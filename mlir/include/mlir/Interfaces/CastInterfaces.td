@@ -25,6 +25,7 @@ def CastOpInterface : OpInterface<"CastOpInterface"> {
     input types and output types match 1-1.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/CastInterfaces.h"];
 
   let methods = [
     StaticInterfaceMethod<[{

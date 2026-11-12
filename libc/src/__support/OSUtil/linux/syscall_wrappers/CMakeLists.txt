@@ -27,6 +27,18 @@ add_header_library(
 )
 
 add_header_library(
+  getgid
+  HDRS
+    getgid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   getpid
   HDRS
     getpid.h
@@ -36,6 +48,43 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.types.pid_t
     libc.include.sys_syscall
+)
+
+add_header_library(
+  getppid
+  HDRS
+    getppid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getsid
+  HDRS
+    getsid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getuid
+  HDRS
+    getuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -184,6 +233,96 @@ add_header_library(
 )
 
 add_header_library(
+  semctl
+  HDRS
+    semctl.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  semget
+  HDRS
+    semget.h
+  DEPENDS
+    libc.hdr.types.key_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  semop
+  HDRS
+    semop.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_sembuf
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  shmat
+  HDRS
+    shmat.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  shmctl
+  HDRS
+    shmctl.h
+  DEPENDS
+    libc.hdr.types.struct_shmid_ds
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  shmdt
+  HDRS
+    shmdt.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  shmget
+  HDRS
+    shmget.h
+  DEPENDS
+    libc.hdr.types.key_t
+    libc.hdr.types.size_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   close
   HDRS
     close.h
@@ -203,7 +342,6 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
-    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_sockaddr
@@ -436,6 +574,36 @@ add_header_library(
 )
 
 add_header_library(
+  process_vm_readv
+  HDRS
+    process_vm_readv.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  process_vm_writev
+  HDRS
+    process_vm_writev.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   recvfrom
   HDRS
     recvfrom.h
@@ -476,6 +644,21 @@ add_header_library(
     libc.hdr.types.ssize_t
     libc.hdr.types.struct_msghdr
     libc.include.sys_syscall
+)
+
+add_header_library(
+  sendfile
+  HDRS
+    sendfile.h
+  DEPENDS
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -549,6 +732,19 @@ add_header_library(
 )
 
 add_header_library(
+  setsid
+  HDRS
+    setsid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   setsockopt
   HDRS
     setsockopt.h
@@ -611,6 +807,47 @@ add_header_library(
 )
 
 add_header_library(
+  rt_sigpending
+  HDRS
+    rt_sigpending.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.sigset_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  rt_sigsuspend
+  HDRS
+    rt_sigsuspend.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.sigset_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  rt_sigtimedwait
+  HDRS
+    rt_sigtimedwait.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.siginfo_t
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+)
+
+add_header_library(
   raise
   HDRS
     raise.h
@@ -641,6 +878,20 @@ add_header_library(
 )
 
 add_header_library(
+  writev
+  HDRS
+    writev.h
+  DEPENDS
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   open
   HDRS
     open.h
@@ -655,6 +906,19 @@ add_header_library(
 )
 
 add_header_library(
+  openat
+  HDRS
+    openat.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   personality
   HDRS
     personality.h
@@ -664,6 +928,18 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.include.sys_syscall
+)
+
+add_header_library(
+  pipe
+  HDRS
+    pipe.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -722,6 +998,19 @@ add_header_library(
 )
 
 add_header_library(
+  madvise
+  HDRS
+    madvise.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   memfd_create
   HDRS
     memfd_create.h
@@ -748,6 +1037,19 @@ add_header_library(
 )
 
 add_header_library(
+  mremap
+  HDRS
+    mremap.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   munmap
   HDRS
     munmap.h
@@ -769,6 +1071,32 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.include.sys_syscall
+)
+
+add_header_library(
+  pkey_alloc
+  HDRS
+    pkey_alloc.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  pkey_free
+  HDRS
+    pkey_free.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -947,6 +1275,19 @@ add_header_library(
 )
 
 add_header_library(
+  getgroups
+  HDRS
+    getgroups.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
   getpgid
   HDRS
     getpgid.h
@@ -963,6 +1304,32 @@ add_header_library(
   setuid
   HDRS
     setuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  getresgid
+  HDRS
+    getresgid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  getresuid
+  HDRS
+    getresuid.h
   DEPENDS
     libc.hdr.types.uid_t
     libc.include.sys_syscall
@@ -1075,6 +1442,56 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.fcntl_macros
     libc.include.sys_syscall
+)
+
+add_header_library(
+  linkat
+  HDRS
+    linkat.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  symlink
+  HDRS
+    symlink.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  symlinkat
+  HDRS
+    symlinkat.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  uname
+  HDRS
+    uname.h
+  DEPENDS
+    libc.hdr.types.struct_utsname
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -1229,6 +1646,18 @@ add_header_library(
 )
 
 add_header_library(
+  close_range
+  HDRS
+    close_range.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   dup
   HDRS
     dup.h
@@ -1264,6 +1693,89 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.include.sys_syscall
+)
+
+add_header_library(
+  epoll_create
+  HDRS
+    epoll_create.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  epoll_create1
+  HDRS
+    epoll_create1.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  epoll_ctl
+  HDRS
+    epoll_ctl.h
+  DEPENDS
+    libc.hdr.types.struct_epoll_event
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  epoll_pwait
+  HDRS
+    epoll_pwait.h
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_epoll_event
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  epoll_pwait2
+  HDRS
+    epoll_pwait2.h
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_epoll_event
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  epoll_wait
+  HDRS
+    epoll_wait.h
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.struct_epoll_event
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -1332,6 +1844,33 @@ add_header_library(
 )
 
 add_header_library(
+  readv
+  HDRS
+    readv.h
+  DEPENDS
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_iovec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remap_file_pages
+  HDRS
+    remap_file_pages.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   rename
   HDRS
     rename.h
@@ -1367,6 +1906,22 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.stdint_proxy
     libc.hdr.types.off_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  copy_file_range
+  HDRS
+    copy_file_range.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
     libc.include.sys_syscall
 )
 
@@ -1424,6 +1979,20 @@ add_header_library(
 )
 
 add_header_library(
+  clock_nanosleep
+  HDRS
+    clock_nanosleep.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   nanosleep
   HDRS
     nanosleep.h
@@ -1435,6 +2004,21 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.include.sys_syscall
+)
+
+add_header_library(
+  poll
+  HDRS
+    poll.h
+  DEPENDS
+    libc.hdr.types.nfds_t
+    libc.hdr.types.struct_pollfd
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -1452,6 +2036,40 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.include.sys_syscall
+)
+
+add_header_library(
+  pread
+  HDRS
+    pread.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+    libc.src.__support.CPP.bit
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  pwrite
+  HDRS
+    pwrite.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+    libc.src.__support.CPP.bit
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -1591,6 +2209,19 @@ add_header_library(
 )
 
 add_header_library(
+  timer_getoverrun
+  HDRS
+    timer_getoverrun.h
+  DEPENDS
+    libc.hdr.types.timer_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   timer_gettime
   HDRS
     timer_gettime.h
@@ -1633,6 +2264,34 @@ add_header_library(
 )
 
 add_header_library(
+  clock_gettime
+  HDRS
+    clock_gettime.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  clock_settime
+  HDRS
+    clock_settime.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   getrusage
   HDRS
     getrusage.h
@@ -1664,6 +2323,19 @@ add_header_library(
     setpriority.h
   DEPENDS
     libc.hdr.types.id_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  kill
+  HDRS
+    kill.h
+  DEPENDS
+    libc.hdr.types.pid_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or

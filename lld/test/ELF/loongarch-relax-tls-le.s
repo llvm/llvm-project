@@ -4,10 +4,10 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 -mattr=+relax %s -o %t.64.o
 
 # RUN: ld.lld %t.32.o -o %t.32
-# RUN: llvm-objdump -d --no-show-raw-insn %t.32 | FileCheck --check-prefixes=RELAX32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.32 | FileCheck --check-prefixes=RELAX32 %s
 
 # RUN: ld.lld %t.64.o -o %t.64
-# RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=RELAX64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=RELAX64 %s
 
 # RELAX32-LABEL: <_start>:
 ## .LANCHOR0@tprel = 8

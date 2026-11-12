@@ -115,7 +115,6 @@ static_library("CodeGen") {
     "LiveRegMatrix.cpp",
     "LiveRegUnits.cpp",
     "LiveStacks.cpp",
-    "LiveVariables.cpp",
     "LocalStackSlotAllocation.cpp",
     "LoopTraversal.cpp",
     "LowLevelTypeUtils.cpp",

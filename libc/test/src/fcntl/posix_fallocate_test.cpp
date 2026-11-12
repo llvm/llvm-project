@@ -13,7 +13,6 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
-#include "hdr/sys_stat_macros.h"
 #include "hdr/types/off_t.h"
 #include "hdr/types/struct_stat.h"
 #include "src/__support/CPP/scope.h"

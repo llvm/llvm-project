@@ -26,7 +26,9 @@ class LLVM_LIBRARY_VISIBILITY SparcTargetInfo : public TargetInfo {
 
 public:
   SparcTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), SoftFloat(false) {}
+      : TargetInfo(Triple), SoftFloat(false) {
+    HasStrictFP = true;
+  }
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     if (RegNo == 0)
@@ -77,10 +79,7 @@ public:
     }
     return false;
   }
-  std::string_view getClobbers() const override {
-    // FIXME: Implement!
-    return "";
-  }
+  std::string_view getClobbers() const override { return "~{y}"; }
 
   // No Sparc V7 for now, the backend doesn't support it anyway.
   enum CPUKind {
@@ -127,7 +126,14 @@ public:
     CG_V9,
   };
 
+  enum CPUFamily {
+    CF_NONE,
+    CF_LEON,
+  };
+
   CPUGeneration getCPUGeneration(CPUKind Kind) const;
+
+  CPUFamily getCPUFamily(CPUKind Kind) const;
 
   CPUKind getCPUKind(StringRef Name) const;
 

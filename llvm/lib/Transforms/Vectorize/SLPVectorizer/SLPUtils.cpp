@@ -48,9 +48,16 @@ bool isConstant(Value *V) {
   return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
 }
 
-bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
-  const auto *CI = dyn_cast<ConstantInt>(V);
-  return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
+Constant *getReassocIdentity(unsigned Opcode, Type *Ty, bool Negated) {
+  // Subtracting -0.0 turns a -0.0 total into +0.0.
+  if (Negated && Opcode == Instruction::FAdd)
+    Opcode = Instruction::FSub;
+  return ConstantExpr::getBinOpIdentity(Opcode, Ty, /*AllowRHSConstant=*/true);
+}
+
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode, bool Negated) {
+  return isa<ConstantInt, ConstantFP>(V) &&
+         V == getReassocIdentity(Opcode, V->getType(), Negated);
 }
 
 bool isUndefTolerantBinOp(const Value *V) {
@@ -302,19 +309,8 @@ std::optional<unsigned> getExtractIndex(const Instruction *E) {
   assert((Opcode == Instruction::ExtractElement ||
           Opcode == Instruction::ExtractValue) &&
          "Expected extractelement or extractvalue instruction.");
-  if (Opcode == Instruction::ExtractElement) {
-    auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
-    if (!CI)
-      return std::nullopt;
-    // Check if the index is out of bound. We can get the source vector from
-    // operand 0.
-    unsigned Idx = CI->getZExtValue();
-    auto *EE = cast<ExtractElementInst>(E);
-    const unsigned VF = getNumElements(EE->getVectorOperandType());
-    if (Idx >= VF)
-      return std::nullopt;
-    return Idx;
-  }
+  if (Opcode == Instruction::ExtractElement)
+    return getInsertExtractIndex<ExtractElementInst>(E, /*Offset=*/0);
   auto *EI = cast<ExtractValueInst>(E);
   if (EI->getNumIndices() != 1)
     return std::nullopt;
@@ -481,11 +477,11 @@ bool areAllOperandsNonInsts(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
-  return !mayHaveNonDefUseDependency(*I) &&
-         all_of(make_isa_range<Instruction>(I->operands()),
+  return all_of(make_isa_range<Instruction>(I->operands()),
                 [I](Instruction *IO) {
                   return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-                });
+                }) &&
+         !mayHaveNonDefUseDependency(*I);
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -493,13 +489,12 @@ bool isUsedOutsideBlock(Value *V) {
   if (!I)
     return true;
   // Limits the number of uses to save compile time.
-  return !I->mayReadOrWriteMemory() && !I->hasNUsesOrMore(UsesLimit) &&
-         all_of(I->users(), [I](User *U) {
-           auto *IU = dyn_cast<Instruction>(U);
-           if (!IU)
-             return true;
-           return IU->getParent() != I->getParent() || isa<PHINode>(IU);
-         });
+  return !I->hasNUsesOrMore(UsesLimit) && all_of(I->users(), [I](User *U) {
+    auto *IU = dyn_cast<Instruction>(U);
+    if (!IU)
+      return true;
+    return IU->getParent() != I->getParent() || isa<PHINode>(IU);
+  }) && !I->mayReadOrWriteMemory();
 }
 
 bool doesNotNeedToBeScheduled(Value *V) {
@@ -904,6 +899,13 @@ Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
         std::min(BaseAlignment, commonAlignment(cast<LoadInst>(V)->getAlign(),
                                                 Idx * ScalarSize));
   return BaseAlignment;
+}
+
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL) {
+  Value *Ptr = cast<LoadInst>(VL.front())->getPointerOperand();
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEP->getPointerOperand();
+  return cast<SelectInst>(Ptr);
 }
 
 Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
@@ -1668,6 +1670,56 @@ unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
     return Scale;
   }
   return LoopAwareTripCount;
+}
+
+bool areTwoInsertFromSameBuildVector(
+    InsertElementInst *VU, InsertElementInst *V,
+    function_ref<Value *(InsertElementInst *)> GetBaseOperand) {
+  // Instructions must be from the same basic blocks.
+  if (VU->getParent() != V->getParent())
+    return false;
+  // Checks if 2 insertelements are from the same buildvector.
+  if (VU->getType() != V->getType())
+    return false;
+  // Multiple used inserts are separate nodes.
+  if (!VU->hasOneUse() && !V->hasOneUse())
+    return false;
+  auto *IE1 = VU;
+  auto *IE2 = V;
+  std::optional<unsigned> Idx1 = getElementIndex(IE1);
+  std::optional<unsigned> Idx2 = getElementIndex(IE2);
+  if (Idx1 == std::nullopt || Idx2 == std::nullopt)
+    return false;
+  // Go through the vector operand of insertelement instructions trying to find
+  // either VU as the original vector for IE2 or V as the original vector for
+  // IE1.
+  SmallBitVector ReusedIdx(VU->getType()->getElementCount().getKnownMinValue());
+  bool IsReusedIdx = false;
+  do {
+    if (IE2 == VU && !IE1)
+      return VU->hasOneUse();
+    if (IE1 == V && !IE2)
+      return V->hasOneUse();
+    if (IE1 && IE1 != V) {
+      unsigned Idx1 = getElementIndex(IE1).value_or(*Idx2);
+      IsReusedIdx |= ReusedIdx.test(Idx1);
+      ReusedIdx.set(Idx1);
+      if ((IE1 != VU && !IE1->hasOneUse()) || IsReusedIdx)
+        IE1 = nullptr;
+      else
+        IE1 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE1));
+    }
+    if (IE2 && IE2 != VU) {
+      unsigned Idx2 = getElementIndex(IE2).value_or(*Idx1);
+      IsReusedIdx |= ReusedIdx.test(Idx2);
+      ReusedIdx.set(Idx2);
+      if ((IE2 != V && !IE2->hasOneUse()) || IsReusedIdx)
+        IE2 = nullptr;
+      else
+        IE2 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE2));
+    }
+  } while (!IsReusedIdx && (IE1 || IE2));
+  return false;
 }
 
 } // namespace llvm::slpvectorizer

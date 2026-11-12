@@ -20,6 +20,7 @@
 
 #include "HexagonDepITypes.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/MC/MCInstrDesc.h"
 
 namespace llvm {
 
@@ -45,7 +46,8 @@ namespace HexagonII {
     HalfWordAccess,
     WordAccess,
     DoubleWordAccess,
-    HVXVectorAccess
+    HVXVectorAccess,
+    HLXVectorAccess
   };
 
   enum class RegType : uint8_t {
@@ -78,7 +80,7 @@ namespace HexagonII {
 
   // MCInstrDesc TSFlags
   // *** Must match HexagonInstrFormat*.td ***
-  enum {
+  enum HexagonTSFlagsVal {
     // This 7-bit field describes the insn type.
     TypePos = 0,
     TypeMask = 0x7f,
@@ -184,8 +186,7 @@ namespace HexagonII {
     PrefersSlot3Pos = 55,
     PrefersSlot3Mask = 0x1,
 
-    HasHvxTmpPos = 56,
-    HasHvxTmpMask = 0x1,
+    isTmpWritePos = 56,
 
     CVINewPos = 58,
     CVINewMask = 0x1,
@@ -201,7 +202,14 @@ namespace HexagonII {
 
     hasUnaryRestrictionPos = 62,
     hasUnaryRestrictionMask = 0x1,
+
+    isHLXPos = 63,
+    isHLXMask = 0x1,
   };
+
+  inline bool getTSFlag(const MCInstrDesc &MID, HexagonTSFlagsVal Pos) {
+    return (MID.TSFlags >> Pos) & 1;
+  }
 
   // *** The code above must match HexagonInstrFormat*.td *** //
 

@@ -19,38 +19,40 @@ void f(int n) {
   for (int i = 0; i < n; ++i)
     use(i);
   // C99-NOT: loop_hints
-  // C11: } loop_hints < must_progress>
-  // FINITE: } loop_hints < must_progress>
+  // C11: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
+  // FINITE: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
   // NOFINITE-NOT: loop_hints
 
   // CIR: cir.while
   while (n)
     --n;
-  // C11: } loop_hints < must_progress>
-  // FINITE: } loop_hints < must_progress>
+  // C11: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
+  // FINITE: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // CIR: cir.do
   do {
     --n;
   } while (n > 0);
-  // C11: } loop_hints < must_progress>
-  // FINITE: } loop_hints < must_progress>
+  // C11: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
+  // FINITE: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // With a constant condition, only -ffinite-loops marks the loops, unless they
   // are trivially empty.
   // CIR: cir.while
   while (1)
     use(n);
-  // FINITE: } loop_hints < must_progress>
+  // FINITE: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // CIR: cir.for
   for (;;)
     use(n);
-  // FINITE: } loop_hints < must_progress>
+  // FINITE: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
 
   // CIR: cir.while
   while (1) {
   }
+  // A loop without any hints doesn't have a loop id either.
+  // CIR-NOT: loop_id
   // CIR-NOT: loop_hints
   // CIR: cir.return
 }

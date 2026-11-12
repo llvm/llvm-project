@@ -7,18 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "BenchmarkResult.h"
-#include "BenchmarkRunner.h"
 #include "Error.h"
 #include "ValidationEvent.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"

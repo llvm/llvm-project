@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -std=c++20 -emit-llvm -triple x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++20 -emit-llvm -triple x86_64-unknown-linux-gnu -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -std=c++17 -emit-llvm -triple x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++17 -emit-llvm -triple x86_64-unknown-linux-gnu -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -std=c++14 -emit-llvm -triple x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++14 -emit-llvm -triple x86_64-unknown-linux-gnu -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -std=c++11 -emit-llvm -triple x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++11 -emit-llvm -triple x86_64-unknown-linux-gnu -o - %s | FileCheck %s %}
 
 // - volatile object in return statement don't match the rule for using move
 //   operation instead of copy operation. Thus should call the copy constructor

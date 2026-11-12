@@ -17,8 +17,7 @@ namespace llvm {
 namespace sandboxir {
 
 bool TransactionAcceptOrRevert::runOnRegion(Region &Rgn, const Analyses &A) {
-  const VectorizeOptions &Opts =
-      Rgn.getContext().getLibraryOptions().get<VectorizeOptions>();
+  const VectorizeOptions &Opts = getVectorizeOptions(Rgn.getContext());
   const auto &SB = cast<RegionWithScore>(Rgn).getScoreboard();
   [[maybe_unused]] auto CostBefore = SB.getBeforeCost();
   [[maybe_unused]] auto CostAfter = SB.getAfterCost();

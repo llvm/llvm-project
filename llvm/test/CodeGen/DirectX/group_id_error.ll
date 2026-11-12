@@ -7,8 +7,8 @@
 target triple = "dxil-pc-shadermodel6.7-pixel"
 
 ; Function Attrs: noinline nounwind optnone
-define i32 @test_group_id(i32 %a) #0 {
+define i32 @test_group_id() #0 {
 entry:
-  %0 = call i32 @llvm.dx.group.id(i32 %a)
+  %0 = call i32 @llvm.dx.group.id(i32 0)
   ret i32 %0
 }

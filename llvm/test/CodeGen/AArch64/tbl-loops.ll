@@ -280,7 +280,8 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IAENABLED-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-IAENABLED-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-IAENABLED-NEXT:    xtn v1.4h, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v1.8b, v2.8b, v1.8b
+; CHECK-IAENABLED-NEXT:    zip1 v1.8h, v2.8h, v1.8h
+; CHECK-IAENABLED-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-IAENABLED-NEXT:    str d1, [x0], #8
 ; CHECK-IAENABLED-NEXT:    b.ne .LBB1_8
 ; CHECK-IAENABLED-NEXT:  // %bb.9: // %middle.block
@@ -358,7 +359,8 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IADISABLED-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-IADISABLED-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-IADISABLED-NEXT:    xtn v1.4h, v1.4s
-; CHECK-IADISABLED-NEXT:    trn1 v1.8b, v2.8b, v1.8b
+; CHECK-IADISABLED-NEXT:    zip1 v1.8h, v2.8h, v1.8h
+; CHECK-IADISABLED-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-IADISABLED-NEXT:    str d1, [x0], #8
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB1_8
 ; CHECK-IADISABLED-NEXT:  // %bb.9: // %middle.block

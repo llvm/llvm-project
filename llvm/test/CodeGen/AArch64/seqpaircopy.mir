@@ -3,6 +3,7 @@
 ---
 # CHECK-LABEL: name: copy_xseqpairs
 name: copy_xseqpairs
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK: $x4_x5 = CASPALX $x4_x5, $x2_x3, $x0
@@ -14,6 +15,7 @@ body: |
 ---
 # CHECK-LABEL: name: copy_wseqpairs
 name: copy_wseqpairs
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK: $w4_w5 = CASPALW $w4_w5, $w2_w3, $x0

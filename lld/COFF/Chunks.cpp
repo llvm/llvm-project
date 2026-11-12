@@ -198,9 +198,10 @@ void applyMOV32T(uint8_t *off, uint32_t v) {
 static void applyBranch20T(uint8_t *off, int32_t v) {
   if (!isInt<21>(v))
     error("relocation out of range");
+  // Encoding T3: the offset is S:J2:J1:imm6:imm11:'0'.
   uint32_t s = v < 0 ? 1 : 0;
-  uint32_t j1 = (v >> 19) & 1;
-  uint32_t j2 = (v >> 18) & 1;
+  uint32_t j1 = (v >> 18) & 1;
+  uint32_t j2 = (v >> 19) & 1;
   or16(off, (s << 10) | ((v >> 12) & 0x3f));
   or16(off + 2, (j1 << 13) | (j2 << 11) | ((v >> 1) & 0x7ff));
 }

@@ -26,7 +26,7 @@
 
 namespace llvm {
 
-class IntEqClasses {
+class LLVM_ATTRIBUTE_WARN_UNUSED IntEqClasses {
   /// EC - When uncompressed, map each integer to a smaller member of its
   /// equivalence class. The class leader is the smallest member and maps to
   /// itself.

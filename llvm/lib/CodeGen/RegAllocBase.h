@@ -69,7 +69,7 @@ protected:
   VirtRegMap *VRM = nullptr;
   LiveIntervals *LIS = nullptr;
   LiveRegMatrix *Matrix = nullptr;
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
 private:
   /// Private, callees should go through shouldAllocateRegister
@@ -89,7 +89,8 @@ protected:
   virtual ~RegAllocBase() = default;
 
   // A RegAlloc pass should call this before allocatePhysRegs.
-  void init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat);
+  void init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat,
+            RegisterClassInfo &rci);
 
   /// Get whether a given register should be allocated
   bool shouldAllocateRegister(Register Reg) {
@@ -110,6 +111,12 @@ protected:
   /// liveness in order to avoid spurious verifier errors in later passes.
   void cleanupFailedVReg(Register FailedVReg, MCRegister PhysReg,
                          SmallVectorImpl<Register> &SplitRegs);
+
+  /// Add the defs of \p FailedReg on \p MI to the \p PhysReg regunit live
+  /// ranges, and make the defs of \p PhysReg on \p MI consistently dead or
+  /// live.
+  void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
+                         MCRegister PhysReg);
 
   // Get a temporary reference to a Spiller instance.
   virtual Spiller &spiller() = 0;

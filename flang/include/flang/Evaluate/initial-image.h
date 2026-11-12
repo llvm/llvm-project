@@ -14,7 +14,6 @@
 // initializer for a symbol.
 
 #include "expression.h"
-#include "flang/Evaluate/char.h"
 #include <map>
 #include <optional>
 #include <vector>
@@ -30,11 +29,11 @@ inline void StoreSerialValues(char *dst, llvm::ArrayRef<SCALAR> values,
 }
 
 template <typename SCALAR>
-inline void LoadSerialValues(
-    const char *src, llvm::MutableArrayRef<SCALAR> values, size_t stride) {
+inline void LoadSerialValues(int kind, const char *src,
+    llvm::MutableArrayRef<SCALAR> values, size_t stride) {
   for (auto it : llvm::enumerate(values)) {
-    it.value() =
-        SCALAR::FromRawBytes(src + stride * it.index(), SCALAR::bytesStored());
+    it.value() = SCALAR::FromRawBytes(
+        kind, src + stride * it.index(), SCALAR::bytesStored(kind));
   }
 }
 
@@ -81,46 +80,10 @@ public:
       }
     }
   }
-  template <int KIND>
-  Result Add(ConstantSubscript offset, std::size_t bytes,
-      const Constant<Type<TypeCategory::Character, KIND>> &x,
-      FoldingContext &) {
-    if (offset < 0 || offset + bytes > data_.size()) {
-      return OutOfRange;
-    } else {
-      auto optElements{TotalElementCount(x.shape())};
-      if (!optElements) {
-        return TooManyElems;
-      }
-      auto elements{*optElements};
-      auto elementBytes{bytes > 0 ? bytes / elements : 0};
-      if (elements * elementBytes != bytes) {
-        return SizeMismatch;
-      } else if (bytes == 0) {
-        return OkNoChange;
-      } else {
-        Result result{OkNoChange};
-        for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
-          typename value::Character<KIND> scalar{x.At(at)};
-          auto scalarBytes{scalar.size() * KIND};
-          if (scalarBytes != elementBytes) {
-            result = LengthMismatch;
-          }
-          // TODO endianness
-          auto *to{&data_.at(offset)};
-          bool changed{false};
-          scalar.StoreRawBytes(to, elementBytes, &changed);
-          if (changed && result == OkNoChange) {
-            result = Ok;
-          }
-          offset += elementBytes;
-        }
-        return result;
-      }
-    }
-  }
-  Result Add(ConstantSubscript, std::size_t, const Constant<SomeDerived> &,
-      FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Character>> &, FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Derived>> &, FoldingContext &);
   template <typename T>
   Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x,
       FoldingContext &c) {

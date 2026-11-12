@@ -6,6 +6,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 declare {ptr, i64} @__size_returning_new(i64)
+declare [2 x i64] @__size_returning_new_aligned(i64, i64)
 
 define ptr @test_extra_libfuncs() sanitize_alloc_token {
 ; CHECK-LABEL: define ptr @test_extra_libfuncs(
@@ -13,11 +14,17 @@ define ptr @test_extra_libfuncs() sanitize_alloc_token {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call { ptr, i64 } @__alloc_token___size_returning_new(i64 10, i64 2689373973731826898), !alloc_token [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractvalue { ptr, i64 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call [2 x i64] @__alloc_token___size_returning_new_aligned(i64 10, i64 8, i64 2689373973731826898), !alloc_token [[META0]]
+; CHECK-NEXT:    [[PTR2_INT:%.*]] = extractvalue [2 x i64] [[TMP1]], 0
+; CHECK-NEXT:    [[PTR2:%.*]] = inttoptr i64 [[PTR2_INT]] to ptr
 ; CHECK-NEXT:    ret ptr [[PTR1]]
 ;
 entry:
   %srn = call {ptr, i64} @__size_returning_new(i64 10), !alloc_token !0
-  %ptr1  = extractvalue {ptr, i64} %srn, 0
+  %ptr1 = extractvalue {ptr, i64} %srn, 0
+  %srna = call [2 x i64] @__size_returning_new_aligned(i64 10, i64 8), !alloc_token !0
+  %ptr2_int = extractvalue [2 x i64] %srna, 0
+  %ptr2 = inttoptr i64 %ptr2_int to ptr
   ret ptr %ptr1
 }
 

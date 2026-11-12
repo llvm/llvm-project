@@ -40,7 +40,7 @@ subroutine declare_simd_2
   use m1
   procedure (sub) sub1
   !WARNING: DECLARE SIMD directive is not implemented yet and will be ignored
-  !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
+  !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive as members of 'branch' clause group
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p
   p=>sub1
@@ -62,6 +62,7 @@ contains
     !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
     !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
     !$omp declare target (foo, N, M)
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
     !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
@@ -71,6 +72,7 @@ contains
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target enter(Q, S) link(R)
+    !WARNING: TO clause is no longer allowed on DECLARE TARGET directive since OpenMP v5.2 [-Wopenmp-deprecated]
     !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: MAP clause is not allowed on DECLARE TARGET directive
@@ -97,5 +99,59 @@ subroutine declare_red_1()
   !$omp end parallel
   print *, "sum of thread numbers is ", my_var
 end subroutine declare_red_1
+
+module assumes_no_openmp_module
+  implicit none
+  !$omp assumes no_openmp
+contains
+  subroutine set_value(value)
+    integer :: value
+    value = 7
+  end subroutine set_value
+end module assumes_no_openmp_module
+
+subroutine assumes_no_openmp_procedure(value)
+  use assumes_no_openmp_module, only: set_value
+  implicit none
+  !$omp assumes no_openmp
+  integer :: value
+  call set_value(value)
+end subroutine assumes_no_openmp_procedure
+
+subroutine assumes_no_openmp_duplicate
+  !ERROR: At most one NO_OPENMP clause can appear on ASSUMES directive
+  !$omp assumes no_openmp no_openmp
+end subroutine assumes_no_openmp_duplicate
+
+module assumes_absent_module
+  implicit none
+  !$omp assumes absent(parallel, barrier)
+contains
+  subroutine local_work()
+    !$omp assumes absent(critical)
+  end subroutine local_work
+end module assumes_absent_module
+
+subroutine assumes_absent_procedure()
+  use assumes_absent_module
+  implicit none
+  !$omp assumes absent(target enter data)
+  !$omp assumes absent(parallel)
+end subroutine assumes_absent_procedure
+
+subroutine assumes_absent_combined()
+  !$omp assumes absent(barrier) no_openmp no_openmp_routines no_parallelism holds(.true.)
+end subroutine assumes_absent_combined
+
+subroutine assumes_absent_contains()
+  !$omp assumes absent(barrier) contains(parallel)
+  !$omp parallel
+  !$omp end parallel
+end subroutine assumes_absent_contains
+
+subroutine assumes_absent_duplicate()
+  !ERROR: At most one ABSENT clause can appear on ASSUMES directive
+  !$omp assumes absent(parallel) absent(barrier)
+end subroutine assumes_absent_duplicate
 
 end

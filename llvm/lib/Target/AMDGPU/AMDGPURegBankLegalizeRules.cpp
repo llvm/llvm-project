@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPURegBankLegalizeRules.h"
+#include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -683,7 +684,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32}});
 
   addRulesForGOpcs({G_FSHR}, Standard)
-      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32, Sgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
   addRulesForGOpcs({G_BSWAP}, Standard)
@@ -1427,6 +1428,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniP5, UniS32}, {{SgprP5}, {Sgpr32}, DynStackAlloc}})
       .Any({{UniP5, DivS32}, {{SgprP5}, {Vgpr32}, DynStackAlloc}});
 
+  addRulesForGOpcs({G_STACKRESTORE}).Any({{P5}, {{}, {SgprB32_ReadFirstLane}}});
+
   addRulesForGOpcs({G_ABS}, Standard)
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}})
       .Div(S16, {{Vgpr16}, {Vgpr16}, AbsToNegMax})
@@ -1650,13 +1653,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniPtr64}, !IsDataPF}, {{}, {}, DeletePrefetch}}, !HasSMemPF)
 
       .Any({{{DivPtr64}, IsDataPF}, {{}, {VgprPtr64}}}, HasVMemPF)
-      .Any({{{DivPtr64}, IsDataPF}, {{}, {}, DeletePrefetch}}, !HasVMemPF)
-      .Any({{{DivPtr64}, !IsDataPF}, {{}, {}, DeletePrefetch}})
+      // Otherwise prefetch the first active lane's address.
+      .Any({{DivPtr64}, {{}, {SgprB64_ReadFirstLane}}}, HasSMemPF)
+      .Any({{DivPtr64}, {{}, {}, DeletePrefetch}})
 
-      .Any({{P3}, {{}, {}, DeletePrefetch}})
-      .Any({{P5}, {{}, {}, DeletePrefetch}})
-      .Any({{UniP6}, {{}, {SgprP6}}}, HasSMemPF)
-      .Any({{UniP6}, {{}, {}, DeletePrefetch}}, !HasSMemPF);
+      .Any({{Ptr32}, {{}, {}, DeletePrefetch}})
+      .Any({{P8}, {{}, {}, DeletePrefetch}});
 
   addRulesForGOpcs({G_FPEXT})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})
@@ -1687,9 +1689,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  addRulesForGOpcs({G_FMINNUM_IEEE, G_FMAXNUM_IEEE, G_FMINNUM, G_FMAXNUM,
-                    G_FMINIMUMNUM, G_FMAXIMUMNUM},
-                   Standard)
+  addRulesForGOpcs({G_FMINNUM_IEEE, G_FMAXNUM_IEEE}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64}})
@@ -1700,6 +1700,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat);
+
+  addRulesForGOpcs({G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM},
+                   Standard)
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat)
+      .Any({{UniV2S64}, {{UniInVgprV2S64}, {VgprV2S64, VgprV2S64}}})
+      .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64, VgprV2S64}}});
 
   addRulesForGOpcs({G_FPTRUNC})
       .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
@@ -1866,6 +1881,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_prefetch}).Any({{}, {{}, {IntrId, VgprP1}}});
 
   addRulesForIOpcs({amdgcn_s_prefetch_data, amdgcn_s_prefetch_inst})
+      .Any({{_, Ptr32}, {{}, {}, DeletePrefetch}})
+      .Any({{_, P8}, {{}, {}, DeletePrefetch}})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
 
   addRulesForIOpcs({amdgcn_class})
@@ -2688,11 +2705,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, _, S64}, {{UniInVgprS32}, {IntrId, Vgpr64}}})
       .Any({{DivS32, _, S64}, {{Vgpr32}, {IntrId, Vgpr64}}});
 
-  addRulesForIOpcs({amdgcn_div_fmas}, Standard)
-      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}})
-      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}})
-      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr64, Vgpr64, Vcc}})
-      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr64, Vgpr64, Vcc}});
+  Predicate isUnscaledDivFmas([](const MachineInstr &MI) -> bool {
+    return AMDGPU::isUnscaledIEEEDivFmas(MI, MI.getMF()->getRegInfo());
+  });
+
+  addRulesForIOpcs({amdgcn_div_fmas})
+      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}}})
+      .Any({{{UniS32}, isUnscaledDivFmas},
+            {{Sgpr32}, {IntrId, Sgpr32, Sgpr32, Sgpr32, Vcc}}},
+           hasSALUFloat)
+      .Any({{UniS32}, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vcc}}})
+      .Any({{DivS64}, {{Vgpr64}, {IntrId, Vgpr64, Vgpr64, Vgpr64, Vcc}}})
+      .Any({{UniS64}, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr64, Vgpr64, Vcc}}});
 
   addRulesForIOpcs({amdgcn_div_fixup}, Standard)
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})

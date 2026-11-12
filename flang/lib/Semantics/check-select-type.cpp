@@ -98,8 +98,16 @@ private:
                       "LEN type parameter as assumed"_err_en_US);
                   typeSpecRetVal = false;
                 }
+              } else if (const DerivedTypeSpec *derived{spec->AsDerived()};
+                  IsEnumerationType(derived->typeSymbol())) {
+                // An enumeration type extends nothing (F2023 C1167).
+                typeSpecRetVal = true;
+                if (!selectorType_.IsUnlimitedPolymorphic()) {
+                  context_.Say(stmt.source,
+                      "If selector is not unlimited polymorphic, an enumeration type specification must not be specified in the type guard statement"_err_en_US);
+                  typeSpecRetVal = false;
+                }
               } else {
-                const DerivedTypeSpec *derived{spec->AsDerived()};
                 typeSpecRetVal = PassesDerivedTypeChecks(
                     *derived, parser::FindSourceLocation(typeSpec));
               }
@@ -108,6 +116,11 @@ private:
             [&](const parser::DerivedTypeSpec &x) {
               CHECK(x.derivedTypeSpec);
               const semantics::DerivedTypeSpec *derived{x.derivedTypeSpec};
+              if (IsEnumerationType(derived->typeSymbol())) { // R1156
+                context_.Say(parser::FindSourceLocation(x),
+                    "An enumeration type may not appear in a CLASS IS type guard statement"_err_en_US);
+                return false;
+              }
               return PassesDerivedTypeChecks(
                   *derived, parser::FindSourceLocation(x));
             },

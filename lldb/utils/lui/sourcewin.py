@@ -93,7 +93,7 @@ class SourceWin(cui.TitledWin):
             self.pageUp()
 
     def updateViewline(self):
-        half = self.height / 2
+        half = self.height // 2
         if self.pc_line < half:
             self.viewline = 0
         else:
@@ -193,7 +193,7 @@ class SourceWin(cui.TitledWin):
             if path in self.breakpoints:
                 self.breakpoints[path].difference_update(lines)
             else:
-                raise "Removing locations that were never added...no good"
+                raise RuntimeError("Removing locations that were never added...no good")
 
     def handleBPEvent(self, event):
         def getLocations(event):

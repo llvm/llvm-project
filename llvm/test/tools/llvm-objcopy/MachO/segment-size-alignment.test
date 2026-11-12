@@ -57,6 +57,7 @@
 ## main.c: int main() { return 0; }
 ## xcrun -sdk iphoneos clang -arch armv7 main.c -o main.exe
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x0000000C
@@ -255,6 +256,7 @@ LinkEditData:
 ## main.c: int main() { return 0; }
 ## xcrun -sdk iphoneos clang -arch arm64 main.c -o main.exe
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x0100000C
@@ -473,6 +475,7 @@ LinkEditData:
 ## main.c: int main() { return 0; }
 ## xcrun -sdk watchos clang -arch arm64_32 main.c -o main.exe
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x0200000C
@@ -689,6 +692,7 @@ LinkEditData:
 ## main.c: int main() { return 0; }
 ## clang -arch x86_64 main.c -o main.exe
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

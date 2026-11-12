@@ -360,7 +360,8 @@ public:
       const mlir::Location loc = cgf.getLoc(e->getSourceRange());
       const mlir::Value vecValue = Visit(e->getBase());
       const mlir::Value indexValue = Visit(e->getIdx());
-      return cir::VecExtractOp::create(cgf.builder, loc, vecValue, indexValue);
+      return cir::VecExtractOp::create(cgf.getBuilder(), loc, vecValue,
+                                       indexValue);
     }
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);
@@ -371,8 +372,9 @@ public:
       // The undocumented form of __builtin_shufflevector.
       mlir::Value inputVec = Visit(e->getExpr(0));
       mlir::Value indexVec = Visit(e->getExpr(1));
-      return cir::VecShuffleDynamicOp::create(
-          cgf.builder, cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
+      return cir::VecShuffleDynamicOp::create(cgf.getBuilder(),
+                                              cgf.getLoc(e->getSourceRange()),
+                                              inputVec, indexVec);
     }
 
     mlir::Value vec1 = Visit(e->getExpr(0));
@@ -384,16 +386,16 @@ public:
     SmallVector<mlir::Attribute, 8> indices;
     for (unsigned i = 2; i < e->getNumSubExprs(); ++i) {
       indices.push_back(
-          cir::IntAttr::get(cgf.builder.getSInt64Ty(),
+          cir::IntAttr::get(cgf.getBuilder().getSInt64Ty(),
                             e->getExpr(i)
                                 ->EvaluateKnownConstInt(cgf.getContext())
                                 .getSExtValue()));
     }
 
-    return cir::VecShuffleOp::create(cgf.builder,
+    return cir::VecShuffleOp::create(cgf.getBuilder(),
                                      cgf.getLoc(e->getSourceRange()),
                                      cgf.convertType(e->getType()), vec1, vec2,
-                                     cgf.builder.getArrayAttr(indices));
+                                     cgf.getBuilder().getArrayAttr(indices));
   }
 
   mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *e) {
@@ -406,10 +408,7 @@ public:
 
   mlir::Value VisitExtVectorElementExpr(Expr *e) { return emitLoadOfLValue(e); }
 
-  mlir::Value VisitMatrixElementExpr(Expr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: matrix element");
-    return {};
-  }
+  mlir::Value VisitMatrixElementExpr(Expr *e) { return emitLoadOfLValue(e); }
 
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
@@ -519,15 +518,18 @@ public:
   mlir::Value emitScalarCast(mlir::Value src, QualType srcType,
                              QualType dstType, mlir::Type srcTy,
                              mlir::Type dstTy, ScalarConversionOpts opts) {
-    assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
-           "Internal error: matrix types not handled by this function.");
     assert(!(mlir::isa<mlir::IntegerType>(srcTy) ||
              mlir::isa<mlir::IntegerType>(dstTy)) &&
            "Obsolete code. Don't use mlir::IntegerType with CIR.");
 
     mlir::Type fullDstTy = dstTy;
-    if (mlir::isa<cir::VectorType>(srcTy) &&
-        mlir::isa<cir::VectorType>(dstTy)) {
+    if (mlir::isa<cir::MatrixType>(srcTy) &&
+        mlir::isa<cir::MatrixType>(dstTy)) {
+      // Use the element types of the matrices to figure out the CastKind.
+      srcTy = mlir::dyn_cast<cir::MatrixType>(srcTy).getElementType();
+      dstTy = mlir::dyn_cast<cir::MatrixType>(dstTy).getElementType();
+    } else if (mlir::isa<cir::VectorType>(srcTy) &&
+               mlir::isa<cir::VectorType>(dstTy)) {
       // Use the element types of the vectors to figure out the CastKind.
       srcTy = mlir::dyn_cast<cir::VectorType>(srcTy).getElementType();
       dstTy = mlir::dyn_cast<cir::VectorType>(dstTy).getElementType();
@@ -632,8 +634,7 @@ public:
   mlir::Value emitFixedPointIncDec(const UnaryOperator *e, mlir::Value value,
                                    QualType type);
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv) {
-    if (cgf.getLangOpts().OpenMP)
-      cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
+    assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
     QualType type = e->getSubExpr()->getType();
 
@@ -1148,9 +1149,8 @@ public:
     }
 
     if (srcType->isMatrixType() && dstType->isMatrixType()) {
-      cgf.getCIRGenModule().errorNYI(loc,
-                                     "matrix type to matrix type conversion");
-      return {};
+      return emitScalarCast(src, srcType, dstType, mlirSrcType, mlirDstType,
+                            opts);
     }
     assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
            "Internal error: conversion between matrix type and scalar type");
@@ -1432,11 +1432,18 @@ public:
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
 
-      auto cmpOpKind = cir::CmpOpKind::ne;
       auto resultTy =
           mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
-      rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+        CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+        auto cmpOpKind = cir::FCmpOpKind::une;
+        lhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      } else {
+        auto cmpOpKind = cir::CmpOpKind::ne;
+        lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      }
       return builder.createAnd(loc, lhs, rhs);
     }
 
@@ -1480,11 +1487,18 @@ public:
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
 
-      auto cmpOpKind = cir::CmpOpKind::ne;
       auto resultTy =
           mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
-      rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+        CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+        auto cmpOpKind = cir::FCmpOpKind::une;
+        lhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecFCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      } else {
+        auto cmpOpKind = cir::CmpOpKind::ne;
+        lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+        rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
+      }
       return builder.createOr(loc, lhs, rhs);
     }
 
@@ -1625,10 +1639,10 @@ public:
     mlir::Type dstTy = cgf.convertType(e->getType());
 
     unsigned numElementsSrc = isa<cir::VectorType>(srcTy)
-                                  ? cast<cir::VectorType>(srcTy).getSize()
+                                  ? cast<cir::VectorType>(srcTy).getFixedSize()
                                   : 0;
     unsigned numElementsDst = isa<cir::VectorType>(dstTy)
-                                  ? cast<cir::VectorType>(dstTy).getSize()
+                                  ? cast<cir::VectorType>(dstTy).getFixedSize()
                                   : 0;
 
     // Use bit vector expansion for ext_vector_type boolean vectors.
@@ -1653,7 +1667,7 @@ public:
     if (numElementsSrc != 3 && numElementsDst == 3) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
       auto dstElemTy = cast<cir::VectorType>(dstTy).getElementType();
-      auto dstVec4Ty = cir::VectorType::get(dstElemTy, 4);
+      auto dstVec4Ty = cir::VectorType::getFixed(dstElemTy, 4);
       src = createCastsForTypeOfSameSize(src, dstVec4Ty);
       src = convertVec3AndVec4(builder, loc, src, 3);
       return src;
@@ -1736,8 +1750,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   else
     cgf.emitStoreThroughLValue(RValue::get(result), lhsLV);
 
-  if (cgf.getLangOpts().OpenMP)
-    cgf.cgm.errorNYI(e->getSourceRange(), "openmp");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   return lhsLV;
 }
@@ -2070,12 +2083,10 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    cir::OverflowBehavior overflowBehavior =
-        cgf.getLangOpts().PointerOverflowDefined
-            ? cir::OverflowBehavior::None
-            : cir::OverflowBehavior::NoSignedWrap;
-    index =
-        cgf.getBuilder().createMul(loc, index, numElements, overflowBehavior);
+    cir::OverflowFlags overflowFlags = cgf.getLangOpts().PointerOverflowDefined
+                                           ? cir::OverflowFlags::None
+                                           : cir::OverflowFlags::NoSignedWrap;
+    index = cgf.getBuilder().createMul(loc, index, numElements, overflowFlags);
     assert(!cir::MissingFeatures::sanitizers());
     return cir::PtrStrideOp::create(cgf.getBuilder(), loc, pointer.getType(),
                                     pointer, index);
@@ -2932,17 +2943,30 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                               cgf.convertType(destTy));
   }
 
+  case CK_HLSLAggregateSplatCast:
   case CK_VectorSplat: {
-    // Create a vector object and fill all elements with the same scalar value.
+    // Splat the element across to all elements
     mlir::Type destCIRTy = cgf.convertType(destTy);
-    assert(mlir::isa<cir::VectorType>(destCIRTy) &&
-           "CK_VectorSplat to non-vector type");
     return cir::VecSplatOp::create(builder,
                                    cgf.getLoc(subExpr->getSourceRange()),
                                    destCIRTy, Visit(subExpr));
   }
   case CK_FunctionToPointerDecay:
     return cgf.emitLValue(subExpr).getPointer();
+
+  case CK_HLSLVectorTruncation: {
+    assert((destTy->isVectorType() || destTy->isBuiltinType()) &&
+           "Destination type must be a vector or builtin type.");
+    mlir::Value vec = Visit(subExpr);
+    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
+    if (auto *vecTy = destTy->getAs<VectorType>()) {
+      unsigned numElts = vecTy->getNumElements();
+      llvm::SmallVector<int64_t, 4> mask(numElts);
+      std::iota(mask.begin(), mask.end(), 0);
+      return builder.createVecShuffle(loc, vec, mask);
+    }
+    return builder.createExtractElement(loc, vec, /*idx=*/0);
+  }
 
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
@@ -2989,7 +3013,7 @@ mlir::Value
 ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
                                                 cir::VectorType vectorType,
                                                 ArrayRef<mlir::Value> inits) {
-  const unsigned resElts = vectorType.getSize();
+  const unsigned resElts = vectorType.getFixedSize();
   mlir::Value result =
       builder.getConstant(loc, cir::PoisonAttr::get(vectorType));
   unsigned curIdx = 0;
@@ -3000,7 +3024,7 @@ ScalarExprEmitter::emitVectorInitWithSubvectors(mlir::Location loc,
       continue;
     }
 
-    const unsigned initElts = initType.getSize();
+    const unsigned initElts = initType.getFixedSize();
     assert(curIdx + initElts <= resElts &&
            "Sema should reject excess elements");
     SmallVector<int64_t, 16> mask(resElts, -1);
@@ -3055,11 +3079,12 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
                                           vectorType, elements);
 
     // Zero-initialize any remaining values.
-    if (numInitElements < vectorType.getSize()) {
+    const uint64_t vectorSize = vectorType.getFixedSize();
+    if (numInitElements < vectorSize) {
       const mlir::Value zeroValue = cgf.getBuilder().getNullValue(
           vectorType.getElementType(), cgf.getLoc(e->getSourceRange()));
-      std::fill_n(std::back_inserter(elements),
-                  vectorType.getSize() - numInitElements, zeroValue);
+      std::fill_n(std::back_inserter(elements), vectorSize - numInitElements,
+                  zeroValue);
     }
 
     return cir::VecCreateOp::create(cgf.getBuilder(),
@@ -3122,6 +3147,12 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
     auto operVecTy = mlir::cast<cir::VectorType>(oper.getType());
     mlir::Value zeroVec = builder.getNullValue(operVecTy, loc);
     auto resultTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+    if (cir::isFPOrVectorOfFPType(operVecTy.getElementType())) {
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+      return builder.createVecFCompare(loc, resultTy, cir::FCmpOpKind::oeq,
+                                       oper, zeroVec);
+    }
+
     return builder.createVecCompare(loc, resultTy, cir::CmpOpKind::eq, oper,
                                     zeroVec);
   }
@@ -3259,7 +3290,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
               builder.getConstAPInt(numElts.getLoc(), numElts.getType(),
                                     cgf.cgm.getSize(eltSize).getValue());
           return builder.createMul(loc, eltSizeValue, numElts,
-                                   cir::OverflowBehavior::NoUnsignedWrap);
+                                   cir::OverflowFlags::NoUnsignedWrap);
         }
 
         return numElts;
@@ -3274,7 +3305,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     return builder.getConstantInt(loc, cgf.cgm.sizeTy, alignment);
   } else if (e->getKind() == UETT_VectorElements) {
     auto vecTy = cast<cir::VectorType>(convertType(e->getTypeOfArgument()));
-    if (vecTy.getIsScalable()) {
+    if (vecTy.isScalable()) {
       cgf.getCIRGenModule().errorNYI(
           e->getSourceRange(),
           "VisitUnaryExprOrTypeTraitExpr: sizeOf scalable vector");
@@ -3284,7 +3315,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     }
 
     return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize()));
+        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getFixedSize()));
   }
 
   // The result type is size_t (target-dependent width); use it so the IntAttr
@@ -3346,19 +3377,21 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     mlir::Value lhsValue = Visit(lhsExpr);
     mlir::Value rhsValue = Visit(rhsExpr);
 
-    mlir::Type vecTy = convertType(condType);
+    // Test the MSB with a signed compare, as classic codegen does.
+    mlir::Type vecTy =
+        convertType(cgf.getContext().getCorrespondingSignedType(condType));
+    condValue = builder.createBitcast(condValue, vecTy);
     mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
     auto testMSB = cir::VecCmpOp::create(
         builder, loc, vecTy, cir::CmpOpKind::lt, condValue, zeroVec);
     mlir::Value tmp = builder.createIntCast(testMSB, vecTy);
     mlir::Value tmp2 = builder.createNot(tmp);
 
-    // Cast float to int to perform ANDs if necessary.
+    // Bitcast float or differently signed operands to the condition type.
     mlir::Value rhsTmp = rhsValue;
     mlir::Value lhsTmp = lhsValue;
     bool wasCast = false;
-    auto rhsVecTy = cast<cir::VectorType>(rhsValue.getType());
-    if (cir::isAnyFloatingPointType(rhsVecTy.getElementType())) {
+    if (rhsValue.getType() != vecTy) {
       rhsTmp = builder.createBitcast(rhsValue, tmp2.getType());
       lhsTmp = builder.createBitcast(lhsValue, tmp.getType());
       wasCast = true;

@@ -143,7 +143,7 @@ declare void @free(ptr)
 ; CHECK:       [[AFTERCOROSUSPEND3]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i8 [ -1, %[[COROSAVE1]] ], [ 0, %[[ENTRY_RESUME]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[COND]], label %[[COROSAVE4:.*]], label %[[COROEND:.*]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[COROSAVE4:.*]], label %[[COROEND:.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[COROSAVE4]]:
 ; CHECK-NEXT:    [[INDEX_ADDR14:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i2 -2, ptr [[INDEX_ADDR14]], align 1
@@ -154,7 +154,7 @@ declare void @free(ptr)
 ; CHECK:       [[AFTERCOROSUSPEND7]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i8 [ -1, %[[STEP1_CONTINUE]] ], [ 0, %[[ENTRY_RESUME]] ]
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i8 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[COND1]], label %[[COROSAVE8]], label %[[COROEND]]
+; CHECK-NEXT:    br i1 [[COND1]], label %[[COROSAVE8]], label %[[COROEND]], !prof [[PROF3]]
 ; CHECK:       [[COROSAVE8]]:
 ; CHECK-NEXT:    [[INDEX_ADDR15:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i2 -1, ptr [[INDEX_ADDR15]], align 1
@@ -202,9 +202,11 @@ declare void @free(ptr)
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nomerge nounwind }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nounwind memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { nomerge nounwind }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"function_entry_count", i64 1463}
 ; CHECK: [[PROF2]] = !{!"branch_weights", i32 0, i32 -2147483648, i32 715827200, i32 119304419, i32 159072407}
+; CHECK: [[PROF3]] = !{!"unknown", !"local"}
 ;.

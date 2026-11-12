@@ -122,6 +122,15 @@ LLVM_ABI bool isValidTraitPropertyForTraitSetAndSelector(TraitProperty Property,
 /// scored (via the ScoresMap). In addition, the required consturct nesting is
 /// decribed as well.
 struct VariantMatchInfo {
+  /// A device or target_device isa property and the ISA name it requires.
+  struct ISATrait {
+    TraitProperty Property;
+    StringRef Name;
+    bool operator==(const ISATrait &Other) const {
+      return Property == Other.Property && Name == Other.Name;
+    }
+  };
+
   /// Add the trait \p Property to the required trait set. \p RawString is the
   /// string we parsed and derived \p Property from. If \p Score is not null, it
   /// recorded as well. If \p Property is in the `construct` set it is recorded
@@ -142,10 +151,9 @@ struct VariantMatchInfo {
 
     // Special handling for `device={isa(...)}` as we do not match the enum but
     // the raw string.
-    if (Property == TraitProperty::device_isa___ANY)
-      ISATraits.push_back(RawString);
-    if (Property == TraitProperty::target_device_isa___ANY)
-      ISATraits.push_back(RawString);
+    if (Property == TraitProperty::device_isa___ANY ||
+        Property == TraitProperty::target_device_isa___ANY)
+      ISATraits.push_back({Property, RawString});
 
     RequiredTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
@@ -153,7 +161,7 @@ struct VariantMatchInfo {
   }
 
   BitVector RequiredTraits = BitVector(unsigned(TraitProperty::Last) + 1);
-  SmallVector<StringRef, 8> ISATraits;
+  SmallVector<ISATrait, 8> ISATraits;
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
 };

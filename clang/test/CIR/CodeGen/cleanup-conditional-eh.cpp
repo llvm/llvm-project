@@ -766,3 +766,338 @@ void test_flag_cleared_before_cond_cleanup() {
 // OGCG:   call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
 // OGCG:   call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
 // OGCG:   resume { ptr, i32 }
+
+// The members that an aggregate initialization has constructed so far are
+// destroyed when a later member initializer is left early, here by a return
+// in a statement expression in an operand of a conditional operator. The
+// member cleanups are deactivated at the end of the initialization, while the
+// cleanup scope that the conditional operator opened for its operands is still
+// open: the flag that guards the cleanup of the first member is cleared inside
+// that scope.
+
+struct Obj {
+  char c;
+  Obj(char);
+  ~Obj();
+};
+
+struct Pair {
+  Obj a;
+  Obj b;
+};
+
+Obj copy(const Obj &);
+Obj make(bool);
+
+void struct_ternary(bool b, bool c) {
+  Pair p{Obj{'a'}, b ? ({
+                     if (c)
+                       return;
+                     Obj{'b'};
+                   })
+                     : Obj{'c'}};
+}
+
+// The cleanup scope of the conditional operator is empty and canonicalized
+// away.
+//
+// CIR-LABEL: cir.func {{.*}} @_Z14struct_ternarybb(
+// CIR:         %[[P:.*]] = cir.alloca "p"
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive"
+// CIR:         %[[A:.*]] = cir.get_member %[[P]][0] {name = "a"}
+// CIR:         cir.call @_ZN3ObjC1Ec(%[[A]],
+// CIR-NEXT:    %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:    cir.store %[[TRUE]], %[[ACTIVE]]
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR:           cir.if
+// CIR:             cir.if
+// CIR-NEXT:          cir.return
+// CIR:           } else {
+// CIR:             cir.call @_ZN3ObjC1Ec(
+// CIR-NEXT:      } loc(
+// CIR-NEXT:      %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup all {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN3ObjD1Ev(%[[A]])
+// CIR:         cir.call @_ZN4PairD1Ev(%[[P]])
+
+// A logical operator opens such a scope too.
+
+void logical_and(bool b, bool c) {
+  Pair p{Obj{'a'}, make(b && ({
+                          if (c)
+                            return;
+                          true;
+                        }))};
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z11logical_andbb(
+// CIR:         %[[P:.*]] = cir.alloca "p"
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive"
+// CIR:         %[[A:.*]] = cir.get_member %[[P]][0] {name = "a"}
+// CIR:         cir.store %{{.*}}, %[[ACTIVE]]
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR:           cir.ternary
+// CIR:             cir.return
+// CIR:           cir.call @_Z4makeb(
+// CIR-NEXT:      %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup all {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN3ObjD1Ev(%[[A]])
+
+// The cleanup of an initialized member or init-capture, or the operator delete
+// or partial-array cleanup of a new-expression, is deactivated once the object
+// is initialized.
+// If an operand of a later ?:, && or || in the same initializer created a
+// temporary, the cleanup scope for that temporary is open in the body of the
+// deactivated cleanup's scope. It has to stay open until the end of the
+// full-expression, so the deactivated cleanup gets an active flag instead of
+// ending its scope early.
+
+int h(const Obj &);
+int g();
+void use(const Pair &, int);
+
+void aggregate(bool b) {
+  use(Pair{Obj{'a'}, b ? copy(Obj{'t'}) : Obj{'c'}}, g());
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z9aggregateb(
+// CIR:         %[[PAIR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Pair>
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_Obj>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[A:.*]] = cir.get_member %[[PAIR]][0] {name = "a"}
+// CIR:         cir.call @_ZN3ObjC1Ec(%[[A]], %{{.*}})
+// CIR-NEXT:    %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:    cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.if %{{.*}} {
+// CIR:             } else {
+// CIR-NEXT:          %[[C:.*]] = cir.const #cir.int<99> : !s8i
+// CIR-NEXT:          cir.call @_ZN3ObjC1Ec(%{{.*}}, %[[C]]){{.*}}
+// CIR-NEXT:        }
+// CIR-NEXT:        %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:        cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR-NEXT:        cir.cleanup.scope {
+// CIR-NEXT:          %[[G:.*]] = cir.call @_Z1gv()
+// CIR-NEXT:          cir.call @_Z3useRK4Pairi(%[[PAIR]], %[[G]])
+// CIR-NEXT:          cir.yield
+// CIR-NEXT:        } cleanup all {
+// CIR-NEXT:          cir.call @_ZN4PairD1Ev(%[[PAIR]])
+// CIR-NEXT:          cir.yield
+// CIR-NEXT:        }
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      } cleanup all {
+// CIR-NEXT:        %[[IS_COND:.*]] = cir.load
+// CIR-NEXT:        cir.if %[[IS_COND]] {
+// CIR-NEXT:          cir.call @_ZN3ObjD1Ev(%[[TMP]]){{.*}}
+// CIR-NEXT:        }
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup all {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN3ObjD1Ev(%[[A]])
+
+// LLVM-LABEL: define {{.*}} void @_Z9aggregateb(
+// LLVM:         call void @_ZN3ObjC1Ec(ptr {{.*}} %[[A:.*]], i8 {{.*}} 97)
+// LLVM:         invoke void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 116)
+// LLVM:         invoke void @_Z4copyRK3Obj(
+// LLVM:         invoke {{.*}} i32 @_Z1gv()
+// LLVM:         invoke void @_Z3useRK4Pairi(
+// LLVM:         call void @_ZN4PairD1Ev(
+// LLVM:         call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+
+// OGCG-LABEL: define {{.*}} void @_Z9aggregateb(
+// OGCG:         call void @_ZN3ObjC1Ec(ptr {{.*}} %[[A:.*]], i8 {{.*}} 97)
+// OGCG:         invoke void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 116)
+// OGCG:         invoke void @_Z4copyRK3Obj(
+// OGCG:         invoke {{.*}} i32 @_Z1gv()
+// OGCG:         invoke void @_Z3useRK4Pairi(
+// OGCG:         call void @_ZN4PairD1Ev(
+// OGCG:         call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+
+struct Agg {
+  Obj o;
+  int i;
+};
+
+void use_array(Agg *, int);
+
+void array_new(bool b) {
+  use_array(new Agg[2]{{Obj{'a'}, b ? h(Obj{'t'}) : 0}, {Obj{'c'}, 2}}, g());
+}
+
+// The member of the first element is deactivated with a flag, which keeps it
+// on the EH stack above the partial-array cleanup until the full-expression
+// ends.
+// CIR-LABEL: cir.func {{.*}} @_Z9array_newb(
+// CIR:         %[[RESULT:.*]] = cir.alloca "__new_result"
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Obj>
+// CIR:         %[[COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[ARRAY:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!void> -> !cir.ptr<!rec_Agg>
+// CIR:         %[[A:.*]] = cir.get_member %[[ARRAY]][0] {name = "o"}
+// CIR:         cir.call @_ZN3ObjC1Ec(%[[A]], %{{.*}})
+// CIR-NEXT:    %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:    cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.ternary
+// CIR:               cir.call @_ZN3ObjC1Ec(%[[TMP]], %{{.*}})
+// CIR:             %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:        cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:             %[[C:.*]] = cir.const #cir.int<99> : !s8i
+// CIR-NEXT:        cir.call @_ZN3ObjC1Ec(%{{.*}}, %[[C]])
+// CIR:             %[[NEW_ARRAY:.*]] = cir.load {{.*}} %[[RESULT]]
+// CIR-NEXT:        %[[G:.*]] = cir.call @_Z1gv()
+// CIR-NEXT:        cir.call @_Z9use_arrayP3Aggi(%[[NEW_ARRAY]], %[[G]])
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      } cleanup all {
+// CIR-NEXT:        %[[IS_COND:.*]] = cir.load {{.*}} %[[COND]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:        cir.if %[[IS_COND]] {
+// CIR-NEXT:          cir.call @_ZN3ObjD1Ev(%[[TMP]]){{.*}}
+// CIR-NEXT:        }
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup all {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN3ObjD1Ev(%[[A]]){{.*}}
+
+// LLVM-LABEL: define {{.*}} void @_Z9array_newb(
+// LLVM:         invoke void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 116)
+// LLVM:         invoke void @_ZN3ObjC1Ec(ptr {{.*}}, i8 {{.*}} 99)
+// LLVM:         invoke {{.*}} i32 @_Z1gv()
+// LLVM:         invoke void @_Z9use_arrayP3Aggi(
+// LLVM:         call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+
+// OGCG-LABEL: define {{.*}} void @_Z9array_newb(
+// OGCG:         invoke void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 116)
+// OGCG:         invoke void @_ZN3ObjC1Ec(ptr {{.*}}, i8 {{.*}} 99)
+// OGCG:         invoke {{.*}} i32 @_Z1gv()
+// OGCG:         invoke void @_Z9use_arrayP3Aggi(
+// OGCG:         call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+
+struct Foo {
+  Foo(int);
+};
+
+void use_new(Foo *, int);
+
+void new_expr(bool b) { use_new(new Foo(b ? h(Obj{'x'}) : 0), g()); }
+
+// Without exceptions there is no operator delete cleanup to deactivate.
+// CIR-LABEL: cir.func {{.*}} @_Z8new_exprb(
+// CIR:         %[[RESULT:.*]] = cir.alloca "__new_result"
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Obj>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[PTR:.*]] = cir.call @_Znwm(
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR-NEXT:      %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:      cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.ternary
+// CIR:             cir.call @_ZN3FooC1Ei(
+// CIR-NEXT:        %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:        cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR-NEXT:        %[[FOO:.*]] = cir.load {{.*}} %[[RESULT]]
+// CIR-NEXT:        %[[G:.*]] = cir.call @_Z1gv()
+// CIR-NEXT:        cir.call @_Z7use_newP3Fooi(%[[FOO]], %[[G]])
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      } cleanup all {
+// CIR-NEXT:        %[[IS_COND:.*]] = cir.load
+// CIR-NEXT:        cir.if %[[IS_COND]] {
+// CIR-NEXT:          cir.call @_ZN3ObjD1Ev(%[[TMP]]){{.*}}
+// CIR-NEXT:        }
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup eh {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZdlPvm(%[[PTR]], %{{.*}})
+
+// LLVM-LABEL: define {{.*}} void @_Z8new_exprb(
+// LLVM:         invoke void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 120)
+// LLVM:         invoke void @_ZN3FooC1Ei(
+// LLVM:         invoke {{.*}} i32 @_Z1gv()
+// LLVM:         invoke void @_Z7use_newP3Fooi(
+// LLVM:         call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+
+// OGCG-LABEL: define {{.*}} void @_Z8new_exprb(
+// OGCG:         invoke void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 120)
+// OGCG:         invoke void @_ZN3FooC1Ei(
+// OGCG:         invoke {{.*}} i32 @_Z1gv()
+// OGCG:         invoke void @_Z7use_newP3Fooi(
+// OGCG:         call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+
+void use_int(int, int);
+
+void init_capture(bool b) {
+  use_int([o = Obj{'a'}, i = b ? h(Obj{'t'}) : 0] { return i; }(), g());
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z12init_captureb(
+// CIR:         %[[LAMBDA:.*]] = cir.alloca "ref.tmp0"
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_Obj>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[O:.*]] = cir.get_member %[[LAMBDA]][0] {name = "o"}
+// CIR:         cir.call @_ZN3ObjC1Ec(%[[O]], %{{.*}})
+// CIR-NEXT:    %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:    cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.ternary
+// CIR:             cir.store {{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:        %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:        cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR-NEXT:        cir.cleanup.scope {
+// CIR-NEXT:          %[[I:.*]] = cir.call @_ZZ12init_capturebENK3$_{{[0-9]+}}clEv(%[[LAMBDA]])
+// CIR-NEXT:          %[[G:.*]] = cir.call @_Z1gv()
+// CIR-NEXT:          cir.call @_Z7use_intii(%[[I]], %[[G]])
+// CIR-NEXT:          cir.yield
+// CIR-NEXT:        } cleanup all {
+// CIR-NEXT:          cir.call @_ZZ12init_capturebEN3$_{{[0-9]+}}D1Ev(%[[LAMBDA]])
+// CIR-NEXT:          cir.yield
+// CIR-NEXT:        }
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      } cleanup all {
+// CIR-NEXT:        %[[IS_COND:.*]] = cir.load
+// CIR-NEXT:        cir.if %[[IS_COND]] {
+// CIR-NEXT:          cir.call @_ZN3ObjD1Ev(%[[TMP]]){{.*}}
+// CIR-NEXT:        }
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup all {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN3ObjD1Ev(%[[O]])
+
+// LLVM-LABEL: define {{.*}} void @_Z12init_captureb(
+// LLVM:         invoke void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 116)
+// LLVM:         invoke {{.*}} i32 @"_ZZ12init_capturebENK3$_{{[0-9]+}}clEv"(
+// LLVM:         invoke {{.*}} i32 @_Z1gv()
+// LLVM:         invoke void @_Z7use_intii(
+// LLVM:         call void @"_ZZ12init_capturebEN3$_{{[0-9]+}}D1Ev"(
+// LLVM:         call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM-LABEL: define internal {{.*}} @"_ZZ12init_capturebENK3$_{{[0-9]+}}clEv"(
+
+// OGCG-LABEL: define {{.*}} void @_Z12init_captureb(
+// OGCG:         invoke void @_ZN3ObjC1Ec(ptr {{.*}} %[[TMP:.*]], i8 {{.*}} 116)
+// OGCG:         invoke {{.*}} i32 @"_ZZ12init_capturebENK3$_{{[0-9]+}}clEv"(
+// OGCG:         invoke {{.*}} i32 @_Z1gv()
+// OGCG:         invoke void @_Z7use_intii(
+// OGCG:         call void @"_ZZ12init_capturebEN3$_{{[0-9]+}}D1Ev"(
+// OGCG:         call void @_ZN3ObjD1Ev(ptr {{.*}} %[[TMP]])
+// OGCG-LABEL: define internal {{.*}} @"_ZZ12init_capturebENK3$_{{[0-9]+}}clEv"(

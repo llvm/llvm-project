@@ -1,4 +1,4 @@
-add_custom_target(libc-support-threads-tests)
+add_libc_testsuite(libc-support-threads-tests PARENT libc-support-tests)
 
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
   add_libc_test(

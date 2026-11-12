@@ -196,18 +196,8 @@ inline RT_API_ATTRS T Nearest(T x, bool positive) {
   }
 }
 
-// Exponentiation operator for (Real ** Integer) cases (10.1.5.2.1).
 template <typename BTy, typename ETy>
-RT_API_ATTRS BTy FPowI(BTy base, ETy exp) {
-  if (exp == ETy{0})
-    return BTy{1};
-  bool isNegativePower{exp < ETy{0}};
-  bool isMinPower{exp == common::numeric_limits<ETy>::min()};
-  if (isMinPower) {
-    exp = common::numeric_limits<ETy>::max();
-  } else if (isNegativePower) {
-    exp = -exp;
-  }
+RT_API_ATTRS BTy FPowIPositive(BTy base, ETy exp, bool isMinPower) {
   BTy result{1};
   BTy origBase{base};
   while (true) {
@@ -223,8 +213,27 @@ RT_API_ATTRS BTy FPowI(BTy base, ETy exp) {
   if (isMinPower) {
     result *= origBase;
   }
+  return result;
+}
+
+// Exponentiation operator for (Real ** Integer) cases (10.1.5.2.1).
+template <typename BTy, typename ETy>
+RT_API_ATTRS BTy FPowI(BTy base, ETy exp) {
+  if (exp == ETy{0})
+    return BTy{1};
+  bool isNegativePower{exp < ETy{0}};
+  bool isMinPower{exp == common::numeric_limits<ETy>::min()};
+  if (isMinPower) {
+    exp = common::numeric_limits<ETy>::max();
+  } else if (isNegativePower) {
+    exp = -exp;
+  }
+  BTy result{FPowIPositive(base, exp, isMinPower)};
   if (isNegativePower) {
     result = BTy{1} / result;
+    if (result == BTy{0} && base != BTy{0}) {
+      result = FPowIPositive(BTy{1} / base, exp, isMinPower);
+    }
   }
   return result;
 }
