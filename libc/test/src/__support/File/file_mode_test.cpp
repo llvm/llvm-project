@@ -234,30 +234,40 @@ TEST(LlvmLibcFileModeTest, TextFlagIsAccepted) {
   constexpr FileMode read_text("rt");
   EXPECT_TRUE(read_text.is_valid());
   EXPECT_TRUE(read_text.is_read());
+  EXPECT_TRUE(read_text.is_text_format());
   EXPECT_FALSE(read_text.is_binary_format());
+
+  constexpr FileMode read_plain("r");
+  EXPECT_FALSE(read_plain.is_text_format());
+  EXPECT_FALSE(read_plain == read_text);
 
   constexpr FileMode write_text("wt");
   EXPECT_TRUE(write_text.is_valid());
   EXPECT_TRUE(write_text.is_write());
+  EXPECT_TRUE(write_text.is_text_format());
 
   constexpr FileMode append_text("at");
   EXPECT_TRUE(append_text.is_valid());
   EXPECT_TRUE(append_text.is_append());
+  EXPECT_TRUE(append_text.is_text_format());
 
   constexpr FileMode update_text("r+t");
   EXPECT_TRUE(update_text.is_valid());
   EXPECT_TRUE(update_text.is_read());
   EXPECT_TRUE(update_text.is_update());
+  EXPECT_TRUE(update_text.is_text_format());
 }
 
 TEST(LlvmLibcFileModeTest, TextFlagDoesNotDependOnOrder) {
   constexpr FileMode text_then_binary("rtb");
   EXPECT_TRUE(text_then_binary.is_valid());
   EXPECT_TRUE(text_then_binary.is_binary_format());
+  EXPECT_TRUE(text_then_binary.is_text_format());
 
   constexpr FileMode binary_then_text("rbt");
   EXPECT_TRUE(binary_then_text.is_valid());
   EXPECT_TRUE(binary_then_text.is_binary_format());
+  EXPECT_TRUE(binary_then_text.is_text_format());
 
   constexpr FileMode text_with_cloexec("rte");
   EXPECT_TRUE(text_with_cloexec.is_valid());

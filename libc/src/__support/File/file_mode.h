@@ -69,6 +69,7 @@ public:
       case 't':
         // Text mode is the default on Linux. On Windows it asks for newline
         // translation, so programs written for it pass "rt".
+        file_mode_ |= static_cast<Mode>(Extension::TEXT);
         break;
       default:
         unknown_character = true;
@@ -123,6 +124,10 @@ public:
     return (file_mode_ & static_cast<Mode>(CreateType::EXCLUSIVE)) != 0;
   }
 
+  constexpr bool is_text_format() const {
+    return (file_mode_ & static_cast<Mode>(Extension::TEXT)) != 0;
+  }
+
   constexpr bool is_close_on_exec() const {
     return (file_mode_ & static_cast<Mode>(Extension::CLOSE_ON_EXEC)) != 0;
   }
@@ -157,9 +162,11 @@ private:
     EXCLUSIVE = 0x100,
   };
 
-  // POSIX extensions to the ISO C file modes.
+  // POSIX extensions to the ISO C file modes, and the 't' of the Windows
+  // runtime, which asks for text mode explicitly.
   enum class Extension : Mode {
     CLOSE_ON_EXEC = 0x1000,
+    TEXT = 0x2000,
   };
 
   // This property tracks the mode for the particular file instance (i.e
