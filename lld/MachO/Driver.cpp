@@ -2104,6 +2104,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       (config->emitChainedFixups && !config->noFixupChainsIgnored) ||
       args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
+  config->objcMethodListMetadataDiscovery =
+      args.hasArg(OPT_objc_method_list_metadata_discovery);
+  config->enableObjCProtocolRelativeMethodLists =
+      args.hasArg(OPT_enable_objc_protocol_relative_method_lists);
+  if (config->enableObjCProtocolRelativeMethodLists &&
+      !config->objcMethodListMetadataDiscovery)
+    error("--enable-objc-protocol-relative-method-lists requires "
+          "--objc-method-list-metadata-discovery");
   config->icfLevel = getICFLevel(args);
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
@@ -2601,6 +2609,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       else
         objc::mergeCategories();
     }
+
+    // After liveness and category merging (which synthesizes method lists),
+    // before literal folding and layout.
+    objc::collectMethodLists();
 
     computeColdness();
 

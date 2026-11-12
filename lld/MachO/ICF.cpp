@@ -13,6 +13,7 @@
 #include "InputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -697,6 +698,14 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
+  // Converted method lists live in a synthetic output section, not in
+  // inputSections. They remain distinct relocation targets: treating their
+  // uninitialized classes as equal can fold accessors to different lists.
+  if (in.objcMethList)
+    for (ConcatInputSection *isec : in.objcMethList->getInputs()) {
+      isec->icfEqClass[0] = ++icfUniqueID;
+      isec->icfEqClass[1] = isec->icfEqClass[0];
+    }
   parallelForEach(foldable, [](ConcatInputSection *isec) {
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     uint64_t hash;
