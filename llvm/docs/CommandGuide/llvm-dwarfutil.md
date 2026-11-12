@@ -98,9 +98,11 @@ following set of commands:
 - `bfd`: zero for all addresses and [1,1] for DWARF v4 (or less) address ranges and exec.
 - `maxpc`: -1 for all addresses and -2 for DWARF v4 (or less) address ranges.
 - `universal`: both `bfd` and `maxpc`.
-- `exec`: match with address ranges of executable sections.
+- `exec`: match functions to executable and variables to allocated sections.
 
-The value `universal` is used by default.
+The value `universal` is used by default. TLS variables are conservatively
+retained because TLS offsets do not reliably indicate whether a variable
+is live.
 :::
 
 :::{option} --verbose
