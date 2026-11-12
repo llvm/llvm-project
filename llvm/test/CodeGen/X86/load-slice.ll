@@ -26,7 +26,7 @@
 ; Add high slice: out[out_start].imm, this is base + 4.
 ; STRESS-NEXT: vaddss 4([[BASE]]), [[OUT_Imm]], [[RES_Imm:%xmm[0-9]+]]
 ; Swap Imm and Real.
-; STRESS-NEXT: vinsertps $16, [[RES_Imm]], [[RES_Real]], [[RES_Vec:%xmm[0-9]+]]
+; STRESS-NEXT: vinsertps $28, [[RES_Imm]], [[RES_Real]], [[RES_Vec:%xmm[0-9]+]]
 ; Put the results back into out[out_start].
 ; STRESS-NEXT: vmovlps [[RES_Vec]], ([[BASE]])
 ;
@@ -41,7 +41,7 @@
 ; Add high slice: out[out_start].imm, this is base + 4.
 ; REGULAR-NEXT: vaddss 4([[BASE]]), [[OUT_Imm]], [[RES_Imm:%xmm[0-9]+]]
 ; Swap Imm and Real.
-; REGULAR-NEXT: vinsertps $16, [[RES_Imm]], [[RES_Real]], [[RES_Vec:%xmm[0-9]+]]
+; REGULAR-NEXT: vinsertps $28, [[RES_Imm]], [[RES_Real]], [[RES_Vec:%xmm[0-9]+]]
 ; Put the results back into out[out_start].
 ; REGULAR-NEXT: vmovlps [[RES_Vec]], ([[BASE]])
 define void @t1(ptr nocapture %out, i64 %out_start) {
