@@ -1159,6 +1159,13 @@ Similarly, a few transformations are performed during deserialization:
 *   `OpType*` instructions will be converted into proper `mlir::Type`s.
 *   `OpConstant*` instructions are materialized as `spirv.Constant` at each use
     site.
+*   `OpConstantNull` instructions of array and literal struct types are
+    deserialized into `spirv.Constant` ops. The value is an array attribute
+    with one null constituent per element or member, the same representation
+    `OpConstantComposite` instructions are deserialized into. `OpConstantNull`
+    instructions of pointer or identified struct types, and
+    `OpConstantComposite` instructions with `OpUndef` constituents, cannot be
+    represented as `spirv.Constant` and are rejected.
 *   `OpVariable` instructions will be converted to `spirv.GlobalVariable` ops if
     in module-level; otherwise they will be converted into `spirv.Variable` ops.
 *   Every use of a module-level `OpVariable` instruction will materialize a
