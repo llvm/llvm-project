@@ -2678,17 +2678,25 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         }
       }
 
-      // Note if a variant uses the statement after the pragma.
-      if (Tok.isNot(tok::r_paren)) {
-        OpenMPDirectiveKind DKind = parseOpenMPDirectiveKind(*this);
-        if (DKind != OMPD_unknown &&
-            getDirectiveAssociation(DKind) != Association::None)
-          AnyVariantTakesStmt = true;
-      }
+      // Note if a variant uses the statement after the pragma. 'ordered' uses
+      // it unless it has a 'depend' or 'doacross' clause.
+      OpenMPDirectiveKind VariantKind =
+          Tok.is(tok::r_paren) ? OMPD_unknown : parseOpenMPDirectiveKind(*this);
+      bool TakesStmt =
+          VariantKind == OMPD_ordered_standalone ||
+          (VariantKind != OMPD_unknown &&
+           getDirectiveAssociation(VariantKind) != Association::None);
 
       // Skip Directive for now. We will parse directive in the second iteration
       int paren = 0;
       while (Tok.isNot(tok::r_paren) || paren != 0) {
+        if (VariantKind == OMPD_ordered_standalone && paren == 0 &&
+            Tok.is(tok::identifier)) {
+          OpenMPClauseKind OrderedCKind =
+              getOpenMPClauseKind(PP.getSpelling(Tok));
+          if (OrderedCKind == OMPC_depend || OrderedCKind == OMPC_doacross)
+            TakesStmt = false;
+        }
         if (Tok.is(tok::l_paren))
           paren++;
         if (Tok.is(tok::r_paren))
@@ -2701,6 +2709,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         }
         ConsumeAnyToken();
       }
+      AnyVariantTakesStmt |= TakesStmt;
       // Parse ')'
       if (Tok.is(tok::r_paren))
         T.consumeClose();

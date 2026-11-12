@@ -333,17 +333,19 @@ void OMPLoopDirective::setFinalsConditions(ArrayRef<Expr *> A) {
 
 OMPMetaDirective *OMPMetaDirective::allocate(const ASTContext &C,
                                              unsigned NumVariants,
+                                             unsigned NumConstructTraits,
                                              SourceLocation StartLoc,
                                              SourceLocation EndLoc) {
-  void *Mem =
-      C.Allocate(sizeof(OMPMetaDirective) + getTraitInfosOffset(NumVariants) +
-                     NumVariants * sizeof(OMPTraitInfo *),
-                 alignof(OMPMetaDirective));
+  void *Mem = C.Allocate(
+      sizeof(OMPMetaDirective) + getConstructTraitsOffset(NumVariants) +
+          NumConstructTraits * sizeof(llvm::omp::TraitProperty),
+      alignof(OMPMetaDirective));
   auto *Data = OMPChildren::CreateEmpty(
       reinterpret_cast<OMPMetaDirective *>(Mem) + 1, /*NumClauses=*/0,
       /*HasAssociatedStmt=*/false, 2 * NumVariants);
   auto *Dir = new (Mem) OMPMetaDirective(StartLoc, EndLoc);
   Dir->Data = Data;
+  Dir->NumConstructTraits = NumConstructTraits;
   return Dir;
 }
 
@@ -357,30 +359,23 @@ OMPMetaDirective *OMPMetaDirective::Create(
          Variants.size() == TraitInfos.size() &&
          Variants.size() == DirectiveThenStmt.size() &&
          "Expected one condition, trait info and flag per variant");
-  OMPMetaDirective *Dir = allocate(C, Variants.size(), StartLoc, EndLoc);
+  OMPMetaDirective *Dir =
+      allocate(C, Variants.size(), ConstructTraits.size(), StartLoc, EndLoc);
   llvm::copy(Variants, Dir->getTrailingVariants().begin());
   llvm::copy(Conditions, Dir->getTrailingConditions().begin());
   llvm::copy(TraitInfos, Dir->getTrailingTraitInfos().begin());
+  llvm::copy(DirectiveThenStmt, Dir->getTrailingDirectiveThenStmt().begin());
+  llvm::copy(ConstructTraits, Dir->getTrailingConstructTraits().begin());
   Dir->setHasImplicitOtherwise(HasImplicitOtherwise);
-  Dir->setConstructTraits(C, ConstructTraits);
-  Dir->setDirectiveThenStmt(C, DirectiveThenStmt);
   return Dir;
-}
-
-void OMPMetaDirective::setDirectiveThenStmt(const ASTContext &C,
-                                            ArrayRef<bool> Flags) {
-  DirectiveThenStmt = Flags.copy(C);
-}
-
-void OMPMetaDirective::setConstructTraits(
-    const ASTContext &C, ArrayRef<llvm::omp::TraitProperty> Traits) {
-  ConstructTraits = Traits.copy(C);
 }
 
 OMPMetaDirective *OMPMetaDirective::CreateEmpty(const ASTContext &C,
                                                 unsigned NumVariants,
+                                                unsigned NumConstructTraits,
                                                 EmptyShell) {
-  return allocate(C, NumVariants, SourceLocation(), SourceLocation());
+  return allocate(C, NumVariants, NumConstructTraits, SourceLocation(),
+                  SourceLocation());
 }
 
 OMPParallelDirective *OMPParallelDirective::Create(

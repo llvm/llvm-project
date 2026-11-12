@@ -2541,20 +2541,16 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
 
 void ASTStmtReader::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
-  // The NumVariants field was read in ReadStmtFromStream.
-  Record.skipInts(1);
+  // NumVariants and NumConstructTraits were read in ReadStmtFromStream.
+  Record.skipInts(2);
   VisitOMPExecutableDirective(D);
   D->setHasImplicitOtherwise(Record.readBool());
   for (OMPTraitInfo *&TI : D->getTrailingTraitInfos())
     TI = Record.readOMPTraitInfo();
-  SmallVector<llvm::omp::TraitProperty, 4> ConstructTraits(Record.readInt());
-  for (llvm::omp::TraitProperty &Trait : ConstructTraits)
+  for (llvm::omp::TraitProperty &Trait : D->getTrailingConstructTraits())
     Trait = llvm::omp::TraitProperty(Record.readInt());
-  D->setConstructTraits(Record.getContext(), ConstructTraits);
-  SmallVector<bool, 4> DirectiveThenStmt(D->getNumVariants());
-  for (bool &Flag : DirectiveThenStmt)
+  for (bool &Flag : D->getTrailingDirectiveThenStmt())
     Flag = Record.readBool();
-  D->setDirectiveThenStmt(Record.getContext(), DirectiveThenStmt);
 }
 
 void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {
@@ -3739,7 +3735,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_OMP_META_DIRECTIVE:
       S = OMPMetaDirective::CreateEmpty(
-          Context, Record[ASTStmtReader::NumStmtFields], Empty);
+          Context, Record[ASTStmtReader::NumStmtFields],
+          Record[ASTStmtReader::NumStmtFields + 1], Empty);
       break;
 
     case STMT_OMP_PARALLEL_DIRECTIVE:
