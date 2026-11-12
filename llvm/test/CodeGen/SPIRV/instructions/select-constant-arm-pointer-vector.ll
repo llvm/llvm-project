@@ -1,6 +1,5 @@
-; A constant arm of an aggregate select or PHI whose pointer of known pointee
-; type sits in a vector member: the vector is rebuilt as an insertelement chain,
-; which casts each pointer to the result's element type.
+; A pointer in a vector member of a constant arm is bitcast to the vector's
+; element type; the vector and struct are rebuilt with OpCompositeInsert.
 
 ; RUN: llc -O0 --spirv-ext=+SPV_INTEL_masked_gather_scatter -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_INTEL_masked_gather_scatter -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}

@@ -1,5 +1,5 @@
-; A constant arm of an aggregate select or PHI whose pointer sits in a nested
-; aggregate member: the nested member is rebuilt as its own insertvalue chain.
+; A pointer in a nested struct of a constant arm: inner and outer structs are
+; rebuilt with OpCompositeInsert in the result's types.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}

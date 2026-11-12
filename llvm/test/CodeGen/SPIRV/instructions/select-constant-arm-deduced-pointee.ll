@@ -1,9 +1,6 @@
-; A constant arm of an aggregate select or PHI holds a pointer whose pointee
-; type is known (i32 for @g), so the constant is a different SPIR-V type than
-; the result. The arm is rebuilt with insertvalue, which casts each member to
-; the result's member type, so all arms have the result's type.
-; A PHI arm is rebuilt in its incoming block, once even when a switch lists
-; that block twice. An arm with only null pointers is kept as it is.
+; A constant select/PHI arm holding @g (i32 pointee) is rebuilt with
+; OpCompositeInsert in the result type. A PHI arm is built once in the entry
+; block, even for duplicate switch edges; a null-only arm stays a constant.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}

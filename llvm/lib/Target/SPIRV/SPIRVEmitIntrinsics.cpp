@@ -266,9 +266,7 @@ class SPIRVEmitIntrinsicsImpl
   Value *lowerUndefOrPoison(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
   void preprocessUndefsAndPoisons(IRBuilder<> &B);
   void insertCompositeAggregateArms(Instruction *I, IRBuilder<> &B);
-  bool hasDeducedPointee(Value *V);
-  Value *buildInsertValueChain(Constant *C, BasicBlock::iterator InsertPt);
-  void insertPointerConstantArms(Function &Func);
+  Value *lowerCompositeMember(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
   void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
@@ -1811,63 +1809,21 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
   }
 }
 
-// True for a constant aggregate whose deduced type differs from its LLVM type,
-// i.e. one with a pointer member of known pointee type.
-bool SPIRVEmitIntrinsicsImpl::hasDeducedPointee(Value *V) {
-  auto *C = dyn_cast<ConstantAggregate>(V);
-  return C && deduceNestedTypeHelper(C, false) != C->getType();
-}
-
-// A nested aggregate or vector member with such pointers gets its own chain,
-// a vector one of insertelement.
-Value *
-SPIRVEmitIntrinsicsImpl::buildInsertValueChain(Constant *C,
-                                               BasicBlock::iterator InsertPt) {
-  Value *Composite = PoisonValue::get(C->getType());
-  bool IsVector = C->getType()->isVectorTy();
-  Type *I32Ty = Type::getInt32Ty(C->getContext());
-  for (unsigned Idx = 0, E = C->getNumOperands(); Idx != E; ++Idx) {
-    Value *Member = C->getOperand(Idx);
-    if (hasDeducedPointee(Member))
-      Member = buildInsertValueChain(cast<Constant>(Member), InsertPt);
-    if (IsVector)
-      Composite = InsertElementInst::Create(
-          Composite, Member, ConstantInt::get(I32Ty, Idx), "", InsertPt);
-    else
-      Composite = InsertValueInst::Create(Composite, Member, Idx, "", InsertPt);
-  }
-  return Composite;
-}
-
-// Rebuild each constant arm of an aggregate PHI/select/freeze whose pointer
-// members have known pointee types as an insertvalue chain. Such a constant is
-// a different SPIR-V type than the result; insertvalue casts each member to the
-// result's member type.
-void SPIRVEmitIntrinsicsImpl::insertPointerConstantArms(Function &Func) {
-  for (Instruction &I : instructions(Func)) {
-    if (!isAggregateValueIdInstr(I))
-      continue;
-    auto *Phi = dyn_cast<PHINode>(&I);
-    // A switch can list an incoming block twice, and both entries need the
-    // same value, so build one chain per block.
-    SmallDenseMap<BasicBlock *, Value *> PhiArms;
-    for (Use &U : I.operands()) {
-      if (!hasDeducedPointee(U.get()))
-        continue;
-      if (Value *Arm =
-              Phi ? PhiArms.lookup(Phi->getIncomingBlock(U)) : nullptr) {
-        U.set(Arm);
-        continue;
-      }
-      Instruction *InsertPt =
-          Phi ? Phi->getIncomingBlock(U)->getTerminator() : &I;
-      Value *Composite = buildInsertValueChain(cast<Constant>(U.get()),
-                                               InsertPt->getIterator());
-      U.set(Composite);
-      if (Phi)
-        PhiArms[Phi->getIncomingBlock(U)] = Composite;
-    }
-  }
+// A member of a constant aggregate as it is lowered. addrspacecast(null)
+// becomes null in the target address space, so that it gets the correct pointer
+// type. Undef or poison nested in a constant aggregate is not a direct
+// instruction operand, so preprocessUndefsAndPoisons() misses it; an unlowered
+// aggregate one would reach IRTranslator as an untranslatable operand.
+Value *SPIRVEmitIntrinsicsImpl::lowerCompositeMember(Value *Op, IRBuilder<> &B,
+                                                     bool HasPoisonExt) {
+  if (auto *CE = dyn_cast<ConstantExpr>(Op);
+      CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
+      isa<ConstantPointerNull>(CE->getOperand(0)))
+    return ConstantPointerNull::get(cast<PointerType>(CE->getType()));
+  if (isa<UndefValue>(Op))
+    if (Value *Repl = lowerUndefOrPoison(Op, B, HasPoisonExt))
+      return Repl;
+  return Op;
 }
 
 void SPIRVEmitIntrinsicsImpl::preprocessCompositeConstants(IRBuilder<> &B) {
@@ -1910,37 +1866,56 @@ void SPIRVEmitIntrinsicsImpl::preprocessCompositeConstants(IRBuilder<> &B) {
                 : B.SetInsertPoint(I);
           BPrepared = true;
         };
+        PrepareInsert();
+        Type *DeducedTy = deduceNestedTypeHelper(AggrConst, false);
+        // A pointer member of known pointee makes the deduced type differ from
+        // the type a user other than an intrinsic or extractvalue expects.
+        // Rebuild such a constant as an insertvalue (insertelement for a
+        // vector) chain, which casts each member to the LLVM type's member
+        // type.
+        if (DeducedTy != AggrConst->getType() &&
+            !isa<IntrinsicInst, ExtractValueInst>(I)) {
+          bool IsVector = AggrConst->getType()->isVectorTy();
+          Value *Composite = PoisonValue::get(AggrConst->getType());
+          for (unsigned Idx = 0, E = AggrConst->getNumOperands(); Idx != E;
+               ++Idx) {
+            Value *Member = AggrConst->getOperand(Idx);
+            // Lowered undef/poison is an i32 placeholder, so it is set after
+            // Create, which checks the types.
+            Value *LoweredBase =
+                lowerCompositeMember(Composite, B, HasPoisonExt);
+            Value *LoweredMember =
+                lowerCompositeMember(Member, B, HasPoisonExt);
+            Instruction *Insert;
+            if (IsVector)
+              Insert = InsertElementInst::Create(
+                  Composite, Member, B.getInt32(Idx), "", B.GetInsertPoint());
+            else
+              Insert = InsertValueInst::Create(Composite, Member, Idx, "",
+                                               B.GetInsertPoint());
+            Insert->setOperand(0, LoweredBase);
+            Insert->setOperand(1, LoweredMember);
+            Worklist.push(Insert);
+            Composite = Insert;
+          }
+          I->replaceUsesOfWith(Op, Composite);
+          KeepInst = true;
+          continue;
+        }
         SmallVector<Value *> Args;
         if (auto *COp = dyn_cast<ConstantDataSequential>(Op))
           for (unsigned i = 0; i < COp->getNumElements(); ++i)
             Args.push_back(COp->getElementAsConstant(i));
         else
-          for (Value *Op : AggrConst->operands()) {
-            // Simplify addrspacecast(null) to null in the target address space
-            // so that null pointers get the correct pointer type when lowered.
-            if (auto *CE = dyn_cast<ConstantExpr>(Op);
-                CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
-                isa<ConstantPointerNull>(CE->getOperand(0)))
-              Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
-            // Undef or poison nested in a constant aggregate is not a direct
-            // instruction operand, so preprocessUndefsAndPoisons() misses it.
-            // An unlowered aggregate one would reach IRTranslator as an
-            // untranslatable spv_const_composite operand.
-            if (isa<UndefValue>(Op)) {
-              PrepareInsert();
-              if (Value *Repl = lowerUndefOrPoison(Op, B, HasPoisonExt))
-                Op = Repl;
-            }
-            Args.push_back(Op);
-          }
-        PrepareInsert();
+          for (Value *Op : AggrConst->operands())
+            Args.push_back(lowerCompositeMember(Op, B, HasPoisonExt));
         auto *CI = B.CreateIntrinsicWithoutFolding(
             Intrinsic::spv_const_composite, {ResTy}, {Args});
         Worklist.push(CI);
         I->replaceUsesOfWith(Op, CI);
         KeepInst = true;
         AggrConsts[CI] = AggrConst;
-        AggrConstTypes[CI] = deduceNestedTypeHelper(AggrConst, false);
+        AggrConstTypes[CI] = DeducedTy;
       }
     }
     if (!KeepInst)
@@ -3957,7 +3932,6 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     processGlobalValue(GV, B);
 
   reconstructAggregateReturns(Func, B);
-  insertPointerConstantArms(Func);
   preprocessUndefsAndPoisons(B);
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
