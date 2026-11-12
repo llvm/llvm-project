@@ -686,6 +686,13 @@ public:
   MCFragment &getDummyFragment() { return DummyFragment; }
 
   FragList *curFragList() const { return CurFragList; }
+
+  // Return the highest subsection number in use. Subsections is sorted, so
+  // this is also the last subsection in layout order. After layout, all
+  // subsections are merged into subsection 0.
+  unsigned getLastSubsection() const {
+    return Subsections.empty() ? 0 : Subsections.back().first;
+  }
   iterator begin() const { return iterator(CurFragList->Head); }
   iterator end() const { return {}; }
 
