@@ -204,6 +204,12 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       continue;
 
     default:
+      // R_SPARC_OLO10 keeps a second addend in the upper 24 bits of its type
+      // field, which relocate adds after taking the low 10 bits of S + A.
+      if ((type & 0xff) == R_SPARC_OLO10) {
+        expr = R_ABS;
+        break;
+      }
       Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
                << "unknown relocation (" << type.v << ") against symbol "
                << &sym;
@@ -215,6 +221,15 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
 void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
                        uint64_t val) const {
+  if ((rel.type & 0xff) == R_SPARC_OLO10) {
+    // V-simm13: the low 10 bits of S + A, plus the second addend.
+    val = (val & 0x3ff) + SignExtend64<24>(rel.type >> 8);
+    Relocation olo10 = rel;
+    olo10.type = R_SPARC_OLO10;
+    checkInt(ctx, loc, val, 13, olo10);
+    write32be(loc, (read32be(loc) & ~0x00001fff) | (val & 0x00001fff));
+    return;
+  }
   switch (rel.type) {
   case R_SPARC_8:
     // V-byte8
