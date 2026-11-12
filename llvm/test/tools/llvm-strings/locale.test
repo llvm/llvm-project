@@ -16,7 +16,7 @@ RUN: %if locale-en_US.UTF-8 %{ env LANG=en_US.UTF-8 \
 RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-UTF-8 %s %} \
 RUN: %else %{ echo en_US.UTF-8 locale not supported, skipping test %}
 
-RUN: %if locale-ja_JP.SJIS && !system-darwin %{ env LANG=ja_JP.SJIS \
+RUN: %if locale-ja_JP.SJIS %{ env LANG=ja_JP.SJIS \
 RUN: llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-SJIS %s %} \
 RUN: %else %{ echo ja_JP.SJIS locale not supported, skipping test %}
 
