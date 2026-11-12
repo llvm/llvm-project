@@ -404,6 +404,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 
   // Create the loop to register all the entries.
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", RegGlobalsFn));
+  Builder.disableGEPCanonicalization();
   auto *EntryBB = BasicBlock::Create(C, "while.entry", RegGlobalsFn);
   auto *IfKindBB = BasicBlock::Create(C, "if.kind", RegGlobalsFn);
   auto *IfThenBB = BasicBlock::Create(C, "if.then", RegGlobalsFn);

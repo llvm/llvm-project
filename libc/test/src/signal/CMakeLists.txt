@@ -133,6 +133,26 @@ add_libc_test(
 )
 
 add_libc_test(
+  sigwait_test
+  SUITE
+    libc-signal-tests
+  SRCS
+    sigwait_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_time_macros
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_itimerval
+    libc.src.signal.raise
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.signal.sigwait
+    libc.src.sys.time.setitimer
+)
+
+add_libc_test(
   sigwaitinfo_test
   SUITE
     libc-signal-tests

@@ -86,7 +86,8 @@ inline std::string mangleArrayLiteral(
 
 inline std::string mangleArrayLiteral(
     mlir::Type eleTy,
-    const Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived> &x) {
+    const Fortran::evaluate::Constant<
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>> &x) {
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
                             x.shape(), Fortran::common::TypeCategory::Derived,
                             /*kind=*/0, /*charLen=*/-1,
