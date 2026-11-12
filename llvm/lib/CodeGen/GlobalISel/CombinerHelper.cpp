@@ -2256,6 +2256,57 @@ void CombinerHelper::applyCombineShlOfExtend(
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchNarrowShlToHalf(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const {
+  // (shl x, C) -> (zext (shl (trunc x), C)) when the result fits in the low
+  // half, i.e. x has at least Half + C known leading zeros.
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(Dst);
+  if (!Ty.isScalar())
+    return false;
+  unsigned BitWidth = Ty.getSizeInBits();
+  if (BitWidth % 2 != 0)
+    return false;
+  unsigned Half = BitWidth / 2;
+
+  auto MaybeAmt =
+      getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!MaybeAmt)
+    return false;
+  uint64_t ShiftAmt = MaybeAmt->Value.getZExtValue();
+  if (ShiftAmt >= Half)
+    return false;
+
+  LLT HalfTy = Ty.changeElementSize(Half);
+  const auto &TLI = getTargetLowering();
+  if (!TLI.isDesirableToPullExtFromShl(MI))
+    return false;
+  LLVMContext &Ctx = MI.getMF()->getFunction().getContext();
+  if (!TLI.isTypeDesirableForOp(ISD::SHL,
+                                getApproximateEVTForLLT(HalfTy, Ctx)) ||
+      !TLI.isTruncateFree(Ty, HalfTy, Ctx) || !TLI.isZExtFree(HalfTy, Ty, Ctx))
+    return false;
+
+  LLT ShiftAmtTy = TLI.getPreferredShiftAmountTy(HalfTy);
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SHL, {HalfTy, ShiftAmtTy}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {HalfTy, Ty}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {Ty, HalfTy}}) ||
+      !isConstantLegalOrBeforeLegalizer(ShiftAmtTy))
+    return false;
+
+  if (VT->getKnownBits(Src).countMinLeadingZeros() < Half + ShiftAmt)
+    return false;
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    auto Narrow = B.buildTrunc(HalfTy, Src);
+    auto Amt = B.buildConstant(ShiftAmtTy, ShiftAmt);
+    auto Shl = B.buildShl(HalfTy, Narrow, Amt, MI.getFlags());
+    B.buildZExt(Dst, Shl);
+  };
+  return true;
+}
+
 static Register peekThroughBitcast(Register Reg,
                                    const MachineRegisterInfo &MRI) {
   while (mi_match(Reg, MRI, m_GBitcast(m_Reg(Reg))))

@@ -3214,8 +3214,15 @@ def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
   sext_inreg_to_zext_inreg, sdiv_to_unsigned, srem_to_unsigned]>;
 
+def narrow_shl_to_half : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_SHL $dst, $src, $amt):$root,
+         [{ return Helper.matchNarrowShlToHalf(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,
-                                               narrow_binop_feeding_and]>;
+                                               narrow_binop_feeding_and,
+                                               narrow_shl_to_half]>;
 
 def phi_combines : GICombineGroup<[extend_through_phis]>;
 
