@@ -144,6 +144,13 @@ public:
   /// \param FilePath The path at which the content will be mapped.
   /// \param Content A buffer of the file's content.
   virtual void mapVirtualFile(StringRef FilePath, StringRef Content) = 0;
+
+  /// Set a hook that runs around the processing of each compile command.
+  ///
+  /// See \c InvocationWrapper. Implementations must forward the wrapper to
+  /// every \c ClangTool they use (or otherwise honor it). Depending on the
+  /// executor, the wrapper may be called concurrently from multiple threads.
+  virtual void setInvocationWrapper(InvocationWrapper Wrapper) = 0;
 };
 
 /// Interface for factories that create specific executors. This is also
