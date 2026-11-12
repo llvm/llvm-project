@@ -252,9 +252,7 @@ Error SPIRVExtensionsParser::parse(StringRef ArgValue, ExtensionSet &Enabled,
 
 Error SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
                                              ExtensionSet &AllowedExtensions) {
-  SmallVector<StringRef, 10> Tokens;
-  for (const auto &Ext : ExtNames)
-    Tokens.emplace_back(Ext);
+  SmallVector<StringRef, 10> Tokens(ExtNames);
 
   ExtensionSet Disabled;
 
