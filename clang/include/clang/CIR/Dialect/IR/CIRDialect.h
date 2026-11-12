@@ -115,6 +115,15 @@ namespace cir {
 /// its allocated type.  Addressing has to keep using \p addr, whose type and
 /// address space may differ from the alloca's own result.
 AllocaOp getUnderlyingAlloca(mlir::Value addr);
+
+/// Whether the C++ vtables of \p module use the relative layout.
+bool usesRelativeVTables(mlir::ModuleOp mod);
+
+/// The size in bytes of an entry of a C++ vtable in \p module. Operations
+/// address vtable entries by index, so this is the one place that relates the
+/// index of an entry to its distance from the address point.
+uint64_t getVTableEntrySize(mlir::ModuleOp mod,
+                            const mlir::DataLayout &dataLayout);
 } // namespace cir
 
 #endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_H

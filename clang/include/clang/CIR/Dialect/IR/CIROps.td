@@ -491,17 +491,11 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
     cast operation. It is an optional `#cir.dyn_cast_info` attribute that is
     only present when the operation models a down-cast or a side-cast.
 
-    The `relative_layout` argument specifies whether the Itanium C++ ABI vtable
-    uses relative layout. It is only meaningful when the operation models a
-    cast-to-complete operation.
-
     Examples:
 
     ```
     %0 = cir.dyn_cast ptr %p : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
-    %1 = cir.dyn_cast ptr relative_layout %p : !cir.ptr<!rec_Base>
-              -> !cir.ptr<!rec_Derived>
-    %2 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
+    %1 = cir.dyn_cast ref %r : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived>
               #cir.dyn_cast_info<
                 srcRtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>,
                 destRtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>,
@@ -515,8 +509,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let arguments = (ins
     CIR_DynamicCastKindAttr:$kind,
     CIR_PtrToRecordType:$src,
-    OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
-    UnitAttr:$relative_layout
+    OptionalAttr<CIR_DynamicCastInfoAttr>:$info
   );
 
   let results = (outs
@@ -524,7 +517,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let assemblyFormat = [{
-    enum($kind) (`relative_layout` $relative_layout^)? $src
+    enum($kind) $src
     `:` qualified(type($src)) `->` qualified(type($result))
     (qualified($info)^)? attr-dict
   }];
@@ -3838,6 +3831,43 @@ def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
 
   let assemblyFormat = [{
     $vptr `[` $index `]` (`invariant` $invariant^)? attr-dict
+    `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableGetOffsetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetOffsetOp : CIR_Op<"vtable.get_offset", [
+  MemoryEffects<[MemRead]>
+]> {
+  let summary = "Get an offset stored in a vtable";
+  let description = [{
+    The `vtable.get_offset` operation reads an offset that is stored in an
+    object's vtable, such as the offset of a virtual base class or a virtual
+    adjustment for a thunk, in an ABI independent way.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the entry in the vtable, counted from the address point.
+    Entries that precede the address point have a negative index.
+
+    The result is the value of the offset, in bytes.
+
+    Example:
+    ```
+    %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
+    %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %5 = cir.vtable.get_offset %4[-4] : !cir.vptr -> !s64i
+    ```
+  }];
+
+  let arguments = (ins CIR_VPtrType:$vptr, I64Attr:$index);
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{
+    $vptr `[` $index `]` attr-dict
     `:` qualified(type($vptr)) `->` qualified(type($result))
   }];
 }

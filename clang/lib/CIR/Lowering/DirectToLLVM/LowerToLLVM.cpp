@@ -1088,13 +1088,6 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
                                    mlirValues));
 }
 
-/// Whether the C++ vtables of the module use the relative layout.
-static bool usesRelativeVTables(mlir::ModuleOp module) {
-  auto loweringOpts = module->getAttrOfType<cir::LoweringOptionsAttr>(
-      cir::CIRDialect::getLoweringOptionsAttrName());
-  return loweringOpts && loweringOpts.getRelativeCxxAbiVtables();
-}
-
 // GlobalViewAttr / GlobalOffsetAttr visitors.
 CIRAttrToValue::LoweredGlobalSymbol
 CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
@@ -5620,6 +5613,34 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
       op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy),
       /*isVolatile=*/false, /*isNonTemporal=*/false,
       /*isInvariant=*/op.getInvariant(), /*isInvariantGroup=*/false);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVTableGetOffsetOpLowering::matchAndRewrite(
+    cir::VTableGetOffsetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError("NYI: offset lookup in a relative layout vtable");
+
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
+
+  // The entry is the offset itself: load it from its slot, addressed by its
+  // byte offset.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  int64_t byteOffset =
+      op.getIndex() * cir::getVTableEntrySize(
+                          op->getParentOfType<mlir::ModuleOp>(), dataLayout);
+  mlir::Value byteOffsetVal = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), rewriter.getI64Type(),
+      rewriter.getI64IntegerAttr(byteOffset));
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, rewriter.getI8Type(), adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{byteOffsetVal});
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy));
   return mlir::success();
 }
 

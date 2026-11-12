@@ -46,14 +46,4 @@ module {
   // CHECK:     %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
   // CHECK:     cir.return %0 : !cir.ptr<!void>
   // CHECK:   }
-
-  cir.func dso_local @test_relative_layout_cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!void> {
-   %0 = cir.dyn_cast ptr relative_layout %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
-   cir.return %0 : !cir.ptr<!void>
-  }
-
-  // CHECK: cir.func dso_local @test_relative_layout_cast(%arg0: !cir.ptr<!rec_Base>) -> !cir.ptr<!void> {
-  // CHECK:     %0 = cir.dyn_cast ptr relative_layout %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
-  // CHECK:     cir.return %0 : !cir.ptr<!void>
-  // CHECK:   }
 }
