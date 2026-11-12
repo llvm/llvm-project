@@ -270,7 +270,8 @@ void GCNHazardRecognizer::updateTRANSState(const MachineInstr &MI) {
 void GCNHazardRecognizer::updateMultiCycleVALUState(const MachineInstr &MI) {
   if (!hasCoExecWindowModel())
     return;
-  // Multi-cycle VALU (CVT, etc.) blocks subsequent VALU for repeat rate cycles.
+  // Multi-cycle VALU (CVT, etc.) blocks subsequent VALU for BlockingCycles
+  // cycles.
   if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
     return;
 
@@ -279,13 +280,14 @@ void GCNHazardRecognizer::updateMultiCycleVALUState(const MachineInstr &MI) {
       SIInstrInfo::isMFMA(MI) || SIInstrInfo::isTRANS(MI))
     return;
 
-  unsigned RepeatRate = TII.getRepeatRate(MI);
-  if (RepeatRate > 1) {
+  unsigned BlockingCycles = TII.getBlockingCycles(MI);
+  if (BlockingCycles > 1) {
     // bumpCycle's AdvanceCycle decrements once before the next pick's
     // hazard check (same convention as CyclesUntilTRANS), so to expose
-    // RepeatRate-1 cycles of shadow we must seed with RepeatRate.
-    CyclesUntilVALU = RepeatRate;
-    LLVM_DEBUG(dbgs() << "    Multi-cycle VALU: repeat=" << RepeatRate
+    // BlockingCycles-1 cycles of shadow we must seed with BlockingCycles.
+    CyclesUntilVALU = BlockingCycles;
+    LLVM_DEBUG(dbgs() << "    Multi-cycle VALU: BlockingCycles="
+                      << BlockingCycles
                       << ", CyclesUntilVALU=" << CyclesUntilVALU << "\n");
   }
 }
@@ -306,7 +308,7 @@ unsigned GCNHazardRecognizer::checkTRANSHazard(const MachineInstr &MI) const {
 
   if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true) &&
       !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI) &&
-      TII.getRepeatRate(MI) > 1)
+      TII.getBlockingCycles(MI) > 1)
     return CyclesUntilTRANS;
 
   return 0;
@@ -318,7 +320,7 @@ GCNHazardRecognizer::checkMultiCycleVALUHazard(const MachineInstr &MI) const {
     return 0;
 
   // Multi-cycle VALU blocks anything on the VALU pipe - VALU, WMMA, SWMMAC,
-  // and TRANS - for RepeatRate-1 cycles. Only off-pipe instructions (MEM,
+  // and TRANS - for BlockingCycles-1 cycles. Only off-pipe instructions (MEM,
   // SALU, control) can fill the shadow.
   if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true) &&
       !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI) &&

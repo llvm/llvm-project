@@ -235,15 +235,15 @@ define amdgpu_ps float @v_test_cvt_v2f64_v2bf16_v(<2 x double> %src) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[4:5], v8
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[6:7], v9
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cmp_gt_f64_e64 s1, |v[2:3]|, |v[4:5]|
 ; GFX1250-NEXT:    v_cmp_nlg_f64_e32 vcc_lo, v[2:3], v[4:5]
-; GFX1250-NEXT:    v_cmp_nlg_f64_e64 s0, v[0:1], v[6:7]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, -1, 1, s1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmp_gt_f64_e64 s1, |v[0:1]|, |v[6:7]|
+; GFX1250-NEXT:    v_cmp_nlg_f64_e64 s0, v[0:1], v[6:7]
 ; GFX1250-NEXT:    v_dual_add_nc_u32 v1, v8, v2 :: v_dual_bitop2_b32 v10, 1, v8 bitop3:0x40
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, -1, 1, s1
 ; GFX1250-NEXT:    v_and_b32_e32 v11, 1, v9
 ; GFX1250-NEXT:    v_cmp_ne_u32_e64 s1, 0, v10
