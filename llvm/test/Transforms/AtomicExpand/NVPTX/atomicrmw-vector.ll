@@ -19,14 +19,14 @@ define <2 x i8> @and_v2i8_partword(ptr %addr, <2 x i8> %val) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr [[ALIGNEDADDR]], i32 [[ANDOPERAND]] monotonic, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr [[ALIGNEDADDR]], i32 [[ANDOPERAND]] monotonic, align 4, !noalias.addrspace [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[TMP5]]
 ;
 entry:
-  %old = atomicrmw and ptr %addr, <2 x i8> %val monotonic
+  %old = atomicrmw and ptr %addr, <2 x i8> %val monotonic, !noalias.addrspace !999
   ret <2 x i8> %old
 }
 
@@ -55,7 +55,7 @@ define <2 x i8> @add_v2i8_partword(ptr %addr, <2 x i8> %val) {
 ; CHECK-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -66,7 +66,7 @@ define <2 x i8> @add_v2i8_partword(ptr %addr, <2 x i8> %val) {
 ; CHECK-NEXT:    ret <2 x i8> [[TMP6]]
 ;
 entry:
-  %old = atomicrmw add ptr %addr, <2 x i8> %val monotonic
+  %old = atomicrmw add ptr %addr, <2 x i8> %val monotonic, !noalias.addrspace !999
   ret <2 x i8> %old
 }
 
@@ -94,7 +94,7 @@ define <2 x i8> @nand_v2i8_partword(ptr %addr, <2 x i8> %val) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[NEW]], [[MASK]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP8]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP8]] monotonic monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP9]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -105,6 +105,9 @@ define <2 x i8> @nand_v2i8_partword(ptr %addr, <2 x i8> %val) {
 ; CHECK-NEXT:    ret <2 x i8> [[TMP10]]
 ;
 entry:
-  %old = atomicrmw nand ptr %addr, <2 x i8> %val monotonic
+  %old = atomicrmw nand ptr %addr, <2 x i8> %val monotonic, !noalias.addrspace !999
   ret <2 x i8> %old
 }
+
+; These tests isolate RMW expansion on nonlocal memory.
+!999 = !{i32 5, i32 6}

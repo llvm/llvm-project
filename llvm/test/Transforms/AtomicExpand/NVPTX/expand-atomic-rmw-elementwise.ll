@@ -48,16 +48,16 @@ define <2 x i32> @add_metadata_v2i32_elementwise(ptr %addr, <2 x i32> %val) {
 ; CHECK-NEXT:    [[HI_VAL:%.*]] = shufflevector <2 x i32> [[VAL]], <2 x i32> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds <1 x i32>, ptr [[ADDR:%.*]], i64 1
 ; CHECK-NEXT:    [[LANE_VAL:%.*]] = extractelement <1 x i32> [[LO_VAL]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 8, !mmra [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 8, !mmra [[META0:![0-9]+]], !noalias.addrspace [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[LANE_OLD:%.*]] = insertelement <1 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LANE_VAL2:%.*]] = extractelement <1 x i32> [[HI_VAL]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[HI_PTR]], i32 [[LANE_VAL2]] monotonic, align 4, !mmra [[META0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[HI_PTR]], i32 [[LANE_VAL2]] monotonic, align 4, !mmra [[META0]], !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[LANE_OLD3:%.*]] = insertelement <1 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[HI_OLD:%.*]] = shufflevector <1 x i32> [[LANE_OLD]], <1 x i32> [[LANE_OLD3]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[HI_OLD]]
 ;
 entry:
-  %old = atomicrmw elementwise add ptr %addr, <2 x i32> %val monotonic, !mmra !0
+  %old = atomicrmw elementwise add ptr %addr, <2 x i32> %val monotonic, !mmra !0, !noalias.addrspace !999
   ret <2 x i32> %old
 }
 
@@ -95,20 +95,20 @@ define <4 x i32> @add_acq_rel_v4i32_elementwise(ptr %addr, <4 x i32> %val) {
 ; CHECK-NEXT:    [[HI_VAL4:%.*]] = shufflevector <2 x i32> [[LO_VAL]], <2 x i32> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[HI_PTR4:%.*]] = getelementptr inbounds <1 x i32>, ptr [[ADDR]], i64 1
 ; CHECK-NEXT:    [[LO_VAL2:%.*]] = extractelement <1 x i32> [[LO_VAL3]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LO_VAL2]] syncscope("block") monotonic, align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LO_VAL2]] syncscope("block") monotonic, align 16, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[LANE_OLD:%.*]] = insertelement <1 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[HI_VAL3:%.*]] = extractelement <1 x i32> [[HI_VAL4]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[HI_PTR4]], i32 [[HI_VAL3]] syncscope("block") monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[HI_PTR4]], i32 [[HI_VAL3]] syncscope("block") monotonic, align 4, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[LANE_OLD6:%.*]] = insertelement <1 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[HI_OLD:%.*]] = shufflevector <1 x i32> [[LANE_OLD]], <1 x i32> [[LANE_OLD6]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[LO_VAL7:%.*]] = shufflevector <2 x i32> [[HI_VAL]], <2 x i32> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[HI_VAL8:%.*]] = shufflevector <2 x i32> [[HI_VAL]], <2 x i32> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[HI_PTR7:%.*]] = getelementptr inbounds <1 x i32>, ptr [[HI_PTR]], i64 1
 ; CHECK-NEXT:    [[LO_VAL5:%.*]] = extractelement <1 x i32> [[LO_VAL7]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[HI_PTR]], i32 [[LO_VAL5]] syncscope("block") monotonic, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[HI_PTR]], i32 [[LO_VAL5]] syncscope("block") monotonic, align 8, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[LANE_OLD12:%.*]] = insertelement <1 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[HI_VAL6:%.*]] = extractelement <1 x i32> [[HI_VAL8]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw add ptr [[HI_PTR7]], i32 [[HI_VAL6]] syncscope("block") monotonic, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw add ptr [[HI_PTR7]], i32 [[HI_VAL6]] syncscope("block") monotonic, align 4, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[LANE_OLD14:%.*]] = insertelement <1 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[HI_OLD9:%.*]] = shufflevector <1 x i32> [[LANE_OLD12]], <1 x i32> [[LANE_OLD14]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[OLD1:%.*]] = shufflevector <2 x i32> [[HI_OLD]], <2 x i32> [[HI_OLD9]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -116,7 +116,7 @@ define <4 x i32> @add_acq_rel_v4i32_elementwise(ptr %addr, <4 x i32> %val) {
 ; CHECK-NEXT:    ret <4 x i32> [[OLD1]]
 ;
 entry:
-  %old = atomicrmw elementwise add ptr %addr, <4 x i32> %val syncscope("block") acq_rel, align 16
+  %old = atomicrmw elementwise add ptr %addr, <4 x i32> %val syncscope("block") acq_rel, align 16, !noalias.addrspace !999
   ret <4 x i32> %old
 }
 
@@ -132,7 +132,7 @@ define <8 x half> @fmin_v8f16_elementwise(ptr %addr, <8 x half> %val) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.minnum.v8f16(<8 x half> [[LOADED]], <8 x half> [[VAL:%.*]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x half> [[TMP2]] to i128
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x half> [[LOADED]] to i128
-; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i128 [[TMP4]], i128 [[TMP3]] monotonic monotonic, align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ADDR]], i128 [[TMP4]], i128 [[TMP3]] monotonic monotonic, align 16, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
 ; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i128, i1 } [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP6]] = bitcast i128 [[NEWLOADED]] to <8 x half>
@@ -141,7 +141,7 @@ define <8 x half> @fmin_v8f16_elementwise(ptr %addr, <8 x half> %val) {
 ; CHECK-NEXT:    ret <8 x half> [[TMP6]]
 ;
 entry:
-  %old = atomicrmw elementwise fmin ptr %addr, <8 x half> %val monotonic, align 16
+  %old = atomicrmw elementwise fmin ptr %addr, <8 x half> %val monotonic, align 16, !noalias.addrspace !999
   ret <8 x half> %old
 }
 
@@ -150,12 +150,12 @@ define <4 x i8> @xchg_v4i8_elementwise(ptr %addr, <4 x i8> %val) {
 ; CHECK-LABEL: @xchg_v4i8_elementwise(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 [[TMP0]] monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i32 [[TMP0]] monotonic, align 4, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[TMP2]]
 ;
 entry:
-  %old = atomicrmw elementwise xchg ptr %addr, <4 x i8> %val monotonic, align 4
+  %old = atomicrmw elementwise xchg ptr %addr, <4 x i8> %val monotonic, align 4, !noalias.addrspace !999
   ret <4 x i8> %old
 }
 
@@ -164,12 +164,12 @@ define <2 x float> @xchg_v2f32_elementwise(ptr %addr, <2 x float> %val) {
 ; CHECK-LABEL: @xchg_v2f32_elementwise(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[VAL:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i64 [[TMP0]] monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i64 [[TMP0]] monotonic, align 8, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[HI_OLD:%.*]] = bitcast i64 [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[HI_OLD]]
 ;
 entry:
-  %old = atomicrmw elementwise xchg ptr %addr, <2 x float> %val monotonic
+  %old = atomicrmw elementwise xchg ptr %addr, <2 x float> %val monotonic, !noalias.addrspace !999
   ret <2 x float> %old
 }
 
@@ -182,16 +182,16 @@ define <8 x float> @xchg_v8f32_elementwise(ptr %addr, <8 x float> %val) {
 ; CHECK-NEXT:    [[HI_VAL:%.*]] = shufflevector <8 x float> [[VAL]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds <4 x float>, ptr [[ADDR:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[LO_VAL]] to i128
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR]], i128 [[TMP0]] monotonic, align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR]], i128 [[TMP0]] monotonic, align 32, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x float>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[HI_VAL]] to i128
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[HI_PTR]], i128 [[TMP3]] monotonic, align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[HI_PTR]], i128 [[TMP3]] monotonic, align 16, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i128 [[TMP4]] to <4 x float>
 ; CHECK-NEXT:    [[OLD1:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x float> [[OLD1]]
 ;
 entry:
-  %old = atomicrmw elementwise xchg ptr %addr, <8 x float> %val monotonic
+  %old = atomicrmw elementwise xchg ptr %addr, <8 x float> %val monotonic, !noalias.addrspace !999
   ret <8 x float> %old
 }
 
@@ -211,14 +211,14 @@ define <2 x i8> @and_v2i8_partword_elementwise(ptr %addr, <2 x i8> %val) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr [[ALIGNEDADDR]], i32 [[ANDOPERAND]] monotonic, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr [[ALIGNEDADDR]], i32 [[ANDOPERAND]] monotonic, align 4, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[TMP5]]
 ;
 entry:
-  %old = atomicrmw elementwise and ptr %addr, <2 x i8> %val monotonic
+  %old = atomicrmw elementwise and ptr %addr, <2 x i8> %val monotonic, !noalias.addrspace !999
   ret <2 x i8> %old
 }
 
@@ -247,7 +247,7 @@ define <2 x i8> @add_v2i8_partword_elementwise(ptr %addr, <2 x i8> %val) {
 ; CHECK-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4, !noalias.addrspace [[META3]]
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -258,7 +258,7 @@ define <2 x i8> @add_v2i8_partword_elementwise(ptr %addr, <2 x i8> %val) {
 ; CHECK-NEXT:    ret <2 x i8> [[TMP6]]
 ;
 entry:
-  %old = atomicrmw elementwise add ptr %addr, <2 x i8> %val monotonic
+  %old = atomicrmw elementwise add ptr %addr, <2 x i8> %val monotonic, !noalias.addrspace !999
   ret <2 x i8> %old
 }
 
@@ -320,20 +320,20 @@ define <4 x float> @fadd_ignore_denormal_mode_v4f32_elementwise(ptr addrspace(1)
 ; CHECK-NEXT:    [[HI_VAL3:%.*]] = shufflevector <2 x float> [[LO_VAL]], <2 x float> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[HI_PTR4:%.*]] = getelementptr inbounds <1 x float>, ptr addrspace(1) [[ADDR]], i64 1
 ; CHECK-NEXT:    [[LANE_VAL:%.*]] = extractelement <1 x float> [[LO_VAL2]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(1) [[ADDR]], float [[LANE_VAL]] monotonic, align 16, !atomic.ignore.denormal.mode [[META3:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(1) [[ADDR]], float [[LANE_VAL]] monotonic, align 16, !atomic.ignore.denormal.mode [[META4:![0-9]+]]
 ; CHECK-NEXT:    [[LANE_OLD:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
 ; CHECK-NEXT:    [[LANE_VAL5:%.*]] = extractelement <1 x float> [[HI_VAL3]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(1) [[HI_PTR4]], float [[LANE_VAL5]] monotonic, align 4, !atomic.ignore.denormal.mode [[META3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(1) [[HI_PTR4]], float [[LANE_VAL5]] monotonic, align 4, !atomic.ignore.denormal.mode [[META4]]
 ; CHECK-NEXT:    [[LANE_OLD6:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    [[OLD:%.*]] = shufflevector <1 x float> [[LANE_OLD]], <1 x float> [[LANE_OLD6]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[LO_VAL7:%.*]] = shufflevector <2 x float> [[HI_VAL]], <2 x float> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[HI_VAL8:%.*]] = shufflevector <2 x float> [[HI_VAL]], <2 x float> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[HI_PTR9:%.*]] = getelementptr inbounds <1 x float>, ptr addrspace(1) [[HI_PTR]], i64 1
 ; CHECK-NEXT:    [[LANE_VAL11:%.*]] = extractelement <1 x float> [[LO_VAL7]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[HI_PTR]], float [[LANE_VAL11]] monotonic, align 8, !atomic.ignore.denormal.mode [[META3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[HI_PTR]], float [[LANE_VAL11]] monotonic, align 8, !atomic.ignore.denormal.mode [[META4]]
 ; CHECK-NEXT:    [[LANE_OLD12:%.*]] = insertelement <1 x float> poison, float [[TMP2]], i64 0
 ; CHECK-NEXT:    [[LANE_VAL13:%.*]] = extractelement <1 x float> [[HI_VAL8]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(1) [[HI_PTR9]], float [[LANE_VAL13]] monotonic, align 4, !atomic.ignore.denormal.mode [[META3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fadd ptr addrspace(1) [[HI_PTR9]], float [[LANE_VAL13]] monotonic, align 4, !atomic.ignore.denormal.mode [[META4]]
 ; CHECK-NEXT:    [[LANE_OLD14:%.*]] = insertelement <1 x float> poison, float [[TMP3]], i64 0
 ; CHECK-NEXT:    [[OLD10:%.*]] = shufflevector <1 x float> [[LANE_OLD12]], <1 x float> [[LANE_OLD14]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[OLD1:%.*]] = shufflevector <2 x float> [[OLD]], <2 x float> [[OLD10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -348,3 +348,6 @@ entry:
 !1 = !{!"foo", !"bar"}
 !2 = !{!"bux", !"baz"}
 !3 = !{}
+
+; These tests isolate RMW expansion on nonlocal memory.
+!999 = !{i32 5, i32 6}
