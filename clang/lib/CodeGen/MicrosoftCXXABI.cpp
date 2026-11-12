@@ -2049,7 +2049,8 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
         getObjectWithVPtr(), VTable, Ty,
         ML.Index *
             CGM.getContext().getTargetInfo().getPointerWidth(LangAS::Default) /
-            8);
+            8,
+        Loc);
   } else {
     if (CGM.getCodeGenOpts().PrepareForLTO)
       CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
