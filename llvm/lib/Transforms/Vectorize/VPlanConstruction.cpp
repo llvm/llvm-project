@@ -2375,49 +2375,84 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     assert(MinOrMaxResult &&
            "MinOrMaxResult must be a user of MinOrMaxBackedgeR");
 
-    // Cmp must be used by the select of a FindLastIV chain.
+    // Cmp must be used by the select of a FindLast chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
-    VPValue *IVOp, *FindIV;
+    VPValue *IVOp, *Find;
     if (!Sel || (Sel->getNumUsers() != (HeaderMask ? 1 : 2)) ||
         !match(Sel,
-               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))))
+               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(Find))))
       return false;
 
-    if (!isa<VPReductionPHIRecipe>(FindIV)) {
-      std::swap(FindIV, IVOp);
+    if (!isa<VPReductionPHIRecipe>(Find)) {
+      std::swap(Find, IVOp);
       Pred = CmpInst::getInversePredicate(Pred);
     }
 
-    auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindRecurrenceKind(
-                           FindIVPhiR->getRecurrenceKind()))
+    auto *FindPhiR = dyn_cast<VPReductionPHIRecipe>(Find);
+    if (!FindPhiR || !RecurrenceDescriptor::isFindRecurrenceKind(
+                         FindPhiR->getRecurrenceKind()))
       return false;
 
-    assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
+    assert(!FindPhiR->isInLoop() && !FindPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
 
+    VPValue *FindBackedge = FindPhiR->getBackedgeValue();
+    VPInstruction *FindResult =
+        findSingleUser<VPInstruction::ComputeReductionResult>(FindBackedge);
+    assert(FindResult &&
+           "must be able to retrieve the FindResult VPInstruction");
+
+    VPReductionPHIRecipe *FindIVPhiR = FindPhiR;
+    VPInstruction *FindIVResult = FindResult;
     if (RecurrenceDescriptor::isFindLastRecurrenceKind(
-            FindIVPhiR->getRecurrenceKind())) {
+            FindPhiR->getRecurrenceKind())) {
+      Type *TCTy = Plan.getTripCount()->getScalarType();
       if (!WidenIterIV) {
-        Type *Ty = Plan.getTripCount()->getScalarType();
-        VPIRValue *One = Plan.getConstantInt(Ty, 1);
+        VPValue *One = Plan.getConstantInt(TCTy, 1);
         WidenIterIV = new VPWidenIntOrFpInductionRecipe(
             /*IV=*/nullptr, One, One, &Plan.getVF(),
-            InductionDescriptor::getCanonicalIntInduction(Ty, *PSE.getSE()),
+            InductionDescriptor::getCanonicalIntInduction(TCTy, *PSE.getSE()),
             VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false),
             DebugLoc::getUnknown());
-        WidenIterIV->insertBefore(FindIVPhiR);
+        WidenIterIV->insertBefore(FindPhiR);
       }
+      VPValue *Zero = Plan.getZero(TCTy);
+      FindIVPhiR = new VPReductionPHIRecipe(
+          /*Phi=*/nullptr, RecurKind::FindIV, *Zero, *Zero, RdxUnordered{1}, {},
+          /*HasUsesOutsideReductionChain=*/false);
+      FindIVPhiR->insertBefore(FindPhiR);
+
+      VPValue *TrueVal = WidenIterIV;
+      VPValue *FalseVal = FindIVPhiR;
+      if (match(Sel,
+                m_Select(m_Specific(Cmp), m_Specific(FindPhiR), m_VPValue())))
+        std::swap(TrueVal, FalseVal);
+      VPValue *IterBackedge =
+          VPBuilder(Sel->getDefiningRecipe())
+              .createSelect(Cmp, TrueVal, FalseVal, DebugLoc::getUnknown());
+      if (HeaderMask)
+        IterBackedge = VPBuilder(cast<VPRecipeWithIRFlags>(
+                                     FindBackedge->getDefiningRecipe()))
+                           .createSelect(HeaderMask, IterBackedge, FindIVPhiR);
+
+      FindIVPhiR->setOperand(1, IterBackedge);
+
+      VPBuilder MiddleBuilder(FindResult);
+      VPIRFlags Flags(RecurKind::UMax, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                      FastMathFlags());
+      DebugLoc ExitDL = FindResult->getDebugLoc();
+      FindIVResult = MiddleBuilder.createNaryOp(
+          VPInstruction::ComputeReductionResult, IterBackedge, Flags, ExitDL);
+      VPValue *IterCmp = MiddleBuilder.createICmp(CmpInst::ICMP_NE,
+                                                  FindIVResult, Zero, ExitDL);
+      VPValue *IterResult =
+          MiddleBuilder.createSelect(IterCmp, FindIVResult, Zero, ExitDL);
+
       return false;
     }
 
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
     // on its ComputeReductionResult. SMax/UMax indicates FindLast.
-    VPInstruction *FindIVResult =
-        findSingleUser<VPInstruction::ComputeReductionResult>(
-            FindIVPhiR->getBackedgeValue());
-    assert(FindIVResult &&
-           "must be able to retrieve the FindIVResult VPInstruction");
     RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
     if (FindIVMinMaxKind != RecurKind::SMax &&
         FindIVMinMaxKind != RecurKind::UMax)
