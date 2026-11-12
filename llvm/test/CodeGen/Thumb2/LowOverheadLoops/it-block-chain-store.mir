@@ -99,7 +99,6 @@
 ---
 name:            it_block_store_count_before_start
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -205,7 +204,6 @@ body:             |
 ---
 name:            it_block_store_count_after_start
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

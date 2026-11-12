@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "SDNodeDbgValue.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -1469,6 +1470,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   LibInfo = LibraryInfo;
   Libcalls = LibcallsInfo;
   Context = &MF->getFunction().getContext();
+  DAGOpts = &Context->getLibraryOptions().get<SelectionDAGOptions>();
   UA = NewUA;
   PSI = PSIin;
   BFI = BFIin;

@@ -29,6 +29,7 @@ include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
 class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<CIR_Dialect, name, traits> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRAttrs.h"];
   let mnemonic = attrMnemonic;
   // Setting this to 0 will make the CXXABILowering always consider this
   // attribute 'legal', so that it won't require any transformation. This should
@@ -200,6 +201,10 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `transparent_union`: whether the record is a union with
       `__attribute__((transparent_union))`, which is passed as its first
       member.  False, the default, is omitted from the printed form.
+    - `flexible_array_member`: from `RecordDecl::hasFlexibleArrayMember()`,
+      which is also set when the last field is a record that has one.  A
+      zero-length array is not a flexible array member.  False, the default,
+      is omitted from the printed form.
 
     Example:
     ```
@@ -223,7 +228,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     "bool":$has_trivial_dtor,
     "uint64_t":$record_align,
     "uint64_t":$unadjusted_align,
-    DefaultValuedParameter<"bool", "false">:$transparent_union
+    DefaultValuedParameter<"bool", "false">:$transparent_union,
+    DefaultValuedParameter<"bool", "false">:$flexible_array_member
   );
 
   let builders = [
@@ -232,7 +238,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
                      "uint64_t":$record_align), [{
       return $_get($_ctxt, arg_passing_kind, has_trivial_dtor, record_align,
                    /*unadjusted_align=*/record_align,
-                   /*transparent_union=*/false);
+                   /*transparent_union=*/false,
+                   /*flexible_array_member=*/false);
     }]>
   ];
 
@@ -1600,10 +1607,14 @@ def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
 // VisibilityKind
 //===----------------------------------------------------------------------===//
 
+def CIR_VisibilityDefault : I32EnumCase<"Default", 0, "default">;
+def CIR_VisibilityHidden : I32EnumCase<"Hidden", 1, "hidden">;
+def CIR_VisibilityProtected : I32EnumCase<"Protected", 2, "protected">;
+
 def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
-  I32EnumCase<"Default", 0, "default">,
-  I32EnumCase<"Hidden", 1, "hidden">,
-  I32EnumCase<"Protected", 2, "protected">
+  CIR_VisibilityDefault,
+  CIR_VisibilityHidden,
+  CIR_VisibilityProtected
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -1674,6 +1685,28 @@ def CIR_FramePointerKindAttr
     }
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// MaxWorkGroupSizeAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MaxWorkGroupSizeAttr
+    : CIR_Attr<"MaxWorkGroupSize", "max_work_group_size"> {
+  let summary = "Maximum kernel work-group size";
+  let description = [{
+    Stores the maximum work-group size of a kernel, emitted to LLVM IR as
+    `max_work_group_size` function metadata.
+  }];
+
+  let parameters = (ins
+    "uint32_t":$x,
+    "uint32_t":$y,
+    "uint32_t":$z
+  );
+
+  let assemblyFormat = "`<` $x `,` $y `,` $z `>`";
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2699,13 +2732,13 @@ def CIR_LoweringOptionsAttr
 
     The following fields come from `LangOptions`.  Each bool field mirrors the
     like-named `LangOptions` member: `exceptions`,
-    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`, `gpu_rdc`,
-    `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
-    `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
-    `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
-    `ClangABI` gains an enumerator every Clang release (see
-    `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
-    single toolchain. `no_trapping_math` is true when
+    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`,
+    `sycl_is_device`, `gpu_rdc`, `openmp` (`LangOpts.OpenMP != 0`; only its
+    on/off state matters), and `openmp_is_target_device`. `clang_abi_compat`
+    is an `i32` mirroring `LangOptions::ClangABI`; it is an `i32` rather than
+    a CIR enum because `ClangABI` gains an enumerator every Clang release
+    (see `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine
+    within a single toolchain. `no_trapping_math` is true when
     `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
 
     The following fields come from `CodeGenOptions`.
@@ -2725,9 +2758,9 @@ def CIR_LoweringOptionsAttr
     ```
     module attributes {cir.lowering_options = #cir.lowering_options<
       exceptions = false, threadsafe_statics = true, cuda = false,
-      cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
-      openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
-      long_double_size = 0, enable_noundef_attrs = false,
+      cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
+      gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+      clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false,
       no_trapping_math = true, ssp_buffer_size = 8>} { }
     ```
   }];
@@ -2739,6 +2772,7 @@ def CIR_LoweringOptionsAttr
     "bool":$cuda_is_device,
     "bool":$hip,
     "bool":$hlsl,
+    "bool":$sycl_is_device,
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
@@ -2751,9 +2785,10 @@ def CIR_LoweringOptionsAttr
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
-               $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat, $long_double_size, $enable_noundef_attrs,
-               $no_trapping_math, $ssp_buffer_size) `>`
+               $hlsl, $sycl_is_device, $gpu_rdc, $openmp,
+               $openmp_is_target_device, $clang_abi_compat, $long_double_size,
+               $enable_noundef_attrs, $no_trapping_math,
+               $ssp_buffer_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

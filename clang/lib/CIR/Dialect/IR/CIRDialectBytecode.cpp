@@ -24,11 +24,6 @@ using namespace cir;
 
 namespace {
 
-// Both namespaces declare a BoolAttr, named unqualified below. This must live
-// in the inner namespace: at global scope it merges with the using-directives
-// and stays ambiguous.
-using cir::BoolAttr;
-
 //===--------------------------------------------------------------------===//
 // Helpers referenced by the generated readers
 //===--------------------------------------------------------------------===//

@@ -31,6 +31,7 @@ def HalfWordAccess   : MemAccessSize<2>;
 def WordAccess       : MemAccessSize<3>;
 def DoubleWordAccess : MemAccessSize<4>;
 def HVXVectorAccess  : MemAccessSize<5>;
+def HLXVectorAccess  : MemAccessSize<6>;
 
 
 //===----------------------------------------------------------------------===//
@@ -151,8 +152,8 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<1> prefersSlot3 = 0;
   let TSFlags{55} = prefersSlot3; // Complex XU
 
-  bits<1> hasHvxTmp = 0;
-  let TSFlags{56} = hasHvxTmp;  // vector register vX.tmp false-write
+  bit isTmpWrite = 0;
+  let TSFlags{56} = isTmpWrite;  // Vector register false-write.
 
   bit CVINew = 0;
   let TSFlags{58} = CVINew;
@@ -168,6 +169,9 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   bit hasUnaryRestriction = 0;
   let TSFlags{62} = hasUnaryRestriction;
+
+  bit isHLX = 0;
+  let TSFlags{63} = isHLX;
 
   // Fields used for relation models.
   bit isNonTemporal = 0;
