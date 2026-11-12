@@ -1397,12 +1397,9 @@ bool Instruction::isSafeToRemove() const {
 
 bool Instruction::willReturn() const {
   // Volatile operations are not guaranteed to return.
-  if (isVolatile())
-    return false;
-
   if (const auto *CB = dyn_cast<CallBase>(this))
-    return CB->hasFnAttr(Attribute::WillReturn);
-  return true;
+    return CB->hasFnAttr(Attribute::WillReturn) && !isVolatile();
+  return !isVolatile();
 }
 
 bool Instruction::isLifetimeStartOrEnd() const {
