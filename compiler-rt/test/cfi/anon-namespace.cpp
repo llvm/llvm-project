@@ -23,8 +23,8 @@
 // RUN: %clangxx -o %t5 %t1.o %t2.o
 // RUN: %run %t5 2>&1 | FileCheck --check-prefix=NCFI %s
 
-// RUN: %clangxx_cfi_diag -c -DTU1 -o %t1.o %s
-// RUN: %clangxx_cfi_diag -c -DTU2 -o %t2.o %S/../cfi/anon-namespace.cpp
+// RUN: %clangxx_cfi_diag -c -DTU1 -DB32 -o %t1.o %s
+// RUN: %clangxx_cfi_diag -c -DTU2 -DB32 -o %t2.o %S/../cfi/anon-namespace.cpp
 // RUN: %clangxx_cfi_diag -o %t6 %t1.o %t2.o
 // RUN: %run %t6 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 

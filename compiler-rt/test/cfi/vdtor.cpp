@@ -13,7 +13,7 @@
 // RUN: %clangxx -o %t5 %s
 // RUN: %run %t5 2>&1 | FileCheck --check-prefix=NCFI %s
 
-// RUN: %clangxx_cfi_diag -o %t6 %s
+// RUN: %clangxx_cfi_diag -DB32 -o %t6 %s
 // RUN: %run %t6 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 
 // Tests that the CFI enforcement also applies to virtual destructor calls made
