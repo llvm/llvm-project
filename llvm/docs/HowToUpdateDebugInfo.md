@@ -67,12 +67,15 @@ Examples of transformations that should follow this rule include:
 
 A transformation should merge instruction locations if it replaces multiple
 instructions with one or more new instructions, *and* the new instruction(s)
-produce the output of more than one of the original instructions. The API to use
-is `Instruction::applyMergedLocation`. For each new instruction I, its new
-location should be a merge of the locations of all instructions whose output is
-produced by I. Typically, this includes any instruction being RAUWed by a new
-instruction, and excludes any instruction that only produces an intermediate
-value used by the RAUWed instruction.
+produce the output of more than one of the original instructions. For each new
+instruction I, its new location should be a merge of the locations of all
+instructions whose output is produced by I. Typically, this includes any
+instruction being RAUWed by a new instruction, and excludes any instruction
+that only produces an intermediate value used by the RAUWed instruction.
+
+Use `Instruction::applyMergedLocation` for two locations. For a collection,
+merge them with `DebugLoc::getMergedLocations` and attach the result with
+`Instruction::setDebugLoc`.
 
 The purpose of this rule is to ensure that a) the single merged instruction
 has a location with an accurate scope attached, and b) to prevent misleading
@@ -85,8 +88,8 @@ To maintain distinct source locations for SamplePGO, it is often beneficial to
 retain an arbitrary but deterministic location instead of discarding line and
 column information as part of merging. In particular, loss of location
 information for calls inhibits optimizations such as indirect call promotion.
-This behavior can be optionally enabled until support for accurately
-representing merged instructions in the line table is implemented.
+The hidden `-pick-merged-source-locations` flag enables this behavior. It is
+off by default.
 
 Examples of transformations that should follow this rule include:
 
@@ -114,10 +117,11 @@ Examples of transformations for which this rule *does not* apply include:
   `(sext (zext i8 %x to i16) to i32) => (zext i8 %x to i32)`. The inner
   `zext` is modified but remains in its block, so the rule for
   {ref}`preserving locations <WhenToPreserveLocation>` should apply.
-- Peephole optimizations which combine multiple instructions together, like
-  `(add (mul A B) C) => llvm.fma.f32(A, B, C)`. Note that the result of the
-  `mul` no longer appears in the program, while the result of the `add` is
-  now produced by the `fma`, so the `add`'s location should be used.
+- Combining multiple instructions when the replacement produces only one of
+  the original results, like contracting `(fadd (fmul A, B), C)` to
+  `llvm.fma.f32(A, B, C)` when both operations permit contraction. The `fma`
+  produces the `fadd` result; the `fmul` result is only an intermediate, so use
+  the `fadd` location.
 - Converting an if-then-else CFG diamond into a `select`. Preserving the
   debug locations of speculated instructions can make it seem like a condition
   is true when it's not (or vice versa), which leads to a confusing
@@ -173,8 +177,9 @@ reason that it does not have a valid location. These are as follows:
   code.
 - `DebugLoc::getDropped()`: This indicates that the instruction has
   intentionally had its source location removed, according to the rules for
-  {ref}`dropping locations <WhenToDropLocation>`; this is set automatically by
-  `Instruction::dropLocation()`.
+  {ref}`dropping locations <WhenToDropLocation>`. `Instruction::dropLocation()`
+  usually sets this, but may keep a line 0 location for a call that can lower
+  to a function call so its scope survives inlining.
 - `DebugLoc::getUnknown()`: This indicates that the instruction does not have
   a known or currently knowable source location, e.g. that it is infeasible to
   determine the correct source location, or that the source location is
@@ -200,11 +205,10 @@ prevent false positives from being flagged up.
 
 ### Deleting an IR-level Instruction
 
-When an `Instruction` is deleted, its debug uses change to `undef`. This is
-a loss of debug info: the value of one or more source variables becomes
-unavailable, starting with the `#dbg_value(undef, ...)`. When there is no
-way to reconstitute the value of the lost instruction, this is the best
-possible outcome. However, it's often possible to do better:
+Deleting an `Instruction` turns any remaining debug uses into `poison`, making
+the corresponding source variables unavailable from that point
+(`#dbg_value(poison, ...)`). If the value cannot be recovered, this is the best
+we can do. Often we can do better:
 
 - If the dying instruction can be RAUW'd, do so. The
   `Value::replaceAllUsesWith` API transparently updates debug uses of the
@@ -226,40 +230,38 @@ define i16 @foo(i16 %a) {
 }
 ```
 
-Now, here's what happens after the unnecessary truncation instruction `%d` is
-replaced with a simplified instruction:
+Replacing `%d` with `%simplified` removes `%c`'s last non-debug use. Erasing
+`%c` without updating its debug use leaves:
 
 ```llvm
 define i16 @foo(i16 %a) {
-    #dbg_value(i32 undef, ...)
+    #dbg_value(i32 poison, ...)
   %simplified = and i16 %a, 15
   ret i16 %simplified
 }
 ```
 
-Note that after deleting `%d`, all uses of its operand `%c` become
-trivially dead. The debug use which used to point to `%c` is now `undef`,
-and debug info is needlessly lost.
-
-To solve this problem, do:
+Call `llvm::replaceAllDbgUsesWith` before erasing `%c`:
 
 ```cpp
 llvm::replaceAllDbgUsesWith(%c, theSimplifiedAndInstruction, ...)
 ```
 
-This results in better debug info because the debug use of `%c` is preserved:
+Because `%simplified` is narrower, the helper can describe `%c`'s original
+value only when the debug variable has known signedness. The variable here is
+signed, so it appends a 16 to 32 bit sign extension to the `DIExpression`,
+leaving:
 
 ```llvm
 define i16 @foo(i16 %a) {
   %simplified = and i16 %a, 15
-    #dbg_value(i16 %simplified, ...)
+    #dbg_value(i16 %simplified, ...,
+               !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_signed,
+                             DW_OP_LLVM_convert, 32, DW_ATE_signed,
+                             DW_OP_stack_value), ...)
   ret i16 %simplified
 }
 ```
-
-You may have noticed that `%simplified` is narrower than `%c`: this is not
-a problem, because `llvm::replaceAllDbgUsesWith` takes care of inserting the
-necessary conversion operations into the DIExpressions of updated debug uses.
 
 ### Deleting a MIR-level MachineInstr
 
@@ -267,11 +269,10 @@ TODO
 
 ## Rules for updating `DIAssignID` Attachments
 
-`DIAssignID` metadata attachments are used by Assignment Tracking, which is
-currently an experimental debug mode.
+`DIAssignID` metadata attachments are used by Assignment Tracking.
 
-See {doc}`AssignmentTracking` for how to update them and for more info on
-Assignment Tracking.
+See {doc}`AssignmentTracking` for how to update them, and for the design and
+current status of Assignment Tracking.
 
 ## How to automatically convert tests into debug info tests
 
@@ -298,51 +299,30 @@ immediately used by debug value records everywhere possible.
 For example, here is a module before:
 
 ```llvm
-define void @f(i32* %x) {
+define void @f(ptr %x) {
 entry:
-  %x.addr = alloca i32*, align 8
-  store i32* %x, i32** %x.addr, align 8
-  %0 = load i32*, i32** %x.addr, align 8
-  store i32 10, i32* %0, align 4
+  %x.addr = alloca ptr, align 8
+  store ptr %x, ptr %x.addr, align 8
+  %0 = load ptr, ptr %x.addr, align 8
+  store i32 10, ptr %0, align 4
   ret void
 }
 ```
 
-and after running `opt -debugify`:
+and the function body after running
+`opt -passes=debugify -S -o - debugify-sample.ll`:
 
 ```llvm
-define void @f(i32* %x) !dbg !6 {
+define void @f(ptr %x) !dbg !5 {
 entry:
-  %x.addr = alloca i32*, align 8, !dbg !12
-    #dbg_value(i32** %x.addr, !9, !DIExpression(), !12)
-  store i32* %x, i32** %x.addr, align 8, !dbg !13
-  %0 = load i32*, i32** %x.addr, align 8, !dbg !14
-    #dbg_value(i32* %0, !11, !DIExpression(), !14)
-  store i32 10, i32* %0, align 4, !dbg !15
+  %x.addr = alloca ptr, align 8, !dbg !12
+    #dbg_value(ptr %x.addr, !9, !DIExpression(), !12)
+  store ptr %x, ptr %x.addr, align 8, !dbg !13
+  %0 = load ptr, ptr %x.addr, align 8, !dbg !14
+    #dbg_value(ptr %0, !11, !DIExpression(), !14)
+  store i32 10, ptr %0, align 4, !dbg !15
   ret void, !dbg !16
 }
-
-!llvm.dbg.cu = !{!0}
-!llvm.debugify = !{!3, !4}
-!llvm.module.flags = !{!5}
-
-!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "debugify-sample.ll", directory: "/")
-!2 = !{}
-!3 = !{i32 5}
-!4 = !{i32 2}
-!5 = !{i32 2, !"Debug Info Version", i32 3}
-!6 = distinct !DISubprogram(name: "f", linkageName: "f", scope: null, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !8)
-!7 = !DISubroutineType(types: !2)
-!8 = !{!9, !11}
-!9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
-!10 = !DIBasicType(name: "ty64", size: 64, encoding: DW_ATE_unsigned)
-!11 = !DILocalVariable(name: "2", scope: !6, file: !1, line: 3, type: !10)
-!12 = !DILocation(line: 1, column: 1, scope: !6)
-!13 = !DILocation(line: 2, column: 1, scope: !6)
-!14 = !DILocation(line: 3, column: 1, scope: !6)
-!15 = !DILocation(line: 4, column: 1, scope: !6)
-!16 = !DILocation(line: 5, column: 1, scope: !6)
 ```
 
 #### Using `debugify`
@@ -350,21 +330,28 @@ entry:
 A simple way to use `debugify` is as follows:
 
 ```bash
-$ opt -debugify -pass-to-test -check-debugify sample.ll
+$ opt -passes=debugify,pass-to-test,check-debugify -disable-output sample.ll
 ```
 
-This will inject synthetic DI to `sample.ll` run the `pass-to-test` and
-then check for missing DI. The `-check-debugify` step can of course be
-omitted in favor of more customizable FileCheck directives.
+Replace `pass-to-test` with the pipeline to test. This can be used to check that
+one or more passes preserve the synthetic locations and variables. Some losses
+are reported as `WARNING:` even though `check-debugify` still prints `PASS` and
+`opt` exits successfully, so reject warnings and require `PASS` with FileCheck:
+
+```llvm
+; RUN: opt -passes=debugify,pass-to-test,check-debugify -disable-output %s 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=DEBUGIFY --implicit-check-not="WARNING:"
+; DEBUGIFY: CheckModuleDebugify: PASS
+```
 
 Some other ways to run debugify are available:
 
 ```bash
 # Same as the above example.
-$ opt -enable-debugify -pass-to-test sample.ll
+$ opt -enable-debugify -passes=pass-to-test -disable-output sample.ll
 
 # Suppresses verbose debugify output.
-$ opt -enable-debugify -debugify-quiet -pass-to-test sample.ll
+$ opt -enable-debugify -debugify-quiet -passes=pass-to-test -disable-output sample.ll
 
 # Prepend -debugify before and append -check-debugify -strip after
 # each pass on the pipeline (similar to -verify-each).
@@ -377,7 +364,7 @@ In order for `check-debugify` to work, the DI must be coming from
 `debugify` can be used to test a backend, e.g:
 
 ```bash
-$ opt -debugify < sample.ll | llc -o -
+$ opt -passes=debugify < sample.ll | llc -o -
 ```
 
 There is also a MIR-level debugify pass that can be run before each backend
@@ -445,7 +432,7 @@ pre-existing debug info metadata. It could be run as follows:
 
 ```bash
 # Run the pass by checking original Debug Info preservation.
-$ opt -verify-debuginfo-preserve -pass-to-test sample.ll
+$ opt -verify-debuginfo-preserve -passes=pass-to-test -disable-output sample.ll
 
 # Check the preservation of original Debug Info after each pass.
 $ opt -verify-each-debuginfo-preserve -O2 sample.ll
@@ -467,7 +454,7 @@ Furthermore, there is a way to export the issues that have been found into
 a JSON file as follows:
 
 ```bash
-$ opt -verify-debuginfo-preserve -verify-di-preserve-export=sample.json -pass-to-test sample.ll
+$ opt -verify-debuginfo-preserve -verify-di-preserve-export=sample.json -passes=pass-to-test -disable-output sample.ll
 ```
 
 and then use the `llvm/utils/llvm-original-di-preservation.py` script
@@ -475,7 +462,7 @@ to generate an HTML page with the issues reported in a more human-readable form
 as follows:
 
 ```bash
-$ llvm-original-di-preservation.py sample.json --report-file sample.html
+$ llvm-original-di-preservation.py sample.json --report-html-file sample.html
 ```
 
 Testing of original debug info preservation can be invoked from front-end level
