@@ -39,7 +39,11 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <set>
 #include <string>
@@ -51,28 +55,47 @@ namespace clang {
 namespace clangd {
 namespace {
 
-const char *getDiagnosticCode(unsigned ID) {
-  switch (ID) {
+struct DiagnosticNameTable {
 #define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROPU, SFINAE, NOWERROR,      \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
              LEGACY_STABLE_IDS)                                                \
-  case clang::diag::ENUM:                                                      \
-    return #ENUM;
-#include "clang/Basic/DiagnosticASTKinds.inc"
-#include "clang/Basic/DiagnosticAnalysisKinds.inc"
-#include "clang/Basic/DiagnosticCommentKinds.inc"
-#include "clang/Basic/DiagnosticCommonKinds.inc"
-#include "clang/Basic/DiagnosticDriverKinds.inc"
-#include "clang/Basic/DiagnosticFrontendKinds.inc"
-#include "clang/Basic/DiagnosticLexKinds.inc"
-#include "clang/Basic/DiagnosticParseKinds.inc"
-#include "clang/Basic/DiagnosticRefactoringKinds.inc"
-#include "clang/Basic/DiagnosticSemaKinds.inc"
-#include "clang/Basic/DiagnosticSerializationKinds.inc"
+  char ENUM[sizeof(#ENUM)];
+#include "DiagnosticNameKinds.inc"
 #undef DIAG
-  default:
+};
+
+constexpr DiagnosticNameTable DiagnosticNames = {
+#define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROPU, SFINAE, NOWERROR,      \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                \
+  #ENUM,
+#include "DiagnosticNameKinds.inc"
+#undef DIAG
+};
+
+constexpr std::array<uint32_t, clang::diag::DIAG_UPPER_LIMIT>
+makeDiagnosticNameOffsets() {
+  std::array<uint32_t, clang::diag::DIAG_UPPER_LIMIT> Offsets{};
+#define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROPU, SFINAE, NOWERROR,      \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                \
+  Offsets[clang::diag::ENUM] = offsetof(DiagnosticNameTable, ENUM) + 1;
+#include "DiagnosticNameKinds.inc"
+#undef DIAG
+  return Offsets;
+}
+
+constexpr auto DiagnosticNameOffsets = makeDiagnosticNameOffsets();
+static_assert(sizeof(DiagnosticNames) < std::numeric_limits<uint32_t>::max());
+
+const char *getDiagnosticCode(unsigned ID) {
+  if (ID >= DiagnosticNameOffsets.size())
     return nullptr;
-  }
+  uint32_t Offset = DiagnosticNameOffsets[ID];
+  if (Offset == 0)
+    return nullptr;
+  const char *Names = reinterpret_cast<const char *>(&DiagnosticNames);
+  return Names + Offset - 1;
 }
 
 bool mentionsMainFile(const Diag &D) {
