@@ -625,6 +625,102 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getNumOperands(), 10U);
 }
 
+TEST(MachineInstrTest, SwapOperands) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  std::unique_ptr<MachineFunction> MF = createMachineFunction(Ctx, Mod);
+  MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
+  MCInstrDesc MCID = {TargetOpcode::INLINEASM,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic),
+                      0};
+  MachineInstr *MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->begin(), MI);
+
+  // clang-format off
+  MCRegisterClass RC{
+      0, 0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true,
+      0, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
+  // clang-format on
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  Register A = MRI.createVirtualRegister(&RC);
+  Register B = MRI.createVirtualRegister(&RC);
+
+  MI->addOperand(MachineOperand::CreateReg(A, /*isDef=*/true));
+  MI->addOperand(MachineOperand::CreateReg(A, /*isDef=*/false));
+  MI->addOperand(MachineOperand::CreateReg(B, /*isDef=*/false));
+  MI->addOperand(MachineOperand::CreateImm(7));
+  MI->addOperand(MachineOperand::CreateReg(A, /*isDef=*/false));
+  MI->tieOperands(0, 2);
+
+  auto RegOps = [&](Register Reg) {
+    SmallVector<const MachineOperand *> Ops;
+    for (const MachineOperand &MO : MRI.reg_operands(Reg))
+      Ops.push_back(&MO);
+    return Ops;
+  };
+  auto Op = [&](unsigned Idx) -> const MachineOperand * {
+    return &MI->getOperand(Idx);
+  };
+
+  EXPECT_THAT(RegOps(A), testing::ElementsAre(Op(0), Op(1), Op(4)));
+  EXPECT_THAT(RegOps(B), testing::ElementsAre(Op(2)));
+
+  // Swap registers. Tied status stays with the operand position.
+  MRI.swapOperands(&MI->getOperand(1), &MI->getOperand(2));
+  EXPECT_EQ(MI->getOperand(1).getReg(), B);
+  EXPECT_EQ(MI->getOperand(2).getReg(), A);
+  EXPECT_FALSE(MI->getOperand(1).isTied());
+  EXPECT_TRUE(MI->getOperand(2).isTied());
+  EXPECT_EQ(MI->findTiedOperandIdx(0), 2U);
+  EXPECT_EQ(MI->findTiedOperandIdx(2), 0U);
+  EXPECT_THAT(RegOps(A), testing::ElementsAre(Op(0), Op(2), Op(4)));
+  EXPECT_THAT(RegOps(B), testing::ElementsAre(Op(1)));
+
+  // Swap a register with an immediate.
+  MI->swapOperands(4, 3);
+  EXPECT_EQ(MI->getOperand(3).getReg(), A);
+  EXPECT_TRUE(MI->getOperand(4).isImm());
+  EXPECT_EQ(MI->getOperand(4).getImm(), 7);
+  EXPECT_THAT(RegOps(A), testing::ElementsAre(Op(0), Op(2), Op(3)));
+
+  // Swap two operands that are adjacent on the same use-def list.
+  MI->getOperand(3).setIsKill();
+  MRI.swapOperands(&MI->getOperand(2), &MI->getOperand(3));
+  EXPECT_TRUE(MI->getOperand(2).isKill());
+  EXPECT_FALSE(MI->getOperand(3).isKill());
+  EXPECT_TRUE(MI->getOperand(2).isTied());
+  EXPECT_FALSE(MI->getOperand(3).isTied());
+  EXPECT_THAT(RegOps(A), testing::ElementsAre(Op(0), Op(3), Op(2)));
+
+  for (const MachineOperand &MO : MI->operands())
+    EXPECT_EQ(MO.getParent(), MI);
+#ifndef NDEBUG
+  MRI.verifyUseList(A);
+  MRI.verifyUseList(B);
+#endif
+
+  // Swap operands of an instruction that is not in a function.
+  MachineInstr *Clone = MF->CloneMachineInstr(MI);
+  Clone->swapOperands(1, 2);
+  EXPECT_EQ(Clone->getOperand(1).getReg(), A);
+  EXPECT_EQ(Clone->getOperand(2).getReg(), B);
+  EXPECT_FALSE(Clone->getOperand(1).isTied());
+  EXPECT_TRUE(Clone->getOperand(2).isTied());
+  EXPECT_EQ(Clone->findTiedOperandIdx(0), 2U);
+  EXPECT_EQ(Clone->getOperand(1).getParent(), Clone);
+  EXPECT_EQ(Clone->getOperand(2).getParent(), Clone);
+  EXPECT_THAT(RegOps(A), testing::ElementsAre(Op(0), Op(3), Op(2)));
+  EXPECT_THAT(RegOps(B), testing::ElementsAre(Op(1)));
+}
+
 // Checks the iterator returned by MacineInstr::eraseFromParent().
 TEST(MachineInstr, EraseFromParentReturnedIterator) {
   LLVMContext Ctx;
