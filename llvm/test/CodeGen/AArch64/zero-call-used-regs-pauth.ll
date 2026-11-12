@@ -4,9 +4,9 @@
 ; RUN: llc -verify-machineinstrs -enable-post-misched=false -enable-machine-outliner=never -mtriple aarch64 -mattr=+v8.3a %s -o - | \
 ; RUN:   FileCheck %s --check-prefixes CHECK,V83A
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner=never -mtriple aarch64 %s -o - | \
-; RUN:   FileCheck %s --check-prefixes DEFAULT,DEFAULT-V8A
+; RUN:   FileCheck %s --check-prefixes CHECK,V8A
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner=never -mtriple aarch64 -mattr=+v8.3a %s -o - | \
-; RUN:   FileCheck %s --check-prefixes DEFAULT,DEFAULT-V83A
+; RUN:   FileCheck %s --check-prefixes CHECK,V83A
 
 define i32 @leaf_a(i32 %x) "sign-return-address"="all" "sign-return-address-key"="a_key" "zero-call-used-regs"="all" nounwind {
 ; CHECK-LABEL: leaf_a:
@@ -18,13 +18,6 @@ define i32 @leaf_a(i32 %x) "sign-return-address"="all" "sign-return-address-key"
 ; V8A-NEXT:    hint #29
 ; V8A-NEXT:    ret
 ; V83A-NEXT:   retaa
-;
-; DEFAULT-LABEL: leaf_a:
-; DEFAULT-V8A:   hint #29
-; DEFAULT-V83A:  autiasp
-; DEFAULT:       mov x1, #0
-; DEFAULT:       movi v31.2d, #0000000000000000
-; DEFAULT-NEXT:  ret
   ret i32 %add
 }
 
@@ -38,13 +31,6 @@ define i32 @leaf_b(i32 %x) "sign-return-address"="all" "sign-return-address-key"
 ; V8A-NEXT:    hint #31
 ; V8A-NEXT:    ret
 ; V83A-NEXT:   retab
-;
-; DEFAULT-LABEL: leaf_b:
-; DEFAULT-V8A:   hint #31
-; DEFAULT-V83A:  autibsp
-; DEFAULT:       mov x1, #0
-; DEFAULT:       movi v31.2d, #0000000000000000
-; DEFAULT-NEXT:  ret
   ret i32 %add
 }
 
@@ -62,15 +48,6 @@ define void @nonleaf_a() "sign-return-address"="non-leaf" "sign-return-address-k
 ; V8A-NEXT:    hint #29
 ; V8A-NEXT:    ret
 ; V83A-NEXT:   retaa
-;
-; DEFAULT-LABEL: nonleaf_a:
-; DEFAULT:       bl ext
-; DEFAULT:       ldr x30, [sp], #16
-; DEFAULT-V8A:   hint #29
-; DEFAULT-V83A:  autiasp
-; DEFAULT:       mov x0, #0
-; DEFAULT:       movi v31.2d, #0000000000000000
-; DEFAULT-NEXT:  ret
   ret void
 }
 
@@ -86,15 +63,6 @@ define void @nonleaf_b() "sign-return-address"="non-leaf" "sign-return-address-k
 ; V8A-NEXT:    hint #31
 ; V8A-NEXT:    ret
 ; V83A-NEXT:   retab
-;
-; DEFAULT-LABEL: nonleaf_b:
-; DEFAULT:       bl ext
-; DEFAULT:       ldr x30, [sp], #16
-; DEFAULT-V8A:   hint #31
-; DEFAULT-V83A:  autibsp
-; DEFAULT:       mov x0, #0
-; DEFAULT:       movi v31.2d, #0000000000000000
-; DEFAULT-NEXT:  ret
   ret void
 }
 
@@ -107,14 +75,6 @@ define i32 @leaf_sve(i32 %x) "target-features"="+sve" "sign-return-address"="all
 ; V8A-NEXT:    hint #29
 ; V8A-NEXT:    ret
 ; V83A-NEXT:   retaa
-;
-; DEFAULT-LABEL: leaf_sve:
-; DEFAULT-V8A:   hint #29
-; DEFAULT-V83A:  autiasp
-; DEFAULT:       mov x1, #0
-; DEFAULT:       mov z31.d, #0
-; DEFAULT:       pfalse p15.b
-; DEFAULT-NEXT:  ret
   ret i32 %add
 }
 
@@ -127,13 +87,5 @@ define i32 @leaf_pauthlr(i32 %x) "branch-protection-pauth-lr" "sign-return-addre
 ; V83A:        autiasp
 ; CHECK-NEXT:  mov x16, #0
 ; CHECK-NEXT:  ret
-;
-; DEFAULT-LABEL: leaf_pauthlr:
-; DEFAULT-V8A:   hint #29
-; DEFAULT-V83A:  autiasp
-; DEFAULT:       mov x1, #0
-; DEFAULT:       mov x18, #0
-; DEFAULT-NEXT:  mov x16, #0
-; DEFAULT-NEXT:  ret
   ret i32 %add
 }
