@@ -93,3 +93,105 @@ contains
     call obj%elemental_fallback_reversed(x=y)
   end subroutine
 end module
+
+! A type-bound operator ranks its passed operand first, as a type-bound call does.
+module operator_ranking
+  type :: t
+  contains
+    procedure, pass(this) :: device_obj, managed_obj
+    generic :: choose => device_obj, managed_obj
+    generic :: operator(.choose.) => device_obj, managed_obj
+  end type
+contains
+  integer function device_obj(x, this)
+    integer, managed, intent(in) :: x
+    class(t), device, intent(in) :: this
+    device_obj = 1
+  end function
+  integer function managed_obj(x, this)
+    integer, device, intent(in) :: x
+    class(t), managed, intent(in) :: this
+    managed_obj = 2
+  end function
+
+  ! CHECK-LABEL: func.func @_QMoperator_rankingPcaller(
+  subroutine caller(obj, x, r)
+    type(t), managed :: obj
+    integer, managed :: x
+    integer :: r
+    ! CHECK: fir.call @_QMoperator_rankingPmanaged_obj(
+    r = obj%choose(x)
+    ! CHECK: fir.call @_QMoperator_rankingPmanaged_obj(
+    r = x .choose. obj
+  end subroutine
+end module
+
+! Candidates are ranked together: a tie between earlier specifics does not hide
+! a better later one, and the result does not depend on declaration order.
+module tie_then_better
+  interface first_tie
+    module procedure int_device, real_device, int_managed
+  end interface
+  interface last_tie
+    module procedure int_managed, int_device, real_device
+  end interface
+  interface fallback
+    module procedure device_array, elemental_managed, managed_array
+  end interface
+  type :: u
+  contains
+    procedure :: object_first
+    procedure, pass(this) :: object_last
+    generic :: mixed => object_first, object_last
+    generic :: mixed_reversed => object_last, object_first
+  end type
+contains
+  subroutine int_device(p, x)
+    integer, pointer, intent(in) :: p
+    integer, device :: x
+  end subroutine
+  subroutine real_device(p, x)
+    real, pointer, intent(in) :: p
+    integer, device :: x
+  end subroutine
+  subroutine int_managed(p, x)
+    integer, pointer, intent(in) :: p
+    integer, managed :: x
+  end subroutine
+  subroutine device_array(x)
+    integer, device :: x(:)
+  end subroutine
+  pure elemental subroutine elemental_managed(x)
+    integer, managed, intent(in) :: x
+  end subroutine
+  subroutine managed_array(x)
+    integer, managed :: x(:)
+  end subroutine
+  subroutine object_first(this, x)
+    class(u), device :: this
+    integer, managed :: x
+  end subroutine
+  subroutine object_last(x, this)
+    integer, device :: x
+    class(u), managed :: this
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMtie_then_betterPcaller(
+  subroutine caller(obj, x)
+    type(u), managed :: obj
+    integer, managed :: x
+    integer, managed :: y(2)
+    ! CHECK: fir.call @_QMtie_then_betterPint_managed(
+    call first_tie(null(), x)
+    ! CHECK: fir.call @_QMtie_then_betterPint_managed(
+    call last_tie(null(), x)
+    ! Apply the non-elemental preference before ranking the remaining candidates.
+    ! CHECK: fir.call @_QMtie_then_betterPmanaged_array(
+    call fallback(y)
+    ! A PASS object in different positions is compared with its own score.
+    ! CHECK: fir.call @_QMtie_then_betterPobject_last(
+    call obj%mixed(x)
+    ! CHECK: fir.call @_QMtie_then_betterPobject_last(
+    call obj%mixed_reversed(x)
+  end subroutine
+end module

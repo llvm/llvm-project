@@ -6160,8 +6160,15 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
   generic = scope ? scope->FindComponent(oprName) : nullptr;
   if (generic) {
     ExpressionAnalyzer::AdjustActuals adjustment{
-        [&](const Symbol &proc, ActualArguments &) {
-          return passIndex == GetPassIndex(proc).value_or(-1);
+        [&](const Symbol &proc, ActualArguments &actuals) {
+          if (passIndex != GetPassIndex(proc).value_or(-1)) {
+            return false;
+          }
+          // Rank the operand as the passed object, as for a type-bound call.
+          if (actuals.at(passIndex)) {
+            actuals.at(passIndex)->set_isPassedObject();
+          }
+          return true;
         }};
     auto result{context_.ResolveGeneric(
         *generic, actuals_, adjustment, isSubroutine, SymbolVector{})};
