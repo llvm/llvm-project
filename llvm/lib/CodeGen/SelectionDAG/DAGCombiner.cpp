@@ -31642,7 +31642,9 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
     SDValue N11 = N1.getOperand(1);
     SDValue N21 = N2.getOperand(1);
     // Second op VT might be different (e.g. shift amount type)
-    if (N11.getValueType() == N21.getValueType()) {
+    if (N11.getValueType() == N21.getValueType() &&
+        TLI.isProfitableToFoldSelectIntoShiftAmount(BinOpc, N1.getValueType(),
+                                                    N11, N21)) {
       SDValue NewSel = DAG.getSelect(DL, N11.getValueType(), N0, N11, N21);
       SDNodeFlags Flags = N1->getFlags() & N2->getFlags();
       SDValue NewBinOp =

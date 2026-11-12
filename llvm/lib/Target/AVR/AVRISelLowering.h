@@ -88,6 +88,12 @@ public:
     return false;
   }
 
+  bool isProfitableToFoldSelectIntoShiftAmount(unsigned Opcode, EVT VT,
+                                               SDValue Amount1,
+                                               SDValue Amount2) const override {
+    return !isa<ConstantSDNode>(Amount1) || !isa<ConstantSDNode>(Amount2);
+  }
+
   ShiftLegalizationStrategy
   preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                      unsigned ExpansionFactor) const override {

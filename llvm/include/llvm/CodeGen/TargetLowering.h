@@ -864,6 +864,16 @@ public:
     return false;
   }
 
+  /// Return true if it is profitable to fold a select into the shift amount
+  /// operand of a shift. For example, 'select (c, x << a, x << b)' --->
+  /// 'x << select(c, a, b)'. Some targets (such as AVR) may have their own
+  /// optimization for shift operations.
+  virtual bool isProfitableToFoldSelectIntoShiftAmount(unsigned Opcode, EVT VT,
+                                                       SDValue Amount1,
+                                                       SDValue Amount2) const {
+    return true;
+  }
+
   /// Return true if it is profitable to fold a pair of shifts into a mask.
   /// This is usually true on most targets. But some targets, like Thumb1,
   /// have immediate shift instructions, but no immediate "and" instruction;
