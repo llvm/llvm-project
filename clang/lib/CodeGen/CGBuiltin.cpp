@@ -6931,8 +6931,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
   StringRef Prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
+  // This also finds the target-independent builtins, such as
+  // __builtin_debugtrap, so it is done for targets without a prefix too.
+  IntrinsicID = Intrinsic::getIntrinsicForClangBuiltin(Prefix, Name);
   if (!Prefix.empty()) {
-    IntrinsicID = Intrinsic::getIntrinsicForClangBuiltin(Prefix.data(), Name);
     if (IntrinsicID == Intrinsic::not_intrinsic && Prefix == "spv" &&
         getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
       IntrinsicID = Intrinsic::getIntrinsicForClangBuiltin("amdgcn", Name);

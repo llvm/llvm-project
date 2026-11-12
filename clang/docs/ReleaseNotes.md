@@ -930,6 +930,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   as `_Atomic(int)`. Atomic types whose size is rounded up to a power of two
   (adding padding bits) continue to report `false`. This also fixes a false
   positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
+- Target-independent builtins that map to LLVM intrinsics, such as
+  `__builtin_debugtrap`, now work on MSP430 too, where they gave "cannot
+  compile this builtin function yet".
 
 #### Bug Fixes to Attribute Support
 

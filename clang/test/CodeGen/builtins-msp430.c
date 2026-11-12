@@ -1,6 +1,13 @@
 // REQUIRES: msp430-registered-target
 // RUN: %clang_cc1 -triple msp430-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
+// MSP430 has no intrinsics of its own, but the target-independent ones work.
+void test_builtin_debugtrap(void) {
+  // CHECK-LABEL: @test_builtin_debugtrap
+  // CHECK: call void @llvm.debugtrap()
+  __builtin_debugtrap();
+}
+
 int test_builtin_flt_rounds() {
   // CHECK:     [[V0:[%A-Za-z0-9.]+]] = call i32 @llvm.get.rounding()
   // CHECK-DAG: [[V1:[%A-Za-z0-9.]+]] = trunc i32 [[V0]] to i16
