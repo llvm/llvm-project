@@ -14,7 +14,7 @@ define void @test(i64 %arg, i32 %arg1, ptr %base) {
 ; CHECK-SAME:  End: (8 + (8 * (zext i32 (-1 + %arg1)<nsw> to i64))<nuw><nsw> + %base)
 ; CHECK-NEXT: LAA: Adding RT check for range:
 ; CHECK-NEXT:  Start: ((8 * (1 smin %arg)) + %base)
-; CHECK-SAME:  End: (8 + (8 * %arg) + %base)
+; CHECK-SAME:  End: (8 + (8 * %arg)<u nsw> + %base)
 
 ; CHECK: vector.body
 

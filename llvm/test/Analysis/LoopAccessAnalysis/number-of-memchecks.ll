@@ -246,8 +246,8 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:       %arrayidxA2 = getelementptr i16, ptr %a, i64 %ind2
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:     Group GRP0:
-; CHECK-NEXT:       (Low: ((2 * %offset) + %a) High: (10000 + (2 * %offset) + %a))
-; CHECK-NEXT:         Member: {((2 * %offset) + %a),+,2}<%for.body>
+; CHECK-NEXT:       (Low: ((2 * %offset)<u nsw> + %a) High: (10000 + (2 * %offset)<u nsw> + %a))
+; CHECK-NEXT:         Member: {((2 * %offset)<u nsw> + %a),+,2}<%for.body>
 ; CHECK-NEXT:     Group GRP1:
 ; CHECK-NEXT:       (Low: %a High: (10000 + %a))
 ; CHECK-NEXT:         Member: {%a,+,2}<nw><%for.body>
