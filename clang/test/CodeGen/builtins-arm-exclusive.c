@@ -255,7 +255,7 @@ void test_clrex(void) {
 
   __builtin_arm_clrex();
 // CHECK: call void @llvm.arm.clrex()
-// CHECK-ARM64: call void @llvm.aarch64.clrex()
+// CHECK-ARM64: call void @llvm.aarch64.clrex(i32 15)
 }
 
 #ifdef __aarch64__
