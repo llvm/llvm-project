@@ -17,6 +17,10 @@ lldb_tablegen(ObjectFilePECOFFEnums.inc -gen-lldb-option-enum-defs
   SOURCE ObjectFilePECOFFEnums.td
   TARGET LLDBPluginObjectFilePECOFFEnumsGen)
 
+lldb_tablegen(ObjectFilePECOFFEnums.json -dump-json
+  SOURCE ObjectFilePECOFFEnums.td
+  TARGET LLDBPluginObjectFilePECOFFEnumsJsonGen)
+
 lldb_tablegen(ObjectFilePECOFFProperties.json -dump-json
   SOURCE ObjectFilePECOFFProperties.td
   TARGET LLDBPluginObjectFilePECOFFPropertiesJsonGen)

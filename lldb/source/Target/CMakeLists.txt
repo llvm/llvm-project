@@ -10,9 +10,17 @@ lldb_tablegen(ProcessEnums.inc -gen-lldb-option-enum-defs
   SOURCE ProcessEnums.td
   TARGET LLDBProcessEnumsGen)
 
+lldb_tablegen(ProcessEnums.json -dump-json
+  SOURCE ProcessEnums.td
+  TARGET LLDBProcessEnumsJsonGen)
+
 lldb_tablegen(TargetEnums.inc -gen-lldb-option-enum-defs
   SOURCE TargetEnums.td
   TARGET LLDBTargetEnumsGen)
+
+lldb_tablegen(TargetEnums.json -dump-json
+  SOURCE TargetEnums.td
+  TARGET LLDBTargetEnumsJsonGen)
 
 lldb_tablegen(TargetProperties.json -dump-json
   SOURCE TargetProperties.td
