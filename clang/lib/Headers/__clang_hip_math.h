@@ -944,7 +944,7 @@ double nan(const char *__tagp) {
 #else
   __static_assert_type_size_equal(sizeof(uint64_t), sizeof(double));
   uint64_t __val = __make_mantissa(__tagp);
-  __val |= 0xFFF << 51;
+  __val |= 0xFFFULL << 51;
   return *reinterpret_cast<double *>(&__val);
 #endif
 }
