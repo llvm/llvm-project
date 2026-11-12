@@ -8,13 +8,17 @@ define double @test(double %x) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double 1.000000e+00>, double [[X]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[M0:%.*]] = extractelement <4 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    [[M0:%.*]] = fmul double 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[M0_USE:%.*]] = fmul double [[M0]], 0.000000e+00
 ; CHECK-NEXT:    call void @use(double [[M0_USE]])
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x double> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[A2:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP3]])
+; CHECK-NEXT:    [[M1:%.*]] = fmul double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[R0:%.*]] = fmul contract double [[M0]], 0.000000e+00
+; CHECK-NEXT:    [[R1:%.*]] = fmul double [[M1]], 0.000000e+00
+; CHECK-NEXT:    [[A0:%.*]] = fadd reassoc contract double [[R0]], [[R1]]
+; CHECK-NEXT:    [[M2:%.*]] = fmul double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[R2:%.*]] = fmul double [[M2]], 0.000000e+00
+; CHECK-NEXT:    [[A1:%.*]] = fadd reassoc double [[A0]], [[R2]]
+; CHECK-NEXT:    [[A2:%.*]] = fadd reassoc double [[A1]], 0.000000e+00
 ; CHECK-NEXT:    ret double [[A2]]
 ;
 entry:

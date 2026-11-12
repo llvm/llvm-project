@@ -6238,8 +6238,7 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   for (auto *I : Tys) {
     if (!I->isVectorTy())
       continue;
-    if (I->getScalarSizeInBits() * cast<FixedVectorType>(I)->getNumElements() ==
-        128)
+    if (getTypeLegalizationCost(I).second.is128BitVector())
       Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0, CostKind) +
               getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
   }
