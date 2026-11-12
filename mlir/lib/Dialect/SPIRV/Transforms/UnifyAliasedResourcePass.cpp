@@ -143,7 +143,12 @@ deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   return std::distance(scalarNumBits.begin(), minVal);
 }
 
-static bool areSameBitwidthScalarType(Type a, Type b) {
+static bool areSameBitwidthScalarOrVectorType(Type a, Type b) {
+  if (auto va = dyn_cast<VectorType>(a)) {
+    auto vb = dyn_cast<VectorType>(b);
+    return vb && va.getNumElements() * va.getElementTypeBitWidth() ==
+                     vb.getNumElements() * vb.getElementTypeBitWidth();
+  }
   return a.isIntOrFloat() && b.isIntOrFloat() &&
          a.getIntOrFloatBitWidth() == b.getIntOrFloatBitWidth();
 }
@@ -357,7 +362,7 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
     spirv::SPIRVType dstElemType = analysis.getElementType(dstVarOp);
 
     if (srcElemType == dstElemType ||
-        areSameBitwidthScalarType(srcElemType, dstElemType)) {
+        areSameBitwidthScalarOrVectorType(srcElemType, dstElemType)) {
       // We have the same bitwidth for source and destination element types.
       // Thie indices keep the same.
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
@@ -450,7 +455,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       return success();
     }
 
-    if (areSameBitwidthScalarType(srcElemType, dstElemType)) {
+    if (areSameBitwidthScalarOrVectorType(srcElemType, dstElemType)) {
       auto castOp = spirv::BitcastOp::create(rewriter, loc, srcElemType,
                                              newLoadOp.getValue());
       rewriter.replaceOp(loadOp, castOp->getResults());
@@ -616,7 +621,7 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
     if (srcElemType != dstElemType) {
       if (!srcElemType.isIntOrFloat() || !dstElemType.isIntOrFloat())
         return rewriter.notifyMatchFailure(storeOp, "not scalar type");
-      if (!areSameBitwidthScalarType(srcElemType, dstElemType))
+      if (!areSameBitwidthScalarOrVectorType(srcElemType, dstElemType))
         return rewriter.notifyMatchFailure(storeOp, "different bitwidth");
       value = spirv::BitcastOp::create(rewriter, loc, dstElemType, value);
     }
