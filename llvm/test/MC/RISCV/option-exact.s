@@ -37,7 +37,8 @@ call undefined@plt
 
 # CHECK-ASM: beq a0, a1, undefined
 # CHECK-ASM-SAME: # encoding: [0x63'A',A,0xb5'A',A]
-# CHECK-OBJDUMP: bne a0, a1, 0x14
+# CHECK-OBJDUMP: bne a0, a1, 0xc
+# CHECK-OBJDUMP-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-OBJDUMP-NEXT: jal zero, 0x10
 # CHECK-OBJDUMP-NEXT: R_RISCV_JAL undefined
 beq a0, a1, undefined
@@ -104,7 +105,8 @@ call undefined@plt
 
 # CHECK-ASM: beq a0, a1, undefined
 # CHECK-ASM-SAME: # encoding: [0x63'A',A,0xb5'A',A]
-# CHECK-OBJDUMP: bne a0, a1, 0x40
+# CHECK-OBJDUMP: bne a0, a1, 0x38
+# CHECK-OBJDUMP-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-OBJDUMP-NEXT: jal zero, 0x3c
 # CHECK-OBJDUMP-NEXT: R_RISCV_JAL undefined
 beq a0, a1, undefined
