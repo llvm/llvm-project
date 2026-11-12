@@ -817,10 +817,10 @@ void CompileUnit::cloneAndEmitRangeList(DebugSectionKind RngSectionKind,
     std::optional<AddressRangeValuePair> CachedRange;
     uint64_t OffsetAfterUnitLength = emitRangeListHeader(OutRangeSection);
 
-    DebugRangePatch *CompileUnitRangePtr = nullptr;
+    DebugRangePatch *UnitRangePtr = nullptr;
     DebugInfoSection.ListDebugRangePatch.forEach([&](DebugRangePatch &Patch) {
-      if (Patch.IsCompileUnitRanges) {
-        CompileUnitRangePtr = &Patch;
+      if (Patch.IsUnitRanges) {
+        UnitRangePtr = &Patch;
       } else {
         // Get ranges from the source DWARF corresponding to the current
         // attribute.
@@ -859,10 +859,10 @@ void CompileUnit::cloneAndEmitRangeList(DebugSectionKind RngSectionKind,
       }
     });
 
-    if (CompileUnitRangePtr != nullptr) {
+    if (UnitRangePtr != nullptr) {
       // Emit compile unit ranges last to be binary compatible with classic
       // dsymutil.
-      DebugInfoSection.apply(CompileUnitRangePtr->PatchOffset,
+      DebugInfoSection.apply(UnitRangePtr->PatchOffset,
                              dwarf::DW_FORM_sec_offset,
                              OutRangeSection.OS.tell());
       emitRangeListFragment(LinkedFunctionRanges, OutRangeSection);
