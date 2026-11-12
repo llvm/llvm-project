@@ -6,25 +6,29 @@
 define void @load_lane_in_gather_node(ptr %a, ptr %out, half %y0, half %y1) {
 ; CHECK-LABEL: define void @load_lane_in_gather_node(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[OUT:%.*]], half [[Y0:%.*]], half [[Y1:%.*]]) {
-; CHECK-NEXT:    [[PA1:%.*]] = getelementptr half, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[L0:%.*]] = load half, ptr [[A]], align 4
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr half, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[L1:%.*]] = load half, ptr [[PA1]], align 4
 ; CHECK-NEXT:    [[T2:%.*]] = fmul half [[Y0]], [[L0]]
+; CHECK-NEXT:    [[T3:%.*]] = fsub half [[T2]], [[Y1]]
 ; CHECK-NEXT:    [[T7:%.*]] = fmul half 1.000000e+00, [[L0]]
 ; CHECK-NEXT:    [[T8:%.*]] = fadd half [[Y0]], [[T7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[Y0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[TMP1]], <2 x half> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> <half poison, half 1.000000e+00>, half [[L1]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x half> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x half> poison, half [[Y1]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x half> [[TMP5]], half [[T2]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x half> [[TMP6]], half [[T8]], i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x half> [[TMP7]], half [[L1]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x half> <half poison, half 0.000000e+00, half poison, half poison>, half [[Y1]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x half> [[TMP4]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x half> [[TMP9]], <4 x half> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP12:%.*]] = fsub <4 x half> [[TMP8]], [[TMP11]]
-; CHECK-NEXT:    store <4 x half> [[TMP12]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x half> [[TMP3]], <2 x half> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x half> [[TMP5]], half [[T8]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x half> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    store half [[T3]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[PO1:%.*]] = getelementptr half, ptr [[OUT]], i64 1
+; CHECK-NEXT:    store half [[Y1]], ptr [[PO1]], align 4
+; CHECK-NEXT:    [[PO2:%.*]] = getelementptr half, ptr [[OUT]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x half> [[TMP7]], i64 0
+; CHECK-NEXT:    store half [[TMP8]], ptr [[PO2]], align 4
+; CHECK-NEXT:    [[PO3:%.*]] = getelementptr half, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x half> [[TMP7]], i64 1
+; CHECK-NEXT:    store half [[TMP9]], ptr [[PO3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %l0 = load half, ptr %a, align 4

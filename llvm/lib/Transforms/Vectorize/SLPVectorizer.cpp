@@ -2564,6 +2564,15 @@ private:
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
 
+  /// \returns the cost of the shuffles that take the values in \p VL from the
+  /// vectorized tree entries. Only the values in \p DemandedElts with a zero
+  /// insert cost are counted.
+  /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
+  InstructionCost getVectorizedScalarsShuffleCost(ArrayRef<Value *> VL,
+                                                  const APInt &DemandedElts,
+                                                  bool ForPoisonSrc,
+                                                  Type *ScalarTy) const;
+
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
   void setInsertPointAfterBundle(const TreeEntry *E);
@@ -21943,43 +21952,40 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // Do the cost estimation if shuffle beneficial than buildvector.
     SmallVector<int> SubMask(std::next(Mask.begin(), MaskBase),
                              std::next(Mask.begin(), MaskBase + VL.size()));
-    auto ShrinkMask = [&](MutableArrayRef<int> SrcMask, unsigned SrcVF) {
-      int MinElement = SrcMask.front(), MaxElement = SrcMask.front();
-      for (int Idx : make_filter_range(
-               SrcMask, [](int Idx) { return Idx != PoisonMaskElem; })) {
-        if (MinElement == PoisonMaskElem || MinElement % SrcVF > Idx % SrcVF)
-          MinElement = Idx;
-        if (MaxElement == PoisonMaskElem || MaxElement % SrcVF < Idx % SrcVF)
-          MaxElement = Idx;
-      }
-      assert(MaxElement >= 0 && MinElement >= 0 &&
-             MaxElement % SrcVF >= MinElement % SrcVF &&
-             "Expected at least single element.");
-      // If the leading [0, MinIdx) range sits in its own register part(s),
-      // skip those whole parts when sizing the destination - everything below
-      // the register-aligned floor is unused and never indexed.
-      unsigned Offset = 0;
-      unsigned MinIdx = MinElement % SrcVF;
-      if (MinIdx > 1) {
-        unsigned RegFloor = getFloorFullVectorNumberOfElements(
-            *TTI, VL.front()->getType(), MinIdx, Opts.slp_revec);
-        auto *RegFloorTy = getWidenedType(VL.front()->getType(), RegFloor);
-        unsigned RegFloorParts =
-            getNumberOfParts(RegFloorTy, VL.front()->getType(), RegFloor);
-        if (RegFloorParts > 1)
-          Offset = RegFloor;
-      }
-      unsigned NewVF =
-          std::max<unsigned>(VL.size(), (MaxElement % SrcVF) - Offset + 1);
-      if (NewVF >= SrcVF)
-        return SrcVF;
+    int MinElement = SubMask.front(), MaxElement = SubMask.front();
+    for (int Idx : make_filter_range(
+             SubMask, [](int Idx) { return Idx != PoisonMaskElem; })) {
+      if (MinElement == PoisonMaskElem || MinElement % VF > Idx % VF)
+        MinElement = Idx;
+      if (MaxElement == PoisonMaskElem || MaxElement % VF < Idx % VF)
+        MaxElement = Idx;
+    }
+    assert(MaxElement >= 0 && MinElement >= 0 &&
+           MaxElement % VF >= MinElement % VF &&
+           "Expected at least single element.");
+    // If the leading [0, MinIdx) range sits in its own register part(s),
+    // skip those whole parts when sizing the destination - everything below
+    // the register-aligned floor is unused and never indexed.
+    unsigned Offset = 0;
+    unsigned MinIdx = MinElement % VF;
+    if (MinIdx > 1) {
+      unsigned RegFloor = getFloorFullVectorNumberOfElements(
+          *TTI, VL.front()->getType(), MinIdx, Opts.slp_revec);
+      auto *RegFloorTy = getWidenedType(VL.front()->getType(), RegFloor);
+      unsigned RegFloorParts =
+          getNumberOfParts(RegFloorTy, VL.front()->getType(), RegFloor);
+      if (RegFloorParts > 1)
+        Offset = RegFloor;
+    }
+    unsigned NewVF =
+        std::max<unsigned>(VL.size(), (MaxElement % VF) - Offset + 1);
+    if (NewVF < VF) {
       for (int &Idx : make_filter_range(
-               SrcMask, [](int Idx) { return Idx != PoisonMaskElem; }))
-        Idx = (Idx % SrcVF) - Offset +
-              (Idx >= static_cast<int>(SrcVF) ? NewVF : 0);
-      return NewVF;
-    };
-    unsigned NewVF = ShrinkMask(SubMask, VF);
+               SubMask, [](int Idx) { return Idx != PoisonMaskElem; }))
+        Idx = (Idx % VF) - Offset + (Idx >= static_cast<int>(VF) ? NewVF : 0);
+    } else {
+      NewVF = VF;
+    }
 
     auto *VecTy =
         cast<VectorType>(getWidenedType(VL.front()->getType(), NewVF));
@@ -21999,6 +22005,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
                             VecTy, CostKind, Mask);
     };
     InstructionCost ShuffleCost = GetShuffleCost(SubMask, Entries, VecTy);
+    auto GetVectorizedScalarsCost = [&](const APInt &DemandedElts,
+                                        bool ForPoisonSrc) -> InstructionCost {
+      if (MinBWs.contains(TE))
+        return TTI::TCC_Free;
+      return getVectorizedScalarsShuffleCost(VL, DemandedElts, ForPoisonSrc,
+                                             VL.front()->getType());
+    };
     InstructionCost FirstShuffleCost = 0;
     SmallVector<int> FirstMask(SubMask.begin(), SubMask.end());
     if (Entries.size() == 1 || !Entries[0]->isGather()) {
@@ -22022,6 +22035,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
                                    MaskVecTy, DemandedElts, /*Insert=*/true,
                                    /*Extract=*/false, CostKind);
+      FirstShuffleCost +=
+          GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/false);
     }
     InstructionCost SecondShuffleCost = 0;
     SmallVector<int> SecondMask(SubMask.begin(), SubMask.end());
@@ -22048,6 +22063,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
                                    MaskVecTy, DemandedElts, /*Insert=*/true,
                                    /*Extract=*/false, CostKind);
+      SecondShuffleCost +=
+          GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/false);
     }
     APInt DemandedElts = APInt::getAllOnes(SubMask.size());
     for (auto [I, Idx] : enumerate(SubMask))
@@ -22057,46 +22074,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
                                  MaskVecTy, DemandedElts, /*Insert=*/true,
                                  /*Extract=*/false, CostKind);
-    // A lane taken from another vectorized entry needs a shuffle, which a zero
-    // insert price misses.
-    APInt VectorizedElts = APInt::getZero(SubMask.size());
-    SmallVector<const TreeEntry *, 2> VectorizedEntries;
-    SmallVector<std::pair<unsigned, const TreeEntry *>> VectorizedLanes;
-    for (auto [I, Idx] : enumerate(SubMask)) {
-      if (Idx == PoisonMaskElem)
-        continue;
-      ArrayRef<TreeEntry *> VTEs = getTreeEntries(VL[I]);
-      const auto *It = find_if(VTEs, [&](const TreeEntry *E) {
-        return !DeletedNodes.contains(E) &&
-               !TransformedToGatherNodes.contains(E);
-      });
-      if (It == VTEs.end())
-        continue;
-      VectorizedElts.setBit(I);
-      VectorizedLanes.emplace_back(I, *It);
-      if (!is_contained(VectorizedEntries, *It))
-        VectorizedEntries.push_back(*It);
-    }
-    if (!VectorizedElts.isZero() && VectorizedEntries.size() <= 2 &&
-        getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
-                                 MaskVecTy, VectorizedElts, /*Insert=*/true,
-                                 /*Extract=*/false,
-                                 CostKind) == TTI::TCC_Free) {
-      unsigned VectorizedVF = 0;
-      for (const TreeEntry *E : VectorizedEntries)
-        VectorizedVF = std::max(VectorizedVF, E->getVectorFactor());
-      SmallVector<int> VectorizedMask(SubMask.size(), PoisonMaskElem);
-      for (auto [I, E] : VectorizedLanes)
-        VectorizedMask[I] = E->findLaneForValue(VL[I]) +
-                            (E == VectorizedEntries.front() ? 0 : VectorizedVF);
-      unsigned VectorizedNewVF = ShrinkMask(VectorizedMask, VectorizedVF);
-      auto *VectorizedVecTy = cast<VectorType>(
-          getWidenedType(VL.front()->getType(), VectorizedNewVF));
-      InstructionCost VectorizedShuffleCost =
-          GetShuffleCost(VectorizedMask, VectorizedEntries, VectorizedVecTy);
-      if (VectorizedShuffleCost.isValid())
-        BuildVectorCost += VectorizedShuffleCost;
-    }
+    BuildVectorCost +=
+        GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/true);
     const TreeEntry *BestEntry = nullptr;
     auto MaskSlice = MutableArrayRef(Mask).slice(MaskBase, VL.size());
     if (FirstShuffleCost < ShuffleCost) {
@@ -22201,6 +22180,117 @@ BoUpSLP::isGatherShuffledEntry(
   return Res;
 }
 
+InstructionCost BoUpSLP::getVectorizedScalarsShuffleCost(
+    ArrayRef<Value *> VL, const APInt &DemandedElts, bool ForPoisonSrc,
+    Type *ScalarTy) const {
+  if (isa<VectorType>(ScalarTy))
+    return TTI::TCC_Free;
+  const unsigned VF = VL.size();
+  auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VF));
+  SmallMapVector<const TreeEntry *, SmallVector<int>, 2> EntryMasks;
+  APInt ShuffledElts = APInt::getZero(VF);
+  for (auto [I, V] : enumerate(VL)) {
+    if (!DemandedElts[I] || !isa<Instruction>(V) || V->getType() != ScalarTy)
+      continue;
+    ArrayRef<TreeEntry *> VTEs = getTreeEntries(V);
+    const auto *It = find_if(VTEs, [&](const TreeEntry *E) {
+      return !TransformedToGatherNodes.contains(E) && !DeletedNodes.contains(E);
+    });
+    if (It == VTEs.end() ||
+        getScalarizationOverhead(*TTI, Opts.slp_revec, ScalarTy, VecTy,
+                                 APInt::getOneBitSet(VF, I), /*Insert=*/true,
+                                 /*Extract=*/false, CostKind,
+                                 /*ForPoisonSrc=*/true, VL) != TTI::TCC_Free)
+      continue;
+    EntryMasks.try_emplace(*It, VF, PoisonMaskElem).first->second[I] =
+        (*It)->findLaneForValue(V);
+    ShuffledElts.setBit(I);
+  }
+  if (ShuffledElts.isZero())
+    return TTI::TCC_Free;
+
+  // The vector the shuffled scalars are placed into. It already holds the
+  // constants and the scalars inserted before the first shuffled one.
+  const unsigned FirstShuffled = ShuffledElts.countr_zero();
+  SmallVector<Constant *> BaseElts(VF, PoisonValue::get(ScalarTy));
+  for (auto [I, V] : enumerate(VL))
+    if (!ForPoisonSrc || (!ShuffledElts[I] && !isa<PoisonValue>(V) &&
+                          (!isa<Instruction>(V) || I < FirstShuffled)))
+      BaseElts[I] = Constant::getNullValue(ScalarTy);
+  Constant *Base = ConstantVector::get(BaseElts);
+
+  InstructionCost Cost = 0;
+  for (const TreeEntry *E : make_first_range(EntryMasks)) {
+    auto It = MinBWs.find(E);
+    if (It == MinBWs.end())
+      continue;
+    unsigned BWSz = It->second.first;
+    unsigned DstBWSz = DL->getTypeSizeInBits(ScalarTy);
+    unsigned VecOpcode;
+    if (DstBWSz < BWSz)
+      VecOpcode = Instruction::Trunc;
+    else
+      VecOpcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
+    Cost += TTI->getCastInstrCost(
+        VecOpcode, VecTy,
+        getWidenedType(IntegerType::get(ScalarTy->getContext(), BWSz), VF),
+        getCastContextHint(*E), CostKind);
+  }
+  auto ResizeToVF = [&](const TreeEntry *E, ArrayRef<int> Mask, bool) {
+    if (none_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); }))
+      return std::make_pair(E, false);
+    SmallVector<int> OrigMask(E->getVectorFactor(), PoisonMaskElem);
+    copy(Mask, OrigMask.begin());
+    Cost += getShuffleCost(
+        *TTI, TTI::SK_PermuteSingleSrc,
+        cast<VectorType>(getWidenedType(ScalarTy, OrigMask.size())), CostKind,
+        OrigMask);
+    return std::make_pair(E, true);
+  };
+  unsigned SrcVF = 0;
+  auto EstimateShufflesCost = [&](ArrayRef<int> Mask,
+                                  ArrayRef<const TreeEntry *> TEs) {
+    assert((TEs.size() == 1 || TEs.size() == 2) &&
+           "Expected exactly 1 or 2 tree entries.");
+    if (TEs.size() == 1) {
+      if (SrcVF == 0)
+        SrcVF = TEs.front()->getVectorFactor();
+      if (!ShuffleVectorInst::isIdentityMask(Mask, SrcVF) &&
+          !all_of(enumerate(Mask), [=](const auto &Data) {
+            return Data.value() == PoisonMaskElem ||
+                   (Data.index() < SrcVF &&
+                    static_cast<int>(Data.index()) == Data.value());
+          }))
+        Cost += getShuffleCost(
+            *TTI, TTI::SK_PermuteSingleSrc,
+            cast<VectorType>(getWidenedType(ScalarTy, SrcVF)), CostKind, Mask);
+    } else {
+      if (SrcVF == 0) {
+        if (TEs.front() &&
+            TEs.front()->getVectorFactor() == TEs.back()->getVectorFactor())
+          SrcVF = TEs.front()->getVectorFactor();
+        else
+          SrcVF = Mask.size();
+      }
+      Cost += getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc,
+                             cast<VectorType>(getWidenedType(ScalarTy, SrcVF)),
+                             CostKind, Mask);
+    }
+    SrcVF = Mask.size();
+    return TEs.back();
+  };
+  auto Vector = EntryMasks.takeVector();
+  (void)performExtractsShuffleAction<const TreeEntry>(
+      MutableArrayRef(Vector.data(), Vector.size()), Base,
+      [](const TreeEntry *E) { return E->getVectorFactor(); }, ResizeToVF,
+      EstimateShufflesCost);
+  // Keep the insert cost alone if the target has no valid cost for the
+  // shuffles.
+  if (!Cost.isValid())
+    return TTI::TCC_Free;
+  return Cost;
+}
+
 InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                        Type *ScalarTy) const {
   const unsigned VF = VL.size();
@@ -22246,6 +22336,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                      /*Insert=*/true,
                                      /*Extract=*/false, CostKind,
                                      ForPoisonSrc && !IsAnyNonUndefConst, VL);
+
+  // 3. Shuffle the scalars of the vectorized entries.
+  Cost += getVectorizedScalarsShuffleCost(VL, DemandedElements, ForPoisonSrc,
+                                          ScalarTy);
   return Cost;
 }
 
