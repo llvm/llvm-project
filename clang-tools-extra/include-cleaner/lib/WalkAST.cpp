@@ -161,8 +161,10 @@ public:
       return false;
     if (auto *CD = S->getCalleeDecl()) {
       if (isa<CXXMethodDecl>(CD)) {
-        // Treat this as a regular member reference.
-        report(S->getOperatorLoc(), getMemberProvider(S->getArg(0)->getType()),
+        // Treat this as a regular member reference. Like VisitMemberExpr, look
+        // through the derived-to-base cast an inherited operator adds.
+        report(S->getOperatorLoc(),
+               getMemberProvider(S->getArg(0)->IgnoreImpCasts()->getType()),
                RefType::Implicit);
       } else {
         report(S->getOperatorLoc(), dyn_cast<NamedDecl>(CD), RefType::Implicit);

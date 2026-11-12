@@ -292,9 +292,15 @@ infrastructure are described first, followed by tool-specific sections.
     instantiations with real move semantics.
 
 - Improved {doc}`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check by matching
-  {option}`IgnoreHeaders` patterns containing `/` against header paths on
-  Windows.
+  <clang-tidy/checks/misc/include-cleaner>` check:
+
+  - Matched {option}`IgnoreHeaders` patterns containing `/` against header
+    paths on Windows.
+
+  - Attributed a member operator inherited from a base class to the derived
+    type, so the derived type's header is no longer reported as unused. This
+    made `<memory>` look unused after `p->x` on a `std::shared_ptr` with
+    libstdc++ but not libc++.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
