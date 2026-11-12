@@ -451,7 +451,7 @@ private:
 
   // Make all operands of the GEP available.
   void makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
-                         const SmallVecInsn &InstructionsToHoist,
+                         ArrayRef<GetElementPtrInst *> CorrespondingGeps,
                          Instruction *Gep) const;
 
   void updateAlignment(Instruction *I, Instruction *Repl);
@@ -879,9 +879,9 @@ bool GVNHoist::allGepOperandsAvailable(const Instruction *I,
   return true;
 }
 
-void GVNHoist::makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
-                                 const SmallVecInsn &InstructionsToHoist,
-                                 Instruction *Gep) const {
+void GVNHoist::makeGepsAvailable(
+    Instruction *Repl, BasicBlock *HoistPt,
+    ArrayRef<GetElementPtrInst *> CorrespondingGeps, Instruction *Gep) const {
   assert(allGepOperandsAvailable(Gep, HoistPt) && "GEP operands not available");
 
   Instruction *ClonedGep = Gep->clone();
@@ -893,8 +893,14 @@ void GVNHoist::makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
 
       // As a GEP can refer to other GEPs, recursively make all the operands
       // of this GEP available at HoistPt.
-      if (GetElementPtrInst *GepOp = dyn_cast<GetElementPtrInst>(Op))
-        makeGepsAvailable(ClonedGep, HoistPt, InstructionsToHoist, GepOp);
+      if (GetElementPtrInst *GepOp = dyn_cast<GetElementPtrInst>(Op)) {
+        // Feed with the parent of the nested gep
+        SmallVector<GetElementPtrInst *, 4> OperandGeps;
+        for (GetElementPtrInst *OtherGep : CorrespondingGeps)
+          OperandGeps.push_back(
+              cast<GetElementPtrInst>(OtherGep->getOperand(i)));
+        makeGepsAvailable(ClonedGep, HoistPt, OperandGeps, GepOp);
+      }
     }
 
   // Copy Gep and replace its uses in Repl with ClonedGep.
@@ -906,13 +912,7 @@ void GVNHoist::makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
 
   // If we have optimization hints which agree with each other along different
   // paths, preserve them.
-  for (const Instruction *OtherInst : InstructionsToHoist) {
-    const GetElementPtrInst *OtherGep;
-    if (auto *OtherLd = dyn_cast<LoadInst>(OtherInst))
-      OtherGep = cast<GetElementPtrInst>(OtherLd->getPointerOperand());
-    else
-      OtherGep = cast<GetElementPtrInst>(
-          cast<StoreInst>(OtherInst)->getPointerOperand());
+  for (const GetElementPtrInst *OtherGep : CorrespondingGeps) {
     ClonedGep->andIRFlags(OtherGep);
 
     // Merge debug locations of GEPs, because the hoisted GEP replaces those
@@ -1022,10 +1022,20 @@ bool GVNHoist::makeGepOperandsAvailable(
   if (!Gep || !allGepOperandsAvailable(Gep, HoistPt))
     return false;
 
-  makeGepsAvailable(Repl, HoistPt, InstructionsToHoist, Gep);
+  auto CollectGeps = [&](bool StoredValue) {
+    SmallVector<GetElementPtrInst *, 4> Geps;
+    for (Instruction *I : InstructionsToHoist) {
+      Value *V = StoredValue ? cast<StoreInst>(I)->getValueOperand()
+                             : getLoadStorePointerOperand(I);
+      Geps.push_back(cast<GetElementPtrInst>(V));
+    }
+    return Geps;
+  };
+
+  makeGepsAvailable(Repl, HoistPt, CollectGeps(false), Gep);
 
   if (Val && isa<GetElementPtrInst>(Val))
-    makeGepsAvailable(Repl, HoistPt, InstructionsToHoist, Val);
+    makeGepsAvailable(Repl, HoistPt, CollectGeps(true), Val);
 
   return true;
 }
