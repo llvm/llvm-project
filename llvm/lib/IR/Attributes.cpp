@@ -1522,8 +1522,9 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets) {
 
   // There's memory after the node where we can store the entries in.
   llvm::copy(Sets, getTrailingObjects());
-  AttrSets = getTrailingObjects();
   NumAttrSets = Sets.size();
+  assert(getAttrSets() == getTrailingObjects() &&
+         "attribute sets must directly follow AttributeListImplBase");
 
   // Initialize AvailableFunctionAttrs and AvailableSomewhereAttrs
   // summary bitsets.
