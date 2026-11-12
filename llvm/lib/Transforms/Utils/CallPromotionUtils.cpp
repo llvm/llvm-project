@@ -396,8 +396,7 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
   if (!PtrAuthBundle) {
     Cond = Builder.CreateICmpEQ(CalledValue, Callee);
   } else if (auto *Disc = dyn_cast<ConstantInt>(PtrAuthBundle->Inputs[1])) {
-    // The call authenticates the called value, a signed pointer, so compare it
-    // with the callee signed with the same key and discriminator.
+    // The called value is signed, so compare it with the signed callee.
     auto *Key = cast<ConstantInt>(PtrAuthBundle->Inputs[0]);
     auto *Null = ConstantPointerNull::get(Builder.getPtrTy());
     Constant *SignedCallee =
@@ -405,9 +404,8 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
                              /*AddrDisc=*/Null, /*DeactivationSymbol=*/Null);
     Cond = Builder.CreateICmpEQ(CalledValue, SignedCallee);
   } else {
-    // The discriminator is only known at run time, for example because it is
-    // blended with the address the called value was loaded from. Authenticate
-    // the called value, and compare the result with the callee.
+    // The discriminator isn't a constant (e.g. it's address-blended), so
+    // authenticate the called value instead of signing the callee.
     Value *Auth = Builder.CreateIntrinsic(
         Intrinsic::ptrauth_auth,
         {Builder.CreatePtrToInt(CalledValue, Builder.getInt64Ty()),
@@ -422,14 +420,11 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
   if (auto *GV = dyn_cast<GlobalValue>(Callee->stripPointerCasts()))
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
-  bool HasPtrAuthBundle = PtrAuthBundle.has_value();
   CallBase &NewInst = versionCallSiteWithCond(CB, Cond, BranchWeights);
-  if (!HasPtrAuthBundle)
+  if (!PtrAuthBundle)
     return NewInst;
 
-  // The condition has checked the signature, so the clone doesn't need to
-  // authenticate the called value again, and once it calls the callee directly
-  // it can't have a ptrauth bundle.
+  // The condition checked the signature, so drop the bundle.
   CallBase *NewCall = CallBase::removeOperandBundle(
       &NewInst, LLVMContext::OB_ptrauth, NewInst.getIterator());
   NewCall->copyMetadata(NewInst);

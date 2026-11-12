@@ -1,9 +1,7 @@
 ; RUN: opt -passes=attributor -S < %s | FileCheck %s
 
-; A call with a ptrauth bundle authenticates its callee, a signed pointer,
-; before calling it. Check that such a call is not specialized for the
-; functions in its !callees: the signed pointer does not compare equal to any
-; of them, and a direct call would not be authenticated.
+; Calls with a ptrauth bundle have a signed callee, so they aren't specialized
+; for their !callees.
 
 @g = global i32 0
 

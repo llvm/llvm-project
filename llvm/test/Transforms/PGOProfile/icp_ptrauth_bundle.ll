@@ -2,12 +2,8 @@
 ; RUN: opt < %s -passes=pgo-icall-prom -S | FileCheck %s --check-prefixes=CHECK,ICALL
 ; RUN: opt < %s -passes=pgo-icall-prom -enable-vtable-profile-use -S | FileCheck %s --check-prefixes=CHECK,VTPROF
 
-; A call with a ptrauth bundle authenticates the called value, a signed
-; pointer. With a constant discriminator, the promoted call compares the called
-; value to the target signed the same way. Otherwise, it authenticates the
-; called value and compares the result to the target. The direct call has no
-; ptrauth bundle, and a vtable comparison, which wouldn't check the signature,
-; isn't used.
+; For calls with a ptrauth bundle, the condition checks the signature and the
+; direct call has no bundle. The vtable comparison isn't used for them.
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64e-apple-macosx14.0.0"
@@ -145,8 +141,7 @@ define i32 @constant_disc_musttail(ptr %fp, i32 %x) {
   ret i32 %r
 }
 
-; A virtual call. The discriminator is blended with the address of the vtable
-; slot.
+; A virtual call: the discriminator is blended with the vtable slot address.
 define i32 @blended_disc(ptr %ptr, i32 %a, i32 %b) {
 ;
 ;

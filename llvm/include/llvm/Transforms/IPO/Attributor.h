@@ -6274,9 +6274,8 @@ struct AAIndirectCallInfo
     if (IRP.getPositionKind() != IRPosition::IRP_CALL_SITE)
       return false;
     auto *CB = cast<CallBase>(IRP.getCtxI());
-    // Leave calls with a ptrauth bundle alone. The callee is a signed pointer,
-    // so it does not compare equal to a known callee, and a direct call would
-    // not be authenticated.
+    // With a ptrauth bundle the callee is a signed pointer, which never
+    // compares equal to a known callee.
     return CB->getOpcode() == Instruction::Call && CB->isIndirectCall() &&
            !CB->isMustTailCall() &&
            !CB->getOperandBundle(LLVMContext::OB_ptrauth);
