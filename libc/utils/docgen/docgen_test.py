@@ -348,6 +348,43 @@ class DocgenTest(unittest.TestCase):
         self.assertTrue(srch_hdr.implements_type("ACTION"))
         self.assertTrue(srch_hdr.implements_fn("hcreate"))
 
+    def test_summary_stats(self):
+        stdio = Header("stdio.h").get_summary_stats()
+        self.assertEqual(stdio["standard"], "c23")
+        self.assertGreater(stdio["c23"]["implemented"], 0)
+        self.assertEqual(stdio["types"]["implemented"], stdio["types"]["total"])
+        self.assertEqual(stdio["objects"]["implemented"], 3)
+        for key in ("overall", "functions", "macros", "types", "objects", "c23"):
+            self.assertLessEqual(stdio[key]["implemented"], stdio[key]["total"])
+
+        self.assertEqual(Header("fcntl.h").get_summary_stats()["c23"]["total"], 0)
+        self.assertTrue(Header("ulimit.h").get_summary_stats()["removed_posix"])
+        self.assertFalse(Header("byteswap.h").get_summary_stats()["removed_posix"])
+
+        math_hdr = Header("math.h")
+        math_stats = math_hdr.get_summary_stats()
+        self.assertEqual(len(math_stats["precisions"]), 7)
+        self.assertEqual(
+            math_stats["overall"]["total"],
+            sum(
+                math_stats[k]["total"]
+                for k in ("functions", "macros", "types", "objects")
+            ),
+        )
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(math_hdr, math_hdr.api)
+        out = buf.getvalue()
+        self.assertIn('role="progressbar"', out)
+        self.assertIn("Base Families", out)
+        self.assertIn("Global Variables", out)
+        self.assertIn("Precision Coverage", out)
+
+        fx_stats = Header("stdfix.h").get_summary_stats()
+        self.assertEqual(len(fx_stats["precisions"]), 12)
+        self.assertGreater(fx_stats["tr18037"]["implemented"], 0)
+        self.assertEqual(fx_stats["c23"]["total"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
