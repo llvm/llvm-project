@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_PRINTF_CORE_PRINTF_CONFIG_H
 #define LLVM_LIBC_SRC___SUPPORT_PRINTF_CORE_PRINTF_CONFIG_H
 
-#include "include/llvm-libc-types/float128.h"
+#include "src/__support/macros/properties/types.h"
 
 // The index array buffer is always initialized when printf is called. In cases
 // where index mode is necessary but memory is limited, or when index mode

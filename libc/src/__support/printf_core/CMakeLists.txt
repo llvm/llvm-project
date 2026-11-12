@@ -80,7 +80,7 @@ add_header_library(
     printf_config.h
     ${printf_config_copts}
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
