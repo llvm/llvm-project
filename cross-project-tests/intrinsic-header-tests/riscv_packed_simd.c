@@ -5872,8 +5872,7 @@ int16x4_t test_pset_i16_i16x4(int16x4_t v, int16_t e) {
 }
 
 // CHECK-LABEL: test_pset_u16_u16x4:
-// RV32:         srli{{[[:space:]]}}
-// RV32-NEXT     pack{{[[:space:]]}}
+// RV32:         ppaireo.h
 // RV64:         lui
 // RV64-NEXT:    slli{{[[:space:]]}}
 // RV64-NEXT:    slli{{[[:space:]]}}
