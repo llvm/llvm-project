@@ -44,11 +44,7 @@ private:
 
 const llvm::abi::TargetInfo &SPIRVABIClassifier::getTargetInfo(cir::FuncOp) {
   if (!target) {
-    // Classic codegen passes the target address space of LangAS::Default and
-    // LangOptions::isTargetDevice().
-    // LowerModule rebuilds both from the module's attributes, so a reloaded
-    // .cir classifies the same way it was compiled. Without cir.triple
-    // there is no target, so use 0 as default address space.
+    // Without cir.triple there is no target, so use 0 as default address space.
     std::unique_ptr<cir::LowerModule> lowerModule =
         cir::createLowerModule(modOp);
     assert(lowerModule && "LowerModule shouldn't be null");

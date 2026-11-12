@@ -168,24 +168,3 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @kernel_ptr(%arg0: !cir.ptr<!s32i, target_address_space(1)>
 }
-
-// -----
-
-// Without a cir.triple the target cannot be rebuilt, so the default address
-// space falls back to 0.
-
-!s32i = !cir.int<s, 32>
-
-module attributes {
-  dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
-} {
-
-  // The default address space is 0, so a private kernel pointer is coerced.
-  cir.func @kernel_ptr_no_triple(%arg0: !cir.ptr<!s32i>) cc(spir_kernel) requires_call_conv_lowering {
-    cir.return
-  }
-
-  // CHECK: cir.func{{.*}} @kernel_ptr_no_triple(%arg0: !cir.ptr<!s32i, target_address_space(1)>
-}

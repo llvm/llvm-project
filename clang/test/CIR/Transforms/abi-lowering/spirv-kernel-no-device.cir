@@ -3,8 +3,9 @@
 // Checks SPIR-V kernel argument classification outside a device compilation.
 // The default address space is then 0, and kernel pointer coercion follows the
 // default address space rather than the device flag, as in classic codegen:
-// - a default (address space 0) pointer is still passed as a CrossWorkgroup
-//   (1) pointer, and a generic (4) one is left alone;
+// - only a kernel pointer in the default (here private, 0) address space is
+//   passed as a CrossWorkgroup (1) pointer; pointers in any other address
+//   space, such as generic (4), are left alone;
 // - without the device flag, a record that cannot be copied is passed
 //   indirectly but not byval. Copyable aggregates are byval either way.
 

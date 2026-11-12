@@ -780,8 +780,7 @@ CIRABIClassifierCommon::classifySignature(
   return fc;
 }
 
-/// FIXME: Only the AMDGPU and SPIR kernel conventions are mapped. Every other
-/// convention is classified as C.
+/// FIXME: Implement proper support for other calling conventions.
 llvm::CallingConv::ID cir::convertCallingConv(cir::CallingConv cc) {
   if (cc == cir::CallingConv::AMDGPUKernel)
     return llvm::CallingConv::AMDGPU_KERNEL;
