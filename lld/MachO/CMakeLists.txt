@@ -23,6 +23,7 @@ add_lld_library(lldMachO
   MapFile.cpp
   MarkLive.cpp
   ObjC.cpp
+  ObjCMethodLists.cpp
   OutputSection.cpp
   OutputSegment.cpp
   Relocations.cpp

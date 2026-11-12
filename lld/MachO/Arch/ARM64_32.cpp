@@ -105,9 +105,9 @@ ARM64_32::ARM64_32() : ARM64Common(ILP32()) {
   cpuType = CPU_TYPE_ARM64_32;
   cpuSubtype = CPU_SUBTYPE_ARM64_V8;
 
-  modeDwarfEncoding = 0x04000000;              // UNWIND_ARM_MODE_DWARF
-  subtractorRelocType = GENERIC_RELOC_INVALID; // FIXME
-  unsignedRelocType = GENERIC_RELOC_INVALID;   // FIXME
+  modeDwarfEncoding = 0x04000000; // UNWIND_ARM_MODE_DWARF
+  subtractorRelocType = ARM64_RELOC_SUBTRACTOR;
+  unsignedRelocType = ARM64_RELOC_UNSIGNED;
 
   stubSize = sizeof(stubCode);
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);

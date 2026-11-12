@@ -728,6 +728,8 @@ public:
   void writeTo(uint8_t *bufStart) const override;
 
 private:
+  const Relocation *getMethodRelocAt(const ConcatInputSection *isec,
+                                     uint32_t offset) const;
   void readMethodListHeader(const uint8_t *buf, uint32_t &structSizeAndFlags,
                             uint32_t &structCount) const;
   void writeMethodListHeader(uint8_t *buf, uint32_t structSizeAndFlags,
@@ -757,6 +759,11 @@ private:
   // The output size of the __objc_methlist section, computed during finalize()
   uint32_t sectionSize = 0;
   std::vector<ConcatInputSection *> inputs;
+  // Relocation vectors are stable after category merging. Index them once so
+  // large lists do not repeatedly scan all relocations during setup/writing.
+  mutable llvm::DenseMap<const ConcatInputSection *,
+                         llvm::DenseMap<uint32_t, const Relocation *>>
+      methodRelocations;
 };
 
 // Chained fixups are a replacement for classic dyld opcodes. In this format,
