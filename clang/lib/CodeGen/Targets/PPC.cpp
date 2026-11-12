@@ -497,13 +497,26 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   //   void *reg_save_area;
   // };
 
-  bool isI64 = Ty->isIntegerType() && getContext().getTypeSize(Ty) == 64;
+  bool isI64 =
+      Ty->isIntegralOrEnumerationType() && getContext().getTypeSize(Ty) == 64;
   bool isInt = !Ty->isFloatingType();
   bool isF64 = Ty->isFloatingType() && getContext().getTypeSize(Ty) == 64;
 
   // All aggregates are passed indirectly?  That doesn't seem consistent
   // with the argument-lowering code.
   bool isIndirect = isAggregateTypeForABI(Ty);
+
+  // An integer narrower than a register is in the low-order bytes of its
+  // 4-byte slot, in the register save area as on the stack, and those come
+  // last on a big-endian target. Only the types the default argument
+  // promotions leave alone get here, such as the scoped enumerations with a
+  // narrow underlying type and the narrow bit-precise integers.
+  CharUnits RightAdjust;
+  if (isInt && !isIndirect && CGF.CGM.getDataLayout().isBigEndian()) {
+    CharUnits Size = getContext().getTypeSizeInChars(Ty);
+    if (Size < CharUnits::fromQuantity(4))
+      RightAdjust = CharUnits::fromQuantity(4) - Size;
+  }
 
   CGBuilderTy &Builder = CGF.Builder;
 
@@ -559,8 +572,11 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
         Builder.CreateMul(NumRegs, Builder.getInt8(RegSize.getQuantity()));
     RegAddr = Address(Builder.CreateInBoundsGEP(
                           CGF.Int8Ty, RegAddr.emitRawPointer(CGF), RegOffset),
-                      DirectTy,
+                      CGF.Int8Ty,
                       RegAddr.getAlignment().alignmentOfArrayElement(RegSize));
+    if (!RightAdjust.isZero())
+      RegAddr = Builder.CreateConstInBoundsByteGEP(RegAddr, RightAdjust);
+    RegAddr = RegAddr.withElementType(DirectTy);
 
     // Increase the used-register count.
     NumRegs =
@@ -601,7 +617,11 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
                              OverflowArea.getElementType(), Align);
     }
 
-    MemAddr = OverflowArea.withElementType(DirectTy);
+    if (!RightAdjust.isZero())
+      MemAddr = Builder.CreateConstInBoundsByteGEP(OverflowArea, RightAdjust);
+    else
+      MemAddr = OverflowArea;
+    MemAddr = MemAddr.withElementType(DirectTy);
 
     // Increase the overflow area.
     OverflowArea = Builder.CreateConstInBoundsByteGEP(OverflowArea, Size);
