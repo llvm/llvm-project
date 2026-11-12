@@ -177,7 +177,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __inplace_merge(
       __len11 = __len1 / 2;
       __m1    = __first;
       _Ops::advance(__m1, __len11);
-      __m2    = std::lower_bound(__middle, __last, *__m1, __comp);
+      // Unlike std::lower_bound, this doesn't copy the comparison, which std::stable_sort never does.
+      __identity __proj;
+      __m2    = std::__lower_bound<_AlgPolicy>(__middle, __last, *__m1, __comp, __proj);
       __len21 = _Ops::distance(__middle, __m2);
     }
     difference_type __len12 = __len1 - __len11; // distance(__m1, __middle)
