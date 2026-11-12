@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -333,48 +336,59 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
       return failure();
 
     bool hasRemovedCycles = false;
+    auto yieldOp = cast<linalg::YieldOp>(genericOp.getBody()->getTerminator());
     // Iterate over output operands and remove any unused cycles.
-    for (const auto &outputOpOperand :
-         llvm::enumerate(genericOp.getDpsInits())) {
+    for (auto [outputIndex, _] : llvm::enumerate(genericOp.getDpsInits())) {
 
       // Check that result from out operand is dead.
-      Value result = genericOp.getResult(outputOpOperand.index());
-      if (!result.use_empty())
+      if (!genericOp.getResult(outputIndex).use_empty())
         continue;
 
-      // Check that outputArg has one use in cycle.
-      BlockArgument outputArg =
-          genericOp.getRegionOutputArgs()[outputOpOperand.index()];
-      if (!outputArg.hasOneUse())
+      BlockArgument outputArg = genericOp.getRegionOutputArgs()[outputIndex];
+      Value yieldedValue = yieldOp.getOperand(outputIndex);
+      if (yieldedValue == outputArg)
         continue;
 
-      // Check cycle has at most one use.
-      Operation *cycleOp = *outputArg.user_begin();
-      if (!cycleOp->hasOneUse())
+      SliceOptions options;
+      options.filter = [&](Operation *op) {
+        return genericOp->isProperAncestor(op) && op != yieldOp.getOperation();
+      };
+      llvm::SetVector<Operation *> forwardSlice;
+      getForwardSlice(outputArg, &forwardSlice, options);
+
+      // Only rewrite a value computed from this output block argument.
+      if (!forwardSlice.contains(yieldedValue.getDefiningOp()))
         continue;
 
-      // Check that the cycleUser is a yield.
-      Operation *cycleUserOp = *cycleOp->user_begin();
-      if (!isa<linalg::YieldOp>(cycleUserOp))
+      // Every operation reached from the output argument must be removable
+      // once the corresponding yield operand is replaced.
+      if (!llvm::all_of(forwardSlice, wouldOpBeTriviallyDead))
         continue;
 
-      // Check that argIndex matches yieldIndex, else data is being used.
-      if (cycleUserOp->getOperand(outputOpOperand.index()) !=
-          cycleOp->getResult(0))
+      // A different yield operand may use the output argument directly or
+      // use a value computed from it.
+      bool usedByOtherYield = false;
+      for (auto [yieldIndex, value] : llvm::enumerate(yieldOp.getValues())) {
+        if (yieldIndex == outputIndex)
+          continue;
+        if (value == outputArg ||
+            forwardSlice.contains(value.getDefiningOp())) {
+          usedByOtherYield = true;
+          break;
+        }
+      }
+      if (usedByOtherYield)
         continue;
 
-      // Directly replace the cycle with the blockArg such that
-      // Deduplicate pattern can eliminate it along with unused yield.
-      rewriter.replaceOp(cycleOp, outputArg);
+      rewriter.modifyOpInPlace(yieldOp, [&, index = outputIndex]() {
+        yieldOp.setOperand(index, outputArg);
+      });
+      eliminateTriviallyDeadOps(rewriter, genericOp.getRegion());
       rewriter.modifyOpInPlace(genericOp, [] {});
       hasRemovedCycles = true;
     }
 
-    if (hasRemovedCycles) {
-      return success();
-    }
-
-    return failure();
+    return success(hasRemovedCycles);
   }
 };
 

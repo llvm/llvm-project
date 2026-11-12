@@ -648,9 +648,41 @@ func.func @sigmoid_dynamic_dim(%0: tensor<?x1xf32>) -> tensor<?x1xf32> {
 
 // -----
 
+// A side-effect-free producer can be fused and removed.
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func.func @fuse_pure_producer(%init0: tensor<1x8xf64>, %init1: tensor<1x8xf64>) -> tensor<1x8xf64> {
+  %producer = linalg.generic {
+      indexing_maps = [#map], iterator_types = ["parallel", "parallel"]}
+      outs(%init0 : tensor<1x8xf64>) {
+    ^bb0(%out: f64):
+      %sum = arith.addf %out, %out : f64
+      linalg.yield %sum : f64
+    } -> tensor<1x8xf64>
+  %consumer = linalg.generic {
+      indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel"]}
+      ins(%producer : tensor<1x8xf64>)
+      outs(%init1 : tensor<1x8xf64>) {
+    ^bb0(%in: f64, %out: f64):
+      %product = arith.mulf %in, %out : f64
+      linalg.yield %product : f64
+    } -> tensor<1x8xf64>
+  return %consumer : tensor<1x8xf64>
+}
+
+// CHECK-LABEL: func.func @fuse_pure_producer(
+// CHECK-NEXT: %[[FUSED:.+]]:2 = linalg.generic
+// CHECK: %[[SUM:.+]] = arith.addf
+// CHECK: %[[PRODUCT:.+]] = arith.mulf %[[SUM]],
+// CHECK: linalg.yield %[[SUM]], %[[PRODUCT]]
+// CHECK: return %[[FUSED]]#1 : tensor<1x8xf64>
+
+// -----
+
 func.func private @compute1(%a: f64) -> f64
 func.func private @compute2(%a: f64, %b: i32) -> i32
 
+// Calls with unknown effects must not be cloned into a fused op.
 // CHECK-LABEL: func @generic_index_op2(
 func.func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> tensor<1x8xi32> {
   %0 = linalg.generic {
@@ -662,12 +694,12 @@ func.func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> 
     linalg.yield %r : f64
   } -> tensor<1x8xf64>
 
-  // CHECK-NEXT:   %[[R:.*]]:2 = linalg.generic
-  //      CHECK:     bb0(%[[BBA:[0-9a-zA-Z_]*]]: f64, %[[BBB:[0-9a-zA-Z_]*]]: i32):
-  // CHECK-NEXT:       %[[A:.*]] = func.call @compute1(%[[BBA]]) : (f64) -> f64
-  // CHECK-NEXT:       %[[B:.*]] = func.call @compute2(%[[A]], %[[BBB]]) : (f64, i32) -> i32
-  // CHECK-NEXT:       linalg.yield %[[A]], %[[B]] : f64, i32
-  // CHECK-NEXT:   } -> (tensor<1x8xf64>, tensor<1x8xi32>)
+  // CHECK-NEXT: %[[PRODUCER:.*]] = linalg.generic
+  // CHECK: func.call @compute1
+  // CHECK: %[[CONSUMER:.*]] = linalg.generic
+  // CHECK-SAME: ins(%[[PRODUCER]] : tensor<1x8xf64>)
+  // CHECK-NOT: func.call @compute1
+  // CHECK: func.call @compute2
   %1 = linalg.generic {
     indexing_maps = [affine_map<(i, j) -> (i, j)>, affine_map<(i, j) -> (i, j)>],
     iterator_types = ["parallel", "parallel"]}
@@ -678,7 +710,7 @@ func.func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> 
     linalg.yield %r : i32
   } -> tensor<1x8xi32>
 
-  // CHECK-NEXT:   return %[[R]]#1 : tensor<1x8xi32>
+  // CHECK: return %[[CONSUMER]] : tensor<1x8xi32>
   return %1 : tensor<1x8xi32>
 }
 
