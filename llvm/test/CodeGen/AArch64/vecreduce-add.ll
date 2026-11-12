@@ -185,13 +185,8 @@ entry:
 define i64 @add_v8i16_v8i64_zext(<8 x i16> %x) {
 ; CHECK-SD-LABEL: add_v8i16_v8i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v2.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv s0, v0.8h
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_v8i16_v8i64_zext:
@@ -231,9 +226,8 @@ entry:
 define i64 @add_v4i16_v4i64_zext(<4 x i16> %x) {
 ; CHECK-SD-LABEL: add_v4i16_v4i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddlv d0, v0.4s
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv s0, v0.4h
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_v4i16_v4i64_zext:
@@ -611,21 +605,8 @@ entry:
 define i64 @add_v16i8_v16i64_zext(<16 x i8> %x) {
 ; CHECK-SD-LABEL: add_v16i8_v16i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll2 v2.4s, v1.8h, #0
-; CHECK-SD-NEXT:    ushll2 v3.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v4.2d, v3.4s, v2.4s
-; CHECK-SD-NEXT:    uaddl v2.2d, v3.2s, v2.2s
-; CHECK-SD-NEXT:    uaddl2 v5.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    add v1.2d, v5.2d, v4.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv h0, v0.16b
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_v16i8_v16i64_zext:
@@ -675,14 +656,8 @@ entry:
 define i64 @add_v8i8_v8i64_zext(<8 x i8> %x) {
 ; CHECK-SD-LABEL: add_v8i8_v8i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v2.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv h0, v0.8b
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_v8i8_v8i64_zext:
@@ -726,9 +701,8 @@ define i64 @add_v4i8_v4i64_zext(<4 x i8> %x) {
 ; CHECK-SD-LABEL: add_v4i8_v4i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddlv d0, v0.4s
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv s0, v0.4h
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_v4i8_v4i64_zext:
@@ -975,13 +949,8 @@ entry:
 define i64 @add_v8i16_v8i64_acc_zext(<8 x i16> %x, i64 %a) {
 ; CHECK-SD-LABEL: add_v8i16_v8i64_acc_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v2.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    uaddlv s0, v0.8h
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    add x0, x8, x0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1027,9 +996,8 @@ entry:
 define i64 @add_v4i16_v4i64_acc_zext(<4 x i16> %x, i64 %a) {
 ; CHECK-SD-LABEL: add_v4i16_v4i64_acc_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddlv d0, v0.4s
-; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    uaddlv s0, v0.4h
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    add x0, x8, x0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1423,21 +1391,8 @@ entry:
 define i64 @add_v16i8_v16i64_acc_zext(<16 x i8> %x, i64 %a) {
 ; CHECK-SD-LABEL: add_v16i8_v16i64_acc_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll2 v2.4s, v1.8h, #0
-; CHECK-SD-NEXT:    ushll2 v3.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v4.2d, v3.4s, v2.4s
-; CHECK-SD-NEXT:    uaddl v2.2d, v3.2s, v2.2s
-; CHECK-SD-NEXT:    uaddl2 v5.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    add v1.2d, v5.2d, v4.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    uaddlv h0, v0.16b
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    add x0, x8, x0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1491,14 +1446,8 @@ entry:
 define i64 @add_v8i8_v8i64_acc_zext(<8 x i8> %x, i64 %a) {
 ; CHECK-SD-LABEL: add_v8i8_v8i64_acc_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v2.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    uaddlv h0, v0.8b
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    add x0, x8, x0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1546,9 +1495,8 @@ define i64 @add_v4i8_v4i64_acc_zext(<4 x i8> %x, i64 %a) {
 ; CHECK-SD-LABEL: add_v4i8_v4i64_acc_zext:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddlv d0, v0.4s
-; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    uaddlv s0, v0.4h
+; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    add x0, x8, x0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1678,22 +1626,14 @@ entry:
 }
 
 define i64 @add_pair_v4i32_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-SD-LABEL: add_pair_v4i32_v4i64_zext:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddlp v1.2d, v1.4s
-; CHECK-SD-NEXT:    uadalp v1.2d, v0.4s
-; CHECK-SD-NEXT:    addp d0, v1.2d
-; CHECK-SD-NEXT:    fmov x0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: add_pair_v4i32_v4i64_zext:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    uaddlv d0, v0.4s
-; CHECK-GI-NEXT:    uaddlv d1, v1.4s
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    add x0, x8, x9
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: add_pair_v4i32_v4i64_zext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv d0, v0.4s
+; CHECK-NEXT:    uaddlv d1, v1.4s
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ret
 entry:
   %xx = zext <4 x i32> %x to <4 x i64>
   %z1 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %xx)
@@ -2507,19 +2447,11 @@ entry:
 define i64 @add_pair_v8i16_v8i64_zext(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-SD-LABEL: add_pair_v8i16_v8i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll2 v2.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v4.2d, v0.4s, v2.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v2.2s
-; CHECK-SD-NEXT:    uaddl2 v2.2d, v1.4s, v3.4s
-; CHECK-SD-NEXT:    uaddl v1.2d, v1.2s, v3.2s
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v4.2d
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv s0, v0.8h
+; CHECK-SD-NEXT:    uaddlv s1, v1.8h
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    fmov w9, s1
+; CHECK-SD-NEXT:    add x0, x8, x9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_pair_v8i16_v8i64_zext:
@@ -2577,12 +2509,11 @@ entry:
 define i64 @add_pair_v4i16_v4i64_zext(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-SD-LABEL: add_pair_v4i16_v4i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddlp v1.2d, v1.4s
-; CHECK-SD-NEXT:    uadalp v1.2d, v0.4s
-; CHECK-SD-NEXT:    addp d0, v1.2d
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv s0, v0.4h
+; CHECK-SD-NEXT:    uaddlv s1, v1.4h
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    fmov w9, s1
+; CHECK-SD-NEXT:    add x0, x8, x9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_pair_v4i16_v4i64_zext:
@@ -3129,35 +3060,11 @@ entry:
 define i64 @add_pair_v16i8_v16i64_zext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-SD-LABEL: add_pair_v16i8_v16i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll2 v2.8h, v0.16b, #0
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll2 v3.8h, v1.16b, #0
-; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    ushll v4.4s, v2.4h, #0
-; CHECK-SD-NEXT:    ushll2 v2.4s, v2.8h, #0
-; CHECK-SD-NEXT:    ushll2 v5.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ushll2 v6.4s, v3.8h, #0
-; CHECK-SD-NEXT:    ushll2 v7.4s, v1.8h, #0
-; CHECK-SD-NEXT:    ushll v3.4s, v3.4h, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v16.2d, v5.4s, v2.4s
-; CHECK-SD-NEXT:    uaddl v2.2d, v5.2s, v2.2s
-; CHECK-SD-NEXT:    uaddl2 v5.2d, v0.4s, v4.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v4.2s
-; CHECK-SD-NEXT:    uaddl2 v4.2d, v7.4s, v6.4s
-; CHECK-SD-NEXT:    uaddl v6.2d, v7.2s, v6.2s
-; CHECK-SD-NEXT:    uaddl2 v7.2d, v1.4s, v3.4s
-; CHECK-SD-NEXT:    uaddl v1.2d, v1.2s, v3.2s
-; CHECK-SD-NEXT:    add v3.2d, v5.2d, v16.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    add v2.2d, v7.2d, v4.2d
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v6.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v3.2d
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv h0, v0.16b
+; CHECK-SD-NEXT:    uaddlv h1, v1.16b
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    fmov w9, s1
+; CHECK-SD-NEXT:    add x0, x8, x9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_pair_v16i8_v16i64_zext:
@@ -3233,21 +3140,11 @@ entry:
 define i64 @add_pair_v8i8_v8i64_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-SD-LABEL: add_pair_v8i8_v8i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    ushll2 v2.4s, v0.8h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    uaddl2 v4.2d, v0.4s, v2.4s
-; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v2.2s
-; CHECK-SD-NEXT:    uaddl2 v2.2d, v1.4s, v3.4s
-; CHECK-SD-NEXT:    uaddl v1.2d, v1.2s, v3.2s
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v4.2d
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    addp d0, v0.2d
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    uaddlv h0, v0.8b
+; CHECK-SD-NEXT:    uaddlv h1, v1.8b
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    fmov w9, s1
+; CHECK-SD-NEXT:    add x0, x8, x9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_pair_v8i8_v8i64_zext:
@@ -3309,14 +3206,13 @@ entry:
 define i64 @add_pair_v4i8_v4i64_zext(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-SD-LABEL: add_pair_v4i8_v4i64_zext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
 ; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    uaddlp v1.2d, v1.4s
-; CHECK-SD-NEXT:    uadalp v1.2d, v0.4s
-; CHECK-SD-NEXT:    addp d0, v1.2d
-; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-SD-NEXT:    uaddlv s0, v0.4h
+; CHECK-SD-NEXT:    uaddlv s1, v1.4h
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    fmov w9, s1
+; CHECK-SD-NEXT:    add x0, x8, x9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: add_pair_v4i8_v4i64_zext:
