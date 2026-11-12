@@ -156,16 +156,6 @@ LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
     state->bytes_stored++;
     if (state->bytes_stored == state->total_bytes) {
       state->conversion_state = MBConversionState::FULL;
-      // Detect and reject overlong encodings
-      if (state->partial <= MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 2]) {
-        clear();
-        return EILSEQ;
-      }
-      // Also reject out-of-range code points
-      if (state->partial > MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 1]) {
-        clear();
-        return EILSEQ;
-      }
     }
     return 0;
   }
