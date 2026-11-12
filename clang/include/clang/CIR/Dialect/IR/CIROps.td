@@ -157,7 +157,8 @@ class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = [],
 
 // Base class for the region-branch ops whose successors do not depend on the
 // operation: any of their regions may be entered from the parent operation, and
-// every region returns to it on exit.
+// every region returns to it on exit. Subclasses may narrow which regions are
+// entered for constant operands, through `getEntrySuccessorRegions`.
 class CIR_EnterAnyRegionBranchOpBase<string mnemonic, list<Trait> traits = [],
                                      list<string> regionBranchMethods = []>
     : CIR_RegionBranchOpBase<mnemonic, traits, regionBranchMethods> {
