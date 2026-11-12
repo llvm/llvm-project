@@ -5494,7 +5494,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     ValType = AtomTy;
   }
 
-  PointerAuthQualifier PointerAuth = AtomTy.getPointerAuth();
+  PointerAuthQualifier PointerAuth =
+      AtomTy->isArrayType() ? PointerAuthQualifier() : AtomTy.getPointerAuth();
   if (PointerAuth && PointerAuth.isAddressDiscriminated()) {
     Diag(ExprRange.getBegin(),
          diag::err_atomic_op_needs_non_address_discriminated_pointer)

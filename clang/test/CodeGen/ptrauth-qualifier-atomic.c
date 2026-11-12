@@ -216,3 +216,14 @@ long load_int(void) { return __c11_atomic_load(&atomic_int, __ATOMIC_SEQ_CST); }
 // CHECK-NOT:     @llvm.ptrauth
 // CHECK:         store atomic i64 {{.*}}, ptr @atomic_int
 void store_int(long v) { __c11_atomic_store(&atomic_int, v, __ATOMIC_SEQ_CST); }
+
+UniformPtr uniform_array[1], uniform_array_out[1];
+
+// CHECK-LABEL: define {{.*}}void @load_array()
+// CHECK-NOT:     @llvm.ptrauth
+// CHECK:         load atomic i64, ptr @uniform_array
+// CHECK-NOT:     @llvm.ptrauth
+// CHECK:         store i64 {{.*}}, ptr @uniform_array_out
+void load_array(void) {
+  __atomic_load(&uniform_array, &uniform_array_out, __ATOMIC_SEQ_CST);
+}
