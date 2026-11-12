@@ -28,6 +28,7 @@ class ExtractValueInst;
 class GVNLeaderMap;
 class Instruction;
 class GetElementPtrInst;
+class LoadInst;
 class MemoryAccess;
 class MemoryDependenceResults;
 class MemorySSA;
@@ -81,7 +82,7 @@ private:
   Expression createExtractValueExpr(ExtractValueInst *EI);
   Expression createGEPExpr(GetElementPtrInst *GEP);
   uint32_t lookupOrAddCall(CallInst *C);
-  uint32_t computeLoadStoreVN(Instruction *I);
+  uint32_t computeLoadVN(LoadInst *LI);
   uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
                             uint32_t Num, GVNLeaderMap &LeaderTable);
   bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
