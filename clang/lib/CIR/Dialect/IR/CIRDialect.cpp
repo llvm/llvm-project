@@ -1367,8 +1367,12 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
         return cir::BoolAttr::get(getContext(), !intAttr.getValue().isZero());
       break;
     case cir::CastKind::bool_to_int:
+      // Zero-extend the bit, which also fits a signed one-bit integer.
       if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(src))
-        return cir::IntAttr::get(getType(), boolAttr.getValue() ? 1 : 0);
+        return cir::IntAttr::get(
+            getType(),
+            llvm::APInt(mlir::cast<cir::IntType>(getType()).getWidth(),
+                        boolAttr.getValue()));
       break;
     default:
       break;
