@@ -9,6 +9,8 @@
 #ifndef LIBCPP_TEST_STD_ITERATORS_ITERATOR_REQUIREMENTS_ITERATOR_CONCEPTS_INCREMENTABLE_H
 #define LIBCPP_TEST_STD_ITERATORS_ITERATOR_REQUIREMENTS_ITERATOR_CONCEPTS_INCREMENTABLE_H
 
+#include <concepts>
+
 struct postfix_increment_returns_void {
   using difference_type = int;
   postfix_increment_returns_void& operator++();
@@ -179,6 +181,14 @@ struct noncopyable_with_difference_type_and_minus {
   int operator-(noncopyable_with_difference_type_and_minus const&) const;
 
   bool operator==(noncopyable_with_difference_type_and_minus const&) const;
+};
+
+template <std::signed_integral T>
+struct extended_integral_difference_type {
+  using difference_type = T;
+
+  extended_integral_difference_type& operator++();
+  void operator++(int);
 };
 
 #endif // #define LIBCPP_TEST_STD_ITERATORS_ITERATOR_REQUIREMENTS_ITERATOR_CONCEPTS_INCREMENTABLE_H

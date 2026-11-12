@@ -251,7 +251,7 @@ struct SizedRandomAccessView : IntBufferView {
   constexpr auto begin() const { return iterator(buffer_); }
   constexpr auto end() const { return sized_sentinel<iterator>(iterator(buffer_ + size_)); }
 
-  constexpr decltype(auto) operator[](std::size_t n) const { return *(begin() + n); }
+  constexpr decltype(auto) operator[](std::size_t n) const { return *(begin() + static_cast<std::ptrdiff_t>(n)); }
 };
 static_assert(std::ranges::view<SizedRandomAccessView>);
 static_assert(std::ranges::random_access_range<SizedRandomAccessView>);
