@@ -62,6 +62,9 @@ Improvements and New Features
 -----------------------------
 
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
+- ``std::lexicographical_compare_three_way`` has been optimized for contiguous ranges of integers and other trivially
+  equality comparable types, resulting in a performance improvement of up to 22x for ``unsigned char`` and 2.5x for
+  ``int``.
 
 Deprecations and Removals
 -------------------------
