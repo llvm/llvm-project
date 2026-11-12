@@ -2000,7 +2000,14 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
     IsMultiChar = false;
   }
 
-  llvm::APInt LitVal(PP.getTargetInfo().getIntWidth(), 0);
+  // A char32_t or wchar_t literal can be wider than int, as where int has 16
+  // bits, so its value is computed in the width of its type.
+  unsigned LitWidth = PP.getTargetInfo().getIntWidth();
+  if (isUTF32())
+    LitWidth = std::max(LitWidth, PP.getTargetInfo().getChar32Width());
+  else if (isWide())
+    LitWidth = std::max(LitWidth, PP.getTargetInfo().getWCharWidth());
+  llvm::APInt LitVal(LitWidth, 0);
 
   // Narrow character literals act as though their value is concatenated
   // in this implementation, but warn on overflow.

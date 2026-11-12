@@ -890,6 +890,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 - Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
+- `char32_t` character literals, such as `U'\U0001F600'`, no longer lose their
+  upper 16 bits on targets where `int` has 16 bits, such as AVR.
 
 #### Bug Fixes to Compiler Builtins
 
