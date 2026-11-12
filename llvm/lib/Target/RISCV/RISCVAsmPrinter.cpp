@@ -443,6 +443,18 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case RISCV::PseudoCALLIndirectLpadAlign:
     emitLpadAlignedCall(*MI);
     return;
+  case RISCV::PseudoCALLIndirect:
+    EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::JALR)
+                                     .addReg(RISCV::X1)
+                                     .addReg(MI->getOperand(0).getReg())
+                                     .addImm(0));
+    return;
+  case RISCV::PseudoTAILIndirect:
+    EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::JALR)
+                                     .addReg(RISCV::X0)
+                                     .addReg(MI->getOperand(0).getReg())
+                                     .addImm(0));
+    return;
   }
 
   MCInst OutInst;
@@ -1072,9 +1084,7 @@ void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
       GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
       break;
     case llvm::RISCVCFI::ZicfilpLabelSchemeKind::FuncSig:
-      // TODO: Emit the func-sig bit after the feature is implemented
-      reportFatalUsageError("the complete func-sig label scheme feature is not "
-                            "implemented yet");
+      GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG;
       break;
     }
   }

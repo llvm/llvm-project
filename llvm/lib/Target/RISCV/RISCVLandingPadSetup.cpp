@@ -50,20 +50,10 @@ static bool runLandingPadSetup(MachineFunction &MF) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
-  if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (!RVFI->hasCFProtectionBranch())
     return false;
-
-  uint32_t Label = 0;
-  if (std::optional<uint32_t> Preferred = STI.getCLOpts().landing_pad_label) {
-    if (!isUInt<20>(*Preferred))
-      report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit in "
-                         "unsigned 20-bits");
-    Label = *Preferred;
-  }
-
-  // Zicfilp does not check X7 if landing pad label is zero.
-  if (Label == 0)
-    return false;
+  uint32_t LocalJumpLabel = RVFI->getZicfilpLocalJumpLabel();
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
@@ -72,6 +62,20 @@ static bool runLandingPadSetup(MachineFunction &MF) {
           MI.getOpcode() != RISCV::PseudoCALLIndirect &&
           MI.getOpcode() != RISCV::PseudoTAILIndirect)
         continue;
+
+      uint32_t Label = 0;
+      if (MI.getOpcode() == RISCV::PseudoCALLIndirect ||
+          MI.getOpcode() == RISCV::PseudoTAILIndirect) {
+        Label = RISCVMachineFunctionInfo::resolveZicfilpIndirectCallLabel(MI);
+      } else if (MI.getOpcode() == RISCV::PseudoBRIND) {
+        // already validated earlier
+        Label = LocalJumpLabel;
+      }
+
+      // Zicfilp does not check X7 if landing pad label is zero.
+      if (Label == 0)
+        continue;
+
       BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::LUI), RISCV::X7)
           .addImm(Label);
       MachineInstrBuilder(MF, &MI).addUse(RISCV::X7, RegState::ImplicitKill);

@@ -31,5 +31,6 @@ define void @test_indirect_call_preserved_mask(ptr %fptr, ptr %buf) {
 
 attributes #0 = { returns_twice }
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1}
 !0 = !{i32 8, !"cf-protection-branch", i32 1}
+!1 = !{i32 1, !"cf-branch-label-scheme", !"unlabeled"}

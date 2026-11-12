@@ -29141,6 +29141,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFunction::CallSiteInfo CSInfo;
 
+  // Extract landing pad label for Zicfilp extension or default to 0
+  uint32_t LpadLabel =
+      MF.getInfo<RISCVMachineFunctionInfo>()->getZicfilpCallSiteLabel(CLI.CB);
+
   // Set type id for call site info.
   setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
@@ -29509,10 +29513,39 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, RISCVII::MO_CALL);
   }
 
+  // Determine if this is an indirect call AFTER the callee is transformed.
+  // TargetGlobalAddress and TargetExternalSymbol are subclasses, so this
+  // correctly returns false for direct calls, but true for the large code model
+  // load.
+  bool IsIndirect =
+      !(isa<GlobalAddressSDNode>(Callee) || isa<ExternalSymbolSDNode>(Callee));
+
+  // Use software guarded branch for large code model non-indirect calls
+  // Tail call to external symbol will have a null CLI.CB and we need another
+  // way to determine the callsite type
+  bool NeedSWGuarded =
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
+      !CLI.IsPatchPoint &&
+      (getTargetMachine().getCodeModel() == CodeModel::Large &&
+       ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol));
+
+  // Use special pseudo for returns_twice calls (e.g., setjmp) when
+  // cf-protection-branch is enabled, to ensure LPAD is inserted after the call.
+  bool NeedLpadCall =
+      CLI.CB && CLI.CB->hasFnAttr(Attribute::ReturnsTwice) &&
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
+
   // The first call operand is the chain and the second is the target address.
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
+
+  // Append the landing pad label (if no label was set, this will be 0)
+  // the conditions are the same for wether a CALL_INDIRECT or TAIL_INDIRECT Opc
+  // will be chosen later
+  if (IsIndirect && !NeedSWGuarded && !NeedLpadCall && !CLI.IsPatchPoint) {
+    Ops.push_back(DAG.getTargetConstant(LpadLabel, DL, MVT::i32));
+  }
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
@@ -29549,16 +29582,16 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
       NeedSWGuardedCall = true;
   }
 
-  // Use special pseudo for returns_twice calls (e.g., setjmp) when
-  // cf-protection-branch is enabled, to ensure LPAD is inserted after the call.
-  bool NeedLpadCall =
-      CLI.CB && CLI.CB->hasFnAttr(Attribute::ReturnsTwice) &&
-      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
-
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    unsigned CallOpc =
-        NeedSWGuardedTail ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
+    unsigned CallOpc;
+    if (NeedSWGuardedTail) {
+      CallOpc = RISCVISD::SW_GUARDED_TAIL;
+    } else if (IsIndirect) {
+      CallOpc = RISCVISD::TAIL_INDIRECT;
+    } else {
+      CallOpc = RISCVISD::TAIL;
+    }
     SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -29570,12 +29603,19 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   unsigned CallOpc;
   // FIXME: Large Code Model + Zicfilp: SW_GUARDED_CALL takes priority over
   // LPAD_CALL for returns_twice calls, breaking LPAD alignment.
+  // FIXME: LPAD_CALL and LPAD_CALL_INDIRECT carry only the default label for
+  // their lpad; LPAD_CALL_INDIRECT carries no label for its indirect jump; ABI
+  // decision for how to establish these labels is pending.
   if (NeedSWGuardedCall)
     CallOpc = RISCVISD::SW_GUARDED_CALL;
+  else if (CLI.IsPatchPoint && IsIndirect)
+    CallOpc = RISCVISD::PATCHPOINT_CALL_INDIRECT;
   else if (NeedLpadCall && CLI.CB->isIndirectCall())
     CallOpc = RISCVISD::LPAD_CALL_INDIRECT;
   else if (NeedLpadCall)
     CallOpc = RISCVISD::LPAD_CALL;
+  else if (IsIndirect)
+    CallOpc = RISCVISD::CALL_INDIRECT;
   else
     CallOpc = RISCVISD::CALL;
   Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);

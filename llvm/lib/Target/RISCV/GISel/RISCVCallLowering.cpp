@@ -588,6 +588,19 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const DataLayout &DL = MF.getDataLayout();
   CallingConv::ID CC = Info.CallConv;
 
+  bool NeedSWGuarded =
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
+      MF.getTarget().getCodeModel() == CodeModel::Large &&
+      (!Info.CB || !Info.CB->isIndirectCall());
+
+  if (NeedSWGuarded) {
+    // GlobalISel does not yet implement the software-guarded call sequence
+    // (RISCVISD::SW_GUARDED_CALL/_TAIL) that SelectionDAG uses for direct
+    // calls under the large code model when branch-protection labels are
+    // enabled. Bail out so SelectionDAG lowers this call correctly instead.
+    return false;
+  }
+
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
   for (auto &AInfo : Info.OrigArgs) {
@@ -619,16 +632,26 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!Info.Callee.isReg())
     Info.Callee.setTargetFlags(RISCVII::MO_CALL);
 
+  bool IsIndirect = Info.Callee.isReg();
+
   MachineInstrBuilder Call =
       MIRBuilder
-          .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
-                                                  : RISCV::PseudoCALL)
+          .buildInstrNoInsert(IsIndirect ? RISCV::PseudoCALLIndirect
+                                         : RISCV::PseudoCALL)
           .add(Info.Callee);
   if (Info.NoMerge)
     Call.setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  if (IsIndirect) {
+    uint32_t LpadLabel =
+        MF.getInfo<RISCVMachineFunctionInfo>()->getZicfilpCallSiteLabel(
+            Info.CB);
+    Call.addImm(LpadLabel);
+  }
+
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv))
-      .setOperandDead(2); // $x1 (ra)
+    .setOperandDead(IsIndirect ? 3 : 2); // $x1 (ra)
 
   OutgoingValueAssigner ArgAssigner(CC_RISCV);
   RISCVOutgoingValueHandler ArgHandler(MIRBuilder, MF.getRegInfo(), Call);
