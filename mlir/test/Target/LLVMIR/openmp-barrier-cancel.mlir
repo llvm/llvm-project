@@ -50,3 +50,25 @@ llvm.func @test() {
 // CHECK:       omp.par.exit.exitStub:
 // CHECK:         ret void
 
+llvm.func @after_empty_sections()
+
+llvm.func @test_empty_sections() {
+  omp.parallel {
+    omp.cancel cancellation_construct_type(parallel)
+    omp.sections {
+      omp.terminator
+    }
+    llvm.call @after_empty_sections() : () -> ()
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define internal void @test_empty_sections..omp_par
+// CHECK:       omp.par.region1.split:
+// CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
+// CHECK-NEXT:    %[[CANCEL:.*]] = call i32 @__kmpc_cancel_barrier({{.*}}, i32 %[[TID]])
+// CHECK-NEXT:    %[[CONTINUE:.*]] = icmp eq i32 %[[CANCEL]], 0
+// CHECK-NEXT:    br i1 %[[CONTINUE]], label %[[CONT:.*]], label %{{.*}}
+// CHECK:       [[CONT]]:
+// CHECK-NEXT:    call void @after_empty_sections()
