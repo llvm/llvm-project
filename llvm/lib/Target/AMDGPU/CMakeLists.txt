@@ -57,6 +57,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUCodeGenPrepare.cpp
   AMDGPUCombinerHelper.cpp
   AMDGPUCtorDtorLowering.cpp
+  AMDGPUDwarfDebug.cpp
   AMDGPUExportClustering.cpp
   AMDGPUExportKernelRuntimeHandles.cpp
   AMDGPUFrameLowering.cpp
