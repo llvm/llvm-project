@@ -79,6 +79,8 @@ add_header_library(
   HDRS
     printf_config.h
     ${printf_config_copts}
+  DEPENDS
+    libc.include.llvm-libc-types.float128
 )
 
 add_header_library(
