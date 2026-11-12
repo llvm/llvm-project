@@ -4076,6 +4076,14 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
   if (!isUniform(Ptr, VF))
     PtrTy = toVectorTy(PtrTy, VF);
 
+  // Same answer as the VPlan recipe gives, so the two cost models agree. The
+  // scalar address does not say which of its operands varies across lanes.
+  std::optional<bool> UniformBase;
+  if (isUniform(Ptr, VF))
+    UniformBase = true;
+  else if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    UniformBase = isUniform(GEP->getPointerOperand(), VF);
+
   unsigned IID = I->getOpcode() == Instruction::Load
                      ? Intrinsic::masked_gather
                      : Intrinsic::masked_scatter;
@@ -4083,7 +4091,8 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                        Config.CostKind) +
          TTI.getMemIntrinsicInstrCost(
              MemIntrinsicCostAttributes(IID, VectorTy, Ptr, isMaskRequired(I),
-                                        Alignment, I),
+                                        Alignment, I, /*StrideVal=*/nullptr,
+                                        UniformBase),
              Config.CostKind);
 }
 

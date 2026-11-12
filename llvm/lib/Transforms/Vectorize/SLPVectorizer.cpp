@@ -6302,6 +6302,23 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   return true;
 }
 
+/// Whether the gathered lanes in \p VL share a base pointer. Only the first
+/// lane's address reaches a gather cost query, so the target cannot tell a
+/// shared base from a varying one. It is shared exactly when every pointer is
+/// a GEP off the same operand, which is the form that widens to one base plus
+/// a vector of indices.
+static bool hasUniformGEPBase(ArrayRef<Value *> VL) {
+  const Value *Base = nullptr;
+  for (Value *V : VL) {
+    const auto *GEP =
+        dyn_cast_or_null<GetElementPtrInst>(getLoadStorePointerOperand(V));
+    if (!GEP || (Base && GEP->getPointerOperand() != Base))
+      return false;
+    Base = GEP->getPointerOperand();
+  }
+  return Base != nullptr;
+}
+
 BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     ArrayRef<Value *> VL, const Value *VL0, SmallVectorImpl<unsigned> &Order,
     SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo,
@@ -6489,7 +6506,9 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         TTI.getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::masked_gather, VecTy,
                                        cast<LoadInst>(VL0)->getPointerOperand(),
-                                       /*VariableMask=*/false, CommonAlignment),
+                                       /*VariableMask=*/false, CommonAlignment,
+                                       /*I=*/nullptr, /*StrideVal=*/nullptr,
+                                       hasUniformGEPBase(VL)),
             CostKind) +
         (ProfitableGatherPointers ? 0 : VectorGEPCost);
     InstructionCost GatherCost =
@@ -6608,13 +6627,15 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, SubVecTy, CostKind);
           break;
         case LoadsState::ScatterVectorize:
-          VecLdCost += TTI.getMemIntrinsicInstrCost(
-                           MemIntrinsicCostAttributes(
-                               Intrinsic::masked_gather, SubVecTy,
-                               LI0->getPointerOperand(),
-                               /*VariableMask=*/false, CommonAlignment),
-                           CostKind) +
-                       VectorGEPCost;
+          VecLdCost +=
+              TTI.getMemIntrinsicInstrCost(
+                  MemIntrinsicCostAttributes(
+                      Intrinsic::masked_gather, SubVecTy,
+                      LI0->getPointerOperand(), /*VariableMask=*/false,
+                      CommonAlignment, /*I=*/nullptr, /*StrideVal=*/nullptr,
+                      hasUniformGEPBase(VL.slice(SliceStart, SliceVF))),
+                  CostKind) +
+              VectorGEPCost;
           break;
         case LoadsState::BlendedLoadVectorize:
           // Two masked loads (one per candidate base) plus a select; no address
@@ -10050,7 +10071,8 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
           InstructionCost GatherCost = TTI.getMemIntrinsicInstrCost(
               MemIntrinsicCostAttributes(
                   Intrinsic::masked_gather, VecTy, LI0->getPointerOperand(),
-                  /*VariableMask=*/false, computeCommonAlignment<LoadInst>(VL)),
+                  /*VariableMask=*/false, computeCommonAlignment<LoadInst>(VL),
+                  /*I=*/nullptr, /*StrideVal=*/nullptr, hasUniformGEPBase(VL)),
               CostKind);
           UseOriginal = GatherCost < PackCost;
         }
@@ -17871,9 +17893,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getMemIntrinsicInstrCost(
-            MemIntrinsicCostAttributes(Intrinsic::masked_gather, VecTy,
-                                       LI0->getPointerOperand(),
-                                       /*VariableMask=*/false, CommonAlignment),
+            MemIntrinsicCostAttributes(
+                Intrinsic::masked_gather, VecTy, LI0->getPointerOperand(),
+                /*VariableMask=*/false, CommonAlignment, /*I=*/nullptr,
+                /*StrideVal=*/nullptr,
+                hasUniformGEPBase(UniqueValues.getArrayRef())),
             CostKind);
         break;
       }
