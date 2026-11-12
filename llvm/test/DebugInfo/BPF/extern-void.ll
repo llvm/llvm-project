@@ -1,22 +1,25 @@
 ; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 ; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfel -filetype=obj -o %t.o %s
+; RUN: llvm-objcopy --dump-section=.BTF=%t.btf %t.o
+; RUN: %python %S/../../CodeGen/BPF/BTF/print_btf.py %t.btf | FileCheck %s --check-prefix=BTF
 ;
 ; Source code:
-;   extern void bla1;
-;   ptr test1() {
-;     ptr x = &bla1;
+;   extern void bla1 __attribute__((section(".ksyms")));
+;   void *test1(void) {
+;     void *x = &bla1;
 ;     return x;
 ;   }
 ;
 ;   extern const void bla2;
-;   const ptr test2() {
-;     const ptr x = &bla2;
+;   const void *test2(void) {
+;     const void *x = &bla2;
 ;     return x;
 ;   }
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
-@bla1 = external dso_local global i8, align 1, !dbg !0
+@bla1 = external dso_local global i8, section ".ksyms", align 1, !dbg !0
 @bla2 = external dso_local constant i8, align 1, !dbg !6
 
 ; Function Attrs: norecurse nounwind readnone
@@ -38,6 +41,10 @@ entry:
 ;
 ; CHECK:        .quad bla2
 ; CHECK-NEXT:   DW_TAG_const_type
+
+; BTF: [[VAR:[0-9]+]]] VAR 'bla1' type_id=0, linkage=extern
+; BTF: DATASEC '.ksyms'
+; BTF-NEXT: type_id=[[VAR]] offset=
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

@@ -811,10 +811,8 @@ BTFDebug::BTFDebug(AsmPrinter *AP)
 
 uint32_t BTFDebug::addType(std::unique_ptr<BTFTypeBase> TypeEntry,
                            const DIType *Ty) {
-  TypeEntry->setId(TypeEntries.size() + 1);
-  uint32_t Id = TypeEntry->getId();
-  DIToIdMap[Ty] = Id;
-  TypeEntries.push_back(std::move(TypeEntry));
+  const uint32_t Id = addType(std::move(TypeEntry));
+  DIToIdMap.insert_or_assign(Ty, Id);
   return Id;
 }
 
@@ -980,19 +978,14 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
     llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
       return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
     });
-  uint32_t VLen = Elements.size();
-  // Variant parts might have a discriminator. LLVM DI doesn't consider it as
-  // an element and instead keeps it as a separate reference. But we represent
-  // it as an element in BTF.
-  if (CTy->getTag() == dwarf::DW_TAG_variant_part) {
-    const auto *DTy = CTy->getDiscriminator();
-    if (DTy) {
-      visitTypeEntry(DTy);
-      VLen++;
-    }
-  }
+  // BTF counts a variant's discriminator as a member. LLVM DI stores it
+  // separately from the elements.
+  const auto *Discriminator = CTy->getDiscriminator();
+  const size_t VLen = Elements.size() + (Discriminator != nullptr);
   if (VLen > BTF::MAX_VLEN)
     return;
+  if (Discriminator)
+    visitTypeEntry(Discriminator);
 
   // Check whether we have any bitfield members or not
   bool HasBitField = false;
@@ -1060,18 +1053,8 @@ static uint32_t getBTFArrayLength(const DINode *Dimension, MCContext &Ctx) {
 
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // Visit array element type.
-  uint32_t ElemTypeId = 0;
-  const DIType *ElemType = tryRemoveAtomicType(CTy->getBaseType());
-  visitTypeEntry(ElemType, ElemTypeId, false, false);
-  if (!ElemTypeId) {
-    SmallString<128> Message;
-    raw_svector_ostream Err(Message);
-    Err << "unsupported BTF array element type";
-    if (ElemType && !ElemType->getName().empty())
-      Err << " '" << ElemType->getName() << '\'';
-    OS.getContext().reportError({}, Message);
-    // Still register the array so enclosing types can resolve their references.
-  }
+  uint32_t ElemTypeId;
+  visitTypeEntry(CTy->getBaseType(), ElemTypeId, false, false);
 
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
@@ -1235,8 +1218,11 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
 /// will be generated.
 void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
                               bool CheckPointer, bool SeenPointer) {
-  if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end()) {
-    TypeId = DIToIdMap[Ty];
+  TypeId = 0;
+  if (!Ty)
+    return;
+  if (auto It = DIToIdMap.find(Ty); It != DIToIdMap.end()) {
+    TypeId = It->second;
 
     // To handle the case like the following:
     //    struct t;
@@ -1267,14 +1253,16 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
     // We will traverse const/ptr/volatile which already have corresponding
     // BTF types and generate type for 'struct' which might be in Fixup
     // state.
-    if (Ty && (!CheckPointer || !SeenPointer)) {
+    if (TypeId && (!CheckPointer || !SeenPointer)) {
       if (const auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
         while (DTy) {
           const DIType *BaseTy = DTy->getBaseType();
           if (!BaseTy)
             break;
 
-          if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
+          if (auto It = DIToIdMap.find(BaseTy); It != DIToIdMap.end()) {
+            if (!It->second)
+              break;
             DTy = dyn_cast<DIDerivedType>(BaseTy);
           } else {
             if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type &&
@@ -1305,6 +1293,19 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
     visitDerivedType(DTy, TypeId, CheckPointer, SeenPointer);
   else
     llvm_unreachable("Unknown DIType");
+
+  // Members and atomic qualifiers have no BTF record of their own.
+  if (TypeId || Ty->getTag() == dwarf::DW_TAG_member ||
+      Ty->getTag() == dwarf::DW_TAG_atomic_type)
+    return;
+
+  // Map an unsupported type to zero so later references can resolve it.
+  DIToIdMap.insert_or_assign(Ty, 0);
+
+  SmallString<128> Message("unsupported BTF type");
+  if (StringRef Name = Ty->getName(); !Name.empty())
+    raw_svector_ostream(Message) << " '" << Name << "'";
+  OS.getContext().reportError({}, Message);
 }
 
 void BTFDebug::visitTypeEntry(const DIType *Ty) {
@@ -1313,8 +1314,12 @@ void BTFDebug::visitTypeEntry(const DIType *Ty) {
 }
 
 void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
-  if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end()) {
-    TypeId = DIToIdMap[Ty];
+  if (!Ty) {
+    TypeId = 0;
+    return;
+  }
+  if (auto It = DIToIdMap.find(Ty); It != DIToIdMap.end()) {
+    TypeId = It->second;
     return;
   }
 
