@@ -603,7 +603,7 @@ def mif_DeallocCoarrayOp
 //   For now we've modeled this by *deliberately* omitting mlir::MemoryEffects
 //   on these operations, to ensure analysis treats these ops conservatively.
 //
-//   EVENT QUERY is not an image control statement, but it is an atomic
+//   A call to EVENT_QUERY is not an image control statement, but is an atomic
 //   observation of the event variable (F23 16.9.82 p3), whose value other
 //   images may change at any time.
 //   Two queries therefore don't necessarily return the same value, and an
