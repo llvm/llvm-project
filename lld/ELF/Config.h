@@ -285,7 +285,10 @@ struct Config {
   llvm::StringRef cmseOutputLib;
   ReportPolicy zBtiReport = ReportPolicy::None;
   llvm::StringRef zBtiReportSource;
-  ReportPolicy zCetReport = ReportPolicy::None;
+  ReportPolicy zIbtReport = ReportPolicy::None;
+  llvm::StringRef zIbtReportSource;
+  ReportPolicy zShstkReport = ReportPolicy::None;
+  llvm::StringRef zShstkReportSource;
   ReportPolicy zPauthReport = ReportPolicy::None;
   ReportPolicy zGcsReport = ReportPolicy::None;
   llvm::StringRef zGcsReportSource;
