@@ -9394,18 +9394,26 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   // Values that are guaranteed to stay in SGPRs. A readfirstlane on them is
-  // redundant and needlessly constrains the result to sreg_32_xm0. Glued
-  // CopyFromReg nodes are inline asm or call outputs, whose register class
-  // cannot be changed later.
+  // redundant and needlessly constrains the result to sreg_32_xm0. This also
+  // keeps the lowering idempotent, since it may run again on the same node.
+  // Every register accepted by read_register is an SGPR. Live-in vregs (inreg
+  // arguments) are copies of physical SGPRs, and glued CopyFromReg nodes are
+  // inline asm or call outputs; their register class cannot be changed later.
   auto IsKnownSGPRValue = [&](SDValue V) {
-    if (isa<ConstantSDNode, ConstantFPSDNode, FrameIndexSDNode>(V))
+    if (isa<ConstantSDNode, ConstantFPSDNode, FrameIndexSDNode>(V) ||
+        V.getOpcode() == ISD::READ_REGISTER)
       return true;
+    if (V.getOpcode() == ISD::INTRINSIC_WO_CHAIN) {
+      unsigned IntrID = V.getConstantOperandVal(0);
+      return IntrID == Intrinsic::amdgcn_readfirstlane ||
+             IntrID == Intrinsic::amdgcn_readlane;
+    }
     if (V.getOpcode() != ISD::CopyFromReg)
       return false;
     Register SrcReg = cast<RegisterSDNode>(V.getOperand(1))->getReg();
     if (!TRI->isSGPRReg(MRI, SrcReg))
       return false;
-    return SrcReg.isPhysical() ||
+    return SrcReg.isPhysical() || MRI.getLiveInPhysReg(SrcReg) ||
            V.getOperand(V.getNumOperands() - 1).getValueType() == MVT::Glue;
   };
 

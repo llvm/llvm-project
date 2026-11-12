@@ -98,8 +98,6 @@ define void @func_store_stacksave() #0 {
 ; WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
-; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s4
-; WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s4
 ; WAVE32-O0-NEXT:    ;;#ASMEND
@@ -112,8 +110,6 @@ define void @func_store_stacksave() #0 {
 ; WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
-; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s4
-; WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s4
 ; WAVE64-O0-NEXT:    ;;#ASMEND
@@ -124,8 +120,6 @@ define void @func_store_stacksave() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s4, s4, 5
-; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s4
-; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
@@ -196,8 +190,6 @@ define amdgpu_kernel void @kernel_store_stacksave() #0 {
 ; WAVE32-O0-NEXT:    s_lshr_b32 s0, s0, 5
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s0, v0
-; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s0
-; WAVE32-O0-NEXT:    v_readfirstlane_b32 s0, v0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s0
 ; WAVE32-O0-NEXT:    ;;#ASMEND
@@ -209,8 +201,6 @@ define amdgpu_kernel void @kernel_store_stacksave() #0 {
 ; WAVE64-O0-NEXT:    s_lshr_b32 s0, s0, 6
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s0, v0
-; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s0
-; WAVE64-O0-NEXT:    v_readfirstlane_b32 s0, v0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s0
 ; WAVE64-O0-NEXT:    ;;#ASMEND
@@ -220,8 +210,6 @@ define amdgpu_kernel void @kernel_store_stacksave() #0 {
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s0, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s0, s0, 5
-; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s0
-; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s0, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s0, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
@@ -453,8 +441,6 @@ define void @func_stacksave_nonentry_block(i1 %cond) #0 {
 ; WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
-; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s4
-; WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s4
 ; WAVE32-O0-NEXT:    ;;#ASMEND
@@ -494,8 +480,6 @@ define void @func_stacksave_nonentry_block(i1 %cond) #0 {
 ; WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
-; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s4
-; WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s4
 ; WAVE64-O0-NEXT:    ;;#ASMEND
@@ -530,8 +514,6 @@ define void @func_stacksave_nonentry_block(i1 %cond) #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:  ; %bb.1: ; %bb1
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s4, s4, 5
-; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s4
-; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
@@ -1019,8 +1001,6 @@ define void @func_stacksave_stackrestore_use() #0 {
 ; WAVE32-O0-NEXT:    s_lshr_b32 s5, s4, 5
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s5, v0
-; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s5
-; WAVE32-O0-NEXT:    v_readfirstlane_b32 s5, v0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s5
 ; WAVE32-O0-NEXT:    ;;#ASMEND
@@ -1034,8 +1014,6 @@ define void @func_stacksave_stackrestore_use() #0 {
 ; WAVE64-O0-NEXT:    s_lshr_b32 s5, s4, 6
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s5, v0
-; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s5
-; WAVE64-O0-NEXT:    v_readfirstlane_b32 s5, v0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s5
 ; WAVE64-O0-NEXT:    ;;#ASMEND
@@ -1047,8 +1025,6 @@ define void @func_stacksave_stackrestore_use() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s5, s4, 5
-; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s5
-; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s5, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s5
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s5, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
@@ -1121,8 +1097,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_use() #0 {
 ; WAVE32-O0-NEXT:    s_lshr_b32 s1, s0, 5
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s1
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s1, v0
-; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s1
-; WAVE32-O0-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s1
 ; WAVE32-O0-NEXT:    ;;#ASMEND
@@ -1135,8 +1109,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_use() #0 {
 ; WAVE64-O0-NEXT:    s_lshr_b32 s1, s0, 6
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s1
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s1, v0
-; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s1
-; WAVE64-O0-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s1
 ; WAVE64-O0-NEXT:    ;;#ASMEND
@@ -1147,8 +1119,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_use() #0 {
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s0, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s1, s0, 5
-; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s1
-; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
@@ -1455,8 +1425,6 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) #0 {
 ; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s1, v0
-; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s1
-; WAVE32-O0-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s1
 ; WAVE32-O0-NEXT:    ;;#ASMEND
@@ -1472,8 +1440,6 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) #0 {
 ; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s1, v0
-; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s1
-; WAVE64-O0-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s1
 ; WAVE64-O0-NEXT:    ;;#ASMEND
@@ -1488,8 +1454,6 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s0
-; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s1, v0
-; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
 ; WAVE32-WWM-PREALLOC-NEXT:    ; use s1
@@ -1728,8 +1692,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-O0-NEXT:    v_readlane_b32 s0, v32, 0
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s1
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s1, v0
-; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s1
-; WAVE32-O0-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s1
 ; WAVE32-O0-NEXT:    ;;#ASMEND
@@ -1843,8 +1805,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; WAVE64-O0-NEXT:    v_readlane_b32 s1, v32, 1
 ; WAVE64-O0-NEXT:    v_readlane_b32 s0, v32, 0
-; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s1
-; WAVE64-O0-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s1
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
@@ -1961,8 +1921,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-WWM-PREALLOC-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s1, v32, 1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s0, v32, 0
-; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s1
-; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s1, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
@@ -2403,8 +2361,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() #0 {
 ; WAVE32-O0-NEXT:    v_readlane_b32 s4, v33, 0
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s5, v0
-; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s5
-; WAVE32-O0-NEXT:    v_readfirstlane_b32 s5, v0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s5
 ; WAVE32-O0-NEXT:    ;;#ASMEND
@@ -2521,8 +2477,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() #0 {
 ; WAVE64-O0-NEXT:    v_readlane_b32 s4, v33, 0
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s5, v0
-; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s5
-; WAVE64-O0-NEXT:    v_readfirstlane_b32 s5, v0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s5
 ; WAVE64-O0-NEXT:    ;;#ASMEND
@@ -2637,8 +2591,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s5, v32, 1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s4, v32, 0
-; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s5
-; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s5, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, s5
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s5, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
