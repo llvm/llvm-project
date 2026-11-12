@@ -18,6 +18,8 @@ define i32 @relax_bcc(i1 %b) {
 ; CHECK-NEXT:    .p2align        4
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    #APP
@@ -32,6 +34,7 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
    %0 = phi i32 [0, %entry], [%1, %for.body]
+   call void asm sideeffect "", ""()
    %1 = add i32 %0, 1
    %2 = icmp sgt i32 %1, 100
    br i1 %2, label %exit, label %for.body

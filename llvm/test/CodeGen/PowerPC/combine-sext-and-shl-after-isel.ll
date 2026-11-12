@@ -223,26 +223,15 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mr r3, r29
 ; CHECK-NEXT:  .LBB3_2: # %cond.end.i.i
-; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB3_3 Depth 2
+; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwz r29, 0(r3)
-; CHECK-NEXT:    li r5, 0
-; CHECK-NEXT:    extsw r4, r29
-; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB3_3: # %while.body5.i
-; CHECK-NEXT:    # Parent Loop BB3_2 Depth=1
-; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    addi r5, r5, -1
-; CHECK-NEXT:    cmpwi r5, 0
-; CHECK-NEXT:    bgt cr0, .LBB3_3
-; CHECK-NEXT:  # %bb.4: # %while.cond12.preheader.i
-; CHECK-NEXT:    #
 ; CHECK-NEXT:    bc 12, 4*cr2+lt, .LBB3_1
-; CHECK-NEXT:  # %bb.5: # %for.cond99.preheader
+; CHECK-NEXT:  # %bb.3: # %for.cond99.preheader
 ; CHECK-NEXT:    #
+; CHECK-NEXT:    extsw r4, r29
 ; CHECK-NEXT:    ld r5, 0(r3)
-; CHECK-NEXT:    sldi r4, r4, 2
 ; CHECK-NEXT:    stw r3, 0(r3)
+; CHECK-NEXT:    sldi r4, r4, 2
 ; CHECK-NEXT:    stwx r30, r5, r4
 ; CHECK-NEXT:    b .LBB3_1
 ;
@@ -267,26 +256,15 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    mr r3, r29
 ; CHECK-BE-NEXT:  .LBB3_2: # %cond.end.i.i
-; CHECK-BE-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-BE-NEXT:    # Child Loop BB3_3 Depth 2
+; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    lwz r29, 0(r3)
-; CHECK-BE-NEXT:    li r5, 0
-; CHECK-BE-NEXT:    extsw r4, r29
-; CHECK-BE-NEXT:    .p2align 5
-; CHECK-BE-NEXT:  .LBB3_3: # %while.body5.i
-; CHECK-BE-NEXT:    # Parent Loop BB3_2 Depth=1
-; CHECK-BE-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-BE-NEXT:    addi r5, r5, -1
-; CHECK-BE-NEXT:    cmpwi r5, 0
-; CHECK-BE-NEXT:    bgt cr0, .LBB3_3
-; CHECK-BE-NEXT:  # %bb.4: # %while.cond12.preheader.i
-; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    bc 12, 4*cr2+lt, .LBB3_1
-; CHECK-BE-NEXT:  # %bb.5: # %for.cond99.preheader
+; CHECK-BE-NEXT:  # %bb.3: # %for.cond99.preheader
 ; CHECK-BE-NEXT:    #
+; CHECK-BE-NEXT:    extsw r4, r29
 ; CHECK-BE-NEXT:    ld r5, 0(r3)
-; CHECK-BE-NEXT:    sldi r4, r4, 2
 ; CHECK-BE-NEXT:    stw r3, 0(r3)
+; CHECK-BE-NEXT:    sldi r4, r4, 2
 ; CHECK-BE-NEXT:    stwx r30, r5, r4
 ; CHECK-BE-NEXT:    b .LBB3_1
 ;
@@ -311,21 +289,10 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-P9-NEXT:    nop
 ; CHECK-P9-NEXT:    mr r3, r29
 ; CHECK-P9-NEXT:  .LBB3_2: # %cond.end.i.i
-; CHECK-P9-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-P9-NEXT:    # Child Loop BB3_3 Depth 2
-; CHECK-P9-NEXT:    lwz r29, 0(r3)
-; CHECK-P9-NEXT:    li r4, 0
-; CHECK-P9-NEXT:    .p2align 5
-; CHECK-P9-NEXT:  .LBB3_3: # %while.body5.i
-; CHECK-P9-NEXT:    # Parent Loop BB3_2 Depth=1
-; CHECK-P9-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-P9-NEXT:    addi r4, r4, -1
-; CHECK-P9-NEXT:    cmpwi r4, 0
-; CHECK-P9-NEXT:    bgt cr0, .LBB3_3
-; CHECK-P9-NEXT:  # %bb.4: # %while.cond12.preheader.i
 ; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:    lwz r29, 0(r3)
 ; CHECK-P9-NEXT:    bc 12, 4*cr2+lt, .LBB3_1
-; CHECK-P9-NEXT:  # %bb.5: # %for.cond99.preheader
+; CHECK-P9-NEXT:  # %bb.3: # %for.cond99.preheader
 ; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    ld r4, 0(r3)
 ; CHECK-P9-NEXT:    extswsli r5, r29, 2
@@ -354,21 +321,10 @@ define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
 ; CHECK-P9-BE-NEXT:    nop
 ; CHECK-P9-BE-NEXT:    mr r3, r29
 ; CHECK-P9-BE-NEXT:  .LBB3_2: # %cond.end.i.i
-; CHECK-P9-BE-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-P9-BE-NEXT:    # Child Loop BB3_3 Depth 2
-; CHECK-P9-BE-NEXT:    lwz r29, 0(r3)
-; CHECK-P9-BE-NEXT:    li r4, 0
-; CHECK-P9-BE-NEXT:    .p2align 5
-; CHECK-P9-BE-NEXT:  .LBB3_3: # %while.body5.i
-; CHECK-P9-BE-NEXT:    # Parent Loop BB3_2 Depth=1
-; CHECK-P9-BE-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-P9-BE-NEXT:    addi r4, r4, -1
-; CHECK-P9-BE-NEXT:    cmpwi r4, 0
-; CHECK-P9-BE-NEXT:    bgt cr0, .LBB3_3
-; CHECK-P9-BE-NEXT:  # %bb.4: # %while.cond12.preheader.i
 ; CHECK-P9-BE-NEXT:    #
+; CHECK-P9-BE-NEXT:    lwz r29, 0(r3)
 ; CHECK-P9-BE-NEXT:    bc 12, 4*cr2+lt, .LBB3_1
-; CHECK-P9-BE-NEXT:  # %bb.5: # %for.cond99.preheader
+; CHECK-P9-BE-NEXT:  # %bb.3: # %for.cond99.preheader
 ; CHECK-P9-BE-NEXT:    #
 ; CHECK-P9-BE-NEXT:    ld r4, 0(r3)
 ; CHECK-P9-BE-NEXT:    extswsli r5, r29, 2

@@ -19,7 +19,7 @@ for.body.prol:
   %i.0106.prol = phi i32 [ undef, %for.body.prol ], [ %sub, %entry ]
   %sr.prol = phi float [ %0, %for.body.prol ], [ undef, %entry ]
   %sr109.prol = phi float [ %sr.prol, %for.body.prol ], [ undef, %entry ]
-  %prol.iter = phi i32 [ %prol.iter.sub, %for.body.prol ], [ undef, %entry ]
+  %prol.iter = phi i32 [ %prol.iter.sub, %for.body.prol ], [ %sub, %entry ]
   %0 = load float, ptr %p0, align 4
   %sub7.prol = fsub contract float %sr109.prol, %0
   store float %sub7.prol, ptr %p1, align 4

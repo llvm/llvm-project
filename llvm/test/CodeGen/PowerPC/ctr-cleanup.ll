@@ -4,10 +4,11 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define void @main() #0 {
 entry:
-  br i1 undef, label %for.end, label %for.body
+  br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 1, %entry ]
+  call void asm sideeffect "", ""()
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 5

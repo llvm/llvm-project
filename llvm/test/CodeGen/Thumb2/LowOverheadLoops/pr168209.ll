@@ -6,20 +6,10 @@
 define i32 @test(i16 %arg) {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %bb
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    uxth r0, r0
-; CHECK-NEXT:    wls lr, r0, .LBB0_4
-; CHECK-NEXT:  .LBB0_1: @ %bb3
-; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    le lr, .LBB0_1
-; CHECK-NEXT:  @ %bb.2: @ %bb2
-; CHECK-NEXT:    wls lr, r0, .LBB0_4
-; CHECK-NEXT:  .LBB0_3: @ %bb7
-; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    le lr, .LBB0_3
-; CHECK-NEXT:  .LBB0_4: @ %.critedge
+; CHECK-NEXT:    lsls r0, r0, #16
+; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    bx lr
 bb:
   %i = zext i16 %arg to i32
   %i1 = icmp eq i16 %arg, 0

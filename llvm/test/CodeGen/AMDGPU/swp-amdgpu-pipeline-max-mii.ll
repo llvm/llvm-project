@@ -20,7 +20,7 @@ bb1:                                              ; preds = %bb1, %bb
   %elt = extractelement <4 x float> %load, i64 0
   %mfmaA = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x2f32(float %elt, float 0.000000e+00, <16 x float> %phiA, i32 0, i32 0, i32 0)
   %mfmaB = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x2f32(float %elt, float 0.000000e+00, <16 x float> %phiB, i32 0, i32 0, i32 0)
-  %icmp = icmp eq i32 %iv, 0
+  %icmp = icmp eq i32 %iv, %arg
   br i1 %icmp, label %exit, label %bb1
 
 exit:                                             ; preds = %bb1

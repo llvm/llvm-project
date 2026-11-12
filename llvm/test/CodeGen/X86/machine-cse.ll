@@ -68,7 +68,7 @@ define void @commute(i32 %test_case, i32 %scale) nounwind ssp {
 ; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_3: # %for.body53.us
+; CHECK-NEXT:  .LBB1_3: # %bb.nph743.us
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB1_3
 ; CHECK-NEXT:  .LBB1_4: # %sw.bb307

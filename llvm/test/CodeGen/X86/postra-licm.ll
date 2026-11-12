@@ -145,22 +145,23 @@ declare i32 @strcmp(ptr nocapture, ptr nocapture) nounwind readonly
 
 @map_4_to_16 = external constant [16 x i16], align 32 ; <ptr> [#uses=2]
 
-define void @t2(ptr nocapture %bufp, ptr nocapture %data, i32 %dsize) nounwind ssp {
+define void @t2(ptr nocapture %bufp, ptr nocapture %data, i32 %dsize, i1 %cond) nounwind ssp {
 ; X86-64-LABEL: t2:
 entry:
-  br i1 undef, label %return, label %bb.nph
+  br i1 %cond, label %return, label %bb.nph
 
 bb.nph:                                           ; preds = %entry
 ; X86-64: movq _map_4_to_16@GOTPCREL(%rip)
 ; X86-64: .p2align 4
-  %tmp5 = zext i32 undef to i64                   ; <i64> [#uses=1]
+  %tmp5 = zext i32 %dsize to i64                   ; <i64> [#uses=1]
   %tmp6 = add i64 %tmp5, 1                        ; <i64> [#uses=1]
   %tmp11 = shl i64 undef, 1                       ; <i64> [#uses=1]
   %tmp14 = mul i64 undef, 3                       ; <i64> [#uses=1]
   br label %bb
 
 bb:                                               ; preds = %bb, %bb.nph
-  %tmp9 = mul i64 undef, undef                    ; <i64> [#uses=2]
+  %iv = phi i64 [ 0, %bb.nph ], [ %iv.next, %bb ]
+  %tmp9 = mul i64 %iv, 4                    ; <i64> [#uses=2]
   %tmp12 = add i64 %tmp11, %tmp9                  ; <i64> [#uses=1]
   %scevgep13 = getelementptr i8, ptr %bufp, i64 %tmp12 ; <ptr> [#uses=1]
   %tmp15 = add i64 %tmp14, %tmp9                  ; <i64> [#uses=1]
@@ -180,7 +181,8 @@ bb:                                               ; preds = %bb, %bb.nph
   store i8 %10, ptr %scevgep13, align 1
   %11 = trunc i16 %8 to i8                        ; <i8> [#uses=1]
   store i8 %11, ptr %scevgep16, align 1
-  %exitcond = icmp eq i64 undef, %tmp6            ; <i1> [#uses=1]
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %tmp6            ; <i1> [#uses=1]
   br i1 %exitcond, label %return, label %bb
 
 return:                                           ; preds = %bb, %entry

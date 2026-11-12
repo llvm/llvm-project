@@ -59,6 +59,12 @@
 ; LAXX-NEXT:         Canonicalize Freeze Instructions in Loops
 ; LAXX-NEXT:         Induction Variable Users
 ; LAXX-NEXT:         Loop Strength Reduction
+; LAXX-NEXT:       LCSSA Verifier
+; LAXX-NEXT:       Loop-Closed SSA Form Pass
+; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
+; LAXX-NEXT:       Function Alias Analysis Results
+; LAXX-NEXT:       Loop Pass Manager
+; LAXX-NEXT:         Delete dead loops
 ; LAXX-NEXT:       Lower Garbage Collection Instructions
 ; LAXX-NEXT:       Shadow Stack GC Lowering
 ; LAXX-NEXT:       Remove unreachable blocks from the CFG

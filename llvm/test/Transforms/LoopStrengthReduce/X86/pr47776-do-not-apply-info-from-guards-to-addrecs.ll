@@ -19,38 +19,39 @@ define void @bar() personality ptr @zot {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[BB1]] ], [ [[TMP7:%.*]], [[BB5:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = invoke i32 @fn()
-; CHECK-NEXT:    to label [[BB5]] unwind label [[BB23_LOOPEXIT_SPLIT_LP:%.*]]
+; CHECK-NEXT:            to label [[BB5]] unwind label [[BB23_LOOPEXIT_SPLIT_LP:%.*]]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i32, ptr addrspace(1) undef unordered, align 8
 ; CHECK-NEXT:    [[TMP7]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i64 [[TMP7]], 10000
 ; CHECK-NEXT:    br i1 [[C_0]], label [[BB2]], label [[BB8:%.*]]
 ; CHECK:       bb8:
+; CHECK-NEXT:    [[TMP7_LCSSA:%.*]] = phi i64 [ [[TMP7]], [[BB5]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10:%.*]], label [[BB29:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[TMP7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[TMP7_LCSSA]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP1]], 7
 ; CHECK-NEXT:    br label [[BB17:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi i32 [ [[TMP21:%.*]], [[BB20:%.*]] ], [ [[TMP16]], [[BB10]] ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = invoke i32 @fn()
-; CHECK-NEXT:    to label [[BB20]] unwind label [[BB23_LOOPEXIT:%.*]]
+; CHECK-NEXT:            to label [[BB20]] unwind label [[BB23_LOOPEXIT:%.*]]
 ; CHECK:       bb20:
 ; CHECK-NEXT:    [[TMP21]] = add i32 [[TMP18]], -1
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[TMP21]], 0
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[BB1_LOOPEXIT]], label [[BB17]]
 ; CHECK:       bb23.loopexit:
 ; CHECK-NEXT:    [[LPAD_LOOPEXIT:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    br label [[BB23:%.*]]
 ; CHECK:       bb23.loopexit.split-lp:
 ; CHECK-NEXT:    [[LPAD_LOOPEXIT_SPLIT_LP:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    br label [[BB23]]
 ; CHECK:       bb23:
 ; CHECK-NEXT:    ret void

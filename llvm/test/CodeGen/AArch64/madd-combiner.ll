@@ -27,28 +27,9 @@ define i32 @mul_sub_imm1(i32 %a, i32 %b) {
 
 ; bugpoint reduced test case. This only tests that we pass the MI verifier.
 define void @mul_add_imm2() {
-; CHECK-ISEL-LABEL: mul_add_imm2:
-; CHECK-ISEL:       ; %bb.0: ; %entry
-; CHECK-ISEL-NEXT:    mov w8, #1 ; =0x1
-; CHECK-ISEL-NEXT:  LBB2_1: ; %for.body8
-; CHECK-ISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-ISEL-NEXT:    cbnz w8, LBB2_1
-; CHECK-ISEL-NEXT:  ; %bb.2: ; %for.end20
-; CHECK-ISEL-NEXT:    ret
-;
-; CHECK-FAST-LABEL: mul_add_imm2:
-; CHECK-FAST:       ; %bb.0: ; %entry
-; CHECK-FAST-NEXT:    mov x8, #-3 ; =0xfffffffffffffffd
-; CHECK-FAST-NEXT:    mov x9, #45968 ; =0xb390
-; CHECK-FAST-NEXT:    madd x8, x8, x8, x8
-; CHECK-FAST-NEXT:    movk x9, #48484, lsl #16
-; CHECK-FAST-NEXT:    movk x9, #323, lsl #32
-; CHECK-FAST-NEXT:  LBB2_1: ; %for.body8
-; CHECK-FAST-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-FAST-NEXT:    cmp x8, x9
-; CHECK-FAST-NEXT:    b.lt LBB2_1
-; CHECK-FAST-NEXT:  ; %bb.2: ; %for.end20
-; CHECK-FAST-NEXT:    ret
+; CHECK-LABEL: mul_add_imm2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ret
 entry:
   br label %for.body
 for.body:

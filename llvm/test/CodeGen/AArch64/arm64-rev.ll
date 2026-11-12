@@ -527,22 +527,16 @@ declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>) nounwind readnone
 define void @test_rev16_truncstore() {
 ; CHECK-SD-LABEL: test_rev16_truncstore:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:  .LBB38_1: // %cleanup
-; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldrh w8, [x8]
 ; CHECK-SD-NEXT:    rev16 w8, w8
 ; CHECK-SD-NEXT:    strh w8, [x8]
-; CHECK-SD-NEXT:    b .LBB38_1
 ;
 ; CHECK-GI-LABEL: test_rev16_truncstore:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:  .LBB38_1: // %cleanup
-; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldrh w8, [x8]
 ; CHECK-GI-NEXT:    rev w8, w8
 ; CHECK-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-GI-NEXT:    strh w8, [x8]
-; CHECK-GI-NEXT:    b .LBB38_1
 entry:
   br label %body
 

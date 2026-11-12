@@ -710,6 +710,7 @@ void TargetPassConfig::addIRPasses() {
       addPass(createLoopStrengthReducePass());
       if (EnableLoopTermFold)
         addPass(createLoopTermFoldPass());
+      addPass(createLoopDeletionPass());
     }
   }
 

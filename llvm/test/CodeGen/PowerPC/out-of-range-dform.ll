@@ -15,23 +15,14 @@ define dso_local void @main() local_unnamed_addr personality ptr @__gxx_personal
 ; CHECK-P9-NEXT:    .cfi_offset lr, 16
 ; CHECK-P9-NEXT:    bl malloc
 ; CHECK-P9-NEXT:    nop
+; CHECK-P9-NEXT:    b .LBB0_2
+; CHECK-P9-NEXT:  # %bb.1: # %bb5
 ; CHECK-P9-NEXT:    addis r4, r2, _ZL3num@toc@ha
-; CHECK-P9-NEXT:    addi r3, r3, -25400
 ; CHECK-P9-NEXT:    lfs f0, _ZL3num@toc@l(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI0_0@toc@ha
 ; CHECK-P9-NEXT:    lfs f1, .LCPI0_0@toc@l(r4)
-; CHECK-P9-NEXT:    li r4, 0
 ; CHECK-P9-NEXT:    xsmulsp f0, f0, f1
-; CHECK-P9-NEXT:    cmpldi r4, 0
-; CHECK-P9-NEXT:    beq- cr0, .LBB0_2
-; CHECK-P9-NEXT:    .p2align 5
-; CHECK-P9-NEXT:  .LBB0_1: # %bb5
-; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    addi r3, r3, 25400
-; CHECK-P9-NEXT:    addi r4, r4, 25400
 ; CHECK-P9-NEXT:    stfs f0, 15240(r3)
-; CHECK-P9-NEXT:    cmpldi r4, 0
-; CHECK-P9-NEXT:    bne+ cr0, .LBB0_1
 ; CHECK-P9-NEXT:  .LBB0_2: # %bb16
 bb:
   %i = tail call noalias dereferenceable_or_null(6451600) ptr @malloc()

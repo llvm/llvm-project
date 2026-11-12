@@ -21,7 +21,7 @@ for.end:                                          ; preds = %for.body
 
 ; The for.body contains 3 seq_cst stores.
 ; Hence it should have 3 dmb;str;dmb sequences with the middle dmbs collapsed
-; CHECK: %for.body
+; CHECK-LABEL: test:
 ; CHECK-NOT: str
 ; CHECK: dmb
 ; CHECK-NOT: dmb
@@ -41,7 +41,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: dmb
 ; CHECK-NOT: dmb
 ; CHECK-NOT: str
-; CHECK: %for.end
+; CHECK: bx lr
 }
 
 define void @test2() {

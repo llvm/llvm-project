@@ -122,6 +122,12 @@
 ; SPIRV-Opt-NEXT:        Canonicalize Freeze Instructions in Loops
 ; SPIRV-Opt-NEXT:        Induction Variable Users
 ; SPIRV-Opt-NEXT:        Loop Strength Reduction
+; SPIRV-Opt-NEXT:      LCSSA Verifier
+; SPIRV-Opt-NEXT:      Loop-Closed SSA Form Pass
+; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
+; SPIRV-Opt-NEXT:      Function Alias Analysis Results
+; SPIRV-Opt-NEXT:      Loop Pass Manager
+; SPIRV-Opt-NEXT:        Delete dead loops
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG

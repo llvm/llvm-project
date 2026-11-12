@@ -1,5 +1,3 @@
-; Broken by r326208
-; XFAIL: *
 ; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 ; CHECK-NOT: add(r{{[0-9]+}},#2)
 ; CHECK-NOT: add(r{{[0-9]+}},#3)

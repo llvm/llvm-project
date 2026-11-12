@@ -72,47 +72,10 @@ declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64) #0
 define void @julia__hypot_17() #0 {
 ; CHECK-LABEL: julia__hypot_17:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    li r30, 3
-; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB1_1: # %bb1
-; CHECK-NEXT:    #
-; CHECK-NEXT:    addi r30, r30, -1
-; CHECK-NEXT:    cmpldi r30, 0
-; CHECK-NEXT:    bc 4, gt, .LBB1_3
-; CHECK-NEXT:  # %bb.2: # %bb3
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lhz r3, 0(0)
-; CHECK-NEXT:    bl __extendhfsf2
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    fcmpu cr0, f1, f1
-; CHECK-NEXT:    bun cr0, .LBB1_1
-; CHECK-NEXT:  .LBB1_3: # %bb9
-; CHECK-NEXT:    addi r1, r1, 48
-; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: julia__hypot_17:
 ; CHECK-P9:       # %bb.0: # %bb
-; CHECK-P9-NEXT:    li r3, 3
-; CHECK-P9-NEXT:    mtctr r3
-; CHECK-P9-NEXT:    li r3, 0
-; CHECK-P9-NEXT:    .p2align 5
-; CHECK-P9-NEXT:  .LBB1_1: # %bb1
-; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    bdzlr
-; CHECK-P9-NEXT:  # %bb.2: # %bb3
-; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    lxsihzx f0, 0, r3
-; CHECK-P9-NEXT:    xscvhpdp f0, f0
-; CHECK-P9-NEXT:    fcmpu cr0, f0, f0
-; CHECK-P9-NEXT:    bun cr0, .LBB1_1
-; CHECK-P9-NEXT:  # %bb.3: # %bb9
 ; CHECK-P9-NEXT:    blr
 bb:
   br label %bb1
@@ -137,50 +100,34 @@ bb9:                                              ; preds = %bb3, %bb1
 define void @func_48786() #0 {
 ; CHECK-LABEL: func_48786:
 ; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB2_3
+; CHECK-NEXT:  # %bb.1: # %bb4
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    cmpdi r3, 0
-; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    crnot 4*cr5+lt, eq
-; CHECK-NEXT:    b .LBB2_2
-; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB2_1: # %bb10
-; CHECK-NEXT:    #
-; CHECK-NEXT:    bdzlr
-; CHECK-NEXT:  .LBB2_2: # %bb2
-; CHECK-NEXT:    #
-; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB2_1
-; CHECK-NEXT:  # %bb.3: # %bb4
-; CHECK-NEXT:    #
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB2_5
-; CHECK-NEXT:  # %bb.4: # %bb8
-; CHECK-NEXT:    #
+; CHECK-NEXT:  # %bb.2: # %bb8
 ; CHECK-NEXT:    lhz r3, 0(r3)
 ; CHECK-NEXT:    sth r3, 0(0)
-; CHECK-NEXT:    b .LBB2_1
+; CHECK-NEXT:  .LBB2_3: # %bb10
+; CHECK-NEXT:    bclr 12, 4*cr5+lt, 0
+; CHECK-NEXT:  # %bb.4: # %bb12
 ; CHECK-NEXT:  .LBB2_5: # %bb15
 ;
 ; CHECK-P9-LABEL: func_48786:
 ; CHECK-P9:       # %bb.0: # %bb
+; CHECK-P9-NEXT:    bc 12, 4*cr5+lt, .LBB2_3
+; CHECK-P9-NEXT:  # %bb.1: # %bb4
 ; CHECK-P9-NEXT:    ld r3, 0(r3)
 ; CHECK-P9-NEXT:    cmpdi r3, 0
-; CHECK-P9-NEXT:    mtctr r3
 ; CHECK-P9-NEXT:    crnot 4*cr5+lt, eq
-; CHECK-P9-NEXT:    b .LBB2_2
-; CHECK-P9-NEXT:    .p2align 5
-; CHECK-P9-NEXT:  .LBB2_1: # %bb10
-; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    bdzlr
-; CHECK-P9-NEXT:  .LBB2_2: # %bb2
-; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    bc 12, 4*cr5+lt, .LBB2_1
-; CHECK-P9-NEXT:  # %bb.3: # %bb4
-; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    bc 4, 4*cr5+lt, .LBB2_5
-; CHECK-P9-NEXT:  # %bb.4: # %bb8
-; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:  # %bb.2: # %bb8
 ; CHECK-P9-NEXT:    lhz r3, 0(r3)
 ; CHECK-P9-NEXT:    sth r3, 0(0)
-; CHECK-P9-NEXT:    b .LBB2_1
+; CHECK-P9-NEXT:  .LBB2_3: # %bb10
+; CHECK-P9-NEXT:    bclr 12, 4*cr5+lt, 0
+; CHECK-P9-NEXT:  # %bb.4: # %bb12
 ; CHECK-P9-NEXT:  .LBB2_5: # %bb15
 bb:
   %i = load i64, ptr addrspace(11) undef, align 8

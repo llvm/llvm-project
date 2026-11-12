@@ -65,10 +65,10 @@ bb1:
   ret void
 }
 
-define void @loop() {
+define void @loop(i1 %c) {
 ; CHECK-LABEL: loop:
 entry:
-  br label %bb1
+  br i1 %c, label %bb1, label %end
 
 bb1:
   %p1 = alloca %struct.S
@@ -91,8 +91,10 @@ loop1:
 ; CHECK: jg
 
 end:
-  call void @f(ptr %p1)
-  call void @f(ptr %p2)
+  %p = phi ptr [ null, %entry ], [ %p1, %loop1 ]
+  %q = phi ptr [ null, %entry ], [ %p2, %loop1 ]
+  call void @f(ptr %p)
+  call void @f(ptr %q)
   ret void
 }
 

@@ -10,24 +10,9 @@ define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %
 ; GFX9-LABEL: lsr_order_mul24_0:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v5, v[0:1], off
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffffff, v2
-; GFX9-NEXT:    v_sub_u32_e32 v4, v4, v1
-; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    ds_write_b32 v0, v5
-; GFX9-NEXT:  .LBB0_1: ; %bb23
-; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    v_mul_u32_u24_e32 v5, v0, v2
-; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
-; GFX9-NEXT:    v_sub_u32_e32 v5, v4, v5
-; GFX9-NEXT:    v_add_u32_e32 v5, v5, v0
-; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v5, v3
-; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_cbranch_execnz .LBB0_1
-; GFX9-NEXT:  ; %bb.2: ; %.loopexit
-; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    ds_write_b32 v0, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 bb:

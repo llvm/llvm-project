@@ -640,7 +640,7 @@ loop3:
   br label %loop1
 }
 
-define void @unanalyzable_branch_to_loop_header(double %a0) {
+define void @unanalyzable_branch_to_loop_header(double %a0, i8 %arg) {
 ; Ensure that we can handle unanalyzable branches into loop headers. We
 ; pre-form chains for unanalyzable branches, and will find the tail end of that
 ; at the start of the loop. This function uses floating point comparison
@@ -657,7 +657,7 @@ entry:
   br i1 %cmp, label %loop, label %exit
 
 loop:
-  %cond = icmp eq i8 undef, 42
+  %cond = icmp eq i8 %arg, 42
   br i1 %cond, label %exit, label %loop
 
 exit:

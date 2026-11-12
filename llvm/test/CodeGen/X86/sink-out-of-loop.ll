@@ -9,44 +9,6 @@ define i32 @sink_succ(i32 %argc, ptr nocapture %argv) nounwind uwtable ssp {
 ; CHECK-LABEL: sink_succ:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_1: ## %preheader
-; CHECK-NEXT:    ## =>This Loop Header: Depth=1
-; CHECK-NEXT:    ## Child Loop BB0_2 Depth 2
-; CHECK-NEXT:    ## Child Loop BB0_3 Depth 3
-; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_2: ## %for.body1.lr
-; CHECK-NEXT:    ## Parent Loop BB0_1 Depth=1
-; CHECK-NEXT:    ## => This Loop Header: Depth=2
-; CHECK-NEXT:    ## Child Loop BB0_3 Depth 3
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_3: ## %for.body1
-; CHECK-NEXT:    ## Parent Loop BB0_1 Depth=1
-; CHECK-NEXT:    ## Parent Loop BB0_2 Depth=2
-; CHECK-NEXT:    ## => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    decl %edx
-; CHECK-NEXT:    jne LBB0_3
-; CHECK-NEXT:  ## %bb.4: ## %for.inc40.i
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=2
-; CHECK-NEXT:    incl %ecx
-; CHECK-NEXT:    cmpl $32, %ecx
-; CHECK-NEXT:    jne LBB0_2
-; CHECK-NEXT:  ## %bb.5: ## %exit
-; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    cmpl $10, %eax
-; CHECK-NEXT:    jne LBB0_1
-; CHECK-NEXT:  ## %bb.6: ## %for.body2.preheader
-; CHECK-NEXT:    movl $2048, %eax ## imm = 0x800
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_7: ## %for.body2
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    decl %eax
-; CHECK-NEXT:    jne LBB0_7
-; CHECK-NEXT:  ## %bb.8: ## %for.end20
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 entry:
   br label %preheader

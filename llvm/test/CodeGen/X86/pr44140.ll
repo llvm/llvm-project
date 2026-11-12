@@ -15,14 +15,9 @@ define i32 @main() {
 ; CHECK:       # %bb.0: # %start
 ; CHECK-NEXT:    subq $584, %rsp # imm = 0x248
 ; CHECK-NEXT:    .cfi_def_cfa_offset 592
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm6 = [1010101010101010101,2020202020202020202]
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_1: # %fake-loop
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
-; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm7
+; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm6
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm2
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm3
 ; CHECK-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
@@ -30,10 +25,10 @@ define i32 @main() {
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
 ; CHECK-NEXT:    vmovups %ymm3, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm2, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups %ymm7, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups %ymm6, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm3, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm2, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups %ymm7, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups %ymm6, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm5
@@ -42,12 +37,10 @@ define i32 @main() {
 ; CHECK-NEXT:    vmovups %ymm4, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq opaque@PLT
-; CHECK-NEXT:    vmovaps %xmm6, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    testb %sil, %sil
-; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [1010101010101010101,2020202020202020202]
 ; CHECK-NEXT:    movabsq $1010101010101010101, %rcx # imm = 0xE04998456557EB5
 ; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    negl %eax

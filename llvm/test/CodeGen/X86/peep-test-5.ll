@@ -75,17 +75,6 @@ define i32 @pr155828() {
 ; CHECK-LABEL: pr155828:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB2_1: # %func_188.exit.i.i
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    testb $1, %cl
-; CHECK-NEXT:    jne .LBB2_1
-; CHECK-NEXT:  # %bb.2: # %if.else.i.i.i
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    setg %al
 ; CHECK-NEXT:    retq
 entry:
   br label %func_188.exit.i.i

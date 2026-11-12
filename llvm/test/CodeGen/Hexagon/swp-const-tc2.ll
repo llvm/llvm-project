@@ -6,7 +6,7 @@
 ; In the bug, the final CFG contains two iterations of the loop.
 
 ; CHECK-NOT: loop0
-; CHECK: r{{[0-9]+}} = mpyi
+; CHECK: mpyi
 ; CHECK-NOT: r{{[0-9]+}} = mpyi
 
 define i32 @f0(ptr %a0) {

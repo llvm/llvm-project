@@ -8,7 +8,7 @@ target triple = "thumbv8-unknown-linux-gnueabihf"
 ; clobbers the predicate when considering the instructions they share.
 
 ; Function Attrs: nounwind
-define void @BN_kronecker(i1 %a, i32 %b) #0 {
+define void @BN_kronecker(i1 %a, i32 %b, i1 %loopcond) #0 {
 entry:
   br label %while.cond38
 
@@ -56,8 +56,7 @@ if.then109:                                       ; preds = %cond.false101
   br label %if.end111
 
 if.end111:                                        ; preds = %if.then109, %cond.false101
-  %tobool113 = icmp ne i32 0, 0
-  br i1 %tobool113, label %while.cond38, label %end
+  br i1 %loopcond, label %while.cond38, label %end
 
 end:                                              ; preds = %if.end111
   ret void

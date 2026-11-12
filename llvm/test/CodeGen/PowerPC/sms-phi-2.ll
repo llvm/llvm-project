@@ -5,45 +5,15 @@
 define void @phi2(i32, i32, ptr) local_unnamed_addr {
 ; CHECK-LABEL: phi2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    divw 7, 3, 4
-; CHECK-NEXT:    li 5, 55
-; CHECK-NEXT:    li 6, 48
-; CHECK-NEXT:    mtctr 3
-; CHECK-NEXT:    bdz .LBB0_4
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    divw 9, 7, 4
-; CHECK-NEXT:    mullw 8, 7, 4
-; CHECK-NEXT:    sub 3, 3, 8
-; CHECK-NEXT:    cmplwi 3, 10
-; CHECK-NEXT:    isellt 8, 6, 5
-; CHECK-NEXT:    add 3, 8, 3
-; CHECK-NEXT:    stbu 3, -1(8)
-; CHECK-NEXT:    bdz .LBB0_3
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    mr 3, 7
-; CHECK-NEXT:    mr 7, 9
-; CHECK-NEXT:    mullw 10, 9, 4
-; CHECK-NEXT:    divw 9, 9, 4
-; CHECK-NEXT:    sub 3, 3, 10
-; CHECK-NEXT:    cmplwi 3, 10
-; CHECK-NEXT:    isellt 10, 6, 5
-; CHECK-NEXT:    add 3, 10, 3
-; CHECK-NEXT:    stbu 3, -1(8)
-; CHECK-NEXT:    bdnz .LBB0_2
-; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    mr 3, 7
-; CHECK-NEXT:    mr 7, 9
-; CHECK-NEXT:    b .LBB0_5
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    # implicit-def: $x8
-; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    mullw 4, 7, 4
+; CHECK-NEXT:    divw 5, 3, 4
+; CHECK-NEXT:    mullw 4, 5, 4
+; CHECK-NEXT:    li 5, 48
 ; CHECK-NEXT:    sub 3, 3, 4
+; CHECK-NEXT:    li 4, 55
 ; CHECK-NEXT:    cmplwi 3, 10
-; CHECK-NEXT:    isellt 4, 6, 5
+; CHECK-NEXT:    isellt 4, 5, 4
 ; CHECK-NEXT:    add 3, 4, 3
-; CHECK-NEXT:    stbu 3, -1(8)
+; CHECK-NEXT:    stb 3, 0(3)
 ; CHECK-NEXT:    blr
   br label %4
 

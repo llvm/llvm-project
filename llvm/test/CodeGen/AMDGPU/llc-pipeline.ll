@@ -218,6 +218,12 @@
 ; GCN-O1-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O1-NEXT:        Induction Variable Users
 ; GCN-O1-NEXT:        Loop Strength Reduction
+; GCN-O1-NEXT:      LCSSA Verifier
+; GCN-O1-NEXT:      Loop-Closed SSA Form Pass
+; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O1-NEXT:      Function Alias Analysis Results
+; GCN-O1-NEXT:      Loop Pass Manager
+; GCN-O1-NEXT:        Delete dead loops
 ; GCN-O1-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Lazy Branch Probability Analysis
@@ -525,6 +531,12 @@
 ; GCN-O1-OPTS-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O1-OPTS-NEXT:        Induction Variable Users
 ; GCN-O1-OPTS-NEXT:        Loop Strength Reduction
+; GCN-O1-OPTS-NEXT:      LCSSA Verifier
+; GCN-O1-OPTS-NEXT:      Loop-Closed SSA Form Pass
+; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:      Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:      Loop Pass Manager
+; GCN-O1-OPTS-NEXT:        Delete dead loops
 ; GCN-O1-OPTS-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
@@ -850,6 +862,12 @@
 ; GCN-O2-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O2-NEXT:        Induction Variable Users
 ; GCN-O2-NEXT:        Loop Strength Reduction
+; GCN-O2-NEXT:      LCSSA Verifier
+; GCN-O2-NEXT:      Loop-Closed SSA Form Pass
+; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O2-NEXT:      Function Alias Analysis Results
+; GCN-O2-NEXT:      Loop Pass Manager
+; GCN-O2-NEXT:        Delete dead loops
 ; GCN-O2-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Lazy Branch Probability Analysis
@@ -1184,6 +1202,12 @@
 ; GCN-O3-NEXT:        Canonicalize Freeze Instructions in Loops
 ; GCN-O3-NEXT:        Induction Variable Users
 ; GCN-O3-NEXT:        Loop Strength Reduction
+; GCN-O3-NEXT:      LCSSA Verifier
+; GCN-O3-NEXT:      Loop-Closed SSA Form Pass
+; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:      Function Alias Analysis Results
+; GCN-O3-NEXT:      Loop Pass Manager
+; GCN-O3-NEXT:        Delete dead loops
 ; GCN-O3-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis

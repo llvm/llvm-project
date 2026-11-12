@@ -26,7 +26,7 @@ b2:                                               ; preds = %b2, %b1
   %v11 = tail call i64 @llvm.hexagon.S2.packhl(i32 %v9, i32 undef)
   %v12 = tail call i64 @llvm.hexagon.M2.vdmacs.s0(i64 %v1, i64 %v6, i64 %v11)
   %v13 = add nsw i32 %v3, 1
-  %v14 = icmp eq i32 %v13, undef
+  %v14 = icmp eq i32 %v13, 1000
   br i1 %v14, label %b3, label %b2
 
 b3:                                               ; preds = %b2

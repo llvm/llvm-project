@@ -8,14 +8,7 @@ define void @other_regression(i1 %cmp.not.i.i.i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movl 0, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    sarl %cl, %eax
-; CHECK-NEXT:    movl $1, %edx
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    shrl %cl, %edx
-; CHECK-NEXT:    imull %eax, %edx
-; CHECK-NEXT:    movslq %edx, %rsi
+; CHECK-NEXT:    movslq 0, %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorl %edx, %edx

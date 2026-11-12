@@ -61,7 +61,7 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:    # in Loop: Header=BB0_7 Depth=1
 ; CHECK-NEXT:    addiw a4, a4, 1
 ; CHECK-NEXT:    bne a3, a4, .LBB0_7
-; CHECK-NEXT:  .LBB0_9: # %while.end
+; CHECK-NEXT:  .LBB0_9: # %mismatch_end
 ; CHECK-NEXT:    mv a0, a3
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_10:

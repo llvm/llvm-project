@@ -8,14 +8,8 @@
 define i32 @test_phi() {
 ; CHECK-LABEL: test_phi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:  .LBB0_1: # %for.body
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    sh a0, 0(zero)
-; CHECK-NEXT:    bnez a1, .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 entry:

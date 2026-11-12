@@ -45,6 +45,7 @@ loop_body:
   %0 = call <4 x float> @llvm.minnum.v4f32(<4 x float> %f, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>)
   store <4 x float> %0, ptr %fp, align 16
   %1 = add i64 %invar_address.dim.0.01, 1
+  call void asm sideeffect "", ""()
   %2 = icmp eq i64 %1, 4
   br i1 %2, label %loop_exit, label %loop_body
 
@@ -53,9 +54,8 @@ loop_exit:
 }
 
 ; CHECK-LABEL: test1v:
-; CHECK: xvminsp
-; CHECK-NOT: xsmindp
-; CHECK: mtctr
+; CHECK-DAG: xvminsp
+; CHECK-DAG: mtctr
 ; CHECK-NOT: xsmindp
 ; CHECK: blr
 
@@ -91,6 +91,7 @@ loop_body:
   %0 = call <4 x double> @llvm.maxnum.v4f64(<4 x double> %f, <4 x double> <double 1.0, double 1.0, double 1.0, double 1.0>)
   store <4 x double> %0, ptr %fp, align 16
   %1 = add i64 %invar_address.dim.0.01, 1
+  call void asm sideeffect "", ""()
   %2 = icmp eq i64 %1, 4
   br i1 %2, label %loop_exit, label %loop_body
 
@@ -99,10 +100,8 @@ loop_exit:
 }
 
 ; CHECK-LABEL: test2v:
-; CHECK: xvmaxdp
-; CHECK: xvmaxdp
-; CHECK-NOT: xsmaxdp
-; CHECK: mtctr
+; CHECK-DAG: xvmaxdp
+; CHECK-DAG: mtctr
 ; CHECK-NOT: xsmaxdp
 ; CHECK: blr
 
