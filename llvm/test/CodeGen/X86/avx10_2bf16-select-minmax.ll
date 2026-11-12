@@ -86,3 +86,38 @@ define <32 x bfloat> @select_olt_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b) {
   %sel = select <32 x i1> %cmp, <32 x bfloat> %a, <32 x bfloat> %b
   ret <32 x bfloat> %sel
 }
+
+define i32 @select_i32_olt_bf16(bfloat %a, bfloat %b, i32 %x, i32 %y) {
+; CHECK-LABEL: select_i32_olt_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vpslld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vucomiss %xmm0, %xmm1
+; CHECK-NEXT:    cmovbel %esi, %eax
+; CHECK-NEXT:    retq
+  %cmp = fcmp olt bfloat %a, %b
+  %sel = select i1 %cmp, i32 %x, i32 %y
+  ret i32 %sel
+}
+
+define i32 @br_olt_bf16(bfloat %a, bfloat %b) {
+; CHECK-LABEL: br_olt_bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vpslld $16, %xmm1, %xmm1
+; CHECK-NEXT:    vucomiss %xmm0, %xmm1
+; CHECK-NEXT:    jbe .LBB5_2
+; CHECK-NEXT:  # %bb.1: # %t
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB5_2: # %f
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %cmp = fcmp olt bfloat %a, %b
+  br i1 %cmp, label %t, label %f
+t:
+  ret i32 1
+f:
+  ret i32 0
+}

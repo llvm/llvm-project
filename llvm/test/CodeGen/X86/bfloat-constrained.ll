@@ -171,8 +171,62 @@ define void @add() strictfp {
   ret void
 }
 
+define fp128 @bfloat_to_fp128(bfloat %a) strictfp {
+; X86-LABEL: bfloat_to_fp128:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    subl $36, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 48
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %edi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __extendbfsf2
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    wait
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __extendsftf2
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
+; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $36, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl $4
+;
+; X64-LABEL: bfloat_to_fp128:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    vpextrw $0, %xmm0, %eax
+; X64-NEXT:    movzwl %ax, %edi
+; X64-NEXT:    callq __extendbfsf2@PLT
+; X64-NEXT:    callq __extendsftf2@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    retq
+  %r = call fp128 @llvm.experimental.constrained.fpext.f128.bf16(bfloat %a, metadata !"fpexcept.strict") #0
+  ret fp128 %r
+}
+
 declare float @llvm.experimental.constrained.fpext.f32.bf16(bfloat, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.bf16(bfloat, metadata)
+declare fp128 @llvm.experimental.constrained.fpext.f128.bf16(bfloat, metadata)
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare bfloat @llvm.experimental.constrained.fptrunc.bf16.f32(float, metadata, metadata)
 declare bfloat @llvm.experimental.constrained.fptrunc.bf16.f64(double, metadata, metadata)
