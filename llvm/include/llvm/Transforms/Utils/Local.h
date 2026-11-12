@@ -297,11 +297,13 @@ LLVM_ABI bool replaceDbgDeclare(Value *Address, Value *NewAddress,
 
 /// Replaces multiple dbg.value records when the alloca it describes
 /// is replaced with a new value. If Offset is non-zero, a constant displacement
-/// is added to the expression (after the mandatory Deref). Offset can be
-/// negative. New dbg.value records are inserted at the locations of
-/// the instructions they replace.
+/// is added to the expression (before the mandatory Deref). Offset can be
+/// negative. DIExprFlags (DIExpression::DerefBefore) dereferences the new
+/// address before the offset, for an address held in memory. New dbg.value
+/// records are inserted at the locations of the instructions they replace.
 LLVM_ABI void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
-                                       DIBuilder &Builder, int Offset = 0);
+                                       DIBuilder &Builder, int Offset = 0,
+                                       uint8_t DIExprFlags = 0);
 
 /// Salvage debug records that use \p I before the instruction is deleted.
 /// Rewrite those uses in terms of its operands where we can, and encode the

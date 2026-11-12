@@ -15,6 +15,10 @@ entry:
 
   ; CHECK: store ptr %[[USST]], ptr @__safestack_unsafe_stack_ptr
 
+  ; The unsafe stack's base, kept in a slot for the debug info to read.
+  ; CHECK: %[[BASE:.*]] = alloca ptr, align {{4|8}}
+  ; CHECK: store ptr %[[USP]], ptr %[[BASE]], align {{4|8}}
+
   %a.addr = alloca ptr, align 8
   %buf = alloca [16 x i8], align 16
 
