@@ -5497,7 +5497,8 @@ static void computeKnownFPClassForFRem(const Operator *Op,
     computeKnownFPClass(RHS, DemandedElts, InterestedRHS, KnownRHS, Q,
                         Depth + 1);
 
-  Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
+  const bool HasNSZ = cast<FPMathOperator>(Op)->hasNoSignedZeros();
+  Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode, HasNSZ);
 }
 
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
@@ -5851,7 +5852,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known = KnownFPClass::sinh(KnownSrc);
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::sinh(KnownSrc, Mode, HasNSZ);
       break;
     }
     case Intrinsic::cosh: {
@@ -5865,14 +5872,26 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known = KnownFPClass::tanh(KnownSrc);
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::tanh(KnownSrc, Mode, HasNSZ);
       break;
     }
     case Intrinsic::asin: {
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known = KnownFPClass::asin(KnownSrc);
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::asin(KnownSrc, Mode, HasNSZ);
       break;
     }
     case Intrinsic::acos: {
@@ -5886,7 +5905,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known = KnownFPClass::atan(KnownSrc);
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::atan(KnownSrc, Mode, HasNSZ);
       break;
     }
     case Intrinsic::atan2: {
@@ -5916,7 +5941,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           F ? F->getDenormalMode(
                   II->getType()->getScalarType()->getFltSemantics())
             : DenormalMode::getDynamic();
-      Known = KnownFPClass::atan2(KnownY, KnownX, Mode);
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::atan2(KnownY, KnownX, Mode, HasNSZ);
       break;
     }
     case Intrinsic::maxnum:
@@ -6120,7 +6146,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownFPClass KnownRHS;
       computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedRHS,
                           KnownRHS, Q, Depth + 1);
-      Known = KnownFPClass::pow(KnownLHS, KnownRHS);
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::pow(KnownLHS, KnownRHS, Mode, HasNSZ);
       break;
     }
     case Intrinsic::powi: {
@@ -6148,7 +6180,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                             KnownSrc, Q, Depth + 1);
 
-      Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits, Mode, HasNSZ);
       break;
     }
     case Intrinsic::ldexp: {
