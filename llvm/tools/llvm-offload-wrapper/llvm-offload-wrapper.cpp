@@ -95,8 +95,8 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
       return Err;
     break;
   case llvm::object::OFK_SYCL:
-    // A relocatable link has already linked the device image. Mark it as
-    // finalized, so that a later link does not link it again.
+    // As clang-linker-wrapper does for -r, put the already linked device image
+    // in .sycl_fatbin instead of .llvm.offloading.
     if (Error Err = offloading::wrapSYCLBinaries(
             M, BuffersToWrap.front(), offloading::SYCLJITOptions(),
             /*IsFinalizedImage=*/Relocatable))

@@ -109,9 +109,9 @@ space attributes for pointers:
 
 ## Relocatable linking
 
-`-r` links the SYCL device code of its inputs and registers it with the SYCL
-runtime, then merges the inputs into one relocatable object. The object can be
-linked later by any host linker, or put into a static library.
+`-r` links the SYCL device code of its inputs, adds the code that registers it
+with the SYCL runtime, and merges the inputs into one relocatable object. The
+object can be linked later by any host linker, or put into a static library.
 
 ```console
 clang++ -fsycl -c a.cpp b.cpp
@@ -121,4 +121,4 @@ clang++ main.o ab.o -L<libsycl dir> -lLLVMSYCL -o app
 ```
 
 Without `-fsycl`, use `--offload-link -r`. Relocatable linking is not
-supported for COFF targets. See {doc}`OffloadingDesign` for details.
+supported for Windows (COFF) targets. See {doc}`OffloadingDesign` for details.
