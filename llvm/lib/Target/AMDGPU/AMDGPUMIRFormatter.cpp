@@ -288,9 +288,9 @@ bool AMDGPUMIRFormatter::parseSWaitcntImmMnemonic(
     Src.consume_front(Name);
     Src.consume_front(SWaitAluDelim);
 
-    int64_t Num;
+    unsigned Num;
     StringRef::iterator NumPos = Src.begin();
-    if (Src.consumeInteger(10, Num) || Num < 0)
+    if (Src.consumeInteger(10, Num))
       return ErrorCallback(NumPos,
                            "expected non-negative integer counter number");
 
@@ -353,9 +353,9 @@ bool AMDGPUMIRFormatter::parseSWaitLoadcntDscntImmMnemonic(
     Src.consume_front(Name);
     Src.consume_front(SWaitAluDelim);
 
-    int64_t Num;
+    unsigned Num;
     StringRef::iterator NumPos = Src.begin();
-    if (Src.consumeInteger(10, Num) || Num < 0)
+    if (Src.consumeInteger(10, Num))
       return ErrorCallback(NumPos,
                            "expected non-negative integer counter number");
 
@@ -421,10 +421,10 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     DelimIdx = Src.find(SWaitAluDelim);
     // Src:       Num1_Name2_Num2
     //            ^^^^
-    int64_t Num;
+    unsigned Num;
     // Save the position of the number for accurate error reporting.
     StringRef::iterator NumPos = Src.begin();
-    if (Src.consumeInteger(10, Num) || Num < 0)
+    if (Src.consumeInteger(10, Num))
       return ErrorCallback(NumPos,
                            "expected non-negative integer counter number");
     unsigned Max;

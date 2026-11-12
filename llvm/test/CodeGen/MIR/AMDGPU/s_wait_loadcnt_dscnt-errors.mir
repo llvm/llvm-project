@@ -141,3 +141,27 @@ body: |
   bb.0:
     S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_abc
 ...
+
+;--- loadcnt-negative-zero.mir
+# RUN: not llc %t/loadcnt-negative-zero.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/loadcnt-negative-zero.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Loadcnt_-0
+# CHECK-NEXT:                                  ^
+name: LoadcntNegativeZero
+body: |
+  bb.0:
+    S_WAIT_LOADCNT_DSCNT .Loadcnt_-0
+...
+
+;--- loadcnt-exceeds-32-bits.mir
+# RUN: not llc %t/loadcnt-exceeds-32-bits.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/loadcnt-exceeds-32-bits.mir --strict-whitespace --match-full-lines
+---
+# CHECK:error: {{.*}} expected non-negative integer counter number
+# CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Loadcnt_4294967296
+# CHECK-NEXT:                                  ^
+name: LoadcntExceeds32Bits
+body: |
+  bb.0:
+    S_WAIT_LOADCNT_DSCNT .Loadcnt_4294967296
+...
