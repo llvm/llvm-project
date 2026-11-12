@@ -287,9 +287,7 @@ bool Sema::CheckCountedByAttrInRecord(const DeclContext *DC, QualType Ty,
     return true;
   }
 
-  // Only a flexible array member takes the attribute among arrays. Whether it's
-  // the last field isn't known until the record is complete; ActOnFields
-  // rejects a flexible array member that isn't.
+  // Only a flexible array member takes the attribute among arrays.
   if (Ty->isArrayType() && !Ty->isIncompleteArrayType()) {
     Diag(Loc, diag::err_counted_by_attr_on_array_not_flexible_array_member)
         << Kind << Range;

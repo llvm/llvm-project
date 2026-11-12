@@ -2559,8 +2559,8 @@ public:
   /// Check a counted_by-family attribute in type position and initialize
   /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer and
   /// array declarator chunks enclosing the attribute, up to the nearest
-  /// function chunk. \p OnReturnType is true if a function chunk encloses it,
-  /// i.e. the attribute is in a function's return type.
+  /// function declarator chunk. \p OnReturnType is true if a function chunk
+  /// encloses it, i.e. the attribute is in a function's return type.
   ///
   /// \returns false after diagnosing an attribute that must be dropped (see
   /// ValidateBoundsAttrTypeShape).
@@ -2579,8 +2579,8 @@ public:
                                   unsigned PointerNestLevel, bool OnReturnType);
 
   /// Check if applying the specified attribute variant from the "counted by"
-  /// family of attributes to a field of record \p RD, with type \p Ty, is
-  /// semantically valid. If semantically invalid diagnostics will be emitted
+  /// family of attributes to a field of \p DC, with type \p Ty, is
+  /// semantically valid. If semantically invalid, diagnostics will be emitted
   /// explaining the problems. This doesn't need the FieldDecl, so it can run
   /// before the field's type is built.
   ///
