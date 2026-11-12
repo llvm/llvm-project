@@ -114,47 +114,64 @@ arithmetic on them to classify or convert characters. Use the helpers in
 for non-ASCII encodings and for both `char` and `wchar_t`. See
 {ref}`design_philosophy` for the model behind this.
 
+(math_function_guidelines)=
+
 ## Math functions
 
-```{note}
-This section records the general expectations as understood by the
-non-math maintainers. It needs review by the math maintainers.
-```
+The {ref}`math page <math>` describes the goals of the math library, and
+`libc/src/math/docs/add_math_function.md` is the step-by-step guide for adding
+a function. The points below are the ones that most often need stating.
 
-- New functions are expected to be correctly rounded in all rounding modes.
-  The {doc}`math.h status tables <../headers/math>` record the accuracy of
-  each function.
-- The implementation lives in a header under `src/__support/math/`, and the
-  entrypoint is a thin wrapper. `libc/src/math/docs/add_math_function.md` is
-  the step-by-step guide.
-- A pull request may add a function for a single floating point type. It does
-  not need to cover every type at once.
-- New code converts a signaling NaN input to a quiet NaN and raises
-  `FE_INVALID`.
+### Accuracy and error reporting
+
+- The default implementation of every math function is expected to be
+  correctly rounded in all rounding modes, and to support `errno`, floating
+  point exceptions, and signaling NaNs. A signaling NaN input produces a quiet
+  NaN and raises `FE_INVALID`.
+- The {doc}`math.h status tables <../headers/math>` record the accuracy of
+  each function. The double precision `atan` and `atan2` entries currently
+  list 1 ULP. That is a known gap, and it is being fixed.
 - `errno` and floating point exceptions are reported only through
   `fputil::set_errno_if_required` and `fputil::raise_except_if_required`.
-- Tests that compare against MPFR run only in overlay mode. Every function
-  also needs a smoke test, which is what runs in full builds and on baremetal
-  and GPU targets.
 - The GPU-specific math implementations have different accuracy bounds and
   are maintained by the GPU maintainers.
 
-```{admonition} Open questions for the math maintainers
-:class: important
+### Structure
 
-- Is the multiple-implementation scheme (`LIBC_MATH_<FUNC>_IMPL` selecting
-  among `double_eval`, `float_eval`, and `integer_eval` variants) the intended
-  structure for every function? What does each variant promise for accuracy,
-  `errno`, exceptions, and signaling NaNs?
-- Is `math::static_rounding` the future primary implementation, with the
-  dynamic rounding mode as a wrapper, or a parallel API for compiler use only?
-- Must a new single precision or half precision function pass an exhaustive
-  test in all four rounding modes before it is merged, and who runs it?
-- The status tables list double precision `atan` and `atan2` at 1 ULP. Is
-  that an accepted bound or a gap to close?
-- What are the rules for the test data under
-  `libc/test/src/math/exhaustive/`?
-```
+- The implementation lives in a header under `src/__support/math/`, and the
+  entrypoint is a thin wrapper.
+- A function can have several implementations, each in its own namespace
+  (`double_eval`, `float_eval`, `float_eval_cr_rn`, `integer_eval`), with
+  `LIBC_MATH_<FUNC>_IMPL` selecting the one to use. This is the intended
+  structure for every function, although only some functions have been
+  converted so far. Variants other than the default may make different
+  guarantees. Once more variants exist, the {ref}`math page <math>` will have
+  a table of what each one guarantees.
+- The functions in `math::static_rounding` take the rounding mode as an
+  argument. They exist for callers that need a fixed rounding mode, such as
+  compilers. They are not the primary implementation of a function. The
+  primary implementation is whichever one is best for the target's
+  configuration.
+- A pull request may add a function for a single floating point type. It does
+  not need to cover every type at once.
+
+### Testing
+
+- The author of a math change runs the unit, smoke, and exhaustive tests for
+  it on their own machine, at least in the default configuration, and
+  preferably before sending the pull request. Reviewers check that this was
+  done. CI covers most of the tests and some configurations, not all of them.
+- The exhaustive tests take a long time and are not run by `check-libc`.
+- If the tests are hard to run, or hard to get passing, ask the math
+  maintainers for help.
+- Tests that compare against MPFR run only in overlay mode. Every function
+  also needs a smoke test, which is what runs in full builds and on baremetal
+  and GPU targets.
+- `libc/test/src/math/exhaustive/` contains hard-to-round inputs from the
+  [CORE-MATH](https://core-math.gitlabpages.inria.fr/) project, as text files
+  (`.wc`) and in a compact binary form (`.bin`). The two forms must stay
+  consistent. A CI check for that, and instructions for adding more
+  hard-to-round cases, are planned.
 
 ## Areas that need rework
 
@@ -165,7 +182,8 @@ as separate, focused changes.
 - **The `File` abstraction.** The Linux implementation is in
   `src/__support/File/`, while the baremetal and GPU implementations are in
   `src/stdio/baremetal/` and `src/stdio/gpu/`. These should share one design.
-- **`src/__support/HashTable/`** needs a cleanup.
+- **`src/__support/HashTable/`** needs a cleanup of its implementation style,
+  its header inclusion, and its architecture-specific dispatch.
 - **String to floating point conversion.** The layering between the parsers
   and their fallbacks should be clearer. Today the original string has to be
   passed along even after the first parser has consumed it.

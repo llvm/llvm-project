@@ -144,12 +144,17 @@ responsibility of that downstream.
   tested in an overlay build with MPFR installed.
 - Tests in `libc/test/src/math/smoke/` do not need MPFR. They are the math
   tests that run in full builds and on baremetal and GPU targets.
+- Tests in `libc/test/src/math/exhaustive/` take a long time and are not run
+  by `check-libc`. The author of a math change runs them locally. See
+  {ref}`math_function_guidelines`.
 
 ## Fuzzing and benchmarks
 
 Neither is required for a new function today. Ideally, security-sensitive
 functions have fuzz tests and performance-sensitive functions have benchmarks.
 
-Fuzz tests live in `libc/fuzzing/` (see {ref}`fuzzing`). The benchmarks under
+Fuzz tests live in `libc/fuzzing/` (see {ref}`fuzzing`). A migration of the
+fuzz tests to [FuzzTest](https://github.com/google/fuzztest) is being
+considered. The benchmarks under
 `libc/benchmarks/` are unmaintained, apart from the GPU benchmarks in
 `libc/benchmarks/gpu/`.
