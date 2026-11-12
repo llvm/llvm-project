@@ -595,9 +595,10 @@ struct AACalleeToCallSite : public BaseType {
   }
 };
 
-/// Helper function to accumulate uses. The uses of \p Val are visited first,
-/// followed by the transitive uses in \p Uses, which are added to as they are
-/// found.
+/// Helper function to accumulate uses.
+///
+/// The uses of \p Val are visited first, followed by the transitive uses in
+/// \p Uses, which are added to as they are found.
 template <class AAType, typename StateType = typename AAType::StateType>
 static void followUsesInContext(AAType &AA, Attributor &A,
                                 MustBeExecutedContextExplorer &Explorer,
