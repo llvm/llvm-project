@@ -480,6 +480,9 @@ protected:
   bool ShouldMarkAsGlobal = true;
   /// List of the emitted declarations.
   llvm::DenseSet<CanonicalDeclPtr<const Decl>> AlreadyEmittedTargetDecls;
+  /// Implicitly-defined constructors already scanned for target regions; only
+  /// lambdas can hold such regions there and they compute their own parent.
+  llvm::SmallPtrSet<const CXXConstructorDecl *, 8> ScannedImplicitCtors;
   /// List of the global variables with their addresses that should not be
   /// emitted for the target.
   llvm::StringMap<llvm::WeakTrackingVH> EmittedNonTargetVariables;
@@ -522,6 +525,10 @@ protected:
   /// \param S Starting statement.
   /// \param ParentName Name of the function declaration that is being scanned.
   void scanForTargetRegionsFunctions(const Stmt *S, StringRef ParentName);
+
+  /// Scans the mem-initializers and the body of \a Ctor for target regions.
+  void scanConstructorForTargetRegions(const CXXConstructorDecl *Ctor,
+                                       StringRef ParentName);
 
   /// Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
@@ -1418,6 +1425,11 @@ public:
                                           llvm::Constant *&OutlinedFnID,
                                           bool IsOffloadEntry,
                                           const RegionCodeGenTy &CodeGen);
+
+  /// Returns the parent name of the target regions in \a FD: its enclosing
+  /// non-closure function if \a FD is a closure, otherwise \a FD itself;
+  /// constructors and destructors use their complete variant.
+  StringRef getTargetRegionParentName(const FunctionDecl *FD) const;
 
   /// Emit the target offloading code associated with \a D. The emitted
   /// code attempts offloading the execution to the device, an the event of
