@@ -4,14 +4,37 @@
 
 # Record the current generic GlobalISel folding behavior for arithmetic,
 # G_FMA, G_FCMP, rounding, and min/max. These folds currently ignore the
-# MachineFunction's denormal mode, including dynamic environments.
-# Cover f16 environments independently of the float: mode as well.
-# f32 and f64 share FPCR.FZ; f16 has the separate FPCR.FZ16 control.
-
+# MachineFunction's denormal_fpenv attribute, even when set to "dynamic".
+#
+# Ensure the tests exercise combinations like:
+#   denormal_fpenv(ieee, float: preservesign)
+#   denormal_fpenv(preservesign, float:ieee)
+# to cover cases where f16 should follow the default `denormal_fpenv` but
+# f32 is specified differently.
+#
 # TODO: Make these constant folds honour the denormal environment.
-# The current output values are technically legal since denormal_fpenv
-# "may" flush but is not required to. However, it may be desirable to have
-# the outputs match the actual hardware results in most cases where possible.
+# The current values produced via constant folding are technically legal since
+# denormal_fpenv "may" flush but is not required to. However, it may be desirable in
+# most cases to have the const-folded results match the results that would be produced
+# if they exectuted on the actual hardware with non-const inputs containing the same values.
+#
+# It is not always possible to 100% match the const-folding to the hardware-executed result.
+# For example with f16 flushing enabled, f32 flushing disabled with:
+#   denormal_fpenv(preservesign, float:ieee)
+# The input:
+#   fadd half f0x0001, f0x0002
+# could be lowered to:
+#   fadd h0, h0, h1
+# which would flush if FZ16 was set, but it hypothetically be promoted instead and lowered to:
+#   fcvt s2, h0
+#   fcvt s3, h1
+#   fadd s2, s2, s3
+#   fcvt h2, s2   
+# which would depend on FZ instead and therefore not flush.
+#
+# However, making const-folding match the behaviour of the simple scalar version of these
+# instructions makes it more likely to be match the results from the hardware-executed
+# instruction than if we always ignore `denormal_fpenv` during const-folding.
 
 --- |
   define void @fbinops() denormal_fpenv(float: preservesign) { ret void }
