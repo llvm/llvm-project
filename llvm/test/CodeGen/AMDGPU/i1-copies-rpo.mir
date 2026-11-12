@@ -4,7 +4,6 @@
 # The strange block ordering visits the use before the def.
 ---
 name: inserted_cmp_operand_class_rpo
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

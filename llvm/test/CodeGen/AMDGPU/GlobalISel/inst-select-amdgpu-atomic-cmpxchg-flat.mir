@@ -11,7 +11,6 @@
 name:            amdgpu_atomic_cmpxchg_s32_flat
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
@@ -78,7 +77,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s32_flat_gep4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
@@ -163,7 +161,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s64_flat
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -230,7 +227,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s64_flat_gep4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -315,7 +311,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s32_flat_gepm4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
@@ -416,7 +411,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s32_flat_nortn
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
@@ -477,7 +471,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s64_flat_nortn
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5

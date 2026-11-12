@@ -47,7 +47,6 @@
 
 ---
 name:            test_spill_v2_partial_agpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -84,7 +83,6 @@ body:             |
 
 ---
 name:            test_spill_v3_partial_agpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 12, alignment: 4 }
 machineFunctionInfo:
@@ -123,7 +121,6 @@ body:             |
 
 ---
 name:            test_spill_v4_partial_agpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -168,7 +165,6 @@ body:             |
 
 ---
 name:            test_spill_v5_partial_agpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 20, alignment: 4 }
 machineFunctionInfo:
@@ -215,7 +211,6 @@ body:             |
 
 ---
 name:            test_spill_v6_partial_agpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 24, alignment: 4 }
 machineFunctionInfo:
@@ -268,7 +263,6 @@ body:             |
 
 ---
 name:            test_spill_v8_partial_agpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 4 }
 machineFunctionInfo:
@@ -323,7 +317,6 @@ body:             |
 
 ---
 name:            test_spill_v16_partial_agpr
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 4 }
 machineFunctionInfo:

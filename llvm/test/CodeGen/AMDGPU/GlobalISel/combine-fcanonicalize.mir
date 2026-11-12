@@ -4,7 +4,6 @@
 
 ---
 name: test_fcanonicalize
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -24,7 +23,6 @@ body: |
 
 ---
 name: test_fconstant
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -40,7 +38,6 @@ body: |
 # FIXME: Mode fields are redundant and not considered.
 ---
 name: test_denormal_fconstant
-tracksRegLiveness: true
 legalized: true
 machineFunctionInfo:
   mode:
@@ -59,7 +56,6 @@ body: |
 
 ---
 name: test_fminnum_with_fminnum_argument_s32_ieee_mode_on
-tracksRegLiveness: true
 legalized: true
 machineFunctionInfo:
   mode:
@@ -94,7 +90,6 @@ body: |
 
 ---
 name: test_fminnum_with_fmaxnum_argument_s32_ieee_mode_on
-tracksRegLiveness: true
 legalized: true
 machineFunctionInfo:
   mode:
@@ -129,7 +124,6 @@ body: |
 
 ---
 name: test_fmaxnum_with_fmaxnum_argument_s32_ieee_mode_on
-tracksRegLiveness: true
 legalized: true
 machineFunctionInfo:
   mode:
@@ -164,7 +158,6 @@ body: |
 
 ---
 name: test_fmaxnum_with_fminnum_argument_s32_ieee_mode_on
-tracksRegLiveness: true
 legalized: true
 machineFunctionInfo:
   mode:
@@ -199,7 +192,6 @@ body: |
 
 ---
 name: test_multiple_uses
-tracksRegLiveness: true
 legalized: true
 machineFunctionInfo:
   mode:
@@ -231,7 +223,6 @@ body: |
 
 ---
 name: test_splat_padded_with_undef
-tracksRegLiveness: true
 legalized: true
 machineFunctionInfo:
   mode:
@@ -281,7 +272,6 @@ body: |
 
 ---
 name: test_splat_SNaN_and_QNaN_padded_with_undef
-tracksRegLiveness: true
 legalized: true
 machineFunctionInfo:
   mode:
@@ -332,7 +322,6 @@ body: |
 
 ---
 name: test_fcanonicalize_log
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -352,7 +341,6 @@ body: |
 
 ---
 name: test_fcanonicalize_exp2
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:

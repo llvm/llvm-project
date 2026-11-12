@@ -4,7 +4,6 @@
 ---
 liveins:
 name:            do_not_fold_copy_with_implicit_exec
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: do_not_fold_copy_with_implicit_exec
   ; CHECK: bb.0:
@@ -61,7 +60,6 @@ body:             |
 # would drop the per-lane snapshot.
 ---
 name:            do_not_fold_sgpr_to_vgpr_copy_escaping_loop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: do_not_fold_sgpr_to_vgpr_copy_escaping_loop
   ; CHECK: bb.0:
@@ -124,7 +122,6 @@ body:             |
 # not be propagated through that exit copy either (separate fold path).
 ---
 name:            do_not_fold_sgpr_to_vgpr_copy_escaping_loop_via_copy_use
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: do_not_fold_sgpr_to_vgpr_copy_escaping_loop_via_copy_use
   ; CHECK: bb.0:
@@ -188,7 +185,6 @@ body:             |
 # there is no temporal divergence and the fold is allowed.
 ---
 name:            fold_from_loop_allowed_because_loop_does_not_modify_exec
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_from_loop_allowed_because_loop_does_not_modify_exec
   ; CHECK: bb.0:

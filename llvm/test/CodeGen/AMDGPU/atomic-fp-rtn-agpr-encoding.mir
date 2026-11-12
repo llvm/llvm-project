@@ -25,7 +25,6 @@
 # GFX942-NEXT: s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 ---
 name: f64_rtn_agpr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $agpr2_agpr3, $sgpr0_sgpr1
@@ -62,7 +61,6 @@ body: |
 # GFX942-NEXT: s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 ---
 name: f32_rtn_agpr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $agpr2, $sgpr0_sgpr1

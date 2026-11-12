@@ -4,7 +4,6 @@
 # Kernels can have no FP
 ---
 name: kernel_no_fold_fi_non_stack_rsrc_and_soffset
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -37,7 +36,6 @@ body:             |
 
 ---
 name: kernel_no_fold_fi_non_stack_rsrc
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -69,7 +67,6 @@ body:             |
 
 ---
 name: kernel_no_fold_fi_non_stack_soffset
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -102,7 +99,6 @@ body:             |
 
 ---
 name: kernel_fold_fi_mubuf
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -135,7 +131,6 @@ body:             |
 # Functions have an unswizzled SP/FP relative to the wave offset
 ---
 name: function_no_fold_fi_non_stack_rsrc_and_soffset
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -169,7 +164,6 @@ body:             |
 
 ---
 name: function_no_fold_fi_non_stack_rsrc
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -202,7 +196,6 @@ body:             |
 
 ---
 name: function_no_fold_fi_non_stack_soffset
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -234,7 +227,6 @@ body:             |
 
 ---
 name: function_fold_fi_mubuf_wave_relative
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4
@@ -266,7 +258,6 @@ body:             |
 
 ---
 name: function_fold_fi_mubuf_stack_relative
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  4

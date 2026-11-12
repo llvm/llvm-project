@@ -12,7 +12,6 @@
 
 ---
 name:            test_V_WMMA_F32_16X16X16_F16_w32_threeaddr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_WMMA_F32_16X16X16_F16_w32_threeaddr
   ; CHECK: bb.0:
@@ -52,7 +51,6 @@ body:             |
 
 ---
 name:            test_V_WMMA_F32_16X16X16_F16_twoaddr_w32
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_WMMA_F32_16X16X16_F16_twoaddr_w32
   ; CHECK: bb.0:
@@ -87,7 +85,6 @@ body:             |
 
 ---
 name:            test_V_WMMA_I32_16X16X16_IU8_twoaddr_w32
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_WMMA_I32_16X16X16_IU8_twoaddr_w32
   ; CHECK: bb.0:
@@ -124,7 +121,6 @@ body:             |
 
 ---
 name:            test_V_WMMA_BF16_16X16X16_BF16_threeaddr_w32
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_WMMA_BF16_16X16X16_BF16_threeaddr_w32
   ; CHECK: bb.0:
@@ -159,7 +155,6 @@ body:             |
 
 ---
 name:            test_V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr
   ; CHECK: bb.0:
@@ -200,7 +195,6 @@ body:             |
 
 ---
 name:            test_V_PERMLANE_XOR_B32_e64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_PERMLANE_XOR_B32_e64
   ; CHECK: bb.0:
@@ -238,7 +232,6 @@ body:             |
 ...
 ---
 name:            test_V_PERMLANE_UP_B32_e64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_PERMLANE_UP_B32_e64
   ; CHECK: bb.0:
@@ -276,7 +269,6 @@ body:             |
 ...
 ---
 name:            test_V_PERMLANE_DOWN_B32_e64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_PERMLANE_DOWN_B32_e64
   ; CHECK: bb.0:
@@ -314,7 +306,6 @@ body:             |
 ...
 ---
 name:            test_V_PERMLANE_BCAST_B32_e64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_PERMLANE_BCAST_B32_e64
   ; CHECK: bb.0:
@@ -352,7 +343,6 @@ body:             |
 ...
 ---
 name:            test_V_PERMLANE_IDX_GEN_B32_e64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_PERMLANE_IDX_GEN_B32_e64
   ; CHECK: bb.0:
@@ -390,7 +380,6 @@ body:             |
 ...
 ---
 name:            test_V_PERMLANEX_VAR_B32_e64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_PERMLANEX_VAR_B32_e64
   ; CHECK: bb.0:
@@ -426,7 +415,6 @@ body:             |
 ...
 ---
 name:            test_V_PERMLANE64_B32
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_PERMLANE64_B32
   ; CHECK: bb.0:
@@ -462,7 +450,6 @@ body:             |
 ...
 ---
 name:            test_V_PERMLANE16_VAR_B32_e64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_PERMLANE16_VAR_B32_e64
   ; CHECK: bb.0:
@@ -503,7 +490,6 @@ body:             |
 
 ---
 name:            test_V_DOT2C_F32_BF16_dpp_vi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_DOT2C_F32_BF16_dpp_vi
   ; CHECK: bb.0:
@@ -539,7 +525,6 @@ body:             |
 ...
 ---
 name:            test_V_DOT2C_F32_F16_dpp_vi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_DOT2C_F32_F16_dpp_vi
   ; CHECK: bb.0:
@@ -575,7 +560,6 @@ body:             |
 ...
 ---
 name:            test_V_DOT2C_I32_I16_dpp_vi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_DOT2C_I32_I16_dpp_vi
   ; CHECK: bb.0:
@@ -611,7 +595,6 @@ body:             |
 ...
 ---
 name:            test_V_DOT4C_I32_I8_dpp_vi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_DOT4C_I32_I8_dpp_vi
   ; CHECK: bb.0:
@@ -647,7 +630,6 @@ body:             |
 ...
 ---
 name:            test_V_DOT8C_I32_I4_dpp_vi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_V_DOT8C_I32_I4_dpp_vi
   ; CHECK: bb.0:

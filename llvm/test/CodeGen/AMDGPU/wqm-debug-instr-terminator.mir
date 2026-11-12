@@ -38,7 +38,6 @@
 
 ---
 name: wqm_debug_strict_to_exact
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wqm_debug_strict_to_exact
   ; CHECK: bb.0.entry:

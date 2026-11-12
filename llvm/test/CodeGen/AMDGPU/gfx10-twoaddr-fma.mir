@@ -10,7 +10,6 @@
 # GFX10-LIS: V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -29,7 +28,6 @@ body:             |
 # GFX10-LIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16__imm_is_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -49,7 +47,6 @@ body:             |
 # GFX10-LIS: %3:vgpr_32 = V_FMA_F16_gfx9_e64 0, %0.sub0, 0, %2.sub0, 0, %1, 0, 0, 0, implicit $mode, implicit $e
 ---
 name:            test_fmamk_reg_imm_f16__imm_is_subreg_fully_defined
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_64 = IMPLICIT_DEF
@@ -69,7 +66,6 @@ body:             |
 # GFX10-LIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16__use_imm_before_mac
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -89,7 +85,6 @@ body:             |
 # GFX10-LIS: %3:vgpr_32 = V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f16__use_imm_after_mac
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -112,7 +107,6 @@ body:             |
 
 ---
 name:            test_fmamk_reg_imm_f16__use_imm_before_after_mac
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -132,7 +126,6 @@ body:             |
 # GFX10-LIS: V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_imm_reg_f16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }
@@ -155,7 +148,6 @@ body:             |
 # GFX10-LIS: V_FMAAK_F16 %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_f16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vgpr_32 }
@@ -177,7 +169,6 @@ body:             |
 
 ---
 name:            test_fmaak_inline_literal_f16
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
 body:             |

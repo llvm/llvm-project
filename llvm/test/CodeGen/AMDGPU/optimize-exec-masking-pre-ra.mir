@@ -5,7 +5,6 @@
 # dropping the opcode check.
 ---
 name: exec_src1_is_not_copy
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
@@ -109,7 +108,6 @@ body:             |
 # s_cbranch_vccz, ensure that an undef operand is handled correctly.
 ---
 name: cndmask_cmp_cbranch_fold_undef
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: cndmask_cmp_cbranch_fold_undef
   ; GCN: bb.0:
@@ -133,7 +131,6 @@ body:             |
 # Don't crash on exec copy to SGPR subregister.
 ---
 name: exec_copy_to_subreg
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: exec_copy_to_subreg
   ; GCN: bb.0:

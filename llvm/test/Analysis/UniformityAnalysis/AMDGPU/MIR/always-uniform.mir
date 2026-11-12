@@ -45,7 +45,6 @@ body:             |
 # for copy operand src = sgpr -> uniform
 ---
 name:            sgprcopy
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

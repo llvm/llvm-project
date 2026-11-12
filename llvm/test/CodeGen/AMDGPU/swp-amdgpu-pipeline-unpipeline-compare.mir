@@ -7,7 +7,6 @@
 
 ---
 name:            swp_amdgpu_pipeline_unpipeline_compare
-tracksRegLiveness: true
 isSSA:           true
 liveins:
   - { reg: '$sgpr4_sgpr5' }

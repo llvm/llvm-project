@@ -187,7 +187,6 @@ body: |
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # CHECK-NOT: S_WAITCNT
 name: preexisting_waitcnt
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -209,7 +208,6 @@ body: |
 # CHECK-NEXT: }
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 name: bundle_no_waitcnt
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -232,7 +230,6 @@ body: |
 # CHECK: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # CHECK-NOT: S_WAITCNT
 name: preexisting_waitcnt_in_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -258,7 +255,6 @@ body: |
 # CHECK-NEXT: }
 
 name: insert_in_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -282,7 +278,6 @@ body: |
 # CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
 
 name: exit_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -310,7 +305,6 @@ body: |
 # CHECK-NEXT: }
 
 name: cross_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

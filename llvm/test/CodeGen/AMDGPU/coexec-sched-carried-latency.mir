@@ -4,7 +4,6 @@
 
 ---
 name: same_iteration_loop
-tracksRegLiveness: true
 body: |
   ; DEFAULT-LABEL: name: same_iteration_loop
   ; DEFAULT: bb.0:
@@ -200,7 +199,6 @@ body: |
 
 ---
 name: prefetch_loop
-tracksRegLiveness: true
 body: |
   ; DEFAULT-LABEL: name: prefetch_loop
   ; DEFAULT: bb.0:

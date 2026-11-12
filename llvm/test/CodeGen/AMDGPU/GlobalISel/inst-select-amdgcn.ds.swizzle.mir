@@ -6,7 +6,6 @@
 name: ds_swizzle_0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 
 body: |
@@ -29,7 +28,6 @@ body: |
 name: ds_swizzle_65535
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 
 body: |

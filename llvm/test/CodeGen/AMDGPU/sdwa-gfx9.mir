@@ -18,7 +18,6 @@
 
 ---
 name:            add_shr_i32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }
@@ -62,7 +61,6 @@ body:             |
 
 ---
 name:            trunc_shr_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: vreg_64 }

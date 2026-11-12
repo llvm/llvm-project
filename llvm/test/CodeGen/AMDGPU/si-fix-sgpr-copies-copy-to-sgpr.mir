@@ -6,7 +6,6 @@
 
 ---
 name:            si_fix_sgpr_copies_breaks_function
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

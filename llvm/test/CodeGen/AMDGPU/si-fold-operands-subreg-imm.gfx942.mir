@@ -6,7 +6,6 @@
 
 ---
 name:            issue139317
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -30,7 +29,6 @@ body:             |
 
 ---
 name:            issue139317_sub0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -54,7 +52,6 @@ body:             |
 
 ---
 name:            issue139317_nested_reg_sequence
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -87,7 +84,6 @@ body:             |
 
 ---
 name:            issue139317_foldable_neg_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -111,7 +107,6 @@ body:             |
 
 ---
 name:            issue139317_foldable_fp_imm_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -135,7 +130,6 @@ body:             |
 
 ---
 name:            issue139317_foldable_fp_imm_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -159,7 +153,6 @@ body:             |
 
 ---
 name:            issue139317_reg_sequence_subreg_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -181,7 +174,6 @@ body:             |
 
 ---
 name:            issue139317_reg_sequence_subreg_use_foldable_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

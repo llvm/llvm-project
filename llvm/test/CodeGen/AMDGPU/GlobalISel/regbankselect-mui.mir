@@ -363,7 +363,6 @@ body: |
 ---
 name: uniform_i1_phi
 legalized: true
-tracksRegLiveness: true
 body: |
   ; OLD_RBS-LABEL: name: uniform_i1_phi
   ; OLD_RBS: bb.0:
@@ -862,7 +861,6 @@ body: |
 ---
 name: divergent_phi_with_uniform_inputs
 legalized: true
-tracksRegLiveness: true
 body: |
   ; OLD_RBS-LABEL: name: divergent_phi_with_uniform_inputs
   ; OLD_RBS: bb.0:
@@ -946,7 +944,6 @@ body: |
 ---
 name: divergent_because_of_temporal_divergent_use
 legalized: true
-tracksRegLiveness: true
 body: |
   ; OLD_RBS-LABEL: name: divergent_because_of_temporal_divergent_use
   ; OLD_RBS: bb.0:
@@ -1052,7 +1049,6 @@ body: |
 ---
 name: loop_with_2breaks
 legalized: true
-tracksRegLiveness: true
 body: |
   ; OLD_RBS-LABEL: name: loop_with_2breaks
   ; OLD_RBS: bb.0:

@@ -14,7 +14,6 @@
 
 ---
 name: phys_reg_partial_liveness_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1
@@ -42,7 +41,6 @@ body:             |
 
 ---
 name: phys_reg_partial_liveness_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1

@@ -6,7 +6,6 @@
 # of the REG_SEQUENCE instruction.
 ---
 name: test_undef_use
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test_undef_use
   ; CHECK: bb.0:

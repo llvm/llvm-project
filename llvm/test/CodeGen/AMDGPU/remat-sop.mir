@@ -3,7 +3,6 @@
 
 ---
 name:            test_remat_s_mov_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_mov_b32
@@ -24,7 +23,6 @@ body:             |
 ...
 ---
 name:            test_no_remat_s_mov_b32_impuse_exec
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg:  $sgpr32
 body:             |
@@ -55,7 +53,6 @@ body:             |
 # available.
 ---
 name:            test_remat_s_mov_b32_vreg_src_long_lr
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg:  $sgpr32
 body:             |
@@ -84,7 +81,6 @@ body:             |
 # unavailable and we do not want to artificially extend the liverange.
 ---
 name:            test_no_remat_s_mov_b32_vreg_src_short_lr
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg:  $sgpr32
 body:             |
@@ -115,7 +111,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_mov_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_mov_b64
@@ -136,7 +131,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_brev_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_brev_b32
@@ -157,7 +151,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_brev_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_brev_b64
@@ -178,7 +171,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_ff0_i32_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_ff0_i32_b32
@@ -199,7 +191,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_ff1_i32_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_ff1_i32_b32
@@ -220,7 +211,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_ff0_i32_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_ff0_i32_b64
@@ -241,7 +231,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_ff1_i32_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_ff1_i32_b64
@@ -262,7 +251,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_flbit_i32_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_flbit_i32_b32
@@ -283,7 +271,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_flbit_i32_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_flbit_i32_b64
@@ -304,7 +291,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_flbit_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_flbit_i32
@@ -325,7 +311,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_flbit_i32_i64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_flbit_i32_i64
@@ -346,7 +331,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_sext_i32_i8
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_sext_i32_i8
@@ -367,7 +351,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_sext_i32_i16
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_sext_i32_i16
@@ -388,7 +371,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_bitreplicate_b64_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_bitreplicate_b64_b32
@@ -409,7 +391,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_bfm_b32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_bfm_b32
@@ -430,7 +411,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_bfm_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_bfm_b64
@@ -451,7 +431,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_mul_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_mul_i32
@@ -472,7 +451,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_mul_hi_i32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_mul_hi_i32
@@ -493,7 +471,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_mul_hi_u32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_mul_hi_u32
@@ -514,7 +491,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_pack_ll_b32_b16
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_pack_ll_b32_b16
@@ -535,7 +511,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_pack_lh_b32_b16
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_pack_lh_b32_b16
@@ -556,7 +531,6 @@ body:             |
 ...
 ---
 name:            test_remat_s_pack_hh_b32_b16
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_pack_hh_b32_b16
@@ -578,7 +552,6 @@ body:             |
 
 ---
 name:            test_remat_s_getpc_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -601,7 +574,6 @@ body:             |
 
 ---
 name:            test_remat_s_getpc_b64_2
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -657,7 +629,6 @@ body:             |
 
 ---
 name:            test_remat_s_mov_b64_imm_pseudo
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_s_mov_b64_imm_pseudo

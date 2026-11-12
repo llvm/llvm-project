@@ -19,7 +19,6 @@
 
 ---
 name:            anti_hints_present
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       8
@@ -103,7 +102,6 @@ body:             |
 
 ---
 name:            anti_hints_absent
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       8
@@ -218,7 +216,6 @@ body:             |
 
 ---
 name:            anti_hints_suppressed_by_target_budget
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       8
@@ -342,7 +339,6 @@ body:             |
 
 ---
 name:            anti_hints_suppressed_by_current_budget
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       4
@@ -466,7 +462,6 @@ body:             |
 
 ---
 name:            anti_hints_unified_agpr_headroom
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       6
@@ -519,7 +514,6 @@ body:             |
 
 ---
 name:            anti_hints_unified_agpr_budget
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       6
@@ -585,7 +579,6 @@ body:             |
 
 ---
 name:            anti_hints_high_vgpr_counts_for_budget
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       8
@@ -703,7 +696,6 @@ body:             |
 
 ---
 name:            anti_hints_av_class_applied_to_agpr
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy:       6

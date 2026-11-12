@@ -2,7 +2,6 @@
 
 ---
 name:            single_anti_hint
-tracksRegLiveness: true
 # CHECK-LABEL: name: single_anti_hint
 # CHECK:      registers:
 # CHECK:   - { id: 3, class: vreg_128_align2, preferred-register: '', flags: [  ],
@@ -23,7 +22,6 @@ body: |
 
 ---
 name:            multiple_anti_hints
-tracksRegLiveness: true
 # CHECK-LABEL: name: multiple_anti_hints
 # CHECK:      registers:
 # CHECK:   - { id: 3, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
@@ -49,7 +47,6 @@ body: |
 
 ---
 name:            duplicate_anti_hints
-tracksRegLiveness: true
 # CHECK-LABEL: name: duplicate_anti_hints
 # CHECK:      registers:
 # CHECK:   - { id: 2, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
@@ -68,7 +65,6 @@ body: |
 
 ---
 name:            anti_hint_with_preferred_register
-tracksRegLiveness: true
 # CHECK-LABEL: name: anti_hint_with_preferred_register
 # CHECK:      registers:
 # CHECK:   - { id: 2, class: vgpr_32, preferred-register: '$vgpr8', flags: [  ],
@@ -87,7 +83,6 @@ body: |
 
 ---
 name:            empty_anti_hints
-tracksRegLiveness: true
 # CHECK-LABEL: name: empty_anti_hints
 # CHECK:      registers:
 # CHECK:   - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ] }
@@ -104,7 +99,6 @@ body: |
 
 ---
 name:            no_anti_hints
-tracksRegLiveness: true
 # CHECK-LABEL: name: no_anti_hints
 # CHECK:      registers:
 # CHECK-NEXT:   - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ] }

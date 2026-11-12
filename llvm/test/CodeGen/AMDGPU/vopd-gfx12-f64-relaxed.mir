@@ -11,7 +11,6 @@
 
 ---
 name:            test_fma_f64_dpmacc_constraint
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -37,7 +36,6 @@ body:             |
 
 ---
 name:            test_add_f64_dpmacc_constraint
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -63,7 +61,6 @@ body:             |
 
 ---
 name:            test_mul_f64_dpmacc_constraint
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -89,7 +86,6 @@ body:             |
 
 ---
 name:            test_min_num_f64_dpmacc_constraint
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -115,7 +111,6 @@ body:             |
 
 ---
 name:            test_max_num_f64_dpmacc_constraint
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -141,7 +136,6 @@ body:             |
 
 ---
 name:            test_non_dpmacc_antidep_allows_vopd
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
@@ -165,7 +159,6 @@ body:             |
 
 ---
 name:            test_fma_f64_no_write_dependency_forms_vopd
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6, $vgpr7
@@ -190,7 +183,6 @@ body:             |
 
 ---
 name:            test_add_f64_no_write_dependency_allows_vopd_gfx1250
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7

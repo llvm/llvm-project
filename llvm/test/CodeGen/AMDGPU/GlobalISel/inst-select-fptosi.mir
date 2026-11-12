@@ -8,7 +8,6 @@
 name: fptosi_s32_to_s32_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -43,7 +42,6 @@ body: |
 name: fptosi_s32_to_s32_vs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -78,7 +76,6 @@ body: |
 name: fptosi_s32_to_s32_fneg_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -114,7 +111,6 @@ body: |
 name: fptosi_s16_to_s32_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -163,7 +159,6 @@ body: |
 name: fptosi_s16_to_s32_vs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -211,7 +206,6 @@ body: |
 name: fptosi_s16_to_s32_fneg_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -261,7 +255,6 @@ body: |
 name: fptosi_s16_to_s1_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -312,7 +305,6 @@ body: |
 name: fptosi_s16_to_s1_vs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -362,7 +354,6 @@ body: |
 name: fptosi_s16_to_s1_fneg_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

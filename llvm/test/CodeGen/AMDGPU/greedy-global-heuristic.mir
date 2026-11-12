@@ -25,7 +25,6 @@
 ...
 ---
 name: use_global_assign
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_128, preferred-register: '%0' }
   - { id: 1, class: vreg_128, preferred-register: '%0' }

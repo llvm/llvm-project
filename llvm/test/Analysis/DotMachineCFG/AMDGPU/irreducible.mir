@@ -47,7 +47,6 @@
 # MCFG-ONLY-NEXT: Node{{[0-9A-Za-z]*}} [shape=record,label="{%bb.6}"];
 ---
 name:            irreducible
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

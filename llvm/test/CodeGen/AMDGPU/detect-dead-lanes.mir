@@ -212,7 +212,6 @@ body: |
 # CHECK: %1:sreg_64 = COPY $vcc
 # CHECK: S_NOP 0, implicit %1
 name: test3
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_64 }
   - { id: 1, class: sreg_64 }
@@ -232,7 +231,6 @@ body: |
 # CHECK: %1:sreg_64 = IMPLICIT_DEF
 # CHECK: S_NOP 0, implicit undef %1
 name: test4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_64 }
   - { id: 1, class: sreg_64 }
@@ -252,7 +250,6 @@ body: |
 # CHECK: %1:sreg_64 = REG_SEQUENCE undef %0, %subreg.sub0, %0, %subreg.sub1
 # CHECK: S_NOP 0, implicit %1.sub1
 name: test5
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sreg_64 }
@@ -278,7 +275,6 @@ body: |
 # CHECK:   S_NOP 0, implicit %4.sub0
 # CHECK:   S_NOP 0, implicit undef %4.sub3
 name: loop0
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sreg_32_xm0 }
@@ -329,7 +325,6 @@ body: |
 # CHECK: bb.2:
 # CHECK:   S_NOP 0, implicit %6.sub3
 name: loop1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sreg_32_xm0 }
@@ -378,7 +373,6 @@ body: |
 # CHECK:   S_NOP 0, implicit %2.sub2
 # CHECK:   S_NOP 0, implicit %2.sub3
 name: loop2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sgpr_128 }
@@ -413,7 +407,6 @@ body: |
 # CHECK: BUNDLE implicit undef %0 {
 # CHECK-NEXT: S_NOP 0, implicit undef %0
 name: bundle_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:sreg_32_xm0 = IMPLICIT_DEF
@@ -430,7 +423,6 @@ body: |
 # CHECK-NEXT: S_NOP 0, implicit %0.sub0
 # CHECK-NEXT: S_NOP 0, implicit undef %0.sub1
 name: bundle_subregs
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -450,7 +442,6 @@ body: |
 # CHECK-NEXT: S_NOP 0, implicit-def dead %1
 # CHECK: S_NOP 0, implicit %0.sub0
 name: bundle_defs
-tracksRegLiveness: true
 body: |
   bb.0:
     BUNDLE implicit-def %0:sreg_64, implicit-def %1:sreg_64 {
@@ -467,7 +458,6 @@ body: |
 # CHECK: BUNDLE implicit undef %0 {
 # CHECK-NEXT: KILL undef %0
 name: bundle_kill
-tracksRegLiveness: true
 body: |
   bb.0:
     S_NOP 0, implicit-def %0:sreg_64

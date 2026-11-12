@@ -5,7 +5,6 @@
 ---
 name:            test_machine_copy
 alignment:       1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

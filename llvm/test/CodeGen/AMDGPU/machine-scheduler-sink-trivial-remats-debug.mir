@@ -16,7 +16,6 @@
   }
 ---
 name:            sink_and_inc_idx_when_skipping_small_region_1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -88,7 +87,6 @@ body:             |
 ...
 ---
 name:            sink_and_inc_idx_when_skipping_small_regions_2
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -163,7 +161,6 @@ body:             |
 # be interrupted and reverted in all re-scheduled regions.
 ---
 name:            test_occ_inc_revert_all_regions
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

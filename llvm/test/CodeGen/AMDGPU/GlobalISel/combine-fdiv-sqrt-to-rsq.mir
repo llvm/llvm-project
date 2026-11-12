@@ -4,7 +4,6 @@
 
 ---
 name:            rsq_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -29,7 +28,6 @@ body:             |
 
 ---
 name:            rsq_f16_missing_contract0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -56,7 +54,6 @@ body:             |
 
 ---
 name:            rsq_f16_missing_contract1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -83,7 +80,6 @@ body:             |
 
 ---
 name:            neg_rsq_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -109,7 +105,6 @@ body:             |
 
 ---
 name:            neg_rsq_f16_missing_contract0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -136,7 +131,6 @@ body:             |
 
 ---
 name:            neg_rsq_f16_missing_contract1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -163,7 +157,6 @@ body:             |
 
 ---
 name:            rsq_f16_multi_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -192,7 +185,6 @@ body:             |
 
 ---
 name:            rsq_f16_multi_use_missing_contract0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -221,7 +213,6 @@ body:             |
 
 ---
 name:            rsq_f16_multi_use_missing_contract1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -250,7 +241,6 @@ body:             |
 
 ---
 name:            rsq_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -273,7 +263,6 @@ body:             |
 
 ---
 name:            neg_rsq_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -296,7 +285,6 @@ body:             |
 
 ---
 name:            afn_rsq_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -319,7 +307,6 @@ body:             |
 
 ---
 name:            afn_rsq_f32_multi_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -344,7 +331,6 @@ body:             |
 
 ---
 name:            afn_neg_rsq_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -368,7 +354,6 @@ body:             |
 
 ---
 name:            rsq_f64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -395,7 +380,6 @@ body:             |
 
 ---
 name:            neg_rsq_f64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -422,7 +406,6 @@ body:             |
 
 ---
 name:            afn_rsq_f64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -449,7 +432,6 @@ body:             |
 
 ---
 name:            afn_neg_rsq_f64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -477,7 +459,6 @@ body:             |
 
 ---
 name:            rsq_fract_num_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -504,7 +485,6 @@ body:             |
 
 ---
 name:            neg_rsq_fract_num_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -532,7 +512,6 @@ body:             |
 
 ---
 name:            rsq_large_num_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -559,7 +538,6 @@ body:             |
 
 ---
 name:            neg_rsq_large_num_f16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

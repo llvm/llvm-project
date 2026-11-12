@@ -5,7 +5,6 @@
 # Cannot fold this without moving the def of %7 after the and.
 ---
 name:            no_fold_andn2_select_condition_live_out_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: no_fold_andn2_select_condition_live_out_phi
   ; CHECK: bb.0:
@@ -58,7 +57,6 @@ body:             |
 # It's OK to fold this, since the phi def is after the andn2 insert point.
 ---
 name:            fold_andn2_select_condition_live_out_phi_reorder
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_andn2_select_condition_live_out_phi_reorder
   ; CHECK: bb.0:
@@ -108,7 +106,6 @@ body:             |
 
 ---
 name:            no_fold_andn2_select_condition_live_out_phi_physreg
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: no_fold_andn2_select_condition_live_out_phi_physreg
   ; CHECK: bb.0:
@@ -162,7 +159,6 @@ body:             |
 
 ---
 name:            fold_andn2_select_condition_live_out_phi_physreg_reorder
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fold_andn2_select_condition_live_out_phi_physreg_reorder
   ; CHECK: bb.0:

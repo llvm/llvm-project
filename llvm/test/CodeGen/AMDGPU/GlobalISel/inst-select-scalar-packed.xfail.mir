@@ -17,7 +17,6 @@
 name:            s_add_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -34,7 +33,6 @@ body: |
 name:            s_sub_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -51,7 +49,6 @@ body: |
 name:            s_mul_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -68,7 +65,6 @@ body: |
 name:            s_shl_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -85,7 +81,6 @@ body: |
 name:            s_lshr_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -102,7 +97,6 @@ body: |
 name:            s_ashr_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -119,7 +113,6 @@ body: |
 name:            s_smin_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -136,7 +129,6 @@ body: |
 name:            s_smax_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -153,7 +145,6 @@ body: |
 name:            s_umin_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -170,7 +161,6 @@ body: |
 name:            s_umax_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

@@ -47,7 +47,6 @@
 ...
 ---
 name:            _amdgpu_cs_main
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   hasSpilledSGPRs: true

@@ -6,7 +6,6 @@
 
 ---
 name: use_duplicate_literal_cndmask
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $vcc_lo
@@ -19,7 +18,6 @@ body:            |
 
 ---
 name: use_duplicate_literal_fma
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $vgpr0
@@ -32,7 +30,6 @@ body:            |
 
 ---
 name: use_duplicate_literal_fmaak
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $vgpr0
@@ -45,7 +42,6 @@ body:            |
 
 ---
 name: use_duplicate_literal_sop2
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: use_duplicate_literal_sop2
@@ -55,7 +51,6 @@ body: |
 
 ---
 name: use_duplicate_literal_sopc
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: use_duplicate_literal_sopc

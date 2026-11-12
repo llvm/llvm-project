@@ -7,7 +7,6 @@
 name: test_fmed3_f32_known_nnan_ieee_true
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -51,7 +50,6 @@ body: |
 name: test_fmed3_f16_known_nnan_ieee_false
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -101,7 +99,6 @@ body: |
 name: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee:            true
@@ -148,7 +145,6 @@ body: |
 name: test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp_true
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -194,7 +190,6 @@ body: |
 name: test_fmed3_f32_maybe_NaN_ieee_false
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -242,7 +237,6 @@ body: |
 name: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -293,7 +287,6 @@ body: |
 name: test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true

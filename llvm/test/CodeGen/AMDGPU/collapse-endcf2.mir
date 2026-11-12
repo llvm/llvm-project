@@ -13,7 +13,6 @@
 # Call should be assumed to read exec
 ---
 name: call_no_explicit_exec_dependency
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }

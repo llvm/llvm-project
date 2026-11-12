@@ -9,7 +9,6 @@
 # Pattern: v_mov_b16 v0.h, 0  +  v_mov_b16 v0.l, v2.h
 #   => v_lshrrev_b32 v0, 16, v2
 name: merge_hi_zero_lo_from_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2
@@ -26,7 +25,6 @@ body: |
 
 ---
 name: merge_hi_zero_lo_from_hi_vop3
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr128
@@ -45,7 +43,6 @@ body: |
 # Pattern: v_mov_b16 v0.l, 0  +  v_mov_b16 v0.h, v2.l
 #   => v_lshlrev_b32 v0, 16, v2
 name: merge_lo_zero_hi_from_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2
@@ -64,7 +61,6 @@ body: |
 # Pattern: v_mov_b16 v0.l, 0  +  v_mov_b16 v0.h, s2
 #   => v_lshlrev_b32 v0, 16, s2
 name: merge_lo_zero_hi_from_lo_sgpr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr2
@@ -83,7 +79,6 @@ body: |
 # Pattern: v_mov_b16 v0.l, 0  +  v_mov_b16 v0.h, v2.h
 #   => v_and_b32 v0, 0xffff0000, v2
 name: merge_lo_zero_hi_from_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2
@@ -102,7 +97,6 @@ body: |
 # Pattern: v_mov_b16 v0.h, 0  +  v_mov_b16 v0.l, v2.l
 #   => v_and_b32 v0, 0x0000ffff, v2
 name: merge_hi_zero_lo_from_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2
@@ -121,7 +115,6 @@ body: |
 # Pattern: v_mov_b16 v0.h, 0  +  v_mov_b16 v0.l, s2
 #   => v_and_b32 v0, 0x0000ffff, s2
 name: merge_hi_zero_lo_from_lo_sgpr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr2
@@ -139,7 +132,6 @@ body: |
 ---
 # Pattern: v_mov_b16 v0.l, v2.l  +  v_mov_b16 v0.h, v3.l
 name: merge_lo_from_lo_hi_from_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -157,7 +149,6 @@ body: |
 ---
 # Pattern: v_mov_b16 v0.l, v2.h  +  v_mov_b16 v0.h, v3.h
 name: merge_lo_from_hi_hi_from_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -175,7 +166,6 @@ body: |
 ---
 # Pattern: v_mov_b16 v0.l, v2.l  +  v_mov_b16 v0.h, v3.h
 name: merge_lo_from_lo_hi_from_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -193,7 +183,6 @@ body: |
 ---
 # Pattern: v_mov_b16 v0.l, v2.h  +  v_mov_b16 v0.h, v3.l
 name: merge_lo_from_hi_hi_from_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -211,7 +200,6 @@ body: |
 ---
 # Pattern: v_mov_b16 v0.l, v2.l  +  v_mov_b16 v0.h, s3
 name: merge_lo_from_lo_hi_from_lo_1_sgpr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $sgpr3
@@ -230,7 +218,6 @@ body: |
 # Pattern: v_mov_b16 v0.l, s2  +  v_mov_b16 v0.h, s3
 # Reject, constant bus violation
 name: merge_lo_from_lo_hi_from_lo_2_sgpr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr2, $sgpr3
@@ -249,7 +236,6 @@ body: |
 ---
 # Negative: intervening instruction that clobbers dst — must NOT merge.
 name: no_merge_dst_clobbered
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2
@@ -269,7 +255,6 @@ body: |
 
 ---
 name: merge_src_clobbered_First_Src
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -288,7 +273,6 @@ body: |
 
 ---
 name: merge_src_clobbered_Second_Src
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -307,7 +291,6 @@ body: |
 
 ---
 name: merge_src_read_First_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -326,7 +309,6 @@ body: |
 
 ---
 name: merge_src_read_Second_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -348,7 +330,6 @@ body: |
 ---
 name: merge_src_read_dst_declined
 # Negative: intervening instruction that read dst — must NOT merge.
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -368,7 +349,6 @@ body: |
 
 ---
 name: merge_src_clobbered_both_accepted
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -390,7 +370,6 @@ body: |
 ---
 # Negative: intervening instruction that clobbers both src — must NOT merge.
 name: no_merge_src_clobbered_both_declined
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr2, $vgpr3
@@ -413,7 +392,6 @@ body: |
 ---
 # Second mov reads the lo16 the first wrote: both halves come from $vgpr1.lo16.
 name: merge_second_src_is_first_dst_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr1
@@ -431,7 +409,6 @@ body: |
 ---
 # Same, hi16 first: both halves come from $vgpr1.hi16.
 name: merge_second_src_is_first_dst_hi
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr1
@@ -449,7 +426,6 @@ body: |
 ---
 # Zero lo16 then copy to hi16: forwarding makes both sources immediate 0.
 name: merge_second_src_is_first_dst_zero
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: merge_second_src_is_first_dst_zero
@@ -463,7 +439,6 @@ body: |
 ---
 # Non-zero immediate: the halves combine into a 32-bit literal.
 name: merge_second_src_is_first_dst_imm
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: merge_second_src_is_first_dst_imm
@@ -477,7 +452,6 @@ body: |
 ---
 # Two independent immediates also merge.
 name: merge_both_imm
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: merge_both_imm
@@ -491,7 +465,6 @@ body: |
 ---
 # A dst above v127 uses the e64 form, like the other merge patterns.
 name: merge_both_imm_high_vgpr
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: merge_both_imm_high_vgpr
@@ -505,7 +478,6 @@ body: |
 ---
 # Forwarding works across an unrelated instruction.
 name: merge_second_src_is_first_dst_across_unrelated
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -525,7 +497,6 @@ body: |
 ---
 # Negative immediates are masked to 16 bits.
 name: merge_second_src_is_first_dst_neg_imm
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: merge_second_src_is_first_dst_neg_imm
@@ -539,7 +510,6 @@ body: |
 ---
 # Negative on one half only: checks the other half's mask.
 name: merge_both_imm_neg_lo
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: merge_both_imm_neg_lo
@@ -553,7 +523,6 @@ body: |
 ---
 # An SGPR forwards into both v_perm_b32 operands; one unique SGPR is legal.
 name: merge_second_src_is_first_dst_sgpr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr2
@@ -572,7 +541,6 @@ body: |
 # Forwarded source clobbered between the movs, but nothing reads $vgpr0, so
 # the merge goes before the clobber.
 name: merge_forwarded_src_clobbered_after
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr1
@@ -593,7 +561,6 @@ body: |
 # Negative: forwarded source clobbered before a read of $vgpr0, so no
 # insertion point works.
 name: no_merge_forwarded_src_clobbered
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -617,7 +584,6 @@ body: |
 # The first mov reads the half the second writes; the merge reads before
 # writing, so it is still correct.
 name: merge_first_src_is_second_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -636,7 +602,6 @@ body: |
 # Allow merging across a WWM exec region since the merged instruction doesn't land
 # in there.
 name: merge_across_wwm_exec_write
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $sgpr105
@@ -658,7 +623,6 @@ body:             |
 ---
 # Allow merging accross a WWM SGPR spill reload
 name: merge_across_wwm_sgpr_spill_reload
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
 body:             |

@@ -3,7 +3,6 @@
 
 ---
 name: test_phi_s32
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_s32
@@ -53,7 +52,6 @@ body: |
 ...
 ---
 name: test_phi_v2s16
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v2s16
@@ -115,7 +113,6 @@ body: |
 
 ---
 name: test_phi_v3s16
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v3s16
@@ -203,7 +200,6 @@ body: |
 ---
 
 name: test_phi_v4s16
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v4s16
@@ -278,7 +274,6 @@ body: |
 ...
 ---
 name: test_phi_v2s32
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v2s32
@@ -332,7 +327,6 @@ body: |
 ...
 ---
 name: test_phi_v3s32
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v3s32
@@ -387,7 +381,6 @@ body: |
 ...
 ---
 name: test_phi_v4s32
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v4s32
@@ -443,7 +436,6 @@ body: |
 ...
 ---
 name: test_phi_v8s32
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v8s32
@@ -503,7 +495,6 @@ body: |
 ...
 ---
 name: test_phi_v16s32
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v16s32
@@ -569,7 +560,6 @@ body: |
 
 ---
 name: test_phi_v32s32
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v32s32
@@ -651,7 +641,6 @@ body: |
 
 ---
 name: test_phi_v64s32
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v64s32
@@ -772,7 +761,6 @@ body: |
 
 ---
 name: test_phi_s64
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_s64
@@ -826,7 +814,6 @@ body: |
 ...
 ---
 name: test_phi_v2s64
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v2s64
@@ -888,7 +875,6 @@ body: |
 ...
 ---
 name: test_phi_v3s64
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v3s64
@@ -961,7 +947,6 @@ body: |
 ...
 ---
 name: test_phi_p3
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_p3
@@ -1013,7 +998,6 @@ body: |
 ...
 ---
 name: test_phi_p5
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_p5
@@ -1065,7 +1049,6 @@ body: |
 ...
 ---
 name: test_phi_p0
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_p0
@@ -1117,7 +1100,6 @@ body: |
 ...
 ---
 name: test_phi_p1
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_p1
@@ -1169,7 +1151,6 @@ body: |
 ...
 ---
 name: test_phi_p4
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_p4
@@ -1221,7 +1202,6 @@ body: |
 ...
 ---
 name: test_phi_p9999
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_p9999
@@ -1271,7 +1251,6 @@ body: |
 ...
 ---
 name: test_phi_s1
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_s1
@@ -1325,7 +1304,6 @@ body: |
 ...
 ---
 name: test_phi_s7
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_s7
@@ -1382,7 +1360,6 @@ body: |
 ...
 ---
 name: test_phi_s8
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_s8
@@ -1439,7 +1416,6 @@ body: |
 ...
 ---
 name: test_phi_s16
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_s16
@@ -1493,7 +1469,6 @@ body: |
 ...
 ---
 name: test_phi_s128
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_s128
@@ -1549,7 +1524,6 @@ body: |
 ...
 ---
 name: test_phi_s256
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_s256
@@ -1609,7 +1583,6 @@ body: |
 ...
 ---
 name: test_phi_v2s1
-tracksRegLiveness: true
 
 body: |
   ; CHECK-LABEL: name: test_phi_v2s1

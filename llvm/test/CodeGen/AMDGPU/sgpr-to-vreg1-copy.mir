@@ -3,7 +3,6 @@
 
 ---
 name:            copy_to_vreg_1
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: copy_to_vreg_1
   ; GCN: bb.0:

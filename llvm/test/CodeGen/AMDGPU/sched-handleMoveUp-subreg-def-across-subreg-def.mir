@@ -4,7 +4,6 @@
 
 ---
 name:            handleMoveUp_incorrect_interval
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '%0' }
 frameInfo:

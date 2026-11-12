@@ -11,7 +11,6 @@
 name: rsq_clamp_s32_vs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -31,7 +30,6 @@ body: |
 name: rsq_clamp_s32_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

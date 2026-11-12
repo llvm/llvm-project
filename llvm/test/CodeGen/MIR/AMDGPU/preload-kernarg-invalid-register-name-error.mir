@@ -3,7 +3,6 @@
 ---
 # CHECK: Invalid register name
 name: kernarg_preload_invalid_register_name
-tracksRegLiveness: true
 machineFunctionInfo:
   explicitKernArgSize: 4
   maxKernArgAlign: 4

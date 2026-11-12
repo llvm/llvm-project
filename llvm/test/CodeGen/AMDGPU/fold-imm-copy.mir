@@ -3,7 +3,6 @@
 
 ---
 name: fold-imm-copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -34,7 +33,6 @@ body:             |
 ---
 # The first XOR needs commuting to fold that immediate operand.
 name: no_extra_fold_on_same_opnd
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: no_extra_fold_on_same_opnd
@@ -59,7 +57,6 @@ body:             |
 # immediates
 #
 name: clear_subreg_imm_fold
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: clear_subreg_imm_fold
@@ -75,7 +72,6 @@ body:             |
 
 ---
 name: no_fold_imm_into_m0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: no_fold_imm_into_m0
@@ -90,7 +86,6 @@ body:             |
 
 ---
 name: fold_sgpr_imm_to_vgpr_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: fold_sgpr_imm_to_vgpr_copy
@@ -107,7 +102,6 @@ body:             |
 
 ---
 name: no_fold_physreg_users_vgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: no_fold_physreg_users_vgpr
@@ -128,7 +122,6 @@ body:             |
 
 ---
 name: av_mov_b32_imm_pseudo_copy_av_32_to_physreg_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b32_imm_pseudo_copy_av_32_to_physreg_agpr
@@ -143,7 +136,6 @@ body:             |
 
 ---
 name: av_mov_b32_imm_pseudo_copy_av_32_to_physreg_vgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b32_imm_pseudo_copy_av_32_to_physreg_vgpr
@@ -158,7 +150,6 @@ body:             |
 
 ---
 name: av_mov_b32_imm_pseudo_copy_av_32_to_virtreg_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b32_imm_pseudo_copy_av_32_to_virtreg_agpr
@@ -172,7 +163,6 @@ body:             |
 
 ---
 name: av_mov_b32_imm_pseudo_copy_av_32_to_virtreg_vgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b32_imm_pseudo_copy_av_32_to_virtreg_vgpr
@@ -186,7 +176,6 @@ body:             |
 
 ---
 name: v_mov_b32_imm_literal_copy_v_to_agpr_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b32_imm_literal_copy_v_to_agpr_32
@@ -203,7 +192,6 @@ body:             |
 
 ---
 name: s_mov_b32_inlineimm_copy_s_to_av_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_inlineimm_copy_s_to_av_32
@@ -219,7 +207,6 @@ body:             |
 
 ---
 name: v_mov_b32_inlineimm_copy_v_to_av_32
-tracksRegLiveness: true
 body:             |
  bb.0:
     ; GCN-LABEL: name: v_mov_b32_inlineimm_copy_v_to_av_32
@@ -235,7 +222,6 @@ body:             |
 
 ---
 name: s_mov_b32_imm_literal_copy_s_to_av_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_literal_copy_s_to_av_32
@@ -252,7 +238,6 @@ body:             |
 
 ---
 name: v_mov_b32_imm_literal_copy_v_to_av_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b32_imm_literal_copy_v_to_av_32
@@ -269,7 +254,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_0_full_copy_to_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -291,7 +275,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_fp64_1_full_copy_to_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -313,7 +296,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_lit_full_copy_to_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -336,7 +318,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_fp32_1_splat_full_copy_to_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -359,7 +340,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_fp32_1_splat_copy_extract_sub0_to_f32_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0
@@ -381,7 +361,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_fp32_1_splat_copy_extract_sub1_to_f32_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0
@@ -403,7 +382,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_fp64_1_copy_extract_sub0_to_f32_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0
@@ -425,7 +403,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_fp64_1_copy_extract_sub1_to_f32_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0
@@ -448,7 +425,6 @@ body:             |
 
 ---
 name: reg_sequence_3x_0_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -477,7 +453,6 @@ body:             |
 
 ---
 name: reg_sequence_3x_neg1_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -506,7 +481,6 @@ body:             |
 
 ---
 name: reg_sequence_3x_1_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -535,7 +509,6 @@ body:             |
 
 ---
 name: reg_sequence_0_0_1_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -564,7 +537,6 @@ body:             |
 
 ---
 name: reg_sequence_neg1_neg1_0_f64_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -593,7 +565,6 @@ body:             |
 
 ---
 name: reg_sequence_split_f64_1_use
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -620,7 +591,6 @@ body:             |
 
 ---
 name: reg_sequence_split_f64_1_use_wrong_order
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -647,7 +617,6 @@ body:             |
 
 ---
 name: reg_sequence_split_f64_1_use_backwards_sequence
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -674,7 +643,6 @@ body:             |
 
 ---
 name: reg_sequence_split_x2_f64_1_use_0
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -701,7 +669,6 @@ body:             |
 
 ---
 name: reg_sequence_split_x2_f64_1_use_1
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -728,7 +695,6 @@ body:             |
 
 ---
 name: reg_sequence_split_x2_f64_1_use_0_sgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -755,7 +721,6 @@ body:             |
 
 ---
 name: reg_sequence_split_x2_f64_1_use_nonconsecutive_reg_sequence
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $vgpr0_vgpr1
@@ -782,7 +747,6 @@ body:             |
 
 ---
 name: av_mov_b64_imm_pseudo_copy_av_64_to_physreg_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b64_imm_pseudo_copy_av_64_to_physreg_agpr
@@ -797,7 +761,6 @@ body:             |
 
 ---
 name: av_mov_b64_imm_pseudo_copy_av_64_to_physreg_vgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b64_imm_pseudo_copy_av_64_to_physreg_vgpr
@@ -812,7 +775,6 @@ body:             |
 
 ---
 name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_agpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_agpr
@@ -827,7 +789,6 @@ body:             |
 # Splat value across 2 halves of register
 ---
 name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_vgpr_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_vgpr_0
@@ -842,7 +803,6 @@ body:             |
 # Low and hi are different inline constants
 ---
 name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_vgpr_nonsplat_value
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_vgpr_nonsplat_value
@@ -857,7 +817,6 @@ body:             |
 
 ---
 name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_vgpr_nonsplat_value_copy_sub0
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_vgpr_nonsplat_value_copy_sub0
@@ -871,7 +830,6 @@ body:             |
 
 ---
 name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_vgpr_nonsplat_value_copy_sub1
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b64_imm_pseudo_copy_av_64_to_virtreg_vgpr_nonsplat_value_copy_sub1

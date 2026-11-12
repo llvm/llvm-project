@@ -34,7 +34,6 @@
 ...
 ---
 name:            no_agprs
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -62,7 +61,6 @@ body:             |
 ...
 ---
 name:            few_agprs
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -92,7 +90,6 @@ body:             |
 ...
 ---
 name:            default_split
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'

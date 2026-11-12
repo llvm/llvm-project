@@ -8,7 +8,6 @@
 # S_AND_B64 which produces SCC. The frame index has a non-zero offset so
 # the ADDC path applies. Verify ADDC+BITCMP1+BITSET0 is generated.
 name: s_cselect_b32_fi_after_scc_producer
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 4, alignment: 4 }
@@ -81,7 +80,6 @@ body:             |
 # case: the incoming carry must survive frame index lowering even though the
 # instruction goes on to overwrite SCC.
 name: s_addc_u32_fi_after_and_scc_producer
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 4, alignment: 4 }
@@ -151,7 +149,6 @@ body:             |
 # scaling it must not land between the SCC producer and the S_CSELECT_B32 that
 # consumes it.
 name: s_cselect_b32_zero_offset_fi_after_scc_producer
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -206,7 +203,6 @@ body:             |
 # s_cselect_b32_fi_after_scc_producer, but the frame index user is S_AND_B32
 # which defines SCC instead of reading it, so lowering is free to clobber SCC
 name: s_and_b32_fi_after_scc_producer_scc_not_live_in
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 4, alignment: 4 }
@@ -264,7 +260,6 @@ body:             |
 # s_cselect_b32_zero_offset_fi_after_scc_producer, but S_AND_B32 defines SCC
 # rather than reading it, so SCC is not live into the frame index user.
 name: s_and_b32_zero_offset_fi_after_scc_producer_scc_not_live_in
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -317,7 +312,6 @@ body:             |
 # Negative case with no SCC producer at all: nothing defines SCC ahead of the
 # frame index user and the user does not read SCC, so there's no restrictions
 name: s_and_b32_zero_offset_fi_no_scc_producer
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -365,7 +359,6 @@ body:             |
 # so SCC is still live when the frame index is lowered. The wave-size
 # scaling must not clobber it.
 name: s_mov_b32_fi_scc_live_across
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -423,7 +416,6 @@ body:             |
 # frame index user in the same way, but S_AND_B32 defines SCC itself, so the
 # incoming value is dead at the user.
 name: s_and_b32_fi_defines_scc_live_after
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:

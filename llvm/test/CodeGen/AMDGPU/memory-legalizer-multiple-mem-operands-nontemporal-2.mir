@@ -49,7 +49,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '' }

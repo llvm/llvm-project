@@ -34,7 +34,6 @@
 ...
 ---
 name:            demote_then_debug_value
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: demote_then_debug_value
   ; CHECK: bb.0:
@@ -97,7 +96,6 @@ body:             |
 ...
 ---
 name:            demote_then_debug_value_then_nop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: demote_then_debug_value_then_nop
   ; CHECK: bb.0:

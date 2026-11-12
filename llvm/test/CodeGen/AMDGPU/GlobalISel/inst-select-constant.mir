@@ -7,7 +7,6 @@
 name:            constant_v_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -38,7 +37,6 @@ body: |
 name:            constant_s_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -69,7 +67,6 @@ body: |
 name:            constant_v_s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -108,7 +105,6 @@ body: |
 name:            constant_s_s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -139,7 +135,6 @@ body: |
 name:            constant_v_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -179,7 +174,6 @@ body: |
 name:            constant_s_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -220,7 +214,6 @@ body: |
 name:            constant_i1_vcc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -243,7 +236,6 @@ body: |
 name:            constant_s_p3
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -275,7 +267,6 @@ body: |
 name:            constant_v_p3
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -306,7 +297,6 @@ body: |
 name:            constant_s_p2
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -338,7 +328,6 @@ body: |
 name:            constant_v_p2
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -369,7 +358,6 @@ body: |
 name:            constant_s_p5
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -401,7 +389,6 @@ body: |
 name:            constant_v_p5
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -432,7 +419,6 @@ body: |
 name:            constant_s_p6
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -464,7 +450,6 @@ body: |
 name:            constant_v_p6
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -495,7 +480,6 @@ body: |
 name:            constant_s_p1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -535,7 +519,6 @@ body: |
 name:            constant_v_p1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -575,7 +558,6 @@ body: |
 name:            constant_s_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -615,7 +597,6 @@ body: |
 name:            constant_v_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -654,7 +635,6 @@ body: |
 name:            constant_s_p4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -694,7 +674,6 @@ body: |
 name:            constant_v_p4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -734,7 +713,6 @@ body: |
 name:            zext_sgpr_s1_to_sgpr_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   ; WAVE64-LABEL: name: zext_sgpr_s1_to_sgpr_s32

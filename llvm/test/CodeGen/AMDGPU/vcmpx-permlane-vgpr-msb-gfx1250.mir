@@ -36,7 +36,6 @@
 # ASM:      v_permlane16_b32 v0, v44 /*v300*/, s1, s0
 ---
 name:            vcmpx_permlane_high_vgpr_src0
-tracksRegLiveness: true
 body:            |
   ; CHECK-LABEL: name: vcmpx_permlane_high_vgpr_src0
   ; CHECK: bb.0:

@@ -7,7 +7,6 @@
 # CHECK: 'split-from' references the same vreg as 'id' (%0)
 ---
 name: self_split
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, split-from: '%0' }
 body: |

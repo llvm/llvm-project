@@ -6,7 +6,6 @@
 ---
 
 name:            merge_sgpr_spill_into_copy_from_exec_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -31,7 +30,6 @@ body:             |
 ---
 
 name:            merge_sgpr_spill_into_copy_from_exec_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -56,7 +54,6 @@ body:             |
 ---
 
 name:            merge_sgpr_spill_into_copy_from_exec
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -87,7 +84,6 @@ body:             |
 ---
 
 name:            reload_sgpr_spill_into_copy_to_exec_lo
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -110,7 +106,6 @@ body:             |
 ---
 
 name:            reload_sgpr_spill_into_copy_to_exec_hi
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -133,7 +128,6 @@ body:             |
 ---
 
 name:            reload_sgpr_spill_into_copy_to_exec
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

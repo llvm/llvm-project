@@ -72,7 +72,6 @@ TEST_F(RegisterClassInfoTest, IncrementalUpdateMatchesRecompute) {
   ASSERT_TRUE(parseMIR(R"MIR(
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

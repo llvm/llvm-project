@@ -3,7 +3,6 @@
 ---
 
 name:            phi_moveimm_input
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: phi_moveimm_input
   ; GCN: bb.0:
@@ -58,7 +57,6 @@ body:             |
 
 ---
 name:            phi_moveimm_bad_opcode_input
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: phi_moveimm_bad_opcode_input
   ; GCN: bb.0:
@@ -114,7 +112,6 @@ body:             |
 ---
 
 name:            phi_moveimm_av_pseudo_input
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: phi_moveimm_av_pseudo_input
   ; GCN: bb.0:

@@ -338,7 +338,6 @@
 ...
 ---
 name:            test_spill
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 4 }
   - { id: 1, name: '', type: spill-slot, offset: 0, size: 64, alignment: 4 }

@@ -6,7 +6,6 @@
 # GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 456, %0, implicit-def $vcc, implicit $exec
 
 name: fold_imm_non_ssa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -25,7 +24,6 @@ body:             |
 # GCN: %1:vgpr_32 = V_MOV_B32_e32 456, implicit $exec
 # GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 123, %1, implicit-def $vcc, implicit $exec
 name: fold_partially_defined_superreg
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }

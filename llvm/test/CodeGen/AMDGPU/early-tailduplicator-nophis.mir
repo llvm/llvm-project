@@ -7,7 +7,6 @@
 
 ---
 name:           tail_duplicate_nophis
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tail_duplicate_nophis
   ; CHECK: bb.0:

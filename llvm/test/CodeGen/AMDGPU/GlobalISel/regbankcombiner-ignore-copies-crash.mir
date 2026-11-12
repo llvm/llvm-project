@@ -7,7 +7,6 @@
 name: test_inline_asm
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -43,7 +42,6 @@ body: |
 name: test_unmerge_values
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true

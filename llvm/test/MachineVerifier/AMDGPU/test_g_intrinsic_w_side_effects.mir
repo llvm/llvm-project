@@ -5,7 +5,6 @@ name:            test_intrinsic_w_side_effects
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0:

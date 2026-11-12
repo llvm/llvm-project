@@ -16,7 +16,6 @@
 
 ---
 name:            waterfall_si_call_inreg_av32
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
   hasCalls: true
@@ -59,7 +58,6 @@ body:             |
 
 ---
 name:            waterfall_si_call_inreg_vgpr32
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
   hasCalls: true

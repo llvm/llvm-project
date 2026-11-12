@@ -35,7 +35,6 @@
 # STRESS-NEXT: %r2:vgpr_32 = V_ADD_U32_e32 %v4, %v5
 
 name: sched_pressure
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

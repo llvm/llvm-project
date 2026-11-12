@@ -5,7 +5,6 @@
 name: ctpop_i32_ss
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -26,7 +25,6 @@ body: |
 name: ctpop_i32_vs
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -47,7 +45,6 @@ body: |
 name: ctpop_i32_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -68,7 +65,6 @@ body: |
 name: add_ctpop_i32_v_vv_commute0
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -92,7 +88,6 @@ body: |
 name: add_ctpop_i32_v_vv_commute1
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -117,7 +112,6 @@ body: |
 name: add_ctpop_i32_s_ss_commute0
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -142,7 +136,6 @@ body: |
 name: add_ctpop_i32_v_vs_commute0
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -167,7 +160,6 @@ body: |
 name: add_ctpop_i32_v_sv_commute0
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -192,7 +184,6 @@ body: |
 name: add_ctpop_i32_s_sv_commute0
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -216,7 +207,6 @@ body: |
 name: ctpop_i64_ss
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

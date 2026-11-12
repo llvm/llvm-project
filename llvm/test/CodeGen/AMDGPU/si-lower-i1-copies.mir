@@ -4,7 +4,6 @@
 
 ---
 name:              lcssa_phi
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: lcssa_phi
   ; GCN: bb.0:
@@ -67,7 +66,6 @@ body:             |
 ...
 ---
 name:            copy_observed_outside_loop
-tracksRegLiveness: true
 noPhis:          false
 
 body:             |

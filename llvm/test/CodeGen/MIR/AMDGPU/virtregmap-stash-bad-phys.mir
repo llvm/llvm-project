@@ -6,7 +6,6 @@
 # CHECK: 'assigned-phys' must be a physical register, got '%0'
 ---
 name: bad_phys
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32, assigned-phys: '%0' }

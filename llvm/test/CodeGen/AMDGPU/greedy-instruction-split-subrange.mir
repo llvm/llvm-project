@@ -3,7 +3,6 @@
 ---
 name: split_instruction_subranges
 alignment:       1
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   hasCalls:        true
@@ -39,7 +38,6 @@ body:             |
 ---
 name: split_instruction_subranges_use_is_subreg_def
 alignment:       1
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
   hasCalls:        true

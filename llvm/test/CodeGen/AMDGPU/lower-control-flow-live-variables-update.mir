@@ -9,7 +9,6 @@
 
 ---
 name:            live_variables_update_block_split
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: live_variables_update_block_split
   ; CHECK: bb.0:
@@ -90,7 +89,6 @@ body:             |
 # bb.2 is split into MBB/SplitBB, %4 will be live through MBB.
 ---
 name: live_variables_update_block_split_non_phi_live_across
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: live_variables_update_block_split_non_phi_live_across
   ; CHECK: bb.0:
@@ -183,7 +181,6 @@ body:             |
 # registers defined before si_end_cf
 ---
 name:            live_variables_update_block_split_split_killed_def_before_si_end_cf
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: live_variables_update_block_split_split_killed_def_before_si_end_cf
   ; CHECK: bb.0:
@@ -266,7 +263,6 @@ body:             |
 # except the def before si_end_cf is live out of the block
 ---
 name:            live_variables_update_block_split_split_def_before_si_end_cf_live_out
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: live_variables_update_block_split_split_def_before_si_end_cf_live_out
   ; CHECK: bb.0:

@@ -16,7 +16,6 @@
 # S_MOV_B32 via the new evalBinaryInstruction handlers.
 ---
 name: s_add_i32_imm_imm_scc_dead
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: s_add_i32_imm_imm_scc_dead
@@ -29,7 +28,6 @@ body: |
 
 ---
 name: s_add_u32_imm_imm_scc_dead
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: s_add_u32_imm_imm_scc_dead
@@ -42,7 +40,6 @@ body: |
 
 ---
 name: s_sub_i32_imm_imm_scc_dead
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: s_sub_i32_imm_imm_scc_dead
@@ -55,7 +52,6 @@ body: |
 
 ---
 name: s_sub_u32_imm_imm_scc_dead
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: s_sub_u32_imm_imm_scc_dead
@@ -73,7 +69,6 @@ body: |
 # correctly leaves the SOP2 untouched).
 ---
 name: s_add_i32_reg_zero
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -91,7 +86,6 @@ body: |
 
 ---
 name: s_add_i32_zero_reg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -109,7 +103,6 @@ body: |
 
 ---
 name: s_sub_i32_reg_zero
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -128,7 +121,6 @@ body: |
 # S_SUB_I32 0, %x is *negation*, not a copy. Must NOT fold to a copy.
 ---
 name: s_sub_i32_zero_reg_must_not_fold
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -149,7 +141,6 @@ body: |
 # reject the (imm, imm) -> S_MOV_B32 collapse since the carry-out is needed.
 ---
 name: s_add_i32_imm_imm_scc_live_must_not_fold
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GCN-LABEL: name: s_add_i32_imm_imm_scc_live_must_not_fold

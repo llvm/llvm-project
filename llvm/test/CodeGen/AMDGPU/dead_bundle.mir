@@ -4,7 +4,6 @@
 # This test checks that dead bundles are handled correctly.
 ---
 name: psmain
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
   psInputAddr:     7

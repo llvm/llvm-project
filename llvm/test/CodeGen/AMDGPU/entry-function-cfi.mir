@@ -11,7 +11,6 @@
 ---
 name:            kern1
 alignment:       1
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:

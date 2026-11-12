@@ -8,7 +8,6 @@
 
 ---
 name: handleMove_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   memoryBound:     false

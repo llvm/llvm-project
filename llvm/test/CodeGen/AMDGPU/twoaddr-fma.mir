@@ -130,7 +130,6 @@ body:             |
 # GCN: %2:vgpr_32 = V_FMAC_F32_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_other_constantlike_src0_f32
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }

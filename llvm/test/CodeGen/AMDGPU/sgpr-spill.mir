@@ -19,7 +19,6 @@
 ...
 ---
 name:            check_spill
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr4_sgpr5' }
   - { reg: '$sgpr6_sgpr7' }
@@ -578,7 +577,6 @@ body:             |
 
 ---
 name:            check_reload
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr4_sgpr5' }
   - { reg: '$sgpr6_sgpr7' }

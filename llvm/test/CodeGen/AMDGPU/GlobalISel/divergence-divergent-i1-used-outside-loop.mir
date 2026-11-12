@@ -5,7 +5,6 @@
 ---
 name: divergent_i1_phi_used_outside_loop
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_phi_used_outside_loop
   ; GFX10: bb.0:
@@ -95,7 +94,6 @@ body: |
 ---
 name: divergent_i1_phi_used_outside_loop_larger_loop_body
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_phi_used_outside_loop_larger_loop_body
   ; GFX10: bb.0:
@@ -226,7 +224,6 @@ body: |
 ---
 name: divergent_i1_xor_used_outside_loop
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_xor_used_outside_loop
   ; GFX10: bb.0:
@@ -317,7 +314,6 @@ body: |
 ---
 name: divergent_i1_xor_used_outside_loop_twice
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_xor_used_outside_loop_twice
   ; GFX10: bb.0:
@@ -421,7 +417,6 @@ body: |
 ---
 name: divergent_i1_xor_used_outside_loop_larger_loop_body
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_xor_used_outside_loop_larger_loop_body
   ; GFX10: bb.0:
@@ -639,7 +634,6 @@ body: |
 ---
 name: divergent_i1_icmp_used_outside_loop
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_icmp_used_outside_loop
   ; GFX10: bb.0:
@@ -818,7 +812,6 @@ body: |
 ---
 name: divergent_i1_freeze_used_outside_loop
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_freeze_used_outside_loop
   ; GFX10: bb.0:
@@ -963,7 +956,6 @@ body: |
 ---
 name: loop_with_1break
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: loop_with_1break
   ; GFX10: bb.0:

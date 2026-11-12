@@ -19,7 +19,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }

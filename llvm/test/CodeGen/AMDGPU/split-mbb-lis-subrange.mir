@@ -6,7 +6,6 @@
 
 ---
 name: split_critical_edge_subranges
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: split_critical_edge_subranges
   ; GCN: bb.0:

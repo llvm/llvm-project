@@ -7,7 +7,6 @@
 
 ---
 name: soft_clause_bundle_out_of_registers
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   waveLimiter:     true
@@ -106,7 +105,6 @@ body:             |
 
 ---
 name: simple_huge_reg_tuple_clause
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   waveLimiter:     false

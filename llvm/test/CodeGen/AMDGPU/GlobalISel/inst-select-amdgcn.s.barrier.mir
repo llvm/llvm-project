@@ -6,7 +6,6 @@
 name: s_barrier
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 
 body: |

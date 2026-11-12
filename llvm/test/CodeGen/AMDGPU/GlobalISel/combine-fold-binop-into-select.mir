@@ -3,7 +3,6 @@
 
 ---
 name: no_fold_add_into_select_s32_0_multi_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -32,7 +31,6 @@ body: |
 
 ---
 name: no_fold_add_into_select_s32_1_multi_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -61,7 +59,6 @@ body: |
 
 ---
 name: no_fold_sub_into_select_s32_nonconst_rhs
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -91,7 +88,6 @@ body: |
 
 ---
 name: no_fold_sub_into_select_s32_nonconst_lhs
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -121,7 +117,6 @@ body: |
 
 ---
 name: fold_add_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -148,7 +143,6 @@ body: |
 
 ---
 name: fold_add_into_select_s32_1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -175,7 +169,6 @@ body: |
 
 ---
 name: fold_add_into_select_v2s32_splat
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -207,7 +200,6 @@ body: |
 
 ---
 name: fold_add_into_select_v2s32_nonsplat
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -241,7 +233,6 @@ body: |
 
 ---
 name: fold_add_into_select_v2s32_nonsplat_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -278,7 +269,6 @@ body: |
 
 ---
 name: fold_sub_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -305,7 +295,6 @@ body: |
 
 ---
 name: fold_sub_into_select_s32_1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -332,7 +321,6 @@ body: |
 
 ---
 name: fold_ptr_add_into_select_p3_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -359,7 +347,6 @@ body: |
 
 ---
 name: fold_ptr_add_into_select_p3_1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -386,7 +373,6 @@ body: |
 
 ---
 name: fold_shl_into_select_s64_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -413,7 +399,6 @@ body: |
 
 ---
 name: fold_shl_into_select_s64_1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -440,7 +425,6 @@ body: |
 
 ---
 name: fold_and_variable_into_select_zero_neg1_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -466,7 +450,6 @@ body: |
 
 ---
 name: fold_and_variable_into_select_neg1_zero_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -492,7 +475,6 @@ body: |
 
 ---
 name: fold_or_variable_into_select_zero_neg1_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -518,7 +500,6 @@ body: |
 
 ---
 name: fold_or_variable_into_select_neg1_zero_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -544,7 +525,6 @@ body: |
 
 ---
 name: fold_and_variable_into_select_undef_neg1_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -573,7 +553,6 @@ body: |
 
 ---
 name: fold_and_variable_into_select_undef_zero_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -600,7 +579,6 @@ body: |
 
 ---
 name: fold_or_variable_into_select_neg1_fpzero_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -629,7 +607,6 @@ body: |
 
 ---
 name: no_fold_or_variable_into_select_neg1_fpnegzero_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -658,7 +635,6 @@ body: |
 
 ---
 name: no_fold_or_variable_into_select_neg1_other_const_s32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -687,7 +663,6 @@ body: |
 
 ---
 name: fold_xor_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -714,7 +689,6 @@ body: |
 
 ---
 name: fold_sdiv_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -741,7 +715,6 @@ body: |
 
 ---
 name: fold_srem_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -766,7 +739,6 @@ body: |
 
 ---
 name: fold_udiv_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -793,7 +765,6 @@ body: |
 
 ---
 name: fold_urem_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -818,7 +789,6 @@ body: |
 
 ---
 name: fold_lshr_into_select_s64_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -845,7 +815,6 @@ body: |
 
 ---
 name: fold_lshr_into_select_s64_1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -872,7 +841,6 @@ body: |
 
 ---
 name: fold_ashr_into_select_s64_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -899,7 +867,6 @@ body: |
 
 ---
 name: fold_ashr_into_select_s64_1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -926,7 +893,6 @@ body: |
 
 ---
 name: fold_smin_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -953,7 +919,6 @@ body: |
 
 ---
 name: fold_smax_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -975,7 +940,6 @@ body: |
 
 ---
 name: fold_umin_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1002,7 +966,6 @@ body: |
 
 ---
 name: fold_umax_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1024,7 +987,6 @@ body: |
 
 ---
 name: fold_fadd_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1051,7 +1013,6 @@ body: |
 
 ---
 name: fold_fadd_into_select_s32_1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1078,7 +1039,6 @@ body: |
 
 ---
 name: fold_fsub_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1105,7 +1065,6 @@ body: |
 
 ---
 name: fold_fmul_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1132,7 +1091,6 @@ body: |
 
 ---
 name: fold_fdiv_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1159,7 +1117,6 @@ body: |
 
 ---
 name: fold_frem_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1186,7 +1143,6 @@ body: |
 
 ---
 name: fold_fpow_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1215,7 +1171,6 @@ body: |
 
 ---
 name: fold_fminnum_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1242,7 +1197,6 @@ body: |
 
 ---
 name: fold_fminnum_ieee_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1271,7 +1225,6 @@ body: |
 
 ---
 name: fold_fmaxnum_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1298,7 +1251,6 @@ body: |
 
 ---
 name: fold_fmaxnum_ieee_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1327,7 +1279,6 @@ body: |
 
 ---
 name: fold_fminimum_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1354,7 +1305,6 @@ body: |
 
 ---
 name: fold_fmaximum_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1381,7 +1331,6 @@ body: |
 
 ---
 name: fold_fcopysign_into_select_f32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1410,7 +1359,6 @@ body: |
 
 ---
 name: fold_fcopysign_into_select_f32_f64_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1439,7 +1387,6 @@ body: |
 
 ---
 name: fold_fcopysign_into_select_f64_f32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1469,7 +1416,6 @@ body: |
 # Test handling of intermediate copy between add and select.
 ---
 name: fold_add_copy_into_select_s32_0
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -1497,7 +1443,6 @@ body: |
 
 ---
 name: fold_add_copy_into_select_s32_1
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0

@@ -4,7 +4,6 @@
 # %2.sub0 -> %0.sub0
 ---
 name:            reg_sequence_extract_subreg_sub0_from_regsequence_sub0_sub1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -28,7 +27,6 @@ body:             |
 # %2.sub1 -> %1
 ---
 name:            reg_sequence_extract_subreg_sub1_from_regsequence_sub0_sub1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -52,7 +50,6 @@ body:             |
 # %2.sub0 -> %0.sub0
 ---
 name:            reg_sequence_extract_subreg_sub0_from_regsequence_sub1_sub0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -76,7 +73,6 @@ body:             |
 # %2.sub1 -> %1
 ---
 name:            reg_sequence_extract_subreg_sub1_from_regsequence_sub1_sub0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -100,7 +96,6 @@ body:             |
 # %2.sub0 -> %0.sub0
 ---
 name:            reg_sequence_extract_subreg_sub0_from_vreg96
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2
@@ -124,7 +119,6 @@ body:             |
 # %2.sub0 -> %0.sub0
 ---
 name:            reg_sequence_extract_subreg_sub1_from_vreg96
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2
@@ -147,7 +141,6 @@ body:             |
 
 ---
 name:            reg_sequence_v128_compose_reg_sequence64_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -178,7 +171,6 @@ body:             |
 
 ---
 name:            reg_sequence_v128_compose_reg_sequence128_subreg64_extract32_sub2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
@@ -201,7 +193,6 @@ body:             |
 
 ---
 name:            reg_sequence_v128_align2_compose_reg_sequence128_subreg64_extract32_sub2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
@@ -225,7 +216,6 @@ body:             |
 # Unhandled, spans multiple sources
 ---
 name:            reg_sequence_v128_align2_compose_reg_sequence128_subreg64_align2_extract64_sub1_sub2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
@@ -249,7 +239,6 @@ body:             |
 # Unhandled, spans multiple sources
 ---
 name:            reg_sequence_v128_align2_compose_reg_sequence128_subreg64_align2_extract64_sub2_sub3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
@@ -274,7 +263,6 @@ body:             |
 # %2.sub1 -> %0.sub1
 ---
 name:            reg_sequence_compose_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2
@@ -300,7 +288,6 @@ body:             |
 # %2.sub2 -> %0.sub0
 ---
 name:            reg_sequence_compose_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4
@@ -328,7 +315,6 @@ body:             |
 # %3.sub0 -> %0.sub2
 ---
 name:            reg_sequence_compose_2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4
@@ -355,7 +341,6 @@ body:             |
 # %3.sub0 -> %0.sub2
 ---
 name:            reg_sequence_compose_3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4
@@ -383,7 +368,6 @@ body:             |
 # %3.sub2 -> %0.sub0
 ---
 name:            reg_sequence_compose_4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4
@@ -409,7 +393,6 @@ body:             |
 # %2.sub3 -> %1.sub1
 ---
 name:            reg_sequence_compose_5
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
@@ -433,7 +416,6 @@ body:             |
 # %2.sub0 -> %0.sub2
 ---
 name:            reg_sequence_compose_6
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
@@ -457,7 +439,6 @@ body:             |
 # %2.sub1 -> %0.sub3
 ---
 name:            reg_sequence_compose_7
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
@@ -481,7 +462,6 @@ body:             |
 # %2.sub2 -> %1.sub0
 ---
 name:            reg_sequence_compose_8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
@@ -505,7 +485,6 @@ body:             |
 # %2.sub3 -> %1.sub1
 ---
 name:            reg_sequence_compose_9
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
@@ -529,7 +508,6 @@ body:             |
 # %2.sub3 -> %1.sub1
 ---
 name:            reg_sequence_compose_10
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
@@ -553,7 +531,6 @@ body:             |
 # %2.sub1 -> %0.sub3
 ---
 name:            reg_sequence_compose_11
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
@@ -577,7 +554,6 @@ body:             |
 # %2.sub0 -> %0.sub1
 ---
 name:            reg_sequence_compose_12
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6
@@ -604,7 +580,6 @@ body:             |
 # %2.sub3 -> %1.sub1
 ---
 name:            reg_sequence_compose_13
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6
@@ -639,7 +614,6 @@ body:             |
 # %2.sub5 -> %0.sub3
 ---
 name:            reg_sequence_compose_14
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6

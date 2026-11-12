@@ -3,7 +3,6 @@
 
 ---
 name:            max-ilp-liveness-tracking
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: max-ilp-liveness-tracking
   ; CHECK: bb.0:

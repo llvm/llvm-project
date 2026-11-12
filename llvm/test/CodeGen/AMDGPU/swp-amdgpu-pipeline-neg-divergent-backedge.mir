@@ -6,7 +6,6 @@
 
 ---
 name:            swp_amdgpu_pipeline_neg_divergent_backedge
-tracksRegLiveness: true
 isSSA:           true
 machineFunctionInfo:
   isEntryFunction: true

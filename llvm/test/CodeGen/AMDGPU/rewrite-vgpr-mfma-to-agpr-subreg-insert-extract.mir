@@ -4,7 +4,6 @@
 # V-to-A copy is a subregister insert
 ---
 name:  test_rewrite_mfma_copy_subreg_insert
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -39,7 +38,6 @@ body:             |
 # V-to-A copy is a subregister extract
 ---
 name:  test_rewrite_mfma_copy_subreg_extract
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -68,7 +66,6 @@ body:             |
 # V-to-A copy is a subregister-to-subregister copy
 ---
 name:  test_rewrite_mfma_copy_subreg_insert_extract_same_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -97,7 +94,6 @@ body:             |
 # V-to-A copy is a subregister-to-subregister copy
 ---
 name:  test_rewrite_mfma_copy_subreg_insert_extract_different_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -126,7 +122,6 @@ body:             |
 # V-to-A copy is a subregister extract, from a subregister def
 ---
 name:  test_rewrite_mfma_copy_subreg_extract_from_subreg_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -157,7 +152,6 @@ body:             |
 # V-to-A copy is a subregister insert from a subregister_def
 ---
 name:  test_rewrite_mfma_copy_subreg_insert_from_subreg_def_tuple
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -193,7 +187,6 @@ body:             |
 # subregister_def
 ---
 name:  test_rewrite_mfma_copy_subreg_insert_from_subreg_def_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5

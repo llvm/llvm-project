@@ -24,7 +24,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_64 }
   - { id: 1, class: sreg_32_xm0 }

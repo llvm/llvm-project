@@ -6,7 +6,6 @@
 
 ---
 name:  copy_undef
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -21,7 +20,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__mov_fi_const_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -45,7 +43,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__const_copy_mov_fi_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -69,7 +66,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__fi_imm_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -92,7 +88,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__imm_fi_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -115,7 +110,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__mov_fi_const_copy_to_phys_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -132,7 +126,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__mov_fi_const_copy_to_virt_vgpr_live_vcc
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -164,7 +157,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__mov_fi_const_copy_to_virt_vgpr_live_scc
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   localFrameSize:  16384
@@ -184,7 +176,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__mov_fi_reg_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -221,7 +212,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__reg_copy_mov_fi_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -257,7 +247,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__fi_fi_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
   - { id: 1, size: 16384, alignment: 4, local-offset: 0 }
@@ -274,7 +263,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__fi_const_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -297,7 +285,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__const_fi_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -320,7 +307,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__fi_reg_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -354,7 +340,6 @@ body:             |
 
 ---
 name:  fold_s_add_i32__reg_fi_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -388,7 +373,6 @@ body:             |
 
 ---
 name:  fold_s_or_b32__mov_fi_const_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -406,7 +390,6 @@ body:             |
 
 ---
 name:  fold_s_or_b32__const_copy_mov_fi_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -424,7 +407,6 @@ body:             |
 
 ---
 name:  fold_s_or_b32__fi_imm_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -439,7 +421,6 @@ body:             |
 
 ---
 name:  fold_s_or_b32__imm_fi_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -454,7 +435,6 @@ body:             |
 
 ---
 name:  fold_s_and_b32__fi_imm_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -469,7 +449,6 @@ body:             |
 
 ---
 name:  fold_s_and_b32__fi_const_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -484,7 +463,6 @@ body:             |
 
 ---
 name:  fold_s_mul_i32__fi_imm_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -499,7 +477,6 @@ body:             |
 
 ---
 name:  fold_s_mul_i32__fi_reg_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -519,7 +496,6 @@ body:             |
 
 ---
 name:  fold_s_and_b32__mov_fi_const_copy_to_virt_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
 body:             |
@@ -538,7 +514,6 @@ body:             |
 # Physreg copy of %2 to $vgpr0 should not be erased
 ---
 name: fold_fi_into_s_or_b32_user_is_physreg_copy
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16, alignment: 16 }
 machineFunctionInfo:

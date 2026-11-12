@@ -13,7 +13,6 @@
 # GFX9-NEXT: V_ADDC_U32_e64
 ---
 name:            test1_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -55,7 +54,6 @@ body:             |
 # GFX9-NOT: V_ADDC_U32_e32
 ---
 name:            test2_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -97,7 +95,6 @@ body:             |
 # GFX9-NOT: V_ADDC_U32_e32
 ---
 name:            test3_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -128,7 +125,6 @@ body:             |
 # GFX9-NOT: V_ADDC_U32_e32
 ---
 name:            test4_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -158,7 +154,6 @@ body:             |
 # GFX9: V_ADDC_U32_e64
 ---
 name:            test5_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -188,7 +183,6 @@ body:             |
 # GFX9-NOT: V_ADDC_U32_e32
 ---
 name:            test6_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -217,7 +211,6 @@ body:             |
 # GFX9-NOT: V_ADDC_U32_e32
 ---
 name:            test7_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -247,7 +240,6 @@ body:             |
 # GFX9: V_ADDC_U32_e64
 ---
 name:            test8_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -278,7 +270,6 @@ body:             |
 # GFX9: V_ADDC_U32_e64
 ---
 name:            test9_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -309,7 +300,6 @@ body:             |
 # GFX9: V_ADDC_U32_e64
 ---
 name:            test10_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -340,7 +330,6 @@ body:             |
 # GFX9: V_ADDC_U32_e64
 ---
 name:            test11_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -371,7 +360,6 @@ body:             |
 # GFX9: V_ADDC_U32_e64
 ---
 name:            test12_add_co_sdwa
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, preferred-register: '' }
 liveins:
@@ -405,7 +393,6 @@ body:             |
 # GFX9-NEXT: REG_SEQUENCE
 ---
 name:            test13_add_co_addc_different_mbb
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1
