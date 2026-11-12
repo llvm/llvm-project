@@ -1554,6 +1554,13 @@ enum : unsigned {
   NT_GNU_BUILD_ATTRIBUTE_FUNC = 0x101,
 };
 
+// LLVM MemProf note types. These values are interpreted in the "LLVM" note
+// namespace.
+enum : unsigned {
+  NT_LLVM_MEMPROF_TU_ID = 0x4d505401,
+  NT_LLVM_MEMPROF_MODULE_ID = 0x4d505402,
+};
+
 // Core note types.
 enum : unsigned {
   NT_PRSTATUS = 1,
