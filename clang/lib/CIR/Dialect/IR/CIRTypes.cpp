@@ -1102,7 +1102,6 @@ unsigned
 IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
   if (!isBitInt())
     return getWidth();
-  // The cap lives in the data-layout spec, which getTypeABIAlignment reads.
   uint64_t alignBits = dataLayout.getTypeABIAlignment(*this) * 8;
   return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
 }
@@ -1120,10 +1119,6 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
   unsigned width = getWidth();
   if (isBitInt()) {
-    // TargetInfo::getBitIntAlign clamps the power-of-two width to
-    // getBitIntMaxAlign() and to at least the char width. The cap is the
-    // #cir.bitint_spec data-layout entry, in bits. The char width is 8
-    // bits, so the alignment is at least one byte.
     uint64_t maxAlignBits = getBitIntMaxAlignBits(params);
     uint64_t alignBits = std::min(
         static_cast<uint64_t>(llvm::PowerOf2Ceil(width)), maxAlignBits);
