@@ -34,7 +34,6 @@
 #include <cstdint>
 #include <limits>
 #include <list>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -503,7 +502,7 @@ private:
     };
 
     /// The diagnostic states for each file.
-    mutable std::map<FileID, File> Files;
+    mutable llvm::DenseMap<FileID, std::unique_ptr<File>> Files;
 
     /// One-entry cache for getFile(): Files gets large, and most
     /// lookups are for the same FileID as the previous one.
