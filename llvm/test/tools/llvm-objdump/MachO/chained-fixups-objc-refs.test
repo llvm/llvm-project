@@ -1,0 +1,374 @@
+# REQUIRES: aarch64-registered-target
+
+## Check that disassembly names the Objective-C selector and class references
+## that instructions load when the references are chained fixups. Each slot then
+## holds an encoded rebase or bind rather than the address it resolves to, and
+## these three rebases and the bind form a single chain.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj main.yaml -o main
+# RUN: llvm-objdump --macho -d --no-show-raw-insn main | FileCheck %s
+
+# CHECK:      _main:
+# CHECK-NEXT: adrp x1, {{.*}}
+# CHECK-NEXT: ldr x1, [x1] ; Objc selector ref: foo
+# CHECK-NEXT: adrp x1, {{.*}}
+# CHECK-NEXT: ldr x1, [x1, #0x8] ; Objc selector ref: bar
+# CHECK-NEXT: adrp x1, {{.*}}
+# CHECK-NEXT: ldr x1, [x1, #0x10] ; Objc selector ref: baz
+# CHECK-NEXT: adrp x0, {{.*}}
+# CHECK-NEXT: ldr x0, [x0, #0x18] ; Objc class ref: _OBJC_CLASS_$_Foo
+# CHECK-NEXT: ret
+
+## The chained binds also name bound class references in --objc-meta-data.
+# RUN: llvm-objdump --macho --objc-meta-data main | FileCheck %s --check-prefix=META
+
+# META:      Contents of (__DATA,__objc_classrefs) section
+# META-NEXT: 0000000100001018 {{.*}} _OBJC_CLASS_$_Foo
+
+## libObject does not decode every pointer format; one it leaves out is
+## DYLD_CHAINED_PTR_ARM64E_USERLAND (9). With such a format llvm-objdump warns
+## and reads the pointers as they are. The sed changes the pointer_format, which
+## follows the page_size of 0x1000, from 1 to 9.
+# RUN: sed 's/0x0, 0x10, 0x1, 0x0, 0x0, 0x10,/0x0, 0x10, 0x9, 0x0, 0x0, 0x10,/' \
+# RUN:   main.yaml | yaml2obj -o format9
+# RUN: llvm-objdump --macho -d --no-show-raw-insn format9 2>err \
+# RUN:   | FileCheck %s --check-prefix=FORMAT9
+# RUN: FileCheck %s --check-prefix=WARN --input-file=err
+# RUN: llvm-objdump --macho --objc-meta-data format9 2>err \
+# RUN:   | FileCheck %s --check-prefix=META9
+# RUN: FileCheck %s --check-prefix=WARN --input-file=err
+
+# FORMAT9:      _main:
+# FORMAT9:      ret
+# META9:        Contents of (__DATA,__objc_classrefs) section
+# META9-NEXT:   0000000100001018 0x{{[0-9a-f]+$}}
+# WARN: warning: 'format9': segment 2 has unsupported chained fixup pointer_format 9
+
+## gen links the image with Xcode's ld; the YAML below comes from ld-27037.1. To
+## regenerate it, run llvm/utils/update_test_body.py on macOS, with obj2yaml on
+## PATH.
+
+#--- foo.s
+.section __DATA,__objc_data
+.globl _OBJC_CLASS_$_Foo
+_OBJC_CLASS_$_Foo:
+  .quad 0
+
+#--- main.s
+.globl _main
+.p2align 2
+_main:
+  adrp x1, L_foo@PAGE
+  ldr x1, [x1, L_foo@PAGEOFF]
+  adrp x1, L_bar@PAGE
+  ldr x1, [x1, L_bar@PAGEOFF]
+  adrp x1, L_baz@PAGE
+  ldr x1, [x1, L_baz@PAGEOFF]
+  adrp x0, L_classref@PAGE
+  ldr x0, [x0, L_classref@PAGEOFF]
+  ret
+
+.section __TEXT,__objc_methname,cstring_literals
+L_foo_name:
+  .asciz "foo"
+L_bar_name:
+  .asciz "bar"
+L_baz_name:
+  .asciz "baz"
+
+.section __DATA,__objc_selrefs,literal_pointers,no_dead_strip
+.p2align 3
+L_foo:
+  .quad L_foo_name
+L_bar:
+  .quad L_bar_name
+L_baz:
+  .quad L_baz_name
+
+.section __DATA,__objc_classrefs,regular,no_dead_strip
+.p2align 3
+L_classref:
+  .quad _OBJC_CLASS_$_Foo
+
+#--- gen
+sdk=$(xcrun --sdk macosx --show-sdk-path)
+xcrun clang -target arm64e-apple-macos11.0 -c foo.s main.s
+xcrun ld -arch arm64e -syslibroot "$sdk" -platform_version macos 11.0 27.0 \
+  -lSystem -dylib -install_name @executable_path/libfoo.dylib foo.o \
+  -o libfoo.dylib
+xcrun ld -arch arm64e -syslibroot "$sdk" -platform_version macos 11.0 27.0 \
+  -lSystem -segalign 0x1000 main.o libfoo.dylib -o main
+# Zero LC_UUID and drop the trailing spaces that obj2yaml leaves. obj2yaml also
+# leaves out the byte order when it is the host's, so pin it.
+clean='s/\(uuid: *\).*/\100000000-0000-0000-0000-000000000000/; s/ *$//'
+obj2yaml main | sed "$clean" | sed '1a\
+IsLittleEndian: true'
+
+#--- main.yaml
+--- !mach-o
+IsLittleEndian: true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x81000002
+  filetype:        0x2
+  ncmds:           18
+  sizeofcmds:      1032
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100000450
+        size:            36
+        offset:          0x450
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000B0210040F9010000B0210440F9010000B0210840F9000000B0000C40F9C0035FD6
+      - sectname:        __objc_methname
+        segname:         __TEXT
+        addr:            0x100000474
+        size:            12
+        offset:          0x474
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         6261720062617A00666F6F00
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __DATA
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        4096
+    maxprot:         3
+    initprot:        3
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __objc_selrefs
+        segname:         __DATA
+        addr:            0x100001000
+        size:            24
+        offset:          0x1000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x10000005
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         7C0400000100080074040000010008007804000001000800
+      - sectname:        __objc_classrefs
+        segname:         __DATA
+        addr:            0x100001018
+        size:            8
+        offset:          0x1018
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000040'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        472
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_CHAINED_FIXUPS
+    cmdsize:         16
+    dataoff:         8192
+    datasize:        104
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         8296
+    datasize:        48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          8352
+    nsyms:           3
+    stroff:          8400
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            00000000-0000-0000-0000-000000000000
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             1769472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         1771897088
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        1104
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 89063424
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 0
+      compatibility_version: 0
+    Content:         '@executable_path/libfoo.dylib'
+    ZeroPadBytes:    3
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         8344
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         8352
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         8448
+    datasize:        216
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      18
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      9
+            Name:            _mh_execute_header
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      13
+            Name:            main
+            Flags:           0x0
+            Address:         0x450
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968400
+    - n_strx:          28
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - '_OBJC_CLASS_$_Foo'
+    - ''
+    - ''
+  FunctionStarts:  [ 0x450 ]
+  ChainedFixups:   [ 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0, 0x50, 0x0,
+                     0x0, 0x0, 0x54, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+                     0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x18, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x18, 0x0, 0x0, 0x0,
+                     0x0, 0x10, 0x1, 0x0, 0x0, 0x10, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+                     0x2, 0x2, 0x0, 0x0, 0x0, 0x5F, 0x4F, 0x42, 0x4A, 0x43,
+                     0x5F, 0x43, 0x4C, 0x41, 0x53, 0x53, 0x5F, 0x24, 0x5F,
+                     0x46, 0x6F, 0x6F, 0x0, 0x0 ]
+...

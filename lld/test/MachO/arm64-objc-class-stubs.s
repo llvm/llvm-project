@@ -191,13 +191,11 @@
 
 # Each arm64e tail is pinned to the address of __auth_got: __auth_got and __got
 # can share a page, so a stub that read the raw __got would otherwise match.
-# llvm-objdump does not decode chained fixups yet, so most selector refs are
-# not annotated on arm64e and are left unchecked.
 # FAST-ARM64E:      __auth_got {{[0-9a-f]+}} {{0*}}[[#%x,FAST_E_AUTH_GOT:]] DATA
 # FAST-ARM64E:      Contents of (__TEXT,__objc_stubs) section
 # FAST-ARM64E:      _objc_msgSend$instance:
 # FAST-ARM64E-NEXT: adrp    x1,
-# FAST-ARM64E-NEXT: ldr     x1, [x1
+# FAST-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
 # FAST-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,FAST_E_INSTANCE_PAGE:]]
 # FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_INSTANCE_PAGE]]
 # FAST-ARM64E-NEXT: ldr     x16, [x17]
@@ -208,7 +206,7 @@
 # FAST-ARM64E-NEXT: adrp    x0,
 # FAST-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # FAST-ARM64E-NEXT: adrp    x1,
-# FAST-ARM64E-NEXT: ldr     x1, [x1
+# FAST-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: external
 # FAST-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,FAST_E_EXTERNAL_PAGE:]]
 # FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_EXTERNAL_PAGE]]
 # FAST-ARM64E-NEXT: ldr     x16, [x17]
@@ -217,7 +215,7 @@
 # FAST-ARM64E-NEXT: adrp    x0, [[#]] ; 0x[[#%x,FAST_E_LOCAL_CLASS_PAGE:]]
 # FAST-ARM64E-NEXT: add     x0, x0, #0x[[#%x,FAST_E_LOCAL_CLASS_OFF:]]
 # FAST-ARM64E-NEXT: adrp    x1,
-# FAST-ARM64E-NEXT: ldr     x1, [x1
+# FAST-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: local
 # FAST-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,FAST_E_LOCAL_PAGE:]]
 # FAST-ARM64E-NEXT: add     x17, x17, #0x[[#%x,FAST_E_AUTH_GOT-FAST_E_LOCAL_PAGE]]
 # FAST-ARM64E-NEXT: ldr     x16, [x17]
@@ -232,19 +230,19 @@
 # SMALL-ARM64E:      Contents of (__TEXT,__objc_stubs) section
 # SMALL-ARM64E:      _objc_msgSend$instance:
 # SMALL-ARM64E-NEXT: adrp    x1,
-# SMALL-ARM64E-NEXT: ldr     x1, [x1
+# SMALL-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
 # SMALL-ARM64E-NEXT: b       _objc_msgSend
 # SMALL-ARM64E-NEXT: _objc_msgSendClass$external$_OBJC_CLASS_$_ExternalClass:
 # SMALL-ARM64E-NEXT: adrp    x0,
 # SMALL-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # SMALL-ARM64E-NEXT: adrp    x1,
-# SMALL-ARM64E-NEXT: ldr     x1, [x1
+# SMALL-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: external
 # SMALL-ARM64E-NEXT: b       _objc_msgSend
 # SMALL-ARM64E-NEXT: _objc_msgSendClass$local$_OBJC_CLASS_$_LocalClass:
 # SMALL-ARM64E-NEXT: adrp    x0, [[#]] ; 0x[[#%x,SMALL_E_LOCAL_CLASS_PAGE:]]
 # SMALL-ARM64E-NEXT: add     x0, x0, #0x[[#%x,SMALL_E_LOCAL_CLASS_OFF:]]
 # SMALL-ARM64E-NEXT: adrp    x1,
-# SMALL-ARM64E-NEXT: ldr     x1, [x1
+# SMALL-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: local
 # SMALL-ARM64E-NEXT: b       _objc_msgSend
 # SMALL-ARM64E-LABEL: SYMBOL TABLE:
 # SMALL-ARM64E-DAG: {{0*}}[[#%x,SMALL_E_LOCAL_CLASS_PAGE+SMALL_E_LOCAL_CLASS_OFF]] g     O __DATA,__data _OBJC_CLASS_$_LocalClass
@@ -253,7 +251,7 @@
 # GOT-LOAD-ARM64E:      Contents of (__TEXT,__objc_stubs) section
 # GOT-LOAD-ARM64E-NEXT: _objc_msgSend$got:
 # GOT-LOAD-ARM64E-NEXT: adrp    x1,
-# GOT-LOAD-ARM64E-NEXT: ldr     x1, [x1
+# GOT-LOAD-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: got
 # GOT-LOAD-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,GOT_LOAD_SEL_PAGE:]]
 # GOT-LOAD-ARM64E-NEXT: add     x17, x17, #0x[[#%x,GOT_LOAD_AUTH_GOT-GOT_LOAD_SEL_PAGE]]
 # GOT-LOAD-ARM64E-NEXT: ldr     x16, [x17]
@@ -264,7 +262,7 @@
 # GOT-LOAD-ARM64E-NEXT: adrp    x0,
 # GOT-LOAD-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # GOT-LOAD-ARM64E-NEXT: adrp    x1,
-# GOT-LOAD-ARM64E-NEXT: ldr     x1, [x1
+# GOT-LOAD-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: got
 # GOT-LOAD-ARM64E-NEXT: adrp    x17, [[#]] ; 0x[[#%x,GOT_LOAD_CLASS_PAGE:]]
 # GOT-LOAD-ARM64E-NEXT: add     x17, x17, #0x[[#%x,GOT_LOAD_AUTH_GOT-GOT_LOAD_CLASS_PAGE]]
 # GOT-LOAD-ARM64E-NEXT: ldr     x16, [x17]
@@ -280,7 +278,7 @@
 # DYNAMIC-SMALL-ARM64E-NEXT: adrp    x0,
 # DYNAMIC-SMALL-ARM64E-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_DynamicClass
 # DYNAMIC-SMALL-ARM64E-NEXT: adrp    x1,
-# DYNAMIC-SMALL-ARM64E-NEXT: ldr     x1, [x1
+# DYNAMIC-SMALL-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: dynamic
 # DYNAMIC-SMALL-ARM64E-NEXT: b       0x[[#%x,DYN_E_AUTH_STUBS]]
 
 # DYNAMIC:      Contents of (__TEXT,__objc_stubs) section
@@ -300,7 +298,7 @@
 # _objc_msgSend is not the first __auth_got entry here and has no __got slot,
 # so the annotation shows the stub uses its own __auth_got slot.
 # INTERPOSABLE-ARM64E-NEXT: adrp    x1,
-# INTERPOSABLE-ARM64E-NEXT: ldr     x1, [x1
+# INTERPOSABLE-ARM64E-NEXT: ldr     x1, {{.*}} ; Objc selector ref: local
 # INTERPOSABLE-ARM64E-NEXT: adrp    x17,
 # INTERPOSABLE-ARM64E-NEXT: add     x17, x17, #0x{{[0-9a-f]+}} ; literal pool symbol address: _objc_msgSend{{$}}
 # INTERPOSABLE-ARM64E-NEXT: ldr     x16, [x17]
