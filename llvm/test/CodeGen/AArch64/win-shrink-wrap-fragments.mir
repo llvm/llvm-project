@@ -301,6 +301,7 @@ body:             |
 # both return and branch terminators without bundling nearby debug/probe pseudos
 # or disrupting their emission.
 name:            frame_before_prologue
+tracksRegLiveness: true
 alignment:       4
 hasWinCFI:       true
 noPhis:          true
@@ -338,6 +339,8 @@ body:             |
   ; MIR-NOT: SEH_StartProc
   bb.0:
     successors: %bb.2
+    liveins: $x19, $lr
+
     B %bb.2
 
   bb.1:
@@ -353,6 +356,8 @@ body:             |
 
   bb.2:
     successors: %bb.1
+    liveins: $x19, $lr
+
     $sp = frame-setup SUBXri $sp, 16, 0
     frame-setup SEH_StackAlloc 16
     frame-setup STPXi $x19, $lr, $sp, 0
@@ -367,6 +372,7 @@ body:             |
 # operation in its phantom recipe, not copy the dynamic adjustment. The leaf
 # return between ranges remains uncovered, and the epilogue recovers SP from FP.
 name:            dynamic_frame_paths
+tracksRegLiveness: true
 alignment:       4
 hasWinCFI:       true
 noPhis:          true
@@ -406,10 +412,14 @@ body:             |
   ; MIR-NEXT: $sp = frame-destroy SUBXri $fp, 16, 0
   bb.0:
     successors: %bb.1, %bb.2
+    liveins: $x0, $fp, $lr
+
     CBZX $x0, %bb.2
 
   bb.1:
     successors: %bb.3
+    liveins: $x0, $fp, $lr
+
     $sp = frame-setup SUBXri $sp, 32, 0
     frame-setup SEH_StackAlloc 32
     frame-setup STPXi $fp, $lr, $sp, 2
@@ -424,6 +434,8 @@ body:             |
     RET undef $lr
 
   bb.3:
+    liveins: $fp
+
     frame-destroy SEH_EpilogStart
     $sp = frame-destroy SUBXri $fp, 16, 0
     frame-destroy SEH_AddFP 16
@@ -440,6 +452,7 @@ body:             |
 # ending only before the shared frameless return block. Metadata before the
 # first epilogue's lone terminator must not cause a spurious split.
 name:            adjacent_epilogues
+tracksRegLiveness: true
 alignment:       4
 hasWinCFI:       true
 noPhis:          true
@@ -481,10 +494,14 @@ body:             |
   ; MIR-NOT: SEH_EndProc
   bb.0:
     successors: %bb.1, %bb.4
+    liveins: $w0, $w1, $x19, $lr
+
     CBZW $w0, %bb.4
 
   bb.1:
     successors: %bb.2, %bb.3
+    liveins: $w0, $w1, $x19, $lr
+
     $sp = frame-setup SUBXri $sp, 16, 0
     frame-setup SEH_StackAlloc 16
     frame-setup STPXi $x19, $lr, $sp, 0
@@ -493,6 +510,8 @@ body:             |
     CBZW $w1, %bb.3
 
   bb.2:
+    liveins: $w0
+
     frame-destroy SEH_EpilogStart
     $x19, $lr = frame-destroy LDPXi $sp, 0
     frame-destroy SEH_SaveRegP 19, 30, 0
@@ -520,6 +539,7 @@ body:             |
 # block. End the record before the suffix without bundling its instructions or
 # debug/probe pseudos. The next framed block still needs a phantom recipe.
 name:            epilogue_suffix
+tracksRegLiveness: true
 alignment:       4
 hasWinCFI:       true
 noPhis:          true
@@ -554,10 +574,14 @@ body:             |
   ; MIR: RET
   bb.0:
     successors: %bb.1, %bb.4
+    liveins: $w0, $w1, $x19, $lr
+
     CBZW $w0, %bb.4
 
   bb.1:
     successors: %bb.2, %bb.3
+    liveins: $w0, $w1, $x19, $lr
+
     $sp = frame-setup SUBXri $sp, 16, 0
     frame-setup SEH_StackAlloc 16
     frame-setup STPXi $x19, $lr, $sp, 0
@@ -567,6 +591,8 @@ body:             |
 
   bb.2:
     successors: %bb.4
+    liveins: $w0
+
     frame-destroy SEH_EpilogStart
     $x19, $lr = frame-destroy LDPXi $sp, 0
     frame-destroy SEH_SaveRegP 19, 30, 0

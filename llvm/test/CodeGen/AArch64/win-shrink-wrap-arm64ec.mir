@@ -62,6 +62,7 @@
 ...
 ---
 name: ec_fragments
+tracksRegLiveness: true
 alignment: 4
 hasWinCFI: true
 noPhis: true
@@ -95,10 +96,14 @@ body: |
   ; MIR-NEXT: }
   bb.0:
     successors: %bb.1, %bb.2
+    liveins: $w0, $x19, $lr, $q6, $q7
+
     CBZW $w0, %bb.2
 
   bb.1:
     successors: %bb.3
+    liveins: $x19, $lr, $q6, $q7
+
     $sp = frame-setup SUBXri $sp, 48, 0
     frame-setup SEH_StackAlloc 48
     frame-setup STPXi $x19, $lr, $sp, 0
