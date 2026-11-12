@@ -142,6 +142,21 @@ TEST(CallDescription, SimpleNameMatching) {
       "void foo(); void bar() { foo(); }"));
 }
 
+TEST(CallDescription, IndexedNameMatching) {
+  EXPECT_TRUE(tooling::runToolOnCode(
+      std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
+          {{CDM::SimpleFunc, {"not_foo_0"}}, false},
+          {{CDM::SimpleFunc, {"not_foo_1"}}, false},
+          {{CDM::SimpleFunc, {"not_foo_2"}}, false},
+          {{CDM::SimpleFunc, {"not_foo_3"}}, false},
+          {{CDM::SimpleFunc, {"not_foo_4"}}, false},
+          {{CDM::SimpleFunc, {"not_foo_5"}}, false},
+          {{CDM::SimpleFunc, {"not_foo_6"}}, false},
+          {{CDM::SimpleFunc, {"foo"}}, true},
+      })),
+      "void foo(); void bar() { foo(); }"));
+}
+
 TEST(CallDescription, RequiredArguments) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
@@ -200,6 +215,13 @@ TEST(CallDescription, MatchConstructor) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(
           new CallDescriptionAction<CXXConstructExpr>({
+              {{CDM::CXXMethod, {"not_basic_string_0"}}, false},
+              {{CDM::CXXMethod, {"not_basic_string_1"}}, false},
+              {{CDM::CXXMethod, {"not_basic_string_2"}}, false},
+              {{CDM::CXXMethod, {"not_basic_string_3"}}, false},
+              {{CDM::CXXMethod, {"not_basic_string_4"}}, false},
+              {{CDM::CXXMethod, {"not_basic_string_5"}}, false},
+              {{CDM::CXXMethod, {"not_basic_string_6"}}, false},
               {{CDM::CXXMethod, {"std", "basic_string", "basic_string"}, 2, 2},
                true},
           })),
@@ -486,7 +508,12 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("hardened variants of functions");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDM::Unspecified, {"memset"}, 3}, false},
+            {{{CDM::Unspecified, {"not_memset_0"}}, false},
+             {{CDM::Unspecified, {"not_memset_1"}}, false},
+             {{CDM::Unspecified, {"not_memset_2"}}, false},
+             {{CDM::Unspecified, {"not_memset_3"}}, false},
+             {{CDM::Unspecified, {"not_memset_4"}}, false},
+             {{CDM::Unspecified, {"memset"}, 3}, false},
              {{CDM::CLibrary, {"memset"}, 3}, false},
              {{CDM::CLibraryMaybeHardened, {"memset"}, 3}, true}})),
         "void foo() {"
@@ -590,7 +617,12 @@ TEST(CallDescription, MatchBuiltins) {
 
 class CallDescChecker
     : public Checker<check::PreCall, check::PreStmt<CallExpr>> {
-  CallDescriptionSet Set = {{CDM::SimpleFunc, {"bar"}, 0}};
+  CallDescriptionSet Set = {
+      {CDM::SimpleFunc, {"not_bar_0"}, 0}, {CDM::SimpleFunc, {"not_bar_1"}, 0},
+      {CDM::SimpleFunc, {"not_bar_2"}, 0}, {CDM::SimpleFunc, {"not_bar_3"}, 0},
+      {CDM::SimpleFunc, {"not_bar_4"}, 0}, {CDM::SimpleFunc, {"not_bar_5"}, 0},
+      {CDM::SimpleFunc, {"not_bar_6"}, 0}, {CDM::SimpleFunc, {"bar"}, 0},
+  };
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
