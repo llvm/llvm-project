@@ -9,19 +9,16 @@ define void @test1_pr58811(ptr %dst) {
 ; VF2-NEXT:    br label %[[LOOP_1_PREHEADER:.*]]
 ; VF2:       [[LOOP_1_PREHEADER]]:
 ; VF2-NEXT:    [[IV_1_PH:%.*]] = phi i32 [ [[SUB93_2:%.*]], %[[UNREACHABLE_BB:.*]] ], [ 0, %[[ENTRY]] ]
-; VF2-NEXT:    [[TMP0:%.*]] = sub i32 0, [[IV_1_PH]]
 ; VF2-NEXT:    br label %[[LOOP_1:.*]]
 ; VF2:       [[LOOP_1]]:
-; VF2-NEXT:    [[INDUCTION_IV:%.*]] = phi i32 [ [[INDUCTION_IV_NEXT:%.*]], %[[LOOP_1]] ], [ [[TMP0]], %[[LOOP_1_PREHEADER]] ]
 ; VF2-NEXT:    [[IV_1:%.*]] = phi i32 [ [[IV_1_NEXT:%.*]], %[[LOOP_1]] ], [ [[IV_1_PH]], %[[LOOP_1_PREHEADER]] ]
 ; VF2-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP_1]] ], [ 0, %[[LOOP_1_PREHEADER]] ]
-; VF2-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_2]], -1
 ; VF2-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 1
 ; VF2-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_2]], [[IV_1]]
-; VF2-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP1]]
 ; VF2-NEXT:    br i1 false, label %[[LOOP_1]], label %[[LOOP_2_PREHEADER:.*]]
 ; VF2:       [[LOOP_2_PREHEADER]]:
 ; VF2-NEXT:    [[IV_1_LCSSA:%.*]] = phi i32 [ [[IV_1]], %[[LOOP_1]] ]
+; VF2-NEXT:    [[INDUCTION_IV:%.*]] = sub i32 0, [[IV_1_PH]]
 ; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[TMP2:%.*]] = mul i32 198, [[INDUCTION_IV]]
@@ -71,19 +68,16 @@ define void @test1_pr58811(ptr %dst) {
 ; CHECK-NEXT:    br label %[[LOOP_1_PREHEADER:.*]]
 ; CHECK:       [[LOOP_1_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_1_PH:%.*]] = phi i32 [ [[SUB93_2:%.*]], %[[UNREACHABLE_BB:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[IV_1_PH]]
 ; CHECK-NEXT:    br label %[[LOOP_1:.*]]
 ; CHECK:       [[LOOP_1]]:
-; CHECK-NEXT:    [[INDUCTION_IV:%.*]] = phi i32 [ [[INDUCTION_IV_NEXT:%.*]], %[[LOOP_1]] ], [ [[TMP0]], %[[LOOP_1_PREHEADER]] ]
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[IV_1_NEXT:%.*]], %[[LOOP_1]] ], [ [[IV_1_PH]], %[[LOOP_1_PREHEADER]] ]
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP_1]] ], [ 0, %[[LOOP_1_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_2]], -1
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 1
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_2]], [[IV_1]]
-; CHECK-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP_1]], label %[[LOOP_2_PREHEADER:.*]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i32 [ [[IV_1]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[INDUCTION_IV:%.*]] = sub i32 0, [[IV_1_PH]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 196, [[INDUCTION_IV]]
@@ -178,20 +172,16 @@ define void @test2_pr58811(ptr %dst) {
 ; VF2-NEXT:    br label %[[LOOP_1_HEADER]]
 ; VF2:       [[LOOP_1_HEADER]]:
 ; VF2-NEXT:    [[P_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUB93_2_LCSSA]], %[[LOOP_1_HEADER_LOOPEXIT]] ]
-; VF2-NEXT:    [[TMP0:%.*]] = mul i32 [[P_1]], -1
 ; VF2-NEXT:    br label %[[LOOP_2:.*]]
 ; VF2:       [[LOOP_2]]:
-; VF2-NEXT:    [[INDUCTION_IV:%.*]] = phi i32 [ [[INDUCTION_IV_NEXT:%.*]], %[[LOOP_2]] ], [ [[TMP0]], %[[LOOP_1_HEADER]] ]
 ; VF2-NEXT:    [[IV_2:%.*]] = phi i32 [ [[P_1]], %[[LOOP_1_HEADER]] ], [ [[ADD101:%.*]], %[[LOOP_2]] ]
 ; VF2-NEXT:    [[IV_3:%.*]] = phi i32 [ 0, %[[LOOP_1_HEADER]] ], [ [[SUB93:%.*]], %[[LOOP_2]] ]
-; VF2-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_3]], -1
 ; VF2-NEXT:    [[SUB93]] = add i32 [[IV_3]], 1
 ; VF2-NEXT:    [[ADD101]] = add i32 [[IV_3]], [[IV_2]]
-; VF2-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP1]]
 ; VF2-NEXT:    br i1 false, label %[[LOOP_2]], label %[[LOOP_3_PREHEADER:.*]]
 ; VF2:       [[LOOP_3_PREHEADER]]:
-; VF2-NEXT:    [[INDUCTION_IV_LCSSA:%.*]] = phi i32 [ [[INDUCTION_IV]], %[[LOOP_2]] ]
 ; VF2-NEXT:    [[IV_2_LCSSA:%.*]] = phi i32 [ [[IV_2]], %[[LOOP_2]] ]
+; VF2-NEXT:    [[INDUCTION_IV_LCSSA:%.*]] = sub i32 0, [[P_1]]
 ; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[TMP2:%.*]] = mul i32 198, [[INDUCTION_IV_LCSSA]]
@@ -242,20 +232,16 @@ define void @test2_pr58811(ptr %dst) {
 ; CHECK-NEXT:    br label %[[LOOP_1_HEADER]]
 ; CHECK:       [[LOOP_1_HEADER]]:
 ; CHECK-NEXT:    [[P_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[SUB93_2_LCSSA]], %[[LOOP_1_HEADER_LOOPEXIT]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[P_1]], -1
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
 ; CHECK:       [[LOOP_2]]:
-; CHECK-NEXT:    [[INDUCTION_IV:%.*]] = phi i32 [ [[INDUCTION_IV_NEXT:%.*]], %[[LOOP_2]] ], [ [[TMP0]], %[[LOOP_1_HEADER]] ]
 ; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[P_1]], %[[LOOP_1_HEADER]] ], [ [[ADD101:%.*]], %[[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ 0, %[[LOOP_1_HEADER]] ], [ [[SUB93:%.*]], %[[LOOP_2]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_3]], -1
 ; CHECK-NEXT:    [[SUB93]] = add i32 [[IV_3]], 1
 ; CHECK-NEXT:    [[ADD101]] = add i32 [[IV_3]], [[IV_2]]
-; CHECK-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP_2]], label %[[LOOP_3_PREHEADER:.*]]
 ; CHECK:       [[LOOP_3_PREHEADER]]:
-; CHECK-NEXT:    [[INDUCTION_IV_LCSSA:%.*]] = phi i32 [ [[INDUCTION_IV]], %[[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_2_LCSSA:%.*]] = phi i32 [ [[IV_2]], %[[LOOP_2]] ]
+; CHECK-NEXT:    [[INDUCTION_IV_LCSSA:%.*]] = sub i32 0, [[P_1]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 196, [[INDUCTION_IV_LCSSA]]
