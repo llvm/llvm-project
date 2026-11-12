@@ -2668,6 +2668,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_chown",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/chown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_fcntl_macros",
+        ":types_gid_t",
+        ":types_uid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_dup",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/dup.h"],
     target_compatible_with = select({
@@ -18561,6 +18579,25 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_chdir",
         ":__support_osutil_syscall",
         ":errno",
+    ],
+)
+
+libc_function(
+    name = "chown",
+    srcs = ["src/unistd/linux/chown.cpp"],
+    hdrs = ["src/unistd/chown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_chown",
+        ":errno",
+        ":types_gid_t",
+        ":types_uid_t",
     ],
 )
 
