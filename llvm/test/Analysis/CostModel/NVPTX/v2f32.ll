@@ -1,6 +1,4 @@
-; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mcpu=sm_100 < %s | FileCheck %s
-
-target triple = "nvptx64-nvidia-cuda"
+; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -mtriple=nvptx64-nvidia-cuda -disable-output -mcpu=sm_100 < %s | FileCheck %s
 
 define <2 x float> @f32x2_arith(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: 'f32x2_arith'
