@@ -263,6 +263,7 @@ define dso_local i32 @has_funclet(i32 %x) local_unnamed_addr personality ptr @__
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .seh_handlerdata
 ; CHECK-NEXT:  .Lhas_funclet$parent_frame_offset = 48
+; CHECK-NEXT:  .Lhas_funclet$parent_frame_align_mask = -1
 ; CHECK-NEXT:    .long (.Llsda_end0-.Llsda_begin0)/16 # Number of call sites
 ; CHECK-NEXT:  .Llsda_begin0:
 ; CHECK-NEXT:    .long .Ltmp0@IMGREL # LabelStart

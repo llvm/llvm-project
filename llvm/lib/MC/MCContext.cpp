@@ -267,6 +267,12 @@ MCSymbol *MCContext::getOrCreateParentFrameOffsetSymbol(const Twine &FuncName) {
                            "$parent_frame_offset");
 }
 
+MCSymbol *
+MCContext::getOrCreateParentFrameAlignMaskSymbol(const Twine &FuncName) {
+  return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + FuncName +
+                           "$parent_frame_align_mask");
+}
+
 MCSymbol *MCContext::getOrCreateLSDASymbol(const Twine &FuncName) {
   return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + "__ehtable$" +
                            FuncName);
