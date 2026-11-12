@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++20 %s -fcxx-exceptions -fms-extensions | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple=thumbv7-windows-msvc -std=c++20 %s -fcxx-exceptions -fms-extensions | FileCheck %s --check-prefix=ARM
 
 // CHECK-DAG: @"??_R0?AUY@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { ptr @"??_7type_info@@6B@", ptr null, [8 x i8] c".?AUY@@\00" }, comdat
 // CHECK-DAG: @"_CT??_R0?AUY@@@8??0Y@@QAE@ABU0@@Z8" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 4, ptr @"??_R0?AUY@@@8", i32 0, i32 -1, i32 0, i32 8, ptr @"??0Y@@QAE@ABU0@@Z" }, section ".xdata", comdat
@@ -25,6 +26,14 @@
 // CHECK-DAG: @_CTA2PAPFAH = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.2 { i32 2, [2 x ptr] [ptr @"_CT??_R0PAPFAH@84", ptr @"_CT??_R0PAX@84"] }, section ".xdata", comdat
 // CHECK-DAG: @"_TI1?AUFoo@?A0x{{[^@]*}}@@" = internal unnamed_addr constant %eh.ThrowInfo { i32 0, ptr null, ptr null, ptr @"_CTA1?AUFoo@?A0x{{[^@]*}}@@" }, section ".xdata"
 
+// ARM-DAG: %eh.CatchableType = type { i32, i32, i32, i32, i32, i32, i32 }
+// ARM-DAG: %eh.ThrowInfo = type { i32, i32, i32, i32 }
+// ARM-DAG: @"_CT??_R0?AUY@@@8??0Y@@QAA@ABU0@@Z8" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 4, i32 sub nuw nsw (i32 ptrtoint (ptr @"??_R0?AUY@@@8" to i32), i32 ptrtoint (ptr @__ImageBase to i32)), i32 0, i32 -1, i32 0, i32 8, i32 sub nuw nsw (i32 ptrtoint (ptr @"??0Y@@QAA@ABU0@@Z" to i32), i32 ptrtoint (ptr @__ImageBase to i32)) }, section ".xdata", comdat
+// ARM-DAG: @"_CT??_R0?AUZ@@@81" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, i32 sub nuw nsw (i32 ptrtoint (ptr @"??_R0?AUZ@@@8" to i32), i32 ptrtoint (ptr @__ImageBase to i32)), i32 0, i32 -1, i32 0, i32 1, i32 0 }, section ".xdata", comdat
+// ARM-DAG: @"_CTA5?AUY@@" = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.5 { i32 5, [5 x i32] [i32 sub nuw nsw (i32 ptrtoint (ptr @"_CT??_R0?AUY@@@8??0Y@@QAA@ABU0@@Z8" to i32), i32 ptrtoint (ptr @__ImageBase to i32)), {{.*}}] }, section ".xdata", comdat
+// ARM-DAG: @"_TI5?AUY@@" = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i32 sub nuw nsw (i32 ptrtoint (ptr @"??_DY@@QAAXXZ" to i32), i32 ptrtoint (ptr @__ImageBase to i32)), i32 0, i32 sub nuw nsw (i32 ptrtoint (ptr @"_CTA5?AUY@@" to i32), i32 ptrtoint (ptr @__ImageBase to i32)) }, section ".xdata", comdat
+// ARM-DAG: @_TI1P6AXXZ = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i32 0, i32 0, i32 sub nuw nsw (i32 ptrtoint (ptr @_CTA1P6AXXZ to i32), i32 ptrtoint (ptr @__ImageBase to i32)) }, section ".xdata", comdat
+
 
 struct N { ~N(); };
 struct M : private N {};
@@ -38,6 +47,8 @@ void f(const Y &y) {
   // CHECK-LABEL: @"?f@@YAXABUY@@@Z"
   // CHECK: call x86_thiscallcc noundef ptr @"??0Y@@QAE@ABU0@@Z"(ptr {{[^,]*}} %[[mem:.*]], ptr
   // CHECK: call void @_CxxThrowException(ptr %[[mem]], ptr @"_TI5?AUY@@")
+  // ARM-LABEL: @"?f@@YAXABUY@@@Z"
+  // ARM: call arm_aapcs_vfpcc void @_CxxThrowException(ptr %{{.*}}, ptr @"_TI5?AUY@@")
   throw y;
 }
 

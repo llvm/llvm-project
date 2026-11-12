@@ -13,7 +13,6 @@
 # RUN: | FileCheck -check-prefixes=CHECK-NO-ZCMP64 %s
 ---
 name: popret_rvlist5
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 body:                   |
@@ -105,7 +104,6 @@ body:                   |
 ...
 ---
 name: popretz_rvlist5
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 body:                   |

@@ -441,7 +441,7 @@ bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
     assert(sec->isLive());
 
     if (auto *s = dyn_cast<MergeInputSection>(sec))
-      return s->getSectionPiece(d->value).live;
+      return d->isSection() || s->getSectionPiece(d->value).live;
     return true;
   }
   return b.hasFlag(USED) || !ctx.arg.gcSections;
@@ -1923,7 +1923,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // that we can correctly decide if a dynamic relocation is needed. This is
     // called after processSymbolAssignments() because it needs to know whether
     // a linker-script-defined symbol is absolute.
-    scanRelocations<ELFT>(ctx);
+    scanRelocations(ctx);
 
     // Process symbols referenced by the embedded unoptimized part of dynamic
     // debugging. Report references to undefined symbols and ensure that

@@ -5,7 +5,6 @@
 name:            foo
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:

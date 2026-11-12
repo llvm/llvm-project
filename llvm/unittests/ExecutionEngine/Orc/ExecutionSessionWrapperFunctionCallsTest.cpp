@@ -8,9 +8,10 @@
 
 #include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
-#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -20,6 +21,14 @@
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
+
+namespace {
+struct AddAsync {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::verbatim("addAsync_tag");
+  using SPSSig = int32_t(int32_t, int32_t);
+};
+} // namespace
 
 static void addAsyncWrapper(unique_function<void(int32_t)> SendResult,
                             int32_t X, int32_t Y) {
@@ -38,8 +47,8 @@ TEST(ExecutionSessionWrapperFunctionCalls, RegisterAsyncHandlerAndRun) {
       {{AddAsyncTag, {AddAsyncTagAddr, JITSymbolFlags::Exported}}})));
 
   cantFail(ES.registerCallControllerHandlers(
-      JD, bindCallControllerHandlerSPS<int32_t(int32_t, int32_t)>(
-              SymbolNameSpec::verbatim("addAsync_tag"), addAsyncWrapper)));
+      JD,
+      bindCallControllerHandler<sps::HandlerSpec<AddAsync>>(addAsyncWrapper)));
 
   std::promise<int32_t> RP;
   auto RF = RP.get_future();

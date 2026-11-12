@@ -2676,7 +2676,7 @@ def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
 def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
     MetaVarName<"<pathname>">,
-    HelpText<"Use memory profile for profile-guided memory optimization">,
+    HelpText<"Use memory profile for profile-guided memory optimization (MemPGO)">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
 
 defm copyprof : BoolFOption<"copyprof",
@@ -5170,7 +5170,7 @@ defm partition_static_data_sections: BoolFOption<"partition-static-data-sections
   CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " partition static data sections using PGO profile information and MemProf (x86 and aarch64 ELF). See LLVM MemProf doc for usage.">>;
+  BothFlags<[], [ClangOption], " partition static data sections using MemPGO profiles with fall back to PGO (x86 and aarch64 ELF). See LLVM MemPGO doc for usage.">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,
@@ -7373,6 +7373,12 @@ def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   HelpText<"Disable generation of new-value stores">;
 def mcabac: Flag<["-"], "mcabac">, Group<m_hexagon_Features_Group>,
   HelpText<"Enable CABAC instructions">;
+def mhexagon_hlx : Flag<["-"], "mhlx">, Group<m_hexagon_Features_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable Hexagon eLementwise eXtensions">;
+def mno_hexagon_hlx : Flag<["-"], "mno-hlx">, Group<m_hexagon_Features_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable Hexagon eLementwise eXtensions">;
 
 // SPARC feature flags
 let Flags = [TargetSpecific] in {
@@ -8187,6 +8193,10 @@ def reloc_section_sym : Joined<["--"], "reloc-section-sym=">,
   NormalizedValuesScope<"llvm::RelocSectionSymType">,
   NormalizedValues<["All", "Internal", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"RelocSectionSym">, "All">;
+def grelocatable_dwarf : Flag<["-"], "grelocatable-dwarf">,
+  HelpText<"Relocate offsets from one DWARF section into another in Mach-O "
+           "object files">,
+  MarshallingInfoFlag<CodeGenOpts<"MachORelocatableDwarf">>;
 // The leading 'g' is misleading. This is an unwind tables option, not
 // a debug option. But uses this name for gnu compatibility.
 def gsframe : Flag<["--"], "gsframe">,

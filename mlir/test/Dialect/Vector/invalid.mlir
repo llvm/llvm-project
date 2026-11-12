@@ -961,6 +961,16 @@ func.func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>
 
 // -----
 
+func.func @contraction_scalar_acc_0d_result(%arg0: vector<10xf32>, %arg1: vector<10xf32>, %acc: f32) {
+  // expected-error@+1 {{expected same accumulator and result type}}
+  %0 = "vector.contract"(%arg0, %arg1, %acc) <{
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = [#vector.iterator_type<reduction>],
+    kind = #vector.kind<add>}> : (vector<10xf32>, vector<10xf32>, f32) -> vector<f32>
+}
+
+// -----
+
 #contraction_accesses = [
   affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
   affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
@@ -2093,6 +2103,26 @@ func.func @vector_mask_non_empty_mixed_return(%t: tensor<?xf32>, %idx: index,
   } : vector<16xi1> -> (vector<16xf32>, vector<16xf32>)
 
   return %0#0, %0#1 : vector<16xf32>, vector<16xf32>
+}
+
+// -----
+
+func.func @vector_mask_already_masked_transfer_read(%base: memref<?xf32>, %c0: index, %pad: f32, %m: vector<4xi1>) -> vector<4xf32> {
+  // expected-error@+1 {{doesn't expect a mask operand for the masked transfer operation}}
+  %0 = vector.mask %m {
+    vector.transfer_read %base[%c0], %pad, %m {in_bounds = [true]} : memref<?xf32>, vector<4xf32>
+  } : vector<4xi1> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @vector_mask_already_masked_transfer_write(%base: memref<?xf32>, %c0: index, %v: vector<4xf32>, %m: vector<4xi1>) {
+  // expected-error@+1 {{doesn't expect a mask operand for the masked transfer operation}}
+  vector.mask %m {
+    vector.transfer_write %v, %base[%c0], %m {in_bounds = [true]} : vector<4xf32>, memref<?xf32>
+  } : vector<4xi1>
+  return
 }
 
 // -----

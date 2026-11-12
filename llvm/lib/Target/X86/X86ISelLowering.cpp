@@ -47963,14 +47963,14 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
       ExtractVT != MVT::i64)
     return SDValue();
 
-  EVT VT = Extract->getOperand(0).getValueType();
-  if (!isPowerOf2_32(VT.getVectorNumElements()))
-    return SDValue();
-
   // Match shuffle + add pyramid.
   ISD::NodeType BinOp;
   SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
   if (!Root)
+    return SDValue();
+
+  EVT RootVT = Root.getValueType();
+  if (!isPowerOf2_32(RootVT.getVectorNumElements()))
     return SDValue();
 
   // The operand is expected to be zero extended from i8.
@@ -48007,7 +48007,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
 
   // If the original vector was wider than 8 elements, sum over the results
   // in the SAD vector.
-  unsigned Stages = Log2_32(VT.getVectorNumElements());
+  unsigned Stages = Log2_32(RootVT.getVectorNumElements());
   EVT SadVT = SAD.getValueType();
   if (Stages > 3) {
     unsigned SadElems = SadVT.getVectorNumElements();

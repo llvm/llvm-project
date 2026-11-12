@@ -169,7 +169,13 @@ add_header_library(
   HDRS
     alloc-checker.h
   DEPENDS
+    libc.hdr.func.aligned_alloc
+    libc.hdr.func.malloc
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.CPP.new
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.os
 )
 
 add_header_library(
