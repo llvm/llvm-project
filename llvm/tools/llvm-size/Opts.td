@@ -9,11 +9,11 @@ multiclass Eq<string name, string help> {
   def : Separate<["--"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
 }
 
-def common : FF<"common", "Print common symbols in the ELF file. When using Berkeley format, this is added to bss">;
+def common : FF<"common", "Print common symbols in the ELF file. When using Berkeley or GNU format, this is added to bss">;
 defm format : Eq<"format", "Specify output format">;
 def help : FF<"help", "Display this help">;
 defm radix : Eq<"radix", "Print size in radix">;
-def totals : FF<"totals", "Print totals of all objects - Berkeley format only">;
+def totals : FF<"totals", "Print totals of all objects - Berkeley and GNU formats">;
 def version : FF<"version", "Display the version">;
 
 // Mach-O specific options.
@@ -27,6 +27,7 @@ def exclude_pagezero
 
 def : F<"A", "Alias for --format">, Alias<format_EQ>, AliasArgs<["sysv"]>;
 def : F<"B", "Alias for --format">, Alias<format_EQ>, AliasArgs<["berkeley"]>;
+def : F<"G", "Alias for --format">, Alias<format_EQ>, AliasArgs<["gnu"]>;
 def : F<"d", "Alias for --radix=10">, Alias<radix_EQ>, AliasArgs<["10"]>;
 def : F<"h", "Alias for --help">, Alias<help>;
 def : F<"m", "Alias for --format">, Alias<format_EQ>, AliasArgs<["darwin"]>;

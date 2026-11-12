@@ -1,11 +1,14 @@
 ## Check that with the common switch common symbols are added to bss (Berkeley
-## output) or shown as *COM* (sysv output). Otherwise their size is ignored.
+## and GNU output) or shown as *COM* (sysv output). Otherwise their size is
+## ignored.
 
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-size -A --common %t.o | FileCheck --check-prefix=SYSV %s
 # RUN: llvm-size -B --common %t.o | FileCheck --check-prefix=BSD %s
+# RUN: llvm-size -G --common %t.o | FileCheck --check-prefix=GNU %s
 # RUN: llvm-size -A %t.o | FileCheck --check-prefix=SYSVNOCOMM %s
 # RUN: llvm-size -B %t.o | FileCheck --check-prefix=BSDNOCOMM %s
+# RUN: llvm-size -G %t.o | FileCheck --check-prefix=GNUNOCOMM %s
 
 # SYSV:      {{.*}}.o  :
 # SYSV-NEXT: section     size   addr
@@ -23,6 +26,12 @@
 
 # BSDNOCOMM:      text    data     bss     dec     hex filename
 # BSDNOCOMM-NEXT:    0       0       0       0       0 {{.*}}.o
+
+# GNU:           text       data        bss      total filename
+# GNU-NEXT:         0          0          8          8 {{.*}}.o
+
+# GNUNOCOMM:           text       data        bss      total filename
+# GNUNOCOMM-NEXT:         0          0          0          0 {{.*}}.o
 
 --- !ELF
 FileHeader:
