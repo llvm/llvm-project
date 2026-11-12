@@ -1,0 +1,47 @@
+## Show that for MH_DSYM files, MachOObjectFile::getSectionSize returns the
+## size from the section header even when the section's offset is past the
+## end of the file (as the DSYM may be smaller than the original object file).
+
+# RUN: yaml2obj %s -o %t.dsym
+# RUN: %python -c "import sys; f = open(sys.argv[1], 'r+b'); f.truncate(1024); f.close()" %t.dsym
+# RUN: llvm-objdump --section-headers %t.dsym | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT: Idx Name   Size     VMA              Type
+# CHECK-NEXT:   0 __text 00000100 0000000000000000 TEXT
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x0000000A
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          0x100
+    fileoff:         0
+    filesize:        0
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            0x100
+        offset:          0x2000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
