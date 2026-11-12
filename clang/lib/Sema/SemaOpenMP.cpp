@@ -11418,10 +11418,11 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     PrevEUB =
         SemaRef.ActOnFinishFullExpr(PrevEUB.get(), /*DiscardedValue=*/false);
 
-    // Build IV <= PrevUB or IV < PrevUB + 1 for unsigned IV to be used in
-    // parallel for is in combination with a distribute directive with
-    // schedule(static, 1)
-    Expr *BoundPrevUB = PrevUB.get();
+    // Build IV <= PrevUB (or IV < PrevUB + 1 for unsigned IV) for a parallel
+    // for combined with a distribute directive with schedule(static, 1). Use
+    // PrevUB converted to the loop upper-bound type to avoid widening IV or
+    // changing its signedness in the comparison.
+    Expr *BoundPrevUB = NewPrevUB.get();
     if (UseStrictCompare) {
       BoundPrevUB =
           SemaRef

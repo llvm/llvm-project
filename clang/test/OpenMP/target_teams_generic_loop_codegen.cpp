@@ -255,9 +255,9 @@ int foo() {
 // IR-GPU-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // IR-GPU:       omp.inner.for.cond:
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4, !llvm.access.group [[ACC_GRP7:![0-9]+]]
-// IR-GPU-NEXT:    [[CONV6:%.*]] = sext i32 [[TMP7]] to i64
 // IR-GPU-NEXT:    [[TMP8:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8, !llvm.access.group [[ACC_GRP7]]
-// IR-GPU-NEXT:    [[CMP:%.*]] = icmp ule i64 [[CONV6]], [[TMP8]]
+// IR-GPU-NEXT:    [[CONV6:%.*]] = trunc i64 [[TMP8]] to i32
+// IR-GPU-NEXT:    [[CMP:%.*]] = icmp sle i32 [[TMP7]], [[CONV6]]
 // IR-GPU-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // IR-GPU:       omp.inner.for.body:
 // IR-GPU-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4, !llvm.access.group [[ACC_GRP7]]
