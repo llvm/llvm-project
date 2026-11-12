@@ -2,9 +2,10 @@
 ; RUN: llc -O0 -mtriple=dxil-pc-shadermodel6.10-compute %s -o - | FileCheck %s
 ; RUN: llc -O2 -mtriple=dxil-pc-shadermodel6.10-compute %s -o - | FileCheck %s
 
-; CHECK-LABEL: main
 ; The test is using two instances of the debugBreak to make sure they will
 ; not get optimized away on -O2.
+
+; CHECK-LABEL: main
 ; CHECK: call void @dx.op.debugBreak(i32 343)
 ; CHECK: call void @dx.op.debugBreak(i32 343)
 
