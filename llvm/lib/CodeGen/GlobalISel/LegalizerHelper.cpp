@@ -7406,10 +7406,7 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
       B.buildMul(NarrowTy, Src1Regs[DstIdx], Src2Regs[DstIdx]).getReg(0);
   DstRegs[DstIdx] = FactorSum;
 
-  Register CarrySumPrevDstIdx;
-  SmallVector<Register, 4> Factors;
-
-  for (DstIdx = 1; DstIdx < DstParts; DstIdx++) {
+  auto CollectFactors = [&](SmallVectorImpl<Register> &Factors) {
     // Collect high parts of muls from previous DstIdx.
     for (unsigned i = DstIdx < SrcParts ? 0 : DstIdx - SrcParts;
          i <= std::min(DstIdx - 1, SrcParts - 1); ++i) {
@@ -7428,6 +7425,53 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
           B.buildMul(NarrowTy, Src1Regs[DstIdx - i], Src2Regs[i]);
       Factors.push_back(Mul.getReg(0));
     }
+  };
+
+  const LLT CarryTy = LLT::integer(1);
+  if (LI.isLegal({TargetOpcode::G_UADDE, {NarrowTy, CarryTy}})) {
+    SmallVector<SmallVector<Register, 4>, 4> ColumnFactors(DstParts);
+    unsigned MaxFactors = 0;
+    for (DstIdx = 1; DstIdx < DstParts; ++DstIdx) {
+      SmallVectorImpl<Register> &Column = ColumnFactors[DstIdx];
+      CollectFactors(Column);
+      // The first factor is already stored.
+      DstRegs[DstIdx] = Column[0];
+      MaxFactors = std::max<unsigned>(MaxFactors, Column.size());
+    }
+
+    Register Zero;
+    for (unsigned K = 1; K < MaxFactors; ++K) {
+      Register Carry;
+      for (DstIdx = 1; DstIdx < DstParts; ++DstIdx) {
+        ArrayRef<Register> Column = ColumnFactors[DstIdx];
+        bool HasFactor = K < Column.size();
+
+        if (!HasFactor && !Carry)
+          continue;
+        // Supply zero when only a carry-in remains.
+        if (!HasFactor && !Zero)
+          Zero = B.buildConstant(NarrowTy, 0).getReg(0);
+
+        Register RHS = HasFactor ? Column[K] : Zero;
+        if (!Carry && DstIdx == DstParts - 1) {
+          DstRegs[DstIdx] =
+              B.buildAdd(NarrowTy, DstRegs[DstIdx], RHS).getReg(0);
+          continue;
+        }
+        MachineInstrBuilder Add =
+            Carry ? B.buildUAdde(NarrowTy, CarryTy, DstRegs[DstIdx], RHS, Carry)
+                  : B.buildUAddo(NarrowTy, CarryTy, DstRegs[DstIdx], RHS);
+        DstRegs[DstIdx] = Add.getReg(0);
+        Carry = Add.getReg(1);
+      }
+    }
+    return;
+  }
+
+  Register CarrySumPrevDstIdx;
+  SmallVector<Register, 4> Factors;
+  for (DstIdx = 1; DstIdx < DstParts; ++DstIdx) {
+    CollectFactors(Factors);
     // Add CarrySum from additions calculated for previous DstIdx.
     if (DstIdx != 1) {
       Factors.push_back(CarrySumPrevDstIdx);

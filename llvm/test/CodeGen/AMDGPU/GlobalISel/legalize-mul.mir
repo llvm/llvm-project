@@ -622,22 +622,18 @@ body: |
     ; GFX6-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[UV]], [[UV3]]
     ; GFX6-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV4]]
     ; GFX6-NEXT: [[MUL2:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV3]]
-    ; GFX6-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[UMULH]], [[MUL1]]
-    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO1]](i1)
-    ; GFX6-NEXT: [[UADDO2:%[0-9]+]]:_(s32), [[UADDO3:%[0-9]+]]:_(i1) = G_UADDO [[UADDO]], [[MUL2]]
-    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO3]](i1)
-    ; GFX6-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[ZEXT1]]
     ; GFX6-NEXT: [[UMULH1:%[0-9]+]]:_(s32) = G_UMULH [[UV1]], [[UV3]]
     ; GFX6-NEXT: [[UMULH2:%[0-9]+]]:_(s32) = G_UMULH [[UV]], [[UV4]]
     ; GFX6-NEXT: [[MUL3:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV5]]
     ; GFX6-NEXT: [[MUL4:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV4]]
     ; GFX6-NEXT: [[MUL5:%[0-9]+]]:_(s32) = G_MUL [[UV2]], [[UV3]]
-    ; GFX6-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[UMULH1]], [[UMULH2]]
-    ; GFX6-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[MUL3]]
-    ; GFX6-NEXT: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[ADD2]], [[MUL4]]
-    ; GFX6-NEXT: [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[ADD3]], [[MUL5]]
-    ; GFX6-NEXT: [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[ADD4]], [[ADD]]
-    ; GFX6-NEXT: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[MUL]](s32), [[UADDO2]](s32), [[ADD5]](s32)
+    ; GFX6-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(i1) = G_UADDO [[UMULH]], [[MUL1]]
+    ; GFX6-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(i1) = G_UADDE [[UMULH1]], [[UMULH2]], [[UADDO1]]
+    ; GFX6-NEXT: [[UADDO2:%[0-9]+]]:_(s32), [[UADDO3:%[0-9]+]]:_(i1) = G_UADDO [[UADDO]], [[MUL2]]
+    ; GFX6-NEXT: [[UADDE2:%[0-9]+]]:_(s32), [[UADDE3:%[0-9]+]]:_(i1) = G_UADDE [[UADDE]], [[MUL3]], [[UADDO3]]
+    ; GFX6-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[UADDE2]], [[MUL4]]
+    ; GFX6-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[MUL5]]
+    ; GFX6-NEXT: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[MUL]](s32), [[UADDO2]](s32), [[ADD1]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](s96)
     ;
     ; GFX89-LABEL: name: test_mul_s96
