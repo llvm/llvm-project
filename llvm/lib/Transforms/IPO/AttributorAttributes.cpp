@@ -3670,7 +3670,7 @@ struct AAIntraFnReachabilityFunction final
 
 private:
   /// The blocks reached from a block through assumed live edges and without
-  /// entering an excluded block, as explored by isReachableImpl.
+  /// entering an excluded block.
   struct Exploration {
     /// The successors of the explored blocks through assumed live edges.
     SmallPtrSet<const BasicBlock *, 16> Successors;
@@ -3682,13 +3682,16 @@ private:
     bool UsedExclusionSet = false;
   };
 
+  /// Return the exploration from \p FromBB that does not enter a block of
+  /// \p ExclusionBlocks, and compute it if needed.
   const Exploration &
   getExploration(Attributor &A, const BasicBlock *FromBB,
                  const AA::InstExclusionSetTy *ExclusionSet,
                  const SmallPtrSetImpl<const BasicBlock *> &ExclusionBlocks,
                  const AAIsDead *LivenessAA) {
+    // Without liveness, all edges are live, as for an invalid AAIsDead.
     uint64_t LivenessVersion =
-        LivenessAA ? LivenessAA->getEdgeLivenessVersion() : 0;
+        LivenessAA ? LivenessAA->getEdgeLivenessVersion() : UINT64_MAX;
     if (LivenessVersion != ExplorationsLivenessVersion) {
       Explorations.clear();
       ExplorationsLivenessVersion = LivenessVersion;
@@ -3710,25 +3713,28 @@ private:
       const BasicBlock *BB = Worklist.pop_back_val();
       if (!Visited.insert(BB).second)
         continue;
+      bool HasLiveSuccessor = false;
       for (const BasicBlock *SuccBB : successors(BB)) {
         if (LivenessAA && LivenessAA->isEdgeDead(BB, SuccBB)) {
           E.DeadEdges.push_back({BB, SuccBB});
           continue;
         }
         E.Successors.insert(SuccBB);
-        E.WithLiveSuccessors.insert(BB);
-        if (ExclusionBlocks.count(SuccBB)) {
+        HasLiveSuccessor = true;
+        if (ExclusionBlocks.contains(SuccBB)) {
           E.UsedExclusionSet = true;
           continue;
         }
         Worklist.push_back(SuccBB);
       }
+      if (HasLiveSuccessor)
+        E.WithLiveSuccessors.insert(BB);
     }
     return E;
   }
 
   /// Return true if a block of \p E with a live successor edge dominates
-  /// \p ToBB, which is how isReachableImpl short-circuits the exploration.
+  /// \p ToBB. isReachableImpl treats \p ToBB as reachable then.
   bool isDominatedByAny(const Exploration &E, const BasicBlock *ToBB) const {
     // An unreachable block is dominated by every block.
     if (!DT->isReachableFromEntry(ToBB))
