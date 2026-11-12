@@ -389,13 +389,11 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // For Load/Store return true if atomic ordering is stronger than AO,
   // for other instruction just true if it can read or write to memory.
   auto isComplexForReordering = [](Instruction * I, AtomicOrdering AO)->bool {
-    if (I->isVolatile())
-      return true;
     if (auto *LI = dyn_cast<LoadInst>(I))
-      return isStrongerThan(LI->getOrdering(), AO);
+      return LI->isVolatile() || isStrongerThan(LI->getOrdering(), AO);
     if (auto *SI = dyn_cast<StoreInst>(I))
-      return isStrongerThan(SI->getOrdering(), AO);
-    return I->mayReadOrWriteMemory();
+      return SI->isVolatile() || isStrongerThan(SI->getOrdering(), AO);
+    return I->isVolatile() || I->mayReadOrWriteMemory();
   };
 
   // Walk backwards through the basic block, looking for dependencies.
