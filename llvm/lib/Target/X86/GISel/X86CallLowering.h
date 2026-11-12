@@ -40,6 +40,10 @@ public:
   bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
                       SmallVectorImpl<BaseArgInfo> &Outs,
                       bool IsVarArg) const override;
+
+private:
+  void saveVarArgRegistersSysV(MachineIRBuilder &MIRBuilder,
+                               int FrameIdx) const;
 };
 
 } // end namespace llvm
