@@ -20,7 +20,7 @@ define void @test_basic() #0 {
 ; THUMB-NEXT:    mov r5, #0
 ; THUMB-NEXT:    push {lr}
 ; THUMB-NEXT:    bl __morestack
-; THUMB-NEXT:    ldr lr, [sp], #4
+; THUMB-NEXT:    pop.w {lr}
 ; THUMB-NEXT:    pop {r4, r5}
 ; THUMB-NEXT:    bx lr
 ; THUMB-NEXT:  .LBB0_2:
@@ -87,7 +87,7 @@ define void @test_large() #0 {
 ; THUMB-NEXT:    mov     r5, #0
 ; THUMB-NEXT:    push    {lr}
 ; THUMB-NEXT:    bl      __morestack
-; THUMB-NEXT:    ldr     lr, [sp], #4
+; THUMB-NEXT:    pop.w {lr}
 ; THUMB-NEXT:    pop     {r4, r5}
 ; THUMB-NEXT:    bx      lr
 
@@ -139,7 +139,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; THUMB-NEXT:    mov     r5, #0
 ; THUMB-NEXT:    push    {lr}
 ; THUMB-NEXT:    bl      __morestack
-; THUMB-NEXT:    ldr     lr, [sp], #4
+; THUMB-NEXT:    pop.w {lr}
 ; THUMB-NEXT:    pop     {r4, r5}
 ; THUMB-NEXT:    bx      lr
 

@@ -105,7 +105,7 @@ define i32 @foo(i32 %a, i32 %b) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %true
 ; THUMB-ENABLE-NEXT:    push {r7, lr}
 ; THUMB-ENABLE-NEXT:    mov r7, sp
-; THUMB-ENABLE-NEXT:    str r0, [sp, #-4]!
+; THUMB-ENABLE-NEXT:    push.w {r0}
 ; THUMB-ENABLE-NEXT:    mov r1, sp
 ; THUMB-ENABLE-NEXT:    movs r0, #0
 ; THUMB-ENABLE-NEXT:    bl _doSomething

@@ -6,9 +6,9 @@ define i32 @test_leaf(i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %x) "sign-
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
 ; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    push.w {r12}
 ; CHECK-NEXT:    ldr r0, [sp, #4]
-; CHECK-NEXT:    ldr r12, [sp], #4
+; CHECK-NEXT:    pop.w {r12}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:

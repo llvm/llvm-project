@@ -30,9 +30,9 @@ define void @f(i32 %val) optsize minsize {
 ; CHECK-NEXT:  LBB0_5: @ %three
 ; CHECK-NEXT:    movs r0, #78
 ; CHECK-NEXT:  LBB0_6: @ %common.ret
-; CHECK-NEXT:    str lr, [sp, #-4]!
+; CHECK-NEXT:    push.w {lr}
 ; CHECK-NEXT:    bl _g
-; CHECK-NEXT:    ldr lr, [sp], #4
+; CHECK-NEXT:    pop.w {lr}
 ; CHECK-NEXT:    bx lr
   switch i32 %val, label %def [
     i32 0, label %one

@@ -11,7 +11,7 @@ declare ptr @_Znwm()
 define void @func() {
 ; CHECK-LABEL: func:
 ; CHECK:       @ %bb.0: @ %bb14
-; CHECK-NEXT:    str lr, [sp, #-4]!
+; CHECK-NEXT:    push.w {lr}
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    movs r1, #4
 ; CHECK-NEXT:    str r0, [r1]
@@ -25,7 +25,7 @@ define void @func() {
 ; CHECK-NEXT:    movs r0, #8
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    str r1, [r1]
-; CHECK-NEXT:    ldr lr, [sp], #4
+; CHECK-NEXT:    pop.w {lr}
 ; CHECK-NEXT:    bx lr
 bb14:
   call void @llvm.memset.p0.i32(ptr null, i8 0, i32 12, i1 false)
