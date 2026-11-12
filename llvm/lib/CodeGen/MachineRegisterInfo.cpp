@@ -652,6 +652,8 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
     if (MF->getSubtarget().isRegisterReservedByUser(Regs[I]))
       MF->getRegInfo().disableCalleeSavedRegister(Regs[I]);
 
+  if (IsUpdatedCSRsInitialized)
+    return UpdatedCSRs.data();
   return Regs;
 }
 
