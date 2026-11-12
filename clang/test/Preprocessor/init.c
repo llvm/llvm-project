@@ -2915,7 +2915,7 @@
 // XTENSA: #define __ATOMIC_RELEASE 3
 // XTENSA: #define __ATOMIC_SEQ_CST 5
 // XTENSA: #define __BIGGEST_ALIGNMENT__ 4
-// XTENSA: #define __BITINT_MAXWIDTH__ 128
+// XTENSA-NOT: #define __BITINT_MAXWIDTH__
 // XTENSA: #define __BOOL_WIDTH__ 1
 // XTENSA: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // XTENSA: #define __CHAR16_TYPE__ unsigned short

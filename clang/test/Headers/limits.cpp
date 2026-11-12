@@ -10,6 +10,7 @@
 // Specifically test 16-bit int platforms.
 // RUN: %clang_cc1 -triple=avr -ffreestanding -fsyntax-only -verify -x c %s
 // RUN: %clang_cc1 -triple=avr -std=c++11 -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple=avr -std=c2x -ffreestanding -fsyntax-only -verify -x c %s
 
 // expected-no-diagnostics
 
@@ -184,8 +185,13 @@ _Static_assert(LLONG_WIDTH / CHAR_BIT == sizeof(signed long long));
 #if LLONG_WIDTH
 #endif
 
+#ifdef __BITINT_MAXWIDTH__
 _Static_assert(BITINT_MAXWIDTH >= ULLONG_WIDTH);
 #if BITINT_MAXWIDTH
+#endif
+#else
+/* Targets without _BitInt, such as AVR, have no maximum width. */
+int BITINT_MAXWIDTH;
 #endif
 #else
 /* None of these are defined. */

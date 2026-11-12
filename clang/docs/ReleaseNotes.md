@@ -826,6 +826,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Bug Fixes in This Version
 
+- `__BITINT_MAXWIDTH__`, and `BITINT_MAXWIDTH` in `<limits.h>`, are no longer
+  defined for targets that do not support `_BitInt`, such as AVR, MSP430 and
+  M68k, which reject the type.
 - Fixed an assertion failure when a token followed an `#embed` parameter whose
   expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
   (#GH212075)

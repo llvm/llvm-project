@@ -85,7 +85,9 @@
 #define ULLONG_WIDTH __LLONG_WIDTH__
 #define LLONG_WIDTH  __LLONG_WIDTH__
 
+#ifdef __BITINT_MAXWIDTH__
 #define BITINT_MAXWIDTH __BITINT_MAXWIDTH__
+#endif
 #endif
 
 #ifdef __CHAR_UNSIGNED__  /* -funsigned-char */

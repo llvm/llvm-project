@@ -1128,12 +1128,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__LONG_WIDTH__", Twine(TI.getLongWidth()));
   Builder.defineMacro("__LLONG_WIDTH__", Twine(TI.getLongLongWidth()));
 
-  size_t BitIntMaxWidth = TI.getMaxBitIntWidth();
-  assert(BitIntMaxWidth <= llvm::IntegerType::MAX_INT_BITS &&
-         "Target defined a max bit width larger than LLVM can support!");
-  assert(BitIntMaxWidth >= TI.getLongLongWidth() &&
-         "Target defined a max bit width smaller than the C standard allows!");
-  Builder.defineMacro("__BITINT_MAXWIDTH__", Twine(BitIntMaxWidth));
+  // Targets without _BitInt reject the type, so they have no maximum width.
+  if (TI.hasBitIntType()) {
+    size_t BitIntMaxWidth = TI.getMaxBitIntWidth();
+    assert(BitIntMaxWidth <= llvm::IntegerType::MAX_INT_BITS &&
+           "Target defined a max bit width larger than LLVM can support!");
+    assert(BitIntMaxWidth >= TI.getLongLongWidth() &&
+           "Target defined a max bit width smaller than the C standard "
+           "allows!");
+    Builder.defineMacro("__BITINT_MAXWIDTH__", Twine(BitIntMaxWidth));
+  }
 
   DefineTypeSize("__SCHAR_MAX__", TargetInfo::SignedChar, TI, Builder);
   DefineTypeSize("__SHRT_MAX__", TargetInfo::SignedShort, TI, Builder);
