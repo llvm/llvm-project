@@ -305,6 +305,8 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
   // Decompose the end of the comment.
   const unsigned CommentEndOffset =
       Comments.getCommentEndOffset(CommentBeforeDecl);
+  if (CommentEndOffset > LocDecomp.second)
+    return nullptr;
 
   // Get the corresponding buffer.
   bool Invalid = false;
@@ -541,8 +543,18 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
       if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
         continue;
 
+      const FileID DeclFile = SourceMgr.getDecomposedLoc(DeclLoc).first;
+      if (!DeclFile.isValid())
+        continue;
+
+      const auto *CommentsInDeclFile =
+          DeclFile == File ? CommentsInThisFile
+                           : Comments.getCommentsInFile(DeclFile);
+      if (!CommentsInDeclFile || CommentsInDeclFile->empty())
+        continue;
+
       if (RawComment *const DocComment =
-              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
+              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInDeclFile)) {
         cacheRawComment(D, *DocComment);
         comments::FullComment *FC = DocComment->parse(*this, PP, D);
         ParsedComments[D->getCanonicalDecl()] = FC;
@@ -9793,9 +9805,15 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::DeducedTemplateSpecialization:
     return;
 
+  // An overflow behavior type has the representation of its underlying type.
+  case Type::OverflowBehavior:
+    getObjCEncodingForTypeImpl(
+        cast<OverflowBehaviorType>(CT)->getUnderlyingType(), S, Options, FD,
+        NotEncodedT);
+    return;
+
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
-  case Type::OverflowBehavior:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:

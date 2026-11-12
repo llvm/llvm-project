@@ -3,7 +3,6 @@
 
 ---
 name:            no_rbx_dead_eflags
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi, $rax, $rcx, $rdx
@@ -24,7 +23,6 @@ body:             |
 
 ---
 name:            no_rbx_live_eflags
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi, $rax, $rcx, $rdx
@@ -49,7 +47,6 @@ body:             |
 
 ---
 name:            save_rbx_dead_eflags
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    64
 stack:
@@ -75,7 +72,6 @@ body:             |
 
 ---
 name:            save_rbx_live_eflags
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    64
 stack:

@@ -89,7 +89,6 @@
 ---
 name:            proofnumberscan
 alignment:       16
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: addr64bit }
   - { id: 1, class: addr64bit }

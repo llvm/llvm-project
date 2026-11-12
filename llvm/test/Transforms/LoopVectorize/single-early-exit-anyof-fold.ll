@@ -14,7 +14,7 @@ define i1 @find_nan(ptr dereferenceable(32) align(16) %a) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]

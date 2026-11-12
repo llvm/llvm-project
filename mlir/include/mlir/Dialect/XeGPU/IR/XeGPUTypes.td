@@ -39,6 +39,7 @@ def XeGPU_LaneShuffleType
 class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
                    string baseCppClass = "::mlir::Type">
     : TypeDef<XeGPU_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/XeGPU/IR/XeGPU.h"];
   let mnemonic = typeMnemonic;
 }
 

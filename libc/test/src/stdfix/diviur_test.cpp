@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DiviFxTest.h"
+#include "test/src/stdfix/DiviFxTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/stdfix/diviur.h"
 
 LIST_DIVIFX_TESTS(ur, unsigned int, unsigned fract, LIBC_NAMESPACE::diviur);

@@ -26,7 +26,6 @@
 ...
 ---
 name:            lwmi
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -49,7 +48,6 @@ body:             |
 ...
 ---
 name:            lwmi_x0
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -67,7 +65,6 @@ body:             |
 ...
 ---
 name:            lwmi_nonconsecutive
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -87,7 +84,6 @@ body:             |
 ...
 ---
 name:            lwmi_misaligned
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -105,12 +101,11 @@ body:             |
 ...
 ---
 name:            swmi
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $x10
+    liveins: $x10, $x28, $x29, $x30, $x31
     ; CHECK-LABEL: name: swmi
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x10, $x28, $x29, $x30, $x31
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: QC_SWMI killed $x28, $x10, 4, 0, implicit killed $x29, implicit $x30, implicit killed $x31 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
@@ -122,12 +117,11 @@ body:             |
 ...
 ---
 name:            swmi_x0
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $x10
+    liveins: $x1, $x10
     ; CHECK-LABEL: name: swmi_x0
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x1, $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
     ; CHECK-NEXT: QC_SWMI $x1, $x10, 3, 4, implicit $x2, implicit $x3 :: (store (s32))
@@ -140,12 +134,11 @@ body:             |
 ...
 ---
 name:            swmi_nonconsecutive
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $x10
+    liveins: $x10, $x28, $x29, $x30, $x31
     ; CHECK-LABEL: name: swmi_nonconsecutive
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x10, $x28, $x29, $x30, $x31
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: QC_SWMI $x28, $x10, 2, 0, implicit killed $x29 :: (store (s32))
     ; CHECK-NEXT: $x11 = ADDI $x28, 1
@@ -162,12 +155,11 @@ body:             |
 ...
 ---
 name:            swmi_misaligned
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $x10
+    liveins: $x1, $x10
     ; CHECK-LABEL: name: swmi_misaligned
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x1, $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
     ; CHECK-NEXT: SW $x1, $x10, 4 :: (store (s32))
@@ -182,7 +174,6 @@ body:             |
 ...
 ---
 name:            setwmi
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10
@@ -199,7 +190,6 @@ body:             |
 ...
 ---
 name:            setwmi_no_pair_move_insn_back
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x1, $x2

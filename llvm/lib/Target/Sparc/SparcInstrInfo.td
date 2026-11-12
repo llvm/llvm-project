@@ -403,6 +403,11 @@ def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg>;
 
+def SPreadcyclecounter
+    : SDNode<"SPISD::READ_CYCLE_COUNTER",
+             SDTypeProfile<2, 0, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
+             [SDNPHasChain, SDNPSideEffect]>;
+
 // GPRC, CHAIN = LOAD_BIG/LITTLE CHAIN, Ptr, Type
 // These are endianness-adjusted load instructions. They load the low "Type"
 // bits of the memory pointed by Ptr, possibly byte swapping it as necessary
@@ -643,6 +648,11 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 
 // Full memory barrier for V8.
 def V8BAR : Pseudo<(outs), (ins), "!V8BAR", []>, Requires<[HasNoV9]>;
+
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
+def ReadCycleCounter
+    : Pseudo<(outs IntRegs:$lo, IntRegs:$hi), (ins), "",
+             [(set IntRegs:$lo, IntRegs:$hi, (SPreadcyclecounter))]>;
 
 // GETPCX for PIC
 let Defs = [O7] in {

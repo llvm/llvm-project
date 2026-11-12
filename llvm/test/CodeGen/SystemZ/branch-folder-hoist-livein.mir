@@ -14,7 +14,6 @@
 ...
 ---
 name:            f1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: f1
   ; CHECK: bb.0:
