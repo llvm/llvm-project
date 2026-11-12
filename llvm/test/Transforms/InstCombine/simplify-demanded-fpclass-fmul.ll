@@ -124,7 +124,7 @@ define nofpclass(inf norm sub zero snan) float @ret_only_qnan_results_square(flo
 define nofpclass(inf norm sub zero qnan) float @ret_only_snan_results_square(float noundef %x) {
 ; CHECK-LABEL: define nofpclass(qnan inf zero sub norm) float @ret_only_snan_results_square(
 ; CHECK-SAME: float noundef [[X:%.*]]) {
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul float %x, %x
@@ -1590,7 +1590,7 @@ define nofpclass(qnan zero sub norm) float @ret__snan_inf__fmul_square__no_deman
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[QNAN:%.*]] = call noundef float @returns_qnan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[QNAN]], float [[UNKNOWN]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %qnan = call noundef float @returns_qnan()
@@ -1604,7 +1604,7 @@ define nofpclass(pinf) float @ret__no_pinf__fmul_square__no_demand_inf(i1 nounde
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[INF:%.*]] = call noundef float @returns_inf()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[INF]], float [[UNKNOWN]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %inf = call noundef float @returns_inf()
@@ -1617,7 +1617,9 @@ define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fm
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fmul_square__no_demand_norm(
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[NORM:%.*]] = call noundef float @returns_norm()
-; CHECK-NEXT:    ret float +qnan
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
 ;
   %norm = call noundef float @returns_norm()
   %select = select i1 %cond, float %norm, float %unknown
@@ -1629,7 +1631,9 @@ define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fm
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fmul_square__no_demand_zero(
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[ZERO:%.*]] = call noundef float @returns_zero()
-; CHECK-NEXT:    ret float +qnan
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ZERO]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
 ;
   %zero = call noundef float @returns_zero()
   %select = select i1 %cond, float %zero, float %unknown
@@ -1656,7 +1660,7 @@ define nofpclass(pzero) float @ret__no_pzero__fmul_square__no_demand_sub(i1 noun
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = call noundef float @returns_sub()
@@ -1670,7 +1674,7 @@ define nofpclass(pzero) float @ret__no_pzero__fmul_square_nsz__no_demand_sub(i1 
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = call noundef float @returns_sub()
@@ -1698,7 +1702,7 @@ define nofpclass(zero) float @ret__no_zero__fmul_square_nsz__no_demand_sub__ieee
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = call noundef float @returns_sub()
@@ -1712,7 +1716,7 @@ define nofpclass(pzero) float @ret__no_pzero__fmul_square_nsz__no_demand_sub__dy
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[UNKNOWN]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %sub = call noundef float @returns_sub()

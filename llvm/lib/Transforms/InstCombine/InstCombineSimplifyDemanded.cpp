@@ -2590,24 +2590,26 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return nullptr;
   }
   case Instruction::FMul: {
-    KnownFPClass KnownLHS, KnownRHS;
-
     Value *X = I->getOperand(0);
     Value *Y = I->getOperand(1);
 
     Type *EltTy = VTy->getScalarType();
     DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
-    FPClassTest SrcDemandedMask =
-        KnownFPClass::inverse_fmul(DemandedMask, Mode).getKnownFPClasses();
-
     if (X == Y &&
         isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CtxI, SQ.DT, Depth + 1)) {
-      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, SQ,
+      KnownFPClass KnownSrc;
+      const bool HasNSZ = FMF.noSignedZeros();
+      FPClassTest SrcDemandedMask =
+          KnownFPClass::inverse_square(
+              DemandedMask, RoundingMode::NearestTiesToEven, Mode, HasNSZ)
+              .getKnownFPClasses();
+
+      if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, SQ,
                                   Depth + 1))
         return I;
 
-      Known = KnownFPClass::square(KnownLHS, Mode);
+      Known = KnownFPClass::square(KnownSrc, Mode);
       Known.knownNot(~DemandedMask);
 
       if (Constant *Folded = getFPClassConstant(VTy, Known.getKnownFPClasses(),
@@ -2615,9 +2617,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return Folded;
 
       if (Known.isKnownAlways(fcPosZero | fcPosInf | fcNan) &&
-          KnownLHS.isKnownNever(fcSubnormal | fcNormal)) {
+          KnownSrc.isKnownNever(fcSubnormal | fcNormal)) {
         // We can skip the fabs if the source was already known positive.
-        if (KnownLHS.isKnownAlways(fcPositive))
+        if (KnownSrc.isKnownAlways(fcPositive))
           return X;
 
         // => fabs(x), in case this was a -inf or -0.
@@ -2631,6 +2633,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       return nullptr;
     }
+
+    KnownFPClass KnownLHS, KnownRHS;
+
+    FPClassTest SrcDemandedMask =
+        KnownFPClass::inverse_fmul(DemandedMask, Mode).getKnownFPClasses();
 
     if (SimplifyDemandedFPClass(I, 1, SrcDemandedMask, KnownRHS, SQ,
                                 Depth + 1) ||

@@ -687,6 +687,12 @@ public:
   LLVM_ABI static KnownFPClass inverse_fmul(const KnownFPClass &Output,
                                             DenormalMode Mode);
 
+  /// Computes the possible inputs for fmul(x, x) from the result.
+  LLVM_ABI static KnownFPClass inverse_square(const KnownFPClass &Output,
+                                              RoundingMode RM,
+                                              DenormalMode Mode,
+                                              bool MayBeNSZ = true);
+
   /// Computes the possible inputs for fdiv from the result assuming that both
   /// inputs are unknown and uncorrelated.
   LLVM_ABI static std::pair<KnownFPClass, KnownFPClass>
