@@ -8807,7 +8807,8 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
 
   llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
       genMapInfoCB, varType, mapperFuncName, customMapperCB,
-      /*PreserveMemberOfFlags=*/true);
+      /*PreserveMemberOfFlags=*/true, /*PropagatePresentToPointeeStorage=*/true,
+      /*PropagatePresentToNonPointeeStorage=*/true);
   if (!newFn)
     return newFn.takeError();
   if ([[maybe_unused]] llvm::Function *mappedFunc =

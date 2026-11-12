@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxBitsTest.h"
+#include "test/src/stdfix/FxBitsTest.h"
+
 #include "src/stdfix/lrbits.h"
 
 LIST_FXBITS_TEST(lr, long fract, int_lr_t, LIBC_NAMESPACE::lrbits);

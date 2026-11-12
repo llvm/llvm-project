@@ -7324,6 +7324,7 @@ bool llvm::UpgradeModuleFlags(Module &M) {
     return Changed;
 
   bool HasObjCFlag = false, HasClassProperties = false;
+  bool HasClassROSigning = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;
@@ -7350,6 +7351,8 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       HasObjCFlag = true;
     if (ID->getString() == "Objective-C Class Properties")
       HasClassProperties = true;
+    if (ID->getString() == "Objective-C Enforce ClassRO Pointer Signing")
+      HasClassROSigning = true;
     // Upgrade PIC from Error/Max to Min.
     if (ID->getString() == "PIC Level") {
       if (auto *Behavior =
@@ -7473,6 +7476,16 @@ bool llvm::UpgradeModuleFlags(Module &M) {
   if (HasObjCFlag && !HasClassProperties) {
     M.addModuleFlag(llvm::Module::Override, "Objective-C Class Properties",
                     (uint32_t)0);
+    Changed = true;
+  }
+
+  // Likewise, ObjC bitcode from before "Objective-C Enforce ClassRO Pointer
+  // Signing" was added does not sign class_ro_t pointers. Give it the flag with
+  // value 0, so that linking it with bitcode that signs them does not set
+  // SignedClassRO.
+  if (HasObjCFlag && !HasClassROSigning) {
+    M.addModuleFlag(Module::Override,
+                    "Objective-C Enforce ClassRO Pointer Signing", (uint32_t)0);
     Changed = true;
   }
 
