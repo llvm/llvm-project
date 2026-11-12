@@ -199,7 +199,7 @@
 ; M68K-NEXT: declare double @__muldf3(double, double)
 ; M68K-NEXT: declare i64 @__muldi3(i64, i64)
 ; M68K-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; M68K-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; M68K-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 2 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; M68K-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; M68K-NEXT: declare float @__mulsf3(float, float)
 ; M68K-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -415,8 +415,9 @@
 ; M68K-NEXT: declare float @tgammaf(float)
 ; M68K-NEXT: declare double @trunc(double)
 ; M68K-NEXT: declare float @truncf(float)
+; M68K-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; M68K-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; M68K-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; M68K-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; M68K-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; M68K-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; M68K-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; M68K-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; M68K-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

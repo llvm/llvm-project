@@ -256,7 +256,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @__muldf3(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__muldi3(i64, i64)
 ; SJLJ-NEXT: declare arm_aapcscc signext i16 @__mulhi3(i16 signext, i16 signext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__mulosi4(i32, i32, ptr)
+; SJLJ-NEXT: declare arm_aapcscc i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc signext i8 @__mulqi3(i8 signext, i8 signext)
 ; SJLJ-NEXT: declare arm_aapcscc float @__mulsf3(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__mulsi3(i32, i32)
@@ -474,10 +474,11 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @trunc(double)
 ; SJLJ-NEXT: declare arm_aapcscc float @truncf(float)
 ; SJLJ-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; SJLJ-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; SJLJ-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; DWARF: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
@@ -729,7 +730,7 @@
 ; DWARF-NEXT: declare arm_aapcscc double @__muldf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__muldi3(i64, i64)
 ; DWARF-NEXT: declare arm_aapcscc signext i16 @__mulhi3(i16 signext, i16 signext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__mulosi4(i32, i32, ptr)
+; DWARF-NEXT: declare arm_aapcscc i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc signext i8 @__mulqi3(i8 signext, i8 signext)
 ; DWARF-NEXT: declare arm_aapcscc float @__mulsf3(float, float)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__mulsi3(i32, i32)
@@ -947,8 +948,9 @@
 ; DWARF-NEXT: declare arm_aapcscc double @trunc(double)
 ; DWARF-NEXT: declare arm_aapcscc float @truncf(float)
 ; DWARF-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; DWARF-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; DWARF-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

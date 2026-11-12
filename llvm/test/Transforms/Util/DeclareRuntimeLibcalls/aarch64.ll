@@ -323,7 +323,7 @@
 ; LINUX-NEXT: declare double @__muldf3(double, double)
 ; LINUX-NEXT: declare i64 @__muldi3(i64, i64)
 ; LINUX-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; LINUX-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; LINUX-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; LINUX-NEXT: declare float @__mulsf3(float, float)
 ; LINUX-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -595,10 +595,11 @@
 ; LINUX-NEXT: declare double @trunc(double)
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncl(fp128)
+; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; DARWIN: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
@@ -911,7 +912,7 @@
 ; DARWIN-NEXT: declare double @__muldf3(double, double)
 ; DARWIN-NEXT: declare i64 @__muldi3(i64, i64)
 ; DARWIN-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; DARWIN-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; DARWIN-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; DARWIN-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; DARWIN-NEXT: declare float @__mulsf3(float, float)
 ; DARWIN-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -1024,7 +1025,7 @@
 ; DARWIN-NEXT: declare double @atan2(double, double)
 ; DARWIN-NEXT: declare float @atan2f(float, float)
 ; DARWIN-NEXT: declare float @atanf(float)
-; DARWIN-NEXT: declare void @bzero(ptr, i64)
+; DARWIN-NEXT: declare void @bzero(ptr writeonly captures(none), i64) [[ARGMEM_WRITE_ATTRS]]
 ; DARWIN-NEXT: declare void @cabs(...)
 ; DARWIN-NEXT: declare void @cabsf(...)
 ; DARWIN-NEXT: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
@@ -1131,10 +1132,11 @@
 ; DARWIN-NEXT: declare float @tgammaf(float)
 ; DARWIN-NEXT: declare double @trunc(double)
 ; DARWIN-NEXT: declare float @truncf(float)
+; DARWIN-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; DARWIN-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; DARWIN-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; DARWIN-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; DARWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; DARWIN-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; DARWIN-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; DARWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; DARWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; WINMSVC: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
@@ -1448,7 +1450,7 @@
 ; WINMSVC-NEXT: declare double @__muldf3(double, double)
 ; WINMSVC-NEXT: declare i64 @__muldi3(i64, i64)
 ; WINMSVC-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; WINMSVC-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; WINMSVC-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; WINMSVC-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; WINMSVC-NEXT: declare float @__mulsf3(float, float)
 ; WINMSVC-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -1661,9 +1663,10 @@
 ; WINMSVC-NEXT: declare float @tgammaf(float)
 ; WINMSVC-NEXT: declare double @trunc(double)
 ; WINMSVC-NEXT: declare float @truncf(float)
-; WINMSVC-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; WINMSVC-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; WINMSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; WINMSVC-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; WINMSVC-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; WINMSVC-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; WINMSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; WINMSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; MINGW: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
@@ -1977,7 +1980,7 @@
 ; MINGW-NEXT: declare double @__muldf3(double, double)
 ; MINGW-NEXT: declare i64 @__muldi3(i64, i64)
 ; MINGW-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; MINGW-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; MINGW-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; MINGW-NEXT: declare float @__mulsf3(float, float)
 ; MINGW-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -2194,10 +2197,11 @@
 ; MINGW-NEXT: declare float @tgammaf(float)
 ; MINGW-NEXT: declare double @trunc(double)
 ; MINGW-NEXT: declare float @truncf(float)
+; MINGW-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; MINGW-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; MINGW-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; MINGW-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; MINGW-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; MINGW-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; ANDROID: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
@@ -2515,7 +2519,7 @@
 ; ANDROID-NEXT: declare double @__muldf3(double, double)
 ; ANDROID-NEXT: declare i64 @__muldi3(i64, i64)
 ; ANDROID-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; ANDROID-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; ANDROID-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; ANDROID-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; ANDROID-NEXT: declare float @__mulsf3(float, float)
 ; ANDROID-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -2788,8 +2792,9 @@
 ; ANDROID-NEXT: declare double @trunc(double)
 ; ANDROID-NEXT: declare float @truncf(float)
 ; ANDROID-NEXT: declare fp128 @truncl(fp128)
+; ANDROID-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; ANDROID-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; ANDROID-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; ANDROID-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; ANDROID-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; ANDROID-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; ANDROID-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; ANDROID-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; ANDROID-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
