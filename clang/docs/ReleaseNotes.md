@@ -933,6 +933,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Bug Fixes to Attribute Support
 
+- Fixed rejection of standard attributes following GNU attributes on
+  declarations inside namespaces. (#GH240537)
+
 - Fixed a crash when using a zero-argument call to an undeclared
   `__CFStringMakeConstantString` as a format string. (#GH225034)
 

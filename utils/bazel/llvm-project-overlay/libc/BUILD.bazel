@@ -2668,6 +2668,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_chown",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/chown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_fcntl_macros",
+        ":types_gid_t",
+        ":types_uid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_dup",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/dup.h"],
     target_compatible_with = select({
@@ -2812,6 +2830,23 @@ libc_support_library(
         ":__support_osutil_syscall",
         ":hdr_signal_macros",
         ":types_struct_epoll_event",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_fchown",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/fchown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
+        ":types_uid_t",
     ],
 )
 
@@ -3430,6 +3465,21 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":hdr_fcntl_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_geteuid",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/geteuid.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_uid_t",
     ],
 )
 
@@ -17540,7 +17590,7 @@ libc_support_library(
     srcs = ["src/stdlib/environ_internal.cpp"],
     hdrs = ["src/stdlib/environ_internal.h"],
     deps = [
-        ":__support_alloc_checker",
+        ":__support_checked_ptr",
         ":__support_common",
         ":__support_cpp_new",
         ":__support_cpp_optional",
@@ -18565,6 +18615,25 @@ libc_function(
 )
 
 libc_function(
+    name = "chown",
+    srcs = ["src/unistd/linux/chown.cpp"],
+    hdrs = ["src/unistd/chown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_chown",
+        ":errno",
+        ":types_gid_t",
+        ":types_uid_t",
+    ],
+)
+
+libc_function(
     name = "close",
     srcs = ["src/unistd/linux/close.cpp"],
     hdrs = ["src/unistd/close.h"],
@@ -18809,6 +18878,25 @@ libc_function(
 )
 
 libc_function(
+    name = "fchown",
+    srcs = ["src/unistd/linux/fchown.cpp"],
+    hdrs = ["src/unistd/fchown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_fchown",
+        ":errno",
+        ":types_gid_t",
+        ":types_uid_t",
+    ],
+)
+
+libc_function(
     name = "fsync",
     srcs = ["src/unistd/linux/fsync.cpp"],
     hdrs = ["src/unistd/fsync.h"],
@@ -18863,9 +18951,8 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_geteuid",
         ":hdr_unistd_macros",
-        ":types_size_t",
         ":types_uid_t",
     ],
 )

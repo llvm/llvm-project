@@ -3493,12 +3493,21 @@ void Fortran::lower::mapSymbolAttributes(
     }
   }
 
-  if (Fortran::evaluate::IsCoarray(sym)) {
-    assert(!Fortran::semantics::IsAllocatable(sym) &&
-           "must be a non-ALLOCATABLE coarray");
-    if (Fortran::semantics::IsSaved(sym) &&
-        (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
-         var.isModuleOrSubmoduleVariable()))
+  // A non-allocatable coarray is lowered as a global.
+  // Internal procedures that access it through host association instantiate
+  // the same global, but must not allocate it again.
+  bool isHostAssociated = false;
+  if (const Fortran::lower::pft::FunctionLikeUnit *funit =
+          converter.getCurrentFunctionUnit()) {
+    const Fortran::semantics::Scope &curScope = funit->getScope();
+    isHostAssociated = !var.isModuleOrSubmoduleVariable() &&
+                       Fortran::semantics::IsHostAssociated(sym, curScope);
+  }
+  if (Fortran::evaluate::IsCoarray(sym) && !isHostAssociated) {
+    assert(Fortran::semantics::IsSaved(sym) &&
+           "Non-ALLOCATABLE coarray variable must be save.");
+    if (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
+        var.isModuleOrSubmoduleVariable())
       Fortran::lower::genAllocateNonAllocatableSaveCoarray(converter, loc, sym,
                                                            addr);
     else
