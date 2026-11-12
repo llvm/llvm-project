@@ -6105,7 +6105,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Self)
       KnownLHS = KnownRHS;
 
-    auto* ConstFP = llvm::dyn_cast<llvm::ConstantFP>(Op->getOperand(1));
+    auto *ConstFP = llvm::dyn_cast<llvm::ConstantFP>(Op->getOperand(1));
 
     if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
         (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) ||
@@ -6130,9 +6130,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         }
 
         if (ConstFP && Opc == Instruction::FAdd) {
-            const auto& APF = ConstFP->getValueAPF();
-            Known = KnownFPClass::fadd(KnownLHS, APF, Mode);
-            break;
+          const auto &APF = ConstFP->getValueAPF();
+          Known = KnownFPClass::fadd(KnownLHS, APF, Mode);
+          break;
         }
 
         Known = Opc == Instruction::FAdd
