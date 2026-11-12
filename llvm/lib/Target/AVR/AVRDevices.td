@@ -234,7 +234,7 @@ def FamilyXMEGA : Family<"xmega",
                          [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
                           FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
                           FeatureMultiplication, FeatureMOVW, FeatureLPMX,
-                          FeatureSPM, FeatureBREAK, FeatureEIJMPCALL,
+                          FeatureSPM, FeatureBREAK,
                           FeatureSPMX, FeatureDES, FeatureELPM, FeatureELPMX,
                           FeatureLowByteFirst]>;
 
@@ -279,8 +279,8 @@ def : Device<"avrxmega2", FamilyXMEGA, ELFArchXMEGA2>;
 def : Device<"avrxmega3", FamilyXMEGA3, ELFArchXMEGA3>;
 def : Device<"avrxmega4", FamilyXMEGA, ELFArchXMEGA4>;
 def : Device<"avrxmega5", FamilyXMEGA, ELFArchXMEGA5>;
-def : Device<"avrxmega6", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"avrxmega7", FamilyXMEGA, ELFArchXMEGA7>;
+def : Device<"avrxmega6", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"avrxmega7", FamilyXMEGA, ELFArchXMEGA7, [FeatureEIJMPCALL]>;
 def : Device<"avrtiny", FamilyTiny, ELFArchTiny>;
 
 // Specific MCUs
@@ -524,28 +524,28 @@ def : Device<"atxmega64d3", FamilyXMEGA, ELFArchXMEGA4>;
 def : Device<"atxmega64d4", FamilyXMEGA, ELFArchXMEGA4>;
 def : Device<"atxmega64a1", FamilyXMEGA, ELFArchXMEGA5>;
 def : Device<"atxmega64a1u", FamilyXMEGAU, ELFArchXMEGA5>;
-def : Device<"atxmega128a3", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega128a3u", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega128b1", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega128b3", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega128c3", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega128d3", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega128d4", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega192a3", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega192a3u", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega192c3", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega192d3", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega256a3", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega256a3u", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega256a3b", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega256a3bu", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega256c3", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega256d3", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega384c3", FamilyXMEGAU, ELFArchXMEGA6>;
-def : Device<"atxmega384d3", FamilyXMEGA, ELFArchXMEGA6>;
-def : Device<"atxmega128a1", FamilyXMEGA, ELFArchXMEGA7>;
-def : Device<"atxmega128a1u", FamilyXMEGAU, ELFArchXMEGA7>;
-def : Device<"atxmega128a4u", FamilyXMEGAU, ELFArchXMEGA7>;
+def : Device<"atxmega128a3", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128a3u", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128b1", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128b3", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128c3", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128d3", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128d4", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega192a3", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega192a3u", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega192c3", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega192d3", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega256a3", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega256a3u", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega256a3b", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega256a3bu", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega256c3", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega256d3", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega384c3", FamilyXMEGAU, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega384d3", FamilyXMEGA, ELFArchXMEGA6, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128a1", FamilyXMEGA, ELFArchXMEGA7, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128a1u", FamilyXMEGAU, ELFArchXMEGA7, [FeatureEIJMPCALL]>;
+def : Device<"atxmega128a4u", FamilyXMEGAU, ELFArchXMEGA7, [FeatureEIJMPCALL]>;
 def : Device<"attiny4", FamilyTiny, ELFArchTiny>;
 def : Device<"attiny5", FamilyTiny, ELFArchTiny>;
 def : Device<"attiny9", FamilyTiny, ELFArchTiny>;

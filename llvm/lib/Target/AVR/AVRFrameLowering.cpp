@@ -35,8 +35,9 @@ using namespace llvm;
 
 namespace llvm {
 
-AVRFrameLowering::AVRFrameLowering()
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1), -2) {}
+AVRFrameLowering::AVRFrameLowering(const AVRSubtarget &STI)
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1),
+                          STI.hasEIJMPCALL() ? -3 : -2) {}
 
 bool AVRFrameLowering::canSimplifyCallFramePseudos(
     const MachineFunction &MF) const {
