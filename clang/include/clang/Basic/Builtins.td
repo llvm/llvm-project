@@ -1502,6 +1502,12 @@ def Unreachable : Builtin {
   let Prototype = "void()";
 }
 
+def ObservableCheckpoint : Builtin {
+  let Spellings = ["__builtin_observable_checkpoint"];
+  let Attributes = [NoThrow];
+  let Prototype = "void()";
+}
+
 def AllowRuntimeCheck : Builtin {
   let Spellings = ["__builtin_allow_runtime_check"];
   let Attributes = [NoThrow, Pure, Const];

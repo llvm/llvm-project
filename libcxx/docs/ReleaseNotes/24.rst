@@ -38,6 +38,8 @@ What's New in Libc++ 24.0.0?
 Implemented Papers
 ------------------
 
+- P1494R5: Partial program correctness
+- P3641R0: Rename ``std::observable`` to ``std::observable_checkpoint``, and add a feature-test macro
 - P2546R5: Debugging support (`Github <https://llvm.org/PR105392>`__)
 - P2810R4: ``is_debugger_present`` ``is_replaceable`` (`Github <https://llvm.org/PR105422>`__)
 - P3052R2: ``view_interface::at()`` (`Github <https://llvm.org/PR204395>`__)
