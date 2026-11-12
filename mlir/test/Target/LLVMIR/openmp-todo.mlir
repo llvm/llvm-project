@@ -775,12 +775,12 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @target_enter_data_map_iterator(%addr : !llvm.ptr) {
+llvm.func @target_enter_data_map_iterator_bycopy(%addr : !llvm.ptr) {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_enter_data operation}}
@@ -791,10 +791,13 @@ llvm.func @target_enter_data_map_iterator(%addr : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_exit_data_map_iterator(%addr : !llvm.ptr) {
+llvm.mlir.global external @declare_target_link_array() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : !llvm.array<10 x i32>
+
+llvm.func @target_exit_data_map_iterator_declare_target() {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
+  %addr = llvm.mlir.addressof @declare_target_link_array : !llvm.ptr
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
     %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
@@ -807,12 +810,51 @@ llvm.func @target_exit_data_map_iterator(%addr : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_update_map_iterator(%addr : !llvm.ptr) {
+llvm.func @target_update_map_iterator_nowait(%addr : !llvm.ptr) {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %c10 = llvm.mlir.constant(10 : i64) : i64
   %c1 = llvm.mlir.constant(1 : i64) : i64
   %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
     %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier and nowait in omp.target_update operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target_update}}
+  omp.target_update map_iterated(%it : !omp.iterated<!llvm.ptr>) nowait
+  llvm.return
+}
+
+// -----
+
+omp.declare_mapper @iterated_mapper : !llvm.struct<"iterated_mapper_type", (i32)> {
+^bb0(%arg: !llvm.ptr):
+  %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"iterated_mapper_type", (i32)>) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+  omp.declare_mapper.info map_entries(%m : !llvm.ptr)
+}
+
+llvm.func @target_update_map_iterator_mapper(%addr : !llvm.ptr) {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"iterated_mapper_type", (i32)>) map_clauses(to) capture(ByRef) mapper(@iterated_mapper) name("") -> !llvm.ptr
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_update operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target_update}}
+  omp.target_update map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_update_map_iterator_var_ptr_ptr(%desc : !llvm.ptr) {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+    %base = llvm.getelementptr %desc[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64)>
+    %m = omp.map.info var_ptr(%desc : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) var_ptr_ptr(%base : !llvm.ptr, i32) name("") -> !llvm.ptr
     omp.yield(%m : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_update operation}}

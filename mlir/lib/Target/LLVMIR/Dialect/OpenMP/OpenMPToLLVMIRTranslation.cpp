@@ -523,6 +523,16 @@ static omp::PrivateClauseOp findPrivatizer(Operation *from,
   return privatizer;
 }
 
+static bool isDeclareTargetLink(Value value);
+static bool isDeclareTargetTo(Value value);
+
+/// Return the map entry that \p iterOp yields for each iteration of a
+/// map_iterated clause.
+static omp::MapInfoOp getIteratedMapInfo(omp::IteratorOp iterOp) {
+  return cast<omp::MapInfoOp>(
+      iterOp.getYieldOp().getResults().front().getDefiningOp());
+}
+
 /// Check whether translation to LLVM IR for the given operation is currently
 /// supported. If not, descriptive diagnostics will be emitted to let users know
 /// this is a not-yet-implemented feature.
@@ -656,6 +666,28 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getMapIterated().empty())
       result = todo("map/motion clause with iterator modifier");
   };
+  // Only iterators yielding a plain by-reference map per iteration are handled.
+  auto checkMapIterated = [&todo](auto op, LogicalResult &result) {
+    if (op.getMapIterated().empty())
+      return;
+    if (op.getNowait()) {
+      result = todo("map/motion clause with iterator modifier and nowait");
+      return;
+    }
+    for (Value iterated : op.getMapIterated()) {
+      omp::MapInfoOp mapOp =
+          getIteratedMapInfo(iterated.getDefiningOp<omp::IteratorOp>());
+      if (!mapOp.getMembers().empty() || mapOp.getVarPtrPtr() ||
+          mapOp.getMapperId() ||
+          mapOp.getMapCaptureType() != omp::VariableCaptureKind::ByRef ||
+          bitEnumContainsAny(mapOp.getMapType(), omp::ClauseMapFlags::attach) ||
+          isDeclareTargetLink(mapOp.getVarPtr()) ||
+          isDeclareTargetTo(mapOp.getVarPtr())) {
+        result = todo("map/motion clause with iterator modifier");
+        return;
+      }
+    }
+  };
 
   auto checkDynGroupprivate = [&todo](auto op, LogicalResult &result) {
     if (op.getDynGroupprivateSize())
@@ -736,11 +768,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>([&](auto op) {
         checkDepend(op, result);
-        checkMap(op, result);
+        checkMapIterated(op, result);
       })
       .Case([&](omp::TargetUpdateOp op) {
         checkDepend(op, result);
-        checkMap(op, result);
+        checkMapIterated(op, result);
       })
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
@@ -8718,6 +8750,50 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
   }
 }
 
+/// Describe the map entries that \p iterOp expands a map clause list item into,
+/// one per iteration, as a dynamic segment.
+static MapInfosTy::DynamicSegment
+genIteratedMapSegment(llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      DataLayout &dl, omp::IteratorOp iterOp,
+                      TargetDirectiveEnumTy targetDirective) {
+  omp::MapInfoOp mapOp = getIteratedMapInfo(iterOp);
+  IteratorInfo iterInfo(iterOp, moduleTranslation, builder);
+
+  MapInfosTy::DynamicSegment segment;
+  segment.Count = iterInfo.getTotalTrips();
+  segment.Type = convertClauseMapFlags(mapOp.getMapType());
+  segment.Name = LLVM::createMappingInformation(
+      mapOp.getLoc(), *getOpenMPBuilder(moduleTranslation),
+      getMapClauseName(mapOp));
+  segment.GenEntry = [&moduleTranslation, &dl, iterOp, mapOp, iterInfo,
+                      targetDirective](llvm::IRBuilderBase &entryBuilder,
+                                       llvm::Value *index) mutable
+      -> llvm::Expected<MapInfosTy::DynamicSegment::Entry> {
+    if (failed(convertIteratorRegion(index, iterInfo, iterOp.getRegion(),
+                                     entryBuilder, moduleTranslation)))
+      return llvm::make_error<PreviouslyReportedError>();
+
+    SmallVector<Value> mapVars{mapOp.getResult()};
+    MapInfoData mapData;
+    collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,
+                                  entryBuilder);
+    MapInfosTy entryInfo;
+    genMapInfos(entryBuilder, moduleTranslation, dl, entryInfo, mapData,
+                targetDirective);
+    moduleTranslation.forgetMapping(iterOp.getRegion());
+
+    assert(entryInfo.BasePointers.size() == 1 &&
+           entryInfo.Types.front() ==
+               convertClauseMapFlags(mapOp.getMapType()) &&
+           "iterated map must expand to a single entry of its own map type");
+    return MapInfosTy::DynamicSegment::Entry{entryInfo.BasePointers.front(),
+                                             entryInfo.Pointers.front(),
+                                             entryInfo.Sizes.front()};
+  };
+  return segment;
+}
+
 static llvm::Expected<llvm::Function *>
 emitUserDefinedMapper(Operation *declMapperOp, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation,
@@ -8840,6 +8916,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::Value *ifCond = nullptr;
   llvm::Value *deviceID = builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
   SmallVector<Value> mapVars;
+  SmallVector<Value> mapIterated;
   SmallVector<Value> useDevicePtrVars;
   SmallVector<Value> useDeviceAddrVars;
   llvm::omp::RuntimeFunction RTLFn;
@@ -8893,6 +8970,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                     ? llvm::omp::OMPRTL___tgt_target_data_begin_nowait_mapper
                     : llvm::omp::OMPRTL___tgt_target_data_begin_mapper;
             mapVars = enterDataOp.getMapVars();
+            mapIterated = enterDataOp.getMapIterated();
             info.HasNoWait = enterDataOp.getNowait();
             return success();
           })
@@ -8910,6 +8988,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                         ? llvm::omp::OMPRTL___tgt_target_data_end_nowait_mapper
                         : llvm::omp::OMPRTL___tgt_target_data_end_mapper;
             mapVars = exitDataOp.getMapVars();
+            mapIterated = exitDataOp.getMapIterated();
             info.HasNoWait = exitDataOp.getNowait();
             return success();
           })
@@ -8928,6 +9007,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                     ? llvm::omp::OMPRTL___tgt_target_data_update_nowait_mapper
                     : llvm::omp::OMPRTL___tgt_target_data_update_mapper;
             mapVars = updateDataOp.getMapVars();
+            mapIterated = updateDataOp.getMapIterated();
             info.HasNoWait = updateDataOp.getNowait();
             return success();
           })
@@ -8950,6 +9030,10 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     builder.restoreIP(codeGenIP);
     genMapInfos(builder, moduleTranslation, DL, combinedInfo, mapData,
                 targetDirective);
+    for (Value iterated : mapIterated)
+      combinedInfo.DynamicSegments.push_back(genIteratedMapSegment(
+          builder, moduleTranslation, DL,
+          iterated.getDefiningOp<omp::IteratorOp>(), targetDirective));
     return combinedInfo;
   };
 
