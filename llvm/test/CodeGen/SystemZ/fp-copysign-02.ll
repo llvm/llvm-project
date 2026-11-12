@@ -2,10 +2,6 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
-declare float @copysignf(float, float) readnone
-declare double @copysign(double, double) readnone
-; FIXME: not really the correct prototype for SystemZ.
-declare fp128 @copysignl(fp128, fp128) readnone
 
 ; Test f32 copies in which the sign comes from an f128.
 define float @f1(float %a, ptr %bptr) {
@@ -15,7 +11,7 @@ define float @f1(float %a, ptr %bptr) {
 ; CHECK: br %r14
   %bl = load volatile fp128, ptr %bptr
   %b = fptrunc fp128 %bl to float
-  %res = call float @copysignf(float %a, float %b) readnone
+  %res = call float @llvm.copysign.f32(float %a, float %b)
   ret float %res
 }
 
@@ -27,7 +23,7 @@ define double @f2(double %a, ptr %bptr) {
 ; CHECK: br %r14
   %bl = load volatile fp128, ptr %bptr
   %b = fptrunc fp128 %bl to double
-  %res = call double @copysign(double %a, double %b) readnone
+  %res = call double @llvm.copysign.f64(double %a, double %b)
   ret double %res
 }
 
@@ -42,7 +38,7 @@ define void @f7(ptr %cptr, ptr %aptr, float %bf) {
 ; CHECK: br %r14
   %a = load volatile fp128, ptr %aptr
   %b = fpext float %bf to fp128
-  %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
+  %c = call fp128 @llvm.copysign.f128(fp128 %a, fp128 %b)
   store fp128 %c, ptr %cptr
   ret void
 }
@@ -58,7 +54,7 @@ define void @f8(ptr %cptr, ptr %aptr, double %bd) {
 ; CHECK: br %r14
   %a = load volatile fp128, ptr %aptr
   %b = fpext double %bd to fp128
-  %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
+  %c = call fp128 @llvm.copysign.f128(fp128 %a, fp128 %b)
   store fp128 %c, ptr %cptr
   ret void
 }
@@ -75,7 +71,7 @@ define void @f9(ptr %cptr, ptr %aptr, ptr %bptr) {
 ; CHECK: br %r14
   %a = load volatile fp128, ptr %aptr
   %b = load volatile fp128, ptr %bptr
-  %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
+  %c = call fp128 @llvm.copysign.f128(fp128 %a, fp128 %b)
   store fp128 %c, ptr %cptr
   ret void
 }

@@ -2750,7 +2750,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
+void elf::markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
+  llvm::TimeTraceScope timeScope("Mark buffers as dontneed");
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
   // buffers as MADV_DONTNEED so that these pages can be reused by the expensive
@@ -2803,8 +2804,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
   lto->setBitcodeLibFuncs(bitcodeLibFuncs);
-  for (BitcodeFile *file : ctx.bitcodeFiles)
+  DenseMap<const char *, MemoryBuffer *> bitcodeBufs;
+  if (skipLinkedOutput && !ctx.bitcodeFiles.empty()) {
+    bitcodeBufs.reserve(ctx.memoryBuffers.size());
+    for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
+      bitcodeBufs.try_emplace(mb.getBufferStart(), &mb);
+  }
+  for (BitcodeFile *file : ctx.bitcodeFiles) {
+    const char *bufStart = file->mb.getBufferStart();
     lto->add(*file);
+    if (MemoryBuffer *mb = bitcodeBufs.lookup(bufStart))
+      mb->dontNeedIfMmap();
+  }
 
   if (!ctx.bitcodeFiles.empty())
     markBuffersAsDontNeed(ctx, skipLinkedOutput);

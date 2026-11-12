@@ -829,7 +829,7 @@ void cir::ConditionOp::getSuccessorRegions(
     if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
       regions.emplace_back(cleanup);
     else
-      regions.emplace_back(getOperation());
+      regions.emplace_back(loopOp.getOperation());
     return;
   }
 
