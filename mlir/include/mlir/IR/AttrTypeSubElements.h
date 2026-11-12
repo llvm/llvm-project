@@ -411,7 +411,8 @@ struct AttrTypeSubElementHandler {
 /// Detect if any of the given parameter types has a sub-element handler.
 namespace detail {
 template <typename T>
-using has_default_sub_element_handler_t = decltype(T::DefaultHandlerTag);
+using has_default_sub_element_handler_t =
+    typename AttrTypeSubElementHandler<T>::DefaultHandlerTag;
 } // namespace detail
 template <typename... Ts>
 inline constexpr bool has_sub_attr_or_type_v =

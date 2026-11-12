@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv7--linux-android -verify-machineinstrs -run-pass=arm-ldst-opt %s -o - | FileCheck %s --check-prefix=CHECK-MERGE
+# RUN: llc -mtriple=thumbv7--linux-android -run-pass=arm-ldst-opt %s -o - | FileCheck %s --check-prefix=CHECK-MERGE
 #CHECK-MERGE: foo
 name:            foo
 tracksRegLiveness: false

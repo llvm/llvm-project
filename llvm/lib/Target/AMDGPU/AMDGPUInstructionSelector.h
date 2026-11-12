@@ -241,8 +241,8 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
-  bool selectScaleOffset(MachineOperand &Root, Register &Offset,
-                         bool IsSigned) const;
+  bool selectScaleOffset(MachineOperand &Root, Register &Offset, bool IsSigned,
+                         bool IsSMEM = false) const;
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
                         int64_t *Offset, bool *ScaleOffset) const;
   InstructionSelector::ComplexRendererFns
@@ -364,6 +364,8 @@ private:
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderPrefetchLen(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
   void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                           int OpIdx) const;
 

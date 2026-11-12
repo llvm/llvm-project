@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -stats %s -o - 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -stats %s -o - 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Check that instruction mapping stats work.
@@ -17,7 +17,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |

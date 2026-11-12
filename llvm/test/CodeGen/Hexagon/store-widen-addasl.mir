@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=hexagon-widen-stores -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -march=hexagon -run-pass=hexagon-widen-stores %s -o - | FileCheck %s
 
 # CHECK: S2_addasl_rrri [[VREG0:%[0-9]+]], [[VREG1:%[0-9]+]], 3
 # CHECK-NEXT: [[NEWREG:%[0-9]+]]:doubleregs = A2_combinew

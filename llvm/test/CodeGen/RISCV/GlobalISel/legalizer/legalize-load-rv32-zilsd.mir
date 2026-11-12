@@ -5,7 +5,6 @@
 ---
 name:            load_i64_zilsd
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -50,7 +49,6 @@ body:             |
 ---
 name:            load_i64_zilsd_unaligned
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -125,7 +123,6 @@ body:             |
 ---
 name:            load_i64_zilsd_word_align
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

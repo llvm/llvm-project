@@ -3,8 +3,8 @@
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
 
 ; Using FTZ should emit fma.ftz.relu for f16, not for bf16
-; RUN: llc < %s -denormal-fp-math-f32=preserve-sign -mtriple=nvptx64 -mcpu=sm_80 | FileCheck %s --check-prefixes=CHECK-FTZ
-; RUN: %if ptxas %{ llc < %s -denormal-fp-math-f32=preserve-sign -mtriple=nvptx64 -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
+; RUN: llc < %s -denormal-fp-math=preserve-sign -mtriple=nvptx64 -mcpu=sm_80 | FileCheck %s --check-prefixes=CHECK-FTZ
+; RUN: %if ptxas %{ llc < %s -denormal-fp-math=preserve-sign -mtriple=nvptx64 -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
 
 ; SM < 80 or (which needs PTX version >= 70) should not emit fma{.ftz}.relu
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 | FileCheck %s --check-prefixes=CHECK-SM70

@@ -36,9 +36,11 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -57,6 +59,12 @@ getPrivateDataAddress(llvm::IRBuilderBase &builder,
                       omp::PrivateClauseOp privatizer, llvm::Value *var);
 
 namespace {
+/// Stores the option value so the OpenMP-to-LLVM IR translation can read it
+/// outside registerOpenMPTranslationCLOptions(). The local cl::opt avoids a
+/// global constructor in MLIR and writes to this variable through cl::location.
+/// Without registration, false keeps Virtual enabled for eligible loops.
+static bool disableVirtualCollapse = false;
+
 static llvm::omp::ScheduleKind
 convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
   if (!schedKind.has_value())
@@ -598,25 +606,20 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       if (!op.getReductionVars().empty() || op.getReductionByref() ||
           op.getReductionSyms())
         result = todo("reduction");
-    if (op.getReductionMod() &&
-        op.getReductionMod().value() != omp::ReductionModifier::defaultmod) {
-      omp::ReductionModifier mod = op.getReductionMod().value();
-      // The `task` reduction modifier is supported on the parallel and
-      // worksharing (do/for and sections) constructs. Other modifiers, and the
-      // `task` modifier on other constructs, are not yet implemented.
+    for (unsigned i = 0, e = op.getNumReductionVars(); i != e; ++i) {
+      omp::ReductionModifier mod = op.getReductionModifier(i);
+      if (mod == omp::ReductionModifier::defaultmod)
+        continue;
+      // Task modifiers are supported only on parallel and worksharing
+      // constructs, and only for non-byref reduction variables.
       bool taskModifierSupported =
           mod == omp::ReductionModifier::task &&
           isa<omp::ParallelOp, omp::WsloopOp, omp::SectionsOp>(op);
       if (!taskModifierSupported) {
         result = todo("reduction with modifier");
       } else if (auto byref = op.getReductionByref()) {
-        // The task reduction modifier lowering only handles non-byref
-        // reductions for now.
-        for (bool isByRef : *byref)
-          if (isByRef) {
-            result = todo("task reduction modifier with by-ref reduction");
-            break;
-          }
+        if ((*byref)[i])
+          result = todo("task reduction modifier with by-ref reduction");
       }
     }
   };
@@ -1907,7 +1910,7 @@ static LogicalResult createReductionsAndCleanup(
     return op->emitOpError() << "failed to convert reductions";
 
   llvm::OpenMPIRBuilder::InsertPointTy afterIP = *contInsertPoint;
-  if (!isTeamsReduction) {
+  if (!isTeamsReduction && !isNowait) {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy barrierIP =
         ompBuilder->createBarrier({*contInsertPoint, reductionLoc},
                                   llvm::omp::OMPD_for);
@@ -2493,6 +2496,27 @@ static void
 emitTaskReductionModifierFini(bool isWorksharing, llvm::IRBuilderBase &builder,
                               LLVM::ModuleTranslation &moduleTranslation);
 
+/// Register only the task-modified items. All items still participate in the
+/// enclosing construct's ordinary reduction combination and cleanup.
+template <typename OpTy>
+static llvm::Value *emitTaskReductionModifierInitCall(
+    OpTy op, ArrayRef<omp::DeclareReductionOp> reductionDecls,
+    ArrayRef<llvm::Value *> privateReductionVariables,
+    llvm::IRBuilderBase &builder, llvm::OpenMPIRBuilder::InsertPointTy allocaIP,
+    LLVM::ModuleTranslation &moduleTranslation, bool isWorksharing) {
+  SmallVector<omp::DeclareReductionOp> taskDecls;
+  SmallVector<llvm::Value *> taskVariables;
+  for (unsigned i = 0, e = op.getNumReductionVars(); i != e; ++i) {
+    if (op.getReductionModifier(i) != omp::ReductionModifier::task)
+      continue;
+    taskDecls.push_back(reductionDecls[i]);
+    taskVariables.push_back(privateReductionVariables[i]);
+  }
+  return emitTaskReductionInitCall(
+      taskDecls, taskVariables, "__omp_taskred_mod_", builder, allocaIP,
+      moduleTranslation, /*isModifier=*/true, isWorksharing);
+}
+
 static LogicalResult
 convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) {
@@ -2527,8 +2551,7 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   bool isTaskReductionMod =
-      sectionsOp.getReductionMod() == omp::ReductionModifier::task &&
-      sectionsOp.getNumReductionVars() > 0;
+      sectionsOp.hasReductionModifier(omp::ReductionModifier::task);
 
   SmallVector<StorableBodyGenCallbackTy> sectionCBs;
 
@@ -2575,10 +2598,9 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   // is emitted only after the empty-sections early return above, so it stays
   // balanced with the matching fini emitted after the sections region.
   if (isTaskReductionMod &&
-      !emitTaskReductionInitCall(reductionDecls, privateReductionVariables,
-                                 "__omp_taskred_mod_", builder, allocaIP,
-                                 moduleTranslation, /*isModifier=*/true,
-                                 /*isWorksharing=*/true))
+      !emitTaskReductionModifierInitCall(
+          sectionsOp, reductionDecls, privateReductionVariables, builder,
+          allocaIP, moduleTranslation, /*isWorksharing=*/true))
     return sectionsOp.emitError(
         "failed to emit task reduction modifier initialization");
 
@@ -3061,6 +3083,8 @@ public:
           moduleTranslation.lookupValue(itersOp.getLoopSteps()[d]);
       assert(lb && ub && st &&
              "Expect lowerBounds, upperBounds, and steps in IteratorOp");
+      assert(lb->getType() == ub->getType() && lb->getType() == st->getType() &&
+             "Expect matching iterator range types");
       assert((!llvm::isa<llvm::ConstantInt>(st) ||
               !llvm::cast<llvm::ConstantInt>(st)->isZero()) &&
              "Expect non-zero step in IteratorOp");
@@ -3078,9 +3102,9 @@ public:
       llvm::Value *step = builder.CreateSExt(st, countTy);
       llvm::Value *count =
           getOpenMPBuilder(moduleTranslation)
-              ->calculateCanonicalLoopTripCount(builder, start, stop, step,
-                                                /*IsSigned=*/true,
-                                                /*InclusiveStop=*/true);
+              ->calculateCanonicalLoopTripCount(
+                  builder, start, stop, step,
+                  /*IsSigned=*/true, itersOp.getLoopInclusive(), "iterator");
       trips[d] = builder.CreateZExtOrTrunc(count, builder.getInt64Ty());
     }
 
@@ -3215,10 +3239,16 @@ static mlir::LogicalResult convertIteratorRegion(
   llvm::Value *tmp = linearIV;
   for (int d = (int)iterInfo.getDims() - 1; d >= 0; --d) {
     llvm::Value *trip = iterInfo.getTrips()[d];
-    // idx_d = tmp % trip_d
-    llvm::Value *idx = builder.CreateURem(tmp, trip);
-    // tmp = tmp / trip_d
-    tmp = builder.CreateUDiv(tmp, trip);
+    llvm::Value *zero = llvm::ConstantInt::get(trip->getType(), 0);
+    llvm::Value *one = llvm::ConstantInt::get(trip->getType(), 1);
+    // A zero trip count makes the linearized loop empty. Use one in its
+    // unreachable IV decoder so the generated IR contains no division by zero.
+    llvm::Value *divisor =
+        builder.CreateSelect(builder.CreateICmpEQ(trip, zero), one, trip);
+    // idx_d = tmp % divisor_d
+    llvm::Value *idx = builder.CreateURem(tmp, divisor);
+    // tmp = tmp / divisor_d
+    tmp = builder.CreateUDiv(tmp, divisor);
 
     // physIV_d = lb_d + idx_d * step_d
     idx =
@@ -5021,13 +5051,11 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   // loop. Participating explicit tasks accumulate into the per-thread private
   // copies, which the worksharing reduction then combines across threads.
   bool isTaskReductionMod =
-      wsloopOp.getReductionMod() == omp::ReductionModifier::task &&
-      wsloopOp.getNumReductionVars() > 0;
+      wsloopOp.hasReductionModifier(omp::ReductionModifier::task);
   if (isTaskReductionMod &&
-      !emitTaskReductionInitCall(reductionDecls, privateReductionVariables,
-                                 "__omp_taskred_mod_", builder, allocaIP,
-                                 moduleTranslation, /*isModifier=*/true,
-                                 /*isWorksharing=*/true))
+      !emitTaskReductionModifierInitCall(
+          wsloopOp, reductionDecls, privateReductionVariables, builder,
+          allocaIP, moduleTranslation, /*isWorksharing=*/true))
     return wsloopOp.emitError(
         "failed to emit task reduction modifier initialization");
 
@@ -5195,8 +5223,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   // the reduction-combine path (guarded by getNumReductionVars() > 0) would be
   // skipped, leaving the modifier init unbalanced.
   bool isTaskReductionMod =
-      opInst.getReductionMod() == omp::ReductionModifier::task &&
-      opInst.getNumReductionVars() > 0;
+      opInst.hasReductionModifier(omp::ReductionModifier::task);
 
   auto bodyGenCB =
       [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
@@ -5246,10 +5273,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     // explicit tasks accumulate into the per-thread private copies; the
     // parallel reduction then combines those copies across the team.
     if (isTaskReductionMod &&
-        !emitTaskReductionInitCall(reductionDecls, privateReductionVariables,
-                                   "__omp_taskred_mod_", builder, allocaIP,
-                                   moduleTranslation, /*isModifier=*/true,
-                                   /*isWorksharing=*/false))
+        !emitTaskReductionModifierInitCall(
+            opInst, reductionDecls, privateReductionVariables, builder,
+            allocaIP, moduleTranslation, /*isWorksharing=*/false))
       return llvm::createStringError(
           "failed to emit task reduction modifier initialization");
 
@@ -5591,6 +5617,31 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             privateVarsInfo);
 }
 
+/// Select Virtual only for two constant-count host worksharing loops.
+static llvm::OpenMPIRBuilder::CollapseIVMapping
+selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice,
+                        ArrayRef<llvm::CanonicalLoopInfo *> loops) {
+  using Mapping = llvm::OpenMPIRBuilder::CollapseIVMapping;
+  if (isTargetDevice || loopOp.getCollapseNumLoops() != 2 ||
+      disableVirtualCollapse)
+    return Mapping::DivMod;
+  auto wsloop = dyn_cast<omp::WsloopOp>(loopOp->getParentOp());
+  if (!wsloop || isa<omp::LoopWrapperInterface>(wsloop->getParentOp()) ||
+      wsloop.getScheduleKind().value_or(omp::ClauseScheduleKind::Static) !=
+          omp::ClauseScheduleKind::Static ||
+      wsloop.getScheduleChunk() || wsloop.getOrdered().has_value() ||
+      !wsloop.getLinearVars().empty())
+    return Mapping::DivMod;
+  // Use the existing normalized counts; the builder also validates direct
+  // API callers.
+  if (llvm::any_of(loops, [](llvm::CanonicalLoopInfo *loop) {
+        auto *count = llvm::dyn_cast<llvm::ConstantInt>(loop->getTripCount());
+        return !count;
+      }))
+    return Mapping::DivMod;
+  return Mapping::Virtual;
+}
+
 /// Converts an OpenMP loop nest into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -5699,6 +5750,10 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::CanonicalLoopInfo *> collapseLoopInfos(
       loopInfos.begin(), loopInfos.begin() + (numCollapse));
 
+  llvm::SaveAndRestore<llvm::OpenMPIRBuilder::CollapseIVMapping> mappingGuard(
+      ompBuilder->Config.CollapseMapping,
+      selectCollapseIVMapping(loopOp, ompBuilder->Config.isTargetDevice(),
+                              collapseLoopInfos));
   auto newTopLoopInfo =
       ompBuilder->collapseLoops(ompLoc.DL, collapseLoopInfos, {});
 
@@ -8752,7 +8807,8 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
 
   llvm::Expected<llvm::Function *> newFn = ompBuilder->emitUserDefinedMapper(
       genMapInfoCB, varType, mapperFuncName, customMapperCB,
-      /*PreserveMemberOfFlags=*/true);
+      /*PreserveMemberOfFlags=*/true, /*PropagatePresentToPointeeStorage=*/true,
+      /*PropagatePresentToNonPointeeStorage=*/true);
   if (!newFn)
     return newFn.takeError();
   if ([[maybe_unused]] llvm::Function *mappedFunc =
@@ -11193,6 +11249,13 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
     moduleTranslation.stackPop();
 
   return result;
+}
+
+void mlir::registerOpenMPTranslationCLOptions() {
+  static llvm::cl::opt<bool, /*ExternalStorage=*/true> option(
+      "openmp-disable-virtual-collapse", llvm::cl::Hidden,
+      llvm::cl::desc("Disable virtual collapse of eligible host loops"),
+      llvm::cl::location(disableVirtualCollapse));
 }
 
 void mlir::registerOpenMPDialectTranslation(DialectRegistry &registry) {

@@ -1,8 +1,11 @@
 // REQUIRES: x86-registered-target
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O1 -S -o - %s | FileCheck -check-prefix=STRCPY -check-prefix=MEMSET %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -O1 -S -o - %s | FileCheck -check-prefix=STRCPY -check-prefix=MEMSET %s %}
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fno-builtin -O1 -S -o - %s | FileCheck -check-prefix=NOSTRCPY -check-prefix=NOMEMSET %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -fno-builtin -O1 -S -o - %s | FileCheck -check-prefix=NOSTRCPY -check-prefix=NOMEMSET %s %}
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fno-builtin-memset -O1 -S -o - %s | FileCheck -check-prefix=STRCPY -check-prefix=NOMEMSET %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -fno-builtin-memset -O1 -S -o - %s | FileCheck -check-prefix=STRCPY -check-prefix=NOMEMSET %s %}
 
 void PR13497(void) {
   char content[2];

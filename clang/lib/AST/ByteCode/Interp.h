@@ -133,8 +133,6 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
 
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
-bool isConstexprUnknown(const Pointer &P);
-bool isConstexprUnknown(const Block *B);
 bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
                  bool IsReferenceCast);
 bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
@@ -886,11 +884,6 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                   bool CanOverflow, UnsignedOrNone BitWidth = std::nullopt) {
   assert(!Ptr.isDummy());
 
-  if (!S.inConstantContext()) {
-    if (isConstexprUnknown(Ptr))
-      return false;
-  }
-
   if constexpr (std::is_same_v<T, Boolean>) {
     if (!S.getLangOpts().CPlusPlus14)
       return Invalid(S, OpPC);
@@ -1321,7 +1314,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   assert(!RHS.isZero());
 
   if (!S.inConstantContext()) {
-    if (isConstexprUnknown(LHS) || isConstexprUnknown(RHS))
+    if (LHS.isConstexprUnknown() || RHS.isConstexprUnknown())
       return false;
   }
 
@@ -1840,7 +1833,6 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
 
   const Pointer &Field = This.atField(I);
-  assert(Field.canBeInitialized());
   Field.deref<T>() = S.Stk.pop<T>();
   Field.initialize();
   return true;
@@ -1857,7 +1849,6 @@ bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
 
   const Pointer &Field = This.atField(I);
-  assert(Field.canBeInitialized());
   Field.deref<T>() = S.Stk.pop<T>();
   Field.activate();
   Field.initialize();
@@ -1876,7 +1867,6 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
     return false;
 
   const Pointer &Field = This.atField(FieldOffset);
-  assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
 
   if constexpr (isIntegralOrPointer<T>()) {
@@ -1901,7 +1891,6 @@ bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
     return false;
 
   const Pointer &Field = This.atField(FieldOffset);
-  assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
 
   if constexpr (isIntegralOrPointer<T>()) {
@@ -2054,7 +2043,7 @@ inline bool GetRefGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
     return true;
   }
 
-  if (isConstexprUnknown(B)) {
+  if (B->isConstexprUnknown()) {
     S.Stk.push<Pointer>(B);
     return true;
   }
@@ -2119,33 +2108,27 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool FinishInitPop(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   return true;
 }
 
 inline bool FinishInit(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   return true;
 }
 
 inline bool FinishInitActivate(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   return true;
 }
 
 inline bool FinishInitActivatePop(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   return true;
 }
 
@@ -2272,8 +2255,7 @@ bool Store(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.canDeref(Name))
     return false;
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -2286,16 +2268,14 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.canDeref(Name))
     return false;
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
 }
 
 static inline bool Activate(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (Ptr.canBeInitialized())
-    Ptr.activate();
+  Ptr.activate();
   return true;
 }
 
@@ -2306,7 +2286,6 @@ static inline bool ActivateThisField(InterpState &S, uint32_t I) {
     return false;
 
   const Pointer &Ptr = S.Current->getThis();
-  assert(Ptr.atField(I).canBeInitialized());
   Ptr.atField(I).activate();
   return true;
 }
@@ -2318,10 +2297,8 @@ bool StoreActivate(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -2333,10 +2310,8 @@ bool StoreActivatePop(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -2348,8 +2323,7 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2363,8 +2337,7 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2379,10 +2352,8 @@ bool StoreBitFieldActivate(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2397,10 +2368,8 @@ bool StoreBitFieldActivatePop(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2534,22 +2503,9 @@ bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
 
 template <class T, ArithOp Op>
 std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
-                                    const T &Offset, const Pointer &Ptr,
-                                    bool IsPointerArith = false) {
-  // A zero offset does not change the pointer.
-  if (Offset.isZero())
-    return Ptr;
-
-  if (IsPointerArith && !CheckNull(S, OpPC, Ptr, CSK_ArrayIndex)) {
-    // The CheckNull will have emitted a note already, but we only
-    // abort in C++, since this is fine in C.
-    if (S.getLangOpts().CPlusPlus)
-      return std::nullopt;
-  }
-
-  // Arrays of unknown bounds cannot have pointers into them.
-  if (!CheckArray(S, OpPC, Ptr))
-    return std::nullopt;
+                                    const T &Offset, const Pointer &Ptr) {
+  if (S.getLangOpts().CPlusPlus)
+    assert(!Ptr.isZero());
 
   // This is much simpler for integral pointers, so handle them first.
   if (Ptr.isIntegralPointer()) {
@@ -2593,13 +2549,18 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   }
 
   assert(Ptr.isBlockPointer());
+  PtrView P = Ptr.view();
 
-  uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
+  // Arrays of unknown bounds cannot have pointers into them.
+  if (!CheckArray(S, OpPC, Ptr))
+    return std::nullopt;
+
+  uint64_t MaxIndex = static_cast<uint64_t>(P.getNumElems());
   uint64_t Index;
-  if (Ptr.isOnePastEnd())
+  if (P.isOnePastEnd())
     Index = MaxIndex;
   else
-    Index = Ptr.getIndex();
+    Index = P.getIndex();
 
   bool Invalid = false;
   // Helper to report an invalid offset, computed as APSInt.
@@ -2610,7 +2571,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
                    /*IsUnsigned=*/false);
     APSInt NewIndex =
         (Op == ArithOp::Add) ? (APIndex + APOffset) : (APIndex - APOffset);
-    diagnoseArrayIndex(S, OpPC, NewIndex, MaxIndex, Ptr.inArray());
+    diagnoseArrayIndex(S, OpPC, NewIndex, MaxIndex, P.inArray());
     Invalid = true;
   };
 
@@ -2635,7 +2596,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       DiagInvalidOffset();
   }
 
-  if (Invalid && (S.getLangOpts().CPlusPlus || Ptr.inArray()))
+  if (Invalid && (S.getLangOpts().CPlusPlus || P.inArray()))
     return std::nullopt;
 
   // Offset is valid - compute it on unsigned.
@@ -2650,13 +2611,13 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   // When the pointer is one-past-end, going back to index 0 is the only
   // useful thing we can do. Any other index has been diagnosed before and
   // we don't get here.
-  if (Result == 0 && Ptr.isOnePastEnd()) {
-    if (Ptr.getFieldDesc()->isArray())
-      return Ptr.atIndex(0);
-    return Pointer(Ptr.asBlockPointer().Pointee, Ptr.asBlockPointer().Base);
+  if (Result == 0 && P.isOnePastEnd()) {
+    if (P.getFieldDesc()->isArray())
+      return Pointer(P.atIndex(0));
+    return Pointer(P.Pointee, P.Base);
   }
 
-  return Ptr.atIndex(static_cast<uint64_t>(Result));
+  return Pointer(P.atIndex(static_cast<uint64_t>(Result)));
 }
 
 std::optional<Pointer> addSubOffsetOpaque(InterpState &S, CodePtr OpPC,
@@ -2667,6 +2628,11 @@ bool AddOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>().expand();
 
+  if (Offset.isZero()) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
   if (Ptr.isOpaquePointer()) {
     if (std::optional<Pointer> Result =
             addSubOffsetOpaque(S, OpPC, Ptr, Offset.toAPSInt(), ArithOp::Add)) {
@@ -2676,8 +2642,11 @@ bool AddOffset(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
-  if (std::optional<Pointer> Result = OffsetHelper<T, ArithOp::Add>(
-          S, OpPC, Offset, Ptr, /*IsPointerArith=*/true)) {
+  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex) && S.getLangOpts().CPlusPlus)
+    return false;
+
+  if (std::optional<Pointer> Result =
+          OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr)) {
     S.Stk.push<Pointer>(Result->narrow());
     return true;
   }
@@ -2698,8 +2667,16 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
-  if (std::optional<Pointer> Result = OffsetHelper<T, ArithOp::Sub>(
-          S, OpPC, Offset, Ptr, /*IsPointerArith=*/true)) {
+  if (Offset.isZero()) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
+  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex) && S.getLangOpts().CPlusPlus)
+    return false;
+
+  if (std::optional<Pointer> Result =
+          OffsetHelper<T, ArithOp::Sub>(S, OpPC, Offset, Ptr)) {
     S.Stk.push<Pointer>(Result->narrow());
     return true;
   }
@@ -2738,8 +2715,7 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
 
   // Now the current Ptr again and a constant 1.
   OneT One = OneT::from(1);
-  if (std::optional<Pointer> Result =
-          OffsetHelper<OneT, Op>(S, OpPC, One, P, /*IsPointerArith=*/true)) {
+  if (std::optional<Pointer> Result = OffsetHelper<OneT, Op>(S, OpPC, One, P)) {
     // Store the new value.
     Ptr.deref<Pointer>() = Result->narrow();
     return true;

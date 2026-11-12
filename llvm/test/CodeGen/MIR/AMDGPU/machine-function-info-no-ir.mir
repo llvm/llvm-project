@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
-# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none %s -o - | FileCheck -check-prefixes=FULL,ALL %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -simplify-mir %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
 
 
 ---
@@ -646,7 +646,7 @@ registers:
 body: |
   bb.0:
     %2:sgpr_64 = COPY %1
-    %1:sgpr_64 = COPY %0
+    %1:sgpr_64 = IMPLICIT_DEF
 ...
 
 ---

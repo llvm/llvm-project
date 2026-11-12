@@ -7,11 +7,11 @@
 // RUN: not llvm-mc -triple=amdgpu12.00 -show-encoding %s | FileCheck %s --check-prefixes=GFX8PLUS,GFX12XX,GFX12
 // RUN: not llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -show-encoding %s | FileCheck %s --check-prefixes=GFX8PLUS,GFX12XX,GFX1250,GFX1250-ASM
 // RUN: not llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -disassemble -show-encoding | FileCheck -strict-whitespace %s --check-prefixes=GFX8PLUS,GFX12XX,GFX1250,GFX1250-DIS
-// RUN: not llvm-mc -triple=amdgpu9.0a -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX90A
-// RUN: not llvm-mc -triple=amdgpu9.08 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX908
-// RUN: not llvm-mc -triple=amdgpu9.4 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX940
-// RUN: not llvm-mc -triple=amdgpu9.42 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX942
-// RUN: not llvm-mc -triple=amdgpu9.50 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOGFX950
+// RUN: not llvm-mc -triple=amdgpu9.0a -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NOGFX90A
+// RUN: not llvm-mc -triple=amdgpu9.08 -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NOGFX908
+// RUN: not llvm-mc -triple=amdgpu9.4 -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NOGFX940
+// RUN: not llvm-mc -triple=amdgpu9.42 -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NOGFX942
+// RUN: not llvm-mc -triple=amdgpu9.50 -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NOGFX950
 
 // RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICI,NOSI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgpu7.04 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICI,NOCI --implicit-check-not=error:

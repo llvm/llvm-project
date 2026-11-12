@@ -423,6 +423,11 @@ LogicalResult spirv::CompositeConstructOp::verify() {
         "expected to return a vector or cooperative matrix when the number of "
         "constituents is less than what the result needs");
 
+  if (constituents.size() < 2)
+    return emitOpError("has incorrect number of operands: expected at least "
+                       "2 for a vector result, but provided ")
+           << constituents.size();
+
   SmallVector<unsigned> sizes;
   for (Value component : constituents) {
     if (!isa<VectorType>(component.getType()) &&

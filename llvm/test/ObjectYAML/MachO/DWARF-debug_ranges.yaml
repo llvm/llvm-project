@@ -59,6 +59,7 @@
 # YAML-NEXT:         HighOffset:      0x1000
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -249,6 +250,7 @@ DWARF:
 # EMPTY-NEXT: ...
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

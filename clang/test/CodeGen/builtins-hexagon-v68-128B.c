@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple hexagon -target-cpu hexagonv68 -target-feature +hvxv68 -target-feature +hvx-length128b -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple hexagon -target-cpu hexagonv68 -target-feature +hvxv68 -target-feature +hvx-length128b -emit-llvm -o - %s | FileCheck %s %}
 // REQUIRES: hexagon-registered-target
 
 typedef long HEXAGON_Vect1024 __attribute__((__vector_size__(128)))

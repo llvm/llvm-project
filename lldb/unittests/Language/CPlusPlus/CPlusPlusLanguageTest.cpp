@@ -8,6 +8,7 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
@@ -457,6 +458,19 @@ TEST(CPlusPlusLanguage, MatchesCxx) {
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(itaniumExtensionSymbol));
   Mangled msvcSymbol("??x@@3AH");
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(msvcSymbol));
+}
+
+TEST(CPlusPlusLanguage, GetVersionWithLanguageInfo) {
+  SubsystemRAII<CPlusPlusLanguage> lang;
+  std::string info = CPlusPlusLanguage().GetVersionInfo();
+  if (info.empty())
+    GTEST_SKIP() << "built without VCS revisions";
+
+  // There is one CPlusPlusLanguage instance per C++ dialect, but its
+  // information must appear only once.
+  std::string version = Language::GetVersionWithLanguageInfo();
+  EXPECT_TRUE(llvm::StringRef(version).starts_with(GetVersion()));
+  EXPECT_EQ(llvm::StringRef(version).count(info), 1u);
 }
 
 struct ManglingSubstitutorTestCase {

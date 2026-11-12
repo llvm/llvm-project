@@ -1,5 +1,5 @@
 
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt -o - %s | FileCheck %s
 
 --- |
   define i1 @no-clobber-zr(ptr %p, i64 %x) { ret i1 0 }

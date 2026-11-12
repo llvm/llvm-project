@@ -179,15 +179,22 @@ static_assert(!HasUniqueCopyIter<R<const int*>, const int*>);
 // !indirectly_copyable_storable<iterator_t<R>, O>
 static_assert(!HasUniqueCopyIter< R<cpp20_input_iterator<MoveOnly*>>, cpp20_output_iterator<AssignableFromMoveOnly*>>);
 
-template <class InIter, class OutIter, template <class> class SentWrapper, std::size_t N1, std::size_t N2>
-constexpr void testUniqueCopyImpl(std::array<int, N1> in, std::array<int, N2> expected) {
+template <class InIter,
+          class OutIter,
+          template <class> class SentWrapper,
+          std::size_t N1,
+          std::size_t N2,
+          class Comp = std::ranges::equal_to,
+          class Proj = std::identity>
+constexpr void
+testUniqueCopyImpl(std::array<int, N1> in, std::array<int, N2> expected, Comp comp = {}, Proj proj = {}) {
   using Sent = SentWrapper<InIter>;
 
   // iterator overload
   {
     std::array<int, N2> out;
-    std::same_as<std::ranges::unique_copy_result<InIter, OutIter>> decltype(auto) result =
-        std::ranges::unique_copy(InIter{in.data()}, Sent{InIter{in.data() + in.size()}}, OutIter{out.data()});
+    std::same_as<std::ranges::unique_copy_result<InIter, OutIter>> decltype(auto) result = std::ranges::unique_copy(
+        InIter{in.data()}, Sent{InIter{in.data() + in.size()}}, OutIter{out.data()}, comp, proj);
     assert(std::ranges::equal(out, expected));
     assert(base(result.in) == in.data() + in.size());
     assert(base(result.out) == out.data() + out.size());
@@ -198,7 +205,7 @@ constexpr void testUniqueCopyImpl(std::array<int, N1> in, std::array<int, N2> ex
     std::array<int, N2> out;
     std::ranges::subrange r{InIter{in.data()}, Sent{InIter{in.data() + in.size()}}};
     std::same_as<std::ranges::unique_copy_result<InIter, OutIter>> decltype(auto) result =
-        std::ranges::unique_copy(r, OutIter{out.data()});
+        std::ranges::unique_copy(r, OutIter{out.data()}, comp, proj);
     assert(std::ranges::equal(out, expected));
     assert(base(result.in) == in.data() + in.size());
     assert(base(result.out) == out.data() + out.size());
@@ -240,6 +247,26 @@ constexpr void testImpl() {
     std::array<int, 0> in{};
     std::array<int, 0> expected{};
     testUniqueCopyImpl<InIter, OutIter, SentWrapper>(in, expected);
+  }
+
+  // The comparator is called with the earlier element as the first argument. The input is strictly increasing,
+  // so the first argument must be smaller than the second.
+  {
+    std::array in{0, 1, 2, 3, 4, 5};
+    std::array expected{0, 2, 4};
+    auto comp = [](int x, int y) {
+      assert(x < y);
+      return x / 2 == y / 2;
+    };
+    testUniqueCopyImpl<InIter, OutIter, SentWrapper>(in, expected, comp);
+
+    // With a projection, the projected values are passed in the same order.
+    auto proj      = [](int x) { return -x; };
+    auto comp_proj = [](int x, int y) {
+      assert(x > y);
+      return x / 2 == y / 2;
+    };
+    testUniqueCopyImpl<InIter, OutIter, SentWrapper>(in, expected, comp_proj, proj);
   }
 }
 

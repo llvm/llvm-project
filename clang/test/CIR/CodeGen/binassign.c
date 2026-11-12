@@ -169,7 +169,6 @@ int ignore_result_assign() {
 // LLVM:         %{{.*}} = load i32, ptr %[[RETVAL_PTR]]
 // LLVM:         ret i32
 // LLVM:       [[ELSE]]:
-// LLVM:         br label
 // LLVM:         store i32 0, ptr %[[RETVAL_PTR]]
 // LLVM:         %{{.*}} = load i32, ptr %[[RETVAL_PTR]]
 // LLVM:         ret i32

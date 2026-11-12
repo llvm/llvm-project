@@ -1263,7 +1263,7 @@ MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
   auto Res = PerBlockAccesses.try_emplace(BB);
 
   if (Res.second)
-    Res.first->second = std::make_unique<AccessList>();
+    Res.first->second.reset(new (UseOrDefAllocator) AccessList());
   return Res.first->second.get();
 }
 
@@ -1271,7 +1271,7 @@ MemorySSA::DefsList *MemorySSA::getOrCreateDefsList(const BasicBlock *BB) {
   auto Res = PerBlockDefs.try_emplace(BB);
 
   if (Res.second)
-    Res.first->second = std::make_unique<DefsList>();
+    Res.first->second.reset(new (UseOrDefAllocator) DefsList());
   return Res.first->second.get();
 }
 
@@ -1498,6 +1498,16 @@ void MemorySSA::placePHINodes(
     createMemoryPhi(BB);
 }
 
+/// Allocate a MemoryUse or MemoryDef from \p Allocator, with its operands in
+/// front of it like User::operator new.
+template <typename AccessT, typename AllocatorT, typename... ArgTs>
+static AccessT *allocateUseOrDef(AllocatorT &Allocator, ArgTs &&...Args) {
+  size_t OpsSize = sizeof(Use) * OperandTraits<AccessT>::operands(nullptr);
+  char *Mem = static_cast<char *>(
+      Allocator.Allocate(OpsSize + sizeof(AccessT), alignof(AccessT)));
+  return ::new (Mem + OpsSize) AccessT(std::forward<ArgTs>(Args)...);
+}
+
 template <typename IterT>
 void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // We create an access to represent "live on entry", for things like
@@ -1507,8 +1517,9 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // semantics do *not* imply that something with no immediate uses can simply
   // be removed.
   BasicBlock &StartingPoint = *Blocks.begin();
-  LiveOnEntryDef.reset(new MemoryDef(StartingPoint.getContext(), nullptr,
-                                     nullptr, &StartingPoint, NextID++));
+  LiveOnEntryDef.reset(
+      allocateUseOrDef<MemoryDef>(UseOrDefAllocator, StartingPoint.getContext(),
+                                  nullptr, nullptr, &StartingPoint, NextID++));
 
   // We maintain lists of memory accesses per-block, trading memory for time. We
   // could just look up the memory access for every possible instruction in the
@@ -1806,9 +1817,11 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
 
   MemoryUseOrDef *MUD;
   if (Def) {
-    MUD = new MemoryDef(I->getContext(), nullptr, I, I->getParent(), NextID++);
+    MUD = allocateUseOrDef<MemoryDef>(UseOrDefAllocator, I->getContext(),
+                                      nullptr, I, I->getParent(), NextID++);
   } else {
-    MUD = new MemoryUse(I->getContext(), nullptr, I, I->getParent());
+    MUD = allocateUseOrDef<MemoryUse>(UseOrDefAllocator, I->getContext(),
+                                      nullptr, I, I->getParent());
     if (isUseTriviallyOptimizableToLiveOnEntry(*AAP, I)) {
       MemoryAccess *LiveOnEntry = getLiveOnEntryDef();
       MUD->setOptimized(LiveOnEntry);
@@ -1852,22 +1865,22 @@ void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
   // first.
   if (!isa<MemoryUse>(MA)) {
     auto DefsIt = PerBlockDefs.find(BB);
-    std::unique_ptr<DefsList> &Defs = DefsIt->second;
-    Defs->remove(*MA);
-    if (Defs->empty())
+    DefsList &Defs = *DefsIt->second;
+    Defs.remove(*MA);
+    if (Defs.empty())
       PerBlockDefs.erase(DefsIt);
   }
 
   // The erase call here will delete it. If we don't want it deleted, we call
   // remove instead.
   auto AccessIt = PerBlockAccesses.find(BB);
-  std::unique_ptr<AccessList> &Accesses = AccessIt->second;
+  AccessList &Accesses = *AccessIt->second;
   if (ShouldDelete)
-    Accesses->erase(MA);
+    Accesses.erase(MA);
   else
-    Accesses->remove(MA);
+    Accesses.remove(MA);
 
-  if (Accesses->empty()) {
+  if (Accesses.empty()) {
     PerBlockAccesses.erase(AccessIt);
     BlockNumberingValid.erase(BB);
   }
@@ -2613,11 +2626,11 @@ void MemoryPhi::deleteMe(DerivedUser *Self) {
 }
 
 void MemoryDef::deleteMe(DerivedUser *Self) {
-  delete static_cast<MemoryDef *>(Self);
+  static_cast<MemoryDef *>(Self)->~MemoryDef();
 }
 
 void MemoryUse::deleteMe(DerivedUser *Self) {
-  delete static_cast<MemoryUse *>(Self);
+  static_cast<MemoryUse *>(Self)->~MemoryUse();
 }
 
 bool upward_defs_iterator::IsGuaranteedLoopInvariant(const Value *Ptr) const {

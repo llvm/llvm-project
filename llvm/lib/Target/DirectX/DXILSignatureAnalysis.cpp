@@ -738,8 +738,8 @@ ModuleSignatureInfo SignatureAnalysis::run(Module &M,
   return collectSignatures(M, AM.getResult<DXILMetadataAnalysis>(M));
 }
 
-PreservedAnalyses SignatureAnalysisPrinter::run(Module &M,
-                                                ModuleAnalysisManager &AM) {
+PreservedAnalyses SignatureAnalysisPrinterPass::run(Module &M,
+                                                    ModuleAnalysisManager &AM) {
   AM.getResult<SignatureAnalysis>(M).print(OS, M);
   return PreservedAnalyses::all();
 }

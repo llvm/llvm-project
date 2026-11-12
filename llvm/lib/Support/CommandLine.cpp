@@ -176,9 +176,13 @@ public:
 
   // Libraries whose options are declared in TableGen, and an index from their
   // option names. Libraries[NumIndexedLibraries:] are not indexed yet.
-  SmallVector<LibraryOptions *, 0> Libraries;
-  DenseMap<StringRef, LibraryOptions *> LibraryIndex;
+  SmallVector<const LibraryOptions *, 0> Libraries;
+  DenseMap<StringRef, const LibraryOptions *> LibraryIndex;
   size_t NumIndexedLibraries = 0;
+  // The libraries that the last parse recognized in addition to Libraries, and
+  // an index from their option names.
+  SmallVector<const LibraryOptions *, 0> ToolOptions;
+  DenseMap<StringRef, const LibraryOptions *> ToolIndex;
   // Storage that library options refer to: copies of the arguments passed to
   // LibraryOptions::parse and what it allocates. Response file expansions do
   // not outlive parsing.
@@ -191,7 +195,8 @@ public:
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr,
                                vfs::FileSystem *VFS = nullptr,
-                               LibraryOptionsContext *Context = nullptr);
+                               LibraryOptionsContext *Context = nullptr,
+                               ArrayRef<const LibraryOptions *> Tools = {});
 
   void forEachSubCommand(Option &Opt, function_ref<void(SubCommand &)> Action) {
     if (Opt.Subs.empty()) {
@@ -234,7 +239,8 @@ public:
       // own arguments.
       if (!SC->OptionsMap.insert(std::make_pair(O->ArgStr, O)).second ||
           (RegisteredSubCommands.contains(SC) &&
-           LibraryIndex.contains(O->ArgStr))) {
+           (LibraryIndex.contains(O->ArgStr) ||
+            ToolIndex.contains(O->ArgStr)))) {
         errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
                << "' registered more than once!\n";
         HadErrors = true;
@@ -334,17 +340,20 @@ public:
 
   void printOptionValues();
 
-  void indexLibraryOptions() {
+  void
+  indexLibraries(ArrayRef<const LibraryOptions *> Libs,
+                 DenseMap<StringRef, const LibraryOptions *> &Index,
+                 const DenseMap<StringRef, const LibraryOptions *> &Other) {
     bool HadErrors = false;
-    for (; NumIndexedLibraries != Libraries.size(); ++NumIndexedLibraries) {
-      LibraryOptions *L = Libraries[NumIndexedLibraries];
+    for (const LibraryOptions *L : Libs) {
       L->forEachOption([&](StringRef Spelling, StringRef, StringRef) {
         StringRef Name = Spelling.rtrim('=');
-        auto [It, Inserted] = LibraryIndex.try_emplace(Name, L);
-        if (Inserted ? none_of(RegisteredSubCommands,
-                               [&](SubCommand *SC) {
-                                 return SC->OptionsMap.contains(Name);
-                               })
+        auto [It, Inserted] = Index.try_emplace(Name, L);
+        if (Inserted ? !Other.contains(Name) &&
+                           none_of(RegisteredSubCommands,
+                                   [&](SubCommand *SC) {
+                                     return SC->OptionsMap.contains(Name);
+                                   })
                      : It->second == L)
           return;
         errs() << ProgramName << ": CommandLine Error: Option '" << Name
@@ -356,10 +365,26 @@ public:
       report_fatal_error("inconsistency in registered CommandLine options");
   }
 
+  void indexLibraryOptions() {
+    indexLibraries(ArrayRef(Libraries).drop_front(NumIndexedLibraries),
+                   LibraryIndex, ToolIndex);
+    NumIndexedLibraries = Libraries.size();
+  }
+
+  void setToolOptions(ArrayRef<const LibraryOptions *> Libs) {
+    if (ArrayRef(ToolOptions) == Libs)
+      return;
+    ToolOptions.assign(Libs);
+    ToolIndex.clear();
+    indexLibraries(ToolOptions, ToolIndex, LibraryIndex);
+  }
+
   // A library loaded while parsing (e.g. a pass plugin) may define the name.
-  LibraryOptions *lookupLibraryOption(StringRef Name) {
+  const LibraryOptions *lookupLibraryOption(StringRef Name) {
     indexLibraryOptions();
-    return LibraryIndex.lookup(Name);
+    if (const LibraryOptions *L = LibraryIndex.lookup(Name))
+      return L;
+    return ToolIndex.lookup(Name);
   }
 
   void registerCategory(OptionCategory *cat) {
@@ -417,6 +442,8 @@ public:
     Libraries.clear();
     LibraryIndex.clear();
     NumIndexedLibraries = 0;
+    ToolOptions.clear();
+    ToolIndex.clear();
 
     SubCommand::getTopLevel().reset();
     SubCommand::getAll().reset();
@@ -446,8 +473,9 @@ static CommandLineParser &globalParser() {
 // separate value, into Opts. Opts may refer to the arguments, so they are
 // copied into Alloc, and appended to Record if given.
 static Error
-parseLibraryOption(LibraryOptions &L, void *Opts, ArrayRef<const char *> Args,
-                   unsigned &Consumed, BumpPtrAllocator &Alloc,
+parseLibraryOption(const LibraryOptions &L, void *Opts,
+                   ArrayRef<const char *> Args, unsigned &Consumed,
+                   BumpPtrAllocator &Alloc,
                    SmallVectorImpl<const char *> *Record = nullptr) {
   StringSaver Saver(Alloc);
   const char *Saved[2];
@@ -1446,11 +1474,10 @@ Error ExpansionContext::readConfigFile(StringRef CfgFile,
 }
 
 static void initCommonOptions();
-static bool parseCommandLineOptionsImpl(LibraryOptionsContext *Context,
-                                        ArrayRef<const char *> Args,
-                                        StringRef Overview, raw_ostream *Errs,
-                                        vfs::FileSystem *VFS,
-                                        const char *EnvVar) {
+static bool parseCommandLineOptionsImpl(
+    LibraryOptionsContext *Context, ArrayRef<const char *> Args,
+    StringRef Overview, raw_ostream *Errs, vfs::FileSystem *VFS,
+    const char *EnvVar, ArrayRef<const LibraryOptions *> ToolOptions = {}) {
   initCommonOptions();
   SmallVector<const char *, 20> NewArgv;
   BumpPtrAllocator A;
@@ -1469,8 +1496,8 @@ static bool parseCommandLineOptionsImpl(LibraryOptionsContext *Context,
   int NewArgc = static_cast<int>(NewArgv.size());
 
   // Parse all options.
-  return globalParser().ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
-                                                Errs, VFS, Context);
+  return globalParser().ParseCommandLineOptions(
+      NewArgc, &NewArgv[0], Overview, Errs, VFS, Context, ToolOptions);
 }
 
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
@@ -1486,6 +1513,15 @@ bool cl::parseCommandLineOptions(LibraryOptionsContext &Context,
                                  vfs::FileSystem *VFS, const char *EnvVar) {
   return parseCommandLineOptionsImpl(&Context, Args, Overview, Errs, VFS,
                                      EnvVar);
+}
+
+bool cl::parseCommandLineOptions(LibraryOptionsContext &Context,
+                                 ArrayRef<const LibraryOptions *> ToolOptions,
+                                 ArrayRef<const char *> Args,
+                                 StringRef Overview, raw_ostream *Errs,
+                                 vfs::FileSystem *VFS, const char *EnvVar) {
+  return parseCommandLineOptionsImpl(&Context, Args, Overview, Errs, VFS,
+                                     EnvVar, ToolOptions);
 }
 
 /// Reset all options at least once, so that we can parse different options.
@@ -1507,15 +1543,17 @@ void CommandLineParser::ResetAllOptionOccurrences() {
     if (SC->ConsumeAfterOpt)
       SC->ConsumeAfterOpt->reset();
   }
-  for (LibraryOptions *L : Libraries)
+  for (const LibraryOptions *L :
+       concat<const LibraryOptions *const>(Libraries, ToolOptions))
     L->reset();
   LibraryArgAlloc.Reset();
 }
 
 bool CommandLineParser::ParseCommandLineOptions(
     int argc, const char *const *argv, StringRef Overview, raw_ostream *Errs,
-    vfs::FileSystem *VFS, LibraryOptionsContext *Context) {
-  assert(hasOptions() && "No options specified!");
+    vfs::FileSystem *VFS, LibraryOptionsContext *Context,
+    ArrayRef<const LibraryOptions *> Tools) {
+  assert((hasOptions() || !Tools.empty()) && "No options specified!");
 
   ProgramOverview = Overview;
   bool IgnoreErrors = Errs;
@@ -1543,6 +1581,7 @@ bool CommandLineParser::ParseCommandLineOptions(
 
   // Copy the program name into ProgName, making sure not to overflow it.
   ProgramName = std::string(sys::path::filename(StringRef(argv[0])));
+  setToolOptions(Tools);
   indexLibraryOptions();
 
   // Check out the positional arguments to collect information about them.
@@ -1689,7 +1728,8 @@ bool CommandLineParser::ParseCommandLineOptions(
         Handler = LookupOption(SubCommand::getTopLevel(), ArgName, Value);
 
       if (!Handler) {
-        if (LibraryOptions *L = lookupLibraryOption(ArgName.split('=').first)) {
+        if (const LibraryOptions *L =
+                lookupLibraryOption(ArgName.split('=').first)) {
           ArrayRef<const char *> Rest(argv + i, argc - i);
           unsigned N;
           if (Error E = Context && L->isPerContext()
@@ -2494,7 +2534,8 @@ public:
 
     SmallVector<std::pair<std::string, StringRef>, 0> LibraryOpts;
     if (ShowHidden)
-      for (LibraryOptions *L : globalParser().Libraries)
+      for (const LibraryOptions *L : concat<const LibraryOptions *const>(
+               globalParser().Libraries, globalParser().ToolOptions))
         L->forEachOption(
             [&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
               if (!Help.empty())
@@ -2939,24 +2980,22 @@ void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
 
 void cl::ResetCommandLineParser() { globalParser().reset(); }
 
-void cl::addLibraryOptions(LibraryOptions &L) {
+void cl::addLibraryOptions(const LibraryOptions &L) {
   globalParser().Libraries.push_back(&L);
 }
 
-// Parses the library options that a LibraryOptionsContext recorded in Args
-// into Context, or into their global() if Context is null.
+// Parses the arguments that a LibraryOptionsContext recorded, each with the
+// library that parsed it, into Context, or into their global() if Context is
+// null.
 static void replayLibraryArgs(ArrayRef<const char *> Args,
+                              ArrayRef<const LibraryOptions *> Libraries,
                               LibraryOptionsContext *Context) {
   for (size_t I = 0, E = Args.size(); I != E;) {
-    StringRef Name = Args[I];
-    Name.consume_front("-");
-    Name.consume_front("-");
-    LibraryOptions *L =
-        globalParser().lookupLibraryOption(Name.split('=').first);
+    const LibraryOptions &L = *Libraries[I];
     unsigned N;
     ArrayRef<const char *> Rest = Args.drop_front(I);
-    cantFail(Context ? Context->parse(*L, Rest, N)
-                     : parseLibraryOption(*L, L->global(), Rest, N,
+    cantFail(Context ? Context->parse(L, Rest, N)
+                     : parseLibraryOption(L, L.global(), Rest, N,
                                           globalParser().LibraryArgAlloc));
     I += N;
   }
@@ -2966,16 +3005,20 @@ void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
   assert(this != &Other);
   Values.clear();
   SavedArgs.clear();
-  replayLibraryArgs(Other.SavedArgs, this);
+  SavedLibraries.clear();
+  replayLibraryArgs(Other.SavedArgs, Other.SavedLibraries, this);
 }
 
-Error LibraryOptionsContext::parse(LibraryOptions &L,
+Error LibraryOptionsContext::parse(const LibraryOptions &L,
                                    ArrayRef<const char *> Args,
                                    unsigned &Consumed) {
   auto [It, Inserted] = Values.try_emplace(L.getDefault());
   if (Inserted)
     It->second = L.copyDefault(Alloc);
-  return parseLibraryOption(L, It->second, Args, Consumed, Alloc, &SavedArgs);
+  Error E =
+      parseLibraryOption(L, It->second, Args, Consumed, Alloc, &SavedArgs);
+  SavedLibraries.resize(SavedArgs.size(), &L);
+  return E;
 }
 
 void cl::ResetAllOptionOccurrences() {
@@ -2987,13 +3030,35 @@ LibraryOptionsContext &cl::getCAPILibraryOptions() {
   return C;
 }
 
-void LLVMParseCommandLineOptions(int argc, const char *const *argv,
-                                 const char *Overview) {
+static bool llvmParseCommandLineOptionsImpl(int argc, const char *const *argv,
+                                            const char *Overview,
+                                            raw_ostream *Errs) {
   LibraryOptionsContext &C = getCAPILibraryOptions();
   size_t Begin = C.args().size();
-  parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, &nulls());
+  bool Res = parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, Errs);
 
   // Code without a context, such as a target machine created through the C
   // API, reads the global values.
-  replayLibraryArgs(C.args().drop_front(Begin), nullptr);
+  replayLibraryArgs(C.args().drop_front(Begin),
+                    C.argLibraries().drop_front(Begin), nullptr);
+
+  return Res;
+}
+
+void LLVMParseCommandLineOptions(int argc, const char *const *argv,
+                                 const char *Overview) {
+  llvmParseCommandLineOptionsImpl(argc, argv, Overview, &nulls());
+}
+
+LLVMBool LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
+                                              const char *Overview,
+                                              char **ErrorMessage) {
+  *ErrorMessage = nullptr;
+  SmallString<128> Err;
+  raw_svector_ostream Stream(Err);
+  if (!llvmParseCommandLineOptionsImpl(argc, argv, Overview, &Stream)) {
+    *ErrorMessage = strdup(Err.c_str());
+    return 1;
+  }
+  return 0;
 }

@@ -44,6 +44,8 @@
 //
 // 6. acc.on_device (folded):
 //    acc.on_device with constant device type is folded to a boolean constant.
+//    With a device type only known at runtime it is replaced by comparisons
+//    against the device types being specialized for.
 //
 // Scope of Application:
 // ---------------------
@@ -65,6 +67,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/ACCSpecializePatterns.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -80,7 +83,9 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-/// Fold acc.on_device with a constant device type in device code.
+/// Fold acc.on_device in device code. A constant device type folds to a
+/// boolean constant, any other device type to a comparison against the device
+/// types being specialized for.
 class FoldAccOnDeviceOpConversion : public OpRewritePattern<acc::OnDeviceOp> {
   using OpRewritePattern<acc::OnDeviceOp>::OpRewritePattern;
 
@@ -94,13 +99,32 @@ public:
 
   LogicalResult matchAndRewrite(acc::OnDeviceOp op,
                                 PatternRewriter &rewriter) const override {
+    Value deviceType = op.getDeviceType();
     APInt constVal;
-    if (!matchPattern(op.getDeviceType(), m_ConstantInt(&constVal)))
-      return failure();
+    if (matchPattern(deviceType, m_ConstantInt(&constVal))) {
+      bool result = theDeviceTypes.contains(constVal.getSExtValue());
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, rewriter.getI1Type(), rewriter.getBoolAttr(result));
+      return success();
+    }
 
-    bool result = theDeviceTypes.contains(constVal.getSExtValue());
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-        op, rewriter.getI1Type(), rewriter.getBoolAttr(result));
+    // The device type is only known at runtime, inline the definition of
+    // `on_device`.
+    Location loc = op.getLoc();
+    Value result;
+    for (int64_t type : theDeviceTypes) {
+      Value typeValue = arith::ConstantOp::create(
+          rewriter, loc, deviceType.getType(),
+          rewriter.getIntegerAttr(deviceType.getType(), type));
+      Value isType = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::eq, deviceType, typeValue);
+      if (result)
+        result = arith::OrIOp::create(rewriter, loc, result, isType);
+      else
+        result = isType;
+    }
+    assert(result && "At least one device type expected.");
+    rewriter.replaceOp(op, result);
     return success();
   }
 };

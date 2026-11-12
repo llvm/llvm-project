@@ -23,6 +23,7 @@ namespace llvm {
 class AnyMemCpyInst;
 class ConstantInt;
 class Instruction;
+struct KnownBits;
 class MemCpyInst;
 class MemMoveInst;
 class MemSetInst;
@@ -70,6 +71,12 @@ LLVM_ABI void expandMemSetAsLoop(MemSetInst *MemSet,
 /// is not deleted.
 LLVM_ABI void expandMemSetAsLoop(MemSetInst *MemSet,
                                  const TargetTransformInfo &TTI);
+
+/// Expand \p MemSet, whose length is known to be in [\p MinLen, \p MaxLen] and
+/// to have the known bits \p LenKnown, into a tree of branches on the length
+/// leading to at most two overlapping stores each. \p MemSet is not deleted.
+LLVM_ABI void expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
+                                  uint64_t MaxLen, const KnownBits &LenKnown);
 
 /// Expand \p MemSetPattern as a loop. \p MemSet is not deleted.
 /// If \p TTI is provided, the memset.pattern is expanded according to the
