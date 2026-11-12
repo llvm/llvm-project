@@ -47,6 +47,13 @@ public:
   static std::optional<FileSpec>
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
                              const FileSpecList &default_search_paths);
+
+  // Locate the source file given a module specification and file specification.
+  //
+  // Locating the file should happen only on the local computer or using the
+  // current computers global settings.
+  static std::optional<FileSpec> LocateSourceFile(const ModuleSpec &module_spec,
+                                                  const FileSpec &file_spec);
 };
 
 } // namespace lldb_private
