@@ -2238,8 +2238,8 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         const Record *RegClass = Op.getRegClass();
         bool HasRegCoercion =
             RegClass && Info.RegConversions.contains(RegClass);
-        // Registers are always converted the same, don't duplicate the
-        // conversion function based on them unless they need to be coerced.
+        // Registers are always converted the same unless they need to be
+        // coerced, don't duplicate the conversion function based on them.
         std::string Class;
         std::string Name = "CVT_";
         if (HasRegCoercion) {
@@ -2279,7 +2279,7 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
         // This is a new operand kind. Add a handler for it to the
         // converter driver.
-        CvtOS << "    case " << Name << ":" << (HasRegCoercion ? " {\n" : "\n");
+        CvtOS << "    case " << Name << (HasRegCoercion ? ": {\n" : ":\n");
         if (Op.Class->IsOptional) {
           // If optional operand is not present in actual instruction then we
           // should call its DefaultMethod before RenderMethod
