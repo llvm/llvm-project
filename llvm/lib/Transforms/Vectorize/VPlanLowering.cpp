@@ -207,8 +207,11 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *NotMask = Builder.createNot(ALM, DL);
   if (IsBranchOnCount)
     Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
-  else
+  else {
+    assert(LatchExit->getSingleUser()->usesFirstLaneOnly(LatchExit) &&
+           "Single user of latch exit compare must only use the first lane");
     LatchExit->replaceAllUsesWith(NotMask);
+  }
   LatchExit->eraseFromParent();
   return LaneMaskPhi;
 }
