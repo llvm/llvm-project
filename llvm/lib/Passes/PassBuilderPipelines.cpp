@@ -150,6 +150,7 @@
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LowerCommentStringPass.h"
+#include "llvm/Transforms/Utils/MaterializeKernelInfo.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
@@ -1089,6 +1090,8 @@ ModulePassManager PassBuilder::buildModuleSimplificationPipeline(
           true /* IsInLTO */, true /* SamplePGO */, ImportSummary));
   }
 
+  MPM.addPass(MaterializeKernelInfoPass());
+
   // Try to perform OpenMP specific optimizations on the module. This is a
   // (quick!) no-op if there are no OpenMP runtime calls present in the module.
   MPM.addPass(OpenMPOptPass(Phase));
@@ -1879,6 +1882,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   }
 
   if (Level == OptimizationLevel::O0) {
+    MPM.addPass(MaterializeKernelInfoPass());
+
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
     MPM.addPass(DropTypeTestsPass());
@@ -1899,6 +1904,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
+    MPM.addPass(MaterializeKernelInfoPass());
     MPM.addPass(
         buildModuleInlinerPipeline(Level, ThinOrFullLTOPhase::ThinLTOPostLink));
   } else {
@@ -1947,6 +1953,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(CrossDSOCFIPass());
 
   if (Level == OptimizationLevel::O0) {
+    MPM.addPass(MaterializeKernelInfoPass());
+
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
     // metadata and intrinsics.
     MPM.addPass(WholeProgramDevirtPass(ExportSummary, nullptr));
@@ -1978,6 +1986,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // RequireAnalysisPass for PSI before subsequent non-module passes.
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
   }
+
+  MPM.addPass(MaterializeKernelInfoPass());
 
   // Try to run OpenMP optimizations, quick no-op if no OpenMP metadata present.
   MPM.addPass(OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink));
@@ -2358,6 +2368,8 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   }
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
+
+  MPM.addPass(MaterializeKernelInfoPass());
 
   // Build a minimal pipeline based on the semantics required by LLVM,
   // which is just that always inlining occurs. Further, disable generating
