@@ -823,8 +823,7 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
 
   using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
   CreatePThreadKeyProxy CreateKey(
-      sps::ProxySpec<CreatePThreadKeyProxy,
-                     macho_sps_ci::CreatePThreadKey>::dispatch,
+      sps::ProxySpec<macho_sps_ci::CreatePThreadKey>::dispatch,
       CreatePThreadKey.Addr);
   return CreateKey(ES);
 }

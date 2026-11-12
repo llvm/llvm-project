@@ -746,15 +746,13 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
   using sps::ProxySpec;
 
   PlatformBootstrapProxy PlatformBootstrap(
-      ProxySpec<PlatformBootstrapProxy,
-                coff_sps_ci::PlatformBootstrap>::dispatch,
+      ProxySpec<coff_sps_ci::PlatformBootstrap>::dispatch,
       orc_rt_coff_platform_bootstrap);
   RegisterJITDylibProxy RegisterJITDylib(
-      ProxySpec<RegisterJITDylibProxy, coff_sps_ci::RegisterJITDylib>::dispatch,
+      ProxySpec<coff_sps_ci::RegisterJITDylib>::dispatch,
       orc_rt_coff_register_jitdylib);
   RegisterObjectSectionsProxy RegisterObjectSections(
-      ProxySpec<RegisterObjectSectionsProxy,
-                coff_sps_ci::RegisterObjectSections>::dispatch,
+      ProxySpec<coff_sps_ci::RegisterObjectSections>::dispatch,
       orc_rt_coff_register_object_sections);
 
   // Call bootstrap functions

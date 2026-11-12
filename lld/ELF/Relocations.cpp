@@ -10,10 +10,10 @@
 // relocations and determines what auxiliary data structures (GOT, PLT, copy
 // relocations) need to be created during linking.
 //
-// The main entry point is scanRelocations<ELFT>(), which calls scanSection()
-// to process all relocations within an input section. For each relocation,
-// scan() analyzes the type and target, and determines whether a synthetic
-// section entry or dynamic relocation is needed.
+// The main entry point is scanRelocations(), which calls scanSection() to
+// process all relocations within an input section. For each relocation,
+// scanSection() analyzes the type and target, and determines whether a
+// synthetic section entry or dynamic relocation is needed.
 //
 // Note: This file analyzes what needs to be done but doesn't apply the
 // actual relocations - that happens later in InputSection::writeTo().
@@ -1134,7 +1134,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   printLocation(diag, *sec, sym, offset);
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                                  unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -1144,7 +1144,7 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(false);
     uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = rel.r_offset;
     RelExpr expr = getRelExpr(type, sym, sec.content().data() + offset);
 
@@ -1153,7 +1153,7 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    rs.process(expr, type, offset, sym, rs.getAddend<ELFT>(rel, type));
+    rs.process(expr, type, offset, sym, rs.getAddend(rel, type));
   }
 }
 
@@ -1181,7 +1181,7 @@ void RelocScan::scanEhSection(EhInputSection &s) {
   }
 }
 
-template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
+void elf::scanRelocations(Ctx &ctx) {
   // Scan all relocations. Each relocation goes through a series of tests to
   // determine if it needs special treatment, such as creating GOT, PLT,
   // copy relocations, etc. Note that relocations for non-alloc sections are
@@ -2052,11 +2052,6 @@ template <class ELFT> void elf::checkNoCrossRefs(Ctx &ctx) {
     }
   }
 }
-
-template void elf::scanRelocations<ELF32LE>(Ctx &);
-template void elf::scanRelocations<ELF32BE>(Ctx &);
-template void elf::scanRelocations<ELF64LE>(Ctx &);
-template void elf::scanRelocations<ELF64BE>(Ctx &);
 
 template void elf::checkNoCrossRefs<ELF32LE>(Ctx &);
 template void elf::checkNoCrossRefs<ELF32BE>(Ctx &);

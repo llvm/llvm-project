@@ -3283,30 +3283,6 @@ void InformationCache::initializeInformationCache(const Function &CF,
   // queried by abstract attributes during their initialization or update.
   // This has to happen before we create attributes.
 
-  DenseMap<const Value *, std::optional<short>> AssumeUsesMap;
-
-  // Add \p V to the assume uses map which track the number of uses outside of
-  // "visited" assumes. If no outside uses are left the value is added to the
-  // assume only use vector.
-  auto AddToAssumeUsesMap = [&](const Value &V) -> void {
-    SmallVector<const Instruction *> Worklist;
-    if (auto *I = dyn_cast<Instruction>(&V))
-      Worklist.push_back(I);
-    while (!Worklist.empty()) {
-      const Instruction *I = Worklist.pop_back_val();
-      std::optional<short> &NumUses = AssumeUsesMap[I];
-      if (!NumUses)
-        NumUses = I->getNumUses();
-      NumUses = *NumUses - /* this assume */ 1;
-      if (*NumUses != 0)
-        continue;
-      AssumeOnlyValues.insert(I);
-      for (const Value *Op : I->operands())
-        if (auto *OpI = dyn_cast<Instruction>(Op))
-          Worklist.push_back(OpI);
-    }
-  };
-
   for (Instruction &I : instructions(&F)) {
     bool IsInterestingOpcode = false;
 
@@ -3326,9 +3302,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // For `llvm.assume` calls we also fill the KnowledgeMap as we find them.
       // For `must-tail` calls we remember the caller and callee.
       if (auto *Assume = dyn_cast<AssumeInst>(&I)) {
-        AssumeOnlyValues.insert(Assume);
         fillMapFromAssume(*Assume, KnowledgeMap);
-        AddToAssumeUsesMap(*Assume->getArgOperand(0));
       } else if (cast<CallInst>(I).isMustTailCall()) {
         FI.ContainsMustTailCall = true;
         if (auto *Callee = dyn_cast_if_present<Function>(
@@ -3367,6 +3341,41 @@ void InformationCache::initializeInformationCache(const Function &CF,
   if (F.hasFnAttribute(Attribute::AlwaysInline) &&
       isInlineViable(F).isSuccess())
     InlineableFunctions.insert(&F);
+}
+
+void InformationCache::collectAssumeOnlyValues(FunctionInfo &FI) {
+  FI.AssumeOnlyValuesCollected = true;
+  InstructionVectorTy *Calls = FI.OpcodeInstMap[Instruction::Call];
+  if (!Calls)
+    return;
+
+  DenseMap<const Value *, std::optional<short>> AssumeUsesMap;
+
+  // Add \p V to the assume uses map which track the number of uses outside of
+  // "visited" assumes. If no outside uses are left the value is added to the
+  // assume only use vector.
+  auto AddToAssumeUsesMap = [&](const Value &V) -> void {
+    SmallVector<const Instruction *> Worklist;
+    if (auto *I = dyn_cast<Instruction>(&V))
+      Worklist.push_back(I);
+    while (!Worklist.empty()) {
+      const Instruction *I = Worklist.pop_back_val();
+      std::optional<short> &NumUses = AssumeUsesMap[I];
+      if (!NumUses)
+        NumUses = I->getNumUses();
+      NumUses = *NumUses - /* this assume */ 1;
+      if (*NumUses != 0)
+        continue;
+      AssumeOnlyValues.insert(I);
+      for (const Instruction *OpI : make_isa_range<Instruction>(I->operands()))
+        Worklist.push_back(OpI);
+    }
+  };
+
+  for (AssumeInst *Assume : make_isa_range<AssumeInst>(*Calls)) {
+    AssumeOnlyValues.insert(Assume);
+    AddToAssumeUsesMap(*Assume->getArgOperand(0));
+  }
 }
 
 InformationCache::FunctionInfo::~FunctionInfo() {

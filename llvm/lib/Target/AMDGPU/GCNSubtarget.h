@@ -563,9 +563,6 @@ public:
 
   bool hasMadF16() const;
 
-  // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return HasGFX1250Insts; }
-
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return HasGFX1250Insts; }
 
