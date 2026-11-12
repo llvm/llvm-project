@@ -5626,6 +5626,32 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMVTableGetEntryOpLowering::matchAndRewrite(
+    cir::VTableGetEntryOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError(
+        "NYI: pointer entry lookup in a relative layout vtable");
+
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
+
+  // The entry is the pointer itself: load it from its slot.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value index = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), rewriter.getI64Type(),
+      rewriter.getI64IntegerAttr(op.getIndex()));
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, ptrTy, adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{index},
+      mlir::LLVM::GEPNoWrapFlags::inbounds);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
     cir::VTTAddrPointOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

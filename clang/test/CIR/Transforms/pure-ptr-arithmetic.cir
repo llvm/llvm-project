@@ -51,7 +51,7 @@ cir.func @dead_vtable_get_virtual_fn(%arg0: !cir.vptr) {
 // CHECK-LABEL: @dead_vtable_get_type_info
 // CHECK-NOT:     cir.vtable.get_type_info
 cir.func @dead_vtable_get_type_info(%arg0: !cir.vptr) {
-  %0 = cir.vtable.get_type_info %arg0 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_S>>
+  %0 = cir.vtable.get_type_info %arg0 : !cir.vptr -> !cir.ptr<!rec_S>
   cir.return
 }
 
