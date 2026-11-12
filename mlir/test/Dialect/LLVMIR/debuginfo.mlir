@@ -245,6 +245,23 @@ llvm.mlir.global @data() {dbg_exprs = [#var_expression, #var_expression1]} : i64
 // CHECK-DAG: #[[GV1]] = #llvm.di_global_variable<{{.*}}name = "a"{{.*}}>
 // CHECK-DAG: #[[GV2]] = #llvm.di_global_variable<{{.*}}name = "b"{{.*}}>
 
+#enum0 = #llvm.di_enumerator<i64, "zero", 0>
+#enum1 = #llvm.di_enumerator<i64, 0>
+#enum2 = #llvm.di_enumerator<i64, "thirty", 30>
+#enum3 = #llvm.di_enumerator<i64, "neg_one", -1>
+#enum4 = #llvm.di_enumerator<i64, "u64_max", 18446744073709551615, isUnsigned>
+#enum5 = #llvm.di_enumerator<i64, "i64_min", -9223372036854775808>
+#enum6 = #llvm.di_enumerator<i64, "u64_msb", 9223372036854775808, isUnsigned>
+#enum7 = #llvm.di_enumerator<i128, "i128_min", -170141183460469231731687303715884105728>
+#enum8 = #llvm.di_enumerator<i128, "i128_max", 170141183460469231731687303715884105727>
+#enum9 = #llvm.di_enumerator<i132, "u132", 2722258935367507707706996859454145691648, isUnsigned>
+#enum10 = #llvm.di_enumerator<i1, "llvm_neg_one", -1>
+#enum_comp = #llvm.di_composite_type<
+  tag = DW_TAG_enumeration_type, name = "enum_type", file = #file, line = 42,
+  baseType = #int1, sizeInBits = 32, alignInBits = 32,
+  elements = #enum0, #enum1, #enum2, #enum3, #enum4, #enum5, #enum6, #enum7, #enum8, #enum9, #enum10
+>
+// CHECK-DAG: #[[ENUM_COMP:.*]] = #llvm.di_composite_type<tag = DW_TAG_enumeration_type, name = "enum_type", file = #{{.*}}, line = 42, baseType = #{{.*}}, sizeInBits = 32, alignInBits = 32, elements = #llvm.di_enumerator<i64, "zero", 0>, #llvm.di_enumerator<i64, 0>, #llvm.di_enumerator<i64, "thirty", 30>, #llvm.di_enumerator<i64, "neg_one", -1>, #llvm.di_enumerator<i64, "u64_max", 18446744073709551615, isUnsigned>, #llvm.di_enumerator<i64, "i64_min", -9223372036854775808>, #llvm.di_enumerator<i64, "u64_msb", 9223372036854775808, isUnsigned>, #llvm.di_enumerator<i128, "i128_min", -170141183460469231731687303715884105728>, #llvm.di_enumerator<i128, "i128_max", 170141183460469231731687303715884105727>, #llvm.di_enumerator<i132, "u132", 2722258935367507707706996859454145691648, isUnsigned>, #llvm.di_enumerator<i1, "llvm_neg_one", -1>>
 
 // CHECK: llvm.func @addr(%[[ARG:.*]]: i64)
 llvm.func @addr(%arg: i64) {
@@ -269,5 +286,10 @@ llvm.func @value(%arg1: i32, %arg2: i32, %arg3 : i32) {
   llvm.intr.dbg.label #label1
   // CHECK: llvm.intr.dbg.label #[[LABEL2]]
   llvm.intr.dbg.label #label2
+  llvm.return
+}
+
+// CHECK: llvm.func @enumerators() attributes {di = #[[ENUM_COMP]]}
+llvm.func @enumerators() attributes {di = #enum_comp} {
   llvm.return
 }
