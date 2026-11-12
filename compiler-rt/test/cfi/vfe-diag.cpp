@@ -8,9 +8,6 @@
 // -fvirtual-function-elimination requires full LTO.
 // UNSUPPORTED: thinlto
 
-// FIXME: The checked load calls the handler without its arguments.
-// XFAIL: *
-
 #include "utils.h"
 #include <string.h>
 

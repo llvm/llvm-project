@@ -26,6 +26,7 @@ namespace std {
 
 struct S2 {
   virtual void f();
+  virtual ~S2();
 };
 
 }
@@ -72,10 +73,10 @@ struct DerivedFromS2 : std::S2 {};
 // NOSTD-WPD-NOT: llvm.type.test
 // NOSTD-WPD-NOT: call void @__ubsan_handle_cfi_check_fail
 // NOSTD-WPD: ret void
-// NOSTD-VFE: call { ptr, i1 } @llvm.type.checked.load(ptr {{.*}}, i32 0, metadata !"_ZTSSt2S2")
+// NOSTD-VFE: call { ptr, i1 } @llvm.type.checked.load(ptr {{.*}}, i32 16, metadata !"_ZTSSt2S2")
 // NOSTD-VFE-NOT: extractvalue { ptr, i1 } {{.*}}, 1
 // NOSTD-VFE-NOT: call void @__ubsan_handle_cfi_check_fail
 // NOSTD-VFE: ret void
 void d2f(DerivedFromS2 *d) {
-  d->f();
+  delete d;
 }
