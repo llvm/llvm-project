@@ -667,7 +667,8 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
           MachineBasicBlock::iterator KillInst = opBlock.end();
           for (MachineBasicBlock::iterator MI = ScanStart; MI != opBlock.end();
                ++MI) {
-            if (!MI->readsRegister(SrcReg, /*TRI=*/nullptr))
+            if (MI->isDebugInstr() ||
+                !MI->readsRegister(SrcReg, /*TRI=*/nullptr))
               continue;
             KillInst = MI;
             if (KillsIt != PHISrcLaneKills.end())
