@@ -1004,8 +1004,19 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       return nullptr;
     }
     if (getLangOpts().IncrementalExtensions &&
-        !isDeclarationStatement(/*DisambiguatingWithExpression=*/true))
+        !isDeclarationStatement(/*DisambiguatingWithExpression=*/true)) {
+      // The disambiguation looked up the first name at file scope. The
+      // statement has a scope of its own, where an ExternalSemaSource may
+      // know a name that is undeclared at file scope (`f();`). Look it up
+      // again.
+      if (Tok.is(tok::annot_non_type_undeclared)) {
+        IdentifierInfo *II = getIdentifierAnnotation(Tok);
+        Tok.setKind(tok::identifier);
+        Tok.setIdentifierInfo(II);
+        Tok.setLength(II->getLength());
+      }
       return ParseTopLevelStmtDecl();
+    }
 
     // We can't tell whether this is a function-definition or declaration yet.
     if (!SingleDecl)
