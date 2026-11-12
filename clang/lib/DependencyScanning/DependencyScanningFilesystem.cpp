@@ -228,10 +228,12 @@ static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 combineGlobalAndLocalFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> GlobalFS,
                         IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS) {
   if (LocalFS) {
+    // LocalFS takes precedence over GlobalFS, like it does for the queries that
+    // don't go through this overlay.
     auto OverlayVFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
-        std::move(LocalFS));
-    OverlayVFS->pushOverlay(std::move(GlobalFS));
-    GlobalFS = std::move(OverlayVFS);
+        std::move(GlobalFS));
+    OverlayVFS->pushOverlay(std::move(LocalFS));
+    return OverlayVFS;
   }
   return GlobalFS;
 }
