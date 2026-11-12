@@ -142,7 +142,7 @@ void printLocation(ELFSyncStream &s, InputSectionBase &sec, const Symbol &sym,
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations(Ctx &ctx);
+void scanRelocations(Ctx &ctx);
 template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
 void reportUndefinedSymbols(Ctx &);
 bool maybeReportUndefined(Ctx &, Undefined &sym, InputSectionBase &sec,

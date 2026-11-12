@@ -93,7 +93,7 @@ public:
   // require special type or addend adjustment. `shard` selects the `relocsVec`
   // shard that discovered dynamic relocations are appended to.
   virtual void scanSection(InputSectionBase &, unsigned shard);
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
 
   // Called after parallel relocation scanning is complete but before
