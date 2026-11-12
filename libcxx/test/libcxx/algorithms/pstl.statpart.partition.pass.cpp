@@ -23,6 +23,7 @@
 #include <iterator>
 #include <cassert>
 #include <optional>
+#include <cstddef>
 #include <forward_list>
 #include <vector>
 
