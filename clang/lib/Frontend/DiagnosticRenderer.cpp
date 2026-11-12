@@ -165,6 +165,14 @@ void DiagnosticRenderer::emitIncludeStackRecursively(FullSourceLoc Loc) {
   if (PLoc.isInvalid())
     return;
 
+  // clang-repl includes each input from its empty main file. Unlike an
+  // #include in a main file, that is an implementation detail:
+  // "In file included from <<< inputs >>>:1:".
+  if (LangOpts.IncrementalExtensions &&
+      Loc.getFileID() == Loc.getManager().getMainFileID() &&
+      Loc.getBufferData().empty())
+    return;
+
   // If this source location was imported from a module, print the module
   // import stack rather than the
   // FIXME: We want submodule granularity here.
