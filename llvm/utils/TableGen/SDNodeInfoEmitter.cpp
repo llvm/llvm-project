@@ -10,6 +10,7 @@
 #include "Common/CodeGenDAGPatterns.h" // For SDNodeInfo.
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -337,10 +338,45 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
 }
 
 static void emitDesc(raw_ostream &OS, StringRef EnumName,
-                     ArrayRef<SDNodeInfo> Nodes, unsigned NameOffset,
-                     unsigned ConstraintsOffset, unsigned ConstraintCount) {
+                     ArrayRef<SDNodeInfo> Nodes, unsigned NameOffset) {
   assert(haveCompatibleDescriptions(Nodes));
   const SDNodeInfo &N = Nodes.front();
+
+  if (!isUInt<16>(NameOffset))
+    PrintFatalError(N.getRecord()->getLoc(), "generated SDNode name offset " +
+                                                 Twine(NameOffset) +
+                                                 " does not fit in 16 bits");
+  if (!isUInt<8>(N.getTSFlags()))
+    PrintFatalError(N.getRecord()->getLoc(), "SDNode TSFlags value " +
+                                                 Twine(N.getTSFlags()) +
+                                                 " does not fit in 8 bits");
+
+  OS << "    {" << NameOffset << ", " << N.getTSFlags() << ", 0";
+
+  if (N.isStrictFP())
+    OS << "|1<<SDNFIsStrictFP";
+  if (N.getProperties() & (1 << SDNPMemOperand))
+    OS << "|1<<SDNFIsMemOperand";
+
+  OS << "}, // " << EnumName << '\n';
+}
+
+static void emitVerifyDesc(raw_ostream &OS, StringRef EnumName,
+                           ArrayRef<SDNodeInfo> Nodes,
+                           unsigned ConstraintsOffset,
+                           unsigned ConstraintCount) {
+  assert(haveCompatibleDescriptions(Nodes));
+  const SDNodeInfo &N = Nodes.front();
+
+  if (!isUInt<16>(N.getNumResults()))
+    PrintFatalError(N.getRecord()->getLoc(), "SDNode result count " +
+                                                 Twine(N.getNumResults()) +
+                                                 " does not fit in 16 bits");
+  if (!isInt<16>(N.getNumOperands()))
+    PrintFatalError(N.getRecord()->getLoc(), "SDNode operand count " +
+                                                 Twine(N.getNumOperands()) +
+                                                 " does not fit in 16 bits");
+
   OS << "    {" << N.getNumResults() << ", " << N.getNumOperands() << ", 0";
 
   // Emitted properties must be kept in sync with haveCompatibleDescriptions.
@@ -358,12 +394,8 @@ static void emitDesc(raw_ostream &OS, StringRef EnumName,
   if (Properties & (1 << SDNPMemOperand))
     OS << "|1<<SDNPMemOperand";
 
-  OS << ", 0";
-  if (N.isStrictFP())
-    OS << "|1<<SDNFIsStrictFP";
-
-  OS << formatv(", {}, {}, {}, {}}, // {}\n", N.getTSFlags(), NameOffset,
-                ConstraintsOffset, ConstraintCount, EnumName);
+  OS << formatv(", {}, {}}, // {}\n", ConstraintsOffset, ConstraintCount,
+                EnumName);
 }
 
 void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
@@ -373,21 +405,46 @@ void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
   NamespaceEmitter NS(OS, "llvm");
 
   std::vector<unsigned> NameOffsets = emitNodeNames(OS);
-  std::vector<std::pair<unsigned, unsigned>> ConstraintOffsetsAndCounts =
-      emitTypeConstraints(OS);
 
   OS << "static const SDNodeDesc " << TargetName << "SDNodeDescs[] = {\n";
 
-  for (const auto &[NameAndNodes, NameOffset, ConstraintOffsetAndCount] :
-       zip_equal(NodesByName, NameOffsets, ConstraintOffsetsAndCounts))
-    emitDesc(OS, NameAndNodes.first, NameAndNodes.second, NameOffset,
-             ConstraintOffsetAndCount.first, ConstraintOffsetAndCount.second);
+  for (const auto &[NameAndNodes, NameOffset] :
+       zip_equal(NodesByName, NameOffsets))
+    emitDesc(OS, NameAndNodes.first, NameAndNodes.second, NameOffset);
 
   OS << "};\n\n";
 
-  OS << formatv("static const SDNodeInfo {0}GenSDNodeInfo(\n"
+  OS << "#ifndef NDEBUG\n";
+
+  std::vector<std::pair<unsigned, unsigned>> ConstraintOffsetsAndCounts =
+      emitTypeConstraints(OS);
+
+  OS << "static const SDNodeVerifyDesc " << TargetName
+     << "SDNodeVerifyDescs[] = {\n";
+
+  for (const auto &[NameAndNodes, ConstraintOffsetAndCount] :
+       zip_equal(NodesByName, ConstraintOffsetsAndCounts))
+    emitVerifyDesc(OS, NameAndNodes.first, NameAndNodes.second,
+                   ConstraintOffsetAndCount.first,
+                   ConstraintOffsetAndCount.second);
+
+  OS << "};\n\n";
+
+  OS << formatv("static const SDNodeVerifyInfo {0}SDNodeVerifyInfo = {\n"
+                "    {0}SDNodeVerifyDescs, {0}VTByHwModeTable,\n"
+                "    {0}SDTypeConstraints};\n",
+                TargetName);
+  OS << "#endif // NDEBUG\n\n";
+
+  OS << formatv("#ifndef NDEBUG\n"
+                "static const SDNodeInfo {0}GenSDNodeInfo(\n"
                 "    /*NumOpcodes=*/{1}, {0}SDNodeDescs, {0}SDNodeNames,\n"
-                "    {0}VTByHwModeTable, {0}SDTypeConstraints);\n",
+                "    &{0}SDNodeVerifyInfo);\n"
+                "#else\n"
+                "static const SDNodeInfo {0}GenSDNodeInfo(\n"
+                "    /*NumOpcodes=*/{1}, {0}SDNodeDescs, {0}SDNodeNames,\n"
+                "    nullptr);\n"
+                "#endif // NDEBUG\n",
                 TargetName, NodesByName.size());
 }
 

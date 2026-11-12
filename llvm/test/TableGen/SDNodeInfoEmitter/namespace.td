@@ -23,16 +23,31 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // EMPTY-NEXT:     "\0"
 // EMPTY-NEXT:     ;
 
+// EMPTY:        static const SDNodeDesc MyTargetSDNodeDescs[] = {
+// EMPTY-NEXT:   };
+// EMPTY-EMPTY:
+// EMPTY-NEXT:   #ifndef NDEBUG
 // EMPTY:        static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // EMPTY-NEXT:     /* dummy */ {SDTCisVT, 0, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // EMPTY-NEXT:   };
 // EMPTY-EMPTY:
-// EMPTY-NEXT:   static const SDNodeDesc MyTargetSDNodeDescs[] = {
+// EMPTY-NEXT:   static const SDNodeVerifyDesc MyTargetSDNodeVerifyDescs[] = {
 // EMPTY-NEXT:   };
 // EMPTY-EMPTY:
+// EMPTY-NEXT:   static const SDNodeVerifyInfo MyTargetSDNodeVerifyInfo = {
+// EMPTY-NEXT:       MyTargetSDNodeVerifyDescs, MyTargetVTByHwModeTable,
+// EMPTY-NEXT:       MyTargetSDTypeConstraints};
+// EMPTY-NEXT:   #endif // NDEBUG
+// EMPTY-EMPTY:
+// EMPTY-NEXT:   #ifndef NDEBUG
 // EMPTY-NEXT:   static const SDNodeInfo MyTargetGenSDNodeInfo(
 // EMPTY-NEXT:       /*NumOpcodes=*/0, MyTargetSDNodeDescs, MyTargetSDNodeNames,
-// EMPTY-NEXT:       MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);
+// EMPTY-NEXT:       &MyTargetSDNodeVerifyInfo);
+// EMPTY-NEXT:   #else
+// EMPTY-NEXT:   static const SDNodeInfo MyTargetGenSDNodeInfo(
+// EMPTY-NEXT:       /*NumOpcodes=*/0, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// EMPTY-NEXT:       nullptr);
+// EMPTY-NEXT:   #endif // NDEBUG
 
 // COMMON:       namespace llvm::[[NS]] {
 // COMMON-EMPTY:
@@ -49,7 +64,13 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // COMMON-NEXT:    "[[NS]]::NODE\0"
 // COMMON-NEXT:    ;
 
-// COMMON:       static const VTByHwModePair MyTargetVTByHwModeTable[] = {
+// COMMON:       static const SDNodeDesc MyTargetSDNodeDescs[] = {
+// TARGET-NEXT:      {1, 0, 0}, // NODE
+// CUSTOM-NEXT:      {1, 0, 0}, // NODE
+// COMMON-NEXT:  };
+// COMMON-EMPTY:
+// COMMON-NEXT:  #ifndef NDEBUG
+// COMMON-NEXT:  static const VTByHwModePair MyTargetVTByHwModeTable[] = {
 // COMMON-NEXT:    /* dummy */ {0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // COMMON-NEXT:  };
 
@@ -58,11 +79,22 @@ def node_2 : SDNode<"MyCustomISD::NODE", SDTypeProfile<0, 1, [SDTCisVT<0, i2>]>>
 // CUSTOM-NEXT:    /* 0 */ {SDTCisVT, 0, 0, 0, MVT::i2},
 // COMMON-NEXT:  };
 // COMMON-EMPTY:
-// COMMON-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// TARGET-NEXT:      {1, 0, 0, 0, 0, 1, 0, 1}, // NODE
-// CUSTOM-NEXT:      {0, 1, 0, 0, 0, 1, 0, 1}, // NODE
+// COMMON-NEXT:  static const SDNodeVerifyDesc MyTargetSDNodeVerifyDescs[] = {
+// TARGET-NEXT:      {1, 0, 0, 0, 1}, // NODE
+// CUSTOM-NEXT:      {0, 1, 0, 0, 1}, // NODE
 // COMMON-NEXT:  };
 // COMMON-EMPTY:
+// COMMON-NEXT:  static const SDNodeVerifyInfo MyTargetSDNodeVerifyInfo = {
+// COMMON-NEXT:      MyTargetSDNodeVerifyDescs, MyTargetVTByHwModeTable,
+// COMMON-NEXT:      MyTargetSDTypeConstraints};
+// COMMON-NEXT:  #endif // NDEBUG
+// COMMON-EMPTY:
+// COMMON-NEXT:  #ifndef NDEBUG
 // COMMON-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
 // COMMON-NEXT:      /*NumOpcodes=*/1, MyTargetSDNodeDescs, MyTargetSDNodeNames,
-// COMMON-NEXT:      MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);
+// COMMON-NEXT:      &MyTargetSDNodeVerifyInfo);
+// COMMON-NEXT:  #else
+// COMMON-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
+// COMMON-NEXT:      /*NumOpcodes=*/1, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// COMMON-NEXT:      nullptr);
+// COMMON-NEXT:  #endif // NDEBUG
