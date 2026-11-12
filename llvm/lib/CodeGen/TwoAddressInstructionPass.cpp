@@ -1552,6 +1552,9 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
   bool AllUsesCopied = true;
   Register LastCopiedReg;
   SlotIndex LastCopyIdx;
+  // Slot of each inserted copy and the lanes of RegB it reads, so that each
+  // subrange of RegB can end at the copy that reads its lanes.
+  SmallVector<std::pair<SlotIndex, LaneBitmask>, 4> CopyReads;
   Register RegB = 0;
   unsigned SubRegB = 0;
   for (auto &TP : TiedPairs) {
@@ -1615,6 +1618,9 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
 
     if (LIS) {
       LastCopyIdx = LIS->InsertMachineInstrInMaps(*PrevMI).getRegSlot();
+      CopyReads.emplace_back(LastCopyIdx,
+                             SubRegB ? TRI->getSubRegIndexLaneMask(SubRegB)
+                                     : MRI->getMaxLaneMaskForVReg(RegB));
 
       SlotIndex endIdx =
           LIS->getInstructionIndex(*MI).getRegSlot(DstMO.isEarlyClobber());
@@ -1692,15 +1698,25 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
     // Update LiveIntervals.
     if (LIS) {
       SlotIndex UseIdx = LIS->getInstructionIndex(*MI);
-      auto Shrink = [=](LiveRange &LR, LaneBitmask LaneMask) {
-        LiveRange::Segment *S = LR.getSegmentContaining(LastCopyIdx);
+      auto Shrink = [&](LiveRange &LR, LaneBitmask LaneMask) {
+        // The new end is the last copy that reads any of these lanes. When
+        // several tied operands read different subregisters of RegB, each
+        // subrange ends at its own copy, not at the last copy overall.
+        SlotIndex NewEnd;
+        for (const auto &[CopyIdx, CopyLanes] : CopyReads)
+          if ((CopyLanes & LaneMask).any() &&
+              (!NewEnd.isValid() || NewEnd < CopyIdx))
+            NewEnd = CopyIdx;
+        if (!NewEnd.isValid())
+          NewEnd = LastCopyIdx;
+        LiveRange::Segment *S = LR.getSegmentContaining(NewEnd);
         if (!S)
           return true;
         if ((LaneMask & RemainingUses).any())
           return false;
         if (S->end.getBaseIndex() != UseIdx)
           return false;
-        S->end = LastCopyIdx;
+        S->end = NewEnd;
         return true;
       };
 
