@@ -1860,7 +1860,7 @@ public:
   void Post(const parser::OmpAssumesDirective &x) {
     if (Symbol * symbol{currScope().symbol()}) {
       llvm::omp::Clauses clauses;
-      std::set<llvm::omp::Directive> absent;
+      llvm::omp::Directives absent;
       for (const parser::OmpClause &clause : x.v.Clauses().v) {
         if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
           clauses.set(clause.Id());
@@ -1877,7 +1877,7 @@ public:
                        std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
           clauses.set(clause.Id());
           for (llvm::omp::Directive directive : absentClause->v.v) {
-            absent.insert(directive);
+            absent.set(directive);
           }
         }
       }

@@ -67,11 +67,11 @@ public:
   const llvm::omp::Clauses &ompAssumes() const { return ompAssumes_; }
   void set_ompAssumes(llvm::omp::Clauses clauses) { ompAssumes_ = clauses; }
 
-  const std::set<llvm::omp::Directive> &ompAssumesAbsent() const {
+  const llvm::omp::Directives &ompAssumesAbsent() const {
     return ompAssumesAbsent_;
   }
   void add_ompAssumesAbsent(llvm::omp::Directive directive) {
-    ompAssumesAbsent_.insert(directive);
+    ompAssumesAbsent_.set(directive);
   }
 
   const llvm::omp::Clauses &ompDeclTarget() const { return ompDeclTarget_; }
@@ -120,7 +120,7 @@ private:
   // clause is present in the ompRequires_ set.
   std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
   llvm::omp::Clauses ompAssumes_;
-  std::set<llvm::omp::Directive> ompAssumesAbsent_;
+  llvm::omp::Directives ompAssumesAbsent_;
   // The set of clauses on DECLARE_TARGET directive that apply to this
   // symbol.
   llvm::omp::Clauses ompDeclTarget_;

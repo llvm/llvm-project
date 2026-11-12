@@ -6570,7 +6570,7 @@ private:
     bool noParallelism = false;
     const auto *assumptionScopeEnd =
         &Fortran::semantics::omp::GetProgramUnit(scope).parent();
-    std::set<llvm::omp::Directive> absent;
+    llvm::omp::Directives absent;
     for (const auto *assumptionScope = &scope;
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
@@ -6584,8 +6584,7 @@ private:
                     llvm::omp::Clause::OMPC_no_openmp);
                 noParallelism |= details.ompAssumes().test(
                     llvm::omp::Clause::OMPC_no_parallelism);
-                const auto &directives = details.ompAssumesAbsent();
-                absent.insert(directives.begin(), directives.end());
+                absent |= details.ompAssumesAbsent();
               }
             },
             symbol->details());
