@@ -428,16 +428,19 @@ public:
 };
 
 /// The attribute sets and enum function attributes of an AttributeListImpl,
-/// so that AttributeList can query them inline.
+/// so that AttributeList can query them inline. The attribute sets are stored
+/// directly after this, as the trailing objects of the AttributeListImpl.
 class AttributeListImplBase {
 protected:
-  /// The attribute sets, which are stored after the AttributeListImpl.
-  const AttributeSet *AttrSets = nullptr;
   unsigned NumAttrSets = 0; ///< Number of entries in this set.
   AttributeBitSet AvailableFunctionAttrs;
+  /// Union of enum attributes available at any index.
+  AttributeBitSet AvailableSomewhereAttrs;
 
 public:
-  const AttributeSet *getAttrSets() const { return AttrSets; }
+  const AttributeSet *getAttrSets() const {
+    return reinterpret_cast<const AttributeSet *>(this + 1);
+  }
   unsigned getNumAttrSets() const { return NumAttrSets; }
 
   /// Return true if the function has an enum attribute of the given kind.
