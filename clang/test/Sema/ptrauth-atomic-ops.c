@@ -187,6 +187,8 @@ void by_address(int *p, int **raw, UniformPtr *same) {
   __atomic_load(&uniform, same, memory_order_seq_cst);
   __atomic_store(&uniform, same, memory_order_seq_cst);
   __atomic_exchange(&uniform, same, same, memory_order_seq_cst);
+  __typeof__(__atomic_load_n(&uniform, memory_order_seq_cst)) loaded;
+  int **unqualified = &loaded;
 
   __c11_atomic_compare_exchange_strong(&atomic_uniform, raw, p, memory_order_seq_cst, memory_order_seq_cst);
   // expected-error@-1 {{passing 'int **' to parameter of type 'int *__ptrauth(2,0,200) *' changes pointer authentication of pointee type}}

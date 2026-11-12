@@ -5579,13 +5579,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   // 'A'.  We shouldn't let the volatile-ness of the pointee-type inject itself
   // into the result or the other operands. Similarly atomic_load takes a
   // pointer to a const 'A'.
-  ValType.removeLocalVolatile();
-  ValType.removeLocalConst();
-  if (ValType.getPointerAuth()) {
-    Qualifiers Quals = ValType.getQualifiers();
-    Quals.removePointerAuth();
-    ValType = Context.getQualifiedType(ValType.getUnqualifiedType(), Quals);
-  }
+  ValType = ValType.getUnqualifiedType();
   QualType ResultType = ValType;
   if (Form == Copy || Form == LoadCopy || Form == GNUXchg || Form == Init ||
       Form == ClearByte)
