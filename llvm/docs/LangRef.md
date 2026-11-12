@@ -22621,8 +22621,8 @@ is taken from the third argument.
 ;; Lanes at and above %pivot are taken from %on_false
 %atfirst = insertelement <4 x i32> poison, i32 %pivot, i64 0
 %splat = shufflevector <4 x i32> %atfirst, <4 x i32> poison, <4 x i32> zeroinitializer
-%pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> %splat
-%mergemask = and <4 x i1> %cond, <4 x i1> %pivotmask
+%pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %splat
+%mergemask = select <4 x i1> %pivotmask, <4 x i1> %cond, <4 x i1> splat (i1 false)
 %also.r = select <4 x i1> %mergemask, <4 x i32> %on_true, <4 x i32> %on_false
 ```
 
