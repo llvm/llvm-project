@@ -4507,13 +4507,6 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
   if (getFenvAttr())
     return {};
 
-  auto lhsVecAttr =
-      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
-  auto rhsVecAttr =
-      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
-  if (!lhsVecAttr || !rhsVecAttr)
-    return {};
-
   cir::FCmpOpKind kind = getKind();
   if (kind == cir::FCmpOpKind::_true || kind == cir::FCmpOpKind::_false) {
     mlir::Attribute elt =
@@ -4523,6 +4516,13 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
     return cir::ConstVectorAttr::get(
         getType(), mlir::ArrayAttr::get(getContext(), elements));
   }
+
+  auto lhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
+  auto rhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
+  if (!lhsVecAttr || !rhsVecAttr)
+    return {};
 
   mlir::ArrayAttr lhsElts = lhsVecAttr.getElts();
   mlir::ArrayAttr rhsElts = rhsVecAttr.getElts();
