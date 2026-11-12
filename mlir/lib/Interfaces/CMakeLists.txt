@@ -13,6 +13,7 @@ set(LLVM_OPTIONAL_SOURCES
   InferIntRangeInterface.cpp
   InferStridedMetadataInterface.cpp
   InferTypeOpInterface.cpp
+  InferUniformityOpInterface.cpp
   LoopLikeInterface.cpp
   MemOpInterfaces.cpp
   MemorySlotInterfaces.cpp
@@ -85,6 +86,7 @@ add_mlir_library(MLIRInferStridedMetadataInterface
 )
 
 add_mlir_interface_library(InferTypeOpInterface)
+add_mlir_interface_library(InferUniformityOpInterface)
 
 add_mlir_library(MLIRLoopLikeInterface
   LoopLikeInterface.cpp
