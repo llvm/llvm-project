@@ -13987,7 +13987,8 @@ def err_hlsl_builtin_requires_sm : Error<
   "%0 requires shader model %1 or newer">;
 
 def err_hlsl_builtin_unsupported_in_stage : Error<
-  "%0 is not supported in '%1' shaders">;
+  "%0 is not supported in '%1' shaders, requires "
+  "%select{|one of the following: }2%3">;
 
 def err_hlsl_export_not_on_function : Error<
   "export declaration can only be used on functions">;

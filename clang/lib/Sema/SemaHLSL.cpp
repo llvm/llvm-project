@@ -3238,18 +3238,23 @@ void DiagnoseHLSLAvailability::DiagnoseQuadAllCall(CallExpr *CE) {
   if (!FD || FD->getBuiltinID() != Builtin::BI__builtin_hlsl_quad_all)
     return;
 
-  switch (GetCurrentShaderEnvironment()) {
-  case llvm::Triple::UnknownEnvironment:
-  case llvm::Triple::Pixel:
-  case llvm::Triple::Compute:
-  case llvm::Triple::Mesh:
-  case llvm::Triple::Amplification:
+  const llvm::Triple::EnvironmentType AllowedStages[] = {
+      llvm::Triple::Pixel, llvm::Triple::Compute, llvm::Triple::Mesh,
+      llvm::Triple::Amplification};
+  llvm::Triple::EnvironmentType Stage = GetCurrentShaderEnvironment();
+  if (Stage == llvm::Triple::UnknownEnvironment ||
+      llvm::is_contained(AllowedStages, Stage))
     return;
-  default:
-    SemaRef.Diag(CE->getExprLoc(), diag::err_hlsl_builtin_unsupported_in_stage)
-        << FD
-        << llvm::Triple::getEnvironmentTypeName(GetCurrentShaderEnvironment());
-  }
+
+  SmallVector<StringRef, 4> StageStrings;
+  llvm::transform(AllowedStages, std::back_inserter(StageStrings),
+                  [](llvm::Triple::EnvironmentType ST) {
+                    return StringRef(
+                        HLSLShaderAttr::ConvertEnvironmentTypeToStr(ST));
+                  });
+  SemaRef.Diag(CE->getExprLoc(), diag::err_hlsl_builtin_unsupported_in_stage)
+      << FD << llvm::Triple::getEnvironmentTypeName(Stage)
+      << (std::size(AllowedStages) != 1) << join(StageStrings, ", ");
 }
 
 uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierGroupMemory(
