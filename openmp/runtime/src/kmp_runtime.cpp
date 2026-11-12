@@ -1167,6 +1167,32 @@ inline static void updateHWFPControl(kmp_team_t *team) {
     }
   }
 }
+#elif KMP_RISCV_FP_CONTROL
+// Access frm alone: fflags and reserved fcsr bits belong to the current thread.
+static inline kmp_uint32 __kmp_riscv_read_rounding() {
+  kmp_uint32 mode;
+  __asm__ __volatile__("frrm %0" : "=r"(mode) : : "memory");
+  return mode;
+}
+
+static inline void __kmp_riscv_write_rounding(kmp_uint32 mode) {
+  __asm__ __volatile__("fsrm %0" : : "r"(mode) : "memory");
+}
+
+inline static void propagateFPControl(kmp_team_t *team) {
+  if (__kmp_inherit_fp_control) {
+    KMP_CHECK_UPDATE(team->t.t_riscv_rounding, __kmp_riscv_read_rounding());
+    KMP_CHECK_UPDATE(team->t.t_fp_control_saved, TRUE);
+  } else {
+    KMP_CHECK_UPDATE(team->t.t_fp_control_saved, FALSE);
+  }
+}
+
+inline static void updateHWFPControl(kmp_team_t *team) {
+  if (__kmp_inherit_fp_control && team->t.t_fp_control_saved &&
+      team->t.t_riscv_rounding != __kmp_riscv_read_rounding())
+    __kmp_riscv_write_rounding(team->t.t_riscv_rounding);
+}
 #else
 #define propagateFPControl(x) ((void)0)
 #define updateHWFPControl(x) ((void)0)
@@ -4754,7 +4780,10 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
   team->t.t_fp_control_saved = FALSE; /* not needed */
   team->t.t_x87_fpu_control_word = 0; /* not needed */
   team->t.t_mxcsr = 0; /* not needed */
-#endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
+#elif KMP_RISCV_FP_CONTROL
+  team->t.t_fp_control_saved = FALSE;
+  team->t.t_riscv_rounding = 0;
+#endif /* FP control */
 
   team->t.t_construct = 0;
 
