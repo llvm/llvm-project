@@ -23,14 +23,19 @@ using LIBC_NAMESPACE::CheckedPtr;
 using LIBC_NAMESPACE::make_unique;
 using LIBC_NAMESPACE::make_unique_for_overwrite;
 using LIBC_NAMESPACE::cpp::is_constructible_v;
+using LIBC_NAMESPACE::cpp::is_convertible_v;
 using LIBC_NAMESPACE::cpp::move;
 using LIBC_NAMESPACE::cpp::unique_ptr;
 
 // Verify compile-time properties:
 // - Non-copyable and non-default-constructible.
+// - Implicitly convertible from nullptr, but not from a raw pointer (like
+//   unique_ptr).
 // - Explicit conversion to bool is only allowed on non-const lvalues/rvalues.
 static_assert(!is_constructible_v<CheckedPtr<int>>);
 static_assert(!is_constructible_v<CheckedPtr<int>, const CheckedPtr<int> &>);
+static_assert(is_convertible_v<decltype(nullptr), CheckedPtr<int>>);
+static_assert(!is_convertible_v<int *, CheckedPtr<int>>);
 static_assert(is_constructible_v<bool, CheckedPtr<int> &>);
 static_assert(!is_constructible_v<bool, const CheckedPtr<int> &>);
 static_assert(is_constructible_v<bool, CheckedPtr<int[]> &>);
@@ -95,6 +100,9 @@ TEST(LlvmLibcCheckedPtrTest, BasicMakeUniqueAndAccess) {
 TEST(LlvmLibcCheckedPtrTest, NullptrCheck) {
   CheckedPtr<int> ptr(nullptr);
   EXPECT_FALSE(static_cast<bool>(ptr));
+
+  CheckedPtr<int> implicit_ptr = nullptr;
+  EXPECT_FALSE(static_cast<bool>(implicit_ptr));
 }
 
 TEST(LlvmLibcCheckedPtrTest, MoveRequiresRecheck) {
