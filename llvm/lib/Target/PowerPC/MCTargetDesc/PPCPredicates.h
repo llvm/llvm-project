@@ -63,8 +63,9 @@ namespace PPC {
     BR_NO_HINT       = 0x0,
     BR_NONTAKEN_HINT = 0x2,
     BR_TAKEN_HINT    = 0x3,
-    BR_HINT_MASK     = 0X3
   };
+
+  constexpr unsigned BR_HINT_MASK = 0x3;
 
   /// Invert the specified predicate.  != -> ==, < -> >=.
   Predicate InvertPredicate(Predicate Opcode);
