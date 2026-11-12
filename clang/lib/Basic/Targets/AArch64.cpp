@@ -808,9 +808,11 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16");
 
-  // Allow detection of fast FMA support.
-  Builder.defineMacro("__FP_FAST_FMA", "1");
-  Builder.defineMacro("__FP_FAST_FMAF", "1");
+  // Allow detection of fast FMA support, which needs the FPU.
+  if (FPU & FPUMode) {
+    Builder.defineMacro("__FP_FAST_FMA", "1");
+    Builder.defineMacro("__FP_FAST_FMAF", "1");
+  }
 
   // C/C++ operators work on both VLS and VLA SVE types
   if (FPU & SveMode)

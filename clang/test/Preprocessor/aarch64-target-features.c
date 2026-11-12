@@ -879,3 +879,8 @@
 // CHECK-SME2p2: __ARM_FEATURE_SME2 1
 // CHECK-SME2p2: __ARM_FEATURE_SME2p1 1
 // CHECK-SME2p2: __ARM_FEATURE_SME2p2 1
+
+// Without an FPU, there is no __ARM_FP, and fma is not fast.
+// RUN: %clang --target=aarch64 -mgeneral-regs-only -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOFP --implicit-check-not=__FP_FAST_FMA --implicit-check-not='__ARM_FP 0x' %s
+// RUN: %clang --target=aarch64 -march=armv8-a+nofp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOFP --implicit-check-not=__FP_FAST_FMA --implicit-check-not='__ARM_FP 0x' %s
+// CHECK-NOFP: #define __aarch64__ 1
