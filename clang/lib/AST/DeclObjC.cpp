@@ -66,7 +66,7 @@ ObjCContainerDecl::ObjCContainerDecl(Kind DK, DeclContext *DC,
                                      const IdentifierInfo *Id,
                                      SourceLocation nameLoc,
                                      SourceLocation atStartLoc)
-    : NamedDecl(DK, DC, nameLoc, Id), DeclContext(DK, this) {
+    : NamedDecl(DK, DC, nameLoc, Id), DeclContext(DK) {
   setAtStartLoc(atStartLoc);
 }
 
@@ -823,8 +823,8 @@ ObjCMethodDecl::ObjCMethodDecl(
     bool isSynthesizedAccessorStub, bool isImplicitlyDeclared, bool isDefined,
     ObjCImplementationControl impControl, bool HasRelatedResultType)
     : NamedDecl(ObjCMethod, contextDecl, beginLoc, SelInfo),
-      DeclContext(ObjCMethod, this), MethodDeclType(T),
-      ReturnTInfo(ReturnTInfo), DeclEndLoc(endLoc) {
+      DeclContext(ObjCMethod), MethodDeclType(T), ReturnTInfo(ReturnTInfo),
+      DeclEndLoc(endLoc) {
 
   // Initialized the bits stored in DeclContext.
   ObjCMethodDeclBits.Family =
