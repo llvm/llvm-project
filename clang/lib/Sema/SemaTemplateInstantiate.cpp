@@ -3680,7 +3680,7 @@ bool Sema::InstantiateClassImpl(
     Spec->setPointOfInstantiation(PointOfInstantiation);
   }
 
-  NonSFINAEContext _(*this);
+  NonSFINAEContext _(*this, Instantiation);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Instantiation);
   if (Inst.isInvalid())
     return true;
