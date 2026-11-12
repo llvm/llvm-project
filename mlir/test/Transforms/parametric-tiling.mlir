@@ -146,3 +146,21 @@ func.func @loop_with_iter_args(%buffer: memref<1024xf32>, %lb: index,
   }
   return %final_sum : f32
 }
+
+// Verify that extractFixedOuterLoops silently skips loops using unsigned
+// comparisons instead of crashing (regression test for
+// https://github.com/llvm/llvm-project/issues/240306).
+
+// COMMON-LABEL: @loop_with_unsigned_cmp
+// COMMON: scf.for unsigned
+// COMMON-NOT: scf.for
+// COMMON: return
+func.func @loop_with_unsigned_cmp(%buffer: memref<1024xf32>, %lb: index,
+                                  %ub: index, %step: index) {
+  // This loop uses unsigned comparison; strip-mining must not be applied.
+  scf.for unsigned %iv = %lb to %ub step %step {
+    %element = memref.load %buffer[%iv] : memref<1024xf32>
+    memref.store %element, %buffer[%iv] : memref<1024xf32>
+  }
+  return
+}

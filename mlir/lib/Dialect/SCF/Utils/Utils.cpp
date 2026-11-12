@@ -1434,14 +1434,24 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
 
-  // The strip-mining transformation splices loop bodies into a new inner loop
-  // without threading iter_args.  If any of the collected loops carries
-  // iter_args, the splice would produce invalid IR (yielded values from the
-  // inner scope used in the outer terminator).  Skip the transformation in
-  // that case.
-  if (llvm::any_of(forOps,
-                   [](scf::ForOp op) { return !op.getInitArgs().empty(); }))
-    return {};
+  for (scf::ForOp op : forOps) {
+    // The strip-mining transformation splices loop bodies into a new inner loop
+    // without threading iter_args.  If any of the collected loops carries
+    // iter_args, the splice would produce invalid IR (yielded values from the
+    // inner scope used in the outer terminator).  Skip the transformation in
+    // that case.
+    if (!op.getInitArgs().empty())
+      return {};
+
+    // The strip-mining transformation uses signed arithmetic (`arith.minsi`) to
+    // compute the strip bounds, and creates inner loops with signed
+    // comparisons. Because of this, for loops using unsigned comparisons,
+    // bounds with the sign bit set would be misinterpreted and change the
+    // number of iterations (`stripmineSink` asserts on exactly this case). Skip
+    // the transformation in this case.
+    if (op.getUnsignedCmp())
+      return {};
+  }
 
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes
