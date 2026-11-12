@@ -240,14 +240,14 @@ void TypeAndShape::AcquireAttrs(const semantics::Symbol &symbol) {
 
 void TypeAndShape::AcquireLEN() {
   if (auto len{type_.GetCharLength()}) {
-    LEN_ = std::move(len);
+    set_LEN(std::move(*len));
   }
 }
 
 void TypeAndShape::AcquireLEN(const semantics::Symbol &symbol) {
   if (type_.category() == TypeCategory::Character) {
     if (auto len{DataRef{symbol}.LEN()}) {
-      LEN_ = std::move(*len);
+      set_LEN(std::move(*len));
     }
   }
 }
