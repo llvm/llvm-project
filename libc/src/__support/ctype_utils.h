@@ -597,6 +597,18 @@ LIBC_INLINE constexpr bool is_char_or_wchar(char ch, char c_value,
   return (ch == c_value);
 }
 
+LIBC_INLINE constexpr bool isblank(char ch) { return ch == ' ' || ch == '\t'; }
+
+LIBC_INLINE constexpr bool iscntrl(char ch) {
+  return static_cast<unsigned char>(ch) < 0x20 || ch == 0x7f;
+}
+
+LIBC_INLINE constexpr bool isprint(char ch) {
+  return static_cast<unsigned char>(ch - 0x20) < 95;
+}
+
+LIBC_INLINE constexpr bool isascii(int c) { return (c & (~0x7f)) == 0; }
+
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 

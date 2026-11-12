@@ -8,14 +8,17 @@
 
 #include "src/ctype/isprint.h"
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, isprint, (int c)) {
-  const unsigned ch = static_cast<unsigned>(c);
-  return static_cast<int>((ch - ' ') < 95);
+  if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
+    return 0;
+  return static_cast<int>(internal::isprint(static_cast<char>(c)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
