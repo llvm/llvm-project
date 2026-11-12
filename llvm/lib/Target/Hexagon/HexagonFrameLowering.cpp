@@ -1839,23 +1839,30 @@ MachineBasicBlock::iterator HexagonFrameLowering::eliminateCallFramePseudoInstr(
 void HexagonFrameLowering::computeVTCMStackOffsets(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  const auto &HRI = *HST.getRegisterInfo();
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
   MachineFrameInfo &VTCMFrameInfo = HMFI.getVTCMFrameInfo();
+  const int64_t HlxLRSize = HRI.getSpillSize(Hexagon::HlxLRRegClass);
 
   int64_t Offset = 0;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    bool IsHlxLRSpill =
+        MFI.isSpillSlotObjectIndex(I) && MFI.getObjectSize(I) == HlxLRSize;
     if (MFI.isDeadObjectIndex(I) || MFI.isFixedObjectIndex(I) ||
-        MFI.isSpillSlotObjectIndex(I) || MFI.isVariableSizedObjectIndex(I) ||
-        MFI.isObjectPreAllocated(I))
+        (!IsHlxLRSpill && MFI.isSpillSlotObjectIndex(I)) ||
+        MFI.isVariableSizedObjectIndex(I) || MFI.isObjectPreAllocated(I))
       continue;
     const AllocaInst *AI = MFI.getObjectAllocation(I);
-    if (!AI || !containsHLXObject(HST, AI->getAllocatedType()))
+    if (!IsHlxLRSpill &&
+        (!AI || !containsHLXObject(HST, AI->getAllocatedType())))
       continue;
 
     int64_t Size = MFI.getObjectSize(I);
     Align Alignment = MFI.getObjectAlign(I);
-    int VTCMIndex = VTCMFrameInfo.CreateStackObject(Size, Alignment, false,
-                                                    MFI.getObjectAllocation(I));
+    int VTCMIndex =
+        IsHlxLRSpill ? VTCMFrameInfo.CreateSpillStackObject(Size, Alignment)
+                     : VTCMFrameInfo.CreateStackObject(
+                           Size, Alignment, false, MFI.getObjectAllocation(I));
     Offset += Size;
     VTCMFrameInfo.setObjectOffset(VTCMIndex, -Offset);
     HMFI.moveToVTCMStack(I, VTCMIndex);
