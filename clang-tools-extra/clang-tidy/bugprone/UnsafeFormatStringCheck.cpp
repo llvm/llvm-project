@@ -262,15 +262,12 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (!hasUnboundedStringSpecifier(FormatString, IsScanfFamily))
     return;
-
   diag(Call->getBeginLoc(),
-       llvm::formatv(
-           "format specifier '%%s' without {0} may cause buffer overflow; "
-           "consider using '%%{1}Ns' where N limits {2} length",
-           IsScanfFamily ? "field width" : "precision",
-           IsScanfFamily ? "" : ".", IsScanfFamily ? "input" : "output")
-           .str())
-      << Call->getSourceRange();
+       "format specifier '%%s' without %select{precision|field width}0 may "
+       "cause buffer overflow; "
+       "consider using '%%%select{.|}0Ns' where N limits "
+       "%select{output|input}0 length")
+      << IsScanfFamily << Call->getSourceRange();
 }
 
 } // namespace clang::tidy::bugprone
