@@ -273,3 +273,4 @@ body:             |
     %2:_(s32) = G_ATOMICRMW_XOR %0(p0), %1 :: (load store monotonic (s32))
     $x10 = COPY %2(s32)
     PseudoRET implicit $x10
+...
