@@ -47,7 +47,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -66,26 +65,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hwloops"
 
-#ifndef NDEBUG
-static cl::opt<int> HWLoopLimit("hexagon-max-hwloop", cl::Hidden, cl::init(-1));
-
-// Option to create preheader only for a specific function.
-static cl::opt<std::string> PHFn("hexagon-hwloop-phfn", cl::Hidden,
-                                 cl::init(""));
-#endif
-
-// Option to create a preheader if one doesn't exist.
-static cl::opt<bool> HWCreatePreheader("hexagon-hwloop-preheader",
-    cl::Hidden, cl::init(true),
-    cl::desc("Add a preheader to a hardware loop if one doesn't exist"));
-
-// Turn it off by default. If a preheader block is not created here, the
-// software pipeliner may be unable to find a block suitable to serve as
-// a preheader. In that case SWP will not run.
-static cl::opt<bool> SpecPreheader("hwloop-spec-preheader", cl::Hidden,
-                                   cl::desc("Allow speculation of preheader "
-                                            "instructions"));
-
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
 
 namespace {
@@ -99,6 +78,7 @@ namespace {
     const HexagonInstrInfo     *TII;
     const HexagonRegisterInfo  *TRI;
     MachineOptimizationRemarkEmitter *MORE;
+    const HexagonOptions *CLOpts = nullptr;
 #ifndef NDEBUG
     static int Counter;
 #endif
@@ -394,6 +374,7 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
   TII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
+  CLOpts = &HST.getCLOpts();
 
   MORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
@@ -442,7 +423,8 @@ bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
                                                  MachineInstr *&IVOp
                                                  ) const {
   MachineBasicBlock *Header = L->getHeader();
-  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
+  MachineBasicBlock *Preheader =
+      MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader);
   MachineBasicBlock *Latch = L->getLoopLatch();
   MachineBasicBlock *ExitingBlock = L->findLoopControlBlock();
   if (!Header || !Preheader || !Latch || !ExitingBlock)
@@ -643,7 +625,8 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   if (!FoundIV)
     return nullptr;
 
-  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
+  MachineBasicBlock *Preheader =
+      MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader);
 
   MachineOperand *InitialValue = nullptr;
   MachineInstr *IV_Phi = MRI->getVRegDef(IVReg);
@@ -877,7 +860,8 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
   if (!isPowerOf2_64(std::abs(IVBump)))
     return nullptr;
 
-  MachineBasicBlock *PH = MLI->findLoopPreheader(Loop, SpecPreheader);
+  MachineBasicBlock *PH =
+      MLI->findLoopPreheader(Loop, CLOpts->hwloop_spec_preheader);
   assert (PH && "Should have a preheader by now");
   MachineBasicBlock::iterator InsertPos = PH->getFirstTerminator();
   DebugLoc DL;
@@ -1249,9 +1233,9 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
 
 #ifndef NDEBUG
   // Stop trying after reaching the limit (if any).
-  int Limit = HWLoopLimit;
+  int Limit = CLOpts->hexagon_max_hwloop;
   if (Limit >= 0) {
-    if (Counter >= HWLoopLimit)
+    if (Counter >= CLOpts->hexagon_max_hwloop)
       return false;
     Counter++;
   }
@@ -1310,7 +1294,8 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
 
   // Ensure the loop has a preheader: the loop instruction will be
   // placed there.
-  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
+  MachineBasicBlock *Preheader =
+      MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader);
   if (!Preheader) {
     Preheader = createPreheaderForLoop(L);
     if (!Preheader)
@@ -1972,9 +1957,10 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
 /// createPreheaderForLoop - Create a preheader for a given loop.
 MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
       MachineLoop *L) {
-  if (MachineBasicBlock *TmpPH = MLI->findLoopPreheader(L, SpecPreheader))
+  if (MachineBasicBlock *TmpPH =
+          MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader))
     return TmpPH;
-  if (!HWCreatePreheader)
+  if (!CLOpts->hexagon_hwloop_preheader)
     return nullptr;
 
   MachineBasicBlock *Header = L->getHeader();
@@ -1984,7 +1970,8 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
   DebugLoc DL;
 
 #ifndef NDEBUG
-  if ((!PHFn.empty()) && (PHFn != MF->getName()))
+  if ((!CLOpts->hexagon_hwloop_phfn.empty()) &&
+      (CLOpts->hexagon_hwloop_phfn != MF->getName()))
     return nullptr;
 #endif
 

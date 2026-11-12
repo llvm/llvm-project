@@ -24,6 +24,7 @@ namespace llvm {
 enum class QFloatMode { StrictIEEE, IEEE, Lossy, Legacy };
 
 class HexagonTargetMachine : public CodeGenTargetMachineImpl {
+  const HexagonOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   HexagonSubtarget Subtarget;
   mutable StringMap<std::unique_ptr<HexagonSubtarget>> SubtargetMap;
@@ -36,6 +37,7 @@ public:
                        bool JIT);
   ~HexagonTargetMachine() override;
   const HexagonSubtarget *getHexagonSubtarget() const { return &Subtarget; }
+  const HexagonOptions &getCLOpts() const { return CLOpts; }
   const HexagonSubtarget *getSubtargetImpl(const Function &F) const override;
 
   void registerPassBuilderCallbacks(PassBuilder &PB) override;

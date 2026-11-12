@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <set>
@@ -28,14 +27,6 @@
 #define DEBUG_TYPE "hexagon-cext-opt"
 
 using namespace llvm;
-
-static cl::opt<unsigned> CountThreshold(
-    "hexagon-cext-threshold", cl::init(3), cl::Hidden,
-    cl::desc("Minimum number of extenders to trigger replacement"));
-
-static cl::opt<unsigned>
-    ReplaceLimit("hexagon-cext-limit", cl::init(0), cl::Hidden,
-                 cl::desc("Maximum number of replacements"));
 
 static int32_t adjustUp(int32_t V, uint8_t A, uint8_t O) {
   assert(isPowerOf2_32(A));
@@ -1829,8 +1820,8 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
 }
 
 bool HCE::replaceInstr(unsigned Idx, Register ExtR, const ExtenderInit &ExtI) {
-  if (ReplaceLimit.getNumOccurrences()) {
-    if (ReplaceLimit <= ReplaceCounter)
+  if (HST->getCLOpts().hexagon_cext_limit) {
+    if (*HST->getCLOpts().hexagon_cext_limit <= ReplaceCounter)
       return false;
     ++ReplaceCounter;
   }
@@ -1902,7 +1893,7 @@ bool HCE::replaceExtenders(const AssignmentMap &IMap) {
 
   for (const std::pair<const ExtenderInit, IndexList> &P : IMap) {
     const IndexList &Idxs = P.second;
-    if (Idxs.size() < CountThreshold)
+    if (Idxs.size() < HST->getCLOpts().hexagon_cext_threshold)
       continue;
 
     Defs.clear();
