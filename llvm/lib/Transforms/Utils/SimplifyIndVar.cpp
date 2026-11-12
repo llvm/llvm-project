@@ -253,11 +253,10 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   // Do not generate something ridiculous. If the compare gets hoisted, expand
   // its operands in the preheader of the outermost loop it is invariant in, as
   // parent loops get unswitched as well.
-  Instruction *PHTerm =
-      HoistInvariantCmps
-          ? findOutermostInvariantInsertPt(L, {InvariantLHS, InvariantRHS},
-                                           Rewriter)
-          : Preheader->getTerminator();
+  Instruction *PHTerm = HoistInvariantCmps
+                            ? findOutermostInvariantInsertPt(
+                                  L, {InvariantLHS, InvariantRHS}, Rewriter)
+                            : Preheader->getTerminator();
   if (Rewriter.isHighCostExpansion({InvariantLHS, InvariantRHS}, L,
                                    2 * SCEVCheapExpansionBudget, TTI, PHTerm) ||
       !Rewriter.isSafeToExpandAt(InvariantLHS, PHTerm) ||
