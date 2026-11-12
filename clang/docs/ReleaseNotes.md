@@ -750,6 +750,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   duck typing rather than a hardcoded type list, suppressing false positives
   when both methods are called on the same user-defined container object.
 
+- `-Wunsafe-buffer-usage` now reports each unsafe pointer in a declaration with
+  several declarators, such as `int *p, *q;`. Previously only one of them was
+  reported, and the unsafe uses of the others were listed under it.
+
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
