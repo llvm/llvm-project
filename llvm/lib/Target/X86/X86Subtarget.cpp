@@ -264,7 +264,13 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   StringRef FeaturesIn64BitOnly[] = {"egpr",   "push2pop2", "ppx", "ndd",
                                      "ccmp",   "nf",        "cf",  "zu",
                                      "jmpabs", "uintr"};
-  if (FullFS.find("-64bit-mode") != std::string::npos)
+  // Determine effective 64-bit mode: only disable 64-bit-only features
+  // when -64bit-mode is the last mode entry.
+  size_t LastNeg = FullFS.rfind("-64bit-mode");
+  size_t LastPos = FullFS.rfind("+64bit-mode");
+  bool EffectiveNon64Bit = LastNeg != std::string::npos &&
+                           (LastPos == std::string::npos || LastNeg > LastPos);
+  if (EffectiveNon64Bit)
     for (StringRef F : FeaturesIn64BitOnly)
       FullFS += ",-" + F.str();
 
