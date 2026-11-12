@@ -306,7 +306,8 @@ define signext i64 @lshr_i64(i64 signext %a, i64 signext %b) {
 ; MIPS32-NEXT:    sllv $2, $3, $2
 ; MIPS32-NEXT:    or $3, $2, $1
 ; MIPS32-NEXT:    srlv $2, $4, $7
-; MIPS32-NEXT:    andi $1, $7, 32
+; MIPS32-NEXT:    srl $1, $7, 5
+; MIPS32-NEXT:    andi $1, $1, 1
 ; MIPS32-NEXT:    movn $3, $2, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    movn $2, $zero, $1
@@ -319,7 +320,7 @@ define signext i64 @lshr_i64(i64 signext %a, i64 signext %b) {
 ; MIPS32R2-NEXT:    sllv $2, $3, $2
 ; MIPS32R2-NEXT:    or $3, $2, $1
 ; MIPS32R2-NEXT:    srlv $2, $4, $7
-; MIPS32R2-NEXT:    andi $1, $7, 32
+; MIPS32R2-NEXT:    ext $1, $7, 5, 1
 ; MIPS32R2-NEXT:    movn $3, $2, $1
 ; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    movn $2, $zero, $1
@@ -331,7 +332,7 @@ define signext i64 @lshr_i64(i64 signext %a, i64 signext %b) {
 ; MIPS32R6-NEXT:    sll $3, $4, 1
 ; MIPS32R6-NEXT:    sllv $2, $3, $2
 ; MIPS32R6-NEXT:    or $1, $2, $1
-; MIPS32R6-NEXT:    andi $2, $7, 32
+; MIPS32R6-NEXT:    ext $2, $7, 5, 1
 ; MIPS32R6-NEXT:    seleqz $1, $1, $2
 ; MIPS32R6-NEXT:    srlv $4, $4, $7
 ; MIPS32R6-NEXT:    selnez $3, $4, $2
@@ -372,11 +373,11 @@ define signext i64 @lshr_i64(i64 signext %a, i64 signext %b) {
 ; MMR3-NEXT:    sllv $3, $3, $1
 ; MMR3-NEXT:    or16 $3, $2
 ; MMR3-NEXT:    srlv $2, $4, $7
-; MMR3-NEXT:    andi16 $4, $7, 32
-; MMR3-NEXT:    movn $3, $2, $4
-; MMR3-NEXT:    li16 $5, 0
+; MMR3-NEXT:    ext $1, $7, 5, 1
+; MMR3-NEXT:    movn $3, $2, $1
+; MMR3-NEXT:    li16 $4, 0
 ; MMR3-NEXT:    jr $ra
-; MMR3-NEXT:    movn $2, $5, $4
+; MMR3-NEXT:    movn $2, $4, $1
 ;
 ; MMR6-LABEL: lshr_i64:
 ; MMR6:       # %bb.0: # %entry
@@ -385,7 +386,7 @@ define signext i64 @lshr_i64(i64 signext %a, i64 signext %b) {
 ; MMR6-NEXT:    sll16 $3, $4, 1
 ; MMR6-NEXT:    sllv $2, $3, $2
 ; MMR6-NEXT:    or $1, $2, $1
-; MMR6-NEXT:    andi16 $2, $7, 32
+; MMR6-NEXT:    ext $2, $7, 5, 1
 ; MMR6-NEXT:    seleqz $1, $1, $2
 ; MMR6-NEXT:    srlv $4, $4, $7
 ; MMR6-NEXT:    selnez $3, $4, $2
@@ -588,6 +589,7 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS4-NEXT:    or $3, $2, $1
 ; MIPS4-NEXT:    dsrlv $2, $4, $7
 ; MIPS4-NEXT:    andi $1, $5, 64
+; MIPS4-NEXT:    srl $1, $1, 6
 ; MIPS4-NEXT:    movn $3, $2, $1
 ; MIPS4-NEXT:    jr $ra
 ; MIPS4-NEXT:    movn $2, $zero, $1
@@ -602,6 +604,7 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS64-NEXT:    or $3, $2, $1
 ; MIPS64-NEXT:    dsrlv $2, $4, $7
 ; MIPS64-NEXT:    andi $1, $5, 64
+; MIPS64-NEXT:    srl $1, $1, 6
 ; MIPS64-NEXT:    movn $3, $2, $1
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    movn $2, $zero, $1
@@ -616,6 +619,7 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS64R2-NEXT:    or $3, $2, $1
 ; MIPS64R2-NEXT:    dsrlv $2, $4, $7
 ; MIPS64R2-NEXT:    andi $1, $5, 64
+; MIPS64R2-NEXT:    srl $1, $1, 6
 ; MIPS64R2-NEXT:    movn $3, $2, $1
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    movn $2, $zero, $1
@@ -629,6 +633,7 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS64R6-NEXT:    dsllv $2, $2, $5
 ; MIPS64R6-NEXT:    or $1, $2, $1
 ; MIPS64R6-NEXT:    andi $2, $3, 64
+; MIPS64R6-NEXT:    srl $2, $2, 6
 ; MIPS64R6-NEXT:    sll $2, $2, 0
 ; MIPS64R6-NEXT:    seleqz $1, $1, $2
 ; MIPS64R6-NEXT:    dsrlv $4, $4, $7
@@ -729,5 +734,357 @@ entry:
 ; MM-NOT:         lw        $25, %call16(__lshrti3)($2)
 
   %r = lshr i128 %a, %b
+  ret i128 %r
+}
+
+; The select condition in the *_PARTS lowering must be a 0/1 boolean.
+define signext i64 @lshr_i64_mask(i64 signext %b) {
+; MIPS2-LABEL: lshr_i64_mask:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    andi $1, $5, 32
+; MIPS2-NEXT:    addiu $2, $zero, 0
+; MIPS2-NEXT:    bnez $1, $BB6_2
+; MIPS2-NEXT:    addiu $3, $zero, 1
+; MIPS2-NEXT:  # %bb.1: # %entry
+; MIPS2-NEXT:    addiu $3, $zero, -1
+; MIPS2-NEXT:    addiu $2, $zero, 1
+; MIPS2-NEXT:  $BB6_2: # %entry
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    nop
+;
+; MIPS32-LABEL: lshr_i64_mask:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    andi $1, $5, 32
+; MIPS32-NEXT:    srl $1, $1, 5
+; MIPS32-NEXT:    addiu $3, $zero, -1
+; MIPS32-NEXT:    addiu $2, $zero, 1
+; MIPS32-NEXT:    movn $3, $2, $1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    xori $2, $1, 1
+;
+; MIPS32R2-LABEL: lshr_i64_mask:
+; MIPS32R2:       # %bb.0: # %entry
+; MIPS32R2-NEXT:    andi $1, $5, 32
+; MIPS32R2-NEXT:    srl $1, $1, 5
+; MIPS32R2-NEXT:    addiu $3, $zero, -1
+; MIPS32R2-NEXT:    addiu $2, $zero, 1
+; MIPS32R2-NEXT:    movn $3, $2, $1
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    xori $2, $1, 1
+;
+; MIPS32R6-LABEL: lshr_i64_mask:
+; MIPS32R6:       # %bb.0: # %entry
+; MIPS32R6-NEXT:    andi $1, $5, 32
+; MIPS32R6-NEXT:    srl $1, $1, 5
+; MIPS32R6-NEXT:    addiu $2, $zero, -1
+; MIPS32R6-NEXT:    seleqz $2, $2, $1
+; MIPS32R6-NEXT:    addiu $4, $zero, 1
+; MIPS32R6-NEXT:    selnez $3, $4, $1
+; MIPS32R6-NEXT:    or $3, $3, $2
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    seleqz $2, $4, $1
+;
+; MIPS3-LABEL: lshr_i64_mask:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    daddiu $1, $zero, 1
+; MIPS3-NEXT:    dsll $1, $1, 33
+; MIPS3-NEXT:    daddiu $1, $1, -1
+; MIPS3-NEXT:    sll $2, $4, 0
+; MIPS3-NEXT:    andi $2, $2, 32
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    dsrlv $2, $1, $2
+;
+; MIPS4-LABEL: lshr_i64_mask:
+; MIPS4:       # %bb.0: # %entry
+; MIPS4-NEXT:    daddiu $1, $zero, 1
+; MIPS4-NEXT:    dsll $1, $1, 33
+; MIPS4-NEXT:    daddiu $1, $1, -1
+; MIPS4-NEXT:    sll $2, $4, 0
+; MIPS4-NEXT:    andi $2, $2, 32
+; MIPS4-NEXT:    jr $ra
+; MIPS4-NEXT:    dsrlv $2, $1, $2
+;
+; MIPS64-LABEL: lshr_i64_mask:
+; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    daddiu $1, $zero, 1
+; MIPS64-NEXT:    dsll $1, $1, 33
+; MIPS64-NEXT:    daddiu $1, $1, -1
+; MIPS64-NEXT:    sll $2, $4, 0
+; MIPS64-NEXT:    andi $2, $2, 32
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    dsrlv $2, $1, $2
+;
+; MIPS64R2-LABEL: lshr_i64_mask:
+; MIPS64R2:       # %bb.0: # %entry
+; MIPS64R2-NEXT:    daddiu $1, $zero, 1
+; MIPS64R2-NEXT:    dsll $1, $1, 33
+; MIPS64R2-NEXT:    daddiu $1, $1, -1
+; MIPS64R2-NEXT:    sll $2, $4, 0
+; MIPS64R2-NEXT:    andi $2, $2, 32
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    dsrlv $2, $1, $2
+;
+; MIPS64R6-LABEL: lshr_i64_mask:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    daddiu $1, $zero, 1
+; MIPS64R6-NEXT:    dsll $1, $1, 33
+; MIPS64R6-NEXT:    daddiu $1, $1, -1
+; MIPS64R6-NEXT:    sll $2, $4, 0
+; MIPS64R6-NEXT:    andi $2, $2, 32
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    dsrlv $2, $1, $2
+;
+; MMR3-LABEL: lshr_i64_mask:
+; MMR3:       # %bb.0: # %entry
+; MMR3-NEXT:    andi16 $2, $5, 32
+; MMR3-NEXT:    srl16 $2, $2, 5
+; MMR3-NEXT:    li16 $3, -1
+; MMR3-NEXT:    li16 $4, 1
+; MMR3-NEXT:    movn $3, $4, $2
+; MMR3-NEXT:    jr $ra
+; MMR3-NEXT:    xori $2, $2, 1
+;
+; MMR6-LABEL: lshr_i64_mask:
+; MMR6:       # %bb.0: # %entry
+; MMR6-NEXT:    andi16 $2, $5, 32
+; MMR6-NEXT:    srl16 $2, $2, 5
+; MMR6-NEXT:    li16 $3, -1
+; MMR6-NEXT:    seleqz $1, $3, $2
+; MMR6-NEXT:    li16 $4, 1
+; MMR6-NEXT:    selnez $3, $4, $2
+; MMR6-NEXT:    or $3, $3, $1
+; MMR6-NEXT:    seleqz $2, $4, $2
+; MMR6-NEXT:    jrc $ra
+entry:
+  %m = and i64 %b, 32
+  %r = lshr i64 8589934591, %m
+  ret i64 %r
+}
+
+define signext i128 @lshr_i128_mask(i128 signext %b) {
+; MIPS2-LABEL: lshr_i128_mask:
+; MIPS2:       # %bb.0: # %entry
+; MIPS2-NEXT:    addiu $sp, $sp, -32
+; MIPS2-NEXT:    .cfi_def_cfa_offset 32
+; MIPS2-NEXT:    addiu $1, $sp, 0
+; MIPS2-NEXT:    addiu $2, $zero, 1
+; MIPS2-NEXT:    addiu $3, $zero, -1
+; MIPS2-NEXT:    sw $3, 28($sp)
+; MIPS2-NEXT:    sw $3, 24($sp)
+; MIPS2-NEXT:    sw $2, 20($sp)
+; MIPS2-NEXT:    addiu $1, $1, 16
+; MIPS2-NEXT:    andi $2, $7, 64
+; MIPS2-NEXT:    srl $2, $2, 3
+; MIPS2-NEXT:    subu $1, $1, $2
+; MIPS2-NEXT:    sw $zero, 16($sp)
+; MIPS2-NEXT:    sw $zero, 12($sp)
+; MIPS2-NEXT:    sw $zero, 8($sp)
+; MIPS2-NEXT:    sw $zero, 4($sp)
+; MIPS2-NEXT:    sw $zero, 0($sp)
+; MIPS2-NEXT:    lw $2, 0($1)
+; MIPS2-NEXT:    lw $3, 4($1)
+; MIPS2-NEXT:    lw $4, 8($1)
+; MIPS2-NEXT:    lw $5, 12($1)
+; MIPS2-NEXT:    jr $ra
+; MIPS2-NEXT:    addiu $sp, $sp, 32
+;
+; MIPS32-LABEL: lshr_i128_mask:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addiu $sp, $sp, -32
+; MIPS32-NEXT:    .cfi_def_cfa_offset 32
+; MIPS32-NEXT:    addiu $1, $sp, 0
+; MIPS32-NEXT:    addiu $2, $zero, 1
+; MIPS32-NEXT:    addiu $3, $zero, -1
+; MIPS32-NEXT:    sw $3, 28($sp)
+; MIPS32-NEXT:    sw $3, 24($sp)
+; MIPS32-NEXT:    sw $2, 20($sp)
+; MIPS32-NEXT:    addiu $1, $1, 16
+; MIPS32-NEXT:    andi $2, $7, 64
+; MIPS32-NEXT:    srl $2, $2, 3
+; MIPS32-NEXT:    subu $1, $1, $2
+; MIPS32-NEXT:    sw $zero, 16($sp)
+; MIPS32-NEXT:    sw $zero, 12($sp)
+; MIPS32-NEXT:    sw $zero, 8($sp)
+; MIPS32-NEXT:    sw $zero, 4($sp)
+; MIPS32-NEXT:    sw $zero, 0($sp)
+; MIPS32-NEXT:    lw $2, 0($1)
+; MIPS32-NEXT:    lw $3, 4($1)
+; MIPS32-NEXT:    lw $4, 8($1)
+; MIPS32-NEXT:    lw $5, 12($1)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    addiu $sp, $sp, 32
+;
+; MIPS32R2-LABEL: lshr_i128_mask:
+; MIPS32R2:       # %bb.0: # %entry
+; MIPS32R2-NEXT:    addiu $sp, $sp, -32
+; MIPS32R2-NEXT:    .cfi_def_cfa_offset 32
+; MIPS32R2-NEXT:    addiu $1, $sp, 0
+; MIPS32R2-NEXT:    addiu $2, $zero, 1
+; MIPS32R2-NEXT:    addiu $3, $zero, -1
+; MIPS32R2-NEXT:    sw $3, 28($sp)
+; MIPS32R2-NEXT:    sw $3, 24($sp)
+; MIPS32R2-NEXT:    sw $2, 20($sp)
+; MIPS32R2-NEXT:    addiu $1, $1, 16
+; MIPS32R2-NEXT:    andi $2, $7, 64
+; MIPS32R2-NEXT:    srl $2, $2, 3
+; MIPS32R2-NEXT:    subu $1, $1, $2
+; MIPS32R2-NEXT:    sw $zero, 16($sp)
+; MIPS32R2-NEXT:    sw $zero, 12($sp)
+; MIPS32R2-NEXT:    sw $zero, 8($sp)
+; MIPS32R2-NEXT:    sw $zero, 4($sp)
+; MIPS32R2-NEXT:    sw $zero, 0($sp)
+; MIPS32R2-NEXT:    lw $2, 0($1)
+; MIPS32R2-NEXT:    lw $3, 4($1)
+; MIPS32R2-NEXT:    lw $4, 8($1)
+; MIPS32R2-NEXT:    lw $5, 12($1)
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    addiu $sp, $sp, 32
+;
+; MIPS32R6-LABEL: lshr_i128_mask:
+; MIPS32R6:       # %bb.0: # %entry
+; MIPS32R6-NEXT:    addiu $sp, $sp, -32
+; MIPS32R6-NEXT:    .cfi_def_cfa_offset 32
+; MIPS32R6-NEXT:    addiu $1, $sp, 0
+; MIPS32R6-NEXT:    addiu $2, $zero, 1
+; MIPS32R6-NEXT:    addiu $3, $zero, -1
+; MIPS32R6-NEXT:    sw $3, 28($sp)
+; MIPS32R6-NEXT:    sw $3, 24($sp)
+; MIPS32R6-NEXT:    sw $2, 20($sp)
+; MIPS32R6-NEXT:    addiu $1, $1, 16
+; MIPS32R6-NEXT:    andi $2, $7, 64
+; MIPS32R6-NEXT:    srl $2, $2, 3
+; MIPS32R6-NEXT:    subu $1, $1, $2
+; MIPS32R6-NEXT:    sw $zero, 16($sp)
+; MIPS32R6-NEXT:    sw $zero, 12($sp)
+; MIPS32R6-NEXT:    sw $zero, 8($sp)
+; MIPS32R6-NEXT:    sw $zero, 4($sp)
+; MIPS32R6-NEXT:    sw $zero, 0($sp)
+; MIPS32R6-NEXT:    lw $2, 0($1)
+; MIPS32R6-NEXT:    lw $3, 4($1)
+; MIPS32R6-NEXT:    lw $4, 8($1)
+; MIPS32R6-NEXT:    lw $5, 12($1)
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    addiu $sp, $sp, 32
+;
+; MIPS3-LABEL: lshr_i128_mask:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    sll $1, $5, 0
+; MIPS3-NEXT:    andi $1, $1, 64
+; MIPS3-NEXT:    daddiu $2, $zero, 0
+; MIPS3-NEXT:    bnez $1, .LBB7_2
+; MIPS3-NEXT:    daddiu $3, $zero, 1
+; MIPS3-NEXT:  # %bb.1: # %entry
+; MIPS3-NEXT:    daddiu $3, $zero, -1
+; MIPS3-NEXT:    daddiu $2, $zero, 1
+; MIPS3-NEXT:  .LBB7_2: # %entry
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    nop
+;
+; MIPS4-LABEL: lshr_i128_mask:
+; MIPS4:       # %bb.0: # %entry
+; MIPS4-NEXT:    sll $1, $5, 0
+; MIPS4-NEXT:    andi $1, $1, 64
+; MIPS4-NEXT:    srl $1, $1, 6
+; MIPS4-NEXT:    daddiu $3, $zero, -1
+; MIPS4-NEXT:    daddiu $2, $zero, 1
+; MIPS4-NEXT:    movn $3, $2, $1
+; MIPS4-NEXT:    xori $1, $1, 1
+; MIPS4-NEXT:    dsll $1, $1, 32
+; MIPS4-NEXT:    jr $ra
+; MIPS4-NEXT:    dsrl $2, $1, 32
+;
+; MIPS64-LABEL: lshr_i128_mask:
+; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    sll $1, $5, 0
+; MIPS64-NEXT:    andi $1, $1, 64
+; MIPS64-NEXT:    srl $1, $1, 6
+; MIPS64-NEXT:    daddiu $3, $zero, -1
+; MIPS64-NEXT:    daddiu $2, $zero, 1
+; MIPS64-NEXT:    movn $3, $2, $1
+; MIPS64-NEXT:    xori $1, $1, 1
+; MIPS64-NEXT:    dsll $1, $1, 32
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    dsrl $2, $1, 32
+;
+; MIPS64R2-LABEL: lshr_i128_mask:
+; MIPS64R2:       # %bb.0: # %entry
+; MIPS64R2-NEXT:    sll $1, $5, 0
+; MIPS64R2-NEXT:    andi $1, $1, 64
+; MIPS64R2-NEXT:    srl $1, $1, 6
+; MIPS64R2-NEXT:    daddiu $3, $zero, -1
+; MIPS64R2-NEXT:    daddiu $2, $zero, 1
+; MIPS64R2-NEXT:    movn $3, $2, $1
+; MIPS64R2-NEXT:    xori $1, $1, 1
+; MIPS64R2-NEXT:    jr $ra
+; MIPS64R2-NEXT:    dext $2, $1, 0, 32
+;
+; MIPS64R6-LABEL: lshr_i128_mask:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    sll $1, $5, 0
+; MIPS64R6-NEXT:    andi $1, $1, 64
+; MIPS64R6-NEXT:    srl $1, $1, 6
+; MIPS64R6-NEXT:    sll $1, $1, 0
+; MIPS64R6-NEXT:    daddiu $2, $zero, -1
+; MIPS64R6-NEXT:    seleqz $2, $2, $1
+; MIPS64R6-NEXT:    daddiu $4, $zero, 1
+; MIPS64R6-NEXT:    selnez $3, $4, $1
+; MIPS64R6-NEXT:    or $3, $3, $2
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    seleqz $2, $4, $1
+;
+; MMR3-LABEL: lshr_i128_mask:
+; MMR3:       # %bb.0: # %entry
+; MMR3-NEXT:    addiusp -32
+; MMR3-NEXT:    .cfi_def_cfa_offset 32
+; MMR3-NEXT:    li16 $2, 0
+; MMR3-NEXT:    li16 $3, 1
+; MMR3-NEXT:    li16 $4, -1
+; MMR3-NEXT:    sw $4, 28($sp)
+; MMR3-NEXT:    swp $3, 20($sp)
+; MMR3-NEXT:    sw $2, 16($sp)
+; MMR3-NEXT:    sw $2, 12($sp)
+; MMR3-NEXT:    sw $2, 8($sp)
+; MMR3-NEXT:    sw $2, 4($sp)
+; MMR3-NEXT:    sw $2, 0($sp)
+; MMR3-NEXT:    addiur1sp $2, 0
+; MMR3-NEXT:    addiur2 $2, $2, 16
+; MMR3-NEXT:    andi16 $3, $7, 64
+; MMR3-NEXT:    srl16 $3, $3, 3
+; MMR3-NEXT:    subu16 $5, $2, $3
+; MMR3-NEXT:    lwp $2, 0($5)
+; MMR3-NEXT:    lw16 $4, 8($5)
+; MMR3-NEXT:    lw16 $5, 12($5)
+; MMR3-NEXT:    addiusp 32
+; MMR3-NEXT:    jrc $ra
+;
+; MMR6-LABEL: lshr_i128_mask:
+; MMR6:       # %bb.0: # %entry
+; MMR6-NEXT:    addiu $sp, $sp, -32
+; MMR6-NEXT:    .cfi_def_cfa_offset 32
+; MMR6-NEXT:    li16 $2, 0
+; MMR6-NEXT:    li16 $3, 1
+; MMR6-NEXT:    li16 $4, -1
+; MMR6-NEXT:    sw $4, 28($sp)
+; MMR6-NEXT:    sw $4, 24($sp)
+; MMR6-NEXT:    sw $3, 20($sp)
+; MMR6-NEXT:    sw $2, 16($sp)
+; MMR6-NEXT:    sw $2, 12($sp)
+; MMR6-NEXT:    sw $2, 8($sp)
+; MMR6-NEXT:    sw $2, 4($sp)
+; MMR6-NEXT:    sw $2, 0($sp)
+; MMR6-NEXT:    addiu $2, $sp, 0
+; MMR6-NEXT:    addiur2 $2, $2, 16
+; MMR6-NEXT:    andi16 $3, $7, 64
+; MMR6-NEXT:    srl16 $3, $3, 3
+; MMR6-NEXT:    subu16 $5, $2, $3
+; MMR6-NEXT:    lw16 $2, 0($5)
+; MMR6-NEXT:    lw16 $3, 4($5)
+; MMR6-NEXT:    lw16 $4, 8($5)
+; MMR6-NEXT:    lw16 $5, 12($5)
+; MMR6-NEXT:    addiu $sp, $sp, 32
+; MMR6-NEXT:    jrc $ra
+entry:
+  %m = and i128 %b, 64
+  %r = lshr i128 36893488147419103231, %m
   ret i128 %r
 }
