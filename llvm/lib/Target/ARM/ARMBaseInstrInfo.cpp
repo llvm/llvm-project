@@ -2931,18 +2931,20 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   if (MI && IsThumb1) {
     --I;
     if (I != E && !MI->readsRegister(ARM::CPSR, TRI)) {
+      SmallVector<MachineInstr *, 2> Movs;
       bool CanReorder = true;
-      for (; I != E; --I) {
-        if (I->getOpcode() != ARM::tMOVi8) {
+      for (MachineInstr &Instr : instructionsWithoutDebug(
+               std::next(MI->getIterator()), CmpInstr.getIterator(),
+               /*SkipPseudoOp=*/false)) {
+        if (Instr.getOpcode() != ARM::tMOVi8) {
           CanReorder = false;
           break;
         }
+        Movs.push_back(&Instr);
       }
-      if (CanReorder) {
-        MI = MI->removeFromParent();
-        E = CmpInstr;
-        CmpInstr.getParent()->insert(E, MI);
-      }
+      if (CanReorder)
+        for (MachineInstr *Mov : Movs)
+          Mov->moveBefore(MI);
     }
     I = CmpInstr;
     E = MI;
