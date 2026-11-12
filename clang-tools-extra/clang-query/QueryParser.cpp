@@ -108,10 +108,11 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
                          .Case("print", OK_Print)
                          .Case("detailed-ast", OK_DetailedAST)
                          .Case("dump", OK_DetailedAST)
+                         .Case("json", OK_JSON)
                          .Default(~0u);
   if (OutKind == ~0u) {
-    return new InvalidQuery("expected 'diag', 'print', 'detailed-ast' or "
-                            "'dump', got '" +
+    return new InvalidQuery("expected 'diag', 'print', 'detailed-ast', 'dump' "
+                            "or 'json', got '" +
                             ValStr + "'");
   }
 
@@ -122,6 +123,8 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
     return new QueryType(&QuerySession::DiagOutput);
   case OK_Print:
     return new QueryType(&QuerySession::PrintOutput);
+  case OK_JSON:
+    return new QueryType(&QuerySession::JSONOutput);
   }
 
   llvm_unreachable("Invalid output kind");
