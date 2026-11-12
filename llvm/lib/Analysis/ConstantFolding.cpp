@@ -1636,8 +1636,8 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
       if (CE->getOpcode() == Instruction::IntToPtr) {
         // zext/trunc the inttoptr to pointer/address size.
         Type *MidTy = Opcode == Instruction::PtrToInt
-                          ? DL.getAddressType(CE->getType())
-                          : DL.getIntPtrType(CE->getType());
+                          ? DL.getIntPtrType(CE->getType())
+                          : DL.getAddressType(CE->getType());
         FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0), MidTy,
                                               /*IsSigned=*/false, DL);
       } else if (auto *GEP = dyn_cast<GEPOperator>(CE)) {
