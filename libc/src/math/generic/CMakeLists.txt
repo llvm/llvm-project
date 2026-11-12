@@ -214,6 +214,7 @@ add_entrypoint_object(
   HDRS
     ../daddf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.daddf128
 )
 
@@ -1823,6 +1824,16 @@ add_entrypoint_object(
     ../log10f16.h
   DEPENDS
     libc.src.__support.math.log10f16
+)
+
+add_entrypoint_object(
+  log10p1bf16
+  SRCS
+    log10p1bf16.cpp
+  HDRS
+    ../log10p1bf16.h
+  DEPENDS
+    libc.src.__support.math.log10p1bf16
 )
 
 add_entrypoint_object(

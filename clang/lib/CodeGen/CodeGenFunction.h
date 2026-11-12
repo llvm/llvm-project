@@ -2640,6 +2640,11 @@ public:
   void EmitVTablePtrCheck(const CXXRecordDecl *RD, llvm::Value *VTable,
                           CFITypeCheckKind TCK, SourceLocation Loc);
 
+  /// Emit a CFI check failure handler or trap for a vtable type test result.
+  void EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T, llvm::Metadata *MD,
+                       llvm::Value *VTable, llvm::Value *TypeTest,
+                       SourceLocation Loc, bool UseCrossDsoSlowPath);
+
   /// If whole-program virtual table optimization is enabled, emit an assumption
   /// that VTable is a member of RD's type identifier. Or, if vptr CFI is
   /// enabled, emit a check that VTable is a member of RD's type identifier.
@@ -5467,6 +5472,8 @@ public:
     BCK_CTZPassedZero,
     BCK_CLZPassedZero,
     BCK_AssumePassedFalse,
+    BCK_NonUniformLane,
+    BCK_InactiveLane,
   };
 
   /// Emits an argument for a call to a builtin. If the builtin sanitizer is

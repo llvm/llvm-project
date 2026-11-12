@@ -4474,8 +4474,10 @@ class AMDGPUTensorLoadStore:
     "", [SDNPMemOperand]
   >;
 
+let TargetFeatures = "tdm-insts" in {
 def int_amdgcn_tensor_load_to_lds    : ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
 def int_amdgcn_tensor_store_from_lds : ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
+} // End TargetFeatures = "tdm-insts"
 
 class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<

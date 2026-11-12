@@ -35,6 +35,9 @@ public:
   static char ID;
   SPIRVPostLegalizerLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
+  MachineFunctionProperties getSetProperties() const override {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
 };
 } // namespace
 
@@ -618,6 +621,7 @@ bool SPIRVPostLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 SPIRVPostLegalizerPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   return runPostLegalizer(MF) ? getMachineFunctionPassPreservedAnalyses()
                               : PreservedAnalyses::all();
 }

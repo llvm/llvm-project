@@ -233,23 +233,39 @@ public:
 
 class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
   static constexpr const HWEvents
-      WaitEventMaskForInstPreGFX12[AMDGPU::NUM_INST_CNTS] = {
+      WaitEventMaskForInstWithoutVscnt[AMDGPU::NUM_INST_CNTS] = {
+          // LOAD_CNT
           HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
-              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS,
+              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS |
+              HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
+          // DS_CNT
           HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
               HWEvents::SQ_MESSAGE,
+          // EXP_CNT
           HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
               HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
               HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE};
+
+  // Hardware with VScnt has non-empty STORE_CNT wait events.
+  static constexpr const HWEvents
+      WaitEventMaskForInstWithVscnt[AMDGPU::NUM_INST_CNTS] = {
+          // LOAD_CNT
+          HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
+              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS,
+          // DS_CNT
+          HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
+              HWEvents::SQ_MESSAGE,
+          // EXP_CNT
+          HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
+              HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
+              HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
+          // STORE_CNT
           HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
           HWEvents::NONE};
 
 public:
@@ -265,14 +281,8 @@ public:
                         const WaitcntBrackets &ScoreBrackets) override;
 
   HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
-    // Targets without a separate store counter count stores in LOAD_CNT
-    // (see below), so STORE_CNT has no events of its own there.
-    if (T == AMDGPU::STORE_CNT && !ST.hasVscnt())
-      return HWEvents::NONE;
-    HWEvents EVs = WaitEventMaskForInstPreGFX12[T];
-    if (T == AMDGPU::LOAD_CNT && !ST.hasVscnt())
-      EVs |= WaitEventMaskForInstPreGFX12[AMDGPU::STORE_CNT];
-    return EVs;
+    return ST.hasVscnt() ? WaitEventMaskForInstWithVscnt[T]
+                         : WaitEventMaskForInstWithoutVscnt[T];
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
@@ -503,6 +513,13 @@ private:
     return It != VMem.end() ? It->second.Scores[T] : 0;
   }
 
+  // Number of ordered XDL writes issued after the VA_VDST write tracked for
+  // TID. Only meaningful while that write is pending.
+  unsigned getNumOrderedXDLsAfterWrite(VMEMID TID) const {
+    return std::min(OrderedXDLCount - VMem.at(TID).OrderedXDLCountAtWrite,
+                    getLimit(AMDGPU::VA_VDST_WR) - 1);
+  }
+
 public:
   // Do some internal consistency checks.
   void verify() {
@@ -531,8 +548,7 @@ public:
   void simplifyVmemInvOnlyWait(AMDGPU::Waitcnt &Wait) const {
     // LOAD_CNT also includes store events on targets without VScnt.
     HWEvents LoadEvents =
-        PendingEvents & (Context->getWaitEvents(AMDGPU::LOAD_CNT) -
-                         Context->getWaitEvents(AMDGPU::STORE_CNT));
+        PendingEvents & Context->getWaitEvents(AMDGPU::LOAD_CNT);
     if (LoadEvents == HWEvents::VMEM_INV_ACCESS)
       Wait.clear(AMDGPU::LOAD_CNT);
   }
@@ -650,8 +666,10 @@ private:
 
   using CounterValueArray = std::array<unsigned, AMDGPU::NUM_INST_CNTS>;
 
+  unsigned getWaitForScore(AMDGPU::InstCounterType T, unsigned Score) const;
   void determineWaitForScore(AMDGPU::InstCounterType T, unsigned Score,
                              AMDGPU::Waitcnt &Wait) const;
+  void determineWaitForVAVDSTWrite(VMEMID ID, AMDGPU::Waitcnt &Wait) const;
 
   static bool mergeScore(const MergeInfo &M, unsigned &Score,
                          unsigned OtherScore);
@@ -688,8 +706,12 @@ private:
     if (Reg == AMDGPU::SCC) {
       SCCScore = Val;
     } else if (TRI.isVectorRegister(Context->MRI, Reg)) {
-      for (MCRegUnit RU : regunits(Reg))
-        VMem[toVMEMID(RU)].Scores[T] = Val;
+      for (MCRegUnit RU : regunits(Reg)) {
+        auto &Info = VMem[toVMEMID(RU)];
+        Info.Scores[T] = Val;
+        if (T == AMDGPU::VA_VDST_WR)
+          Info.OrderedXDLCountAtWrite = OrderedXDLCount;
+      }
     } else if (TRI.isSGPRReg(Context->MRI, Reg)) {
       for (MCRegUnit RU : regunits(Reg))
         SGPRs[RU].get(T) = Val;
@@ -715,6 +737,9 @@ private:
   unsigned LastFlatLoadCnt = 0;
   // Remember the last GDS operation.
   unsigned LastGDS = 0;
+  // Number of VA_VDST ordered XDL writes issued so far. Only differences
+  // between values are meaningful, so unsigned wraparound is harmless.
+  unsigned OrderedXDLCount = 0;
 
   // The score tracking logic is fragmented as follows:
   // - VMem: VGPR RegUnits and LDS DMA IDs, see the VMEMID encoding.
@@ -732,6 +757,9 @@ private:
   struct VMEMInfo {
     // Scores for all instruction counters. Zero-initialized.
     CounterValueArray Scores{};
+    // OrderedXDLCount when the VA_VDST_WR score was set. Every ordered XDL
+    // write issued since then remains outstanding while this write is pending.
+    unsigned OrderedXDLCountAtWrite = 0;
     // For VGPRs, we need to track an additional fine-grained set of pending
     // events.
     HWEvents VGPRPendingEvents;
@@ -873,6 +901,12 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
   // Examples including vm_cnt when buffer-store or lgkm_cnt when send-message.
   PendingEvents |= E;
   setScoreUB(T, CurrScore);
+
+  // Count this write before recording its own destination, so the
+  // destination does not count itself. A VOP3PX2 WMMA counts once even though
+  // it increments VA_VDST twice: only its WMMA half is an ordered XDL write.
+  if (E == HWEvents::VGPR_XDL_WRITE && Context->TII.isVAVDSTOrderedXDL(Inst))
+    ++OrderedXDLCount;
 
   const SIRegisterInfo &TRI = Context->TRI;
   const MachineRegisterInfo &MRI = Context->MRI;
@@ -1339,9 +1373,9 @@ void WaitcntBrackets::purgeEmptyTrackingData() {
   SGPRs.remove_if([](const auto &P) { return P.second.empty(); });
 }
 
-void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
-                                            unsigned ScoreToWait,
-                                            AMDGPU::Waitcnt &Wait) const {
+// Returns the wait needed for \p ScoreToWait, or ~0u if no wait is needed.
+unsigned WaitcntBrackets::getWaitForScore(AMDGPU::InstCounterType T,
+                                          unsigned ScoreToWait) const {
   const unsigned LB = getScoreLB(T);
   const unsigned UB = getScoreUB(T);
 
@@ -1352,19 +1386,39 @@ void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
       // If there is a pending FLAT operation, and this is a VMem or LGKM
       // waitcnt and the target can report early completion, then we need
       // to force a waitcnt 0.
-      Wait.add(T, 0);
-    } else if (counterOutOfOrder(T)) {
+      return 0;
+    }
+    if (counterOutOfOrder(T)) {
       // Counter can get decremented out-of-order when there
       // are multiple types event in the bracket. Also emit an s_wait counter
       // with a conservative value of 0 for the counter.
-      Wait.add(T, 0);
-    } else {
-      // If a counter has been maxed out avoid overflow by waiting for
-      // MAX(CounterType) - 1 instead.
-      unsigned NeededWait = std::min(UB - ScoreToWait, getLimit(T) - 1);
-      Wait.add(T, NeededWait);
+      return 0;
     }
+    // If a counter has been maxed out avoid overflow by waiting for
+    // MAX(CounterType) - 1 instead.
+    return std::min(UB - ScoreToWait, getLimit(T) - 1);
   }
+  return ~0u;
+}
+
+void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
+                                            unsigned ScoreToWait,
+                                            AMDGPU::Waitcnt &Wait) const {
+  Wait.add(T, getWaitForScore(T, ScoreToWait));
+}
+
+void WaitcntBrackets::determineWaitForVAVDSTWrite(VMEMID ID,
+                                                  AMDGPU::Waitcnt &Wait) const {
+  unsigned Count =
+      getWaitForScore(AMDGPU::VA_VDST_WR, getVMemScore(ID, AMDGPU::VA_VDST_WR));
+  if (Count == ~0u)
+    return;
+
+  // The ordered-XDL count is a wait bound independent of exact event-class
+  // ordering. Combine the bounds for this register unit before Wait.add()
+  // takes the minimum across all required register-unit dependencies.
+  Wait.add(AMDGPU::VA_VDST_WR,
+           std::max(Count, getNumOrderedXDLsAfterWrite(ID)));
 }
 
 AMDGPU::Waitcnt
@@ -1444,8 +1498,12 @@ MCRegister WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
       AMDGPU::isHi16Reg(Reg, Context->TRI) ? AMDGPU::lo16 : AMDGPU::hi16);
 
   AMDGPU::Waitcnt Wait;
-  for (MCRegUnit RU : regunits(OtherHalf))
-    determineWaitForScore(T, getVMemScore(toVMEMID(RU), T), Wait);
+  for (MCRegUnit RU : regunits(OtherHalf)) {
+    if (T == AMDGPU::VA_VDST_WR)
+      determineWaitForVAVDSTWrite(toVMEMID(RU), Wait);
+    else
+      determineWaitForScore(T, getVMemScore(toVMEMID(RU), T), Wait);
+  }
 
   // No wait on otherhalf
   if (!Wait.hasWait())
@@ -1474,10 +1532,15 @@ void WaitcntBrackets::determineWaitForPhysReg(AMDGPU::InstCounterType T,
     bool IsVGPR = Context->TRI.isVectorRegister(Context->MRI, Reg);
     if (IsVGPR)
       Reg = determineVGPR16Dependency(MI, T, Reg);
-    for (MCRegUnit RU : regunits(Reg))
-      determineWaitForScore(
-          T, IsVGPR ? getVMemScore(toVMEMID(RU), T) : getSGPRScore(RU, T),
-          Wait);
+    for (MCRegUnit RU : regunits(Reg)) {
+      if (IsVGPR && T == AMDGPU::VA_VDST_WR) {
+        determineWaitForVAVDSTWrite(toVMEMID(RU), Wait);
+      } else {
+        determineWaitForScore(
+            T, IsVGPR ? getVMemScore(toVMEMID(RU), T) : getSGPRScore(RU, T),
+            Wait);
+      }
+    }
   }
 }
 
@@ -2912,8 +2975,25 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
       }
     }
 
-    for (auto &[RegID, Info] : VMem)
-      StrictDom |= mergeScore(M, Info.Scores[T], Other.getVMemScore(RegID, T));
+    for (auto &[RegID, Info] : VMem) {
+      unsigned OtherScore = Other.getVMemScore(RegID, T);
+      if (T == AMDGPU::VA_VDST_WR) {
+        // A fence count is usable only when every path carrying the dependency
+        // has at least that many later ordered XDL writes. Keep this path's
+        // OrderedXDLCount and rebase each write onto it.
+        bool MyPending = Info.Scores[T] > M.OldLB;
+        bool OtherPending = OtherScore > M.OtherLB;
+        unsigned MyCount = MyPending ? getNumOrderedXDLsAfterWrite(RegID) : 0;
+        unsigned OtherCount =
+            OtherPending ? Other.getNumOrderedXDLsAfterWrite(RegID) : 0;
+        unsigned NewCount = MyPending && OtherPending
+                                ? std::min(MyCount, OtherCount)
+                                : (MyPending ? MyCount : OtherCount);
+        StrictDom |= MyPending && NewCount < MyCount;
+        Info.OrderedXDLCountAtWrite = OrderedXDLCount - NewCount;
+      }
+      StrictDom |= mergeScore(M, Info.Scores[T], OtherScore);
+    }
 
     if (isSmemCounter(T)) {
       for (auto &[RegID, Info] : SGPRs) {

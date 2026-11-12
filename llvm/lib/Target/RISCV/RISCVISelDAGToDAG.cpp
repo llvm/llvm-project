@@ -3163,8 +3163,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SCALAR_TO_VECTOR:
     if (Subtarget->hasStdExtP()) {
       MVT SrcVT = Node->getOperand(0).getSimpleValueType();
-      if ((VT == MVT::v2i32 && SrcVT == MVT::i64) ||
-          (VT == MVT::v4i8 && SrcVT == MVT::i32)) {
+      if (SrcVT == Subtarget->getXLenVT() &&
+          VT.getSizeInBits() == SrcVT.getSizeInBits()) {
         ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
         CurDAG->RemoveDeadNode(Node);
         return;

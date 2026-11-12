@@ -32,15 +32,15 @@ body: |
     ; GFX10-WAVE32: liveins: $sgpr10
     ; GFX10-WAVE32-NEXT: {{  $}}
     ; GFX10-WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr32
-    ; GFX10-WAVE32-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 5, implicit-def dead $scc
-    ; GFX10-WAVE32-NEXT: $sgpr32 = COPY [[S_LSHR_B32_]]
+    ; GFX10-WAVE32-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 5, implicit-def dead $scc
+    ; GFX10-WAVE32-NEXT: $sgpr32 = COPY [[S_LSHL_B32_]]
     ;
     ; GFX10-WAVE64-LABEL: name: stackrestore_direct_sp_sgpr
     ; GFX10-WAVE64: liveins: $sgpr10
     ; GFX10-WAVE64-NEXT: {{  $}}
     ; GFX10-WAVE64-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr32
-    ; GFX10-WAVE64-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 6, implicit-def dead $scc
-    ; GFX10-WAVE64-NEXT: $sgpr32 = COPY [[S_LSHR_B32_]]
+    ; GFX10-WAVE64-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 6, implicit-def dead $scc
+    ; GFX10-WAVE64-NEXT: $sgpr32 = COPY [[S_LSHL_B32_]]
     %0:sgpr(p5) = COPY $sgpr32
     G_STACKRESTORE %0
 
@@ -58,15 +58,15 @@ body: |
     ; GFX10-WAVE32: liveins: $sgpr10
     ; GFX10-WAVE32-NEXT: {{  $}}
     ; GFX10-WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr10
-    ; GFX10-WAVE32-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 5, implicit-def dead $scc
-    ; GFX10-WAVE32-NEXT: $sgpr32 = COPY [[S_LSHR_B32_]]
+    ; GFX10-WAVE32-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 5, implicit-def dead $scc
+    ; GFX10-WAVE32-NEXT: $sgpr32 = COPY [[S_LSHL_B32_]]
     ;
     ; GFX10-WAVE64-LABEL: name: stackrestore_any_sgpr
     ; GFX10-WAVE64: liveins: $sgpr10
     ; GFX10-WAVE64-NEXT: {{  $}}
     ; GFX10-WAVE64-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr10
-    ; GFX10-WAVE64-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 6, implicit-def dead $scc
-    ; GFX10-WAVE64-NEXT: $sgpr32 = COPY [[S_LSHR_B32_]]
+    ; GFX10-WAVE64-NEXT: [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY]], 6, implicit-def dead $scc
+    ; GFX10-WAVE64-NEXT: $sgpr32 = COPY [[S_LSHL_B32_]]
     %0:sgpr(p5) = COPY $sgpr10
     G_STACKRESTORE %0
 

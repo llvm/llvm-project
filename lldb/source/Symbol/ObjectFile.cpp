@@ -256,7 +256,8 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_type(eTypeInvalid), m_strata(eStrataInvalid),
       m_file_offset(file_offset), m_length(length),
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(),
-      m_memory_addr(LLDB_INVALID_ADDRESS), m_sections_up(), m_symtab_up(),
+      m_memory_addr(LLDB_INVALID_ADDRESS),
+      m_disable_memory_symtab_caching(false), m_sections_up(), m_symtab_up(),
       m_symtab_once_up(new llvm::once_flag()) {
   if (file_spec_ptr)
     m_file = *file_spec_ptr;
@@ -283,8 +284,8 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
     : ModuleChild(module_sp), m_file(), m_type(eTypeInvalid),
       m_strata(eStrataInvalid), m_file_offset(0), m_length(0),
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(process_sp),
-      m_memory_addr(header_addr), m_sections_up(), m_symtab_up(),
-      m_symtab_once_up(new llvm::once_flag()) {
+      m_memory_addr(header_addr), m_disable_memory_symtab_caching(false),
+      m_sections_up(), m_symtab_up(), m_symtab_once_up(new llvm::once_flag()) {
   if (header_extractor_sp && header_extractor_sp->HasData())
     m_data_nsp = header_extractor_sp;
   Log *log = GetLog(LLDBLog::Object);
@@ -806,6 +807,7 @@ Symtab *ObjectFile::GetSymtab(bool can_create) {
       if (!m_symtab_up->LoadFromCache()) {
         ElapsedTime elapsed(module_sp->GetSymtabParseTime());
         ParseSymtab(*m_symtab_up);
+        m_symtab_up->SetWasParsedFromObjectFile();
         m_symtab_up->Finalize();
       }
     });

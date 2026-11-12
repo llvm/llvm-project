@@ -12,7 +12,6 @@
 
 ---
 name:            test
-tracksRegLiveness: true
 stack:
   - { id: 0, type: variable-sized, offset: 0, alignment: 32,
       stack-id: default }

@@ -518,15 +518,18 @@ public:
   mlir::Value emitScalarCast(mlir::Value src, QualType srcType,
                              QualType dstType, mlir::Type srcTy,
                              mlir::Type dstTy, ScalarConversionOpts opts) {
-    assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
-           "Internal error: matrix types not handled by this function.");
     assert(!(mlir::isa<mlir::IntegerType>(srcTy) ||
              mlir::isa<mlir::IntegerType>(dstTy)) &&
            "Obsolete code. Don't use mlir::IntegerType with CIR.");
 
     mlir::Type fullDstTy = dstTy;
-    if (mlir::isa<cir::VectorType>(srcTy) &&
-        mlir::isa<cir::VectorType>(dstTy)) {
+    if (mlir::isa<cir::MatrixType>(srcTy) &&
+        mlir::isa<cir::MatrixType>(dstTy)) {
+      // Use the element types of the matrices to figure out the CastKind.
+      srcTy = mlir::dyn_cast<cir::MatrixType>(srcTy).getElementType();
+      dstTy = mlir::dyn_cast<cir::MatrixType>(dstTy).getElementType();
+    } else if (mlir::isa<cir::VectorType>(srcTy) &&
+               mlir::isa<cir::VectorType>(dstTy)) {
       // Use the element types of the vectors to figure out the CastKind.
       srcTy = mlir::dyn_cast<cir::VectorType>(srcTy).getElementType();
       dstTy = mlir::dyn_cast<cir::VectorType>(dstTy).getElementType();
@@ -887,6 +890,14 @@ public:
     if (cir::isFPOrVectorOfFPType(operand.getType()))
       return builder.createOrFold<cir::FNegOp>(loc, operand);
 
+    // Saturated negation must saturate (-min for signed, any nonzero value for
+    // unsigned), as in classic codegen.
+    if (e->getType()->isSaturatedFixedPointType()) {
+      CIRGenFixedPointBuilder fpBuilder(builder, loc);
+      return fpBuilder.createNeg(
+          operand, cgf.getContext().getFixedPointSemantics(e->getType()));
+    }
+
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
     //            that the overflow behavior is handled correctly.
@@ -1146,9 +1157,8 @@ public:
     }
 
     if (srcType->isMatrixType() && dstType->isMatrixType()) {
-      cgf.getCIRGenModule().errorNYI(loc,
-                                     "matrix type to matrix type conversion");
-      return {};
+      return emitScalarCast(src, srcType, dstType, mlirSrcType, mlirDstType,
+                            opts);
     }
     assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
            "Internal error: conversion between matrix type and scalar type");
@@ -2081,12 +2091,10 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    cir::OverflowBehavior overflowBehavior =
-        cgf.getLangOpts().PointerOverflowDefined
-            ? cir::OverflowBehavior::None
-            : cir::OverflowBehavior::NoSignedWrap;
-    index =
-        cgf.getBuilder().createMul(loc, index, numElements, overflowBehavior);
+    cir::OverflowFlags overflowFlags = cgf.getLangOpts().PointerOverflowDefined
+                                           ? cir::OverflowFlags::None
+                                           : cir::OverflowFlags::NoSignedWrap;
+    index = cgf.getBuilder().createMul(loc, index, numElements, overflowFlags);
     assert(!cir::MissingFeatures::sanitizers());
     return cir::PtrStrideOp::create(cgf.getBuilder(), loc, pointer.getType(),
                                     pointer, index);
@@ -3290,7 +3298,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
               builder.getConstAPInt(numElts.getLoc(), numElts.getType(),
                                     cgf.cgm.getSize(eltSize).getValue());
           return builder.createMul(loc, eltSizeValue, numElts,
-                                   cir::OverflowBehavior::NoUnsignedWrap);
+                                   cir::OverflowFlags::NoUnsignedWrap);
         }
 
         return numElts;

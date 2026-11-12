@@ -209,7 +209,6 @@
 ---
 name:            store3align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -251,7 +250,6 @@ body:             |
 ---
 name:            store3align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -288,7 +286,6 @@ body:             |
 ---
 name:            store3align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -325,7 +322,6 @@ body:             |
 ---
 name:            store3align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -362,7 +358,6 @@ body:             |
 ---
 name:            store5align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -399,7 +394,6 @@ body:             |
 ---
 name:            store5align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -436,7 +430,6 @@ body:             |
 ---
 name:            store5align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -473,7 +466,6 @@ body:             |
 ---
 name:            store5align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -510,7 +502,6 @@ body:             |
 ---
 name:            store6align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -552,7 +543,6 @@ body:             |
 ---
 name:            store6align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -589,7 +579,6 @@ body:             |
 ---
 name:            store6align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -626,7 +615,6 @@ body:             |
 ---
 name:            store6align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -663,7 +651,6 @@ body:             |
 ---
 name:            store7align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -705,7 +692,6 @@ body:             |
 ---
 name:            store7align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -742,7 +728,6 @@ body:             |
 ---
 name:            store7align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -779,7 +764,6 @@ body:             |
 ---
 name:            store7align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r6, $r7
@@ -816,7 +800,6 @@ body:             |
 ---
 name:            store_double_align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -846,7 +829,6 @@ body:             |
 ---
 name:            store_double_align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -876,7 +858,6 @@ body:             |
 ---
 name:            store_double_align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -906,7 +887,6 @@ body:             |
 ---
 name:            store_double_align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6
@@ -932,7 +912,6 @@ body:             |
 ---
 name:            store_i64_align1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -966,7 +945,6 @@ body:             |
 ---
 name:            store_i64_align2
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -1000,7 +978,6 @@ body:             |
 ---
 name:            store_i64_align4
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -1034,7 +1011,6 @@ body:             |
 ---
 name:            store_i64_align8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
