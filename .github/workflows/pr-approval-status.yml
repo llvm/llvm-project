@@ -1,0 +1,100 @@
+name: "Approval status"
+
+# Sets the "Approval or skip-precommit-approval label" commit status on a PR's
+# head commit. Triggered when pr-approval-check.yml completes, which happens
+# whenever a PR targeting main is updated, (un)labeled, or reviewed. See that
+# file for why this is split into two workflows.
+#
+# workflow_run workflows run in the context of the base repository with the
+# workflow definition from main, so they can be given write access even for
+# PRs from forks. Since PR authors control the contents of the triggering run
+# for their PRs, nothing produced by that run (artifacts, logs, etc) is used
+# here: the PR is found from the run's head repository/branch, which are set by
+# GitHub, and its labels and reviews are read from the GitHub API.
+
+permissions:
+  contents: read
+
+on:
+  workflow_run:
+    workflows:
+      - "Check for approval or skip-precommit-approval label"
+    types:
+      - completed
+
+jobs:
+  set_approval_status:
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: read
+      statuses: write
+    concurrency:
+      group: >-
+        ${{ github.workflow }}-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+      cancel-in-progress: true
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Set approval status
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const run = context.payload.workflow_run;
+            const head = `${run.head_repository.owner.login}:${run.head_branch}`;
+
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', base: 'main', head, per_page: 100,
+            });
+            if (pulls.length == 0) {
+              core.info(`No open PR targeting main found for ${head}`);
+              return;
+            }
+
+            for (const pr of pulls) {
+              let state;
+              let description;
+              if (pr.labels.some((l) => l.name === 'skip-precommit-approval')) {
+                state = 'success';
+                description = 'Has the skip-precommit-approval label';
+              } else {
+                // Take each reviewer's most recent review that affects
+                // approval status (comment-only reviews don't), ignoring the
+                // PR author, and count the reviewers whose most recent such
+                // review is an approval.
+                const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                  owner, repo, pull_number: pr.number, per_page: 100,
+                });
+                const latest = new Map();
+                for (const r of reviews) {
+                  if (!r.user || r.user.login === pr.user.login)
+                    continue;
+                  if (!['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(r.state))
+                    continue;
+                  const prev = latest.get(r.user.login);
+                  if (!prev || r.submitted_at > prev.submitted_at)
+                    latest.set(r.user.login, r);
+                }
+                const approvers = [...latest.values()]
+                  .filter((r) => r.state === 'APPROVED')
+                  .map((r) => r.user.login);
+                if (approvers.length > 0) {
+                  state = 'success';
+                  description = `Approved by ${approvers.join(', ')}`;
+                } else {
+                  state = 'failure';
+                  description = 'Needs an approval, or the skip-precommit-approval label (ideally added when creating the PR)';
+                }
+              }
+
+              // Commit status descriptions are limited to 140 characters.
+              if (description.length > 140)
+                description = description.slice(0, 137) + '...';
+              core.info(`PR #${pr.number} (${pr.head.sha}): ${state}: ${description}`);
+              await github.rest.repos.createCommitStatus({
+                owner, repo, sha: pr.head.sha, state, description,
+                context: 'Approval or skip-precommit-approval label',
+                target_url: 'https://llvm.org/docs/CodeReview.html',
+              });
+            }
