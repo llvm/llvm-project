@@ -161,6 +161,17 @@ end
 ! CHECK-LABEL: func.func @_QPassumed_shape_dummy(
 ! CHECK: hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 uniq_name("_QFassumed_shape_dummyEassociated") fortran_attrs<target>
 
+subroutine assumed_type_dummy(associated)
+  type(*) :: associated
+  real :: pointee
+  integer(8) :: ptr
+  pointer(ptr, pointee)
+  ptr = loc(associated)
+end
+
+! CHECK-LABEL: func.func @_QPassumed_type_dummy(
+! CHECK: hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 uniq_name("_QFassumed_type_dummyEassociated") fortran_attrs<target>
+
 subroutine host_association()
   real :: pointee, associated
   integer(8) :: ptr
