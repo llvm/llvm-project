@@ -489,3 +489,74 @@ func.func @inner_loop_yields_induction_var() -> index {
   }
   return %r : index
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/231902
+// Yielded values of inner loops that are removed must be retained to
+// replace later uses of the loop results.
+
+// CHECK-LABEL: func @inner_iter_arg_passthrough_result
+// CHECK-SAME:    (%[[INIT:.*]]: i32)
+// CHECK:         %[[RES:.*]] = affine.for %{{.*}} = 0 to %{{.*}} iter_args(%{{.*}} = %[[INIT]]) -> (i32) {
+// CHECK-NOT:       affine.for
+// CHECK:           "use"(%[[INIT]]) : (i32) -> ()
+// CHECK:           affine.yield %[[INIT]] : i32
+// CHECK:         }
+// CHECK:         return %[[RES]] : i32
+func.func @inner_iter_arg_passthrough_result(%init: i32) -> i32 {
+  %outer = affine.for %i = 0 to 4 iter_args(%a = %init) -> (i32) {
+    %inner = affine.for %j = 0 to 4 iter_args(%b = %init) -> (i32) {
+      "use"(%b) : (i32) -> ()
+      affine.yield %b : i32
+    }
+    affine.yield %inner : i32
+  }
+  return %outer : i32
+}
+
+// -----
+
+// Inner loops that carry a value across iterations (here a reduction) must
+// not be coalesced: replacing the iter_arg with its initial value would
+// change the result.
+
+// CHECK-LABEL: func @inner_loop_carried_value_not_coalesced
+// CHECK:         affine.for %{{.*}} = 0 to 4 iter_args
+// CHECK:           affine.for %{{.*}} = 0 to 4 iter_args
+// CHECK:             arith.addi
+func.func @inner_loop_carried_value_not_coalesced(%init: i32, %v: i32) -> i32 {
+  %outer = affine.for %i = 0 to 4 iter_args(%outer_arg = %init) -> (i32) {
+    %inner = affine.for %j = 0 to 4 iter_args(%inner_arg = %init) -> (i32) {
+      %next = arith.addi %inner_arg, %v : i32
+      affine.yield %next : i32
+    }
+    affine.yield %inner : i32
+  }
+  return %outer : i32
+}
+
+// -----
+
+// Pass-through iter_args of every inner loop in a 3-deep nest are replaced by
+// their initial values, including uses in the innermost body of the middle
+// loop's iter_arg.
+
+// CHECK-LABEL: func @three_level_passthrough_iter_args
+// CHECK-SAME:    (%[[X:.*]]: i32)
+// CHECK:         affine.for %{{.*}} = 0 to %{{.*}} {
+// CHECK-NOT:       affine.for
+// CHECK:           "use"(%[[X]], %[[X]]) : (i32, i32) -> ()
+// CHECK:         }
+func.func @three_level_passthrough_iter_args(%x: i32) {
+  affine.for %i = 0 to 4 {
+    %r = affine.for %j = 0 to 4 iter_args(%a = %x) -> (i32) {
+      %s = affine.for %k = 0 to 4 iter_args(%b = %x) -> (i32) {
+        "use"(%a, %b) : (i32, i32) -> ()
+        affine.yield %b : i32
+      }
+      affine.yield %a : i32
+    }
+  }
+  return
+}
