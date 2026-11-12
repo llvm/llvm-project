@@ -12,6 +12,8 @@
 ; Use the same directive for i128 and fp128 on x86-32 since both are passed and returned on the stack.
 ; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=i686-unknown-linux-gnu -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-X86
 ; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=i686-unknown-linux-gnu -verify-machineinstrs   | FileCheck %s --check-prefix=CHECK-X86
+; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=i686-unknown-linux-code16 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-X86
+; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=i686-unknown-linux-code16 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-X86
 ; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=i686-pc-windows-msvc -verify-machineinstrs     | FileCheck %s --check-prefix=CHECK-MSVC32
 ; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=i686-pc-windows-msvc -verify-machineinstrs     | FileCheck %s --check-prefix=CHECK-MSVC32
 

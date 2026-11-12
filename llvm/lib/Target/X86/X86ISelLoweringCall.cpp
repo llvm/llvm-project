@@ -242,8 +242,9 @@ bool X86TargetLowering::functionArgumentNeedsConsecutiveRegisters(
   if (Ty->isIntegerTy(128))
     return true;
 
-  // On x86-32, fp128 acts the same as i128.
-  if (Subtarget.is32Bit() && Ty->isFP128Ty())
+  // On x86-32, and in 16-bit mode, which has the same ABI, fp128 acts the same
+  // as i128.
+  if (!Subtarget.is64Bit() && Ty->isFP128Ty())
     return true;
 
   return false;
