@@ -428,9 +428,12 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
+  if (M.getModuleFlag("openmp") ||
+      M.getTargetTriple().getEnvironment() == Triple::LLVM)
+    return false;
+
   auto *PrintfFunction = M.getFunction("printf");
-  if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
-      M.getModuleFlag("openmp"))
+  if (!PrintfFunction || !PrintfFunction->isDeclaration())
     return false;
 
   // Verify the signature of the printf function and skip if it isn't correct.
