@@ -7245,9 +7245,10 @@ getActiveGSLanesAndGroups(const Value *Mask, unsigned VF, unsigned GroupSize) {
 // Return an average cost of Gather / Scatter instruction, maybe improved later.
 InstructionCost
 X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                            Type *SrcVTy, const Value *Ptr, Align Alignment,
-                            unsigned AddressSpace, const Value *Mask,
-                            std::optional<bool> UniformBase) const {
+                            Type *SrcVTy, const Value *Ptr, bool VariableMask,
+                            Align Alignment, unsigned AddressSpace,
+                            const Value *Mask, std::optional<bool> UniformBase,
+                            const Instruction *CtxI) const {
 
   assert(isa<VectorType>(SrcVTy) && "Unexpected type in getGSVectorCost");
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
@@ -7267,6 +7268,44 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
     const GetElementPtrInst *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr);
     if (IndexSize != 64 || !GEP)
       return IndexSize;
+
+    // getUniformBase() declines a GEP from another block. The address then
+    // reaches the gather already built as a pointer vector, with no arithmetic
+    // left to narrow.
+    if (CtxI && GEP->getParent() != CtxI->getParent())
+      return IndexSize;
+
+    // SelectionDAG analyses one block at a time and reads the operand tree, so
+    // it cannot see a PHI's incoming values, a definition in another block, or
+    // a range the IR states as an attribute. The whole tree has to be visible,
+    // not just its root: `shl` of a PHI reads narrow here and full width
+    // there. Give up on the first value carrying such a fact.
+    auto RangeVisibleToSelectionDAG = [&](const Value *V) {
+      SmallVector<const Value *, 8> Worklist(1, V);
+      SmallPtrSet<const Value *, 16> Seen;
+      while (!Worklist.empty()) {
+        const Value *Cur = Worklist.pop_back_val();
+        if (isa<Constant>(Cur) || !Seen.insert(Cur).second)
+          continue;
+        if (const auto *Arg = dyn_cast<Argument>(Cur)) {
+          if (Arg->getRange())
+            return false;
+          continue;
+        }
+        if (const auto *CB = dyn_cast<CallBase>(Cur))
+          if (CB->getRange())
+            return false;
+        const auto *I = dyn_cast<Instruction>(Cur);
+        if (!I)
+          continue;
+        if (isa<PHINode>(I) || (CtxI && I->getParent() != CtxI->getParent()))
+          return false;
+        if (Seen.size() >= 16)
+          return false;
+        Worklist.append(I->op_begin(), I->op_end());
+      }
+      return true;
+    };
 
     unsigned NumOfVarIndices = 0;
     const Value *Ptrs = GEP->getPointerOperand();
@@ -7332,24 +7371,40 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
 
       // An index that holds the same value in every lane contributes a fixed
       // byte offset, which folds into the base pointer instead of reaching the
-      // index operand. That covers every struct member, named by a scalar
-      // constant, as well as a splat. A constant that is not a splat does
-      // reach the index, so it is examined like any other.
-      if (isa<Constant>(Operand) && (!Operand->getType()->isVectorTy() ||
-                                     getSplatValue(Operand) != nullptr))
+      // index operand. A scalar operand is uniform by construction once the GEP
+      // produces a vector of pointers, whether or not it is constant. Where the
+      // GEP is still scalar its operand is the index widening will vary, so
+      // only a constant folds. A constant that is not a splat does reach the
+      // index.
+      if (!Operand->getType()->isVectorTy() &&
+          (isa<Constant>(Operand) || GEP->getType()->isVectorTy()))
+        continue;
+      if (isa<Constant>(Operand) && getSplatValue(Operand))
         continue;
 
       if (++NumOfVarIndices > 1)
         return IndexSize;
 
-      Operand = PeelSplatAddend(Operand);
+      TypeSize PeelEltSize = DL.getTypeAllocSize(GTI.getIndexedType());
+      if (PeelEltSize.isScalable())
+        return IndexSize;
+
+      // Peel only on a power-of-two stride, where the scale field or a shift
+      // keeps the constant term separate. Any other stride multiplies the
+      // whole sum, so the product the combine tests for a signed dword
+      // includes the addend.
+      if (isPowerOf2_64(PeelEltSize.getFixedValue()))
+        Operand = PeelSplatAddend(Operand);
 
       unsigned IndexBits;
       if (Operand->getType()->isVectorTy()) {
         // Match the backend: combineGatherScatter narrows an index vector
         // that is representable in a signed dword, and tests that with
-        // ComputeNumSignBits rather than by declared width and opcode.
-        IndexBits = ComputeMaxSignificantBits(Operand, DL);
+        // ComputeNumSignBits rather than by declared width and opcode. Ask
+        // only where SelectionDAG reaches the same answer.
+        IndexBits = RangeVisibleToSelectionDAG(Operand)
+                        ? ComputeMaxSignificantBits(Operand, DL)
+                        : Operand->getType()->getScalarSizeInBits();
       } else if (std::optional<unsigned> Bits = ExtendedBits(Operand)) {
         // A scalar index reaches here from a caller that has not widened the
         // address yet. Widening preserves the extension, so its source width
@@ -7376,12 +7431,20 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
         return IndexSize;
       }
 
-      // Any other stride is multiplied into the index first, and the product
-      // is what the combine sees. It has to fit a signed dword with the stride
-      // included, and it is no longer an extension node. ComputeNumSignBits
-      // adds the two significant widths, and a positive constant spends one
-      // bit on the sign, so a stride of 12 contributes five bits and not four.
-      if (IndexBits + APInt(64, Stride).getSignificantBits() > 32)
+      // A larger stride reaches the index itself, and the product is what has
+      // to fit a signed dword. A power of two arrives as a shift, and
+      // combineGatherScatter walks it into the scale field until the field is
+      // full, so only the residual shift is left. One more than a power of two
+      // becomes a shift plus the index, which SelectionDAG reads a bit tighter
+      // than the multiply every other stride keeps.
+      unsigned StrideBits;
+      if (isPowerOf2_64(Stride))
+        StrideBits = Log2_64(Stride) - 3;
+      else if (isPowerOf2_64(Stride - 1))
+        StrideBits = APInt(64, Stride).getActiveBits();
+      else
+        StrideBits = APInt(64, Stride).getSignificantBits();
+      if (IndexBits + StrideBits > 32)
         return IndexSize;
       if (!isa<Constant>(Operand) && !TruncationRemovesIllegalType())
         return IndexSize;
@@ -7423,9 +7486,11 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
     // gathers nothing, and CodeGen folds it away rather than emitting it.
     ChargedLanes = Active->first;
     EmittedParts = Active->second;
-  } else if (Opcode != Instruction::Load) {
-    // Without a compile-time mask the tail that legalization's widening added
-    // cannot be proved dead. A gather's tail produces an unused result and is
+  } else if (VariableMask && Opcode != Instruction::Load) {
+    // Under a mask that is not known here the tail that legalization's widening
+    // added cannot be proved dead. An unmasked scatter has no such tail, so the
+    // caller supplies VariableMask: a null Mask means only that this query
+    // carries no mask operand. A gather's tail produces an unused result and is
     // dropped, but a scatter's survives as a store under a zeroed mask, which
     // is still an instruction. The predicate legalizes into k-register pieces,
     // so the widened length is the next whole number of pieces, never beyond
@@ -7493,9 +7558,9 @@ X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
     if (II->getIntrinsicID() == MICA.getID())
       Mask = II->getArgOperand(IsLoad ? 1 : 2);
 
-  InstructionCost Cost =
-      getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment, AddressSpace,
-                      Mask, MICA.getUniformBase());
+  InstructionCost Cost = getGSVectorCost(
+      Opcode, CostKind, SrcVTy, Ptr, MICA.getVariableMask(), Alignment,
+      AddressSpace, Mask, MICA.getUniformBase(), MICA.getInst());
 
   // Predicate fanout (see getPredicateFanoutCost); variable mask only, and not
   // at code size. There the cost is the instruction count getGSVectorCost
