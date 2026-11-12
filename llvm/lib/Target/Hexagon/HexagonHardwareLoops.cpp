@@ -1049,7 +1049,10 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     //   DistCheck = CMP_GT DistR,  0   --> CmpLess
     //   DistCheck = CMP_GT DistR, -1   --> CmpGreater
     Register DistCheckR = MRI->createVirtualRegister(PredRC);
-    const MCInstrDesc &DistCheckD = TII->get(Hexagon::C2_cmpgti);
+    unsigned DistCheckOpc = (CmpLess && Comparison::isUnsigned(Cmp))
+                                ? Hexagon::C2_cmpgtui
+                                : Hexagon::C2_cmpgti;
+    const MCInstrDesc &DistCheckD = TII->get(DistCheckOpc);
     BuildMI(*PH, InsertPos, DL, DistCheckD, DistCheckR)
         .addReg(DistR, {}, DistSR)
         .addImm((CmpLess) ? 0 : -1);
