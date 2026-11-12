@@ -60,14 +60,55 @@ namespace {
 // LayoutPropagation
 //===----------------------------------------------------------------------===//
 
-/// Propagates layout requirements in a single backward walk.
-/// Layouts requested by consumers are tracked separately from producer layouts
-/// written into the IR. Later visits overwrite earlier layout requests.
+/// Propagates layouts with a backward scan, then a forward fill.
 ///
-/// A forward pass then sets the region result layouts from the terminator
-/// operands, updates the function signatures, and infers layouts still missing
-/// from operand layouts where supported.
-/// ResolveLayoutConflicts reconciles producer and consumer layouts.
+/// Backward scan: the shared driver xegpu::walkBackward, used by both layout
+/// propagation and layout recovery, calls the BackwardLayoutVisitor callbacks
+/// visitTerminator / visitRegionOp / visitRegularOp.
+///   - Order: ops are visited backward (consumers before producers), with an
+///     op's regions before the op itself. Regions are visited against control
+///     flow, so scf.while's before region comes before its after region.
+///   - Exceptions: consumers across a loop back edge are visited after their
+///     producer. For scf.while, that also covers the uses in its after region.
+///
+/// One decision per op:
+///   - Values: a value takes the layout requested by its nearest consumer.
+///     Requests are kept in one value -> layout map (requestedLayouts), which
+///     each consumer overwrites. Because consumers are visited from farthest to
+///     nearest, no program-order numbering is needed.
+///   - Transfer functions (visit*Op) are pure. They take the layouts requested
+///     for the op's results, return the layouts the op requests of its
+///     operands, and may replace a result layout the op requires (e.g. a
+///     reduction). The driver (visitRegularOp) writes the result layouts and
+///     tensor_desc types into the IR, including the scalar result of a
+///     reduction.
+///   - Anchors decide once. Load rules do not need a consumer layout: without
+///     one, load_nd, load_gather and load_matrix take their own instruction's
+///     default layout. That default logic (setupDefault2DBlockIOLayout,
+///     setupDefaultScatterIOLayout) is shared with store_nd, prefetch_nd,
+///     store_scatter and store_matrix.
+///
+/// Region boundaries, in the backward scan:
+///   - Terminators (visitTerminator): each operand takes the layout of the
+///     region argument it feeds, if one has been requested, otherwise of the
+///     region result, and gets it as layout_operand_N. This is
+///     propagateRegionResultsToYieldOperands, shared with layout recovery,
+///     which passes its use-point lookup.
+///   - Init operands (visitRegionOp) take the layout of the region argument
+///     they feed (propagateRegionArgsToInits).
+///   - scf.while restriction: an after-region argument must be a pass-through
+///     of a before-region argument. Otherwise propagation reports an error.
+///
+/// Forward fill (forwardFillUnassignedLayouts), in program order, does only
+/// what needs information flowing forward:
+///   - forwardFillRegularOp infers a result's layout from its operand
+///     layouts, and warns "op has users but no layout assigned" when it
+///     can't;
+///   - forwardYieldOperandsToRegionResults gives each region result the layout
+///     of the terminator operand that feeds it;
+///   - updateFunctionOpInterface updates the function signatures.
+///
+/// ResolveLayoutConflicts then reconciles producer and consumer layouts.
 class LayoutPropagation final : public xegpu::BackwardLayoutVisitor {
 public:
   LayoutPropagation(Operation *scopeRoot, xegpu::LayoutKind layoutKind)
@@ -1525,9 +1566,9 @@ using GetLayoutFnTy = function_ref<xegpu::DistributeLayoutAttr(Value)>;
 ///
 /// If the global propagation left a result without a layout, forward-fill it
 /// locally from the operand layouts.
-static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
-                                             mlir::Operation *op,
-                                             GetLayoutFnTy getLayoutOfValue) {
+static LogicalResult forwardFillRegularOp(mlir::OpBuilder &builder,
+                                          mlir::Operation *op,
+                                          GetLayoutFnTy getLayoutOfValue) {
   // Iterate over all the results.
   for (OpResult result : op->getResults()) {
     Type resultType = result.getType();
@@ -1779,7 +1820,7 @@ forwardFillUnassignedLayouts(OpBuilder &builder, Operation *target,
           r = updateFunctionOpInterface(builder, funcOp, getLayoutOfValue);
         })
         .Default([&](Operation *op) {
-          r = updateOpWithForwardFill(builder, op, getLayoutOfValue);
+          r = forwardFillRegularOp(builder, op, getLayoutOfValue);
         });
     if (failed(r)) {
       op->emitError("Failed to update operation with the layout.");
