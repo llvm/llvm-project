@@ -55,10 +55,6 @@ using namespace llvm;
 
 STATISTIC(NumCallsAnalyzed, "Number of call sites analyzed");
 
-static cl::opt<bool> InlineOnlyWithinSection(
-    "inline-only-within-section", cl::init(true), cl::Hidden,
-    cl::desc("Only inline functions into call sites within the same section."));
-
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -3141,7 +3137,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
   // With a linker script, only inline functions into call sites within the same
   // output section (unless callee has always-inline attribute).
-  if (InlineOnlyWithinSection &&
+  if (Opts.inline_only_within_section &&
       !functionsHaveMatchingOutputSections(Call.getCaller(), Callee))
     return InlineResult::failure("caller and callee in different sections");
 
