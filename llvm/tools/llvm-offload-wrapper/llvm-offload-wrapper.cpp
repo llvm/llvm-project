@@ -42,7 +42,8 @@ static cl::opt<object::OffloadKind> Kind(
 
 static cl::opt<bool> Relocatable(
     "relocatable",
-    cl::desc("Wrap for a relocatable offloading application (OpenMP only)"),
+    cl::desc("Wrap for a relocatable offloading application (OpenMP, OpenACC "
+             "and SYCL)"),
     cl::cat(OffloadWrapeprCategory));
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
@@ -94,7 +95,11 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
       return Err;
     break;
   case llvm::object::OFK_SYCL:
-    if (Error Err = offloading::wrapSYCLBinaries(M, BuffersToWrap.front()))
+    // A relocatable link has already linked the device image. Mark it as
+    // finalized, so that a later link does not link it again.
+    if (Error Err = offloading::wrapSYCLBinaries(
+            M, BuffersToWrap.front(), offloading::SYCLJITOptions(),
+            /*IsFinalizedImage=*/Relocatable))
       return Err;
     break;
   default:

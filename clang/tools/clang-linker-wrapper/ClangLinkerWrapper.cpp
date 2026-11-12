@@ -743,7 +743,7 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       "-o",
       *BitcodeOrErr,
   };
-  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
+  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC || Kind == OFK_SYCL) &&
       Args.hasArg(OPT_relocatable))
     WrapperArgs.push_back("--relocatable");
   for (const auto &Buffer : Buffers)
@@ -829,8 +829,11 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
   case OFK_SYCL: {
     // TODO: fill these options once the Driver supports them.
     offloading::SYCLJITOptions Options;
-    if (Error Err =
-            offloading::wrapSYCLBinaries(M, BuffersToWrap.front(), Options))
+    // With -r the device image is already linked. Mark it as finalized, so that
+    // a later link through clang-linker-wrapper does not link it again.
+    if (Error Err = offloading::wrapSYCLBinaries(
+            M, BuffersToWrap.front(), Options,
+            /*IsFinalizedImage=*/Args.hasArg(OPT_relocatable)))
       return std::move(Err);
     break;
   }
