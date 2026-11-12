@@ -265,6 +265,8 @@ LIBC_INLINE ErrorOr<char16_t> CharacterConverter::pop_utf16() {
   LIBC_ASSERT(state->conversion_state != MBConversionState::PUSHING);
 
   char32_t output;
+  // state->total_bytes refers to UTF-8 bytes
+  // 3 byte UTF-8 has max code point U+FFFF and can fit in 1 UTF-16 code unit.
   if (state->total_bytes <= 3) {
     // no surrogates needed
     output = state->partial;
