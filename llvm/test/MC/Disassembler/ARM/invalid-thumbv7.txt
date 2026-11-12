@@ -48,6 +48,28 @@
 # CHECK: potentially undefined instruction encoding
 # CHECK-NEXT: [0xb4 0xe8 0x34 0x04]
 
+# Thumb2 LDM register lists must not contain both LR and PC.
+# LDMIA, without and with writeback.
+[0x93 0xe8 0xff 0xcf]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0x93 0xe8 0xff 0xcf]
+[0xb4 0xe8 0x03 0xc0]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0xb4 0xe8 0x03 0xc0]
+
+# LDMDB, without and with writeback.
+[0x13 0xe9 0x03 0xc0]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0x13 0xe9 0x03 0xc0]
+[0x34 0xe9 0x03 0xc0]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0x34 0xe9 0x03 0xc0]
+
+# POP.W uses LDMIA with writeback to SP.
+[0xbd 0xe8 0x03 0xc0]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0xbd 0xe8 0x03 0xc0]
+
 
 #------------------------------------------------------------------------------
 # Undefined encoding for ldrd
