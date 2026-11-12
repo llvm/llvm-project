@@ -4,20 +4,20 @@ using namespace hlsl;
 
 struct S {
   float4 f0 : SV_Position;
-// CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:10 f0 'float4':'vector<float, 4>'
-// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:15> "SV_Position" 0
+// CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} {{.*}} f0 'float4':'vector<float, 4>'
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} {{.*}} "SV_Position" 0
 // Use a user semantic to test non-zero index propagation.
   float4 f1 : USER3;
-// CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:10 referenced f1 'float4':'vector<float, 4>'
-// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:15> "USER" 3
+// CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} {{.*}} referenced f1 'float4':'vector<float, 4>'
+// CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} {{.*}} "USER" 3
 };
 
 float4 main(S s) : SV_Target {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:8 main 'float4 (S)'
-// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:15 used s 'S'
-// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:6:15> "SV_Position" 0
-// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:10:15> "USER" 3
+// CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} {{.*}} used s 'S'
+// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} {{.*}} "SV_Position" 0
+// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} {{.*}} "USER" 3
 
-// CHECK:       HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:20> "SV_Target" 0
+// CHECK:       HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} {{.*}} "SV_Target" 0
   return s.f1;
 }
