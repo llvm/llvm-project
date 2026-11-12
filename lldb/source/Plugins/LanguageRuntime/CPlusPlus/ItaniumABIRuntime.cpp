@@ -76,7 +76,7 @@ TypeAndOrName ItaniumABIRuntime::FindTypeInfoWithClangVTable(
       continue;
     }
 
-    if (!TypeSystemClang::IsCXXClassType(type_sp->GetForwardCompilerType())) {
+    if (!IsCXXClassOrStruct(type_sp->GetForwardCompilerType())) {
       LLDB_LOG(log,
                "{0:x}: Found __clang_vtable at {1:x} for '{2}' which is not a "
                "CXXClassType. Ignoring",
