@@ -648,7 +648,7 @@ def generate_index_md():
         )
     )
     print(
-        "(implementation_status)=\n\n(headers_index)=\n\n# Implementation Status\n\n"
+        "(implementation_status)=\n\n(headers_index)=\n\n# Headers\n\n"
         f"Live symbol coverage across {len(headers_data)} headers ({n_c23} C23 "
         f"standard headers, {n_posix} POSIX.1-2024 headers, and extensions), verified "
         "directly against LLVM-libc source files, header generation specifications, "
