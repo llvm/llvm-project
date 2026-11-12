@@ -681,6 +681,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
               handleFMFFlags(std::move(IncomingVal), FMF, /*IsInput=*/true);
       }
 
+      handleMetadata(PHI->getType(), IncomingVal, *PHI);
+      if (hasProgramExited())
+        return;
+
       IncomingValues.emplace_back(PHI, IncomingVal);
       ++CurrentFrame->PC;
     }
