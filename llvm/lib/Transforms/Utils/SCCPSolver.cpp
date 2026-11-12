@@ -972,8 +972,8 @@ public:
 
   bool isEdgeFeasible(BasicBlock *From, BasicBlock *To) const;
 
-  std::vector<ValueLatticeElement> getStructLatticeValueFor(Value *V) const {
-    std::vector<ValueLatticeElement> StructValues;
+  SmallVector<ValueLatticeElement, 4> getStructLatticeValueFor(Value *V) const {
+    SmallVector<ValueLatticeElement, 4> StructValues;
     auto *STy = dyn_cast<StructType>(V->getType());
     assert(STy && "getStructLatticeValueFor() can be called only on structs");
     for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
@@ -1209,10 +1209,10 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV,
 Constant *SCCPInstVisitor::getConstantOrNull(Value *V) const {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
-    std::vector<ValueLatticeElement> LVs = getStructLatticeValueFor(V);
+    SmallVector<ValueLatticeElement, 4> LVs = getStructLatticeValueFor(V);
     if (any_of(LVs, SCCPSolver::isOverdefined))
       return nullptr;
-    std::vector<Constant *> ConstVals;
+    SmallVector<Constant *, 4> ConstVals;
     auto *ST = cast<StructType>(V->getType());
     for (unsigned I = 0, E = ST->getNumElements(); I != E; ++I) {
       const ValueLatticeElement &LV = LVs[I];
@@ -2448,7 +2448,7 @@ bool SCCPSolver::isEdgeFeasible(BasicBlock *From, BasicBlock *To) const {
   return Visitor->isEdgeFeasible(From, To);
 }
 
-std::vector<ValueLatticeElement>
+SmallVector<ValueLatticeElement, 4>
 SCCPSolver::getStructLatticeValueFor(Value *V) const {
   return Visitor->getStructLatticeValueFor(V);
 }
