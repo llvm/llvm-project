@@ -557,6 +557,19 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
   }
 }
 
+static InstructionCost getPackedBuildCost(unsigned NumRegs, MVT RegVT,
+                                          const APInt &DemandedElts) {
+  // Each v4i8 register is built with 3 PRMTs that merge four bytes into one
+  // 32-bit register, plus a zext for each demanded element. Other packed types
+  // are built with a single mov per register.
+  if (RegVT == MVT::v4i8) {
+    unsigned NumPRMT = 3 * NumRegs;
+    unsigned NumZExt = DemandedElts.popcount();
+    return (NumPRMT + NumZExt) * TTI::TCC_Basic;
+  }
+  return NumRegs * TTI::TCC_Basic;
+}
+
 InstructionCost NVPTXTTIImpl::getScalarizationOverhead(
     VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
@@ -564,27 +577,18 @@ InstructionCost NVPTXTTIImpl::getScalarizationOverhead(
   if (!InTy->getElementCount().isFixed())
     return InstructionCost::getInvalid();
 
-  auto VT = getTLI()->getValueType(DL, InTy);
   auto NumElements = InTy->getElementCount().getFixedValue();
   InstructionCost Cost = 0;
   if (Insert && !VL.empty()) {
     bool AllConstant = all_of(seq(NumElements), [&](int Idx) {
       return !DemandedElts[Idx] || isa<Constant>(VL[Idx]);
     });
-    if (AllConstant) {
-      Cost += TTI::TCC_Free;
+    if (AllConstant)
       Insert = false;
-    }
   }
-  if (Insert && VT == MVT::v4i8) {
-    Cost += 3; // 3 x PRMT
-    for (auto Idx : seq(NumElements))
-      if (DemandedElts[Idx])
-        Cost += 1; // zext operand to i32
-    Insert = false;
-  } else if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
-    // Can be built in a single 32-bit mov
-    Cost += 1;
+  auto [NumRegs, RegVT] = getTypeLegalizationCost(InTy);
+  if (Insert && RegVT.is32BitVector() && NVPTX::isPackedVectorTy(RegVT)) {
+    Cost += getPackedBuildCost(NumRegs.getValue(), RegVT, DemandedElts);
     Insert = false;
   }
   return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
