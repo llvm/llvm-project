@@ -57,7 +57,7 @@ class ChangeProcessGroupTestCase(TestBase):
         listener = lldb.SBListener("my.attach.listener")
         error = lldb.SBError()
         process = target.AttachToProcessWithID(listener, int(pid), error)
-        self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         # set a breakpoint just before the setpgid() call
         lldbutil.run_break_set_by_file_and_line(

@@ -14,7 +14,6 @@
 ...
 ---
 name:            add_scalar_eq
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -37,7 +36,6 @@ body:             |
 ...
 ---
 name:            add_vector_eq
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -61,7 +59,6 @@ body:             |
 ...
 ---
 name:            add_scalar_eq_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -84,7 +81,6 @@ body:             |
 ...
 ---
 name:            add_vector_eq_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -108,7 +104,6 @@ body:             |
 ...
 ---
 name:            add_scalar_eq_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -131,7 +126,6 @@ body:             |
 ...
 ---
 name:            add_vector_eq_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -155,7 +149,6 @@ body:             |
 ...
 ---
 name:            xor_scalar_eq
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -178,7 +171,6 @@ body:             |
 ...
 ---
 name:            xor_vector_eq
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -202,7 +194,6 @@ body:             |
 ...
 ---
 name:            xor_scalar_eq_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -225,7 +216,6 @@ body:             |
 ...
 ---
 name:            xor_vector_eq_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -249,7 +239,6 @@ body:             |
 ...
 ---
 name:            xor_scalar_eq_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -272,7 +261,6 @@ body:             |
 ...
 ---
 name:            xor_vector_eq_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -296,7 +284,6 @@ body:             |
 ...
 ---
 name:            sub_scalar_eq
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -319,7 +306,6 @@ body:             |
 ...
 ---
 name:            sub_vector_eq
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -343,7 +329,6 @@ body:             |
 ...
 ---
 name:            sub_scalar_eq_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -366,7 +351,6 @@ body:             |
 ...
 ---
 name:            sub_vector_eq_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -390,7 +374,6 @@ body:             |
 ...
 ---
 name:            add_scalar_ne
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -413,7 +396,6 @@ body:             |
 ...
 ---
 name:            add_vector_ne
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -437,7 +419,6 @@ body:             |
 ...
 ---
 name:            add_scalar_ne_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -460,7 +441,6 @@ body:             |
 ...
 ---
 name:            add_vector_ne_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -484,7 +464,6 @@ body:             |
 ...
 ---
 name:            add_scalar_ne_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -507,7 +486,6 @@ body:             |
 ...
 ---
 name:            add_vector_ne_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -531,7 +509,6 @@ body:             |
 ...
 ---
 name:            xor_scalar_ne
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -554,7 +531,6 @@ body:             |
 ...
 ---
 name:            xor_vector_ne
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -578,7 +554,6 @@ body:             |
 ...
 ---
 name:            xor_scalar_ne_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -601,7 +576,6 @@ body:             |
 ...
 ---
 name:            xor_vector_ne_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -625,7 +599,6 @@ body:             |
 ...
 ---
 name:            xor_scalar_ne_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -648,7 +621,6 @@ body:             |
 ...
 ---
 name:            xor_vector_ne_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -672,7 +644,6 @@ body:             |
 ...
 ---
 name:            sub_scalar_ne
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -695,7 +666,6 @@ body:             |
 ...
 ---
 name:            sub_vector_ne
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -719,7 +689,6 @@ body:             |
 ...
 ---
 name:            sub_scalar_ne_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -742,7 +711,6 @@ body:             |
 ...
 ---
 name:            sub_vector_ne_commuted_in_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -766,7 +734,6 @@ body:             |
 ...
 ---
 name:            dont_combine_sub_scalar_eq_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -790,7 +757,6 @@ body:             |
 ...
 ---
 name:            dont_combine_sub_vector_eq_commuted_in_op
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -814,7 +780,6 @@ body:             |
 ...
 ---
 name:            dont_combine_not_equality
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -838,7 +803,6 @@ body:             |
 ...
 ---
 name:            dont_combine_unique_operands
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2

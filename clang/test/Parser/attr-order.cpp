@@ -44,3 +44,19 @@ extern "C" {
 
 extern "C" __attribute__ ((__warn_unused_result__)) [[__maybe_unused__]] int p(int); // ok
 extern "C" [[__maybe_unused__]] __attribute__ ((__warn_unused_result__)) int q(int); // ok
+
+// Mixed GNU and standard attributes also work in namespace scope (GH240537).
+namespace {
+__attribute__((unused)) [[maybe_unused]] int x;
+[[maybe_unused]] __attribute__((unused)) int y;
+__attribute__((unused)) [[maybe_unused]]
+__attribute__((aligned(16))) [[]] int z;
+static_assert(__alignof__(z) == 16, "GNU attributes must be preserved");
+}
+
+namespace N {
+__attribute__((warn_unused_result)) [[maybe_unused]] int f();
+[[maybe_unused]] __attribute__((warn_unused_result)) int g();
+[[maybe_unused]] __attribute__((warn_unused_result)) [[]]
+__attribute__((nothrow)) [[nodiscard]] int h();
+}

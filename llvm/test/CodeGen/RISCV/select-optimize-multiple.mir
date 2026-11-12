@@ -24,7 +24,6 @@
 # select, we cannot optimize the sequence to share control-flow.
 name:            cmov_interleaved_bad
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -122,7 +121,6 @@ body:             |
 # in the head basic block.
 name:            cmov_interleaved_debug_value
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }

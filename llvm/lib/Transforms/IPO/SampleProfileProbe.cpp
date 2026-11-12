@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CRC.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -41,18 +41,6 @@ using namespace llvm;
 
 STATISTIC(ArtificialDbgLine,
           "Number of probes that have an artificial debug line");
-
-static cl::opt<bool>
-    VerifyPseudoProbe("verify-pseudo-probe", cl::init(false), cl::Hidden,
-                      cl::desc("Do pseudo probe verification"));
-
-static cl::list<std::string> VerifyPseudoProbeFuncList(
-    "verify-pseudo-probe-funcs", cl::Hidden,
-    cl::desc("The option to specify the name of the functions to verify."));
-
-static cl::opt<bool>
-    UpdatePseudoProbe("update-pseudo-probe", cl::init(true), cl::Hidden,
-                      cl::desc("Update pseudo probe distribution factor"));
 
 static uint64_t getCallStackHash(const DILocation *DIL) {
   uint64_t Hash = 0;
@@ -79,14 +67,16 @@ bool PseudoProbeVerifier::shouldVerifyFunction(const Function *F) {
   // defintion will be verified instead.
   if (F->hasAvailableExternallyLinkage())
     return false;
-  // Do a name matching.
-  static const StringSet<> VerifyFuncNames(llvm::from_range,
-                                           VerifyPseudoProbeFuncList);
   return VerifyFuncNames.empty() || VerifyFuncNames.contains(F->getName());
 }
 
+PseudoProbeVerifier::PseudoProbeVerifier(const LLVMContext &C)
+    : Enabled(getIPOOptions(C).verify_pseudo_probe),
+      VerifyFuncNames(llvm::from_range,
+                      getIPOOptions(C).verify_pseudo_probe_funcs) {}
+
 void PseudoProbeVerifier::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  if (VerifyPseudoProbe) {
+  if (Enabled) {
     PIC.registerAfterPassCallback(
         [this](StringRef P, IRUnitRef IR, const PreservedAnalyses &) {
           this->runAfterPass(P, IR);
@@ -568,7 +558,7 @@ void PseudoProbeUpdatePass::runOnFunction(Function &F,
 
 PreservedAnalyses PseudoProbeUpdatePass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
-  if (UpdatePseudoProbe) {
+  if (getIPOOptions(M).update_pseudo_probe) {
     for (auto &F : M) {
       if (F.isDeclaration())
         continue;

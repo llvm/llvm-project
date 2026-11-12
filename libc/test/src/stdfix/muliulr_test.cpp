@@ -11,9 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MuliFxTest.h"
+#include "test/src/stdfix/MuliFxTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/stdfix/muliulr.h"
 
 LIST_MULIFX_TESTS(ulr, unsigned long int, unsigned long fract,

@@ -692,6 +692,7 @@ def CvtPackedOddIndexedToF32Op
 
 class AMX_Type<string typeName, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<X86_Dialect, "AMX" # typeName, traits> {
+  let cppIncludes = ["mlir/Dialect/X86/X86Dialect.h"];
   let mnemonic = "amx." # typeMnemonic;
 }
 

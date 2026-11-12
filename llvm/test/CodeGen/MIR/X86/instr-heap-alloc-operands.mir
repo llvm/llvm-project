@@ -23,7 +23,6 @@
 ---
 name: test
 # CHECK-LABEL: name: test
-tracksRegLiveness: true
 frameInfo:
   hasCalls: true
 body: |

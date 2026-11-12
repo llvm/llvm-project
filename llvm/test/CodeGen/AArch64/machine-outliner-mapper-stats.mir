@@ -9,7 +9,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
