@@ -28,6 +28,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   ChrootChecker.cpp
   CloneChecker.cpp
   ContainerModeling.cpp
+  ContainerOfModeling.cpp
   ConversionChecker.cpp
   CXXDeleteChecker.cpp
   CXXSelfAssignmentChecker.cpp
