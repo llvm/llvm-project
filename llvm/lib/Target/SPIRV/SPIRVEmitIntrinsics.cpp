@@ -2428,15 +2428,13 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
           InsertValueInst::getInsertedValueOperandIndex(), B);
     return;
   }
-  // So must a pointer inserted into a vector.
+  // So must a pointer inserted into a vector, whose elements are untyped
+  // pointers and so pointers to i8.
   if (auto *IEI = dyn_cast<InsertElementInst>(I)) {
     Value *Op = IEI->getOperand(1);
-    if (isPointerTy(Op->getType())) {
-      Type *ElemTy = getPointeeType(IEI->getType()->getElementType());
+    if (isPointerTy(Op->getType()))
       replacePointerOperandWithPtrCast(
-          I, Op, ElemTy ? ElemTy : IntegerType::getInt8Ty(I->getContext()), 1,
-          B);
-    }
+          I, Op, IntegerType::getInt8Ty(I->getContext()), 1, B);
     return;
   }
 
