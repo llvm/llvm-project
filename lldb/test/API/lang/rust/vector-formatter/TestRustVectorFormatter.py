@@ -24,7 +24,7 @@ class TestRustVectorFormatter(TestBase):
             children=[
                 ValueCheck(name="[0]", value="1"),
                 ValueCheck(name="[1]", value="2"),
-                ValueCheck(name="[2]", value="3")
+                ValueCheck(name="[2]", value="3"),
             ],
         )
 
@@ -34,6 +34,6 @@ class TestRustVectorFormatter(TestBase):
             result_children=[
                 ValueCheck(name="[0]", value="1"),
                 ValueCheck(name="[1]", value="2"),
-                ValueCheck(name="[2]", value="3")
+                ValueCheck(name="[2]", value="3"),
             ],
         )
