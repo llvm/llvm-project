@@ -214,8 +214,8 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   if (Opc == Mov || Opc == AMDGPU::COPY) {
     // Already-folded AND: s_mov vcc, 0  or  s_mov/copy vcc, exec.
     const MachineOperand &Src = A->getOperand(1);
-    if (Src.isImm() && (Src.getImm() == 0 || Src.getImm() == -1))
-      MaskValue = Src.getImm();
+    if (Src.isImm() && Src.getImm() == 0)
+      MaskValue = 0;
     else if (Src.isReg() && Src.getReg() == ExecReg)
       MaskValue = -1;
     else
