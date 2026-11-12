@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_PPOLL_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_PPOLL_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/signal_macros.h"
 #include "hdr/types/nfds_t.h"
 #include "hdr/types/sigset_t.h"
@@ -39,22 +40,21 @@ LIBC_INLINE ErrorOr<int> ppoll(struct pollfd *fds, nfds_t nfds,
   // signals. NSIG is the signal count, so NSIG / 8 gives the byte size.
   const size_t SIGSETSIZE = NSIG / 8;
 
+  // Pick the syscall whose timespec layout matches ours. SYS_ppoll_time64 takes
+  // 64-bit members. The legacy SYS_ppoll takes two longs, so it is only safe
+  // when time_t is as wide as long.
 #if defined(SYS_ppoll_time64)
-  static_assert(
-      sizeof(time_t) == sizeof(int64_t),
-      "SYS_ppoll_time64 requires struct timespec with 64-bit members.");
-  return syscall_checked<int>(SYS_ppoll_time64, fds, nfds, tmo_p, sigmask,
-                              SIGSETSIZE);
-#elif defined(SYS_ppoll)
-  static_assert(
-      sizeof(timespec::tv_nsec) == sizeof(long),
-      "This legacy syscall fallback is only safe on platforms where tv_nsec "
-      "matches the register size (long). It is unsafe on 32-bit platforms "
-      "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_ppoll, fds, nfds, tmo_p, sigmask, SIGSETSIZE);
-#else
-#error "ppoll and ppoll_time64 syscalls not available."
+  if constexpr (sizeof(time_t) == sizeof(int64_t))
+    return syscall_checked<int>(SYS_ppoll_time64, fds, nfds, tmo_p, sigmask,
+                                SIGSETSIZE);
 #endif
+#if defined(SYS_ppoll)
+  if constexpr (sizeof(time_t) == sizeof(long))
+    return syscall_checked<int>(SYS_ppoll, fds, nfds, tmo_p, sigmask,
+                                SIGSETSIZE);
+#endif
+  // No syscall matches our timespec.
+  return Error(ENOSYS);
 }
 
 } // namespace linux_syscalls
