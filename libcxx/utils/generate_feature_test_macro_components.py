@@ -109,7 +109,7 @@ feature_test_macros = [
                 "memory",
                 "ranges",
                 "string",
-                "vector", 
+                "vector",
             ],
             "unimplemented": True,
         },
