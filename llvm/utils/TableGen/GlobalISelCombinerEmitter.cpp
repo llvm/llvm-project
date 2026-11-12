@@ -689,8 +689,7 @@ private:
   /// If the rule sets CheckApplyLegality, adds a predicate checking that each
   /// instruction built by its 'apply' patterns is legal.
   /// Returns false on error.
-  bool addApplyLegalityPredicates(RuleMatcher &M, const CodeExpansions &CE,
-                                  const PatternAlternatives &Alts);
+  bool addApplyLegalityPredicates(RuleMatcher &M);
 
   bool hasOnlyCXXApplyPatterns() const;
   bool hasEraseRoot() const;
@@ -1107,19 +1106,18 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
       ExpandedCode.getEnumNameWithPrefix(CXXPredPrefix));
 }
 
-bool CombineRuleBuilder::addApplyLegalityPredicates(
-    RuleMatcher &M, const CodeExpansions &CE, const PatternAlternatives &Alts) {
+bool CombineRuleBuilder::addApplyLegalityPredicates(RuleMatcher &M) {
   if (!RuleDef.getValueAsBit("CheckApplyLegality"))
     return true;
 
-  for (auto &[Name, Pat] : ApplyPats) {
+  for (const auto &Pat : values(ApplyPats)) {
     const auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat.get());
     if (!CGP)
       continue;
 
     const CodeGenInstruction &CGI = CGP->getInst();
     // Map each generic type index (typeN) to the first operand that uses it.
-    SmallVector<std::string, 4> TypeOps;
+    SmallVector<std::optional<std::pair<unsigned, unsigned>>, 4> TypeOps;
     unsigned NumOps =
         std::min<unsigned>(CGP->operands_size(), CGI.Operands.size());
     for (unsigned K = 0; K < NumOps; ++K) {
@@ -1131,7 +1129,7 @@ bool CombineRuleBuilder::addApplyLegalityPredicates(
         continue;
       if (TypeIdx >= TypeOps.size())
         TypeOps.resize(TypeIdx + 1);
-      if (!TypeOps[TypeIdx].empty())
+      if (TypeOps[TypeIdx])
         continue;
       const InstructionOperand &Op = CGP->getOperand(K);
       // Use the first operand of this type defined by the 'match'; registers
@@ -1139,11 +1137,11 @@ bool CombineRuleBuilder::addApplyLegalityPredicates(
       if (!Op.isNamedOperand() || Op.hasImmValue() ||
           !MatchOpTable.lookup(Op.getOperandName()).Found)
         continue;
-      TypeOps[TypeIdx] =
-          ("MRI.getType(${" + Op.getOperandName() + "}.getReg())").str();
+      const OperandMatcher &OM = M.getOperandMatcher(Op.getOperandName());
+      TypeOps[TypeIdx] = {OM.getInsnVarID(), OM.getOpIdx()};
     }
     for (const auto &[Idx, Ty] : enumerate(TypeOps)) {
-      if (Ty.empty()) {
+      if (!Ty) {
         PrintError("CheckApplyLegality: type" + Twine(Idx) + " of '" +
                    CGI.TheDef->getName() +
                    "' must come from an operand defined in the 'match'");
@@ -1151,11 +1149,12 @@ bool CombineRuleBuilder::addApplyLegalityPredicates(
       }
     }
 
-    std::string Code;
-    raw_string_ostream OS(Code);
-    OS << "return Helper.isLegalOrBeforeLegalizer({TargetOpcode::"
-       << CGI.TheDef->getName() << ", {" << join(TypeOps, ", ") << "}});";
-    addCXXPredicate(M, CE, CXXPattern(Code, Name), Alts);
+    SmallVector<std::pair<unsigned, unsigned>, 4> TypeOperands;
+    for (const auto &Ty : TypeOps)
+      TypeOperands.push_back(*Ty);
+    // Like C++ predicates, this is attached to the root but runs after all the
+    // operands have been recorded (see dependsOnRecordedOperands).
+    M.roots_front().addPredicate<LegalityPredicateMatcher>(CGI, TypeOperands);
   }
   return true;
 }
@@ -1753,7 +1752,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     }
   }
 
-  if (!IsUsingCustomCXXAction && !addApplyLegalityPredicates(M, CE, Alts))
+  if (!IsUsingCustomCXXAction && !addApplyLegalityPredicates(M))
     return false;
 
   return IsUsingCustomCXXAction ? emitCXXMatchApply(CE, M, CXXMatchers)
@@ -1812,7 +1811,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
       }
     }
 
-    if (!IsUsingCustomCXXAction && !addApplyLegalityPredicates(M, CE, Alts))
+    if (!IsUsingCustomCXXAction && !addApplyLegalityPredicates(M))
       return false;
 
     const bool Res = IsUsingCustomCXXAction
@@ -2736,6 +2735,11 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
      << "  }\n\n"
      << "  return false;\n"
      << "}\n\n";
+  // Used by GIM_CheckIsLegal, for rules with CheckApplyLegality.
+  OS << "bool " << getClassName()
+     << "::isLegalForApply(unsigned Opcode, ArrayRef<LLT> Types) const {\n"
+     << "  return Helper.isLegalOrBeforeLegalizer(Opcode, Types);\n"
+     << "}\n\n";
 }
 
 void GICombinerEmitter::emitMIPredicateFns(raw_ostream &OS) {
@@ -2943,7 +2947,9 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   {
     IfDefGuardEmitter If(OS, "GET_GICOMBINER_CLASS_MEMBERS");
     OS << "  bool canMatchOpcode(unsigned Opc) const override;\n"
-       << "  uint32_t getRootFlagsToDrop() const override;\n";
+       << "  uint32_t getRootFlagsToDrop() const override;\n"
+       << "  bool isLegalForApply(unsigned Opcode, ArrayRef<LLT> Types) "
+          "const override;\n";
   }
   emitPredicatesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
   emitTemporariesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
