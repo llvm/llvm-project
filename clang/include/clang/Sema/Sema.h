@@ -11735,6 +11735,21 @@ public:
       const NamedDecl *PatternDef, TemplateSpecializationKind TSK,
       bool Complain = true, bool *Unreachable = nullptr);
 
+  /// Emits notes explaining rejected candidate partial specializations when an
+  /// error occurs on a class or variable template specialization.
+  void NoteUnsatisfiedPartialSpecializations(
+      SourceLocation Loc, ClassTemplateDecl *Template,
+      ArrayRef<TemplateArgument> Args,
+      const ClassTemplatePartialSpecializationDecl *Selected = nullptr);
+  void NoteUnsatisfiedPartialSpecializations(
+      SourceLocation Loc, const ClassTemplateSpecializationDecl *Spec);
+  void NoteUnsatisfiedPartialSpecializations(
+      SourceLocation Loc, VarTemplateDecl *Template,
+      ArrayRef<TemplateArgument> Args,
+      const VarTemplatePartialSpecializationDecl *Selected = nullptr);
+  void NoteUnsatisfiedPartialSpecializations(
+      SourceLocation Loc, const VarTemplateSpecializationDecl *Spec);
+
   /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
   /// that the template parameter 'PrevDecl' is being shadowed by a new
   /// declaration at location Loc. Returns true to indicate that this is
