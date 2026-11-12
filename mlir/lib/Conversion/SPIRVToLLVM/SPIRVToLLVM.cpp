@@ -402,6 +402,7 @@ public:
     case spirv::StorageClass::Uniform:
     case spirv::StorageClass::StorageBuffer:
     case spirv::StorageClass::PushConstant:
+    case spirv::StorageClass::PhysicalStorageBuffer:
       return rewriter.notifyMatchFailure(
           op, "pointer ArrayStride is not supported for this storage class");
     default:
