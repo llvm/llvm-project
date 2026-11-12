@@ -34,6 +34,20 @@ bool hasNonTrivialMoveConstructor(QualType Type);
 /// Return true if `Type` has a non-trivial move assignment operator.
 bool hasNonTrivialMoveAssignment(QualType Type);
 
+/// Returns `true` if `Record` has a copy constructor that is not deleted.
+bool isCopyConstructible(const CXXRecordDecl &Record);
+
+/// Returns `true` if `Record` has a move constructor that is not deleted.
+bool isMoveConstructible(const CXXRecordDecl &Record);
+
+/// Returns `true` if `Record` has a copy assignment operator that is not
+/// deleted.
+bool isCopyAssignable(const CXXRecordDecl &Record);
+
+/// Returns `true` if `Record` has a move assignment operator that is not
+/// deleted.
+bool isMoveAssignable(const CXXRecordDecl &Record);
+
 /// Returns `true` if `Type` is a `std::initializer_list<...>` specialization.
 bool isStdInitializerList(QualType Type);
 
