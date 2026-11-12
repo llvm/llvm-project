@@ -76,6 +76,29 @@ Policy Policy::CreateScriptedExtensionCall() {
   return p;
 }
 
+// Pushed only by the thread handling a stop in
+// Process::ProcessEventData::DoOnRemoval. That thread reads the stop's own
+// state and run lock, which say stopped, while every other thread still gets
+// eStateRunning and finds the public run lock set to running, so none of
+// them can resume or inspect the process before the stop's actions are done.
+Policy Policy::CreateHandlingStop() {
+  Policy p = PolicyStack::Get().Current();
+  p.view = View::HandlingStop;
+  return p;
+}
+
+static llvm::StringRef GetViewName(Policy::View view) {
+  switch (view) {
+  case Policy::View::Public:
+    return "public";
+  case Policy::View::Private:
+    return "private";
+  case Policy::View::HandlingStop:
+    return "handling-stop";
+  }
+  llvm_unreachable("unhandled policy view");
+}
+
 PolicyStack::Guard::~Guard() {
   if (!m_active)
     return;
@@ -112,7 +135,7 @@ PolicyStack::Guard &PolicyStack::Guard::operator=(Guard &&other) {
 }
 
 void Policy::Dump(Stream &s) const {
-  s << "policy: view=" << (view == View::Public ? "public" : "private");
+  s << "policy: view=" << GetViewName(view);
   s << ", capabilities={";
   s << "eval_expr=" << capabilities.can_evaluate_expressions;
   s << " run_all=" << capabilities.can_run_all_threads;
