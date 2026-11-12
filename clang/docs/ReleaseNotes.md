@@ -1375,6 +1375,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
   already did on AArch64.
 
+- `_ReadBarrier`, `_WriteBarrier` and `_ReadWriteBarrier` are now available on
+  32-bit Arm, as on x86 and AArch64.
+
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
   over-aligned base class is followed by another base class. MSVC on Arm64 (but
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
