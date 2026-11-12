@@ -6,11 +6,10 @@ define void @urem_udiv_lane0(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -50,14 +49,11 @@ define void @srem_sdiv_lane2(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-LABEL: define void @srem_sdiv_lane2(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
-; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A2:%.*]] = load i32, ptr [[PA2]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B2:%.*]] = load i32, ptr [[PB2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = srem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D2:%.*]] = sdiv i32 [[A2]], [[B2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D2:%.*]] = extractelement <4 x i32> [[TMP3]], i64 2
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    store i32 [[D2]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
@@ -100,9 +96,8 @@ define void @urem_udiv_reordered(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[R]], align 4
@@ -392,10 +387,9 @@ define void @urem_udiv_phi_operands(ptr %p, ptr %r, ptr %q, i1 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP1]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PR0:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = urem <4 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = udiv <4 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[PR0]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP3]], i64 0
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -459,8 +453,9 @@ define void @urem_udiv_arg_operands(i32 %a0, i32 %b0, i32 %a1, i32 %b1, i32 %a2,
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[B2]], i64 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[B3]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = urem <4 x i32> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = udiv <4 x i32> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP9]], i64 0
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[PR0]], align 4
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;

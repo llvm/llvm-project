@@ -37,6 +37,7 @@ class AssumptionCache;
 class Constant;
 class DataLayout;
 class DebugLoc;
+class DominatorTree;
 class InsertElementInst;
 class Instruction;
 class IRBuilderBase;
@@ -307,6 +308,12 @@ Value *createInsertVector(
 /// Generates subvector extract.
 Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
                            unsigned SubVecVF, unsigned Index);
+
+/// \returns true if \p InsertPt dominates all the uses of \p I from the block
+/// of \p InsertPt. Returns false if \p I precedes \p InsertPt and has too many
+/// uses to check.
+bool dominatesAllUses(const DominatorTree &DT, const Instruction &InsertPt,
+                      const Instruction &I);
 
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.

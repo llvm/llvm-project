@@ -23,6 +23,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -733,6 +734,17 @@ Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
   SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
   std::iota(Mask.begin(), Mask.end(), Index);
   return Builder.CreateShuffleVector(Vec, Mask);
+}
+
+bool dominatesAllUses(const DominatorTree &DT, const Instruction &InsertPt,
+                      const Instruction &I) {
+  assert(InsertPt.getParent() == I.getParent() && "Expected same block.");
+  // The uses of the instruction after InsertPt are dominated by InsertPt.
+  if (InsertPt.comesBefore(&I))
+    return true;
+  return !I.hasNUsesOrMore(UsesLimit) && all_of(I.uses(), [&](const Use &U) {
+    return DT.dominates(&InsertPt, U);
+  });
 }
 
 SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask, UseMask MaskArg) {

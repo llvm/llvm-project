@@ -516,6 +516,7 @@ public:
     NonScheduledFirst.clear();
     EntryToLastInstruction.clear();
     LastInstructionToPos.clear();
+    PairedDivisions.clear();
     LoadEntriesToVectorize.clear();
     IsGraphTransformMode = false;
     GatheredLoadsEntriesFirst.reset();
@@ -2449,6 +2450,18 @@ private:
                                ArrayRef<Value *> VectorizedVals,
                                SmallPtrSetImpl<Value *> &CheckedExtracts);
 
+  /// Checks if \p I is not deleted, not part of the tree, including the
+  /// copyable lanes, and not used by the ignored users of the tree. Returns
+  /// false if \p I has too many uses to check.
+  bool isOutOfTree(Instruction *I) const {
+    return !isDeleted(I) && !isVectorized(I) &&
+           !ValueToGatherNodes.contains(I) && !I->hasNUsesOrMore(UsesLimit) &&
+           none_of(I->users(),
+                   [&](User *U) { return UserIgnoreSet.contains(U); }) &&
+           none_of(VectorizableTree,
+                   std::bind(&TreeEntry::isCopyableElement, _1, I));
+  }
+
   /// Estimates spill/reload cost from vector register pressure for \p E at the
   /// point of emitting its vector result type \p FinalVecTy. \p ScalarTy is the
   /// scalar/slot type used to widen into \p VecTy/\p FinalVecTy and may itself
@@ -3490,6 +3503,12 @@ private:
   /// be emitted after the vector instruction emission process to correctly
   /// handle order of the vector instructions and shuffles.
   SetVector<const TreeEntry *> PostponedGathers;
+
+  /// Scalar divisions with their lanes, which are replaced by the lanes of the
+  /// vector division of the remainder node, as selected by the cost model.
+  SmallDenseMap<const TreeEntry *,
+                SmallVector<std::pair<Instruction *, unsigned>>>
+      PairedDivisions;
 
   /// Frozen operands of the expanded binops with the shuffles, which blend the
   /// frozen expanded lanes into the other operands.
@@ -17803,6 +17822,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               *TTI, Opts.slp_revec, ShuffleOrOp, ScalarTy, VL.size(), CostKind);
           MaskedCost.isValid())
         return MaskedCost + CommonCost;
+      if ((ShuffleOrOp == Instruction::URem ||
+           ShuffleOrOp == Instruction::SRem) &&
+          It == MinBWs.end()) {
+        SmallVector<std::pair<Instruction *, unsigned>> &Divs =
+            PairedDivisions[E];
+        Divs.clear();
+        if (InstructionCost PairedCost = getPairedDivisionsCost(
+                *TTI, *DT, *TLI, Opts.slp_revec, ShuffleOrOp, E->getOperand(0),
+                E->getOperand(1), VL0, getLastInstructionInBundle(E), CostKind,
+                std::bind(&BoUpSLP::isOutOfTree, this, _1), Divs);
+            PairedCost.isValid())
+          return PairedCost + CommonCost;
+      }
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(E->getOperand(OpIdx));
@@ -25220,6 +25252,28 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         V = Builder.CreateBinOp(
             static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS, RHS);
       V = PropagateIRFlags(V);
+      if (auto DivsIt = PairedDivisions.find(E);
+          DivsIt != PairedDivisions.end()) {
+        assert(!PaddedVecTy && "Expected no paired divisions for masked rem.");
+        const Instruction &InsertPt = getLastInstructionInBundle(E);
+        Value *Div = nullptr;
+        for (auto [I, Lane] : DivsIt->second) {
+          // The scheduling may move the bundle after the uses of the division.
+          if (isDeleted(I) || !dominatesAllUses(*DT, InsertPt, *I))
+            continue;
+          if (!Div)
+            Div = Builder.CreateBinOp(
+                static_cast<Instruction::BinaryOps>(I->getOpcode()), LHS, RHS);
+          const unsigned SubVF = getNumElements(I->getType());
+          Value *Ex =
+              isVectorizedTy(I->getType())
+                  ? createExtractVector(Builder, Div, SubVF, Lane * SubVF)
+                  : Builder.CreateExtractElement(Div, Lane);
+          Ex->takeName(I);
+          I->replaceAllUsesWith(Ex);
+          eraseInstruction(I);
+        }
+      }
 
       V = FinalShuffle(V, E);
 
