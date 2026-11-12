@@ -1299,6 +1299,64 @@ void AggExprEmitter::VisitPointerToDataMemberBinaryOperator(
   EmitFinalDestCopy(E->getType(), LV);
 }
 
+/// Return true if initializing or assigning \p T from \p E accesses a volatile
+/// member. When \p E is an initializer list (or compound literal), only the
+/// active initialized member of each union is considered. A null \p E
+/// indicates default/value initialization of an omitted subobject.
+static bool hasVolatileMember(QualType T, const Expr *E, ASTContext &Ctx) {
+  if (T.isVolatileQualified())
+    return true;
+
+  const RecordDecl *RD = Ctx.getBaseElementType(T)->getAsRecordDecl();
+  if (!RD || !RD->hasVolatileMember())
+    return false;
+
+  if (E) {
+    E = E->IgnoreParenNoopCasts(Ctx);
+    if (E->getType().isVolatileQualified())
+      return true;
+    if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(E))
+      E = CLE->getInitializer();
+  }
+
+  const auto *ILE = dyn_cast_or_null<InitListExpr>(E);
+  if (E && !ILE && !isa<ImplicitValueInitExpr>(E))
+    return true;
+
+  if (const auto *AT = Ctx.getAsArrayType(T)) {
+    QualType EltTy = AT->getElementType();
+    if (!ILE)
+      return hasVolatileMember(EltTy, nullptr, Ctx);
+    for (const Expr *Init : ILE->inits())
+      if (hasVolatileMember(EltTy, Init, Ctx))
+        return true;
+    return ILE->hasArrayFiller() &&
+           hasVolatileMember(EltTy, ILE->getArrayFiller(), Ctx);
+  }
+
+  if (RD->isUnion() && ILE) {
+    const FieldDecl *FD = ILE->getInitializedFieldInUnion();
+    const Expr *Init = ILE->getNumInits() ? ILE->getInit(0) : nullptr;
+    return FD && hasVolatileMember(FD->getType(), Init, Ctx);
+  }
+
+  unsigned InitIdx = 0;
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->isUnnamedBitField())
+      continue;
+    if (FD->getType()->isIncompleteArrayType())
+      break;
+    const Expr *FieldInit = (ILE && InitIdx < ILE->getNumInits())
+                                ? ILE->getInit(InitIdx++)
+                                : nullptr;
+    if (hasVolatileMember(FD->getType(), FieldInit, Ctx))
+      return true;
+    if (RD->isUnion())
+      return false;
+  }
+  return false;
+}
+
 void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   ApplyAtomGroup Grp(CGF.getDebugInfo());
   // For an assignment to work, the value on the right has
@@ -1353,7 +1411,8 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
       LHS, AggValueSlot::IsDestructed, needsGC(E->getLHS()->getType()),
       AggValueSlot::IsAliased, AggValueSlot::MayOverlap);
   // A non-volatile aggregate destination might have volatile member.
-  if (!LHSSlot.isVolatile() && CGF.hasVolatileMember(E->getLHS()->getType()))
+  if (!LHSSlot.isVolatile() &&
+      hasVolatileMember(E->getLHS()->getType(), E->getRHS(), CGF.getContext()))
     LHSSlot.setVolatile(true);
 
   CGF.EmitAggExpr(E->getRHS(), LHSSlot);
