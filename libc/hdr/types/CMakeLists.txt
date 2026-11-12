@@ -1319,7 +1319,7 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
-  hsearch_data
+  struct_hsearch_data
   HDRS
     struct_hsearch_data.h
   FULL_BUILD_DEPENDS
