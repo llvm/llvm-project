@@ -182,9 +182,15 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processExtension(operands);
   case spirv::Opcode::OpExtInst:
   case spirv::Opcode::OpExtInstWithForwardRefsKHR: {
-    StringRef setName = operands.size() >= 4
-                            ? extendedInstSets.lookup(operands[2])
-                            : StringRef();
+    if (operands.size() < 4) {
+      return emitError(unknownLoc,
+                       "OpExtInst must have at least 4 operands, result type "
+                       "<id>, result <id>, set <id> and instruction opcode");
+    }
+    auto setIt = extendedInstSets.find(operands[2]);
+    if (setIt == extendedInstSets.end())
+      return emitError(unknownLoc, "undefined set <id> in OpExtInst");
+    StringRef setName = setIt->second;
     if (setName == extDebugInfo)
       return processDebugInfoExtInst(operands, deferInstructions);
     if (setName == extShaderDebugInfo100 || setName == extShaderDebugInfo200)
@@ -537,14 +543,6 @@ LogicalResult spirv::Deserializer::processShaderDebugInfoExtInst(
 }
 
 LogicalResult spirv::Deserializer::processExtInst(ArrayRef<uint32_t> operands) {
-  if (operands.size() < 4) {
-    return emitError(unknownLoc,
-                     "OpExtInst must have at least 4 operands, result type "
-                     "<id>, result <id>, set <id> and instruction opcode");
-  }
-  if (!extendedInstSets.count(operands[2])) {
-    return emitError(unknownLoc, "undefined set <id> in OpExtInst");
-  }
   SmallVector<uint32_t, 4> slicedOperands;
   slicedOperands.append(operands.begin(), std::next(operands.begin(), 2));
   slicedOperands.append(std::next(operands.begin(), 4), operands.end());

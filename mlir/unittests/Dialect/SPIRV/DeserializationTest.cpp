@@ -450,6 +450,55 @@ TEST_F(DeserializationTest, ExtInstWithForwardRefsSemanticSet) {
                    "extended instruction set");
 }
 
+TEST_F(DeserializationTest, ExtInstWithForwardRefsUndefinedSet) {
+  addHeader();
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInstWithForwardRefsKHR,
+                 {voidType, nextID++, /*set=*/42, 1});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("undefined set <id> in OpExtInst");
+}
+
+TEST_F(DeserializationTest, ShaderDebugSourceMissingFile) {
+  addHeader();
+  uint32_t extInstSetID = addExtInstImport(spirv::extShaderDebugInfo100);
+  uint32_t voidType = addVoidType();
+  addInstruction(
+      spirv::Opcode::OpExtInst,
+      {voidType, nextID++, extInstSetID,
+       llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugSource)});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("DebugSource must have a File operand");
+}
+
+TEST_F(DeserializationTest, ShaderDebugLineMissingOperands) {
+  addHeader();
+  uint32_t extInstSetID = addExtInstImport(spirv::extShaderDebugInfo100);
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInst,
+                 {voidType, nextID++, extInstSetID,
+                  llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugLine),
+                  /*source=*/42});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("DebugLine must have 5 operands");
+}
+
+TEST_F(DeserializationTest, ShaderDebugLineNonConstant) {
+  addHeader();
+  uint32_t extInstSetID = addExtInstImport(spirv::extShaderDebugInfo100);
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInst,
+                 {voidType, nextID++, extInstSetID,
+                  llvm::to_underlying(spirv::ShaderDebugInfoExtInst::DebugLine),
+                  /*source=*/42, 43, 43, 44, 44});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("DebugLine line and column must be integer constants");
+}
+
 TEST_F(DeserializationTest, ShaderDebugInfoLine) {
   addHeader();
   uint32_t extInstSetID = addExtInstImport(spirv::extShaderDebugInfo100);
