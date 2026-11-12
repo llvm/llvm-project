@@ -1057,7 +1057,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm FMULX_ZPZZ  : sve_fp_bin_pred_hfd<"FMULX_ZPmZ", int_aarch64_sve_fmulx_u>;
   defm FDIV_ZPZZ   : sve_fp_bin_pred_hfd<"FDIV_ZPmZ", AArch64fdiv_p>;
 
-  // TODO: Create FSCALE_ZPZZ when psuedo expansion is able to handle the case
+  // TODO: Create FSCALE_ZPZZ when pseudo expansion is able to handle the case
   // when a DestructiveBinary operation reuses its second data operand.
   def : SVE_3_Op_Pat<nxv8f16, AArch64fscale_p, nxv8i1, nxv8f16, nxv8i16, FSCALE_ZPmZ_H>;
   def : SVE_3_Op_Pat<nxv4f32, AArch64fscale_p, nxv4i1, nxv4f32, nxv4i32, FSCALE_ZPmZ_S>;
