@@ -202,14 +202,14 @@ AliasScopeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<
-      DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
-      DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr, DIGenericSubrangeAttr,
-      DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
-      DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
-      DIModuleAttr, DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
-      DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
-      attr);
+  return llvm::isa<DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+                   DICompositeTypeAttr, DIDerivedTypeAttr, DIEnumeratorAttr,
+                   DIFileAttr, DIGenericSubrangeAttr, DIGlobalVariableAttr,
+                   DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+                   DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+                   DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
+                   DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -757,4 +757,74 @@ MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                           "#llvm.md_addrspacecast operand, but got "
                        << arg;
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DIEnumeratorAttr
+//===----------------------------------------------------------------------===//
+
+Attribute DIEnumeratorAttr::parse(AsmParser &parser, Type odsType) {
+  if (parser.parseLess())
+    return {};
+  SMLoc widthLoc = parser.getCurrentLocation();
+  IntegerType widthType;
+  if (parser.parseType(widthType) || parser.parseComma())
+    return {};
+  unsigned bitWidth = widthType.getWidth();
+  if (!widthType.isSignless() || bitWidth == 0) {
+    parser.emitError(widthLoc, "expected positive signless integer width");
+    return {};
+  }
+
+  StringAttr name;
+  std::string nameStr;
+  if (succeeded(parser.parseOptionalString(&nameStr))) {
+    name = StringAttr::get(parser.getContext(), nameStr);
+    if (parser.parseComma())
+      return {};
+  }
+
+  SMLoc valueLoc = parser.getCurrentLocation();
+  if (succeeded(parser.parseOptionalKeyword("true")) ||
+      succeeded(parser.parseOptionalKeyword("false"))) {
+    parser.emitError(valueLoc, "expected integer value");
+    return {};
+  }
+  APInt value;
+  if (parser.parseInteger(value))
+    return {};
+
+  bool isUnsigned = false;
+  if (succeeded(parser.parseOptionalComma())) {
+    if (parser.parseKeyword("isUnsigned"))
+      return {};
+    isUnsigned = true;
+  }
+  if (parser.parseGreater())
+    return {};
+
+  if (isUnsigned && value.isNegative()) {
+    parser.emitError(valueLoc,
+                     "unsigned enumerator cannot have a negative value");
+    return {};
+  }
+  unsigned minBits =
+      isUnsigned ? value.getActiveBits() : value.getSignificantBits();
+  if (minBits > bitWidth) {
+    parser.emitError(valueLoc, "integer value out of range for i") << bitWidth;
+    return {};
+  }
+  value =
+      isUnsigned ? value.zextOrTrunc(bitWidth) : value.sextOrTrunc(bitWidth);
+  return DIEnumeratorAttr::get(parser.getContext(), name, value, isUnsigned);
+}
+
+void DIEnumeratorAttr::print(AsmPrinter &printer) const {
+  printer << "<i" << getValue().getBitWidth() << ", ";
+  if (getName())
+    printer << getName() << ", ";
+  getValue().print(printer.getStream(), /*isSigned=*/!getIsUnsigned());
+  if (getIsUnsigned())
+    printer << ", isUnsigned";
+  printer << '>';
 }
