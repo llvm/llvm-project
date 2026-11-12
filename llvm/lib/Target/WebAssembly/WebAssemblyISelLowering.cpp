@@ -2924,10 +2924,10 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
     SDValue RHS = MaskOp.getOperand(1);
     if (MaskOp.getValueType().isVector()) {
       APInt MaskVal;
-      if (!ISD::isConstantSplatVector(RHS.getNode(), MaskVal))
+      if (!ISD::isConstantSplatVector(RHS, MaskVal))
         std::swap(LHS, RHS);
 
-      if (ISD::isConstantSplatVector(RHS.getNode(), MaskVal) &&
+      if (ISD::isConstantSplatVector(RHS, MaskVal) &&
           MaskVal == MaskBits)
         MaskOp = LHS;
     } else {

@@ -66,6 +66,7 @@ class MachineConstantPoolValue;
 class MCSymbol;
 class raw_ostream;
 class SDNode;
+class SDValue;
 class SelectionDAG;
 class Type;
 class Value;
@@ -86,50 +87,50 @@ namespace ISD {
 
   /// Node predicates
 
-/// If N is a BUILD_VECTOR or SPLAT_VECTOR node whose elements are all the
+/// If V is a BUILD_VECTOR or SPLAT_VECTOR value whose elements are all the
 /// same constant or undefined, return true and return the constant value in
 /// \p SplatValue.
-LLVM_ABI bool isConstantSplatVector(const SDNode *N, APInt &SplatValue);
+LLVM_ABI bool isConstantSplatVector(const SDValue V, APInt &SplatValue);
 
-/// Return true if the specified node is a BUILD_VECTOR or SPLAT_VECTOR where
+/// Return true if the specified value is a BUILD_VECTOR or SPLAT_VECTOR where
 /// all of the elements are ~0 or undef. If \p BuildVectorOnly is set to
 /// true, it only checks BUILD_VECTOR.
-LLVM_ABI bool isConstantSplatVectorAllOnes(const SDNode *N,
+LLVM_ABI bool isConstantSplatVectorAllOnes(const SDValue V,
                                            bool BuildVectorOnly = false);
 
-/// Return true if the specified node is a BUILD_VECTOR or SPLAT_VECTOR where
+/// Return true if the specified value is a BUILD_VECTOR or SPLAT_VECTOR where
 /// all of the elements are 0 or undef. If \p BuildVectorOnly is set to true, it
 /// only checks BUILD_VECTOR.
-LLVM_ABI bool isConstantSplatVectorAllZeros(const SDNode *N,
+LLVM_ABI bool isConstantSplatVectorAllZeros(const SDValue V,
                                             bool BuildVectorOnly = false);
 
-/// Return true if the specified node is a BUILD_VECTOR where all of the
+/// Return true if the specified value is a BUILD_VECTOR where all of the
 /// elements are ~0 or undef.
-LLVM_ABI bool isBuildVectorAllOnes(const SDNode *N);
+LLVM_ABI bool isBuildVectorAllOnes(const SDValue V);
 
-/// Return true if the specified node is a BUILD_VECTOR where all of the
+/// Return true if the specified value is a BUILD_VECTOR where all of the
 /// elements are 0 or undef.
-LLVM_ABI bool isBuildVectorAllZeros(const SDNode *N);
+LLVM_ABI bool isBuildVectorAllZeros(const SDValue V);
 
-/// Return true if the specified node is a BUILD_VECTOR node of all
+/// Return true if the specified value is a BUILD_VECTOR node of all
 /// ConstantSDNode or undef.
-LLVM_ABI bool isBuildVectorOfConstantSDNodes(const SDNode *N);
+LLVM_ABI bool isBuildVectorOfConstantSDNodes(const SDValue V);
 
-/// Return true if the specified node is a BUILD_VECTOR node of all
+/// Return true if the specified value is a BUILD_VECTOR node of all
 /// ConstantFPSDNode or undef.
-LLVM_ABI bool isBuildVectorOfConstantFPSDNodes(const SDNode *N);
+LLVM_ABI bool isBuildVectorOfConstantFPSDNodes(const SDValue V);
 
-/// Returns true if the specified node is a vector where all elements can
+/// Returns true if the specified value is a vector where all elements can
 /// be truncated to the specified element size without a loss in meaning.
-LLVM_ABI bool isVectorShrinkable(const SDNode *N, unsigned NewEltSize,
+LLVM_ABI bool isVectorShrinkable(const SDValue V, unsigned NewEltSize,
                                  bool Signed);
 
-/// Return true if the node has at least one operand and all operands of the
-/// specified node are ISD::UNDEF.
-LLVM_ABI bool allOperandsUndef(const SDNode *N);
+/// Return true if the value has at least one operand and all operands of the
+/// specified value are ISD::UNDEF.
+LLVM_ABI bool allOperandsUndef(const SDValue V);
 
-/// Return true if the specified node is FREEZE(UNDEF).
-LLVM_ABI bool isFreezeUndef(const SDNode *N);
+/// Return true if the specified value is FREEZE(UNDEF).
+LLVM_ABI bool isFreezeUndef(const SDValue V);
 
 } // end namespace ISD
 
