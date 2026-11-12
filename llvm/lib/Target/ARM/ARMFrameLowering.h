@@ -59,7 +59,6 @@ public:
   getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
                                  Register &FrameReg,
                                  bool IgnoreSPUpdates) const override;
-  unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const override;
 
   void getCalleeSaves(const MachineFunction &MF,
                       BitVector &SavedRegs) const override;

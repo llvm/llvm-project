@@ -41,7 +41,6 @@ define i32 @catch_all() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  .long 0 @ Type
 ; CHECK-NEXT:  .long 0 @ CatchObjOffset
 ; CHECK-NEXT:  .long "?catch$3@?0?catch_all@4HA"@imgrel @ Handler
-; CHECK-NEXT:  .long 0 @ ParentFrameOffset
 entry:
   invoke void @g() to label %done unwind label %dispatch
 dispatch:
@@ -51,6 +50,36 @@ catch:
   catchret from %cp to label %done
 done:
   %r = phi i32 [ 1, %catch ], [ 0, %entry ]
+  ret i32 %r
+}
+
+; Two catch handlers. 32-bit HandlerType entries are 16 bytes: there is no
+; ParentFrameOffset, which only the 64-bit layout has.
+define i32 @two_catches() personality ptr @__CxxFrameHandler3 {
+; CHECK-LABEL: two_catches:
+; CHECK:       $handlerMap$0$two_catches:
+; CHECK-NEXT:  .long 8 @ Adjectives
+; CHECK-NEXT:  .long "??_R0?AUE@@@8"@imgrel @ Type
+; CHECK-NEXT:  .long {{-[0-9]+}} @ CatchObjOffset
+; CHECK-NEXT:  .long "?catch${{[0-9]+}}@?0?two_catches@4HA"@imgrel @ Handler
+; CHECK-NEXT:  .long 64 @ Adjectives
+; CHECK-NEXT:  .long 0 @ Type
+; CHECK-NEXT:  .long 0 @ CatchObjOffset
+; CHECK-NEXT:  .long "?catch${{[0-9]+}}@?0?two_catches@4HA"@imgrel @ Handler
+; CHECK-NOT:   ParentFrameOffset
+entry:
+  %e = alloca ptr, align 4
+  invoke void @g() to label %done unwind label %dispatch
+dispatch:
+  %cs = catchswitch within none [label %catch.e, label %catch.all] unwind to caller
+catch.e:
+  %cp1 = catchpad within %cs [ptr @"??_R0?AUE@@@8", i32 8, ptr %e]
+  catchret from %cp1 to label %done
+catch.all:
+  %cp2 = catchpad within %cs [ptr null, i32 64, ptr null]
+  catchret from %cp2 to label %done
+done:
+  %r = phi i32 [ 0, %entry ], [ 1, %catch.e ], [ 2, %catch.all ]
   ret i32 %r
 }
 

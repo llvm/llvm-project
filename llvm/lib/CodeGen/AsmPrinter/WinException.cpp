@@ -825,9 +825,12 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
       OS.emitValue(create32bitRef(HandlerMapXData), 4);
     }
 
-    // All funclets use the same parent frame offset currently.
+    // Only the 64-bit HandlerType has ParentFrameOffset. All funclets use the
+    // same parent frame offset currently.
+    bool EmitParentFrameOffset =
+        shouldEmitPersonality && Asm->TM.getTargetTriple().isArch64Bit();
     unsigned ParentFrameOffset = 0;
-    if (shouldEmitPersonality) {
+    if (EmitParentFrameOffset) {
       const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
       ParentFrameOffset = TFI->getWinEHParentFrameOffset(*MF);
     }
@@ -873,7 +876,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
         AddComment("Handler");
         OS.emitValue(create32bitRef(HandlerSym), 4);
 
-        if (shouldEmitPersonality) {
+        if (EmitParentFrameOffset) {
           AddComment("ParentFrameOffset");
           OS.emitInt32(ParentFrameOffset);
         }

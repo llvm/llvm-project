@@ -1593,11 +1593,6 @@ ARMFrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
   return getFrameIndexReference(MF, FI, FrameReg);
 }
 
-unsigned
-ARMFrameLowering::getWinEHParentFrameOffset(const MachineFunction &MF) const {
-  return 0;
-}
-
 StackOffset
 ARMFrameLowering::getNonLocalFrameIndexReference(const MachineFunction &MF,
                                                  int FI) const {
