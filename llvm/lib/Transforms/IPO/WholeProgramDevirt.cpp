@@ -1311,12 +1311,13 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         // This use is no longer unsafe.
         if (VCallSite.NumUnsafeUses)
           --*VCallSite.NumUnsafeUses;
-
-        CSInfo.markDevirt();
       }
     }
     if (CSInfo.isExported())
       IsExported = true;
+    if (!HasPublicTarget &&
+        Opts.wholeprogramdevirt_check != WPDCheckMode::Fallback)
+      CSInfo.markDevirt();
   };
   Apply(SlotInfo.CSInfo);
   for (auto &P : SlotInfo.ConstCSInfo)
