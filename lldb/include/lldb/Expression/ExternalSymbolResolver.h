@@ -28,10 +28,6 @@ namespace lldb_private {
 /// need alternate manglings tried, and it may be satisfied by the target's
 /// images, by a language runtime, or by a symbol that a previous expression
 /// defined (see Target::GetPersistentSymbol).
-///
-/// The same resolution is needed however the expression is evaluated: by
-/// IRForTarget while rewriting the IR, by the IR interpreter, and by the JIT
-/// when linking the compiled code.
 class ExternalSymbolResolver {
 public:
   /// Constructor
