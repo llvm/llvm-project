@@ -114,3 +114,41 @@ func.func @for_nested_load_and_store(%lb: index, %ub: index) -> i32 {
   %load2 = memref.load %alloca[] : memref<i32>
   return %load2 : i32
 }
+
+// -----
+
+#iseven = affine_set<(d0) : (d0 mod 2 == 0)>
+// CHECK-LABEL: func.func @affine_for_affine_if
+// CHECK-SAME: (%[[X:.*]]: f32)
+// CHECK-DAG: %[[CST:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK: %[[RES:.*]] = affine.for %[[IV:.*]] = 0 to 128 iter_args(%[[ARG:.*]] = %[[X]]) -> (f32) {
+// CHECK:   %[[IFRES:.*]] = affine.if #{{.*}}(%[[IV]]) -> f32 {
+// CHECK:     %[[NEW:.*]] = arith.mulf %[[ARG]], %[[CST]] : f32
+// CHECK:     affine.yield %[[NEW]] : f32
+// CHECK:   } else {
+// CHECK:     affine.yield %[[ARG]] : f32
+// CHECK:   }
+// CHECK:   arith.mulf %[[IFRES]], %[[CST]] : f32
+// CHECK:   affine.yield %[[IFRES]] : f32
+// CHECK: }
+// CHECK: return %[[RES]] : f32
+func.func @affine_for_affine_if(%x: f32) -> (f32) {
+  %cst = arith.constant 2.0 : f32
+  %alloc = memref.alloca() : memref<f32>
+  memref.store %x, %alloc[] : memref<f32>
+
+  affine.for %iv = 0 to 128 {
+
+    affine.if #iseven(%iv) {
+      %val = memref.load %alloc[] : memref<f32>
+      %new_val = arith.mulf %val, %cst : f32
+      memref.store %new_val, %alloc[] : memref<f32>
+    }
+
+    %cur_val = memref.load %alloc[] : memref<f32>
+    %prod_next = arith.mulf %cur_val, %cst : f32
+  }
+
+  %prod = memref.load %alloc[] : memref<f32>
+  return %prod : f32
+}
