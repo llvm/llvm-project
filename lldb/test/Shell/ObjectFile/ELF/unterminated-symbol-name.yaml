@@ -1,0 +1,41 @@
+# Unterminated symbol names must not read past the string table bounds.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb %t -o "image dump symtab" -b 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=AAAA
+
+# CHECK: good_symbol
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Size:            0x8
+  # "\0good_symbol\0AAAA", with no terminator after the last name.
+  - Name:            .strtab
+    Type:            SHT_STRTAB
+    Content:         00676F6F645F73796D626F6C0041414141
+  # "BBBB\0", which an unbounded read would append to the last name.
+  - Name:            .trailer
+    Type:            SHT_PROGBITS
+    Content:         4242424200
+Symbols:
+  - StName:          1
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1000
+    Size:            0x4
+  - StName:          13
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1004
+    Size:            0x4
+...

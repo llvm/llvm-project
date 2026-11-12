@@ -10,11 +10,12 @@
 // a ProxySpec per operation, plus factories that resolve them and construct an
 // instance.
 //
-// Each spec pairs one of EPCGenericDylibManager's proxies with its
-// controller-interface descriptor in Shared/SPSCI/NativeDylibManagerSPSCI.h,
-// which supplies the wrapper name and wire signature. The specs are public so
-// that clients can resolve the operations under non-default names, using
-// recordProxy<Spec>(&P, Name) with lookupAndApply.
+// Each spec is built from the controller-interface descriptor for one of
+// EPCGenericDylibManager's operations in
+// Shared/SPSCI/NativeDylibManagerSPSCI.h, which supplies the wrapper name and
+// wire signature. The specs are public so that clients can resolve the
+// operations under non-default names, using recordProxy<Spec>(&P, Name) with
+// lookupAndApply.
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,10 +31,8 @@
 
 namespace llvm::orc::sps {
 
-using DylibMgrOpenProxySpec =
-    ProxySpec<EPCGenericDylibManager::OpenProxy, rt::sps_ci::DylibMgrOpen>;
-using DylibMgrResolveProxySpec = ProxySpec<EPCGenericDylibManager::ResolveProxy,
-                                           rt::sps_ci::DylibMgrResolve>;
+using DylibMgrOpenProxySpec = ProxySpec<rt::sps_ci::DylibMgrOpen>;
+using DylibMgrResolveProxySpec = ProxySpec<rt::sps_ci::DylibMgrResolve>;
 
 /// Create an EPCGenericDylibManager for the ORC runtime's NativeDylibManager
 /// interface, resolving its symbols in the given JITDylib.

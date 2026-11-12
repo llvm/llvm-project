@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-apple-darwin -target-feature +clwb  -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=x86_64-apple-darwin -target-feature +clwb  -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 
 #include <immintrin.h>
 

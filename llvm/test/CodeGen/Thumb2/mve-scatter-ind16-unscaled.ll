@@ -335,19 +335,19 @@ define arm_aapcs_vfpcc void @trunc_signed_unscaled_i32_i8(ptr %base, ptr %offptr
 ; CHECK-NEXT:    vmov r12, lr, d5
 ; CHECK-NEXT:    vldrb.s32 q2, [r1, #4]
 ; CHECK-NEXT:    vadd.i32 q2, q2, r0
-; CHECK-NEXT:    vmov r0, r6, d1
+; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    strh r4, [r2]
-; CHECK-NEXT:    vmov r2, r7, d4
+; CHECK-NEXT:    vmov r2, r6, d4
 ; CHECK-NEXT:    strh r5, [r3]
-; CHECK-NEXT:    vmov r3, r5, d5
+; CHECK-NEXT:    vmov r3, r7, d5
 ; CHECK-NEXT:    strh.w r0, [r12]
-; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    strh.w r6, [lr]
-; CHECK-NEXT:    vmov r6, r4, d3
+; CHECK-NEXT:    vmov r0, r4, d2
+; CHECK-NEXT:    strh.w r1, [lr]
+; CHECK-NEXT:    vmov r1, r5, d3
 ; CHECK-NEXT:    strh r0, [r2]
-; CHECK-NEXT:    strh r1, [r7]
-; CHECK-NEXT:    strh r6, [r3]
-; CHECK-NEXT:    strh r4, [r5]
+; CHECK-NEXT:    strh r4, [r6]
+; CHECK-NEXT:    strh r1, [r3]
+; CHECK-NEXT:    strh r5, [r7]
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %offs = load <8 x i8>, ptr %offptr, align 1

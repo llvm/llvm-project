@@ -181,6 +181,13 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
       ignoringImplicit(allOf(cxxConstructExpr(isListInitialization()),
                              unless(cxxTemporaryObjectExpr()))));
 
+  // 0 and NULL convert to null pointers, but emplace_back would deduce them as
+  // integers, which don't.
+  auto NullPointerConstantAsArgument = hasAnyArgument(
+      expr(hasType(hasCanonicalType(anyOf(pointerType(), memberPointerType()))),
+           ignoringImplicit(
+               ignoringParenImpCasts(anyOf(integerLiteral(), gnuNullExpr())))));
+
   // We could have leak of resource.
   auto NewExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
   // We would call another constructor.
@@ -194,13 +201,14 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   auto HasInitList = anyOf(has(ignoringImplicit(initListExpr())),
                            has(cxxStdInitializerListExpr()));
 
-  // FIXME: Discard 0/NULL (as nullptr), static inline const data members,
-  // overloaded functions and template names.
+  // FIXME: Discard static inline const data members, overloaded functions and
+  // template names.
   const auto SoughtConstructExpr =
       cxxConstructExpr(
           unless(anyOf(IsCtorOfSmartPtr, HasInitList, BitFieldAsArgument,
-                       InitializerListAsArgument, NewExprAsArgument,
-                       ConstructingDerived, IsPrivateOrProtectedCtor)))
+                       NullPointerConstantAsArgument, InitializerListAsArgument,
+                       NewExprAsArgument, ConstructingDerived,
+                       IsPrivateOrProtectedCtor)))
           .bind("ctor");
   auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 

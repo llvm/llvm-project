@@ -98,6 +98,7 @@ static_library("LLVMMipsCodeGen") {
     "MipsBranchExpansion.cpp",
     "MipsCCState.cpp",
     "MipsCallLowering.cpp",
+    "MipsCodeGenPassBuilder.cpp",
     "MipsConstantIslandPass.cpp",
     "MipsDelaySlotFiller.cpp",
     "MipsExpandPseudo.cpp",

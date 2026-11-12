@@ -389,6 +389,18 @@ public:
   bool isBind() const { return Kind == FixupKind::Bind; }
   bool isRebase() const { return Kind == FixupKind::Rebase; }
 
+  /// \return the DYLD_CHAINED_PTR_* format of the segment of this fixup.
+  uint16_t pointerFormat() const { return PointerFormat; }
+
+  /// \return whether this is an arm64e authenticated rebase or bind, which
+  /// dyld signs with key(), diversity() and, if hasAddressDiversity(), the
+  /// address of the fixup.
+  bool isAuthenticated() const { return IsAuthenticated; }
+  /// \return the ptrauth key: 0 = IA, 1 = IB, 2 = DA, 3 = DB.
+  uint8_t key() const { return Key; }
+  uint16_t diversity() const { return Diversity; }
+  bool hasAddressDiversity() const { return HasAddressDiversity; }
+
   LLVM_ABI void moveNext();
   LLVM_ABI void moveToFirst();
   LLVM_ABI void moveToEnd();
@@ -400,6 +412,11 @@ private:
   std::vector<ChainedFixupsSegment> Segments;
   ArrayRef<uint8_t> SegmentData;
   FixupKind Kind;
+  uint16_t PointerFormat = 0;
+  uint16_t Diversity = 0;
+  uint8_t Key = 0;
+  bool IsAuthenticated = false;
+  bool HasAddressDiversity = false;
   uint32_t InfoSegIndex = 0; // Index into Segments
   uint32_t PageIndex = 0;    // Index into Segments[InfoSegIdx].PageStarts
   uint32_t PageOffset = 0;   // Page offset of the current fixup

@@ -102,7 +102,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
     initReg(MCI, ImpUse, PredReg, isTrue);
 
   const bool IgnoreTmpDst = (HexagonMCInstrInfo::hasTmpDst(MCII, MCI) ||
-                             HexagonMCInstrInfo::hasHvxTmp(MCII, MCI)) &&
+                             HexagonMCInstrInfo::isTmpWrite(MCII, MCI)) &&
                             STI.hasFeature(Hexagon::ArchV69);
 
   // Get implicit register definitions.
@@ -229,9 +229,10 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
   bool ChkHVXAccum = checkHVXAccum();
+  bool ChkHLX64BitRegUse = checkHLX64BitRegUse();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
              chkAXOK && chkCofMax1 && chkHWLoop && chkValidTmpDst &&
-             chkLegalVecRegPair && ChkHVXAccum;
+             chkLegalVecRegPair && ChkHVXAccum && ChkHLX64BitRegUse;
 
   return chk;
 }
@@ -714,7 +715,8 @@ bool HexagonMCChecker::checkValidTmpDst() {
   }
   auto HasTmp = [&](MCInst const &I) {
     return HexagonMCInstrInfo::hasTmpDst(MCII, I) ||
-           HexagonMCInstrInfo::hasHvxTmp(MCII, I);
+           (HexagonMCInstrInfo::isTmpWrite(MCII, I) &&
+            HexagonMCInstrInfo::isHVX(MCII, I));
   };
   unsigned HasTmpCount =
       llvm::count_if(HexagonMCInstrInfo::bundleInstructions(MCII, MCB), HasTmp);
@@ -826,6 +828,41 @@ bool HexagonMCChecker::checkHVXAccum()
                   "' is accumulated in this packet");
       return false;
     }
+  }
+  return true;
+}
+
+bool HexagonMCChecker::checkHLX64BitRegUse() {
+  const MCRegisterClass &DoubleRegs =
+      RI.getRegClass(Hexagon::DoubleRegsRegClassID);
+  const MCRegisterClass &IntRegs = RI.getRegClass(Hexagon::IntRegsRegClassID);
+  const MCInst *DoubleInst = nullptr;
+  unsigned NumScalarArg = 0;
+  for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (!HexagonMCInstrInfo::isHLX(MCII, I))
+      continue;
+    const MCInstrDesc &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+    if (Desc.mayLoad() || Desc.mayStore())
+      continue;
+    bool UsesScalarArg = false;
+    for (const auto &Op : I) {
+      if (!DoubleInst && Op.isReg() && DoubleRegs.contains(Op.getReg()))
+        DoubleInst = &I;
+      if (Op.isImm() || Op.isExpr() ||
+          (Op.isReg() &&
+           (IntRegs.contains(Op.getReg()) || DoubleRegs.contains(Op.getReg()))))
+        UsesScalarArg = true;
+    }
+    if (UsesScalarArg)
+      ++NumScalarArg;
+  }
+
+  if (DoubleInst && NumScalarArg > 1) {
+    reportError(DoubleInst->getLoc(),
+                "HLX instruction using a 64-bit scalar register cannot be "
+                "in the same packet with another HLX instruction using a "
+                "scalar register or immediate");
+    return false;
   }
   return true;
 }

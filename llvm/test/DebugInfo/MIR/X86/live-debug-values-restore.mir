@@ -264,7 +264,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 debugInstrRef: true
 hasWinCFI:       false
 registers:       []
@@ -385,7 +384,6 @@ body:             |
 
 name:            g
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -463,7 +461,6 @@ body:             |
 
 name:            h
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -578,7 +575,6 @@ body:             |
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 name:            i
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -693,7 +689,6 @@ body:             |
 # CHECK-LABEL: bb.2.if.end
 
 name:            j
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -804,7 +799,6 @@ body:             |
 
 name:            k
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }

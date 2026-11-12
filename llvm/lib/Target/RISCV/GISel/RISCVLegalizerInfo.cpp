@@ -267,15 +267,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     else
       CTLZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
 
-    getActionDefinitionsBuilder(G_CTTZ)
-        .maxScalar(0, sXLen)
-        .scalarSameSizeAs(1, 0)
-        .lower();
-    if (ST.hasVendorXTHeadBb())
+    auto &CTTZActions = getActionDefinitionsBuilder(G_CTTZ);
+    if (ST.hasVendorXTHeadBb()) {
+      CTTZActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0).lower();
       CTLZPoisonActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0);
-    else
+      CTTZPoisonActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0);
+    } else {
+      CTTZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
       CTLZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
-    CTTZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+      CTTZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    }
   }
   CTLZPoisonActions.lower();
   CTTZPoisonActions.lower();
@@ -1748,6 +1749,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_ADD: {
     Helper.Observer.changingInstr(MI);
+    // The G_ANYEXTs below leave the new high bits unconstrained, so no-wrap
+    // claims proved at the narrow width no longer hold.
+    MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
     Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
 
@@ -1776,6 +1780,10 @@ bool RISCVLegalizerInfo::legalizeCustom(
         ExtOpc = TargetOpcode::G_ZEXT;
 
       Helper.Observer.changingInstr(MI);
+      // The G_ANYEXT leave the new high bits unconstrained, so no-wrap
+      // claims proved at the narrow width no longer hold.
+      if (ExtOpc == TargetOpcode::G_ANYEXT)
+        MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
       Helper.widenScalarSrc(MI, sXLen, 1, ExtOpc);
       Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ZEXT);
       Helper.widenScalarDst(MI, sXLen);

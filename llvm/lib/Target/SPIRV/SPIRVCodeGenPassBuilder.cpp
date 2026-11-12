@@ -91,6 +91,7 @@ void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     if (getOptLevel() != CodeGenOptLevel::None) {
       addModulePass(SPIRVFinalizeShaderLinkagePass(getTM()), PMW);
     }
+    addModulePass(SPIRVRemoveUnusedResourcesPass(), PMW);
   } else {
     // Variadic function calls aren't supported in shader code.
     // This needs to come before SPIRVPrepareFunctions because this
@@ -176,9 +177,7 @@ Error SPIRVCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addGlobalInstructionSelect(
     PassManagerWrapper &PMW) {
-  addMachineFunctionPass(
-      InstructionSelectPass(getOptLevel(), /*RequireRegBankSelection=*/false),
-      PMW);
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
   return Error::success();
 }
 
@@ -196,7 +195,7 @@ void SPIRVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  addModulePass(SPIRVAsmPrinterBeginPass(), PMW);
+  addModulePass(SPIRVAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
@@ -210,7 +209,7 @@ void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  addModulePass(SPIRVAsmPrinterEndPass(), PMW);
+  addModulePass(SPIRVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 } // namespace
