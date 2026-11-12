@@ -643,6 +643,7 @@ public:
     IPM_NoUse,
     IPM_OneUse,
     IPM_GenericPredicate,
+    IPM_CheckIsLegal,
     IPM_MIFlags,
 
     OPM_LeafPredicate,
@@ -685,8 +686,9 @@ public:
   bool dependsOnRecordedOperands() const {
     // Custom predicates really depend on the context pattern of the
     // instruction, not just the individual instruction. This therefore
-    // implicitly depends on all other pattern constraints.
-    return Kind == IPM_GenericPredicate;
+    // implicitly depends on all other pattern constraints. Legality checks
+    // read the types of operands recorded by the pattern.
+    return Kind == IPM_GenericPredicate || Kind == IPM_CheckIsLegal;
   }
 
   /// \param M A Matcher that contains this PredicateMatcher.
@@ -1574,6 +1576,31 @@ public:
     // symbol that may be used by C++ code.
     // TODO?: Could we be more precise, e.g. hoist if the Matcher records
     // operands, but the operands aren't used by this bit of C++.
+    return !M.recordsOperand();
+  }
+};
+
+/// Generates code to check that an instruction built by a combine's apply
+/// patterns would be legal. Each type index of the instruction takes the type
+/// of a matched operand, given as (InsnVarID, OpIdx).
+class LegalityPredicateMatcher : public InstructionPredicateMatcher {
+  const CodeGenInstruction &I;
+  SmallVector<std::pair<unsigned, unsigned>, 4> TypeOperands;
+
+public:
+  LegalityPredicateMatcher(unsigned InsnVarID, const CodeGenInstruction &I,
+                           ArrayRef<std::pair<unsigned, unsigned>> TypeOperands)
+      : InstructionPredicateMatcher(IPM_CheckIsLegal, InsnVarID), I(I),
+        TypeOperands(TypeOperands.begin(), TypeOperands.end()) {}
+
+  static bool classof(const InstructionPredicateMatcher *P) {
+    return P->getKind() == IPM_CheckIsLegal;
+  }
+  bool isIdentical(const PredicateMatcher &B) const override;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
+
+  bool canHoistOutsideOf(const Matcher &M) const override {
+    // Like C++ predicates, this reads operands recorded by the matcher.
     return !M.recordsOperand();
   }
 };

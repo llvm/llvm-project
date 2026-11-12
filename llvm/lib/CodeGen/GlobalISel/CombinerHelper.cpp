@@ -163,6 +163,11 @@ bool CombinerHelper::isLegalOrBeforeLegalizer(
   return isPreLegalize() || isLegal(Query);
 }
 
+bool CombinerHelper::isLegalOrBeforeLegalizer(unsigned Opcode,
+                                              ArrayRef<LLT> Types) const {
+  return isLegalOrBeforeLegalizer({Opcode, Types});
+}
+
 bool CombinerHelper::isLegalOrHasWidenScalar(const LegalityQuery &Query) const {
   return isLegal(Query) ||
          LI->getAction(Query).Action == LegalizeActions::WidenScalar;

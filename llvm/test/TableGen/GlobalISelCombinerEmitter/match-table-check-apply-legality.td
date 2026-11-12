@@ -1,6 +1,7 @@
 // RUN: llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
 // RUN:     -combiners=MyCombiner %s | \
-// RUN: FileCheck %s
+// RUN: FileCheck %s --implicit-check-not=GIM_CheckCxxInsnPredicate \
+// RUN:     --implicit-check-not=GIM_CheckIsLegal
 
 include "llvm/Target/Target.td"
 include "llvm/Target/GlobalISel/Combine.td"
@@ -41,13 +42,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   BitreverseShlToLShr,
   MergeUndefNoCheck
 ]>;
-// CHECK:      bool GenMyCombiner::testMIPredicate_MI(unsigned PredicateID, const MachineInstr & MI, const MatcherState &State) const {
-// CHECK-NEXT:   switch (PredicateID) {
-// CHECK-NEXT:   case GICXXPred_MI_Predicate_GICombiner0: {
-// CHECK-NEXT:     return Helper.isLegalOrBeforeLegalizer({TargetOpcode::G_ANYEXT, {MRI.getType(State.MIs[0]->getOperand(0).getReg()), MRI.getType(State.MIs[0]->getOperand(1).getReg())}});
-// CHECK-NEXT:   }
-// CHECK-NEXT:   case GICXXPred_MI_Predicate_GICombiner1: {
-// CHECK-NEXT:     return Helper.isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {MRI.getType(State.MIs[0]->getOperand(0).getReg()), MRI.getType(State.MIs[1]->getOperand(2).getReg())}});
-// CHECK-NEXT:   }
-// CHECK-NEXT:   }
-// CHECK-NEXT:   llvm_unreachable("Unknown predicate");
+// CHECK:      bool GenMyCombiner::isLegalForApply(unsigned Opcode, ArrayRef<LLT> Types) const {
+// CHECK-NEXT:   return Helper.isLegalOrBeforeLegalizer(Opcode, Types);
+
+// The legality checks are in the match table: each type index takes the type
+// of a matched operand (MI, Op).
+// CHECK: GIM_CheckIsLegal, GIMT_Encode2(TargetOpcode::G_ANYEXT), /*NumTypes*/2, /*MI*/0, /*Op*/0, /*MI*/0, /*Op*/1,
+// CHECK: GIM_CheckIsLegal, GIMT_Encode2(TargetOpcode::G_LSHR), /*NumTypes*/2, /*MI*/0, /*Op*/0, /*MI*/1, /*Op*/2,
