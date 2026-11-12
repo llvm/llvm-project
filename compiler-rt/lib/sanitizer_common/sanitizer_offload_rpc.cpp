@@ -201,8 +201,16 @@ void OffloadRpc::Start(Offload& O, hsa_executable_t Exec) {
       if (Slot.Ports > rpc::MAX_PORT_COUNT)
         Slot.Ports = rpc::MAX_PORT_COUNT;
       const uptr Bytes = rpc::Server::allocation_size(Slot.Lanes, Slot.Ports);
+      const Offload::MemoryPool* Fine = nullptr;
+      for (const Offload::MemoryPool& P : O.Pools()) {
+        if (O.IsCpu(P.Agent) && P.HostAccess &&
+            (P.Flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED)) {
+          Fine = &P;
+          break;
+        }
+      }
       void* Buffer = nullptr;
-      if (!O.Alloc(O.Host(), Bytes, &Buffer) || !Buffer)
+      if (!Fine || !O.Alloc(*Fine, Bytes, &Buffer) || !Buffer)
         FailRpc();
       internal_memset(Buffer, 0, Bytes);
       PlantSignal(R, Buffer);

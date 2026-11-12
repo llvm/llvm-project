@@ -20,6 +20,7 @@
 
 #define SANITIZER_HSA_FUNCTIONS(X)        \
   X(hsa_iterate_agents)                   \
+  X(hsa_system_get_info)                  \
   X(hsa_agent_get_info)                   \
   X(hsa_executable_get_symbol_by_name)    \
   X(hsa_executable_symbol_get_info)       \
@@ -28,12 +29,23 @@
   X(hsa_amd_memory_pool_free)             \
   X(hsa_amd_agents_allow_access)          \
   X(hsa_amd_memory_pool_get_info)         \
+  X(hsa_amd_agent_memory_pool_get_info)   \
   X(hsa_amd_agent_iterate_memory_pools)   \
   X(hsa_system_get_major_extension_table) \
   X(hsa_amd_signal_create)                \
   X(hsa_signal_destroy)                   \
   X(hsa_signal_store_screlease)           \
   X(hsa_signal_wait_scacquire)
+
+// Runtime functions only present in newer HSA runtimes.
+#define SANITIZER_HSA_VMEM_FUNCTIONS(X) \
+  X(hsa_amd_vmem_address_reserve_align) \
+  X(hsa_amd_vmem_address_free)          \
+  X(hsa_amd_vmem_handle_create)         \
+  X(hsa_amd_vmem_handle_release)        \
+  X(hsa_amd_vmem_map)                   \
+  X(hsa_amd_vmem_unmap)                 \
+  X(hsa_amd_vmem_set_access)
 
 extern "C" {
 
@@ -66,6 +78,9 @@ typedef void* hsa_file_t;
 #else
 typedef int hsa_file_t;
 #endif
+typedef struct hsa_amd_vmem_alloc_handle_s {
+  uint64_t handle;
+} hsa_amd_vmem_alloc_handle_t;
 
 typedef int64_t hsa_signal_value_t;
 
@@ -92,12 +107,67 @@ typedef enum {
   HSA_AMD_MEMORY_POOL_INFO_SEGMENT = 0,
   HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS = 1,
   HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED = 5,
+  HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE = 6,
+  HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_REC_GRANULE = 18,
 } hsa_amd_memory_pool_info_t;
 
 typedef enum {
+  HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT = 1,
   HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED = 2,
   HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED = 4,
+  HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_EXTENDED_SCOPE_FINE_GRAINED = 8,
 } hsa_amd_memory_pool_global_flag_t;
+
+// Flags hsa_amd_vmem_handle_create honors. Bit 0 is point-to-point fine grain.
+typedef enum {
+  HSA_AMD_MEMORY_POOL_PCIE_FLAG = 1,
+  HSA_AMD_MEMORY_POOL_CONTIGUOUS_FLAG = 1 << 1,
+  HSA_AMD_MEMORY_POOL_EXECUTABLE_FLAG = 1 << 2,
+  HSA_AMD_MEMORY_POOL_UNCACHED_FLAG = 1 << 3,
+} hsa_amd_memory_pool_flag_t;
+
+// Reserve the range without registering it. A later map is what the driver
+// sees.
+typedef enum {
+  HSA_AMD_VMEM_ADDRESS_NO_REGISTER = 1,
+} hsa_amd_vmem_address_reserve_flag_t;
+
+typedef enum {
+  HSA_AMD_SYSTEM_INFO_EXT_VERSION_MINOR = 0x208,
+} hsa_system_info_t;
+
+typedef enum {
+  HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED = 0,
+} hsa_amd_memory_pool_access_t;
+
+typedef enum {
+  HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS = 0,
+} hsa_amd_agent_memory_pool_info_t;
+
+typedef enum {
+  MEMORY_TYPE_NONE = 0,
+  MEMORY_TYPE_PINNED = 1
+} hsa_amd_memory_type_t;
+
+// Read, write, and execute are independent bits.
+typedef enum {
+  HSA_ACCESS_PERMISSION_NONE = 0,
+  HSA_ACCESS_PERMISSION_RO = 1,
+  HSA_ACCESS_PERMISSION_WO = 2,
+  HSA_ACCESS_PERMISSION_RW = 3,
+  HSA_ACCESS_PERMISSION_EX = 4,
+  // HSA leaves the combination to the caller.
+  HSA_ACCESS_PERMISSION_RWX = 7,
+} hsa_access_permission_t;
+
+typedef struct hsa_amd_memory_access_desc_s {
+  hsa_access_permission_t permissions;
+  hsa_agent_t agent_handle;
+} hsa_amd_memory_access_desc_t;
+
+static_assert(sizeof(hsa_amd_memory_access_desc_t) == 16, "layout drift");
+static_assert(offsetof(hsa_amd_memory_access_desc_t, agent_handle) == 8,
+              "layout drift");
 
 typedef enum {
   HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT = 0xA002,
@@ -160,7 +230,10 @@ struct hsa_ven_amd_loader_segment_descriptor_t {
 static_assert(sizeof(hsa_ven_amd_loader_segment_descriptor_t) == 64,
               "layout drift");
 
-// Version 1.04 of HSA_EXTENSION_AMD_LOADER. Slot order is the extension ABI.
+// Version 1.04 of HSA_EXTENSION_AMD_LOADER. Slots are appended, so an older
+// runtime fills the prefix and leaves the tail null. CreateFromFile and
+// IterateExecutables are the 1.02 and 1.03 slots; they keep the offsets honest
+// and are not called.
 struct LoaderApi {
   hsa_status_t (*QueryHostAddress)(const void*, const void**);
   hsa_status_t (*QuerySegmentDescriptors)(
@@ -173,21 +246,24 @@ struct LoaderApi {
   hsa_status_t (*GetCodeObjectInfo)(
       hsa_loaded_code_object_t, hsa_ven_amd_loader_loaded_code_object_info_t,
       void*);
-  hsa_status_t (*CreateCodeObjectReaderFromFile)(hsa_file_t, size_t, size_t,
-                                                 hsa_code_object_reader_t*);
+  hsa_status_t (*CreateFromFile)(hsa_file_t, size_t, size_t,
+                                 hsa_code_object_reader_t*);
   hsa_status_t (*IterateExecutables)(hsa_status_t (*)(hsa_executable_t, void*),
                                      void*);
-  hsa_status_t (*CodeObjectReaderGetLoadSize)(hsa_code_object_reader_t,
-                                              size_t*);
-  hsa_status_t (*LoadAgentCodeObjectAtAddress)(hsa_executable_t, hsa_agent_t,
-                                               hsa_code_object_reader_t,
-                                               const char*, void*, size_t,
-                                               hsa_loaded_code_object_t*);
+  hsa_status_t (*GetLoadSize)(hsa_code_object_reader_t, size_t*);
+  hsa_status_t (*LoadAtAddress)(hsa_executable_t, hsa_agent_t,
+                                hsa_code_object_reader_t, const char*, void*,
+                                size_t, hsa_loaded_code_object_t*);
 };
 static_assert(sizeof(LoaderApi) == 9 * sizeof(void*), "layout drift");
+static_assert(offsetof(LoaderApi, CreateFromFile) == 5 * sizeof(void*),
+              "layout drift");
+static_assert(offsetof(LoaderApi, GetLoadSize) == 7 * sizeof(void*),
+              "layout drift");
 
 hsa_status_t hsa_init(void);
 hsa_status_t hsa_shut_down(void);
+hsa_status_t hsa_system_get_info(hsa_system_info_t attribute, void* value);
 hsa_status_t hsa_iterate_agents(hsa_status_t (*callback)(hsa_agent_t, void*),
                                 void* data);
 hsa_status_t hsa_agent_get_info(hsa_agent_t agent, hsa_agent_info_t attribute,
@@ -214,6 +290,9 @@ hsa_status_t hsa_amd_memory_pool_free(void* ptr);
 hsa_status_t hsa_amd_memory_pool_get_info(hsa_amd_memory_pool_t memory_pool,
                                           hsa_amd_memory_pool_info_t attribute,
                                           void* value);
+hsa_status_t hsa_amd_agent_memory_pool_get_info(
+    hsa_agent_t agent, hsa_amd_memory_pool_t memory_pool,
+    hsa_amd_agent_memory_pool_info_t attribute, void* value);
 hsa_status_t hsa_amd_agent_iterate_memory_pools(
     hsa_agent_t agent, hsa_status_t (*callback)(hsa_amd_memory_pool_t, void*),
     void* data);
@@ -225,6 +304,23 @@ hsa_status_t hsa_system_get_major_extension_table(uint16_t extension,
                                                   uint16_t version_major,
                                                   size_t table_length,
                                                   void* table);
+hsa_status_t hsa_amd_vmem_address_reserve_align(void** va, size_t size,
+                                                uint64_t address,
+                                                uint64_t alignment,
+                                                uint64_t flags);
+hsa_status_t hsa_amd_vmem_address_free(void* va, size_t size);
+hsa_status_t hsa_amd_vmem_handle_create(hsa_amd_memory_pool_t pool, size_t size,
+                                        hsa_amd_memory_type_t type,
+                                        uint64_t flags,
+                                        hsa_amd_vmem_alloc_handle_t* handle);
+hsa_status_t hsa_amd_vmem_handle_release(hsa_amd_vmem_alloc_handle_t handle);
+hsa_status_t hsa_amd_vmem_map(void* va, size_t size, size_t in_offset,
+                              hsa_amd_vmem_alloc_handle_t handle,
+                              uint64_t flags);
+hsa_status_t hsa_amd_vmem_unmap(void* va, size_t size);
+hsa_status_t hsa_amd_vmem_set_access(void* va, size_t size,
+                                     const hsa_amd_memory_access_desc_t* desc,
+                                     size_t desc_cnt);
 hsa_status_t hsa_memory_copy(void* dst, const void* src, size_t size);
 hsa_status_t hsa_amd_signal_create(hsa_signal_value_t initial_value,
                                    uint32_t num_consumers,

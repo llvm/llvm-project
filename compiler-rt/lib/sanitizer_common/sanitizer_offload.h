@@ -45,6 +45,43 @@ class Offload {
   SymbolizedStack* Symbolize(uptr PC);
   bool SymbolizeData(uptr Addr, DataInfo* Info);
 
+  // Informating relating to an HSA memory pool.
+  struct MemoryPool {
+    hsa_agent_t Agent;
+    hsa_amd_memory_pool_t Pool;
+    u32 Flags;
+    uptr Granule;
+    uptr AllocGranule;
+    bool HostAccess;
+  };
+
+  bool IsGpu(hsa_agent_t Agent) const;
+  const InternalMmapVectorNoCtor<hsa_agent_t>& Cpus() const { return CpuList; }
+  const InternalMmapVectorNoCtor<MemoryPool>& Pools() const { return PoolList; }
+  bool CanAccess(hsa_agent_t Agent, hsa_amd_memory_pool_t Pool) const;
+  bool Copy(void* Dst, const void* Src, uptr N) const;
+
+  // Virtual memory support, capability depends on the HSA library version.
+  bool HasVirtualMemory() const;
+  bool FineGrainVmem() const;
+  bool ReserveAddress(uptr Addr, uptr Size);
+  void FreeAddress(uptr Addr, uptr Size);
+  bool CreateHandle(hsa_amd_memory_pool_t Pool, uptr Size, u64 Flags,
+                    u64* Handle);
+  void ReleaseHandle(u64 Handle);
+  bool Map(uptr Addr, uptr Size, uptr Offset, u64 Handle);
+  void Unmap(uptr Addr, uptr Size);
+  bool SetAccess(uptr Addr, uptr Size, const hsa_amd_memory_access_desc_t* Desc,
+                 uptr Count);
+
+  // Loader 1.04 can place a code object at a reserved address.
+  bool CanLoadAtAddress() const;
+  bool CodeObjectLoadSize(hsa_code_object_reader_t Reader, uptr* Size) const;
+  bool LoadCodeObjectAt(hsa_executable_t Exec, hsa_agent_t Agent,
+                        hsa_code_object_reader_t Reader, const char* Options,
+                        void* Address, uptr Size,
+                        hsa_loaded_code_object_t* Loaded) const;
+
  private:
   friend struct OffloadRpc;
 
@@ -54,7 +91,6 @@ class Offload {
 
   struct Device {
     hsa_agent_t Agent;
-    hsa_amd_memory_pool_t Pool;
     u32 Lanes;
     u32 MaxWaves;
   };
@@ -62,6 +98,7 @@ class Offload {
   struct Api {
 #define SANITIZER_HSA_DECLARE(Name) decltype(&::Name) Name;
     SANITIZER_HSA_FUNCTIONS(SANITIZER_HSA_DECLARE)
+    SANITIZER_HSA_VMEM_FUNCTIONS(SANITIZER_HSA_DECLARE)
 #undef SANITIZER_HSA_DECLARE
   } Api{};
 
@@ -71,12 +108,11 @@ class Offload {
   bool Release();
   void Teardown();
 
-  const Device& Host() const { return HostDevice; }
   const InternalMmapVectorNoCtor<Device>& Devices() const { return DeviceList; }
 
-  bool Alloc(const Device& D, uptr Bytes, void** Out);
+  bool IsCpu(hsa_agent_t Agent) const;
+  bool Alloc(const MemoryPool& Pool, uptr Bytes, void** Out);
   void Free(void* P);
-  bool Copy(void* Dst, const void* Src, uptr N);
   bool Lookup(hsa_executable_t Exec, const char* Name, hsa_agent_t Agent,
               u64* Addr);
   bool CreateSignal(hsa_signal_t* Out);
@@ -93,8 +129,11 @@ class Offload {
   template <typename Cb>
   void ForEachAgentObject(hsa_executable_t Exec, Cb F);
 
-  Device HostDevice{};
+  u16 AmdExtMinor{};
+
   InternalMmapVectorNoCtor<Device> DeviceList{};
+  InternalMmapVectorNoCtor<hsa_agent_t> CpuList{};
+  InternalMmapVectorNoCtor<MemoryPool> PoolList{};
 
   // Serializes initialization and shutdown of the core HSA interface.
   Mutex LifetimeMtx{};
