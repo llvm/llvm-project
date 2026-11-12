@@ -50,9 +50,9 @@ struct SkippedRange {
   // The nature of this skipped range
   Kind RangeKind;
 
-  bool isComment() { return RangeKind == Comment; }
-  bool isEmptyLine() { return RangeKind == EmptyLine; }
-  bool isPPIfElse() { return RangeKind == PPIfElse; }
+  bool isComment() const { return RangeKind == Comment; }
+  bool isEmptyLine() const { return RangeKind == EmptyLine; }
+  bool isPPIfElse() const { return RangeKind == PPIfElse; }
 
   SkippedRange(SourceRange Range, Kind K,
                SourceLocation PrevTokLoc = SourceLocation(),
@@ -70,6 +70,13 @@ class CoverageSourceInfo : public PPCallbacks,
   // A vector of skipped source ranges and PrevTokLoc with NextTokLoc.
   std::vector<SkippedRange> SkippedRanges;
 
+  // Indices into SkippedRanges by file, sorted by begin location. This is
+  // updated lazily by getSkippedRangesIn.
+  llvm::DenseMap<FileID, SmallVector<unsigned, 0>> SkippedRangesByFile;
+
+  // The number of SkippedRanges in SkippedRangesByFile.
+  unsigned NumIndexedSkippedRanges = 0;
+
   SourceManager &SourceMgr;
 
 public:
@@ -79,7 +86,9 @@ public:
 
   CoverageSourceInfo(SourceManager &SourceMgr) : SourceMgr(SourceMgr) {}
 
-  std::vector<SkippedRange> &getSkippedRanges() { return SkippedRanges; }
+  /// Return the skipped ranges that begin within \p Range, which must be in a
+  /// single file, sorted by their begin locations.
+  SmallVector<SkippedRange, 0> getSkippedRangesIn(SourceRange Range);
 
   void AddSkippedRange(SourceRange Range, SkippedRange::Kind RangeKind);
 
