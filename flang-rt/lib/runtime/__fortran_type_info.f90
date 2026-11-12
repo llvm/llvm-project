@@ -53,7 +53,9 @@ module __fortran_type_info
     integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
     integer(1) :: noFinalizationNeeded ! 1 if nothing finalizeable
     integer(1) :: noDefinedAssignment ! 1 if no defined ASSIGNMENT(=)
-    integer(1) :: __padding0(3)
+    integer(1) :: isEnumeration ! 1 if an F2023 enumeration type
+    integer(1) :: __padding0(2)
+    integer(4) :: enumeratorCount ! number of enumerators, else 0
   end type
 
   type :: Binding
