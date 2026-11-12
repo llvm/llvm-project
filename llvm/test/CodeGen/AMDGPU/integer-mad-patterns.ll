@@ -27,9 +27,9 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-TRUE16,GFX1200-GISEL,GFX1200-GISEL-TRUE16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1200,GFX1200-FAKE16,GFX1200-GISEL,GFX1200-GISEL-FAKE16 %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG,GFX1250-FAKE16,GFX1250-SDAG-FAKE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16,GFX1250-SDAG,GFX1250-SDAG-FAKE16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdpal -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16,GFX1250-GISEL-FAKE16 %s
-; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG,GFX1250-REAL16,GFX1250-SDAG-REAL16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-REAL16,GFX1250-SDAG,GFX1250-SDAG-REAL16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50-amd-amdpal -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-REAL16,GFX1250-GISEL-REAL16 %s
 
 ; Test for integer mad formation for patterns used in clpeak
