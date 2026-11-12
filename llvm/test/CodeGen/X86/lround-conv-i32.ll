@@ -19,28 +19,56 @@ define i32 @test_lround_i32_f16(half %x) nounwind {
 ;
 ; X86-SSE2-LABEL: test_lround_i32_f16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    subl $8, %esp
+; X86-SSE2-NEXT:    subl $12, %esp
 ; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-SSE2-NEXT:    movw %ax, (%esp)
 ; X86-SSE2-NEXT:    calll __extendhfsf2
-; X86-SSE2-NEXT:    fstps (%esp)
-; X86-SSE2-NEXT:    calll roundf
-; X86-SSE2-NEXT:    fstps (%esp)
+; X86-SSE2-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movaps %xmm1, %xmm0
+; X86-SSE2-NEXT:    andps %xmm2, %xmm0
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm3 = [4.9999997E-1,0.0E+0,0.0E+0,0.0E+0]
+; X86-SSE2-NEXT:    addss %xmm0, %xmm3
+; X86-SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
+; X86-SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; X86-SSE2-NEXT:    andps %xmm2, %xmm3
+; X86-SSE2-NEXT:    andnps %xmm1, %xmm2
+; X86-SSE2-NEXT:    orps %xmm2, %xmm3
+; X86-SSE2-NEXT:    cmpnltss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    movaps %xmm0, %xmm2
+; X86-SSE2-NEXT:    andnps %xmm3, %xmm2
+; X86-SSE2-NEXT:    andps %xmm1, %xmm0
+; X86-SSE2-NEXT:    orps %xmm2, %xmm0
+; X86-SSE2-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE2-NEXT:    calll __truncsfhf2
 ; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-SSE2-NEXT:    movw %ax, (%esp)
 ; X86-SSE2-NEXT:    calll __extendhfsf2
 ; X86-SSE2-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    cvttss2si {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    addl $8, %esp
+; X86-SSE2-NEXT:    addl $12, %esp
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-LABEL: test_lround_i32_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    callq roundf@PLT
+; X64-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X64-NEXT:    movaps %xmm0, %xmm2
+; X64-NEXT:    andps %xmm1, %xmm2
+; X64-NEXT:    movss {{.*#+}} xmm3 = [4.9999997E-1,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    addss %xmm2, %xmm3
+; X64-NEXT:    cvttps2dq %xmm3, %xmm3
+; X64-NEXT:    cvtdq2ps %xmm3, %xmm3
+; X64-NEXT:    andps %xmm1, %xmm3
+; X64-NEXT:    andnps %xmm0, %xmm1
+; X64-NEXT:    orps %xmm1, %xmm3
+; X64-NEXT:    cmpnltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    andps %xmm2, %xmm0
+; X64-NEXT:    andnps %xmm3, %xmm2
+; X64-NEXT:    orps %xmm2, %xmm0
 ; X64-NEXT:    callq __truncsfhf2@PLT
 ; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %eax
