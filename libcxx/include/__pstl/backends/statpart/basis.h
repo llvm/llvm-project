@@ -177,11 +177,7 @@ __partition(_Iterator __first,
     return {nullopt, __partitioning_status::__no_parallelism};
   }
 
-  size_t __count = static_cast<size_t>(std::distance(__first, __last));
-  if (__count == 0) {
-    return {nullopt, __partitioning_status::__not_enough_elements};
-  }
-
+  size_t __count           = static_cast<size_t>(std::distance(__first, __last));
   size_t __max_partitions  = __workers_count * __max_partitions_per_cpu;
   size_t __partition_count = std::min(__max_partitions, __count / __min_partition_size);
   if (__partition_count < 2) {
