@@ -6335,7 +6335,11 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
     if (Val == 0)
       return DAG.getConstantFP(1.0, DL, LHS.getValueType());
 
-    if (DAG.getTargetLoweringInfo().isBeneficialToExpandPowI(
+    // Scalable vectors cannot fall back to a scalar libcall. Constant exponents
+    // must therefore use the multiplication tree, even when optimizing for
+    // size.
+    if (LHS.getValueType().isScalableVector() ||
+        DAG.getTargetLoweringInfo().isBeneficialToExpandPowI(
             Val, DAG.shouldOptForSize())) {
       // Get the exponent as a positive value.
       if ((int)Val < 0)
