@@ -263,6 +263,36 @@ void testPointerArithmetic(int * p, const int **q, T * x) {
   x += 1; x -= 1;   // expected-note2{{used in pointer arithmetic here}}
 }
 
+#define ZERO 0
+constexpr int ZeroOffset = 0;
+enum { ZeroEnum = 0 };
+
+// A literal zero offset does not move the pointer.
+void testPointerArithmeticZeroOffset(int *p, int *q, int n) {
+  // expected-warning@-1{{'q' is an unsafe pointer used for buffer access}}
+  foo(p + 0, 0 + p, p - 0, p + 0u, p + (0), p + ZERO);
+  p += 0;
+  p -= 0;
+
+  // Other offsets are still reported, including constant expressions that
+  // evaluate to zero.
+  foo(q + 1, q + (n - n), q + (1 - 1), q + ZeroOffset, q + ZeroEnum); // expected-note5{{used in pointer arithmetic here}}
+  q += ZeroOffset; // expected-note{{used in pointer arithmetic here}}
+}
+
+// A zero template argument is not a literal zero.
+template <int N> void testPointerArithmeticZeroOffsetTmpl(int *p) {
+  // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
+  foo(p + N); // expected-note{{used in pointer arithmetic here}}
+}
+template void testPointerArithmeticZeroOffsetTmpl<0>(int *);
+
+void testPointerArithmeticZeroOffsetNested(int *p) {
+  // FIXME: `p` is not reported because the inner `p + 0` is no longer a use
+  // of `p` in pointer arithmetic.
+  foo(p + 0 + 1); // expected-warning{{unsafe pointer arithmetic}}
+}
+
 void testTemplate(int * p) {
   int *a[10];
   foo(f(p, &p, a, a)[1]); // expected-warning{{unsafe buffer access}}

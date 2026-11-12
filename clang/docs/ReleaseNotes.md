@@ -742,6 +742,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
 
+- `-Wunsafe-buffer-usage` no longer warns on pointer arithmetic whose offset is
+  a literal zero, such as `p + 0` or `p -= 0`.
+
 - `-Wunsafe-buffer-usage-in-container` now warns on unsafe calls to
   two-parameter constructors and factory functions annotated with
   `[[clang::unsafe_buffer_usage_in_container]]` or
