@@ -5971,7 +5971,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       else if (Output.isFilename())
         OutputName = Output.getFilename();
 
-      CsectArg += llvm::sys::path::stem(OutputName);
+      if (OutputName == "-")
+        CsectArg += "@stdout@";
+      else
+        CsectArg += llvm::sys::path::stem(OutputName);
       CsectArg += "#";
       CmdArgs.push_back(Args.MakeArgString(CsectArg));
     } else {

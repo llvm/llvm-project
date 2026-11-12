@@ -5676,6 +5676,9 @@ using the same name for both results in an error.
 `#pragma csect(test, "name")` is accepted and ignored. This is done to avoid
 messages when porting XL code.
 
+The names must follow the CSECT name rules described in the "CSECT Options"
+section of the User's Manual.
+
 ## Extensions for Static Analysis
 
 Clang supports additional attributes that are useful for documenting program
