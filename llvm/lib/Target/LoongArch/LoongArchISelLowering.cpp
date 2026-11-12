@@ -514,6 +514,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
+  setTargetDAGCombine(ISD::XOR);
   setTargetDAGCombine(ISD::SRL);
   setTargetDAGCombine(ISD::SETCC);
 
@@ -9347,6 +9348,36 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DAG, DCI, Subtarget);
+  case ISD::XOR: {
+    EVT VT = N->getValueType(0);
+    // LA64 promotes i32 integer operations to GPR-width operations during
+    // legalization. Match the idiom before that promotion as well as after
+    // it, otherwise common unsigned 32-bit bit tests miss this combine.
+    if (VT != Subtarget.getGRLenVT() &&
+        !(Subtarget.is64Bit() && VT == MVT::i32))
+      return SDValue();
+
+    SDValue XorOps[] = {N->getOperand(0), N->getOperand(1)};
+    for (unsigned AndIdx = 0; AndIdx != 2; ++AndIdx) {
+      SDValue And = XorOps[AndIdx];
+      SDValue Mask = XorOps[1 - AndIdx];
+      if (And.getOpcode() != ISD::AND || !And.hasOneUse())
+        continue;
+
+      for (unsigned MaskIdx = 0; MaskIdx != 2; ++MaskIdx) {
+        // Match by SDValue identity so that (X & M1) ^ M2 is never folded
+        // unless M1 and M2 are the same value. Canonicalize before
+        // instruction selection, where the AND operand may already have been
+        // selected to a target machine node.
+        if (And.getOperand(MaskIdx) != Mask)
+          continue;
+        SDLoc DL(N);
+        SDValue X = And.getOperand(1 - MaskIdx);
+        return DAG.getNode(ISD::AND, DL, VT, Mask, DAG.getNOT(DL, X, VT));
+      }
+    }
+    return SDValue();
+  }
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SELECT:
@@ -12130,7 +12161,7 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
   if (Y.getValueType().isVector())
     return false;
 
-  return !isa<ConstantSDNode>(Y);
+  return true;
 }
 
 ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
