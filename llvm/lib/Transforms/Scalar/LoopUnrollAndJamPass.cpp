@@ -19,12 +19,14 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -40,6 +42,7 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -118,6 +121,123 @@ getUnrollAndJammedLoopSize(unsigned LoopSize,
                            unsigned Count) {
   assert(LoopSize >= UP.BEInsns && "LoopSize should not be less than BEInsns!");
   return static_cast<uint64_t>(LoopSize - UP.BEInsns) * Count + UP.BEInsns;
+}
+
+// Returns the step of Ptr per iteration of L if Ptr is an access in SubLoop
+// that is an add recurrence in both loops, and null otherwise.
+static const SCEV *getOuterStep(const SCEV *Ptr, const Loop *L,
+                                const Loop *SubLoop, ScalarEvolution &SE) {
+  auto *Inner = dyn_cast<SCEVAddRecExpr>(Ptr);
+  if (!Inner || Inner->getLoop() != SubLoop)
+    return nullptr;
+  auto *Outer = dyn_cast<SCEVAddRecExpr>(Inner->getStart());
+  if (!Outer || Outer->getLoop() != L ||
+      !SE.isLoopUniform(Inner->getStepRecurrence(SE), L))
+    return nullptr;
+  return Outer->getStepRecurrence(SE);
+}
+
+// For a paired MemRef instructions, try to calculate its reuse distance
+static unsigned getJamReuseDistance(Instruction *I, Instruction *Other,
+                                    const Loop *L, const Loop *SubLoop,
+                                    unsigned MaxCount, ScalarEvolution &SE) {
+  if (getLoadStoreType(I) != getLoadStoreType(Other))
+    return 0;
+
+  const SCEV *Ptr = SE.getSCEV(getLoadStorePointerOperand(I));
+  const SCEV *OtherPtr = SE.getSCEV(getLoadStorePointerOperand(Other));
+  const SCEV *Step = getOuterStep(Ptr, L, SubLoop, SE);
+  if (!Step || Step != getOuterStep(OtherPtr, L, SubLoop, SE))
+    return 0;
+
+  const SCEV *Diff = SE.getMinusSCEV(Ptr, OtherPtr);
+  if (isa<SCEVCouldNotCompute>(Diff) || Diff->getType() != Step->getType())
+    return 0;
+
+  // Do not use SCEVDivision::divide as it only handles simple form
+  // (e.g.) It cannot get (16 + 16m) is a divident of (8 + 8m)
+  // It should be cheap enough  as the current Max == 4 by default.
+  for (unsigned Distance = 1; Distance < MaxCount; ++Distance)
+    if (Diff == SE.getMulExpr(SE.getConstant(Step->getType(), Distance), Step))
+      return Distance;
+  return 0;
+}
+
+// Iterate through each MemRef pairs and counts the Max Distantce.
+static unsigned computeReuseCount(const ScalarOptions &Opts, Loop *L,
+                                  Loop *SubLoop, ScalarEvolution &SE,
+                                  unsigned Count, bool AllowRemainder) {
+  if (Count <= 1) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Unroll count is too small\n");
+    return 0;
+  }
+
+  SmallVector<Instruction *, 16> MemRefs;
+  for (BasicBlock *BB : SubLoop->getBlocks())
+    for (Instruction &I : *BB)
+      if (isa<LoadInst, StoreInst>(I))
+        MemRefs.push_back(&I);
+  if (MemRefs.empty())
+    return 0;
+
+  unsigned MaxCount = AllowRemainder
+                          ? std::min(Count, Opts.unroll_and_jam_max_reuse_count)
+                          : Count;
+  unsigned NumReuse = 0, ReuseCount = 0;
+  bool HasInvariantLoad = false;
+  for (Instruction *I : MemRefs) {
+    // Loads that are invariant in the outer loop are shared by all the copies.
+    if (auto *Ld = dyn_cast<LoadInst>(I)) {
+      const SCEV *LSCEV = SE.getSCEVAtScope(Ld->getPointerOperand(), L);
+      if (SE.isLoopInvariant(LSCEV, L)) {
+        HasInvariantLoad = true;
+        ++NumReuse;
+        continue;
+      }
+    }
+
+    unsigned MaxDistance = 0;
+    for (Instruction *Other : MemRefs)
+      if (Other != I)
+        MaxDistance =
+            std::max(MaxDistance,
+                     getJamReuseDistance(I, Other, L, SubLoop, MaxCount, SE));
+    if (MaxDistance) {
+      ++NumReuse;
+      ReuseCount = std::max(ReuseCount, MaxDistance + 1);
+    }
+  }
+
+  if (!NumReuse ||
+      NumReuse * 100 / MemRefs.size() < Opts.unroll_and_jam_min_reuse_percent) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Too few memory accesses with "
+                         "reuse\n");
+    return 0;
+  }
+
+  if (HasInvariantLoad || !AllowRemainder)
+    return Count;
+  return ReuseCount;
+}
+
+static bool hasVectorizableReduction(Loop *L, const TargetTransformInfo &TTI,
+                                     DominatorTree &DT, AssumptionCache *AC,
+                                     ScalarEvolution &SE) {
+  if (TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+              .getFixedValue() <= 64 &&
+      !TTI.supportsScalableVectors())
+    return false;
+
+  for (PHINode &Phi : L->getHeader()->phis()) {
+    if (RecurrenceDescriptor::isFixedOrderRecurrence(&Phi, L, &DT))
+      return true;
+    RecurrenceDescriptor RedDes;
+    if (RecurrenceDescriptor::isReductionPHI(&Phi, L, RedDes, /*DB=*/nullptr,
+                                             AC, &DT, &SE) &&
+        !RedDes.getExactFPMathInst())
+      return true;
+  }
+  return false;
 }
 
 // Calculates unroll and jam count.
@@ -221,26 +341,16 @@ static unsigned computeUnrollAndJamCount(
     return 0;
   }
 
-  // Limit to loops where there is something to gain from unrolling and
-  // jamming the loop. In this case, look for loads that are invariant in the
-  // outer loop and can become shared.
-  unsigned NumInvariant = 0;
-  for (BasicBlock *BB : SubLoop->getBlocks()) {
-    for (Instruction &I : *BB) {
-      if (auto *Ld = dyn_cast<LoadInst>(&I)) {
-        Value *V = Ld->getPointerOperand();
-        const SCEV *LSCEV = SE.getSCEVAtScope(V, L);
-        if (SE.isLoopInvariant(LSCEV, L))
-          NumInvariant++;
-      }
-    }
-  }
-  if (NumInvariant == 0) {
-    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; No loop invariant loads\n");
+  // Give up jamming if it is possible for reduction.
+  if (hasVectorizableReduction(SubLoop, TTI, DT, AC, SE)) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Inner loop has a recurrence "
+                         "that could be vectorized\n");
     return 0;
   }
 
-  return Count;
+  // Limit to loops where there is something to gain from unrolling and
+  // jamming the loop.
+  return computeReuseCount(Opts, L, SubLoop, SE, Count, UP.AllowRemainder);
 }
 
 static LoopUnrollResult
