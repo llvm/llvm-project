@@ -1216,6 +1216,14 @@ bool Instruction::isAtomic() const {
     return cast<LoadInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
   case Instruction::Store:
     return cast<StoreInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    // A call implementing an atomic access records it in an "atomicity"
+    // operand bundle.
+    return cast<CallBase>(this)
+        ->getOperandBundle(LLVMContext::OB_atomicity)
+        .has_value();
   }
 }
 
@@ -1228,6 +1236,10 @@ bool Instruction::hasAtomicLoad() const {
   case Instruction::AtomicRMW:
   case Instruction::Load:
     return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return mayReadFromMemory();
   }
 }
 
@@ -1240,6 +1252,10 @@ bool Instruction::hasAtomicStore() const {
   case Instruction::AtomicRMW:
   case Instruction::Store:
     return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return mayWriteToMemory();
   }
 }
 
