@@ -516,7 +516,8 @@ enum class TemplateSubstitutionKind : char {
     /// given outermost scope.
     static void deleteScopes(LocalInstantiationScope *Scope,
                              LocalInstantiationScope *Outermost) {
-      while (Scope && Scope != Outermost) {
+      while (Scope != Outermost) {
+        assert(Scope && "scope does not extend the outermost scope");
         LocalInstantiationScope *Out = Scope->Outer;
         delete Scope;
         Scope = Out;

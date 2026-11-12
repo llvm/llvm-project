@@ -21,3 +21,11 @@ Address CIRGenFunction::getAsNaturalAddressOf(Address addr,
   assert(!cir::MissingFeatures::pointerAuthentication());
   return addr;
 }
+cir::FuncOp CIRGenModule::getFunctionPointer(GlobalDecl gd) {
+  // This should eventually get the function pointer with authentication
+  // information added.  Since this is not yet implemented, this just gets the
+  // 'base' pointer right now.
+  assert(!cir::MissingFeatures::pointerAuthentication());
+
+  return getRawFunctionPointer(gd);
+}

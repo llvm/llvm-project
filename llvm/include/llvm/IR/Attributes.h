@@ -122,14 +122,14 @@ public:
   ///                      an exception might pass by.
   /// uwtable + nounwind = Needs an entry because the ABI says so.
 
-  enum AttrKind {
+  enum AttrKind : unsigned {
     // IR-Level Attributes
-    None,                  ///< No attributes have been set
-    #define GET_ATTR_ENUM
+    None, ///< No attributes have been set
+#define GET_ATTR_ENUM
     #include "llvm/IR/Attributes.inc"
-    EndAttrKinds,          ///< Sentinel value useful for loops
-    EmptyKey,              ///< Use as Empty key for DenseMap of AttrKind
-    TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
+    EndAttrKinds, ///< Sentinel value useful for loops
+    EmptyKey,     ///< Use as Empty key for DenseMap of AttrKind
+    TombstoneKey, ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
   static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
@@ -1429,6 +1429,10 @@ LLVM_ABI AttributeMask typeIncompatible(Type *Ty, AttributeSet AS,
 /// include attributes like nocapture, which constrain the function
 /// implementation rather than the passed value.
 LLVM_ABI AttributeMask getUBImplyingAttributes();
+
+/// Get param/return attributes which make an invalid value poison, e.g.,
+/// nonnull, where null becomes poison.
+LLVM_ABI AttributeMask getPoisonGeneratingAttributes();
 
 /// \returns Return true if the two functions have compatible target-independent
 /// attributes for inlining purposes.

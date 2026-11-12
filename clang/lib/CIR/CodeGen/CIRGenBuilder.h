@@ -468,9 +468,8 @@ public:
 
   mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
                                   bool vtableUseRelativeLayout) {
-    // TODO(cir): consider address space here.
-    assert(!cir::MissingFeatures::addressSpace());
-    cir::PointerType destTy = getVoidPtrTy();
+    auto srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
+    cir::PointerType destTy = getVoidPtrTy(srcPtrTy.getAddrSpace());
     return cir::DynamicCastOp::create(
         *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
         cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
@@ -644,10 +643,11 @@ public:
                                                   mlir::Value objectPtr,
                                                   mlir::Value memberPtr) {
     auto memberPtrTy = mlir::cast<cir::DataMemberType>(memberPtr.getType());
+    auto objectPtrTy = mlir::cast<cir::PointerType>(objectPtr.getType());
 
-    // TODO(cir): consider address space.
-    assert(!cir::MissingFeatures::addressSpace());
-    cir::PointerType resultTy = getPointerTo(memberPtrTy.getMemberTy());
+    // The member lives in the same address space as the object.
+    cir::PointerType resultTy =
+        getPointerTo(memberPtrTy.getMemberTy(), objectPtrTy.getAddrSpace());
 
     return cir::GetRuntimeMemberOp::create(*this, loc, resultTy, objectPtr,
                                            memberPtr);
@@ -916,6 +916,14 @@ public:
                *this, loc, this->getStringAttr(str), resTy,
                std::forward<Operands>(op)..., fastmath)
         .getResult();
+  }
+
+  /// Converts \p src to \p dstTy, saturating at its bounds. The signedness of
+  /// \p dstTy selects between fptosi.sat and fptoui.sat.
+  mlir::Value createFPToIntSat(mlir::Location loc, mlir::Value src,
+                               cir::IntType dstTy) {
+    return emitIntrinsicCallOp(
+        loc, dstTy.isSigned() ? "fptosi.sat" : "fptoui.sat", dstTy, src);
   }
 };
 

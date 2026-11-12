@@ -28,15 +28,15 @@ body:             |
     %16:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %11(p4), 44, 0
     %17:sreg_32 = COPY %15.sub1
     %18:sreg_32 = COPY %15.sub0
-    %19:sgpr_96 = REG_SEQUENCE killed %18, %subreg.sub0, killed %17, %subreg.sub1, killed %16, %subreg.sub2
+    %19:sgpr_96 = REG_SEQUENCE %18, %subreg.sub0, %17, %subreg.sub1, %16, %subreg.sub2
     %0:sgpr_96 = COPY %19
     %20:sreg_32 = S_MOV_B32 -1
-    %21:sreg_64 = V_CMP_GT_I32_e64 %10(s32), killed %20, implicit $exec
+    %21:sreg_64 = V_CMP_GT_I32_e64 %10(s32), %20, implicit $exec
     %22:sreg_32 = S_MOV_B32 0
-    %23:sreg_64 = V_CMP_LT_I32_e64 %10(s32), killed %22, implicit $exec
+    %23:sreg_64 = V_CMP_LT_I32_e64 %10(s32), %22, implicit $exec
     %1:vreg_1 = COPY %21
     %14:sreg_32 = IMPLICIT_DEF
-    %2:sreg_64 = SI_IF killed %23, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %2:sreg_64 = SI_IF %23, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -45,7 +45,7 @@ body:             |
     %24:sreg_32 = COPY %0.sub0
     %3:sreg_32 = COPY %0.sub1
     %25:sreg_32 = S_MOV_B32 0
-    S_CMP_LT_I32 killed %24, killed %25, implicit-def $scc
+    S_CMP_LT_I32 %24, %25, implicit-def $scc
     %26:sreg_64 = COPY $scc
     %4:sreg_64 = COPY %26
 
@@ -69,7 +69,7 @@ body:             |
     SI_END_CF %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %28:sreg_64 = IMPLICIT_DEF
     %29:vreg_64 = COPY %28
-    GLOBAL_STORE_DWORD killed %29, %9, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD %29, %9, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

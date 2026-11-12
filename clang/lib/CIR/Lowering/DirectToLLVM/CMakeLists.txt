@@ -1,12 +1,16 @@
 set(LLVM_LINK_COMPONENTS
   Core
   Support
+  TransformUtils
   )
 
 add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
   LowerToLLVMIR.cpp
+  LowerToLLVMMetadata.cpp
   LowerToLLVMOffloadPrintf.cpp
+  LowerToLLVMOffloadPrintfAMDGPU.cpp
+  LowerToLLVMOffloadPrintfNVPTX.cpp
   LowerToLLVMOpenCLMetadata.cpp
 
   DEPENDS

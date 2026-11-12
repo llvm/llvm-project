@@ -57,8 +57,7 @@ std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
 lto::Config BitcodeCompiler::createConfig() {
   lto::Config c;
   c.LibraryOptions = &ctx.config.libraryOptions;
-  c.PTO = PipelineTuningOptions(c.LibraryOptions);
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options = getTargetOptions(ctx.config.libraryOptions);
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.config.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
@@ -70,8 +69,10 @@ lto::Config BitcodeCompiler::createConfig() {
 
   // Use static reloc model on 32-bit x86 because it usually results in more
   // compact code, and because there are also known code generation bugs when
-  // using the PIC model (see PR34306).
-  if (ctx.config.machine == COFF::IMAGE_FILE_MACHINE_I386)
+  // using the PIC model (see PR34306). Also on 32-bit ARM, where COFF has no
+  // relocation for PIC's PC-relative movw/movt.
+  if (ctx.config.machine == COFF::IMAGE_FILE_MACHINE_I386 ||
+      ctx.config.machine == COFF::IMAGE_FILE_MACHINE_ARMNT)
     c.RelocModel = Reloc::Static;
   else
     c.RelocModel = Reloc::PIC_;

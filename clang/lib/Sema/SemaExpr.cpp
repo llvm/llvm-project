@@ -58,6 +58,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -5553,6 +5554,10 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                          << LHSExp->getSourceRange()
                          << RHSExp->getSourceRange());
       ResultType = BTy->getSveEltType(Context);
+    } else if (Hexagon().isHLXVectorType(LHSTy)) {
+      // There is no HLX vector element extract.
+      return ExprError(Diag(LLoc, diag::err_subscript_hlx)
+                       << LHSExp->getSourceRange() << RHSExp->getSourceRange());
     } else {
       const VectorType *VTy = LHSTy->getAs<VectorType>();
       ResultType = VTy->getElementType();
@@ -11061,11 +11066,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       if (VecType->getVectorKind() == VectorKind::SveFixedLengthData ||
           VecType->getVectorKind() == VectorKind::SveFixedLengthPredicate)
         return true;
-      if (VecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-          VecType->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
+      if (isRVVFixedLengthVectorKind(VecType->getVectorKind())) {
         SVEorRVV = 1;
         return true;
       }
@@ -11096,14 +11097,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
             SecondVecType->getVectorKind() ==
                 VectorKind::SveFixedLengthPredicate)
           return true;
-        if (SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthData ||
-            SecondVecType->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_1 ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_2 ||
-            SecondVecType->getVectorKind() ==
-                VectorKind::RVVFixedLengthMask_4) {
+        if (isRVVFixedLengthVectorKind(SecondVecType->getVectorKind())) {
           SVEorRVV = 1;
           return true;
         }
@@ -13715,9 +13709,13 @@ QualType Sema::GetSignedVectorType(QualType V) {
       return Context.getExtVectorType(Context.Int128Ty, VTy->getNumElements());
     if (TypeSize == Context.getTypeSize(Context.LongTy))
       return Context.getExtVectorType(Context.LongTy, VTy->getNumElements());
-    assert(TypeSize == Context.getTypeSize(Context.LongLongTy) &&
-           "Unhandled vector element size in vector compare");
-    return Context.getExtVectorType(Context.LongLongTy, VTy->getNumElements());
+    if (TypeSize == Context.getTypeSize(Context.LongLongTy))
+      return Context.getExtVectorType(Context.LongLongTy,
+                                      VTy->getNumElements());
+    const auto *BIT = VTy->getElementType()->castAs<BitIntType>();
+    return Context.getExtVectorType(
+        Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
+        VTy->getNumElements());
   }
 
   if (TypeSize == Context.getTypeSize(Context.Int128Ty))
@@ -13735,10 +13733,13 @@ QualType Sema::GetSignedVectorType(QualType V) {
   if (TypeSize == Context.getTypeSize(Context.ShortTy))
     return Context.getVectorType(Context.ShortTy, VTy->getNumElements(),
                                  VectorKind::Generic);
-  assert(TypeSize == Context.getTypeSize(Context.CharTy) &&
-         "Unhandled vector element size in vector compare");
-  return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
-                               VectorKind::Generic);
+  if (TypeSize == Context.getTypeSize(Context.CharTy))
+    return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
+                                 VectorKind::Generic);
+  const auto *BIT = VTy->getElementType()->castAs<BitIntType>();
+  return Context.getVectorType(
+      Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
+      VTy->getNumElements(), VectorKind::Generic);
 }
 
 QualType Sema::GetSignedSizelessVectorType(QualType V) {
@@ -15588,6 +15589,12 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
       S.Diag(OpLoc, diag::ext_typecheck_indirection_through_void_pointer)
           << OpTy << Op->getSourceRange();
   }
+
+  // HLX has no vector pair loads or stores.
+  if (S.Hexagon().isHLXVectorType(Result) &&
+      S.Context.getTypeSizeInChars(Result).getQuantity() == 4096)
+    S.Diag(OpLoc, diag::err_typecheck_indirection_hlx_vectorpair_pointer)
+        << OpTy << Op->getSourceRange();
 
   // Dereferences are usually l-values...
   VK = VK_LValue;
@@ -19439,9 +19446,12 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
       }
 
       if (Func->isDefaulted() && !Func->isDeleted()) {
-        DefaultedComparisonKind DCK = Func->getDefaultedComparisonKind();
-        if (DCK != DefaultedComparisonKind::None)
-          DefineDefaultedComparison(Loc, Func, DCK);
+        FunctionDecl::DefaultedFunctionKind DFK =
+            Func->getDefaultedFunctionKind();
+        if (DFK.isComparison())
+          DefineDefaultedComparison(Loc, Func, DFK.asComparison());
+        else if (DFK.isPostfixOperator())
+          DefineDefaultedPostfixOperator(Loc, Func, DFK.asPostfixOperator());
       }
 
       // Implicit instantiation of function templates and member functions of
@@ -21052,8 +21062,7 @@ static void DoMarkVarDeclReferenced(
 
   bool NeedDefinition =
       OdrUse == OdrUseContext::Used || NeededForConstantEvaluation ||
-      (TSK != clang::TSK_Undeclared && !UsableInConstantExpr &&
-       Var->getType()->isUndeducedType());
+      (TSK != clang::TSK_Undeclared && Var->getType()->isUndeducedType());
 
   assert(!isa<VarTemplatePartialSpecializationDecl>(Var) &&
          "Can't instantiate a partial template specialization.");

@@ -17,9 +17,11 @@ add_lldb_unittest(TargetTests
   ScratchTypeSystemTest.cpp
   StackFrameListTest.cpp
   StackFrameRecognizerTest.cpp
+  StackIDTest.cpp
   SummaryStatisticsTest.cpp
   TargetAPIMutexTest.cpp
   TargetGroupTest.cpp
+  ThreadPlanStackTest.cpp
   FindFileTest.cpp
 
   LINK_COMPONENTS

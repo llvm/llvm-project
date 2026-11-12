@@ -17,8 +17,9 @@
 using LlvmLibcCtimeR = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcCtimeR, Nullptr) {
-  char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
-  time_t t;
+  [[maybe_unused]] char
+      buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
+  [[maybe_unused]] time_t t;
   EXPECT_DEATH([] { LIBC_NAMESPACE::ctime_r(nullptr, nullptr); },
                WITH_SIGNAL(-1));
   EXPECT_DEATH([&] { LIBC_NAMESPACE::ctime_r(nullptr, buffer); },

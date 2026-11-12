@@ -44,3 +44,34 @@ func.func @parallel_loop(%outer_i0: index, %outer_i1: index, %A: memref<?x?xf32>
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+// -----
+
+#map = affine_map<()[s0] -> (8, s0)>
+
+func.func @parallel_loop_with_result(%ub: index) -> i32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %init = arith.constant 0 : i32
+  %bound = affine.min #map()[%ub]
+  %result = scf.parallel (%i) = (%c0) to (%bound) step (%c1)
+      init (%init) -> i32 {
+    %value = arith.index_cast %i : index to i32
+    scf.reduce(%value : i32) {
+    ^bb0(%lhs: i32, %rhs: i32):
+      %sum = arith.addi %lhs, %rhs : i32
+      scf.reduce.return %sum : i32
+    }
+  }
+  return %result : i32
+}
+
+// CHECK-LABEL: func.func @parallel_loop_with_result
+// CHECK: %[[IF_RESULT:.*]] = scf.if {{.*}} -> (i32) {
+// CHECK:   %[[THEN_RESULT:.*]] = scf.parallel
+// CHECK:   scf.yield %[[THEN_RESULT]] : i32
+// CHECK: } else {
+// CHECK:   %[[ELSE_RESULT:.*]] = scf.parallel
+// CHECK:   scf.yield %[[ELSE_RESULT]] : i32
+// CHECK: }
+// CHECK: return %[[IF_RESULT]] : i32

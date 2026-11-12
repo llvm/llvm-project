@@ -1,0 +1,111 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// A record with a flexible array member is passed byval and returned through
+// sret, both in addrspace(5). A zero-length array is not one.
+
+!s32i = !cir.int<s, 32>
+!rec_fam_t = !cir.struct<"fam_t" {data !s32i, data !cir.array<!s32i x 0>}>
+!rec_zla_t = !cir.struct<"zla_t" {data !s32i, empty !cir.array<!s32i x 0>}>
+!rec_fam_nested_t = !cir.struct<"fam_nested_t" {data !s32i, data !rec_fam_t}>
+
+module attributes {
+  cir.record_layouts = {
+    fam_nested_t = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                      has_trivial_dtor = true, record_align = 4,
+                                      flexible_array_member = true>,
+    fam_t = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                               has_trivial_dtor = true, record_align = 4,
+                               flexible_array_member = true>,
+    zla_t = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                               has_trivial_dtor = true, record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  cir.func @arg_fam(%arg0: !rec_fam_t) requires_call_conv_lowering {
+    %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+    cir.store %arg0, %1 : !rec_fam_t, !cir.ptr<!rec_fam_t>
+    cir.return
+  }
+
+  // CHECK:      cir.func @arg_fam(%[[S_ARG:[^:]+]]: !cir.ptr<!rec_fam_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.byval = !rec_fam_t, llvm.noundef}) {
+  // CHECK-NEXT:   %[[S:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[S_VIEW:.*]] = cir.cast address_space %[[S]] : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+  // CHECK-NEXT:   cir.copy %[[S_ARG]] align(4) to %[[S_VIEW]] align(4) : !cir.ptr<!rec_fam_t, target_address_space(5)>, !cir.ptr<!rec_fam_t>
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The last field holds a flexible array member, so the record has one too.
+  cir.func @arg_fam_nested(%arg0: !rec_fam_nested_t) requires_call_conv_lowering {
+    %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_nested_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_fam_nested_t, target_address_space(5)> -> !cir.ptr<!rec_fam_nested_t>
+    cir.store %arg0, %1 : !rec_fam_nested_t, !cir.ptr<!rec_fam_nested_t>
+    cir.return
+  }
+
+  // CHECK:      cir.func @arg_fam_nested(%[[S_ARG:[^:]+]]: !cir.ptr<!rec_fam_nested_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.byval = !rec_fam_nested_t, llvm.noundef}) {
+  // CHECK-NEXT:   %[[S:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_nested_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[S_VIEW:.*]] = cir.cast address_space %[[S]] : !cir.ptr<!rec_fam_nested_t, target_address_space(5)> -> !cir.ptr<!rec_fam_nested_t>
+  // CHECK-NEXT:   cir.copy %[[S_ARG]] align(4) to %[[S_VIEW]] align(4) : !cir.ptr<!rec_fam_nested_t, target_address_space(5)>, !cir.ptr<!rec_fam_nested_t>
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A zero-length array holds no data, so the record is packed into an i32.
+  cir.func @arg_zla(%arg0: !rec_zla_t) requires_call_conv_lowering {
+    %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_zla_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_zla_t, target_address_space(5)> -> !cir.ptr<!rec_zla_t>
+    cir.store %arg0, %1 : !rec_zla_t, !cir.ptr<!rec_zla_t>
+    cir.return
+  }
+
+  // CHECK:      cir.func @arg_zla(%[[S_ARG:[^:]+]]: !s32i) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[S_ARG]], %[[COERCE]] : !s32i, !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[COERCE_REC:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!s32i, target_address_space(5)> -> !cir.ptr<!rec_zla_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[S:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_zla_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[S_VIEW:.*]] = cir.cast address_space %[[S]] : !cir.ptr<!rec_zla_t, target_address_space(5)> -> !cir.ptr<!rec_zla_t>
+  // CHECK-NEXT:   cir.copy %[[COERCE_REC]] align(4) to %[[S_VIEW]] align(4) : !cir.ptr<!rec_zla_t, target_address_space(5)>, !cir.ptr<!rec_zla_t>
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @ret_fam(%arg0: !rec_fam_t) -> !rec_fam_t requires_call_conv_lowering {
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_fam_t, target_address_space(5)>
+    %1 = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_t, target_address_space(5)>
+    %2 = cir.cast address_space %1 : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+    %3 = cir.cast address_space %0 : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+    cir.store %arg0, %2 : !rec_fam_t, !cir.ptr<!rec_fam_t>
+    cir.copy %2 align(4) to %3 align(4) : !cir.ptr<!rec_fam_t>
+    %4 = cir.load %0 : !cir.ptr<!rec_fam_t, target_address_space(5)>, !rec_fam_t
+    cir.return %4 : !rec_fam_t
+  }
+
+  // CHECK:      cir.func @ret_fam(%[[RET:[^:]+]]: !cir.ptr<!rec_fam_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_fam_t, llvm.writable}, %[[S_ARG:[^:]+]]: !cir.ptr<!rec_fam_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.byval = !rec_fam_t, llvm.noundef}) {
+  // CHECK-NEXT:   %[[S:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[S_VIEW:.*]] = cir.cast address_space %[[S]] : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+  // CHECK-NEXT:   %[[RET_VIEW:.*]] = cir.cast address_space %[[RET]] : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+  // CHECK-NEXT:   cir.copy %[[S_ARG]] align(4) to %[[S_VIEW]] align(4) : !cir.ptr<!rec_fam_t, target_address_space(5)>, !cir.ptr<!rec_fam_t>
+  // CHECK-NEXT:   cir.copy %[[S_VIEW]] align(4) to %[[RET_VIEW]] align(4) : !cir.ptr<!rec_fam_t>
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @call_fam(%arg0: !rec_fam_t) requires_call_conv_lowering {
+    %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+    cir.store %arg0, %1 : !rec_fam_t, !cir.ptr<!rec_fam_t>
+    %2 = cir.load align(4) %1 : !cir.ptr<!rec_fam_t>, !rec_fam_t
+    cir.call @arg_fam(%2) : (!rec_fam_t) -> ()
+    cir.return
+  }
+
+  // The caller's local is passed as the byval pointer.
+  // CHECK:      cir.func @call_fam(%[[S_ARG:[^:]+]]: !cir.ptr<!rec_fam_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.byval = !rec_fam_t, llvm.noundef}) {
+  // CHECK-NEXT:   %[[S:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[S_VIEW:.*]] = cir.cast address_space %[[S]] : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+  // CHECK-NEXT:   cir.copy %[[S_ARG]] align(4) to %[[S_VIEW]] align(4) : !cir.ptr<!rec_fam_t, target_address_space(5)>, !cir.ptr<!rec_fam_t>
+  // CHECK-NEXT:   cir.call @arg_fam(%[[S]]) : (!cir.ptr<!rec_fam_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.byval = !rec_fam_t, llvm.noundef}) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+}

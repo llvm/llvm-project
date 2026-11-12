@@ -1231,13 +1231,21 @@ void IntegerRelation::removeRedundantConstraints() {
   gcdTightenInequalities();
   Simplex simplex(*this);
   simplex.detectRedundant();
+  removeRedundantConstraintsFromSimplex(simplex, /*offset=*/0);
+}
+
+void IntegerRelation::removeRedundantConstraintsFromSimplex(
+    const Simplex &simplex, unsigned offset) {
+  unsigned numIneqs = getNumInequalities();
+  assert(offset + numIneqs + 2 * getNumEqualities() <=
+             simplex.getNumConstraints() &&
+         "simplex does not contain all constraints of this relation");
 
   unsigned pos = 0;
-  unsigned numIneqs = getNumInequalities();
   // Scan to get rid of all inequalities marked redundant, in-place. In Simplex,
   // the first constraints added are the inequalities.
   for (unsigned r = 0; r < numIneqs; r++) {
-    if (!simplex.isMarkedRedundant(r))
+    if (!simplex.isMarkedRedundant(offset + r))
       inequalities.copyRow(r, pos++);
   }
   inequalities.resizeVertically(pos);
@@ -1248,8 +1256,8 @@ void IntegerRelation::removeRedundantConstraints() {
   // redundant.
   pos = 0;
   for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
-    if (!(simplex.isMarkedRedundant(numIneqs + 2 * r) &&
-          simplex.isMarkedRedundant(numIneqs + 2 * r + 1)))
+    if (!(simplex.isMarkedRedundant(offset + numIneqs + 2 * r) &&
+          simplex.isMarkedRedundant(offset + numIneqs + 2 * r + 1)))
       equalities.copyRow(r, pos++);
   }
   equalities.resizeVertically(pos);

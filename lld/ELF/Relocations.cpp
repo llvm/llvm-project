@@ -10,10 +10,10 @@
 // relocations and determines what auxiliary data structures (GOT, PLT, copy
 // relocations) need to be created during linking.
 //
-// The main entry point is scanRelocations<ELFT>(), which calls scanSection()
-// to process all relocations within an input section. For each relocation,
-// scan() analyzes the type and target, and determines whether a synthetic
-// section entry or dynamic relocation is needed.
+// The main entry point is scanRelocations(), which calls scanSection() to
+// process all relocations within an input section. For each relocation,
+// scanSection() analyzes the type and target, and determines whether a
+// synthetic section entry or dynamic relocation is needed.
 //
 // Note: This file analyzes what needs to be done but doesn't apply the
 // actual relocations - that happens later in InputSection::writeTo().
@@ -151,6 +151,13 @@ static bool isRelExpr(RelExpr expr) {
                RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
+// True if a reference to a non-absolute symbol is independent of the load base
+// of the ELF file.
+static bool isLoadBaseIndependent(Ctx &ctx, RelExpr expr, RelType type) {
+  return oneof<R_SIZE, RE_RISCV_LEB128>(expr) || isRelExpr(expr) ||
+         ctx.target->usesOnlyLowPageBits(type);
+}
+
 static RelExpr toPlt(RelExpr expr) {
   switch (expr) {
   case RE_LOONGARCH_PAGE_PC:
@@ -244,7 +251,7 @@ static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
 static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
                                uint64_t value, uint64_t size) {
   uint16_t versionId = sym.versionId;
-  Defined(ctx, sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
+  Defined(sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
           size, &sec)
       .overwrite(sym);
 
@@ -882,22 +889,11 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (!ctx.arg.isPic)
     return true;
 
-  // Constant when referencing a non-preemptible symbol.
-  if (e == R_SIZE || e == RE_RISCV_LEB128)
-    return true;
-
-  // For the target and the relocation, we want to know if they are
-  // absolute or relative.
   bool absVal = isAbsoluteOrTls(sym) && e != RE_PPC64_TOCBASE;
-  bool relE = isRelExpr(e);
-  if (absVal && !relE)
+  if (!absVal)
+    return isLoadBaseIndependent(ctx, e, type);
+  if (oneof<R_SIZE, RE_RISCV_LEB128>(e) || !isRelExpr(e))
     return true;
-  if (!absVal && relE)
-    return true;
-  if (!absVal && !relE)
-    return ctx.target->usesOnlyLowPageBits(type);
-
-  assert(absVal && relE);
 
   // Allow R_PLT_PC (optimized to R_PC here) to a hidden undefined weak symbol
   // in PIC mode. This is a little strange, but it allows us to link function
@@ -1060,9 +1056,11 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
 
   // When producing an executable, we can perform copy relocations (for
   // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
+  // In a PIE, the reference must be independent of the load base.
   // Copy relocations/canonical PLT entries are unsupported for
   // R_AARCH64_AUTH_ABS64.
   if (!ctx.arg.shared && sym.isShared() &&
+      (!ctx.arg.pie || isLoadBaseIndependent(ctx, expr, type)) &&
       !(ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(ctx, sym)) {
       auto diag = Err(ctx);
@@ -1136,40 +1134,38 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   printLocation(diag, *sec, sym, offset);
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                                  unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
-  for (auto it = rels.begin(); it != rels.end(); ++it) {
-    auto type = it->getType(false);
-    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
+  for (const RelTy &rel : rels) {
+    RelType type = rel.getType(false);
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.file->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelExpr expr = getRelExpr(type, sym, sec.content().data() + offset);
+
+    // Error if the target symbol is undefined. Symbol index 0 may be used by
+    // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    rs.process(expr, type, offset, sym, rs.getAddend(rel, type));
   }
 }
 
-template <class ELFT>
-void TargetInfo::scanSection1(InputSectionBase &sec, unsigned shard) {
-  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
-  if (rels.areRelocsCrel())
-    scanSectionImpl<ELFT>(sec, rels.crels, shard);
-  else if (rels.areRelocsRel())
-    scanSectionImpl<ELFT>(sec, rels.rels, shard);
-  else
-    scanSectionImpl<ELFT>(sec, rels.relas, shard);
-}
-
 void TargetInfo::scanSection(InputSectionBase &sec, unsigned shard) {
-  invokeELFT(scanSection1, sec, shard);
+  invokeELFT(elf::scanSection1, *this, sec, shard);
 }
 
 void RelocScan::scanEhSection(EhInputSection &s) {
   sec = &s;
   OffsetGetter getter(s);
-  auto rels = s.rels;
-  s.relocations.reserve(rels.size());
-  for (auto &r : rels) {
+  s.relocations.reserve(s.rels.size());
+  for (const Relocation &r : s.rels) {
     // Ignore R_*_NONE and other marker relocations.
     if (r.expr == R_NONE)
       continue;
@@ -1185,7 +1181,7 @@ void RelocScan::scanEhSection(EhInputSection &s) {
   }
 }
 
-template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
+void elf::scanRelocations(Ctx &ctx) {
   // Scan all relocations. Each relocation goes through a series of tests to
   // determine if it needs special treatment, such as creating GOT, PLT,
   // copy relocations, etc. Note that relocations for non-alloc sections are
@@ -2056,11 +2052,6 @@ template <class ELFT> void elf::checkNoCrossRefs(Ctx &ctx) {
     }
   }
 }
-
-template void elf::scanRelocations<ELF32LE>(Ctx &);
-template void elf::scanRelocations<ELF32BE>(Ctx &);
-template void elf::scanRelocations<ELF64LE>(Ctx &);
-template void elf::scanRelocations<ELF64BE>(Ctx &);
 
 template void elf::checkNoCrossRefs<ELF32LE>(Ctx &);
 template void elf::checkNoCrossRefs<ELF32BE>(Ctx &);

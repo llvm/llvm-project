@@ -4,10 +4,10 @@
 define void @foo() safestack sspreq {
 entry:
 ; CHECK: %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-; CHECK: %[[USST:.*]] = getelementptr i8, ptr %[[USP]], i32 -16
+; CHECK: %[[USST:.*]] = getelementptr i8, ptr %[[USP]], i64 -16
 ; CHECK: store ptr %[[USST]], ptr @__safestack_unsafe_stack_ptr
 
-; CHECK: %[[A:.*]] = getelementptr i8, ptr %[[USP]], i32 -8
+; CHECK: %[[A:.*]] = getelementptr i8, ptr %[[USP]], i64 -8
 ; CHECK: %[[StackGuard:.*]] = call ptr @llvm.stackguard()
 ; CHECK: store ptr %[[StackGuard]], ptr %[[A]]
   %a = alloca i8, align 1

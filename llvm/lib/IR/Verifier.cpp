@@ -99,6 +99,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -312,6 +313,7 @@ public:
     visitModuleIdents();
     visitModuleCommandLines();
     visitModuleErrnoTBAA();
+    visitModuleRawSections();
 
     verifyCompileUnits();
 
@@ -350,6 +352,7 @@ private:
   void visitModuleIdents();
   void visitModuleCommandLines();
   void visitModuleErrnoTBAA();
+  void visitModuleRawSections();
   void visitModuleFlags();
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
@@ -1968,6 +1971,49 @@ void Verifier::visitModuleErrnoTBAA() {
     TBAAVerifyHelper.visitTBAAMetadata(nullptr, N);
 }
 
+void Verifier::visitModuleRawSections() {
+  const NamedMDNode *RawSections = M.getNamedMetadata("llvm.raw.sections");
+  if (!RawSections)
+    return;
+
+  for (const MDNode *N : RawSections->operands()) {
+    if (N->getNumOperands() != 4) {
+      CheckFailed("llvm.raw.sections entry must have four operands", N);
+      continue;
+    }
+    Check(dyn_cast_or_null<MDString>(N->getOperand(0)),
+          "llvm.raw.sections entry operand 0 must be a string "
+          "(section name)",
+          N);
+    auto *AlignCI = mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(1));
+    Check(AlignCI,
+          "llvm.raw.sections entry operand 1 must be an integer "
+          "(alignment)",
+          N);
+    if (!isPowerOf2_64(AlignCI->getZExtValue())) {
+      CheckFailed("llvm.raw.sections entry operand 1 must be a power of two "
+                  "(alignment)",
+                  N);
+      continue;
+    }
+    auto *FlagsCI = mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(2));
+    Check(FlagsCI,
+          "llvm.raw.sections entry operand 2 must be an integer "
+          "(flags)",
+          N);
+    if (FlagsCI->getZExtValue() != 0) {
+      CheckFailed("llvm.raw.sections entry operand 2 must be zero (flags are "
+                  "reserved for future use)",
+                  N);
+      continue;
+    }
+    Check(dyn_cast_or_null<MDString>(N->getOperand(3)),
+          "llvm.raw.sections entry operand 3 must be a string "
+          "(section data)",
+          N);
+  }
+}
+
 void Verifier::visitModuleFlags() {
   const NamedMDNode *Flags = M.getModuleFlagsMetadata();
   if (!Flags) return;
@@ -2583,6 +2629,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         "'sanitize_realtime and sanitize_realtime_blocking' are incompatible!",
         V);
 
+  Check(!(Attrs.hasFnAttr(Attribute::SanitizeThread) &&
+          Attrs.hasFnAttr(Attribute::SanitizeConcurrency)),
+        "Attributes 'sanitize_thread and sanitize_concurrency' are "
+        "incompatible!",
+        V);
+
   if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
           "Attributes 'optsize and optdebug' are incompatible!", V);
@@ -2733,6 +2785,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                .empty(),
           "\"patchable-function-entry-section\" must not be empty");
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "unsafe-stack-size", V);
   for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
     checkUnsignedBaseTenFuncAttr(Attrs, Attr, V);
 
@@ -3511,6 +3564,9 @@ void Verifier::visitFunction(const Function &F) {
         Check(NumKCFIAttachments == 1,
               "function must have a single !kcfi_type attachment", &F,
               I.second);
+        break;
+      case LLVMContext::MD_annotation:
+        visitAnnotationMetadata(I.second);
         break;
       }
 
@@ -4700,12 +4756,13 @@ void Verifier::checkGEPOperator(const GEPOperator &GEP) {
         "GEP base pointer is not a vector or a vector of pointers", &GEP);
   Check(GEP.getSourceElementType()->isSized(), "GEP into unsized type!", &GEP);
 
-  if (auto *STy = dyn_cast<StructType>(GEP.getSourceElementType())) {
-    Check(!STy->isScalableTy(),
-          "getelementptr cannot target structure that contains scalable vector"
-          "type",
-          &GEP);
-  }
+  Type *SrcTy = GEP.getSourceElementType();
+  while (auto *ATy = dyn_cast<ArrayType>(SrcTy))
+    SrcTy = ATy->getElementType();
+  Check(!isa<StructType>(SrcTy) || !SrcTy->isScalableTy(),
+        "getelementptr cannot target structure that contains scalable vector "
+        "type",
+        &GEP);
 
   SmallVector<Value *, 16> Idxs(GEP.indices());
   Check(
@@ -5547,7 +5604,7 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         "dereferenceable, dereferenceable_or_null "
         "apply only to pointer types",
         &I);
-  Check((isa<LoadInst>(I) || isa<IntToPtrInst>(I)),
+  Check((isa<LoadInst, IntToPtrInst, PHINode>(I)),
         "dereferenceable, dereferenceable_or_null apply only to load"
         " and inttoptr instructions, use attributes for calls or invokes",
         &I);
@@ -6069,10 +6126,11 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
                 F->getIntrinsicID() == Intrinsic::wasm_throw ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
+                F->getIntrinsicID() == Intrinsic::bpf_unwind_exit ||
                 IsAttachedCallOperand(F, CBI, i),
             "Cannot invoke an intrinsic other than donothing, patchpoint, "
-            "statepoint, coro_resume, coro_destroy, clang.arc.attachedcall or "
-            "wasm.(re)throw",
+            "statepoint, coro_resume, coro_destroy, clang.arc.attachedcall, "
+            "wasm.(re)throw or bpf.unwind.exit",
             &I);
       Check(F->getParent() == &M, "Referencing function in another module!", &I,
             &M, F, F->getParent());
@@ -6114,13 +6172,14 @@ void Verifier::visitInstruction(Instruction &I) {
   }
 
   if (MDNode *Range = I.getMetadata(LLVMContext::MD_range)) {
-    Check(isa<LoadInst>(I) || isa<CallInst>(I) || isa<InvokeInst>(I),
-          "Ranges are only for loads, calls and invokes!", &I);
+    Check((isa<LoadInst, CallInst, InvokeInst, PHINode>(I)),
+          "Ranges are only for loads, calls, invokes and phi nodes!", &I);
     visitRangeMetadata(I, Range, I.getType());
   }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofpclass)) {
-    Check(isa<LoadInst>(I), "nofpclass is only for loads", &I);
+    Check((isa<LoadInst, PHINode>(I)),
+          "nofpclass is only for loads and phi nodes", &I);
     visitNoFPClassMetadata(I, MD, I.getType());
   }
 
@@ -6147,15 +6206,16 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
     Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
           &I);
-    Check(isa<LoadInst>(I),
-          "nonnull applies only to load instructions, use attributes"
-          " for calls or invokes",
+    Check((isa<LoadInst, PHINode>(I)),
+          "nonnull applies only to load instructions or phi nodes, use "
+          "attributes for calls or invokes",
           &I);
     Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
   }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_noundef)) {
-    Check(isa<LoadInst>(I), "noundef applies only to load instructions", &I);
+    Check((isa<LoadInst, PHINode>(I)),
+          "noundef applies only to load instructions or phi nodes", &I);
     Check(MD->getNumOperands() == 0, "noundef metadata must be empty", &I);
   }
 
@@ -6185,8 +6245,8 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *AlignMD = I.getMetadata(LLVMContext::MD_align)) {
     Check(I.getType()->isPointerTy(), "align applies only to pointer types",
           &I);
-    Check(isa<LoadInst>(I),
-          "align applies only to load instructions, "
+    Check((isa<LoadInst, PHINode>(I)),
+          "align applies only to load instructions or phi nodes, "
           "use attributes for calls or invokes",
           &I);
     Check(AlignMD->getNumOperands() == 1, "align takes one operand!", &I);
@@ -7204,6 +7264,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(ArgTy->getNumElements() == ResultTy->getMinNumElements(),
           "vector_repeat argument and result must have the same minimum "
           "element count.",
+          &Call);
+    break;
+  }
+  case Intrinsic::vector_shuffle: {
+    auto *RetTy = cast<VectorType>(Call.getType());
+    auto *MaskTy = cast<VectorType>(Call.getArgOperand(1)->getType());
+
+    Check(MaskTy->getElementCount() == RetTy->getElementCount(),
+          "vector_shuffle mask must have the same number of elements as the "
+          "result.",
           &Call);
     break;
   }

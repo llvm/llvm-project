@@ -236,6 +236,16 @@ def vec_ins_or_scal_vec_v2f64 : PatFrags<(ops node:$src),
 def vec_ins_or_scal_vec_v4f32 : PatFrags<(ops node:$src),
                               [(vector_insert undef, node:$src, (i64 0)),
                                (scalar_to_vector_v4f32 node:$src)]>;
+                               
+// Only fold a shift into SSRA/USRA if it has no other users. Otherwise the
+// shift still has to be computed separately, and folding it can stop the
+// other operand of the add from being folded instead.
+let HasOneUse = 1 in {
+def AArch64vashr_oneuse : PatFrag<(ops node:$src, node:$amt),
+                                  (AArch64vashr node:$src, node:$amt)>;
+def AArch64vlshr_oneuse : PatFrag<(ops node:$src, node:$amt),
+                                  (AArch64vlshr node:$src, node:$amt)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Asm Operand Classes.
