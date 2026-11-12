@@ -1,0 +1,20 @@
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
+
+# Check that lane masks at the edges of the supported range are parsed and
+# printed back unchanged.
+
+---
+name: lanemask_boundaries
+body: |
+  bb.0:
+    %0:_(s32) = IMPLICIT_DEF
+    ; CHECK: KILL %0(s32), lanemask(0xFFFFFFFFFFFFFFFF)
+    KILL %0(s32), lanemask(0xFFFFFFFFFFFFFFFF)
+    ; Leading zeros beyond 64 bits are accepted.
+    ; CHECK: KILL %0(s32), lanemask(0x00000000000000FF)
+    KILL %0(s32), lanemask(0x00000000000000000000000000FF)
+    ; CHECK: KILL %0(s32), lanemask(0x0000000000000000)
+    KILL %0(s32), lanemask(0x0)
+    ; CHECK: KILL %0(s32), lanemask(0xFFFFFFFFFFFFFFFF)
+    KILL %0(s32), lanemask(18446744073709551615)
+...
