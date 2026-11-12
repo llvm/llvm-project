@@ -14,6 +14,7 @@
 #ifndef LLVM_INTERFACESTUB_IFSSTUB_H
 #define LLVM_INTERFACESTUB_IFSSTUB_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include <optional>
@@ -52,7 +53,7 @@ enum class IFSBitWidthType {
 
 struct IFSSymbol {
   IFSSymbol() = default;
-  explicit IFSSymbol(const std::string &Name) : Name(Name) {}
+  explicit IFSSymbol(StringRef Name) : Name(Name) {}
   std::string Name;
   std::string Version;
   std::optional<uint64_t> Size;
@@ -87,7 +88,6 @@ struct IFSTarget {
 // A cumulative representation of InterFace stubs.
 // Both textual and binary stubs will read into and write from this object.
 struct IFSStub {
-  // TODO: Add support for symbol versioning.
   VersionTuple IfsVersion;
   std::optional<std::string> SoName;
   IFSTarget Target;
