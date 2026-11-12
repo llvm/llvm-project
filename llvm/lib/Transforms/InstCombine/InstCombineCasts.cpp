@@ -18,6 +18,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instruction.h"
@@ -3538,6 +3539,24 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       // bitcast (inselt <1 x elt> V, X, 0) to <n x m> --> bitcast X to <n x m>
       if (auto *InsElt = dyn_cast<InsertElementInst>(Src))
         return new BitCastInst(InsElt->getOperand(1), DestTy);
+    }
+
+    // Packing an integer into the least-significant element of an otherwise
+    // zero/undef/poison vector can be replaced with a zext.
+    if (DestTy->isIntegerTy() && SrcVTy->getElementType()->isIntegerTy()) {
+      unsigned NumElems = SrcVTy->getNumElements();
+      unsigned LowIdx = DL.isBigEndian() ? NumElems - 1 : 0;
+      Value *Low = findScalarElement(Src, LowIdx);
+
+      auto IsZeroOrLow = [Src, LowIdx](unsigned ElemIdx) {
+        if (ElemIdx == LowIdx)
+          return true;
+        Value *Elem = findScalarElement(Src, ElemIdx);
+        return Elem && match(Elem, m_CombineOr(m_ZeroInt(), m_Undef()));
+      };
+
+      if (Low && all_of(seq(NumElems), IsZeroOrLow))
+        return new ZExtInst(Low, DestTy);
     }
 
     // Convert an artificial vector insert into more analyzable bitwise logic.
