@@ -1457,7 +1457,8 @@ TYPE_PARSER(construct<OmpIterationOffset>(
     Parser<DefinedOperator>{}, scalarIntConstantExpr))
 
 // iteration -> iteration-variable [+/- nonnegative-scalar-integer-constant]
-TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
+TYPE_PARSER(
+    sourced(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{}))))
 
 TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
 

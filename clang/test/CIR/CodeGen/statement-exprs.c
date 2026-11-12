@@ -9,8 +9,8 @@ int f19(void) {
   return ({ 3;;4; });
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[TEST3_S:.*]] = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_S
-// LLVM-DAG: @[[TEST3_S:.*]] = private constant %struct.S { i32 1 }
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[TEST3_S:.*]] = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_S
+// LLVM-DAG: @[[TEST3_S:.*]] = private unnamed_addr constant %struct.S { i32 1 }
 
 // CIR: cir.func {{.*}} @f19() -> !s32i
 // CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
@@ -100,7 +100,7 @@ int nested(void) {
 // CIR:     cir.return %[[RES]] : !s32i
 // CIR:   }
 // CIR:   %[[FINAL_RES:.+]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
-// CIR:   cir.return %[[FINAL_RES]] : !s32i
+// CIR:   cir.return implicit %[[FINAL_RES]] : !s32i
 
 // LLVM: define dso_local i32 @nested()
 // LLVM:   %[[VAR6:.+]] = alloca i32, 

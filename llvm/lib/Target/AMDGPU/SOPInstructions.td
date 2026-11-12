@@ -998,6 +998,22 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
 
+def uniform_unscaled_div_fmas : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2, node:$scale),
+  (unscaled_div_fmas node:$src0, node:$src1, node:$src2, node:$scale),
+  [{ return !N->isDivergent(); }]> {
+  // Uniformity is captured by the result register bank constraint in GlobalISel.
+  let GISelPredicateCode = [{ return true; }];
+}
+
+// Outrank the vector patterns, which include complex operand matchers.
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 31 in
+def : GCNPat<
+  (f32 (uniform_unscaled_div_fmas SSrc_f32:$src0, SSrc_f32:$src1,
+                                 SReg_32:$src2, (i1 srcvalue))),
+  (S_FMAC_F32 $src0, $src1, $src2)
+>;
+
 // On GFX12 MIN/MAX instructions do not read MODE register.
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
     isReMaterializable = 1, SchedRW = [WriteSFPU], AddedComplexity = 25 in {

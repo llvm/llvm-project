@@ -36,6 +36,10 @@ MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
 
 MCAsmInfo::~MCAsmInfo() = default;
 
+unsigned MCAsmInfo::getAsmMacroMaxNestingDepth() const {
+  return getMCCLOptions(TargetOptions).asm_macro_max_nesting_depth;
+}
+
 void MCAsmInfo::addInitialFrameState(const MCCFIInstruction &Inst) {
   InitialFrameState.push_back(Inst);
 }

@@ -6,7 +6,6 @@
 ...
 ---
 name:            bzero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -29,7 +28,6 @@ body:             |
 ...
 ---
 name:            bzero_tail_call
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1

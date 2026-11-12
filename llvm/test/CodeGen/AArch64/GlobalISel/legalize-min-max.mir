@@ -3,7 +3,6 @@
 
 ---
 name:            v8s8_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -25,7 +24,6 @@ body: |
 ...
 ---
 name:            v16s8_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -47,7 +45,6 @@ body: |
 ...
 ---
 name:            v32s8_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -72,7 +69,6 @@ body: |
 ...
 ---
 name:            v4s16_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -94,7 +90,6 @@ body: |
 ...
 ---
 name:            v8s16_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -116,7 +111,6 @@ body: |
 ...
 ---
 name:            v16s16_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -141,7 +135,6 @@ body: |
 ...
 ---
 name:            v2s32_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -163,7 +156,6 @@ body: |
 ...
 ---
 name:            v4s32_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -185,7 +177,6 @@ body: |
 ...
 ---
 name:            v8s32_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -210,7 +201,6 @@ body: |
 ...
 ---
 name:            v2s64_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -238,7 +228,6 @@ body: |
 ...
 ---
 name:            v4s64_smin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -273,7 +262,6 @@ body: |
 ...
 ---
 name:            v8s8_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -295,7 +283,6 @@ body: |
 ...
 ---
 name:            v16s8_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -317,7 +304,6 @@ body: |
 ...
 ---
 name:            v32s8_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -342,7 +328,6 @@ body: |
 ...
 ---
 name:            v4s16_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -364,7 +349,6 @@ body: |
 ...
 ---
 name:            v8s16_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -386,7 +370,6 @@ body: |
 ...
 ---
 name:            v16s16_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -411,7 +394,6 @@ body: |
 ...
 ---
 name:            v2s32_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -433,7 +415,6 @@ body: |
 ...
 ---
 name:            v4s32_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -455,7 +436,6 @@ body: |
 ...
 ---
 name:            v8s32_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -480,7 +460,6 @@ body: |
 ...
 ---
 name:            v2s64_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -508,7 +487,6 @@ body: |
 ...
 ---
 name:            v4s64_umin
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -543,7 +521,6 @@ body: |
 ...
 ---
 name:            v8s8_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -565,7 +542,6 @@ body: |
 ...
 ---
 name:            v16s8_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -587,7 +563,6 @@ body: |
 ...
 ---
 name:            v4s16_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -609,7 +584,6 @@ body: |
 ...
 ---
 name:            v32s8_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -634,7 +608,6 @@ body: |
 ...
 ---
 name:            v8s16_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -656,7 +629,6 @@ body: |
 ...
 ---
 name:            v16s16_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -681,7 +653,6 @@ body: |
 ...
 ---
 name:            v2s32_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -703,7 +674,6 @@ body: |
 ...
 ---
 name:            v4s32_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -725,7 +695,6 @@ body: |
 ...
 ---
 name:            v8s32_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -750,7 +719,6 @@ body: |
 ...
 ---
 name:            v2s64_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -778,7 +746,6 @@ body: |
 ...
 ---
 name:            v4s64_smax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -813,7 +780,6 @@ body: |
 ...
 ---
 name:            v8s8_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -835,7 +801,6 @@ body: |
 ...
 ---
 name:            v16s8_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -857,7 +822,6 @@ body: |
 ...
 ---
 name:            v32s8_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -882,7 +846,6 @@ body: |
 ...
 ---
 name:            v4s16_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -904,7 +867,6 @@ body: |
 ...
 ---
 name:            v8s16_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -926,7 +888,6 @@ body: |
 ...
 ---
 name:            v16s16_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -951,7 +912,6 @@ body: |
 ...
 ---
 name:            v2s32_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -973,7 +933,6 @@ body: |
 ...
 ---
 name:            v4s32_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -995,7 +954,6 @@ body: |
 ...
 ---
 name:            v8s32_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1
@@ -1020,7 +978,6 @@ body: |
 ...
 ---
 name:            v2s64_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0
@@ -1048,7 +1005,6 @@ body: |
 ...
 ---
 name:            v4s64_umax
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $q0, $q1

@@ -16,7 +16,6 @@
 
 ---
 name: partial_redundancy_coalesce_undef_copy_live_out
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: partial_redundancy_coalesce_undef_copy_live_out
   ; CHECK: bb.0:

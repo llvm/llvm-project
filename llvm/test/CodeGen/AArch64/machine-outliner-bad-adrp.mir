@@ -11,7 +11,6 @@
 ---
 name:            foo
 # CHECK-LABEL: name: foo
-tracksRegLiveness: true
 constants:       
   - id:              0
     value:           'float 1.990000e+02'

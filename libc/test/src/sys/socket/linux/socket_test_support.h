@@ -27,7 +27,7 @@
 #include "src/unistd/chdir.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fchdir.h"
-#include "test/UnitTest/LibcTest.h"
+#include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {

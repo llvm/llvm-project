@@ -18,7 +18,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r4_64, $r5_64, $r6_64, $r7_64

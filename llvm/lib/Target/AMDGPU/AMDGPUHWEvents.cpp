@@ -116,14 +116,8 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (TII.isFLAT(Inst)) {
-    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
-      HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
-      if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
-        E |= HWEvents::VMEM_GROUP;
-      return E;
-    }
-
-    assert(Inst.mayLoadOrStore());
+    assert(Inst.mayLoadOrStore() ||
+           SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()));
     HWEvents E = HWEvents::NONE;
     if (TII.mayAccessVMEMThroughFlat(Inst)) {
       if (ST.hasWaitXcnt() && ST.isXNACKEnabled())

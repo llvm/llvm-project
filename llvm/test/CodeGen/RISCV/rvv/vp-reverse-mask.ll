@@ -302,15 +302,19 @@ define <vscale x 128 x i1> @test_vp_reverse_nxv128i1(<vscale x 128 x i1> %src, i
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a1, a2, 4
+; CHECK-NEXT:    bltu a0, a1, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    bltu a0, a2, .LBB14_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    bltu a0, a2, .LBB14_4
+; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:  .LBB14_4:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
@@ -323,6 +327,7 @@ define <vscale x 128 x i1> @test_vp_reverse_nxv128i1(<vscale x 128 x i1> %src, i
 ; CHECK-NEXT:    slli a3, a3, 4
 ; CHECK-NEXT:    sub sp, sp, a3
 ; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    addi a3, sp, 64
 ; CHECK-NEXT:    add a4, a0, a3
 ; CHECK-NEXT:    li a5, -1

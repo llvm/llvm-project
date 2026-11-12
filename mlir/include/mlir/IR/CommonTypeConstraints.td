@@ -118,6 +118,7 @@ class TypeAlias<Type t, string summary = t.summary> :
     Type<t.predicate, summary, t.cppType> {
   let description = t.description;
   let builderCall = t.builderCall;
+  let cppIncludes = t.cppIncludes;
 }
 
 // A type of a specific dialect.
@@ -133,6 +134,7 @@ class Variadic<Type type> : TypeConstraint<type.predicate,
                                            "variadic of " # type.summary,
                                            type.cppType> {
   Type baseType = type;
+  let cppIncludes = type.cppIncludes;
 }
 
 // A nested variadic type constraint. It expands to zero or more variadic ranges
@@ -150,6 +152,7 @@ class VariadicOfVariadic<Type type, string variadicSegmentAttrName>
 class Optional<Type type> : TypeConstraint<type.predicate, type.summary,
                                            type.cppType> {
   Type baseType = type;
+  let cppIncludes = type.cppIncludes;
 }
 
 // A type that can be constructed using MLIR::Builder.
@@ -180,12 +183,16 @@ def AnyType : Type<Neg<IsTokenTypePred>, "any non-token type">;
 
 // The builtin token type.
 def Token : Type<IsTokenTypePred, "token", "::mlir::TokenType">,
-            BuildableType<"$_builder.getType<::mlir::TokenType>()">;
+            BuildableType<"$_builder.getType<::mlir::TokenType>()"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // None type
 def NoneType : Type<CPred<"::llvm::isa<::mlir::NoneType>($_self)">, "none type",
                     "::mlir::NoneType">,
-      BuildableType<"$_builder.getType<::mlir::NoneType>()">;
+      BuildableType<"$_builder.getType<::mlir::NoneType>()"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any type from the given list
 class AnyTypeOf<list<Type> allowedTypeList, string summary = "",
@@ -197,6 +204,7 @@ class AnyTypeOf<list<Type> allowedTypeList, string summary = "",
         summary),
     cppType> {
   list<Type> allowedTypes = allowedTypeList;
+  let cppIncludes = AllCppIncludes<allowedTypeList>.ret;
 }
 
 // A type that satisfies the constraints of all given types.
@@ -209,6 +217,7 @@ class AllOfType<list<Type> allowedTypeList, string summary = "",
         summary),
     cppType> {
   list<Type> allowedTypes = allowedTypeList;
+  let cppIncludes = AllCppIncludes<allowedTypeList>.ret;
 }
 
 // A type that satisfies additional predicates.
@@ -218,7 +227,12 @@ class ConfinedType<Type type, list<Pred> predicates, string summary = "",
     summary, cppType> {
     Type baseType = type;
     list<Pred> predicateList = predicates;
+    let cppIncludes = type.cppIncludes;
 }
+
+// Constraints on builtin types. The types are declared in the builtin types
+// header.
+let cppIncludes = ["mlir/IR/BuiltinTypes.h"] in {
 
 // Integer types.
 
@@ -385,6 +399,8 @@ def F8E8M0FNU : Type<CPred<"::llvm::isa<::mlir::Float8E8M0FNUType>($_self)">, "f
                 BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
 def F8E5M3FNU : Type<CPred<"::llvm::isa<::mlir::Float8E5M3FNUType>($_self)">, "f8E5M3FNU type">,
                 BuildableType<"$_builder.getType<Float8E5M3FNUType>()">;
+def MXI8 : Type<CPred<"::llvm::isa<::mlir::MXI8Type>($_self)">, "mxi8 type">,
+           BuildableType<"$_builder.getType<MXI8Type>()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
@@ -420,6 +436,8 @@ def FunctionType : Type<CPred<"::llvm::isa<::mlir::FunctionType>($_self)">,
 def GraphType : Type<CPred<"::llvm::isa<::mlir::GraphType>($_self)">,
                               "graph type", "::mlir::GraphType">;
 
+} // cppIncludes = ["mlir/IR/BuiltinTypes.h"]
+
 // A container type is a type that has another type embedded within it.
 class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
                     string descr, string cppType = "::mlir::Type"> :
@@ -439,7 +457,11 @@ class ShapedContainerType<list<Type> allowedTypes,
                 SubstLeaves<"$_self", "elementType",
                 AnyTypeOf<allowedTypes>.predicate>,
                 "; }(::llvm::cast<::mlir::ShapedType>($_self).getElementType())">]>,
-         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values" # summary, cppType>;
+         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values" # summary, cppType> {
+  // Shaped container types with a specific C++ type are builtin types.
+  let cppIncludes = !if(!eq(cppType, "::mlir::Type"), ["mlir/IR/Types.h"],
+                       ["mlir/IR/BuiltinTypes.h"]);
+}
 
 // Whether a shaped type is ranked.
 def HasRankPred : CPred<"::llvm::cast<::mlir::ShapedType>($_self).hasRank()">;
@@ -532,17 +554,23 @@ class IsScalableVectorOfRankPred<list<int> allowedRanks> :
 // Any vector where the rank is from the given `allowedRanks` list
 class VectorOfRank<list<int> allowedRanks> : Type<
   IsVectorOfRankPred<allowedRanks>,
-  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType">;
+  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any fixed-length vector where the rank is from the given `allowedRanks` list
 class FixedVectorOfRank<list<int> allowedRanks> : Type<
   IsFixedVectorOfRankPred<allowedRanks>,
-  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType">;
+  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any scalable vector where the rank is from the given `allowedRanks` list
 class ScalableVectorOfRank<list<int> allowedRanks> : Type<
   IsScalableVectorOfRankPred<allowedRanks>,
-  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType">;
+  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any vector where the rank is from the given `allowedRanks` list and the type
 // is from the given `allowedTypes` list
@@ -642,35 +670,45 @@ class IsVectorOfShape<list<int> shape>
 class VectorOfLength<list<int> allowedLengths> : Type<
   IsVectorOfLengthPred<allowedLengths>,
   " of length " # !interleave(allowedLengths, "/"),
-  "::mlir::VectorType">;
+  "::mlir::VectorType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any vector where the number of elements is more than
 // or equal to minLength.
 class VectorOfMinLength<int minLength> : Type<
   IsVectorOfMinLengthPred<minLength>,
   " of at least length " # minLength,
-  "::mlir::VectorType">;
+  "::mlir::VectorType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any vector where the number of elements is less than
 // or equal to maxLength.
 class VectorOfMaxLength<int maxLength> : Type<
   IsVectorOfMaxLengthPred<maxLength>,
   " of at most length " # maxLength,
-  "::mlir::VectorType">;
+  "::mlir::VectorType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list
 class FixedVectorOfLength<list<int> allowedLengths> : Type<
   IsFixedVectorOfLengthPred<allowedLengths>,
   " of length " # !interleave(allowedLengths, "/"),
-  "::mlir::VectorType">;
+  "::mlir::VectorType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any scalable vector where the number of elements is from the given
 // `allowedLengths` list
 class ScalableVectorOfLength<list<int> allowedLengths> : Type<
   IsScalableVectorOfLengthPred<allowedLengths>,
   " of length " # !interleave(allowedLengths, "/"),
-  "::mlir::VectorType">;
+  "::mlir::VectorType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes`
@@ -755,7 +793,9 @@ class ScalableVectorOfRankAndLengthAndType<list<int> allowedRanks,
 class ShapedTypeWithNthDimOfSize<int n, list<int> allowedSizes> : Type<
   IsNthDimSizeIsOneOfPred<n, allowedSizes>,
   " with dim " # n # " having a size of {" # !interleave(allowedSizes, ", ") # "}",
-  "::mlir::ShapedType">;
+  "::mlir::ShapedType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // Any scalable vector with a single trailing scalable dimensions, where the
 // size of the trailing dimension is in `allowedTrailingSizes` list, and the
@@ -947,7 +987,9 @@ class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
          MemRefOf<allowedTypes>.summary>;
 
 // This represents a generic tuple without any constraints on element type.
-def AnyTuple : Type<IsTupleTypePred, "tuple", "::mlir::TupleType">;
+def AnyTuple : Type<IsTupleTypePred, "tuple", "::mlir::TupleType"> {
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
+}
 
 // A container type that has other types embedded in it, but (unlike
 // ContainerType) can hold elements with a mix of types. Requires a call that

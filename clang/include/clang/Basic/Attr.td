@@ -4707,12 +4707,16 @@ def MSVtorDisp : InheritableAttr {
 
 def InitSeg : Attr {
   let Spellings = [Pragma<"", "init_seg">];
-  let Args = [StringArgument<"Section">];
+  let Args = [StringArgument<"Section">,
+              DeclArgument<Function, "Func", /*optional=*/1>];
   let SemaHandler = 0;
   let Documentation = [InitSegDocs];
   let AdditionalMembers = [{
   void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-    OS << " (" << getSection() << ')';
+    OS << " (" << getSection();
+    if (const auto *FD = getFunc())
+      OS << ", " << FD->getName();
+    OS << ')';
   }
   }];
 }
@@ -5460,6 +5464,14 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkLocationDocs];
+}
+
+def HLSLVkBuiltIn : HLSLAnnotationAttr, TargetSpecificAttr<TargetSPIRV> {
+  let Spellings = [CXX11<"vk", "builtin">];
+  let Args = [StringArgument<"BuiltIn">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkBuiltInDocs];
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
