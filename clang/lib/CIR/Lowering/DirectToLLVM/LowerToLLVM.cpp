@@ -3116,6 +3116,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
   for (mlir::NamedAttribute attr : func->getDiscardableAttrs()) {
     if (isHandledDiscardableFuncAttr(attr))
       continue;
+    if (!includeFunctionOnlyAttrs &&
+        attr.getName() == CIRDialect::getUniformWorkGroupSizeAttrName())
+      continue;
     if (openCLMetadataLowering.lower(attr, includeFunctionOnlyAttrs))
       continue;
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
