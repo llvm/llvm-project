@@ -1,7 +1,7 @@
-; RUN: llc -load-pass-plugin %llvmshlibdir/CGTestPlugin%pluginext %s -o - | FileCheck %s
-; REQUIRES: native, system-linux, llvm-dylib, plugins
+; RUN: llc -load-pass-plugin %llvmshlibdir/Ciao%pluginext %s -o - | FileCheck %s
+; REQUIRES: native, system-linux, llvm-dylib, plugins, examples
 
-; CHECK: CodeGen Test Pass running on main
+; CHECK: Ciao: main
 define void @main() {
   ret void
 }
