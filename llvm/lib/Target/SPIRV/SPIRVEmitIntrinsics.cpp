@@ -1176,6 +1176,20 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
   if (!Visited.insert(U).second)
     return OrigTy;
 
+  auto DeduceOpTy = [&](Value *Op, Type *OpTy) -> Type * {
+    auto *PtrTy = dyn_cast<PointerType>(OpTy);
+    if (!PtrTy)
+      return deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
+                                    UnknownElemTypeI8);
+    // A uniqued null carries the pointee an earlier user gave it.
+    if (isa<ConstantPointerNull>(Op))
+      return OpTy;
+    if (Type *NestedTy =
+            deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
+      return getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
+    return OpTy;
+  };
+
   if (auto *OrigStructTy = dyn_cast<StructType>(OrigTy)) {
     SmallVector<Type *> Tys;
     bool Change = false;
@@ -1183,15 +1197,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       Value *Op = U->getOperand(i);
       assert(Op && "Operands should not be null.");
       Type *OpTy = Op->getType();
-      Type *Ty = OpTy;
-      if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-        if (Type *NestedTy =
-                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
-          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
-      } else {
-        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
-                                    UnknownElemTypeI8);
-      }
+      Type *Ty = DeduceOpTy(Op, OpTy);
       Tys.push_back(Ty);
       Change |= Ty != OpTy;
     }
@@ -1205,15 +1211,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
   } else if (auto *ArrTy = dyn_cast<ArrayType>(OrigTy)) {
     for (Value *Op : U->operands()) {
       Type *OpTy = ArrTy->getElementType();
-      Type *Ty = OpTy;
-      if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-        if (Type *NestedTy =
-                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
-          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
-      } else {
-        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
-                                    UnknownElemTypeI8);
-      }
+      Type *Ty = DeduceOpTy(Op, OpTy);
       if (Ty != OpTy) {
         Type *NewTy = ArrayType::get(Ty, ArrTy->getNumElements());
         GR->addDeducedCompositeType(U, NewTy);
@@ -1223,15 +1221,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
   } else if (auto *VecTy = dyn_cast<VectorType>(OrigTy)) {
     for (Value *Op : U->operands()) {
       Type *OpTy = VecTy->getElementType();
-      Type *Ty = OpTy;
-      if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-        if (Type *NestedTy =
-                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
-          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
-      } else {
-        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
-                                    UnknownElemTypeI8);
-      }
+      Type *Ty = DeduceOpTy(Op, OpTy);
       if (Ty != OpTy) {
         Type *NewTy = VectorType::get(Ty, VecTy->getElementCount());
         GR->addDeducedCompositeType(U,
