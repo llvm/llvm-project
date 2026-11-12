@@ -482,3 +482,32 @@ func.func @complex_log1p(%arg: complex<f32>) -> complex<f32> {
 //       CHECK:   %[[RESRE:.+]] = spirv.GL.Log %[[ABS]] : f32
 //       CHECK:   %[[RESIM:.+]] = spirv.GL.Atan2 %[[IM]], %[[ONEPRE]] : f32
 //       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @complex_log_opencl(%arg: complex<f32>) -> complex<f32> {
+  %log = complex.log %arg : complex<f32>
+  return %log : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_log_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.log
+//       CHECK:   spirv.CL.atan2
+
+func.func @complex_log1p_opencl(%arg: complex<f32>) -> complex<f32> {
+  %log1p = complex.log1p %arg : complex<f32>
+  return %log1p : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_log1p_opencl
+//       CHECK:   spirv.Constant 1.000000e+00 : f32
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.log
+//       CHECK:   spirv.CL.atan2
+
+}
