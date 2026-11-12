@@ -209,6 +209,7 @@ private:
   Value *optimizeFMod(CallInst *CI, IRBuilderBase &B);
   Value *mergeSqrtToExp(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B);
+  Value *optimizeSinCos(CallInst *CI, bool IsSin, IRBuilderBase &B);
   Value *optimizeTrigInversionPairs(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSymmetric(CallInst *CI, LibFunc Func, IRBuilderBase &B);
   Value *optimizeRemquo(CallInst *CI, IRBuilderBase &B);
