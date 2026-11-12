@@ -549,11 +549,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // vector ops
   // G_BUILD_VECTOR cannot be legalized by adding elements: the extra elements
-  // are undef, and narrowing the widened vector back to the original type
-  // recreates the instruction being legalized, so the legalizer would never
-  // make progress. Only exact native widths are custom-legalized (and only
-  // when all sources are constant); other vector types are left unsupported.
-  // Lowering non-constant build vectors is tracked by #143099.
+  // are padded with G_IMPLICIT_DEF (GMIR has no poison operand), and narrowing
+  // the widened vector back to the original type recreates the instruction
+  // being legalized, so the legalizer would never make progress. Those padded
+  // lanes are deleted right after by buildDeleteTrailingVectorElements, so
+  // they never reach the selector. Only exact native widths are
+  // custom-legalized (and only when all sources are constant); other vector
+  // types are left unsupported. Lowering non-constant build vectors is tracked
+  // by #143099.
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .customIf([=](const LegalityQuery &Query) {
         return (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
