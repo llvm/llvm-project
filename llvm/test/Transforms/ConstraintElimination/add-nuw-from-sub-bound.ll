@@ -107,7 +107,8 @@ define i32 @mid_plus_one_bounded_by_load(i32 %lo, i32 %hi) {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds nuw [4 x i8], ptr @arr, i64 [[Z]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[G]], align 4
 ; CHECK-NEXT:    [[M1:%.*]] = add nuw i32 [[M]], 1
-; CHECK-NEXT:    ret i32 [[M1]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[M1]], [[V]]
+; CHECK-NEXT:    ret i32 [[R]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -123,7 +124,8 @@ body:
   %g = getelementptr inbounds nuw [4 x i8], ptr @arr, i64 %z
   %v = load i32, ptr %g, align 4
   %m1 = add i32 %m, 1
-  ret i32 %m1
+  %r = add i32 %m1, %v
+  ret i32 %r
 
 exit:
   ret i32 0
