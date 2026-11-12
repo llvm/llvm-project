@@ -68,10 +68,10 @@ static sandboxir::BasicBlock *getBasicBlockByName(sandboxir::Function *F,
 
 TEST_F(SchedulerTest, SchedBundle) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
-  store i8 %v0, ptr %ptr
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v0, i8 %v1) {
+  store i8 %v0, ptr %ptr0
   %other = add i8 %v0, %v1
-  store i8 %v1, ptr %ptr
+  store i8 %v1, ptr %ptr1
   ret void
 }
 )IR");
