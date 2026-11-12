@@ -42,7 +42,6 @@ body:             |
     $x0 = COPY %0(p0)
 ...
 
----
 
 ---
 name:            ptr_mask
