@@ -30,8 +30,8 @@
 # RUN:   %t/cat1-with-load.o %t/cat2-with-load.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --check-prefixes=CATCLS,CATCAT --implicit-check-not '+load'
 
-## Regression test: Check that we don't crash.
-# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
+## Regression test: Check that we don't crash or report conflicts across classes.
+# RUN: %lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass-with-no-rodata.o -o /dev/null
 
 ## Check that we don't emit any warnings without --check-category-conflicts.
 # RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
@@ -295,6 +295,8 @@ _$s11FooAACfD:
   .quad __objc_empty_cache
   .quad 0
   .quad __objc_empty_cache
+## A second class at offset 40 shares the symbol but has a different addend.
+  .quad 0, 0, 0, 0, __objc_empty_cache
 
 _Bar:
   .space 24
@@ -303,12 +305,13 @@ _Bar:
 .section __DATA,__objc_catlist,regular,no_dead_strip
   .quad __CATEGORY_METAFoo_$_Foo20
   .quad __CATEGORY_METABar_$_Bar20
+  .quad __CATEGORY_METAFoo_$_Foo0
 
 .section __DATA,__objc_const
 __CATEGORY_METAFoo_$_Foo20:
   .objc_classname "Foo20"
-  .quad _$s11FooAACfD
-  .quad 0
+  .quad _$s11FooAACfD + 40
+  .quad _SharedMethods
   .quad 0
   .quad 0
   .quad 0
@@ -321,6 +324,15 @@ __CATEGORY_METABar_$_Bar20:
   .quad _Bar + 24
   .quad 0, 0, 0, 0, 0
   .long 64, 0
+
+__CATEGORY_METAFoo_$_Foo0:
+  .objc_classname "Foo0"
+  .quad _$s11FooAACfD, _SharedMethods, 0, 0, 0, 0
+  .long 64, 0
+
+_SharedMethods:
+  .long 24, 1
+  .empty_objc_method "shared", "v16@0:8", "shared"
 
 .subsections_via_symbols
 
