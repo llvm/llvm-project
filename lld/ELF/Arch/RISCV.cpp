@@ -74,6 +74,7 @@ public:
 #define INTERNAL_R_RISCV_GPREL_S 257
 #define INTERNAL_R_RISCV_X0REL_I 258
 #define INTERNAL_R_RISCV_X0REL_S 259
+#define INTERNAL_R_RISCV_RVC_LUI 260
 
 const uint64_t dtpOffset = 0x800;
 
@@ -381,6 +382,7 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_RISCV_HI20:
     case R_RISCV_LO12_I:
     case R_RISCV_LO12_S:
+    case INTERNAL_R_RISCV_RVC_LUI:
       expr = R_ABS;
       break;
 
@@ -561,6 +563,19 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     insn |= imm11 | imm4 | imm9_8 | imm10 | imm6 | imm7 | imm3_1 | imm5;
 
     write16le(loc, insn);
+    return;
+  }
+
+  case INTERNAL_R_RISCV_RVC_LUI: {
+    int64_t imm = SignExtend64(val + 0x800, bits) >> 12;
+    checkInt(ctx, loc, imm, 6, rel);
+    if (imm == 0) { // `c.lui rd, 0` is illegal, convert to `c.li rd, 0`
+      write16le(loc, (read16le(loc) & 0x0F83) | 0x4000);
+    } else {
+      uint16_t imm17 = extractBits(val + 0x800, 17, 17) << 12;
+      uint16_t imm16_12 = extractBits(val + 0x800, 16, 12) << 2;
+      write16le(loc, (read16le(loc) & 0xEF83) | imm17 | imm16_12);
+    }
     return;
   }
 
@@ -1011,11 +1026,33 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   }
 
   const Defined *gp = ctx.sym.riscvGlobalPointer;
-  if (!gp)
-    return;
+  if (!gp || !isInt<12>(r.sym->getVA(ctx, r.addend) - gp->getVA(ctx))) {
+    // We know that this cannot be relaxed to a GP-relative access (either
+    // because GP is not defined or because the symbol is farther than
+    // 12-bits away from it). Check if we might be able to compress the
+    // lui to a c.lui.
+    if (r.type != R_RISCV_HI20 || !(getEFlags(ctx, sec.file) & EF_RISCV_RVC) ||
+        !isInt<18>(r.sym->getVA(ctx, r.addend)))
+      return;
+    const unsigned bits = ctx.arg.wordsize * 8;
+    uint32_t rd = extractBits(read32le(sec.content().data() + r.offset), 11, 7);
+    uint32_t newInsn = 0x6001 | (rd << 7); // c.lui
+    int64_t imm = SignExtend64(r.sym->getVA(ctx, r.addend) + 0x800, bits) >> 12;
 
-  if (!isInt<12>(r.sym->getVA(ctx, r.addend) - gp->getVA(ctx)))
+    // The high immediate may be outside the range if the low needs to be
+    // negative. So the isInt<18> check above is not sufficient. Also,
+    // rd != 2 for c.lui.
+    if (rd == 2 || !isInt<6>(imm))
+      return;
+    if (imm == 0)
+      newInsn &= 0xDFFF;
+    uint16_t imm17 = extractBits(imm, 5, 5) << 12;
+    uint16_t imm16_12 = extractBits(imm, 4, 0) << 2;
+    remove = 2;
+    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_RVC_LUI;
+    sec.relaxAux->writes.push_back(newInsn | imm17 | imm16_12);
     return;
+  }
 
   switch (r.type) {
   case R_RISCV_HI20:
@@ -1341,6 +1378,7 @@ void RISCV::finalizeRelax(int passes) const {
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;
+          case INTERNAL_R_RISCV_RVC_LUI:
           case R_RISCV_RVC_JUMP:
             skip = 2;
             write16le(p, aux.writes[writesIdx++]);
