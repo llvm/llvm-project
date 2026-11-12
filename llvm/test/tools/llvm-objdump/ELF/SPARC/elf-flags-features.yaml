@@ -1,0 +1,99 @@
+## Check that llvm-objdump infers the SPARC subtarget features from the ELF
+## header: EM_SPARC32PLUS / EF_SPARC_32PLUS enable V9, EF_SPARC_SUN_US1
+## enables VIS and EF_SPARC_SUN_US3 enables VIS 2.
+
+## The .text section contains popc (V9), fpadd16 (VIS) and bmask (VIS 2).
+
+# RUN: yaml2obj %s -DMACHINE=EM_SPARC -o %t.sparc
+# RUN: llvm-objdump -d --no-show-raw-insn %t.sparc | \
+# RUN:   FileCheck %s --check-prefix=V8
+
+# RUN: yaml2obj %s -DMACHINE=EM_SPARC32PLUS -o %t.v8plus
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v8plus | \
+# RUN:   FileCheck %s --check-prefix=V9
+
+# RUN: yaml2obj %s -DMACHINE=EM_SPARC32PLUS -DFLAGS="[ EF_SPARC_32PLUS ]" \
+# RUN:   -o %t.v8plus.32plus
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v8plus.32plus | \
+# RUN:   FileCheck %s --check-prefix=V9
+
+# RUN: yaml2obj %s -DMACHINE=EM_SPARC32PLUS \
+# RUN:   -DFLAGS="[ EF_SPARC_32PLUS, EF_SPARC_SUN_US1 ]" -o %t.v8plus.us1
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v8plus.us1 | \
+# RUN:   FileCheck %s --check-prefix=VIS
+
+# RUN: yaml2obj %s -DMACHINE=EM_SPARC32PLUS \
+# RUN:   -DFLAGS="[ EF_SPARC_32PLUS, EF_SPARC_SUN_US3 ]" -o %t.v8plus.us3
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v8plus.us3 | \
+# RUN:   FileCheck %s --check-prefix=VIS2
+
+# RUN: yaml2obj %s -DMACHINE=EM_SPARC32PLUS \
+# RUN:   -DFLAGS="[ EF_SPARC_32PLUS, EF_SPARC_SUN_US1, EF_SPARC_SUN_US3 ]" \
+# RUN:   -o %t.v8plus.all
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v8plus.all | \
+# RUN:   FileCheck %s --check-prefix=ALL
+
+## VIS and VIS 2 depend on V9 but not on each other, so each flag works on its
+## own for EM_SPARCV9, where V9 is always enabled.
+
+# RUN: yaml2obj %s -DCLASS=ELFCLASS64 -DMACHINE=EM_SPARCV9 -o %t.v9
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v9 | \
+# RUN:   FileCheck %s --check-prefix=V9
+
+# RUN: yaml2obj %s -DCLASS=ELFCLASS64 -DMACHINE=EM_SPARCV9 \
+# RUN:   -DFLAGS="[ EF_SPARC_SUN_US1 ]" -o %t.v9.us1
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v9.us1 | \
+# RUN:   FileCheck %s --check-prefix=VIS
+
+# RUN: yaml2obj %s -DCLASS=ELFCLASS64 -DMACHINE=EM_SPARCV9 \
+# RUN:   -DFLAGS="[ EF_SPARC_SUN_US3 ]" -o %t.v9.us3
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v9.us3 | \
+# RUN:   FileCheck %s --check-prefix=VIS2
+
+# RUN: yaml2obj %s -DCLASS=ELFCLASS64 -DMACHINE=EM_SPARCV9 \
+# RUN:   -DFLAGS="[ EF_SPARC_SUN_US1, EF_SPARC_SUN_US3 ]" -o %t.v9.all
+# RUN: llvm-objdump -d --no-show-raw-insn %t.v9.all | \
+# RUN:   FileCheck %s --check-prefix=ALL
+
+## Features inferred from the ELF header can be disabled with --mattr.
+## Disabling V9 also disables VIS and VIS 2, which depend on it.
+
+# RUN: llvm-objdump -d --no-show-raw-insn --mattr=-vis %t.v8plus.all | \
+# RUN:   FileCheck %s --check-prefix=VIS2
+# RUN: llvm-objdump -d --no-show-raw-insn --mattr=-vis2 %t.v8plus.all | \
+# RUN:   FileCheck %s --check-prefix=VIS
+# RUN: llvm-objdump -d --no-show-raw-insn --mattr=-v9 %t.v8plus.all | \
+# RUN:   FileCheck %s --check-prefix=V8
+
+# V8:        <unknown>
+# V8-NEXT:   <unknown>
+# V8-NEXT:   <unknown>
+
+# V9:        popc %g0, %g0
+# V9-NEXT:   <unknown>
+# V9-NEXT:   <unknown>
+
+# VIS:       popc %g0, %g0
+# VIS-NEXT:  fpadd16 %f0, %f2, %f4
+# VIS-NEXT:  <unknown>
+
+# VIS2:      popc %g0, %g0
+# VIS2-NEXT: <unknown>
+# VIS2-NEXT: bmask %o0, %o1, %o2
+
+# ALL:       popc %g0, %g0
+# ALL-NEXT:  fpadd16 %f0, %f2, %f4
+# ALL-NEXT:  bmask %o0, %o1, %o2
+
+--- !ELF
+FileHeader:
+  Class:   [[CLASS=ELFCLASS32]]
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: [[MACHINE]]
+  Flags:   [[FLAGS=<none>]]
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: 8170000089b00a0295b20329
