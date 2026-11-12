@@ -815,6 +815,10 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   else if constexpr (cpp::is_same_v<UnqualT, float128>)
     return FPType::IEEE754_Binary128;
 #endif
+#if defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
+  else if constexpr (cpp::is_same_v<UnqualT, __bf16>)
+    return FPType::BFloat16;
+#endif
   else if constexpr (cpp::is_same_v<UnqualT, bfloat16>)
     return FPType::BFloat16;
   else if constexpr (cpp::is_same_v<UnqualT, Float128>)

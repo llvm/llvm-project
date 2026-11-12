@@ -12,6 +12,7 @@
 
 #include "hdr/float_macros.h" // LDBL_MANT_DIG, LDBL_MAX_EXP
 #include "hdr/stdint_proxy.h" // UINT64_MAX, __SIZEOF_INT128__
+#include "include/llvm-libc-macros/bfloat16-macros.h" // LIBC_TYPES_HAS_BUILTIN_BFLOAT16
 #include "include/llvm-libc-macros/float16-macros.h" // LIBC_TYPES_HAS_FLOAT16
 #include "include/llvm-libc-types/float128.h"        // float128
 #include "src/__support/macros/config.h"             // LIBC_NAMESPACE_DECL
