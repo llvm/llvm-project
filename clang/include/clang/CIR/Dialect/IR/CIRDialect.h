@@ -52,11 +52,10 @@ template <typename ConcreteType>
 class FenvOpTrait : public mlir::OpTrait::TraitBase<ConcreteType, FenvOpTrait> {
 public:
   mlir::Speculation::Speculatability getSpeculatability() {
-    // Masked exceptions cannot trap. When strict_except is false, exception
-    // side effects are non-deterministic, so speculation is still safe.
-    FPEnvConstrainedOpInterface fenvOp = getFenvOp();
-    if (fenvOp.getFenvExceptionMode() == cir::FPExceptionMode::Masked &&
-        !fenvOp.getFenvStrictExcept())
+    // An unconstrained operation, or one whose exceptions are masked and not
+    // strict, can neither trap nor observably change the exception flags.
+    cir::FenvAttr fenv = getFenvOp().getFenvAttr();
+    if (!fenv || fenv.canIgnoreExceptions())
       return mlir::Speculation::Speculatable;
 
     return mlir::Speculation::NotSpeculatable;
@@ -66,6 +65,10 @@ public:
       llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
     if (!getFenvOp().getFenvAttr())
       return;
+    // Every constrained operation keeps the write, even one that can ignore
+    // exceptions, so an unused one is not erased as dead. A folder may still
+    // replace such an operation with a constant: it sets the exception flags
+    // only non-deterministically, so dropping that write is allowed.
     effects.emplace_back(mlir::MemoryEffects::Read::get(),
                          FloatingPointEnvironmentResource::get());
     effects.emplace_back(mlir::MemoryEffects::Write::get(),
@@ -73,8 +76,8 @@ public:
   }
 
 private:
-  FPEnvConstrainedOpInterface getFenvOp() {
-    return mlir::cast<FPEnvConstrainedOpInterface>(this->getOperation());
+  ConcreteType getFenvOp() {
+    return mlir::cast<ConcreteType>(this->getOperation());
   }
 };
 

@@ -54,8 +54,8 @@ module {
     %0 = cir.fcmp oeq %arg0, %arg1 : !cir.float fenv<strict_except = true>
     // CHECK: cir.fcmp olt %arg0, %arg1 : !cir.float signaling fenv<strict_except = true>
     %1 = cir.fcmp olt %arg0, %arg1 : !cir.float signaling fenv<strict_except = true>
-    // CHECK: cir.fcmp une %arg0, %arg1 : !cir.float fenv<>
-    %2 = cir.fcmp une %arg0, %arg1 : !cir.float fenv<>
+    // CHECK: cir.fcmp une %arg0, %arg1 : !cir.float fenv<except_mode = unknown>
+    %2 = cir.fcmp une %arg0, %arg1 : !cir.float fenv<except_mode = unknown>
     cir.return
   }
 }

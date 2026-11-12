@@ -4568,12 +4568,9 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
-  // Do not fold when fenv is present.
-  // TODO(cir): This is overly conservative. We could fold comparisons as long
-  //            as we can prove that the operation wouldn't raise exceptions or
-  //            when the fenv attribute does not require strict exception
-  //            semantics.
-  if (getFenvAttr())
+  // A constrained comparison folds only when it can ignore exceptions; the
+  // rounding mode does not affect a comparison.
+  if (cir::FenvAttr fenv = getFenvAttr(); fenv && !fenv.canIgnoreExceptions())
     return {};
 
   cir::FCmpOpKind kind = getKind();
