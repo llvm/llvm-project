@@ -8581,9 +8581,8 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
     // equality compares as integer?
   }
 
-  // Check to see that the input is converted from an integer type that is small
-  // enough that preserves all bits.  TODO: check here for "known" sign bits.
-  // This would allow us to handle (fptosi (x >>s 62) to float) if x is i64 f.e.
+  // Check whether rounding can affect this comparison. Known bits and sign
+  // correlations may prove an otherwise wide integer exactly representable.
 
   // Following test does NOT adjust IntWidth downwards for signed inputs,
   // because the most negative value still requires all the mantissa bits
@@ -8593,14 +8592,16 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
     int Exp = ilogb(*RHS);
     if (Exp == APFloat::IEK_Inf) {
       int MaxExponent = ilogb(APFloat::getLargest(RHS->getSemantics()));
-      if (MaxExponent < (int)IntWidth - !LHSUnsigned)
-        // Conversion could create infinity.
+      if (MaxExponent < (int)IntWidth - !LHSUnsigned &&
+          !llvm::isKnownExactIntToFP(LHSI->getOperand(0), RHS->getSemantics(),
+                                     !LHSUnsigned, SQ.getWithInstruction(&I)))
         return nullptr;
     } else {
       // Note that if RHS is zero or NaN, then Exp is negative
       // and first condition is trivially false.
-      if (MantissaWidth <= Exp && Exp <= (int)IntWidth - !LHSUnsigned)
-        // Conversion could affect comparison.
+      if (MantissaWidth <= Exp && Exp <= (int)IntWidth - !LHSUnsigned &&
+          !llvm::isKnownExactIntToFP(LHSI->getOperand(0), RHS->getSemantics(),
+                                     !LHSUnsigned, SQ.getWithInstruction(&I)))
         return nullptr;
     }
   }

@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
+
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -110,6 +113,88 @@ bool CombinerHelper::matchCanonicalizeICmp(const MachineInstr &MI,
   }
 
   return false;
+}
+
+bool CombinerHelper::matchFCmpIntToFP(const MachineInstr &MI,
+                                      BuildFnTy &MatchInfo) const {
+  const auto &Cmp = cast<GFCmp>(MI);
+  Register Dst = Cmp.getReg(0);
+  Register CastReg = Cmp.getLHSReg();
+  MachineInstr *Cast = getDefIgnoringCopies(CastReg, MRI);
+  if (!Cast)
+    return false;
+  unsigned Opcode = Cast->getOpcode();
+  if ((Opcode != TargetOpcode::G_SITOFP && Opcode != TargetOpcode::G_UITOFP) ||
+      !MRI.hasOneNonDBGUse(CastReg))
+    return false;
+
+  Register Src = Cast->getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(Src);
+  LLT DstTy = MRI.getType(Dst);
+  auto C = MRI.getType(CastReg).isVector()
+               ? getFConstantSplat(Cmp.getRHSReg(), MRI)
+               : getFConstantVRegValWithLookThrough(Cmp.getRHSReg(), MRI);
+  if (!C || !isConstantLegalOrBeforeLegalizer(SrcTy) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_ICMP, {DstTy, SrcTy}}))
+    return false;
+
+  bool IsSigned = Opcode == TargetOpcode::G_SITOFP;
+  APSInt IntC(SrcTy.getScalarSizeInBits(), !IsSigned);
+  bool IsExact;
+  if (C->Value.convertToInteger(IntC, APFloat::rmTowardZero, &IsExact) !=
+          APFloat::opOK ||
+      !IsExact)
+    return false;
+
+  CmpInst::Predicate Pred;
+  switch (Cmp.getCond()) {
+  default:
+    return false;
+  case CmpInst::FCMP_OEQ:
+  case CmpInst::FCMP_UEQ:
+    Pred = CmpInst::ICMP_EQ;
+    break;
+  case CmpInst::FCMP_ONE:
+  case CmpInst::FCMP_UNE:
+    Pred = CmpInst::ICMP_NE;
+    break;
+  case CmpInst::FCMP_OGT:
+  case CmpInst::FCMP_UGT:
+    Pred = IsSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
+    break;
+  case CmpInst::FCMP_OGE:
+  case CmpInst::FCMP_UGE:
+    Pred = IsSigned ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
+    break;
+  case CmpInst::FCMP_OLT:
+  case CmpInst::FCMP_ULT:
+    Pred = IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
+    break;
+  case CmpInst::FCMP_OLE:
+  case CmpInst::FCMP_ULE:
+    Pred = IsSigned ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+    break;
+  }
+
+  const APInt &Value = IntC;
+  const fltSemantics &Sem = C->Value.getSemantics();
+  auto IsExactInt = [&](const APInt &V) {
+    return llvm::isKnownExactIntToFP(KnownBits::makeConstant(V), Sem, IsSigned);
+  };
+  // Exact neighbors prevent any rounded integer from colliding with C or
+  // crossing the comparison boundary. Otherwise require an exact source.
+  bool Min = IsSigned ? Value.isMinSignedValue() : Value.isMinValue();
+  bool Max = IsSigned ? Value.isMaxSignedValue() : Value.isMaxValue();
+  if (!((Min || IsExactInt(Value - 1)) && (Max || IsExactInt(Value + 1))) &&
+      !(VT && VT->isKnownExactIntToFP(Src, Sem, IsSigned)))
+    return false;
+
+  APInt Const = IntC;
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto RHS = B.buildConstant(SrcTy, Const);
+    B.buildICmp(Pred, Dst, Src, RHS);
+  };
+  return true;
 }
 
 bool CombinerHelper::matchCanonicalizeFCmp(const MachineInstr &MI,

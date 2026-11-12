@@ -95,6 +95,13 @@ public:
                               unsigned Depth = 0);
   unsigned computeNumSignBits(Register R, unsigned Depth = 0);
 
+  /// Return true if the integer scalar or every vector lane in R is known to
+  /// be exactly and finitely representable in Sem. Combine known bits and,
+  /// for signed inputs, replicated sign bits using the shared ValueTracking
+  /// query. False means unknown.
+  bool isKnownExactIntToFP(Register R, const fltSemantics &Sem, bool IsSigned,
+                           unsigned Depth = 0);
+
   // KnownBitsAPI
   KnownBits getKnownBits(Register R);
   KnownBits getKnownBits(Register R, const APInt &DemandedElts,

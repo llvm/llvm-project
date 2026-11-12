@@ -4223,3 +4223,158 @@ TEST_P(FindAllocaForValueTest, findAllocaForValueZeroOffset) {
 
 INSTANTIATE_TEST_SUITE_P(FindAllocaForValueTest, FindAllocaForValueTest,
                          ::testing::ValuesIn(FindAllocaForValueTests));
+
+TEST(ValueTracking, ExactIntToFPKnownBits) {
+  const fltSemantics &F32 = APFloat::IEEEsingle();
+  EXPECT_TRUE(isKnownExactIntToFP(KnownBits(24), F32, false));
+  EXPECT_FALSE(isKnownExactIntToFP(KnownBits(25), F32, false));
+  EXPECT_TRUE(isKnownExactIntToFP(KnownBits(25), F32, true));
+  EXPECT_FALSE(isKnownExactIntToFP(KnownBits(26), F32, true));
+  EXPECT_TRUE(isKnownExactIntToFP(KnownBits(1), F32, true));
+
+  KnownBits K(32);
+  K.Zero = ~APInt(32, 16777218);
+  EXPECT_TRUE(isKnownExactIntToFP(K, F32, false));
+  K.Zero = ~APInt(32, 16777217);
+  EXPECT_FALSE(isKnownExactIntToFP(K, F32, false));
+
+  K.resetAll();
+  K.Zero.setLowBits(7);
+  EXPECT_TRUE(isKnownExactIntToFP(K, F32, true));
+  EXPECT_FALSE(isKnownExactIntToFP(K, F32, false));
+  K.Zero.setLowBits(8);
+  EXPECT_TRUE(isKnownExactIntToFP(K, F32, false));
+
+  // Independently supplied sign-bit information, with an unknown sign.
+  K.resetAll();
+  EXPECT_FALSE(isKnownExactIntToFP(K, F32, true));
+  EXPECT_TRUE(isKnownExactIntToFP(K, F32, true, 8));
+  EXPECT_FALSE(isKnownExactIntToFP(K, F32, true, 7));
+  EXPECT_FALSE(isKnownExactIntToFP(K, F32, false, 8));
+  K.Zero.setBit(0);
+  EXPECT_TRUE(isKnownExactIntToFP(K, F32, true, 7));
+
+  K = KnownBits::makeConstant(APInt(32, -16777216, true));
+  EXPECT_TRUE(isKnownExactIntToFP(K, F32, true));
+  K = KnownBits::makeConstant(APInt(32, -16777217, true));
+  EXPECT_FALSE(isKnownExactIntToFP(K, F32, true));
+  K = KnownBits::makeConstant(APInt::getSignedMinValue(32));
+  EXPECT_TRUE(isKnownExactIntToFP(K, F32, true));
+}
+
+TEST(ValueTracking, ExactIntToFPFormats) {
+  const fltSemantics &F16 = APFloat::IEEEhalf();
+  EXPECT_TRUE(isKnownExactIntToFP(KnownBits(11), F16, false));
+  EXPECT_FALSE(isKnownExactIntToFP(KnownBits(12), F16, false));
+  EXPECT_TRUE(isKnownExactIntToFP(KnownBits(12), F16, true));
+  KnownBits K(16);
+  K.Zero.setLowBits(5);
+  EXPECT_TRUE(isKnownExactIntToFP(K, F16, false)); // Up to 65504.
+  K = KnownBits::makeConstant(APInt(32, 65536));
+  EXPECT_FALSE(isKnownExactIntToFP(K, F16, false));
+  K = KnownBits::makeConstant(APInt(32, -65536, true));
+  EXPECT_FALSE(isKnownExactIntToFP(K, F16, true));
+
+  EXPECT_TRUE(isKnownExactIntToFP(KnownBits(8), APFloat::BFloat(), false));
+  EXPECT_FALSE(isKnownExactIntToFP(KnownBits(9), APFloat::BFloat(), false));
+  EXPECT_TRUE(isKnownExactIntToFP(KnownBits(53), APFloat::IEEEdouble(), false));
+  EXPECT_FALSE(
+      isKnownExactIntToFP(KnownBits(54), APFloat::IEEEdouble(), false));
+  EXPECT_TRUE(
+      isKnownExactIntToFP(KnownBits(64), APFloat::x87DoubleExtended(), true));
+  EXPECT_TRUE(isKnownExactIntToFP(KnownBits(113), APFloat::IEEEquad(), false));
+  EXPECT_FALSE(isKnownExactIntToFP(KnownBits(114), APFloat::IEEEquad(), false));
+  EXPECT_FALSE(
+      isKnownExactIntToFP(KnownBits(8), APFloat::PPCDoubleDouble(), true));
+  EXPECT_TRUE(
+      isKnownExactIntToFP(KnownBits::makeConstant(APInt(128, 0)), F16, false));
+}
+
+TEST_F(ValueTrackingTest, ExactIntToFP) {
+  parseAssembly(R"(
+    define i32 @test(i32 %x) {
+      %A = ashr i32 %x, 7
+      %A2 = ashr i32 %x, 6
+      %A3 = and i32 %A2, -2
+      %A4 = and i32 %x, -128
+      %A5 = and i32 %x, 16777217
+      %A6 = and i32 %x, 16777218
+      ret i32 %A
+    }
+  )");
+  SimplifyQuery SQ(M->getDataLayout());
+  const fltSemantics &F32 = APFloat::IEEEsingle();
+  EXPECT_TRUE(computeKnownBits(A, SQ).isUnknown());
+  EXPECT_TRUE(isKnownExactIntToFP(A, F32, true, SQ));
+  EXPECT_FALSE(isKnownExactIntToFP(A, F32, false, SQ));
+  EXPECT_FALSE(isKnownExactIntToFP(A2, F32, true, SQ));
+  EXPECT_TRUE(isKnownExactIntToFP(A3, F32, true, SQ));
+  EXPECT_TRUE(isKnownExactIntToFP(A4, F32, true, SQ));
+  EXPECT_FALSE(isKnownExactIntToFP(A5, F32, false, SQ));
+  EXPECT_TRUE(isKnownExactIntToFP(A6, F32, false, SQ));
+  EXPECT_FALSE(
+      isKnownExactIntToFP(A, F32, true, SQ, MaxAnalysisRecursionDepth));
+}
+
+TEST_F(ValueTrackingTest, ExactIntToFPVector) {
+  parseAssembly(R"(
+    define <2 x i32> @test(<2 x i32> %x) {
+      %A = ashr <2 x i32> %x, <i32 7, i32 7>
+      %A2 = ashr <2 x i32> %x, <i32 7, i32 6>
+      %A3 = ashr <2 x i32> %x, <i32 6, i32 6>
+      %A4 = and <2 x i32> %A3, <i32 -2, i32 -2>
+      %A5 = and <2 x i32> %A2, <i32 -2, i32 -2>
+      ret <2 x i32> %A
+    }
+  )");
+  SimplifyQuery SQ(M->getDataLayout());
+  const fltSemantics &F32 = APFloat::IEEEsingle();
+  EXPECT_TRUE(isKnownExactIntToFP(A, F32, true, SQ));
+  EXPECT_FALSE(isKnownExactIntToFP(A2, F32, true, SQ));
+  EXPECT_TRUE(isKnownExactIntToFP(A4, F32, true, SQ));
+  // ComputeNumSignBits currently cannot use a non-splat shift amount.
+  EXPECT_FALSE(isKnownExactIntToFP(A5, F32, true, SQ));
+}
+
+TEST(ValueTracking, ExactIntToFPKnownBitsExhaustive) {
+  // Enumerate all known/unknown assignments to seven bits spanning sign,
+  // exponent, and precision boundaries. Check every positive answer against
+  // APFloat conversion of every represented integer, rather than duplicating
+  // the precision calculation in the query.
+  constexpr unsigned Positions[] = {0, 1, 7, 10, 11, 14, 15};
+  for (unsigned State = 0; State != 2187; ++State) {
+    KnownBits K(16);
+    K.Zero.setAllBits();
+    unsigned S = State;
+    for (unsigned Bit : Positions) {
+      if (S % 3 != 0)
+        K.Zero.clearBit(Bit);
+      if (S % 3 == 1)
+        K.One.setBit(Bit);
+      S /= 3;
+    }
+    for (const fltSemantics *Sem : {&APFloat::IEEEhalf(), &APFloat::BFloat()}) {
+      for (bool IsSigned : {false, true}) {
+        for (unsigned SignBits : {1u, 4u, 8u}) {
+          if (!isKnownExactIntToFP(K, *Sem, IsSigned, SignBits))
+            continue;
+          for (unsigned Pattern = 0; Pattern != 128; ++Pattern) {
+            APInt V(16, 0);
+            for (unsigned I = 0; I != 7; ++I)
+              if (Pattern & (1u << I))
+                V.setBit(Positions[I]);
+            if (!(V & K.Zero).isZero() || (V & K.One) != K.One ||
+                (IsSigned && V.getNumSignBits() < SignBits))
+              continue;
+            APFloat F(*Sem);
+            EXPECT_EQ(
+                APFloat::opOK,
+                F.convertFromAPInt(V, IsSigned, APFloat::rmNearestTiesToEven))
+                << "State=" << State << " Value=" << V
+                << " IsSigned=" << IsSigned << " SignBits=" << SignBits;
+          }
+        }
+      }
+    }
+  }
+}

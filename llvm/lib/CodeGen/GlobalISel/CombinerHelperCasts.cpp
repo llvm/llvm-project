@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
+
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -114,6 +117,33 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
   }
 
   return false;
+}
+
+bool CombinerHelper::matchIntToFPToFP(const MachineInstr &MI,
+                                      const MachineInstr &IntToFP,
+                                      BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = IntToFP.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  unsigned Opcode = IntToFP.getOpcode();
+  if (!MRI.hasOneNonDBGUse(IntToFP.getOperand(0).getReg()) ||
+      !isLegalOrBeforeLegalizer({Opcode, {DstTy, SrcTy}}))
+    return false;
+
+  const fltSemantics &Sem = getFltSemanticForLLT(
+      MRI.getType(IntToFP.getOperand(0).getReg()).getScalarType());
+  bool IsSigned = Opcode == TargetOpcode::G_SITOFP;
+  if (!(VT ? VT->isKnownExactIntToFP(Src, Sem, IsSigned)
+           : llvm::isKnownExactIntToFP(KnownBits(SrcTy.getScalarSizeInBits()),
+                                       Sem, IsSigned)))
+    return false;
+
+  uint32_t Flags = MI.getFlags() & IntToFP.getFlags();
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildInstr(Opcode, {Dst}, {Src}, Flags);
+  };
+  return true;
 }
 
 bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
