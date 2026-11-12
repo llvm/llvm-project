@@ -5,6 +5,7 @@
 // produce unconstrained intrinsics
 
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef unsigned char uchar4 __attribute__((ext_vector_type(4)));
 
 // Sanity check we're getting constrained ops for a non-builtin.
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z11strict_faddDv4_fS_
@@ -325,4 +326,15 @@ float4 strict_elementwise_pow(float4 a, float4 b) {
 //
 float4 strict_elementwise_fmod(float4 a, float4 b) {
   return __builtin_elementwise_fmod(a, b);
+}
+
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z38strict_elementwise_convert_from_f8e5m2Dv4_h
+// CHECK-SAME: (i32 noundef [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(<4 x i8> [[TMP0]], metadata !"Float8E5M2") #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[TMP1]]
+//
+float4 strict_elementwise_convert_from_f8e5m2(uchar4 a) {
+  return __builtin_elementwise_convert_from_f8e5m2_f32(a);
 }
