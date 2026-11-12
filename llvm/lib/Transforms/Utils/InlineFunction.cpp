@@ -2234,7 +2234,7 @@ void llvm::updateProfileCallee(
 
 /// An operand bundle "clang.arc.attachedcall" on a call indicates the call
 /// result is implicitly consumed by a call to retainRV/claimRV/unsafeClaimRV
-//  immediately after the call. This function inlines those consuming calls.
+/// immediately after the call. This function inlines those consuming calls.
 ///
 /// There are three cases to consider:
 ///
