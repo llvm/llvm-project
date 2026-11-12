@@ -72,9 +72,6 @@ static bool isCrossCopy(const MachineRegisterInfo &MRI,
   assert(lowersToCopies(MI));
   Register SrcReg = MO.getReg();
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
-  if (DstRC == SrcRC)
-    return false;
-
   unsigned SrcSubIdx = MO.getSubReg();
 
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
@@ -94,6 +91,12 @@ static bool isCrossCopy(const MachineRegisterInfo &MRI,
     SrcSubIdx = TRI.composeSubRegIndices(SubReg, SrcSubIdx);
   }
   }
+
+  if (DstRC == SrcRC &&
+      (SrcSubIdx == DstSubIdx ||
+       (SrcSubIdx && DstSubIdx &&
+        TRI.getSubRegIdxSize(SrcSubIdx) == TRI.getSubRegIdxSize(DstSubIdx))))
+    return false;
 
   return !TRI.findCommonRegClass(SrcRC, SrcSubIdx, DstRC, DstSubIdx);
 }
