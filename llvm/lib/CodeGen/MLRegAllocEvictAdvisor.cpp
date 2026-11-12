@@ -735,7 +735,9 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       if (Cascade <= IntfCascade) {
         if (!Urgent)
           return false;
-        // Greedy only lets an equal cascade evict a spillable range.
+        // Unlike the default advisor, the policy can evict an unspillable range
+        // for a spillable one, leaving it only its own cascade to evict. Greedy
+        // allows that only for spillable ranges.
         if (Cascade == IntfCascade && !Intf->isSpillable())
           return false;
         ++NumUrgent;
