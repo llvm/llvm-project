@@ -29,6 +29,15 @@
   define amdgpu_ps void @existing_setprio_2() {
     ret void
   }
+  define amdgpu_ps void @existing_setprio_after_meta() {
+    ret void
+  }
+  define amdgpu_ps void @end_of_shader_with_meta() {
+    ret void
+  }
+  define amdgpu_ps void @existing_workaround_with_meta() {
+    ret void
+  }
 ...
 
 ---
@@ -385,5 +394,112 @@ body: |
     EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     S_SETPRIO 3
+    S_ENDPGM 0
+...
+
+---
+name: existing_setprio_after_meta
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0' }
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GFX11-LABEL: name: existing_setprio_after_meta
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; GFX11-NEXT: S_SETPRIO 3
+    ; GFX11-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0
+    ;
+    ; GFX1150-LABEL: name: existing_setprio_after_meta
+    ; GFX1150: liveins: $vgpr0
+    ; GFX1150-NEXT: {{  $}}
+    ; GFX1150-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; GFX1150-NEXT: S_SETPRIO 3
+    ; GFX1150-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    ; GFX1150-NEXT: S_SETPRIO 0
+    ; GFX1150-NEXT: S_NOP 0
+    ; GFX1150-NEXT: S_NOP 0
+    ; GFX1150-NEXT: S_ENDPGM 0
+    frame-setup CFI_INSTRUCTION undefined $pc_reg
+    S_SETPRIO 3
+    EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: end_of_shader_with_meta
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0' }
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GFX11-LABEL: name: end_of_shader_with_meta
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; GFX11-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    ; GFX11-NEXT: CFI_INSTRUCTION undefined $pc_reg
+    ; GFX11-NEXT: S_ENDPGM 0
+    ;
+    ; GFX1150-LABEL: name: end_of_shader_with_meta
+    ; GFX1150: liveins: $vgpr0
+    ; GFX1150-NEXT: {{  $}}
+    ; GFX1150-NEXT: S_SETPRIO 2
+    ; GFX1150-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; GFX1150-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    ; GFX1150-NEXT: S_SETPRIO 0
+    ; GFX1150-NEXT: S_NOP 0
+    ; GFX1150-NEXT: S_NOP 0
+    ; GFX1150-NEXT: CFI_INSTRUCTION undefined $pc_reg
+    ; GFX1150-NEXT: S_ENDPGM 0
+    frame-setup CFI_INSTRUCTION undefined $pc_reg
+    EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    CFI_INSTRUCTION undefined $pc_reg
+    S_ENDPGM 0
+...
+
+---
+name: existing_workaround_with_meta
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0' }
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; GFX11-LABEL: name: existing_workaround_with_meta
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    ; GFX11-NEXT: DBG_VALUE $vgpr0, $noreg
+    ; GFX11-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    ; GFX11-NEXT: DBG_VALUE $vgpr0, $noreg
+    ; GFX11-NEXT: S_SETPRIO 0
+    ; GFX11-NEXT: S_NOP 0
+    ; GFX11-NEXT: S_NOP 0
+    ; GFX11-NEXT: S_ENDPGM 0
+    ;
+    ; GFX1150-LABEL: name: existing_workaround_with_meta
+    ; GFX1150: liveins: $vgpr0
+    ; GFX1150-NEXT: {{  $}}
+    ; GFX1150-NEXT: S_SETPRIO 2
+    ; GFX1150-NEXT: EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    ; GFX1150-NEXT: DBG_VALUE $vgpr0, $noreg
+    ; GFX1150-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    ; GFX1150-NEXT: DBG_VALUE $vgpr0, $noreg
+    ; GFX1150-NEXT: S_SETPRIO 0
+    ; GFX1150-NEXT: S_NOP 0
+    ; GFX1150-NEXT: S_NOP 0
+    ; GFX1150-NEXT: S_ENDPGM 0
+    EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    DBG_VALUE $vgpr0, $noreg
+    EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    DBG_VALUE $vgpr0, $noreg
+    S_SETPRIO 0
+    S_NOP 0
+    S_NOP 0
     S_ENDPGM 0
 ...
