@@ -83,6 +83,7 @@ private:
   /// Bitset of libcalls a module may emit a call to.
   LibcallImplBitset AvailableLibcallImpls;
 
+  unsigned WCharSize;
   LongDoubleFormat LongDoubleFmt;
 
 public:
@@ -93,7 +94,7 @@ public:
   LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::Default,
-      FloatABI::ABIType FloatABI = FloatABI::Default,
+      unsigned WCharSize = 0, FloatABI::ABIType FloatABI = FloatABI::Default,
       std::optional<LongDoubleFormat> LDblFormat = std::nullopt,
       StringRef ABIName = "", VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
@@ -208,17 +209,20 @@ public:
   /// and convert it to IR FunctionType and Attributes.
   /// If the C-type function signature is not provided, return nullptr.
   LLVM_ABI std::pair<FunctionType *, AttributeList>
-  getDefaultFunctionTy(const Module &M, RTLIB::LibcallImpl LibcallImpl) const;
+  getDefaultFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                       RTLIB::LibcallImpl LibcallImpl) const;
 
   /// \returns the function type and attributes for the \p LibcallImpl,
-  /// depending on the target of \p M. If the function has incomplete type
+  /// depending on the target \p TT. If the function has incomplete type
   /// information, return nullptr for the function type.
   LLVM_ABI std::pair<FunctionType *, AttributeList>
-  getFunctionTy(const Module &M, RTLIB::LibcallImpl LibcallImpl) const;
+  getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                RTLIB::LibcallImpl LibcallImpl) const;
 
   /// \returns the value type of \p LibcallImpl if it is a global variable
   /// rather than a function, or nullptr otherwise.
-  LLVM_ABI Type *getVariableType(const Module &M,
+  LLVM_ABI Type *getVariableType(LLVMContext &Ctx, const Triple &TT,
+                                 const DataLayout &DL,
                                  RTLIB::LibcallImpl LibcallImpl) const;
 
   /// \returns the declaration of \p LibcallImpl in \p M. If \p M does not

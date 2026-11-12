@@ -2464,8 +2464,8 @@ SDValue SelectionDAGLegalize::ExpandSincosStretLibCall(SDNode *Node) const {
 
   const DataLayout &DL = DAG.getDataLayout();
 
-  const Module &M = *DAG.getMachineFunction().getFunction().getParent();
-  auto [FuncTy, FuncAttrs] = CallsInfo.getFunctionTy(M, SincosStret);
+  auto [FuncTy, FuncAttrs] = CallsInfo.getFunctionTy(
+      *DAG.getContext(), TM.getTargetTriple(), DL, SincosStret);
 
   Type *SincosStretRetTy = FuncTy->getReturnType();
   CallingConv::ID CallConv = CallsInfo.getLibcallImplCallingConv(SincosStret);
