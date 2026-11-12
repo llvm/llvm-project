@@ -46,7 +46,7 @@ __m512d test_mm512_cvt_roundepi64_pd(__m512i __A) {
   // COMMON-LABEL: test_mm512_cvt_roundepi64_pd
   // COMMONIR: @llvm.x86.avx512.sitofp.round.v8f64.v8i64
   // CHECK-ASM: vcvtqq2pd
-  return _mm512_cvt_roundepi64_pd(__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_cvt_roundepi64_pd(__A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_mask_cvt_roundepi64_pd(__m512d __W, __mmask8 __U, __m512i __A) {
@@ -54,7 +54,7 @@ __m512d test_mm512_mask_cvt_roundepi64_pd(__m512d __W, __mmask8 __U, __m512i __A
   // COMMONIR: @llvm.x86.avx512.sitofp.round.v8f64.v8i64
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   // CHECK-ASM: vcvtqq2pd
-  return _mm512_mask_cvt_roundepi64_pd(__W, __U, __A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_mask_cvt_roundepi64_pd(__W, __U, __A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_maskz_cvt_roundepi64_pd(__mmask8 __U, __m512i __A) {
@@ -62,7 +62,7 @@ __m512d test_mm512_maskz_cvt_roundepi64_pd(__mmask8 __U, __m512i __A) {
   // COMMONIR: @llvm.x86.avx512.sitofp.round.v8f64.v8i64
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   // CHECK-ASM: vcvtqq2pd
-  return _mm512_maskz_cvt_roundepi64_pd(__U, __A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_maskz_cvt_roundepi64_pd(__U, __A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m256 test_mm512_cvtepi64_ps(__m512i __A) {
@@ -95,7 +95,7 @@ __m256 test_mm512_cvt_roundepi64_ps(__m512i __A) {
   // COMMON-LABEL: test_mm512_cvt_roundepi64_ps
   // COMMONIR: @llvm.x86.avx512.sitofp.round.v8f32.v8i64
   // CHECK-ASM: vcvtqq2ps
-  return _mm512_cvt_roundepi64_ps(__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_cvt_roundepi64_ps(__A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m256 test_mm512_mask_cvt_roundepi64_ps(__m256 __W, __mmask8 __U, __m512i __A) {
@@ -103,7 +103,7 @@ __m256 test_mm512_mask_cvt_roundepi64_ps(__m256 __W, __mmask8 __U, __m512i __A) 
   // COMMONIR: @llvm.x86.avx512.sitofp.round.v8f32.v8i64
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   // CHECK-ASM: vcvtqq2ps
-  return _mm512_mask_cvt_roundepi64_ps(__W, __U, __A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_mask_cvt_roundepi64_ps(__W, __U, __A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m256 test_mm512_maskz_cvt_roundepi64_ps(__mmask8 __U, __m512i __A) {
@@ -111,7 +111,7 @@ __m256 test_mm512_maskz_cvt_roundepi64_ps(__mmask8 __U, __m512i __A) {
   // COMMONIR: @llvm.x86.avx512.sitofp.round.v8f32.v8i64
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   // CHECK-ASM: vcvtqq2ps
-  return _mm512_maskz_cvt_roundepi64_ps(__U, __A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_maskz_cvt_roundepi64_ps(__U, __A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_cvtepu64_pd(__m512i __A) {
@@ -144,7 +144,7 @@ __m512d test_mm512_cvt_roundepu64_pd(__m512i __A) {
   // COMMON-LABEL: test_mm512_cvt_roundepu64_pd
   // COMMONIR: @llvm.x86.avx512.uitofp.round.v8f64.v8i64
   // CHECK-ASM: vcvtuqq2pd
-  return _mm512_cvt_roundepu64_pd(__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_cvt_roundepu64_pd(__A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_mask_cvt_roundepu64_pd(__m512d __W, __mmask8 __U, __m512i __A) {
@@ -152,7 +152,7 @@ __m512d test_mm512_mask_cvt_roundepu64_pd(__m512d __W, __mmask8 __U, __m512i __A
   // COMMONIR: @llvm.x86.avx512.uitofp.round.v8f64.v8i64
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   // CHECK-ASM: vcvtuqq2pd
-  return _mm512_mask_cvt_roundepu64_pd(__W, __U, __A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_mask_cvt_roundepu64_pd(__W, __U, __A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_maskz_cvt_roundepu64_pd(__mmask8 __U, __m512i __A) {
@@ -160,7 +160,7 @@ __m512d test_mm512_maskz_cvt_roundepu64_pd(__mmask8 __U, __m512i __A) {
   // COMMONIR: @llvm.x86.avx512.uitofp.round.v8f64.v8i64
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   // CHECK-ASM: vcvtuqq2pd
-  return _mm512_maskz_cvt_roundepu64_pd(__U, __A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_maskz_cvt_roundepu64_pd(__U, __A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m256 test_mm512_cvtepu64_ps(__m512i __A) {
@@ -193,7 +193,7 @@ __m256 test_mm512_cvt_roundepu64_ps(__m512i __A) {
   // COMMON-LABEL: test_mm512_cvt_roundepu64_ps
   // COMMONIR: @llvm.x86.avx512.uitofp.round.v8f32.v8i64
   // CHECK-ASM: vcvtuqq2ps
-  return _mm512_cvt_roundepu64_ps(__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_cvt_roundepu64_ps(__A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m256 test_mm512_mask_cvt_roundepu64_ps(__m256 __W, __mmask8 __U, __m512i __A) {
@@ -201,7 +201,7 @@ __m256 test_mm512_mask_cvt_roundepu64_ps(__m256 __W, __mmask8 __U, __m512i __A) 
   // COMMONIR: @llvm.x86.avx512.uitofp.round.v8f32.v8i64
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   // CHECK-ASM: vcvtuqq2ps
-  return _mm512_mask_cvt_roundepu64_ps(__W, __U, __A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_mask_cvt_roundepu64_ps(__W, __U, __A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 
 __m256 test_mm512_maskz_cvt_roundepu64_ps(__mmask8 __U, __m512i __A) {
@@ -209,6 +209,6 @@ __m256 test_mm512_maskz_cvt_roundepu64_ps(__mmask8 __U, __m512i __A) {
   // COMMONIR: @llvm.x86.avx512.uitofp.round.v8f32.v8i64
   // COMMONIR: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   // CHECK-ASM: vcvtuqq2ps
-  return _mm512_maskz_cvt_roundepu64_ps(__U, __A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+  return _mm512_maskz_cvt_roundepu64_ps(__U, __A, _MM_FROUND_TO_NEAREST_TIES_EVEN | _MM_FROUND_NO_EXC);
 }
 

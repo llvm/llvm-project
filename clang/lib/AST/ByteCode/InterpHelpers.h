@@ -157,8 +157,8 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT NumElements,
   if (ElemSize == 0)
     return true;
 
-  // FIXME: Both the SizeT::from() as well as the
-  // NumElements.toAPSInt() in this function are rather expensive.
+  if (!NumElements.isNumber())
+    return Invalid(S, OpPC);
 
   // Can't be too many elements if the bitwidth of NumElements is lower than
   // that of Descriptor::MaxArrayElemBytes.
@@ -166,24 +166,26 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT NumElements,
       (sizeof(Descriptor::MaxArrayElemBytes) * 8))
     return true;
 
+  // Negative sizes aren't ok.
+  if (NumElements.isNegative()) {
+    if (!IsNoThrow)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
+          << NumElements.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
   // FIXME: GH63562
   // APValue stores array extents as unsigned,
   // so anything that is greater that unsigned would overflow when
   // constructing the array, we catch this here.
   SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
   assert(MaxElements.isPositive());
-  if (NumElements.toAPSInt().getActiveBits() >
+  if (NumElements.getActiveBits() >
           ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
       NumElements > MaxElements) {
-    if (!IsNoThrow) {
-      if (NumElements.isSigned() && NumElements.isNegative()) {
-        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
-            << NumElements.toDiagnosticString(S.getASTContext());
-      } else {
-        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_large)
-            << NumElements.toDiagnosticString(S.getASTContext());
-      }
-    }
+    if (!IsNoThrow)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_large)
+          << NumElements.toDiagnosticString(S.getASTContext());
     return false;
   }
   return true;

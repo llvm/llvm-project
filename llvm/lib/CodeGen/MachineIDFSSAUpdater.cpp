@@ -37,7 +37,6 @@ class MachineIDFCalculator final
 public:
   using IDFCalculatorBase =
       typename llvm::IDFCalculatorBase<MachineBasicBlock, IsPostDom>;
-  using ChildrenGetterTy = typename IDFCalculatorBase::ChildrenGetterTy;
 
   MachineIDFCalculator(DominatorTreeBase<MachineBasicBlock, IsPostDom> &DT)
       : IDFCalculatorBase(DT) {}

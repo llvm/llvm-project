@@ -21,7 +21,7 @@ glob
 inttypes
 libgen
 locale
-math/index
+math
 net/if
 netinet/in
 netinet/tcp

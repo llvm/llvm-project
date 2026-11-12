@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -emit-llvm \
 // RUN:   -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc64le-unknown-linux-gnu -emit-llvm   -o - %s | FileCheck %s %}
 
 int A;
 int B[5];

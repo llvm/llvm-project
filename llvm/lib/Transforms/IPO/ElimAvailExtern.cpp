@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
@@ -22,28 +23,12 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "elim-avail-extern"
-
-static cl::opt<bool> ConvertToLocal(
-    "avail-extern-to-local", cl::Hidden,
-    cl::desc("Convert available_externally into locals, renaming them "
-             "to avoid link-time clashes."));
-
-// This option was originally introduced to correctly support the lowering of
-// LDS variables for AMDGPU when ThinLTO is enabled. It can be utilized for
-// other purposes, but make sure it is safe to do so, as privatizing global
-// variables is generally not safe.
-static cl::opt<unsigned> ConvertGlobalVariableInAddrSpace(
-    "avail-extern-gv-in-addrspace-to-local", cl::Hidden,
-    cl::desc(
-        "Convert available_externally global variables into locals if they are "
-        "in specificed addrspace, renaming them to avoid link-time clashes."));
 
 STATISTIC(NumRemovals, "Number of functions removed");
 STATISTIC(NumFunctionsConverted, "Number of functions converted");
@@ -57,7 +42,11 @@ void deleteFunction(Function &F) {
 }
 
 static std::string getNewName(Module &M, const GlobalValue &GV) {
-  return GV.getName().str() + ".__uniq" + getUniqueModuleId(&M);
+  std::string Name = GV.getName().str() + ".__uniq";
+  std::string ModuleId = getUniqueModuleId(&M);
+  if (!ModuleId.empty())
+    Name += "." + ModuleId;
+  return Name;
 }
 
 /// Create a copy of the thinlto import, mark it local, and redirect direct
@@ -113,6 +102,7 @@ static void convertToLocalCopy(Module &M, GlobalVariable &GV) {
 }
 
 static bool eliminateAvailableExternally(Module &M, bool Convert) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
 
   // If a global variable is available externally and in the specified address
@@ -120,8 +110,7 @@ static bool eliminateAvailableExternally(Module &M, bool Convert) {
   for (GlobalVariable &GV : M.globals()) {
     if (!GV.hasAvailableExternallyLinkage())
       continue;
-    if (ConvertGlobalVariableInAddrSpace.getNumOccurrences() &&
-        GV.getAddressSpace() == ConvertGlobalVariableInAddrSpace &&
+    if (GV.getAddressSpace() == Opts.avail_extern_gv_in_addrspace_to_local &&
         !GV.use_empty()) {
       convertToLocalCopy(M, GV);
       Changed = true;
@@ -144,7 +133,7 @@ static bool eliminateAvailableExternally(Module &M, bool Convert) {
     if (F.isDeclaration() || !F.hasAvailableExternallyLinkage())
       continue;
 
-    if (Convert || ConvertToLocal)
+    if (Convert || Opts.avail_extern_to_local)
       convertToLocalCopy(M, F);
     else
       deleteFunction(F);

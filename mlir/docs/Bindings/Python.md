@@ -594,7 +594,7 @@ The former provides all the generic functionality such as comparison, type
 access and printing. The latter provide access to the defining block or
 operation and the position of the value within it. By default, the generic
 `Value` objects are returned from IR traversals. Downcasting is implemented
-through concrete subclass constructors, similarly to attribtues and types:
+through concrete subclass constructors, similarly to attributes and types:
 
 ```python
 from mlir.ir import BlockArgument, OpResult, Value

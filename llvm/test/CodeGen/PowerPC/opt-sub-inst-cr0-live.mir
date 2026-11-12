@@ -108,10 +108,10 @@ body:             |
     %16 = SUBFE8 %2, %0, implicit-def dead $carry, implicit $carry
     %17 = ADDI8 %16, -1
     %18 = ADDI8 %15, -1
-    %19 = ANDC8 killed %17, %16
-    %20 = ANDC8 killed %18, %15
-    %22 = CNTLZD killed %19
-    %24 = CNTLZD killed %20
+    %19 = ANDC8 %17, %16
+    %20 = ANDC8 %18, %15
+    %22 = CNTLZD %19
+    %24 = CNTLZD %20
     %25 = CMPLDI %15, 0
     BCC 76, %25, %bb.2.loop
     ; CHECK: SUBFC8_rec %3, %1, implicit-def $carry, implicit-def $cr0

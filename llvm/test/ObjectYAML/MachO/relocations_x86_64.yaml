@@ -209,6 +209,7 @@
 # CHECK-NEXT:        reserved3:       0x0
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

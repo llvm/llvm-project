@@ -150,9 +150,15 @@ private:
   bool expandLoadInt(MachineBasicBlock &B, MachineBasicBlock::iterator It,
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
       SmallVectorImpl<Register> &NewRegs) const;
+  bool expandStoreCirc(MachineBasicBlock &B, MachineBasicBlock::iterator It,
+                       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+                       SmallVectorImpl<Register> &NewRegs) const;
+  bool expandLoadCirc(MachineBasicBlock &B, MachineBasicBlock::iterator It,
+                      MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+                      SmallVectorImpl<Register> &NewRegs) const;
   bool expandStoreVecPred(MachineBasicBlock &B, MachineBasicBlock::iterator It,
-      MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
-      SmallVectorImpl<Register> &NewRegs) const;
+                          MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+                          SmallVectorImpl<Register> &NewRegs) const;
   bool expandLoadVecPred(MachineBasicBlock &B, MachineBasicBlock::iterator It,
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
       SmallVectorImpl<Register> &NewRegs) const;
