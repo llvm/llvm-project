@@ -157,8 +157,8 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
 
   // Find the earliest virtreg and fixed interference start.
   SlotIndex FirstStart;
-  for (RegUnitInfo &RUI : RegUnits) {
-    LiveIntervalUnion::SegmentIter &I = RUI.VirtI;
+  for (const RegUnitInfo &RUI : RegUnits) {
+    const LiveIntervalUnion::SegmentIter &I = RUI.VirtI;
     if (I.valid() && (!FirstStart.isValid() || I.start() < FirstStart))
       FirstStart = I.start();
     LiveInterval::const_iterator FI = RUI.FixedI;
