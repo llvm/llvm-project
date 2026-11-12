@@ -54,6 +54,7 @@
 namespace clang {
 
 class ASTContext;
+class DeclStateReverter;
 class ClassTemplateDecl;
 class ConstructorUsingShadowDecl;
 class CXXBasePath;
@@ -265,6 +266,7 @@ class CXXRecordDecl : public RecordDecl {
   friend class ASTRecordWriter;
   friend class ASTWriter;
   friend class DeclContext;
+  friend class DeclStateReverter;
   friend class LambdaExpr;
   friend class ODRDiagsEmitter;
 
