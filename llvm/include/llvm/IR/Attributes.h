@@ -124,12 +124,12 @@ public:
 
   enum AttrKind : unsigned {
     // IR-Level Attributes
-    None,                  ///< No attributes have been set
-    #define GET_ATTR_ENUM
+    None, ///< No attributes have been set
+#define GET_ATTR_ENUM
     #include "llvm/IR/Attributes.inc"
-    EndAttrKinds,          ///< Sentinel value useful for loops
-    EmptyKey,              ///< Use as Empty key for DenseMap of AttrKind
-    TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
+    EndAttrKinds, ///< Sentinel value useful for loops
+    EmptyKey,     ///< Use as Empty key for DenseMap of AttrKind
+    TombstoneKey, ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
   static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
