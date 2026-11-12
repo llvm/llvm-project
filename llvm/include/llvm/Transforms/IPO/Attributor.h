@@ -3211,6 +3211,10 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   const StateType &getState() const override { return *this; }
+
+  bool isAtFixpoint() const final { return StateTy::isAtFixpoint(); }
+
+  bool isStateAtFixpoint() const final { return StateTy::isAtFixpoint(); }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -3386,6 +3390,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Return the internal abstract state for inspection.
   virtual StateType &getState() = 0;
   virtual const StateType &getState() const = 0;
+
+  /// Return true if the state is at a fixpoint, like
+  /// getState().isAtFixpoint() but with a single virtual call.
+  virtual bool isStateAtFixpoint() const { return getState().isAtFixpoint(); }
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const { return *this; };
