@@ -6026,17 +6026,8 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
 
     // If we have a null capture, this must be the C++ 'this' capture.
     if (!capture) {
-      QualType type;
-      if (auto *Method =
-              cast_or_null<CXXMethodDecl>(blockDecl->getNonClosureContext()))
-        type = Method->getThisType();
-      else if (auto *RDecl = dyn_cast<CXXRecordDecl>(blockDecl->getParent()))
-        type = CGM.getContext().getCanonicalTagType(RDecl);
-      else
-        llvm_unreachable("unexpected block declcontext");
-
-      fields.push_back(createFieldType("this", type, loc, AS_public,
-                                       offsetInBits, tunit, tunit));
+      fields.push_back(createFieldType("this", block.CXXThisType, loc,
+                                       AS_public, offsetInBits, tunit, tunit));
       continue;
     }
 

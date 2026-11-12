@@ -281,6 +281,9 @@ public:
   CharUnits BlockAlign;
   CharUnits CXXThisOffset;
 
+  /// The type of the captured 'this', if there is one.
+  QualType CXXThisType;
+
   // Offset of the gap caused by block header having a smaller
   // alignment than the alignment of the block descriptor. This
   // is the gap offset before the first capturued field.

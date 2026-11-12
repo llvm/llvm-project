@@ -146,6 +146,29 @@ Address CodeGenFunction::LoadCXXThisAddress() {
       false, nullptr, nullptr, KnownNonNull);
 }
 
+QualType CodeGenFunction::getCXXThisType() const {
+  if (!CXXThisTypeOverride.isNull())
+    return CXXThisTypeOverride;
+
+  // A lambda capturing '*this' by copy points 'this' at the copy.
+  if (LambdaThisCaptureField) {
+    QualType FieldTy = LambdaThisCaptureField->getType();
+    return FieldTy->isPointerType() ? FieldTy
+                                    : getContext().getPointerType(FieldTy);
+  }
+
+  if (BlockInfo && BlockInfo->getBlockDecl()->capturesCXXThis())
+    return BlockInfo->CXXThisType;
+  if (CapturedStmtInfo && CapturedStmtInfo->isCXXThisExprCaptured())
+    return CapturedStmtInfo->getThisFieldDecl()->getType();
+
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(CurFuncDecl);
+      MD && MD->isImplicitObjectMemberFunction())
+    return MD->getThisType();
+
+  return QualType();
+}
+
 /// Emit the address of a field using a member data pointer.
 ///
 /// \param E Only used for emergency diagnostics
