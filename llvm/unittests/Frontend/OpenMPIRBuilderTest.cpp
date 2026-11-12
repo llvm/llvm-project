@@ -9332,4 +9332,69 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseSavedPreheader) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, ParallelNoReturnSharedAlloca) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // Shared outer alloca without lifetime markers, used only inside a
+  // non-returning parallel region. It must remain in the outer function so all
+  // threads access the same shared address, and synthetic ABI allocas (tid,
+  // bound_tid) must also not be sunk.
+  AllocaInst *SharedAI =
+      Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, "shared.var");
+
+  BasicBlock *EnterBB = BasicBlock::Create(Ctx, "parallel.enter", F);
+  Builder.CreateBr(EnterBB);
+  Builder.SetInsertPoint(EnterBB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  Instruction *AtomicOp = nullptr;
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       ArrayRef<BasicBlock *> DeallocBlocks) {
+    Builder.restoreIP(CodeGenIP);
+    BasicBlock *CGBB = CodeGenIP.getNodeParent();
+    SplitBlock(CGBB, &*CodeGenIP);
+    CGBB->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(CGBB);
+    AtomicOp = Builder.CreateAtomicRMW(AtomicRMWInst::Add, SharedAI,
+                                       Builder.getInt32(1), MaybeAlign(),
+                                       AtomicOrdering::Monotonic);
+    Builder.CreateUnreachable();
+    return Error::success();
+  };
+
+  auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                    Value &Orig, Value &Inner,
+                    Value *&ReplacementValue) -> InsertPointTy {
+    // Shared clause: forward the outer address directly.
+    ReplacementValue = &Inner;
+    return CodeGenIP;
+  };
+
+  auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
+
+  IRBuilder<>::InsertPoint AllocaIP(F->getEntryBlock().getFirstInsertionPt());
+  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
+                       OMPBuilder.createParallel(
+                           Loc, AllocaIP, {}, BodyGenCB, PrivCB, FiniCB,
+                           nullptr, nullptr, OMP_PROC_BIND_default, false));
+
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  OMPBuilder.finalize();
+
+  ASSERT_NE(AtomicOp, nullptr);
+  Function *OutlinedFn = AtomicOp->getFunction();
+  EXPECT_NE(OutlinedFn, F);
+  EXPECT_EQ(SharedAI->getFunction(), F);
+  // Expect tid, bound_tid, and the aggregate struct carrying shared.var.
+  EXPECT_EQ(OutlinedFn->arg_size(), 3U);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 } // namespace

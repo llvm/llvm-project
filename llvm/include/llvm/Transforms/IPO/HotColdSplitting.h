@@ -51,7 +51,8 @@ private:
   bool shouldOutlineFrom(const Function &F) const;
   bool outlineColdRegions(Function &F, bool HasProfileSummary);
   bool isSplittingBeneficial(CodeExtractor &CE, const BlockSequence &Region,
-                             TargetTransformInfo &TTI);
+                             TargetTransformInfo &TTI,
+                             const CodeExtractorAnalysisCache &CEAC);
   Function *extractColdRegion(BasicBlock &EntryPoint, CodeExtractor &CE,
                               const CodeExtractorAnalysisCache &CEAC,
                               BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,

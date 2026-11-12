@@ -512,32 +512,49 @@ enum OpenMPOffloadingRequiresDirFlags {
 
 class OMPCodeExtractor : public CodeExtractor {
 public:
-  OMPCodeExtractor(OpenMPIRBuilder &OMPBuilder, ArrayRef<BasicBlock *> BBs,
-                   DominatorTree *DT = nullptr, bool AggregateArgs = false,
+  OMPCodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
+                   bool AggregateArgs = false,
                    BlockFrequencyInfo *BFI = nullptr,
                    BranchProbabilityInfo *BPI = nullptr,
                    AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                    bool AllowAlloca = false,
                    BasicBlock *AllocationBlock = nullptr,
                    ArrayRef<BasicBlock *> DeallocationBlocks = {},
-                   std::string Suffix = "", bool ArgsInZeroAddressSpace = false)
+                   std::string Suffix = "", bool ArgsInZeroAddressSpace = false,
+                   bool VoidReturnWithSingleOutput = true)
       : CodeExtractor(BBs, DT, AggregateArgs, BFI, BPI, AC, AllowVarArgs,
-                      AllowAlloca, AllocationBlock, DeallocationBlocks, Suffix,
-                      ArgsInZeroAddressSpace),
-        OMPBuilder(OMPBuilder) {}
+                      AllowAlloca, AllocationBlock, DeallocationBlocks,
+                      std::move(Suffix), ArgsInZeroAddressSpace,
+                      VoidReturnWithSingleOutput) {
+    // OpenMP outlined functions are invoked via runtime dispatch (often across
+    // multiple threads) rather than called at most once directly, and
+    // OpenMPIRBuilder uses synthetic outer allocas without lifetime markers to
+    // materialize mandatory ABI arguments.
+    setAllowNoReturnAllocaSinking(false);
+  }
 
-  virtual ~OMPCodeExtractor() = default;
-
-protected:
-  OpenMPIRBuilder &OMPBuilder;
+  ~OMPCodeExtractor() override = default;
 };
 
 class DeviceSharedMemCodeExtractor : public OMPCodeExtractor {
 public:
-  using OMPCodeExtractor::OMPCodeExtractor;
-  virtual ~DeviceSharedMemCodeExtractor() = default;
+  DeviceSharedMemCodeExtractor(
+      OpenMPIRBuilder &OMPBuilder, ArrayRef<BasicBlock *> BBs,
+      DominatorTree *DT = nullptr, bool AggregateArgs = false,
+      BlockFrequencyInfo *BFI = nullptr, BranchProbabilityInfo *BPI = nullptr,
+      AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
+      bool AllowAlloca = false, BasicBlock *AllocationBlock = nullptr,
+      ArrayRef<BasicBlock *> DeallocationBlocks = {}, std::string Suffix = "",
+      bool ArgsInZeroAddressSpace = false)
+      : OMPCodeExtractor(BBs, DT, AggregateArgs, BFI, BPI, AC, AllowVarArgs,
+                         AllowAlloca, AllocationBlock, DeallocationBlocks,
+                         std::move(Suffix), ArgsInZeroAddressSpace),
+        OMPBuilder(OMPBuilder) {}
+
+  ~DeviceSharedMemCodeExtractor() override = default;
 
 protected:
+  OpenMPIRBuilder &OMPBuilder;
   virtual Instruction *
   allocateVar(IRBuilder<>::InsertPoint AllocaIP, DebugLoc DL, Type *VarType,
               const Twine &Name = Twine(""),
@@ -2144,16 +2161,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   OI->collectBlocks(ParallelRegionBlockSet, Blocks);
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
-  CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
-                          /* AggregateArgs */ false,
-                          /* BlockFrequencyInfo */ nullptr,
-                          /* BranchProbabilityInfo */ nullptr,
-                          /* AssumptionCache */ nullptr,
-                          /* AllowVarArgs */ true,
-                          /* AllowAlloca */ true,
-                          /* AllocationBlock */ OuterAllocaBlock,
-                          /* DeallocationBlocks */ {},
-                          /* Suffix */ ".omp_par", ArgsInZeroAddressSpace);
+  OMPCodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
+                             /* AggregateArgs */ false,
+                             /* BlockFrequencyInfo */ nullptr,
+                             /* BranchProbabilityInfo */ nullptr,
+                             /* AssumptionCache */ nullptr,
+                             /* AllowVarArgs */ true,
+                             /* AllowAlloca */ true,
+                             /* AllocationBlock */ OuterAllocaBlock,
+                             /* DeallocationBlocks */ {},
+                             /* Suffix */ ".omp_par", ArgsInZeroAddressSpace);
 
   // Find inputs to, outputs from the code region.
   BasicBlock *CommonExit = nullptr;
@@ -6709,18 +6726,18 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   OI->collectBlocks(ParallelRegionBlockSet, Blocks);
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
-  CodeExtractor Extractor(Blocks,
-                          /* DominatorTree */ nullptr,
-                          /* AggregateArgs */ true,
-                          /* BlockFrequencyInfo */ nullptr,
-                          /* BranchProbabilityInfo */ nullptr,
-                          /* AssumptionCache */ nullptr,
-                          /* AllowVarArgs */ true,
-                          /* AllowAlloca */ true,
-                          /* AllocationBlock */ CLI->getPreheader(),
-                          /* DeallocationBlocks */ {},
-                          /* Suffix */ ".omp_wsloop",
-                          /* AggrArgsIn0AddrSpace */ true);
+  OMPCodeExtractor Extractor(Blocks,
+                             /* DominatorTree */ nullptr,
+                             /* AggregateArgs */ true,
+                             /* BlockFrequencyInfo */ nullptr,
+                             /* BranchProbabilityInfo */ nullptr,
+                             /* AssumptionCache */ nullptr,
+                             /* AllowVarArgs */ true,
+                             /* AllowAlloca */ true,
+                             /* AllocationBlock */ CLI->getPreheader(),
+                             /* DeallocationBlocks */ {},
+                             /* Suffix */ ".omp_wsloop",
+                             /* AggrArgsIn0AddrSpace */ true);
 
   BasicBlock *CommonExit = nullptr;
   SetVector<Value *> SinkingCands, HoistingCands;
@@ -12436,7 +12453,7 @@ std::unique_ptr<CodeExtractor>
 OpenMPIRBuilder::OutlineInfo::createCodeExtractor(ArrayRef<BasicBlock *> Blocks,
                                                   bool ArgsInZeroAddressSpace,
                                                   Twine Suffix) {
-  return std::make_unique<CodeExtractor>(
+  return std::make_unique<OMPCodeExtractor>(
       Blocks, /* DominatorTree */ nullptr,
       /* AggregateArgs */ true,
       /* BlockFrequencyInfo */ nullptr,

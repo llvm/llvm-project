@@ -16,6 +16,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -887,6 +888,181 @@ TEST(CodeExtractor, ArgsDebugInfo) {
   TestExtracted(true);
   TestExtracted(false);
   EXPECT_FALSE(verifyFunction(*Func));
+}
+
+TEST(CodeExtractor, NoReturnRegionAllocas) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+    declare void @use(ptr)
+    declare void @fail(ptr) noreturn
+    declare i32 @setjmp(ptr) returns_twice
+
+    ; %buf is only used by the region, which never returns.
+    define void @noreturn(i1 %c) {
+    entry:
+      %buf = alloca [4 x i8]
+      %other = alloca i32
+      call void @llvm.lifetime.start.p0(ptr %buf)
+      call void @use(ptr %other)
+      br i1 %c, label %cold, label %exit
+
+    cold:
+      call void @fail(ptr %buf)
+      unreachable
+
+    exit:
+      call void @llvm.lifetime.end.p0(ptr %buf)
+      ret void
+    }
+
+    ; The region returns.
+    define void @returns(i1 %c) {
+    entry:
+      %buf = alloca [4 x i8]
+      br i1 %c, label %extract, label %exit
+
+    extract:
+      call void @use(ptr %buf)
+      br label %exit
+
+    exit:
+      ret void
+    }
+
+    ; The function may be re-entered through setjmp.
+    define void @setjmp_caller(i1 %c, ptr %env) {
+    entry:
+      %buf = alloca [4 x i8]
+      %r = call i32 @setjmp(ptr %env)
+      br i1 %c, label %cold, label %exit
+
+    cold:
+      call void @fail(ptr %buf)
+      unreachable
+
+    exit:
+      ret void
+    }
+
+    ; Sinking into a non-returning region can be disabled.
+    define void @noreturn_disabled(i1 %c) {
+    entry:
+      %buf = alloca [4 x i8]
+      br i1 %c, label %cold, label %exit
+
+    cold:
+      call void @fail(ptr %buf)
+      unreachable
+
+    exit:
+      ret void
+    }
+
+    declare i32 @__gxx_personality_v0(...)
+
+    ; Region ends in ret (succ_empty before splitReturnBlocks, not unreachable).
+    define void @ends_in_ret(i1 %c) {
+    entry:
+      %buf = alloca [4 x i8]
+      br i1 %c, label %cold, label %exit
+
+    cold:
+      call void @use(ptr %buf)
+      ret void
+
+    exit:
+      ret void
+    }
+
+    ; Region ends in resume (succ_empty, but leaves by unwinding).
+    define void @ends_in_resume(i1 %c) personality ptr @__gxx_personality_v0 {
+    entry:
+      %buf = alloca [4 x i8]
+      br i1 %c, label %cold, label %exit
+
+    cold:
+      invoke void @use(ptr %buf)
+          to label %unreach unwind label %lpad
+
+    unreach:
+      unreachable
+
+    lpad:
+      %lp = landingpad { ptr, i32 }
+          cleanup
+      resume { ptr, i32 } %lp
+
+    exit:
+      ret void
+    }
+
+    ; Non-static (dynamic) alloca must not be sunk.
+    define void @dynamic_alloca(i1 %c, i64 %n) {
+    entry:
+      %buf = alloca i8, i64 %n
+      br i1 %c, label %cold, label %exit
+
+    cold:
+      call void @fail(ptr %buf)
+      unreachable
+
+    exit:
+      ret void
+    }
+  )ir",
+                                                Err, Ctx));
+  ASSERT_TRUE(M) << Err.getMessage();
+
+  auto ExtractBlocks = [&](StringRef Name, ArrayRef<StringRef> BlockNames,
+                           bool AllowNoReturnSinking = true) {
+    Function *Func = M->getFunction(Name);
+    SmallVector<BasicBlock *, 3> Blocks;
+    for (StringRef B : BlockNames)
+      Blocks.push_back(getBlockByName(Func, B));
+    CodeExtractor CE(Blocks);
+    CE.setAllowNoReturnAllocaSinking(AllowNoReturnSinking);
+    EXPECT_TRUE(CE.isEligible());
+    CodeExtractorAnalysisCache CEAC(*Func);
+    SetVector<Value *> SinkCands, HoistCands;
+    BasicBlock *ExitBlock = nullptr;
+    CE.findAllocas(CEAC, SinkCands, HoistCands, ExitBlock);
+    Function *Outlined = CE.extractCodeRegion(CEAC);
+    EXPECT_TRUE(Outlined);
+    EXPECT_FALSE(verifyFunction(*Outlined, &errs()));
+    EXPECT_FALSE(verifyFunction(*Func, &errs()));
+    return std::make_pair(Outlined, SinkCands.size());
+  };
+  auto Extract = [&](StringRef Name, StringRef Block,
+                     bool AllowNoReturnSinking = true) {
+    return ExtractBlocks(Name, {Block}, AllowNoReturnSinking).first;
+  };
+
+  // %buf moves into the outlined function, and its lifetime markers outside
+  // of the region are dropped. %other stays.
+  Function *Outlined = Extract("noreturn", "cold");
+  Function *Func = M->getFunction("noreturn");
+  EXPECT_EQ(Outlined->arg_size(), 0u);
+  Instruction *Buf = getInstByName(Outlined, "buf");
+  ASSERT_TRUE(Buf);
+  EXPECT_EQ(Buf->getParent(), &Outlined->getEntryBlock());
+  EXPECT_TRUE(getInstByName(Func, "other"));
+  EXPECT_TRUE(none_of(instructions(Func), [](const Instruction &I) {
+    return isa<LifetimeIntrinsic>(I);
+  }));
+
+  // Otherwise, %buf is passed to the outlined function and not marked sinkable.
+  EXPECT_EQ(Extract("returns", "extract")->arg_size(), 1u);
+  EXPECT_EQ(Extract("setjmp_caller", "cold")->arg_size(), 1u);
+  EXPECT_EQ(Extract("noreturn_disabled", "cold", false)->arg_size(), 1u);
+  auto [RetOutlined, RetSinks] = ExtractBlocks("ends_in_ret", {"cold"});
+  EXPECT_EQ(RetSinks, 0u);
+  EXPECT_EQ(RetOutlined->arg_size(), 1u);
+  auto [ResumeOutlined, ResumeSinks] =
+      ExtractBlocks("ends_in_resume", {"cold", "unreach", "lpad"});
+  EXPECT_EQ(ResumeSinks, 0u);
+  EXPECT_EQ(ResumeOutlined->arg_size(), 1u);
+  EXPECT_EQ(Extract("dynamic_alloca", "cold")->arg_size(), 1u);
 }
 
 } // end anonymous namespace
