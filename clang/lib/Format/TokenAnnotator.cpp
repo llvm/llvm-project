@@ -3169,10 +3169,19 @@ private:
     if (Tok.is(tok::amp) && PrevToken->Tok.isAnyIdentifier() &&
         IsChainedOperatorAmpOrMember(PrevToken->getPreviousNonComment()) &&
         NextToken && NextToken->Tok.isAnyIdentifier()) {
-      if (auto NextNext = NextToken->getNextNonComment();
-          NextNext &&
-          (IsChainedOperatorAmpOrMember(NextNext) || NextNext->is(tok::semi))) {
-        return TT_BinaryOperator;
+      if (auto NextNext = NextToken->getNextNonComment(); NextNext) {
+        if (IsChainedOperatorAmpOrMember(NextNext) || NextNext->is(tok::semi))
+          return TT_BinaryOperator;
+
+        // A qualified function call on the RHS indicates a binary expression.
+        if (NextNext->is(tok::coloncolon)) {
+          const auto *QualifiedName = NextNext->getNextNonComment();
+          if (QualifiedName && QualifiedName->is(tok::identifier)) {
+            const auto *AfterName = QualifiedName->getNextNonComment();
+            if (AfterName && AfterName->is(tok::l_paren))
+              return TT_BinaryOperator;
+          }
+        }
       }
     }
 
