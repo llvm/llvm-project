@@ -2566,11 +2566,11 @@ public:
   }
 
   Value *CreateICmp(CmpInst::Predicate P, Value *LHS, Value *RHS,
-                    const Twine &Name = "", bool IsSameSign = false) {
+                    const Twine &Name = "", bool HasSameSign = false) {
     if (auto *V = Folder.FoldCmp(P, LHS, RHS))
       return V;
     ICmpInst *I = Insert(new ICmpInst(P, LHS, RHS), Name);
-    if (IsSameSign)
+    if (HasSameSign)
       I->setSameSign();
     return I;
   }
