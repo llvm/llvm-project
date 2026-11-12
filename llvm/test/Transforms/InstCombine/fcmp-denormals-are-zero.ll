@@ -13,7 +13,7 @@ define void @denormal_input_preserve_sign_fcmp_olt_smallest_normalized(float %f3
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 1
 ; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oeq half [[F16:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 1
-; CHECK-NEXT:    [[CMPF32_FLAGS:%.*]] = fcmp oeq float [[F32]], 0.000000e+00
+; CHECK-NEXT:    [[CMPF32_FLAGS:%.*]] = fcmp nnan oeq float [[F32]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32_FLAGS]], ptr @var, align 1
 ; CHECK-NEXT:    ret void
 ;
