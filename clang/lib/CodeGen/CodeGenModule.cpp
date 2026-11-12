@@ -3201,6 +3201,91 @@ CodeGenModule::getMostBaseClasses(const CXXRecordDecl *RD) {
   return MostBases.takeVector();
 }
 
+namespace {
+/// Finds whether the template arguments of a function template instantiation,
+/// or of the class and function templates it is nested in, name an entity
+/// (class, enum, lambda closure type, function or template) declared in the
+/// main source file. Such an instantiation (ignoring unusual setups, and ODR
+/// equivalent definitions in multiple main files) can't be referenced or
+/// emitted by any other translation unit.
+class MainFileTemplateArgFinder {
+  const SourceManager &SM;
+  // Bound the walk over deeply nested template arguments.
+  unsigned Budget = 128;
+
+  bool inMainFile(const Decl *D) {
+    return D && SM.isInMainFile(D->getLocation());
+  }
+
+  bool visitType(QualType T) {
+    if (T.isNull() || Budget == 0)
+      return false;
+    --Budget;
+    const Type *Ty = T.getCanonicalType().getTypePtr();
+    if (const auto *PT = dyn_cast<PointerType>(Ty))
+      return visitType(PT->getPointeeType());
+    if (const auto *RT = dyn_cast<ReferenceType>(Ty))
+      return visitType(RT->getPointeeType());
+    if (const auto *AT = dyn_cast<ArrayType>(Ty))
+      return visitType(AT->getElementType());
+    if (const auto *MPT = dyn_cast<MemberPointerType>(Ty))
+      return inMainFile(MPT->getMostRecentCXXRecordDecl()) ||
+             visitType(MPT->getPointeeType());
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(Ty))
+      return visitType(FPT->getReturnType()) ||
+             llvm::any_of(FPT->param_types(),
+                          [&](QualType P) { return visitType(P); });
+    if (const TagDecl *TD = Ty->getAsTagDecl())
+      return inMainFile(TD) || visitContext(TD);
+    return false;
+  }
+
+  bool visitArg(const TemplateArgument &A) {
+    switch (A.getKind()) {
+    case TemplateArgument::Type:
+      return visitType(A.getAsType());
+    case TemplateArgument::Declaration:
+      return inMainFile(A.getAsDecl());
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      return inMainFile(A.getAsTemplateOrTemplatePattern().getAsTemplateDecl());
+    case TemplateArgument::Pack:
+      return visitArgs(A.pack_elements());
+    default:
+      return false;
+    }
+  }
+
+  bool visitArgs(ArrayRef<TemplateArgument> Args) {
+    return llvm::any_of(Args,
+                        [&](const TemplateArgument &A) { return visitArg(A); });
+  }
+
+  // Template arguments of D itself (if a specialization) and of the class and
+  // function template specializations enclosing it, e.g. a member function of
+  // std::vector<T>, or a lambda inside std::sort<It, Cmp>.
+  bool visitContext(const Decl *D) {
+    for (const DeclContext *DC = dyn_cast<DeclContext>(D); DC;
+         DC = DC->getParent()) {
+      if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
+        if (visitArgs(CTSD->getTemplateArgs().asArray()))
+          return true;
+      } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
+        if (const TemplateArgumentList *Args =
+                FD->getTemplateSpecializationArgs())
+          if (visitArgs(Args->asArray()))
+            return true;
+      }
+    }
+    return false;
+  }
+
+public:
+  MainFileTemplateArgFinder(const SourceManager &SM) : SM(SM) {}
+  bool find(const FunctionDecl *FD) { return visitContext(FD); }
+};
+} // namespace
+
 void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
                                                            llvm::Function *F) {
   llvm::AttrBuilder B(F->getContext());
@@ -3351,9 +3436,11 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     const SourceManager &SM = getContext().getSourceManager();
     // D->getLocation(), for a template instantiation, is the location of the
     // template's definition, not instantiation.
-    // TODO: Also consider template instantiations where a template argument is
-    // a class declared in the main file.
     bool InMainFile = SM.isInMainFile(D->getLocation());
+    // A template defined in a header but instantiated with a main-file class,
+    // e.g. std::sort with a main-file comparator or lambda.
+    if (FD && !InMainFile && FD->isTemplateInstantiation())
+      InMainFile = MainFileTemplateArgFinder(SM).find(FD);
     if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
       B.addAttribute(llvm::Attribute::LikelyModuleLocal);
   }

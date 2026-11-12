@@ -66,10 +66,8 @@ int use(int x) {
 // HDR-NOT: likely_module_local
 // HDR-SAME: }
 
-// Template defined in hdr.h, instantiated (with a main.cpp lambda) in main.cpp.
+// Template defined in hdr.h, instantiated with a main.cpp lambda in main.cpp.
 // HDRTMPL: define{{.*}} i32 @_Z8hdr_call{{.*}}) #[[HDRTMPL:[0-9]+]]
-// HDRTMPL: attributes #[[HDRTMPL]] = {
-// HDRTMPL-NOT: likely_module_local
-// HDRTMPL-SAME: }
+// HDRTMPL: attributes #[[HDRTMPL]] = { {{.*}}likely_module_local{{.*}} }
 
 // OFF-NOT: likely_module_local
