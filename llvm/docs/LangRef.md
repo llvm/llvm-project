@@ -13989,7 +13989,7 @@ assumptions to be made about the values of input arguments; namely
 ##### Syntax:
 
 ```
-<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...
+<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...[, !nonnull !<empty_node>][, !noundef !<empty_node>][, !range !<range-info>][, !nofpclass !<fpclass-info>][, !align !<align_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>]
 ```
 
 ##### Overview:
@@ -14202,7 +14202,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -14211,7 +14211,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-   
+
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -14220,7 +14220,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-   
+
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -14236,14 +14236,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-   
+
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
