@@ -32,9 +32,17 @@ spirv.GlobalVariable @varOutput : !spirv.ptr<i1, Output>
 // CHECK-UNKNOWN:        llvm.func @pointerWorkgroup(!llvm.ptr)
 spirv.func @pointerWorkgroup(!spirv.ptr<i1, Workgroup>) "None"
 
+// CHECK-OPENCL:         llvm.mlir.global private @varWorkgroup() {addr_space = 3 : i32} : i1
+// CHECK-UNKNOWN:        llvm.mlir.global private @varWorkgroup() {addr_space = 0 : i32} : i1
+spirv.GlobalVariable @varWorkgroup : !spirv.ptr<i1, Workgroup>
+
 // CHECK-OPENCL:         llvm.func @pointerCrossWorkgroup(!llvm.ptr<1>)
 // CHECK-UNKNOWN:        llvm.func @pointerCrossWorkgroup(!llvm.ptr)
 spirv.func @pointerCrossWorkgroup(!spirv.ptr<i1, CrossWorkgroup>) "None"
+
+// CHECK-OPENCL:         llvm.mlir.global external @varCrossWorkgroup() {addr_space = 1 : i32} : i1
+// CHECK-UNKNOWN:        llvm.mlir.global external @varCrossWorkgroup() {addr_space = 0 : i32} : i1
+spirv.GlobalVariable @varCrossWorkgroup : !spirv.ptr<i1, CrossWorkgroup>
 
 // CHECK-ALL:            llvm.func @pointerPrivate(!llvm.ptr)
 spirv.func @pointerPrivate(!spirv.ptr<i1, Private>) "None"
