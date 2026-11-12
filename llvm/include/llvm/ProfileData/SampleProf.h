@@ -841,7 +841,7 @@ class SampleProfileReaderItaniumRemapper;
 using BodySampleMap = SortedVectorMap<LineLocation, SampleRecord, 0>;
 // NOTE: Using a StringMap here makes parsed profiles consume around 17% more
 // memory, which is *very* significant for large profiles.
-using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
+using FunctionSamplesMap = SortedVectorMap<FunctionId, FunctionSamples, 0>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
 using CallsiteTypeMap = SortedVectorMap<LineLocation, TypeCountMap, 0>;
 using LocToLocMap = DenseMap<LineLocation, LineLocation>;
@@ -1064,6 +1064,8 @@ public:
   /// \p Loc with the maximum total sample count. If \p Remapper or \p
   /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
   /// with equivalent name as \p CalleeName.
+  /// The returned pointer may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
   LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
       const LineLocation &Loc, StringRef CalleeName,
       SampleProfileReaderItaniumRemapper *Remapper,

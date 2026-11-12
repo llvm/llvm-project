@@ -549,7 +549,7 @@ void ProfileConverter::convertCSProfiles(ProfileConverter::FrameNode &Node) {
     if (NodeProfile) {
       // Add child profile to the callsite profile map.
       auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
-      SamplesMap.emplace(OrigChildContext.getFunction(), *ChildProfile);
+      SamplesMap.try_emplace(OrigChildContext.getFunction(), *ChildProfile);
       NodeProfile->addTotalSamples(ChildProfile->getTotalSamples());
       // Remove the corresponding body sample for the callsite and update the
       // total weight.
