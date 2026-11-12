@@ -193,6 +193,13 @@ def LoopHintsRequireLoopId : PredOpTrait<
   CPred<"!$loop_hints || $loop_id">
 >;
 
+// 'vectorized' describes a loop that is the result of vectorizing another one,
+// so it is only meaningful in the hints in 'unroll_and_jam_inner'.
+def LoopHintsNotVectorized : PredOpTrait<
+  "'loop_hints' can only have 'vectorized' in 'unroll_and_jam_inner'",
+  CPred<"!$loop_hints || !$loop_hints->getVectorized()">
+>;
+
 // Like `SameTypeOperands`, but the operands are pointers that are only required
 // to share the same pointee type; they may still differ in address space (e.g.
 // a `cir.copy` that assigns through an address-space-qualified pointer).
@@ -1922,7 +1929,7 @@ def CIR_SwitchFlatOp : CIR_Op<"switch.flat", [
 
 def CIR_BrOp : CIR_Op<"br",[
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  Pure, Terminator, LoopHintsRequireLoopId
+  Pure, Terminator, LoopHintsRequireLoopId, LoopHintsNotVectorized
 ]> {
   let summary = "Unconditional branch";
   let description = [{
@@ -2264,7 +2271,8 @@ def CIR_FreezeOp : CIR_Op<"freeze", [Pure, SameOperandsAndResultType]> {
 
 def CIR_BrCondOp : CIR_Op<"brcond", [
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  Pure, Terminator, AttrSizedOperandSegments, LoopHintsRequireLoopId
+  Pure, Terminator, AttrSizedOperandSegments, LoopHintsRequireLoopId,
+  LoopHintsNotVectorized
 ]> {
   let summary = "Conditional branch";
   let description = [{
@@ -2371,7 +2379,8 @@ def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
 //===----------------------------------------------------------------------===//
 
 class CIR_LoopOpBase<string mnemonic> : CIR_Op<mnemonic, [
-  LoopOpInterface, NoRegionArguments, LoopHintsRequireLoopId
+  LoopOpInterface, NoRegionArguments, LoopHintsRequireLoopId,
+  LoopHintsNotVectorized
 ]> {
   let extraClassDefinition = [{
     void $cppClass::getSuccessorRegions(
