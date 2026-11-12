@@ -1022,16 +1022,12 @@ define void @test_sincos_f128(ptr sret({ fp128, fp128 }) %ret, ptr %in) #0 {
 ; GNU64-NEXT:    save %sp, -208, %sp
 ; GNU64-NEXT:    ldd [%i1], %f0
 ; GNU64-NEXT:    ldd [%i1+8], %f2
-; GNU64-NEXT:    add %fp, 2031, %i1
-; GNU64-NEXT:    add %fp, 2015, %i2
-; GNU64-NEXT:    mov %i1, %o2
+; GNU64-NEXT:    add %fp, 2031, %o2
 ; GNU64-NEXT:    call sincosl
-; GNU64-NEXT:    mov %i2, %o3
-; GNU64-NEXT:    or %i1, 8, %i1
-; GNU64-NEXT:    or %i2, 8, %i2
-; GNU64-NEXT:    ldd [%i2], %f0
+; GNU64-NEXT:    add %fp, 2015, %o3
+; GNU64-NEXT:    ldd [%fp+2023], %f0
 ; GNU64-NEXT:    ldd [%fp+2015], %f2
-; GNU64-NEXT:    ldd [%i1], %f4
+; GNU64-NEXT:    ldd [%fp+2039], %f4
 ; GNU64-NEXT:    ldd [%fp+2031], %f6
 ; GNU64-NEXT:    std %f0, [%i0+24]
 ; GNU64-NEXT:    std %f2, [%i0+16]
@@ -1209,29 +1205,21 @@ define void @test_sincos_v2f128(ptr sret({ <2 x fp128>, <2 x fp128> }) %ret, ptr
 ; GNU64-NEXT:    std %f2, [%fp+1975] ! 16-byte Folded Spill
 ; GNU64-NEXT:    ldd [%i1], %f0
 ; GNU64-NEXT:    ldd [%i1+8], %f2
-; GNU64-NEXT:    add %fp, 1999, %i1
-; GNU64-NEXT:    add %fp, 1983, %i2
-; GNU64-NEXT:    mov %i1, %o2
+; GNU64-NEXT:    add %fp, 1999, %o2
 ; GNU64-NEXT:    call sincosl
-; GNU64-NEXT:    mov %i2, %o3
-; GNU64-NEXT:    add %fp, 2031, %i3
-; GNU64-NEXT:    add %fp, 2015, %i4
+; GNU64-NEXT:    add %fp, 1983, %o3
+; GNU64-NEXT:    add %fp, 2031, %o2
+; GNU64-NEXT:    add %fp, 2015, %o3
 ; GNU64-NEXT:    ldd [%fp+1967], %f0
-; GNU64-NEXT:    ldd [%fp+1975], %f2 ! 16-byte Folded Reload
-; GNU64-NEXT:    mov %i3, %o2
 ; GNU64-NEXT:    call sincosl
-; GNU64-NEXT:    mov %i4, %o3
+; GNU64-NEXT:    ldd [%fp+1975], %f2
 ; GNU64-NEXT:    ldd [%fp+1999], %f0
-; GNU64-NEXT:    or %i1, 8, %i1
-; GNU64-NEXT:    ldd [%i1], %f2
+; GNU64-NEXT:    ldd [%fp+2007], %f2
 ; GNU64-NEXT:    ldd [%fp+2031], %f4
-; GNU64-NEXT:    or %i3, 8, %i1
-; GNU64-NEXT:    ldd [%i1], %f6
-; GNU64-NEXT:    or %i2, 8, %i1
-; GNU64-NEXT:    or %i4, 8, %i2
-; GNU64-NEXT:    ldd [%i2], %f8
+; GNU64-NEXT:    ldd [%fp+2039], %f6
+; GNU64-NEXT:    ldd [%fp+2023], %f8
 ; GNU64-NEXT:    ldd [%fp+2015], %f10
-; GNU64-NEXT:    ldd [%i1], %f12
+; GNU64-NEXT:    ldd [%fp+1991], %f12
 ; GNU64-NEXT:    ldd [%fp+1983], %f14
 ; GNU64-NEXT:    std %f8, [%i0+56]
 ; GNU64-NEXT:    std %f10, [%i0+48]

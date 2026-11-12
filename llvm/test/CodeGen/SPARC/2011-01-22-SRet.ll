@@ -36,11 +36,10 @@ define i32 @test() nounwind {
 ; CHECK-NEXT:    call make_foo
 ; CHECK-NEXT:    st %i0, [%sp+64]
 ; CHECK-NEXT:    unimp 12
-; CHECK-NEXT:    ld [%fp+-16], %i1
-; CHECK-NEXT:    or %i0, 4, %i0
-; CHECK-NEXT:    ld [%i0], %i0
+; CHECK-NEXT:    ld [%fp+-16], %i0
+; CHECK-NEXT:    ld [%fp+-12], %i1
 ; CHECK-NEXT:    ld [%fp+-8], %i2
-; CHECK-NEXT:    add %i0, %i1, %i0
+; CHECK-NEXT:    add %i1, %i0, %i0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore %i0, %i2, %o0
 entry:

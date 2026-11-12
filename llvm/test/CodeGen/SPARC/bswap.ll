@@ -25,8 +25,7 @@ define i16 @u16_bswap(i16 %0) #0 {
 ; SPARCEL-NEXT:    add %sp, -96, %sp
 ; SPARCEL-NEXT:    add %sp, 92, %o1
 ; SPARCEL-NEXT:    sta %o0, [%o1] #ASI_P
-; SPARCEL-NEXT:    or %o1, 2, %o0
-; SPARCEL-NEXT:    lduh [%o0], %o0
+; SPARCEL-NEXT:    lduh [%sp+94], %o0
 ; SPARCEL-NEXT:    retl
 ; SPARCEL-NEXT:    add %sp, 96, %sp
 ;
@@ -209,8 +208,7 @@ define i16 @u16_bswapload_misaligned(ptr %0) #0 {
 ; SPARCEL-NEXT:    or %o1, %o0, %o0
 ; SPARCEL-NEXT:    add %sp, 92, %o1
 ; SPARCEL-NEXT:    sta %o0, [%o1] #ASI_P
-; SPARCEL-NEXT:    or %o1, 2, %o0
-; SPARCEL-NEXT:    lduh [%o0], %o0
+; SPARCEL-NEXT:    lduh [%sp+94], %o0
 ; SPARCEL-NEXT:    retl
 ; SPARCEL-NEXT:    add %sp, 96, %sp
 ;
@@ -307,9 +305,7 @@ define i64 @u64_bswapload_misaligned(ptr %0) #0 {
 ; SPARC32-NEXT:    sll %o4, 24, %o3
 ; SPARC32-NEXT:    or %o3, %o2, %o2
 ; SPARC32-NEXT:    or %o2, %o1, %o1
-; SPARC32-NEXT:    add %sp, 96, %o2
-; SPARC32-NEXT:    or %o2, 4, %o2
-; SPARC32-NEXT:    st %o1, [%o2]
+; SPARC32-NEXT:    st %o1, [%sp+100]
 ; SPARC32-NEXT:    ldub [%o0+2], %o1
 ; SPARC32-NEXT:    ldub [%o0+3], %o2
 ; SPARC32-NEXT:    ldub [%o0+1], %o3
@@ -344,9 +340,7 @@ define i64 @u64_bswapload_misaligned(ptr %0) #0 {
 ; SPARCEL-NEXT:    sll %o4, 24, %o3
 ; SPARCEL-NEXT:    or %o3, %o2, %o2
 ; SPARCEL-NEXT:    or %o2, %o1, %o1
-; SPARCEL-NEXT:    add %sp, 96, %o2
-; SPARCEL-NEXT:    or %o2, 4, %o2
-; SPARCEL-NEXT:    st %o1, [%o2]
+; SPARCEL-NEXT:    st %o1, [%sp+100]
 ; SPARCEL-NEXT:    ldub [%o0+1], %o1
 ; SPARCEL-NEXT:    ldub [%o0], %o2
 ; SPARCEL-NEXT:    ldub [%o0+2], %o3
@@ -832,9 +826,7 @@ define void @u64_bswapstore_misaligned(ptr %0, i64 %1) #0 {
 ; SPARC32-NEXT:    ld [%sp+96], %o3
 ; SPARC32-NEXT:    ld [%sp+100], %o2
 ; SPARC32-NEXT:    std %o2, [%sp+104]
-; SPARC32-NEXT:    add %sp, 104, %o1
-; SPARC32-NEXT:    or %o1, 4, %o1
-; SPARC32-NEXT:    ld [%o1], %o1
+; SPARC32-NEXT:    ld [%sp+108], %o1
 ; SPARC32-NEXT:    stb %o1, [%o0+7]
 ; SPARC32-NEXT:    ld [%sp+104], %o2
 ; SPARC32-NEXT:    stb %o2, [%o0+3]
@@ -863,9 +855,7 @@ define void @u64_bswapstore_misaligned(ptr %0, i64 %1) #0 {
 ; SPARCEL-NEXT:    ld [%sp+96], %o3
 ; SPARCEL-NEXT:    ld [%sp+100], %o2
 ; SPARCEL-NEXT:    std %o2, [%sp+104]
-; SPARCEL-NEXT:    add %sp, 104, %o1
-; SPARCEL-NEXT:    or %o1, 4, %o1
-; SPARCEL-NEXT:    ld [%o1], %o1
+; SPARCEL-NEXT:    ld [%sp+108], %o1
 ; SPARCEL-NEXT:    stb %o1, [%o0+4]
 ; SPARCEL-NEXT:    ld [%sp+104], %o2
 ; SPARCEL-NEXT:    stb %o2, [%o0]
@@ -928,8 +918,7 @@ define void @u16tou32_bswapstore_extended(ptr %0, i16 %1) #0 {
 ; SPARCEL-NEXT:    add %sp, -96, %sp
 ; SPARCEL-NEXT:    add %sp, 92, %o2
 ; SPARCEL-NEXT:    sta %o1, [%o2] #ASI_P
-; SPARCEL-NEXT:    or %o2, 2, %o1
-; SPARCEL-NEXT:    lduh [%o1], %o1
+; SPARCEL-NEXT:    lduh [%sp+94], %o1
 ; SPARCEL-NEXT:    st %o1, [%o0]
 ; SPARCEL-NEXT:    retl
 ; SPARCEL-NEXT:    add %sp, 96, %sp
@@ -966,8 +955,7 @@ define void @u16tou64_bswapstore_extended(ptr %0, i16 %1) #0 {
 ; SPARCEL-NEXT:    add %sp, -96, %sp
 ; SPARCEL-NEXT:    add %sp, 92, %o2
 ; SPARCEL-NEXT:    sta %o1, [%o2] #ASI_P
-; SPARCEL-NEXT:    or %o2, 2, %o1
-; SPARCEL-NEXT:    lduh [%o1], %o2
+; SPARCEL-NEXT:    lduh [%sp+94], %o2
 ; SPARCEL-NEXT:    mov %g0, %o3
 ; SPARCEL-NEXT:    std %o2, [%o0]
 ; SPARCEL-NEXT:    retl

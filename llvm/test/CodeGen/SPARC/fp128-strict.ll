@@ -773,9 +773,7 @@ define fp128 @uitofp_i32_f128(i32 %a) nounwind strictfp {
 ; HARD32-LABEL: uitofp_i32_f128:
 ; HARD32:       ! %bb.0:
 ; HARD32-NEXT:    add %sp, -104, %sp
-; HARD32-NEXT:    add %sp, 96, %o1
-; HARD32-NEXT:    or %o1, 4, %o1
-; HARD32-NEXT:    st %o0, [%o1]
+; HARD32-NEXT:    st %o0, [%sp+100]
 ; HARD32-NEXT:    sethi 1100800, %o0
 ; HARD32-NEXT:    st %o0, [%sp+96]
 ; HARD32-NEXT:    ldd [%sp+96], %f0

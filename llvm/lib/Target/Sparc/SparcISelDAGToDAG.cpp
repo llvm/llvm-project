@@ -102,7 +102,9 @@ bool SparcDAGToDAGISel::SelectADDRri(SDValue Addr,
       Addr.getOpcode() == ISD::TargetGlobalTLSAddress)
     return false;  // direct calls.
 
-  if (Addr.getOpcode() == ISD::ADD) {
+  // An or whose operands have no bits in common, such as that of an aligned
+  // frame object and a small offset, adds them.
+  if (Addr.getOpcode() == ISD::ADD || CurDAG->isBaseWithConstantOffset(Addr)) {
     if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
       if (isInt<13>(CN->getSExtValue())) {
         if (FrameIndexSDNode *FIN =
@@ -141,10 +143,11 @@ bool SparcDAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
       Addr.getOpcode() == ISD::TargetGlobalTLSAddress)
     return false;  // direct calls.
 
+  if (CurDAG->isBaseWithConstantOffset(Addr) &&
+      isInt<13>(cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue()))
+    return false; // Let the reg+imm pattern catch this!
+
   if (Addr.getOpcode() == ISD::ADD) {
-    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1)))
-      if (isInt<13>(CN->getSExtValue()))
-        return false;  // Let the reg+imm pattern catch this!
     if (Addr.getOperand(0).getOpcode() == SPISD::Lo ||
         Addr.getOperand(1).getOpcode() == SPISD::Lo)
       return false;  // Let the reg+imm pattern catch this!

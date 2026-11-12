@@ -2446,10 +2446,14 @@ SDValue SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain,
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
 
   if (ArgTy->isFP128Ty()) {
-    // Create a stack object and pass the pointer to the library function.
-    int FI = MFI.CreateStackObject(16, Align(8), false);
+    // Create a stack object and pass the pointer to the library function. It
+    // is aligned as the ABI aligns long double: to 16 bytes on SPARC V9, where
+    // the routines may rely on it, and to 8 on 32-bit SPARC.
+    Align Alignment = DAG.getDataLayout().getABITypeAlign(ArgTy);
+    int FI = MFI.CreateStackObject(16, Alignment, false);
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
-    Chain = DAG.getStore(Chain, DL, Arg, FIPtr, MachinePointerInfo(), Align(8));
+    Chain =
+        DAG.getStore(Chain, DL, Arg, FIPtr, MachinePointerInfo(), Alignment);
     Args.emplace_back(FIPtr, PointerType::getUnqual(ArgTy->getContext()));
   } else {
     Args.emplace_back(Arg, ArgTy);
@@ -2481,9 +2485,11 @@ SDValue SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   SDValue RetPtr;
 
+  Align RetAlign = DAG.getDataLayout().getABITypeAlign(RetTy);
   if (RetTy->isFP128Ty()) {
-    // Create a Stack Object to receive the return value of type f128.
-    int RetFI = MFI.CreateStackObject(16, Align(8), false);
+    // Create a Stack Object to receive the return value of type f128, aligned
+    // as the ABI aligns long double.
+    int RetFI = MFI.CreateStackObject(16, RetAlign, false);
     RetPtr = DAG.getFrameIndex(RetFI, PtrVT);
     ArgListEntry Entry(RetPtr, PointerType::getUnqual(RetTy->getContext()));
     if (!Subtarget->is64Bit()) {
@@ -2521,7 +2527,7 @@ SDValue SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
 
   // Load RetPtr to get the return value.
   SDValue Result = DAG.getLoad(Op.getValueType(), DL, Chain, RetPtr,
-                               MachinePointerInfo(), Align(8));
+                               MachinePointerInfo(), RetAlign);
   if (IsStrict)
     return DAG.getMergeValues({Result, Result.getValue(1)}, DL);
   return Result;

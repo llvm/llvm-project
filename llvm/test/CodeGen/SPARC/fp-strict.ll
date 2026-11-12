@@ -559,9 +559,7 @@ define double @uitofp_i32_f64(i32 %a) nounwind strictfp {
 ; V8-LABEL: uitofp_i32_f64:
 ; V8:       ! %bb.0:
 ; V8-NEXT:    add %sp, -104, %sp
-; V8-NEXT:    add %sp, 96, %o1
-; V8-NEXT:    or %o1, 4, %o1
-; V8-NEXT:    st %o0, [%o1]
+; V8-NEXT:    st %o0, [%sp+100]
 ; V8-NEXT:    sethi 1100800, %o0
 ; V8-NEXT:    st %o0, [%sp+96]
 ; V8-NEXT:    ldd [%sp+96], %f0
@@ -987,9 +985,7 @@ define float @uitofp_i32_f32(i32 %a) nounwind strictfp {
 ; V8-LABEL: uitofp_i32_f32:
 ; V8:       ! %bb.0:
 ; V8-NEXT:    add %sp, -104, %sp
-; V8-NEXT:    add %sp, 96, %o1
-; V8-NEXT:    or %o1, 4, %o1
-; V8-NEXT:    st %o0, [%o1]
+; V8-NEXT:    st %o0, [%sp+100]
 ; V8-NEXT:    sethi 1100800, %o0
 ; V8-NEXT:    st %o0, [%sp+96]
 ; V8-NEXT:    ldd [%sp+96], %f0
