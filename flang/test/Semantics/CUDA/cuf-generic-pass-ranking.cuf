@@ -196,8 +196,8 @@ contains
   end subroutine
 end module
 
-! A defined assignment passes its right-hand side in parentheses, which has no
-! CUDA data attribute, so it is not ranked as the passed object.
+! A defined assignment is not ranked as a type-bound call: its right-hand side
+! is passed in parentheses, so it is not ranked as the passed object.
 module assignment_ranking
   type :: t
   contains

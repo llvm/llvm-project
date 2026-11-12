@@ -6165,8 +6165,10 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
             return false;
           }
           // Rank an operator's operand as the passed object, as for a
-          // type-bound call. A defined assignment passes its right-hand side
-          // enclosed in parentheses instead (F2023 15.4.3.4.3p2).
+          // type-bound call. A defined assignment's passed-object left-hand
+          // side already ranks first, and its right-hand side is passed
+          // enclosed in parentheses (F2023 15.4.3.4.3p2), so it is not ranked
+          // as the passed object.
           if (!isSubroutine && actuals.at(passIndex)) {
             actuals.at(passIndex)->set_isPassedObject();
           }
