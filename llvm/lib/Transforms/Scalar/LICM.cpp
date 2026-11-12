@@ -634,7 +634,11 @@ bool llvm::hoistRegion(DomTreeNode *N, const LICMDependencies &Deps,
           canSinkOrHoistInst(I, Deps, CurLoop, true, Flags) &&
           isSafeToExecuteUnconditionally(
               I, &Deps.DT, &Deps.TLI, CurLoop, &Deps.SafetyInfo, Deps.ORE,
-              Preheader->getTerminator(), &Deps.AC, AllowSpeculation)) {
+              Preheader->getTerminator(), &Deps.AC, AllowSpeculation) &&
+          // May-throw calls can only be hoisted if there are no memory
+          // writes before them in the loop. Otherwise hoisting would skip
+          // side effects that must happen before the potential throw.
+          (!I.mayThrow() || Deps.SafetyInfo.doesNotWriteMemoryBefore(I))) {
         hoist(I, &Deps.DT, CurLoop, Preheader, &Deps.SafetyInfo, Deps.MSSAU,
               Deps.SE, Deps.ORE);
         Changed = true;
@@ -948,7 +952,9 @@ bool llvm::canSinkOrHoistInst(Instruction &I,
     return canHoistLoad(*LI, Deps, CurLoop, TargetExecutesOncePerLoop, Flags);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     // Don't sink calls which can throw.
-    if (CI->mayThrow())
+    // Hoisting if there aren't side effect between the call and the preheader
+    // This must be checked by the caller
+    if (Flags.getIsSink() && CI->mayThrow())
       return false;
 
     // Convergent attribute has been used on operations that involve
