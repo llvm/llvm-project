@@ -243,3 +243,16 @@ func.func @extract_slice_loop(%tensor: tensor<1x1x3x?xf32>) {
   }
   return
 }
+
+// -----
+
+// A conservative range including zero is tightened by vscale's positive
+// lower bound.
+// CHECK-LABEL: @vscale_lower_bound_with_zero_min
+//       CHECK:   %[[C1:.*]] = arith.constant 1 : index
+//       CHECK:   return %[[C1]]
+func.func @vscale_lower_bound_with_zero_min() -> index {
+  %vscale = vector.vscale
+  %lb = "test.reify_bound"(%vscale) {type = "LB", vscale_min = 0, vscale_max = 16, scalable} : (index) -> index
+  return %lb : index
+}

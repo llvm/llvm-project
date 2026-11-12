@@ -22,11 +22,13 @@ struct VectorScaleOpInterface
                                                    VectorScaleOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
                                    ValueBoundsConstraintSet &cstr) const {
+    auto vscaleOp = cast<VectorScaleOp>(op);
+    assert(value == vscaleOp.getResult() && "invalid value");
+    // vscale is a positive integer by definition.
+    cstr.bound(value) >= 1;
     auto *scalableCstr = dyn_cast<ScalableValueBoundsConstraintSet>(&cstr);
     if (!scalableCstr)
       return;
-    auto vscaleOp = cast<VectorScaleOp>(op);
-    assert(value == vscaleOp.getResult() && "invalid value");
     if (auto vscale = scalableCstr->getVscaleValue()) {
       // All copies of vscale are equivalent.
       scalableCstr->bound(value) == cstr.getExpr(vscale);
