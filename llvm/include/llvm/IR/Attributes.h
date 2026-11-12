@@ -438,6 +438,10 @@ protected:
   AttributeBitSet AvailableSomewhereAttrs;
 
 public:
+  /// Return true if any index has an enum attribute of the given kind.
+  bool hasAttrSomewhere(Attribute::AttrKind Kind) const {
+    return AvailableSomewhereAttrs.hasAttribute(Kind);
+  }
   const AttributeSet *getAttrSets() const {
     return reinterpret_cast<const AttributeSet *>(this + 1);
   }
@@ -640,6 +644,10 @@ private:
 
   /// Map an attribute index to the index of its set in the list.
   static unsigned attrIdxToArrayIdx(unsigned Index) { return Index + 1; }
+
+  /// Return the first index with an enum attribute of kind \p Kind, which
+  /// must exist.
+  LLVM_ABI unsigned getAttrSomewhereIndex(Attribute::AttrKind Kind) const;
 
 public:
   /// Create an AttributeList with the specified parameters in it.
@@ -985,8 +993,9 @@ public:
   AttributeSet getFnAttrs() const { return getAttributes(FunctionIndex); }
 
   /// Return true if the attribute exists at the given index.
-  LLVM_ABI bool hasAttributeAtIndex(unsigned Index,
-                                    Attribute::AttrKind Kind) const;
+  bool hasAttributeAtIndex(unsigned Index, Attribute::AttrKind Kind) const {
+    return getAttributes(Index).hasAttribute(Kind);
+  }
 
   /// Return true if the attribute exists at the given index.
   LLVM_ABI bool hasAttributeAtIndex(unsigned Index, StringRef Kind) const;
@@ -1036,12 +1045,20 @@ public:
   /// Return true if the specified attribute is set for at least one
   /// parameter or for the return value. If Index is not nullptr, the index
   /// of a parameter with the specified attribute is provided.
-  LLVM_ABI bool hasAttrSomewhere(Attribute::AttrKind Kind,
-                                 unsigned *Index = nullptr) const;
+  bool hasAttrSomewhere(Attribute::AttrKind Kind,
+                        unsigned *Index = nullptr) const {
+    if (!pImpl || !pImpl->hasAttrSomewhere(Kind))
+      return false;
+    if (Index)
+      *Index = getAttrSomewhereIndex(Kind);
+    return true;
+  }
 
   /// Return the attribute object that exists at the given index.
-  LLVM_ABI Attribute getAttributeAtIndex(unsigned Index,
-                                         Attribute::AttrKind Kind) const;
+  Attribute getAttributeAtIndex(unsigned Index,
+                                Attribute::AttrKind Kind) const {
+    return getAttributes(Index).getAttribute(Kind);
+  }
 
   /// Return the attribute object that exists at the given index.
   LLVM_ABI Attribute getAttributeAtIndex(unsigned Index, StringRef Kind) const;

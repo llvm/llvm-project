@@ -335,12 +335,6 @@ public:
   AttributeListImpl(const AttributeListImpl &) = delete;
   AttributeListImpl &operator=(const AttributeListImpl &) = delete;
 
-  /// Return true if the specified attribute is set for at least one
-  /// parameter or for the return value. If Index is not nullptr, the index
-  /// of a parameter with the specified attribute is provided.
-  bool hasAttrSomewhere(Attribute::AttrKind Kind,
-                        unsigned *Index = nullptr) const;
-
   using iterator = const AttributeSet *;
 
   iterator begin() const { return getTrailingObjects(); }
