@@ -786,6 +786,22 @@ MipsSEFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
     !MFI.hasVarSizedObjects();
 }
 
+bool MipsSEFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
+  const MachineFunction *MF = MBB.getParent();
+  const MipsFunctionInfo *MipsFI = MF->getInfo<MipsFunctionInfo>();
+  if (MipsFI->callsEhReturn() || MipsFI->isISR())
+    return &MBB == &MF->front();
+  return true;
+}
+
+bool MipsSEFrameLowering::mayUseStackFrame(const MachineInstr &MI) const {
+  // Accumulator copies are expanded in processFunctionBeforeFrameFinalized()
+  // into GPR virtual registers and may scavenge via an emergency spill slot.
+  return MI.isCopy() && MI.getOperand(1).isReg() &&
+         MI.getOperand(1).getReg().isPhysical() &&
+         getMFHiLoOpc(MI.getOperand(1).getReg()).first != 0;
+}
+
 /// Mark \p Reg and all registers aliasing it in the bitset.
 static void setAliasRegs(MachineFunction &MF, BitVector &SavedRegs,
                          unsigned Reg) {
@@ -798,8 +814,6 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();
   unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
   unsigned FP = ABI.GetFramePtr();
@@ -813,6 +827,14 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Mark $s7 as used if function has dedicated base pointer.
   if (hasBP(MF))
     setAliasRegs(MF, SavedRegs, BP);
+}
+
+void MipsSEFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  assert(RS && "processFunctionBeforeFrameFinalized requires RegScavenger");
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
+  MipsABIInfo ABI = STI.getABI();
 
   // Create spill slots for eh data registers if function calls eh_return.
   if (MipsFI->callsEhReturn())

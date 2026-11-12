@@ -12,6 +12,7 @@
 
 #include "MipsFrameLowering.h"
 #include "MipsInstrInfo.h"
+#include "MipsMachineFunction.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -98,6 +99,11 @@ bool MipsFrameLowering::hasBP(const MachineFunction &MF) const {
   return MFI.hasVarSizedObjects() && TRI->hasStackRealignment(MF);
 }
 
+bool MipsFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
+  const MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
+  return !MipsFI->callsEhReturn() && !MipsFI->isISR();
+}
+
 // Estimate the size of the stack, including the incoming arguments. We need to
 // account for register spills, local objects, reserved call frame and incoming
 // arguments. This is required to determine the largest possible positive offset
@@ -107,22 +113,72 @@ uint64_t MipsFrameLowering::estimateStackSize(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
-  int64_t Size = 0;
+  int64_t IncomingArgEnd = 0;
+  int64_t Offset = 0;
 
-  // Iterate over fixed sized objects which are incoming arguments.
-  for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
-    if (MFI.getObjectOffset(I) > 0)
-      Size += MFI.getObjectSize(I);
-
-  // Conservatively assume all callee-saved registers will be saved.
-  for (const MCPhysReg *R = TRI.getCalleeSavedRegs(&MF); *R; ++R) {
-    unsigned RegSize = TRI.getSpillSize(*TRI.getMinimalPhysRegClass(*R));
-    Size = alignTo(Size + RegSize, RegSize);
+  // Iterate over fixed sized objects: non-negative offsets are incoming stack
+  // arguments above the caller's $sp, whereas negative offsets are preallocated
+  // in the local area.
+  for (int I = MFI.getObjectIndexBegin(); I != 0; ++I) {
+    if (MFI.getStackID(I) != TargetStackID::Default)
+      continue;
+    int64_t ObjOffset = MFI.getObjectOffset(I);
+    if (ObjOffset >= 0) {
+      IncomingArgEnd =
+          std::max<int64_t>(IncomingArgEnd, ObjOffset + MFI.getObjectSize(I));
+    } else {
+      Offset = std::max<int64_t>(Offset, -ObjOffset);
+    }
   }
 
-  // Get the size of the rest of the frame objects and any possible reserved
-  // call frame, accounting for alignment.
-  return Size + MFI.estimateStackSize(MF);
+  Align MaxAlign = MFI.getMaxAlign();
+
+  // PEI places callee-saved register spill slots before local objects.
+  if (MFI.isCalleeSavedInfoValid()) {
+    for (unsigned I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+      if (!MFI.isCalleeSavedObjectIndex(I) || MFI.isDeadObjectIndex(I) ||
+          MFI.getStackID(I) != TargetStackID::Default)
+        continue;
+      Align Alignment = MFI.getObjectAlign(I);
+      Offset = alignTo(Offset + MFI.getObjectSize(I), Alignment);
+      MaxAlign = std::max(Alignment, MaxAlign);
+    }
+  } else {
+    // Conservatively assume all callee-saved registers will be saved.
+    for (const MCPhysReg *R = TRI.getCalleeSavedRegs(&MF); *R; ++R) {
+      unsigned RegSize = TRI.getSpillSize(*TRI.getMinimalPhysRegClass(*R));
+      Offset = alignTo(Offset + RegSize, RegSize);
+    }
+  }
+
+  if (MFI.getUseLocalStackAllocationBlock()) {
+    Align Alignment = MFI.getLocalFrameMaxAlign();
+    Offset = alignTo(Offset, Alignment) + MFI.getLocalFrameSize();
+    MaxAlign = std::max(Alignment, MaxAlign);
+  }
+
+  for (unsigned I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    if (MFI.isCalleeSavedObjectIndex(I) || MFI.isDeadObjectIndex(I) ||
+        MFI.getStackID(I) != TargetStackID::Default ||
+        (MFI.isObjectPreAllocated(I) && MFI.getUseLocalStackAllocationBlock()))
+      continue;
+    Align Alignment = MFI.getObjectAlign(I);
+    Offset = alignTo(Offset + MFI.getObjectSize(I), Alignment);
+    MaxAlign = std::max(Alignment, MaxAlign);
+  }
+
+  if (MFI.adjustsStack() && hasReservedCallFrame(MF))
+    Offset += MFI.getMaxCallFrameSize();
+
+  Align StackAlign =
+      (MFI.adjustsStack() || MFI.hasVarSizedObjects() ||
+       (TRI.hasStackRealignment(MF) && MFI.getObjectIndexEnd() != 0))
+          ? getStackAlign()
+          : getTransientStackAlign();
+  StackAlign = std::max(StackAlign, MaxAlign);
+  Offset = alignTo(Offset, StackAlign);
+
+  return IncomingArgEnd + Offset;
 }
 
 // Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions
