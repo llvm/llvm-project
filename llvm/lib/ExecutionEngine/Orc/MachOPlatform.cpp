@@ -1422,7 +1422,8 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
   // If any platform sections were found then add an allocation action to call
   // the registration function.
   StringRef PlatformSections[] = {MachOModInitFuncSectionName,
-                                  ObjCRuntimeObjectSectionName};
+                                  ObjCRuntimeObjectSectionName,
+                                  MachOObjCSelRefsSectionName};
 
   for (auto &SecName : PlatformSections) {
     auto *Sec = G.findSectionByName(SecName);
@@ -1434,7 +1435,7 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
 
     MachOPlatformSecs.push_back({SecName, R.getRange()});
   }
-
+  
   std::optional<std::tuple<SmallVector<ExecutorAddrRange>, ExecutorAddrRange,
                            ExecutorAddrRange>>
       UnwindInfo;
