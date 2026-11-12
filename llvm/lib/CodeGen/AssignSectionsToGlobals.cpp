@@ -32,14 +32,11 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCParser/MCAsmParser.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -100,19 +97,10 @@ bool AssignSections::run(Module &Mod, TargetMachine *TMIn) {
     return false;
 
   // Initialize the target so we can query sections.
-  const Target &T = TM->getTarget();
-  assert(T.hasMCAsmParser());
-  std::unique_ptr<MCRegisterInfo> MRI(T.createMCRegInfo(TT));
-  if (!MRI)
-    return false;
-  llvm::MCTargetOptions MCOptions;
-  std::unique_ptr<MCAsmInfo> MAI(T.createMCAsmInfo(*MRI, TT, MCOptions));
-  if (!MAI)
-    return false;
-  MCObjectFileInfo MOFI;
-  MCContext MCCtx(Triple(TT), *MAI, *MRI, TM->getMCSubtargetInfo());
-  MCCtx.setObjectFileInfo(&MOFI);
-  MOFI.initMCObjectFileInfo(MCCtx, /*PIC*/ false);
+  assert(TM->getTarget().hasMCAsmParser());
+  MCContext MCCtx(Triple(TT), TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
+                  TM->getMCSubtargetInfo());
+  MCCtx.setObjectFileInfo(TM->getObjFileLowering());
   TM->getObjFileLowering()->initialize(MCCtx, *TM, Mod);
 
   // Iterate over objects, and assign sections
