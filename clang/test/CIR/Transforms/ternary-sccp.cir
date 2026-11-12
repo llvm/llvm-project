@@ -2,11 +2,13 @@
 
 !s32i = !cir.int<s, 32>
 
+#true = #cir.bool<true> : !cir.bool
+
 module {
   // A constant condition enters only one region, so the other arm's value does
   // not reach the result.
   cir.func @const_cond(%arg0: !s32i) -> !s32i {
-    %0 = cir.const #cir.bool<true> : !cir.bool
+    %0 = cir.const #true
     %1 = cir.ternary (%0, true {
       %2 = cir.const #cir.int<1> : !s32i
       cir.yield %2 : !s32i
