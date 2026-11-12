@@ -27,7 +27,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -490,10 +489,12 @@ struct MustBeExecutedContextExplorer {
     return Found;
   }
 
-  /// Return true if \p I is in the context of \p PP, i.e., if iterating over
-  /// the context of \p PP visits \p I. Unlike findInContextOf, this does not
-  /// explore the context of every program point separately but uses summaries
-  /// of the contexts of basic blocks that are shared by all program points.
+  /// Return true if \p I is in the context of \p PP.
+  ///
+  /// That is the case if iterating over the context of \p PP visits \p I.
+  /// Unlike findInContextOf, this does not explore the context of every
+  /// program point separately but uses summaries of the contexts of basic
+  /// blocks that are shared by all program points.
   LLVM_ABI bool isInContextOf(const Instruction *I, const Instruction *PP);
 
   /// Check \p Pred on all terminators in the context of \p PP, like
