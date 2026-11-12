@@ -315,3 +315,42 @@ spirv.module Logical GLSL450 {
     spirv.Unreachable
   }
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.LifetimeStart / spirv.LifetimeStop
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL {
+  // CHECK-LABEL: @lifetime
+  spirv.func @lifetime() "None" {
+    // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x f32 : (i32) -> !llvm.ptr
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    // CHECK: llvm.intr.lifetime.start %[[ALLOCA]] : !llvm.ptr
+    spirv.LifetimeStart %0, 0 : !spirv.ptr<f32, Function>
+    %1 = spirv.Bitcast %0 : !spirv.ptr<f32, Function> to !spirv.ptr<i8, Function>
+    // CHECK: llvm.intr.lifetime.end %[[ALLOCA]] : !llvm.ptr
+    spirv.LifetimeStop %1, 4 : !spirv.ptr<i8, Function>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @lifetime_not_alloca
+  spirv.func @lifetime_not_alloca(%arg0: !spirv.ptr<f32, Function>) "None" {
+    // CHECK-NOT: llvm.intr.lifetime
+    spirv.LifetimeStart %arg0, 0 : !spirv.ptr<f32, Function>
+    spirv.LifetimeStop %arg0, 0 : !spirv.ptr<f32, Function>
+    // CHECK: llvm.return
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @lifetime_partial
+  spirv.func @lifetime_partial() "None" {
+    // CHECK-NOT: llvm.intr.lifetime
+    %0 = spirv.Variable : !spirv.ptr<!spirv.array<4 x f32>, Function>
+    spirv.LifetimeStart %0, 4 : !spirv.ptr<!spirv.array<4 x f32>, Function>
+    spirv.LifetimeStop %0, 4 : !spirv.ptr<!spirv.array<4 x f32>, Function>
+    // CHECK: llvm.return
+    spirv.Return
+  }
+}
