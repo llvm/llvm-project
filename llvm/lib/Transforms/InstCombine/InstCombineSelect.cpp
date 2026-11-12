@@ -3917,9 +3917,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       Value *LOr = Builder.CreateLogicalOr(
           A, Builder.CreateOr(B, FalseVal), "",
           ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(CondVal));
-      if (auto *I = dyn_cast<Instruction>(LOr))
-        if (!I->getMetadata(LLVMContext::MD_prof))
-          setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
       return replaceInstUsesWith(SI, LOr);
     }
 
@@ -3966,9 +3963,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       Value *LAnd = Builder.CreateLogicalAnd(
           A, Builder.CreateAnd(B, TrueVal), "",
           ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(CondVal));
-      if (auto *I = dyn_cast<Instruction>(LAnd))
-        if (!I->getMetadata(LLVMContext::MD_prof))
-          setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
       return replaceInstUsesWith(SI, LAnd);
     }
 
