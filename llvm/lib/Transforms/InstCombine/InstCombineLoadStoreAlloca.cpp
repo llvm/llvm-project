@@ -745,99 +745,77 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     return nullptr;
 
   StringRef Name = LI.getName();
+  auto *ST = dyn_cast<StructType>(T);
+  auto *AT = dyn_cast<ArrayType>(T);
+  uint64_t NumElements = ST ? ST->getNumElements() : AT->getNumElements();
 
-  if (auto *ST = dyn_cast<StructType>(T)) {
-    // If the struct only have one element, we unpack.
-    auto NumElements = ST->getNumElements();
-    if (NumElements == 1) {
-      LoadInst *NewLoad = IC.combineLoadToNewType(LI, ST->getTypeAtIndex(0U),
-                                                  ".unpack");
-      NewLoad->setAAMetadata(LI.getAAMetadata());
-      // Copy invariant metadata from parent load.
-      NewLoad->copyMetadata(LI, LLVMContext::MD_invariant_load);
-      return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
-        PoisonValue::get(T), NewLoad, 0, Name));
-    }
-
-    // We don't want to break loads with padding here as we'd loose
-    // the knowledge that padding exists for the rest of the pipeline.
-    const DataLayout &DL = IC.getDataLayout();
-    auto *SL = DL.getStructLayout(ST);
-
-    if (SL->hasPadding())
-      return nullptr;
-
-    const auto Align = LI.getAlign();
-    auto *Addr = LI.getPointerOperand();
-    auto *IdxType = DL.getIndexType(Addr->getType());
-
-    Value *V = PoisonValue::get(T);
-    for (unsigned i = 0; i < NumElements; i++) {
-      auto *Ptr = IC.Builder.CreateInBoundsPtrAdd(
-          Addr, IC.Builder.CreateTypeSize(IdxType, SL->getElementOffset(i)),
-          Name + ".elt");
-      auto *L = IC.Builder.CreateAlignedLoad(
-          ST->getElementType(i), Ptr,
-          commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue()),
-          Name + ".unpack");
-      // Propagate AA metadata. It'll still be valid on the narrowed load.
-      L->setAAMetadata(LI.getAAMetadata());
-      // Copy invariant metadata from parent load.
-      L->copyMetadata(LI, LLVMContext::MD_invariant_load);
-      V = IC.Builder.CreateInsertValue(V, L, i);
-    }
-
-    V->setName(Name);
-    return IC.replaceInstUsesWith(LI, V);
+  // If the aggregate only has one element, we unpack.
+  if (NumElements == 1) {
+    Type *ET = ST ? ST->getElementType(0) : AT->getElementType();
+    LoadInst *NewLoad = IC.combineLoadToNewType(LI, ET, ".unpack");
+    NewLoad->setAAMetadata(LI.getAAMetadata());
+    return IC.replaceInstUsesWith(
+        LI,
+        IC.Builder.CreateInsertValue(PoisonValue::get(T), NewLoad, 0, Name));
   }
 
-  if (auto *AT = dyn_cast<ArrayType>(T)) {
-    auto *ET = AT->getElementType();
-    auto NumElements = AT->getNumElements();
-    if (NumElements == 1) {
-      LoadInst *NewLoad = IC.combineLoadToNewType(LI, ET, ".unpack");
-      NewLoad->setAAMetadata(LI.getAAMetadata());
-      return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
-        PoisonValue::get(T), NewLoad, 0, Name));
-    }
-
+  const DataLayout &DL = IC.getDataLayout();
+  const StructLayout *SL = nullptr;
+  TypeSize EltSize = TypeSize::getZero();
+  if (ST) {
+    // We don't want to break loads with padding here as we'd loose
+    // the knowledge that padding exists for the rest of the pipeline.
+    SL = DL.getStructLayout(ST);
+    if (SL->hasPadding())
+      return nullptr;
+  } else {
     // Bail out if the array is too large. Ideally we would like to optimize
     // arrays of arbitrary size but this has a terrible impact on compile time.
     // The threshold here is chosen arbitrarily, maybe needs a little bit of
     // tuning.
     if (NumElements > IC.CLOpts.maxarray_size)
       return nullptr;
-
-    const DataLayout &DL = IC.getDataLayout();
-    TypeSize EltSize = DL.getTypeAllocSize(ET);
-    const auto Align = LI.getAlign();
-
-    auto *Addr = LI.getPointerOperand();
-    auto *IdxType = Type::getInt64Ty(T->getContext());
-    auto *Zero = ConstantInt::get(IdxType, 0);
-
-    Value *V = PoisonValue::get(T);
-    TypeSize Offset = TypeSize::getZero();
-    for (uint64_t i = 0; i < NumElements; i++) {
-      Value *Indices[2] = {
-        Zero,
-        ConstantInt::get(IdxType, i),
-      };
-      auto *Ptr = IC.Builder.CreateInBoundsGEP(AT, Addr, ArrayRef(Indices),
-                                               Name + ".elt");
-      auto EltAlign = commonAlignment(Align, Offset.getKnownMinValue());
-      auto *L = IC.Builder.CreateAlignedLoad(AT->getElementType(), Ptr,
-                                             EltAlign, Name + ".unpack");
-      L->setAAMetadata(LI.getAAMetadata());
-      V = IC.Builder.CreateInsertValue(V, L, i);
-      Offset += EltSize;
-    }
-
-    V->setName(Name);
-    return IC.replaceInstUsesWith(LI, V);
+    EltSize = DL.getTypeAllocSize(AT->getElementType());
   }
 
-  return nullptr;
+  const auto Align = LI.getAlign();
+  auto *Addr = LI.getPointerOperand();
+  Value *V = PoisonValue::get(T);
+  TypeSize Offset = TypeSize::getZero();
+  for (uint64_t I = 0; I < NumElements; ++I) {
+    Value *Ptr;
+    Type *ET;
+    if (ST) {
+      Offset = SL->getElementOffset(I);
+      auto *IdxType = DL.getIndexType(Addr->getType());
+      Ptr = IC.Builder.CreateInBoundsPtrAdd(
+          Addr, IC.Builder.CreateTypeSize(IdxType, Offset), Name + ".elt");
+      ET = ST->getElementType(I);
+    } else {
+      auto *IdxType = Type::getInt64Ty(T->getContext());
+      Value *Indices[] = {
+          ConstantInt::get(IdxType, 0),
+          ConstantInt::get(IdxType, I),
+      };
+      Ptr = IC.Builder.CreateInBoundsGEP(AT, Addr, ArrayRef(Indices),
+                                         Name + ".elt");
+      ET = AT->getElementType();
+    }
+
+    auto *L = IC.Builder.CreateAlignedLoad(
+        ET, Ptr, commonAlignment(Align, Offset.getKnownMinValue()),
+        Name + ".unpack");
+    // Propagate AA metadata. It'll still be valid on the narrowed load.
+    L->setAAMetadata(LI.getAAMetadata());
+    // Copy invariant metadata from parent load.
+    L->copyMetadata(LI, LLVMContext::MD_invariant_load);
+    V = IC.Builder.CreateInsertValue(V, L, I);
+    if (AT)
+      Offset += EltSize;
+  }
+
+  V->setName(Name);
+  return IC.replaceInstUsesWith(LI, V);
 }
 
 // If we can determine that all possible objects pointed to by the provided
