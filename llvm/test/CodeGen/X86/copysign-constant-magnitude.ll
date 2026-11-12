@@ -15,7 +15,7 @@ define double @mag_pos0_double(double %x) nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
-  %y = call double @copysign(double 0.0, double %x)
+  %y = call double @llvm.copysign.f64(double 0.0, double %x)
   ret double %y
 }
 
@@ -27,7 +27,7 @@ define double @mag_neg0_double(double %x) nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
-  %y = call double @copysign(double -0.0, double %x)
+  %y = call double @llvm.copysign.f64(double -0.0, double %x)
   ret double %y
 }
 
@@ -43,7 +43,7 @@ define double @mag_pos1_double(double %x) nounwind {
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
-  %y = call double @copysign(double 1.0, double %x)
+  %y = call double @llvm.copysign.f64(double 1.0, double %x)
   ret double %y
 }
 
@@ -60,7 +60,7 @@ define double @mag_neg1_double(double %x) nounwind {
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
-  %y = call double @copysign(double -1.0, double %x)
+  %y = call double @llvm.copysign.f64(double -1.0, double %x)
   ret double %y
 }
 
@@ -75,7 +75,7 @@ define float @mag_pos0_float(float %x) nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
-  %y = call float @copysignf(float 0.0, float %x)
+  %y = call float @llvm.copysign.f32(float 0.0, float %x)
   ret float %y
 }
 
@@ -87,7 +87,7 @@ define float @mag_neg0_float(float %x) nounwind {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
-  %y = call float @copysignf(float -0.0, float %x)
+  %y = call float @llvm.copysign.f32(float -0.0, float %x)
   ret float %y
 }
 
@@ -105,7 +105,7 @@ define float @mag_pos1_float(float %x) nounwind {
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
-  %y = call float @copysignf(float 1.0, float %x)
+  %y = call float @llvm.copysign.f32(float 1.0, float %x)
   ret float %y
 }
 
@@ -126,10 +126,8 @@ define float @mag_neg1_float(float %x) nounwind {
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
-  %y = call float @copysignf(float -1.0, float %x)
+  %y = call float @llvm.copysign.f32(float -1.0, float %x)
   ret float %y
 }
 
-declare double @copysign(double, double) nounwind readnone
-declare float @copysignf(float, float) nounwind readnone
 

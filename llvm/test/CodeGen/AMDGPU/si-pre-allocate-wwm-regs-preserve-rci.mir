@@ -12,7 +12,7 @@
 # CHECK-NEXT: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
 # CHECK-NEXT: Running pass: SIPreAllocateWWMRegsPass on test_wwm_reserved
 # CHECK:      Running pass: RequireAnalysisPass<{{.*}}MachineRegisterClassAnalysis,{{.*}}MachineFunction{{.*}}> on test_wwm_reserved
-# CHECK-NEXT: Running pass: PrintMIRPreparePass on [module]
+# CHECK-NEXT: Running pass: MachineVerifierPass on test_wwm_reserved
 
 # MIR: wwmReservedRegs:
 # MIR-NEXT: - '$vgpr0'

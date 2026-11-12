@@ -549,8 +549,10 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
       continue;
     }
 
-    if (A->getOption().getID() ==
-            options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order &&
+    if ((A->getOption().getID() ==
+             options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order ||
+         A->getOption().getID() ==
+             options::OPT_fhlsl_spv_support_nonzero_base_instance) &&
         getArch() != llvm::Triple::spirv) {
       getDriver().Diag(diag::err_drv_argument_only_allowed_with)
           << A->getAsString(Args) << "-spirv";

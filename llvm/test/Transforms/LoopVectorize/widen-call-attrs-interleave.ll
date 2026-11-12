@@ -14,13 +14,13 @@ define void @range_propagated_uf2(ptr noalias %src, ptr noalias %out) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> range(i32 0, 100) [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> range(i32 0, 100) [[WIDE_LOAD1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
 ; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

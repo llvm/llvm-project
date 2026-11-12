@@ -31,9 +31,6 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
-#if SANITIZER_APPLE && !SANITIZER_GO
-#  include "tsan_flags.h"
-#endif
 #include "tsan_adaptive_delay.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
@@ -41,6 +38,10 @@
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
 #include "tsan_suppressions.h"
+
+#if SANITIZER_APPLE
+#  include <dlfcn.h>
+#endif
 
 using namespace __tsan;
 
@@ -450,7 +451,15 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
   // We want to setup the atexit callback even if we are in ignored lib
   // or after fork.
   SCOPED_INTERCEPTOR_RAW(atexit, f);
-  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, 0, 0);
+  void* dso = nullptr;
+#  if SANITIZER_APPLE
+  // Darwin's libc runs an atexit callback when the image containing it is
+  // dlclose'd. Pass that image as the DSO so the wrapper runs then too.
+  Dl_info info;
+  if (dladdr((const void*)f, &info))
+    dso = info.dli_fbase;
+#  endif
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), f, 0, dso);
 }
 #endif
 
@@ -1262,6 +1271,44 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
   return res;
 }
 #endif
+
+#if SANITIZER_INTERCEPT_C11_THREADS
+extern "C" int __tsan_c11_thread_start_func(void* arg) {
+  ThreadParam* p = (ThreadParam*)arg;
+  int (*callback)(void*) = (int (*)(void*))(uptr)p->callback;
+  void* param = p->param;
+  ThreadStartCommon(p);
+
+  int res = callback(param);
+  // Prevent the callback from being tail called,
+  // it mixes up stack traces.
+  volatile int foo = 42;
+  foo++;
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, thrd_create, void* th, int (*callback)(void*),
+                 void* param) {
+  SCOPED_INTERCEPTOR_RAW(thrd_create, th, callback, param);
+  return ThreadCreateCommon(
+      thr, pc, th, /*detached=*/false, (void* (*)(void*))(uptr)callback, param,
+      [&](ThreadParam* p) {
+        return REAL(thrd_create)(th, __tsan_c11_thread_start_func, p);
+      });
+}
+
+TSAN_INTERCEPTOR(int, thrd_join, uptr th, int* res) {
+  SCOPED_INTERCEPTOR_RAW(thrd_join, th, res);
+  return ThreadJoinCommon(thr, pc, th,
+                          [&]() { return BLOCK_REAL(thrd_join)(th, res); });
+}
+
+TSAN_INTERCEPTOR(int, thrd_detach, uptr th) {
+  SCOPED_INTERCEPTOR_RAW(thrd_detach, th);
+  return ThreadDetachCommon(thr, pc, th,
+                            [&]() { return REAL(thrd_detach)(th); });
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
 
 // Problem:
 // NPTL implementation of pthread_cond has 2 versions (2.2.5 and 2.3.2).
@@ -3134,6 +3181,11 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);
   #endif
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(thrd_create);
+  TSAN_INTERCEPT(thrd_join);
+  TSAN_INTERCEPT(thrd_detach);
+#endif
 
   // In glibc versions older than 2.36, dlsym(RTLD_NEXT, "pthread_cond_init")
   // may return an outdated symbol (max(2.2,base_version)) if the port was

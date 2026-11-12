@@ -31,6 +31,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
 #include <optional>
@@ -974,6 +975,31 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   return newResults;
 }
 
+bool mlir::scf::isShapePreserving(ForOp forOp, int64_t arg) {
+  assert(arg < static_cast<int64_t>(forOp.getNumResults()) &&
+         "arg is out of bounds");
+  Value value = forOp.getYieldedValues()[arg];
+  while (value) {
+    if (value == forOp.getRegionIterArgs()[arg])
+      return true;
+    OpResult opResult = dyn_cast<OpResult>(value);
+    if (!opResult)
+      return false;
+
+    value = llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
+                .Case([&](DestinationStyleOpInterface op) {
+                  return op.getTiedOpOperand(opResult)->get();
+                })
+                .Case([&](ForOp forOp) {
+                  return isShapePreserving(forOp, opResult.getResultNumber())
+                             ? forOp.getInitArgs()[opResult.getResultNumber()]
+                             : Value();
+                })
+                .Default(nullptr);
+  }
+  return false;
+}
+
 namespace {
 /// Fold scf.for iter_arg/result pairs that go through incoming/ougoing
 /// a tensor.cast op pair so as to pull the tensor.cast inside the scf.for:
@@ -982,8 +1008,9 @@ namespace {
 ///   %0 = tensor.cast %t0 : tensor<32x1024xf32> to tensor<?x?xf32>
 ///   %1 = scf.for %i = %c0 to %c1024 step %c32 iter_args(%iter_t0 = %0)
 ///      -> (tensor<?x?xf32>) {
-///     %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-///     scf.yield %2 : tensor<?x?xf32>
+///     %2 = call @do(%iter_t0) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+///     %3 = tensor.cast %2 : tensor<32x1024xf32> to tensor<?x?xf32>
+///     scf.yield %3 : tensor<?x?xf32>
 ///   }
 ///   use_of(%1)
 /// ```
@@ -994,9 +1021,8 @@ namespace {
 ///   %0 = scf.for %arg2 = %c0 to %c1024 step %c32 iter_args(%arg3 = %arg0)
 ///       -> (tensor<32x1024xf32>) {
 ///     %2 = tensor.cast %arg3 : tensor<32x1024xf32> to tensor<?x?xf32>
-///     %3 = call @do(%2) : (tensor<?x?xf32>) -> tensor<?x?xf32>
-///     %4 = tensor.cast %3 : tensor<?x?xf32> to tensor<32x1024xf32>
-///     scf.yield %4 : tensor<32x1024xf32>
+///     %3 = call @do(%2) : (tensor<?x?xf32>) -> tensor<32x1024xf32>
+///     scf.yield %3 : tensor<32x1024xf32>
 ///   }
 ///   %1 = tensor.cast %0 : tensor<32x1024xf32> to tensor<?x?xf32>
 ///   use_of(%1)
@@ -1019,6 +1045,18 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
               incomingCast.getSource().getType()))
         continue;
       if (!std::get<1>(it).hasOneUse())
+        continue;
+      // The fold casts the yielded value to the cast's source type, which is
+      // only valid if every iteration yields a value of that type. A dynamic
+      // dimension of that type stays dynamic, so its size may still change
+      // between iterations; only the static sizes are asserted.
+      int64_t resultNumber = std::get<1>(it).getResultNumber();
+      auto yieldedCast =
+          op.getYieldedValues()[resultNumber].getDefiningOp<tensor::CastOp>();
+      bool yieldsStaticType =
+          yieldedCast && yieldedCast.getSource().getType() ==
+                             incomingCast.getSource().getType();
+      if (!yieldsStaticType && !isShapePreserving(op, resultNumber))
         continue;
 
       // Create a new ForOp with that iter operand replaced.

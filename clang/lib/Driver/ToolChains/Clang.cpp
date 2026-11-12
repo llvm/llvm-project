@@ -4030,7 +4030,8 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
       options::OPT_fhlsl_spv_use_unknown_image_format,
       options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order,
       options::OPT_fhlsl_spv_enable_maximal_reconvergence,
-      options::OPT_fhlsl_spv_preserve_interface};
+      options::OPT_fhlsl_spv_preserve_interface,
+      options::OPT_fhlsl_spv_support_nonzero_base_instance};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
@@ -5125,6 +5126,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     CmdArgs.push_back("-dwarf-explicit-import");
 
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
+  if (useMachORelocatableDwarf(T, EffectiveDWARFVersion))
+    CmdArgs.push_back("-grelocatable-dwarf");
   renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 
   // This controls whether or not we perform JustMyCode instrumentation.
@@ -9234,6 +9237,9 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     // This option does not allow the user redefinitions for these macros.
     if (!HasNoDateTime)
       CmdArgs.push_back("-init-datetime-macros=literalone");
+    // Omit tool, current workdir and command line in COFF CV debug section.
+    CmdArgs.push_back("-gno-codeview-command-line");
+    CmdArgs.push_back("-gno-codeview-cwd");
   }
 }
 
@@ -9453,6 +9459,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
   renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
+  if (useMachORelocatableDwarf(Triple, DwarfVersion))
+    CmdArgs.push_back("-grelocatable-dwarf");
   renderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
 
   // Handle -fPIC et al -- the relocation-model affects the assembler

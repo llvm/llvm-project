@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=x86_64-- %s -o - -passes=process-implicit-defs,unreachable-mbb-elimination | FileCheck %s
 ---
 name:            f
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
   - { id: 1, class: gr32, preferred-register: '' }

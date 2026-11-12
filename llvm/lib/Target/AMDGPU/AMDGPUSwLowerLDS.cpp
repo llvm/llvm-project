@@ -115,12 +115,6 @@ using namespace AMDGPU;
 
 namespace {
 
-cl::opt<bool>
-    AsanInstrumentLDS("amdgpu-asan-instrument-lds",
-                      cl::desc("Run asan instrumentation on LDS instructions "
-                               "lowered to global memory"),
-                      cl::init(true), cl::Hidden);
-
 using DomTreeCallback = function_ref<DominatorTree *(Function &F)>;
 
 struct LDSAccessTypeInfo {
@@ -1394,7 +1388,10 @@ bool AMDGPUSwLowerLDS::run() {
     }
   }
 
-  if (AsanInstrumentLDS) {
+  if (M.getContext()
+          .getLibraryOptions()
+          .get<AMDGPUOptions>()
+          .asan_instrument_lds) {
     SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
     for (Instruction *Inst : AsanInfo.Instructions) {
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implementation of sps_ci::addAll.
+// Implementation of sps::ci::addAll.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +20,7 @@
 #include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 Error addAll(SimpleSymbolTable &ST) {
   using AdderFn = Error (*)(SimpleSymbolTable &);
@@ -47,4 +47,4 @@ Error addAll(SimpleSymbolTable &ST) {
   return Error::success();
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

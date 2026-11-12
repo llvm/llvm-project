@@ -27,7 +27,7 @@
 ; RUN: llvm-dis %t/b.bc.out -o - | FileCheck %s --check-prefix=CHECK-B
 
 ; CHECK-A: define hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo.llvm.
-; CHECK-A: declare hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo(
+; CHECK-A: declare !guid !{{[0-9]+}} hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo(
 ; CHECK-B: define hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo(
 
 ; RUN: llvm-lto2 run %t/a.bc %t/b.bc \

@@ -53,6 +53,9 @@ public:
   virtual llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) = 0;
 
+  /// Notify the plugin when the native process exits.
+  virtual void NativeProcessDidExit(const WaitStatus &exit_status) = 0;
+
   /// Create an AcceleratorActions with an identifier unique within this plugin,
   /// so identifiers from different actions don't collide.
   AcceleratorActions GetNewAcceleratorAction() {
