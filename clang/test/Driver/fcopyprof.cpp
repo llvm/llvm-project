@@ -1,13 +1,14 @@
 // Test driver flags for CopyProf instrumentation and runtime linking.
 
 // Basic C and C++ invocations:
-// RUN: %clang --target=x86_64-linux-gnu -fcopyprof %s -### 2>&1 | FileCheck %s
-// RUN: %clangxx --target=x86_64-linux-gnu -fcopyprof %s -### 2>&1 | FileCheck %s
+// RUN: %clang --target=x86_64-linux-gnu -fcopyprof %s -### 2>&1 | FileCheck %s --implicit-check-not=libclang_rt.copyprof_cxx
+// RUN: %clangxx --target=x86_64-linux-gnu -fcopyprof %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CXX
 // CHECK: "-cc1" {{.*}} "-fcopyprof"
-// CHECK: ld{{.*}}libclang_rt.copyprof
+// CHECK: ld{{.*}}libclang_rt.copyprof{{[-.]}}
+// CHECK-CXX-SAME: libclang_rt.copyprof_cxx
 
 // Re-enabling after -fno-copyprof:
-// RUN: %clangxx --target=x86_64-linux-gnu -fcopyprof -fno-copyprof -fcopyprof %s -### 2>&1 | FileCheck %s
+// RUN: %clangxx --target=x86_64-linux-gnu -fcopyprof -fno-copyprof -fcopyprof %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CXX
 
 // Custom static size threshold (and last-flag-wins behavior):
 // RUN: %clangxx --target=x86_64-linux-gnu -fcopyprof -fcopyprof-static-size-threshold=32 %s -### 2>&1 | FileCheck %s --check-prefix=THRESHOLD32

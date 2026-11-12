@@ -6,6 +6,18 @@ if(NOT LLVM_LIBC_FULL_BUILD AND "${LIBC_CONF_ERRNO_MODE}" STREQUAL "LIBC_ERRNO_M
   add_compile_options(${shared_test_errno_options})
 endif()
 
+# Shared headers are included together by external consumers that build with
+# -Werror -Wshadow; enable -Wshadow here to catch cross-header shadow warnings.
+# Older Clang versions emit false positive shadow warnings for lambda captures
+# inside static member functions (fixed in Clang 22, see PR #157667 and #165919).
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "22.0.0")
+  if(LIBC_WNO_ERROR)
+    add_compile_options(-Wshadow)
+  else()
+    add_compile_options(-Wshadow -Werror=shadow)
+  endif()
+endif()
+
 # Shared math tests include the entire math library headers into a single file
 # so it might take some time to compile the tests.  We do have dedicated
 # precommit CIs to build and test shared tests.  So we provide a cmake option

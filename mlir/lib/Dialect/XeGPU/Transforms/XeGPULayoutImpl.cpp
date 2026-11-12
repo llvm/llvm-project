@@ -1370,37 +1370,59 @@ compute2DBlockIOLaneLayout(ArrayRef<int64_t> instShape, int64_t subgroupSize,
   return {laneLayout, laneData, order};
 }
 
-/// Computes a multi_reduction's source layout as (lane_layout, lane_data,
-/// inst_data), where inst_data = lane_layout * lane_data on every dim.
+/// Derives (lane_layout, lane_data, inst_data) for a vector.multi_reduction
+/// source from the layout requested by its result's consumer. Each returned
+/// vector has one entry per source dimension.
 ///
-/// `maxReduceVectorSize` is the per-lane vector budget.
+/// Reuse the consumer's slice parent when the slice dimensions exactly match
+/// `reductionDims`, the parent's effective lane_layout and lane_data each have
+/// one entry per source dimension, and the lane layout uses all `subgroupSize`
+/// lanes. Clamp reused lane counts to srcShape[i] / lane_data[i], since the
+/// sliced dimensions may have different extents in the reduction source.
 ///
-/// 1. Take lane_layout and lane_data from the consumer. A consumer sliced over
-///    exactly `reductionDims` is a view of a source-rank parent, and that
-///    parent is reused as-is. Any other consumer has the result's rank: its
-///    lane_layout and lane_data hold one element per surviving dim, taken in
-///    order. Reduced dims keep lane_layout 1 for now.
+/// If the consumer's slice parent cannot be reused, initialize lane_layout and
+/// lane_data to 1, then copy available consumer entries onto non-reduced source
+/// dimensions in order, with the same clamp: a consumer that broadcasts along
+/// a unit dimension may place lanes on it.
 ///
-/// 2. Limit lane_layout by `srcShape`: a dim can spread over no more lanes than
-///    it has elements to give.
+/// For a derived (not reused) layout, assign any unused lanes to the innermost
+/// dimension if it is reduced, up to the same bound. If that dimension still
+/// has only one lane, then the lane can reduce a vector limited by
+/// maxReduceVectorSize and the source dimension's size. The vector budget
+/// (maxReduceVectorSize) applies to the product of lane_data across all
+/// dimensions. If that product already meets or exceeds the budget, leave
+/// lane_data unchanged.
 ///
-///    Then hand any unused lanes to the innermost dim, if that dim is reduced.
-///    This is a heuristic: the innermost dim of the source typically already
-///    carries several lanes, whether the source is loaded from memory or is a
-///    dpas result, so putting them there matches what the producer did.
+/// Set inst_data[i] to lane_layout[i] * lane_data[i]. On non-reduced
+/// dimensions, preserve a reused parent's larger inst_data[i].
 ///
-/// 3. Raise lane_data on the innermost dim, so the lane holds a run of elements
-///    along it and reduces the run with one vector op instead of one element at
-///    a time. The run is at most `maxReduceVectorSize` long. The dim must also
-///    be reduced and have lane_layout 1.
+/// Source layout examples with subgroupSize = maxReduceVectorSize = 16:
+/// \code
+///   // Reuse a matching slice parent's lane layout and data.
+///   srcShape=[32, 64], reductionDims=[1], consumer=slice(parent, dims=[1])
+///   parent: lane_layout=[1, 16], lane_data=[1, 1]
+///   source: lane_layout=[1, 16], lane_data=[1, 1], inst_data=[1, 16]
 ///
-///    How much: `maxReduceVectorSize / product(lane_data)`, multiplied onto the
-///    dim's existing lane_data and capped by its extent.
+///   // Preserve dim 0 blocking and limit dim 1 lanes to the source size.
+///   srcShape=[16, 4], reductionDims=[1], consumer=slice(parent, dims=[1])
+///   parent: lane_layout=[1, 16], lane_data=[1, 1], inst_data=[8, 16]
+///   source: lane_layout=[1, 4], lane_data=[1, 1], inst_data=[8, 4]
 ///
-/// e.g. src=[16,32,32] reduce [2], consumer lane=[1,2] ->
-/// lane_layout=[1,2,8], lane_data=[1,1,1], inst_data=[1,2,8].
-/// e.g. src=[16,16] reduce [1], consumer lane=[16] ->
-/// lane_layout=[16,1], lane_data=[1,16], inst_data=[16,16].
+///   // Assign spare lanes to the innermost dimension when it is reduced.
+///   srcShape=[16, 32, 32], reductionDims=[2]
+///   consumer: lane_layout=[1, 2], lane_data=[1, 1]
+///   source:   lane_layout=[1, 2, 8], lane_data=[1, 1, 1], inst_data=[1, 2, 8]
+///
+///   // Keep the consumer's lanes on the non-reduced dimension.
+///   srcShape=[32, 64], reductionDims=[0]
+///   consumer: lane_layout=[16], lane_data=[1]
+///   source:   lane_layout=[1, 16], lane_data=[1, 1], inst_data=[1, 16]
+///
+///   // For a scalar reduction, put lanes on the innermost dimension.
+///   srcShape=[32, 64], reductionDims=[0, 1]
+///   consumer: none
+///   source:   lane_layout=[1, 16], lane_data=[1, 1], inst_data=[1, 16]
+/// \endcode
 static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
                   SmallVector<int64_t>>
 computeReductionLaneLayoutAndData(
@@ -1413,9 +1435,9 @@ computeReductionLaneLayoutAndData(
     return llvm::is_contained(reductionDims, dim);
   };
 
-  // Rule 1. Only a parent that covers the source rank and spends the whole
-  // subgroup is trusted; one spending less distributes less than the producer
-  // already does.
+  // A matching slice parent provides lane information for reduced dimensions
+  // as well as the dimensions present in the result.
+  SmallVector<int64_t> parentInstData;
   auto consumerSlice = dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
   bool reusedParent = false;
   if (consumerSlice &&
@@ -1430,9 +1452,20 @@ computeReductionLaneLayoutAndData(
       laneLayout = std::move(parentLaneLayout);
       laneData = std::move(parentLaneData);
       reusedParent = true;
+      parentInstData = parent.getEffectiveInstDataAsInt();
+      if (static_cast<int>(parentInstData.size()) != srcRank)
+        parentInstData.clear();
+
+      // The parent may come from a broadcast to a larger shape. Bound its
+      // lane counts by the source extent, accounting for per-lane packing.
+      for (int i = 0; i < srcRank; ++i)
+        laneLayout[i] = std::min(
+            laneLayout[i], std::max<int64_t>(1, srcShape[i] / laneData[i]));
     }
   }
 
+  // Without a reusable parent, map result dimensions to non-reduced source
+  // dimensions.
   if (!reusedParent) {
     SmallVector<int64_t> consumerLaneLayout, consumerLaneData;
     if (consumerLayout) {
@@ -1448,42 +1481,48 @@ computeReductionLaneLayoutAndData(
         laneData[i] = consumerLaneData[c];
       ++c;
     }
+
+    // Cap laneLayout using srcShape.
+    for (int i = 0; i < srcRank; ++i)
+      laneLayout[i] = std::min(laneLayout[i],
+                               std::max<int64_t>(1, srcShape[i] / laneData[i]));
+
+    // Assign spare lanes only when the innermost source dimension is reduced,
+    // matching the distribution typically used by memory loads and DPAS
+    // results.
+    int innermost = srcRank - 1;
+    if (isReduced(innermost)) {
+      int64_t spareLanes =
+          std::max<int64_t>(1, subgroupSize / computeProduct(laneLayout));
+      if (spareLanes > 1)
+        laneLayout[innermost] =
+            std::min(spareLanes, std::max<int64_t>(1, srcShape[innermost]));
+
+      if (laneLayout[innermost] == 1) {
+        // Adjust lane_data on this dimension using the remaining vector budget,
+        // capped by the source extent.
+        int64_t vectorBudget = maxReduceVectorSize / computeProduct(laneData);
+        if (vectorBudget > 1)
+          laneData[innermost] =
+              std::min(vectorBudget * laneData[innermost], srcShape[innermost]);
+      }
+    }
   }
 
-  // Rule 2, applied to a reused parent as much as a derived layout.
-  SmallVector<int64_t> maxLanes(srcRank);
-  for (int i = 0; i < srcRank; ++i) {
-    maxLanes[i] = std::max<int64_t>(1, srcShape[i] / laneData[i]);
-    laneLayout[i] = std::min(laneLayout[i], maxLanes[i]);
-  }
-
-  // Lanes the consumer never claimed, plus any the bound above freed, go to the
-  // innermost dim -- and only when it is reduced.
-  // TODO: spend these lanes on an outer reduced dim once that is lowerable --
-  // they sit idle today. Widening it to srcRank-2 breaks
-  // reduction_2D_scalar_cross_sg_intra_lane.
-  int innermost = srcRank - 1;
-  int64_t spareLanes =
-      std::max<int64_t>(1, subgroupSize / computeProduct(laneLayout));
-  if (spareLanes > 1 && isReduced(innermost))
-    laneLayout[innermost] =
-        std::min(laneLayout[innermost] * spareLanes, maxLanes[innermost]);
-
-  // Rule 3. What lane_data already packs comes off the budget first.
-  int64_t vectorBudget =
-      maxReduceVectorSize /
-      std::min(computeProduct(laneData), maxReduceVectorSize);
-
-  bool canCarryVector = laneLayout[innermost] == 1 && isReduced(innermost) &&
-                        srcShape[innermost] > 1;
-
-  if (vectorBudget > 1 && canCarryVector)
-    laneData[innermost] =
-        std::min(vectorBudget * laneData[innermost], srcShape[innermost]);
-
+  // Preserve compatible consumer blocking on non-reduced dimensions so the
+  // reduction result can use the same instruction tiles as its consumer.
   SmallVector<int64_t> instData(srcRank);
-  for (int i = 0; i < srcRank; ++i)
+  for (int i = 0; i < srcRank; ++i) {
     instData[i] = laneLayout[i] * laneData[i];
+    if (isReduced(i) || parentInstData.empty())
+      continue;
+    // The lane product must divide the instruction tile, which must divide
+    // the source extent.
+    int64_t wider = parentInstData[i];
+    if (wider > instData[i] && wider % instData[i] == 0 &&
+        srcShape[i] % wider == 0)
+      instData[i] = wider;
+  }
 
   return {laneLayout, laneData, instData};
 }
@@ -1532,14 +1571,11 @@ computeReductionLaneLayoutAndData(
 //                         maxChunkSize).
 //   - Store (scatter)   : store_scatter / store_matrix — same scatter scheme,
 //                         but always self-derived from the scatter default.
-//   - Reduction         : (multi_)reduction, consumer-driven — distribute the
-//                         inner two dims, with lanes on the innermost dim by
-//                         default (reducing across lanes) and switched to a
-//                         non-reduction dim only when that keeps the reduction
-//                         within a lane. Reuses the consumer's slice layout
-//                         when it slices exactly the reduction dims, otherwise
-//                         re-derives. See setupMultiReductionResultLayout for
-//                         the exact switch condition and worked examples.
+//   - Reduction         : multi_reduction derives source lanes and instruction
+//                         blocking from the consumer, assigning spare lanes to
+//                         the innermost dim if reduced. The result layout is a
+//                         slice over the reduction dims. See
+//                         setupMultiReductionResultLayout for each layout kind.
 //   - BitCast/Interleave: scale the innermost data field by the bitwidth /
 //                         interleave ratio so the source layout divides back
 //                         out.
@@ -2526,121 +2562,72 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 ///
 /// For subgroup layouts, it first tries to align the source layout's subgroup
 /// layout and data with the consumer's layout on non-reduction dimensions.
-/// Then, it distributes remaining subgroups across reduction dimensions. This
-/// avoids subgroup data redistribution overhead between the reduced result and
-/// its consumer. When the consumer layout is a slice layout, it attempts to
-/// reuse the slice layout's parent layout for the source to further minimize
-/// potential data redistribution.
+/// Then, it distributes remaining subgroups across reduction dimensions. When
+/// the consumer slices exactly `reductionDims`, it reuses the slice's parent
+/// for the source and adjusts sg_data on the reduction dimensions to fit the
+/// source extent. This is a best-effort alignment: the goal is to pick a source
+/// layout that minimizes redistribution against the consumer layout.
 ///
-/// This is a best-effort alignment, not a hard constraint: the goal is only to
-/// pick a *legal* source layout that minimizes redistribution against the
-/// (single, first-arriving) consumer layout. There is no failure path - when
-/// the consumer's slice layout cannot be reused as-is (example 2 below), the
-/// function falls back to distributing all subgroups on the non-reduction
-/// dimensions first and the remainder on the reduction dimensions, which always
-/// yields a valid source layout. If the resulting source layout still differs
-/// from what some consumer expects (e.g. a second, inconsistent consumer), that
-/// mismatch is reconciled later by the layout conflict resolution process
-/// (`ResolveLayoutConflicts`), which inserts a `convert_layout` op - this
-/// function never has to give up.
+/// If the resulting source layout still differs from what some consumer
+/// expects (e.g. a second, inconsistent consumer), that mismatch is reconciled
+/// later by layout conflict resolution (`ResolveLayoutConflicts`), which
+/// inserts a `convert_layout` op.
 ///
-/// InstData kind: `computeReductionLaneLayoutAndData` derives lane_layout and
-/// lane_data, and inst_data is their element-wise product.
+/// InstData kind: `computeReductionLaneLayoutAndData` derives lane_layout,
+/// lane_data, and inst_data. It can preserve a reused parent's larger inst_data
+/// on non-reduced dimensions.
 ///
-/// Lane kind: a consumer sliced over exactly `reductionDims` is reused verbatim
-/// rather than re-derived, so this stage does not re-decide packing an earlier
-/// run already committed to. Any other consumer goes through the same
-/// derivation.
+/// Lane kind: a consumer sliced over exactly `reductionDims` is reused.
+/// This preserves the lane layout chosen during instruction-data propagation.
+/// For other consumer layouts, `computeReductionLaneLayoutAndData` derives
+/// lane_layout and lane_data. See that helper for inst_data and lane layout
+/// examples.
 ///
 /// The function returns the *result* layout (the SliceAttr). The *source*
-/// layout it decides on is the parent of that slice; both are listed below so
-/// the relationship is explicit.
+/// layout it decides on is the parent of that slice. The subgroup examples
+/// below show both layouts.
 ///
-/// Examples:
-///   1. Subgroup layout - Row reduction on 2D tensor:
+/// Subgroup layout examples:
+///   1. Row reduction on a 2D tensor:
 ///      srcShape=[32, 128], reductionDims=[1], resShape=[32], subgroupSize=16,
-///      NumSg=32
+///      numSg=32
 ///      * Consumer Layout:
 ///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
-///        [1]>}
+///        [1]>
 ///      * Source Layout (decided by this function):
 ///        #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>
 ///      * Result Layout (returned):
 ///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>, dims =
-///        [1]>}
+///        [1]>
 ///      The consumer slices exactly the reduction dim, so its parent layout is
 ///      reused for the source: sg_layout is kept, but the source's sg_data on
 ///      the reduction dim is grown from 8 to 16 (= srcShape[1] / sg_layout[1] =
 ///      128 / 8) so the source tile is evenly distributed over the reduction
-///      dim. Slicing that source over dim 1 reproduces the consumer.
+///      dim. The non-reduction dimensions keep the consumer's distribution.
 ///
-///   2. Subgroup layout - Same shapes as above but consumer doesn't have a
-///   reusable slice layout, so the algorithm distributes all subgroups on the
-///   non-reduction dims first and the remainder on the reduction dims.
+///   2. Same shapes as above, but the consumer has no reusable slice layout.
+///      Copy its subgroup distribution onto non-reduction dims and assign the
+///      remaining subgroups to reduction dims.
 ///      2a. * Consumer Layout:
 ///            #xegpu.layout<sg_layout=[32], sg_data=[1]>
 ///          * Source Layout (decided by this function):
 ///            #xegpu.layout<sg_layout=[32, 1], sg_data=[1, 128]>
 ///          * Result Layout (returned):
 ///            #xegpu.slice<#xegpu.layout<sg_layout=[32, 1], sg_data=[1, 128]>,
-///            dims = [1]>}
-///          All 32 subgroups land on the non-reduction dim 0; the reduction dim
-///          1 gets the leftover (sg_layout=1, so the whole length 128 lives in
-///          one subgroup's sg_data).
+///            dims = [1]>
+///          All 32 subgroups are assigned to non-reduction dim 0. Dim 1 stays
+///          within each subgroup (sg_layout=1), so its sg_data is 128.
 ///      2b. * Consumer Layout:
-///            #xegpu.slice<#xegpu.layout<sg_layout=[8, 2, 4], sg_data=[4, 64,
-///            32]>, dims = [1, 2]>}
+///            #xegpu.slice<#xegpu.layout<sg_layout=[8, 2, 2], sg_data=[4, 64,
+///            32]>, dims = [1, 2]>
 ///          * Source Layout (decided by this function):
 ///            #xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>
 ///          * Result Layout (returned):
 ///            #xegpu.slice<#xegpu.layout<sg_layout=[8, 4], sg_data=[4, 32]>,
-///            dims = [1]>}
-///          The consumer slices dims [1, 2] which do not match this op's
-///          reductionDims, so it can't be reused as-is; subgroups are
-///          re-distributed (non-reduction dim first, then reduction dim).
-///
-///   3. Lane layout - Default (lanes on innermost dim):
-///      srcShape=[32, 64], reductionDims=[0], subgroupSize=16
-///      * Source Layout (decided by this function):
-///        laneLayout=[1, 16], laneData=[1, 1] (returned sliced over dim 0).
-///      The innermost dim is not reduced, so lanes stay on it. Reduced dim 0 is
-///      then lane-free, but it is not the innermost dim, so it takes no reduce
-///      vector and the reduction runs one element at a time.
-///
-///   4. Lane layout - Switch (lanes moved off the reduction dim):
-///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
-///      * Source Layout (decided by this function):
-///        laneLayout=[16, 1], laneData=[1, 16] (returned sliced over dim 1).
-///      The innermost dim is the sole reduction dim, so lanes move to the
-///      non-reduction dim to reduce within a lane, and the now lane-free
-///      reduction dim takes the per-lane reduce vector (16 of its 64 elements).
-///      This switch only happens when the consumer has no reduction dims to
-///      broadcast the result back along (i.e. the consumer layout is not a
-///      slice over this reduction); otherwise the default (example 3) is used.
-///
-///   5. Lane layout - No switch when both inner dims are reduced (reduction to
-///   scalar):
-///      srcShape=[32, 64], reductionDims=[0, 1], subgroupSize=16
-///      * Source Layout (decided by this function):
-///        laneLayout=[1, 16], laneData=[1, 1] (returned sliced over dims
-///        [0,1]).
-///      Both dims are reduced, so this is not a *sole* innermost reduction; the
-///      switch condition (example 4) does not apply and lanes stay on the
-///      innermost dim. The cross-lane reduction over dim 1 is unavoidable.
-///
-///   6. Lane layout - No switch when the consumer slices the reduction dim:
-///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
-///      * Consumer Layout:
-///        #xegpu.slice<#xegpu.layout<laneLayout=[1, 16], laneData=[1, 1]>,
-///        dims = [1]>}
-///      * Source Layout (decided by this function):
-///        #xegpu.layout<laneLayout=[1, 16], laneData=[1, 1]> (the consumer
-///        slice's parent, reused directly; returned sliced over dim 1).
-///      Same shape/reductionDims as example 4, but here the consumer is a slice
-///      over the reduction dim, so it can broadcast the result back along that
-///      dim. The slice's parent layout is reused as the source (no switch, no
-///      re-derivation); the inst_data propagation step has already inserted a
-///      convert_layout if needed, so the lane-level layout can be reused as-is.
+///            dims = [1]>
+///          The consumer slices dims [1, 2], but the reduction uses dim 1.
+///          Copy its effective sg_layout=[8] onto dim 0 and assign the
+///          remaining four subgroups to dim 1.
 
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,

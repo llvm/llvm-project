@@ -1062,7 +1062,14 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+
   /// @}
+  /// @name Utility functions for querying the size of wchar_t
+  /// @{
+
+  /// Returns the size of the wchar_t type from the "wchar_size" module flag,
+  /// or the triple default when the flag is absent.
+  unsigned getWCharSize() const;
 
   /// @}
   /// @name Utility functions for querying the long double format
