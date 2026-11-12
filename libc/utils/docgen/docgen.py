@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 import re
 import sys
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 from header import Header
 
@@ -344,8 +344,103 @@ def print_families_md(header: Header, api: Dict):
         print("  </tbody>\n</table></div>\n```\n")
 
 
+def _tone(pct: float) -> str:
+    if pct >= 99.95:
+        return "green"
+    return "blue" if pct >= 50.0 else ("amber" if pct > 0.0 else "muted")
+
+
+def _progress_bar_html(pct: float, label: str, tone: str, extra_cls: str = "") -> str:
+    cls = f"hc-progress-track {extra_cls}".strip()
+    esc = html.escape(label, quote=True)
+    return (
+        f'<div class="{cls}" role="progressbar" aria-label="{esc}" '
+        f'aria-valuenow="{pct:.1f}" aria-valuemin="0" aria-valuemax="100">'
+        f'<div class="hc-progress-fill" '
+        f'style="background:var(--hc-{tone}-text);width:{pct:.1f}%"></div></div>'
+    )
+
+
+def _mini_card_html(scope: str, title: str, imp: int, tot: int, tone: str = "") -> str:
+    pct = (imp / tot * 100.0) if tot else 0.0
+    t = tone or _tone(pct)
+    bar = _progress_bar_html(pct, f"{scope} {title} completion", t)
+    return (
+        f'<div class="hc-mini-card"><div class="hc-mini-title">'
+        f"{html.escape(title)}</div>"
+        f'<div class="hc-mini-val">{imp:,} / {tot:,} '
+        f'<span style="color:var(--hc-{t}-text)">({pct:.1f}%)</span></div>{bar}</div>'
+    )
+
+
+def _precision_grid_html(header_name: str, precisions: List[Dict]) -> str:
+    cards = "".join(
+        _mini_card_html(header_name, p["label"], p["implemented"], p["total"])
+        for p in precisions
+    )
+    return f'<div class="hc-grid-prec">{cards}</div>'
+
+
+def print_summary_card(header: Header, api: Dict):
+    stats = header.get_summary_stats(api)
+    imp, tot = stats["overall"]["implemented"], stats["overall"]["total"]
+    if not tot:
+        return
+    pct = imp / tot * 100.0
+    tone = _tone(pct)
+
+    pills = []
+    if stats["standard"] == "c23":
+        pills.append('<span class="hc-pill hc-pill-c23">C23 Standard</span>')
+    elif stats["standard"] == "iso-tr-18037":
+        pills.append('<span class="hc-pill hc-pill-ext">ISO/IEC TR 18037</span>')
+    if stats["posix"] == "posix-2024":
+        pills.append('<span class="hc-pill hc-pill-posix">POSIX.1-2024</span>')
+    if not pills:
+        ext_lbl = (
+            "Removed in POSIX.1-2024" if stats["removed_posix"] else "Extension Header"
+        )
+        pills.append(f'<span class="hc-pill hc-pill-ext">{ext_lbl}</span>')
+
+    cards = "".join(
+        _mini_card_html(
+            header.name, title, stats[k]["implemented"], stats[k]["total"], c
+        )
+        for k, title, c in (
+            ("c23", "C23 Standard", "green"),
+            ("tr18037", "ISO/IEC TR 18037", "purple"),
+            ("posix_spec", "POSIX.1-2024", "blue"),
+            ("families", "Base Families", "green"),
+            ("raw_functions", "Functions", "green"),
+            ("macros", "Macros", "blue"),
+            ("types", "Types", "purple"),
+            ("objects", "Global Variables", "amber"),
+        )
+        if stats[k]["total"]
+    )
+    overall_bar = _progress_bar_html(
+        pct, f"{header.name} overall implementation progress", tone, "hc-progress-lg"
+    )
+    print(
+        "```{raw} html\n"
+        f'<div class="hc-card"><div class="hc-summary-top">'
+        f'<div class="hc-pill-row">{"".join(pills)}</div>'
+        f'<div class="hc-overall-stat">{imp:,} / {tot:,} '
+        f'<span style="color:var(--hc-{tone}-text)">({pct:.1f}%)</span></div></div>'
+        f'{overall_bar}<div class="hc-grid-cards">{cards}</div></div>'
+    )
+    if stats["precisions"]:
+        print(
+            '<div class="hc-card">'
+            '<div class="hc-subcard-title">Precision Coverage</div>'
+            f'{_precision_grid_html(header.name, stats["precisions"])}</div>'
+        )
+    print("```\n")
+
+
 def print_header_status_md(header: Header, api: Dict):
     print(f"# {header.name}\n")
+    print_summary_card(header, api)
 
     if api.get("families"):
         print_families_md(header, api)

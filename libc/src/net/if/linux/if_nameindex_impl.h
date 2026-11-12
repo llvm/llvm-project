@@ -69,14 +69,26 @@ struct InterfaceEntry {
   static_assert(IF_NAMESIZE - 1 < (1u << 8));
 };
 
-LIBC_INLINE ErrorOr<void>
+/// Parses the netlink messages in the buffer and adds the interfaces they
+/// describe to the store. Returns true if the buffer contained the NLMSG_DONE
+/// message terminating the dump, or false if more messages should follow.
+/// Returns an error if the kernel reported one or if the data is malformed.
+LIBC_INLINE ErrorOr<bool>
 parse_netlink_messages(cpp::span<uint8_t> buf,
                        BlockStore<InterfaceEntry, 16> &store) {
   size_t len = buf.size();
   for (auto *nh = reinterpret_cast<struct nlmsghdr *>(buf.data());
        NLMSG_OK(nh, len); nh = NLMSG_NEXT(nh, len)) {
-    if (nh->nlmsg_type == NLMSG_DONE)
-      break;
+    if (nh->nlmsg_type == NLMSG_DONE) {
+      // The payload contains the result of the dump. This is how the kernel
+      // reports errors which happen in the middle of the dump.
+      if (nh->nlmsg_len < NLMSG_LENGTH(sizeof(int)))
+        return Error(EIO);
+      int error = *reinterpret_cast<int *>(NLMSG_DATA(nh));
+      if (error < 0)
+        return Error(-error);
+      return true;
+    }
     if (nh->nlmsg_type == NLMSG_ERROR) {
       if (nh->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr)))
         return Error(EINVAL);
@@ -118,7 +130,10 @@ parse_netlink_messages(cpp::span<uint8_t> buf,
       break;
     }
   }
-  return {};
+  // Anything left over is garbage or a truncated message.
+  if (len != 0)
+    return Error(EIO);
+  return false;
 }
 
 LIBC_INLINE ErrorOr<struct if_nameindex *>
@@ -171,27 +186,36 @@ LIBC_INLINE ErrorOr<struct if_nameindex *> if_nameindex() {
   if (!send_res.has_value())
     return Error(send_res.error());
 
-  // TODO: Figure out if we need to dynamically allocate a buffer.
-  alignas(struct nlmsghdr) uint8_t buf[detail::NLMSG_BUFFER_SIZE];
-  ErrorOr<ssize_t> recv_res =
-      Policy::recvfrom(fd, buf, sizeof(buf), 0, nullptr, nullptr);
-  if (!recv_res.has_value())
-    return Error(recv_res.error());
-
-  close_fd.release();
-  if (ErrorOr<int> close_res = Policy::close(fd); !close_res.has_value())
-    return Error(close_res.error());
-
-  // TODO: Read more than one message.
   // TODO: Deduplicate interfaces to handle restarts.
   BlockStore<detail::InterfaceEntry, 16> store;
   cpp::scope_exit destroy_store(
       [&store]() { BlockStore<detail::InterfaceEntry, 16>::destroy(&store); });
 
-  if (ErrorOr<void> parse_res = detail::parse_netlink_messages(
-          {buf, static_cast<size_t>(*recv_res)}, store);
-      !parse_res.has_value())
-    return Error(parse_res.error());
+  // TODO: Figure out if we need to dynamically allocate a buffer.
+  alignas(struct nlmsghdr) uint8_t buf[detail::NLMSG_BUFFER_SIZE];
+  // The dump can come in multiple datagrams. Keep reading until we get the
+  // NLMSG_DONE message.
+  while (true) {
+    ErrorOr<ssize_t> recv_res =
+        Policy::recvfrom(fd, buf, sizeof(buf), 0, nullptr, nullptr);
+    if (!recv_res.has_value())
+      return Error(recv_res.error());
+    // A netlink socket should never return an empty datagram. Bail out instead
+    // of spinning if it does.
+    if (*recv_res == 0)
+      return Error(EIO);
+
+    ErrorOr<bool> parse_res = detail::parse_netlink_messages(
+        {buf, static_cast<size_t>(*recv_res)}, store);
+    if (!parse_res.has_value())
+      return Error(parse_res.error());
+    if (*parse_res)
+      break;
+  }
+
+  close_fd.release();
+  if (ErrorOr<int> close_res = Policy::close(fd); !close_res.has_value())
+    return Error(close_res.error());
 
   return detail::build_if_nameindex_list(store);
 }

@@ -9,8 +9,14 @@ from functools import lru_cache
 from pathlib import Path
 import re
 import sys
-from typing import Dict, Generator, Optional, Set, Tuple
+from typing import Dict, Generator, List, Optional, Set, Tuple
 import yaml
+
+_C_SEC_RE = re.compile(r"^([0-9]+|[FGHJK])\.")
+
+
+def _stat(flags: List[bool]) -> Dict[str, int]:
+    return {"total": len(flags), "implemented": sum(flags)}
 
 
 def _is_stub_file(path: Path) -> bool:
@@ -325,4 +331,75 @@ class Header:
             "variants": results,
             "implemented_count": implemented_count,
             "total_variants": len(variants),
+        }
+
+    def get_summary_stats(self, api: Optional[Dict] = None) -> Dict:
+        api = api if api is not None else self.api
+        families = api.get("families") or {}
+        fam_eval = {
+            fn: self.evaluate_family(fn, fd or {}) for fn, fd in families.items()
+        }
+        precisions = []
+        for col in api.get("family-columns") or []:
+            vals = [
+                r["variants"][col["key"]]["implemented"]
+                for r in fam_eval.values()
+                if col["key"] in r["variants"]
+            ]
+            if vals:
+                precisions.append(
+                    {"key": col["key"], "label": col["label"], **_stat(vals)}
+                )
+
+        all_items: List[Tuple[Dict, bool]] = [
+            (fd or {}, fam_eval[n]["implemented"]) for n, fd in families.items()
+        ]
+        counts = {"families": _stat([i for _, i in all_items])}
+        for key, sec_name, check_fn in (
+            ("raw_functions", "functions", self.implements_fn),
+            ("macros", "macros", self.implements_macro),
+            ("types", "types", self.implements_type),
+            ("objects", "objects", self.implements_object),
+        ):
+            pairs = [
+                (it or {}, check_fn(n)) for n, it in (api.get(sec_name) or {}).items()
+            ]
+            counts[key] = _stat([i for _, i in pairs])
+            all_items.extend(pairs)
+
+        std = api.get("standard", "")
+        removed = ("removed-in-posix-2024", "removed-in-posix-2008")
+        return {
+            "header": self.name,
+            "standard": std,
+            "posix": api.get("posix", ""),
+            "removed_posix": not std
+            and not api.get("posix")
+            and bool(all_items)
+            and all(any(k in it for k in removed) for it, _ in all_items),
+            "overall": _stat([i for _, i in all_items]),
+            "functions": {
+                "total": counts["families"]["total"] + counts["raw_functions"]["total"],
+                "implemented": counts["families"]["implemented"]
+                + counts["raw_functions"]["implemented"],
+            },
+            **counts,
+            "c23": _stat(
+                [
+                    i
+                    for it, i in all_items
+                    if std == "c23"
+                    and _C_SEC_RE.match(str(it.get("c-definition") or ""))
+                ]
+            ),
+            "tr18037": _stat(
+                [
+                    i
+                    for it, i in all_items
+                    if std == "iso-tr-18037"
+                    and str(it.get("c-definition") or "").startswith("TR 18037")
+                ]
+            ),
+            "posix_spec": _stat([i for it, i in all_items if "in-latest-posix" in it]),
+            "precisions": precisions,
         }
