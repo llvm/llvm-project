@@ -668,6 +668,13 @@ nub_addr_t MachProcess::GetTSDAddressForThread(
       plo_pthread_tsd_entry_size);
 }
 
+static constexpr size_t max_deployment_command_size = std::max({
+    sizeof(struct version_min_command),
+#if defined(LC_BUILD_VERSION)
+    sizeof(struct build_version_command),
+#endif
+});
+
 MachProcess::DeploymentInfo
 MachProcess::GetDeploymentInfo(const struct load_command &lc,
                                uint64_t load_command_address,
@@ -686,7 +693,7 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
     break;
 #endif
   }
-  std::array<uint8_t, sizeof(struct segment_command_64)> command_data;
+  std::array<uint8_t, max_deployment_command_size> command_data;
   const uint8_t *data = nullptr;
   if (command_size && ReadMemory(load_command_address, command_size,
                                  command_data.data()) == command_size)
@@ -915,6 +922,14 @@ bool MachProcess::GetMachOInformationFromMemory(
     return true;
   };
 
+  // Reserve space for the largest fixed command prefix read below.
+  constexpr size_t max_command_prefix_size = std::max({
+      sizeof(struct load_command),
+      sizeof(struct segment_command),
+      sizeof(struct segment_command_64),
+      sizeof(struct uuid_command),
+      max_deployment_command_size,
+  });
   for (uint32_t j = 0; j < inf.mach_header.ncmds; j++) {
     struct load_command lc;
     if (!read_command(load_cmds_p, sizeof(lc), &lc))
@@ -946,7 +961,7 @@ bool MachProcess::GetMachOInformationFromMemory(
     }
     if (command_size > lc.cmdsize)
       return false;
-    std::array<uint8_t, sizeof(struct segment_command_64)> command_data;
+    std::array<uint8_t, max_command_prefix_size> command_data;
     const bool have_command_data =
         read_command(load_cmds_p, command_size, command_data.data());
     if (lc.cmd == LC_SEGMENT) {
