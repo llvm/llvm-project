@@ -64,8 +64,19 @@ ThreadPlanStepOut::ThreadPlanStepOut(
     Vote report_stop_vote, Vote report_run_vote, uint32_t frame_idx,
     LazyBool step_out_avoids_code_without_debug_info,
     bool continue_to_next_branch, bool gather_return_value)
-    : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, report_stop_vote,
-                 report_run_vote),
+    : ThreadPlanStepOut(ThreadPlan::eKindStepOut, "Step out", thread, context,
+                        first_insn, stop_others, report_stop_vote,
+                        report_run_vote, frame_idx,
+                        step_out_avoids_code_without_debug_info,
+                        continue_to_next_branch, gather_return_value) {}
+
+ThreadPlanStepOut::ThreadPlanStepOut(
+    ThreadPlanKind kind, const char *name, Thread &thread,
+    SymbolContext *context, bool first_insn, bool stop_others,
+    Vote report_stop_vote, Vote report_run_vote, uint32_t frame_idx,
+    LazyBool step_out_avoids_code_without_debug_info,
+    bool continue_to_next_branch, bool gather_return_value)
+    : ThreadPlan(kind, name, thread, report_stop_vote, report_run_vote),
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
       m_return_bp_id(LLDB_INVALID_BREAK_ID),
       m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
@@ -514,6 +525,8 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
         ThreadPlanStepOverRange *step_through_inline_plan_ptr =
             static_cast<ThreadPlanStepOverRange *>(
                 m_step_through_inline_plan_sp.get());
+        step_through_inline_plan_ptr->SetBreakpointsToYieldTo(
+            m_breakpoints_to_yield_to);
         m_step_through_inline_plan_sp->SetPrivate(true);
 
         step_through_inline_plan_ptr->SetOkayToDiscard(true);
@@ -537,6 +550,14 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
   }
 
   return false;
+}
+
+void ThreadPlanStepOut::SetBreakpointsToYieldTo(
+    llvm::ArrayRef<break_id_t> break_ids) {
+  m_breakpoints_to_yield_to = std::move(break_ids);
+  if (m_step_through_inline_plan_sp)
+    static_cast<ThreadPlanStepOverRange *>(m_step_through_inline_plan_sp.get())
+        ->SetBreakpointsToYieldTo(m_breakpoints_to_yield_to);
 }
 
 void ThreadPlanStepOut::CalculateReturnValue() {
