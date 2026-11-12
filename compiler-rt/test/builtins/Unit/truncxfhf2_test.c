@@ -61,6 +61,31 @@ int main() {
                       UINT16_C(0x7e00)))
     return 1;
 
+#  if defined(__x86_64__)
+  // Values that rounding to float first would move onto the midpoint between
+  // two halves, which then rounds to even.
+
+  // 65520 - 2^-20, just below the midpoint between 65504 and infinity
+  if (test_truncxfhf2(UINT16_C(0x400e), UINT64_C(0xffeffffff0000000),
+                      UINT16_C(0x7bff)))
+    return 1;
+
+  // -(65520 - 2^-30)
+  if (test_truncxfhf2(UINT16_C(0xc00e), UINT64_C(0xffeffffffffc0000),
+                      UINT16_C(0xfbff)))
+    return 1;
+
+  // 1 + 2^-11 + 2^-40, just above the midpoint between 1 and 1 + 2^-10
+  if (test_truncxfhf2(UINT16_C(0x3fff), UINT64_C(0x8010000000800000),
+                      UINT16_C(0x3c01)))
+    return 1;
+
+  // 2^-25 + 2^-60, just above half the smallest subnormal
+  if (test_truncxfhf2(UINT16_C(0x3fe6), UINT64_C(0x8000000010000000),
+                      UINT16_C(0x0001)))
+    return 1;
+#  endif
+
   return 0;
 }
 
