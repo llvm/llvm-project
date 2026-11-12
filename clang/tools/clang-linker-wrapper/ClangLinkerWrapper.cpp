@@ -1155,8 +1155,7 @@ Error handleOverrideImages(
 
 /// Writes the output of --sycl-device-link: the wrapped SYCL device object,
 /// to be used later in a host link. The host linker is not run.
-Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
-                               ArrayRef<StringRef> WrappedFiles,
+Error emitSYCLDeviceLinkOutput(ArrayRef<StringRef> WrappedFiles,
                                const ArgList &Args) {
   // All SYCL device code is wrapped into at most one object.
   assert(WrappedFiles.size() <= 1 &&
@@ -1172,7 +1171,7 @@ Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
     Module M("offload.wrapper.module", Context);
     M.setTargetTriple(HostTriple);
     M.setDataLayout(HostTriple.computeDataLayout());
-    auto FileOrErr = compileModule(LibraryOptions, M, OFK_SYCL);
+    auto FileOrErr = compileModule(M, OFK_SYCL);
     if (!FileOrErr)
       return FileOrErr.takeError();
     WrappedFile = *FileOrErr;
@@ -1835,8 +1834,7 @@ int main(int Argc, char **Argv) {
       reportError(FilesOrErr.takeError());
 
     if (SYCLDeviceLink) {
-      if (Error Err =
-              emitSYCLDeviceLinkOutput(LibraryOptions, *FilesOrErr, Args))
+      if (Error Err = emitSYCLDeviceLinkOutput(*FilesOrErr, Args))
         reportError(std::move(Err));
     } else if (!EmitFatbinOnly) {
       // Run the host linking job with the rendered arguments.
