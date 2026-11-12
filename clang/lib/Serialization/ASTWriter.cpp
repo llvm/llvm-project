@@ -1534,6 +1534,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     SmallString<128> CleanedSysroot(isysroot);
     PP.getFileManager().makeAbsolutePath(CleanedSysroot, /*Canonicalize=*/true);
     BaseDirectory.assign(CleanedSysroot.begin(), CleanedSysroot.end());
+  } else if (PP.getHeaderSearchInfo().getHeaderSearchOpts().PCHBaseDirIsCwd) {
+    // Reuse relocatable PCH prefix stripping, but leave the reader's base
+    // directory empty so relative paths resolve against the consumer's cwd.
+    // GeneratePCHAction rejects combining this with -relocatable-pch.
+    SmallString<128> BaseDir(".");
+    FileMgr.makeAbsolutePath(BaseDir, /*Canonicalize=*/true);
+    BaseDirectory.assign(BaseDir.begin(), BaseDir.end());
   }
 
   // Module map file
