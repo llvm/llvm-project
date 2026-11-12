@@ -762,3 +762,38 @@
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=egpr -mapx-inline-asm-use-gpr32 -x c -E -dM -o - %s | FileCheck --check-prefixes=USEGPR32 %s
 // NOUSEGPR32-NOT: #define __APX_INLINE_ASM_USE_GPR32__ 1
 // USEGPR32: #define __APX_INLINE_ASM_USE_GPR32__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=FMA %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma -mfma4 -mno-fma4 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=FMA %s
+// FMA: #define __AVX__ 1
+// FMA-NOT: #define __FMA4__ 1
+// FMA: #define __FMA__ 1
+// FMA: #define __FP_FAST_FMA 1
+// FMA: #define __FP_FAST_FMAF 1
+// FMA-NOT: #define __FP_FAST_FMAL 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma -mlong-double-64 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=FMAL %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma4 -mlong-double-64 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=FMAL %s
+// FMAL: #define __FP_FAST_FMA 1
+// FMAL: #define __FP_FAST_FMAF 1
+// FMAL: #define __FP_FAST_FMAL 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma -mno-fma -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOFMA %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma -mno-avx -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOFMA %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma4 -mno-fma4 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOFMA %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma4 -mno-avx -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOFMA %s
+// NOFMA-NOT: #define __FMA4__ 1
+// NOFMA-NOT: #define __FMA__ 1
+// NOFMA-NOT: #define __FP_FAST_FMA 1
+// NOFMA-NOT: #define __FP_FAST_FMAF 1
+// NOFMA-NOT: #define __FP_FAST_FMAL 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma4 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=FMA4 %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mfma -mfma4 -mno-fma -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=FMA4 %s
+// FMA4: #define __AVX__ 1
+// FMA4: #define __FMA4__ 1
+// FMA4-NOT: #define __FMA__ 1
+// FMA4: #define __FP_FAST_FMA 1
+// FMA4: #define __FP_FAST_FMAF 1
+// FMA4-NOT: #define __FP_FAST_FMAL 1
+// FMA4: #define __SSE4A__ 1
