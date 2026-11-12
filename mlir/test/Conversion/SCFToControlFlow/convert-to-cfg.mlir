@@ -859,7 +859,7 @@ func.func @parallel_loop_annotation_2d(%arg0 : index, %arg1 : index, %arg2 : ind
 // Drop standalone loop hints, unrelated LLVM attributes and builtin values.
 // CHECK: #[[UNROLL:.*]] = #llvm.loop_unroll<disable = true>
 // CHECK: #[[ANNOTATION:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL]]>
-// CHECK-LABEL: func.func @loop_annotation_value_dialect
+// CHECK: func.func @loop_annotation_value_dialect
 // CHECK: cf.br {{.*}} {test.annotation = #[[ANNOTATION]]}
 // CHECK: return
 #annotation = #llvm.loop_annotation<unroll = <disable = true>>
