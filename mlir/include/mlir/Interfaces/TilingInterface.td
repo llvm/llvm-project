@@ -71,6 +71,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
     hiding) and fails to compile when the interface forwards to it.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/TilingInterface.h"];
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
@@ -518,6 +519,7 @@ def PartialReductionOpInterface :
     `ReductionTilingStrategy::PartialReductionOuterReduction`).
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/TilingInterface.h"];
   let methods = [
       InterfaceMethod<
         /*desc=*/[{

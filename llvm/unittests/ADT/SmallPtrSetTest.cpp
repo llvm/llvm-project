@@ -498,7 +498,7 @@ TEST(SmallPtrSetTest, MoveConstructInvalidatesIterators) {
   SmallPtrSet<int *, 2> Set;
   Set.insert(&buf[0]);
   auto It = Set.begin();
-  SmallPtrSet<int *, 2> Other = std::move(Set);
+  [[maybe_unused]] SmallPtrSet<int *, 2> Other = std::move(Set);
   EXPECT_DEATH((void)*It, "invalid iterator access");
 }
 
@@ -507,7 +507,7 @@ TEST(SmallPtrSetTest, MoveAssignInvalidatesIterators) {
   SmallPtrSet<int *, 2> Set;
   Set.insert(&buf[0]);
   auto It = Set.begin();
-  SmallPtrSet<int *, 2> Other;
+  [[maybe_unused]] SmallPtrSet<int *, 2> Other;
   Other = std::move(Set);
   EXPECT_DEATH((void)*It, "invalid iterator access");
 }

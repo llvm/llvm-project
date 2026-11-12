@@ -10,6 +10,7 @@
 #define _LIBCPP___PSTL_BACKENDS_STATPART_FIND_IF_H
 
 #include <__algorithm/find_if.h>
+#include <__assert>
 #include <__config>
 #include <__execution/is_execution_policy.h>
 #include <__functional/operations.h>

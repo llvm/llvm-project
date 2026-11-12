@@ -5,7 +5,8 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=sparc-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=SPARC32 %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=sparcv9-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=SPARC64 %s
 
-; SPARC32: declare i32 @.div(i32, i32)
+; SPARC32: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; SPARC32-NEXT: declare i32 @.div(i32, i32)
 ; SPARC32-NEXT: declare i32 @.rem(i32, i32)
 ; SPARC32-NEXT: declare i32 @.udiv(i32, i32)
 ; SPARC32-NEXT: declare i32 @.umul(i32, i32)
@@ -14,6 +15,7 @@
 ; SPARC32-NEXT: declare i64 @_Q_qtoll(fp128)
 ; SPARC32-NEXT: declare i64 @_Q_qtoull(fp128)
 ; SPARC32-NEXT: declare fp128 @_Q_ulltoq(i64)
+; SPARC32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; SPARC32-NEXT: declare void @_Unwind_Resume(ptr)
 ; SPARC32-NEXT: declare double @__adddf3(double, double)
 ; SPARC32-NEXT: declare float @__addsf3(float, float)
@@ -82,6 +84,9 @@
 ; SPARC32-NEXT: declare i32 @__clzdi2(i64)
 ; SPARC32-NEXT: declare i32 @__clzsi2(i32)
 ; SPARC32-NEXT: declare i32 @__clzti2(i128)
+; SPARC32-NEXT: declare i32 @__ctzdi2(i64)
+; SPARC32-NEXT: declare i32 @__ctzsi2(i32)
+; SPARC32-NEXT: declare i32 @__ctzti2(i128)
 ; SPARC32-NEXT: declare void @__cxa_end_cleanup()
 ; SPARC32-NEXT: declare double @__divdf3(double, double)
 ; SPARC32-NEXT: declare i64 @__divdi3(i64, i64)
@@ -206,7 +211,7 @@
 ; SPARC32-NEXT: declare double @__muldf3(double, double)
 ; SPARC32-NEXT: declare i64 @__muldi3(i64, i64)
 ; SPARC32-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; SPARC32-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; SPARC32-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; SPARC32-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; SPARC32-NEXT: declare float @__mulsf3(float, float)
 ; SPARC32-NEXT: declare fp128 @__multf3(fp128, fp128)
@@ -224,8 +229,7 @@
 ; SPARC32-NEXT: declare float @__powisf2(float, i32)
 ; SPARC32-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; SPARC32-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; SPARC32-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
-; SPARC32-NEXT: declare void @__stack_chk_fail()
+; SPARC32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; SPARC32-NEXT: declare double @__subdf3(double, double)
 ; SPARC32-NEXT: declare float @__subsf3(float, float)
 ; SPARC32-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -384,9 +388,9 @@
 ; SPARC32-NEXT: declare float @fmodf(float, float)
 ; SPARC32-NEXT: declare fp128 @fmodl(fp128, fp128)
 ; SPARC32-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; SPARC32-NEXT: declare double @frexp(double, ptr)
-; SPARC32-NEXT: declare float @frexpf(float, ptr)
-; SPARC32-NEXT: declare fp128 @frexpl(fp128, ptr)
+; SPARC32-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC32-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC32-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; SPARC32-NEXT: declare double @ldexp(double, i32)
 ; SPARC32-NEXT: declare float @ldexpf(float, i32)
 ; SPARC32-NEXT: declare fp128 @ldexpl(fp128, i32)
@@ -415,9 +419,9 @@
 ; SPARC32-NEXT: declare ptr @memcpy(ptr, ptr, i32)
 ; SPARC32-NEXT: declare ptr @memmove(ptr, ptr, i32)
 ; SPARC32-NEXT: declare ptr @memset(ptr, i32, i32)
-; SPARC32-NEXT: declare double @modf(double, ptr)
-; SPARC32-NEXT: declare float @modff(float, ptr)
-; SPARC32-NEXT: declare fp128 @modfl(fp128, ptr)
+; SPARC32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; SPARC32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC32-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 8 dereferenceable(16))
 ; SPARC32-NEXT: declare double @nan(ptr)
 ; SPARC32-NEXT: declare float @nanf(ptr)
 ; SPARC32-NEXT: declare fp128 @nanl(ptr)
@@ -433,9 +437,9 @@
 ; SPARC32-NEXT: declare double @remainder(double, double)
 ; SPARC32-NEXT: declare float @remainderf(float, float)
 ; SPARC32-NEXT: declare fp128 @remainderl(fp128, fp128)
-; SPARC32-NEXT: declare double @remquo(double, double, ptr)
-; SPARC32-NEXT: declare float @remquof(float, float, ptr)
-; SPARC32-NEXT: declare fp128 @remquol(fp128, fp128, ptr)
+; SPARC32-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC32-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC32-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; SPARC32-NEXT: declare double @rint(double)
 ; SPARC32-NEXT: declare float @rintf(float)
 ; SPARC32-NEXT: declare fp128 @rintl(fp128)
@@ -452,9 +456,9 @@
 ; SPARC32-NEXT: declare float @scalbnf(float, i32)
 ; SPARC32-NEXT: declare fp128 @scalbnl(fp128, i32)
 ; SPARC32-NEXT: declare double @sin(double)
-; SPARC32-NEXT: declare void @sincos(double, ptr, ptr)
-; SPARC32-NEXT: declare void @sincosf(float, ptr, ptr)
-; SPARC32-NEXT: declare void @sincosl(fp128, ptr, ptr)
+; SPARC32-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; SPARC32-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC32-NEXT: declare void @sincosl(fp128, ptr noalias nonnull writeonly align 8 dereferenceable(16), ptr noalias nonnull writeonly align 8 dereferenceable(16))
 ; SPARC32-NEXT: declare float @sinf(float)
 ; SPARC32-NEXT: declare double @sinh(double)
 ; SPARC32-NEXT: declare float @sinhf(float)
@@ -475,16 +479,20 @@
 ; SPARC32-NEXT: declare double @trunc(double)
 ; SPARC32-NEXT: declare float @truncf(float)
 ; SPARC32-NEXT: declare fp128 @truncl(fp128)
-; SPARC32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; SPARC32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; SPARC32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; SPARC32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; SPARC32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; SPARC32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; SPARC32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; SPARC32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; SPARC32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; SPARC64: declare signext i32 @.div(i32 signext, i32 signext)
+; SPARC64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; SPARC64-NEXT: declare signext i32 @.div(i32 signext, i32 signext)
 ; SPARC64-NEXT: declare signext i32 @.rem(i32 signext, i32 signext)
 ; SPARC64-NEXT: declare zeroext i32 @.udiv(i32 zeroext, i32 zeroext)
 ; SPARC64-NEXT: declare signext i32 @.umul(i32 signext, i32 signext)
 ; SPARC64-NEXT: declare zeroext i32 @.urem(i32 zeroext, i32 zeroext)
+; SPARC64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; SPARC64-NEXT: declare void @_Unwind_Resume(ptr)
 ; SPARC64-NEXT: declare double @__adddf3(double, double)
 ; SPARC64-NEXT: declare float @__addsf3(float, float)
@@ -555,6 +563,9 @@
 ; SPARC64-NEXT: declare signext i32 @__clzdi2(i64)
 ; SPARC64-NEXT: declare signext i32 @__clzsi2(i32 zeroext)
 ; SPARC64-NEXT: declare signext i32 @__clzti2(i128)
+; SPARC64-NEXT: declare signext i32 @__ctzdi2(i64)
+; SPARC64-NEXT: declare signext i32 @__ctzsi2(i32 zeroext)
+; SPARC64-NEXT: declare signext i32 @__ctzti2(i128)
 ; SPARC64-NEXT: declare void @__cxa_end_cleanup()
 ; SPARC64-NEXT: declare double @__divdf3(double, double)
 ; SPARC64-NEXT: declare i64 @__divdi3(i64, i64)
@@ -682,7 +693,7 @@
 ; SPARC64-NEXT: declare double @__muldf3(double, double)
 ; SPARC64-NEXT: declare i64 @__muldi3(i64, i64)
 ; SPARC64-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; SPARC64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr)
+; SPARC64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; SPARC64-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; SPARC64-NEXT: declare float @__mulsf3(float, float)
 ; SPARC64-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext)
@@ -702,8 +713,7 @@
 ; SPARC64-NEXT: declare float @__powisf2(float, i32 signext)
 ; SPARC64-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; SPARC64-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; SPARC64-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
-; SPARC64-NEXT: declare void @__stack_chk_fail()
+; SPARC64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; SPARC64-NEXT: declare double @__subdf3(double, double)
 ; SPARC64-NEXT: declare float @__subsf3(float, float)
 ; SPARC64-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -864,9 +874,9 @@
 ; SPARC64-NEXT: declare float @fmodf(float, float)
 ; SPARC64-NEXT: declare fp128 @fmodl(fp128, fp128)
 ; SPARC64-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; SPARC64-NEXT: declare double @frexp(double, ptr)
-; SPARC64-NEXT: declare float @frexpf(float, ptr)
-; SPARC64-NEXT: declare fp128 @frexpl(fp128, ptr)
+; SPARC64-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC64-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC64-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; SPARC64-NEXT: declare double @ldexp(double, i32 signext)
 ; SPARC64-NEXT: declare float @ldexpf(float, i32 signext)
 ; SPARC64-NEXT: declare fp128 @ldexpl(fp128, i32 signext)
@@ -895,9 +905,9 @@
 ; SPARC64-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; SPARC64-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; SPARC64-NEXT: declare ptr @memset(ptr, i32 signext, i64)
-; SPARC64-NEXT: declare double @modf(double, ptr)
-; SPARC64-NEXT: declare float @modff(float, ptr)
-; SPARC64-NEXT: declare fp128 @modfl(fp128, ptr)
+; SPARC64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; SPARC64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC64-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; SPARC64-NEXT: declare double @nan(ptr)
 ; SPARC64-NEXT: declare float @nanf(ptr)
 ; SPARC64-NEXT: declare fp128 @nanl(ptr)
@@ -913,9 +923,9 @@
 ; SPARC64-NEXT: declare double @remainder(double, double)
 ; SPARC64-NEXT: declare float @remainderf(float, float)
 ; SPARC64-NEXT: declare fp128 @remainderl(fp128, fp128)
-; SPARC64-NEXT: declare double @remquo(double, double, ptr)
-; SPARC64-NEXT: declare float @remquof(float, float, ptr)
-; SPARC64-NEXT: declare fp128 @remquol(fp128, fp128, ptr)
+; SPARC64-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC64-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC64-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; SPARC64-NEXT: declare double @rint(double)
 ; SPARC64-NEXT: declare float @rintf(float)
 ; SPARC64-NEXT: declare fp128 @rintl(fp128)
@@ -932,9 +942,9 @@
 ; SPARC64-NEXT: declare float @scalbnf(float, i32 signext)
 ; SPARC64-NEXT: declare fp128 @scalbnl(fp128, i32 signext)
 ; SPARC64-NEXT: declare double @sin(double)
-; SPARC64-NEXT: declare void @sincos(double, ptr, ptr)
-; SPARC64-NEXT: declare void @sincosf(float, ptr, ptr)
-; SPARC64-NEXT: declare void @sincosl(fp128, ptr, ptr)
+; SPARC64-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; SPARC64-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SPARC64-NEXT: declare void @sincosl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; SPARC64-NEXT: declare float @sinf(float)
 ; SPARC64-NEXT: declare double @sinh(double)
 ; SPARC64-NEXT: declare float @sinhf(float)
@@ -955,7 +965,9 @@
 ; SPARC64-NEXT: declare double @trunc(double)
 ; SPARC64-NEXT: declare float @truncf(float)
 ; SPARC64-NEXT: declare fp128 @truncl(fp128)
-; SPARC64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; SPARC64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; SPARC64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; SPARC64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; SPARC64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; SPARC64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; SPARC64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; SPARC64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; SPARC64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

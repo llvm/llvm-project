@@ -95,7 +95,7 @@ body:             |
     ; SDWA-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     ; SDWA-NEXT: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 8, [[FLAT_LOAD_DWORD]], implicit $exec
     ; SDWA-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 255
-    ; SDWA-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[FLAT_LOAD_DWORD]], killed [[S_MOV_B32_]], implicit $exec
+    ; SDWA-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[FLAT_LOAD_DWORD]], [[S_MOV_B32_]], implicit $exec
     ; SDWA-NEXT: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[FLAT_LOAD_DWORD1]], 0, 5, 2, 4, implicit $exec, implicit [[V_AND_B32_e64_]](tied-def 0)
     ; SDWA-NEXT: FLAT_STORE_DWORD [[COPY2]], [[V_MOV_B32_sdwa]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     ; SDWA-NEXT: S_ENDPGM 0
@@ -107,7 +107,7 @@ body:             |
 
     %9:vgpr_32 = V_LSHRREV_B16_e64 8, %3, implicit $exec
     %10:sreg_32_xm0 = S_MOV_B32 255
-    %11:vgpr_32 = V_AND_B32_e64 %3, killed %10, implicit $exec
+    %11:vgpr_32 = V_AND_B32_e64 %3, %10, implicit $exec
     %17:vgpr_32 = V_MOV_B32_sdwa 0, %4, 0, 5, 2, 4, implicit $exec, implicit %11(tied-def 0)
     FLAT_STORE_DWORD %0, %17, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     S_ENDPGM 0
@@ -144,7 +144,7 @@ body:             |
     ; SDWA-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     ; SDWA-NEXT: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 8, [[FLAT_LOAD_DWORD]], implicit $exec
     ; SDWA-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 65535
-    ; SDWA-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[FLAT_LOAD_DWORD]], killed [[S_MOV_B32_]], implicit $exec
+    ; SDWA-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[FLAT_LOAD_DWORD]], [[S_MOV_B32_]], implicit $exec
     ; SDWA-NEXT: [[V_MOV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_MOV_B32_sdwa 0, [[FLAT_LOAD_DWORD1]], 0, 5, 2, 4, implicit $exec, implicit [[FLAT_LOAD_DWORD]](tied-def 0)
     ; SDWA-NEXT: FLAT_STORE_DWORD [[COPY2]], [[V_MOV_B32_sdwa]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     ; SDWA-NEXT: S_ENDPGM 0
@@ -156,7 +156,7 @@ body:             |
 
     %9:vgpr_32 = V_LSHRREV_B16_e64 8, %3, implicit $exec
     %10:sreg_32_xm0 = S_MOV_B32 65535
-    %11:vgpr_32 = V_AND_B32_e64 %3, killed %10, implicit $exec
+    %11:vgpr_32 = V_AND_B32_e64 %3, %10, implicit $exec
     %17:vgpr_32 = V_MOV_B32_sdwa 0, %4, 0, 5, 2, 4, implicit $exec, implicit %11(tied-def 0)
     FLAT_STORE_DWORD %0, %17, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     S_ENDPGM 0
@@ -220,34 +220,34 @@ body:             |
     S_SETPC_B64_return $sgpr30_sgpr31
 ...
 
-# Should not add kill flag to reused ops in SDWAInst
+# Check an operand reused by multiple SDWA conversions.
 
 ---
-name: multiuse_kill
+name: multiuse_preserve
 tracksRegLiveness: true
 
 body:             |
   bb.0:
-    ; SDWA-LABEL: name: multiuse_kill
+    ; SDWA-LABEL: name: multiuse_preserve
     ; SDWA: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SDWA-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SDWA-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; SDWA-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, killed [[DEF]], implicit $exec
+    ; SDWA-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[DEF]], implicit $exec
     ; SDWA-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-    ; SDWA-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 killed [[S_MOV_B32_]], [[DEF1]], implicit $exec
+    ; SDWA-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[S_MOV_B32_]], [[DEF1]], implicit $exec
     ; SDWA-NEXT: [[V_OR_B32_sdwa:%[0-9]+]]:vgpr_32 = V_OR_B32_sdwa 0, [[DEF1]], 0, [[V_LSHLREV_B32_e64_]], 0, 6, 0, 4, 6, implicit $exec
-    ; SDWA-NEXT: [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, killed [[DEF2]], implicit $exec
+    ; SDWA-NEXT: [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[DEF2]], implicit $exec
     ; SDWA-NEXT: [[V_OR_B32_sdwa1:%[0-9]+]]:vgpr_32 = V_OR_B32_sdwa 0, [[DEF1]], 0, [[V_LSHLREV_B32_e64_1]], 0, 6, 0, 4, 6, implicit $exec
     ; SDWA-NEXT: S_ENDPGM 0
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    %3:vgpr_32 = V_LSHLREV_B32_e64 16, killed %0, implicit $exec
+    %3:vgpr_32 = V_LSHLREV_B32_e64 16, %0, implicit $exec
     %4:sreg_32 = S_MOV_B32 65535
-    %5:vgpr_32 = V_AND_B32_e64 killed %4, killed %1, implicit $exec
-    %6:vgpr_32 = V_OR_B32_e64 %5, killed %3, implicit $exec
-    %7:vgpr_32 = V_LSHLREV_B32_e64 16, killed %2, implicit $exec
-    %8:vgpr_32 = V_OR_B32_e64 %5, killed %7, implicit $exec
+    %5:vgpr_32 = V_AND_B32_e64 %4, %1, implicit $exec
+    %6:vgpr_32 = V_OR_B32_e64 %5, %3, implicit $exec
+    %7:vgpr_32 = V_LSHLREV_B32_e64 16, %2, implicit $exec
+    %8:vgpr_32 = V_OR_B32_e64 %5, %7, implicit $exec
 
     S_ENDPGM 0
 

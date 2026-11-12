@@ -103,6 +103,10 @@ class HexagonMCChecker {
   bool checkLegalVecRegPair();
   bool checkValidTmpDst();
   bool checkHVXAccum();
+  // An HLX instruction that reads a 64-bit scalar register may not be in the
+  // same packet with another HLX instruction that uses a scalar register or
+  // an immediate. HLX loads and stores are excluded.
+  bool checkHLX64BitRegUse();
 
   static void compoundRegisterMap(unsigned &);
 

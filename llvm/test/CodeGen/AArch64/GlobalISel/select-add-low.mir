@@ -14,7 +14,6 @@
 name:            select_add_low_without_offset
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -35,7 +34,6 @@ body:             |
 name:            select_add_low_with_offset
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -56,7 +54,6 @@ body:             |
 name:            select_add_low_without_adrp
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0

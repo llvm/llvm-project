@@ -37,6 +37,7 @@
 #include <flang/Semantics/symbol.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
+#include <flang/Support/Flags.h>
 #include <flang/Utils/OpenMP.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallPtrSet.h>
@@ -75,8 +76,22 @@ llvm::cl::opt<bool> treatIndexAsSection(
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+static bool
+hasUserDefinedDefaultMapper(Fortran::lower::AbstractConverter &converter,
+                            const semantics::DerivedTypeSpec &typeSpec) {
+  std::string mapperName =
+      typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
+  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperName))
+    return sym->GetUltimate().detailsIf<semantics::MapperDetails>();
+
+  return false;
+}
+
 bool requiresImplicitDefaultDeclareMapper(
-    const semantics::DerivedTypeSpec &typeSpec) {
+    lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
+    const semantics::DerivedTypeSpec &typeSpec,
+    bool enableImplicitDefaultMapperAllocatableMembers) {
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
@@ -86,13 +101,21 @@ bool requiresImplicitDefaultDeclareMapper(
 
     semantics::DirectComponentIterator directComponents{spec};
     for (const semantics::Symbol &component : directComponents) {
-      if (component.attrs().test(semantics::Attr::ALLOCATABLE))
+      if (enableImplicitDefaultMapperAllocatableMembers &&
+          component.attrs().test(semantics::Attr::ALLOCATABLE))
         return true;
 
-      if (const semantics::DeclTypeSpec *declType = component.GetType())
-        if (const auto *nested = declType->AsDerived())
-          if (requiresMapper(*nested))
-            return true;
+      if (const semantics::DeclTypeSpec *declType = component.GetType()) {
+        const auto *nested = declType->AsDerived();
+        if (!nested)
+          continue;
+
+        if (hasUserDefinedDefaultMapper(converter, *nested))
+          return true;
+
+        if (requiresMapper(*nested))
+          return true;
+      }
     }
     return false;
   };
@@ -1211,7 +1234,8 @@ findMapperIfTypeMatch(Fortran::lower::AbstractConverter &converter,
 static mlir::FlatSymbolRefAttr
 addImplicitMapper(Fortran::lower::AbstractConverter &converter,
                   mlir::Location loc, const omp::Object &object,
-                  std::string &mapperIdName, bool allowGenerate) {
+                  std::string &mapperIdName, bool allowGenerate,
+                  bool emitAllocatableMemberMaps) {
   if (!allowGenerate || mapperIdName.empty())
     return mlir::FlatSymbolRefAttr();
 
@@ -1232,7 +1256,8 @@ addImplicitMapper(Fortran::lower::AbstractConverter &converter,
       converter.getFirOpBuilder(), loc, recordType, mapperIdName,
       [&](std::string &mapperIdName, llvm::StringRef memberName) {
         defaultMangler(converter, mapperIdName, memberName);
-      });
+      },
+      emitAllocatableMemberMaps);
 }
 
 mlir::FlatSymbolRefAttr resolveMapperId(
@@ -1278,16 +1303,19 @@ mlir::FlatSymbolRefAttr resolveMapperId(
       bool isImplicitMap =
           (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
           mlir::omp::ClauseMapFlags::implicit;
-      bool needsDefaultMapper =
-          requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+      bool needsDefaultMapper = requiresImplicitDefaultDeclareMapper(
+          converter, firOpBuilder, *objectTypeSpec,
+          enableImplicitDefaultMapperAllocatableMembers);
       // For implicit captures, avoid synthesizing default mappers for
       // pointer entities (which can over-map pointer payloads) and for
       // plain non-allocatable/non-pointer entities. Keep implicit mapper
       // support for allocatables.
       if (isImplicitMap && (isPointer || !isAllocOrPointer))
         needsDefaultMapper = false;
-      mapperId = addImplicitMapper(converter, loc, object, mapperIdName,
-                                   /*allowGenerate=*/needsDefaultMapper);
+      mapperId =
+          addImplicitMapper(converter, loc, object, mapperIdName,
+                            /*allowGenerate=*/needsDefaultMapper,
+                            enableImplicitDefaultMapperAllocatableMembers);
     }
   }
 
@@ -1480,6 +1508,172 @@ mlir::Value getEnclosingDispatchNocontext(mlir::OpBuilder &builder) {
     if (auto dispatch = mlir::dyn_cast<mlir::omp::DispatchOp>(op))
       return dispatch.getNocontext();
   return {};
+}
+
+IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object) {
+  IteratorMapObjectAnalysis analysis;
+  const std::optional<ExprTy> &ref = object.ref();
+  if (!ref)
+    return analysis;
+
+  std::optional<evaluate::DataRef> dataRef = evaluate::ExtractDataRef(*ref);
+  if (!dataRef)
+    return analysis;
+
+  const auto *component = std::get_if<evaluate::Component>(&dataRef->u);
+  const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
+  analysis.isDerivedTypeMember =
+      component || (arrayRef && arrayRef->base().UnwrapComponent());
+
+  // A ranked part before the last one, as in v%p(1:1)%a(i) or x(1:2)%c, can be
+  // neither kept in an array base nor described by map bounds.
+  const evaluate::Component *lastComponent =
+      component ? component
+                : (arrayRef ? arrayRef->base().UnwrapComponent() : nullptr);
+  if (lastComponent && lastComponent->base().Rank() > 0) {
+    analysis.hasArrayValuedParent = true;
+    return analysis;
+  }
+
+  if (!arrayRef || arrayRef->subscript().empty() ||
+      evaluate::ExtractCoarrayRef(*dataRef))
+    return analysis;
+
+  for (const auto &subscript : arrayRef->subscript()) {
+    if (!std::holds_alternative<evaluate::Triplet>(subscript.u) &&
+        subscript.Rank() > 0)
+      return analysis;
+  }
+
+  analysis.arrayRef = *arrayRef;
+  return analysis;
+}
+
+// Lower the array base (a for a(i)) with shape information for bounds.
+static hlfir::Entity
+getIteratorMapEntity(Fortran::lower::AbstractConverter &converter,
+                     fir::FirOpBuilder &builder, const omp::Object &object,
+                     mlir::Location loc) {
+  const semantics::Symbol *sym = object.sym();
+  assert(sym && !sym->owner().IsDerivedType() &&
+         "expected non-component symbol for iterator object");
+
+  // Keep the same base address as ordinary map lowering.
+  mlir::Value addr =
+      Fortran::lower::getDataOperandBaseAddr(converter, builder, *sym, loc,
+                                             /*unwrapFirBox=*/false)
+          .addr;
+
+  // Load allocatable and pointer descriptors to access data and shape. Keep
+  // the box value until bounds are built; map construction extracts its data
+  // address with fir.box_addr.
+  if (fir::isBoxAddress(addr.getType()))
+    addr = fir::LoadOp::create(builder, loc, addr);
+  return hlfir::Entity{addr};
+}
+
+// Ordinary map lowering derives bounds from a fully lowered locator. Iterator
+// maps keep the array base in var_ptr, so build bounds from the subscripts in
+// the iterator body, relative to the base's Fortran lower bounds.
+//
+// Examples:
+//   a(i)     -> lower_bound == upper_bound == i - base lower bound
+//   a(i:i+1) -> lower_bound == i - base lower bound,
+//               upper_bound == i + 1 - base lower bound
+static llvm::SmallVector<mlir::Value>
+genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
+                     hlfir::Entity entity, const evaluate::ArrayRef &arrayRef,
+                     Fortran::lower::StatementContext &stmtCtx,
+                     mlir::Location loc) {
+  auto &builder = converter.getFirOpBuilder();
+  using SubscriptExpr =
+      Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>;
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type boundTy = builder.getType<mlir::omp::MapBoundsType>();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  mlir::Value box;
+  if (entity.isBoxAddressOrValue())
+    box = entity.getBase();
+
+  auto lowerSubscriptToIndex = [&](const SubscriptExpr &expr) -> mlir::Value {
+    mlir::Value value =
+        fir::getBase(converter.genExprValue(toEvExpr(expr), stmtCtx, &loc));
+    return builder.createConvert(loc, idxTy, value);
+  };
+
+  llvm::SmallVector<mlir::Value> bounds;
+  bounds.reserve(arrayRef.subscript().size());
+  for (const auto &[dim, subscript] : llvm::enumerate(arrayRef.subscript())) {
+    mlir::Value baseLb = builder.createConvert(
+        loc, idxTy, hlfir::genLBound(loc, builder, entity, dim));
+    mlir::Value extent;
+    mlir::Value stride = one;
+    bool strideInBytes = false;
+    if (box) {
+      mlir::Value dimValue = builder.createIntegerConstant(loc, idxTy, dim);
+      auto dimInfo = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                            box, dimValue);
+      extent = dimInfo.getExtent();
+      stride = dimInfo.getByteStride();
+      strideInBytes = true;
+    } else {
+      extent = builder.createConvert(
+          loc, idxTy, hlfir::genExtent(loc, builder, entity, dim));
+    }
+    mlir::Value lbound;
+    mlir::Value ubound;
+
+    if (const auto *triplet =
+            std::get_if<Fortran::evaluate::Triplet>(&subscript.u)) {
+      // Omitted endpoints use the dimension's lower or upper bound, normalized
+      // to zero or extent - 1, respectively.
+      if (std::optional<SubscriptExpr> lowerBound = triplet->lower()) {
+        mlir::Value lower = lowerSubscriptToIndex(*lowerBound);
+        lbound = mlir::arith::SubIOp::create(builder, loc, lower, baseLb);
+      } else {
+        lbound = zero;
+      }
+
+      if (std::optional<SubscriptExpr> upperBound = triplet->upper()) {
+        mlir::Value upper = lowerSubscriptToIndex(*upperBound);
+        ubound = mlir::arith::SubIOp::create(builder, loc, upper, baseLb);
+      } else {
+        ubound = mlir::arith::SubIOp::create(builder, loc, extent, one);
+      }
+
+      assert(Fortran::evaluate::ToInt64(triplet->GetStride()) == 1 &&
+             "expected unit section stride");
+    } else {
+      const auto *indirect =
+          std::get_if<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
+              &subscript.u);
+      assert(indirect && "expected non-triplet subscript");
+
+      // Scalar subscripts map one element, so lower and upper are identical.
+      mlir::Value index = lowerSubscriptToIndex(indirect->value());
+      lbound = mlir::arith::SubIOp::create(builder, loc, index, baseLb);
+      ubound = lbound;
+    }
+
+    mlir::Value bound = mlir::omp::MapBoundsOp::create(
+        builder, loc, boundTy, lbound, ubound, extent, stride,
+        /*stride_in_bytes=*/strideInBytes, /*start_idx=*/baseLb);
+    bounds.push_back(bound);
+  }
+
+  return bounds;
+}
+
+IteratorMapInfo genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
+                                   fir::FirOpBuilder &builder,
+                                   Fortran::lower::StatementContext &stmtCtx,
+                                   const omp::Object &object,
+                                   const evaluate::ArrayRef &arrayRef,
+                                   mlir::Location loc) {
+  hlfir::Entity entity = getIteratorMapEntity(converter, builder, object, loc);
+  return IteratorMapInfo{
+      entity, genIteratorMapBounds(converter, entity, arrayRef, stmtCtx, loc)};
 }
 
 } // namespace omp

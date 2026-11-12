@@ -6,15 +6,17 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=powerpc64-ibm-aix < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=AIX64 %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=powerpc64-unknown-linux-gnu < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=LINUX %s
 
-; AIX32: declare void @_Unwind_Resume(ptr)
-; AIX32-NEXT: declare void @___bzero(ptr, i32)
+; AIX32: @__ssp_canary_word = external global ptr
+; AIX32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; AIX32-NEXT: declare void @_Unwind_Resume(ptr)
+; AIX32-NEXT: declare void @___bzero(ptr writeonly captures(none), i32) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memccpy(ptr, ptr, i32, i32)
-; AIX32-NEXT: declare i32 @___memcmp(ptr, ptr, i32)
+; AIX32-NEXT: declare i32 @___memcmp(ptr readonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memmove(ptr, ptr, i32)
 ; AIX32-NEXT: declare ptr @___memset(ptr, i32, i32)
 ; AIX32-NEXT: declare i32 @___strcmp(ptr, ptr)
 ; AIX32-NEXT: declare ptr @___strcpy(ptr, ptr)
-; AIX32-NEXT: declare i32 @___strlen(ptr)
+; AIX32-NEXT: declare i32 @___strlen(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; AIX32-NEXT: declare ptr @___strstr(ptr, ptr)
 ; AIX32-NEXT: declare double @__adddf3(double, double)
 ; AIX32-NEXT: declare fp128 @__addkf3(fp128, fp128)
@@ -83,6 +85,9 @@
 ; AIX32-NEXT: declare i32 @__clzdi2(i64)
 ; AIX32-NEXT: declare i32 @__clzsi2(i32)
 ; AIX32-NEXT: declare i32 @__clzti2(i128)
+; AIX32-NEXT: declare i32 @__ctzdi2(i64)
+; AIX32-NEXT: declare i32 @__ctzsi2(i32)
+; AIX32-NEXT: declare i32 @__ctzti2(i128)
 ; AIX32-NEXT: declare void @__cxa_end_cleanup()
 ; AIX32-NEXT: declare double @__divdf3(double, double)
 ; AIX32-NEXT: declare i64 @__divdi3(i64, i64)
@@ -237,7 +242,7 @@
 ; AIX32-NEXT: declare i64 @__muldi3(i64, i64)
 ; AIX32-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
 ; AIX32-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; AIX32-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; AIX32-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; AIX32-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; AIX32-NEXT: declare float @__mulsf3(float, float)
 ; AIX32-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -256,8 +261,7 @@
 ; AIX32-NEXT: declare float @__powisf2(float, i32)
 ; AIX32-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32)
 ; AIX32-NEXT: declare double @__powl_finite(double, double)
-; AIX32-NEXT: declare void @__ssp_canary_word(...)
-; AIX32-NEXT: declare void @__stack_chk_fail()
+; AIX32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare double @__subdf3(double, double)
 ; AIX32-NEXT: declare fp128 @__subkf3(fp128, fp128)
 ; AIX32-NEXT: declare float @__subsf3(float, float)
@@ -440,10 +444,10 @@
 ; AIX32-NEXT: declare fp128 @fmodf128(fp128, fp128)
 ; AIX32-NEXT: declare double @fmodl(double, double)
 ; AIX32-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; AIX32-NEXT: declare double @frexp(double, ptr)
-; AIX32-NEXT: declare float @frexpf(float, ptr)
-; AIX32-NEXT: declare fp128 @frexpf128(fp128, ptr)
-; AIX32-NEXT: declare double @frexpl(double, ptr)
+; AIX32-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX32-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX32-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX32-NEXT: declare double @frexpl(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; AIX32-NEXT: declare double @ldexp(double, i32)
 ; AIX32-NEXT: declare float @ldexpf(float, i32)
 ; AIX32-NEXT: declare fp128 @ldexpf128(fp128, i32)
@@ -479,10 +483,10 @@
 ; AIX32-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @memmove(ptr, ptr, i32)
 ; AIX32-NEXT: declare ptr @memset(ptr, i32, i32)
-; AIX32-NEXT: declare double @modf(double, ptr)
-; AIX32-NEXT: declare float @modff(float, ptr)
-; AIX32-NEXT: declare fp128 @modff128(fp128, ptr)
-; AIX32-NEXT: declare double @modfl(double, ptr)
+; AIX32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 4 dereferenceable(8))
+; AIX32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX32-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
+; AIX32-NEXT: declare double @modfl(double, ptr noalias nonnull writeonly align 4 dereferenceable(8))
 ; AIX32-NEXT: declare double @nan(ptr)
 ; AIX32-NEXT: declare float @nanf(ptr)
 ; AIX32-NEXT: declare double @nanl(ptr)
@@ -500,9 +504,9 @@
 ; AIX32-NEXT: declare double @remainder(double, double)
 ; AIX32-NEXT: declare float @remainderf(float, float)
 ; AIX32-NEXT: declare double @remainderl(double, double)
-; AIX32-NEXT: declare double @remquo(double, double, ptr)
-; AIX32-NEXT: declare float @remquof(float, float, ptr)
-; AIX32-NEXT: declare double @remquol(double, double, ptr)
+; AIX32-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX32-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX32-NEXT: declare double @remquol(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; AIX32-NEXT: declare double @rint(double)
 ; AIX32-NEXT: declare float @rintf(float)
 ; AIX32-NEXT: declare fp128 @rintf128(fp128)
@@ -522,7 +526,7 @@
 ; AIX32-NEXT: declare float @scalbnf(float, i32)
 ; AIX32-NEXT: declare double @scalbnl(double, i32)
 ; AIX32-NEXT: declare double @sin(double)
-; AIX32-NEXT: declare void @sincosf128(fp128, ptr, ptr)
+; AIX32-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; AIX32-NEXT: declare float @sinf(float)
 ; AIX32-NEXT: declare fp128 @sinf128(fp128)
 ; AIX32-NEXT: declare double @sinh(double)
@@ -549,24 +553,32 @@
 ; AIX32-NEXT: declare float @truncf(float)
 ; AIX32-NEXT: declare fp128 @truncf128(fp128)
 ; AIX32-NEXT: declare double @truncl(double)
-; AIX32-NEXT: declare ptr @vec_calloc(i32, i32)
-; AIX32-NEXT: declare void @vec_free(ptr)
-; AIX32-NEXT: declare ptr @vec_malloc(i32)
+; AIX32-NEXT: declare noalias noundef ptr @vec_calloc(i32 noundef, i32 noundef) [[VEC_CALLOC_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare void @vec_free(ptr allocptr noundef captures(none)) [[VEC_FREE_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare noalias noundef ptr @vec_malloc(i32 noundef) [[VEC_MALLOC_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @vec_realloc(ptr, i32)
-; AIX32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; AIX32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; AIX32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; AIX32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; AIX32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; AIX32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; AIX32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; AIX32-NEXT: attributes [[VEC_CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
+; AIX32-NEXT: attributes [[VEC_FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; AIX32-NEXT: attributes [[VEC_MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
 
-; AIX64: declare void @_Unwind_Resume(ptr)
-; AIX64-NEXT: declare void @___bzero64(ptr, i64)
+; AIX64: @__ssp_canary_word = external global ptr
+; AIX64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
+; AIX64-NEXT: declare void @_Unwind_Resume(ptr)
+; AIX64-NEXT: declare void @___bzero64(ptr writeonly captures(none), i64) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memccpy64(ptr, ptr, i32 signext, i64)
-; AIX64-NEXT: declare signext i32 @___memcmp64(ptr, ptr, i64)
+; AIX64-NEXT: declare signext i32 @___memcmp64(ptr readonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memmove64(ptr, ptr, i64)
 ; AIX64-NEXT: declare ptr @___memset64(ptr, i32 signext, i64)
 ; AIX64-NEXT: declare signext i32 @___strcmp64(ptr, ptr)
 ; AIX64-NEXT: declare ptr @___strcpy64(ptr, ptr)
-; AIX64-NEXT: declare i64 @___strlen64(ptr)
+; AIX64-NEXT: declare i64 @___strlen64(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; AIX64-NEXT: declare ptr @___strstr64(ptr, ptr)
 ; AIX64-NEXT: declare double @__adddf3(double, double)
 ; AIX64-NEXT: declare fp128 @__addkf3(fp128, fp128)
@@ -637,6 +649,9 @@
 ; AIX64-NEXT: declare signext i32 @__clzdi2(i64)
 ; AIX64-NEXT: declare signext i32 @__clzsi2(i32 zeroext)
 ; AIX64-NEXT: declare signext i32 @__clzti2(i128)
+; AIX64-NEXT: declare signext i32 @__ctzdi2(i64)
+; AIX64-NEXT: declare signext i32 @__ctzsi2(i32 zeroext)
+; AIX64-NEXT: declare signext i32 @__ctzti2(i128)
 ; AIX64-NEXT: declare void @__cxa_end_cleanup()
 ; AIX64-NEXT: declare double @__divdf3(double, double)
 ; AIX64-NEXT: declare i64 @__divdi3(i64, i64)
@@ -792,7 +807,7 @@
 ; AIX64-NEXT: declare i64 @__muldi3(i64, i64)
 ; AIX64-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
 ; AIX64-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; AIX64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr)
+; AIX64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; AIX64-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; AIX64-NEXT: declare float @__mulsf3(float, float)
 ; AIX64-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext)
@@ -812,8 +827,7 @@
 ; AIX64-NEXT: declare float @__powisf2(float, i32 signext)
 ; AIX64-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext)
 ; AIX64-NEXT: declare double @__powl_finite(double, double)
-; AIX64-NEXT: declare void @__ssp_canary_word(...)
-; AIX64-NEXT: declare void @__stack_chk_fail()
+; AIX64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare double @__subdf3(double, double)
 ; AIX64-NEXT: declare fp128 @__subkf3(fp128, fp128)
 ; AIX64-NEXT: declare float @__subsf3(float, float)
@@ -996,10 +1010,10 @@
 ; AIX64-NEXT: declare fp128 @fmodf128(fp128, fp128)
 ; AIX64-NEXT: declare double @fmodl(double, double)
 ; AIX64-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; AIX64-NEXT: declare double @frexp(double, ptr)
-; AIX64-NEXT: declare float @frexpf(float, ptr)
-; AIX64-NEXT: declare fp128 @frexpf128(fp128, ptr)
-; AIX64-NEXT: declare double @frexpl(double, ptr)
+; AIX64-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX64-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX64-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX64-NEXT: declare double @frexpl(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; AIX64-NEXT: declare double @ldexp(double, i32 signext)
 ; AIX64-NEXT: declare float @ldexpf(float, i32 signext)
 ; AIX64-NEXT: declare fp128 @ldexpf128(fp128, i32 signext)
@@ -1035,10 +1049,10 @@
 ; AIX64-NEXT: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; AIX64-NEXT: declare ptr @memset(ptr, i32 signext, i64)
-; AIX64-NEXT: declare double @modf(double, ptr)
-; AIX64-NEXT: declare float @modff(float, ptr)
-; AIX64-NEXT: declare fp128 @modff128(fp128, ptr)
-; AIX64-NEXT: declare double @modfl(double, ptr)
+; AIX64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 4 dereferenceable(8))
+; AIX64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX64-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
+; AIX64-NEXT: declare double @modfl(double, ptr noalias nonnull writeonly align 4 dereferenceable(8))
 ; AIX64-NEXT: declare double @nan(ptr)
 ; AIX64-NEXT: declare float @nanf(ptr)
 ; AIX64-NEXT: declare double @nanl(ptr)
@@ -1056,9 +1070,9 @@
 ; AIX64-NEXT: declare double @remainder(double, double)
 ; AIX64-NEXT: declare float @remainderf(float, float)
 ; AIX64-NEXT: declare double @remainderl(double, double)
-; AIX64-NEXT: declare double @remquo(double, double, ptr)
-; AIX64-NEXT: declare float @remquof(float, float, ptr)
-; AIX64-NEXT: declare double @remquol(double, double, ptr)
+; AIX64-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX64-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; AIX64-NEXT: declare double @remquol(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; AIX64-NEXT: declare double @rint(double)
 ; AIX64-NEXT: declare float @rintf(float)
 ; AIX64-NEXT: declare fp128 @rintf128(fp128)
@@ -1078,7 +1092,7 @@
 ; AIX64-NEXT: declare float @scalbnf(float, i32 signext)
 ; AIX64-NEXT: declare double @scalbnl(double, i32 signext)
 ; AIX64-NEXT: declare double @sin(double)
-; AIX64-NEXT: declare void @sincosf128(fp128, ptr, ptr)
+; AIX64-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; AIX64-NEXT: declare float @sinf(float)
 ; AIX64-NEXT: declare fp128 @sinf128(fp128)
 ; AIX64-NEXT: declare double @sinh(double)
@@ -1105,16 +1119,24 @@
 ; AIX64-NEXT: declare float @truncf(float)
 ; AIX64-NEXT: declare fp128 @truncf128(fp128)
 ; AIX64-NEXT: declare double @truncl(double)
-; AIX64-NEXT: declare ptr @vec_calloc(i64, i64)
-; AIX64-NEXT: declare void @vec_free(ptr)
-; AIX64-NEXT: declare ptr @vec_malloc(i64)
+; AIX64-NEXT: declare noalias noundef ptr @vec_calloc(i64 noundef, i64 noundef) [[VEC_CALLOC_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare void @vec_free(ptr allocptr noundef captures(none)) [[VEC_FREE_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare noalias noundef ptr @vec_malloc(i64 noundef) [[VEC_MALLOC_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @vec_realloc(ptr, i64)
-; AIX64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; AIX64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; AIX64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; AIX64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; AIX64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; AIX64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; AIX64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; AIX64-NEXT: attributes [[VEC_CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
+; AIX64-NEXT: attributes [[VEC_FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; AIX64-NEXT: attributes [[VEC_MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
 
-; LINUX: declare void @_Unwind_Resume(ptr)
+; LINUX: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare fp128 @__addkf3(fp128, fp128)
 ; LINUX-NEXT: declare float @__addsf3(float, float)
@@ -1184,6 +1206,9 @@
 ; LINUX-NEXT: declare signext i32 @__clzdi2(i64)
 ; LINUX-NEXT: declare signext i32 @__clzsi2(i32 zeroext)
 ; LINUX-NEXT: declare signext i32 @__clzti2(i128)
+; LINUX-NEXT: declare signext i32 @__ctzdi2(i64)
+; LINUX-NEXT: declare signext i32 @__ctzsi2(i32 zeroext)
+; LINUX-NEXT: declare signext i32 @__ctzti2(i128)
 ; LINUX-NEXT: declare void @__cxa_end_cleanup()
 ; LINUX-NEXT: declare double @__divdf3(double, double)
 ; LINUX-NEXT: declare i64 @__divdi3(i64, i64)
@@ -1339,7 +1364,7 @@
 ; LINUX-NEXT: declare i64 @__muldi3(i64, i64)
 ; LINUX-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
 ; LINUX-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; LINUX-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr)
+; LINUX-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; LINUX-NEXT: declare float @__mulsf3(float, float)
 ; LINUX-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext)
@@ -1359,8 +1384,7 @@
 ; LINUX-NEXT: declare float @__powisf2(float, i32 signext)
 ; LINUX-NEXT: declare ppc_fp128 @__powitf2(ppc_fp128, i32 signext)
 ; LINUX-NEXT: declare ppc_fp128 @__powl_finite(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare void @__stack_chk_fail()
-; LINUX-NEXT: declare void @__stack_chk_guard(...)
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare fp128 @__subkf3(fp128, fp128)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
@@ -1543,10 +1567,10 @@
 ; LINUX-NEXT: declare fp128 @fmodf128(fp128, fp128)
 ; LINUX-NEXT: declare ppc_fp128 @fmodl(ppc_fp128, ppc_fp128)
 ; LINUX-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare double @frexp(double, ptr)
-; LINUX-NEXT: declare float @frexpf(float, ptr)
-; LINUX-NEXT: declare fp128 @frexpf128(fp128, ptr)
-; LINUX-NEXT: declare ppc_fp128 @frexpl(ppc_fp128, ptr)
+; LINUX-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare ppc_fp128 @frexpl(ppc_fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; LINUX-NEXT: declare double @ldexp(double, i32 signext)
 ; LINUX-NEXT: declare float @ldexpf(float, i32 signext)
 ; LINUX-NEXT: declare fp128 @ldexpf128(fp128, i32 signext)
@@ -1583,10 +1607,10 @@
 ; LINUX-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; LINUX-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; LINUX-NEXT: declare ptr @memset(ptr, i32 signext, i64)
-; LINUX-NEXT: declare double @modf(double, ptr)
-; LINUX-NEXT: declare float @modff(float, ptr)
-; LINUX-NEXT: declare fp128 @modff128(fp128, ptr)
-; LINUX-NEXT: declare ppc_fp128 @modfl(ppc_fp128, ptr)
+; LINUX-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; LINUX-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
+; LINUX-NEXT: declare ppc_fp128 @modfl(ppc_fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; LINUX-NEXT: declare double @nan(ptr)
 ; LINUX-NEXT: declare float @nanf(ptr)
 ; LINUX-NEXT: declare ppc_fp128 @nanl(ptr)
@@ -1604,9 +1628,9 @@
 ; LINUX-NEXT: declare double @remainder(double, double)
 ; LINUX-NEXT: declare float @remainderf(float, float)
 ; LINUX-NEXT: declare ppc_fp128 @remainderl(ppc_fp128, ppc_fp128)
-; LINUX-NEXT: declare double @remquo(double, double, ptr)
-; LINUX-NEXT: declare float @remquof(float, float, ptr)
-; LINUX-NEXT: declare ppc_fp128 @remquol(ppc_fp128, ppc_fp128, ptr)
+; LINUX-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare ppc_fp128 @remquol(ppc_fp128, ppc_fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; LINUX-NEXT: declare double @rint(double)
 ; LINUX-NEXT: declare float @rintf(float)
 ; LINUX-NEXT: declare fp128 @rintf128(fp128)
@@ -1626,10 +1650,10 @@
 ; LINUX-NEXT: declare float @scalbnf(float, i32 signext)
 ; LINUX-NEXT: declare ppc_fp128 @scalbnl(ppc_fp128, i32 signext)
 ; LINUX-NEXT: declare double @sin(double)
-; LINUX-NEXT: declare void @sincos(double, ptr, ptr)
-; LINUX-NEXT: declare void @sincosf(float, ptr, ptr)
-; LINUX-NEXT: declare void @sincosf128(fp128, ptr, ptr)
-; LINUX-NEXT: declare void @sincosl(ppc_fp128, ptr, ptr)
+; LINUX-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; LINUX-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16))
+; LINUX-NEXT: declare void @sincosl(ppc_fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; LINUX-NEXT: declare float @sinf(float)
 ; LINUX-NEXT: declare fp128 @sinf128(fp128)
 ; LINUX-NEXT: declare double @sinh(double)
@@ -1656,7 +1680,9 @@
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncf128(fp128)
 ; LINUX-NEXT: declare ppc_fp128 @truncl(ppc_fp128)
-; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

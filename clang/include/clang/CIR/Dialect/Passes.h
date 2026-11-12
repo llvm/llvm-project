@@ -26,6 +26,7 @@ enum class CallConvTarget { None, Test, X86_64, AMDGPU };
 namespace mlir {
 
 std::unique_ptr<Pass> createCIRCanonicalizePass();
+std::unique_ptr<Pass> createCIRFoldEmptyBranchesPass();
 std::unique_ptr<Pass> createCIRFlattenCFGPass();
 std::unique_ptr<Pass> createCIRSimplifyPass();
 std::unique_ptr<Pass> createCIREHABILoweringPass();

@@ -1241,6 +1241,7 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
 
   // Parse either the known section names or the string section name.
   StringLiteral *SegmentName = nullptr;
+  IdentifierLoc *FuncId = nullptr;
   if (Tok.isAnyIdentifier()) {
     auto *II = Tok.getIdentifierInfo();
     StringRef Section = llvm::StringSwitch<StringRef>(II->getName())
@@ -1269,7 +1270,19 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
           << PragmaName;
       return false;
     }
-    // FIXME: Add support for the '[, func-name]' part of the pragma.
+  }
+
+  // Parse optional ', func-name'.
+  if (Tok.is(tok::comma)) {
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
+      return false;
+    }
+    FuncId = new (Actions.Context)
+        IdentifierLoc(Tok.getLocation(), Tok.getIdentifierInfo());
+    PP.Lex(Tok);
   }
 
   if (!SegmentName) {
@@ -1283,7 +1296,7 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
                        PragmaName))
     return false;
 
-  Actions.ActOnPragmaMSInitSeg(PragmaLocation, SegmentName);
+  Actions.ActOnPragmaMSInitSeg(PragmaLocation, SegmentName, FuncId);
   return true;
 }
 

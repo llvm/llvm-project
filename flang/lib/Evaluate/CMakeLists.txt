@@ -49,6 +49,7 @@ add_flang_library(FortranEvaluate
   formatting.cpp
   host.cpp
   initial-image.cpp
+  int-power.cpp
   integer.cpp
   integer-value.cpp
   integer-value-impl.cpp

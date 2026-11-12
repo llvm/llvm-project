@@ -10,7 +10,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 body: |

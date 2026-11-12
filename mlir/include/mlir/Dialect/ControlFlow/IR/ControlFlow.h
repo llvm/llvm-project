@@ -14,7 +14,6 @@
 #define MLIR_DIALECT_CONTROLFLOW_IR_CONTROLFLOW_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOpsDialect.h.inc"
 

@@ -194,6 +194,7 @@ def StaticMemoryPlannerAnalysisPass
     envelope:
     - Static memref shape.
     - Integer or floating-point element type.
+    - Identity layout.
     - The allocation lives directly in the function's entry block
       (allocations nested in a region are skipped for now).
     - Every `memref.dealloc` that may free the buffer is anchored in the entry

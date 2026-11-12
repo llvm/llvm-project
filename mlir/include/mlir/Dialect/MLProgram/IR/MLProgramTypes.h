@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_MLPROGRAM_IR_MLPROGRAMTYPES_H_
 #define MLIR_DIALECT_MLPROGRAM_IR_MLPROGRAMTYPES_H_
 
-#include "mlir/IR/Types.h"
-
 //===----------------------------------------------------------------------===//
 // Tablegen Type Declarations
 //===----------------------------------------------------------------------===//

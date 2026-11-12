@@ -115,10 +115,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
         Allocations.erase(Allocations.begin() + Index);
       } else {
         CHECK(NewPtr != nullptr);
-        size_t Size = Allocator->getUsableSize(NewPtr);
-        memset(NewPtr, 0xff, Size);
+        NewSize = Allocator->getUsableSize(NewPtr);
+        memset(NewPtr, 0xff, NewSize);
         Allocations[Index] = NewPtr;
-        TotalAllocatedBytes -= Size;
+        TotalAllocatedBytes += NewSize;
       }
     } else if (Op == 4) {
       // ReleaseToOS

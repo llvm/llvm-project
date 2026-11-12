@@ -892,11 +892,12 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 // Similarly, for local loads.
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
-  const auto &Desc = B->getBlockDesc<InlineDescriptor>();
+  const auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
   const Descriptor *BlockDesc = B->getDescriptor();
   if (!Desc.IsInitialized)
-    return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
-  if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
+    return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B,
+                                 Desc.getLifetime());
+  if (!CheckLifetime(S, OpPC, Desc.getLifetime(), B, AK_Read))
     return false;
   if (BlockDesc->IsVolatile) {
     if (!S.getLangOpts().CPlusPlus)
@@ -3061,7 +3062,7 @@ bool handleReference(InterpState &S, CodePtr OpPC, Block *B) {
     return true;
   }
 
-  const auto &ID = B->getBlockDesc<InlineDescriptor>();
+  const auto &ID = B->getBlockDesc<LocalInlineDescriptor>();
   if (!ID.IsInitialized) {
     if (!S.checkingPotentialConstantExpression())
       S.FFDiag(S.Current->getSource(OpPC),
@@ -3301,20 +3302,16 @@ bool FinishInitGlobal(InterpState &S) {
     return true;
 
   finishGlobalRecurse(S, Ptr.view());
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
 
   return true;
 }
 
 bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-
   switch (Kind) {
   case CastKind::Reinterpret:
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Reinterpret
         << S.Current->getRange(OpPC);
     return !Fatal;
@@ -3324,7 +3321,7 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     assert(!Fatal);
     return true;
   case CastKind::ReinterpretLike:
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
     return !Fatal;
@@ -3342,7 +3339,7 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     return false;
   case CastKind::Dynamic:
     assert(!S.getLangOpts().CPlusPlus20);
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
     return true;
   }
@@ -3360,7 +3357,7 @@ bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
     if (!LocalBlock->isInitialized())
       continue;
 
-    if (LocalBlock->getBlockDesc<InlineDescriptor>().LifeState ==
+    if (LocalBlock->getBlockDesc<LocalInlineDescriptor>().getLifetime() ==
         Lifetime::Ended) {
       const Pointer Ptr = S.Current->getLocalPointer(Local.Offset);
       return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);
@@ -3724,12 +3721,8 @@ bool Memcpy(InterpState &S, CodePtr OpPC) {
   if (!Dest.isBlockPointer())
     return false;
 
-  if ((Src.getRecord() && Src.getRecord()->isUnion() &&
-       !Src.getRecord()->isAnonymousUnion()) ||
-      Src.inUnion()) {
-    if (!CheckLoad(S, OpPC, Src))
-      return false;
-  }
+  if (!CheckLoad(S, OpPC, Src))
+    return false;
 
   return DoMemcpy(S, OpPC, Src, Dest);
 }
