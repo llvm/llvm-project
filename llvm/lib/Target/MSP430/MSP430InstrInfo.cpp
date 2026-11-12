@@ -306,3 +306,13 @@ unsigned MSP430InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   return Desc.getSize();
 }
+
+bool MSP430InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case MSP430::ATOMIC_FENCE:
+    MI.eraseFromParent();
+    return true;
+  }
+}

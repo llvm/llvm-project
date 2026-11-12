@@ -57,6 +57,8 @@ public:
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
+
   // Branch folding goodness
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;

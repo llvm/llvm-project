@@ -184,6 +184,12 @@ def ADDframe : Pseudo<(outs GR16:$dst), (ins i16imm:$base, i16imm:$offset),
                       "# ADDframe PSEUDO", []>;
 }
 
+// There is only one core, so an atomic fence only has to keep the memory
+// accesses around it in place, and it is removed after register allocation.
+let isCodeGenOnly = 1, hasSideEffects = 1, isPseudo = 1 in
+def ATOMIC_FENCE : Pseudo<(outs), (ins), "#ATOMIC_FENCE",
+                          [(atomic_fence timm, timm)]>;
+
 let isCodeGenOnly = 1, usesCustomInserter = 1 in {
   let Uses = [SR] in {
   def Select8  : Pseudo<(outs GR8:$dst), (ins GR8:$src, GR8:$src2, i8imm:$cc),
