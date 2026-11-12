@@ -612,7 +612,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, P64VecVTs, Custom);
       setOperationAction(ISD::SSHLSAT, {MVT::v2i32, MVT::v4i16}, Custom);
       setOperationAction(ISD::BSWAP, MVT::v4i16, Legal);
-      setOperationAction(ISD::BITREVERSE, {MVT::v4i16, MVT::v8i8}, Legal);
+      setOperationAction(ISD::BITREVERSE, MVT::v4i16, Legal);
+      setOperationAction(ISD::BITREVERSE, MVT::v8i8, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, P64VecVTs, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, P64VecVTs, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
@@ -8549,6 +8550,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return LowerIS_FPCLASS(Op, DAG);
   case ISD::BITREVERSE: {
     MVT VT = Op.getSimpleValueType();
+    if (VT == MVT::v8i8 && !Subtarget.is64Bit() && Subtarget.hasStdExtP()) {
+      // Split into two v4i8 bitreverses, each of which fits in a GPR.
+      SDLoc DL(Op);
+      auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+      Lo = DAG.getNode(ISD::BITREVERSE, DL, MVT::v4i8, Lo);
+      Hi = DAG.getNode(ISD::BITREVERSE, DL, MVT::v4i8, Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
     if (VT.isFixedLengthVector()) {
       assert(Subtarget.hasStdExtZvbb());
       return lowerToScalableOp(Op, DAG);
