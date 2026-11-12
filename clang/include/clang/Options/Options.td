@@ -1107,6 +1107,10 @@ def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   Visibility<[ClangOption, CLOption, FlangOption]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
+def : Joined<["-"], "Xlinker=">, Group<Link_Group>,
+  Flags<[LinkerInput, RenderAsInput]>,
+  Visibility<[ClangOption, CLOption, FlangOption]>, Alias<Xlinker>,
+  HelpText<"Alias for -Xlinker">, MetaVarName<"<arg>">;
 def Xthinlto_distributor_EQ : CommaJoined<["-"], "Xthinlto-distributor=">,
   Flags<[LinkOption]>,
   Visibility<[ClangOption, CLOption]>,

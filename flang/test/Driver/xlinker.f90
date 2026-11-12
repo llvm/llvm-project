@@ -9,6 +9,9 @@
 ! RUN: %flang -### --target=x86_64-windows-gnu -Xlinker -rpath -Xlinker /not/a/real/path %s 2>&1 | FileCheck %s --check-prefixes=UNIX
 ! RUN: %flang -### --target=aarch64-windows-msvc -Xlinker -rpath -Xlinker /not/a/real/path -o obscure.exe %s 2>&1 | FileCheck %s --check-prefixes=MSVC
 
+! Try -Xlinker=.
+! RUN: %flang -### --target=ppc64le-linux-gnu -Xlinker=-rpath -Xlinker=/not/a/real/path %s 2>&1 | FileCheck %s --check-prefixes=UNIX
+
 ! UNIX-LABEL: "{{.*}}ld{{(\.exe)?}}"
 ! UNIX-SAME: "-rpath" "/not/a/real/path"
 
