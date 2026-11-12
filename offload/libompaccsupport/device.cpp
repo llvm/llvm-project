@@ -471,7 +471,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   }
 
   // liboffload has no default allocation kind; it is a device allocation.
-  ol_result_t Res = nullptr;
+  ol_result_t Res = OL_SUCCESS;
   switch (Kind) {
   case TARGET_ALLOC_HOST:
     Res = olMemAllocHost(Context, DeviceHandle, Size, &TargetPtr);
