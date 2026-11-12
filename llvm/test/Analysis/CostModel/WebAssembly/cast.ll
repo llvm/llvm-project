@@ -29,10 +29,38 @@ define <4 x i8> @trunc_v4i16_to_v4i8(<4 x i16> %x) {
   ret <4 x i8> %result
 }
 
+define <4 x i16> @trunc_v4i64_to_v4i16(<4 x i64> %x) {
+; CHECK-LABEL: function 'trunc_v4i64_to_v4i16'
+; CHECK: estimated cost of 4 for instruction:
+  %result = trunc <4 x i64> %x to <4 x i16>
+  ret <4 x i16> %result
+}
+
+define <4 x i8> @trunc_v4i64_to_v4i8(<4 x i64> %x) {
+; CHECK-LABEL: function 'trunc_v4i64_to_v4i8'
+; CHECK: estimated cost of 5 for instruction:
+  %result = trunc <4 x i64> %x to <4 x i8>
+  ret <4 x i8> %result
+}
+
 define <8 x i8> @trunc_v8i32_to_v8i8(<8 x i32> %x) {
 ; CHECK-LABEL: function 'trunc_v8i32_to_v8i8'
 ; CHECK: estimated cost of 4 for instruction:
   %result = trunc <8 x i32> %x to <8 x i8>
+  ret <8 x i8> %result
+}
+
+define <8 x i16> @trunc_v8i32_to_v8i16(<8 x i32> %x) {
+; CHECK-LABEL: function 'trunc_v8i32_to_v8i16'
+; CHECK: estimated cost of 3 for instruction:
+  %result = trunc <8 x i32> %x to <8 x i16>
+  ret <8 x i16> %result
+}
+
+define <8 x i8> @trunc_v8i64_to_v8i8(<8 x i64> %x) {
+; CHECK-LABEL: function 'trunc_v8i64_to_v8i8'
+; CHECK: estimated cost of 8 for instruction:
+  %result = trunc <8 x i64> %x to <8 x i8>
   ret <8 x i8> %result
 }
 
@@ -55,6 +83,20 @@ define <4 x i8> @fptosi_v4f32_to_v4i8(<4 x float> %x) {
 ; CHECK: estimated cost of 5 for instruction:
   %result = fptosi <4 x float> %x to <4 x i8>
   ret <4 x i8> %result
+}
+
+define <2 x i8> @fptosi_v2f32_to_v2i8(<2 x float> %x) {
+; CHECK-LABEL: function 'fptosi_v2f32_to_v2i8'
+; CHECK: estimated cost of 5 for instruction:
+  %result = fptosi <2 x float> %x to <2 x i8>
+  ret <2 x i8> %result
+}
+
+define <2 x i8> @fptoui_v2f32_to_v2i8(<2 x float> %x) {
+; CHECK-LABEL: function 'fptoui_v2f32_to_v2i8'
+; CHECK: estimated cost of 5 for instruction:
+  %result = fptoui <2 x float> %x to <2 x i8>
+  ret <2 x i8> %result
 }
 
 define <4 x i8> @fptoui_v4f32_to_v4i8(<4 x float> %x) {

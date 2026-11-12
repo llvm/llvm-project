@@ -2735,8 +2735,6 @@ define <2 x i8> @fptosi_v2f32_v2i8(<2 x float> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
   %conv = fptosi <2 x float> %x to <2 x i8>
@@ -2754,8 +2752,6 @@ define <2 x i8> @fptoui_v2f32_v2i8(<2 x float> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
   %conv = fptoui <2 x float> %x to <2 x i8>
@@ -2803,8 +2799,6 @@ define <4 x i8> @fptosi_v4f32_v4i8(<4 x float> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
   %conv = fptosi <4 x float> %x to <4 x i8>
@@ -2822,8 +2816,6 @@ define <4 x i8> @fptoui_v4f32_v4i8(<4 x float> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
   %conv = fptoui <4 x float> %x to <4 x i8>
@@ -2875,8 +2867,6 @@ define <8 x i8> @fptosi_v8f32_v8i8(<8 x float> %x) {
 ; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
   %conv = fptosi <8 x float> %x to <8 x i8>
@@ -2898,8 +2888,6 @@ define <8 x i8> @fptoui_v8f32_v8i8(<8 x float> %x) {
 ; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    # fallthrough-return
   %conv = fptoui <8 x float> %x to <8 x i8>

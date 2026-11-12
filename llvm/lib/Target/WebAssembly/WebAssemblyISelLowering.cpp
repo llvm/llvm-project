@@ -3334,6 +3334,9 @@ static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
                                         SelectionDAG &DAG) {
   EVT SrcVT = In.getValueType();
 
+  if (In.isUndef())
+    return DAG.getUNDEF(DstVT);
+
   // No truncation required, we might get here due to recursive calls.
   if (SrcVT == DstVT)
     return In;
@@ -3391,17 +3394,24 @@ static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
   SDValue Lo = extractSubVector(In, 0, DAG, DL, SubSizeInBits);
   SDValue Hi = extractSubVector(In, NumElems / 2, DAG, DL, SubSizeInBits);
 
-  // 256bit -> 128bit truncate - Narrow lower/upper 128-bit subvectors.
-  if (SrcVT.is256BitVector() && DstVT.is128BitVector()) {
-    Lo = DAG.getBitcast(InVT, Lo);
-    Hi = DAG.getBitcast(InVT, Hi);
-    SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
-    return DAG.getBitcast(DstVT, Res);
-  } else if (SrcVT.is256BitVector() && DstVT.is64BitVector()) {
-    Lo = DAG.getBitcast(InVT, Lo);
-    Hi = DAG.getBitcast(InVT, Hi);
-    SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
-    return truncateVectorWithNARROW(DstVT, Res, DL, DAG);
+  if (SrcVT.is256BitVector()) {
+    if (DstVT.is128BitVector()) {
+      // 256bit -> 128bit truncate - Narrow lower/upper 128-bit subvectors.
+      Lo = DAG.getBitcast(InVT, Lo);
+      Hi = DAG.getBitcast(InVT, Hi);
+      SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
+      return DAG.getBitcast(DstVT, Res);
+    }
+    if (DstVT.is64BitVector() || DstVT.is32BitVector()) {
+      Lo = DAG.getBitcast(InVT, Lo);
+      Hi = DAG.getBitcast(InVT, Hi);
+      SDValue Res = DAG.getNode(WebAssemblyISD::NARROW_U, DL, OutVT, Lo, Hi);
+      if (OutVT.getVectorNumElements() > DstVT.getVectorNumElements()) {
+        assert(InVT.getVectorNumElements() == DstVT.getVectorNumElements());
+        Res = DAG.getBitcast(InVT, Res);
+      }
+      return truncateVectorWithNARROW(DstVT, Res, DL, DAG);
+    }
   }
 
   // Recursively narrow lower/upper subvectors, concat result and narrow again.

@@ -6611,7 +6611,7 @@ for.body:                                         ; preds = %entry, %for.body
 define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: two_floats_two_bytes_same_op:
 ; CHECK:         .functype two_floats_two_bytes_same_op (i32, i32, i32, i32) -> ()
-; CHECK-NEXT:    .local i32, i32, i32, v128, i32, i32, v128, v128, v128, v128, v128
+; CHECK-NEXT:    .local i32, i32, i32, i32, i32, v128, v128, v128, v128, v128
 ; CHECK-NEXT:    block
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i32.eqz
@@ -6651,60 +6651,56 @@ define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    i32.lt_u
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    br_if 0
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
-; CHECK-NEXT:    local.set 7
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.set 5
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.set 6
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.set 7
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i32.const -4
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    local.set 9
+; CHECK-NEXT:    local.set 8
 ; CHECK-NEXT:  .LBB29_5:
 ; CHECK-NEXT:    loop
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    v128.load 0:p2align=2
-; CHECK-NEXT:    local.tee 10
+; CHECK-NEXT:    local.tee 9
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    v128.load 16:p2align=2
-; CHECK-NEXT:    local.tee 11
+; CHECK-NEXT:    local.tee 10
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    v128.load 0:p2align=2
-; CHECK-NEXT:    local.tee 12
+; CHECK-NEXT:    local.tee 11
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    v128.load 16:p2align=2
-; CHECK-NEXT:    local.tee 13
+; CHECK-NEXT:    local.tee 12
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK-NEXT:    f32x4.mul
 ; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
 ; CHECK-NEXT:    v128.const 255, 255, 255, 255
-; CHECK-NEXT:    local.tee 14
+; CHECK-NEXT:    local.tee 13
 ; CHECK-NEXT:    v128.and
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    local.get 10
-; CHECK-NEXT:    local.get 11
 ; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK-NEXT:    local.get 11
 ; CHECK-NEXT:    local.get 12
-; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
 ; CHECK-NEXT:    f32x4.mul
 ; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
-; CHECK-NEXT:    local.get 14
+; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    v128.and
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    i8x16.shuffle 0, 16, 1, 17, 2, 18, 3, 19, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    v128.store64_lane 0:p2align=0, 0
@@ -6716,14 +6712,14 @@ define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.const 8
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.set 7
+; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    i32.const -4
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    local.tee 8
 ; CHECK-NEXT:    br_if 0
 ; CHECK-NEXT:    end_loop
 ; CHECK-NEXT:    local.get 3
@@ -6735,7 +6731,7 @@ define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    local.set 9
+; CHECK-NEXT:    local.set 8
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i32.const 3
@@ -6752,10 +6748,10 @@ define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.shl
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.set 7
 ; CHECK-NEXT:  .LBB29_8:
 ; CHECK-NEXT:    loop
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    f32.load 0
 ; CHECK-NEXT:    local.get 6
@@ -6763,7 +6759,7 @@ define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    f32.mul
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32.store8 0
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 5
@@ -6785,14 +6781,14 @@ define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    i32.const 8
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.set 7
+; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    i32.const -1
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    local.tee 8
 ; CHECK-NEXT:    br_if 0
 ; CHECK-NEXT:  .LBB29_9:
 ; CHECK-NEXT:    end_loop
@@ -6831,7 +6827,7 @@ for.body:                                         ; preds = %entry, %for.body
 define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 ; CHECK-LABEL: two_floats_two_bytes_vary_op:
 ; CHECK:         .functype two_floats_two_bytes_vary_op (i32, i32, i32, i32) -> ()
-; CHECK-NEXT:    .local i32, i32, i32, v128, i32, i32, v128, v128, v128, v128, v128
+; CHECK-NEXT:    .local i32, i32, i32, i32, i32, v128, v128, v128, v128, v128
 ; CHECK-NEXT:    block
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i32.eqz
@@ -6871,60 +6867,56 @@ define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    i32.lt_u
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    br_if 0
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    local.get 7
-; CHECK-NEXT:    i16x8.narrow_i32x4_u
-; CHECK-NEXT:    local.set 7
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.set 5
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.set 6
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.set 7
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i32.const -4
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    local.tee 4
-; CHECK-NEXT:    local.set 9
+; CHECK-NEXT:    local.set 8
 ; CHECK-NEXT:  .LBB30_5:
 ; CHECK-NEXT:    loop
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    v128.load 0:p2align=2
-; CHECK-NEXT:    local.tee 10
+; CHECK-NEXT:    local.tee 9
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    v128.load 16:p2align=2
-; CHECK-NEXT:    local.tee 11
+; CHECK-NEXT:    local.tee 10
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    v128.load 0:p2align=2
-; CHECK-NEXT:    local.tee 12
+; CHECK-NEXT:    local.tee 11
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    v128.load 16:p2align=2
-; CHECK-NEXT:    local.tee 13
+; CHECK-NEXT:    local.tee 12
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK-NEXT:    f32x4.add
 ; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
 ; CHECK-NEXT:    v128.const 255, 255, 255, 255
-; CHECK-NEXT:    local.tee 14
+; CHECK-NEXT:    local.tee 13
 ; CHECK-NEXT:    v128.and
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    local.get 10
-; CHECK-NEXT:    local.get 11
 ; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK-NEXT:    local.get 11
 ; CHECK-NEXT:    local.get 12
-; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
 ; CHECK-NEXT:    f32x4.sub
 ; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
-; CHECK-NEXT:    local.get 14
+; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    v128.and
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i16x8.narrow_i32x4_u
-; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    i8x16.narrow_i16x8_u
 ; CHECK-NEXT:    i8x16.shuffle 0, 16, 1, 17, 2, 18, 3, 19, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    v128.store64_lane 0:p2align=0, 0
@@ -6936,14 +6928,14 @@ define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    i32.const 32
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.const 8
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.set 7
+; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    i32.const -4
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    local.tee 8
 ; CHECK-NEXT:    br_if 0
 ; CHECK-NEXT:    end_loop
 ; CHECK-NEXT:    local.get 3
@@ -6955,7 +6947,7 @@ define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i32.sub
-; CHECK-NEXT:    local.set 9
+; CHECK-NEXT:    local.set 8
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    i32.const 3
@@ -6972,10 +6964,10 @@ define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.shl
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.set 8
+; CHECK-NEXT:    local.set 7
 ; CHECK-NEXT:  .LBB30_8:
 ; CHECK-NEXT:    loop
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    f32.load 0
 ; CHECK-NEXT:    local.get 6
@@ -6983,7 +6975,7 @@ define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    f32.add
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    i32.store8 0
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 5
@@ -7005,14 +6997,14 @@ define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(n
 ; CHECK-NEXT:    i32.const 8
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.set 6
-; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.set 8
-; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.set 7
+; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    i32.const -1
 ; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    local.tee 8
 ; CHECK-NEXT:    br_if 0
 ; CHECK-NEXT:  .LBB30_9:
 ; CHECK-NEXT:    end_loop
