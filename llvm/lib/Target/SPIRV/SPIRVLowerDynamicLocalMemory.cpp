@@ -177,12 +177,12 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
       IRBuilder<> Builder(InsertPt);
       U.set(Builder.CreateLoad(LocalPtrTy, Slot, "dyn_local_mem"));
 
-      // Modify memory effects of the function and it's callers, a function that would
-      // reference SLM pointer might have ModeRefInfo::NoModRef, but adding the load
-      // requires change it to at least ModRefInfo::Ref
+      // Modify memory effects of the function and it's callers, a function that
+      // would reference SLM pointer might have ModeRefInfo::NoModRef, but
+      // adding the load requires change it to at least ModRefInfo::Ref
       Function *F = I->getFunction();
-      updateMemoryEffectsInChain(F, MemoryEffects::otherMemOnly(ModRefInfo::Ref));
-      
+      updateMemoryEffectsInChain(F,
+                                 MemoryEffects::otherMemOnly(ModRefInfo::Ref));
     }
     GV->eraseFromParent();
   }
