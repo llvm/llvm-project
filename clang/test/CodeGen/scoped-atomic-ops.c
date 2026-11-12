@@ -775,7 +775,7 @@ void fi2b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3:![0-9]+]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] monotonic, align 4, !noalias.addrspace [[META3:![0-9]+]], !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
@@ -783,7 +783,7 @@ void fi2b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP7]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP9:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
@@ -791,7 +791,7 @@ void fi2b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP10:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP12]], ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP14:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
@@ -799,7 +799,7 @@ void fi2b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP15:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP17]], ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP18:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP19:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
@@ -807,7 +807,7 @@ void fi2b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP20:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP22]], ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP23:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP24:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
@@ -815,7 +815,7 @@ void fi2b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP25:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP29:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
@@ -823,7 +823,7 @@ void fi2b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP30:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP32]], ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP33:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP34:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
@@ -831,7 +831,7 @@ void fi2b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP35:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP37]], ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP39:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
@@ -1198,7 +1198,7 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
@@ -1206,7 +1206,7 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP7]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP9:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
@@ -1214,7 +1214,7 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP10:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP12]], ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP14:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
@@ -1222,7 +1222,7 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP15:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP17]], ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP18:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP19:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
@@ -1230,7 +1230,7 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP20:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP22]], ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP23:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP24:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
@@ -1238,7 +1238,7 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP25:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP29:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
@@ -1246,7 +1246,7 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP30:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP32]], ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP33:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP34:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
@@ -1254,7 +1254,7 @@ void fi3a(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP35:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP37]], ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP39:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
@@ -1621,7 +1621,7 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
@@ -1629,7 +1629,7 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP7]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP9:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
@@ -1637,7 +1637,7 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP10:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP12]], ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP14:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
@@ -1645,7 +1645,7 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP15:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP17]], ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP18:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP19:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
@@ -1653,7 +1653,7 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP20:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP22]], ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP23:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP24:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
@@ -1661,7 +1661,7 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP25:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP29:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
@@ -1669,7 +1669,7 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP30:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP32]], ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP33:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP34:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
@@ -1677,7 +1677,7 @@ void fi3b(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP35:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP37]], ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP39:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
@@ -2044,7 +2044,7 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
@@ -2052,7 +2052,7 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP7]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP9:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
@@ -2060,7 +2060,7 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP10:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP12]], ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP14:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
@@ -2068,7 +2068,7 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP15:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP17]], ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP18:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP19:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
@@ -2076,7 +2076,7 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP20:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP22]], ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP23:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP24:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
@@ -2084,7 +2084,7 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP25:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP29:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
@@ -2092,7 +2092,7 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP30:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP32]], ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP33:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP34:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
@@ -2100,7 +2100,7 @@ void fi3c(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP35:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP37]], ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP39:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
@@ -2467,7 +2467,7 @@ void fi3_clustr(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) 
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
@@ -2475,7 +2475,7 @@ void fi3_clustr(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) 
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP7]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP9:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
@@ -2483,7 +2483,7 @@ void fi3_clustr(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) 
 // AMDGCN_CL_20-NEXT:    [[TMP10:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP12]], ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP14:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
@@ -2491,7 +2491,7 @@ void fi3_clustr(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) 
 // AMDGCN_CL_20-NEXT:    [[TMP15:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP17]], ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP18:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP19:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
@@ -2499,7 +2499,7 @@ void fi3_clustr(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) 
 // AMDGCN_CL_20-NEXT:    [[TMP20:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP22]], ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP23:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP24:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
@@ -2507,7 +2507,7 @@ void fi3_clustr(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) 
 // AMDGCN_CL_20-NEXT:    [[TMP25:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP29:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
@@ -2515,7 +2515,7 @@ void fi3_clustr(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) 
 // AMDGCN_CL_20-NEXT:    [[TMP30:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP32]], ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP33:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP34:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
@@ -2523,7 +2523,7 @@ void fi3_clustr(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) 
 // AMDGCN_CL_20-NEXT:    [[TMP35:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP37]], ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP39:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
@@ -2890,7 +2890,7 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP1]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
@@ -2898,7 +2898,7 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw sub ptr [[TMP5]], i32 [[TMP6]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP7]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP9:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
@@ -2906,7 +2906,7 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP10:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP11:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP12:%.*]] = atomicrmw and ptr [[TMP10]], i32 [[TMP11]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP12]], ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP14:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
@@ -2914,7 +2914,7 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP15:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP16:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP17:%.*]] = atomicrmw or ptr [[TMP15]], i32 [[TMP16]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP17]], ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP18:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP19:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
@@ -2922,7 +2922,7 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP20:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP7]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP22:%.*]] = atomicrmw xor ptr [[TMP20]], i32 [[TMP21]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP22]], ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP23:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP8]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP24:%.*]] = load ptr, ptr addrspace(5) [[E_ADDR]], align 8
@@ -2930,7 +2930,7 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP25:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP9]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP27:%.*]] = atomicrmw nand ptr [[TMP25]], i32 [[TMP26]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP10]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP29:%.*]] = load ptr, ptr addrspace(5) [[F_ADDR]], align 8
@@ -2938,7 +2938,7 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP30:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP31:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP11]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP32:%.*]] = atomicrmw min ptr [[TMP30]], i32 [[TMP31]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP32]], ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP33:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP12]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP34:%.*]] = load ptr, ptr addrspace(5) [[G_ADDR]], align 8
@@ -2946,7 +2946,7 @@ void fi3d(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP35:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP13]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP37:%.*]] = atomicrmw max ptr [[TMP35]], i32 [[TMP36]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP37]], ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP14]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP39:%.*]] = load ptr, ptr addrspace(5) [[H_ADDR]], align 8
@@ -3210,7 +3210,7 @@ void fi3e(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP6]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -3330,7 +3330,7 @@ _Bool fi4a(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("agent") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("agent") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP6]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -3450,7 +3450,7 @@ _Bool fi4b(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("workgroup") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("workgroup") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP6]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -3570,7 +3570,7 @@ _Bool fi4c(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("cluster") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("cluster") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP6]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -3690,7 +3690,7 @@ _Bool fi4_clustr(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("wavefront") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("wavefront") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP6]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -3810,7 +3810,7 @@ _Bool fi4d(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("singlethread") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[TMP0]], i32 [[TMP2]], i32 [[TMP3]] syncscope("singlethread") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP6]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -3928,7 +3928,7 @@ _Bool fi4e(int *i) {
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP3]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP5]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -4045,7 +4045,7 @@ _Bool fi5a(int *i) {
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("agent") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("agent") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP3]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP5]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -4162,7 +4162,7 @@ _Bool fi5b(int *i) {
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("workgroup") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("workgroup") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP3]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP5]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -4278,7 +4278,7 @@ _Bool fi5c(int *i) {
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("cluster") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("cluster") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP3]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP5]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -4394,7 +4394,7 @@ _Bool fi5_clustr(int *i) {
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("wavefront") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("wavefront") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP3]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP5]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -4510,7 +4510,7 @@ _Bool fi5d(int *i) {
 // AMDGCN_CL_20-NEXT:    store i32 1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[CMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("singlethread") acquire acquire, align 4
+// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = cmpxchg weak ptr [[TMP0]], i32 [[TMP1]], i32 [[TMP2]] syncscope("singlethread") acquire acquire, align 4, !noalias.addrspace [[META3]]
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP3]], 0
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 // AMDGCN_CL_20-NEXT:    br i1 [[TMP5]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
@@ -4615,7 +4615,7 @@ _Bool fi5e(int *i) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[RET]], align 4
 // AMDGCN_CL_20-NEXT:    ret i32 [[TMP5]]
@@ -4689,7 +4689,7 @@ int fi6a(int *c, int *d) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[RET]], align 4
 // AMDGCN_CL_20-NEXT:    ret i32 [[TMP5]]
@@ -4763,7 +4763,7 @@ int fi6b(int *c, int *d) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("workgroup") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("workgroup") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[RET]], align 4
 // AMDGCN_CL_20-NEXT:    ret i32 [[TMP5]]
@@ -4837,7 +4837,7 @@ int fi6c(int *c, int *d) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("cluster") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("cluster") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[RET]], align 4
 // AMDGCN_CL_20-NEXT:    ret i32 [[TMP5]]
@@ -4911,7 +4911,7 @@ int fi6_clustr(int *c, int *d) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("wavefront") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("wavefront") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[RET]], align 4
 // AMDGCN_CL_20-NEXT:    ret i32 [[TMP5]]
@@ -4985,7 +4985,7 @@ int fi6d(int *c, int *d) {
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(5) [[D_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("singlethread") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[TMP0]], i32 [[TMP3]] syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(5) [[RET]], align 4
 // AMDGCN_CL_20-NEXT:    ret i32 [[TMP5]]
@@ -5055,7 +5055,7 @@ int fi6e(int *c, int *d) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i8 1, ptr addrspace(5) [[DOTATOMICTMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(5) [[DOTATOMICTMP]], align 1
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] monotonic, align 1, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] monotonic, align 1, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i8 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i8, ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -5125,7 +5125,7 @@ _Bool fi7a(_Bool *c) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i8 1, ptr addrspace(5) [[DOTATOMICTMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(5) [[DOTATOMICTMP]], align 1
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("agent") monotonic, align 1, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("agent") monotonic, align 1, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i8 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i8, ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -5195,7 +5195,7 @@ _Bool fi7b(_Bool *c) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i8 1, ptr addrspace(5) [[DOTATOMICTMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(5) [[DOTATOMICTMP]], align 1
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("workgroup") monotonic, align 1, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("workgroup") monotonic, align 1, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i8 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i8, ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -5265,7 +5265,7 @@ _Bool fi7c(_Bool *c) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i8 1, ptr addrspace(5) [[DOTATOMICTMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(5) [[DOTATOMICTMP]], align 1
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("cluster") monotonic, align 1, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("cluster") monotonic, align 1, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i8 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i8, ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -5335,7 +5335,7 @@ _Bool fi7_clustr(_Bool *c) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i8 1, ptr addrspace(5) [[DOTATOMICTMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(5) [[DOTATOMICTMP]], align 1
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("wavefront") monotonic, align 1, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("wavefront") monotonic, align 1, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i8 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i8, ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -5405,7 +5405,7 @@ _Bool fi7d(_Bool *c) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[C_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i8 1, ptr addrspace(5) [[DOTATOMICTMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(5) [[DOTATOMICTMP]], align 1
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("singlethread") monotonic, align 1, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[TMP0]], i8 [[TMP1]] syncscope("singlethread") monotonic, align 1, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i8 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i8, ptr addrspace(5) [[ATOMIC_TEMP]], align 1
 // AMDGCN_CL_20-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -5493,7 +5493,7 @@ _Bool fi7e(_Bool *c) {
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 -1, ptr addrspace(5) [[DOTATOMICTMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw uinc_wrap ptr [[TMP0]], i32 [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw uinc_wrap ptr [[TMP0]], i32 [[TMP1]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = load ptr, ptr addrspace(5) [[B_ADDR]], align 8
@@ -5501,7 +5501,7 @@ _Bool fi7e(_Bool *c) {
 // AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
 // AMDGCN_CL_20-NEXT:    store i32 -1, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
-// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw udec_wrap ptr [[TMP5]], i32 [[TMP6]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw udec_wrap ptr [[TMP5]], i32 [[TMP6]] syncscope("agent") monotonic, align 4, !noalias.addrspace [[META3]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // AMDGCN_CL_20-NEXT:    store i32 [[TMP7]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // AMDGCN_CL_20-NEXT:    [[TMP9:%.*]] = load ptr, ptr addrspace(5) [[A_ADDR]], align 8
@@ -5573,7 +5573,8 @@ void fi8a(unsigned int *a, unsigned int *b) {
 //.
 // AMDGCN_CL_DEF: [[META2]] = !{}
 //.
-// AMDGCN_CL_20: [[META3]] = !{}
+// AMDGCN_CL_20: [[META3]] = !{i32 5, i32 6}
+// AMDGCN_CL_20: [[META4]] = !{}
 //.
 //// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 // AMDGCN: {{.*}}
