@@ -126,9 +126,9 @@ private:
 
   bool getConstantDef(Register Reg, uint64_t &Value, MachineInstr *&MovMI,
                       MachineInstr *&SubregToRegMI);
+  template <typename T>
   void recordConstantDef(MachineInstr &MI,
-                         DenseMap<uint64_t, Register> &Consts32,
-                         DenseMap<uint64_t, Register> &Consts64);
+                         DenseMap<uint64_t, Register> &Consts);
   bool foldSharedAddSubConstant(MachineInstr &MI, unsigned AddOpc,
                                 unsigned SubOpc, bool Is64Bit,
                                 DenseMap<uint64_t, Register> &SameWidth);
@@ -605,7 +605,7 @@ bool AArch64MIPeepholeOptImpl::getConstantDef(Register Reg, uint64_t &Value,
     return false;
   Value = static_cast<uint64_t>(MovMI->getOperand(1).getImm());
   if (SubregToRegMI)
-    Value &= 0xFFFFFFFFULL;
+    Value = static_cast<uint32_t>(Value);
   return true;
 }
 
@@ -614,21 +614,12 @@ static bool hasRealUse(const MachineRegisterInfo &MRI, Register Reg) {
                 [](const MachineInstr &UseMI) { return !UseMI.isFakeUse(); });
 }
 
+template <typename T>
 void AArch64MIPeepholeOptImpl::recordConstantDef(
-    MachineInstr &MI, DenseMap<uint64_t, Register> &Consts32,
-    DenseMap<uint64_t, Register> &Consts64) {
-  switch (MI.getOpcode()) {
-  case AArch64::MOVi32imm:
-    if (hasRealUse(*MRI, MI.getOperand(0).getReg()))
-      Consts32[static_cast<uint64_t>(static_cast<uint32_t>(
-          MI.getOperand(1).getImm()))] = MI.getOperand(0).getReg();
-    break;
-  case AArch64::MOVi64imm:
-    if (hasRealUse(*MRI, MI.getOperand(0).getReg()))
-      Consts64[static_cast<uint64_t>(MI.getOperand(1).getImm())] =
-          MI.getOperand(0).getReg();
-    break;
-  }
+    MachineInstr &MI, DenseMap<uint64_t, Register> &Consts) {
+  if (hasRealUse(*MRI, MI.getOperand(0).getReg()))
+    Consts[static_cast<T>(MI.getOperand(1).getImm())] =
+        MI.getOperand(0).getReg();
 }
 
 bool AArch64MIPeepholeOptImpl::foldSharedAddSubConstant(
@@ -647,8 +638,7 @@ bool AArch64MIPeepholeOptImpl::foldSharedAddSubConstant(
 
   uint64_t NegValue =
       Is64Bit ? (0ULL - RawValue)
-              : static_cast<uint64_t>(
-                    static_cast<uint32_t>(0U - static_cast<uint32_t>(RawValue)));
+              : static_cast<uint32_t>(0U - static_cast<uint32_t>(RawValue));
 
   auto SameIt = SameWidth.find(NegValue);
   if (SameIt == SameWidth.end() || SameIt->second == SrcReg ||
@@ -1068,10 +1058,14 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
     DenseMap<uint64_t, Register> SharedConsts32, SharedConsts64;
 
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
-      recordConstantDef(MI, SharedConsts32, SharedConsts64);
-
       switch (MI.getOpcode()) {
       default:
+        break;
+      case AArch64::MOVi32imm:
+        recordConstantDef<uint32_t>(MI, SharedConsts32);
+        break;
+      case AArch64::MOVi64imm:
+        recordConstantDef<uint64_t>(MI, SharedConsts64);
         break;
       case AArch64::INSERT_SUBREG:
         Changed |= visitINSERT(MI);
