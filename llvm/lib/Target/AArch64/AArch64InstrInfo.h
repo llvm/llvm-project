@@ -745,6 +745,7 @@ static inline bool isUncondBranchOpcode(int Opc) { return Opc == AArch64::B; }
 static inline bool isCondBranchOpcode(int Opc) {
   switch (Opc) {
   case AArch64::Bcc:
+  case AArch64::BCcc:
   case AArch64::CBZW:
   case AArch64::CBZX:
   case AArch64::CBNZW:
