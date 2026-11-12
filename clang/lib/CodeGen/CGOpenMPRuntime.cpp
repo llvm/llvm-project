@@ -6492,6 +6492,20 @@ void CGOpenMPRuntime::emitHostKernelEnvironment(const OMPExecutableDirective &D,
   OMPBuilder.emitKernelEnvironment(CGF.Builder, Attrs);
 }
 
+StringRef
+CGOpenMPRuntime::getTargetRegionParentName(const FunctionDecl *FD) const {
+  // Regions in a closure are named after its enclosing non-closure function
+  // (CodeGenFunction::CurFuncDecl), if there is one.
+  if (const auto *Parent =
+          dyn_cast_or_null<FunctionDecl>(FD->getNonClosureContext()))
+    FD = Parent;
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
+    return CGM.getMangledName(GlobalDecl(Ctor, Ctor_Complete));
+  if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(FD))
+    return CGM.getMangledName(GlobalDecl(Dtor, Dtor_Complete));
+  return CGM.getMangledName(GlobalDecl(FD));
+}
+
 void CGOpenMPRuntime::emitTargetOutlinedFunction(
     const OMPExecutableDirective &D, StringRef ParentName,
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
@@ -11599,13 +11613,49 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     return;
   }
 
+  // Default arguments and member initializers are not children of their uses.
+  if (const auto *E = dyn_cast<CXXDefaultArgExpr>(S)) {
+    scanForTargetRegionsFunctions(E->getExpr(), ParentName);
+    return;
+  }
+  if (const auto *E = dyn_cast<CXXDefaultInitExpr>(S)) {
+    scanForTargetRegionsFunctions(E->getExpr(), ParentName);
+    return;
+  }
+
+  // Implicit and inheriting constructors are only reachable from their uses.
+  const CXXConstructorDecl *Ctor = nullptr;
+  if (const auto *E = dyn_cast<CXXConstructExpr>(S))
+    Ctor = E->getConstructor();
+  else if (const auto *E = dyn_cast<CXXInheritedCtorInitExpr>(S))
+    Ctor = E->getConstructor();
+  if (Ctor && (!Ctor->isUserProvided() || Ctor->isInheritingConstructor()) &&
+      Ctor->hasBody() && ScannedImplicitCtors.insert(Ctor).second)
+    scanConstructorForTargetRegions(Ctor, ParentName);
+
   // If this is a lambda function, look into its body.
-  if (const auto *L = dyn_cast<LambdaExpr>(S))
+  if (const auto *L = dyn_cast<LambdaExpr>(S)) {
+    const CXXMethodDecl *CallOp = L->getCallOperator();
+    // Specializations of a generic lambda are scanned as top-level decls.
+    if (CallOp->isTemplated())
+      return;
+    ParentName = getTargetRegionParentName(CallOp);
     S = L->getBody();
+  }
 
   // Keep looking for target regions recursively.
   for (const Stmt *II : S->children())
     scanForTargetRegionsFunctions(II, ParentName);
+}
+
+void CGOpenMPRuntime::scanConstructorForTargetRegions(
+    const CXXConstructorDecl *Ctor, StringRef ParentName) {
+  const auto *Def = dyn_cast_or_null<CXXConstructorDecl>(Ctor->getDefinition());
+  if (!Def)
+    return;
+  for (const CXXCtorInitializer *Init : Def->inits())
+    scanForTargetRegionsFunctions(Init->getInit(), ParentName);
+  scanForTargetRegionsFunctions(Def->getBody(), ParentName);
 }
 
 static bool isAssumedToBeNotEmitted(const ValueDecl *VD, bool IsDevice) {
@@ -11636,8 +11686,11 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   const ValueDecl *VD = cast<ValueDecl>(GD.getDecl());
   // Try to detect target regions in the function.
   if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
-    StringRef Name = CGM.getMangledName(GD);
-    scanForTargetRegionsFunctions(FD->getBody(), Name);
+    StringRef Name = getTargetRegionParentName(FD);
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
+      scanConstructorForTargetRegions(Ctor, Name);
+    else
+      scanForTargetRegionsFunctions(FD->getBody(), Name);
     if (isAssumedToBeNotEmitted(cast<ValueDecl>(FD),
                                 CGM.getLangOpts().OpenMPIsTargetDevice))
       return true;
@@ -11649,39 +11702,38 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
-  if (isAssumedToBeNotEmitted(cast<ValueDecl>(GD.getDecl()),
-                              CGM.getLangOpts().OpenMPIsTargetDevice))
-    return true;
-
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
-    return false;
+    return isAssumedToBeNotEmitted(cast<ValueDecl>(GD.getDecl()),
+                                   /*IsDevice=*/false);
 
   // Check if there are Ctors/Dtors in this declaration and look for target
   // regions in it. We use the complete variant to produce the kernel name
   // mangling.
-  QualType RDTy = cast<VarDecl>(GD.getDecl())->getType();
+  const auto *VD = cast<VarDecl>(GD.getDecl());
+  QualType RDTy = VD->getType();
   if (const auto *RD = RDTy->getBaseElementTypeUnsafe()->getAsCXXRecordDecl()) {
-    for (const CXXConstructorDecl *Ctor : RD->ctors()) {
-      StringRef ParentName =
-          CGM.getMangledName(GlobalDecl(Ctor, Ctor_Complete));
-      scanForTargetRegionsFunctions(Ctor->getBody(), ParentName);
-    }
-    if (const CXXDestructorDecl *Dtor = RD->getDestructor()) {
-      StringRef ParentName =
-          CGM.getMangledName(GlobalDecl(Dtor, Dtor_Complete));
-      scanForTargetRegionsFunctions(Dtor->getBody(), ParentName);
-    }
+    for (const CXXConstructorDecl *Ctor : RD->ctors())
+      scanConstructorForTargetRegions(Ctor, getTargetRegionParentName(Ctor));
+    if (const CXXDestructorDecl *Dtor = RD->getDestructor())
+      scanForTargetRegionsFunctions(Dtor->getBody(),
+                                    getTargetRegionParentName(Dtor));
   }
+
+  // Lambdas in the initializer are reached from nowhere else.
+  if (const Expr *Init = VD->getInit())
+    scanForTargetRegionsFunctions(Init, CGM.getMangledName(GD));
+
+  if (isAssumedToBeNotEmitted(VD, /*IsDevice=*/true))
+    return true;
 
   // Do not emit variable if it is not marked as declare target.
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
-          cast<VarDecl>(GD.getDecl()));
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
       ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
         *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
        HasRequiresUnifiedSharedMemory)) {
-    DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
+    DeferredGlobalVariables.insert(VD);
     return true;
   }
   return false;
