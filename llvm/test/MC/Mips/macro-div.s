@@ -5,10 +5,13 @@
 
   div $25,$11
 // CHECK-NOTRAP: div	$zero, $25, $11                 # encoding: [0x03,0x2b,0x00,0x1a]
-// CHECK-NOTRAP: bnez	$11, $tmp0                      # encoding: [0x15,0x60,A,A]
-// CHECK-NOTRAP: #   fixup A - offset: 0, value: $tmp0-4, kind: fixup_Mips_PC16
-// CHECK-NOTRAP: nop                                    # encoding: [0x00,0x00,0x00,0x00]
-// CHECK-NOTRAP: break	7                               # encoding: [0x00,0x07,0x00,0x0d]
+// CHECK-NOTRAP-NEXT: .set push
+// CHECK-NOTRAP-NEXT: .set noreorder
+// CHECK-NOTRAP-NEXT: bnez	$11, $tmp0                 # encoding: [0x15,0x60,A,A]
+// CHECK-NOTRAP-NEXT: #   fixup A - offset: 0, value: $tmp0-4, kind: fixup_Mips_PC16
+// CHECK-NOTRAP-NEXT: nop                               # encoding: [0x00,0x00,0x00,0x00]
+// CHECK-NOTRAP-NEXT: .set pop
+// CHECK-NOTRAP-NEXT: break	7                          # encoding: [0x00,0x07,0x00,0x0d]
 // CHECK-NOTRAP: $tmp0:
 // CHECK-NOTRAP: mflo	$25                             # encoding: [0x00,0x00,0xc8,0x12]
 // CHECK-TRAP: div	$zero, $25, $11                 # encoding: [0x03,0x2b,0x00,0x1a]
