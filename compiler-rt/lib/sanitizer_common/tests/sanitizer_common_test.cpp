@@ -229,6 +229,21 @@ void TestThreadInfo(bool main) {
   EXPECT_TRUE(tls_end < stk_begin || tls_end >= stk_end);
   EXPECT_TRUE((tls_begin < stk_begin) == (tls_end < stk_begin));
 #endif
+
+#if SANITIZER_APPLE
+  // LSan scans this range for pointers, so it has to cover the thread's TSD,
+  // which holds the values set with pthread_setspecific.
+  pthread_key_t key;
+  ASSERT_EQ(0, pthread_key_create(&key, nullptr));
+  int marker;
+  ASSERT_EQ(0, pthread_setspecific(key, &marker));
+  bool found = false;
+  for (uptr slot = tls_begin; slot + sizeof(uptr) <= tls_end;
+       slot += sizeof(uptr))
+    found |= *reinterpret_cast<void**>(slot) == &marker;
+  EXPECT_TRUE(found);
+  ASSERT_EQ(0, pthread_key_delete(key));
+#endif
 }
 
 static void *WorkerThread(void *arg) {
