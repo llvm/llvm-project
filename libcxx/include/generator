@@ -49,6 +49,8 @@ _LIBCPP_PUSH_MACROS
 #    include <__coroutine/coroutine_traits.h>
 #    include <__coroutine/noop_coroutine_handle.h>
 #    include <__coroutine/trivial_awaitables.h>
+#    include <__cstddef/ptrdiff_t.h>
+#    include <__cstddef/size_t.h>
 #    include <__exception/exception_ptr.h>
 #    include <__iterator/default_sentinel.h>
 #    include <__memory/addressof.h>
