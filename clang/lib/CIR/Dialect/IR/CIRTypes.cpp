@@ -805,6 +805,19 @@ uint64_t getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
   }
   return kDefaultBitIntMaxAlignBits;
 }
+
+/// The vector alignment cap in bits, or 0 when the module has no
+/// #cir.vector_spec entry. The entry holds TargetInfo::getMaxVectorAlign().
+/// Zero means the target does not set a limit.
+uint64_t getVectorMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::VectorSpecAttr>(entry.getValue()))
+      return spec.getMaxAlign();
+  }
+  return 0;
+}
 } // namespace
 
 llvm::TypeSize
@@ -1607,8 +1620,49 @@ uint64_t
 cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
   // This hook answers in bytes, not bits.
-  return llvm::PowerOf2Ceil(llvm::divideCeil(
-      dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8}));
+  uint64_t byteSize = llvm::divideCeil(
+      dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8});
+  uint64_t align = llvm::PowerOf2Ceil(byteSize);
+  uint64_t maxAlignBits = getVectorMaxAlignBits(params);
+  if (maxAlignBits)
+    align = std::min(align, maxAlignBits / 8);
+  return align;
+}
+
+bool cir::VectorType::areCompatible(
+    mlir::DataLayoutEntryListRef oldLayout,
+    mlir::DataLayoutEntryListRef newLayout, mlir::DataLayoutSpecInterface,
+    const mlir::DataLayoutIdentifiedEntryMap &) const {
+  // A nested spec may only repeat the vector alignment cap already in
+  // effect. No entry means the target imposes no limit.
+  uint64_t oldMax = getVectorMaxAlignBits(oldLayout);
+  for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    auto newSpec = mlir::dyn_cast<cir::VectorSpecAttr>(newEntry.getValue());
+    if (newSpec && newSpec.getMaxAlign() != oldMax)
+      return false;
+  }
+  return true;
+}
+
+llvm::LogicalResult
+cir::VectorType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                               mlir::Location loc) const {
+  cir::VectorType keyTy = getMaxAlignKey(getContext());
+  for (mlir::DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = mlir::cast<VectorType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (key != keyTy)
+      return mlir::emitError(loc)
+             << "expected vector data layout entry to be keyed on " << keyTy
+             << ", got " << key;
+    if (!mlir::isa<cir::VectorSpecAttr>(entry.getValue()))
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.vector_spec attribute";
+  }
+  return mlir::success();
 }
 
 mlir::LogicalResult cir::VectorType::verify(
