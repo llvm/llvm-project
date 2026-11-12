@@ -893,6 +893,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Bug Fixes to Compiler Builtins
 
+- The compare-and-exchange builtins, such as `__atomic_compare_exchange_n`, no
+  longer generate invalid IR, on which the backend crashed, for an order of
+  failure known only at run time on targets where `int` has 16 bits, such as
+  AVR and MSP430.
 - Dropped invalid ``constexpr`` specifier from ``__builtin_assume_separate_storage``, which is not supported in constexpr evaluation. (#GH225335)
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
