@@ -326,35 +326,32 @@ static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
   return SE->getSCEV(APtr) == SE->getSCEV(BPtr);
 }
 
-void LoopVectorizationLegality::collectUnitStridePredicates() const {
+void LoopVectorizationLegality::addUnitStridePredicates() const {
   if (!AllowRuntimeSCEVChecks || !TheLoop->isInnermost())
     return;
 
-  for (BasicBlock *BB : TheLoop->blocks())
-    for (Instruction &I : *BB)
-      if (Value *Ptr = getLoadStorePointerOperand(&I))
-        isConsecutivePtr(getLoadStoreType(&I), Ptr);
+  SmallVector<const SCEVPredicate *> Predicates;
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    for (Instruction &I : *BB) {
+      if (Value *Ptr = getLoadStorePointerOperand(&I)) {
+        Predicates.clear();
+        auto Stride = getPtrStride(PSE, getLoadStoreType(&I), Ptr, TheLoop, *DT,
+                                   LAI->getSymbolicStrides(),
+                                   /*ShouldCheckWrap=*/false, &Predicates);
+        if (Stride == 1 || Stride == -1)
+          PSE.addPredicates(Predicates);
+      }
+    }
+  }
 }
 
 int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                                                 Value *Ptr) const {
-  // FIXME: Currently, the set of symbolic strides is sometimes queried before
-  // it's collected.  This happens from canVectorizeWithIfConvert, when the
-  // pointer is checked to reference consecutive elements suitable for a
-  // masked access.
-  // Stride versioning requires adding a SCEV equality predicate; only consult
-  // the symbolic strides when runtime SCEV checks are permitted.
-  const auto &Strides = LAI && AllowRuntimeSCEVChecks
-                            ? LAI->getSymbolicStrides()
-                            : SymbolicStrideMap();
-  SmallVector<const SCEVPredicate *> Predicates;
-  int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
-                            AllowRuntimeSCEVChecks ? &Predicates : nullptr)
-                   .value_or(0);
+  auto Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, {},
+                             /*ShouldCheckWrap=*/false);
   if (Stride != 1 && Stride != -1)
     return 0;
-  PSE.addPredicates(Predicates);
-  return Stride;
+  return *Stride;
 }
 
 bool LoopVectorizationLegality::isInvariant(Value *V) const {
