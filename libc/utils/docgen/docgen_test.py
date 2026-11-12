@@ -320,6 +320,23 @@ class DocgenTest(unittest.TestCase):
         self.assertIn('title="carg: Implemented (1 ULP)">1 ULP</span>', cmplx_out)
         self.assertIn("G.6.2.1", cmplx_out)
 
+        fx_hdr = Header("stdfix.h")
+        fbuf = io.StringIO()
+        with redirect_stdout(fbuf):
+            print_header_status_md(fx_hdr, fx_hdr.api)
+        fx_out = fbuf.getvalue()
+        self.assertIn("{doc}`../math/stdfix`", fx_out)
+        self.assertIn("## Fixed-point Arithmetics", fx_out)
+        self.assertIn("## Higher Math Functions", fx_out)
+        self.assertIn("## Conversion Functions", fx_out)
+        self.assertIn('title="uhrbits: Implemented"', fx_out)
+        self.assertIn('title="exphk: Implemented"', fx_out)
+        self.assertIn('title="strtofxr: Not Implemented"', fx_out)
+
+        srch_hdr = Header("search.h")
+        self.assertTrue(srch_hdr.implements_type("ACTION"))
+        self.assertTrue(srch_hdr.implements_fn("hcreate"))
+
 
 if __name__ == "__main__":
     unittest.main()

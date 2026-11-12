@@ -38,10 +38,12 @@ if(LLVM_ENABLE_SPHINX)
         pthread
         pwd
         sched
+        search
         setjmp
         signal
         spawn
         stdbit
+        stdfix
         stdio
         stdlib
         string

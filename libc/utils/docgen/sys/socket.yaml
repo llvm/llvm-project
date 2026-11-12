@@ -1,3 +1,31 @@
+posix: posix-2024
+types:
+  sa_family_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  socklen_t:
+    in-latest-posix: ''
+  ssize_t:
+    in-latest-posix: ''
+  struct cmsghdr:
+    in-latest-posix: ''
+  struct iovec:
+    in-latest-posix: ''
+  struct linger:
+    in-latest-posix: ''
+  struct mmsghdr:
+    extension: linux
+  struct msghdr:
+    in-latest-posix: ''
+  struct sockaddr:
+    in-latest-posix: ''
+  struct sockaddr_storage:
+    in-latest-posix: ''
+  struct timespec:
+    extension: linux
+  struct ucred:
+    extension: linux
 macros:
   SCM_RIGHTS:
     in-latest-posix: ''
