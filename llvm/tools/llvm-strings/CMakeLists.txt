@@ -16,7 +16,8 @@ add_llvm_tool(llvm-strings
   )
 
 if(APPLE)
-  target_link_libraries(llvm-strings PRIVATE iconv)
+  find_package(Iconv REQUIRED)
+  target_link_libraries(llvm-strings PRIVATE Iconv::Iconv)
 endif()
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
