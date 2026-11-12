@@ -131,6 +131,7 @@ add_libc_test(
   DEPENDS
     libc.src.__support.alloc_checker
     libc.src.__support.checked_ptr
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility
@@ -312,7 +313,7 @@ add_libc_test(
 )
 
 if(LIBC_TARGET_OS_IS_BAREMETAL AND
-  NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+    NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
   add_object_library(
     minimal_external_crt1_for_test
     SRCS

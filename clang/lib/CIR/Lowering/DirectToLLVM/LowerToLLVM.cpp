@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LowerToLLVM.h"
+#include "LowerToLLVMMetadata.h"
 #include "LowerToLLVMOpenCLMetadata.h"
 
 #include <array>
@@ -401,9 +402,9 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile(),
-      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, /*arg_attrs=*/argAttrs,
-      /*res_attrs=*/nullptr);
+      /*tbaa_struct=*/nullptr, /*access_groups=*/nullptr,
+      /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+      /*arg_attrs=*/argAttrs, /*res_attrs=*/nullptr);
   return mlir::success();
 }
 
@@ -426,7 +427,7 @@ lowerMemTransferOp(CIROp op, typename CIROp::Adaptor adaptor,
   }
   rewriter.replaceOpWithNewOp<LLVMOp>(
       op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
-      /*isVolatile=*/false,
+      /*isVolatile=*/false, /*tbaa_struct=*/nullptr,
       /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
       /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, /*arg_attrs=*/argAttrs,
       /*res_attrs=*/nullptr);
@@ -1087,6 +1088,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
                                    mlirValues));
 }
 
+/// Whether the C++ vtables of the module use the relative layout.
+static bool usesRelativeVTables(mlir::ModuleOp module) {
+  auto loweringOpts = module->getAttrOfType<cir::LoweringOptionsAttr>(
+      cir::CIRDialect::getLoweringOptionsAttrName());
+  return loweringOpts && loweringOpts.getRelativeCxxAbiVtables();
+}
+
 // GlobalViewAttr / GlobalOffsetAttr visitors.
 CIRAttrToValue::LoweredGlobalSymbol
 CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
@@ -1223,6 +1231,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
         mlir::LLVM::GEPOp::create(rewriter, parentLoc, resTy, eltTy, addrOp,
                                   indices, mlir::LLVM::GEPNoWrapFlags::none);
     if (globalAttr.getAddressPoint()) {
+      assert(!cir::MissingFeatures::vtableRelativeLayout());
+      if (usesRelativeVTables(parentModule)) {
+        mlir::emitError(parentLoc)
+            << "NYI: address point of a relative layout vtable";
+        return {};
+      }
+
       // Like classic codegen, a vtable address point is inbounds, and only the
       // one vtable of the group it points into can be accessed through it.
       auto indices =
@@ -1303,6 +1318,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::PoisonAttr poisonAttr) {
 
 // VTableAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(parentModule)) {
+    mlir::emitError(parentLoc)
+        << "NYI: initializer of a relative layout vtable";
+    return {};
+  }
+
   mlir::Type llvmTy = converter->convertType(vtableArr.getType());
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, parentLoc, llvmTy);
 
@@ -3112,11 +3134,11 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
 mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     cir::FuncOp func, bool includeFunctionOnlyAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
-  OpenCLFunctionMetadataLowering openCLMetadataLowering(func.getContext());
+  FunctionMetadataLowering metadataLowering(func.getContext());
   for (mlir::NamedAttribute attr : func->getDiscardableAttrs()) {
     if (isHandledDiscardableFuncAttr(attr))
       continue;
-    if (openCLMetadataLowering.lower(attr, includeFunctionOnlyAttrs))
+    if (metadataLowering.lower(attr, includeFunctionOnlyAttrs))
       continue;
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     result.push_back(attr);
@@ -3140,7 +3162,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
   }
 
   if (includeFunctionOnlyAttrs)
-    openCLMetadataLowering.appendAttrs(result);
+    metadataLowering.appendAttrs(result);
 
   return mlir::success();
 }
@@ -5544,6 +5566,10 @@ getValueForVTableSymbol(mlir::Operation *op,
 mlir::LogicalResult CIRToLLVMVTableAddrPointOpLowering::matchAndRewrite(
     cir::VTableAddrPointOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError("NYI: address point of a relative layout vtable");
+
   const mlir::TypeConverter *converter = getTypeConverter();
   mlir::Type targetType = converter->convertType(op.getType());
   llvm::SmallVector<mlir::LLVM::GEPArg> offsets;
@@ -5577,19 +5603,28 @@ mlir::LogicalResult CIRToLLVMVTableGetVPtrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
-    cir::VTableGetVirtualFnAddrOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
+    cir::VTableGetVirtualFnOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type targetType = getTypeConverter()->convertType(op.getType());
-  if (!targetType)
+  assert(!cir::MissingFeatures::vtableRelativeLayout());
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
+    return op.emitError(
+        "NYI: virtual function lookup in a relative layout vtable");
+
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
     return emitTypeConversionError(op, op.getType());
-  auto eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  llvm::SmallVector<mlir::LLVM::GEPArg> offsets =
-      llvm::SmallVector<mlir::LLVM::GEPArg>{
-          static_cast<int32_t>(op.getIndex())};
-  rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
-      op, targetType, eltType, adaptor.getVptr(), offsets,
+
+  // The entry is the function pointer itself: load it from its slot.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, ptrTy, adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{static_cast<int32_t>(op.getIndex())},
       mlir::LLVM::GEPNoWrapFlags::inbounds);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy),
+      /*isVolatile=*/false, /*isNonTemporal=*/false,
+      /*isInvariant=*/op.getInvariant(), /*isInvariantGroup=*/false);
   return mlir::success();
 }
 
@@ -6469,7 +6504,7 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
       /*tail_call_kind*/
       mlir::LLVM::TailCallKindAttr::get(
           getContext(), mlir::LLVM::tailcallkind::TailCallKind::None),
-      /*convergent=*/mlir::UnitAttr(),
+      op.getConvergentAttr(),
       mlir::LLVM::AsmDialectAttr::get(getContext(), llDialect),
       rewriter.getArrayAttr(opAttrs));
 
@@ -6479,32 +6514,22 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVAStartOpLowering::matchAndRewrite(
     cir::VAStartOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
-  auto vaList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
-                                              adaptor.getArgList());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::VaStartOp>(op, vaList);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::VaStartOp>(op, adaptor.getArgList());
   return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMVAEndOpLowering::matchAndRewrite(
     cir::VAEndOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
-  auto vaList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
-                                              adaptor.getArgList());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::VaEndOp>(op, vaList);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::VaEndOp>(op, adaptor.getArgList());
   return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMVACopyOpLowering::matchAndRewrite(
     cir::VACopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
-  auto dstList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
-                                               adaptor.getDstList());
-  auto srcList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
-                                               adaptor.getSrcList());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::VaCopyOp>(op, dstList, srcList);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::VaCopyOp>(op, adaptor.getDstList(),
+                                                    adaptor.getSrcList());
   return mlir::success();
 }
 
@@ -6512,16 +6537,13 @@ mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
     cir::VAArgOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(!cir::MissingFeatures::vaArgABILowering());
-  auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
-  auto vaList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
-                                              adaptor.getArgList());
-
   mlir::Type llvmType =
       getTypeConverter()->convertType(op->getResultTypes().front());
   if (!llvmType)
     return mlir::failure();
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::VaArgOp>(op, llvmType, vaList);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::VaArgOp>(op, llvmType,
+                                                   adaptor.getArgList());
   return mlir::success();
 }
 

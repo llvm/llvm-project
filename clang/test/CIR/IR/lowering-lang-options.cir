@@ -11,7 +11,8 @@ module attributes {cir.lowering_options = #cir.lowering_options<
   openmp_is_target_device = true, clang_abi_compat = 9, long_double_size = 80,
   sanitize_address = true, sanitize_kernel_address = true,
   sanitize_hwaddress = true, enable_noundef_attrs = false,
-  no_trapping_math = true, ssp_buffer_size = 4>} {
+  no_trapping_math = true, ssp_buffer_size = 4,
+  relative_cxx_abi_vtables = true>} {
 }
 
 // CHECK: cir.lowering_options = #cir.lowering_options<
@@ -21,4 +22,5 @@ module attributes {cir.lowering_options = #cir.lowering_options<
 // CHECK-SAME: openmp_is_target_device = true, clang_abi_compat = 9, long_double_size = 80,
 // CHECK-SAME: sanitize_address = true, sanitize_kernel_address = true,
 // CHECK-SAME: sanitize_hwaddress = true, enable_noundef_attrs = false,
-// CHECK-SAME: no_trapping_math = true, ssp_buffer_size = 4>
+// CHECK-SAME: no_trapping_math = true, ssp_buffer_size = 4,
+// CHECK-SAME: relative_cxx_abi_vtables = true>

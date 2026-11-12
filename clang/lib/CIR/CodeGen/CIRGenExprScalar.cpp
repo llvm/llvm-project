@@ -890,6 +890,14 @@ public:
     if (cir::isFPOrVectorOfFPType(operand.getType()))
       return builder.createOrFold<cir::FNegOp>(loc, operand);
 
+    // Saturated negation must saturate (-min for signed, any nonzero value for
+    // unsigned), as in classic codegen.
+    if (e->getType()->isSaturatedFixedPointType()) {
+      CIRGenFixedPointBuilder fpBuilder(builder, loc);
+      return fpBuilder.createNeg(
+          operand, cgf.getContext().getFixedPointSemantics(e->getType()));
+    }
+
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
     //            that the overflow behavior is handled correctly.

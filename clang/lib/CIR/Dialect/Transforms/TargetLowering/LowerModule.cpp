@@ -122,6 +122,8 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
                           loweringLangOpts.getSanitizeKernelAddress());
     langOpts.Sanitize.set(clang::SanitizerKind::HWAddress,
                           loweringLangOpts.getSanitizeHwaddress());
+    langOpts.RelativeCXXABIVTables =
+        loweringLangOpts.getRelativeCxxAbiVtables();
   }
   // Some langopts are still not lowered.
   assert(!cir::MissingFeatures::lowerModuleLangOpts());

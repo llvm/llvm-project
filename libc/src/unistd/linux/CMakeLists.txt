@@ -39,11 +39,12 @@ add_entrypoint_object(
   HDRS
     ../chown.h
   DEPENDS
-    libc.hdr.fcntl_macros
-    libc.hdr.types.uid_t
     libc.hdr.types.gid_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.uid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.chown
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -163,10 +164,12 @@ add_entrypoint_object(
   HDRS
     ../fchown.h
   DEPENDS
-    libc.hdr.types.uid_t
     libc.hdr.types.gid_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.uid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fchown
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -405,8 +408,8 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.ssize_t
+    libc.src.__support.checked_ptr
     libc.src.__support.common
-    libc.src.__support.CPP.optional
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.linux.syscall_wrappers.getcwd
     libc.src.errno.errno
@@ -459,10 +462,10 @@ add_entrypoint_object(
     ../geteuid.h
   DEPENDS
     libc.hdr.types.uid_t
-    libc.hdr.fcntl_macros
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.geteuid
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -557,8 +560,10 @@ add_entrypoint_object(
     ../getsid.h
   DEPENDS
     libc.hdr.types.pid_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getsid
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -637,10 +642,10 @@ add_entrypoint_object(
   HDRS
     ../linkat.h
   DEPENDS
-    libc.hdr.fcntl_macros
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.linkat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -1013,10 +1018,11 @@ add_entrypoint_object(
   HDRS
     ../symlink.h
   DEPENDS
-    libc.hdr.fcntl_macros
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.symlink
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -1027,10 +1033,11 @@ add_entrypoint_object(
   HDRS
     ../symlinkat.h
   DEPENDS
-    libc.hdr.fcntl_macros
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.symlinkat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -1126,11 +1133,11 @@ add_entrypoint_object(
     ../truncate.h
   DEPENDS
     libc.hdr.types.off_t
-    libc.hdr.fcntl_macros
-    libc.hdr.stdint_proxy
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.truncate
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 

@@ -201,6 +201,10 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `transparent_union`: whether the record is a union with
       `__attribute__((transparent_union))`, which is passed as its first
       member.  False, the default, is omitted from the printed form.
+    - `flexible_array_member`: from `RecordDecl::hasFlexibleArrayMember()`,
+      which is also set when the last field is a record that has one.  A
+      zero-length array is not a flexible array member.  False, the default,
+      is omitted from the printed form.
 
     Example:
     ```
@@ -224,7 +228,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     "bool":$has_trivial_dtor,
     "uint64_t":$record_align,
     "uint64_t":$unadjusted_align,
-    DefaultValuedParameter<"bool", "false">:$transparent_union
+    DefaultValuedParameter<"bool", "false">:$transparent_union,
+    DefaultValuedParameter<"bool", "false">:$flexible_array_member
   );
 
   let builders = [
@@ -233,7 +238,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
                      "uint64_t":$record_align), [{
       return $_get($_ctxt, arg_passing_kind, has_trivial_dtor, record_align,
                    /*unadjusted_align=*/record_align,
-                   /*transparent_union=*/false);
+                   /*transparent_union=*/false,
+                   /*flexible_array_member=*/false);
     }]>
   ];
 
@@ -2760,6 +2766,9 @@ def CIR_LoweringOptionsAttr
     `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
     `sanitize_address`, `sanitize_kernel_address` and `sanitize_hwaddress`
     mirror the like-named bits of `LangOptions::Sanitize`.
+    `relative_cxx_abi_vtables` mirrors `LangOptions::RelativeCXXABIVTables`
+    (`-fexperimental-relative-c++-abi-vtables`), which selects the layout of the
+    C++ vtables that lowering emits and reads. It is omitted when false.
 
     The following fields come from `CodeGenOptions`.
     `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
@@ -2805,7 +2814,8 @@ def CIR_LoweringOptionsAttr
     "bool":$sanitize_hwaddress,
     "bool":$enable_noundef_attrs,
     "bool":$no_trapping_math,
-    "uint32_t":$ssp_buffer_size
+    "uint32_t":$ssp_buffer_size,
+    DefaultValuedParameter<"bool", "false">:$relative_cxx_abi_vtables
   );
 
   let assemblyFormat = [{
@@ -2814,7 +2824,7 @@ def CIR_LoweringOptionsAttr
                $openmp_is_target_device, $clang_abi_compat, $long_double_size,
                $sanitize_address, $sanitize_kernel_address,
                $sanitize_hwaddress, $enable_noundef_attrs, $no_trapping_math,
-               $ssp_buffer_size) `>`
+               $ssp_buffer_size, $relative_cxx_abi_vtables) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

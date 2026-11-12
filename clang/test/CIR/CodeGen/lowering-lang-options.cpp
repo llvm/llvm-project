@@ -11,6 +11,9 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir \
 // RUN:   -fsanitize=address,hwaddress -emit-cir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=SAN
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir \
+// RUN:   -fexperimental-relative-c++-abi-vtables -emit-cir %s -o - \
+// RUN:   | FileCheck %s --check-prefix=RELVT
 
 // CIRGen serializes the LangOptions and CodeGenOptions facts that post-CIRGen
 // lowering consumes onto the ModuleOp as a #cir.lowering_options attribute,
@@ -42,6 +45,7 @@ int x;
 // PLAIN-SAME: enable_noundef_attrs = true
 // PLAIN-SAME: no_trapping_math = true
 // PLAIN-SAME: ssp_buffer_size = 8>
+// PLAIN-NOT: relative_cxx_abi_vtables
 
 // -fexceptions -fcxx-exceptions flips exceptions. (OpenMP is exercised in the
 // #cir.lowering_options round-trip test, since -fopenmp on a global here hits
@@ -66,3 +70,7 @@ int x;
 // SAN-SAME: sanitize_address = true
 // SAN-SAME: sanitize_kernel_address = false
 // SAN-SAME: sanitize_hwaddress = true
+
+// -fexperimental-relative-c++-abi-vtables sets relative_cxx_abi_vtables.
+// RELVT: cir.lowering_options = #cir.lowering_options<
+// RELVT-SAME: ssp_buffer_size = 8, relative_cxx_abi_vtables = true>

@@ -564,6 +564,22 @@ define i16 @test_extract_vector_16_elem1(<2 x i16> %a) {
   ret i16 %extracted
 }
 
+define i16 @test_extract_vector_16_variable(<2 x i16> %a, i32 %idx) {
+; RV32-LABEL: test_extract_vector_16_variable:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 4
+; RV32-NEXT:    srl a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_extract_vector_16_variable:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli.uw a1, a1, 4
+; RV64-NEXT:    srl a0, a0, a1
+; RV64-NEXT:    ret
+  %res = extractelement <2 x i16> %a, i32 %idx
+  ret i16 %res
+}
+
 define i8 @test_extract_vector_8(<4 x i8> %a) {
 ; CHECK-LABEL: test_extract_vector_8:
 ; CHECK:       # %bb.0:
@@ -581,11 +597,26 @@ define i8 @test_extract_vector_8_elem1(<4 x i8> %a) {
   ret i8 %extracted
 }
 
+define i8 @test_extract_vector_8_variable(<4 x i8> %a, i32 %idx) {
+; RV32-LABEL: test_extract_vector_8_variable:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 3
+; RV32-NEXT:    srl a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_extract_vector_8_variable:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli.uw a1, a1, 3
+; RV64-NEXT:    srl a0, a0, a1
+; RV64-NEXT:    ret
+  %res = extractelement <4 x i8> %a, i32 %idx
+  ret i8 %res
+}
+
 define <2 x i16> @test_insert_vector_16(<2 x i16> %a, i16 %val) {
 ; RV32-LABEL: test_insert_vector_16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    pack a0, a1, a0
+; RV32-NEXT:    ppaireo.h a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_insert_vector_16:
@@ -2608,10 +2639,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB184_2
+; CHECK-NEXT:    bnez a3, .LBB186_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB184_2:
+; CHECK-NEXT:  .LBB186_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2622,10 +2653,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB185_2
+; CHECK-NEXT:    bnez a3, .LBB187_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB185_2:
+; CHECK-NEXT:  .LBB187_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
