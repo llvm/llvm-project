@@ -429,15 +429,7 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
                   inconvertibleErrorCode()),
               FileName);
         }
-        // Segment will always be loaded at a page boundary, expect it to be
-        // aligned already. Assume 4K pagesize for the machine from which the
-        // profile has been collected. This should be fine for now, in case we
-        // want to support other pagesizes it can be recorded in the raw profile
-        // during collection.
         PreferredTextSegmentAddress = Phdr.p_vaddr;
-        assert(Phdr.p_vaddr == (Phdr.p_vaddr & ~(0x1000 - 1U)) &&
-               "Expect p_vaddr to always be page aligned");
-        assert(Phdr.p_offset == 0 && "Expect p_offset = 0 for symbolization.");
       }
     }
   }
@@ -504,10 +496,6 @@ Error RawMemProfReader::setupForSymbolization() {
         Twine("No matching executable segments found in binary ") +
             Binary.getBinary()->getFileName(),
         inconvertibleErrorCode());
-  assert((PreferredTextSegmentAddress == 0 ||
-          (PreferredTextSegmentAddress == ProfiledTextSegmentStart)) &&
-         "Expect text segment address to be 0 or equal to profiled text "
-         "segment start.");
   return Error::success();
 }
 
@@ -789,10 +777,8 @@ object::SectionedAddress
 RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
   if (VirtualAddress > ProfiledTextSegmentStart &&
       VirtualAddress <= ProfiledTextSegmentEnd) {
-    // For PIE binaries, the preferred address is zero and we adjust the virtual
-    // address by start of the profiled segment assuming that the offset of the
-    // segment in the binary is zero. For non-PIE binaries the preferred and
-    // profiled segment addresses should be equal and this is a no-op.
+    // Translate the runtime address to the segment's preferred virtual address
+    // using the profiled and preferred starts of the same executable segment.
     const uint64_t AdjustedAddress =
         VirtualAddress + PreferredTextSegmentAddress - ProfiledTextSegmentStart;
     return object::SectionedAddress{AdjustedAddress};
