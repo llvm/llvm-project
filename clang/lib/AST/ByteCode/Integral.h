@@ -78,7 +78,6 @@ private:
   static_assert(std::is_trivially_copyable_v<ReprT>);
   template <unsigned OtherBits, bool OtherSigned> friend class Integral;
 
-  IntegralKind Kind = IntegralKind::Number;
   union {
     ReprT V;
     struct {
@@ -90,6 +89,7 @@ private:
       const AddrLabelExpr *L2;
     } AddrLabelDiff;
   };
+  IntegralKind Kind = IntegralKind::Number;
 
   /// Primitive representing limits.
   static const auto Min = std::numeric_limits<ReprT>::min();
@@ -108,7 +108,7 @@ public:
 
   /// Constructs an integral from another integral.
   template <unsigned SrcBits, bool SrcSign>
-  explicit Integral(Integral<SrcBits, SrcSign> V) : Kind(V.Kind), V(V) {}
+  explicit Integral(Integral<SrcBits, SrcSign> V) : V(V), Kind(V.Kind) {}
 
   /// Pointer integral of the given kind.
   explicit Integral(IntegralKind Kind, const void *P, OffsetT Offset = 0)

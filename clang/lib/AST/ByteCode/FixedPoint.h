@@ -22,7 +22,7 @@ using APSInt = llvm::APSInt;
 /// Wrapper around fixed point types.
 class FixedPoint final {
 private:
-  llvm::APFixedPoint V;
+  LLVM_NO_UNIQUE_ADDRESS llvm::APFixedPoint V;
 
 public:
   FixedPoint(llvm::APFixedPoint &&V) : V(std::move(V)) {}
