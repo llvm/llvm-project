@@ -122,7 +122,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
      `shape(result)[rank(source) + i] = inner_tiles[i]` for `0 <= i < k`.
      - The following relationship for the tiled dimensions holds:
      `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`,
-     where (⌈/⌉ indicates CeilDiv).
+     where '/' indicates CeilDiv.
 
 
     Example: If `inner_tiles = [16, 32]`, the result has a shape of
