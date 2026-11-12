@@ -20,8 +20,8 @@
 ; with f's mangled name made plain, which update_test_checks.py does not
 ; match.
 
-; FIXME: We need to do more than this. In particular, __sanitizer_cov callbacks
-; in funclets need token bundles.
+; The callbacks in the catch and cleanup funclets carry the funclet's token;
+; the ones in the function's body carry none.
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"
@@ -58,11 +58,11 @@ define i32 @f() local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %[[CATCH3:.*]], label %[[CATCH:.*]]] unwind label %[[EHCLEANUP]]
 ; CHECK:       [[CATCH3]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr @"\01??_R0H@8", i32 0, ptr [[E]]]
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]] [ "funclet"(token [[TMP1]]) ]
 ; CHECK-NEXT:    invoke void @"\01?g@@YAXXZ"() [ "funclet"(token [[TMP1]]) ]
 ; CHECK-NEXT:            to label %[[INVOKE_CONT4:.*]] unwind label %[[EHCLEANUP]]
 ; CHECK:       [[INVOKE_CONT4]]:
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]] [ "funclet"(token [[TMP1]]) ]
 ; CHECK-NEXT:    catchret from [[TMP1]] to label %[[TRY_CONT]]
 ; CHECK:       [[TRY_CONT]]:
 ; CHECK-NEXT:    call void @"\01??1Foo@@QEAA@XZ"(ptr nonnull [[V]]) #[[ATTR5:[0-9]+]]
@@ -70,15 +70,15 @@ define i32 @f() local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       [[CATCH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = catchpad within [[TMP0]] [ptr null, i32 64, ptr null]
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]] [ "funclet"(token [[TMP2]]) ]
 ; CHECK-NEXT:    invoke void @"\01?g@@YAXXZ"() [ "funclet"(token [[TMP2]]) ]
 ; CHECK-NEXT:            to label %[[INVOKE_CONT2:.*]] unwind label %[[EHCLEANUP]]
 ; CHECK:       [[INVOKE_CONT2]]:
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]] [ "funclet"(token [[TMP2]]) ]
 ; CHECK-NEXT:    catchret from [[TMP2]] to label %[[TRY_CONT]]
 ; CHECK:       [[EHCLEANUP]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR4]] [ "funclet"(token [[TMP3]]) ]
 ; CHECK-NEXT:    call void @"\01??1Foo@@QEAA@XZ"(ptr nonnull [[V]]) #[[ATTR5]] [ "funclet"(token [[TMP3]]) ]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[V]])
 ; CHECK-NEXT:    cleanupret from [[TMP3]] unwind to caller
