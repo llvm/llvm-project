@@ -437,6 +437,7 @@
 ; MSVC-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare ptr @wmemset(ptr, i16, i64)
 ; MSVC-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MSVC-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -988,6 +989,7 @@
 ; MINGW-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare ptr @wmemset(ptr, i16, i64)
 ; MINGW-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MINGW-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1490,6 +1492,7 @@
 ; CYGWIN-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare ptr @wmemset(ptr, i16, i64)
 ; CYGWIN-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CYGWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CYGWIN-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1935,6 +1938,7 @@
 ; UEFI-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare ptr @wmemset(ptr, i16, i64)
 ; UEFI-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; UEFI-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; UEFI-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

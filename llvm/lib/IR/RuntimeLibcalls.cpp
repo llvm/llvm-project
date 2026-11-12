@@ -282,6 +282,8 @@ static Type *convertToIRType(FuncArgTypeID ID, const Module &M,
   case SizeT:
   case SSizeT:
     return getSizeTType(Ctx, DL);
+  case WChar:
+    return IntegerType::get(Ctx, M.getWCharSize() * 8);
   case CmpResult:
     if (TT.isAArch64() || TT.isAMDGPU() || TT.isWasm())
       return Type::getInt32Ty(Ctx);
@@ -387,11 +389,59 @@ static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
   }
 }
 
+/// Returns the extension attribute needed for an int/unsigned parameter of a
+/// libcall. May be zeroext, signext, or none.
+static Attribute::AttrKind getExtAttrForIntParam(const Triple &T,
+                                                 bool IsSigned) {
+  // 64-bit targets tend to extend int/unsigned parameters to register width.
+  // Some targets ignore type signedness and sign-extend.
+  if (shouldSignExtI32Param(T))
+    return Attribute::SExt;
+  // A few others extend according to type signedness.
+  if (shouldExtI32(T))
+    return IsSigned ? Attribute::SExt : Attribute::ZExt;
+  // The rest either don't extend or don't need to extend because the type is
+  // already register-sized.
+  return Attribute::None;
+}
+
+// wchar_t is just an alias to some integer type and passed the same way.
+// Module records wchar_t size, but not its sign, so we have to guess it.
+Attribute::AttrKind
+RuntimeLibcallsInfo::getExtAttrForWCharParam(const Module &M) {
+  const Triple &TT = M.getTargetTriple();
+  unsigned WCharWidth = M.getWCharSize() * 8;
+  unsigned IntWidth = getIntSize(TT);
+
+  if (WCharWidth < IntWidth) {
+    // A wchar_t narrower than int is unsigned on every supported platform,
+    // either by default or because of -fshort-wchar.
+    if (TT.isOSWindowsOrUEFI() && TT.isX86_64())
+      return Attribute::None;
+    if (TT.isAArch64() && !TT.isOSDarwin())
+      return Attribute::None;
+    // NOTE: It is safe to add an extension attribute to a parameter that does
+    // not need one. The callee assumes the extension bits are garbage and will
+    // never inspect them.
+    return Attribute::ZExt;
+  }
+  if (WCharWidth == IntWidth) {
+    // A wchar_t of int width is signed on most platforms.
+    bool IsSigned = !TT.isOSAIX() && !TT.isOSzOS() && !TT.isVE();
+    return getExtAttrForIntParam(TT, IsSigned);
+  }
+  return Attribute::None;
+}
+
 static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
                                          const Module &M, bool IsReturn) {
   const Triple &TT = M.getTargetTriple();
   if (ID == Bool)
     return shouldZExtBool(TT) ? Attribute::ZExt : Attribute::None;
+  if (ID == WChar) {
+    assert(!IsReturn && "No known function returns wchar_t");
+    return RuntimeLibcallsInfo::getExtAttrForWCharParam(M);
+  }
 
   std::optional<bool> Signed = isSignedIntArgType(ID);
   if (!Signed || !Ty->isIntegerTy())

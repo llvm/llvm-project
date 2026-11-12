@@ -403,6 +403,7 @@
 ; CHECK-NEXT: declare float @tgammaf(float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @trunc(double) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare float @truncf(float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare ptr @wmemset(ptr, i16, i16) addrspace(1)
 ; CHECK-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

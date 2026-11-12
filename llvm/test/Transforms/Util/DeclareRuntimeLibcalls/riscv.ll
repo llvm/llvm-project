@@ -474,6 +474,7 @@
 ; RV32-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare ptr @wmemset(ptr, i32, i32)
 ; RV32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; RV32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; RV32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -957,6 +958,7 @@
 ; RV64-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare ptr @wmemset(ptr, i32 signext, i64)
 ; RV64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; RV64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; RV64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
