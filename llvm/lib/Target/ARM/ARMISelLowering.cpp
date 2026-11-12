@@ -21241,10 +21241,9 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   if (LCImpl == RTLIB::Unsupported)
     return SDValue();
 
+  const Module &M = *DAG.getMachineFunction().getFunction().getParent();
   auto [FuncTy, FuncAttrs] =
-      DAG.getLibcalls().getRuntimeLibcallsInfo().getFunctionTy(
-          *DAG.getContext(), getTM().getTargetTriple(), DAG.getDataLayout(),
-          LCImpl);
+      DAG.getLibcalls().getRuntimeLibcallsInfo().getFunctionTy(M, LCImpl);
   Type *RetTy = FuncTy->getReturnType();
 
   SDValue InChain = DAG.getEntryNode();
@@ -21289,10 +21288,9 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   if (LCImpl == RTLIB::Unsupported)
     return SDValue();
 
+  const Module &M = *DAG.getMachineFunction().getFunction().getParent();
   auto [FuncTy, FuncAttrs] =
-      DAG.getLibcalls().getRuntimeLibcallsInfo().getFunctionTy(
-          *DAG.getContext(), getTM().getTargetTriple(), DAG.getDataLayout(),
-          LCImpl);
+      DAG.getLibcalls().getRuntimeLibcallsInfo().getFunctionTy(M, LCImpl);
   Type *RetTy = FuncTy->getReturnType();
 
   SDValue InChain = DAG.getEntryNode();
