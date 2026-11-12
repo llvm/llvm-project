@@ -16,6 +16,15 @@
 ; CHECK: %[[#S1:]] = OpCompositeInsert %[[#S]] %[[#]] %[[#S0]] 1
 ; CHECK: OpSelect %[[#S]] %[[#]] %[[#]] %[[#S1]]
 
+; The element type comes from @g after a null too.
+; CHECK: OpFunction %[[#S]]
+; CHECK: %[[#NV0:]] = OpCompositeInsert %[[#V]] %[[#]] %[[#]] 0
+; CHECK: %[[#NC:]] = OpBitcast %[[#P8]] %[[#]]
+; CHECK: %[[#NV1:]] = OpCompositeInsert %[[#V]] %[[#NC]] %[[#NV0]] 1
+; CHECK: %[[#NS0:]] = OpCompositeInsert %[[#S]] %[[#NV1]] %[[#]] 0
+; CHECK: %[[#NS1:]] = OpCompositeInsert %[[#S]] %[[#]] %[[#NS0]] 1
+; CHECK: OpSelect %[[#S]] %[[#]] %[[#]] %[[#NS1]]
+
 ; CHECK: OpFunction %[[#S]]
 ; CHECK: %[[#PV1:]] = OpCompositeInsert %[[#V]] %[[#]] %[[#]] 1
 ; CHECK: %[[#PS0:]] = OpCompositeInsert %[[#S]] %[[#PV1]] %[[#]] 0
@@ -28,6 +37,11 @@
 
 define %S @select(i1 %c) {
   %s = select i1 %c, %S zeroinitializer, %S { <2 x ptr addrspace(1)> <ptr addrspace(1) @g, ptr addrspace(1) null>, i32 1 }
+  ret %S %s
+}
+
+define %S @select_null_first(i1 %c) {
+  %s = select i1 %c, %S zeroinitializer, %S { <2 x ptr addrspace(1)> <ptr addrspace(1) null, ptr addrspace(1) @g>, i32 1 }
   ret %S %s
 }
 
