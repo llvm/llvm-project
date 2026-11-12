@@ -38,6 +38,7 @@ struct InstructionTemplate {
   bool hasImmediateVariables() const;
   const Instruction &getInstr() const { return *Instr; }
   ArrayRef<MCOperand> getVariableValues() const { return VariableValues; }
+  const Operand &getMemOpReg() const;
   void setVariableValues(ArrayRef<MCOperand> NewVariableValues) {
     assert(VariableValues.size() == NewVariableValues.size() &&
            "Value count mismatch");
