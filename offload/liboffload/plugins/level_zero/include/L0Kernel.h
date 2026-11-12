@@ -33,6 +33,7 @@ struct KernelPropertiesTy {
   uint32_t MaxThreadGroupSize = 0;
   uint32_t NumKernelArgs = 0;
   uint32_t LocalMemSize = 0;
+  bool UsesDynamicSharedMem = false;
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =
       std::numeric_limits<decltype(IndirectAccessFlags)>::max();
   std::mutex Mtx;
