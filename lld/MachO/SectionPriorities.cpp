@@ -401,23 +401,23 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
 
   // getSymbolPriority() is expensive, and there are many object files and
   // symbols, so parallelize getSymbolPriority() over object files.
-  std::vector<const ObjFile *> objFiles;
+  using Matches = std::vector<std::pair<InputSection *, int>>;
+  std::vector<std::pair<const ObjFile *, Matches>> fileMatches;
   for (const InputFile *file : inputFiles)
     if (auto *obj = dyn_cast<ObjFile>(file))
-      objFiles.push_back(obj);
+      fileMatches.emplace_back(obj, Matches());
 
-  std::vector<std::vector<std::pair<InputSection *, int>>> matches(
-      objFiles.size());
-  parallelFor(0, objFiles.size(), [&](size_t i) {
-    for (Symbol *sym : objFiles[i]->symbols)
+  parallelForEach(fileMatches, [&](auto &pair) {
+    auto &[file, matches] = pair;
+    for (Symbol *sym : file->symbols)
       if (auto *d = dyn_cast_or_null<Defined>(sym))
         if (std::optional<int> priority = getSymbolPriority(d))
-          matches[i].emplace_back(d->isec(), *priority);
+          matches.emplace_back(d->isec(), *priority);
   });
 
   // TODO: Make sure this handles weak symbols correctly.
-  for (const auto &fileMatches : matches)
-    for (auto [isec, symbolPriority] : fileMatches) {
+  for (const auto &[_, matches] : fileMatches)
+    for (auto [isec, symbolPriority] : matches) {
       int &priority = sectionPriorities[isec];
       priority = std::min(priority, symbolPriority);
       // Order file takes precedence over cold partitioning.
