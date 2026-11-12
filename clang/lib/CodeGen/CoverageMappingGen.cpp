@@ -444,15 +444,26 @@ public:
   /// Note this function can potentially be expensive because
   /// getSpellingLineNumber uses getLineNumber, which is expensive.
   std::optional<SpellingRegion> adjustSkippedRange(SourceManager &SM,
-                                                   SourceLocation LocStart,
-                                                   SourceLocation LocEnd,
-                                                   SourceLocation PrevTokLoc,
-                                                   SourceLocation NextTokLoc) {
+                                                   const SkippedRange &R) {
+    SourceLocation LocStart = R.Range.getBegin();
+    SourceLocation LocEnd = R.Range.getEnd();
     SpellingRegion SR{SM, LocStart, LocEnd};
-    SR.ColumnStart = 1;
-    if (PrevTokLoc.isValid() && SM.isWrittenInSameFile(LocStart, PrevTokLoc) &&
-        SR.LineStart == SM.getSpellingLineNumber(PrevTokLoc))
-      SR.LineStart++;
+    // Use the locations of the macro invocations for tokens from macro
+    // expansions.
+    SourceLocation PrevTokLoc, NextTokLoc;
+    if (R.PrevTokLoc.isValid())
+      PrevTokLoc = SM.getExpansionRange(R.PrevTokLoc).getEnd();
+    if (R.NextTokLoc.isValid())
+      NextTokLoc = SM.getExpansionLoc(R.NextTokLoc);
+    // Only comments can be preceded by code on the same line.
+    if (R.isComment()) {
+      SR.ColumnStart = 1;
+      if (PrevTokLoc.isValid() &&
+          SM.isWrittenInSameFile(LocStart, PrevTokLoc) &&
+          SR.LineStart == SM.getSpellingLineNumber(PrevTokLoc))
+        SR.LineStart++;
+    }
+    // Any range can end with a merged comment that is followed by code.
     if (NextTokLoc.isValid() && SM.isWrittenInSameFile(LocEnd, NextTokLoc) &&
         SR.LineEnd == SM.getSpellingLineNumber(NextTokLoc)) {
       SR.LineEnd--;
@@ -481,22 +492,13 @@ public:
 
     auto SkippedRanges = CVM.getSourceInfo().getSkippedRanges();
     for (auto &I : SkippedRanges) {
-      SourceRange Range = I.Range;
-      auto LocStart = Range.getBegin();
-      auto LocEnd = Range.getEnd();
-      assert(SM.isWrittenInSameFile(LocStart, LocEnd) &&
+      assert(SM.isWrittenInSameFile(I.Range.getBegin(), I.Range.getEnd()) &&
              "region spans multiple files");
 
-      auto CovFileID = getCoverageFileID(LocStart);
+      auto CovFileID = getCoverageFileID(I.Range.getBegin());
       if (!CovFileID)
         continue;
-      std::optional<SpellingRegion> SR;
-      if (I.isComment())
-        SR = adjustSkippedRange(SM, LocStart, LocEnd, I.PrevTokLoc,
-                                I.NextTokLoc);
-      else if (I.isPPIfElse() || I.isEmptyLine())
-        SR = {SM, LocStart, LocEnd};
-
+      std::optional<SpellingRegion> SR = adjustSkippedRange(SM, I);
       if (!SR)
         continue;
       auto Region = CounterMappingRegion::makeSkipped(
