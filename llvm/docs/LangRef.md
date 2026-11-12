@@ -22552,11 +22552,11 @@ behavior. For all other VP intrinsics the result is poison.
 
 The explicit vector length (%evl) creates a mask, %EVLmask, with all
 elements `0 <= i < %evl` set to True, and all other lanes `%evl <= i <
-W` to False.  A new mask %M is calculated with an element-wise AND
-from %mask and %EVLmask:
+W` to False.  A new mask %M is calculated with an element-wise logical and
+of %EVLmask and %mask:
 
 ```
-M = %mask AND %EVLmask
+M = select <W x i1> %EVLmask, <W x i1> %mask, <W x i1> splat (i1 false)
 ```
 
 A vector operation `<opcode>` on vectors `A` and `B` calculates:
