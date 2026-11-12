@@ -195,7 +195,6 @@ public:
   // non-split-stack callee this will return true. Otherwise returns false.
   bool needsMoreStackNonSplit = true;
 
-  virtual RelExpr adjustTlsExpr(RelType type, RelExpr expr) const;
   virtual RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                                   const uint8_t *loc) const;
 
