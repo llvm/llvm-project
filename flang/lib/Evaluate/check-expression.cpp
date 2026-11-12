@@ -28,7 +28,7 @@ namespace Fortran::evaluate {
 // are not yet known.
 //
 // The variant form (IsScopeInvariantExpr()) also accepts symbols that are
-// INTENT(IN) dummy arguments without the VALUE attribute.
+// nonpointer INTENT(IN) dummy arguments without the VALUE attribute.
 template <bool INVARIANT>
 class IsConstantExprHelper
     : public AllTraverse<IsConstantExprHelper<INVARIANT>, true> {
@@ -52,7 +52,7 @@ public:
         IsInitialProcedureTarget(ultimate) ||
         ultimate.has<semantics::TypeParamDetails>() ||
         (INVARIANT && IsIntentIn(symbol) && !IsOptional(symbol) &&
-            !symbol.attrs().test(semantics::Attr::VALUE));
+            !IsPointer(symbol) && !symbol.attrs().test(semantics::Attr::VALUE));
   }
   bool operator()(const CoarrayRef &) const { return false; }
   bool operator()(const semantics::ParamValue &param) const {
@@ -68,7 +68,8 @@ public:
     return true;
   }
   bool operator()(const Component &component) const {
-    return (*this)(component.base());
+    // INTENT(IN) does not prevent definition of a pointer component's target.
+    return !IsPointer(component.GetLastSymbol()) && (*this)(component.base());
   }
   // Prevent integer division by known zeroes in constant expressions.
   bool operator()(const Divide<Type<TypeCategory::Integer>> &division) const {
