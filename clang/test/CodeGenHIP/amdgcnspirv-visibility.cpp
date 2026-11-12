@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=default -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-DEFAULT %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=default -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-DEFAULT %s %}
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=protected -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-PROTECTED %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=protected -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-PROTECTED %s %}
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=hidden -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-HIDDEN %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=hidden -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-HIDDEN %s %}
 
 // Mirrors clang/test/CodeGenCUDA/amdgpu-visibility.cu for the SPIR-V AMDGCN
 // target. Verifies that device kernels and variables with hidden visibility get

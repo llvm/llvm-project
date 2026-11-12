@@ -198,10 +198,8 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  if (DeviceOrErr->deleteData(DevicePtr, Kind) == OFFLOAD_FAIL)
-    FATAL_MESSAGE(DeviceNum, "%s",
-                  "Failed to deallocate device ptr. Set "
-                  "OFFLOAD_TRACK_ALLOCATION_TRACES=1 to track allocations.");
+  if (DeviceOrErr->deleteData(DevicePtr) == OFFLOAD_FAIL)
+    FATAL_MESSAGE(DeviceNum, "%s", "Failed to deallocate device ptr.");
 
   ODBG(ODT_Interface) << "omp_target_free deallocated device ptr";
 }
@@ -2359,10 +2357,14 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
                        bool IsRecord, bool SaveOutput, bool EmitReport,
                        const char *OutputDirPath) {
-  return Device.RTL->initialize_record_replay(
-      Device.DeviceID, MemorySize, VAddr, IsRecord,
-      /*IsNative=*/true, SaveOutput, EmitReport, /*ReportFilename=*/"",
-      OutputDirPath);
+  if (auto Err =
+          Device.activateRecordReplay(MemorySize, VAddr, IsRecord,
+                                      /*IsNative=*/true, SaveOutput, EmitReport,
+                                      /*ReportFilename=*/"", OutputDirPath)) {
+    REPORT() << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 /// Executes a kernel using pre-recorded information for loading to

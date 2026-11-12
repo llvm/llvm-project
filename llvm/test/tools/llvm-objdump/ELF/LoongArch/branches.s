@@ -1,7 +1,7 @@
 # RUN: llvm-mc --triple=loongarch32 --filetype=obj < %s | \
-# RUN:   llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN:   llvm-objdump --no-print-imm-hex -d --no-show-raw-insn - | FileCheck %s
 # RUN: llvm-mc --triple=loongarch64 --filetype=obj < %s | \
-# RUN:   llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN:   llvm-objdump --no-print-imm-hex -d --no-show-raw-insn - | FileCheck %s
 
 # CHECK-LABEL: <foo>:
 foo:

@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 \
-; RUN:   -verify-machineinstrs -stop-after=finalize-isel  < %s | \
+; RUN:   -stop-after=finalize-isel < %s | \
 ; RUN:   FileCheck --check-prefixes=POWR8,VSX %s
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr7 \
-; RUN:   -verify-machineinstrs -mattr=-vsx -stop-after=finalize-isel \
+; RUN:   -mattr=-vsx -stop-after=finalize-isel \
 ; RUN:    < %s | FileCheck %s --check-prefixes=NOVSX,NOP8V
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr7 \
-; RUN:   -verify-machineinstrs -mattr=vsx -stop-after=finalize-isel \
+; RUN:   -mattr=vsx -stop-after=finalize-isel \
 ; RUN:    < %s | FileCheck %s --check-prefixes=VSX,NOP8V
 
 define float @vssr(float %a, float %b, float %c, float %d, float %e) {

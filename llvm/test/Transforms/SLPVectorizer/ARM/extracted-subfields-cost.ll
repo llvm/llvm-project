@@ -47,7 +47,7 @@ entry:
 ; YAML-NEXT: Function:        sum4_zext_fields
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-2'
+; YAML-NEXT:   - Cost:            '-5'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '1'
 define i16 @sum4_zext_fields(ptr %p) {

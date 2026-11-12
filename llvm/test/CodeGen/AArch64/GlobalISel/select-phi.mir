@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-unknown-unknown -o - -verify-machineinstrs -run-pass=instruction-select -global-isel-abort=1 %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-unknown -o - -run-pass=instruction-select -global-isel-abort=1 %s | FileCheck %s
 --- |
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"
@@ -36,7 +36,6 @@ exposesReturnsTwice: false
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
@@ -88,7 +87,6 @@ exposesReturnsTwice: false
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }

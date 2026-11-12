@@ -2083,17 +2083,22 @@ struct m_SplatOrPoisonMask {
 };
 
 template <typename PointerOpTy, typename OffsetOpTy> struct PtrAdd_match {
+  const DataLayout &DL;
   PointerOpTy PointerOp;
   OffsetOpTy OffsetOp;
 
-  PtrAdd_match(const PointerOpTy &PointerOp, const OffsetOpTy &OffsetOp)
-      : PointerOp(PointerOp), OffsetOp(OffsetOp) {}
+  PtrAdd_match(const DataLayout &DL, const PointerOpTy &PointerOp,
+               const OffsetOpTy &OffsetOp)
+      : DL(DL), PointerOp(PointerOp), OffsetOp(OffsetOp) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     auto *GEP = dyn_cast<GEPOperator>(V);
-    return GEP && GEP->getSourceElementType()->isIntegerTy(8) &&
-           PointerOp.match(GEP->getPointerOperand()) &&
-           OffsetOp.match(GEP->idx_begin()->get());
+    if (!GEP || !GEP->getSourceElementType()->isIntegerTy(8))
+      return false;
+    Value *Idx = *GEP->idx_begin();
+    unsigned IdxWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+    return Idx->getType()->isIntOrIntVectorTy(IdxWidth) &&
+           PointerOp.match(GEP->getPointerOperand()) && OffsetOp.match(Idx);
   }
 };
 
@@ -2146,11 +2151,12 @@ inline auto m_GEP(const OperandTypes &...Ops) {
   return AnyOps_match<Instruction::GetElementPtr, OperandTypes...>(Ops...);
 }
 
-/// Matches GEP with i8 source element type
+/// Matches GEP with i8 source element type and canonical index type.
 template <typename PointerOpTy, typename OffsetOpTy>
 inline PtrAdd_match<PointerOpTy, OffsetOpTy>
-m_PtrAdd(const PointerOpTy &PointerOp, const OffsetOpTy &OffsetOp) {
-  return PtrAdd_match<PointerOpTy, OffsetOpTy>(PointerOp, OffsetOp);
+m_PtrAdd(const DataLayout &DL, const PointerOpTy &PointerOp,
+         const OffsetOpTy &OffsetOp) {
+  return PtrAdd_match<PointerOpTy, OffsetOpTy>(DL, PointerOp, OffsetOp);
 }
 
 //===----------------------------------------------------------------------===//

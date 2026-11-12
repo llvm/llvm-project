@@ -14,9 +14,10 @@
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
@@ -98,6 +99,22 @@ struct CreatePThreadKey {
   using SPSSig = SPSExpected<uint64_t>();
 };
 } // namespace llvm::orc::macho_sps_ci
+
+// Specs for the call-controller handlers that the MachO platform runtime calls.
+namespace llvm::orc::macho_sps_handlers {
+struct PushInitializers
+    : sps::HandlerSpec<SPSExpected<SPSMachOJITDylibDepInfoMap>(
+          SPSExecutorAddr)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag");
+};
+struct PushSymbols
+    : sps::HandlerSpec<SPSError(SPSExecutorAddr,
+                                SPSSequence<SPSTuple<SPSString, bool>>)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag");
+};
+} // namespace llvm::orc::macho_sps_handlers
 
 namespace {
 
@@ -625,19 +642,12 @@ MachOPlatform::MachOPlatform(
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions() {
-  using PushInitializersSPSSig =
-      SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
-  using PushSymbolsSPSSig =
-      SPSError(SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>);
-
   return ES.registerCallControllerHandlers(
       PlatformJD,
-      bindCallControllerHandlerSPS<PushInitializersSPSSig>(
-          SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag"), this,
-          &MachOPlatform::rt_pushInitializers),
-      bindCallControllerHandlerSPS<PushSymbolsSPSSig>(
-          SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag"), this,
-          &MachOPlatform::rt_pushSymbols));
+      bindCallControllerHandler<macho_sps_handlers::PushInitializers>(
+          this, &MachOPlatform::rt_pushInitializers),
+      bindCallControllerHandler<macho_sps_handlers::PushSymbols>(
+          this, &MachOPlatform::rt_pushSymbols));
 }
 
 void MachOPlatform::pushInitializersLoop(
@@ -811,8 +821,7 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
 
   using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
   CreatePThreadKeyProxy CreateKey(
-      sps::ProxySpec<CreatePThreadKeyProxy,
-                     macho_sps_ci::CreatePThreadKey>::dispatch,
+      sps::ProxySpec<macho_sps_ci::CreatePThreadKey>::dispatch,
       CreatePThreadKey.Addr);
   return CreateKey(ES);
 }
@@ -1591,7 +1600,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
       }
 
       SecBlock.addEdge(PointerEdge,
-                       RecordOffset + ((char *)&SD.Sec.addr - (char *)&SD.Sec),
+                       RecordOffset + offsetof(MachO::section_64, addr),
                        *ObjCImageInfoSym, -SecBlock.getAddress().getValue());
     };
   }

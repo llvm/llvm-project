@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:   | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -emit-llvm -o - %s   | FileCheck %s %}
 
 // PR14638; make sure this doesn't crash.
 struct A {

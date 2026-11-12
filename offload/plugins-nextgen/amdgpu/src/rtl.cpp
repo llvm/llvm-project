@@ -25,7 +25,6 @@
 #include <unordered_map>
 
 #include "ErrorReporting.h"
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/RefCnt.h"
@@ -37,7 +36,6 @@
 #include "OffloadAPI.h"
 #include "PluginInterface.h"
 #include "UtilitiesRTL.h"
-#include "omptarget.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -346,6 +344,7 @@ static Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst,
                         SrcAgent, Size, NumDepSignals, DepSignals,
                         CompletionSignal);
 
+  ODBG(OLDT_Tool) << "Running Async Copy on SDMA Engine: " << *SdmaEngine;
   hsa_status_t S = hsa_amd_memory_async_copy_on_engine(
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
       CompletionSignal, *SdmaEngine, /*force_copy_on_sdma=*/true);
@@ -685,8 +684,7 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(MemoryManager && "Invalid memory manager");
     assert(PtrStorage && "Invalid pointer storage");
 
-    auto PtrStorageOrErr =
-        MemoryManager->allocate(Size, nullptr, /*Alignment=*/0);
+    auto PtrStorageOrErr = MemoryManager->allocate(Size, /*Alignment=*/0);
     if (!PtrStorageOrErr)
       return PtrStorageOrErr.takeError();
 
@@ -710,11 +708,11 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 private:
   /// Allocation callback that will be called once the memory manager does not
   /// have more previously allocated buffers.
-  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment) override;
 
   /// Deallocation callback that will be called by the memory manager.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     return MemoryPool->deallocate(TgtPtr);
   }
 
@@ -1017,10 +1015,13 @@ struct AMDGPUQueueTy {
   }
 
   /// Returns the number of streams, this queue is currently assigned to.
-  bool getUserCount() const { return NumUsers; }
+  uint32_t getUserCount() const { return NumUsers; }
 
   /// Returns if the underlying HSA queue is initialized.
   bool isInitialized() { return Queue != nullptr; }
+
+  /// Returns the underlying HSA queue.
+  hsa_queue_t *getHsaQueue() const { return Queue; }
 
   /// Decrement user count of the queue object.
   void removeUser() { --NumUsers; }
@@ -2965,26 +2966,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment) override;
 
   /// Deallocate memory on the device or related to the device.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     if (TgtPtr == nullptr)
       return Plugin::success();
 
     AMDGPUMemoryPoolTy *MemoryPool = nullptr;
     switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
+    case OL_ALLOC_TYPE_DEVICE:
       MemoryPool = CoarseGrainedMemoryPools[0];
       break;
-    case TARGET_ALLOC_HOST:
+    case OL_ALLOC_TYPE_HOST:
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
-    case TARGET_ALLOC_SHARED:
+    case OL_ALLOC_TYPE_MANAGED:
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
+    default:
+      llvm_unreachable("unexpected allocation type");
     }
 
     if (!MemoryPool)
@@ -2993,7 +2995,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // See allocate() for the registration of host / shared memory as pinned
     // memory.
-    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+    if (Kind == OL_ALLOC_TYPE_HOST || Kind == OL_ALLOC_TYPE_MANAGED)
       if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
         return Err;
 
@@ -3382,39 +3384,21 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         Size / PatternSize);
   }
 
+  /// The HSA queue that \p AsyncInfo's stream is bound to.  A stream is bound
+  /// to a queue when it is first needed, so this binds one if necessary.
+  /// Several streams can share an HSA queue.
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override {
+    AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+    AMDGPUStreamTy *Stream = nullptr;
+    Error Err = getStream(AsyncInfoWrapper, Stream);
+    AsyncInfoWrapper.finalize(Err);
+    if (Err)
+      return std::move(Err);
+    return Stream->getQueue()->getHsaQueue();
+  }
+
   Expected<void *> getNativeHandle() override {
     return reinterpret_cast<void *>(Agent.handle);
-  }
-
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override {
-    // TODO: update once targetsync is supported
-    if (InteropType == kmp_interop_type_target)
-      return interop_spec_t{tgt_fr_hsa, {false, 0}, 0};
-    return interop_spec_t{tgt_fr_none, {false, 0}, 0};
-  }
-
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override {
-    auto *Ret = new omp_interop_val_t(
-        DeviceId, static_cast<kmp_interop_type_t>(InteropType));
-    Ret->fr_id = tgt_fr_hsa;
-    Ret->vendor_id = omp_vendor_amd;
-
-    // TODO: implement targetsync support
-
-    Ret->device_info.Platform = nullptr;
-    Ret->device_info.Device = reinterpret_cast<void *>(Agent.handle);
-    Ret->device_info.Context = nullptr;
-
-    return Ret;
-  }
-
-  Error releaseInterop(omp_interop_val_t *Interop) override {
-    if (Interop)
-      delete Interop;
-    return Plugin::success();
   }
 
   Error enqueueHostCallImpl(AMDGPUStreamTy::HostFnType Callback, void *UserData,
@@ -4289,7 +4273,7 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
   }
 
   void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
-                       TargetAllocTy Kind) override {
+                       ol_alloc_type_t Kind) override {
     std::lock_guard<std::mutex> Lock(AllocationsMutex);
     Allocations[Ptr] = {Kind, &Device};
   }
@@ -4304,9 +4288,9 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
 private:
   // Track each allocation's Kind so we can tell HOST from SHARED — HSA
   // backs both with the same host fine-grained pool.
-  // TODO: drop once TARGET_ALLOC_SHARED has its own backing pool.
+  // TODO: drop once OL_ALLOC_TYPE_MANAGED has its own backing pool.
   struct AllocInfo {
-    TargetAllocTy Kind;
+    ol_alloc_type_t Kind;
     GenericDeviceTy *Device;
   };
   llvm::DenseMap<const void *, AllocInfo> Allocations;
@@ -4843,8 +4827,8 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   return Plugin::error(getOffloadErrorCode(ResultCode), ErrFmt, Args..., Desc);
 }
 
-Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
-                                                 TargetAllocTy Kind,
+Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size,
+                                                 ol_alloc_type_t Kind,
                                                  size_t Alignment) {
   // Allocate memory from the pool.
   void *Ptr = nullptr;
@@ -4865,8 +4849,7 @@ Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
   return Ptr;
 }
 
-Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
-                                          TargetAllocTy Kind,
+Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, ol_alloc_type_t Kind,
                                           size_t Alignment) {
   if (Size == 0)
     return nullptr;
@@ -4874,16 +4857,17 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
   // Find the correct memory pool.
   AMDGPUMemoryPoolTy *MemoryPool = nullptr;
   switch (Kind) {
-  case TARGET_ALLOC_DEFAULT:
-  case TARGET_ALLOC_DEVICE:
+  case OL_ALLOC_TYPE_DEVICE:
     MemoryPool = CoarseGrainedMemoryPools[0];
     break;
-  case TARGET_ALLOC_HOST:
+  case OL_ALLOC_TYPE_HOST:
     MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
-  case TARGET_ALLOC_SHARED:
+  case OL_ALLOC_TYPE_MANAGED:
     MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
+  default:
+    llvm_unreachable("unexpected allocation type");
   }
 
   if (!MemoryPool)
@@ -4911,7 +4895,7 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 
     // Register host / shared memory as pinned memory, so that transfers reading
     // from it can take a device-accessible path.
-    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+    if (Kind == OL_ALLOC_TYPE_HOST || Kind == OL_ALLOC_TYPE_MANAGED)
       if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
         return std::move(Err);
   }

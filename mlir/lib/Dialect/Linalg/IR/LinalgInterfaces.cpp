@@ -225,6 +225,66 @@ linalg::isaTransposeOpInterface(GenericOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// ReduceOpInterface implementation
+//===----------------------------------------------------------------------===//
+std::optional<SmallVector<int64_t>>
+linalg::isaReductionOpInterface(GenericOp op) {
+  // It must reduce along at least one dimension.
+  if (op.getNumReductionLoops() == 0)
+    return std::nullopt;
+
+  // linalg.reduce takes N inputs and N inits, N >= 1.
+  unsigned numInputs = op.getNumDpsInputs();
+  if (numInputs == 0 || numInputs != op.getNumDpsInits())
+    return std::nullopt;
+
+  // The reduction dimensions are the loops carrying a reduction iterator.
+  SmallVector<int64_t> reductionDims;
+  for (auto [idx, iter] : llvm::enumerate(op.getIteratorTypesArray()))
+    if (iter == utils::IteratorType::reduction)
+      reductionDims.push_back(idx);
+
+  // All inputs must be read with an identity indexing map and all outputs with
+  // the identity map with the reduction dimensions dropped, matching the
+  // semantics of linalg.reduce.
+  AffineMap expectedOutputMap =
+      AffineMap::getMultiDimIdentityMap(op.getNumLoops(), op.getContext())
+          .dropResults(reductionDims);
+  for (OpOperand *input : op.getDpsInputOperands())
+    if (!op.getMatchingIndexingMap(input).isIdentity())
+      return std::nullopt;
+  for (OpOperand &init : op.getDpsInitsMutable())
+    if (op.getMatchingIndexingMap(&init) != expectedOutputMap)
+      return std::nullopt;
+
+  // Unlike linalg.generic, linalg.reduce requires all inputs to share the same
+  // shape and all inits to match it exactly, including static sizes, after
+  // dropping the reduction dimensions.
+  auto inputType =
+      dyn_cast<ShapedType>(op.getDpsInputOperand(0)->get().getType());
+  if (!inputType || !inputType.hasRank())
+    return std::nullopt;
+  for (OpOperand *input : op.getDpsInputOperands()) {
+    auto type = dyn_cast<ShapedType>(input->get().getType());
+    if (!type || !type.hasRank() || type.getShape() != inputType.getShape())
+      return std::nullopt;
+  }
+
+  SmallVector<int64_t> expectedOutputShape;
+  for (auto [idx, size] : llvm::enumerate(inputType.getShape()))
+    if (!llvm::is_contained(reductionDims, idx))
+      expectedOutputShape.push_back(size);
+  for (OpOperand &init : op.getDpsInitsMutable()) {
+    auto type = dyn_cast<ShapedType>(init.get().getType());
+    if (!type || !type.hasRank() ||
+        type.getShape() != ArrayRef<int64_t>(expectedOutputShape))
+      return std::nullopt;
+  }
+
+  return reductionDims;
+}
+
+//===----------------------------------------------------------------------===//
 // Elementwise Single Unary/Binary-OpInterface implementation
 //===----------------------------------------------------------------------===//
 
@@ -557,17 +617,24 @@ mlir::linalg::detail::isContractionInterfaceImpl(
   if (llvm::any_of(mapRange,
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
     return MatchContractionResult::NotProjectedPermutations;
-  // TODO: more fields than add/mul.
-  // clang-format off
-  if (!::isContractionBody<
-        arith::MulFOp, arith::AddFOp,
-        arith::MulIOp, arith::AddIOp,
-        complex::MulOp, complex::AddOp,
-        arith::AndIOp, arith::OrIOp>(
-      *linalgOp.getBlock())) {
+
+  // Inputs may be cast to the accumulator type inside the body (mixed
+  // precision, int<->float), so the init element type alone selects which
+  // mul/add pair the contraction must use.
+  Type accType =
+      getElementTypeOrSelf(linalgOp.getDpsInitOperand(0)->get().getType());
+  Block &body = *linalgOp.getBlock();
+  bool isContraction = false;
+  if (accType.isInteger(1))
+    isContraction = ::isContractionBody<arith::AndIOp, arith::OrIOp>(body);
+  else if (isa<IntegerType>(accType))
+    isContraction = ::isContractionBody<arith::MulIOp, arith::AddIOp>(body);
+  else if (isa<FloatType>(accType))
+    isContraction = ::isContractionBody<arith::MulFOp, arith::AddFOp>(body);
+  else if (isa<ComplexType>(accType))
+    isContraction = ::isContractionBody<complex::MulOp, complex::AddOp>(body);
+  if (!isContraction)
     return MatchContractionResult::NotAddMul;
-  }
-  // clang-format on
 
   if (dimensions) {
     FailureOr<ContractionDimensions> res = inferContractionDims(linalgOp);

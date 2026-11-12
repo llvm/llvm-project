@@ -52,7 +52,7 @@ define bfloat @ldexp_bf16(i8 zeroext %x) nounwind {
 ; X64-NEXT:    btl $16, %eax
 ; X64-NEXT:    adcl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    shrl $16, %eax
-; X64-NEXT:    pinsrw $0, %eax, %xmm0
+; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -67,7 +67,7 @@ define bfloat @ldexp_bf16(i8 zeroext %x) nounwind {
 ; WIN64-NEXT:    btl $16, %eax
 ; WIN64-NEXT:    adcl $32767, %eax # imm = 0x7FFF
 ; WIN64-NEXT:    shrl $16, %eax
-; WIN64-NEXT:    pinsrw $0, %eax, %xmm0
+; WIN64-NEXT:    movd %eax, %xmm0
 ; WIN64-NEXT:    addq $40, %rsp
 ; WIN64-NEXT:    retq
 ;

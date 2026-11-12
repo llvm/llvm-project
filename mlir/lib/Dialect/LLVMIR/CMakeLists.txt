@@ -10,7 +10,7 @@ set(LLVM_TARGET_DEFINITIONS IR/LLVMOps.cpp)
 foreach(index RANGE 7)
   set(LLVM_SHARDED_SRC LLVMOps.${index}.cpp)
   list(APPEND LLVM_SHARDED_SRCS ${LLVM_SHARDED_SRC})
-  tablegen(MLIR_SRC_SHARDER ${LLVM_SHARDED_SRC}
+  mlir_src_sharder(${LLVM_SHARDED_SRC}
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRLLVMOpsShardGen)
@@ -67,7 +67,7 @@ set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)
 foreach(index RANGE 7)
   set(NVVM_SHARDED_SRC NVVMOps.${index}.cpp)
   list(APPEND NVVM_SHARDED_SRCS ${NVVM_SHARDED_SRC})
-  tablegen(MLIR_SRC_SHARDER ${NVVM_SHARDED_SRC}
+  mlir_src_sharder(${NVVM_SHARDED_SRC}
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRNVVMOpsShardGen)
@@ -115,7 +115,7 @@ set(LLVM_TARGET_DEFINITIONS IR/ROCDLOps.cpp)
 foreach(index RANGE 7)
   set(ROCDL_SHARDED_SRC ROCDLOps.${index}.cpp)
   list(APPEND ROCDL_SHARDED_SRCS ${ROCDL_SHARDED_SRC})
-  tablegen(MLIR_SRC_SHARDER ${ROCDL_SHARDED_SRC}
+  mlir_src_sharder(${ROCDL_SHARDED_SRC}
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRROCDLOpsShardGen)

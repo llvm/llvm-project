@@ -217,6 +217,10 @@ def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 /// inline=never.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
+/// Function is likely only referenced from the current module.
+def LikelyModuleLocal
+    : EnumAttr<"likely_module_local", IntersectAnd, [FnAttr]>;
+
 /// nooutline
 def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
 

@@ -18,6 +18,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
@@ -3358,9 +3359,17 @@ struct LDSDMAIntrinsic {
 };
 const LDSDMAIntrinsic *lookupLDSDMAIntrinsic(unsigned Intr);
 
+struct ExponentOnlyScaleIntrinsic {
+  unsigned Intr;
+  uint8_t ScaleArg;
+};
+const ExponentOnlyScaleIntrinsic *
+lookupExponentOnlyScaleIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
 #define GET_LDSDMAIntrinsicTable_IMPL
+#define GET_ExponentOnlyScaleIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3377,8 +3386,34 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
 }
 
+bool isTriviallyUniform(const Value *V, const Instruction *CtxI) {
+  if (isa<Constant>(V))
+    return true;
+  if (const auto *A = dyn_cast<Argument>(V))
+    return isArgPassedInSGPR(A);
+  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (!isIntrinsicAlwaysUniform(II->getIntrinsicID()))
+      return false;
+    // If II and CtxI are in different blocks then there is a possibility of a
+    // temporal divergence.
+    return II->getParent() == CtxI->getParent();
+  }
+  return false;
+}
+
+bool isTriviallyUniform(const Use &U) {
+  return isTriviallyUniform(U.get(), cast<Instruction>(U.getUser()));
+}
+
 bool isLDSDMAIntrinsic(unsigned IntrID) {
   return lookupLDSDMAIntrinsic(IntrID);
+}
+
+std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID) {
+  if (const ExponentOnlyScaleIntrinsic *Info =
+          lookupExponentOnlyScaleIntrinsic(IntrID))
+    return Info->ScaleArg;
+  return std::nullopt;
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

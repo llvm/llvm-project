@@ -194,12 +194,17 @@ private:
 
   std::pair<Register, unsigned>
   selectVOP3PModsImpl(Register RootReg, const MachineRegisterInfo &MRI,
-                      bool IsDOT = false) const;
+                      bool IsDOT = false, bool NoOpSel0 = false) const;
   InstructionSelector::ComplexRendererFns
-  selectVOP3PRetHelper(MachineOperand &Root, bool IsDOT = false) const;
+  selectVOP3PRetHelper(MachineOperand &Root, bool IsDOT = false,
+                       bool NoOpSel0 = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PMods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsPkFmaOpSel0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsPkAddMulOpSel0(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsDOT(MachineOperand &Root) const;
@@ -236,8 +241,8 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
-  bool selectScaleOffset(MachineOperand &Root, Register &Offset,
-                         bool IsSigned) const;
+  bool selectScaleOffset(MachineOperand &Root, Register &Offset, bool IsSigned,
+                         bool IsSMEM = false) const;
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
                         int64_t *Offset, bool *ScaleOffset) const;
   InstructionSelector::ComplexRendererFns
@@ -359,6 +364,8 @@ private:
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderPrefetchLen(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
   void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                           int OpIdx) const;
 

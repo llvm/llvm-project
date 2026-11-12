@@ -142,18 +142,22 @@ cc_test(
 )
 
 cc_test(
-    name = "EvaluateLogicalTest",
+    name = "FlangEvaluateTests",
     size = "small",
-    srcs = ["Evaluate/logical.cpp"],
+    srcs = glob(["Evaluate/*ValueTest.cpp"]),
     deps = [
         "//flang:CommonHeaders",
+        "//flang:DecimalHeaders",
         "//flang:EvaluateHeaders",
         "//flang:SemanticsHeaders",
-        "//flang:TestingHeaders",
+        "//flang:SupportHeaders",
+        "//flang/lib/Decimal:FortranDecimal",
         "//flang/lib/Evaluate:FortranEvaluate",
         "//flang/lib/Semantics:FortranSemantics",
-        "//flang/lib/Testing:NonGTestTesting",
+        "//flang/lib/Support:FortranSupport",
         "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 

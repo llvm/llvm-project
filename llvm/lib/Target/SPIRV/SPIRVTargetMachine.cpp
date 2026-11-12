@@ -18,6 +18,7 @@
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
+#include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -26,6 +27,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
@@ -43,6 +45,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   RegisterTargetMachine<SPIRVTargetMachine> X(getTheSPIRV32Target());
   RegisterTargetMachine<SPIRVTargetMachine> Y(getTheSPIRV64Target());
   RegisterTargetMachine<SPIRVTargetMachine> Z(getTheSPIRVLogicalTarget());
+  static opt::RegisterLibraryOptions<SPIRVOptions> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
@@ -66,6 +69,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVLegalizeResourceBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
   initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
+  initializeSPIRVRemoveUnusedResourcesLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -86,6 +90,8 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      CLOpts(cl::LibraryOptionsContext::get<SPIRVOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
       Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
@@ -100,7 +106,12 @@ namespace {
 class SPIRVPassConfig : public TargetPassConfig {
 public:
   SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM), TM(TM) {}
+      : TargetPassConfig(TM, PM), TM(TM) {
+    // Logical SPIR-V cannot express the pointer induction variables that loop
+    // strength reduction creates.
+    if (TM.getSubtargetImpl()->isLogicalSPIRV())
+      EnableLoopStrengthReduce = false;
+  }
 
   void addMachineSSAOptimization() override;
   void addIRPasses() override;
@@ -169,6 +180,11 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new SPIRVPassConfig(*this, PM);
 }
 
+// CSE can merge same-LLT values with different SPIR-V types.
+CSEConfigBase *SPIRVTargetMachine::createCSEConfig() const {
+  return new CSEConfigBase();
+}
+
 void SPIRVPassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
@@ -177,6 +193,7 @@ void SPIRVPassConfig::addIRPasses() {
   if (TM.getSubtargetImpl()->isShader()) {
     if (getOptLevel() != CodeGenOptLevel::None)
       addPass(createSPIRVFinalizeShaderLinkagePass(TM));
+    addPass(createSPIRVRemoveUnusedResourcesLegacyPass());
   } else {
     // Variadic function calls aren't supported in shader code.
     // This needs to come before SPIRVPrepareFunctions because this
@@ -260,20 +277,8 @@ bool SPIRVPassConfig::addRegBankSelect() {
   return false;
 }
 
-// Deprecated flag kept for backward compatibility. NSDI emission is now handled
-// by SPIRVNonSemanticDebugHandler, registered in SPIRVAsmPrinter::
-// doInitialization() when the module contains debug info (llvm.dbg.cu).
-// TODO: Remove this option after a deprecation period. Callers that used
-// -spv-emit-nonsemantic-debug-info should switch to -g.
-static cl::opt<bool> SPVEnableNonSemanticDI(
-    "spv-emit-nonsemantic-debug-info",
-    cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
-             "instructions"),
-    cl::init(false));
-
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelectLegacy(getOptLevel(),
-                                      /*RequireRegBankSelection=*/false));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }

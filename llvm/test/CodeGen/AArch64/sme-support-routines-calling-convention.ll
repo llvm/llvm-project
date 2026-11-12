@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sme -verify-machineinstrs < %s | FileCheck %s --check-prefix=DARWIN
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECK-CSRMASK
-; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sme -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECK-CSRMASK
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECK-CSRMASK
+; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sme -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CHECK-CSRMASK
 
 ; Test that the PCS attribute is accepted and uses the correct register mask.
 ;

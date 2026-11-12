@@ -69,65 +69,6 @@
 namespace llvm {
 namespace {
 
-static cl::opt<unsigned> MaxDepth(
-    "amdgpu-module-splitting-max-depth",
-    cl::desc(
-        "maximum search depth. 0 forces a greedy approach. "
-        "warning: the algorithm is up to O(2^N), where N is the max depth."),
-    cl::init(8));
-
-static cl::opt<float> LargeFnFactor(
-    "amdgpu-module-splitting-large-threshold", cl::init(2.0f), cl::Hidden,
-    cl::desc(
-        "when max depth is reached and we can no longer branch out, this "
-        "value determines if a function is worth merging into an already "
-        "existing partition to reduce code duplication. This is a factor "
-        "of the ideal partition size, e.g. 2.0 means we consider the "
-        "function for merging if its cost (including its callees) is 2x the "
-        "size of an ideal partition."));
-
-static cl::opt<float> LargeFnOverlapForMerge(
-    "amdgpu-module-splitting-merge-threshold", cl::init(0.7f), cl::Hidden,
-    cl::desc("when a function is considered for merging into a partition that "
-             "already contains some of its callees, do the merge if at least "
-             "n% of the code it can reach is already present inside the "
-             "partition; e.g. 0.7 means only merge >70%"));
-
-static cl::opt<bool> NoExternalizeGlobals(
-    "amdgpu-module-splitting-no-externalize-globals", cl::Hidden,
-    cl::desc("disables externalization of global variable with local linkage; "
-             "may cause globals to be duplicated which increases binary size"));
-
-static cl::opt<bool> NoExternalizeOnAddrTaken(
-    "amdgpu-module-splitting-no-externalize-address-taken", cl::Hidden,
-    cl::desc(
-        "disables externalization of functions whose addresses are taken"));
-
-static cl::opt<std::string>
-    ModuleDotCfgOutput("amdgpu-module-splitting-print-module-dotcfg",
-                       cl::Hidden,
-                       cl::desc("output file to write out the dotgraph "
-                                "representation of the input module"));
-
-static cl::opt<std::string> PartitionSummariesOutput(
-    "amdgpu-module-splitting-print-partition-summaries", cl::Hidden,
-    cl::desc("output file to write out a summary of "
-             "the partitions created for each module"));
-
-#ifndef NDEBUG
-static cl::opt<bool>
-    UseLockFile("amdgpu-module-splitting-serial-execution", cl::Hidden,
-                cl::desc("use a lock file so only one process in the system "
-                         "can run this pass at once. useful to avoid mangled "
-                         "debug output in multithreaded environments."));
-
-static cl::opt<bool>
-    DebugProposalSearch("amdgpu-module-splitting-debug-proposal-search",
-                        cl::Hidden,
-                        cl::desc("print all proposals received and whether "
-                                 "they were rejected or accepted"));
-#endif
-
 struct SplitModuleTimer : NamedRegionTimer {
   SplitModuleTimer(StringRef Name, StringRef Desc)
       : NamedRegionTimer(Name, Desc, DEBUG_TYPE, "AMDGPU Module Splitting",
@@ -930,8 +871,8 @@ class RecursiveSearchSplitting {
 public:
   using SubmitProposalFn = function_ref<void(SplitProposal)>;
 
-  RecursiveSearchSplitting(const SplitGraph &SG, unsigned NumParts,
-                           SubmitProposalFn SubmitProposal);
+  RecursiveSearchSplitting(const AMDGPUOptions &CLOpts, const SplitGraph &SG,
+                           unsigned NumParts, SubmitProposalFn SubmitProposal);
 
   void run();
 
@@ -954,7 +895,7 @@ private:
   /// partition of \p SP.
   ///
   /// \p Depth is the current search depth. When this value is equal to
-  /// \ref MaxDepth, we can no longer recurse.
+  /// the maximum search depth, we can no longer recurse.
   ///
   /// This function only recurses if there is more than one possible assignment,
   /// otherwise it is iterative to avoid creating a call stack that is as big as
@@ -969,6 +910,7 @@ private:
   std::pair<unsigned, CostType>
   findMostSimilarPartition(const WorkListEntry &Entry, const SplitProposal &SP);
 
+  const AMDGPUOptions &CLOpts;
   const SplitGraph &SG;
   unsigned NumParts;
   SubmitProposalFn SubmitProposal;
@@ -981,14 +923,18 @@ private:
 };
 
 RecursiveSearchSplitting::RecursiveSearchSplitting(
-    const SplitGraph &SG, unsigned NumParts, SubmitProposalFn SubmitProposal)
-    : SG(SG), NumParts(NumParts), SubmitProposal(SubmitProposal) {
+    const AMDGPUOptions &CLOpts, const SplitGraph &SG, unsigned NumParts,
+    SubmitProposalFn SubmitProposal)
+    : CLOpts(CLOpts), SG(SG), NumParts(NumParts),
+      SubmitProposal(SubmitProposal) {
   // arbitrary max value as a safeguard. Anything above 10 will already be
   // slow, this is just a max value to prevent extreme resource exhaustion or
   // unbounded run time.
-  if (MaxDepth > 16)
+  if (CLOpts.module_splitting_max_depth > 16)
     report_fatal_error("[amdgpu-split-module] search depth of " +
-                       Twine(MaxDepth) + " is too high!");
+                       Twine(CLOpts.module_splitting_max_depth) +
+                       " is too high!");
+  float LargeFnFactor = CLOpts.module_splitting_large_threshold;
   LargeClusterThreshold =
       (LargeFnFactor != 0.0)
           ? CostType(((SG.getModuleCost() / NumParts) * LargeFnFactor))
@@ -1108,7 +1054,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       SinglePIDToTry = CheapestPID;
     else if (MostSimilarPID == CheapestPID) // both landed on the same PID
       SinglePIDToTry = CheapestPID;
-    else if (Depth >= MaxDepth) {
+    else if (Depth >= CLOpts.module_splitting_max_depth) {
       // We have to choose one path. Use a heuristic to guess which one will be
       // more appropriate.
       if (Entry.CostExcludingGraphEntryPoints > LargeClusterThreshold) {
@@ -1117,7 +1063,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
         const double Ratio = static_cast<double>(SimilarDepsCost) /
                              Entry.CostExcludingGraphEntryPoints;
         assert(Ratio >= 0.0 && Ratio <= 1.0);
-        if (Ratio > LargeFnOverlapForMerge) {
+        if (Ratio > CLOpts.module_splitting_merge_threshold) {
           // For debug, just print "L", so we'll see "L3=P3" for instance, which
           // will mean we reached max depth and chose P3 based on this
           // heuristic.
@@ -1171,7 +1117,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
   // Step 3: If we assigned all WorkList items, submit the proposal.
 
   assert(Idx == WorkList.size());
-  assert(NumProposalsSubmitted <= (2u << MaxDepth) &&
+  assert(NumProposalsSubmitted <= (2u << CLOpts.module_splitting_max_depth) &&
          "Search got out of bounds?");
   SP.setName("recursive_search (depth=" + std::to_string(Depth) + ") #" +
              std::to_string(NumProposalsSubmitted++));
@@ -1325,12 +1271,13 @@ static void printPartitionSummary(raw_ostream &OS, unsigned N, const Module &M,
      << "% of the source\n";
 }
 
-static void evaluateProposal(SplitProposal &Best, SplitProposal New) {
+static void evaluateProposal(const AMDGPUOptions &CLOpts, SplitProposal &Best,
+                             SplitProposal New) {
   SplitModuleTimer SMT("proposal_evaluation", "proposal ranking algorithm");
 
   LLVM_DEBUG({
     New.verifyCompleteness();
-    if (DebugProposalSearch)
+    if (CLOpts.module_splitting_debug_proposal_search)
       New.print(dbgs());
   });
 
@@ -1358,7 +1305,7 @@ static void evaluateProposal(SplitProposal &Best, SplitProposal New) {
   if (IsBest)
     Best = std::move(New);
 
-  LLVM_DEBUG(if (DebugProposalSearch) {
+  LLVM_DEBUG(if (CLOpts.module_splitting_debug_proposal_search) {
     if (IsBest)
       dbgs() << "[search] new best proposal!\n";
     else
@@ -1373,7 +1320,8 @@ static std::unique_ptr<Module> cloneAll(const Module &M) {
 }
 
 /// Writes \p SG as a DOTGraph to \ref ModuleDotCfgDir if requested.
-static void writeDOTGraph(const SplitGraph &SG) {
+static void writeDOTGraph(const AMDGPUOptions &CLOpts, const SplitGraph &SG) {
+  StringRef ModuleDotCfgOutput = CLOpts.module_splitting_print_module_dotcfg;
   if (ModuleDotCfgOutput.empty())
     return;
 
@@ -1388,7 +1336,7 @@ static void writeDOTGraph(const SplitGraph &SG) {
 }
 
 static void splitAMDGPUModule(
-    GetTTIFn GetTTI, Module &M, unsigned NumParts,
+    const AMDGPUOptions &CLOpts, GetTTIFn GetTTI, Module &M, unsigned NumParts,
     function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
   CallGraph CG(M);
 
@@ -1409,7 +1357,7 @@ static void splitAMDGPUModule(
   // constraint in the graph and use it to guide splitting, instead of
   // externalizing like this. Maybe non-copyable should really mean "keep one
   // visible copy, then internalize all other copies" for some functions?
-  if (!NoExternalizeOnAddrTaken) {
+  if (CLOpts.module_splitting_externalize_address_taken) {
     for (auto &Fn : M) {
       if (Fn.hasLocalLinkage() && Fn.hasAddressTaken()) {
         LLVM_DEBUG(dbgs() << "[externalize] "; Fn.printAsOperand(dbgs());
@@ -1421,7 +1369,7 @@ static void splitAMDGPUModule(
 
   // Externalize local GVs, which avoids duplicating their initializers, which
   // in turns helps keep code size in check.
-  if (!NoExternalizeGlobals) {
+  if (CLOpts.module_splitting_externalize_globals) {
     for (auto &GV : M.globals()) {
       if (GV.hasLocalLinkage())
         LLVM_DEBUG(dbgs() << "[externalize] GV " << GV.getName() << '\n');
@@ -1463,7 +1411,7 @@ static void splitAMDGPUModule(
     }
   });
 
-  writeDOTGraph(SG);
+  writeDOTGraph(CLOpts, SG);
 
   LLVM_DEBUG(dbgs() << "[search] testing splitting strategies\n");
 
@@ -1473,12 +1421,12 @@ static void splitAMDGPUModule(
     if (!Proposal)
       Proposal = std::move(SP);
     else
-      evaluateProposal(*Proposal, std::move(SP));
+      evaluateProposal(CLOpts, *Proposal, std::move(SP));
   };
 
   // TODO: It would be very easy to create new strategies by just adding a base
   // class to RecursiveSearchSplitting and abstracting it away.
-  RecursiveSearchSplitting(SG, NumParts, EvaluateProposal).run();
+  RecursiveSearchSplitting(CLOpts, SG, NumParts, EvaluateProposal).run();
   LLVM_DEBUG(if (Proposal) dbgs() << "[search done] selected proposal: "
                                   << Proposal->getName() << "\n";);
 
@@ -1491,6 +1439,8 @@ static void splitAMDGPUModule(
   LLVM_DEBUG(Proposal->print(dbgs()););
 
   std::optional<raw_fd_ostream> SummariesOS;
+  StringRef PartitionSummariesOutput =
+      CLOpts.module_splitting_print_partition_summaries;
   if (!PartitionSummariesOutput.empty()) {
     std::error_code EC;
     SummariesOS.emplace(PartitionSummariesOutput, EC);
@@ -1572,9 +1522,11 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
     return FAM.getResult<TargetIRAnalysis>(F);
   };
 
+  const AMDGPUOptions &CLOpts =
+      M.getContext().getLibraryOptions().get<AMDGPUOptions>();
   bool Done = false;
 #ifndef NDEBUG
-  if (UseLockFile) {
+  if (CLOpts.module_splitting_serial_execution) {
     SmallString<128> LockFilePath;
     sys::path::system_temp_directory(/*ErasedOnReboot=*/true, LockFilePath);
     sys::path::append(LockFilePath, "amdgpu-split-module-debug");
@@ -1605,7 +1557,7 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
         }
       }
 
-      splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);
+      splitAMDGPUModule(CLOpts, TTIGetter, M, N, ModuleCallback);
       Done = true;
       break;
     }
@@ -1613,7 +1565,7 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
 #endif
 
   if (!Done)
-    splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);
+    splitAMDGPUModule(CLOpts, TTIGetter, M, N, ModuleCallback);
 
   // We can change linkage/visibilities in the input, consider that nothing is
   // preserved just to be safe. This pass runs last anyway.

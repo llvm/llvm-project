@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple=x86_64-linux-gnu %s | FileCheck %s -check-prefix=CHECK-YES
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -o - -triple=x86_64-linux-gnu %s | FileCheck %s -check-prefix=CHECK-YES %}
 // RUN: %clang_cc1 -emit-llvm -o - -fno-delete-null-pointer-checks -triple=x86_64-linux-gnu %s | FileCheck %s -check-prefix=CHECK-NO
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -o - -fno-delete-null-pointer-checks -triple=x86_64-linux-gnu %s | FileCheck %s -check-prefix=CHECK-NO %}
 
 struct Struct {
   int many;
@@ -11,9 +13,9 @@ struct Struct {
 void TestReturnsVoid(Struct &s) {
   s.ReturnsVoid();
 
-  // CHECK-YES: call void @_ZN6Struct11ReturnsVoidEv(ptr noundef nonnull align 4 dereferenceable(12) %0)
+  // CHECK-YES: call void @_ZN6Struct11ReturnsVoidEv(ptr noundef nonnull align 4 dereferenceable(12) %{{[0-9]+}})
   /// FIXME Use dereferenceable after dereferenceable respects NullPointerIsValid.
-  // CHECK-NO: call void @_ZN6Struct11ReturnsVoidEv(ptr noundef align 4 dereferenceable_or_null(12) %0)
+  // CHECK-NO: call void @_ZN6Struct11ReturnsVoidEv(ptr noundef align 4 dereferenceable_or_null(12) %{{[0-9]+}})
 }
 
 // CHECK-YES: declare void @_ZN6Struct11ReturnsVoidEv(ptr noundef nonnull align 4 dereferenceable(12))

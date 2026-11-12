@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -ffine-grained-bitfield-accesses \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -ffine-grained-bitfield-accesses   -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple riscv64-linux-gnu -ffine-grained-bitfield-accesses \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple riscv64-linux-gnu -ffine-grained-bitfield-accesses   -emit-llvm -o - %s | FileCheck %s %}
 
 // Note: This test checks the X86-64 and RISC-V targets in order to explore
 // behaviour when i8/i16 are native integer widths (X86-64) and when they're

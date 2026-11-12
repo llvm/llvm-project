@@ -1,14 +1,12 @@
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=print-machine-cycles -o - %s 2>&1 | FileCheck %s --check-prefixes=LEGACY,CHECK
 
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes="machine-function(print,verify<machine-cycles>,print<machine-cycles>)" -o - %s 2>&1 | FileCheck %s --check-prefixes=NPM,CHECK
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes="machine-function(verify<machine-cycles>,print<machine-cycles>)" -o - %s 2>&1 | FileCheck %s
 
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: empty
-# NPM-LABEL: name: empty
 name:            empty
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -19,11 +17,9 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: simple
-# NPM-LABEL: name: simple
 # CHECK:           depth=1: entries(bb.1)
 name:            simple
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
 frameInfo:
@@ -45,11 +41,9 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: two_latches
-# NPM-LABEL: name: two_latches
 # CHECK:           depth=1: entries(bb.1) bb.2
 name:            two_latches
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -78,12 +72,10 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: nested_simple
-# NPM-LABEL: name: nested_simple
 # CHECK:           depth=1: entries(bb.1) bb.3 bb.2
 # CHECK:               depth=2: entries(bb.2)
 name:            nested_simple
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -115,12 +107,10 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: nested_outer_latch_in_inner_loop
-# NPM-LABEL: name: nested_outer_latch_in_inner_loop
 # CHECK:           depth=1: entries(bb.1) bb.2 bb.3
 # CHECK:               depth=2: entries(bb.2) bb.3
 name:            nested_outer_latch_in_inner_loop
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -152,12 +142,10 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: sibling_loops
-# NPM-LABEL: name: sibling_loops
 # CHECK:           depth=1: entries(bb.1)
 # CHECK:           depth=1: entries(bb.2)
 name:            sibling_loops
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -190,12 +178,10 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: serial_loops
-# NPM-LABEL: name: serial_loops
 # CHECK:           depth=1: entries(bb.2)
 # CHECK:           depth=1: entries(bb.1)
 name:            serial_loops
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -224,13 +210,11 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: nested_sibling_loops
-# NPM-LABEL: name: nested_sibling_loops
 # CHECK:           depth=1: entries(bb.1) bb.3 bb.2 bb.4 bb.5
 # CHECK:               depth=2: entries(bb.2)
 # CHECK:               depth=2: entries(bb.4) bb.5
 name:            nested_sibling_loops
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr32 }
@@ -288,13 +272,11 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: deeper_nest
-# NPM-LABEL: name: deeper_nest
 # CHECK:           depth=1: entries(bb.1) bb.5 bb.2 bb.3 bb.4
 # CHECK:               depth=2: entries(bb.2) bb.3 bb.4
 # CHECK:                   depth=3: entries(bb.3) bb.4
 name:            deeper_nest
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -336,11 +318,9 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: irreducible_basic
-# NPM-LABEL: name: irreducible_basic
 # CHECK:           depth=1: entries(bb.2 bb.1)
 name:            irreducible_basic
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -373,13 +353,11 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: irreducible_mess
-# NPM-LABEL: name: irreducible_mess
 # CHECK:           depth=1: entries(bb.2 bb.1) bb.6 bb.5 bb.3 bb.4
 # CHECK:               depth=2: entries(bb.5 bb.3 bb.1) bb.4
 # CHECK:                   depth=3: entries(bb.3 bb.1) bb.4
 name:            irreducible_mess
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }
@@ -450,11 +428,9 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: irreducible_into_simple_cycle
-# NPM-LABEL: name: irreducible_into_simple_cycle
 # CHECK:           depth=1: entries(bb.2 bb.4 bb.7) bb.3 bb.5 bb.6
 name:            irreducible_into_simple_cycle
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr8 }
@@ -510,13 +486,11 @@ body:             |
 ...
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: irreducible_mountain_bug
-# NPM-LABEL: name: irreducible_mountain_bug
 # CHECK:           depth=1: entries(bb.6) bb.12 bb.11 bb.10 bb.8 bb.9 bb.7
 # CHECK:               depth=2: entries(bb.10 bb.7) bb.8 bb.9
 # CHECK:                   depth=3: entries(bb.8 bb.7) bb.9
 name:            irreducible_mountain_bug
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr8 }
   - { id: 1, class: gr8 }

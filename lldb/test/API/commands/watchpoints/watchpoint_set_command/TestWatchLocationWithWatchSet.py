@@ -35,7 +35,7 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # method.
 
     @skipIf(oslist=["linux"], archs=["aarch64", "arm$"], bugnumber="llvm.org/pr26031")
-    @skipIfWindows  # This test is flaky on Windows
+    @skipIfWindows  # Flaky on Windows buildbot - https://llvm.org/pr239322
     def test_watchlocation_using_watchpoint_set(self):
         """Test watching a location with 'watchpoint set expression -w write -s size' option."""
         self.build()
