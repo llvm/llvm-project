@@ -14,6 +14,16 @@ extern "C" int vprintf(const char *format, __builtin_va_list) { return -1; }
 extern "C" int vprintf(const char *format, __builtin_va_list);
 #endif
 
+#ifdef OMPTARGET_HAS_LIBC
+// Provided by the GPU libc. The host writes stderr unbuffered, so a message
+// sent there survives a kernel abort, whereas printf output to stdout may still
+// be buffered when the host process is terminated. The libc's public headers
+// are generated when it is built and are not available here, so declare what
+// is used; FILE is only ever handled through a pointer.
+extern "C" void *stderr;
+extern "C" int fputs(const char *, void *);
+#endif
+
 extern "C" {
 [[gnu::weak]] int memcmp(const void *lhs, const void *rhs, size_t count) {
   auto *L = reinterpret_cast<const unsigned char *>(lhs);
@@ -44,5 +54,13 @@ namespace ompx {
   __builtin_va_list vlist;
   __builtin_va_start(vlist, Format);
   return ::vprintf(Format, vlist);
+}
+
+void reportError(const char *Message) {
+#ifdef OMPTARGET_HAS_LIBC
+  ::fputs(Message, ::stderr);
+#else
+  printf("%s", Message);
+#endif
 }
 } // namespace ompx
