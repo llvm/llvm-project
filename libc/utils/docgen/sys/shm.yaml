@@ -1,0 +1,90 @@
+posix: posix-2024
+types:
+  intptr_t:
+    extension: linux
+  key_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  shmatt_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  struct shmid_ds:
+    in-latest-posix: ''
+  time_t:
+    in-latest-posix: ''
+macros:
+  SHMLBA:
+    in-latest-posix: ''
+  SHM_DEST:
+    extension: linux
+  SHM_EXEC:
+    extension: linux
+  SHM_FAILED:
+    extension: linux
+  SHM_HUGETLB:
+    extension: linux
+  SHM_HUGE_16GB:
+    extension: linux
+  SHM_HUGE_16KB:
+    extension: linux
+  SHM_HUGE_16MB:
+    extension: linux
+  SHM_HUGE_1GB:
+    extension: linux
+  SHM_HUGE_1MB:
+    extension: linux
+  SHM_HUGE_256MB:
+    extension: linux
+  SHM_HUGE_2GB:
+    extension: linux
+  SHM_HUGE_2MB:
+    extension: linux
+  SHM_HUGE_32MB:
+    extension: linux
+  SHM_HUGE_512KB:
+    extension: linux
+  SHM_HUGE_512MB:
+    extension: linux
+  SHM_HUGE_64KB:
+    extension: linux
+  SHM_HUGE_8MB:
+    extension: linux
+  SHM_HUGE_MASK:
+    extension: linux
+  SHM_HUGE_SHIFT:
+    extension: linux
+  SHM_INFO:
+    extension: linux
+  SHM_LOCK:
+    extension: linux
+  SHM_LOCKED:
+    extension: linux
+  SHM_NORESERVE:
+    extension: linux
+  SHM_R:
+    extension: linux
+  SHM_RDONLY:
+    in-latest-posix: ''
+  SHM_REMAP:
+    extension: linux
+  SHM_RND:
+    in-latest-posix: ''
+  SHM_STAT:
+    extension: linux
+  SHM_STAT_ANY:
+    extension: linux
+  SHM_UNLOCK:
+    extension: linux
+  SHM_W:
+    extension: linux
+functions:
+  shmat:
+    in-latest-posix: ''
+  shmctl:
+    in-latest-posix: ''
+  shmdt:
+    in-latest-posix: ''
+  shmget:
+    in-latest-posix: ''

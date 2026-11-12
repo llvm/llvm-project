@@ -201,6 +201,10 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `transparent_union`: whether the record is a union with
       `__attribute__((transparent_union))`, which is passed as its first
       member.  False, the default, is omitted from the printed form.
+    - `flexible_array_member`: from `RecordDecl::hasFlexibleArrayMember()`,
+      which is also set when the last field is a record that has one.  A
+      zero-length array is not a flexible array member.  False, the default,
+      is omitted from the printed form.
 
     Example:
     ```
@@ -224,7 +228,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     "bool":$has_trivial_dtor,
     "uint64_t":$record_align,
     "uint64_t":$unadjusted_align,
-    DefaultValuedParameter<"bool", "false">:$transparent_union
+    DefaultValuedParameter<"bool", "false">:$transparent_union,
+    DefaultValuedParameter<"bool", "false">:$flexible_array_member
   );
 
   let builders = [
@@ -233,7 +238,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
                      "uint64_t":$record_align), [{
       return $_get($_ctxt, arg_passing_kind, has_trivial_dtor, record_align,
                    /*unadjusted_align=*/record_align,
-                   /*transparent_union=*/false);
+                   /*transparent_union=*/false,
+                   /*flexible_array_member=*/false);
     }]>
   ];
 

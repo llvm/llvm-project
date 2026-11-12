@@ -31,7 +31,6 @@
 ...
 ---
 name:            compute
-tracksRegLiveness: true
 body: |
   bb.0.body:
     liveins: $edi
@@ -41,7 +40,6 @@ body: |
 ...
 ---
 name:            func
-tracksRegLiveness: true
 frameInfo:
   stackSize:       24
   maxAlignment:    4
