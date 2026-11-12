@@ -23,6 +23,7 @@
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/OffloadBundle.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/MathExtras.h"
 #include <mutex>
 
 using namespace lldb;
@@ -183,6 +184,15 @@ bool ObjectContainerClangOffloadBundle::FindBundleEntries(
         uint64_t offset = 0;
         while (offset < contents->size()) {
           llvm::MemoryBufferRef buf(contents->drop_front(offset), path);
+          auto header_or_err = llvm::object::OffloadBinary::extractHeader(buf);
+          if (!header_or_err) {
+            llvm::consumeError(header_or_err.takeError());
+            break;
+          }
+          const llvm::object::OffloadBinary::Header *header = *header_or_err;
+          const bool is_compressed =
+              header->Version >= 3 && header->InflatedSize != 0;
+          uint64_t blob_size = header->Size;
           auto binaries_or_err = llvm::object::OffloadBinary::create(buf);
           if (!binaries_or_err || binaries_or_err->empty()) {
             if (!binaries_or_err)
@@ -191,21 +201,29 @@ bool ObjectContainerClangOffloadBundle::FindBundleEntries(
           }
           for (const auto &binary_up : *binaries_or_err) {
             if (!binary_up->getImage().empty()) {
-              uint64_t image_offset =
-                  sec_offset +
-                  (binary_up->getImage().data() - contents->data());
               Entry entry;
               entry.arch = ArchSpec(binary_up->getTriple());
-              entry.offset = image_offset;
               entry.size = binary_up->getImage().size();
+              if (is_compressed) {
+                auto entry_data_sp = std::make_shared<DataBufferHeap>(
+                    binary_up->getImage().data(), binary_up->getImage().size());
+                entry.extractor_sp =
+                    std::make_shared<DataExtractor>(entry_data_sp);
+                entry.offset = 0;
+              } else {
+                entry.offset =
+                    sec_offset + offset +
+                    (binary_up->getImage().data() -
+                     binary_up->getMemoryBufferRef().getBufferStart());
+              }
               if (entry.arch.IsValid())
                 result.push_back(std::move(entry));
             }
           }
-          uint64_t blob_size = binaries_or_err->front()->getSize();
           if (blob_size == 0)
             break;
-          offset += blob_size;
+          offset = llvm::alignTo(offset + blob_size,
+                                 llvm::object::OffloadBinary::getAlignment());
         }
       }
     }

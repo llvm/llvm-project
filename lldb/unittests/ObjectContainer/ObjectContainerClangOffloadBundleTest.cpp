@@ -426,14 +426,15 @@ TEST_F(ObjectContainerClangOffloadBundleTest, FindsOffloadBinaryPayload) {
   llvm::object::OffloadBinary::OffloadingImage image;
   image.TheImageKind = llvm::object::IMG_Bitcode;
   image.TheOffloadKind = llvm::object::OFK_OpenMP;
-  image.Triple = "amdgcn-amd-amdhsa";
-  image.Arch = "gfx942";
+  image.StringData["triple"] = "amdgcn-amd-amdhsa";
+  image.StringData["arch"] = "gfx942";
   const uint8_t dummy_img[] = {0xde, 0xad, 0xbe, 0xef};
-  image.Image = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(
-      reinterpret_cast<const char *>(dummy_img), sizeof(dummy_img)));
+  image.Image = llvm::MemoryBuffer::getMemBuffer(
+      llvm::StringRef(reinterpret_cast<const char *>(dummy_img),
+                      sizeof(dummy_img)),
+      "", false);
 
-  llvm::SmallString<0> binary_bytes =
-      llvm::object::OffloadBinary::write({image});
+  llvm::SmallString<0> binary_bytes = llvm::object::OffloadBinary::write(image);
 
   std::string yaml = "--- !ELF\n"
                      "FileHeader:\n"
@@ -470,4 +471,11 @@ TEST_F(ObjectContainerClangOffloadBundleTest, FindsOffloadBinaryPayload) {
   ModuleSpec spec;
   ASSERT_TRUE(device_specs.GetModuleSpecAtIndex(0, spec));
   EXPECT_EQ(spec.GetArchitecture().GetTriple().getArchName(), "amdgcn");
+  uint64_t expected_img_offset =
+      llvm::StringRef(binary_bytes)
+          .find(llvm::StringRef(reinterpret_cast<const char *>(dummy_img),
+                                sizeof(dummy_img)));
+  ASSERT_NE(expected_img_offset, llvm::StringRef::npos);
+  EXPECT_EQ(spec.GetObjectOffset(), 0x1000u + expected_img_offset);
+  EXPECT_EQ(spec.GetObjectSize(), sizeof(dummy_img));
 }
