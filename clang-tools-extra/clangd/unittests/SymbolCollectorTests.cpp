@@ -2055,11 +2055,17 @@ TEST_F(SymbolCollectorTest, DeprecatedSymbols) {
   const std::string Header = R"(
     void TestClangc() __attribute__((deprecated("", "")));
     void TestClangd();
+    #define DEPRECATED_MACRO 1
+    #pragma clang deprecated(DEPRECATED_MACRO)
+    #define NORMAL_MACRO 1
   )";
+  CollectorOpts.CollectMacro = true;
   runSymbolCollector(Header, /**/ "");
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            AllOf(qName("TestClangc"), deprecated()),
-                           AllOf(qName("TestClangd"), Not(deprecated()))));
+                           AllOf(qName("TestClangd"), Not(deprecated())),
+                           AllOf(qName("DEPRECATED_MACRO"), deprecated()),
+                           AllOf(qName("NORMAL_MACRO"), Not(deprecated()))));
 }
 
 TEST_F(SymbolCollectorTest, implementationDetail) {
