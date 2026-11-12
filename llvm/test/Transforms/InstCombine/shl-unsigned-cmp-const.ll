@@ -33,8 +33,8 @@ define i1 @scalar_i8_shl_ult_const_2(i8 %x) {
 ; C2 Shift amount greater than C1 trailing zeros.
 define i1 @scalar_i8_shl_ult_const_3(i8 %x) {
 ; CHECK-LABEL: @scalar_i8_shl_ult_const_3(
-; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SHL_MASK]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i8 %x, 7
