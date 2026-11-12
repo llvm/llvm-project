@@ -314,3 +314,24 @@ void test_loop_messages(void) {
   }
 }
 
+extern int omp_is_initial_device(void);
+
+void test_gh140257(void) {
+  int i, k = 0;
+// expected-error@+1 {{expression must have integral or unscoped enumeration type, not 'int (void)'}}
+#pragma omp target parallel for num_threads(omp_is_initial_device)
+  for (i = 0; i < 16; ++i)
+    ;
+// expected-error@+1 {{expression must have integral or unscoped enumeration type, not 'int (void)'}}
+#pragma omp target parallel for schedule(static, omp_is_initial_device)
+  for (i = 0; i < 16; ++i)
+    ;
+// expected-error@+1 {{expression must have integral or unscoped enumeration type, not 'int (void)'}}
+#pragma omp target parallel for linear(k : omp_is_initial_device)
+  for (i = 0; i < 16; ++i)
+    ;
+#pragma omp target parallel for num_threads(omp_is_initial_device())
+  for (i = 0; i < 16; ++i)
+    ;
+}
+

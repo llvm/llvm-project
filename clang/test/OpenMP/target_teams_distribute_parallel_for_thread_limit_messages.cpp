@@ -54,7 +54,7 @@ T tmain(T argc) {
 #pragma omp target teams distribute parallel for thread_limit(-10u)
   for (int j=0; j<100; j++) foo();
 
-#pragma omp target teams distribute parallel for thread_limit(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
+#pragma omp target teams distribute parallel for thread_limit(3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   for (int j=0; j<100; j++) foo();
 
   return 0;
