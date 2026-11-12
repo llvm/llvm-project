@@ -3,8 +3,7 @@
 
 define i1 @reduction_logical_or(<4 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_or(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[X:%.*]] to i4
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i4 [[TMP1]], 0
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %x)
@@ -22,8 +21,7 @@ define i1 @reduction_logical_or_nxv2i1(<vscale x 2 x i1> %x) {
 
 define i1 @reduction_logical_and(<4 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_and(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[X:%.*]] to i4
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i4 [[TMP1]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %x)
@@ -41,8 +39,7 @@ define i1 @reduction_logical_and_nxv2i1(<vscale x 2 x i1> %x) {
 
 define i1 @reduction_logical_mul(<2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_mul(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[X:%.*]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[TMP1]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.mul.v4i1(<2 x i1> %x)
@@ -60,9 +57,7 @@ define i1 @reduction_logical_mul_nxv2i1(<vscale x 2 x i1> %x) {
 
 define i1 @reduction_logical_xor(<2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_xor(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[X:%.*]] to i2
-; CHECK-NEXT:    [[TMP2:%.*]] = call range(i2 0, -1) i2 @llvm.ctpop.i2(i2 [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = trunc i2 [[TMP2]] to i1
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.xor.v2i1(<2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.xor.v4i1(<2 x i1> %x)
@@ -71,7 +66,7 @@ define i1 @reduction_logical_xor(<2 x i1> %x) {
 
 define i1 @reduction_logical_xor_nxv2i1(<vscale x 2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_xor_nxv2i1(
-; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> %x)
@@ -80,8 +75,7 @@ define i1 @reduction_logical_xor_nxv2i1(<vscale x 2 x i1> %x) {
 
 define i1 @reduction_logical_smin(<2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_smin(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[X:%.*]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.smin.v4i1(<2 x i1> %x)
@@ -99,8 +93,7 @@ define i1 @reduction_logical_smin_nxv2i1(<vscale x 2 x i1> %x) {
 
 define i1 @reduction_logical_smax(<2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_smax(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[X:%.*]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[TMP1]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.smax.v4i1(<2 x i1> %x)
@@ -118,8 +111,7 @@ define i1 @reduction_logical_smax_nxv2i1(<vscale x 2 x i1> %x) {
 
 define i1 @reduction_logical_umin(<2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_umin(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[X:%.*]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[TMP1]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.umin.v4i1(<2 x i1> %x)
@@ -137,8 +129,7 @@ define i1 @reduction_logical_umin_nxv2i1(<vscale x 2 x i1> %x) {
 
 define i1 @reduction_logical_umax(<2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_umax(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[X:%.*]] to i2
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.umax.v4i1(<2 x i1> %x)
@@ -167,8 +158,7 @@ define i1 @reduction_logical_or_reverse_nxv2i1(<vscale x 2 x i1> %p) {
 
 define i1 @reduction_logical_or_reverse_v2i1(<2 x i1> %p) {
 ; CHECK-LABEL: @reduction_logical_or_reverse_v2i1(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[P:%.*]] to i2
-; CHECK-NEXT:    [[RED:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[P:%.*]])
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %rev = call <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1> %p)
@@ -188,8 +178,7 @@ define i1 @reduction_logical_and_reverse_nxv2i1(<vscale x 2 x i1> %p) {
 
 define i1 @reduction_logical_and_reverse_v2i1(<2 x i1> %p) {
 ; CHECK-LABEL: @reduction_logical_and_reverse_v2i1(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[P:%.*]] to i2
-; CHECK-NEXT:    [[RED:%.*]] = icmp eq i2 [[TMP1]], -1
+; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[P:%.*]])
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %rev = call <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1> %p)
@@ -199,7 +188,7 @@ define i1 @reduction_logical_and_reverse_v2i1(<2 x i1> %p) {
 
 define i1 @reduction_logical_xor_reverse_nxv2i1(<vscale x 2 x i1> %p) {
 ; CHECK-LABEL: @reduction_logical_xor_reverse_nxv2i1(
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1> [[P:%.*]])
+; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> [[P:%.*]])
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %rev = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> %p)
@@ -209,9 +198,7 @@ define i1 @reduction_logical_xor_reverse_nxv2i1(<vscale x 2 x i1> %p) {
 
 define i1 @reduction_logical_xor_reverse_v2i1(<2 x i1> %p) {
 ; CHECK-LABEL: @reduction_logical_xor_reverse_v2i1(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[P:%.*]] to i2
-; CHECK-NEXT:    [[TMP2:%.*]] = call range(i2 0, -1) i2 @llvm.ctpop.i2(i2 [[TMP1]])
-; CHECK-NEXT:    [[RED:%.*]] = trunc i2 [[TMP2]] to i1
+; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.xor.v2i1(<2 x i1> [[P:%.*]])
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %rev = call <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1> %p)
