@@ -28,7 +28,6 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
 #include <type_traits>
@@ -43,12 +42,11 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
 
 namespace {
-#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
-
 //===----------------------------------------------------------------------===//
 // Dialect Function Inliner Interface.
 //===----------------------------------------------------------------------===//
@@ -118,7 +116,6 @@ struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
     return success();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//

@@ -26,6 +26,16 @@ class DocgenTest(unittest.TestCase):
         self.assertEqual(Header("search.h").stem, "search")
         self.assertEqual(Header("arpa/inet.h").stem, "arpa/inet")
 
+    def test_new_c23_and_posix_headers(self):
+        self.assertTrue(Header("limits.h").implements_macro("CHAR_BIT"))
+        self.assertFalse(Header("limits.h").implements_macro("BITINT_MAXWIDTH"))
+        self.assertTrue(Header("stdint.h").implements_type("int64_t"))
+        self.assertTrue(Header("stdint.h").implements_macro("INT64_MAX"))
+        self.assertTrue(Header("stdckdint.h").implements_macro("ckd_add"))
+        self.assertTrue(Header("regex.h").implements_fn("regcomp"))
+        self.assertTrue(Header("sys/shm.h").implements_fn("shmget"))
+        self.assertFalse(Header("ulimit.h").implements_fn("ulimit"))
+
     def test_is_stub_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             stub = Path(tmpdir) / "stub.cpp"
@@ -77,7 +87,8 @@ class DocgenTest(unittest.TestCase):
         self.assertTrue(Header("sys/syscall.h").implements_macro("SYS_read"))
         self.assertTrue(Header("errno.h").implements_macro("errno"))
         self.assertTrue(Header("unistd.h").implements_macro("SEEK_SET"))
-        self.assertTrue(Header("float.h").implements_macro("NAN"))
+        self.assertTrue(Header("float.h").implements_macro("FLT_MAX"))
+        self.assertFalse(Header("float.h").implements_macro("NAN"))
 
     def test_implements_type(self):
         self.assertTrue(Header("stdio.h").implements_type("FILE"))
@@ -319,6 +330,60 @@ class DocgenTest(unittest.TestCase):
         self.assertIn("## Function Families", cmplx_out)
         self.assertIn('title="carg: Implemented (1 ULP)">1 ULP</span>', cmplx_out)
         self.assertIn("G.6.2.1", cmplx_out)
+
+        fx_hdr = Header("stdfix.h")
+        fbuf = io.StringIO()
+        with redirect_stdout(fbuf):
+            print_header_status_md(fx_hdr, fx_hdr.api)
+        fx_out = fbuf.getvalue()
+        self.assertIn("{doc}`../math/stdfix`", fx_out)
+        self.assertIn("## Fixed-point Arithmetics", fx_out)
+        self.assertIn("## Higher Math Functions", fx_out)
+        self.assertIn("## Conversion Functions", fx_out)
+        self.assertIn('title="uhrbits: Implemented"', fx_out)
+        self.assertIn('title="exphk: Implemented"', fx_out)
+        self.assertIn('title="strtofxr: Not Implemented"', fx_out)
+
+        srch_hdr = Header("search.h")
+        self.assertTrue(srch_hdr.implements_type("ACTION"))
+        self.assertTrue(srch_hdr.implements_fn("hcreate"))
+
+    def test_summary_stats(self):
+        stdio = Header("stdio.h").get_summary_stats()
+        self.assertEqual(stdio["standard"], "c23")
+        self.assertGreater(stdio["c23"]["implemented"], 0)
+        self.assertEqual(stdio["types"]["implemented"], stdio["types"]["total"])
+        self.assertEqual(stdio["objects"]["implemented"], 3)
+        for key in ("overall", "functions", "macros", "types", "objects", "c23"):
+            self.assertLessEqual(stdio[key]["implemented"], stdio[key]["total"])
+
+        self.assertEqual(Header("fcntl.h").get_summary_stats()["c23"]["total"], 0)
+        self.assertTrue(Header("ulimit.h").get_summary_stats()["removed_posix"])
+        self.assertFalse(Header("byteswap.h").get_summary_stats()["removed_posix"])
+
+        math_hdr = Header("math.h")
+        math_stats = math_hdr.get_summary_stats()
+        self.assertEqual(len(math_stats["precisions"]), 7)
+        self.assertEqual(
+            math_stats["overall"]["total"],
+            sum(
+                math_stats[k]["total"]
+                for k in ("functions", "macros", "types", "objects")
+            ),
+        )
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(math_hdr, math_hdr.api)
+        out = buf.getvalue()
+        self.assertIn('role="progressbar"', out)
+        self.assertIn("Base Families", out)
+        self.assertIn("Global Variables", out)
+        self.assertIn("Precision Coverage", out)
+
+        fx_stats = Header("stdfix.h").get_summary_stats()
+        self.assertEqual(len(fx_stats["precisions"]), 12)
+        self.assertGreater(fx_stats["tr18037"]["implemented"], 0)
+        self.assertEqual(fx_stats["c23"]["total"], 0)
 
 
 if __name__ == "__main__":

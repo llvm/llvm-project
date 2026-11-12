@@ -371,3 +371,72 @@ func.func @complex_cos_opencl(%arg: complex<f32>) -> complex<f32> {
 //       CHECK:   spirv.CL.cosh
 
 }
+
+// -----
+
+func.func @complex_exp(%arg: complex<f32>) -> complex<f32> {
+  %exp = complex.exp %arg : complex<f32>
+  return %exp : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_exp
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[EXPRE:.+]] = spirv.GL.Exp %[[RE]] : f32
+//       CHECK:   %[[SINIM:.+]] = spirv.GL.Sin %[[IM]] : f32
+//       CHECK:   %[[COSIM:.+]] = spirv.GL.Cos %[[IM]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FMul %[[EXPRE]], %[[COSIM]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FMul %[[EXPRE]], %[[SINIM]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_expm1(%arg: complex<f32>) -> complex<f32> {
+  %expm1 = complex.expm1 %arg : complex<f32>
+  return %expm1 : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_expm1
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[EXPRE:.+]] = spirv.GL.Exp %[[RE]] : f32
+//       CHECK:   %[[SINIM:.+]] = spirv.GL.Sin %[[IM]] : f32
+//       CHECK:   %[[COSIM:.+]] = spirv.GL.Cos %[[IM]] : f32
+//       CHECK:   %[[EXPCOS:.+]] = spirv.FMul %[[EXPRE]], %[[COSIM]] : f32
+//       CHECK:   %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FSub %[[EXPCOS]], %[[ONE]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FMul %[[EXPRE]], %[[SINIM]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @complex_exp_opencl(%arg: complex<f32>) -> complex<f32> {
+  %exp = complex.exp %arg : complex<f32>
+  return %exp : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_exp_opencl
+//       CHECK:   spirv.CL.exp
+//       CHECK:   spirv.CL.sin
+//       CHECK:   spirv.CL.cos
+
+func.func @complex_expm1_opencl(%arg: complex<f32>) -> complex<f32> {
+  %expm1 = complex.expm1 %arg : complex<f32>
+  return %expm1 : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_expm1_opencl
+//       CHECK:   spirv.CL.exp
+//       CHECK:   spirv.CL.sin
+//       CHECK:   spirv.CL.cos
+//       CHECK:   spirv.FSub
+
+}

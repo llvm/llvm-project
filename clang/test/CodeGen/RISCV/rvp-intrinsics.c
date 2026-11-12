@@ -204,6 +204,24 @@ uint32_t test_asubu_u32(uint32_t a, uint32_t b) {
   return __riscv_asubu_u32(a, b);
 }
 
+/* Scalar Shift-Add */
+
+// RV32-LABEL: define dso_local i32 @test_ssh1sadd_i32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ssh1sadd.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_ssh1sadd_i32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ssh1sadd.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_ssh1sadd_i32(int32_t a, int32_t b) {
+  return __riscv_ssh1sadd_i32(a, b);
+}
+
 /* Scalar Widening Zip */
 
 // RV32-LABEL: define dso_local i64 @test_wzip8p_64(

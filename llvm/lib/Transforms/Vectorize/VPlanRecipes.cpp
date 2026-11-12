@@ -1244,6 +1244,8 @@ Value *VPInstruction::generate(VPTransformState &State,
     applyMetadata(*WideSI);
     return WideSI;
   }
+  case VPInstruction::MaskedCond:
+    llvm_unreachable("Should have been lowered in VPlanPredicator");
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -1613,6 +1615,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
       ValTy = toVectorTy(ValTy, VF);
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
                                           Ctx.CostKind);
+  }
+  case VPInstruction::NumActiveLanes: {
+    Type *ElementTy = getOperand(0)->getScalarType();
+    auto *MaskTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getExtendedReductionCost(
+        Instruction::Add, /*IsUnsigned=*/true, getScalarType(), MaskTy,
+        /*FMF=*/{}, Ctx.CostKind);
   }
   case VPInstruction::BranchOnCount: {
     // If TC <= VF then this is just a branch.
@@ -4287,8 +4296,13 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
     const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.PSE, Ctx.L);
-    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
-      break;
+    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV)) {
+      // Don't fall back to the legacy cost model for single-scalar accesses.
+      // PtrSCEV won't be used.
+      if (!isSingleScalar())
+        break;
+      PtrSCEV = nullptr;
+    }
 
     Type *ValTy = (IsLoad ? this : getOperand(0))->getScalarType();
     Type *ScalarPtrTy = PtrOp->getScalarType();

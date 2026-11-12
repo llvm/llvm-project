@@ -2685,7 +2685,6 @@ void DFSanVisitor::visitCASOrRMW(Align InstAlignment, Instruction &I) {
 
   // Conservatively set data at stored addresses and return with zero shadow to
   // prevent shadow data races.
-  IRBuilder<> IRB(&I);
   Value *Addr = I.getOperand(0);
   const Align ShadowAlign = DFSF.getShadowAlign(InstAlignment);
   DFSF.storeZeroPrimitiveShadow(Addr, Size, ShadowAlign, I.getIterator());

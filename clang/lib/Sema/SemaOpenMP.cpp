@@ -16945,7 +16945,7 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
     FactorLoc = FactorVal->getExprLoc();
   } else {
     // TODO: Use a better profitability model.
-    Factor = 2;
+    Factor = llvm::omp::DefaultPartialUnrollFactor;
   }
   assert(Factor > 0 && "Expected positive unroll factor");
   auto MakeFactorExpr = [this, Factor, IVTy, FactorLoc]() {

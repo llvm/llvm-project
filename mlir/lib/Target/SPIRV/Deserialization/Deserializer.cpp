@@ -744,6 +744,7 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
     return failure();
   }
 
+  blockConstantMap.clear();
   curBlock = nullptr;
   curFunction = std::nullopt;
 
@@ -937,6 +938,7 @@ spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unexpected operands for OpGraphEndARM");
   }
 
+  blockConstantMap.clear();
   curBlock = nullptr;
   curGraph = std::nullopt;
   graphOutputs.clear();
