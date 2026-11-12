@@ -69,6 +69,7 @@ public:
   Register getFrameRegister(const MachineFunction &MF) const override;
   Register getFrameRegister() const;
   Register getStackRegister() const;
+  Register getVTCMStackRegister() const;
 
   unsigned getHexagonSubRegIndex(const TargetRegisterClass &RC,
         unsigned GenIdx) const;
