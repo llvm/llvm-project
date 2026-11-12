@@ -16,9 +16,44 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+
+static cl::opt<cl::boolOrDefault> PreserveLoopBranchLayout(
+    "nvptx-preserve-loop-branch-layout", cl::Hidden,
+    cl::init(cl::boolOrDefault::BOU_UNSET),
+    cl::desc("Preserve NVPTX single-block loop guard and latch branch layouts "
+             "(default: enabled for sm_120 when optimizing for speed)"));
+
+// ptxas can stop unrolling a loop when its conditional exit and unconditional
+// backedge are reversed, or when the guard falls through into the preheader.
+// Preserve the branch target order when the workaround is enabled. Branch
+// analysis and predicate inversions that do not swap targets remain available.
+static bool shouldPreserveLoopBranchLayout(const MachineBasicBlock &MBB) {
+  if (MBB.succ_size() != 2)
+    return false;
+
+  // A conditional latch of a single-block loop.
+  if (MBB.isSuccessor(&MBB))
+    return true;
+
+  // A guard that branches to the loop (possibly through a preheader) or to
+  // that loop's exit.
+  for (const MachineBasicBlock *Succ : MBB.successors()) {
+    const MachineBasicBlock *Header = Succ;
+    if (Header->succ_size() == 1)
+      Header = *Header->succ_begin();
+    if (Header->succ_size() != 2 || !Header->isSuccessor(Header))
+      continue;
+    for (const MachineBasicBlock *Exit : Header->successors())
+      if (Exit != Header && MBB.isSuccessor(Exit))
+        return true;
+  }
+  return false;
+}
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "NVPTXGenInstrInfo.inc"
@@ -198,6 +233,16 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
   BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB).add(Cond[1]);
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
+}
+
+bool NVPTXInstrInfo::shouldSwapBranchTargets(
+    const MachineBasicBlock &MBB) const {
+  const MachineFunction &MF = *MBB.getParent();
+  bool Preserve = PreserveLoopBranchLayout == cl::boolOrDefault::BOU_TRUE;
+  if (PreserveLoopBranchLayout == cl::boolOrDefault::BOU_UNSET)
+    Preserve = MF.getSubtarget<NVPTXSubtarget>().getTargetName() == "sm_120" &&
+               !MF.getFunction().hasOptSize();
+  return !Preserve || !shouldPreserveLoopBranchLayout(MBB);
 }
 
 bool NVPTXInstrInfo::reverseBranchCondition(
