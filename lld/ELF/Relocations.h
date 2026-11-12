@@ -288,11 +288,6 @@ template <bool is64> struct RelocsCrel {
         step();
       return *this;
     }
-    // For RelocScan::scan when TLS relocations consume multiple entries.
-    void operator+=(size_t n) {
-      for (; n; --n)
-        operator++();
-    }
   };
 
   size_t hdr = 0;
