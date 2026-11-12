@@ -1,6 +1,5 @@
 ; A constant holding @g (i32 pointee) is rebuilt with OpCompositeInsert in its
-; LLVM type for any user but an intrinsic or extractvalue: a return, a call
-; argument, an insertvalue or a vector select.
+; LLVM type for any user other than an intrinsic or extractvalue.
 
 ; RUN: llc -O0 --spirv-ext=+SPV_INTEL_masked_gather_scatter -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_INTEL_masked_gather_scatter -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}

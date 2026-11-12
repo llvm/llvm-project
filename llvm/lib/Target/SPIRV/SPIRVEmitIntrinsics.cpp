@@ -1799,11 +1799,9 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
   }
 }
 
-// A member of a constant aggregate as it is lowered. addrspacecast(null)
-// becomes null in the target address space, so that it gets the correct pointer
-// type. Undef or poison nested in a constant aggregate is not a direct
-// instruction operand, so preprocessUndefsAndPoisons() misses it; an unlowered
-// aggregate one would reach IRTranslator as an untranslatable operand.
+// Lower a constant aggregate member to null in the target address space
+// if it's `addrspacecast(null)`, and nested `undef/poison` because they're
+// missed in `preprocessUndefsAndPoisons()`.
 Value *SPIRVEmitIntrinsicsImpl::lowerCompositeMember(Value *Op, IRBuilder<> &B,
                                                      bool HasPoisonExt) {
   if (auto *CE = dyn_cast<ConstantExpr>(Op);
@@ -1858,11 +1856,9 @@ void SPIRVEmitIntrinsicsImpl::preprocessCompositeConstants(IRBuilder<> &B) {
         };
         PrepareInsert();
         Type *DeducedTy = deduceNestedTypeHelper(AggrConst, false);
-        // A pointer member of known pointee makes the deduced type differ from
-        // the type a user other than an intrinsic or extractvalue expects.
-        // Rebuild such a constant as an insertvalue (insertelement for a
-        // vector) chain, which casts each member to the LLVM type's member
-        // type.
+        // Users other than an intrinsic or extractvalue expect the LLVM type.
+        // Rebuild the constant as an insert chain, which casts each member
+        // to it.
         if (DeducedTy != AggrConst->getType() &&
             !isa<IntrinsicInst, ExtractValueInst>(I)) {
           bool IsVector = AggrConst->getType()->isVectorTy();
