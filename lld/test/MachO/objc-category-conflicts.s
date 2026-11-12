@@ -17,6 +17,12 @@
 # RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1.o \
 # RUN:   %t/cat2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT
 
+## Category merging implies conflict checks for object and dylib inputs.
+# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -objc_category_merging -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS,CATCAT
+# RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -objc_category_merging -dylib -lobjc %t/libklass.dylib %t/cat1.o \
+# RUN:   %t/cat2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CATCAT
+
 # RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/klass_w_sym.o %t/cat1_w_sym.o %t/cat2_w_sym.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --check-prefixes=CATCLS_W_SYM,CATCAT_W_SYM
 # RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists --check-category-conflicts -dylib -lobjc %t/libklass.dylib %t/cat1_w_sym.o \
@@ -35,6 +41,8 @@
 
 ## Check that we don't emit any warnings without --check-category-conflicts.
 # RUN: %no-fatal-warnings-lld -no_objc_relative_method_lists -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
+# RUN:   /dev/null 2>&1 | FileCheck %s --implicit-check-not 'warning' --allow-empty
+# RUN: %no-fatal-warnings-lld -objc_relative_method_lists --no-check-category-conflicts -dylib -lobjc %t/klass.o %t/cat1.o %t/cat2.o -o \
 # RUN:   /dev/null 2>&1 | FileCheck %s --implicit-check-not 'warning' --allow-empty
 
 # CATCLS:      warning: method '+s1' has conflicting definitions:

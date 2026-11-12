@@ -186,9 +186,9 @@ def ignore_auto_link_option_eq : Joined<["--"], "ignore-auto-link-option=">,
 def strict_auto_link : Flag<["--"], "strict-auto-link">,
     HelpText<"Always warn for missing frameworks or libraries if they are loaded via LC_LINKER_OPTIONS">,
     Group<grp_lld>;
-def check_category_conflicts : Flag<["--"], "check-category-conflicts">,
-    HelpText<"Check for conflicts between category & class methods">,
-    Group<grp_lld>;
+defm check_category_conflicts : BB<"check-category-conflicts",
+    "Check for conflicts between category & class methods",
+    "Do not check for conflicts between category & class methods">, Group<grp_lld>;
 def objc_category_merging : Flag<["-"], "objc_category_merging">,
     HelpText<"Merge Objective-C categories that share the same base class">,
     Group<grp_lld>;
