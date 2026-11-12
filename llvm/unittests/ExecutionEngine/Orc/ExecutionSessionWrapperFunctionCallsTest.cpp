@@ -23,10 +23,9 @@ using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
 namespace {
-struct AddAsync {
+struct AddAsync : sps::HandlerSpec<int32_t(int32_t, int32_t)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::verbatim("addAsync_tag");
-  using SPSSig = int32_t(int32_t, int32_t);
 };
 } // namespace
 
@@ -47,8 +46,7 @@ TEST(ExecutionSessionWrapperFunctionCalls, RegisterAsyncHandlerAndRun) {
       {{AddAsyncTag, {AddAsyncTagAddr, JITSymbolFlags::Exported}}})));
 
   cantFail(ES.registerCallControllerHandlers(
-      JD,
-      bindCallControllerHandler<sps::HandlerSpec<AddAsync>>(addAsyncWrapper)));
+      JD, bindCallControllerHandler<AddAsync>(addAsyncWrapper)));
 
   std::promise<int32_t> RP;
   auto RF = RP.get_future();

@@ -687,20 +687,20 @@ define void @func_stackrestore_poison() #0 {
 ; GISEL-WAVE32-OPT-LABEL: func_stackrestore_poison:
 ; GISEL-WAVE32-OPT:       ; %bb.0:
 ; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s32, s4, 5
+; GISEL-WAVE32-OPT-NEXT:    s_lshl_b32 s32, s4, 5
 ; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE64-OPT-LABEL: func_stackrestore_poison:
 ; GISEL-WAVE64-OPT:       ; %bb.0:
 ; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s32, s4, 6
+; GISEL-WAVE64-OPT-NEXT:    s_lshl_b32 s32, s4, 6
 ; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE32-O0-LABEL: func_stackrestore_poison:
 ; GISEL-WAVE32-O0:       ; %bb.0:
 ; GISEL-WAVE32-O0-NEXT:    ; implicit-def: $sgpr4
 ; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -708,7 +708,7 @@ define void @func_stackrestore_poison() #0 {
 ; GISEL-WAVE64-O0:       ; %bb.0:
 ; GISEL-WAVE64-O0-NEXT:    ; implicit-def: $sgpr4
 ; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) poison)
@@ -768,7 +768,7 @@ define void @func_stackrestore_null() #0 {
 ; GISEL-WAVE32-O0:       ; %bb.0:
 ; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s4, 0
-; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -776,7 +776,7 @@ define void @func_stackrestore_null() #0 {
 ; GISEL-WAVE64-O0:       ; %bb.0:
 ; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s4, 0
-; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) zeroinitializer)
@@ -823,20 +823,20 @@ define void @func_stackrestore_neg1() #0 {
 ; GISEL-WAVE32-OPT-LABEL: func_stackrestore_neg1:
 ; GISEL-WAVE32-OPT:       ; %bb.0:
 ; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s32, 0x7ffffff
+; GISEL-WAVE32-OPT-NEXT:    s_movk_i32 s32, 0xffe0
 ; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE64-OPT-LABEL: func_stackrestore_neg1:
 ; GISEL-WAVE64-OPT:       ; %bb.0:
 ; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s32, 0x3ffffff
+; GISEL-WAVE64-OPT-NEXT:    s_movk_i32 s32, 0xffc0
 ; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE32-O0-LABEL: func_stackrestore_neg1:
 ; GISEL-WAVE32-O0:       ; %bb.0:
 ; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s4, -1
-; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -844,7 +844,7 @@ define void @func_stackrestore_neg1() #0 {
 ; GISEL-WAVE64-O0:       ; %bb.0:
 ; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s4, -1
-; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) inttoptr (i32 -1 to ptr addrspace(5)))
@@ -891,20 +891,20 @@ define void @func_stackrestore_42() #0 {
 ; GISEL-WAVE32-OPT-LABEL: func_stackrestore_42:
 ; GISEL-WAVE32-OPT:       ; %bb.0:
 ; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s32, 1
+; GISEL-WAVE32-OPT-NEXT:    s_movk_i32 s32, 0x540
 ; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE64-OPT-LABEL: func_stackrestore_42:
 ; GISEL-WAVE64-OPT:       ; %bb.0:
 ; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s32, 0
+; GISEL-WAVE64-OPT-NEXT:    s_movk_i32 s32, 0xa80
 ; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE32-O0-LABEL: func_stackrestore_42:
 ; GISEL-WAVE32-O0:       ; %bb.0:
 ; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s4, 42
-; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -912,7 +912,7 @@ define void @func_stackrestore_42() #0 {
 ; GISEL-WAVE64-O0:       ; %bb.0:
 ; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s4, 42
-; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) inttoptr (i32 42 to ptr addrspace(5)))
@@ -1222,7 +1222,7 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) #0 {
 ; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s4, s32, 5
 ; GISEL-WAVE32-OPT-NEXT:    v_add_nc_u32_e32 v0, s4, v0
 ; GISEL-WAVE32-OPT-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s32, s4, 5
+; GISEL-WAVE32-OPT-NEXT:    s_lshl_b32 s32, s4, 5
 ; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE64-OPT-LABEL: func_stacksave_stackrestore_voffset:
@@ -1231,7 +1231,7 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) #0 {
 ; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s4, s32, 6
 ; GISEL-WAVE64-OPT-NEXT:    v_add_nc_u32_e32 v0, s4, v0
 ; GISEL-WAVE64-OPT-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s32, s4, 6
+; GISEL-WAVE64-OPT-NEXT:    s_lshl_b32 s32, s4, 6
 ; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE32-O0-LABEL: func_stacksave_stackrestore_voffset:
@@ -1242,7 +1242,7 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) #0 {
 ; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-WAVE32-O0-NEXT:    v_add_nc_u32_e64 v0, v0, v1
 ; GISEL-WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1254,7 +1254,7 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) #0 {
 ; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-WAVE64-O0-NEXT:    v_add_nc_u32_e64 v0, v0, v1
 ; GISEL-WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
@@ -1306,21 +1306,21 @@ define void @func_stacksave_vgpr(ptr addrspace(5) %stack) #0 {
 ; GISEL-WAVE32-OPT:       ; %bb.0:
 ; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE32-OPT-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s32, s4, 5
+; GISEL-WAVE32-OPT-NEXT:    s_lshl_b32 s32, s4, 5
 ; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE64-OPT-LABEL: func_stacksave_vgpr:
 ; GISEL-WAVE64-OPT:       ; %bb.0:
 ; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE64-OPT-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s32, s4, 6
+; GISEL-WAVE64-OPT-NEXT:    s_lshl_b32 s32, s4, 6
 ; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE32-O0-LABEL: func_stacksave_vgpr:
 ; GISEL-WAVE32-O0:       ; %bb.0:
 ; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1328,7 +1328,7 @@ define void @func_stacksave_vgpr(ptr addrspace(5) %stack) #0 {
 ; GISEL-WAVE64-O0:       ; %bb.0:
 ; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
 ; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stack)
@@ -1372,26 +1372,26 @@ define amdgpu_gfx void @func_stacksave_sgpr(ptr addrspace(5) inreg %stack) #0 {
 ; GISEL-WAVE32-OPT-LABEL: func_stacksave_sgpr:
 ; GISEL-WAVE32-OPT:       ; %bb.0:
 ; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s32, s4, 5
+; GISEL-WAVE32-OPT-NEXT:    s_lshl_b32 s32, s4, 5
 ; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE64-OPT-LABEL: func_stacksave_sgpr:
 ; GISEL-WAVE64-OPT:       ; %bb.0:
 ; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s32, s4, 6
+; GISEL-WAVE64-OPT-NEXT:    s_lshl_b32 s32, s4, 6
 ; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE32-O0-LABEL: func_stacksave_sgpr:
 ; GISEL-WAVE32-O0:       ; %bb.0:
 ; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s34, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_lshl_b32 s34, s4, 5
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s34
 ; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-WAVE64-O0-LABEL: func_stacksave_sgpr:
 ; GISEL-WAVE64-O0:       ; %bb.0:
 ; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s34, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_lshl_b32 s34, s4, 6
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s34
 ; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stack)
@@ -1488,7 +1488,7 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) #0 {
 ; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
 ; GISEL-WAVE32-O0-NEXT:    ; use s1
 ; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
-; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s0, s0, 5
+; GISEL-WAVE32-O0-NEXT:    s_lshl_b32 s0, s0, 5
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s0
 ; GISEL-WAVE32-O0-NEXT:    s_endpgm
 ;
@@ -1500,7 +1500,7 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) #0 {
 ; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
 ; GISEL-WAVE64-O0-NEXT:    ; use s1
 ; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
-; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s0, s0, 6
+; GISEL-WAVE64-O0-NEXT:    s_lshl_b32 s0, s0, 6
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s0
 ; GISEL-WAVE64-O0-NEXT:    s_endpgm
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %stack)
