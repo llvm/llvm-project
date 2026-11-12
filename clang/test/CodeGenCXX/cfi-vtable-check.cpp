@@ -4,6 +4,11 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fsanitize-cfi-cross-dso -fsanitize-undefined-strip-path-components=-1 -emit-llvm -o - %s | FileCheck --implicit-check-not="private unnamed_addr constant" --check-prefix=XDSO_TRAP %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fdevirtualize-speculatively -fsanitize-undefined-strip-path-components=-1 -emit-llvm -o - %s | FileCheck --implicit-check-not="private unnamed_addr constant" --check-prefix=SPEC_TRAP %s
 
+// Tests how a failed cfi-vcall vtable check is reported in trap and
+// minimal-runtime modes (with skip-hot-cutoff, cross-DSO CFI, and
+// -fdevirtualize-speculatively). --implicit-check-not catches unused
+// diagnostic data.
+
 struct S {
   virtual void f();
 };

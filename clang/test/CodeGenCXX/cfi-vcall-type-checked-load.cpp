@@ -9,6 +9,11 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -flto -flto-unit -fvisibility=hidden -fwhole-program-vtables -fvirtual-function-elimination -emit-llvm -o - %s | FileCheck --check-prefix=VFE_NOCFI %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -flto -flto-unit -fvisibility=hidden -fsanitize=cfi-vcall,cfi-cast-strict -fno-sanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=STRICT %s
 
+// Tests which intrinsic and failure handler cfi-vcall emits for virtual calls
+// in each mode (trap, minimal and full runtime, cross-DSO), with and without
+// -fwhole-program-vtables and VFE, for classes with hidden and public LTO
+// visibility, same-layout derived classes, and no_sanitize functions.
+
 struct Hidden {
   virtual void f();
   virtual void g();
