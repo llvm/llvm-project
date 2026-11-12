@@ -1032,6 +1032,134 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+// KMSAN instrumentation regions
+//
+// The Linux kernel marks the functions that must not be instrumented (entry
+// code, NMI handlers and the like) as noinstr, which under KMSAN means
+// disable_sanitizer_instrumentation: the function gets no prologue and no
+// instrumentation at all. Such functions still call instrumented code, which
+// the kernel brackets with instrumentation_begin() and instrumentation_end().
+// Since the caller does not write the shadow of the arguments, the callee
+// reads whatever the last instrumented caller left in the per-context
+// parameter TLS, and reports uninitialized values that are not there.
+//
+// To let KMSAN see these calls, the kernel's markers additionally expand to
+//
+//   asm volatile("# kmsan.instrumentation.begin");
+//   asm volatile("# kmsan.instrumentation.end");
+//
+// The token lives in an assembler comment, so a marker assembles to nothing,
+// whether or not this pass sees it. No new IR constructs are involved, and
+// the markers have the semantics of the volatile asm statements the kernel
+// already uses for objtool: they are neither removed nor reordered with calls.
+// They are recognized by the token being a substring of the asm template and
+// are left in place.
+//
+// In a disable_sanitizer_instrumentation function, a call between the markers
+// is instrumented the way it would be in a no_sanitize("kernel-memory")
+// function: the context state is fetched and the shadow of the call arguments
+// (including the variadic ones) is written as initialized. Nothing else is
+// instrumented: no shadow is propagated, no checks are inserted, memory
+// accesses and the code outside the markers are left alone.
+//
+// The context state is fetched right before each call rather than once per
+// region: __msan_get_context_state() returns a different context for task and
+// interrupt contexts, and noinstr functions do switch between them inside a
+// region (e.g. irq_enter_rcu() in run_irq_on_irqstack_cond()).
+//
+// Regions nest (WARN_ON() inside a region opens another one), so membership is
+// computed over the nesting depth. It is a must-analysis: a call is in a region
+// only if every path from the function entry to it has entered a region and
+// not left it, i.e. the depth at a join point is the minimum over the
+// predecessors. Unbalanced markers thus err on the side of not instrumenting,
+// and an unmatched end is ignored. (objtool, which validates the kernel's
+// markers, tracks them with a counter as well.)
+//===----------------------------------------------------------------------===//
+
+static constexpr StringLiteral kKmsanRegionBegin =
+    "kmsan.instrumentation.begin";
+static constexpr StringLiteral kKmsanRegionEnd = "kmsan.instrumentation.end";
+
+static bool isKmsanRegionMarker(const Instruction &I, StringRef Token) {
+  const auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
+    return false;
+  const auto *IA = dyn_cast<InlineAsm>(CB->getCalledOperand());
+  return IA && StringRef(IA->getAsmString()).contains(Token);
+}
+
+/// Returns true if \p F opens a KMSAN instrumentation region.
+static bool hasKmsanRegions(const Function &F) {
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB)
+      if (isKmsanRegionMarker(I, kKmsanRegionBegin))
+        return true;
+  return false;
+}
+
+/// Returns the region nesting depth after \p I, given the depth before it.
+static unsigned kmsanRegionDepthAfter(const Instruction &I, unsigned Depth) {
+  if (isKmsanRegionMarker(I, kKmsanRegionBegin))
+    return Depth + 1;
+  // Saturate at zero: wrapping around on an unmatched end would put the rest
+  // of the function into a region.
+  if (isKmsanRegionMarker(I, kKmsanRegionEnd) && Depth)
+    return Depth - 1;
+  return Depth;
+}
+
+/// Collects the calls of \p F that are inside a KMSAN instrumentation region
+/// and need their parameter shadow set up.
+static void collectKmsanRegionCalls(Function &F,
+                                    SmallVectorImpl<CallBase *> &Calls) {
+  // The depth of a block that has not been reached from the entry (yet).
+  constexpr unsigned Unreached = ~0U;
+  // Nesting depth at the start and at the end of each block.
+  SmallVector<unsigned> DepthIn(F.getMaxBlockNumber(), Unreached);
+  SmallVector<unsigned> DepthOut(F.getMaxBlockNumber(), Unreached);
+
+  // A block is queued when its input depth decreases, and depths are bounded
+  // below by zero, so this terminates.
+  BasicBlock *Entry = &F.getEntryBlock();
+  DepthIn[Entry->getNumber()] = 0;
+  SmallSetVector<BasicBlock *, 16> Worklist;
+  Worklist.insert(Entry);
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    unsigned Depth = DepthIn[BB->getNumber()];
+    for (const Instruction &I : *BB)
+      Depth = kmsanRegionDepthAfter(I, Depth);
+    if (Depth >= DepthOut[BB->getNumber()])
+      continue;
+    DepthOut[BB->getNumber()] = Depth;
+    for (BasicBlock *Succ : successors(BB)) {
+      if (Depth < DepthIn[Succ->getNumber()]) {
+        DepthIn[Succ->getNumber()] = Depth;
+        Worklist.insert(Succ);
+      }
+    }
+  }
+
+  for (BasicBlock &BB : F) {
+    unsigned Depth = DepthIn[BB.getNumber()];
+    if (Depth == Unreached)
+      continue;
+    for (Instruction &I : BB) {
+      Depth = kmsanRegionDepthAfter(I, Depth);
+      if (!Depth)
+        continue;
+      // Inline asm (the markers included) and intrinsics take no parameter
+      // shadow.
+      auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB || CB->isInlineAsm() || isa<IntrinsicInst>(CB) ||
+          CB->hasMetadata(LLVMContext::MD_nosanitize))
+        continue;
+      Calls.push_back(CB);
+    }
+  }
+}
+
 /// This class does all the work for a given function. Store and Load
 /// instructions store and load corresponding shadow and origin
 /// values. Most instructions propagate shadow from arguments to their
@@ -1056,6 +1184,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   bool PoisonStack;
   bool PoisonUndef;
   bool PoisonUndefVectors;
+  /// The function is not instrumented as a whole; only the calls inside KMSAN
+  /// instrumentation regions are, see runOnRegions().
+  bool RegionOnly;
 
   struct ShadowOriginAndInsertPoint {
     Value *Shadow;
@@ -1073,16 +1204,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   int64_t SplittableBlocksCount = 0;
 
   MemorySanitizerVisitor(Function &F, MemorySanitizer &MS,
-                         const TargetLibraryInfo &TLI)
+                         const TargetLibraryInfo &TLI, bool RegionOnly = false)
       : Opts(MS.Opts), F(F), MS(MS), VAHelper(CreateVarArgHelper(F, MS, *this)),
-        TLI(&TLI) {
+        TLI(&TLI), RegionOnly(RegionOnly) {
     bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeMemory) &&
-                            !Opts.msan_disable_checks;
+                            !Opts.msan_disable_checks && !RegionOnly;
     InsertChecks = SanitizeFunction;
     PropagateShadow = SanitizeFunction;
     PoisonStack = SanitizeFunction && Opts.msan_poison_stack;
     PoisonUndef = SanitizeFunction && Opts.msan_poison_undef;
     PoisonUndefVectors = SanitizeFunction && Opts.msan_poison_undef_vectors;
+
+    if (RegionOnly) {
+      // No prologue: the function must stay as it is outside of the regions.
+      // Nothing in a region looks up the shadow of memory, so the s390x
+      // metadata slot is not needed either.
+      MS.initializeCallbacks(*F.getParent(), TLI);
+      FnPrologueEnd = nullptr;
+      MS.MsanMetadataAlloca = nullptr;
+      return;
+    }
 
     // In the presence of unreachable blocks, we may see Phi nodes with
     // incoming nodes from such blocks. Since InstVisitor skips unreachable
@@ -1439,9 +1580,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     LLVM_DEBUG(dbgs() << "DONE:\n" << F);
   }
 
-  // Returns the last instruction in the new prologue
-  void insertKmsanPrologue(IRBuilder<> &IRB) {
-    Value *ContextState = IRB.CreateCall(MS.MsanGetContextStateFn, {});
+  /// Fetch the KMSAN context state and point the TLS accessors at it. Returns
+  /// the call to __msan_get_context_state().
+  CallInst *insertKmsanContextFetch(IRBuilder<> &IRB) {
+    CallInst *ContextState = IRB.CreateCall(MS.MsanGetContextStateFn, {});
     Constant *Zero = IRB.getInt32(0);
     MS.ParamTLS = IRB.CreateGEP(MS.MsanContextStateTy, ContextState,
                                 {Zero, IRB.getInt32(0)}, "param_shadow");
@@ -1459,8 +1601,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     MS.RetvalOriginTLS =
         IRB.CreateGEP(MS.MsanContextStateTy, ContextState,
                       {Zero, IRB.getInt32(6)}, "retval_origin");
+    return ContextState;
+  }
+
+  void insertKmsanPrologue(IRBuilder<> &IRB) {
+    insertKmsanContextFetch(IRB);
     if (MS.TargetTriple.getArch() == Triple::systemz)
       MS.MsanMetadataAlloca = IRB.CreateAlloca(MS.MsanMetadata, 0u);
+  }
+
+  /// Instrument the calls inside the KMSAN instrumentation regions of a
+  /// function that is otherwise not instrumented, see "KMSAN instrumentation
+  /// regions" above.
+  bool runOnRegions() {
+    assert(RegionOnly && MS.CompileKernel);
+    SmallVector<CallBase *, 16> Calls;
+    collectKmsanRegionCalls(F, Calls);
+    if (Calls.empty())
+      return false;
+
+    for (CallBase *CB : Calls) {
+      IRBuilder<> IRB(CB);
+      CallInst *ContextState = insertKmsanContextFetch(IRB);
+      // PropagateShadow is off, so this writes clean shadow for the arguments
+      // the callee is going to read from the TLS.
+      visitCallBase(*CB);
+      // Drop what turned out to be unused, in particular the context fetch if
+      // the callee reads nothing from the TLS because it checks all of its
+      // arguments eagerly (noundef). Everything between the fetch and the call
+      // has just been inserted.
+      SmallVector<Instruction *, 32> Inserted;
+      for (Instruction &I :
+           make_range(ContextState->getIterator(), CB->getIterator()))
+        Inserted.push_back(&I);
+      for (Instruction *I : reverse(Inserted))
+        if (isInstructionTriviallyDead(I) ||
+            (I == ContextState && I->use_empty()))
+          I->eraseFromParent();
+      // The next call fetches the context again.
+      MS.ParamTLS = MS.RetvalTLS = MS.VAArgTLS = MS.VAArgOriginTLS =
+          MS.VAArgOverflowSizeTLS = MS.ParamOriginTLS = MS.RetvalOriginTLS =
+              nullptr;
+    }
+
+    return true;
   }
 
   /// Add MemorySanitizer instrumentation to a function.
@@ -1897,6 +2081,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// This function either returns the value set earlier with setShadow,
   /// or extracts if from ParamTLS (for function arguments).
   Value *getShadow(Value *V) {
+    // There is no prologue to load the shadow of the arguments in, and nothing
+    // else has shadow.
+    if (RegionOnly)
+      return getCleanShadow(V);
     if (Instruction *I = dyn_cast<Instruction>(V)) {
       if (!PropagateShadow || I->getMetadata(LLVMContext::MD_nosanitize))
         return getCleanShadow(V);
@@ -7817,10 +8005,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           MaybeAlign Alignment = std::nullopt;
           if (ParamAlignment)
             Alignment = std::min(*ParamAlignment, kShadowTLSAlignment);
-          Value *AShadowPtr, *AOriginPtr;
-          std::tie(AShadowPtr, AOriginPtr) =
-              getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), Alignment,
-                                 /*isStore*/ false);
+          Value *AShadowPtr = nullptr, *AOriginPtr = nullptr;
+          // The shadow of the argument is not going to be read below if
+          // RegionOnly, and looking it up is a call into the KMSAN runtime.
+          if (!RegionOnly)
+            std::tie(AShadowPtr, AOriginPtr) =
+                getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), Alignment,
+                                   /*isStore*/ false);
           if (!PropagateShadow) {
             Store = IRB.CreateMemSet(ArgShadowBase,
                                      Constant::getNullValue(IRB.getInt8Ty()),
@@ -7879,6 +8070,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&CB, getCleanOrigin());
       return;
     }
+
+    // Nobody is going to look at the shadow of the return value.
+    if (RegionOnly)
+      return;
 
     IRBuilder<> IRBBefore(&CB);
     // Until we have full dynamic coverage, make sure the retval shadow is 0.
@@ -9757,8 +9952,15 @@ bool MemorySanitizer::sanitizeFunction(Function &F, TargetLibraryInfo &TLI) {
   if (!CompileKernel && F.getName() == kMsanModuleCtorName)
     return false;
 
-  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
-    return false;
+  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation)) {
+    // Such a function is not instrumented, except for the calls inside KMSAN
+    // instrumentation regions.
+    if (!CompileKernel || !Opts.msan_kernel_instrumentation_regions ||
+        !hasKmsanRegions(F))
+      return false;
+    return MemorySanitizerVisitor(F, *this, TLI, /*RegionOnly=*/true)
+        .runOnRegions();
+  }
 
   MemorySanitizerVisitor Visitor(F, *this, TLI);
 
