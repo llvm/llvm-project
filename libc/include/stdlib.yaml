@@ -131,6 +131,15 @@ functions:
     arguments:
       - type: double[]
       - type: int
+  - name: ignore_handler_s
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: const char *__restrict
+      - type: void *__restrict
+      - type: errno_t
+    guard: 'LIBC_HAS_ANNEX_K'
   - name: labs
     standards:
       - stdc
