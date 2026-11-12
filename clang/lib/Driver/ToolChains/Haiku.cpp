@@ -139,7 +139,7 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // No need to do anything for pthreads. Claim argument to avoid warning.
-  Args.claimAllArgs(options::OPT_pthread, options::OPT_pthreads);
+  Args.claimAllArgs(options::OPT_pthread);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
