@@ -382,7 +382,8 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   if (!Current.MustBreakBefore && Previous.is(tok::l_brace) &&
       Previous.isNot(TT_DictLiteral) && Previous.is(BK_BracedInit) &&
       Previous.Previous &&
-      Previous.Previous->isOneOf(tok::l_brace, tok::l_paren, tok::comma)) {
+      Previous.Previous->isOneOf(tok::l_brace, tok::l_paren, tok::comma,
+                                 TT_TrailingCommaVaOptRParen)) {
     return false;
   }
   // This prevents breaks like:
@@ -608,7 +609,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   if (Style.AlwaysBreakBeforeMultilineStrings &&
       (NewLineColumn == State.FirstIndent + Style.ContinuationIndentWidth ||
-       Previous.is(tok::comma) || Current.NestingLevel < 2) &&
+       Previous.isCommaOrTrailingCommaVaOpt() || Current.NestingLevel < 2) &&
       Previous.isNoneOf(tok::kw_return, tok::lessless, tok::at,
                         Keywords.kw_dollar) &&
       Previous.isNoneOf(TT_InlineASMColon, TT_ConditionalExpr) &&
@@ -1070,7 +1071,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // have the LHS 'left' of the RHS.
   const FormatToken *P = Current.getPreviousNonComment();
   if (Current.isNot(tok::comment) && P &&
-      (P->isOneOf(TT_BinaryOperator, tok::comma) ||
+      (P->isOneOf(TT_BinaryOperator, tok::comma, TT_TrailingCommaVaOptRParen) ||
        (P->is(TT_ConditionalExpr) && P->is(tok::colon))) &&
       P->isNoneOf(TT_OverloadedOperator, TT_CtorInitializerComma) &&
       P->getPrecedence() != prec::Assignment &&
@@ -1103,7 +1104,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.LastSpace = State.Column;
     CurrentState.NestedBlockIndent = State.Column;
   } else if (Current.isNoneOf(tok::comment, tok::caret) &&
-             ((Previous.is(tok::comma) &&
+             ((Previous.isCommaOrTrailingCommaVaOpt() &&
                Previous.isNot(TT_OverloadedOperator)) ||
               (Previous.is(tok::colon) && Previous.is(TT_ObjCMethodExpr)))) {
     CurrentState.LastSpace = State.Column;
@@ -1273,7 +1274,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   if ((PreviousNonComment &&
-       PreviousNonComment->isOneOf(tok::comma, tok::semi) &&
+       PreviousNonComment->isOneOf(tok::comma, TT_TrailingCommaVaOptRParen,
+                                   tok::semi) &&
        !CurrentState.AvoidBinPacking) ||
       Previous.is(TT_BinaryOperator)) {
     CurrentState.BreakBeforeParameter = false;
@@ -1392,7 +1394,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   if (PreviousNonComment &&
-      PreviousNonComment->isNoneOf(tok::comma, tok::colon, tok::semi) &&
+      PreviousNonComment->isNoneOf(tok::comma, TT_TrailingCommaVaOptRParen,
+                                   tok::colon, tok::semi) &&
       ((PreviousNonComment->isNot(TT_TemplateCloser) &&
         !PreviousNonComment->ClosesRequiresClause) ||
        Current.NestingLevel != 0) &&
@@ -1667,7 +1670,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
     }
     return CurrentState.QuestionColumn;
   }
-  if (Previous.is(tok::comma) && CurrentState.VariablePos != 0)
+  if (Previous.isCommaOrTrailingCommaVaOpt() && CurrentState.VariablePos != 0)
     return CurrentState.VariablePos;
   if (Current.is(TT_RequiresClause)) {
     if (Style.IndentRequiresClause)
@@ -1778,7 +1781,8 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent;
   }
   if (Previous.is(tok::r_paren) &&
-      Previous.isNot(TT_TableGenDAGArgOperatorToBreak) &&
+      Previous.isNoneOf(TT_TableGenDAGArgOperatorToBreak,
+                        TT_TrailingCommaVaOptRParen) &&
       !Current.isBinaryOperator() &&
       Current.isNoneOf(tok::colon, tok::comment)) {
     return ContinuationIndent;
@@ -1936,10 +1940,12 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
         PState.NoLineBreak = true;
     State.Stack[State.Stack.size() - 2].NestedBlockInlined = false;
   }
-  if (Previous && (Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) ||
-                   (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) &&
-                    Previous->isNoneOf(TT_DictLiteral, TT_ObjCMethodExpr,
-                                       TT_CtorInitializerColon)))) {
+  if (Previous &&
+      (Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) ||
+       (Previous->isOneOf(tok::l_paren, tok::comma, TT_TrailingCommaVaOptRParen,
+                          tok::colon) &&
+        Previous->isNoneOf(TT_DictLiteral, TT_ObjCMethodExpr,
+                           TT_CtorInitializerColon)))) {
     CurrentState.NestedBlockInlined =
         !Newline && hasNestedBlockInlined(Previous, Current, Style);
   }
@@ -1952,6 +1958,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
                     !State.Stack.back().NoLineBreakInOperand;
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
+  if (Current.is(TT_TrailingCommaVaOptRParen))
+    State.Stack.back().NoLineBreakInOperand = false;
 
   if (Current.is(TT_ObjCStringLiteral) && State.StartOfStringLiteral == 0)
     State.StartOfStringLiteral = State.Column + 1;
@@ -2151,7 +2159,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     const auto *Prev = Tok->getPreviousNonComment();
     if (!Prev)
       return false;
-    return Prev->is(tok::comma);
+    return Prev->isCommaOrTrailingCommaVaOpt();
   }(Current.MatchingParen);
 
   IndentationAndAlignment NewIndent = 0;
