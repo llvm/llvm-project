@@ -420,7 +420,7 @@ public:
   static constexpr unsigned TrampolineSize = 8;
   static constexpr unsigned StubSize = 8;
   static constexpr unsigned StubToPointerMaxDisplacement = 1U << 31;
-  static constexpr unsigned ResolverCodeSize = 0x68;
+  static constexpr unsigned ResolverCodeSize = 0x60;
 
   /// Write the resolver code into the given memory. The caller allocates the
   /// memory and sets its permissions.
