@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -O1 -vectorize-loops -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-ENABLE-VECT
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -target-cpu x86-64 -O1 -vectorize-loops -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-ENABLE-VECT %}
 // RUN: %clang_cc1 -triple x86_64 -target-cpu x86-64 -O1 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-DISABLE-VECT
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -target-cpu x86-64 -O1 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-DISABLE-VECT %}
 // REQUIRES: x86-registered-target
 
 // CHECK-ENABLE-VECT-LABEL: @for_test()

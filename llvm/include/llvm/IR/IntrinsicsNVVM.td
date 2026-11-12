@@ -1828,45 +1828,23 @@ let TargetPrefix = "nvvm" in {
   //
   // Fma
   //
-  foreach variant = ["", "_sat", "_relu"] in {
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_fma_rn # ftz # variant # _f16 :
-        PureIntrinsic<[llvm_half_ty],
-          [llvm_half_ty, llvm_half_ty, llvm_half_ty]>;
+  foreach ftz = ["", "_ftz"] in
+    foreach variant = ["", "_sat", "_relu"] in
+      def int_nvvm_fma # ftz # variant :
+        PureIntrinsic<[llvm_anyfloat_ty],
+                      [LLVMMatchType<0>, LLVMMatchType<0>,
+                       LLVMMatchType<0>, llvm_i32_ty],
+                      [Commutative, ImmArg<ArgIndex<3>>,
+                       Range<ArgIndex<3>, 0, 4>,
+                       ArgInfo<ArgIndex<3>,
+                               [ArgName<"rnd">,
+                                ImmArgPrinter<"printFPRoundingMode">]>]>;
 
-      def int_nvvm_fma_rn # ftz # variant # _f16x2 :
-        PureIntrinsic<[llvm_v2f16_ty],
-          [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty]>;
-    } // ftz
-  } // variant
-  
-  foreach relu = ["", "_relu"] in { 
-    def int_nvvm_fma_rn # relu # _bf16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_bfloat_ty],
-        [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty]>;
-
-    def int_nvvm_fma_rn # relu # _bf16x2 : NVVMBuiltin,
-      PureIntrinsic<[llvm_v2bf16_ty],
-        [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
-    
-    // oob (out-of-bounds) - clamps the result to 0 if either of the operand is 
-    // an OOB NaN value.
+  // oob (out-of-bounds) - clamps the result to 0 if either of the operand is
+  // an OOB NaN value.
+  foreach relu = ["", "_relu"] in
     def int_nvvm_fma_rn_oob # relu : PureIntrinsic<[llvm_anyfloat_ty],
         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
-  } // relu
-
-  foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-    foreach ftz = ["", "_ftz"] in {
-      foreach sat = ["", "_sat"] in {
-        def int_nvvm_fma # rnd # ftz # sat # _f : NVVMBuiltin,
-          PureIntrinsic<[llvm_float_ty],
-            [llvm_float_ty, llvm_float_ty, llvm_float_ty]>;
-      } // sat
-    } // ftz
-    def int_nvvm_fma # rnd # _d : NVVMBuiltin,
-      PureIntrinsic<[llvm_double_ty],
-        [llvm_double_ty, llvm_double_ty, llvm_double_ty]>;
-  } // rnd
 
   //
   // Rcp
@@ -2517,9 +2495,23 @@ foreach op = ["expect_tx", "complete_tx"] in {
       defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
                             llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
 
+      // The shared::cluster form additionally carries a 32-bit CTA mask and a
+      // constant is-multicast flag.
+      defvar args_ty = !if(!eq(space, "space_cta"),
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty],  // tx-count
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty,   // tx-count
+                            llvm_i32_ty,   // cta-mask
+                            llvm_i1_ty]);  // is-multicast
+      defvar mc_props = !if(!eq(space, "space_cta"),
+                            []<IntrinsicProperty>,
+                            [ImmArg<ArgIndex<3>>]);
+
       def int_nvvm_mbarrier_ # suffix :
-          Intrinsic<[], [mbar_addr_ty, llvm_i32_ty],
-          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+          Intrinsic<[], args_ty,
+          !listconcat([IntrConvergent, IntrArgMemOnly, IntrNoCallback],
+                      mc_props)>;
     } // space
   } // scope
 } // op
@@ -2533,19 +2525,31 @@ foreach op = ["arrive", "arrive_expect_tx",
       defvar suffix = StrJoin<"_", [scope, space]>.ret;
       defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
                             llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
-      defvar args_ty = [mbar_addr_ty, // mbar_address_ptr
-                        llvm_i32_ty]; // tx-count
 
       // mbarriers in shared_cluster space cannot return any value.
       defvar mbar_ret_ty = !if(!eq(space, "space_cta"),
                               [llvm_i64_ty], []<LLVMType>);
 
+      // The shared::cluster form additionally carries a 32-bit CTA mask and a
+      // constant is-multicast flag.
+      defvar args_ty = !if(!eq(space, "space_cta"),
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty],  // count
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty,   // count
+                            llvm_i32_ty,   // cta-mask
+                            llvm_i1_ty]);  // is-multicast
+      defvar mc_props = !if(!eq(space, "space_cta"),
+                            []<IntrinsicProperty>,
+                            [ImmArg<ArgIndex<3>>]);
+
       def int_nvvm_mbarrier_ # op # "_" # suffix:
           Intrinsic<mbar_ret_ty, args_ty,
-          [IntrConvergent, IntrNoCallback]>;
+          !listconcat([IntrConvergent, IntrNoCallback], mc_props)>;
       def int_nvvm_mbarrier_ # op # "_relaxed_" # suffix :
           Intrinsic<mbar_ret_ty, args_ty,
-          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+          !listconcat([IntrConvergent, IntrArgMemOnly, IntrNoCallback],
+                      mc_props)>;
     } // space
   } // scope
 } // op
@@ -3788,7 +3792,7 @@ foreach cta_group = ["cg1", "cg2"] in {
      llvm_i1_ty],       // is_exclusive
     [IntrConvergent, IntrInaccessibleMemOrArgMemOnly,
      WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-     ImmArg<ArgIndex<2>>,
+     ImmArg<ArgIndex<2>, DefaultValue<0>>,
      ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_dealloc_ # cta_group : Intrinsic<[],
@@ -3796,7 +3800,7 @@ foreach cta_group = ["cg1", "cg2"] in {
      llvm_i32_ty,       // num_columns
      llvm_i1_ty],       // is_exclusive
     [IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
-     ImmArg<ArgIndex<2>>,
+     ImmArg<ArgIndex<2>, DefaultValue<0>>,
      ArgInfo<ArgIndex<2>, [ArgName<"is_exclusive">]>]>;
 
   def int_nvvm_tcgen05_relinq_alloc_permit_ # cta_group : Intrinsic<[], [],

@@ -3,6 +3,7 @@
 
 ---
 name:            Cst
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Cst
@@ -17,6 +18,7 @@ body:             |
 ...
 ---
 name:            CstBig
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstBig
@@ -31,6 +33,7 @@ body:             |
 ...
 ---
 name:            CstSext
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstSext
@@ -49,6 +52,7 @@ body:             |
 ...
 ---
 name:            CstSextBig
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstSextBig
@@ -67,6 +71,7 @@ body:             |
 ...
 ---
 name:            ScalarVar
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarVar
@@ -79,6 +84,7 @@ body:             |
 ...
 ---
 name:            ScalarCst
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarCst
@@ -93,6 +99,7 @@ body:             |
 ...
 ---
 name:            VectorSimple
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorSimple
@@ -113,6 +120,7 @@ body:             |
 ...
 ---
 name:            VectorCst
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst
@@ -129,6 +137,7 @@ body:             |
 ...
 ---
 name:            VectorCst36
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst36
@@ -145,6 +154,7 @@ body:             |
 ...
 ---
 name:            VectorCst3unknown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst3unknown
@@ -163,6 +173,7 @@ body:             |
 ...
 ---
 name:            VectorSext
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorSext
@@ -189,6 +200,7 @@ body:             |
 ...
 ---
 name:            FSHLless
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @FSHLless
@@ -207,6 +219,7 @@ body:             |
 ...
 ---
 name:            FSHLeq
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @FSHLeq
@@ -225,6 +238,7 @@ body:             |
 ...
 ---
 name:            FSHLmore
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @FSHLmore
@@ -243,6 +257,7 @@ body:             |
 ...
 ---
 name:            SignBitsThroughZext
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @SignBitsThroughZext
@@ -267,6 +282,7 @@ body:             |
 ...
 ---
 name:            FSHLZeroAmt
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @FSHLZeroAmt
@@ -281,6 +297,7 @@ body:             |
 ...
 ---
 name:            FSHRZeroAmt
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @FSHRZeroAmt

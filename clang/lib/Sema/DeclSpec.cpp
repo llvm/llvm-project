@@ -1390,6 +1390,13 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   // _Thread_local can only appear with the 'static' and 'extern' storage class
   // specifiers. We also allow __private_extern__ as an extension.
   if (ThreadStorageClassSpec != TSCS_unspecified) {
+    if (S.getLangOpts().C23 &&
+        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+          << getThreadStorageClassSpecName()
+          << SourceRange(getThreadStorageClassSpecLoc());
+    }
+
     switch (StorageClassSpec) {
     case SCS_unspecified:
     case SCS_extern:
@@ -1412,12 +1419,6 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
       ThreadStorageClassSpec = TSCS_unspecified;
       C23ThreadLocalSpelling = false;
       ThreadStorageClassSpecLoc = SourceLocation();
-    }
-    if (S.getLangOpts().C23 &&
-        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
-      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
-          << getThreadStorageClassSpecName()
-          << SourceRange(getThreadStorageClassSpecLoc());
     }
   }
 

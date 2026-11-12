@@ -35,6 +35,7 @@
 # DUMP: FunctionInfo @ 0x{{[0-9a-f]+}}: [0x0000000100000f90 - 0x0000000100000fb0) "main"
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

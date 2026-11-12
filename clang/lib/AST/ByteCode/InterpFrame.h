@@ -60,7 +60,9 @@ public:
   void destroy(unsigned Idx);
   void enableLocal(unsigned Offset);
   bool isLocalEnabled(unsigned Offset) const {
-    return getLocalBlock(Offset)->getBlockDesc<InlineDescriptor>().IsActive;
+    return getLocalBlock(Offset)
+        ->getBlockDesc<LocalInlineDescriptor>()
+        .IsEnabled;
   }
 
   /// Describes the frame with arguments for diagnostic purposes.
@@ -93,9 +95,9 @@ public:
     Block *B = getLocalBlock(Offset);
 
     B->deref<T>() = Value;
-    auto &LID = B->getBlockDesc<InlineDescriptor>();
+    auto &LID = B->getBlockDesc<LocalInlineDescriptor>();
     LID.IsInitialized = true;
-    LID.LifeState = Lifetime::Started;
+    LID.setLifetime(Lifetime::Started);
   }
 
   /// Returns a pointer to a local variables.
@@ -107,7 +109,7 @@ public:
     Block *B = localBlock(Offset);
     if (LLVM_UNLIKELY(!B->isInitialized())) {
       B->invokeCtor();
-      new (localInlineDesc(Offset)) InlineDescriptor(B->getDescriptor());
+      new (localInlineDesc(Offset)) LocalInlineDescriptor();
     }
     return B;
   };
@@ -211,8 +213,8 @@ private:
   }
 
   /// Returns the inline descriptor of the local.
-  InlineDescriptor *localInlineDesc(unsigned Offset) const {
-    return reinterpret_cast<InlineDescriptor *>(locals() + Offset);
+  LocalInlineDescriptor *localInlineDesc(unsigned Offset) const {
+    return reinterpret_cast<LocalInlineDescriptor *>(locals() + Offset);
   }
 
 public:

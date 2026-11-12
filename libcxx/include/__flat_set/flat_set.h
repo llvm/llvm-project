@@ -101,13 +101,13 @@ public:
 
 public:
   // [flat.set.cons], construct/copy/destroy
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set() noexcept(is_nothrow_default_constructible_v<_KeyContainer> && is_nothrow_default_constructible_v<_Compare>)
       : __keys_(), __compare_() {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(const flat_set&) = default;
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(const flat_set&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(flat_set&& __other) noexcept(
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(flat_set&& __other) noexcept(
       is_nothrow_move_constructible_v<_KeyContainer> && is_nothrow_move_constructible_v<_Compare>)
 #  if _LIBCPP_HAS_EXCEPTIONS
       try
@@ -121,16 +121,14 @@ public:
   }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit flat_set(const key_compare& __comp)
-      : __keys_(), __compare_(__comp) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit flat_set(const key_compare& __comp) : __keys_(), __compare_(__comp) {}
 
-  _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit flat_set(container_type __keys, const key_compare& __comp = key_compare())
       : __keys_(std::move(__keys)), __compare_(__comp) {
     __sort_and_unique();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(sorted_unique_t, container_type __keys, const key_compare& __comp = key_compare())
       : __keys_(std::move(__keys)), __compare_(__comp) {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
@@ -139,7 +137,7 @@ public:
 
   template <class _InputIterator>
     requires __has_input_iterator_category<_InputIterator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(_InputIterator __first, _InputIterator __last, const key_compare& __comp = key_compare())
       : __keys_(), __compare_(__comp) {
     insert(__first, __last);
@@ -147,7 +145,7 @@ public:
 
   template <class _InputIterator>
     requires __has_input_iterator_category<_InputIterator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(sorted_unique_t, _InputIterator __first, _InputIterator __last, const key_compare& __comp = key_compare())
       : __keys_(__first, __last), __compare_(__comp) {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
@@ -155,43 +153,42 @@ public:
   }
 
   template <_ContainerCompatibleRange<value_type> _Range>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(from_range_t, _Range&& __rg)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(from_range_t, _Range&& __rg)
       : flat_set(from_range, std::forward<_Range>(__rg), key_compare()) {}
 
   template <_ContainerCompatibleRange<value_type> _Range>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(from_range_t, _Range&& __rg, const key_compare& __comp)
-      : flat_set(__comp) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(from_range_t, _Range&& __rg, const key_compare& __comp) : flat_set(__comp) {
     insert_range(std::forward<_Range>(__rg));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
       : flat_set(__il.begin(), __il.end(), __comp) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(sorted_unique_t, initializer_list<value_type> __il, const key_compare& __comp = key_compare())
       : flat_set(sorted_unique, __il.begin(), __il.end(), __comp) {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit flat_set(const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit flat_set(const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_() {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(const key_compare& __comp, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(const key_compare& __comp, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_(__comp) {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(const container_type& __keys, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(const container_type& __keys, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __keys)), __compare_() {
     __sort_and_unique();
   }
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(const container_type& __keys, const key_compare& __comp, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __keys)), __compare_(__comp) {
     __sort_and_unique();
@@ -199,8 +196,7 @@ public:
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
-  flat_set(sorted_unique_t, const container_type& __keys, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(sorted_unique_t, const container_type& __keys, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __keys)), __compare_() {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
         __is_sorted_and_unique(__keys_), "Either the key container is not sorted or it contains duplicates");
@@ -208,7 +204,7 @@ public:
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(sorted_unique_t, const container_type& __keys, const key_compare& __comp, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __keys)), __compare_(__comp) {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
@@ -217,13 +213,13 @@ public:
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(const flat_set& __other, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(const flat_set& __other, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __other.__keys_)),
         __compare_(__other.__compare_) {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(flat_set&& __other, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(flat_set&& __other, const _Allocator& __alloc)
 #  if _LIBCPP_HAS_EXCEPTIONS
       try
 #  endif // _LIBCPP_HAS_EXCEPTIONS
@@ -239,15 +235,14 @@ public:
 
   template <class _InputIterator, class _Allocator>
     requires(__has_input_iterator_category<_InputIterator>::value && uses_allocator<container_type, _Allocator>::value)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
-  flat_set(_InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(_InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_() {
     insert(__first, __last);
   }
 
   template <class _InputIterator, class _Allocator>
     requires(__has_input_iterator_category<_InputIterator>::value && uses_allocator<container_type, _Allocator>::value)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(_InputIterator __first, _InputIterator __last, const key_compare& __comp, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_(__comp) {
     insert(__first, __last);
@@ -255,7 +250,7 @@ public:
 
   template <class _InputIterator, class _Allocator>
     requires(__has_input_iterator_category<_InputIterator>::value && uses_allocator<container_type, _Allocator>::value)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(sorted_unique_t, _InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __first, __last)), __compare_() {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
@@ -264,12 +259,12 @@ public:
 
   template <class _InputIterator, class _Allocator>
     requires(__has_input_iterator_category<_InputIterator>::value && uses_allocator<container_type, _Allocator>::value)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(
-      sorted_unique_t,
-      _InputIterator __first,
-      _InputIterator __last,
-      const key_compare& __comp,
-      const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
+  flat_set(sorted_unique_t,
+           _InputIterator __first,
+           _InputIterator __last,
+           const key_compare& __comp,
+           const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc, __first, __last)), __compare_(__comp) {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
         __is_sorted_and_unique(__keys_), "Either the key container is not sorted or it contains duplicates");
@@ -277,14 +272,14 @@ public:
 
   template <_ContainerCompatibleRange<value_type> _Range, class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(from_range_t, _Range&& __rg, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(from_range_t, _Range&& __rg, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_() {
     insert_range(std::forward<_Range>(__rg));
   }
 
   template <_ContainerCompatibleRange<value_type> _Range, class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(from_range_t, _Range&& __rg, const key_compare& __comp, const _Allocator& __alloc)
       : __keys_(std::make_obj_using_allocator<container_type>(__alloc)), __compare_(__comp) {
     insert_range(std::forward<_Range>(__rg));
@@ -292,37 +287,35 @@ public:
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
-  flat_set(initializer_list<value_type> __il, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(initializer_list<value_type> __il, const _Allocator& __alloc)
       : flat_set(__il.begin(), __il.end(), __alloc) {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(initializer_list<value_type> __il, const key_compare& __comp, const _Allocator& __alloc)
       : flat_set(__il.begin(), __il.end(), __comp, __alloc) {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
-  flat_set(sorted_unique_t, initializer_list<value_type> __il, const _Allocator& __alloc)
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set(sorted_unique_t, initializer_list<value_type> __il, const _Allocator& __alloc)
       : flat_set(sorted_unique, __il.begin(), __il.end(), __alloc) {}
 
   template <class _Allocator>
     requires uses_allocator<container_type, _Allocator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   flat_set(sorted_unique_t, initializer_list<value_type> __il, const key_compare& __comp, const _Allocator& __alloc)
       : flat_set(sorted_unique, __il.begin(), __il.end(), __comp, __alloc) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set& operator=(initializer_list<value_type> __il) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set& operator=(initializer_list<value_type> __il) {
     clear();
     insert(__il);
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set& operator=(const flat_set&) = default;
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set& operator=(const flat_set&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set& operator=(flat_set&& __other) noexcept(
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 flat_set& operator=(flat_set&& __other) noexcept(
       is_nothrow_move_assignable_v<_KeyContainer> && is_nothrow_move_assignable_v<_Compare>) {
     // No matter what happens, we always want to clear the other container before returning
     // since we moved from it
@@ -338,61 +331,45 @@ public:
   }
 
   // iterators
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() noexcept {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() noexcept {
     return iterator(std::as_const(__keys_).begin());
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator begin() const noexcept {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator begin() const noexcept {
     return const_iterator(__keys_.begin());
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator end() noexcept {
-    return iterator(std::as_const(__keys_).end());
-  }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator end() const noexcept {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator end() noexcept { return iterator(std::as_const(__keys_).end()); }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator end() const noexcept {
     return const_iterator(__keys_.end());
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 reverse_iterator rbegin() noexcept {
-    return reverse_iterator(end());
-  }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator rbegin() const noexcept {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator rbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 reverse_iterator rend() noexcept {
-    return reverse_iterator(begin());
-  }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator rend() const noexcept {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator rend() const noexcept {
     return const_reverse_iterator(begin());
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator cbegin() const noexcept {
-    return begin();
-  }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator cend() const noexcept {
-    return end();
-  }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator crbegin() const noexcept {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator cbegin() const noexcept { return begin(); }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator cend() const noexcept { return end(); }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator crbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator crend() const noexcept {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_reverse_iterator crend() const noexcept {
     return const_reverse_iterator(begin());
   }
 
   // [flat.set.capacity], capacity
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool empty() const noexcept {
-    return __keys_.empty();
-  }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 bool empty() const noexcept { return __keys_.empty(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type size() const noexcept {
-    return __keys_.size();
-  }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type size() const noexcept { return __keys_.size(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type max_size() const noexcept {
-    return __keys_.max_size();
-  }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type max_size() const noexcept { return __keys_.max_size(); }
 
   // [flat.set.modifiers], modifiers
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> emplace(_Args&&... __args) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> emplace(_Args&&... __args) {
     if constexpr (sizeof...(__args) == 1 && (is_same_v<remove_cvref_t<_Args>, _Key> && ...)) {
       return __emplace(std::forward<_Args>(__args)...);
     } else {
@@ -401,7 +378,7 @@ public:
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator emplace_hint(const_iterator __hint, _Args&&... __args) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator emplace_hint(const_iterator __hint, _Args&&... __args) {
     if constexpr (sizeof...(__args) == 1 && (is_same_v<remove_cvref_t<_Args>, _Key> && ...)) {
       return __emplace_hint(std::move(__hint), std::forward<_Args>(__args)...);
     } else {
@@ -409,36 +386,32 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> insert(const value_type& __x) {
-    return emplace(__x);
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> insert(const value_type& __x) { return emplace(__x); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> insert(value_type&& __x) {
-    return emplace(std::move(__x));
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> insert(value_type&& __x) { return emplace(std::move(__x)); }
 
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && is_constructible_v<value_type, _Kp>)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> insert(_Kp&& __x) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> insert(_Kp&& __x) {
     return __emplace(std::forward<_Kp>(__x));
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert(const_iterator __hint, const value_type& __x) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert(const_iterator __hint, const value_type& __x) {
     return emplace_hint(__hint, __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert(const_iterator __hint, value_type&& __x) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert(const_iterator __hint, value_type&& __x) {
     return emplace_hint(__hint, std::move(__x));
   }
 
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && is_constructible_v<value_type, _Kp>)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert(const_iterator __hint, _Kp&& __x) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert(const_iterator __hint, _Kp&& __x) {
     return __emplace_hint(__hint, std::forward<_Kp>(__x));
   }
 
   template <class _InputIterator>
     requires __has_input_iterator_category<_InputIterator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(_InputIterator __first, _InputIterator __last) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(_InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve(__last - __first);
     }
@@ -447,8 +420,7 @@ public:
 
   template <class _InputIterator>
     requires __has_input_iterator_category<_InputIterator>::value
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve(__last - __first);
     }
@@ -457,7 +429,7 @@ public:
   }
 
   template <_ContainerCompatibleRange<value_type> _Range>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(_Range&& __range) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(_Range&& __range) {
     if constexpr (ranges::sized_range<_Range>) {
       __reserve(ranges::size(__range));
     }
@@ -466,7 +438,7 @@ public:
   }
 
   template <_ContainerCompatibleRange<value_type> _Range>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(std::sorted_unique_t, _Range&& __range) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(std::sorted_unique_t, _Range&& __range) {
     if constexpr (ranges::sized_range<_Range>) {
       __reserve(ranges::size(__range));
     }
@@ -474,21 +446,19 @@ public:
     __append_sort_merge_unique</*WasSorted = */ true>(std::forward<_Range>(__range));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(initializer_list<value_type> __il) {
-    insert(__il.begin(), __il.end());
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(sorted_unique_t, initializer_list<value_type> __il) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(sorted_unique_t, initializer_list<value_type> __il) {
     insert(sorted_unique, __il.begin(), __il.end());
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 container_type extract() && {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 container_type extract() && {
     auto __guard = std::__make_scope_guard([&]() noexcept { clear() /* noexcept */; });
     auto __ret   = std::move(__keys_);
     return __ret;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void replace(container_type&& __keys) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void replace(container_type&& __keys) {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
         __is_sorted_and_unique(__keys), "Either the key container is not sorted or it contains duplicates");
     auto __guard = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
@@ -496,7 +466,7 @@ public:
     __guard.__complete();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator erase(iterator __position) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator erase(iterator __position) {
     auto __on_failure = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     auto __key_iter   = __keys_.erase(__position.__base());
     __on_failure.__complete();
@@ -506,7 +476,7 @@ public:
   // The following overload is the same as the iterator overload
   // iterator erase(const_iterator __position);
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(const key_type& __x) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(const key_type& __x) {
     auto __iter = find(__x);
     if (__iter != end()) {
       erase(__iter);
@@ -518,21 +488,21 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
              !is_convertible_v<_Kp &&, const_iterator>)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(_Kp&& __x) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(_Kp&& __x) {
     auto [__first, __last] = equal_range(__x);
     auto __res             = __last - __first;
     erase(__first, __last);
     return __res;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator erase(const_iterator __first, const_iterator __last) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator erase(const_iterator __first, const_iterator __last) {
     auto __on_failure = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     auto __key_it     = __keys_.erase(__first.__base(), __last.__base());
     __on_failure.__complete();
     return iterator(std::move(__key_it));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   swap(flat_set& __y) noexcept(is_nothrow_swappable_v<container_type> && is_nothrow_swappable_v<key_compare>) {
     auto __on_failure = std::__make_exception_guard([&]() noexcept {
       clear() /* noexcept */;
@@ -543,141 +513,128 @@ public:
     __on_failure.__complete();
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void clear() noexcept { __keys_.clear(); }
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void clear() noexcept { __keys_.clear(); }
 
   // observers
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 key_compare key_comp() const { return __compare_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_compare value_comp() const {
-    return __compare_;
-  }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 key_compare key_comp() const { return __compare_; }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 value_compare value_comp() const { return __compare_; }
 
   // set operations
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const key_type& __x) {
-    return __find_impl(*this, __x);
-  }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const key_type& __x) { return __find_impl(*this, __x); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const key_type& __x) const {
-    return __find_impl(*this, __x);
-  }
-
-  template <class _Kp>
-    requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const key_type& __x) const {
     return __find_impl(*this, __x);
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator find(const _Kp& __x) {
     return __find_impl(*this, __x);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type count(const key_type& __x) const {
+  template <class _Kp>
+    requires __is_transparent_v<_Compare>
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator find(const _Kp& __x) const {
+    return __find_impl(*this, __x);
+  }
+
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type count(const key_type& __x) const {
     return contains(__x) ? 1 : 0;
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type count(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type count(const _Kp& __x) const {
     return contains(__x) ? 1 : 0;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool contains(const key_type& __x) const {
-    return find(__x) != end();
-  }
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 bool contains(const key_type& __x) const { return find(__x) != end(); }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool contains(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 bool contains(const _Kp& __x) const {
     return find(__x) != end();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator lower_bound(const key_type& __x) {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator lower_bound(const key_type& __x) {
     const auto& __keys = __keys_;
     return iterator(std::lower_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator
-  lower_bound(const key_type& __x) const {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator lower_bound(const key_type& __x) const {
     return const_iterator(std::lower_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator lower_bound(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator lower_bound(const _Kp& __x) {
     const auto& __keys = __keys_;
     return iterator(std::lower_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator lower_bound(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator lower_bound(const _Kp& __x) const {
     return const_iterator(std::lower_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const key_type& __x) {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const key_type& __x) {
     const auto& __keys = __keys_;
     return iterator(std::upper_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator
-  upper_bound(const key_type& __x) const {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator upper_bound(const key_type& __x) const {
     return const_iterator(std::upper_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator upper_bound(const _Kp& __x) {
     const auto& __keys = __keys_;
     return iterator(std::upper_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator upper_bound(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator upper_bound(const _Kp& __x) const {
     return const_iterator(std::upper_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator>
-  equal_range(const key_type& __x) {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator> equal_range(const key_type& __x) {
     return __equal_range_impl(*this, __x);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator>
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator>
   equal_range(const key_type& __x) const {
     return __equal_range_impl(*this, __x);
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator>
-  equal_range(const _Kp& __x) {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator> equal_range(const _Kp& __x) {
     return __equal_range_impl(*this, __x);
   }
   template <class _Kp>
     requires __is_transparent_v<_Compare>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator>
-  equal_range(const _Kp& __x) const {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator> equal_range(const _Kp& __x) const {
     return __equal_range_impl(*this, __x);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator==(const flat_set& __x, const flat_set& __y) {
+  friend _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator==(const flat_set& __x, const flat_set& __y) {
     return ranges::equal(__x, __y);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 auto
-  operator<=>(const flat_set& __x, const flat_set& __y) {
+  friend _LIBCPP_CONSTEXPR_SINCE_CXX26 auto operator<=>(const flat_set& __x, const flat_set& __y) {
     return std::lexicographical_compare_three_way(
         __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  swap(flat_set& __x, flat_set& __y) noexcept(noexcept(__x.swap(__y))) {
+  friend _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_set& __x, flat_set& __y) noexcept(noexcept(__x.swap(__y))) {
     __x.swap(__y);
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __is_sorted_and_unique(auto&& __key_container) const {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __is_sorted_and_unique(auto&& __key_container) const {
     auto __greater_or_equal_to = [this](const auto& __x, const auto& __y) -> bool { return !__compare_(__x, __y); };
     return ranges::adjacent_find(__key_container, __greater_or_equal_to) == ranges::end(__key_container);
   }
@@ -685,14 +642,14 @@ private:
   // This function is only used in constructors. So there is not exception handling in this function.
   // If the function exits via an exception, there will be no flat_set object constructed, thus, there
   // is no invariant state to preserve
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __sort_and_unique() {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void __sort_and_unique() {
     ranges::sort(__keys_, __compare_);
     auto __dup_start = ranges::unique(__keys_, __key_equiv(__compare_)).begin();
     __keys_.erase(__dup_start, __keys_.end());
   }
 
   template <bool _WasSorted, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __append_sort_merge_unique(_Args&&... __args) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void __append_sort_merge_unique(_Args&&... __args) {
     auto __on_failure    = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     size_type __old_size = size();
     __flat_set_utils::__append(*this, std::forward<_Args>(__args)...);
@@ -712,7 +669,7 @@ private:
   }
 
   template <class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto __find_impl(_Self&& __self, const _Kp& __key) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto __find_impl(_Self&& __self, const _Kp& __key) {
     auto __it   = __self.lower_bound(__key);
     auto __last = __self.end();
     if (__it == __last || __self.__compare_(__key, *__it)) {
@@ -722,7 +679,7 @@ private:
   }
 
   template <class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
     using __iter = _If<is_const_v<__libcpp_remove_reference_t<_Self>>, const_iterator, iterator>;
     auto __it    = std::lower_bound(__self.__keys_.begin(), __self.__keys_.end(), __key, __self.__compare_);
     auto __last  = __self.__keys_.end();
@@ -733,7 +690,7 @@ private:
   }
 
   template <class _Kp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace(_Kp&& __key) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace(_Kp&& __key) {
     auto __it = lower_bound(__key);
     if (__it == end() || __compare_(__key, *__it)) {
       return pair<iterator, bool>(__flat_set_utils::__emplace_exact_pos(*this, __it, std::forward<_Kp>(__key)), true);
@@ -743,7 +700,7 @@ private:
   }
 
   template <class _Kp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __is_hint_correct(const_iterator __hint, _Kp&& __key) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __is_hint_correct(const_iterator __hint, _Kp&& __key) {
     if (__hint != cbegin() && !__compare_(*std::prev(__hint), __key)) {
       return false;
     }
@@ -754,7 +711,7 @@ private:
   }
 
   template <class _Kp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __emplace_hint(const_iterator __hint, _Kp&& __key) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __emplace_hint(const_iterator __hint, _Kp&& __key) {
     if (__is_hint_correct(__hint, __key)) {
       if (__hint == cend() || __compare_(__key, *__hint)) {
         return __flat_set_utils::__emplace_exact_pos(*this, __hint, std::forward<_Kp>(__key));
@@ -767,7 +724,7 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __reserve(size_t __size) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void __reserve(size_t __size) {
     if constexpr (__container_traits<_KeyContainer>::__reservable) {
       __keys_.reserve(__size);
     }
@@ -781,9 +738,8 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
 
   struct __key_equiv {
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_equiv(key_compare __c) : __comp_(__c) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
-    operator()(const_reference __x, const_reference __y) const {
+    _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_equiv(key_compare __c) : __comp_(__c) {}
+    _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const_reference __x, const_reference __y) const {
       return !__comp_(__x, __y) && !__comp_(__y, __x);
     }
     key_compare __comp_;
@@ -870,7 +826,7 @@ struct uses_allocator<flat_set<_Key, _Compare, _KeyContainer>, _Allocator>
     : bool_constant<uses_allocator_v<_KeyContainer, _Allocator>> {};
 
 template <class _Key, class _Compare, class _KeyContainer, class _Predicate>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 typename flat_set<_Key, _Compare, _KeyContainer>::size_type
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename flat_set<_Key, _Compare, _KeyContainer>::size_type
 erase_if(flat_set<_Key, _Compare, _KeyContainer>& __flat_set, _Predicate __pred) {
   auto __guard = std::__make_exception_guard([&] { __flat_set.clear(); });
   auto __it    = std::remove_if(__flat_set.__keys_.begin(), __flat_set.__keys_.end(), [&](const auto& __e) -> bool {

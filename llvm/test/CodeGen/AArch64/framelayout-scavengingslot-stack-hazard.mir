@@ -33,7 +33,6 @@ name: stack_hazard_streaming_compat
 # CHECK:      STRDui $d0, $x19, 131
 # CHECK-NEXT: STRXui $x0, $x19, 1
 # CHECK: bb.1:
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:
@@ -81,7 +80,6 @@ name: stack_hazard_streaming_compat_emergency_spill_slot
 # CHECK-NEXT: STRDui $d0, killed $[[SCRATCH]], 131
 # CHECK-NEXT: $[[SCRATCH]] = LDRXui $x19, 0
 # CHECK: bb.1:
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple x86_64-unknown-unknown -target-feature +sgx -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple x86_64-unknown-unknown -target-feature +sgx -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-64 %}
 // RUN: %clang_cc1 %s -ffreestanding -triple i386 -target-feature +sgx -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-32
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple i386 -target-feature +sgx -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-32 %}
 
 #include <immintrin.h>
 #include <stdint.h>

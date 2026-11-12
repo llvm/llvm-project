@@ -113,14 +113,19 @@ void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 void populateMoveAccumulatorForContractLoopPatterns(
     RewritePatternSet &patterns);
 
-// Adds patterns to prepare vector contractions inside scf.for loops for
-// subsequent lowering (e.g. multi-level-unroll).
+// Adds patterns to fold RHS unpacking into VNNI vector contractions inside
+// scf.for loops for subsequent lowering (e.g. multi-level-unroll).
 void populatePrepareVectorContractLoopsPatterns(RewritePatternSet &patterns);
 
 // A set of patterns that tile and unroll contractions in order to prepare them
 // for the AMX nanokernel lowerings.
 void populateVectorContractMultiLevelUnrollForAMXPatterns(
     RewritePatternSet &patterns);
+
+// Approximates vectorized f32 `math.rsqrt` with the AVX `vrsqrtps`
+// instruction followed by one Newton-Raphson step. Requires the inner vector
+// dimension to be a multiple of 8.
+void populateMathRsqrtApproximationPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:

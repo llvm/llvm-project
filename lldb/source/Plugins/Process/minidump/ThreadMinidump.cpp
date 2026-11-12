@@ -17,7 +17,7 @@
 
 #include "Register/Linux/RegisterInfoLinux_i386.h"
 #include "Register/Linux/RegisterInfoLinux_x86_64.h"
-#include "Plugins/Process/elf-core/RegisterContextPOSIXCore_x86.h"
+#include "Plugins/Process/elf-core/RegisterContextELFCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 #include "lldb/Target/RegisterContext.h"
@@ -73,7 +73,7 @@ ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
       lldb::DataBufferSP buf =
           ConvertMinidumpContext_x86_32(m_gpregset_data, reg_interface);
       DataExtractor gpregset(buf, lldb::eByteOrderLittle, 4);
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86>(
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_x86>(
           *this, reg_interface, gpregset,
           llvm::ArrayRef<lldb_private::CoreNote>());
       break;
@@ -83,7 +83,7 @@ ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
       lldb::DataBufferSP buf =
           ConvertMinidumpContext_x86_64(m_gpregset_data, reg_interface);
       DataExtractor gpregset(buf, lldb::eByteOrderLittle, 8);
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86>(
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_x86>(
           *this, reg_interface, gpregset,
           llvm::ArrayRef<lldb_private::CoreNote>());
       break;

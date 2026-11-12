@@ -27,7 +27,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 liveins:
   - { reg: '$r4' }
 frameInfo:
@@ -61,7 +60,6 @@ body:             |
 ...
 ---
 name:            test2
-tracksRegLiveness: true
 frameInfo:
   stackSize:       32
   maxAlignment:    4

@@ -310,7 +310,7 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
   if (NOT ${ARGC} EQUAL 3)
     message(FATAL_ERROR "got too many args. expected 3, got ${ARGC} (namely: ${ARGV})")
   endif()
-  if(ANDROID OR (NOT APPLE AND ${arch} MATCHES "arm|aarch64|riscv32|riscv64"))
+  if(ANDROID OR (NOT APPLE AND ${arch} MATCHES "arm|aarch64|riscv32|riscv64|hexagon"))
     # This is only true if we are cross-compiling.
     # Build all tests with host compiler and use host tools.
     set(${cc_out} ${COMPILER_RT_TEST_COMPILER})
@@ -321,6 +321,9 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
       list(APPEND ${cflags_out} ${DARWIN_osx_CFLAGS})
     endif()
     string(REPLACE ";" " " ${cflags_out} "${${cflags_out}}")
+  endif()
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID AND CMAKE_SYSROOT)
+    string(APPEND ${cflags_out} " --sysroot=${CMAKE_SYSROOT}")
   endif()
 endmacro()
 
@@ -755,6 +758,7 @@ else()
   filter_available_targets(PROFILE_SUPPORTED_ARCH ${ALL_PROFILE_SUPPORTED_ARCH})
   filter_available_targets(CTX_PROFILE_SUPPORTED_ARCH ${ALL_CTX_PROFILE_SUPPORTED_ARCH})
   filter_available_targets(TSAN_SUPPORTED_ARCH ${ALL_TSAN_SUPPORTED_ARCH})
+  filter_available_targets(CSAN_SUPPORTED_ARCH ${ALL_CSAN_SUPPORTED_ARCH})
   filter_available_targets(TYSAN_SUPPORTED_ARCH ${ALL_TYSAN_SUPPORTED_ARCH})
   filter_available_targets(UBSAN_SUPPORTED_ARCH ${ALL_UBSAN_SUPPORTED_ARCH})
   filter_available_targets(SAFESTACK_SUPPORTED_ARCH
@@ -796,7 +800,7 @@ if(COMPILER_RT_SUPPORTED_ARCH)
 endif()
 message(STATUS "Compiler-RT supported architectures: ${COMPILER_RT_SUPPORTED_ARCH}")
 
-set(ALL_SANITIZERS asan;rtsan;dfsan;msan;hwasan;tsan;tysan;safestack;cfi;scudo_standalone;ubsan_minimal;gwp_asan;nsan;asan_abi)
+set(ALL_SANITIZERS asan;rtsan;dfsan;msan;hwasan;tsan;csan;tysan;safestack;cfi;scudo_standalone;ubsan_minimal;gwp_asan;nsan;asan_abi)
 set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING
     "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
@@ -924,6 +928,14 @@ if ((COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_UBSAN TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
+endif()
+
+if ((COMPILER_RT_HAS_SANITIZER_COMMON AND CSAN_SUPPORTED_ARCH AND
+     OS_NAME MATCHES "Linux" AND NOT ANDROID)
+    OR (COMPILER_RT_GPU_BUILD AND CSAN_SUPPORTED_ARCH))
+  set(COMPILER_RT_HAS_CSAN TRUE)
+else()
+  set(COMPILER_RT_HAS_CSAN FALSE)
 endif()
 
 if (UBSAN_SUPPORTED_ARCH AND

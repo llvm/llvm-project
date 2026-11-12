@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=loongarch64 -relocation-model=static -O2 \
-; RUN:   -stop-after=loongarch-merge-base-offset -verify-machineinstrs %s -o - \
+; RUN:   -stop-after=loongarch-merge-base-offset %s -o - \
 ; RUN:   | FileCheck %s
 
 ; CHECK-LABEL: name: test

@@ -882,17 +882,17 @@ public:
     return Info->get(Inst.getOpcode()).mayStore();
   }
 
-  virtual bool isAArch64ExclusiveLoad(const MCInst &Inst) const {
+  virtual bool isExclusiveLoad(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
 
-  virtual bool isAArch64ExclusiveStore(const MCInst &Inst) const {
+  virtual bool isExclusiveStore(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
 
-  virtual bool isAArch64ExclusiveClear(const MCInst &Inst) const {
+  virtual bool isExclusiveClear(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }

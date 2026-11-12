@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple=i386-pc-solaris2.11 -w -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple=i386-pc-solaris2.11 -w -emit-llvm %s -o - | FileCheck %s %}
 
 #pragma redefine_extname fake real
 #pragma redefine_extname name alias
