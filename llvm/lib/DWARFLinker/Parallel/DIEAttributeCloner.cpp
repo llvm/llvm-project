@@ -498,8 +498,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
 
     Value = *Offset;
     ResultingForm = dwarf::DW_FORM_sec_offset;
-  } else if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
-             InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit) {
+  } else if (AttrSpec.Attr == dwarf::DW_AT_high_pc && isUnitRootDIE()) {
     if (!OutUnit.isCompileUnit())
       return 0;
 
@@ -524,9 +523,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
       AttrSpec.Attr == dwarf::DW_AT_start_scope) {
     // Create patch for the range offset value.
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
-        DebugRangePatch{{AttrOutOffset},
-                        InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit},
-        PatchesOffsets);
+        DebugRangePatch{{AttrOutOffset}, isUnitRootDIE()}, PatchesOffsets);
     AttrInfo.HasRanges = true;
   } else if (DWARFAttribute::mayHaveLocationList(AttrSpec.Attr) &&
              dwarf::doesFormBelongToClass(AttrSpec.Form,
@@ -570,10 +567,9 @@ size_t DIEAttributeCloner::cloneScalarAttr(
       !OutUnit.isCompileUnit())
     return 0;
 
-  // A compile unit's high_pc comes from the unit's own linked range and spans
-  // every symbol in it.
-  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
-      InputDieEntry->getTag() != dwarf::DW_TAG_compile_unit)
+  // A unit's high_pc comes from the unit's own linked range and spans every
+  // symbol in it.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc && !isUnitRootDIE())
     Value = constrainHighPC(Value, /*IsLength=*/true);
 
   auto Result =
@@ -717,14 +713,12 @@ size_t DIEAttributeCloner::cloneAddressAttr(
     return 0;
   }
 
-  if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
-      AttrSpec.Attr == dwarf::DW_AT_low_pc) {
+  if (isUnitRootDIE() && AttrSpec.Attr == dwarf::DW_AT_low_pc) {
     if (std::optional<uint64_t> LowPC = OutUnit.getAsCompileUnit()->getLowPc())
       Addr = *LowPC;
     else
       return 0;
-  } else if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
-             AttrSpec.Attr == dwarf::DW_AT_high_pc) {
+  } else if (isUnitRootDIE() && AttrSpec.Attr == dwarf::DW_AT_high_pc) {
     if (uint64_t HighPc = OutUnit.getAsCompileUnit()->getHighPc())
       Addr = HighPc;
     else
