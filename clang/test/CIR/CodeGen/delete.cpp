@@ -136,8 +136,7 @@ void destroy(StructWithVirtualDestructor *x) {
 // CIR:   cir.if %[[NOT_NULL]] {
 // CIR:     %[[VTABLE_PTR:.*]] = cir.vtable.get_vptr %[[X]] : !cir.ptr<!rec_StructWithVirtualDestructor> -> !cir.ptr<!cir.vptr>
 // CIR:     %[[VTABLE:.*]] = cir.load{{.*}} %[[VTABLE_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:     %[[DTOR_FN_ADDR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VTABLE]][1]
-// CIR:     %[[DTOR_FN_ADDR:.*]] = cir.load{{.*}} %[[DTOR_FN_ADDR_PTR]]
+// CIR:     %[[DTOR_FN_ADDR:.*]] = cir.vtable.get_virtual_fn %[[VTABLE]][1]
 // CIR:     cir.call %[[DTOR_FN_ADDR]](%[[X]])
 // CIR:   }
 

@@ -44,7 +44,8 @@ define amdgpu_kernel void @memset_kernel() sanitize_address {
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_kernel, i32 [[TMP20]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    [[TMP27:%.*]] = sext i32 [[TMP22]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i64 [[TMP27]]
 ; CHECK-NEXT:    call void @llvm.memset.p1.i32(ptr addrspace(1) [[TMP23]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]
 ; CHECK:       [[CONDFREE]]:
@@ -100,7 +101,8 @@ define amdgpu_kernel void @memcpy_kernel(ptr addrspace(1) %src) sanitize_address
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_kernel, i32 [[TMP20]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    [[TMP27:%.*]] = sext i32 [[TMP22]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i64 [[TMP27]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i32(ptr addrspace(1) [[TMP23]], ptr addrspace(1) [[SRC]], i32 16, i1 false)
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]
 ; CHECK:       [[CONDFREE]]:
@@ -162,9 +164,11 @@ define amdgpu_kernel void @memmove_kernel() sanitize_address {
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP23]], i32 0, i32 0
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP25]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP26]]
+; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP26]] to i64
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr addrspace(3) [[B]] to i32
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP28]]
+; CHECK-NEXT:    [[TMP34:%.*]] = sext i32 [[TMP28]] to i64
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP34]]
 ; CHECK-NEXT:    call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) [[TMP27]], ptr addrspace(1) [[TMP29]], i32 16, i1 false)
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]
 ; CHECK:       [[CONDFREE]]:
@@ -221,7 +225,8 @@ define amdgpu_kernel void @memset_atomic_kernel() sanitize_address {
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_atomic_kernel, i32 [[TMP20]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    [[TMP27:%.*]] = sext i32 [[TMP22]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i64 [[TMP27]]
 ; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p1.i32(ptr addrspace(1) align 4 [[TMP23]], i8 0, i32 16, i32 4)
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]
 ; CHECK:       [[CONDFREE]]:
@@ -277,7 +282,8 @@ define amdgpu_kernel void @memcpy_atomic_kernel(ptr addrspace(1) %src) sanitize_
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel, i32 [[TMP20]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    [[TMP27:%.*]] = sext i32 [[TMP22]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i64 [[TMP27]]
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1.p1.i32(ptr addrspace(1) align 4 [[TMP23]], ptr addrspace(1) align 4 [[SRC]], i32 16, i32 4)
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]
 ; CHECK:       [[CONDFREE]]:
@@ -339,9 +345,11 @@ define amdgpu_kernel void @memmove_atomic_kernel() sanitize_address {
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP23]], i32 0, i32 0
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP25]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP26]]
+; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP26]] to i64
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr addrspace(3) [[B]] to i32
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP28]]
+; CHECK-NEXT:    [[TMP34:%.*]] = sext i32 [[TMP28]] to i64
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP34]]
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1.p1.i32(ptr addrspace(1) align 4 [[TMP27]], ptr addrspace(1) align 4 [[TMP29]], i32 16, i32 4)
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]
 ; CHECK:       [[CONDFREE]]:

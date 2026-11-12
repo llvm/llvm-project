@@ -6,7 +6,7 @@ load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "lit_expand_template")
 load("//llvm:targets.bzl", "llvm_targets")
-load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -178,6 +178,62 @@ gentbl_cc_library(
             "-dialect=test",
         ],
         "lib/Dialect/Test/TestPatterns.inc": ["-gen-rewriters"],
+        "lib/Dialect/Test/TestOpsAttributes.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Attributes",
+        ],
+        "lib/Dialect/Test/TestOpsAttributes.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Attributes",
+        ],
+        "lib/Dialect/Test/TestOpsConversion.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Conversion",
+        ],
+        "lib/Dialect/Test/TestOpsConversion.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Conversion",
+        ],
+        "lib/Dialect/Test/TestOpsCore.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Core",
+        ],
+        "lib/Dialect/Test/TestOpsCore.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Core",
+        ],
+        "lib/Dialect/Test/TestOpsInterfaces.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Interfaces",
+        ],
+        "lib/Dialect/Test/TestOpsInterfaces.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Interfaces",
+        ],
+        "lib/Dialect/Test/TestOpsPatterns.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Patterns",
+        ],
+        "lib/Dialect/Test/TestOpsPatterns.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Patterns",
+        ],
+        "lib/Dialect/Test/TestOpsProperties.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Properties",
+        ],
+        "lib/Dialect/Test/TestOpsProperties.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Properties",
+        ],
+        "lib/Dialect/Test/TestOpsTraits.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Traits",
+        ],
+        "lib/Dialect/Test/TestOpsTraits.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Traits",
+        ],
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Test/TestOps.td",
@@ -381,25 +437,12 @@ cc_library(
     ],
 )
 
-gentbl_sharded_ops(
-    name = "TestDialectOpSrcs",
-    hdr_out = "lib/Dialect/Test/TestOps.h.inc",
-    shard_count = 20,
-    sharder = "//mlir:mlir-src-sharder",
-    src_file = "lib/Dialect/Test/TestOps.cpp",
-    src_out = "lib/Dialect/Test/TestOps.cpp.inc",
-    tblgen = "//mlir:mlir-tblgen",
-    td_file = "lib/Dialect/Test/TestOps.td",
-    test = True,
-    deps = [":TestOpTdFiles"],
-)
-
 cc_library(
     name = "TestDialect",
     srcs = glob(
         ["lib/Dialect/Test/*.cpp"],
         exclude = ["lib/Dialect/Test/TestToLLVMIRTranslation.cpp"],
-    ) + [":TestDialectOpSrcs"],
+    ),
     hdrs = glob(["lib/Dialect/Test/*.h"]),
     includes = [
         "lib/Dialect/Test",

@@ -518,7 +518,8 @@ static void parseDebugOptions(ArrayRef<const char *> Options) {
   lto_initialize();
   std::vector<const char *> CodegenArgv(1, "libLTO");
   append_range(CodegenArgv, Options);
-  cl::parseCommandLineOptions(LTOContext->getLibraryOptions(), CodegenArgv);
+  cl::parseCommandLineOptions(LTOContext->getLibraryOptions(),
+                              codegen::getToolOptions(), CodegenArgv);
 }
 
 void lto_set_debug_options(const char *const *options, int number) {

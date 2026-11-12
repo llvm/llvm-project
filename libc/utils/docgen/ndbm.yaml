@@ -1,0 +1,32 @@
+posix: posix-2024
+macros:
+  DBM_INSERT:
+    in-latest-posix: ''
+  DBM_REPLACE:
+    in-latest-posix: ''
+functions:
+  dbm_clearerr:
+    in-latest-posix: ''
+  dbm_close:
+    in-latest-posix: ''
+  dbm_delete:
+    in-latest-posix: ''
+  dbm_error:
+    in-latest-posix: ''
+  dbm_fetch:
+    in-latest-posix: ''
+  dbm_firstkey:
+    in-latest-posix: ''
+  dbm_nextkey:
+    in-latest-posix: ''
+  dbm_open:
+    in-latest-posix: ''
+  dbm_store:
+    in-latest-posix: ''
+types:
+  DBM:
+    in-latest-posix: ''
+  datum:
+    in-latest-posix: ''
+  mode_t:
+    in-latest-posix: ''

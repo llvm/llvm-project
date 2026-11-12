@@ -8,10 +8,12 @@
 
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/DJB.h"
 #include <limits>
 #include <map>
 
@@ -77,6 +79,57 @@ bool isIdentifyingChild(const DWARFDie &Die) {
   default:
     return false;
   }
+}
+
+static uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)> ResolveRef,
+    bool IsScope, SmallPtrSetImpl<const DWARFDebugInfoEntry *> &Visited) {
+  const char *Name = nullptr;
+  if (Error Err = finiteLoop([&]() -> Expected<bool> {
+        if (const char *CurrentName = Die.getName(DINameKind::ShortName))
+          Name = CurrentName;
+
+        std::optional<DWARFFormValue> Ref;
+        if (!(Ref = Die.find(dwarf::DW_AT_specification)) &&
+            !(Ref = Die.find(dwarf::DW_AT_abstract_origin)))
+          return false;
+
+        if (!Ref->isFormClass(DWARFFormValue::FC_Reference))
+          return false;
+
+        DWARFDie RefDie = ResolveRef(Die, *Ref);
+        if (!RefDie)
+          return false;
+
+        Die = RefDie;
+        return true;
+      }))
+    consumeError(std::move(Err));
+
+  if (!Name && Die.getTag() == dwarf::DW_TAG_namespace)
+    Name = "(anonymous namespace)";
+
+  // A reference can lead back to a DIE already hashed. End the name there
+  // instead of recursing forever.
+  DWARFDie Parent = Die.getParent();
+  if (!Parent || dwarf::isUnitType(Parent.getTag()) ||
+      Parent.getTag() == dwarf::DW_TAG_module ||
+      !Visited.insert(Die.getDebugInfoEntry()).second)
+    return djbHash(Name ? Name : "", djbHash(IsScope ? "" : "::"));
+
+  return djbHash(Name ? Name : "",
+                 djbHash(Name ? "::" : "",
+                         hashFullyQualifiedName(Parent, ResolveRef,
+                                                /*IsScope=*/true, Visited)));
+}
+
+uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)>
+        ResolveRef) {
+  SmallPtrSet<const DWARFDebugInfoEntry *, 8> Visited;
+  return hashFullyQualifiedName(Die, ResolveRef, /*IsScope=*/false, Visited);
 }
 
 void buildStmtSeqOffsetToFirstRowIndex(

@@ -107,8 +107,8 @@ Error L0KernelTy::setIndirectFlags(L0DeviceTy &L0Device,
                                    L0LaunchEnvTy &KEnv) const {
   // Set Kernel Indirect flags.
   ze_kernel_indirect_access_flags_t Flags = 0;
-  Flags |= L0Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
-  Flags |= L0Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
+  Flags |= L0Device.getMemAllocator(OL_ALLOC_TYPE_HOST).getIndirectFlags();
+  Flags |= L0Device.getMemAllocator(OL_ALLOC_TYPE_DEVICE).getIndirectFlags();
   // Allocations made through a liboffload context live in its own allocators.
   Flags |= UserCtx.getIndirectFlags();
 

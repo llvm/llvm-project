@@ -211,10 +211,8 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
         : DAG(D), TLI(D.getTargetLoweringInfo()),
           STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL),
           BatchAA(BatchAA) {
-      const SelectionDAGOptions &Opts =
-          DAG.getLibraryOptions().get<SelectionDAGOptions>();
       ForCodeSize = DAG.shouldOptForSize();
-      DisableGenericCombines = Opts.combiner_disabled ||
+      DisableGenericCombines = DAG.getSelectionDAGOptions().combiner_disabled ||
                                (STI && STI->disableGenericCombines(OptLevel));
     }
 
@@ -1060,9 +1058,8 @@ static bool isAnyConstantBuildVector(SDValue V, bool NoOpaques = false) {
 }
 
 // Determine if this an indexed load with an opaque target constant index.
-static bool canSplitIdx(LoadSDNode *LD,
-                        const cl::LibraryOptionsContext &LibraryOptions) {
-  return LibraryOptions.get<SelectionDAGOptions>().combiner_split_load_index &&
+static bool canSplitIdx(LoadSDNode *LD, const SelectionDAGOptions &Opts) {
+  return Opts.combiner_split_load_index &&
          (LD->getOperand(2).getOpcode() != ISD::TargetConstant ||
           !cast<ConstantSDNode>(LD->getOperand(2))->isOpaque());
 }
@@ -1810,8 +1807,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
 
-  const SelectionDAGOptions &Opts =
-      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+  const SelectionDAGOptions &Opts = DAG.getSelectionDAGOptions();
   bool UseTopologicalSorting =
       valueOr(Opts.combiner_topological_sorting, TLI.useTopologicalSorting());
 
@@ -2250,8 +2246,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   if (OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
-  const SelectionDAGOptions &Opts =
-      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+  const SelectionDAGOptions &Opts = DAG.getSelectionDAGOptions();
 
   // Don't simplify the token factor if the node itself has too many operands.
   if (N->getNumOperands() > Opts.combiner_tokenfactor_inline_limit)
@@ -20849,7 +20844,7 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
     // Vector conversion the target has to unroll, or one it only supports by
     // widening the operand back up, is not a win.
     if (!hasOperation(ISD::SINT_TO_FP, NarrowVT) ||
-        !TLI.isTypeDesirableForOp(ISD::SINT_TO_FP, NarrowVT) ||
+        !TLI.isTypeDesirableForOp(N, NarrowVT) ||
         !TLI.isTruncateFree(N0, NarrowVT))
       continue;
 
@@ -20918,8 +20913,10 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   for (unsigned Bits = bit_ceil(ActiveBits); Bits < ScalarBits; Bits *= 2) {
     EVT NarrowVT = OpVT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, Bits));
 
-    // Vector conversion is unrolled to scalars, but truncate is not.
+    // Vector conversion is unrolled to scalars, but truncate is not. A type
+    // the target would only widen back up is not a win either.
     if (!hasOperation(ISD::UINT_TO_FP, NarrowVT.getScalarType()) ||
+        !TLI.isTypeDesirableForOp(N, NarrowVT) ||
         !TLI.isTruncateFree(N0, NarrowVT))
       continue;
 
@@ -21024,6 +21021,13 @@ SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
   if (N0.getOpcode() == ISD::FTRUNC)
     return DAG.getNode(ISD::FP_TO_UINT, DL, VT, N0.getOperand(0));
 
+  // fold (fp_to_uint (ffloor x)) -> (fp_to_uint x)
+  // Flooring agrees with truncation for non-negative inputs. Negative inputs
+  // floor to at most -1, which makes the original conversion poison.
+  if (N0.getOpcode() == ISD::FFLOOR)
+    return DAG.getNode(ISD::FP_TO_UINT, DL, VT, N0.getOperand(0),
+                       N->getFlags());
+
   return FoldIntToFPToInt(N, DL, DAG);
 }
 
@@ -21035,6 +21039,13 @@ SDValue DAGCombiner::visitFP_TO_INT_SAT(SDNode *N) {
   if (N0.getOpcode() == ISD::FTRUNC)
     return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
                        N0.getOperand(0), N->getOperand(1));
+
+  // fold (fp_to_uint_sat (ffloor x)) -> (fp_to_uint_sat x)
+  // Flooring agrees with truncation for non-negative inputs, and both forms
+  // saturate negative inputs and NaN to 0.
+  if (N->getOpcode() == ISD::FP_TO_UINT_SAT && N0.getOpcode() == ISD::FFLOOR)
+    return DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N), N->getValueType(0),
+                       N0.getOperand(0), N->getOperand(1), N->getFlags());
 
   return SDValue();
 }
@@ -21754,7 +21765,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
     for (SDUse &Use : BasePtr->uses()) {
       // Skip the use that is Ptr and uses of other results from BasePtr's
@@ -21915,7 +21926,7 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
     return false;
 
   SmallPtrSet<const SDNode *, 32> Visited;
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   for (SDNode *User : BasePtr->users()) {
     if (User == Ptr.getNode())
       continue;
@@ -21962,7 +21973,7 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   // 2) Op must be independent of N, i.e. Op is neither a predecessor
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   for (SDUse &U : Ptr->uses()) {
     if (U.getResNo() != Ptr.getResNo())
       continue;
@@ -22216,7 +22227,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     if (LD->isIndexed()) {
       // Cannot handle opaque target constants and we must respect the user's
       // request not to split indexes from loads.
-      if (!canSplitIdx(LD, DAG.getLibraryOptions()))
+      if (!canSplitIdx(LD, DAG.getSelectionDAGOptions()))
         return SDValue();
       SDValue Idx = SplitIndexingFromLoad(LD);
       SDValue Ops[] = {Val, Idx, Chain};
@@ -22363,7 +22374,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
       // the indexing into an add/sub directly (that TargetConstant may not be
       // valid for a different type of node, and we cannot convert an opaque
       // target constant into a regular constant).
-      bool CanSplitIdx = canSplitIdx(LD, DAG.getLibraryOptions());
+      bool CanSplitIdx = canSplitIdx(LD, DAG.getSelectionDAGOptions());
 
       if (!N->hasAnyUseOfValue(0) && (CanSplitIdx || !N->hasAnyUseOfValue(1))) {
         SDValue Poison = DAG.getPOISON(N->getValueType(0));
@@ -22863,12 +22874,11 @@ static void adjustCostForPairing(SmallVectorImpl<LoadedSlice> &LoadedSlices,
 ///
 /// FIXME: When the cost model will be mature enough, we can relax
 /// constraints (1) and (2).
-static bool
-isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
-                    const APInt &UsedBits, bool ForCodeSize,
-                    const cl::LibraryOptionsContext &LibraryOptions) {
+static bool isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
+                                const APInt &UsedBits, bool ForCodeSize,
+                                const SelectionDAGOptions &Opts) {
   unsigned NumberOfSlices = LoadedSlices.size();
-  if (LibraryOptions.get<SelectionDAGOptions>().combiner_stress_load_slicing)
+  if (Opts.combiner_stress_load_slicing)
     return NumberOfSlices > 1;
 
   // Check (1).
@@ -22977,7 +22987,7 @@ bool DAGCombiner::SliceUpLoad(SDNode *N) {
 
   // Abort slicing if it does not seem to be profitable.
   if (!isSlicingProfitable(LoadedSlices, UsedBits, ForCodeSize,
-                           DAG.getLibraryOptions()))
+                           DAG.getSelectionDAGOptions()))
     return false;
 
   ++SlicedLoads;
@@ -23172,9 +23182,7 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
   if (ST->isTruncatingStore() || VT.isVector())
     return SDValue();
 
-  const SelectionDAGOptions &Opts =
-      DAG.getLibraryOptions().get<SelectionDAGOptions>();
-
+  const SelectionDAGOptions &Opts = DAG.getSelectionDAGOptions();
   unsigned Opc = Value.getOpcode();
 
   if ((Opc != ISD::OR && Opc != ISD::XOR && Opc != ISD::AND) ||
@@ -23700,9 +23708,7 @@ DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
   SDValue Val = peekThroughBitcasts(St->getValue());
   StoreSource StoreSrc = getStoreSource(Val);
   assert(StoreSrc != StoreSource::Unknown && "Expected known source for store");
-
-  const SelectionDAGOptions &Opts =
-      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+  const SelectionDAGOptions &Opts = DAG.getSelectionDAGOptions();
 
   // Match on loadbaseptr if relevant.
   EVT MemVT = St->getMemoryVT();
@@ -24534,9 +24540,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 }
 
 bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
-  const SelectionDAGOptions &Opts =
-      DAG.getLibraryOptions().get<SelectionDAGOptions>();
-
+  const SelectionDAGOptions &Opts = DAG.getSelectionDAGOptions();
   if (OptLevel == CodeGenOptLevel::None || !Opts.combiner_store_merging)
     return false;
 
@@ -31608,6 +31612,9 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
       (N1.getResNo() != N2.getResNo()))
     return SDValue();
 
+  if (N1->getNumOperands() != 2 || N2->getNumOperands() != 2)
+    return SDValue();
+
   // The use checks are intentionally on SDNode because we may be dealing
   // with opcodes that produce more than one SDValue.
   if (!N1->hasOneUse() || !N2->hasOneUse())
@@ -32567,8 +32574,7 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
       return false;
   }
 
-  const SelectionDAGOptions &Opts =
-      DAG.getLibraryOptions().get<SelectionDAGOptions>();
+  const SelectionDAGOptions &Opts = DAG.getSelectionDAGOptions();
   bool UseAA =
       valueOr(Opts.combiner_global_alias_analysis, DAG.getSubtarget().useAA());
   bool UseTBAA = Opts.combiner_use_tbaa;

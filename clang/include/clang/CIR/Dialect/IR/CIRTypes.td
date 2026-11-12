@@ -28,6 +28,7 @@ include "mlir/IR/EnumAttr.td"
 class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
     : TypeDef<CIR_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRTypes.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -389,8 +390,8 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     This type will be the element type of the 'vptr' member of structures that
     require a vtable pointer. The `cir.vtable.address_point` operation returns
     this type. The `cir.vtable.get_vptr` operations returns a pointer to this
-    type. This pointer may be passed to the `cir.vtable.get_virtual_fn_addr`
-    operation to get the address of a virtual function pointer.
+    type. This pointer may be passed to the `cir.vtable.get_virtual_fn`
+    operation to get a virtual function pointer.
 
     The pointer may also be cast to other pointer types in order to perform
     pointer arithmetic based on information encoded in the AST layout to get

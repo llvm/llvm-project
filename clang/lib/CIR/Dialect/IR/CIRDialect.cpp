@@ -829,7 +829,7 @@ void cir::ConditionOp::getSuccessorRegions(
     if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
       regions.emplace_back(cleanup);
     else
-      regions.emplace_back(getOperation());
+      regions.emplace_back(loopOp.getOperation());
     return;
   }
 
@@ -992,7 +992,6 @@ LogicalResult cir::CastOp::verify() {
   mlir::Type resType = getType();
   mlir::Type srcType = getSrc().getType();
   cir::CastKind kind = getKind();
-
   if (getFenvAttr() && !isFloatingPointCastKind(kind))
     return emitOpError()
            << "'fenv' is only valid for floating-point cast kinds";
@@ -1010,18 +1009,33 @@ LogicalResult cir::CastOp::verify() {
   auto srcVTy = mlir::dyn_cast<cir::VectorType>(srcType);
   auto resVTy = mlir::dyn_cast<cir::VectorType>(resType);
   if (srcVTy && resVTy) {
-    if ((kind == cir::CastKind::int_to_float ||
-         kind == cir::CastKind::float_to_int) &&
+    if (kind != cir::CastKind::bitcast &&
         srcVTy.getSize() != resVTy.getSize()) {
-      return emitOpError()
-             << "vector float-to-int and int-to-float casts require "
-                "source and destination vectors to have the same number of "
-                "elements";
+      return emitOpError() << "vector " << cir::stringifyCastKind(kind)
+                           << " cast require source and destination vectors to "
+                              "have the same number of "
+                              "elements";
     }
     // Use the element type of the vector to verify the cast kind. (Except for
     // bitcast, see below.)
     srcType = srcVTy.getElementType();
     resType = resVTy.getElementType();
+  }
+
+  auto srcMatTy = mlir::dyn_cast<cir::MatrixType>(srcType);
+  auto resMatTy = mlir::dyn_cast<cir::MatrixType>(resType);
+  if (srcMatTy && resMatTy) {
+    if (kind != cir::CastKind::bitcast &&
+        (srcMatTy.getNumRows() != resMatTy.getNumRows() ||
+         srcMatTy.getNumColumns() != resMatTy.getNumColumns())) {
+      return emitOpError() << "matrix " << cir::stringifyCastKind(kind)
+                           << " cast require source and destination matrices "
+                              "to have the same number of "
+                              "rows and columns";
+    }
+
+    srcType = srcMatTy.getElementType();
+    resType = resMatTy.getElementType();
   }
 
   switch (kind) {
@@ -2855,6 +2869,12 @@ cir::VTTAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!op)
     return emitOpError("'")
            << name << "' does not reference a valid cir.global";
+  auto resultType = mlir::cast<cir::PointerType>(getAddr().getType());
+  if (op.getAddrSpaceAttr() != resultType.getAddrSpace())
+    return emitOpError()
+           << "result type address space does not match the address "
+              "space of the global @"
+           << name;
   std::optional<mlir::Attribute> init = op.getInitialValue();
   if (!init)
     return success();
@@ -2874,9 +2894,13 @@ LogicalResult cir::VTTAddrPointOp::verify() {
   if (getSymAddr())
     return success();
 
-  mlir::Type resultType = getAddr().getType();
+  // Both pointer levels may carry an address space.
+  auto resultType = mlir::cast<cir::PointerType>(getAddr().getType());
+  auto eltTy = mlir::dyn_cast<cir::PointerType>(resultType.getPointee());
   mlir::Type resTy = cir::PointerType::get(
-      cir::PointerType::get(cir::VoidType::get(getContext())));
+      cir::PointerType::get(cir::VoidType::get(getContext()),
+                            eltTy ? eltTy.getAddrSpace() : nullptr),
+      resultType.getAddrSpace());
 
   if (resultType != resTy)
     return emitOpError("result type must be ")
@@ -3484,28 +3508,6 @@ mlir::LogicalResult cir::FuncOp::verify() {
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// AddOp / SubOp
-//===----------------------------------------------------------------------===//
-
-// The integer-only type constraint on these ops makes the nsw/nuw/sat flag
-// type checks unnecessary. Only the mutual-exclusivity between nsw/nuw and
-// sat needs to be verified.
-
-LogicalResult cir::AddOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
-}
-
-LogicalResult cir::SubOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -4145,6 +4147,9 @@ LogicalResult cir::GetRuntimeMemberOp::verify() {
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
+  if (getType().getAddrSpace() != getAddr().getType().getAddrSpace())
+    return emitError()
+           << "result address space does not match the object address space";
   return mlir::success();
 }
 
@@ -4653,6 +4658,20 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// LdexpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::LdexpOp::verify() {
+  auto srcVecTy = mlir::dyn_cast<cir::VectorType>(getSrc().getType());
+  auto expVecTy = mlir::dyn_cast<cir::VectorType>(getExp().getType());
+  if (!srcVecTy != !expVecTy ||
+      (srcVecTy && srcVecTy.getSize() != expVecTy.getSize()))
+    return emitOpError()
+           << "exponent must have the same number of elements as the value";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MatrixTransposeOp
 //===----------------------------------------------------------------------===//
 
@@ -4969,6 +4988,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   p << ')';
   if (getSideEffects())
     p << " side_effects";
+  if (getConvergent())
+    p << " convergent";
 
   p.printOptionalAttrDict(
       getOperation()->getDiscardableAttrDictionary().getValue());
@@ -4980,7 +5001,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
 void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                              ArrayRef<ValueRange> asmOperands,
                              StringRef asmString, StringRef constraints,
-                             bool sideEffects, cir::AsmFlavor asmFlavor,
+                             bool sideEffects, bool convergent,
+                             cir::AsmFlavor asmFlavor,
                              ArrayRef<Attribute> operandAttrs) {
   // Set up the operands_segments for VariadicOfVariadic
   SmallVector<int32_t> segments;
@@ -4999,6 +5021,9 @@ void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 
   if (sideEffects)
     odsState.addAttribute("side_effects", odsBuilder.getUnitAttr());
+
+  if (convergent)
+    odsState.addAttribute("convergent", odsBuilder.getUnitAttr());
 
   odsState.addAttribute("operand_attrs", odsBuilder.getArrayAttr(operandAttrs));
 }
@@ -5110,6 +5135,9 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 
   if (parser.parseOptionalKeyword("side_effects").succeeded())
     result.attributes.set("side_effects", UnitAttr::get(ctxt));
+
+  if (parser.parseOptionalKeyword("convergent").succeeded())
+    result.attributes.set("convergent", UnitAttr::get(ctxt));
 
   if (parser.parseOptionalAttrDict(result.attributes).failed())
     return mlir::failure();

@@ -174,6 +174,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
+* Removed `mc::RegisterMCTargetOptionsFlags`.
+  A tool that created it now passes `mc::getToolOptions()`, or `codegen::getToolOptions()` with `codegen::RegisterCodeGenFlags`, to `cl::parseCommandLineOptions`.
+
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
 
@@ -183,6 +186,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
   GNU-vs-EABI distinction is now derived entirely from the target triple's
   environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
+
+* Removed `TargetOptions::DebuggerTuning` and the `llc`/`opt`
+  `-debugger-tune=` flag. The debugger to tune debug info for is now
+  controlled by setting the `"debugger-tuning"` module flag.
 
 * Replaced `TargetOptions::EnableMachineFunctionSplitter` with
   `TargetOptions::FunctionSplitting`, and the `-split-machine-functions` and
@@ -206,6 +213,13 @@ Makes programs 10x faster by doing Special New Thing.
   which no longer had any users.
 
 * Removed `LiveVariables` analysis
+
+* `IRBuilder::CreateGEP()` and similar methods will now convert the GEP into a
+  ptradd-compatible representation, using a sequence of `getelementptr i8` and
+  `getelementptr [N x i8]` instructions. The `disableGEPCanonicalization()`
+  method can be used to temporarily disable this behavior. This method exists
+  only to allow incremental migration of LLVM IR tests, and will be removed in
+  the near future.
 
 ### Changes to building LLVM
 
@@ -303,6 +317,9 @@ Makes programs 10x faster by doing Special New Thing.
   ARM64 ABI (calling convention, callee saved registers, stack probing and SEH
   unwind information) and produces PE/COFF objects.
 
+* Added support for the Apple M6, A20 Pro, and S11 CPUs (exposed as,
+  respectively, `apple-m6`, `apple-a20`, and `apple-s11`)
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
@@ -399,6 +416,9 @@ Makes programs 10x faster by doing Special New Thing.
   global variant of Ascalon X without `Zvkng` and with reduced vector FP64
   throughput.
 * Removed X5 from the preserve_most register list.
+* Added `-mcpu=chipsalliance-veer-eh1` for the CHIPS Alliance VeeR EH1
+  processor.
+* The behavior of i128 arguments with the LP64E ABI now matches gcc.
 
 ### Changes to the WebAssembly Backend
 
@@ -488,6 +508,9 @@ Makes programs 10x faster by doing Special New Thing.
   alternative to `LLVMParseCommandLineOptions()` that also captures any error
   during parsing.
 
+* Added `LLVMPrintMetadataToString()` to obtain a `LLVMMetadataRef`'s string
+  representation without having to convert it to a `LLVMValueRef` first.
+
 ### Changes to the CodeGen infrastructure
 
 * `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
@@ -539,15 +562,6 @@ Makes programs 10x faster by doing Special New Thing.
   uncompressed after garbage collection and deduplication, even if the input
   debug sections were compressed. They are now compressed using the input
   format by default.
-
-* llvm-strings now supports the `-e` (`--encoding`) option and by default prints
-  non-ASCII strings it finds, using the system's configured character set. The
-  prior behavior can be restored by specifying `-es` (`--encoding=s`), which is
-  mostly useful on large files when the searched-for strings are known ahead of
-  time to be ASCII, as it searches faster and gives the user fewer results to
-  sift through. The `-eutf8` is also available to search for UTF-8 strings,
-  which is mostly useful on Windows where configuring the system to use UTF-8 is
-  more involved than setting an environment variable.
 
 ### Changes to LLDB
 

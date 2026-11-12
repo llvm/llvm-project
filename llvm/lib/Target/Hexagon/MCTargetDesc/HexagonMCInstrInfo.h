@@ -196,7 +196,7 @@ bool hasImmExt(MCInst const &MCI);
 bool hasNewValue(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasNewValue2(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI);
-bool hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isTmpWrite(MCInstrInfo const &MCII, MCInst const &MCI);
 unsigned iClassOfDuplexPair(unsigned Ga, unsigned Gb);
 
 int64_t minConstant(MCInst const &MCI, size_t Index);
@@ -252,6 +252,8 @@ bool isExtended(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isFloat(MCInstrInfo const &MCII, MCInst const &MCI);
 
 bool isHVX(MCInstrInfo const &MCII, MCInst const &MCI);
+
+bool isHLX(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Returns whether this instruction is an immediate extender
 bool isImmext(MCInst const &MCI);
@@ -314,6 +316,11 @@ bool mustNotExtend(MCExpr const &Expr);
 // Returns true if this instruction requires a slot to execute.
 bool requiresSlot(MCSubtargetInfo const &STI, MCInst const &MCI);
 
+// Returns true if this instruction is an HMX Weight instruction.
+bool isHMXWeight(MCInstrInfo const &MCII, MCInst const &MCI);
+
+// Returns true if this instruction is an HMX Activation instruction.
+bool isHMXActivation(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Returns true if \a MCB would require endloop padding.
 bool LoopNeedsPadding(MCInst const &MCB);
