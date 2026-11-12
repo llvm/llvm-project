@@ -1024,6 +1024,13 @@ Symtab *Module::GetSymtab(bool can_create) {
   return nullptr;
 }
 
+uint32_t Module::GetSymtabState() {
+  if (ObjectFile *objfile = GetObjectFile())
+    if (Symtab *symtab = objfile->GetSymtab(/*can_create=*/false))
+      return symtab->GetState();
+  return eSymtabStateNone;
+}
+
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
                                       std::string object_name) {
   // Container objects whose paths do not specify a file directly can call this
