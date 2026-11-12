@@ -3230,17 +3230,7 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v4i16 (bswap GPRPair:$rs)),
             (PPAIROE_DB GPRPair:$rs, GPRPair:$rs)>;
 
-  // 8/16-bit bitreverse patterns
-  // FIXME: Custom lower?
-  // With Zbkb, brev8 reverses the bits within each byte directly.
-  let append Predicates = [NoStdExtZbkb] in
-  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
-            (BuildGPRPair (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even))),
-                          (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
-  let append Predicates = [HasStdExtZbkb] in
-  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
-            (BuildGPRPair (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
-                          (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)))>;
+  // 16-bit bitreverse patterns. v8i8 is custom lowered to two v4i8.
   def : Pat<(v4i16 (bitreverse GPRPair:$rs)),
             (PPAIROE_DH (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
                                       (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))),
