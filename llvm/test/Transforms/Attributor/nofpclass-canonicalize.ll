@@ -604,9 +604,9 @@ define x86_fp80 @ret_canonicalize_f80__pinf(x86_fp80 nofpclass(nan ninf zero sub
 }
 
 define ppc_fp128 @ret_canonicalize_ppcf128__pinf(ppc_fp128 nofpclass(nan ninf zero sub norm) %x) {
-; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) ppc_fp128 @ret_canonicalize_ppcf128__pinf
+; CHECK-LABEL: define ppc_fp128 @ret_canonicalize_ppcf128__pinf
 ; CHECK-SAME: (ppc_fp128 nofpclass(nan ninf zero sub norm) [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero sub norm) ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 nofpclass(nan ninf zero sub norm) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 nofpclass(nan ninf zero sub norm) [[X]]) #[[ATTR12]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 %x)

@@ -6209,6 +6209,10 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                                unsigned Depth) const {
   KnownFPClass Known;
 
+  // No support for PPCDoubleDouble.
+  if (Op.getValueType().getScalarType() == MVT::ppcf128)
+    return Known;
+
   if (const auto *CFP = dyn_cast<ConstantFPSDNode>(Op))
     return KnownFPClass(CFP->getValueAPF());
 

@@ -6,6 +6,7 @@ declare nofpclass(qnan inf norm sub zero) half @returns_snan_f16()
 declare nofpclass(nan ninf norm sub zero) half @returns_pinf_f16()
 declare nofpclass(nan pinf norm sub zero) half @returns_ninf_f16()
 declare nofpclass(nan norm sub zero) half @returns_inf_f16()
+declare nofpclass(nan norm sub zero) double @returns_inf_f64()
 declare nofpclass(norm sub zero) half @returns_inf_or_nan_f16()
 
 declare nofpclass(inf nan norm psub zero) half @returns_nsub_f16()
@@ -484,4 +485,15 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, half %unkno
   %select = select i1 %cond, half %snan, half %unknown
   %result = fpext half %select to float
   ret float %result
+}
+
+define nofpclass(inf norm sub zero) ppc_fp128 @ret_only_nan__fpext_f64_to_ppcf128() {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) ppc_fp128 @ret_only_nan__fpext_f64_to_ppcf128() {
+; CHECK-NEXT:    [[INF:%.*]] = call double @returns_inf_f64()
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext double [[INF]] to ppc_fp128
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %inf = call double @returns_inf_f64()
+  %result = fpext double %inf to ppc_fp128
+  ret ppc_fp128 %result
 }

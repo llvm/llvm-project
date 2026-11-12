@@ -6,6 +6,7 @@ declare nofpclass(qnan inf norm sub zero) float @returns_snan_f32()
 declare nofpclass(nan ninf norm sub zero) float @returns_pinf_f32()
 declare nofpclass(nan pinf norm sub zero) float @returns_ninf_f32()
 declare nofpclass(nan norm sub zero) float @returns_inf_f32()
+declare nofpclass(nan norm sub zero) ppc_fp128 @returns_inf_ppcf128()
 declare nofpclass(norm sub zero) float @returns_inf_or_nan_f32()
 
 declare nofpclass(inf nan norm psub zero) float @returns_nsub_f32()
@@ -629,6 +630,17 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unkn
   %select = select i1 %cond, float %snan, float %unknown0
   %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
   ret half %result
+}
+
+define nofpclass(inf norm sub zero) float @ret_only_nan__fptrunc_round_ppcf128() {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan__fptrunc_round_ppcf128() {
+; CHECK-NEXT:    [[INF:%.*]] = call ppc_fp128 @returns_inf_ppcf128()
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.fptrunc.round.f32.ppcf128(ppc_fp128 [[INF]], metadata !"round.downward")
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %inf = call ppc_fp128 @returns_inf_ppcf128()
+  %result = call float @llvm.fptrunc.round.f32.ppcf128(ppc_fp128 %inf, metadata !"round.downward")
+  ret float %result
 }
 
 ;-------------------------------------------------------------------------------

@@ -2370,6 +2370,12 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                   FastMathFlags FMF, FPClassTest DemandedMask,
                                   KnownFPClass &Known, const SimplifyQuery &SQ,
                                   unsigned Depth) {
+  // No support for multi-unit-fp-types (Such as PPCDoubleDouble).
+  if (I.getType()->getScalarType()->isMultiUnitFPType() ||
+      I.getOperand(0)->getType()->getScalarType()->isMultiUnitFPType()) {
+    Known.resetAll();
+    return nullptr;
+  }
 
   const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
   const fltSemantics &SrcTy =
@@ -2436,6 +2442,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
   assert(Known == KnownFPClass() && "expected uninitialized state");
 
   Type *VTy = I->getType();
+
+  // No support for PPCDoubleDouble.
+  if (VTy->getScalarType()->isMultiUnitFPType()) {
+    Known.resetAll();
+    return nullptr;
+  }
 
   FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
@@ -2908,6 +2920,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return simplifyDemandedUseFPClassFPTrunc(*this, *I, FMF, DemandedMask,
                                              Known, SQ, Depth);
   case Instruction::FPExt: {
+    // No support for multi-unit-fp-types (Such as PPCDoubleDouble).
+    if (I->getType()->getScalarType()->isMultiUnitFPType() ||
+        I->getOperand(0)->getType()->getScalarType()->isMultiUnitFPType()) {
+      Known.resetAll();
+      return nullptr;
+    }
+
     FPClassTest SrcDemandedMask = DemandedMask;
     if (DemandedMask & fcNan)
       SrcDemandedMask |= fcNan;
