@@ -9,15 +9,26 @@
 
 include "clang/Basic/BuiltinsBase.td"
 
+// CHECK-LABEL: static constexpr char BuiltinStringsStorage[] =
+// CHECK-NEXT:    "\0"
+// CHECK-NEXT:    "__builtin_one_range\0"
+// CHECK-NEXT:    "iiIi\0"
+// CHECK-NEXT:    "nR<1:0:4>\0"
+// CHECK-NEXT:    "__builtin_two_ranges\0"
+// CHECK-NEXT:    "vIiE4iIUi\0"
+// CHECK-NEXT:    "cR<0:-8:8,2:1:65>\0"
+// CHECK-NEXT:    ;
+
 def : Builtin {
-// CHECK: Builtin::Info{{.*}} __builtin_one_range {{.*}} /* nR<1:0:4> */
+// CHECK-LABEL: #ifdef GET_BUILTIN_INFOS
+// CHECK-NEXT: Builtin::Info{Builtin::Info::StrOffsets{1 /* __builtin_one_range */, 21 /* iiIi */, 26 /* nR<1:0:4> */, 0}, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
   let Prototype = "int(int, _Constant int)";
   let Spellings = ["__builtin_one_range"];
   let Attributes = [NoThrow, ArgRange<1, 0, 4>];
 }
 
 def : Builtin {
-// CHECK: Builtin::Info{{.*}} __builtin_two_ranges {{.*}} /* cR<0:-8:8,2:1:65> */
+// CHECK-NEXT: Builtin::Info{Builtin::Info::StrOffsets{36 /* __builtin_two_ranges */, 57 /* vIiE4iIUi */, 67 /* cR<0:-8:8,2:1:65> */, 0}, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
   let Prototype = "void(_Constant int, _ExtVector<4, int>, _Constant unsigned int)";
   let Spellings = ["__builtin_two_ranges"];
   let Attributes = [Const, ArgRange<0, -8, 8>, ArgRange<2, 1, 65>];
