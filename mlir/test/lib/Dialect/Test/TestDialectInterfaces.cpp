@@ -45,7 +45,7 @@ struct TestResourceBlobManagerInterface
 };
 
 namespace {
-enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
+enum test_encoding { k_attr_params = 0, k_test_i32 = 99, k_test_rec = 100 };
 } // namespace
 
 // Test support for interacting with the Bytecode reader/writer.
@@ -60,6 +60,12 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       writer.writeVarInt(test_encoding::k_test_i32);
       return success();
     }
+    if (auto recType = llvm::dyn_cast<TestRecursiveType>(type)) {
+      writer.writeVarInt(test_encoding::k_test_rec);
+      writer.writeOwnedString(recType.getName());
+      writer.writeType(recType.getBody());
+      return success();
+    }
     return failure();
   }
 
@@ -69,6 +75,19 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return Type();
     if (encoding == test_encoding::k_test_i32)
       return TestI32Type::get(getContext());
+    if (encoding == test_encoding::k_test_rec) {
+      StringRef name;
+      if (failed(reader.readString(name)))
+        return Type();
+      // The body may refer back to the type, so bind it before reading the
+      // body.
+      auto recType = TestRecursiveType::get(getContext(), name);
+      Type body;
+      if (failed(reader.bindResult(recType)) || failed(reader.readType(body)) ||
+          failed(recType.setBody(body)))
+        return Type();
+      return recType;
+    }
     return Type();
   }
 
