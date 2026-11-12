@@ -684,8 +684,9 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
   if (isa<InsertElementInst>(I))
     if (const auto *Inserted = dyn_cast<Instruction>(I->getOperand(1)))
       if (!isa<LoadInst, InsertElementInst>(Inserted) &&
-          count_if(Inserted->users(),
-                   [](const User *U) { return !isa<InsertElementInst>(U); }) > 1)
+          count_if(Inserted->users(), [](const User *U) {
+            return !isa<InsertElementInst>(U);
+          }) > 1)
         return VectorInstrContext::HasScalarUser;
 
   // For extracts, check if it has a single use that is a store.

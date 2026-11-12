@@ -15283,12 +15283,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       transform(VL, ShuffleMask.begin(), [](Value *V) {
         return isa<PoisonValue>(V) ? PoisonMaskElem : 0;
       });
-      InstructionCost InsertCost = TTI.getVectorInstrCost(
-          Instruction::InsertElement, VecTy, CostKind, 0,
-          PoisonValue::get(VecTy), *It,
-          ContextHint == TTI::VectorInstrContext::None
-              ? R.getScalarUserContext(*It)
-              : ContextHint);
+      InstructionCost InsertCost =
+          TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                                 PoisonValue::get(VecTy), *It,
+                                 ContextHint == TTI::VectorInstrContext::None
+                                     ? R.getScalarUserContext(*It)
+                                     : ContextHint);
       return InsertCost + getShuffleCost(TTI, TargetTransformInfo::SK_Broadcast,
                                          VecTy, CostKind, ShuffleMask,
                                          /*Index=*/0, /*SubTp=*/nullptr,
