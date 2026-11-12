@@ -296,11 +296,12 @@ bool SSAIfConv::InstrDependenciesAllowIfConv(MachineInstr *I) {
       continue;
     Register Reg = MO.getReg();
 
-    // A reserved register is not tracked by liveness, so a definition of it
-    // must not be executed speculatively.
+    // A user-reserved register is not tracked by liveness, so a definition of
+    // it must not be executed speculatively.
     if (MO.isDef() && Reg.isPhysical() && MRI->isReserved(Reg) &&
-        !MRI->isConstantPhysReg(Reg)) {
-      LLVM_DEBUG(dbgs() << "Won't speculate def of reserved register: " << *I);
+        TRI->isUserReservedReg(*I->getMF(), Reg)) {
+      LLVM_DEBUG(dbgs() << "Won't speculate def of user-reserved register: "
+                        << *I);
       return false;
     }
 

@@ -477,13 +477,14 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
       return false;
     }
 
-    // A reserved register is not tracked by liveness, so a definition of it
-    // must not be executed speculatively.
+    // A user-reserved register is not tracked by liveness, so a definition of
+    // it must not be executed speculatively.
     if (any_of(I.all_defs(), [&](const MachineOperand &MO) {
           return MO.getReg().isPhysical() && MRI->isReserved(MO.getReg()) &&
-                 !MRI->isConstantPhysReg(MO.getReg());
+                 TRI->isUserReservedReg(*MF, MO.getReg());
         })) {
-      LLVM_DEBUG(dbgs() << "Won't speculate def of reserved register: " << I);
+      LLVM_DEBUG(dbgs() << "Won't speculate def of user-reserved register: "
+                        << I);
       return false;
     }
 

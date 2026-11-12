@@ -36,7 +36,8 @@ public:
   }
 
   bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
-  bool isUserReservedReg(const MachineFunction &MF, MCRegister Reg) const;
+  bool isUserReservedReg(const MachineFunction &MF,
+                         MCRegister Reg) const override;
   bool isStrictlyReservedReg(const MachineFunction &MF, MCRegister Reg) const;
   bool isAnyArgRegReserved(const MachineFunction &MF) const;
   void emitReservedArgRegCallError(const MachineFunction &MF) const;
