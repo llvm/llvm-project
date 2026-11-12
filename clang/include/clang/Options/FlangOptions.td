@@ -423,6 +423,10 @@ def finit_local_zero : Flag<["-"], "finit-local-zero">,
            "(alias for -finit-local=zero, GFortran compatibility)">,
   Alias<finit_local_EQ>, AliasArgs<["zero"]>;
 
+def fcheck_already_allocated : Flag<["-"], "fcheck-already-allocated">, Group<f_Group>,
+  HelpText<"Check that an allocatable is not already allocated before an inlined ALLOCATE (default)">;
+def fno_check_already_allocated : Flag<["-"], "fno-check-already-allocated">, Group<f_Group>,
+  HelpText<"Do not check whether an allocatable is already allocated before an inlined ALLOCATE">;
 def fno_realloc_lhs : Flag<["-"], "fno-realloc-lhs">, Group<f_Group>,
   HelpText<"An allocatable left-hand side of an intrinsic assignment is assumed to be allocated and match the shape/type of the right-hand side">;
 def frealloc_lhs : Flag<["-"], "frealloc-lhs">, Group<f_Group>,
