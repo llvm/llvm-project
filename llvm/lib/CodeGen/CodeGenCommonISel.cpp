@@ -284,8 +284,8 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
 static void salvageBuildVector(const MachineRegisterInfo &MRI,
                                MachineInstr &BuildVector, MachineInstr &DbgMI) {
   const DIExpression *Expr = DbgMI.getDebugExpression();
-  if (DbgMI.getNumDebugOperands() != 1 ||
-      !Expr->isSingleLocationExpression() || Expr->isComplex())
+  if (DbgMI.getNumDebugOperands() != 1 || !Expr->isSingleLocationExpression() ||
+      Expr->isComplex())
     return;
 
   unsigned VecSize = MRI.getType(BuildVector.getOperand(0).getReg())
