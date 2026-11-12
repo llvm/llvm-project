@@ -80,7 +80,10 @@ public:
   size_t getNumRelocations() const { return relocations.size(); }
   size_t getNumLiveRelocations() const;
   void writeRelocations(llvm::raw_ostream &os) const;
-  bool generateRelocationCode(raw_ostream &os) const;
+  // Append this chunk's runtime relocation code to `funcs`, starting a new
+  // entry whenever the current one, once wrapped as a function body, would
+  // exceed ctx.arg.maxFunctionBodySize.
+  void generateRelocationCode(std::vector<std::string> &funcs) const;
 
   bool isTLS() const { return flags & llvm::wasm::WASM_SEG_FLAG_TLS; }
   bool isRetained() const { return flags & llvm::wasm::WASM_SEG_FLAG_RETAIN; }
