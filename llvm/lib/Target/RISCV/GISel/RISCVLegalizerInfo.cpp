@@ -220,6 +220,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_BITREVERSE)
       .customFor(ST.hasStdExtZbkb(), {s8})
       .maxScalar(0, sXLen)
+      .widenScalarToNextPow2(0)
       .lower();
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
