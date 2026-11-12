@@ -1686,6 +1686,13 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Scalar Merge
+  case RISCV::BI__builtin_riscv_merge_u32:
+  case RISCV::BI__builtin_riscv_merge_u64:
+    ID = Intrinsic::riscv_merge;
+    IntrinsicTypes = {ResultType};
+    break;
+
   // Scalar Averaging Addition and Subtraction
   case RISCV::BI__builtin_riscv_aadd_i32:
     ID = Intrinsic::riscv_aadd_i32;

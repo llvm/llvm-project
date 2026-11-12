@@ -13869,6 +13869,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, RdHi, Rs1Hi, Rs2Hi);
     return DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, Lo, Hi);
   }
+  case Intrinsic::riscv_merge:
+    // Scalar merge: (rs1, rs2, rd) -> MERGE(mask=rd, rs1, rs2).
+    return DAG.getNode(RISCVISD::MERGE, DL, Op.getValueType(), Op.getOperand(3),
+                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
     // 64-bit packed types on RV32: split into two 32-bit halves.
@@ -18632,6 +18636,39 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64,
                                     Acc.getValue(0), Acc.getValue(1)));
       return;
+    }
+    case Intrinsic::riscv_merge: {
+      EVT VT = N->getValueType(0);
+
+      if (VT == MVT::i64 && !Subtarget.is64Bit()) {
+        auto [RdLo, RdHi] =
+            DAG.SplitScalar(N->getOperand(3), DL, MVT::i32, MVT::i32);
+        auto [Rs1Lo, Rs1Hi] =
+            DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+        auto [Rs2Lo, Rs2Hi] =
+            DAG.SplitScalar(N->getOperand(2), DL, MVT::i32, MVT::i32);
+        SDValue ResLo =
+            DAG.getNode(RISCVISD::MERGE, DL, MVT::i32, RdLo, Rs1Lo, Rs2Lo);
+        SDValue ResHi =
+            DAG.getNode(RISCVISD::MERGE, DL, MVT::i32, RdHi, Rs1Hi, Rs2Hi);
+        Results.push_back(
+            DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, ResLo, ResHi));
+        return;
+      }
+
+      if (VT == MVT::i32 && Subtarget.is64Bit()) {
+        SDValue Rd =
+            DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(3));
+        SDValue Rs1 =
+            DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+        SDValue Rs2 =
+            DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+        SDValue Res = DAG.getNode(RISCVISD::MERGE, DL, MVT::i64, Rd, Rs1, Rs2);
+        Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+        return;
+      }
+
+      reportFatalUsageError("unsupported merge intrinsic");
     }
     case Intrinsic::riscv_pnclipp:
     case Intrinsic::riscv_pnclipup: {

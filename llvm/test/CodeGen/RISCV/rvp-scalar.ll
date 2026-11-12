@@ -4628,3 +4628,75 @@ define i64 @srxi_i64_103(i64 %a, i64 %b) {
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 103)
   ret i64 %1
 }
+
+define i32 @merge_intrinsic_i32_merge(i32 %rd, i32 %rs1, i32 %rs2) nounwind {
+; CHECK-LABEL: merge_intrinsic_i32_merge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.merge.i32(i32 %rs1, i32 %rs2, i32 %rd)
+  ret i32 %res
+}
+
+define i32 @merge_intrinsic_i32_mvm(i32 %rs1, i32 %rd, i32 %rs2) nounwind {
+; CHECK-LABEL: merge_intrinsic_i32_mvm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvm a0, a2, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.merge.i32(i32 %rs1, i32 %rs2, i32 %rd)
+  ret i32 %res
+}
+
+define i32 @merge_intrinsic_i32_mvmn(i32 %rs2, i32 %rs1, i32 %rd) nounwind {
+; CHECK-LABEL: merge_intrinsic_i32_mvmn:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mvmn a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.merge.i32(i32 %rs1, i32 %rs2, i32 %rd)
+  ret i32 %res
+}
+
+define i64 @merge_intrinsic_i64_merge(i64 %rd, i64 %rs1, i64 %rs2) nounwind {
+; RV32-LABEL: merge_intrinsic_i64_merge:
+; RV32:       # %bb.0:
+; RV32-NEXT:    merge a0, a2, a4
+; RV32-NEXT:    merge a1, a3, a5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_intrinsic_i64_merge:
+; RV64:       # %bb.0:
+; RV64-NEXT:    merge a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.merge.i64(i64 %rs1, i64 %rs2, i64 %rd)
+  ret i64 %res
+}
+
+define i64 @merge_intrinsic_i64_mvm(i64 %rs1, i64 %rd, i64 %rs2) nounwind {
+; RV32-LABEL: merge_intrinsic_i64_mvm:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvm a0, a4, a2
+; RV32-NEXT:    mvm a1, a5, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_intrinsic_i64_mvm:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvm a0, a2, a1
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.merge.i64(i64 %rs1, i64 %rs2, i64 %rd)
+  ret i64 %res
+}
+
+define i64 @merge_intrinsic_i64_mvmn(i64 %rs2, i64 %rs1, i64 %rd) nounwind {
+; RV32-LABEL: merge_intrinsic_i64_mvmn:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    mvmn a1, a3, a5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: merge_intrinsic_i64_mvmn:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mvmn a0, a1, a2
+; RV64-NEXT:    ret
+  %res = call i64 @llvm.riscv.merge.i64(i64 %rs1, i64 %rs2, i64 %rd)
+  ret i64 %res
+}
