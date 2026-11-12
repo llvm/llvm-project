@@ -41,6 +41,7 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
@@ -3351,12 +3352,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
-  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
-    cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
-  });
-  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
-    cast<ObjFile<ELFT>>(file)->postParse();
-  });
+  {
+    llvm::TimeTraceScope timeScope("Initialize sections");
+    parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
+      cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
+    });
+    parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
+      cast<ObjFile<ELFT>>(file)->postParse();
+    });
+  }
   parallelForEach(ctx.bitcodeFiles,
                   [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx.nonPrevailingSyms) {
@@ -3447,10 +3451,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // compileBitcodeFiles may have produced lto.tmp object files. After this, no
   // more file will be added.
   auto newObjectFiles = ArrayRef(ctx.objectFiles).slice(numObjsBeforeLTO);
-  parallelForEach(newObjectFiles, [](ELFFileBase *file) {
+  parallelForEachFineGrained(newObjectFiles, [](ELFFileBase *file) {
     cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
   });
-  parallelForEach(newObjectFiles, [](ELFFileBase *file) {
+  parallelForEachFineGrained(newObjectFiles, [](ELFFileBase *file) {
     cast<ObjFile<ELFT>>(file)->postParse();
   });
   for (const DuplicateSymbol &d : ctx.duplicates)
