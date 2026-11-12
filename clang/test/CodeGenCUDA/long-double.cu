@@ -8,7 +8,7 @@
 // RUN:   -emit-llvm -o - -x hip %s 2>&1 | FileCheck %s
 // RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spirv64-amd-amdhsa   -aux-triple x86_64-unknown-gnu-linux -fcuda-is-device   -emit-llvm -o - -x hip %s 2>&1 | FileCheck %s %}
 
-// RUN: %clang_cc1 -triple nvptx \
+// RUN: %clang_cc1 -triple nvptx64 \
 // RUN:   -aux-triple x86_64-unknown-gnu-linux -fcuda-is-device \
 // RUN:   -emit-llvm -o - %s 2>&1 | FileCheck %s
 // RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx   -aux-triple x86_64-unknown-gnu-linux -fcuda-is-device   -emit-llvm -o - %s 2>&1 | FileCheck %s %}
