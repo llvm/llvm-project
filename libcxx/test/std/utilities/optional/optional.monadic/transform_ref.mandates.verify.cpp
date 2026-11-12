@@ -19,7 +19,6 @@
 #include <optional>
 #include <utility>
 
-// clang-format off
 void test() {
   int i = 0;
   std::optional<int&> opt(i);
@@ -56,4 +55,3 @@ void test() {
     // expected-error-re@*:* 0+ {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
   }
 }
-// clang-format on
