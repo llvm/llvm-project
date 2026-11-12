@@ -35,6 +35,10 @@ namespace llvm {
     /// instruction.
     bool IsLargeProc = false;
 
+    /// True if the function allocates IntRegsV8Plus registers, which can put
+    /// values in %o registers that clash with %i registers in leaf procedures.
+    bool UsesV8PlusRegs = false;
+
     /// BranchRelaxationSpillFrameIndex - FrameIndex of the spill slot when
     /// there is no scavenged register in insertIndirectBranch.
     int BranchRelaxationSpillFrameIndex = -1;
@@ -66,6 +70,9 @@ namespace llvm {
 
     void setLargeProc(bool rhs) { IsLargeProc = rhs; }
     bool isLargeProc() const { return IsLargeProc; }
+
+    void setUsesV8PlusRegs() { UsesV8PlusRegs = true; }
+    bool usesV8PlusRegs() const { return UsesV8PlusRegs; }
 
     int getBranchRelaxationSpillFrameIndex() {
       return BranchRelaxationSpillFrameIndex;

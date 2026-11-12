@@ -1866,10 +1866,11 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Atomics are supported on SparcV9. 32-bit atomics are also
   // supported by some Leon SparcV8 variants. Otherwise, atomics
   // are unsupported.
+  //
+  // 32-bit V9 code can only use 64-bit atomics under the V8+ ABI, which
+  // guarantees that the upper halves of the %g and %o registers are preserved.
   if (Subtarget->isV9()) {
-    // TODO: we _ought_ to be able to support 64-bit atomics on 32-bit sparcv9,
-    // but it hasn't been implemented in the backend yet.
-    if (Subtarget->is64Bit())
+    if (Subtarget->is64Bit() || Subtarget->isV8Plus())
       setMaxAtomicSizeInBitsSupported(64);
     else
       setMaxAtomicSizeInBitsSupported(32);
@@ -1891,6 +1892,13 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Legal);
     setOperationAction(ISD::ATOMIC_SWAP, MVT::i64, Legal);
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
+  } else if (Subtarget->isV9() && Subtarget->isV8Plus()) {
+    // As in GCC, 64-bit atomic loads and stores use ldd/std, and 64-bit
+    // compare-and-swap uses casx on values packed into %g/%o registers.
+    // Everything else is expanded to a compare-and-swap loop.
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
   }
@@ -3563,7 +3571,21 @@ static SDValue LowerFNEGorFABS(SDValue Op, SelectionDAG &DAG, bool isV9) {
 }
 
 static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
-  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering())) {
+  auto *AN = cast<AtomicSDNode>(Op);
+
+  // 64-bit atomic store in 32-bit V8+ code: like GCC's atomic_storedi_1, use
+  // std, which is atomic for doubleword-aligned addresses. The load side is
+  // handled in ReplaceNodeResults.
+  if (Op.getOpcode() == ISD::ATOMIC_STORE &&
+      Op.getOperand(1).getValueType() == MVT::i64 &&
+      !DAG.getSubtarget<SparcSubtarget>().is64Bit()) {
+    SDLoc DL(Op);
+    SDValue Val = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, Op.getOperand(1));
+    return DAG.getStore(AN->getChain(), DL, Val, AN->getBasePtr(),
+                        AN->getMemOperand());
+  }
+
+  if (isStrongerThanMonotonic(AN->getSuccessOrdering())) {
     // Expand with a fence.
     return SDValue();
   }
@@ -4199,6 +4221,40 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Res = DAG.getNode(ISD::BITCAST, dl, MVT::i64, LoadRes);
     Results.push_back(Res);
     Results.push_back(LoadRes.getValue(1));
+    return;
+  }
+  case ISD::ATOMIC_LOAD: {
+    // 64-bit atomic load in 32-bit V8+ code: like GCC's atomic_loaddi_1, use
+    // ldd, which is atomic for doubleword-aligned addresses. Ordering is
+    // handled by the fences AtomicExpand inserted around it.
+    auto *AN = cast<AtomicSDNode>(N);
+    assert(AN->getMemoryVT() == MVT::i64 && !Subtarget->is64Bit());
+    SDValue LoadRes = DAG.getLoad(MVT::v2i32, dl, AN->getChain(),
+                                  AN->getBasePtr(), AN->getMemOperand());
+    Results.push_back(DAG.getNode(ISD::BITCAST, dl, MVT::i64, LoadRes));
+    Results.push_back(LoadRes.getValue(1));
+    return;
+  }
+  case ISD::ATOMIC_CMP_SWAP: {
+    // 64-bit compare-and-swap in 32-bit V8+ code. See CASX_V8PLUS.
+    auto *AN = cast<AtomicSDNode>(N);
+    assert(AN->getMemoryVT() == MVT::i64 && !Subtarget->is64Bit());
+    auto [CmpLo, CmpHi] =
+        DAG.SplitScalar(N->getOperand(2), dl, MVT::i32, MVT::i32);
+    auto [NewLo, NewHi] =
+        DAG.SplitScalar(N->getOperand(3), dl, MVT::i32, MVT::i32);
+    SDValue Ops[] = {N->getOperand(1), CmpHi, CmpLo, NewHi, NewLo,
+                     N->getOperand(0)};
+    MachineSDNode *CAS = DAG.getMachineNode(
+        SP::CASX_V8PLUS, dl,
+        DAG.getVTList(MVT::i32, MVT::i32, MVT::i32, MVT::Other), Ops);
+    DAG.setNodeMemRefs(CAS, {AN->getMemOperand()});
+    DAG.getMachineFunction()
+        .getInfo<SparcMachineFunctionInfo>()
+        ->setUsesV8PlusRegs();
+    SDValue Hi(CAS, 0), Lo(CAS, 1);
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi));
+    Results.push_back(SDValue(CAS, 3));
     return;
   }
   }

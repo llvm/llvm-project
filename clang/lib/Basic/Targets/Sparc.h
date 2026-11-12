@@ -134,6 +134,7 @@ public:
   CPUGeneration getCPUGeneration(CPUKind Kind) const;
 
   CPUFamily getCPUFamily(CPUKind Kind) const;
+  static bool hasLeonCASA(CPUKind Kind);
 
   CPUKind getCPUKind(StringRef Name) const;
 
@@ -155,6 +156,8 @@ public:
 
 // SPARC v8 is the 32-bit mode selected by Triple::sparc.
 class LLVM_LIBRARY_VISIBILITY SparcV8TargetInfo : public SparcTargetInfo {
+  bool V8Plus = false;
+
 public:
   SparcV8TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : SparcTargetInfo(Triple, Opts) {
@@ -186,15 +189,27 @@ public:
       LongDoubleFormat = &llvm::APFloat::IEEEquad();
     }
 
-    // Up to 32 bits (V8) or 64 bits (V9) are lock-free atomic, but we're
-    // willing to do atomic ops on up to 64 bits.
+    // We're willing to do atomic ops on up to 64 bits. Which of those are
+    // lock-free is decided in setMaxAtomicWidth.
     MaxAtomicPromoteWidth = 64;
+  }
+
+  bool handleTargetFeatures(std::vector<std::string> &Features,
+                            DiagnosticsEngine &Diags) override {
+    if (!SparcTargetInfo::handleTargetFeatures(Features, Diags))
+      return false;
+    V8Plus = llvm::is_contained(Features, "+v8plus");
+    return true;
+  }
+
+  void setMaxAtomicWidth() override {
     if (getCPUGeneration(CPU) == CG_V9)
-      MaxAtomicInlineWidth = 64;
+      // Like GCC, 64-bit atomics in 32-bit code need V8+ mode, where the
+      // %g and %o registers are 64 bits wide.
+      MaxAtomicInlineWidth = V8Plus ? 64 : 32;
     else
-      // FIXME: This isn't correct for plain V8 which lacks CAS,
-      // only for LEON 3+ and Myriad.
-      MaxAtomicInlineWidth = 32;
+      // Plain V8 lacks CAS; only the LEON and Myriad 2 CPUs with CASA have it.
+      MaxAtomicInlineWidth = hasLeonCASA(CPU) ? 32 : 0;
   }
 
   void getTargetDefines(const LangOptions &Opts,
