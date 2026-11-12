@@ -779,6 +779,11 @@ void Vreg1LoweringHelper::collectIncomingValuesFromPhi(
 
 void Vreg1LoweringHelper::replaceDstReg(Register NewReg, Register OldReg,
                                         MachineBasicBlock *MBB) {
+  // NewReg may have a more constrained lane mask class than OldReg, e.g.
+  // SReg_32_XM0_XEXEC if it is used as a V_CNDMASK condition. Preserve that
+  // constraint when merging the registers.
+  if (isLaneMaskReg(NewReg))
+    MRI->constrainRegClass(OldReg, MRI->getRegClass(NewReg));
   MRI->replaceRegWith(NewReg, OldReg);
 }
 
