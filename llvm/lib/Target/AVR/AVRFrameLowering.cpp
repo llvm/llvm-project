@@ -270,9 +270,18 @@ bool AVRFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // Note that reading the return address requires a frame index, and that frame
   // indexes are always referenced through Y (see
   // AVRRegisterInfo::eliminateFrameIndex).
+  //
+  // A function that passes arguments on the stack has a frame pointer too, so
+  // that it reserves the room for them in its frame and stores them through Y
+  // (see hasReservedCallFrame). Otherwise each call would move the stack
+  // pointer through Z, then store the arguments through Z, which the register
+  // allocator does not know to leave alone in between. A naked function has
+  // no prologue to set up a frame pointer.
   return (FuncInfo->getHasSpills() || FuncInfo->getHasAllocas() ||
           FuncInfo->getHasStackArgs() || MFI.hasVarSizedObjects() ||
-          MFI.isFrameAddressTaken() || MFI.isReturnAddressTaken());
+          MFI.isFrameAddressTaken() || MFI.isReturnAddressTaken() ||
+          (MFI.getMaxCallFrameSize() != 0 &&
+           !MF.getFunction().hasFnAttribute(Attribute::Naked)));
 }
 
 bool AVRFrameLowering::spillCalleeSavedRegisters(

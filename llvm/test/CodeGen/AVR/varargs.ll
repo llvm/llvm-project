@@ -42,18 +42,18 @@ define void @varargcall() {
 ; CHECK-LABEL: varargcall:
 ; CHECK: ldi [[REG1:r[0-9]+]], 191
 ; CHECK: ldi [[REG2:r[0-9]+]], 223
-; CHECK: std Z+6, [[REG2]]
-; CHECK: std Z+5, [[REG1]]
+; CHECK: std Y+6, [[REG2]]
+; CHECK: std Y+5, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 189
 ; CHECK: ldi [[REG2:r[0-9]+]], 205
-; CHECK: std Z+4, [[REG2]]
-; CHECK: std Z+3, [[REG1]]
+; CHECK: std Y+4, [[REG2]]
+; CHECK: std Y+3, [[REG1]]
 ; CHECK: ldi [[REG1:r[0-9]+]], 205
 ; CHECK: ldi [[REG2:r[0-9]+]], 171
-; CHECK: std Z+2, [[REG2]]
-; CHECK: std Z+1, [[REG1]]
+; CHECK: std Y+2, [[REG2]]
+; CHECK: std Y+1, [[REG1]]
 ; CHECK: call
-; CHECK: adiw r30, 6
+; CHECK: adiw r28, 6
   tail call void (i16, ...) @var1223(i16 -21555, i16 -12867, i16 -8257)
   ret void
 }
