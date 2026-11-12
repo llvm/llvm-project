@@ -12,6 +12,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Process.h"
 
@@ -136,19 +137,42 @@ public:
 };
 
 static void printUsage() {
-  llvm::errs() << "Usage: diagtool tree [--internal] [<diagnostic-group>]\n";
+  llvm::errs()
+      << "Usage: diagtool tree [--internal] [--color[=<always|auto|never>]] "
+         "[<diagnostic-group>]\n";
 }
 
+namespace {
+enum class ColorMode { Auto, Always, Never, Invalid };
+} // namespace
+
 int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
-  // First check our one flag (--flags-only).
   bool Internal = false;
-  if (argc > 0) {
-    StringRef FirstArg(*argv);
-    if (FirstArg == "--internal") {
+  ColorMode Color = ColorMode::Auto;
+
+  while (argc > 0) {
+    StringRef Arg(*argv);
+    if (Arg == "--internal") {
       Internal = true;
-      --argc;
-      ++argv;
+    } else if (Arg == "--color") {
+      Color = ColorMode::Always;
+    } else if (Arg.consume_front("--color=")) {
+      Color = llvm::StringSwitch<ColorMode>(Arg)
+                  .Case("always", ColorMode::Always)
+                  .Case("auto", ColorMode::Auto)
+                  .Case("never", ColorMode::Never)
+                  .Default(ColorMode::Invalid);
+      if (Color == ColorMode::Invalid) {
+        llvm::errs() << "Invalid value for --color: '" << Arg
+                     << "'; expected 'always', 'auto', or 'never'\n";
+        printUsage();
+        return -1;
+      }
+    } else {
+      break;
     }
+    --argc;
+    ++argv;
   }
 
   bool ShowAll = false;
@@ -170,7 +194,19 @@ int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
     return -1;
   }
 
-  out.enable_colors(out.has_colors());
+  switch (Color) {
+  case ColorMode::Always:
+    out.enable_colors(true);
+    break;
+  case ColorMode::Never:
+    out.enable_colors(false);
+    break;
+  case ColorMode::Auto:
+    out.enable_colors(out.has_colors());
+    break;
+  case ColorMode::Invalid:
+    llvm_unreachable("invalid color mode");
+  }
 
   TreePrinter TP(out);
   TP.Internal = Internal;
