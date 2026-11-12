@@ -375,8 +375,6 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   return true;
 }
 
-/// The '__ptrauth' qualifier of the object of \p E when the result of \p E is
-/// a plain value.
 static PointerAuthQualifier getResultPointerAuth(const AtomicExpr *E) {
   switch (E->getOp()) {
   case AtomicExpr::AO__atomic_load:
