@@ -1113,8 +1113,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
     return std::nullopt;
   } else {
     // Expression references are diagnosed here.  A saved typed expression
-    // needs no further check when Analyze(Expr) returns it later, since the
-    // analysis that produced it has already been through here for its names.
+    // needs no further check when Analyze(Expr) returns it later: unless an
+    // error stopped it early, the analysis that produced it has already been
+    // through here for its names.
     WarnForNumericStorageSize(context_, n);
     const Symbol &ultimate{n.symbol->GetUltimate()};
     if (ultimate.has<semantics::TypeParamDetails>()) {
