@@ -7704,6 +7704,11 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // For an f16 scalar result, we form an i32 result with a truncate regardless
   // of packed vs. unpacked.
   if (IsD16 && !Ty.isVector()) {
+    LLT Ty = MRI->getType(DstReg);
+    if (Ty.isFloatOrFloatVector()) {
+      // TODO: need to figure out whether the ResultRegs[0] is always integer
+      B.buildBitcast(DstReg, B.buildTrunc(Ty.changeToInteger(), ResultRegs[0]));
+    }
     B.buildTrunc(DstReg, ResultRegs[0]);
     return true;
   }
