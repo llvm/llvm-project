@@ -27,8 +27,8 @@
 ; ERR: LLVM ERROR: scalable types are not supported for Arm64EC thunks
 
 ;--- positive.ll
-; Unused external declarations, SVE intrinsics, and non-address-taken local
-; helpers do not require Arm64EC thunks and should compile cleanly.
+;; Unused external declarations, SVE intrinsics, and non-address-taken local
+;; helpers do not require Arm64EC thunks and should compile cleanly.
 declare <vscale x 4 x i32> @unused_sve_decl(<vscale x 4 x i32>)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 immarg)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.add.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
