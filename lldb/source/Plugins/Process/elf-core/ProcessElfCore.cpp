@@ -311,7 +311,7 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   Log *log = GetLog(LLDBLog::Process);
   m_uuids.clear();
   for (NT_FILE_Entry &entry : m_nt_file_entries) {
-    UUID uuid = FindBuidIdInCoreMemory(entry.start, entry.path);
+    UUID uuid = FindBuidIdInCoreMemory(entry.start);
     if (uuid.IsValid()) {
       // Assert that either the path is not in the map or the UUID matches
       assert(m_uuids.count(entry.path) == 0 || m_uuids[entry.path] == uuid);
@@ -1177,14 +1177,12 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
 
 std::optional<lldb::addr_t>
 ProcessElfCore::FindNTFileAddressForFileOffset(lldb::addr_t elf_header_addr,
-                                               llvm::StringRef path,
                                                lldb::addr_t file_offset) {
   // A file can be mapped more than once. The lowest matching address at or
   // above the ELF header belongs to the same load of the file.
   std::optional<lldb::addr_t> result;
   for (const NT_FILE_Entry &entry : m_nt_file_entries) {
-    if (entry.path != path || entry.start < elf_header_addr ||
-        entry.end <= entry.start)
+    if (entry.start < elf_header_addr || entry.end <= entry.start)
       continue;
     if (file_offset < entry.original_file_offset ||
         file_offset - entry.original_file_offset >= entry.end - entry.start)
@@ -1197,8 +1195,7 @@ ProcessElfCore::FindNTFileAddressForFileOffset(lldb::addr_t elf_header_addr,
   return result;
 }
 
-UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address,
-                                            llvm::StringRef path) {
+UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
   UUID invalid_uuid;
   const uint32_t addr_size = GetAddressByteSize();
   const size_t elf_header_size = addr_size == 4 ? sizeof(llvm::ELF::Elf32_Ehdr)
@@ -1219,11 +1216,13 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address,
   elf::ELFHeader elf_header;
   elf_header.Parse(elf_header_data, &offset);
 
-  // e_phoff is a file offset. The program headers are usually in the first
-  // mapping of the file, but tools such as patchelf can move them to a later
-  // segment whose address is not address + e_phoff.
+  // e_phoff is an offset in the file, not from the load address. They are
+  // the same when the program headers are in the first PT_LOAD, but tools
+  // such as patchelf can move them to a segment at the end of the file
+  // that is mapped elsewhere. Before the program headers are read, only
+  // NT_FILE maps file offsets to addresses.
   std::optional<lldb::addr_t> ph_addr_or_none =
-      FindNTFileAddressForFileOffset(address, path, elf_header.e_phoff);
+      FindNTFileAddressForFileOffset(address, elf_header.e_phoff);
   if (!ph_addr_or_none)
     return invalid_uuid;
   const lldb::addr_t ph_addr = *ph_addr_or_none;

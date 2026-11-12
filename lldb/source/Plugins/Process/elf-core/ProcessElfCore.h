@@ -183,14 +183,12 @@ private:
   bool GetMainExecutableModuleSpec(lldb_private::ModuleSpec &exe_spec);
 
   // Returns the value of certain type of note of a given start address
-  lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address,
-                                            llvm::StringRef path);
+  lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);
 
-  // Returns the address at which file_offset of the file at path is mapped,
-  // using the NT_FILE mappings at or above elf_header_addr.
+  // Returns the address at which file_offset of the file whose ELF header is
+  // at elf_header_addr is mapped, using the NT_FILE mappings at or above it.
   std::optional<lldb::addr_t>
   FindNTFileAddressForFileOffset(lldb::addr_t elf_header_addr,
-                                 llvm::StringRef path,
                                  lldb::addr_t file_offset);
 
   // Parse a contiguous address range of the process from LOAD segment
