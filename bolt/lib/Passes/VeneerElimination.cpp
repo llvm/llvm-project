@@ -143,6 +143,12 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
       if (CallSites > 0) {
         ++NumEliminatedVeneers;
         BF.setPseudo(true);
+        // The veneer's branch back is what made its target a secondary entry
+        // point of the caller. With the veneer gone, the entry point stays
+        // only if something else requested it as well.
+        if (CallerBF->getSecondaryEntryPointSymbol(*ReturnBB) ==
+            ReturnTargetSym)
+          CallerBF->releaseEntryPoint(*ReturnBB);
         LLVM_DEBUG(dbgs() << "BOLT-INFO: inlined e843419 veneer "
                           << BF.getOneName() << " at " << CallSites
                           << " branch sites\n");

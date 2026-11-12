@@ -1642,6 +1642,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
   IRBuilder<> IRB(M);
+  IRB.disableGEPCanonicalization();
 
   // A function with catchswitch/catchpad instruction should have a personality
   // function attached to it. Search for the wasm personality function, and if

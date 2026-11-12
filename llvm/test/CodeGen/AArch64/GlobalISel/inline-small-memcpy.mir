@@ -28,7 +28,6 @@
 ---
 name:            test_small_memcpy
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -61,7 +60,6 @@ body:             |
 ---
 name:            test_large_memcpy
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

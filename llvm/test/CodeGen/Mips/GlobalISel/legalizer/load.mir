@@ -3,7 +3,6 @@
 ---
 name:            load_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -24,7 +23,6 @@ body:             |
 ---
 name:            load_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -49,7 +47,6 @@ body:             |
 ---
 name:            load_float
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -70,7 +67,6 @@ body:             |
 ---
 name:            load_double
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

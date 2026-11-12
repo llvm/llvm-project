@@ -29,6 +29,23 @@ llvm.func @arm_sve_udot(%arg0: vector<[16]xi8>,
 }
 
 //===----------------------------------------------------------------------===//
+// MLA intrinsics
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: define <vscale x 4 x float> @arm_sve_fmla
+llvm.func @arm_sve_fmla(%arg0: vector<[4]xf32>,
+                        %arg1: vector<[4]xf32>,
+                        %arg2: vector<[4]xf32>)
+                        -> vector<[4]xf32> {
+  // CHECK: call <vscale x 4 x float> @llvm.aarch64.sve.fmla.lane.nxv4f32(<vscale x 4
+  %c3 = llvm.mlir.constant(3 : i32) : i32
+  %0 = "arm_sve.intr.fmla.lane"(%arg2, %arg0, %arg1, %c3) :
+    (vector<[4]xf32>, vector<[4]xf32>, vector<[4]xf32>, i32)
+        -> vector<[4]xf32>
+  llvm.return %0 : vector<[4]xf32>
+}
+
+//===----------------------------------------------------------------------===//
 // MMLA intrinsics
 //===----------------------------------------------------------------------===//
 

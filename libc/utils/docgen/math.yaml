@@ -1,0 +1,1945 @@
+standard: c23
+posix: posix-2024
+c-reference-root: numeric/math
+family-note: "`✓` indicates correctly rounded for all four rounding modes; ULP values\
+  \ list the largest recorded error; `N/A` marks variants not defined for that format.\
+  \  `long double` (`*l`) entrypoints alias `double`, `f80`, `double-double`, or\
+  \ `_Float128` according to the target ABI, and the `bfloat16` `log` entrypoint\
+  \ is named `log_bf16` to avoid colliding with `_Float16` `logb` (`logbf16`). \
+  \ See {doc}`../math/index` for accuracy goals, GPU conformance, performance benchmarks,\
+  \ and algorithm notes."
+family-columns:
+- key: float
+  label: float
+- key: double
+  label: double
+- key: float80
+  label: f80
+- key: double_double
+  label: double-double
+- key: float16
+  label: _Float16
+- key: float128
+  label: _Float128
+- key: bfloat16
+  label: bfloat16
+families:
+  bf16add:
+    group: Basic Operations
+    variants:
+      float: bf16addf
+      double: bf16add
+      float80: bf16addf80
+      double_double: ''
+      float128: bf16addf128
+    c-definition: 7.12.14.1
+    c-reference: numeric/math
+    c-error: F.10.11
+  bf16div:
+    group: Basic Operations
+    variants:
+      float: bf16divf
+      double: bf16div
+      float80: bf16divf80
+      double_double: ''
+      float128: bf16divf128
+    c-definition: 7.12.14.4
+    c-reference: numeric/math
+    c-error: F.10.11
+  bf16fma:
+    group: Basic Operations
+    variants:
+      float: bf16fmaf
+      double: bf16fma
+      float80: bf16fmaf80
+      double_double: ''
+      float128: bf16fmaf128
+    c-definition: 7.12.14.5
+    c-reference: numeric/math
+    c-error: F.10.11
+  bf16mul:
+    group: Basic Operations
+    variants:
+      float: bf16mulf
+      double: bf16mul
+      float80: bf16mulf80
+      double_double: ''
+      float128: bf16mulf128
+    c-definition: 7.12.14.3
+    c-reference: numeric/math
+    c-error: F.10.11
+  bf16sub:
+    group: Basic Operations
+    variants:
+      float: bf16subf
+      double: bf16sub
+      float80: bf16subf80
+      double_double: ''
+      float128: bf16subf128
+    c-definition: 7.12.14.2
+    c-reference: numeric/math
+    c-error: F.10.11
+  canonicalize:
+    group: Basic Operations
+    variants:
+      float: canonicalizef
+      double: canonicalize
+      float80: canonicalizef80
+      double_double: ''
+      float16: canonicalizef16
+      float128: canonicalizef128
+      bfloat16: canonicalizebf16
+    c-definition: 7.12.11.7
+    c-reference: numeric/math
+    c-error: F.10.8.7
+  ceil:
+    group: Basic Operations
+    variants:
+      float: ceilf
+      double: ceil
+      float80: ceilf80
+      double_double: ''
+      float16: ceilf16
+      float128: ceilf128
+      bfloat16: ceilbf16
+    c-definition: 7.12.9.1
+    c-error: F.10.6.1
+    in-latest-posix: ''
+  copysign:
+    group: Basic Operations
+    variants:
+      float: copysignf
+      double: copysign
+      float80: copysignf80
+      double_double: ''
+      float16: copysignf16
+      float128: copysignf128
+      bfloat16: copysignbf16
+    c-definition: 7.12.11.1
+    c-error: F.10.8.1
+    in-latest-posix: ''
+  dadd:
+    group: Basic Operations
+    variants:
+      float80: daddf80
+      double_double: ''
+      float128: daddf128
+    c-definition: 7.12.14.1
+    c-reference: numeric/math
+    c-error: F.10.11
+  ddiv:
+    group: Basic Operations
+    variants:
+      float80: ddivf80
+      double_double: ''
+      float128: ddivf128
+    c-definition: 7.12.14.4
+    c-reference: numeric/math
+    c-error: F.10.11
+  dfma:
+    group: Basic Operations
+    variants:
+      float80: dfmaf80
+      double_double: ''
+      float128: dfmaf128
+    c-definition: 7.12.14.5
+    c-reference: numeric/math
+    c-error: F.10.11
+  dmul:
+    group: Basic Operations
+    variants:
+      float80: dmulf80
+      double_double: ''
+      float128: dmulf128
+    c-definition: 7.12.14.3
+    c-reference: numeric/math
+    c-error: F.10.11
+  dsub:
+    group: Basic Operations
+    variants:
+      float80: dsubf80
+      double_double: ''
+      float128: dsubf128
+    c-definition: 7.12.14.2
+    c-reference: numeric/math
+    c-error: F.10.11
+  f16add:
+    group: Basic Operations
+    variants:
+      float: f16addf
+      double: f16add
+      float80: f16addf80
+      double_double: ''
+      float128: f16addf128
+    c-definition: 7.12.14.1
+    c-reference: numeric/math
+    c-error: F.10.11
+  f16div:
+    group: Basic Operations
+    variants:
+      float: f16divf
+      double: f16div
+      float80: f16divf80
+      double_double: ''
+      float128: f16divf128
+    c-definition: 7.12.14.4
+    c-reference: numeric/math
+    c-error: F.10.11
+  f16fma:
+    group: Basic Operations
+    variants:
+      float: f16fmaf
+      double: f16fma
+      float80: f16fmaf80
+      double_double: ''
+      float128: f16fmaf128
+    c-definition: 7.12.14.5
+    c-reference: numeric/math
+    c-error: F.10.11
+  f16mul:
+    group: Basic Operations
+    variants:
+      float: f16mulf
+      double: f16mul
+      float80: f16mulf80
+      double_double: ''
+      float128: f16mulf128
+    c-definition: 7.12.14.3
+    c-reference: numeric/math
+    c-error: F.10.11
+  f16sub:
+    group: Basic Operations
+    variants:
+      float: f16subf
+      double: f16sub
+      float80: f16subf80
+      double_double: ''
+      float128: f16subf128
+    c-definition: 7.12.14.2
+    c-reference: numeric/math
+    c-error: F.10.11
+  fabs:
+    group: Basic Operations
+    variants:
+      float: fabsf
+      double: fabs
+      float80: fabsf80
+      double_double: ''
+      float16: fabsf16
+      float128: fabsf128
+      bfloat16: fabsbf16
+    c-definition: 7.12.7.3
+    c-error: F.10.4.3
+    in-latest-posix: ''
+  fadd:
+    group: Basic Operations
+    variants:
+      double: fadd
+      float80: faddf80
+      double_double: ''
+      float128: faddf128
+    c-definition: 7.12.14.1
+    c-reference: numeric/math
+    c-error: F.10.11
+  fdim:
+    group: Basic Operations
+    variants:
+      float: fdimf
+      double: fdim
+      float80: fdimf80
+      double_double: ''
+      float16: fdimf16
+      float128: fdimf128
+      bfloat16: fdimbf16
+    c-definition: 7.12.12.1
+    c-error: F.10.9.1
+    in-latest-posix: ''
+  fdiv:
+    group: Basic Operations
+    variants:
+      double: fdiv
+      float80: fdivf80
+      double_double: ''
+      float128: fdivf128
+    c-definition: 7.12.14.4
+    c-reference: numeric/math
+    c-error: F.10.11
+  ffma:
+    group: Basic Operations
+    variants:
+      double: ffma
+      float80: ffmaf80
+      double_double: ''
+      float128: ffmaf128
+    c-definition: 7.12.14.5
+    c-reference: numeric/math
+    c-error: F.10.11
+  floor:
+    group: Basic Operations
+    variants:
+      float: floorf
+      double: floor
+      float80: floorf80
+      double_double: ''
+      float16: floorf16
+      float128: floorf128
+      bfloat16: floorbf16
+    c-definition: 7.12.9.2
+    c-error: F.10.6.2
+    in-latest-posix: ''
+  fmax:
+    group: Basic Operations
+    variants:
+      float: fmaxf
+      double: fmax
+      float80: fmaxf80
+      double_double: ''
+      float16: fmaxf16
+      float128: fmaxf128
+      bfloat16: fmaxbf16
+    c-definition: 7.12.12.2
+    c-error: F.10.9.2
+    in-latest-posix: ''
+  fmaximum:
+    group: Basic Operations
+    variants:
+      float: fmaximumf
+      double: fmaximum
+      float80: fmaximumf80
+      double_double: ''
+      float16: fmaximumf16
+      float128: fmaximumf128
+      bfloat16: fmaximumbf16
+    c-definition: 7.12.12.4
+    c-reference: numeric/math
+    c-error: F.10.9.4
+  fmaximum_mag:
+    group: Basic Operations
+    variants:
+      float: fmaximum_magf
+      double: fmaximum_mag
+      float80: fmaximum_magf80
+      double_double: ''
+      float16: fmaximum_magf16
+      float128: fmaximum_magf128
+      bfloat16: fmaximum_magbf16
+    c-definition: 7.12.12.6
+    c-reference: numeric/math
+    c-error: F.10.9.4
+  fmaximum_mag_num:
+    group: Basic Operations
+    variants:
+      float: fmaximum_mag_numf
+      double: fmaximum_mag_num
+      float80: fmaximum_mag_numf80
+      double_double: ''
+      float16: fmaximum_mag_numf16
+      float128: fmaximum_mag_numf128
+      bfloat16: fmaximum_mag_numbf16
+    c-definition: 7.12.12.10
+    c-reference: numeric/math
+    c-error: F.10.9.5
+  fmaximum_num:
+    group: Basic Operations
+    variants:
+      float: fmaximum_numf
+      double: fmaximum_num
+      float80: fmaximum_numf80
+      double_double: ''
+      float16: fmaximum_numf16
+      float128: fmaximum_numf128
+      bfloat16: fmaximum_numbf16
+    c-definition: 7.12.12.8
+    c-reference: numeric/math
+    c-error: F.10.9.5
+  fmin:
+    group: Basic Operations
+    variants:
+      float: fminf
+      double: fmin
+      float80: fminf80
+      double_double: ''
+      float16: fminf16
+      float128: fminf128
+      bfloat16: fminbf16
+    c-definition: 7.12.12.3
+    c-error: F.10.9.3
+    in-latest-posix: ''
+  fminimum:
+    group: Basic Operations
+    variants:
+      float: fminimumf
+      double: fminimum
+      float80: fminimumf80
+      double_double: ''
+      float16: fminimumf16
+      float128: fminimumf128
+      bfloat16: fminimumbf16
+    c-definition: 7.12.12.5
+    c-reference: numeric/math
+    c-error: F.10.9.4
+  fminimum_mag:
+    group: Basic Operations
+    variants:
+      float: fminimum_magf
+      double: fminimum_mag
+      float80: fminimum_magf80
+      double_double: ''
+      float16: fminimum_magf16
+      float128: fminimum_magf128
+      bfloat16: fminimum_magbf16
+    c-definition: 7.12.12.7
+    c-reference: numeric/math
+    c-error: F.10.9.4
+  fminimum_mag_num:
+    group: Basic Operations
+    variants:
+      float: fminimum_mag_numf
+      double: fminimum_mag_num
+      float80: fminimum_mag_numf80
+      double_double: ''
+      float16: fminimum_mag_numf16
+      float128: fminimum_mag_numf128
+      bfloat16: fminimum_mag_numbf16
+    c-definition: 7.12.12.11
+    c-reference: numeric/math
+    c-error: F.10.9.5
+  fminimum_num:
+    group: Basic Operations
+    variants:
+      float: fminimum_numf
+      double: fminimum_num
+      float80: fminimum_numf80
+      double_double: ''
+      float16: fminimum_numf16
+      float128: fminimum_numf128
+      bfloat16: fminimum_numbf16
+    c-definition: 7.12.12.9
+    c-reference: numeric/math
+    c-error: F.10.9.5
+  fmod:
+    group: Basic Operations
+    variants:
+      float: fmodf
+      double: fmod
+      float80: fmodf80
+      double_double: ''
+      float16: fmodf16
+      float128: fmodf128
+      bfloat16: fmodbf16
+    c-definition: 7.12.10.1
+    c-error: F.10.7.1
+    in-latest-posix: ''
+  fmul:
+    group: Basic Operations
+    variants:
+      double: fmul
+      float80: fmulf80
+      double_double: ''
+      float128: fmulf128
+    c-definition: 7.12.14.3
+    c-reference: numeric/math
+    c-error: F.10.11
+  frexp:
+    group: Basic Operations
+    variants:
+      float: frexpf
+      double: frexp
+      float80: frexpf80
+      double_double: ''
+      float16: frexpf16
+      float128: frexpf128
+      bfloat16: frexpbf16
+    c-definition: 7.12.6.7
+    c-error: F.10.3.7
+    in-latest-posix: ''
+  fromfp:
+    group: Basic Operations
+    variants:
+      float: fromfpf
+      double: fromfp
+      float80: fromfpf80
+      double_double: ''
+      float16: fromfpf16
+      float128: fromfpf128
+      bfloat16: fromfpbf16
+    c-definition: 7.12.9.10
+    c-reference: numeric/math
+    c-error: F.10.6.10
+  fromfpx:
+    group: Basic Operations
+    variants:
+      float: fromfpxf
+      double: fromfpx
+      float80: fromfpxf80
+      double_double: ''
+      float16: fromfpxf16
+      float128: fromfpxf128
+      bfloat16: fromfpxbf16
+    c-definition: 7.12.9.11
+    c-reference: numeric/math
+    c-error: F.10.6.11
+  fsub:
+    group: Basic Operations
+    variants:
+      double: fsub
+      float80: fsubf80
+      double_double: ''
+      float128: fsubf128
+    c-definition: 7.12.14.2
+    c-reference: numeric/math
+    c-error: F.10.11
+  getpayload:
+    group: Basic Operations
+    variants:
+      float: getpayloadf
+      double: getpayload
+      float80: getpayloadf80
+      double_double: ''
+      float16: getpayloadf16
+      float128: getpayloadf128
+      bfloat16: getpayloadbf16
+    c-definition: F.10.13.1
+    c-reference: numeric/math
+  ilogb:
+    group: Basic Operations
+    variants:
+      float: ilogbf
+      double: ilogb
+      float80: ilogbf80
+      double_double: ''
+      float16: ilogbf16
+      float128: ilogbf128
+      bfloat16: ilogbbf16
+    c-definition: 7.12.6.8
+    c-error: F.10.3.8
+    in-latest-posix: ''
+  iscanonical:
+    group: Basic Operations
+    variants:
+      float: iscanonicalf
+      double: iscanonical
+      float80: iscanonicalf80
+      double_double: ''
+      float16: iscanonicalf16
+      float128: iscanonicalf128
+      bfloat16: iscanonicalbf16
+    c-definition: 7.12.3.2
+    c-reference: numeric/math
+  issignaling:
+    group: Basic Operations
+    variants:
+      float: issignalingf
+      double: issignaling
+      float80: issignalingf80
+      double_double: ''
+      float16: issignalingf16
+      float128: issignalingf128
+      bfloat16: issignalingbf16
+    c-definition: 7.12.3.8
+    c-reference: numeric/math
+  ldexp:
+    group: Basic Operations
+    variants:
+      float: ldexpf
+      double: ldexp
+      float80: ldexpf80
+      double_double: ''
+      float16: ldexpf16
+      float128: ldexpf128
+      bfloat16: ldexpbf16
+    c-definition: 7.12.6.9
+    c-error: F.10.3.9
+    in-latest-posix: ''
+  llogb:
+    group: Basic Operations
+    variants:
+      float: llogbf
+      double: llogb
+      float80: llogbf80
+      double_double: ''
+      float16: llogbf16
+      float128: llogbf128
+      bfloat16: llogbbf16
+    c-definition: 7.12.6.10
+    c-reference: numeric/math
+    c-error: F.10.3.10
+  llrint:
+    group: Basic Operations
+    variants:
+      float: llrintf
+      double: llrint
+      float80: llrintf80
+      double_double: ''
+      float16: llrintf16
+      float128: llrintf128
+      bfloat16: llrintbf16
+    c-definition: 7.12.9.5
+    c-reference: numeric/math/rint
+    c-error: F.10.6.5
+    in-latest-posix: ''
+  llround:
+    group: Basic Operations
+    variants:
+      float: llroundf
+      double: llround
+      float80: llroundf80
+      double_double: ''
+      float16: llroundf16
+      float128: llroundf128
+      bfloat16: llroundbf16
+    c-definition: 7.12.9.7
+    c-reference: numeric/math/round
+    c-error: F.10.6.7
+    in-latest-posix: ''
+  logb:
+    group: Basic Operations
+    variants:
+      float: logbf
+      double: logb
+      float80: logbf80
+      double_double: ''
+      float16: logbf16
+      float128: logbf128
+      bfloat16: logbbf16
+    c-definition: 7.12.6.17
+    c-error: F.10.3.17
+    in-latest-posix: ''
+  lrint:
+    group: Basic Operations
+    variants:
+      float: lrintf
+      double: lrint
+      float80: lrintf80
+      double_double: ''
+      float16: lrintf16
+      float128: lrintf128
+      bfloat16: lrintbf16
+    c-definition: 7.12.9.5
+    c-reference: numeric/math/rint
+    c-error: F.10.6.5
+    in-latest-posix: ''
+  lround:
+    group: Basic Operations
+    variants:
+      float: lroundf
+      double: lround
+      float80: lroundf80
+      double_double: ''
+      float16: lroundf16
+      float128: lroundf128
+      bfloat16: lroundbf16
+    c-definition: 7.12.9.7
+    c-reference: numeric/math/round
+    c-error: F.10.6.7
+    in-latest-posix: ''
+  modf:
+    group: Basic Operations
+    variants:
+      float: modff
+      double: modf
+      float80: modff80
+      double_double: ''
+      float16: modff16
+      float128: modff128
+      bfloat16: modfbf16
+    c-definition: 7.12.6.18
+    c-error: F.10.3.18
+    in-latest-posix: ''
+  nan:
+    group: Basic Operations
+    variants:
+      float: nanf
+      double: nan
+      float80: nanf80
+      double_double: ''
+      float16: nanf16
+      float128: nanf128
+      bfloat16: nanbf16
+    c-definition: 7.12.11.2
+    c-error: F.10.8.2
+    in-latest-posix: ''
+  nearbyint:
+    group: Basic Operations
+    variants:
+      float: nearbyintf
+      double: nearbyint
+      float80: nearbyintf80
+      double_double: ''
+      float16: nearbyintf16
+      float128: nearbyintf128
+      bfloat16: nearbyintbf16
+    c-definition: 7.12.9.3
+    c-error: F.10.6.3
+    in-latest-posix: ''
+  nextafter:
+    group: Basic Operations
+    variants:
+      float: nextafterf
+      double: nextafter
+      float80: nextafterf80
+      double_double: ''
+      float16: nextafterf16
+      float128: nextafterf128
+      bfloat16: nextafterbf16
+    c-definition: 7.12.11.3
+    c-error: F.10.8.3
+    in-latest-posix: ''
+  nextdown:
+    group: Basic Operations
+    variants:
+      float: nextdownf
+      double: nextdown
+      float80: nextdownf80
+      double_double: ''
+      float16: nextdownf16
+      float128: nextdownf128
+      bfloat16: nextdownbf16
+    c-definition: 7.12.11.6
+    c-reference: numeric/math
+    c-error: F.10.8.6
+  nexttoward:
+    group: Basic Operations
+    variants:
+      float: nexttowardf
+      double: nexttoward
+      float80: nexttowardf80
+      double_double: ''
+      float16: nexttowardf16
+      bfloat16: nexttowardbf16
+    c-definition: 7.12.11.4
+    c-reference: numeric/math/nextafter
+    c-error: F.10.8.4
+    in-latest-posix: ''
+  nextup:
+    group: Basic Operations
+    variants:
+      float: nextupf
+      double: nextup
+      float80: nextupf80
+      double_double: ''
+      float16: nextupf16
+      float128: nextupf128
+      bfloat16: nextupbf16
+    c-definition: 7.12.11.5
+    c-reference: numeric/math
+    c-error: F.10.8.5
+  remainder:
+    group: Basic Operations
+    variants:
+      float: remainderf
+      double: remainder
+      float80: remainderf80
+      double_double: ''
+      float16: remainderf16
+      float128: remainderf128
+      bfloat16: remainderbf16
+    c-definition: 7.12.10.2
+    c-error: F.10.7.2
+    in-latest-posix: ''
+  remquo:
+    group: Basic Operations
+    variants:
+      float: remquof
+      double: remquo
+      float80: remquof80
+      double_double: ''
+      float16: remquof16
+      float128: remquof128
+      bfloat16: remquobf16
+    c-definition: 7.12.10.3
+    c-error: F.10.7.3
+    in-latest-posix: ''
+  rint:
+    group: Basic Operations
+    variants:
+      float: rintf
+      double: rint
+      float80: rintf80
+      double_double: ''
+      float16: rintf16
+      float128: rintf128
+      bfloat16: rintbf16
+    c-definition: 7.12.9.4
+    c-error: F.10.6.4
+    in-latest-posix: ''
+  round:
+    group: Basic Operations
+    variants:
+      float: roundf
+      double: round
+      float80: roundf80
+      double_double: ''
+      float16: roundf16
+      float128: roundf128
+      bfloat16: roundbf16
+    c-definition: 7.12.9.6
+    c-error: F.10.6.6
+    in-latest-posix: ''
+  roundeven:
+    group: Basic Operations
+    variants:
+      float: roundevenf
+      double: roundeven
+      float80: roundevenf80
+      double_double: ''
+      float16: roundevenf16
+      float128: roundevenf128
+      bfloat16: roundevenbf16
+    c-definition: 7.12.9.8
+    c-reference: numeric/math
+    c-error: F.10.6.8
+  scalbln:
+    group: Basic Operations
+    variants:
+      float: scalblnf
+      double: scalbln
+      float80: scalblnf80
+      double_double: ''
+      float16: scalblnf16
+      float128: scalblnf128
+      bfloat16: scalblnbf16
+    c-definition: 7.12.6.19
+    c-reference: numeric/math/scalbn
+    c-error: F.10.3.19
+    in-latest-posix: ''
+  scalbn:
+    group: Basic Operations
+    variants:
+      float: scalbnf
+      double: scalbn
+      float80: scalbnf80
+      double_double: ''
+      float16: scalbnf16
+      float128: scalbnf128
+      bfloat16: scalbnbf16
+    c-definition: 7.12.6.19
+    c-error: F.10.3.19
+    in-latest-posix: ''
+  setpayload:
+    group: Basic Operations
+    variants:
+      float: setpayloadf
+      double: setpayload
+      float80: setpayloadf80
+      double_double: ''
+      float16: setpayloadf16
+      float128: setpayloadf128
+      bfloat16: setpayloadbf16
+    c-definition: F.10.13.2
+    c-reference: numeric/math
+  setpayloadsig:
+    group: Basic Operations
+    variants:
+      float: setpayloadsigf
+      double: setpayloadsig
+      float80: setpayloadsigf80
+      double_double: ''
+      float16: setpayloadsigf16
+      float128: setpayloadsigf128
+      bfloat16: setpayloadsigbf16
+    c-definition: F.10.13.3
+    c-reference: numeric/math
+  totalorder:
+    group: Basic Operations
+    variants:
+      float: totalorderf
+      double: totalorder
+      float80: totalorderf80
+      double_double: ''
+      float16: totalorderf16
+      float128: totalorderf128
+      bfloat16: totalorderbf16
+    c-definition: F.10.12.1
+    c-reference: numeric/math
+  totalordermag:
+    group: Basic Operations
+    variants:
+      float: totalordermagf
+      double: totalordermag
+      float80: totalordermagf80
+      double_double: ''
+      float16: totalordermagf16
+      float128: totalordermagf128
+      bfloat16: totalordermagbf16
+    c-definition: F.10.12.2
+    c-reference: numeric/math
+  trunc:
+    group: Basic Operations
+    variants:
+      float: truncf
+      double: trunc
+      float80: truncf80
+      double_double: ''
+      float16: truncf16
+      float128: truncf128
+      bfloat16: truncbf16
+    c-definition: 7.12.9.9
+    c-error: F.10.6.9
+    in-latest-posix: ''
+  ufromfp:
+    group: Basic Operations
+    variants:
+      float: ufromfpf
+      double: ufromfp
+      float80: ufromfpf80
+      double_double: ''
+      float16: ufromfpf16
+      float128: ufromfpf128
+      bfloat16: ufromfpbf16
+    c-definition: 7.12.9.10
+    c-reference: numeric/math
+    c-error: F.10.6.10
+  ufromfpx:
+    group: Basic Operations
+    variants:
+      float: ufromfpxf
+      double: ufromfpx
+      float80: ufromfpxf80
+      double_double: ''
+      float16: ufromfpxf16
+      float128: ufromfpxf128
+      bfloat16: ufromfpxbf16
+    c-definition: 7.12.9.11
+    c-reference: numeric/math
+    c-error: F.10.6.11
+  acos:
+    group: Higher Math Functions
+    variants:
+      float: acosf
+      double: acos
+      float80: acosf80
+      double_double: ''
+      float16: acosf16
+      float128: acosf128
+      bfloat16: acosbf16
+    c-definition: 7.12.4.1
+    c-error: F.10.1.1
+    in-latest-posix: ''
+  acosh:
+    group: Higher Math Functions
+    variants:
+      float: acoshf
+      double: acosh
+      float80: acoshf80
+      double_double: ''
+      float16: acoshf16
+      float128: acoshf128
+      bfloat16: acoshbf16
+    c-definition: 7.12.5.1
+    c-error: F.10.2.1
+    in-latest-posix: ''
+  acospi:
+    group: Higher Math Functions
+    variants:
+      float: acospif
+      double: acospi
+      float80: acospif80
+      double_double: ''
+      float16: acospif16
+      float128: acospif128
+      bfloat16: acospibf16
+    c-definition: 7.12.4.8
+    c-reference: numeric/math
+    c-error: F.10.1.8
+  asin:
+    group: Higher Math Functions
+    variants:
+      float: asinf
+      double: asin
+      float80: asinf80
+      double_double: ''
+      float16: asinf16
+      float128: asinf128
+      bfloat16: asinbf16
+    c-definition: 7.12.4.2
+    c-error: F.10.1.2
+    in-latest-posix: ''
+  asinh:
+    group: Higher Math Functions
+    variants:
+      float: asinhf
+      double: asinh
+      float80: asinhf80
+      double_double: ''
+      float16: asinhf16
+      float128: asinhf128
+      bfloat16: asinhbf16
+    c-definition: 7.12.5.2
+    c-error: F.10.2.2
+    in-latest-posix: ''
+  asinpi:
+    group: Higher Math Functions
+    variants:
+      float: asinpif
+      double: asinpi
+      float80: asinpif80
+      double_double: ''
+      float16: asinpif16
+      float128: asinpif128
+      bfloat16: asinpibf16
+    c-definition: 7.12.4.9
+    c-reference: numeric/math
+    c-error: F.10.1.9
+  atan:
+    group: Higher Math Functions
+    variants:
+      float: atanf
+      double: atan
+      float80: atanf80
+      double_double: ''
+      float16: atanf16
+      float128: atanf128
+      bfloat16: atanbf16
+    accuracy:
+      double: 1 ULP
+    c-definition: 7.12.4.3
+    c-error: F.10.1.3
+    in-latest-posix: ''
+  atan2:
+    group: Higher Math Functions
+    variants:
+      float: atan2f
+      double: atan2
+      float80: atan2f80
+      double_double: ''
+      float16: atan2f16
+      float128: atan2f128
+      bfloat16: atan2bf16
+    accuracy:
+      double: 1 ULP
+      float128: 1 ULP
+    c-definition: 7.12.4.4
+    c-error: F.10.1.4
+    in-latest-posix: ''
+  atan2pi:
+    group: Higher Math Functions
+    variants:
+      float: atan2pif
+      double: atan2pi
+      float80: atan2pif80
+      double_double: ''
+      float16: atan2pif16
+      float128: atan2pif128
+      bfloat16: atan2pibf16
+    c-definition: 7.12.4.11
+    c-reference: numeric/math
+    c-error: F.10.1.11
+  atanh:
+    group: Higher Math Functions
+    variants:
+      float: atanhf
+      double: atanh
+      float80: atanhf80
+      double_double: ''
+      float16: atanhf16
+      float128: atanhf128
+      bfloat16: atanhbf16
+    c-definition: 7.12.5.3
+    c-error: F.10.2.3
+    in-latest-posix: ''
+  atanpi:
+    group: Higher Math Functions
+    variants:
+      float: atanpif
+      double: atanpi
+      float80: atanpif80
+      double_double: ''
+      float16: atanpif16
+      float128: atanpif128
+      bfloat16: atanpibf16
+    c-definition: 7.12.4.10
+    c-reference: numeric/math
+    c-error: F.10.1.10
+  cbrt:
+    group: Higher Math Functions
+    variants:
+      float: cbrtf
+      double: cbrt
+      float80: cbrtf80
+      double_double: ''
+      float16: cbrtf16
+      float128: cbrtf128
+      bfloat16: cbrtbf16
+    c-definition: 7.12.7.1
+    c-error: F.10.4.1
+    in-latest-posix: ''
+  compoundn:
+    group: Higher Math Functions
+    variants:
+      float: compoundnf
+      double: compoundn
+      float80: compoundnf80
+      double_double: ''
+      float16: compoundnf16
+      float128: compoundnf128
+      bfloat16: compoundnbf16
+    c-definition: 7.12.7.2
+    c-reference: numeric/math
+    c-error: F.10.4.2
+  cos:
+    group: Higher Math Functions
+    variants:
+      float: cosf
+      double: cos
+      float80: cosf80
+      double_double: ''
+      float16: cosf16
+      float128: cosf128
+      bfloat16: cosbf16
+    c-definition: 7.12.4.5
+    c-error: F.10.1.5
+    in-latest-posix: ''
+  cosh:
+    group: Higher Math Functions
+    variants:
+      float: coshf
+      double: cosh
+      float80: coshf80
+      double_double: ''
+      float16: coshf16
+      float128: coshf128
+      bfloat16: coshbf16
+    c-definition: 7.12.5.4
+    c-error: F.10.2.4
+    in-latest-posix: ''
+  cospi:
+    group: Higher Math Functions
+    variants:
+      float: cospif
+      double: cospi
+      float80: cospif80
+      double_double: ''
+      float16: cospif16
+      float128: cospif128
+      bfloat16: cospibf16
+    c-definition: 7.12.4.12
+    c-reference: numeric/math
+    c-error: F.10.1.12
+  dsqrt:
+    group: Higher Math Functions
+    variants:
+      float80: dsqrtf80
+      double_double: ''
+      float128: dsqrtf128
+    c-definition: 7.12.14.6
+    c-reference: numeric/math
+    c-error: F.10.11
+  erf:
+    group: Higher Math Functions
+    variants:
+      float: erff
+      double: erf
+      float80: erff80
+      double_double: ''
+      float16: erff16
+      float128: erff128
+      bfloat16: erfbf16
+    c-definition: 7.12.8.1
+    c-error: F.10.5.1
+    in-latest-posix: ''
+  erfc:
+    group: Higher Math Functions
+    variants:
+      float: erfcf
+      double: erfc
+      float80: erfcf80
+      double_double: ''
+      float16: erfcf16
+      float128: erfcf128
+      bfloat16: erfcbf16
+    c-definition: 7.12.8.2
+    c-error: F.10.5.2
+    in-latest-posix: ''
+  exp:
+    group: Higher Math Functions
+    variants:
+      float: expf
+      double: exp
+      float80: expf80
+      double_double: ''
+      float16: expf16
+      float128: expf128
+      bfloat16: expbf16
+    c-definition: 7.12.6.1
+    c-error: F.10.3.1
+    in-latest-posix: ''
+  exp10:
+    group: Higher Math Functions
+    variants:
+      float: exp10f
+      double: exp10
+      float80: exp10f80
+      double_double: ''
+      float16: exp10f16
+      float128: exp10f128
+      bfloat16: exp10bf16
+    c-definition: 7.12.6.2
+    c-reference: numeric/math
+    c-error: F.10.3.2
+  exp10m1:
+    group: Higher Math Functions
+    variants:
+      float: exp10m1f
+      double: exp10m1
+      float80: exp10m1f80
+      double_double: ''
+      float16: exp10m1f16
+      float128: exp10m1f128
+      bfloat16: exp10m1bf16
+    c-definition: 7.12.6.3
+    c-reference: numeric/math
+    c-error: F.10.3.3
+  exp2:
+    group: Higher Math Functions
+    variants:
+      float: exp2f
+      double: exp2
+      float80: exp2f80
+      double_double: ''
+      float16: exp2f16
+      float128: exp2f128
+      bfloat16: exp2bf16
+    c-definition: 7.12.6.4
+    c-error: F.10.3.4
+    in-latest-posix: ''
+  exp2m1:
+    group: Higher Math Functions
+    variants:
+      float: exp2m1f
+      double: exp2m1
+      float80: exp2m1f80
+      double_double: ''
+      float16: exp2m1f16
+      float128: exp2m1f128
+      bfloat16: exp2m1bf16
+    c-definition: 7.12.6.5
+    c-reference: numeric/math
+    c-error: F.10.3.5
+  expm1:
+    group: Higher Math Functions
+    variants:
+      float: expm1f
+      double: expm1
+      float80: expm1f80
+      double_double: ''
+      float16: expm1f16
+      float128: expm1f128
+      bfloat16: expm1bf16
+    c-definition: 7.12.6.6
+    c-error: F.10.3.6
+    in-latest-posix: ''
+  f16sqrt:
+    group: Higher Math Functions
+    variants:
+      float: f16sqrtf
+      double: f16sqrt
+      float80: f16sqrtf80
+      double_double: ''
+      float128: f16sqrtf128
+    c-definition: 7.12.14.6
+    c-reference: numeric/math
+    c-error: F.10.11
+  fma:
+    group: Higher Math Functions
+    variants:
+      float: fmaf
+      double: fma
+      float80: fmaf80
+      double_double: ''
+      float16: fmaf16
+      float128: fmaf128
+      bfloat16: fmabf16
+    c-definition: 7.12.13.1
+    c-error: F.10.10.1
+    in-latest-posix: ''
+  fsqrt:
+    group: Higher Math Functions
+    variants:
+      double: fsqrt
+      float80: fsqrtf80
+      double_double: ''
+      float128: fsqrtf128
+    c-definition: 7.12.14.6
+    c-reference: numeric/math
+    c-error: F.10.11
+  hypot:
+    group: Higher Math Functions
+    variants:
+      float: hypotf
+      double: hypot
+      float80: hypotf80
+      double_double: ''
+      float16: hypotf16
+      float128: hypotf128
+      bfloat16: hypotbf16
+    c-definition: 7.12.7.4
+    c-error: F.10.4.4
+    in-latest-posix: ''
+  lgamma:
+    group: Higher Math Functions
+    variants:
+      float: lgammaf
+      double: lgamma
+      float80: lgammaf80
+      double_double: ''
+      float16: lgammaf16
+      float128: lgammaf128
+      bfloat16: lgammabf16
+    c-definition: 7.12.8.3
+    c-error: F.10.5.3
+    in-latest-posix: ''
+  log:
+    group: Higher Math Functions
+    variants:
+      float: logf
+      double: log
+      float80: logf80
+      double_double: ''
+      float16: logf16
+      float128: logf128
+      bfloat16: log_bf16
+    c-definition: 7.12.6.11
+    c-error: F.10.3.11
+    in-latest-posix: ''
+  log10:
+    group: Higher Math Functions
+    variants:
+      float: log10f
+      double: log10
+      float80: log10f80
+      double_double: ''
+      float16: log10f16
+      float128: log10f128
+      bfloat16: log10bf16
+    c-definition: 7.12.6.12
+    c-error: F.10.3.12
+    in-latest-posix: ''
+  log10p1:
+    group: Higher Math Functions
+    variants:
+      float: log10p1f
+      double: log10p1
+      float80: log10p1f80
+      double_double: ''
+      float16: log10p1f16
+      float128: log10p1f128
+      bfloat16: log10p1bf16
+    c-definition: 7.12.6.13
+    c-reference: numeric/math
+    c-error: F.10.3.13
+  log1p:
+    group: Higher Math Functions
+    variants:
+      float: log1pf
+      double: log1p
+      float80: log1pf80
+      double_double: ''
+      float16: log1pf16
+      float128: log1pf128
+      bfloat16: log1pbf16
+    c-definition: 7.12.6.14
+    c-error: F.10.3.14
+    in-latest-posix: ''
+  log2:
+    group: Higher Math Functions
+    variants:
+      float: log2f
+      double: log2
+      float80: log2f80
+      double_double: ''
+      float16: log2f16
+      float128: log2f128
+      bfloat16: log2bf16
+    c-definition: 7.12.6.15
+    c-error: F.10.3.15
+    in-latest-posix: ''
+  log2p1:
+    group: Higher Math Functions
+    variants:
+      float: log2p1f
+      double: log2p1
+      float80: log2p1f80
+      double_double: ''
+      float16: log2p1f16
+      float128: log2p1f128
+      bfloat16: log2p1bf16
+    c-definition: 7.12.6.16
+    c-reference: numeric/math
+    c-error: F.10.3.16
+  logp1:
+    group: Higher Math Functions
+    variants:
+      float: logp1f
+      double: logp1
+      float80: logp1f80
+      double_double: ''
+      float16: logp1f16
+      float128: logp1f128
+      bfloat16: logp1bf16
+    c-definition: 7.12.6.14
+    c-reference: numeric/math
+    c-error: F.10.3.14
+  pow:
+    group: Higher Math Functions
+    variants:
+      float: powf
+      double: pow
+      float80: powf80
+      double_double: ''
+      float16: powf16
+      float128: powf128
+      bfloat16: powbf16
+    c-definition: 7.12.7.5
+    c-error: F.10.4.5
+    in-latest-posix: ''
+  powi:
+    group: Higher Math Functions
+    variants:
+      float: powif
+      double: powi
+      float80: powif80
+      double_double: ''
+      float16: powif16
+      float128: powif128
+      bfloat16: powibf16
+    extension: llvm-libc
+  pown:
+    group: Higher Math Functions
+    variants:
+      float: pownf
+      double: pown
+      float80: pownf80
+      double_double: ''
+      float16: pownf16
+      float128: pownf128
+      bfloat16: pownbf16
+    c-definition: 7.12.7.6
+    c-reference: numeric/math
+    c-error: F.10.4.6
+  powr:
+    group: Higher Math Functions
+    variants:
+      float: powrf
+      double: powr
+      float80: powrf80
+      double_double: ''
+      float16: powrf16
+      float128: powrf128
+      bfloat16: powrbf16
+    c-definition: 7.12.7.7
+    c-reference: numeric/math
+    c-error: F.10.4.7
+  rootn:
+    group: Higher Math Functions
+    variants:
+      float: rootnf
+      double: rootn
+      float80: rootnf80
+      double_double: ''
+      float16: rootnf16
+      float128: rootnf128
+      bfloat16: rootnbf16
+    c-definition: 7.12.7.8
+    c-reference: numeric/math
+    c-error: F.10.4.8
+  rsqrt:
+    group: Higher Math Functions
+    variants:
+      float: rsqrtf
+      double: rsqrt
+      float80: rsqrtf80
+      double_double: ''
+      float16: rsqrtf16
+      float128: rsqrtf128
+      bfloat16: rsqrtbf16
+    c-definition: 7.12.7.9
+    c-reference: numeric/math
+    c-error: F.10.4.9
+  sin:
+    group: Higher Math Functions
+    variants:
+      float: sinf
+      double: sin
+      float80: sinf80
+      double_double: ''
+      float16: sinf16
+      float128: sinf128
+      bfloat16: sinbf16
+    c-definition: 7.12.4.6
+    c-error: F.10.1.6
+    in-latest-posix: ''
+  sincos:
+    group: Higher Math Functions
+    variants:
+      float: sincosf
+      double: sincos
+      float80: sincosf80
+      double_double: ''
+      float16: sincosf16
+      float128: sincosf128
+      bfloat16: sincosbf16
+    extension: gnu
+  sinh:
+    group: Higher Math Functions
+    variants:
+      float: sinhf
+      double: sinh
+      float80: sinhf80
+      double_double: ''
+      float16: sinhf16
+      float128: sinhf128
+      bfloat16: sinhbf16
+    c-definition: 7.12.5.5
+    c-error: F.10.2.5
+    in-latest-posix: ''
+  sinpi:
+    group: Higher Math Functions
+    variants:
+      float: sinpif
+      double: sinpi
+      float80: sinpif80
+      double_double: ''
+      float16: sinpif16
+      float128: sinpif128
+      bfloat16: sinpibf16
+    c-definition: 7.12.4.13
+    c-reference: numeric/math
+    c-error: F.10.1.13
+  sqrt:
+    group: Higher Math Functions
+    variants:
+      float: sqrtf
+      double: sqrt
+      float80: sqrtf80
+      double_double: ''
+      float16: sqrtf16
+      float128: sqrtf128
+      bfloat16: sqrtbf16
+    c-definition: 7.12.7.10
+    c-error: F.10.4.10
+    in-latest-posix: ''
+  tan:
+    group: Higher Math Functions
+    variants:
+      float: tanf
+      double: tan
+      float80: tanf80
+      double_double: ''
+      float16: tanf16
+      float128: tanf128
+      bfloat16: tanbf16
+    c-definition: 7.12.4.7
+    c-error: F.10.1.7
+    in-latest-posix: ''
+  tanh:
+    group: Higher Math Functions
+    variants:
+      float: tanhf
+      double: tanh
+      float80: tanhf80
+      double_double: ''
+      float16: tanhf16
+      float128: tanhf128
+      bfloat16: tanhbf16
+    c-definition: 7.12.5.6
+    c-error: F.10.2.6
+    in-latest-posix: ''
+  tanpi:
+    group: Higher Math Functions
+    variants:
+      float: tanpif
+      double: tanpi
+      float80: tanpif80
+      double_double: ''
+      float16: tanpif16
+      float128: tanpif128
+      bfloat16: tanpibf16
+    c-definition: 7.12.4.14
+    c-reference: numeric/math
+    c-error: F.10.1.14
+  tgamma:
+    group: Higher Math Functions
+    variants:
+      float: tgammaf
+      double: tgamma
+      float80: tgammaf80
+      double_double: ''
+      float16: tgammaf16
+      float128: tgammaf128
+      bfloat16: tgammabf16
+    c-definition: 7.12.8.4
+    c-error: F.10.5.4
+    in-latest-posix: ''
+types:
+  double_t:
+    c-definition: '7.12'
+    c-reference: numeric/math/float_t
+    in-latest-posix: ''
+  float128:
+    extension: llvm-libc
+  float_t:
+    c-definition: '7.12'
+    c-reference: numeric/math/float_t
+    in-latest-posix: ''
+objects:
+  signgam:
+    in-latest-posix: ''
+macros:
+  FP_FAST_FMA:
+    c-definition: '7.12'
+    c-reference: numeric/math/FP_FAST_FMA
+    in-latest-posix: ''
+  FP_FAST_FMAF:
+    c-definition: '7.12'
+    c-reference: numeric/math/FP_FAST_FMA
+    in-latest-posix: ''
+  FP_FAST_FMAL:
+    c-definition: '7.12'
+    c-reference: numeric/math/FP_FAST_FMA
+    in-latest-posix: ''
+  FP_ILOGB0:
+    c-definition: '7.12'
+    c-reference: numeric/math/ilogb
+    in-latest-posix: ''
+  FP_ILOGBNAN:
+    c-definition: '7.12'
+    c-reference: numeric/math/ilogb
+    in-latest-posix: ''
+  FP_INFINITE:
+    c-definition: '7.12'
+    c-reference: numeric/math/FP_categories
+    in-latest-posix: ''
+  FP_INT_DOWNWARD:
+    c-definition: '7.12'
+  FP_INT_TONEAREST:
+    c-definition: '7.12'
+  FP_INT_TONEARESTFROMZERO:
+    c-definition: '7.12'
+  FP_INT_TOWARDZERO:
+    c-definition: '7.12'
+  FP_INT_UPWARD:
+    c-definition: '7.12'
+  FP_LLOGB0:
+    c-definition: '7.12'
+  FP_LLOGBNAN:
+    c-definition: '7.12'
+  FP_NAN:
+    c-definition: '7.12'
+    c-reference: numeric/math/FP_categories
+    in-latest-posix: ''
+  FP_NORMAL:
+    c-definition: '7.12'
+    c-reference: numeric/math/FP_categories
+    in-latest-posix: ''
+  FP_SUBNORMAL:
+    c-definition: '7.12'
+    c-reference: numeric/math/FP_categories
+    in-latest-posix: ''
+  FP_ZERO:
+    c-definition: '7.12'
+    c-reference: numeric/math/FP_categories
+    in-latest-posix: ''
+  HUGE_VAL:
+    c-definition: '7.12'
+    c-reference: numeric/math/HUGE_VAL
+    in-latest-posix: ''
+  HUGE_VALF:
+    c-definition: '7.12'
+    c-reference: numeric/math/HUGE_VAL
+    in-latest-posix: ''
+  HUGE_VALL:
+    c-definition: '7.12'
+    c-reference: numeric/math/HUGE_VAL
+    in-latest-posix: ''
+  INFINITY:
+    c-definition: '7.12'
+    c-reference: numeric/math/INFINITY
+    in-latest-posix: ''
+  MATH_ERREXCEPT:
+    c-definition: '7.12'
+    c-reference: numeric/math/math_errhandling
+    in-latest-posix: ''
+  MATH_ERRNO:
+    c-definition: '7.12'
+    c-reference: numeric/math/math_errhandling
+    in-latest-posix: ''
+  MAXFLOAT:
+    removed-in-posix-2024: ''
+  M_1_PI:
+    in-latest-posix: ''
+  M_1_PIf:
+    in-latest-posix: ''
+  M_1_PIf128:
+    extension: llvm-libc
+  M_1_PIf16:
+    extension: llvm-libc
+  M_1_PIl:
+    in-latest-posix: ''
+  M_1_SQRTPI:
+    in-latest-posix: ''
+  M_1_SQRTPIf:
+    in-latest-posix: ''
+  M_1_SQRTPIf128:
+    extension: llvm-libc
+  M_1_SQRTPIf16:
+    extension: llvm-libc
+  M_1_SQRTPIl:
+    in-latest-posix: ''
+  M_2_PI:
+    in-latest-posix: ''
+  M_2_PIf:
+    in-latest-posix: ''
+  M_2_PIf128:
+    extension: llvm-libc
+  M_2_PIf16:
+    extension: llvm-libc
+  M_2_PIl:
+    in-latest-posix: ''
+  M_2_SQRTPI:
+    in-latest-posix: ''
+  M_2_SQRTPIf:
+    in-latest-posix: ''
+  M_2_SQRTPIf128:
+    extension: llvm-libc
+  M_2_SQRTPIf16:
+    extension: llvm-libc
+  M_2_SQRTPIl:
+    in-latest-posix: ''
+  M_E:
+    in-latest-posix: ''
+  M_EGAMMA:
+    in-latest-posix: ''
+  M_EGAMMAf:
+    in-latest-posix: ''
+  M_EGAMMAf128:
+    extension: llvm-libc
+  M_EGAMMAf16:
+    extension: llvm-libc
+  M_EGAMMAl:
+    in-latest-posix: ''
+  M_Ef:
+    in-latest-posix: ''
+  M_Ef128:
+    extension: llvm-libc
+  M_Ef16:
+    extension: llvm-libc
+  M_El:
+    in-latest-posix: ''
+  M_LN10:
+    in-latest-posix: ''
+  M_LN10f:
+    in-latest-posix: ''
+  M_LN10f128:
+    extension: llvm-libc
+  M_LN10f16:
+    extension: llvm-libc
+  M_LN10l:
+    in-latest-posix: ''
+  M_LN2:
+    in-latest-posix: ''
+  M_LN2f:
+    in-latest-posix: ''
+  M_LN2f128:
+    extension: llvm-libc
+  M_LN2f16:
+    extension: llvm-libc
+  M_LN2l:
+    in-latest-posix: ''
+  M_LOG10E:
+    in-latest-posix: ''
+  M_LOG10Ef:
+    in-latest-posix: ''
+  M_LOG10Ef128:
+    extension: llvm-libc
+  M_LOG10Ef16:
+    extension: llvm-libc
+  M_LOG10El:
+    in-latest-posix: ''
+  M_LOG2E:
+    in-latest-posix: ''
+  M_LOG2Ef:
+    in-latest-posix: ''
+  M_LOG2Ef128:
+    extension: llvm-libc
+  M_LOG2Ef16:
+    extension: llvm-libc
+  M_LOG2El:
+    in-latest-posix: ''
+  M_PHI:
+    in-latest-posix: ''
+  M_PHIf:
+    in-latest-posix: ''
+  M_PHIf128:
+    extension: llvm-libc
+  M_PHIf16:
+    extension: llvm-libc
+  M_PHIl:
+    in-latest-posix: ''
+  M_PI:
+    in-latest-posix: ''
+  M_PI_2:
+    in-latest-posix: ''
+  M_PI_2f:
+    in-latest-posix: ''
+  M_PI_2f128:
+    extension: llvm-libc
+  M_PI_2f16:
+    extension: llvm-libc
+  M_PI_2l:
+    in-latest-posix: ''
+  M_PI_4:
+    in-latest-posix: ''
+  M_PI_4f:
+    in-latest-posix: ''
+  M_PI_4f128:
+    extension: llvm-libc
+  M_PI_4f16:
+    extension: llvm-libc
+  M_PI_4l:
+    in-latest-posix: ''
+  M_PIf:
+    in-latest-posix: ''
+  M_PIf128:
+    extension: llvm-libc
+  M_PIf16:
+    extension: llvm-libc
+  M_PIl:
+    in-latest-posix: ''
+  M_SQRT1_2:
+    in-latest-posix: ''
+  M_SQRT1_2f:
+    in-latest-posix: ''
+  M_SQRT1_2f128:
+    extension: llvm-libc
+  M_SQRT1_2f16:
+    extension: llvm-libc
+  M_SQRT1_2l:
+    in-latest-posix: ''
+  M_SQRT1_3:
+    in-latest-posix: ''
+  M_SQRT1_3f:
+    in-latest-posix: ''
+  M_SQRT1_3f128:
+    extension: llvm-libc
+  M_SQRT1_3f16:
+    extension: llvm-libc
+  M_SQRT1_3l:
+    in-latest-posix: ''
+  M_SQRT2:
+    in-latest-posix: ''
+  M_SQRT2f:
+    in-latest-posix: ''
+  M_SQRT2f128:
+    extension: llvm-libc
+  M_SQRT2f16:
+    extension: llvm-libc
+  M_SQRT2l:
+    in-latest-posix: ''
+  M_SQRT3:
+    in-latest-posix: ''
+  M_SQRT3f:
+    in-latest-posix: ''
+  M_SQRT3f128:
+    extension: llvm-libc
+  M_SQRT3f16:
+    extension: llvm-libc
+  M_SQRT3l:
+    in-latest-posix: ''
+  NAN:
+    c-definition: '7.12'
+    c-reference: numeric/math/NAN
+    in-latest-posix: ''
+  __STDC_VERSION_MATH_H__:
+    c-definition: '7.12'
+  fpclassify:
+    c-definition: 7.12.3.1
+    c-reference: numeric/math/fpclassify
+    in-latest-posix: ''
+  iscanonical:
+    c-definition: 7.12.3.2
+  isfinite:
+    c-definition: 7.12.3.3
+    c-reference: numeric/math/isfinite
+    in-latest-posix: ''
+  isgreater:
+    c-definition: 7.12.15.1
+    c-reference: numeric/math/isgreater
+    in-latest-posix: ''
+  isgreaterequal:
+    c-definition: 7.12.15.2
+    c-reference: numeric/math/isgreaterequal
+    in-latest-posix: ''
+  isinf:
+    c-definition: 7.12.3.4
+    c-reference: numeric/math/isinf
+    in-latest-posix: ''
+  isless:
+    c-definition: 7.12.15.3
+    c-reference: numeric/math/isless
+    in-latest-posix: ''
+  islessequal:
+    c-definition: 7.12.15.4
+    c-reference: numeric/math/islessequal
+    in-latest-posix: ''
+  islessgreater:
+    c-definition: 7.12.15.5
+    c-reference: numeric/math/islessgreater
+    in-latest-posix: ''
+  isnan:
+    c-definition: 7.12.3.5
+    c-reference: numeric/math/isnan
+    in-latest-posix: ''
+  isnormal:
+    c-definition: 7.12.3.6
+    c-reference: numeric/math/isnormal
+    in-latest-posix: ''
+  issignaling:
+    c-definition: 7.12.3.8
+  issubnormal:
+    c-definition: 7.12.3.9
+  isunordered:
+    c-definition: 7.12.15.6
+    c-reference: numeric/math/isunordered
+    in-latest-posix: ''
+  iszero:
+    c-definition: 7.12.3.10
+  math_errhandling:
+    c-definition: '7.12'
+    c-reference: numeric/math/math_errhandling
+    in-latest-posix: ''
+  signbit:
+    c-definition: 7.12.3.7
+    c-reference: numeric/math/signbit
+    in-latest-posix: ''
+functions:
+  isnan:
+    extension: bsd
+  isnanf:
+    extension: bsd
+  isnanf128:
+    extension: bsd
+  isnanf16:
+    extension: bsd
+  isnanf80:
+    extension: bsd
+  isnanl:
+    extension: bsd
+  j0:
+    in-latest-posix: ''
+  j1:
+    in-latest-posix: ''
+  jn:
+    in-latest-posix: ''
+  lgamma_r:
+    extension: gnu
+  lgammaf_r:
+    extension: gnu
+  lgammal_r:
+    extension: gnu
+  y0:
+    in-latest-posix: ''
+  y1:
+    in-latest-posix: ''
+  yn:
+    in-latest-posix: ''

@@ -51,8 +51,6 @@ public:
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 
   unsigned getCacheLineSize() const override;
-  unsigned getPrefetchDistance() const override;
-  bool enableWritePrefetching() const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
 

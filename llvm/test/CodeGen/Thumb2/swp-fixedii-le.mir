@@ -43,7 +43,6 @@
 ---
 name:            dot
 alignment:       2
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           'float 0.000000e+00'

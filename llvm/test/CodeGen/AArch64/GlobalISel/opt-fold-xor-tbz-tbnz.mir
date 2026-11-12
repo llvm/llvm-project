@@ -127,7 +127,6 @@ name:            dont_flip_eq_zext
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_flip_eq_zext
   ; CHECK: bb.0:
