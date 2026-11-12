@@ -84,6 +84,38 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @loop_unroll_and_jam_reordered_memory_dependence(
+    %arr: memref<5x5xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  scf.for %i = %c1 to %c5 step %c1 {
+    scf.for %j = %c0 to %c4 step %c1 {
+      %im1 = arith.subi %i, %c1 : index
+      %jp1 = arith.addi %j, %c1 : index
+      %value = memref.load %arr[%im1, %jp1] : memref<5x5xi32>
+      memref.store %value, %arr[%i, %j] : memref<5x5xi32>
+    }
+  } {unroll_jam}
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %root: !transform.any_op {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.for"]}
+        attributes{unroll_jam} in %root
+        : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to unroll and jam}}
+    transform.loop.unroll_and_jam %loop factor = 2
+        : !transform.op<"scf.for">
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @loop_unroll_and_jam_unsupported_loop_with_results() -> index {
   %c0 = arith.constant 0 : index
   %c40 = arith.constant 40 : index
