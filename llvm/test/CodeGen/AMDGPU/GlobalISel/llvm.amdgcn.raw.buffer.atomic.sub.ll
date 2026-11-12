@@ -273,6 +273,7 @@ define amdgpu_ps float @raw_buffer_atomic_sub_i32__sgpr_val__vgpr_rsrc__sgpr_vof
   ; GFX1200-NEXT: bb.2:
   ; GFX1200-NEXT:   successors: %bb.3(0x80000000)
   ; GFX1200-NEXT: {{  $}}
+  ; GFX1200-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_]], %bb.1, %38, %bb.3
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
@@ -282,19 +283,17 @@ define amdgpu_ps float @raw_buffer_atomic_sub_i32__sgpr_val__vgpr_rsrc__sgpr_vof
   ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; GFX1200-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
   ; GFX1200-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
-  ; GFX1200-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY11]], [[COPY9]], implicit $exec
-  ; GFX1200-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY12]], [[COPY10]], implicit $exec
-  ; GFX1200-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
-  ; GFX1200-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
-  ; GFX1200-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[S_AND_B32_1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY11]], [[COPY9]], implicit-def $exec, implicit $exec
+  ; GFX1200-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY12]], [[COPY10]], implicit-def $exec, implicit $exec
+  ; GFX1200-NEXT:   V_CMPX_EQ_U32_nosdst_e32_term [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit-def $exec, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT:   [[BUFFER_ATOMIC_SUB_VBUFFER_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_VBUFFER_OFFEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (i32), align 1, addrspace 8)
-  ; GFX1200-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def dead $scc
+  ; GFX1200-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_B32 [[PHI]], $exec_lo, implicit-def dead $scc
+  ; GFX1200-NEXT:   $exec_lo = S_MOV_B32_term [[S_ANDN2_B32_]]
   ; GFX1200-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.4:
@@ -326,6 +325,7 @@ define amdgpu_ps float @raw_buffer_atomic_sub_i32__sgpr_val__vgpr_rsrc__sgpr_vof
   ; GFX1250-NEXT: bb.2:
   ; GFX1250-NEXT:   successors: %bb.3(0x80000000)
   ; GFX1250-NEXT: {{  $}}
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_]], %bb.1, %38, %bb.3
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
@@ -335,19 +335,17 @@ define amdgpu_ps float @raw_buffer_atomic_sub_i32__sgpr_val__vgpr_rsrc__sgpr_vof
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
   ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
-  ; GFX1250-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY11]], [[COPY9]], implicit $exec
-  ; GFX1250-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY12]], [[COPY10]], implicit $exec
-  ; GFX1250-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
-  ; GFX1250-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
-  ; GFX1250-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[S_AND_B32_1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY11]], [[COPY9]], implicit-def $exec, implicit $exec
+  ; GFX1250-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY12]], [[COPY10]], implicit-def $exec, implicit $exec
+  ; GFX1250-NEXT:   V_CMPX_EQ_U32_nosdst_e32_term [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit-def $exec, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[BUFFER_ATOMIC_SUB_VBUFFER_OFFEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_VBUFFER_OFFEN_RTN [[COPY7]], [[COPY8]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (i32), align 1, addrspace 8)
-  ; GFX1250-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def dead $scc
+  ; GFX1250-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_B32 [[PHI]], $exec_lo, implicit-def dead $scc
+  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32_term [[S_ANDN2_B32_]]
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.4:
@@ -437,6 +435,7 @@ define amdgpu_ps void @raw_buffer_atomic_sub_i32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX1200-NEXT: bb.2:
   ; GFX1200-NEXT:   successors: %bb.3(0x80000000)
   ; GFX1200-NEXT: {{  $}}
+  ; GFX1200-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_]], %bb.1, %37, %bb.3
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
@@ -446,19 +445,17 @@ define amdgpu_ps void @raw_buffer_atomic_sub_i32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; GFX1200-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
   ; GFX1200-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
-  ; GFX1200-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY11]], [[COPY9]], implicit $exec
-  ; GFX1200-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY12]], [[COPY10]], implicit $exec
-  ; GFX1200-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
-  ; GFX1200-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
-  ; GFX1200-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; GFX1200-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[S_AND_B32_1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1200-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY11]], [[COPY9]], implicit-def $exec, implicit $exec
+  ; GFX1200-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY12]], [[COPY10]], implicit-def $exec, implicit $exec
+  ; GFX1200-NEXT:   V_CMPX_EQ_U32_nosdst_e32_term [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit-def $exec, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3:
   ; GFX1200-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT:   BUFFER_ATOMIC_SUB_VBUFFER_OFFEN [[COPY7]], [[COPY8]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (i32), align 1, addrspace 8)
-  ; GFX1200-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def dead $scc
+  ; GFX1200-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_B32 [[PHI]], $exec_lo, implicit-def dead $scc
+  ; GFX1200-NEXT:   $exec_lo = S_MOV_B32_term [[S_ANDN2_B32_]]
   ; GFX1200-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.4:
@@ -489,6 +486,7 @@ define amdgpu_ps void @raw_buffer_atomic_sub_i32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX1250-NEXT: bb.2:
   ; GFX1250-NEXT:   successors: %bb.3(0x80000000)
   ; GFX1250-NEXT: {{  $}}
+  ; GFX1250-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_]], %bb.1, %37, %bb.3
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY1]], implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
@@ -498,19 +496,17 @@ define amdgpu_ps void @raw_buffer_atomic_sub_i32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub2_sub3
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub0_sub1
   ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
-  ; GFX1250-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY11]], [[COPY9]], implicit $exec
-  ; GFX1250-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY12]], [[COPY10]], implicit $exec
-  ; GFX1250-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
-  ; GFX1250-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit $exec
-  ; GFX1250-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[S_AND_B32_]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
-  ; GFX1250-NEXT:   [[S_AND_SAVEEXEC_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 [[S_AND_B32_1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX1250-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY11]], [[COPY9]], implicit-def $exec, implicit $exec
+  ; GFX1250-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term [[COPY12]], [[COPY10]], implicit-def $exec, implicit $exec
+  ; GFX1250-NEXT:   V_CMPX_EQ_U32_nosdst_e32_term [[V_READFIRSTLANE_B32_4]], [[COPY6]], implicit-def $exec, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   BUFFER_ATOMIC_SUB_VBUFFER_OFFEN [[COPY7]], [[COPY8]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (i32), align 1, addrspace 8)
-  ; GFX1250-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def dead $scc
+  ; GFX1250-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_B32 [[PHI]], $exec_lo, implicit-def dead $scc
+  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32_term [[S_ANDN2_B32_]]
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.4:
