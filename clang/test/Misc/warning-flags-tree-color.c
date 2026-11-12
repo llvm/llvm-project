@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-windows
+// REQUIRES: ansi-escape-sequences
 
 // RUN: diagtool tree --color -Wgnu | FileCheck -check-prefix CHECK-COLOR %s
 // RUN: diagtool tree --color=always -Wgnu | FileCheck -check-prefix CHECK-COLOR %s
