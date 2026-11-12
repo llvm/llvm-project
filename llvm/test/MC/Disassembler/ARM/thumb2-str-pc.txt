@@ -1,0 +1,18 @@
+# RUN: llvm-mc -triple=thumbv7 -disassemble %s 2>&1 | FileCheck %s
+
+# Stores with Rt = PC are UNPREDICTABLE and decode with a warning.
+
+[0xcd,0xf8,0x3c,0xf0]
+[0x40,0xf8,0x04,0xfc]
+[0x40,0xf8,0x01,0xf0]
+[0x40,0xf8,0x04,0xff]
+[0x00,0xf8,0x04,0xfb]
+[0x20,0xf8,0x04,0xff]
+
+# CHECK-COUNT-6: warning: potentially undefined instruction encoding
+# CHECK: str.w pc, [sp, #60]
+# CHECK: str pc, [r0, #-4]
+# CHECK: str.w pc, [r0, r1]
+# CHECK: str pc, [r0, #4]!
+# CHECK: strb pc, [r0], #4
+# CHECK: strh pc, [r0, #4]!
