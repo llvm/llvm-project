@@ -3,6 +3,7 @@
 !s32i = !cir.int<s, 32>
 
 #true = #cir.bool<true> : !cir.bool
+#false = #cir.bool<false> : !cir.bool
 
 module {
   // A constant condition enters only one region, so the other arm's value does
@@ -20,6 +21,20 @@ module {
   // CHECK:      cir.func{{.*}} @const_cond
   // CHECK:        %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK:        cir.return %[[ONE]] : !s32i
+
+  cir.func @const_false_cond(%arg0: !s32i) -> !s32i {
+    %0 = cir.const #false
+    %1 = cir.ternary (%0, true {
+      cir.yield %arg0 : !s32i
+    }, false {
+      %2 = cir.const #cir.int<2> : !s32i
+      cir.yield %2 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @const_false_cond
+  // CHECK:        %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK:        cir.return %[[TWO]] : !s32i
 
   cir.func @unknown_cond(%arg0: !cir.bool, %arg1: !s32i) -> !s32i {
     %0 = cir.ternary (%arg0, true {
