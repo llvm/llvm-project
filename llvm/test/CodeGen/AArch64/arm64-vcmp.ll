@@ -234,3 +234,215 @@ define <1 x i64> @cmnez_d(<1 x i64> %A) nounwind {
   %mask = sext <1 x i1> %tst to <1 x i64>
   ret <1 x i64> %mask
 }
+
+; Check for the elimination of spurious type extensions
+define <16 x i1> @abdu_cmp(<16 x i8> %a, <16 x i8> %b, <16 x i8> %g) {
+; CHECK-LABEL: abdu_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uabd.16b v0, v0, v1
+; CHECK-NEXT:    cmhi.16b v0, v2, v0
+; CHECK-NEXT:    ret
+  %za = zext <16 x i8> %a to <16 x i32>
+  %zb = zext <16 x i8> %b to <16 x i32>
+  %zg = zext <16 x i8> %g to <16 x i32>
+  %mx = call <16 x i32> @llvm.umax.v16i32(<16 x i32> %za, <16 x i32> %zb)
+  %mn = call <16 x i32> @llvm.umin.v16i32(<16 x i32> %za, <16 x i32> %zb)
+  %abdu = sub <16 x i32> %mx, %mn
+  %cond = icmp ult <16 x i32> %abdu, %zg
+  ret <16 x i1> %cond
+}
+
+define <16 x i1> @sext_cmp(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: sext_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt.16b v0, v1, v0
+; CHECK-NEXT:    ret
+  %za = sext <16 x i8> %a to <16 x i32>
+  %zb = sext <16 x i8> %b to <16 x i32>
+  %cond = icmp slt <16 x i32> %za, %zb
+  ret <16 x i1> %cond
+}
+
+define <16 x i1> @zext_cmp(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: zext_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmhi.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %za = zext <16 x i8> %a to <16 x i32>
+  %zb = zext <16 x i8> %b to <16 x i32>
+  %cond = icmp ugt <16 x i32> %za, %zb
+  ret <16 x i1> %cond
+}
+
+; The extend sources can have different types.
+define <8 x i1> @zext_cmp_mixed(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-LABEL: zext_cmp_mixed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    cmhi.8h v0, v1, v0
+; CHECK-NEXT:    xtn.8b v0, v0
+; CHECK-NEXT:    ret
+  %za = zext <8 x i8> %a to <8 x i32>
+  %zb = zext <8 x i16> %b to <8 x i32>
+  %cond = icmp ult <8 x i32> %za, %zb
+  ret <8 x i1> %cond
+}
+
+define <8 x i1> @sext_cmp_mixed(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-LABEL: sext_cmp_mixed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll.8h v0, v0, #0
+; CHECK-NEXT:    cmgt.8h v0, v0, v1
+; CHECK-NEXT:    xtn.8b v0, v0
+; CHECK-NEXT:    ret
+  %sa = sext <8 x i8> %a to <8 x i32>
+  %sb = sext <8 x i16> %b to <8 x i32>
+  %cond = icmp sgt <8 x i32> %sa, %sb
+  ret <8 x i1> %cond
+}
+
+; <16 x i16> is not legal, so this is only narrowed after type legalization
+; splits the compare.
+define <16 x i1> @zext_cmp_mixed_v16i16(<16 x i8> %a, <16 x i16> %b) {
+; CHECK-LABEL: zext_cmp_mixed_v16i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll2.8h v3, v0, #0
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    mov d4, v2[1]
+; CHECK-NEXT:    mov d6, v1[1]
+; CHECK-NEXT:    mov d5, v3[1]
+; CHECK-NEXT:    mov d7, v0[1]
+; CHECK-NEXT:    cmhi.4h v2, v2, v3
+; CHECK-NEXT:    cmhi.4h v0, v1, v0
+; CHECK-NEXT:    cmhi.4h v4, v4, v5
+; CHECK-NEXT:    cmhi.4h v3, v6, v7
+; CHECK-NEXT:    mov.d v2[1], v4[0]
+; CHECK-NEXT:    mov.d v0[1], v3[0]
+; CHECK-NEXT:    uzp1.16b v0, v0, v2
+; CHECK-NEXT:    ret
+  %za = zext <16 x i8> %a to <16 x i32>
+  %zb = zext <16 x i16> %b to <16 x i32>
+  %cond = icmp ult <16 x i32> %za, %zb
+  ret <16 x i1> %cond
+}
+
+; Negative test: different kinds of extends.
+define <8 x i1> @zext_sext_cmp(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: zext_sext_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    sshll.8h v1, v1, #0
+; CHECK-NEXT:    ushll.4s v2, v0, #0
+; CHECK-NEXT:    ushll2.4s v0, v0, #0
+; CHECK-NEXT:    sshll.4s v3, v1, #0
+; CHECK-NEXT:    sshll2.4s v1, v1, #0
+; CHECK-NEXT:    cmgt.4s v0, v1, v0
+; CHECK-NEXT:    cmgt.4s v1, v3, v2
+; CHECK-NEXT:    uzp1.8h v0, v1, v0
+; CHECK-NEXT:    xtn.8b v0, v0
+; CHECK-NEXT:    ret
+  %za = zext <8 x i8> %a to <8 x i32>
+  %sb = sext <8 x i8> %b to <8 x i32>
+  %cond = icmp slt <8 x i32> %za, %sb
+  ret <8 x i1> %cond
+}
+
+; Negative test: the extends have other uses.
+define <4 x i1> @sext_cmp_multiuse(<4 x i16> %a, <4 x i16> %b, ptr %p) {
+; CHECK-LABEL: sext_cmp_multiuse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll.4s v2, v0, #0
+; CHECK-NEXT:    sshll.4s v1, v1, #0
+; CHECK-NEXT:    cmgt.4s v0, v1, v2
+; CHECK-NEXT:    stp q2, q1, [x0]
+; CHECK-NEXT:    xtn.4h v0, v0
+; CHECK-NEXT:    ret
+  %sa = sext <4 x i16> %a to <4 x i32>
+  %sb = sext <4 x i16> %b to <4 x i32>
+  store <4 x i32> %sa, ptr %p
+  %q = getelementptr <4 x i32>, ptr %p, i32 1
+  store <4 x i32> %sb, ptr %q
+  %cond = icmp slt <4 x i32> %sa, %sb
+  ret <4 x i1> %cond
+}
+
+; <8 x i16> is legal; narrowed because the target finds it profitable. The
+; result is used as a <8 x i16> mask.
+define <8 x i16> @sext_cmp_legal(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: sext_cmp_legal:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt.8b v0, v1, v0
+; CHECK-NEXT:    sshll.8h v0, v0, #0
+; CHECK-NEXT:    ret
+  %sa = sext <8 x i8> %a to <8 x i16>
+  %sb = sext <8 x i8> %b to <8 x i16>
+  %cond = icmp slt <8 x i16> %sa, %sb
+  %mask = sext <8 x i1> %cond to <8 x i16>
+  ret <8 x i16> %mask
+}
+
+define <16 x i1> @ult_sext_cmp(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: ult_sext_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmhi.16b v0, v1, v0
+; CHECK-NEXT:    ret
+  %sa = sext <16 x i8> %a to <16 x i32>
+  %sb = sext <16 x i8> %b to <16 x i32>
+  %cond = icmp ult <16 x i32> %sa, %sb
+  ret <16 x i1> %cond
+}
+
+define <16 x i1> @eq_zext_cmp(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: eq_zext_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq.16b v0, v0, v1
+; CHECK-NEXT:    ret
+  %za = zext <16 x i8> %a to <16 x i32>
+  %zb = zext <16 x i8> %b to <16 x i32>
+  %cond = icmp eq <16 x i32> %za, %zb
+  ret <16 x i1> %cond
+}
+
+; The narrower source must be sign extended, even for an unsigned compare.
+define <8 x i1> @ult_sext_cmp_mixed(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-LABEL: ult_sext_cmp_mixed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll.8h v0, v0, #0
+; CHECK-NEXT:    cmhi.8h v0, v1, v0
+; CHECK-NEXT:    xtn.8b v0, v0
+; CHECK-NEXT:    ret
+  %sa = sext <8 x i8> %a to <8 x i32>
+  %sb = sext <8 x i16> %b to <8 x i32>
+  %cond = icmp ult <8 x i32> %sa, %sb
+  ret <8 x i1> %cond
+}
+
+; Negative test: a signed compare of zero extends is not handled.
+define <16 x i1> @slt_zext_cmp(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: slt_zext_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll.8h v2, v0, #0
+; CHECK-NEXT:    ushll2.8h v0, v0, #0
+; CHECK-NEXT:    ushll2.8h v3, v1, #0
+; CHECK-NEXT:    ushll.8h v1, v1, #0
+; CHECK-NEXT:    ushll.4s v4, v2, #0
+; CHECK-NEXT:    ushll2.4s v2, v2, #0
+; CHECK-NEXT:    ushll.4s v5, v0, #0
+; CHECK-NEXT:    ushll2.4s v0, v0, #0
+; CHECK-NEXT:    ushll2.4s v6, v3, #0
+; CHECK-NEXT:    ushll.4s v7, v1, #0
+; CHECK-NEXT:    ushll2.4s v1, v1, #0
+; CHECK-NEXT:    ushll.4s v3, v3, #0
+; CHECK-NEXT:    cmgt.4s v0, v6, v0
+; CHECK-NEXT:    cmgt.4s v3, v3, v5
+; CHECK-NEXT:    cmgt.4s v1, v1, v2
+; CHECK-NEXT:    cmgt.4s v2, v7, v4
+; CHECK-NEXT:    uzp1.8h v0, v3, v0
+; CHECK-NEXT:    uzp1.8h v1, v2, v1
+; CHECK-NEXT:    uzp1.16b v0, v1, v0
+; CHECK-NEXT:    ret
+  %za = zext <16 x i8> %a to <16 x i32>
+  %zb = zext <16 x i8> %b to <16 x i32>
+  %cond = icmp slt <16 x i32> %za, %zb
+  ret <16 x i1> %cond
+}
