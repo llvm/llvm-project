@@ -410,11 +410,3 @@ exit:
   store volatile i32 %i, ptr addrspace(5) %tmp, align 4
   ret void
 }
-
-declare i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1), i32, i32)
-declare <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1), i32, i32)
-declare <4 x i32> @llvm.amdgcn.cluster.load.b128.v4i32.p1(ptr addrspace(1), i32, i32)
-declare void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1), ptr addrspace(3), i32, i32, i32)
-declare void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32, i32)
-declare void @llvm.amdgcn.tensor.load.to.lds(<4 x i32>, <8 x i32>, <4 x i32>, <4 x i32>, <8 x i32>, i32)
-declare void @llvm.amdgcn.tensor.store.from.lds(<4 x i32>, <8 x i32>, <4 x i32>, <4 x i32>, <8 x i32>, i32)

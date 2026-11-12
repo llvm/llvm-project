@@ -391,9 +391,10 @@ bool AMDGPULowerIntrinsicsImpl::visitMcastLoad(IntrinsicInst &I) {
   } else {
     Known = computeKnownBits(MaskOp, Q);
   }
-  if ((Known.Zero.getZExtValue() & FullMask) != 0)
+  KnownBits KnownMask = Known.trunc(16);
+  if (!KnownMask.getMaxValue().isAllOnes())
     return false;
-  bool IsKnownFull = (Known.One.getZExtValue() & FullMask) == FullMask;
+  bool IsKnownFull = KnownMask.isAllOnes();
 
   IRBuilder<> B(&I);
   Value *Mask = MaskOp;
