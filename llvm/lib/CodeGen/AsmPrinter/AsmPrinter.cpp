@@ -4653,6 +4653,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   }
 
   if (isa<ConstantPointerNull>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
     AP.OutStreamer->emitIntValue(0, Size);
     return;
   }

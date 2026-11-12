@@ -73,9 +73,9 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-V3-NEXT:    addq $56, %rsp
 ; WIN-V3-NEXT:    .seh_pushreg %rbx
 ; WIN-V3-NEXT:    popq %rbx
-; WIN-V3-NEXT:    .seh_push2regs %rbp, %r12
+; WIN-V3-NEXT:    .seh_push2regs %r12, %rbp
 ; WIN-V3-NEXT:    pop2 %r12, %rbp
-; WIN-V3-NEXT:    .seh_push2regs %r13, %r14
+; WIN-V3-NEXT:    .seh_push2regs %r14, %r13
 ; WIN-V3-NEXT:    pop2 %r14, %r13
 ; WIN-V3-NEXT:    .seh_pushreg %r15
 ; WIN-V3-NEXT:    popq %r15
@@ -106,9 +106,9 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-V3-PPX-NEXT:    addq $56, %rsp
 ; WIN-V3-PPX-NEXT:    .seh_pushreg %rbx
 ; WIN-V3-PPX-NEXT:    popp %rbx
-; WIN-V3-PPX-NEXT:    .seh_push2regs %rbp, %r12
+; WIN-V3-PPX-NEXT:    .seh_push2regs %r12, %rbp
 ; WIN-V3-PPX-NEXT:    pop2p %r12, %rbp
-; WIN-V3-PPX-NEXT:    .seh_push2regs %r13, %r14
+; WIN-V3-PPX-NEXT:    .seh_push2regs %r14, %r13
 ; WIN-V3-PPX-NEXT:    pop2p %r14, %r13
 ; WIN-V3-PPX-NEXT:    .seh_pushreg %r15
 ; WIN-V3-PPX-NEXT:    popp %r15

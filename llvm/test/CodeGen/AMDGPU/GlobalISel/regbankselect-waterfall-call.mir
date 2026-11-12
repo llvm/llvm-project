@@ -4,6 +4,7 @@
 ---
 name:            waterfall_divergent_call_p0_no_args
 legalized: true
+tracksRegLiveness: false
 body: |
  bb.0:
    liveins: $sgpr0_sgpr1
@@ -57,6 +58,7 @@ body: |
 ---
 name:            waterfall_divergent_call_p4_no_args
 legalized: true
+tracksRegLiveness: false
 body: |
  bb.0:
    liveins: $sgpr0_sgpr1
@@ -110,6 +112,7 @@ body: |
 ---
 name:            waterfall_divergent_call_p0_with_args
 legalized: true
+tracksRegLiveness: false
 body: |
  bb.0:
    liveins: $sgpr0_sgpr1
@@ -163,6 +166,7 @@ body: |
 ---
 name:            waterfall_divergent_call_p4_with_args
 legalized: true
+tracksRegLiveness: false
 body: |
  bb.0:
    liveins: $sgpr0_sgpr1

@@ -301,99 +301,94 @@ mm:
 // DATA-NEXT:  0000: 30430000 30420000 30430000 30420004
         addiu $2, $3, %got(foo_mm)         // RELOC: R_MICROMIPS_GOT16 foo_mm
                                            // ENCBE: addiu $2, $3, %got(foo_mm) # encoding: [0x30,0x43,A,A]
-                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
-                                           // ENCLE: addiu $2, $3, %got(foo_mm) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %got(foo_mm) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %got(foo_mm), kind: fixup_MICROMIPS_GOT16
         // %got requires a %lo pair
         addiu $2, $2, %lo(foo_mm)          // RELOC: R_MICROMIPS_LO16 foo_mm
                                            // ENCBE: addiu $2, $2, %lo(foo_mm) # encoding: [0x30,0x42,A,A]
-                                           // ENCLE: addiu $2, $2, %lo(foo_mm) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $2, %lo(foo_mm) # encoding: [0x42,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(foo_mm), kind: fixup_MICROMIPS_LO16
 
 foo_mm:
         addiu $2, $3, %got(bar)            // RELOC: R_MICROMIPS_GOT16 .data
                                            // ENCBE: addiu $2, $3, %got(bar) # encoding: [0x30,0x43,A,A]
-                                           // ENCLE: addiu $2, $3, %got(bar) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %got(bar) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %got(bar), kind: fixup_MICROMIPS_GOT16
         // %got requires a %lo pair
         addiu $2, $2, %lo(bar)             // RELOC: R_MICROMIPS_LO16 .data
                                            // ENCBE: addiu $2, $2, %lo(bar) # encoding: [0x30,0x42,A,A]
-                                           // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(bar), kind: fixup_MICROMIPS_LO16
 
 // DATA-NEXT:  0010: 30430000 30420004 30430001 3042003C
         addiu $2, $3, %got(baz)            // RELOC: R_MICROMIPS_GOT16 .text
                                            // ENCBE: addiu $2, $3, %got(baz) # encoding: [0x30,0x43,A,A]
-                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
-                                           // ENCLE: addiu $2, $3, %got(baz) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %got(baz) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %got(baz), kind: fixup_MICROMIPS_GOT16
         // %got requires a %lo pair
         addiu $2, $2, %lo(baz)             // RELOC: R_MICROMIPS_LO16 .text
                                            // ENCBE: addiu $2, $2, %lo(baz) # encoding: [0x30,0x42,A,A]
-                                           // ENCLE: addiu $2, $2, %lo(baz) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $2, %lo(baz) # encoding: [0x42,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(baz), kind: fixup_MICROMIPS_LO16
 
         addiu $2, $3, %got(long_mm)        // RELOC: R_MICROMIPS_GOT16 .text
                                            // ENCBE: addiu $2, $3, %got(long_mm) # encoding: [0x30,0x43,A,A]
-                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
-                                           // ENCLE: addiu $2, $3, %got(long_mm) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %got(long_mm) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %got(long_mm), kind: fixup_MICROMIPS_GOT16
         // %got requires a %lo pair
         addiu $2, $2, %lo(long_mm)         // RELOC: R_MICROMIPS_LO16 .text
                                            // ENCBE: addiu $2, $2, %lo(long_mm) # encoding: [0x30,0x42,A,A]
-                                           // ENCLE: addiu $2, $2, %lo(long_mm) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $2, %lo(long_mm) # encoding: [0x42,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(long_mm), kind: fixup_MICROMIPS_LO16
 
 // DATA-NEXT:  0020: 30430004 00000000 30430004 00000000
         addiu $2, $3, %got_page(bar)       // RELOC: R_MICROMIPS_GOT_PAGE .data
                                            // ENCBE: addiu $2, $3, %got_page(bar) # encoding: [0x30,0x43,A,A]
-                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
-                                           // ENCLE: addiu $2, $3, %got_page(bar) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %got_page(bar) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %got_page(bar), kind: fixup_MICROMIPS_GOT_PAGE
         nop
 
         addiu $2, $3, %got_ofst(bar)       // RELOC: R_MICROMIPS_GOT_OFST .data
                                            // ENCBE: addiu $2, $3, %got_ofst(bar) # encoding: [0x30,0x43,A,A]
-                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
-                                           // ENCLE: addiu $2, $3, %got_ofst(bar) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %got_ofst(bar) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %got_ofst(bar), kind: fixup_MICROMIPS_GOT_OFST
         nop
 
 // DATA-NEXT:  0030: 30430000 30420000 30430000 30420004
         addiu $2, $3, %hi(foo_mm)          // RELOC: R_MICROMIPS_HI16 foo_mm
                                            // ENCBE: addiu $2, $3, %hi(foo_mm) # encoding: [0x30,0x43,A,A]
-                                           // ENCLE: addiu $2, $3, %hi(foo_mm) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %hi(foo_mm) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %hi(foo_mm), kind: fixup_MICROMIPS_HI16
 
         addiu $2, $2, %lo(foo_mm)          // RELOC: R_MICROMIPS_LO16 foo_mm
                                            // ENCBE: addiu $2, $2, %lo(foo_mm) # encoding: [0x30,0x42,A,A]
-                                           // ENCLE: addiu $2, $2, %lo(foo_mm) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $2, %lo(foo_mm) # encoding: [0x42,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(foo_mm), kind: fixup_MICROMIPS_LO16
 
         addiu $2, $3, %hi(bar)             // RELOC: R_MICROMIPS_HI16 .data
                                            // ENCBE: addiu $2, $3, %hi(bar) # encoding: [0x30,0x43,A,A]
-                                           // ENCLE: addiu $2, $3, %hi(bar) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %hi(bar) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %hi(bar), kind: fixup_MICROMIPS_HI16
 
         addiu $2, $2, %lo(bar)             // RELOC: R_MICROMIPS_LO16 .data
                                            // ENCBE: addiu $2, $2, %lo(bar) # encoding: [0x30,0x42,A,A]
-                                           // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(bar), kind: fixup_MICROMIPS_LO16
 
 // DATA-NEXT:  0040: 30430000 41A50000 41A50000 00000000
         addiu $2, $3, %gottprel(foo)       // RELOC: R_MICROMIPS_TLS_GOTTPREL foo
                                            // ENCBE: addiu $2, $3, %gottprel(foo) # encoding: [0x30,0x43,A,A]
-                                           // ENCLE: addiu $2, $3, %gottprel(foo) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // ENCLE: addiu $2, $3, %gottprel(foo) # encoding: [0x43,0x30,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %gottprel(foo), kind: fixup_MICROMIPS_GOTTPREL
 
         lui $5, %higher(foo)               // RELOC: R_MICROMIPS_HIGHER foo
                                            // ENCBE: lui $5, %higher(foo) # encoding: [0x41,0xa5,A,A]
-                                           // ENCLE: lui $5, %higher(foo) # encoding: [0xa5'A',0x41'A',0x00,0x00]
+                                           // ENCLE: lui $5, %higher(foo) # encoding: [0xa5,0x41,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %higher(foo), kind: fixup_MICROMIPS_HIGHER
 
         lui $5, %highest(foo)              // RELOC: R_MICROMIPS_HIGHEST foo
                                            // ENCBE: lui $5, %highest(foo) # encoding: [0x41,0xa5,A,A]
-                                           // ENCLE: lui $5, %highest(foo) # encoding: [0xa5'A',0x41'A',0x00,0x00]
+                                           // ENCLE: lui $5, %highest(foo) # encoding: [0xa5,0x41,A,A]
                                            // FIXUP: # fixup A - offset: 0, value: %highest(foo), kind: fixup_MICROMIPS_HIGHEST
 
         .space 65520, 0

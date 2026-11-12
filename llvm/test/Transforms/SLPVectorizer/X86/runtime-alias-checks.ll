@@ -1887,6 +1887,100 @@ loop:
 exit:
   ret void
 }
+
+define void @arg_bitcast_first(ptr %dst, ptr %x, i64 %s, double %a, double %b) {
+; CHECK-LABEL: define void @arg_bitcast_first(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[X:%.*]], i64 [[S:%.*]], double [[A:%.*]], double [[B:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[DST1]], 56
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X2]], 8
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[DST1]], [[TMP1]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[X2]], [[TMP0]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0]]
+; CHECK:       [[ENTRY_RTVEC]]:
+; CHECK-NEXT:    [[SD:%.*]] = bitcast i64 [[S]] to double
+; CHECK-NEXT:    [[X3:%.*]] = load double, ptr [[DST]], align 8
+; CHECK-NEXT:    [[DST3:%.*]] = getelementptr i8, ptr [[DST]], i64 24
+; CHECK-NEXT:    [[X4:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[A]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[B]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[X3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[X4]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = fdiv <4 x double> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    store <4 x double> [[TMP6]], ptr [[DST3]], align 8
+; CHECK-NEXT:    [[D7:%.*]] = fdiv double 0.000000e+00, [[SD]]
+; CHECK-NEXT:    store double [[D7]], ptr [[DST]], align 8
+; CHECK-NEXT:    br label %[[ENTRY_RTCONT:.*]]
+; CHECK:       [[ENTRY_RTSCALAR]]:
+; CHECK-NEXT:    [[SD_SCALAR:%.*]] = bitcast i64 [[S]] to double
+; CHECK-NEXT:    [[X3_SCALAR:%.*]] = load double, ptr [[DST]], align 8
+; CHECK-NEXT:    [[D3_SCALAR:%.*]] = fdiv double [[X3_SCALAR]], 0.000000e+00
+; CHECK-NEXT:    [[DST3_SCALAR:%.*]] = getelementptr i8, ptr [[DST]], i64 24
+; CHECK-NEXT:    store double [[D3_SCALAR]], ptr [[DST3_SCALAR]], align 8
+; CHECK-NEXT:    [[X4_SCALAR:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[D4_SCALAR:%.*]] = fdiv double [[X4_SCALAR]], 0.000000e+00
+; CHECK-NEXT:    [[DST4_SCALAR:%.*]] = getelementptr i8, ptr [[DST]], i64 32
+; CHECK-NEXT:    store double [[D4_SCALAR]], ptr [[DST4_SCALAR]], align 8
+; CHECK-NEXT:    [[D5_SCALAR:%.*]] = fdiv double [[A]], 0.000000e+00
+; CHECK-NEXT:    [[DST5_SCALAR:%.*]] = getelementptr i8, ptr [[DST]], i64 40
+; CHECK-NEXT:    store double [[D5_SCALAR]], ptr [[DST5_SCALAR]], align 8
+; CHECK-NEXT:    [[D6_SCALAR:%.*]] = fdiv double [[B]], 0.000000e+00
+; CHECK-NEXT:    [[DST6_SCALAR:%.*]] = getelementptr i8, ptr [[DST]], i64 48
+; CHECK-NEXT:    store double [[D6_SCALAR]], ptr [[DST6_SCALAR]], align 8
+; CHECK-NEXT:    [[D7_SCALAR:%.*]] = fdiv double 0.000000e+00, [[SD_SCALAR]]
+; CHECK-NEXT:    store double [[D7_SCALAR]], ptr [[DST]], align 8
+; CHECK-NEXT:    br label %[[ENTRY_RTCONT]]
+; CHECK:       [[ENTRY_RTCONT]]:
+; CHECK-NEXT:    ret void
+;
+; NOCHK-LABEL: define void @arg_bitcast_first(
+; NOCHK-SAME: ptr [[DST:%.*]], ptr [[X:%.*]], i64 [[S:%.*]], double [[A:%.*]], double [[B:%.*]]) #[[ATTR1]] {
+; NOCHK-NEXT:  [[ENTRY:.*:]]
+; NOCHK-NEXT:    [[SD:%.*]] = bitcast i64 [[S]] to double
+; NOCHK-NEXT:    [[X3:%.*]] = load double, ptr [[DST]], align 8
+; NOCHK-NEXT:    [[DST3:%.*]] = getelementptr i8, ptr [[DST]], i64 24
+; NOCHK-NEXT:    [[DST4:%.*]] = getelementptr i8, ptr [[DST]], i64 32
+; NOCHK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A]], i64 1
+; NOCHK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[B]], i64 1
+; NOCHK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[X3]], i64 0
+; NOCHK-NEXT:    [[TMP3:%.*]] = fdiv <2 x double> [[TMP2]], zeroinitializer
+; NOCHK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; NOCHK-NEXT:    store double [[TMP4]], ptr [[DST3]], align 8
+; NOCHK-NEXT:    [[X4:%.*]] = load double, ptr [[X]], align 8
+; NOCHK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP0]], double [[X4]], i64 0
+; NOCHK-NEXT:    [[TMP6:%.*]] = fdiv <2 x double> [[TMP5]], zeroinitializer
+; NOCHK-NEXT:    store <2 x double> [[TMP6]], ptr [[DST4]], align 8
+; NOCHK-NEXT:    [[DST6:%.*]] = getelementptr i8, ptr [[DST]], i64 48
+; NOCHK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
+; NOCHK-NEXT:    store double [[TMP7]], ptr [[DST6]], align 8
+; NOCHK-NEXT:    [[D7:%.*]] = fdiv double 0.000000e+00, [[SD]]
+; NOCHK-NEXT:    store double [[D7]], ptr [[DST]], align 8
+; NOCHK-NEXT:    ret void
+;
+entry:
+  %sd = bitcast i64 %s to double
+  %x3 = load double, ptr %dst, align 8
+  %d3 = fdiv double %x3, 0.000000e+00
+  %dst3 = getelementptr i8, ptr %dst, i64 24
+  store double %d3, ptr %dst3, align 8
+  %x4 = load double, ptr %x, align 8
+  %d4 = fdiv double %x4, 0.000000e+00
+  %dst4 = getelementptr i8, ptr %dst, i64 32
+  store double %d4, ptr %dst4, align 8
+  %d5 = fdiv double %a, 0.000000e+00
+  %dst5 = getelementptr i8, ptr %dst, i64 40
+  store double %d5, ptr %dst5, align 8
+  %d6 = fdiv double %b, 0.000000e+00
+  %dst6 = getelementptr i8, ptr %dst, i64 48
+  store double %d6, ptr %dst6, align 8
+  %d7 = fdiv double 0.000000e+00, %sd
+  store double %d7, ptr %dst, align 8
+  ret void
+}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

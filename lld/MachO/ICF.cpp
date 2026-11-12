@@ -9,11 +9,13 @@
 #include "ICF.h"
 #include "ConcatOutputSection.h"
 #include "Config.h"
+#include "EhFrame.h"
 #include "InputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 
 #include "lld/Common/CommonLinkerContext.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -110,11 +112,23 @@ static void getNormalizedData(const ConcatInputSection *isec,
     if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
       ++i; // Skip the paired minuend relocation
   }
+  // MC pads each FDE so that it ends at a multiple of its address size, so the
+  // padding of otherwise identical FDEs depends on where they start in
+  // __eh_frame. Ignore the length field and the trailing DW_CFA_nop padding.
+  if (isEhFrameSection(isec)) {
+    EhReader reader(cast<ObjFile>(isec->getFile()), isec->data,
+                    /*dataOff=*/0);
+    size_t off = 0;
+    reader.readLength(&off);
+    memset(buf.data(), 0, off);
+    while (!buf.empty() && buf.back() == dwarf::DW_CFA_nop)
+      buf.pop_back();
+  }
 }
 
 static bool compareData(const ConcatInputSection *ia,
                         const ConcatInputSection *ib) {
-  if (ia->data.size() != ib->data.size())
+  if (ia->data.size() != ib->data.size() && !isEhFrameSection(ia))
     return false;
   if (ia->data == ib->data)
     return true;
@@ -147,6 +161,9 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     if (ra.length != rb.length)
       return false;
     if (ra.offset != rb.offset)
+      return false;
+    // hasAuth follows from the type.
+    if (ra.hasAuth && *ra.getAuthInfo() != *rb.getAuthInfo())
       return false;
     if (isa<Symbol *>(ra.referent) != isa<Symbol *>(rb.referent))
       return false;
@@ -426,7 +443,7 @@ void ICF::run() {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
       uint32_t hash = isec->icfEqClass[icfPass % 2];
       for (const Relocation &r : isec->relocs) {
-        if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+        if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec()) {
               if (auto *referentIsec =
@@ -570,7 +587,7 @@ void macho::markAddrSigSymbols() {
     const InputSection *isec = addrSigSection->subsections[0].isec;
 
     for (const Relocation &r : isec->relocs) {
-      if (auto *sym = r.referent.dyn_cast<Symbol *>())
+      if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent))
         markSymAsAddrSig(sym);
       else
         error(toString(isec) + ": unexpected section relocation");
@@ -658,21 +675,23 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
                       (isCodeSec || isFoldableIgnoringRelocatedBytes(isec)) &&
                       keepUniqueAllowsFolding && !isec->hasAltEntry &&
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
-    if (isFoldable) {
-      foldable.push_back(isec);
-      for (Defined *d : isec->symbols)
-        if (d->unwindEntry())
-          foldable.push_back(d->unwindEntry());
-    } else if (isEhFrameSection(isec)) {
+    // Check __eh_frame before isFoldable: `ld -r` output marks it S_REGULAR
+    // instead of S_COALESCED, so it can pass hasFoldableFlags, which would
+    // collect its FDEs a second time.
+    if (isEhFrameSection(isec)) {
       // __eh_frame contains two types of records: FDEs and CIEs.
-      // Functions point to FDEs, which are already collected above via
-      // unwindEntry(). CIEs are shared headers and are not attached to
-      // individual functions. Collect only CIEs here so they can also be hashed
-      // and deduplicated.
+      // Functions point to FDEs, which are collected below via unwindEntry().
+      // CIEs are shared headers and are not attached to individual functions.
+      // Collect only CIEs here so they can also be hashed and deduplicated.
       auto *obj = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!onlyCfStrings && obj && !obj->fdes.contains(isec) &&
           !isec->shouldOmitFromOutput())
         foldable.push_back(isec);
+    } else if (isFoldable) {
+      foldable.push_back(isec);
+      for (Defined *d : isec->symbols)
+        if (d->unwindEntry())
+          foldable.push_back(d->unwindEntry());
     } else {
       // Give a unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;

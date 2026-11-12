@@ -174,6 +174,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
+* Removed `mc::RegisterMCTargetOptionsFlags`.
+  A tool that created it now passes `mc::getToolOptions()`, or `codegen::getToolOptions()` with `codegen::RegisterCodeGenFlags`, to `cl::parseCommandLineOptions`.
+
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
 
@@ -183,6 +186,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
   GNU-vs-EABI distinction is now derived entirely from the target triple's
   environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
+
+* Removed `TargetOptions::DebuggerTuning` and the `llc`/`opt`
+  `-debugger-tune=` flag. The debugger to tune debug info for is now
+  controlled by setting the `"debugger-tuning"` module flag.
 
 * Replaced `TargetOptions::EnableMachineFunctionSplitter` with
   `TargetOptions::FunctionSplitting`, and the `-split-machine-functions` and
@@ -207,12 +214,24 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Removed `LiveVariables` analysis
 
+* `IRBuilder::CreateGEP()` and similar methods will now convert the GEP into a
+  ptradd-compatible representation, using a sequence of `getelementptr i8` and
+  `getelementptr [N x i8]` instructions. The `disableGEPCanonicalization()`
+  method can be used to temporarily disable this behavior. This method exists
+  only to allow incremental migration of LLVM IR tests, and will be removed in
+  the near future.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
   controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
   `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
   `LLVM_ENABLE_LZMA`, and it has no effect in a standalone LLDB build.
+
+* The `tablegen()` CMake function has been renamed to `tablegen_internal()`.
+  Projects invoking `llvm-tblgen` should use the new `llvm_tablegen(ofn ...)`
+  in place of `tablegen(LLVM ofn ...)`, and projects invoking
+  `mlir-src-sharder` the new `mlir_src_sharder(ofn ...)`.
 
 * The DirectX backend is now an official target and has moved from
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
@@ -261,6 +280,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
   `condition : value` pairs, along with their corresponding side effects,
   are left unresolved.
+* HwMode type expansion has been removed from CodeGenDAGPatterns. SelectionDAG
+  and GlobalISel handle HwModes during instruction selection. FastISel does not
+  support HwModes and will skip any patterns that use HwMode based types.
 
 ### Changes to Interprocedural Optimizations
 
@@ -295,6 +317,9 @@ Makes programs 10x faster by doing Special New Thing.
   ARM64 ABI (calling convention, callee saved registers, stack probing and SEH
   unwind information) and produces PE/COFF objects.
 
+* Added support for the Apple M6, A20 Pro, and S11 CPUs (exposed as,
+  respectively, `apple-m6`, `apple-a20`, and `apple-s11`)
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
@@ -307,6 +332,34 @@ Makes programs 10x faster by doing Special New Thing.
 * These intrinsics have been removed in favour of `llvm.amdgcn.ballot`:
   * `llvm.amdgcn.icmp`
   * `llvm.amdgcn.fcmp`
+
+* The AMDGPU buffer intrinsics that take their buffer resource (rsrc/V#)
+  argument as a `<4 x i32>` are deprecated and will be removed in a future
+  LLVM release.
+
+  They all have `.ptr.` equivalents that take a `ptr addrspace(8)`, produced by
+  `llvm.amdgcn.make.buffer.rsrc`, loaded directly from memory, or, if
+  necessary, converted from an existing descriptor with
+  `bitcast <4 x i32> %rsrc to i128` followed by `inttoptr i128 %i to ptr
+  addrspace(8)`. To migrate, insert `ptr` after the `raw`/`struct` component of
+  the intrinsic name; `llvm.amdgcn.s.buffer.load` is the sole exception and
+  becomes `llvm.amdgcn.ptr.s.buffer.load`.
+
+  ```llvm
+  ; Before
+  %v = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %off, i32 0, i32 0)
+
+  ; After
+  %p = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i32(ptr addrspace(1) %base, i16 0, i32 %numrecords, i32 %flags)
+  %v = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %p, i32 %off, i32 0, i32 0)
+  ```
+
+  This migration enables future flexibility in resource size and usage and
+  allows for more accurate analysis of memory usage.
+
+  Note that when emitting `llvm.amdgcn.ptr.s.buffer.load`, you must tag the intrinsic with `!invariant.load` metadata in order to recover the merging and loop hoisting behavior that `llvm.amdgcn.s.buffer.load` had because it lied about 'not reading memory'. Explicitly tagging these buffer loads as invariant will teach LLVM's general infrastructure about the property that users of the old ``s.buffer.load`` intrinsic were already asserting.
+
+  While we do intend to autoupgrade the old intrinsics when they are removed, this upgrade will have to use `inttoptr` to convert buffer resources, losing pointer provenance. Therefore, we strongly encourage users to migrate to the new forms (which have been available for years) before this removal.
 
 ### Changes to the ARM Backend
 
@@ -321,6 +374,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `-mcpu=v5`, which includes the v4 instruction set and enables unsigned
   and signed high-half multiply instructions (`UHMUL` and `SHMUL`). Use
   `-disable-hmul` to disable their generation.
+
+* Added `-mattr=+func-table`: a pointer to a function is an index into
+  a read-only table of functions, and an indirect call is `callx` through
+  the table. It is for programs that keep pointers to functions in arena.
 
 ### Changes to the DirectX Backend
 
@@ -358,6 +415,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `-mcpu=tt-ascalon-xg` for the Tenstorrent Ascalon XG processor, the
   global variant of Ascalon X without `Zvkng` and with reduced vector FP64
   throughput.
+* Removed X5 from the preserve_most register list.
+* Added `-mcpu=chipsalliance-veer-eh1` for the CHIPS Alliance VeeR EH1
+  processor.
+* The behavior of i128 arguments with the LP64E ABI now matches gcc.
 
 ### Changes to the WebAssembly Backend
 
@@ -443,8 +504,18 @@ Makes programs 10x faster by doing Special New Thing.
   module) must be set using a `LLVMPositionBuilder*()` API before building any
   instructions, otherwise an error will be generated.
 
+* The new `LLVMParseCommandLineOptionsWithError()` function provides an
+  alternative to `LLVMParseCommandLineOptions()` that also captures any error
+  during parsing.
+
+* Added `LLVMPrintMetadataToString()` to obtain a `LLVMMetadataRef`'s string
+  representation without having to convert it to a `LLVMValueRef` first.
+
 ### Changes to the CodeGen infrastructure
 
+* `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
+  tests which wish to opt out of liveness tracking should set
+  `tracksRegLiveness: false` explicitly.
 * Fixed a crash
   ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose
@@ -468,6 +539,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* `llvm-mc` now supports `--verify[=<prefixes>]` to check diagnostics against `<prefix>-<kind> {{...}}` comments in the input instead of printing them.
+
 * `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
   A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
   `LLVM_PLUGIN_API_VERSION` is now 3.
@@ -478,6 +551,8 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-offload-binary can now compress packaged binaries using zstd or zlib.
 
 * llvm-mca no longer defaults -mcpu to "native"
+
+* The `llvm-mc --validate-cfi` option and the `DWARFCFIChecker` library have been removed.
 
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
@@ -511,6 +586,7 @@ Makes programs 10x faster by doing Special New Thing.
 
 #### Windows
 
+* When using the MSVC ABI, dynamic values are now resolved.
 * Python 3.11 or later is now required for building LLDB 24 on Windows.
 * For better performance, LLDB now turns off the Windows debug heap by default when debugging.
   If you need the debug heap enabled, set `platform.plugin.windows.disable-debug-heap` to `false`.

@@ -106,6 +106,7 @@ add_lldb_library(lldbTarget
     lldbSymbol
     lldbUtility
     lldbValueObject
+    lldbVersion
     lldbPluginProcessUtility
   )
 

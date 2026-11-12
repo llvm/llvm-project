@@ -81,7 +81,7 @@ public:
               loopBlockArgIface.getReductionBlockArgsStart());
         }
 
-        loopOp.removeReductionModAttr();
+        loopOp.removeReductionModsAttr();
         loopOp.getReductionVarsMutable().clear();
         loopOp.removeReductionByrefAttr();
         loopOp.removeReductionSymsAttr();
@@ -355,7 +355,8 @@ private:
   void
   populateReductionClauseOps(mlir::omp::LoopOp loopOp,
                              mlir::omp::ReductionClauseOps &clauseOps) const {
-    clauseOps.reductionMod = loopOp.getReductionModAttr();
+    if (auto mods = loopOp.getReductionModsAttr())
+      llvm::append_range(clauseOps.reductionMods, mods);
     clauseOps.reductionVars = loopOp.getReductionVars();
 
     std::optional<mlir::ArrayAttr> reductionSyms = loopOp.getReductionSyms();
@@ -453,7 +454,7 @@ public:
     mlir::omp::LoopOp nestedLoopOp = tryToFindNestedLoopWithReduction(teamsOp);
 
     rewriter.modifyOpInPlace(teamsOp, [&]() {
-      teamsOp.setReductionMod(nestedLoopOp.getReductionMod());
+      teamsOp.setReductionModsAttr(nestedLoopOp.getReductionModsAttr());
       teamsOp.getReductionVarsMutable().assign(nestedLoopOp.getReductionVars());
       teamsOp.setReductionByref(nestedLoopOp.getReductionByref());
       teamsOp.setReductionSymsAttr(nestedLoopOp.getReductionSymsAttr());

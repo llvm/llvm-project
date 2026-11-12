@@ -667,12 +667,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     if (From.isVirtual() && To.isVirtual())
       MRI.constrainRegClass(To, MRI.getRegClass(From));
     // Replace it.
-
-    // Replacing one register with another won't touch the kill flags.
-    // We need to conservatively clear the kill flags as a kill on the old
-    // register might dominate existing uses of the new register.
-    if (!MRI.use_empty(To))
-      MRI.clearKillFlags(From);
     MRI.replaceRegWith(From, To);
   }
 
@@ -3100,30 +3094,28 @@ CheckOrImm(const uint8_t *MatcherTable, size_t &MatcherIndex, SDValue N,
 }
 
 /// IsPredicateKnownToFail - If we know how and can do so without pushing a
-/// scope, evaluate the current node.  If the current predicate is known to
-/// fail, set Result=true and return anything.  If the current predicate is
-/// known to pass, set Result=false and return the MatcherIndex to continue
-/// with.  If the current predicate is unknown, set Result=false and return the
-/// MatcherIndex to continue with.
-static size_t IsPredicateKnownToFail(
-    const uint8_t *Table, size_t Index, SDValue N, bool &Result,
+/// scope, evaluate the current node.  Returns true if the current predicate is
+/// known to fail; Index is unspecified in that case.  If the current predicate
+/// is known to pass, returns false and advances Index past it.  If the current
+/// predicate is unknown, returns false and leaves Index at the predicate.
+static bool IsPredicateKnownToFail(
+    const uint8_t *Table, size_t &Index, SDValue N,
     const SelectionDAGISel &SDISel,
     const SmallVectorImpl<std::pair<SDValue, SDNode *>> &RecordedNodes) {
+  size_t StartIndex = Index;
   unsigned Opcode = Table[Index++];
   switch (Opcode) {
   default:
-    Result = false;
-    return Index-1;  // Could not evaluate this predicate.
+    Index = StartIndex; // Could not evaluate this predicate.
+    return false;
   case SelectionDAGISel::OPC_CheckSame:
-    Result = !::CheckSame(Table, Index, N, RecordedNodes);
-    return Index;
+    return !::CheckSame(Table, Index, N, RecordedNodes);
   case SelectionDAGISel::OPC_CheckChild0Same:
   case SelectionDAGISel::OPC_CheckChild1Same:
   case SelectionDAGISel::OPC_CheckChild2Same:
   case SelectionDAGISel::OPC_CheckChild3Same:
-    Result = !::CheckChildSame(Table, Index, N, RecordedNodes,
-                        Table[Index-1] - SelectionDAGISel::OPC_CheckChild0Same);
-    return Index;
+    return !::CheckChildSame(Table, Index, N, RecordedNodes,
+                             Opcode - SelectionDAGISel::OPC_CheckChild0Same);
   case SelectionDAGISel::OPC_CheckPatternPredicate:
   case SelectionDAGISel::OPC_CheckPatternPredicate0:
   case SelectionDAGISel::OPC_CheckPatternPredicate1:
@@ -3134,8 +3126,7 @@ static size_t IsPredicateKnownToFail(
   case SelectionDAGISel::OPC_CheckPatternPredicate6:
   case SelectionDAGISel::OPC_CheckPatternPredicate7:
   case SelectionDAGISel::OPC_CheckPatternPredicateTwoByte:
-    Result = !::CheckPatternPredicate(Opcode, Table, Index, SDISel);
-    return Index;
+    return !::CheckPatternPredicate(Opcode, Table, Index, SDISel);
   case SelectionDAGISel::OPC_CheckPredicate:
   case SelectionDAGISel::OPC_CheckPredicate0:
   case SelectionDAGISel::OPC_CheckPredicate1:
@@ -3145,11 +3136,9 @@ static size_t IsPredicateKnownToFail(
   case SelectionDAGISel::OPC_CheckPredicate5:
   case SelectionDAGISel::OPC_CheckPredicate6:
   case SelectionDAGISel::OPC_CheckPredicate7:
-    Result = !::CheckNodePredicate(Opcode, Table, Index, SDISel, N);
-    return Index;
+    return !::CheckNodePredicate(Opcode, Table, Index, SDISel, N);
   case SelectionDAGISel::OPC_CheckOpcode:
-    Result = !::CheckOpcode(Table, Index, N.getNode());
-    return Index;
+    return !::CheckOpcode(Table, Index, N.getNode());
   case SelectionDAGISel::OPC_CheckType:
   case SelectionDAGISel::OPC_CheckTypeI32:
   case SelectionDAGISel::OPC_CheckTypeI64:
@@ -3173,9 +3162,8 @@ static size_t IsPredicateKnownToFail(
       VT = getSimpleVT(Table, Index);
       break;
     }
-    Result = !::CheckType(VT.SimpleTy, N, SDISel.TLI,
-                          SDISel.CurDAG->getDataLayout());
-    return Index;
+    return !::CheckType(VT.SimpleTy, N, SDISel.TLI,
+                        SDISel.CurDAG->getDataLayout());
   }
   case SelectionDAGISel::OPC_CheckTypeRes:
   case SelectionDAGISel::OPC_CheckTypeResByHwMode: {
@@ -3183,9 +3171,8 @@ static size_t IsPredicateKnownToFail(
     MVT VT = Opcode == SelectionDAGISel::OPC_CheckTypeResByHwMode
                  ? getHwModeVT(Table, Index, SDISel)
                  : getSimpleVT(Table, Index);
-    Result = !::CheckType(VT.SimpleTy, N.getValue(Res), SDISel.TLI,
-                          SDISel.CurDAG->getDataLayout());
-    return Index;
+    return !::CheckType(VT.SimpleTy, N.getValue(Res), SDISel.TLI,
+                        SDISel.CurDAG->getDataLayout());
   }
   case SelectionDAGISel::OPC_CheckChild0Type:
   case SelectionDAGISel::OPC_CheckChild1Type:
@@ -3249,37 +3236,29 @@ static size_t IsPredicateKnownToFail(
       VT = getSimpleVT(Table, Index);
       ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0Type;
     }
-    Result = !::CheckChildType(VT.SimpleTy, N, SDISel.TLI,
-                               SDISel.CurDAG->getDataLayout(), ChildNo);
-    return Index;
+    return !::CheckChildType(VT.SimpleTy, N, SDISel.TLI,
+                             SDISel.CurDAG->getDataLayout(), ChildNo);
   }
   case SelectionDAGISel::OPC_CheckCondCode:
-    Result = !::CheckCondCode(Table, Index, N);
-    return Index;
+    return !::CheckCondCode(Table, Index, N);
   case SelectionDAGISel::OPC_CheckChild2CondCode:
-    Result = !::CheckChild2CondCode(Table, Index, N);
-    return Index;
+    return !::CheckChild2CondCode(Table, Index, N);
   case SelectionDAGISel::OPC_CheckValueType:
-    Result = !::CheckValueType(Table, Index, N, SDISel.TLI,
-                               SDISel.CurDAG->getDataLayout());
-    return Index;
+    return !::CheckValueType(Table, Index, N, SDISel.TLI,
+                             SDISel.CurDAG->getDataLayout());
   case SelectionDAGISel::OPC_CheckInteger:
-    Result = !::CheckInteger(Table, Index, N);
-    return Index;
+    return !::CheckInteger(Table, Index, N);
   case SelectionDAGISel::OPC_CheckChild0Integer:
   case SelectionDAGISel::OPC_CheckChild1Integer:
   case SelectionDAGISel::OPC_CheckChild2Integer:
   case SelectionDAGISel::OPC_CheckChild3Integer:
   case SelectionDAGISel::OPC_CheckChild4Integer:
-    Result = !::CheckChildInteger(Table, Index, N,
-                     Table[Index-1] - SelectionDAGISel::OPC_CheckChild0Integer);
-    return Index;
+    return !::CheckChildInteger(
+        Table, Index, N, Opcode - SelectionDAGISel::OPC_CheckChild0Integer);
   case SelectionDAGISel::OPC_CheckAndImm:
-    Result = !::CheckAndImm(Table, Index, N, SDISel);
-    return Index;
+    return !::CheckAndImm(Table, Index, N, SDISel);
   case SelectionDAGISel::OPC_CheckOrImm:
-    Result = !::CheckOrImm(Table, Index, N, SDISel);
-    return Index;
+    return !::CheckOrImm(Table, Index, N, SDISel);
   }
 }
 
@@ -3545,10 +3524,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         // If we can't evaluate this predicate without pushing a scope (e.g. if
         // it is a 'MoveParent') or if the predicate succeeds on this node, we
         // push the scope and evaluate the full predicate chain.
-        bool Result;
-        MatcherIndex = IsPredicateKnownToFail(MatcherTable, MatcherIndex, N,
-                                              Result, *this, RecordedNodes);
-        if (!Result)
+        if (!IsPredicateKnownToFail(MatcherTable, MatcherIndex, N, *this,
+                                    RecordedNodes))
           break;
 
         LLVM_DEBUG(
@@ -4613,6 +4590,39 @@ bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
     return (Off >= 0) && (((A.value() - 1) & Off) == unsigned(Off));
   }
   return false;
+}
+
+bool SelectionDAGISel::selectShiftAmountMask(SDValue N, unsigned ShiftWidth,
+                                             SDValue &ShAmt) const {
+  assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+  unsigned ShiftBits = Log2_32(ShiftWidth);
+
+  // A truncation that keeps the low ShiftBits bits doesn't change the bits the
+  // shift reads.
+  if (N.getOpcode() == ISD::TRUNCATE &&
+      N.getScalarValueSizeInBits() >= ShiftBits)
+    N = N.getOperand(0);
+
+  if (N.getOpcode() != ISD::AND || !isa<ConstantSDNode>(N.getOperand(1)))
+    return false;
+
+  const APInt &AndMask = N.getConstantOperandAPInt(1);
+  if (AndMask.getBitWidth() < ShiftBits)
+    return false;
+
+  // Since the max shift amount is a power of 2 we can subtract 1 to make a
+  // mask that covers the bits needed to represent all shift amounts.
+  APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
+  if (!ShMask.isSubsetOf(AndMask)) {
+    // SimplifyDemandedBits may have optimized the mask so try restoring any
+    // bits that are known zero.
+    KnownBits Known = CurDAG->computeKnownBits(N.getOperand(0));
+    if (!ShMask.isSubsetOf(AndMask | Known.Zero))
+      return false;
+  }
+
+  ShAmt = N.getOperand(0);
+  return true;
 }
 
 void SelectionDAGISel::CannotYetSelect(SDNode *N) {

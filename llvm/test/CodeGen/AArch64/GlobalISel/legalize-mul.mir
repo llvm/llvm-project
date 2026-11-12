@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1  %s -o - | FileCheck %s
 ---
 name:            test_scalar_mul_small
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_mul_small
@@ -23,6 +24,7 @@ body:             |
 ...
 ---
 name:            test_smul_overflow
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_smul_overflow
@@ -45,6 +47,7 @@ body:             |
 ...
 ---
 name:            test_umul_overflow
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_umul_overflow
@@ -66,6 +69,7 @@ body:             |
 ...
 ---
 name:            test_smul_overflow_s32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_smul_overflow_s32
@@ -95,6 +99,7 @@ body:             |
 ...
 ---
 name:            test_umul_overflow_s32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_umul_overflow_s32
@@ -123,6 +128,7 @@ body:             |
 ...
 ---
 name:            test_umul_overflow_s24
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_umul_overflow_s24
@@ -163,6 +169,7 @@ body:             |
 ...
 ---
 name:            vector_mul_scalarize
+tracksRegLiveness: false
 liveins:
   - { reg: '$q0' }
   - { reg: '$q1' }
@@ -187,7 +194,6 @@ body:             |
 ---
 name:            test_umulo_overflow_no_invalid_mir
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -252,7 +258,6 @@ body:             |
 ---
 name:            umulh_s32
 exposesReturnsTwice: false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1
@@ -280,7 +285,6 @@ body:             |
 ---
 name:            smulh_s32
 exposesReturnsTwice: false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1
@@ -308,7 +312,6 @@ body:             |
 ---
 name:            umulh_v8s16
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -333,7 +336,6 @@ body:             |
 ---
 name:            umulh_v16s8
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -358,7 +360,6 @@ body:             |
 ---
 name:            umulh_v4s32
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -383,7 +384,6 @@ body:             |
 ---
 name:            smulh_v8s16
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -408,7 +408,6 @@ body:             |
 ---
 name:            smulh_v16s8
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -433,7 +432,6 @@ body:             |
 ---
 name:            smulh_v4s32
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body:             |
@@ -457,6 +455,7 @@ body:             |
 ...
 ---
 name:            test_vector_mul_v16s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_mul_v16s16
@@ -477,6 +476,7 @@ body:             |
 ...
 ---
 name:            test_vector_mul_v32s8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_mul_v32s8
@@ -497,7 +497,6 @@ body:             |
 ...
 ---
 name:            mul_v2s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -527,7 +526,6 @@ body:             |
 ...
 ---
 name:            mul_v3s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $b0, $b1, $b2
@@ -561,7 +559,6 @@ body:             |
 ...
 ---
 name:            mul_v4s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -591,7 +588,6 @@ body:             |
 ...
 ---
 name:            mul_v8s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -621,7 +617,6 @@ body:             |
 ...
 ---
 name:            mul_v16s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
@@ -651,7 +646,6 @@ body:             |
 ...
 ---
 name:            umulh_v8s32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
@@ -683,7 +677,6 @@ body:             |
 ...
 ---
 name:            smulh_v8s32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
@@ -715,7 +708,6 @@ body:             |
 ...
 ---
 name:            umulh_v16s16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
@@ -747,7 +739,6 @@ body:             |
 ...
 ---
 name:            smulh_v32s8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
@@ -775,3 +766,4 @@ body:             |
     $q0 = COPY %lo(<16 x i8>)
     $q1 = COPY %hi(<16 x i8>)
     RET_ReallyLR implicit $q0, implicit $q1
+...

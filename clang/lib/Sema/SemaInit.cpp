@@ -4424,13 +4424,11 @@ static void TryArrayCopy(Sema &S, const InitializationKind &Kind,
   QualType InitEltT =
       S.Context.getAsArrayType(Initializer->getType())->getElementType();
 
-  // FIXME: Here's a functional memory leak cuz we don't have a temporary
-  // allocator at the moment
-  OpaqueValueExpr *OVE = new (S.Context) OpaqueValueExpr(
-      Initializer->getExprLoc(), InitEltT, Initializer->getValueKind(),
-      Initializer->getObjectKind());
-  Expr *OVEAsExpr = OVE;
-  Sequence.InitializeFrom(S, Element, Kind, OVEAsExpr,
+  OpaqueValueExpr OVE(Initializer->getExprLoc(), InitEltT,
+                      Initializer->getValueKind(),
+                      Initializer->getObjectKind());
+  Expr *OVEPtr = &OVE;
+  Sequence.InitializeFrom(S, Element, Kind, OVEPtr,
                           /*TopLevelOfInitList*/ false,
                           TreatUnavailableAsInvalid);
   if (Sequence)
@@ -5384,13 +5382,12 @@ static OverloadingResult TryRefInitWithConversionFunction(
 
       // If the conversion function doesn't return a reference type,
       // it can't be considered for this conversion unless we're allowed to
-      // consider rvalues. If it's a template, we should accept it first
-      // and specialize it before deciding whether to reject it.
+      // consider rvalues.
       // FIXME: Do we need to make sure that we only consider conversion
       // candidates with reference-compatible results? That might be needed to
       // break recursion.
-      if (ConvTemplate || AllowRValues ||
-          Conv->getConversionType()->isLValueReferenceType()) {
+      if ((AllowRValues ||
+           Conv->getConversionType()->isLValueReferenceType())) {
         if (ConvTemplate)
           S.AddTemplateConversionCandidate(
               ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,

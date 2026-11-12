@@ -193,6 +193,8 @@ def StaticMemoryPlannerAnalysisPass
     For each `memref.alloc` the pass checks a conservative eligibility
     envelope:
     - Static memref shape.
+    - Integer or floating-point element type.
+    - Identity layout.
     - The allocation lives directly in the function's entry block
       (allocations nested in a region are skipped for now).
     - Every `memref.dealloc` that may free the buffer is anchored in the entry
@@ -201,6 +203,12 @@ def StaticMemoryPlannerAnalysisPass
       `BufferViewFlowAnalysis`; a dealloc nested inside an entry-block op
       (e.g. an `scf.if` body) is accepted and bounds the lifetime
       conservatively.
+
+    If a dealloc may also free an ineligible allocation, all candidates that
+    share that dealloc are skipped to preserve the ineligible allocation's
+    release. This exclusion propagates through other shared deallocs until
+    the remaining candidates can be rewritten together safely. Independent
+    eligible allocations can still be planned.
 
     Eligible allocations are packed into a single arena using a configurable
     planning algorithm (see the `algorithm` option). The arena is an i8 byte
@@ -259,16 +267,8 @@ def StaticMemoryPlannerAnalysisPass
   let statistics =
       [Statistic<"numEligible", "num-eligible",
                  "Number of alloc/dealloc pairs eligible for static planning">,
-       Statistic<"numSkipDynamic", "num-skipped-dynamic",
-                 "Number of allocations skipped: dynamic shape">,
-       Statistic<
-           "numSkipNested", "num-skipped-nested",
-           "Number of allocations skipped: nested in loop or conditional">,
-       Statistic<"numSkipNoDealloc", "num-skipped-no-dealloc",
-                 "Number of allocations skipped: no unique same-block dealloc">,
-       Statistic<
-           "numSkipEscaping", "num-skipped-escaping",
-           "Number of allocations skipped: cross-block alias or escaping use">,
+       Statistic<"numSkipped", "num-skipped",
+                 "Number of allocations skipped">,
   ];
 }
 

@@ -172,6 +172,7 @@ class TestScriptedExtensionsDiagnostics(TestBase):
         )
         error = lldb.SBError()
         target.Launch(launch_info, error)
+        self.assertSuccess(error)
         self.assert_diagnostic("get_stop_reason")
 
     # ------------------------------------------------------------------
@@ -193,6 +194,7 @@ class TestScriptedExtensionsDiagnostics(TestBase):
         )
         error = lldb.SBError()
         target.Launch(launch_info, error)
+        self.assertSuccess(error)
         self.assert_diagnostic("get_id")
 
     # ------------------------------------------------------------------

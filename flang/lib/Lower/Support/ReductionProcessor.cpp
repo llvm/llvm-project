@@ -99,21 +99,21 @@ ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
 }
 
 ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
-    omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp) {
-  switch (intrinsicOp) {
-  case omp::clause::DefinedOperator::IntrinsicOperator::Add:
+    omp::clause::IntrinsicOperator intrinsicOp) {
+  switch (intrinsicOp.v) {
+  case omp::clause::IntrinsicOperator::Operator::Add:
     return ReductionIdentifier::ADD;
-  case omp::clause::DefinedOperator::IntrinsicOperator::Subtract:
+  case omp::clause::IntrinsicOperator::Operator::Subtract:
     return ReductionIdentifier::SUBTRACT;
-  case omp::clause::DefinedOperator::IntrinsicOperator::Multiply:
+  case omp::clause::IntrinsicOperator::Operator::Multiply:
     return ReductionIdentifier::MULTIPLY;
-  case omp::clause::DefinedOperator::IntrinsicOperator::AND:
+  case omp::clause::IntrinsicOperator::Operator::AND:
     return ReductionIdentifier::AND;
-  case omp::clause::DefinedOperator::IntrinsicOperator::EQV:
+  case omp::clause::IntrinsicOperator::Operator::EQV:
     return ReductionIdentifier::EQV;
-  case omp::clause::DefinedOperator::IntrinsicOperator::OR:
+  case omp::clause::IntrinsicOperator::Operator::OR:
     return ReductionIdentifier::OR;
-  case omp::clause::DefinedOperator::IntrinsicOperator::NEQV:
+  case omp::clause::IntrinsicOperator::Operator::NEQV:
     return ReductionIdentifier::NEQV;
   default:
     llvm_unreachable("unexpected intrinsic operator in reduction");
@@ -127,10 +127,10 @@ ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
 // (the intrinsic-operator clause path filters the rest with a TODO first).
 parser::DefinedOperator::IntrinsicOperator
 ReductionProcessor::toParserIntrinsicOperator(
-    omp::clause::DefinedOperator::IntrinsicOperator op) {
-  using C = omp::clause::DefinedOperator::IntrinsicOperator;
+    omp::clause::IntrinsicOperator op) {
+  using C = omp::clause::IntrinsicOperator::Operator;
   using P = parser::DefinedOperator::IntrinsicOperator;
-  switch (op) {
+  switch (op.v) {
   case C::Add:
     return P::Add;
   case C::Multiply:
@@ -1074,9 +1074,8 @@ bool OpenMPReductionBinder<OpType>::processDefinedOperator(
               &redDefinedOp->u)) {
     return processDefinedOpName(definedOpName);
   }
-  const auto &intrinsicOp{
-      std::get<omp::clause::DefinedOperator::IntrinsicOperator>(
-          redDefinedOp->u)};
+  const auto &intrinsicOp =
+      std::get<omp::clause::IntrinsicOperator>(redDefinedOp->u);
   redId = ReductionProcessor::getReductionType(intrinsicOp);
   switch (redId) {
   case ReductionIdentifier::ADD:
@@ -1110,7 +1109,7 @@ bool OpenMPReductionBinder<OpType>::processDefinedOperator(
   // global name.
   if (semaCtx) {
     parser::CharBlock mangledOpName = semantics::MakeNameFromOperator(
-        ReductionProcessor::toParserIntrinsicOperator(intrinsicOp), *semaCtx);
+        ReductionProcessor::toParserIntrinsicOperator(intrinsicOp));
     if (const semantics::Symbol *userSym =
             semantics::omp::FindUserReductionSymbol(converter.getCurrentScope(),
                                                     mangledOpName, varType)) {
@@ -1130,8 +1129,8 @@ bool OpenMPReductionBinder<OpType>::processDefinedOperator(
   // fall through to createDeclareReduction below.
   reductionName =
       ReductionProcessor::getReductionName(redId, kindMap, redType, isByRef);
-  if (auto existingDecl =
-          builder.getModule().lookupSymbol<OpType>(reductionName)) {
+  mlir::ModuleOp module = builder.getModule();
+  if (auto existingDecl = module.lookupSymbol<OpType>(reductionName)) {
     reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), existingDecl.getSymName()));
     return true;

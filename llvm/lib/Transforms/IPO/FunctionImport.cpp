@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/FunctionImport.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -127,32 +128,12 @@ static cl::opt<float> ImportColdMultiplier(
     "import-cold-multiplier", cl::init(0), cl::Hidden, cl::value_desc("N"),
     cl::desc("Multiply the `import-instr-limit` threshold for cold callsites"));
 
-static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
-                                  cl::desc("Print imported functions"));
-
 static cl::opt<bool> PrintImportFailures(
     "print-import-failures", cl::init(false), cl::Hidden,
     cl::desc("Print information for functions rejected for importing"));
 
 static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
                                  cl::desc("Compute dead symbols"));
-
-static cl::opt<bool> EnableImportMetadata(
-    "enable-import-metadata", cl::init(false), cl::Hidden,
-    cl::desc("Enable import metadata like 'thinlto_src_module' and "
-             "'thinlto_src_file'"));
-
-/// Summary file to use for function importing when using -function-import from
-/// the command line.
-static cl::opt<std::string>
-    SummaryFile("summary-file",
-                cl::desc("The summary file to use for function importing."));
-
-/// Used when testing importing from distributed indexes via opt
-// -function-import.
-static cl::opt<bool>
-    ImportAllIndex("import-all-index",
-                   cl::desc("Import all external functions in index."));
 
 /// This is a test-only option.
 /// If this option is enabled, the ThinLTO indexing step will import each
@@ -164,6 +145,34 @@ static cl::opt<bool> ImportDeclaration(
     "import-declaration", cl::init(false), cl::Hidden,
     cl::desc("If true, import function declaration as fallback if the function "
              "definition is not imported."));
+
+/// Narrower form of -import-declaration for indirect call promotion: when the
+/// definition of a profiled indirect call target is not imported, import its
+/// declaration and export it from its defining module, so that the backend can
+/// promote the indirect call to it (see -icp-allow-decls).
+static cl::opt<bool> ImportDeclarationForIndirectCalls(
+    "import-declaration-for-indirect-calls", cl::init(false), cl::Hidden,
+    cl::desc("If true, import a declaration of the target of an indirect call "
+             "edge (and export it from its defining module) when its "
+             "definition is not imported."));
+
+static cl::opt<CalleeInfo::HotnessType>
+    ImportDeclarationForIndirectCallsMinHotness(
+        "import-declaration-for-indirect-calls-min-hotness",
+        cl::init(CalleeInfo::HotnessType::Hot), cl::Hidden,
+        cl::desc("Minimum hotness of an indirect call edge for "
+                 "-import-declaration-for-indirect-calls to import a "
+                 "declaration of its target."),
+        cl::values(clEnumValN(CalleeInfo::HotnessType::Unknown, "unknown",
+                              "Any edge, including ones without profile"),
+                   clEnumValN(CalleeInfo::HotnessType::Cold, "cold",
+                              "Cold or hotter edges"),
+                   clEnumValN(CalleeInfo::HotnessType::None, "none",
+                              "Edges that are not cold"),
+                   clEnumValN(CalleeInfo::HotnessType::Hot, "hot",
+                              "Hot or critical edges"),
+                   clEnumValN(CalleeInfo::HotnessType::Critical, "critical",
+                              "Critical edges only")));
 
 /// Pass a workload description file - an example of workload would be the
 /// functions executed to satisfy a RPC request. A workload is defined by a root
@@ -734,7 +743,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
     // Since the workload def uses names, we need a quick lookup
     // name->ValueInfo.
     StringMap<ValueInfo> NameToValueInfo;
-    StringSet<> AmbiguousNames;
+    [[maybe_unused]] StringSet<> AmbiguousNames;
     for (auto &I : Index) {
       ValueInfo VI = Index.getValueInfo(I);
       if (!NameToValueInfo.insert(std::make_pair(VI.name(), VI)).second)
@@ -947,17 +956,23 @@ void ModuleImportsManager::computeImportForFunction(
     // callee exported from its defining module) if its definition is not
     // imported. This is the case when the edge was marked as requiring a
     // declaration import (e.g. for MemProf ICP), or when declaration imports
-    // are enabled via -import-declaration for an indirect call edge, since the
-    // backend may then promote the indirect call to the imported declaration
-    // (e.g. regular ICP under -icp-allow-decls), which requires that the
-    // callee not be internalized. Callees of direct calls don't need to be
-    // exported here, since they are either referenced directly from the
-    // destination module, in which case they are already treated as visible
-    // outside their defining module, or from an imported definition, in which
-    // case they are marked exported in ComputeCrossModuleImport.
+    // are enabled for an indirect call edge (via -import-declaration, or via
+    // -import-declaration-for-indirect-calls for edges at least as hot as
+    // -import-declaration-for-indirect-calls-min-hotness), since the backend
+    // may then promote the indirect call to the imported declaration (e.g.
+    // regular ICP under -icp-allow-decls), which requires that the callee not
+    // be internalized. Callees of direct calls don't need to be exported here,
+    // since they are either referenced directly from the destination module,
+    // in which case they are already treated as visible outside their
+    // defining module, or from an imported definition, in which case they are
+    // marked exported in ComputeCrossModuleImport.
     const bool RequiresDeclImport =
         Edge.second.requiresDeclImport() ||
-        (ImportDeclaration && Edge.second.hasIndirectCall());
+        (Edge.second.hasIndirectCall() &&
+         (ImportDeclaration ||
+          (ImportDeclarationForIndirectCalls &&
+           Edge.second.getHotness() >=
+               ImportDeclarationForIndirectCallsMinHotness)));
 
     if (ImportCutoff >= 0 && ImportCount >= ImportCutoff) {
       LLVM_DEBUG(dbgs() << "ignored! import-cutoff value of " << ImportCutoff
@@ -2088,6 +2103,7 @@ static void protectImplicitRefGlobals(Module &M) {
 // index.
 Expected<bool> FunctionImporter::importFunctions(
     Module &DestModule, const FunctionImporter::ImportMapTy &ImportList) {
+  const IPOOptions &Opts = getIPOOptions(DestModule);
   LLVM_DEBUG(dbgs() << "Starting import for Module "
                     << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0, ImportedGVCount = 0;
@@ -2103,8 +2119,18 @@ Expected<bool> FunctionImporter::importFunctions(
 
   IRMover Mover(DestModule);
 
+  // Import from the source modules in module hash order. The IRMover appends
+  // imported globals and named metadata (e.g. llvm.linker.options) in import
+  // order, so this must not depend on the module paths, which the ThinLTO
+  // cache key (see computeLTOCacheKey) leaves out. Modules with the same hash
+  // keep the alphabetical order.
+  SmallVector<std::pair<ModuleHash, StringRef>, 0> SourceModules;
+  for (StringRef ModName : ImportList.getSourceModules())
+    SourceModules.emplace_back(Index.getModuleHash(ModName), ModName);
+  llvm::sort(SourceModules);
+
   // Do the actual import of functions now, one Module at a time
-  for (const auto &ModName : ImportList.getSourceModules()) {
+  for (const auto &[ModHash, ModName] : SourceModules) {
     llvm::TimeTraceScope timeScope("Import", ModName);
     // Get the module for the import
     Expected<std::unique_ptr<Module>> SrcModuleOrErr = ModuleLoader(ModName);
@@ -2146,7 +2172,8 @@ Expected<bool> FunctionImporter::importFunctions(
             return std::move(Err);
           // MemProf should match function's definition and summary,
           // 'thinlto_src_module' is needed.
-          if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+          if (Opts.enable_import_metadata ||
+              EnableMemProfContextDisambiguation) {
             // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
             // statistics and debugging.
             F.setMetadata(
@@ -2222,19 +2249,24 @@ Expected<bool> FunctionImporter::importFunctions(
                      << "Is importing aliasee fn " << GO->getGUIDOrFallback()
                      << " " << GO->getName() << " from "
                      << SrcModule->getSourceFileName() << "\n");
-          if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
-            // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
-            // statistics and debugging.
+          if (Opts.enable_import_metadata ||
+              EnableMemProfContextDisambiguation) {
+            // Add 'thinlto_src_module', 'thinlto_src_file', and
+            // 'thinlto_alias_guid' metadata for statistics, debugging, and
+            // summary lookup (since Fn retains the aliasee's !guid metadata).
+            LLVMContext &Ctx = DestModule.getContext();
             Fn->setMetadata(
                 "thinlto_src_module",
-                MDNode::get(DestModule.getContext(),
-                            {MDString::get(DestModule.getContext(),
-                                           SrcModule->getModuleIdentifier())}));
+                MDNode::get(Ctx, {MDString::get(
+                                     Ctx, SrcModule->getModuleIdentifier())}));
             Fn->setMetadata(
                 "thinlto_src_file",
-                MDNode::get(DestModule.getContext(),
-                            {MDString::get(DestModule.getContext(),
-                                           SrcModule->getSourceFileName())}));
+                MDNode::get(
+                    Ctx, {MDString::get(Ctx, SrcModule->getSourceFileName())}));
+            Fn->setMetadata(
+                "thinlto_alias_guid",
+                MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                     Type::getInt64Ty(Ctx), GUID))}));
           }
           GlobalsToImport.insert(Fn);
         } else if (MaybeImportType) {
@@ -2288,7 +2320,7 @@ Expected<bool> FunctionImporter::importFunctions(
                            GV->isDSOLocal(), GUID});
     }
 
-    if (PrintImports) {
+    if (Opts.print_imports) {
       for (const auto *GV : GlobalsToImport)
         dbgs() << DestModule.getSourceFileName() << ": Import " << GV->getName()
                << " from " << SrcModule->getSourceFileName() << "\n";
@@ -2317,8 +2349,31 @@ Expected<bool> FunctionImporter::importFunctions(
     // from linked IR, it creates attribute-less declarations for aliases, and
     // it does not copy metadata from source definitions.
     for (auto &DI : DeclInfos) {
-      if (DestModule.getNamedValue(DI.Name))
+      // Record the GUID of the original value, which may differ from the GUID
+      // computed from the current name if it was a promoted local. This allows
+      // the declaration to be located via the GUID, e.g. by MemProf ICP.
+      auto SetGUID = [&](Function *F) {
+        F->setMetadata(
+            LLVMContext::MD_guid,
+            MDNode::get(
+                DestModule.getContext(),
+                {ConstantAsMetadata::get(ConstantInt::get(
+                    Type::getInt64Ty(DestModule.getContext()), DI.GUID))}));
+      };
+      if (GlobalValue *Existing = DestModule.getNamedValue(DI.Name)) {
+        // A declaration created by the IRMover as a side effect of importing a
+        // definition that references it (e.g. a vtable initializer) does not
+        // carry the original GUID, so attach it here.
+        // TODO: Consider having IRMover propagate !guid metadata onto
+        // declarations it creates for referenced values (including functions
+        // and global variables not in DeclInfos), especially if we move toward
+        // attaching !guid uniformly to all declarations.
+        if (auto *ExistingF = dyn_cast<Function>(Existing);
+            ExistingF && ExistingF->isDeclaration() &&
+            !ExistingF->getMetadata(LLVMContext::MD_guid))
+          SetGUID(ExistingF);
         continue;
+      }
       Function *F = Function::Create(DI.Ty, GlobalValue::ExternalLinkage,
                                      DI.AddrSpace, DI.Name, &DestModule);
       F->setCallingConv(DI.CC);
@@ -2327,14 +2382,7 @@ Expected<bool> FunctionImporter::importFunctions(
       // setDSOLocal(false) is not allowed on an implicitly dso_local value.
       F->setVisibility(DI.Visibility);
       F->setDSOLocal(DI.DSOLocal);
-      // Record the GUID of the original value, which may differ from the GUID
-      // computed from the current name if it was a promoted local. This allows
-      // the declaration to be located via the GUID, e.g. by MemProf ICP.
-      F->setMetadata(LLVMContext::MD_guid,
-                     MDNode::get(DestModule.getContext(),
-                                 {ConstantAsMetadata::get(ConstantInt::get(
-                                     Type::getInt64Ty(DestModule.getContext()),
-                                     DI.GUID))}));
+      SetGUID(F);
       NumImportedFunctionDecls++;
     }
   }
@@ -2362,13 +2410,14 @@ Expected<bool> FunctionImporter::importFunctions(
 static bool doImportingForModuleForTest(
     Module &M, function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
                    isPrevailing) {
-  if (SummaryFile.empty())
+  const IPOOptions &Opts = getIPOOptions(M);
+  if (Opts.summary_file.empty())
     report_fatal_error("error: -function-import requires -summary-file\n");
   Expected<std::unique_ptr<ModuleSummaryIndex>> IndexPtrOrErr =
-      getModuleSummaryIndexForFile(SummaryFile);
+      getModuleSummaryIndexForFile(Opts.summary_file);
   if (!IndexPtrOrErr) {
     logAllUnhandledErrors(IndexPtrOrErr.takeError(), errs(),
-                          "Error loading file '" + SummaryFile + "': ");
+                          "Error loading file '" + Opts.summary_file + "': ");
     return false;
   }
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(*IndexPtrOrErr);
@@ -2379,7 +2428,7 @@ static bool doImportingForModuleForTest(
   // If requested, simply import all functions in the index. This is used
   // when testing distributed backend handling via the opt tool, when
   // we have distributed indexes containing exactly the summaries to import.
-  if (ImportAllIndex)
+  if (Opts.import_all_index)
     ComputeCrossModuleImportForModuleFromIndexForTest(M.getModuleIdentifier(),
                                                       *Index, ImportList);
   else

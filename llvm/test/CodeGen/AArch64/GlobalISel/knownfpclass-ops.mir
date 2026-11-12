@@ -1073,8 +1073,8 @@ body:             |
   ; CHECK-NEXT: %x:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %sqrt:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?
   ; CHECK-NEXT: %one:_ FPClasses:(pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf zero psub pnorm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf pzero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf pzero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %sqrt:_(f32) = G_FSQRT %x
@@ -1092,8 +1092,8 @@ body:             |
   ; CHECK-NEXT: %neg_x:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %sqrt:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?
   ; CHECK-NEXT: %neg_one:_ FPClasses:(nnorm) SignBitKnown:1
-  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf zero nsub nnorm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf zero nsub nnorm) SignBitKnown:?
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(nan inf nzero nsub nnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan inf nzero nsub nnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %x:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %neg_x:_(f32) = G_FNEG %x
@@ -1126,6 +1126,24 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @FRem
   ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %lhs:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %rhs:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %abs:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frem:_ FPClasses:(nan pzero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan pzero psub pnorm) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %abs:_(f32) = G_FABS %lhs
+    %frem:_(f32) = G_FREM %abs, %rhs
+    %copy:_(f32) = COPY %frem
+...
+---
+name:            FRemSelf
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FRemSelf
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %frem:_ FPClasses:(nan zero) SignBitKnown:?
@@ -1146,6 +1164,52 @@ body:             |
   ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %val:_(f32) = G_FCONSTANT float 2.0
     %frem:_(f32) = G_FREM %val, %val
+    %copy:_(f32) = COPY %frem
+...
+---
+name:            StrictFRem
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @StrictFRem
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %lhs:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %rhs:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %abs:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frem:_ FPClasses:(nan pzero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan pzero psub pnorm) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %abs:_(f32) = G_FABS %lhs
+    %frem:_(f32) = G_STRICT_FREM %abs, %rhs
+    %copy:_(f32) = COPY %frem
+...
+---
+name:            StrictFRemSelf
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @StrictFRemSelf
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %frem:_ FPClasses:(nan zero) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(nan zero) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %val:_(f32) = G_FREEZE %load
+    %frem:_(f32) = G_STRICT_FREM %val, %val
+    %copy:_(f32) = COPY %frem
+...
+---
+name:            StrictFRemSelfKnownFiniteNonZero
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @StrictFRemSelfKnownFiniteNonZero
+  ; CHECK-NEXT: %val:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frem:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
+    %val:_(f32) = G_FCONSTANT float 2.0
+    %frem:_(f32) = G_STRICT_FREM %val, %val
     %copy:_(f32) = COPY %frem
 ...
 ---

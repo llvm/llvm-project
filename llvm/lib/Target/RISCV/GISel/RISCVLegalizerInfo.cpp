@@ -249,20 +249,37 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.is64Bit() && ST.hasStdExtZbc(), {s32})
       .unsupported();
 
-  auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
-  auto &CountZerosPoisonActions =
-      getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
+  auto &CTLZPoisonActions = getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON);
+  auto &CTTZPoisonActions = getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON);
   if (ST.hasStdExtZbb()) {
-    CountZerosActions.legalFor({{sXLen, sXLen}})
+    getActionDefinitionsBuilder({G_CTLZ, G_CTTZ})
+        .legalFor({{sXLen, sXLen}})
         .customFor({{s32, s32}})
         .clampScalar(0, s32, sXLen)
         .widenScalarToNextPow2(0)
         .scalarSameSizeAs(1, 0);
   } else {
-    CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
-    CountZerosPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    auto &CTLZActions = getActionDefinitionsBuilder(G_CTLZ);
+    if (ST.hasVendorXTHeadBb())
+      CTLZActions.legalFor({{sXLen, sXLen}})
+          .clampScalar(0, sXLen, sXLen)
+          .scalarSameSizeAs(1, 0);
+    else
+      CTLZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+
+    auto &CTTZActions = getActionDefinitionsBuilder(G_CTTZ);
+    if (ST.hasVendorXTHeadBb()) {
+      CTTZActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0).lower();
+      CTLZPoisonActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0);
+      CTTZPoisonActions.clampScalar(0, sXLen, sXLen).scalarSameSizeAs(1, 0);
+    } else {
+      CTTZActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+      CTLZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+      CTTZPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    }
   }
-  CountZerosPoisonActions.lower();
+  CTLZPoisonActions.lower();
+  CTTZPoisonActions.lower();
 
   auto &CountSignActions = getActionDefinitionsBuilder(G_CTLS);
   if (ST.hasStdExtP()) {
@@ -1732,6 +1749,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_ADD: {
     Helper.Observer.changingInstr(MI);
+    // The G_ANYEXTs below leave the new high bits unconstrained, so no-wrap
+    // claims proved at the narrow width no longer hold.
+    MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
     Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
 
@@ -1760,6 +1780,10 @@ bool RISCVLegalizerInfo::legalizeCustom(
         ExtOpc = TargetOpcode::G_ZEXT;
 
       Helper.Observer.changingInstr(MI);
+      // The G_ANYEXT leave the new high bits unconstrained, so no-wrap
+      // claims proved at the narrow width no longer hold.
+      if (ExtOpc == TargetOpcode::G_ANYEXT)
+        MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
       Helper.widenScalarSrc(MI, sXLen, 1, ExtOpc);
       Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ZEXT);
       Helper.widenScalarDst(MI, sXLen);

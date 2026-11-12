@@ -717,6 +717,24 @@ skip:
   return s;
 }
 
+// Bypassed variables are initialized before the asm goto callbr terminator.
+// UNINIT-LABEL:  test_asm_goto_bypass(
+// UNINIT-NOT:    !annotation
+// ZERO-LABEL:    test_asm_goto_bypass(
+// ZERO:          %oops = alloca i32, align 4
+// ZERO:          store i32 0, ptr %oops, align 4, !annotation [[AUTO_INIT]]
+// ZERO-NEXT:     callbr void asm
+// PATTERN-LABEL: test_asm_goto_bypass(
+// PATTERN:       %oops = alloca i32, align 4
+// PATTERN:       store i32 -1431655766, ptr %oops, align 4, !annotation [[AUTO_INIT]]
+// PATTERN-NEXT:  callbr void asm
+void test_asm_goto_bypass() {
+  __asm__ goto("" : : : : jump);
+  int oops;
+jump:
+  used(oops);
+}
+
 } // extern "C"
 
 // CHECK: [[AUTO_INIT]] = !{ !"auto-init" }

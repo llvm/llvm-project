@@ -21,7 +21,6 @@
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -84,10 +83,6 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
-namespace llvm {
-  void initializeARMExecutionDomainFixPass(PassRegistry&);
-}
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
@@ -103,7 +98,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
-  initializeARMExecutionDomainFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
@@ -167,6 +161,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   initAsmInfo();
+
+  LLT::setUseExtended(true);
 
   // ARM supports the MachineOutliner.
   setMachineOutliner(true);
@@ -356,23 +352,7 @@ public:
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 
-class ARMExecutionDomainFix : public ExecutionDomainFix {
-public:
-  static char ID;
-  ARMExecutionDomainFix() : ExecutionDomainFix(ID, ARM::DPRRegClass) {}
-  StringRef getPassName() const override {
-    return "ARM Execution Domain Fix";
-  }
-};
-char ARMExecutionDomainFix::ID;
-
 } // end anonymous namespace
-
-INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-                      "ARM Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
-INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-                    "ARM Execution Domain Fix", false, false)
 
 void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "ARMPassRegistry.def"
@@ -513,7 +493,7 @@ void ARMPassConfig::addPreSched2() {
     if (EnableARMLoadStoreOpt)
       addPass(createARMLoadStoreOptLegacyPass());
 
-    addPass(new ARMExecutionDomainFix());
+    addPass(createExecutionDomainFixLegacyPass());
     addPass(createBreakFalseDepsLegacyPass());
   }
 
@@ -533,7 +513,7 @@ void ARMPassConfig::addPreSched2() {
              this->TM->getSubtarget<ARMSubtarget>(F).restrictIT();
     }));
 
-    addPass(createIfConverter([](const MachineFunction &MF) {
+    addPass(createIfConverterLegacyPass([](const MachineFunction &MF) {
       return !MF.getSubtarget<ARMSubtarget>().isThumb1Only();
     }));
   }

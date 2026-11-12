@@ -26,7 +26,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
