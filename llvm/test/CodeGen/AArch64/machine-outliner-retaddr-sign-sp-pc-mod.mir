@@ -308,7 +308,7 @@ body:             |
     frame-destroy AUTIASPPCi <mcsymbol .Lpac0>, implicit-def $lr, implicit $lr, implicit $sp
     frame-destroy CFI_INSTRUCTION llvm_set_ra_state 0, 0
     RET undef $lr
-
+...
 # CHECK-LABEL: name: illegal3
 # CHECK: liveins: $lr
 # CHECK-NEXT: {{  $}}

@@ -16,7 +16,7 @@ body:             |
     $f3 = FADDS $f1, $f2, implicit $fsr
     $f3 = FADDS $f1, $f2, implicit $fsr
     $f0 = FDIVS $f4, $f5, implicit $fsr
-
+...
 ---
 # CHECK:      $f0 = FDIVS $f0, $f0
 # CHECK-NEXT: NOP
@@ -33,7 +33,7 @@ body:             |
     $f3 = FADDS $f1, $f2, implicit $fsr
     $f3 = FADDS $f1, $f2, implicit $fsr
     $f0 = FSQRTS $f4, implicit $fsr
-
+...
 ---
 # CHECK-NOT:  NOP
 name:            er-9
@@ -45,7 +45,7 @@ body:             |
     $f3 = FADDS $f0, $f2, implicit $fsr
     $f3 = FADDS $f1, $f2, implicit $fsr
     $f0 = FSQRTS $f0, implicit $fsr
-
+...
 ---
 # CHECK-NOT:  NOP
 name:            er-10
@@ -56,7 +56,7 @@ body:             |
     $f4 = FSQRTS $f4, implicit $fsr
     $f3 = FADDS $f1, $f2, implicit $fsr
     $f0 = FSQRTS $f0, implicit $fsr
-
+...
 ---
 # CHECK:      er-11
 # CHECK:      $f0 = FSQRTS $f0
@@ -82,7 +82,7 @@ body:             |
     NOP
   bb.4:
     NOP
-
+...
 ---
 # CHECK:      $f1 = FDIVS $f0, $f1
 # CHECK-NEXT: NOP
