@@ -705,6 +705,7 @@ void ScheduleDAGRRList::EmitNode(SUnit *SU) {
   case ISD::CopyFromReg:
   case ISD::EH_LABEL:
   case ISD::ANNOTATION_LABEL:
+  case ISD::PSEUDO_PROBE:
     // Noops don't affect the scoreboard state. Copies are likely to be
     // removed.
     return;
