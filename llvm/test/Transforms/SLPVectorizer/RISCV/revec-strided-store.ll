@@ -101,3 +101,20 @@ entry:
   store i8 0, ptr %out3, align 2
   ret void
 }
+
+define void @reversed_strided_store(ptr noalias %in, ptr noalias %out) {
+; CHECK-LABEL: @reversed_strided_store(
+; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr inbounds i8, ptr [[OUT:%.*]], i64 32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[IN:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v2i64.p0.i64(<2 x i64> [[TMP2]], ptr align 2 [[OUT1]], i64 -32, <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    ret void
+;
+  %in1 = getelementptr inbounds i8, ptr %in, i64 8
+  %a = load <4 x i16>, ptr %in, align 2
+  %b = load <4 x i16>, ptr %in1, align 2
+  %out1 = getelementptr inbounds i8, ptr %out, i64 32
+  store <4 x i16> %a, ptr %out1, align 2
+  store <4 x i16> %b, ptr %out, align 2
+  ret void
+}

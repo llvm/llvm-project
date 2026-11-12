@@ -4135,7 +4135,17 @@ may see any write to the same byte, except:
 -  If R{sub}`byte` happens before write{sub}`3`, then
    R{sub}`byte` does not see write{sub}`3`.
 
-Given that definition, R{sub}`byte` is defined as follows:
+Two accesses form a *data race* if all of the following apply:
+
+-  at least one of them is a write,
+-  they access overlapping sets of bytes,
+-  they are not related by *happens-before*, and
+-  at least one of them is not atomic, or they do not access the exact
+   same set of bytes, or at least one of them specifies a `syncscope` and
+   the accesses do not satisfy the target-specific requirements for that
+   `syncscope`.
+
+Given these definitions, R{sub}`byte` is defined as follows:
 
 -  If R is volatile, the result is target-dependent. (Volatile is
    supposed to give guarantees which can support `sig_atomic_t` in
@@ -4144,19 +4154,18 @@ Given that definition, R{sub}`byte` is defined as follows:
    synchronization.)
 -  Otherwise, if there is no write to the same byte that happens before
    R{sub}`byte`, R{sub}`byte` returns `undef` for that byte.
--  Otherwise, if R{sub}`byte` may see exactly one write,
-   R{sub}`byte` returns the value written by that write.
--  Otherwise, if R is atomic, and all the writes R{sub}`byte` may
-   see are atomic, and R and the writes all access the exact same set of
-   bytes, it chooses one of the values written. See the {ref}`Atomic
-   Memory Ordering Constraints <ordering>` section for additional
-   constraints on how the choice is made. Targets may impose additional
-   requirements on R and the writes it may see based on their `syncscope`.
--  Otherwise R{sub}`byte` returns `undef`.
+-  Otherwise, consider the set consisting of R and all the writes that
+   R{sub}`byte` may see. If any two accesses in that set form a
+   *data race*, R{sub}`byte` returns `undef`.
+-  Otherwise, R{sub}`byte` chooses one of the values written by the
+   writes it may see.
+   See the {ref}`Atomic Memory Ordering Constraints <ordering>` section
+   for additional constraints on how the choice is made.
 
-Atomic accesses cannot tear: If a byte subaccess R{sub}`byte1` of an
-atomic read R reads from an atomic write W, then all other byte
-subaccesses R{sub}`byte2` of R that may see W must also read from W.
+Accesses which return a defined value cannot tear: If a byte subaccess
+R{sub}`byte1` of a read R reads from a write W, then all other byte
+subaccesses R{sub}`byte2` of R that may see W must also read from W or
+return `undef` by the above definition.
 
 R returns the value composed of the series of bytes it read. This
 implies that some bytes within the value may be `undef` **without**
@@ -9188,8 +9197,9 @@ encoded binary sections. More details can be found in the {doc}`PC Sections Meta
 #### '`memprof`' Metadata
 
 The `memprof` metadata is used to record memory profile data on heap
-allocation calls. Multiple context-sensitive profiles can be represented
-with a single `memprof` metadata attachment.
+allocation calls for profile-guided memory optimization (MemPGO). Multiple
+context-sensitive profiles can be represented with a single `memprof` metadata
+attachment.
 
 Example:
 
@@ -10042,10 +10052,11 @@ for a distributed ThinLTO backend via clang's "`-fthinlto-index=<>`" flag
 (this part is not yet implemented, use llvm-as to create a bitcode object
 before feeding into thin link tools for now).
 
-There are currently 3 types of summary entries in the LLVM assembly:
+Summary entries in the LLVM assembly include
 {ref}`module paths<module_path_summary>`,
-{ref}`global values<gv_summary>`, and
-{ref}`type identifiers<typeid_summary>`.
+{ref}`global values<gv_summary>`,
+{ref}`type identifiers<typeid_summary>`, and
+{ref}`CFI function lists<cfi_functions_summary>`.
 
 (module_path_summary)=
 
@@ -10376,6 +10387,28 @@ is `UniformRetVal` (indicates the uniform return value), or
 `UniqueRetVal` (holds the return value associated with the unique vtable
 (0 or 1)). The `byte` and `bit` fields are only used if the target does
 not support the use of absolute symbols to store constants.
+
+(cfi_functions_summary)=
+
+### CFI Function Summary Entries
+
+The `cfiFunctionDefs` and `cfiFunctionDecls` summary entries record the names
+of functions with
+[Control Flow Integrity](https://clang.llvm.org/docs/ControlFlowIntegrity.html)
+jump table entries, along with the GUIDs that ThinLTO uses for them. These
+entries are generated during the thin link and are only present in a combined
+summary index.
+
+Example:
+
+```text
+^4 = cfiFunctionDefs: ((guid: 14740650423002898831, name: "f"), (guid: 16617365750458309383, name: "f_dso_local"))
+^5 = cfiFunctionDecls: ((guid: 13146401226427987378, name: "g"), (guid: 13146401226427987378, name: "g.llvm.123"))
+```
+
+`cfiFunctionDefs` lists functions defined in the linked bitcode modules, and
+`cfiFunctionDecls` lists external functions declared by them. Multiple function
+names may share the same ThinLTO `guid`.
 
 (intrinsicglobalvariables)=
 
@@ -12462,11 +12495,13 @@ The location of memory pointed to is loaded. If the value being loaded
 is of scalar type then the number of bytes read does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, loading an `i24` reads at most three bytes. When loading a
-value of a type like `i20` with a size that is not an integral number
-of bytes, the load will be performed on the next larger multiple of the byte
-size (here `i24`) and truncated. If any of the truncated bits are non-zero,
-the result is a poison value. As such, a non-byte-sized load behaves like a
-byte-sized load followed by a `trunc nuw` operation.
+non-byte-sized scalar or vector value, the load is performed on the next
+larger multiple of the byte size, reading a value of byte type. If any
+padding bit is non-zero or poison, all value bits in the byte containing that
+padding become poison. Then, the value bits are extracted from bit 0 using
+`bitextract`, and the extracted value is finally `bitcast` to the loaded type.
+As such, a non-byte-sized load behaves like a byte-sized load followed by a
+`trunc nuw` operation.
 
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
@@ -12560,11 +12595,13 @@ The contents of memory are updated to contain `<value>` at the
 location specified by the `<pointer>` operand. If `<value>` is
 of scalar type then the number of bytes written does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
-example, storing an `i24` writes at most three bytes. When writing a
-value of a type like `i20` with a size that is not an integral number
-of bytes, the value will be zero extended to the next larger multiple of the
-byte size (here `i24`) and then stored. As such, a non-byte-sized store
-behaves like a `zext` followed by a byte-sized store.
+example, storing an `i24` writes at most three bytes. When storing a
+non-byte-sized scalar or vector value, the value is first `bitcast` to a
+scalar byte type and inserted at bit 0 into a byte type with the next
+larger byte size using `bitinsert`, and the resulting byte-sized value is
+stored. The padding bits are poison if every non-padding bit in the byte
+containing padding bits is poison; otherwise, they are zero. As such, a
+non-byte-sized store behaves like a `zext` followed by a byte-sized store.
 
 If `<value>` is of aggregate type, padding is filled with
 {ref}`undef <undefvalues>`.
@@ -13979,7 +14016,7 @@ assumptions to be made about the values of input arguments; namely
 ##### Syntax:
 
 ```
-<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...
+<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...[, !nonnull !<empty_node>][, !noundef !<empty_node>][, !range !<range-info>][, !nofpclass !<fpclass-info>][, !align !<align_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>]
 ```
 
 ##### Overview:
@@ -14192,7 +14229,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -14201,7 +14238,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-   
+
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -14210,7 +14247,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-   
+
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -14226,14 +14263,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-   
+
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
@@ -21880,6 +21917,43 @@ VecT compress(VecT vec, VecT mask, VecT passthru) {
 }
 ```
 
+(int_vector_shuffle)=
+
+#### '`llvm.vector.shuffle.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <8 x i32> @llvm.vector.shuffle.v8i32.v8i8(<8 x i32> %vec, <8 x i8> %mask)
+declare <vscale x 4 x float> @llvm.vector.shuffle.nxv4f32.nxv4i16(<vscale x 4 x float> %vec, <vscale x 4 x i16> %mask)
+```
+
+##### Overview:
+
+The '`llvm.vector.shuffle.*`' intrinsics permute the elements of a vector
+according to a mask that does not need to be a constant.
+
+For example:
+
+```text
+llvm.vector.shuffle(<A,B,C,D>, <3,0,0,7>) ==> <D,A,A,poison>
+```
+
+##### Arguments:
+
+The first operand is the vector to permute. The result has the same type. The
+second operand is the mask, a vector of integers with the same number of
+elements as the first operand.
+
+##### Semantics:
+
+Element `i` of the result is element `%mask[i]` of `%vec`, where `%mask[i]` is
+treated as an unsigned index. If `%mask[i]` is poison, or is greater than or
+equal to the number of elements in `%vec`, element `i` of the result is a
+{ref}`poison value <poisonvalues>`.
+
 #### '`llvm.experimental.vector.match.*`' Intrinsic
 
 ##### Syntax:
@@ -22500,20 +22574,23 @@ the range:
 Note that for {ref}`scalable vector types <t_vector>` `W` is the runtime
 length of the vector.
 
-The VP intrinsic has undefined behavior if `%evl > W`.  The explicit vector
-length (%evl) creates a mask, %EVLmask, with all elements `0 <= i < %evl` set
-to True, and all other lanes `%evl <= i < W` to False.  A new mask %M is
-calculated with an element-wise AND from %mask and %EVLmask:
+If `%evl > W`, VP intrinsics which access memory have undefined
+behavior. For all other VP intrinsics the result is poison.
+
+The explicit vector length (%evl) creates a mask, %EVLmask, with all
+elements `0 <= i < %evl` set to True, and all other lanes `%evl <= i <
+W` to False.  A new mask %M is calculated with an element-wise logical and
+of %EVLmask and %mask:
 
 ```
-M = %mask AND %EVLmask
+M = select <W x i1> %EVLmask, <W x i1> %mask, <W x i1> splat (i1 false)
 ```
 
 A vector operation `<opcode>` on vectors `A` and `B` calculates:
 
 ```
-A <opcode> B =  {  A[i] <opcode> B[i]   M[i] = True, and
-                {  undef otherwise
+A <opcode> B =  {  A[i] <opcode> B[i]   M[i] = True
+                {  poison               M[i] = False or poison
 ```
 
 #### Optimization Hint
@@ -22571,8 +22648,8 @@ is taken from the third argument.
 ;; Lanes at and above %pivot are taken from %on_false
 %atfirst = insertelement <4 x i32> poison, i32 %pivot, i64 0
 %splat = shufflevector <4 x i32> %atfirst, <4 x i32> poison, <4 x i32> zeroinitializer
-%pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> %splat
-%mergemask = and <4 x i1> %cond, <4 x i1> %pivotmask
+%pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %splat
+%mergemask = select <4 x i1> %pivotmask, <4 x i1> %cond, <4 x i1> splat (i1 false)
 %also.r = select <4 x i1> %mergemask, <4 x i32> %on_true, <4 x i32> %on_false
 ```
 
@@ -22604,8 +22681,8 @@ operation.
 ##### Semantics:
 
 The '`llvm.vp.sdiv`' intrinsic performs signed division ({ref}`sdiv <i_sdiv>`)
-of the first and second vector arguments on each enabled lane.  The result on
-disabled lanes is a {ref}`poison value <poisonvalues>`.
+of the first and second vector arguments on each enabled or poison lane. The
+result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22646,7 +22723,8 @@ operation.
 
 The '`llvm.vp.udiv`' intrinsic performs unsigned division
 ({ref}`udiv <i_udiv>`) of the first and second vector arguments on each enabled
-lane. The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22687,7 +22765,8 @@ operation.
 
 The '`llvm.vp.srem`' intrinsic computes the remainder of the signed division
 ({ref}`srem <i_srem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22728,7 +22807,8 @@ operation.
 
 The '`llvm.vp.urem`' intrinsic computes the remainder of the unsigned division
 ({ref}`urem <i_urem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -23565,7 +23645,7 @@ and `evl2` are unsigned integers indicating the explicit vector lengths of
 `vec1` and `vec2` respectively.  `imm`, `evl1` and `evl2` should
 respect the following constraints: `-evl1 <= imm < evl1`, `0 <= evl1 <= VL`
 and `0 <= evl2 <= VL`, where `VL` is the runtime vector factor. If these
-constraints are not satisfied the intrinsic has undefined behavior.
+constraints are not satisfied the result is poison.
 
 ##### Semantics:
 
@@ -23573,13 +23653,13 @@ Effectively, this intrinsic concatenates `vec1[0..evl1-1]` and
 `vec2[0..evl2-1]` and creates the result vector by selecting the elements in a
 window of size `evl2`, starting at index `imm` (for a positive immediate) of
 the concatenated vector. Elements in the result vector beyond `evl2` are
-`undef`.  If `imm` is negative the starting index is `evl1 + imm`.  The result
+`poison`.  If `imm` is negative the starting index is `evl1 + imm`.  The result
 vector of active vector length `evl2` contains `evl1 - imm` (`-imm` for
 negative `imm`) elements from indices `[imm..evl1 - 1]`
 (`[evl1 + imm..evl1 -1]` for negative `imm`) of `vec1` followed by the
 first `evl2 - (evl1 - imm)` (`evl2 + imm` for negative `imm`) elements of
 `vec2`. If `evl1 - imm` (`-imm`) >= `evl2`, only the first `evl2`
-elements are considered and the remaining are `undef`.  The lanes in the result
+elements are considered and the remaining are `poison`.  The lanes in the result
 vector disabled by `mask` are `poison`.
 
 ##### Examples:

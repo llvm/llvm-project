@@ -25,6 +25,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 class SPIRV_Attr<string attrName, string attrMnemonic>
     : AttrDef<SPIRV_Dialect, attrName> {
+  let cppIncludes = ["mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"];
   let mnemonic = attrMnemonic;
 }
 

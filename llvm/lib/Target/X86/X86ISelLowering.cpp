@@ -32913,6 +32913,11 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
                     : AtomicExpansionKind::CmpXChg;
   }
 
+  // Bit test accesses scaled by a register offset are not supported by LFI, so
+  // we use the CmpXChg pattern instead.
+  if (Subtarget.isLFI())
+    return AtomicExpansionKind::CmpXChg;
+
   assert(BitChange.second == ShiftBit || BitChange.second == NotShiftBit);
 
   auto BitTested = FindSingleBitChange(I->getOperand(OtherIdx));
@@ -34468,8 +34473,10 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
   assert((!N->isExpandingLoad() || Subtarget.hasAVX512()) &&
          "Expanding masked load is supported on AVX-512 target only!");
 
-  assert((!N->isExpandingLoad() || ScalarVT.getSizeInBits() >= 32) &&
-         "Expanding masked load is supported for 32 and 64-bit types only!");
+  assert((!N->isExpandingLoad() || Subtarget.hasVBMI2() ||
+          ScalarVT.getSizeInBits() >= 32) &&
+         "Expanding masked load is only supported for 32 and 64-bit types "
+         "without VBMI2!");
 
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
          "Cannot lower masked load op.");
@@ -34517,8 +34524,10 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   assert((!N->isCompressingStore() || Subtarget.hasAVX512()) &&
          "Compressing masked store is supported on AVX-512 target only!");
 
-  assert((!N->isCompressingStore() || ScalarVT.getSizeInBits() >= 32) &&
-         "Compressing masked store is supported for 32 and 64-bit types only!");
+  assert((!N->isCompressingStore() || Subtarget.hasVBMI2() ||
+          ScalarVT.getSizeInBits() >= 32) &&
+         "Compressing masked store is only supported for 32 and 64-bit types "
+         "without VBMI2!");
 
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
          "Cannot lower masked store op.");
@@ -47954,14 +47963,14 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
       ExtractVT != MVT::i64)
     return SDValue();
 
-  EVT VT = Extract->getOperand(0).getValueType();
-  if (!isPowerOf2_32(VT.getVectorNumElements()))
-    return SDValue();
-
   // Match shuffle + add pyramid.
   ISD::NodeType BinOp;
   SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
   if (!Root)
+    return SDValue();
+
+  EVT RootVT = Root.getValueType();
+  if (!isPowerOf2_32(RootVT.getVectorNumElements()))
     return SDValue();
 
   // The operand is expected to be zero extended from i8.
@@ -47998,7 +48007,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
 
   // If the original vector was wider than 8 elements, sum over the results
   // in the SAD vector.
-  unsigned Stages = Log2_32(VT.getVectorNumElements());
+  unsigned Stages = Log2_32(RootVT.getVectorNumElements());
   EVT SadVT = SAD.getValueType();
   if (Stages > 3) {
     unsigned SadElems = SadVT.getVectorNumElements();
@@ -51700,6 +51709,20 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
 
   unsigned Opc = ExtOpc == ISD::SIGN_EXTEND ? ISD::MULHS : ISD::MULHU;
   SDValue Mulh = DAG.getNode(Opc, DL, MulVT, LHS, RHS);
+
+  // For elements wider than 32 bits, the bits of the product above bit 31 are
+  // copies of its sign bit (sext) or zero (zext), so extend the MULH the same
+  // way as the inputs. A logical shift of a signed product then has to clear
+  // the top 16 bits.
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  if (EltSizeInBits > 32) {
+    SDValue Res = DAG.getNode(ExtOpc, DL, VT, Mulh);
+    if (N->getOpcode() == ISD::SRL && ExtOpc == ISD::SIGN_EXTEND) {
+      APInt Mask = APInt::getLowBitsSet(EltSizeInBits, EltSizeInBits - 16);
+      Res = DAG.getNode(ISD::AND, DL, VT, Res, DAG.getConstant(Mask, DL, VT));
+    }
+    return Res;
+  }
 
   ExtOpc = N->getOpcode() == ISD::SRA ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
   return DAG.getNode(ExtOpc, DL, VT, Mulh);
@@ -56785,6 +56808,60 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
                      DAG.getShiftAmountConstant(AdditionalShift, VT, DL));
 }
 
+// Try to form PMULHRSW from (trunc (shr (add (mul X, Y), 1 << (N-1)), N)),
+// N <= 15, pre-scaling Y by 1 << (15 - N) when it still fits in 16 bits.
+static SDValue combinePMULHRS(SDValue Src, EVT VT, const SDLoc &DL,
+                              SelectionDAG &DAG,
+                              const X86Subtarget &Subtarget) {
+  using namespace llvm::SDPatternMatch;
+
+  if (!Subtarget.hasSSSE3() || !VT.isVectorOf(MVT::i16))
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts < 8 || !isPowerOf2_32(NumElts) ||
+      Src.getScalarValueSizeInBits() < 32)
+    return SDValue();
+
+  unsigned ShiftOpc = Src.getOpcode();
+  if (ShiftOpc != ISD::SRL && ShiftOpc != ISD::SRA)
+    return SDValue();
+
+  SDValue LHS, RHS;
+  APInt ShiftAmt, Round;
+  if (!sd_match(Src, m_BinOp(ShiftOpc,
+                             m_Add(m_Mul(m_Value(LHS), m_Value(RHS)),
+                                   m_ConstInt(Round)),
+                             m_ConstInt(ShiftAmt))))
+    return SDValue();
+
+  if (ShiftAmt.isZero() || ShiftAmt.ugt(15) ||
+      !Round.isOneBitSet(ShiftAmt.getZExtValue() - 1))
+    return SDValue();
+
+  unsigned Scale = 15 - ShiftAmt.getZExtValue();
+  unsigned LHSBits = DAG.ComputeMaxSignificantBits(LHS);
+  unsigned RHSBits = DAG.ComputeMaxSignificantBits(RHS);
+  if (RHSBits > LHSBits) {
+    std::swap(LHS, RHS);
+    std::swap(LHSBits, RHSBits);
+  }
+  if (LHSBits > 16 || RHSBits > 16 - Scale)
+    return SDValue();
+
+  LHS = DAG.getNode(ISD::TRUNCATE, DL, VT, LHS);
+  RHS = DAG.getNode(ISD::TRUNCATE, DL, VT, RHS);
+  if (Scale)
+    RHS = DAG.getNode(ISD::SHL, DL, VT, RHS,
+                      DAG.getShiftAmountConstant(Scale, VT, DL));
+
+  auto PMULHRSBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
+                           ArrayRef<SDValue> Ops) {
+    return DAG.getNode(X86ISD::MULHRS, DL, Ops[0].getValueType(), Ops);
+  };
+  return SplitOpsAndApply(DAG, Subtarget, DL, VT, {LHS, RHS}, PMULHRSBuilder);
+}
+
 // Attempt to match PMADDUBSW, which multiplies corresponding unsigned bytes
 // from one vector with signed bytes from another vector, adds together
 // adjacent pairs of 16-bit products, and saturates the result before
@@ -56934,6 +57011,9 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
 
   // Try to combine PMULHUW/PMULHW for vXi16.
   if (SDValue V = combinePMULH(Src, VT, DL, DAG, Subtarget))
+    return V;
+
+  if (SDValue V = combinePMULHRS(Src, VT, DL, DAG, Subtarget))
     return V;
 
   // Fold trunc(srl(load(p),amt)) -> load(p+amt/8)
@@ -60847,10 +60927,6 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDNode *N,
 static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                    const SDLoc &DL, EVT VT) {
   if (N0.getOpcode() != N1.getOpcode() || N0.getOpcode() != X86ISD::VPMADDWD)
-    return SDValue();
-
-  // TODO: Add 256/512-bit support once VPMADDWD combines with shuffles.
-  if (VT.getSizeInBits() > 128)
     return SDValue();
 
   unsigned NumElts = VT.getVectorNumElements();

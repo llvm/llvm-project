@@ -1183,6 +1183,27 @@ bool Instruction::mayWriteToMemory() const {
   }
 }
 
+bool Instruction::mayReadOrWriteMemory() const {
+  // Keep in sync with mayReadFromMemory and mayWriteToMemory.
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::VAArg:
+  case Instruction::Load:
+  case Instruction::Store:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->doesNotAccessMemory();
+  }
+}
+
 bool Instruction::isAtomic() const {
   switch (getOpcode()) {
   default:

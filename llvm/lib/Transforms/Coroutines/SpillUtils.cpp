@@ -271,6 +271,17 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(ASC);
   }
 
+  // An integer address taken before CoroBegin must be recomputed from the
+  // frame just like a pointer alias, or it keeps the stack address.
+  void visitPtrToIntInst(PtrToIntInst &I) {
+    Base::visitPtrToIntInst(I);
+    handleAlias(I);
+  }
+
+  // Unlike ptrtoint, ptrtoaddr does not capture provenance, so the alloca
+  // cannot be written through it and it is not an escape.
+  void visitPtrToAddrInst(PtrToAddrInst &I) { handleAlias(I); }
+
   void visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     // The base visitor will adjust Offset accordingly.
     Base::visitGetElementPtrInst(GEPI);

@@ -39,11 +39,11 @@ public:
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
-    elf::scanSection1<Hexagon, ELF32LE>(*this, sec, shard);
+    elf::scanSection1<ELF32LE>(*this, sec, shard);
   }
   void finalizeRelocScan() override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
@@ -127,7 +127,7 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                               unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -135,13 +135,13 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
     uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = rel.r_offset;
     RelType type = rel.getType(false);
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    int64_t addend = rs.getAddend(rel, type);
     RelExpr expr;
     // Relocation types that only need a RelExpr set `expr` and break out of
     // the switch to reach rs.process(). Types that need special handling

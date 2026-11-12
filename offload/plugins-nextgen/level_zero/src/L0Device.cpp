@@ -187,10 +187,10 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
 
   DeviceArch = computeArch();
   // Default allocation kind for this device.
-  AllocKind = isDiscreteDevice() ? TARGET_ALLOC_DEVICE : TARGET_ALLOC_SHARED;
+  AllocKind = isDiscreteDevice() ? OL_ALLOC_TYPE_DEVICE : OL_ALLOC_TYPE_MANAGED;
 
   ze_kernel_indirect_access_flags_t Flags =
-      (AllocKind == TARGET_ALLOC_DEVICE)
+      (AllocKind == OL_ALLOC_TYPE_DEVICE)
           ? ZE_KERNEL_INDIRECT_ACCESS_FLAG_DEVICE
           : ZE_KERNEL_INDIRECT_ACCESS_FLAG_SHARED;
   IndirectAccessFlags = Flags;
@@ -341,13 +341,13 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
 }
 
 Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
-                                      TargetAllocTy Kind, size_t Alignment) {
+                                      ol_alloc_type_t Kind, size_t Alignment) {
   return dataAlloc(Size, Alignment, Kind,
                    /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
                    /*DevMalloc=*/false);
 }
 
-Error L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
+Error L0DeviceTy::free(void *TgtPtr, ol_alloc_type_t Kind) {
   return dataDelete(TgtPtr);
 }
 
@@ -649,19 +649,6 @@ Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
                                        bool DevMalloc, uint32_t MemAdvice,
                                        AllocOptionTy AllocOpt) {
 
-  const bool UseDedicatedPool =
-      (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_SCRATCH) ||
-      (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_COUNTER);
-  if (Kind == TARGET_ALLOC_DEFAULT) {
-    if (UserAlloc)
-      Kind = TARGET_ALLOC_DEVICE;
-    else if (AllocOpt == AllocOptionTy::ALLOC_OPT_HOST_MEM)
-      Kind = TARGET_ALLOC_HOST;
-    else if (UseDedicatedPool)
-      Kind = TARGET_ALLOC_DEVICE;
-    else
-      Kind = getAllocKind();
-  }
   auto &Allocator = getMemAllocator(Kind);
   return Allocator.alloc(Size, Align, Kind, Offset, UserAlloc, DevMalloc,
                          MemAdvice, AllocOpt);
@@ -842,7 +829,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   auto BufferOrErr =
       allocate(Funcs.size() * sizeof(void *),
-               /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+               /*HostPtr=*/nullptr, OL_ALLOC_TYPE_DEVICE, /*Alignment=*/0);
   if (!BufferOrErr)
     return HandleErr(BufferOrErr.takeError());
 
@@ -854,7 +841,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
         IsCtor ? "constructors" : "destructors");
 
   auto CleanupBufferAndErr = [&](Error RetErr) {
-    if (auto Err = free(Buffer, TARGET_ALLOC_DEVICE)) {
+    if (auto Err = free(Buffer, OL_ALLOC_TYPE_DEVICE)) {
       return joinErrors(std::move(RetErr), std::move(Err));
     }
     return RetErr;

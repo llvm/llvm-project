@@ -337,7 +337,7 @@ public:
 
   /// Check whether the name is "self" or "_cmd" and should show up in
   /// "frame variable".
-  bool IsAllowedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(llvm::StringRef name) override;
 
 protected:
   // Classes that inherit from ObjCLanguageRuntime can see and modify these

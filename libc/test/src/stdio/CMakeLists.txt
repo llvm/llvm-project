@@ -111,7 +111,9 @@ add_libc_test(
     setvbuf_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.stdio.clearerr
     libc.src.stdio.fclose
+    libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fwrite
@@ -198,7 +200,7 @@ if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   libc_add_definition(sprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
-  LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   libc_add_definition(sprintf_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
@@ -246,6 +248,7 @@ add_libc_test(
   SRCS
     snprintf_test.cpp
   DEPENDS
+    libc.src.__support.CPP.limits
     libc.src.stdio.snprintf
 )
 
@@ -545,7 +548,9 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       rename_test.cpp
     DEPENDS
+      libc.hdr.fcntl_macros
       libc.hdr.sys_stat_macros
+      libc.hdr.unistd_macros
       libc.src.fcntl.open
       libc.src.stdio.rename
       libc.src.unistd.access
@@ -574,7 +579,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
-
 
   add_libc_test(
     fdopen_test

@@ -123,4 +123,35 @@ subroutine assumes_no_openmp_duplicate
   !$omp assumes no_openmp no_openmp
 end subroutine assumes_no_openmp_duplicate
 
+module assumes_absent_module
+  implicit none
+  !$omp assumes absent(parallel, barrier)
+contains
+  subroutine local_work()
+    !$omp assumes absent(critical)
+  end subroutine local_work
+end module assumes_absent_module
+
+subroutine assumes_absent_procedure()
+  use assumes_absent_module
+  implicit none
+  !$omp assumes absent(target enter data)
+  !$omp assumes absent(parallel)
+end subroutine assumes_absent_procedure
+
+subroutine assumes_absent_combined()
+  !$omp assumes absent(barrier) no_openmp no_openmp_routines no_parallelism holds(.true.)
+end subroutine assumes_absent_combined
+
+subroutine assumes_absent_contains()
+  !$omp assumes absent(barrier) contains(parallel)
+  !$omp parallel
+  !$omp end parallel
+end subroutine assumes_absent_contains
+
+subroutine assumes_absent_duplicate()
+  !ERROR: At most one ABSENT clause can appear on ASSUMES directive
+  !$omp assumes absent(parallel) absent(barrier)
+end subroutine assumes_absent_duplicate
+
 end

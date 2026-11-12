@@ -33,6 +33,7 @@ def EmitCFloatType : Type<CPred<"emitc::isSupportedFloatType($_self)">,
 
 class EmitC_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<EmitC_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/EmitC/IR/EmitC.h"];
   let mnemonic = typeMnemonic;
 }
 

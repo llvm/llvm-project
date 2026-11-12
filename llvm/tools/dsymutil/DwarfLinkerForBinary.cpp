@@ -44,7 +44,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -80,8 +79,6 @@
 #include <vector>
 
 namespace llvm {
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 using namespace dwarf_linker;
 

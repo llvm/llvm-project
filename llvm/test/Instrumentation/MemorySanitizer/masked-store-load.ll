@@ -25,7 +25,7 @@ define void @Store(ptr %p, <4 x i64> %v, <4 x i1> %mask) sanitize_memory {
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP0]], ptr align 1 [[TMP3]], <4 x i1> [[MASK:%.*]])
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @Store(
@@ -47,7 +47,7 @@ define void @Store(ptr %p, <4 x i64> %v, <4 x i1> %mask) sanitize_memory {
 ; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7:[0-9]+]]
 ; ADDR-NEXT:    unreachable
 ; ADDR:       8:
-; ADDR-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
+; ADDR-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
 ; ADDR-NEXT:    ret void
 ;
 ; ORIGINS-LABEL: @Store(
@@ -63,21 +63,21 @@ define void @Store(ptr %p, <4 x i64> %v, <4 x i1> %mask) sanitize_memory {
 ; ORIGINS-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; ORIGINS-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP0]], ptr align 1 [[TMP4]], <4 x i1> [[MASK:%.*]])
 ; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP7]], align 4
-; ORIGINS-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i32 1
+; ORIGINS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 4
 ; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP8]], align 4
-; ORIGINS-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP7]], i32 2
+; ORIGINS-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i64 8
 ; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP9]], align 4
-; ORIGINS-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP7]], i32 3
+; ORIGINS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP7]], i64 12
 ; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP10]], align 4
-; ORIGINS-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP7]], i32 4
+; ORIGINS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP7]], i64 16
 ; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP11]], align 4
-; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP7]], i32 5
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP7]], i64 20
 ; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP12]], align 4
-; ORIGINS-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP7]], i32 6
+; ORIGINS-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP7]], i64 24
 ; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP13]], align 4
-; ORIGINS-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP7]], i32 7
+; ORIGINS-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP7]], i64 28
 ; ORIGINS-NEXT:    store i32 [[TMP1]], ptr [[TMP14]], align 4
-; ORIGINS-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
+; ORIGINS-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
 ; ORIGINS-NEXT:    ret void
 ;
 entry:
@@ -158,7 +158,7 @@ define void @StoreNoSanitize(ptr %p, <4 x i64> %v, <4 x i1> %mask) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP2]], <4 x i1> [[MASK:%.*]])
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @StoreNoSanitize(
@@ -168,7 +168,7 @@ define void @StoreNoSanitize(ptr %p, <4 x i64> %v, <4 x i1> %mask) {
 ; ADDR-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080
 ; ADDR-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 ; ADDR-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP2]], <4 x i1> [[MASK:%.*]])
-; ADDR-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
+; ADDR-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
 ; ADDR-NEXT:    ret void
 ;
 ; ORIGINS-LABEL: @StoreNoSanitize(
@@ -182,21 +182,21 @@ define void @StoreNoSanitize(ptr %p, <4 x i64> %v, <4 x i1> %mask) {
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; ORIGINS-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP2]], <4 x i1> [[MASK:%.*]])
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP5]], align 4
-; ORIGINS-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i32 1
+; ORIGINS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i64 4
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP6]], align 4
-; ORIGINS-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP5]], i32 2
+; ORIGINS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP5]], i64 8
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP7]], align 4
-; ORIGINS-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP5]], i32 3
+; ORIGINS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP5]], i64 12
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP8]], align 4
-; ORIGINS-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP5]], i32 4
+; ORIGINS-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i64 16
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP9]], align 4
-; ORIGINS-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP5]], i32 5
+; ORIGINS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP5]], i64 20
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP10]], align 4
-; ORIGINS-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP5]], i32 6
+; ORIGINS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP5]], i64 24
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP11]], align 4
-; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i32 7
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP5]], i64 28
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
-; ORIGINS-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
+; ORIGINS-NEXT:    tail call void @llvm.masked.store.v4i64.p0(<4 x i64> [[V:%.*]], ptr align 1 [[P]], <4 x i1> [[MASK]])
 ; ORIGINS-NEXT:    ret void
 ;
 entry:

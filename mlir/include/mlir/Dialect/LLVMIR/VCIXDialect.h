@@ -23,7 +23,6 @@
 #define MLIR_DIALECT_LLVMIR_VCIXDIALECT_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 ///// Ops /////
