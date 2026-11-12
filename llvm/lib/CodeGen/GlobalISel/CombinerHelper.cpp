@@ -8417,6 +8417,72 @@ static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
   }
 }
 
+bool CombinerHelper::matchMulByZeroOneVector(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo) const {
+  if (MI.getOpcode() != TargetOpcode::G_MUL)
+    return false;
+
+  Register Dst = MI.getOperand(0).getReg();
+  LLT VecTy = MRI.getType(Dst);
+
+  if (!VecTy.isFixedVector())
+    return false;
+
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, VecTy}))
+    return false;
+
+  unsigned ElemBits = VecTy.getScalarSizeInBits();
+
+  // Multiplication is commutative: check both operands for a mask.
+  for (unsigned MaskIdx : {1u, 2u}) {
+    Register MaskReg = MI.getOperand(MaskIdx).getReg();
+    Register SrcReg = MI.getOperand(3 - MaskIdx).getReg();
+
+    auto *BV = getOpcodeDef<GBuildVector>(MaskReg, MRI);
+    if (!BV || BV->getNumSources() != VecTy.getNumElements())
+      continue;
+
+    SmallVector<APInt, 8> MaskValues;
+    bool HasZero = false;
+    bool HasOne = false;
+    bool Valid = true;
+
+    for (unsigned I = 0; I < BV->getNumSources(); ++I) {
+      auto C = getIConstantVRegValWithLookThrough(BV->getSourceReg(I), MRI);
+
+      if (!C) {
+        Valid = false;
+        break;
+      }
+
+      if (C->Value.isZero()) {
+        HasZero = true;
+        MaskValues.emplace_back(ElemBits, 0);
+      } else if (C->Value.isOne()) {
+        HasOne = true;
+        MaskValues.push_back(APInt::getAllOnes(ElemBits));
+      } else {
+        Valid = false;
+        break;
+      }
+    }
+
+    // Leave all-zero and all-one vectors to existing combines.
+    if (!Valid || !HasZero || !HasOne)
+      continue;
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      Register AndMask =
+          B.buildBuildVectorConstant(VecTy, MaskValues).getReg(0);
+      B.buildAnd(Dst, SrcReg, AndMask);
+    };
+
+    return true;
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
                                               BuildFnTy &MatchInfo) const {
 

@@ -464,6 +464,16 @@ def AArch64PostLegalizerLowering
                         unmerge_duplanes]> {
 }
 
+// Turn an AND whose constant mask clears exactly one lane into an insert of
+// zero, which selects to a single "mov v.<T>[i], wzr". Skip ANDs that feed a
+// G_OR, since the AND/OR pair is better matched as a bitwise select.
+def and_clear_one_lane_matchdata : GIDefMatchData<"std::pair<Register, unsigned>">;
+def and_clear_one_lane : GICombineRule<
+  (defs root:$root, and_clear_one_lane_matchdata:$matchinfo),
+  (match (G_AND $dst, $lhs, $rhs):$root,
+         [{ return matchAndClearOneLane(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyAndClearOneLane(*${root}, MRI, B, ${matchinfo}); }])>;
+
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
@@ -476,6 +486,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
+                        mul_by_zero_one_vector, and_clear_one_lane,
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
