@@ -6,13 +6,11 @@
 ; CHECK: = and
 ; CHECK: = and
 ; CHECK: r[[REGA:[0-9]+]] = memub(r{{[0-9]+}}+#1)
-; CHECK: = and
-; CHECK: r[[REG0:[0-9]+]] = and(r[[REG1:[0-9]+]],#255)
-; CHECK-NOT: r[[REG0]] = and(r[[REG1]],#255)
+; CHECK: r[[REG0:[0-9]+]] = and(r[[REGA]],#255)
+; CHECK-NOT: r[[REG0]] = and(r[[REGA]],#255)
 ; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: = add(r{{[0-9]+}},r[[REG0]])
-; CHECK: = and
 ; CHECK: r[[REG0]] = and
 ; CHECK: endloop
 
