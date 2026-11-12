@@ -70,10 +70,10 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 12
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -262,7 +262,7 @@ define i32 @flat_offset_inbounds(ptr %p, i32 %i) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-NEXT:    flat_load_b32 v0, v[0:1] offset:12
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -349,10 +349,10 @@ define void @flat_offset_inbounds_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_lshlrev_b64 v[4:5], 2, v[4:5]
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v4, vcc_lo, v0, 28
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX11-SDAG-NEXT:    s_clause 0x1
 ; GFX11-SDAG-NEXT:    flat_load_b32 v8, v[4:5]
@@ -444,7 +444,7 @@ define void @flat_offset_inbounds_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b64 v[4:5], 2, v[4:5]
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
 ; GFX11-GISEL-NEXT:    s_clause 0x1
 ; GFX11-GISEL-NEXT:    flat_load_b128 v[4:7], v[0:1] offset:12
@@ -633,6 +633,8 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX942-SDAG-NEXT:    s_nop 0
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[12:15], v[8:9]
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[30:33], v[10:11]
+; GFX942-SDAG-NEXT:    ; kill: killed $vgpr10_vgpr11
+; GFX942-SDAG-NEXT:    ; kill: killed $vgpr8_vgpr9
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[34:37], v[4:5]
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[48:51], v[6:7]
 ; GFX942-SDAG-NEXT:    flat_load_dwordx4 v[52:55], v[0:1] offset:12
@@ -669,10 +671,10 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_lshlrev_b64 v[4:5], 2, v[4:5]
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v36, vcc_lo, v0, 28
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v37, null, 0, v1, vcc_lo
 ; GFX11-SDAG-NEXT:    s_clause 0x7
 ; GFX11-SDAG-NEXT:    flat_load_b128 v[4:7], v[36:37] offset:80
@@ -686,7 +688,6 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    flat_load_b128 v[35:38], v[36:37] offset:48
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v2, 48
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v48, vcc_lo, v2, 0x88
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v49, null, 0, v3, vcc_lo
@@ -858,7 +859,7 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshlrev_b64 v[4:5], 2, v[4:5]
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
 ; GFX11-GISEL-NEXT:    s_clause 0x8
 ; GFX11-GISEL-NEXT:    flat_load_b128 v[4:7], v[0:1] offset:12

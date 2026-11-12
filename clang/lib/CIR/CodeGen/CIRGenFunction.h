@@ -38,6 +38,7 @@
 #include "clang/CIR/TypeEvaluationKind.h"
 #include "clang/CodeGenUtils/CallUtils.h"
 #include "clang/CodeGenUtils/StmtUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2470,6 +2471,7 @@ public:
 
   LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
+  LValue emitMatrixElementExpr(const MatrixElementExpr *e);
   LValue emitMemberExpr(const MemberExpr *e);
 
   /// Emit a musttail call for a thunk with a potentially different ABI.
@@ -2636,6 +2638,8 @@ public:
   mlir::Value emitX86CpuSupports(mlir::Location loc,
                                  std::array<uint32_t, 4> FeatureMask);
   mlir::Value emitX86CpuInit(mlir::Location loc);
+  using MSVCIntrin = CodeGenUtils::MSVCIntrin;
+  mlir::Value emitX86MSVCIntrin(MSVCIntrin builtinID, const CallExpr *E);
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 
@@ -2951,6 +2955,8 @@ public:
   emitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &s);
   mlir::LogicalResult emitOMPTargetParallelGenericLoopDirective(
       const OMPTargetParallelGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetGenericLoopDirective(const OMPTargetGenericLoopDirective &s);
   mlir::LogicalResult emitOMPTargetParallelForSimdDirective(
       const OMPTargetParallelForSimdDirective &s);
   mlir::LogicalResult

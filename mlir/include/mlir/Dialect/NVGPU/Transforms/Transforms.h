@@ -16,6 +16,7 @@
 #include "mlir/IR/Operation.h"
 
 namespace mlir {
+class MemRefType;
 class RewriterBase;
 
 namespace nvgpu {
@@ -23,6 +24,12 @@ namespace nvgpu {
 ///
 /// Passes
 ///
+
+/// Returns true if `optimizeSharedMemoryReadsAndWrites` can swizzle accesses to
+/// shared memory buffers of type `memRefType`. This does not guarantee that the
+/// memref will be swizzled, however: factors other than its type can prevent
+/// it, e.g., buffers with aliases are not swizzled.
+bool canSwizzleSharedMemoryType(MemRefType memRefType);
 
 /// Optimizes vectorized accesses to a shared memory buffer specified by
 /// memrefValue. This transformation assumes the following:

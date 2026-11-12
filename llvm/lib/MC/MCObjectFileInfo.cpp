@@ -641,6 +641,7 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       LD->setWeak(false);
       LD->setLinkage(GOFF::ESD_LT_XPLink);
       LD->setExternal(false);
+      LD->setADA(ED);
       ED->setBeginSymbol(LD);
     } else
       assert(LD->getName() == LDName && "Wrong label name");

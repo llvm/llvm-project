@@ -416,7 +416,7 @@ added in the future:
     - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with `nest`.
 
-    - On RISC-V the callee preserves x5-x31 except x6, x7 and x28 registers.
+    - On RISC-V the callee preserves x8-x31 except the x28 register.
 
     - On LoongArch the callee preserves r4-r31 except r12-r15 and r20-r21 registers.
 
@@ -2297,6 +2297,15 @@ define void @f() "no-sse" { ... }
     on function-pointer identity can break. So, any function annotated with
     `jumptable` must also be `unnamed_addr`.
 
+`likely_module_local`
+:   This attribute indicates that the function is likely not referenced from
+    outside of the current module, even though its linkage does not guarantee
+    that. It is only meaningful on functions with `linkonce_odr` linkage and is
+    ignored otherwise. Optimizations may use it as a profitability hint. It is
+    just a hint; it imposes no requirements on the inliner or other
+    optimizations, and furthermore it must not be relied upon for correctness,
+    as the function may still be referenced from another module.
+
 `memory(...)`
 :   This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (`none`,
@@ -2385,7 +2394,7 @@ define void @f() "no-sse" { ... }
     stops inside an inlined call site, it will appear to be stopped at the
     outermost inlined call site.
 
-`no-jump-tables`
+`"no-jump-tables"`
 :   When this attribute is set to true, the jump tables and lookup tables that
     can be generated from a switch case lowering are disabled.
 
@@ -2497,7 +2506,7 @@ define void @f() "no-sse" { ... }
 :   This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.
 
-`indirect-tls-seg-refs`
+`"indirect-tls-seg-refs"`
 :   This attribute indicates that the code generator should not use
     direct TLS access through segment registers, even if the
     target-specific ABI normally permits it.
@@ -2721,6 +2730,10 @@ fn -> other_fn -> other_fn ; fn is norecurse
 :   This attribute indicates that ThreadSanitizer checks
     (dynamic thread safety analysis) are enabled for this function.
 
+`sanitize_concurrency`
+:   This attribute indicates that ConcurrencySanitizer checks
+    (probabilistic data race detection) are enabled for this function.
+
 `sanitize_hwaddress`
 :   This attribute indicates that HWAddressSanitizer checks
     (dynamic address safety analysis based on tagged pointers) are enabled for
@@ -2874,7 +2887,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     bitcode, if the second value is omitted, both input and output
     modes will assume the same mode.
 
-    If this is attribute is not specified, the default is `ieee|ieee`.
+    If this attribute is not specified, the default is `ieee|ieee`.
 
     If the output mode is `preservesign`, or `positivezero`,
     denormal outputs may be flushed to zero by standard floating-point
@@ -2892,10 +2905,6 @@ fn -> other_fn -> other_fn ; fn is norecurse
     the mode is consistent. User or platform code is expected to set
     the floating point mode appropriately before function entry.
 
-    This may optionally specify a second pair, prefixed with
-    `float:`. This provides an override for the behavior of 32-bit
-    float type (or vectors of 32-bit floats).
-
     If the input mode is `preservesign`, or `positivezero`,
     a floating-point operation must treat any input denormal value as
     zero. In some situations, if an instruction does not respect this
@@ -2904,11 +2913,10 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
     This may optionally specify a second pair, prefixed with
     `float:`. This provides an override for the behavior of 32-bit
-    float type. (or vectors of 32-bit floats). If this is present,
-    this overrides the base handling of the default mode. Not all
+    float type (or vectors of 32-bit floats). Not all
     targets support separately setting the denormal mode per type, and
-    no attempt is made to diagnose unsupported uses. Currently this
-    attribute is respected by the AMDGPU and NVPTX backends.
+    no attempt is made to diagnose unsupported uses. Currently the separate
+    `float:` attribute is respected by the AMDGPU and NVPTX backends.
 
     **Examples:**
 
@@ -2970,6 +2978,15 @@ fn -> other_fn -> other_fn ; fn is norecurse
     required integer value, which should be a non-negative integer, and less
     than `UINT_MAX`.  It's unspecified which threshold will be used when
     duplicate definitions are linked together with differing values.
+
+`"unsafe-stack-size"="<size>"`
+:   This attribute records the size in bytes of the static unsafe stack frame
+    of a function with the `safestack` attribute. The SafeStack pass sets it,
+    and code generation adds it to the frame size when reporting stack usage.
+    It is ignored on functions without `safestack`. It takes one required
+    integer value, which should be a non-negative integer, and less than
+    `UINT_MAX`. This attribute is only used internally by LLVM and should not
+    be set by frontends.
 
 `vscale_range(<min>[, <max>])`
 :   This function attribute indicates `vscale` is a power-of-two within a
@@ -4118,7 +4135,17 @@ may see any write to the same byte, except:
 -  If R{sub}`byte` happens before write{sub}`3`, then
    R{sub}`byte` does not see write{sub}`3`.
 
-Given that definition, R{sub}`byte` is defined as follows:
+Two accesses form a *data race* if all of the following apply:
+
+-  at least one of them is a write,
+-  they access overlapping sets of bytes,
+-  they are not related by *happens-before*, and
+-  at least one of them is not atomic, or they do not access the exact
+   same set of bytes, or at least one of them specifies a `syncscope` and
+   the accesses do not satisfy the target-specific requirements for that
+   `syncscope`.
+
+Given these definitions, R{sub}`byte` is defined as follows:
 
 -  If R is volatile, the result is target-dependent. (Volatile is
    supposed to give guarantees which can support `sig_atomic_t` in
@@ -4127,19 +4154,18 @@ Given that definition, R{sub}`byte` is defined as follows:
    synchronization.)
 -  Otherwise, if there is no write to the same byte that happens before
    R{sub}`byte`, R{sub}`byte` returns `undef` for that byte.
--  Otherwise, if R{sub}`byte` may see exactly one write,
-   R{sub}`byte` returns the value written by that write.
--  Otherwise, if R is atomic, and all the writes R{sub}`byte` may
-   see are atomic, and R and the writes all access the exact same set of
-   bytes, it chooses one of the values written. See the {ref}`Atomic
-   Memory Ordering Constraints <ordering>` section for additional
-   constraints on how the choice is made. Targets may impose additional
-   requirements on R and the writes it may see based on their `syncscope`.
--  Otherwise R{sub}`byte` returns `undef`.
+-  Otherwise, consider the set consisting of R and all the writes that
+   R{sub}`byte` may see. If any two accesses in that set form a
+   *data race*, R{sub}`byte` returns `undef`.
+-  Otherwise, R{sub}`byte` chooses one of the values written by the
+   writes it may see.
+   See the {ref}`Atomic Memory Ordering Constraints <ordering>` section
+   for additional constraints on how the choice is made.
 
-Atomic accesses cannot tear: If a byte subaccess R{sub}`byte1` of an
-atomic read R reads from an atomic write W, then all other byte
-subaccesses R{sub}`byte2` of R that may see W must also read from W.
+Accesses which return a defined value cannot tear: If a byte subaccess
+R{sub}`byte1` of a read R reads from a write W, then all other byte
+subaccesses R{sub}`byte2` of R that may see W must also read from W or
+return `undef` by the above definition.
 
 R returns the value composed of the series of bytes it read. This
 implies that some bytes within the value may be `undef` **without**
@@ -9171,8 +9197,9 @@ encoded binary sections. More details can be found in the {doc}`PC Sections Meta
 #### '`memprof`' Metadata
 
 The `memprof` metadata is used to record memory profile data on heap
-allocation calls. Multiple context-sensitive profiles can be represented
-with a single `memprof` metadata attachment.
+allocation calls for profile-guided memory optimization (MemPGO). Multiple
+context-sensitive profiles can be represented with a single `memprof` metadata
+attachment.
 
 Example:
 
@@ -9970,6 +9997,37 @@ for an integer access:
 
 Multiple TBAA operands are allowed to support merging of modules that may use
 different TBAA hierarchies (e.g., when mixing C and C++).
+
+## '`llvm.raw.sections`' Named Metadata
+
+The module-level `!llvm.raw.sections` metadata allows embedding arbitrary
+binary data into named sections of the output object file. A
+`!llvm.raw.sections` metadata node is a list of metadata nodes with the
+following fields:
+
+```
+!0 = !{!"section_name", i32 alignment, i32 flags, !"raw data"}
+```
+
+- **section_name**: The name of the output section.
+- **alignment**: The byte alignment of the section data. Must be a power-of-two.
+- **flags**: A bitmask describing the properties of the section. Each target
+  maps this onto format-appropriate section flags. The value `0` specifies that
+  the section is present in the object file but is not loaded into memory.
+  Other values are reserved for future use and are currently rejected by the
+  verifier.
+- **raw data**: The binary contents of the section.
+
+Example:
+```
+!llvm.raw.sections = !{!0}
+!0 = !{!"__mydata", i32 8, i32 0, !"\DE\AD\BE\EF"}
+```
+
+Each of the nodes inside a `!llvm.raw.sections` metadata node gets lowered to
+a target-specific named data section. It is an error to use
+`!llvm.raw.sections` on a target that does not support arbitrary named
+sections.
 
 (summary)=
 
@@ -21832,6 +21890,43 @@ VecT compress(VecT vec, VecT mask, VecT passthru) {
 }
 ```
 
+(int_vector_shuffle)=
+
+#### '`llvm.vector.shuffle.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <8 x i32> @llvm.vector.shuffle.v8i32.v8i8(<8 x i32> %vec, <8 x i8> %mask)
+declare <vscale x 4 x float> @llvm.vector.shuffle.nxv4f32.nxv4i16(<vscale x 4 x float> %vec, <vscale x 4 x i16> %mask)
+```
+
+##### Overview:
+
+The '`llvm.vector.shuffle.*`' intrinsics permute the elements of a vector
+according to a mask that does not need to be a constant.
+
+For example:
+
+```text
+llvm.vector.shuffle(<A,B,C,D>, <3,0,0,7>) ==> <D,A,A,poison>
+```
+
+##### Arguments:
+
+The first operand is the vector to permute. The result has the same type. The
+second operand is the mask, a vector of integers with the same number of
+elements as the first operand.
+
+##### Semantics:
+
+Element `i` of the result is element `%mask[i]` of `%vec`, where `%mask[i]` is
+treated as an unsigned index. If `%mask[i]` is poison, or is greater than or
+equal to the number of elements in `%vec`, element `i` of the result is a
+{ref}`poison value <poisonvalues>`.
+
 #### '`llvm.experimental.vector.match.*`' Intrinsic
 
 ##### Syntax:
@@ -22452,20 +22547,23 @@ the range:
 Note that for {ref}`scalable vector types <t_vector>` `W` is the runtime
 length of the vector.
 
-The VP intrinsic has undefined behavior if `%evl > W`.  The explicit vector
-length (%evl) creates a mask, %EVLmask, with all elements `0 <= i < %evl` set
-to True, and all other lanes `%evl <= i < W` to False.  A new mask %M is
-calculated with an element-wise AND from %mask and %EVLmask:
+If `%evl > W`, VP intrinsics which access memory have undefined
+behavior. For all other VP intrinsics the result is poison.
+
+The explicit vector length (%evl) creates a mask, %EVLmask, with all
+elements `0 <= i < %evl` set to True, and all other lanes `%evl <= i <
+W` to False.  A new mask %M is calculated with an element-wise logical and
+of %EVLmask and %mask:
 
 ```
-M = %mask AND %EVLmask
+M = select <W x i1> %EVLmask, <W x i1> %mask, <W x i1> splat (i1 false)
 ```
 
 A vector operation `<opcode>` on vectors `A` and `B` calculates:
 
 ```
-A <opcode> B =  {  A[i] <opcode> B[i]   M[i] = True, and
-                {  undef otherwise
+A <opcode> B =  {  A[i] <opcode> B[i]   M[i] = True
+                {  poison               M[i] = False or poison
 ```
 
 #### Optimization Hint
@@ -22556,8 +22654,8 @@ operation.
 ##### Semantics:
 
 The '`llvm.vp.sdiv`' intrinsic performs signed division ({ref}`sdiv <i_sdiv>`)
-of the first and second vector arguments on each enabled lane.  The result on
-disabled lanes is a {ref}`poison value <poisonvalues>`.
+of the first and second vector arguments on each enabled or poison lane. The
+result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22598,7 +22696,8 @@ operation.
 
 The '`llvm.vp.udiv`' intrinsic performs unsigned division
 ({ref}`udiv <i_udiv>`) of the first and second vector arguments on each enabled
-lane. The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22639,7 +22738,8 @@ operation.
 
 The '`llvm.vp.srem`' intrinsic computes the remainder of the signed division
 ({ref}`srem <i_srem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22680,7 +22780,8 @@ operation.
 
 The '`llvm.vp.urem`' intrinsic computes the remainder of the unsigned division
 ({ref}`urem <i_urem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -23517,7 +23618,7 @@ and `evl2` are unsigned integers indicating the explicit vector lengths of
 `vec1` and `vec2` respectively.  `imm`, `evl1` and `evl2` should
 respect the following constraints: `-evl1 <= imm < evl1`, `0 <= evl1 <= VL`
 and `0 <= evl2 <= VL`, where `VL` is the runtime vector factor. If these
-constraints are not satisfied the intrinsic has undefined behavior.
+constraints are not satisfied the result is poison.
 
 ##### Semantics:
 
@@ -23525,13 +23626,13 @@ Effectively, this intrinsic concatenates `vec1[0..evl1-1]` and
 `vec2[0..evl2-1]` and creates the result vector by selecting the elements in a
 window of size `evl2`, starting at index `imm` (for a positive immediate) of
 the concatenated vector. Elements in the result vector beyond `evl2` are
-`undef`.  If `imm` is negative the starting index is `evl1 + imm`.  The result
+`poison`.  If `imm` is negative the starting index is `evl1 + imm`.  The result
 vector of active vector length `evl2` contains `evl1 - imm` (`-imm` for
 negative `imm`) elements from indices `[imm..evl1 - 1]`
 (`[evl1 + imm..evl1 -1]` for negative `imm`) of `vec1` followed by the
 first `evl2 - (evl1 - imm)` (`evl2 + imm` for negative `imm`) elements of
 `vec2`. If `evl1 - imm` (`-imm`) >= `evl2`, only the first `evl2`
-elements are considered and the remaining are `undef`.  The lanes in the result
+elements are considered and the remaining are `poison`.  The lanes in the result
 vector disabled by `mask` are `poison`.
 
 ##### Examples:

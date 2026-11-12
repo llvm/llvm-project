@@ -22,6 +22,7 @@ namespace llvm {
 class TargetPassConfig;
 
 class ARCTargetMachine : public CodeGenTargetMachineImpl {
+  const ARCOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   ARCSubtarget Subtarget;
 
@@ -32,6 +33,8 @@ public:
                    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                    bool JIT);
   ~ARCTargetMachine() override;
+
+  const ARCOptions &getCLOpts() const { return CLOpts; }
 
   const ARCSubtarget *getSubtargetImpl() const { return &Subtarget; }
   const ARCSubtarget *getSubtargetImpl(const Function &) const override {

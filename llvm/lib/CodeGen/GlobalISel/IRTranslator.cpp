@@ -4168,8 +4168,9 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
         InputType && InputType->getNumElements() == 1) {
       // We are inserting an illegal fixed vector into an illegal
       // fixed vector, use the scalar as it is not a legal vector type
-      // in LLT.
-      return translateCopy(U, Vec, MIRBuilder);
+      // in LLT. Since inserting a <1 x Ty> at index 0 replaces the whole
+      // destination, the result is the source operand.
+      return translateCopy(U, Elt, MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a legal fixed

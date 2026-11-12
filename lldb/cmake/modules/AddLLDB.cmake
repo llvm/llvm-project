@@ -30,7 +30,7 @@ function(lldb_tablegen)
     list(APPEND LTG_UNPARSED_ARGUMENTS -DNDEBUG)
   endif()
 
-  tablegen(LLDB ${LTG_UNPARSED_ARGUMENTS})
+  tablegen_internal(LLDB ${LTG_UNPARSED_ARGUMENTS})
 
   if(LTG_TARGET)
     add_public_tablegen_target(${LTG_TARGET})
@@ -98,6 +98,9 @@ function(lldb_record_dynamic_script_interpreter_exports target)
   set(extra_args)
   if(APPLE)
     list(APPEND extra_args --mach-o)
+    foreach(arch ${CMAKE_OSX_ARCHITECTURES})
+      list(APPEND extra_args --arch ${arch})
+    endforeach()
   endif()
 
   add_custom_command(

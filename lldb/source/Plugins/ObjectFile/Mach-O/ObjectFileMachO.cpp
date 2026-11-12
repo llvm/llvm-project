@@ -11,10 +11,10 @@
 
 #include <algorithm>
 
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_riscv32.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -2928,7 +2928,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             const char *so_path = sym[sym_idx - 1]
                                                       .GetMangled()
                                                       .GetDemangledName()
-                                                      .AsCString();
+                                                      .AsCString(nullptr);
                             if (so_path && so_path[0]) {
                               std::string full_so_path(so_path);
                               const size_t double_slash_pos =
@@ -3270,7 +3270,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                               } else {
                                 type = eSymbolTypeData;
                               }
-                            } else if (symbol_sect_name.starts_with("__IMPORT")) 
+                            } else if (symbol_sect_name.starts_with(
+                                           "__IMPORT")) {
                               type = eSymbolTypeTrampoline;
                             } else if (symbol_section->IsDescendant(
                                            objc_section_sp.get())) {

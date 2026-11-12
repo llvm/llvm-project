@@ -869,7 +869,9 @@ The available directives are as follows:
         `qualified($kind)` prints the complete attribute `#vector.kind<minf>`.
     -   Bit enums must define a zero-valued case so every valid bitmask has a
         symbolic spelling. An unquoted comma-separated bit enum cannot be
-        followed by a comma literal because the two uses would be ambiguous.
+        followed by a comma literal, and a space-separated bit enum cannot be
+        followed by a literal that spells one of its cases, because the two
+        uses would be ambiguous.
 
 #### Literals
 
@@ -1675,6 +1677,12 @@ def MyBitEnum: I32BitEnum<"MyBitEnum", "An example bit enum",
 }
 ```
 
+The `separator` is `"|"`, `","`, or a space `" "`. Spaces around `|` or `,`,
+e.g. `" | "`, are printed but optional when parsing. With a space separator, the
+cases are printed as a sequence of keywords, e.g. `Bit1 Bit2`, and parsed until
+the next token is not a case keyword. Only `BitEnum` supports a space separator;
+the legacy `BitEnumAttr` requires `|` or `,`.
+
 We can have:
 
 ```c++
@@ -1824,6 +1832,9 @@ property struct and for the operation's verifier to check that the enum's value
 is a valid value for the enum.
 
 The basic wrapper is `EnumProp`, which simply takes an `EnumInfo`.
+`DefaultValuedEnumProp` takes an `EnumInfo` and one of its cases, which
+becomes the property's default value and is elided from `prop-dict` and from
+an optional group anchored on the property.
 
 A less ambiguous syntax, namely putting a mnemonic and `<>`s surrounding
 the enum is generated with `NamedEnumProp`, which takes a `*EnumInfo`
