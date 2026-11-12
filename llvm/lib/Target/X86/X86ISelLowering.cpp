@@ -22639,6 +22639,22 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
       return DAG.getSelect(dl, DstVT, IsNaN, Zero, Fixed);
     }
 
+    if ((SrcVT.is512BitVector() || Subtarget.hasVLX()) && Subtarget.hasDQI()) {
+      // VCVTTP(S|D)2UDQ maps positive overflow to 0xFFFFFFFF (UINT_MAX), so
+      // only negative values, zero, and NaN need to be clamped to 0.
+      EVT CCVT =
+          TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+      SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, DstVT, Src);
+      SDValue Zero = DAG.getConstant(0, dl, DstVT);
+      uint8_t NonPositiveOrNaN = X86::FPClassQNaN | X86::FPClassPosZero |
+                                 X86::FPClassNegZero | X86::FPClassNegInf |
+                                 X86::FPClassNegative | X86::FPClassSNaN;
+      SDValue IsZeroOrNegOrNaN =
+          DAG.getNode(X86ISD::VFPCLASS, dl, CCVT, Src,
+                      DAG.getTargetConstant(NonPositiveOrNaN, dl, MVT::i32));
+      return DAG.getSelect(dl, DstVT, IsZeroOrNegOrNaN, Zero, Cvt);
+    }
+
     SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
     SDValue Clamped = DAG.getNode(X86ISD::FMAXC, dl, SrcVT, Src, ZeroFP);
     APFloat OvfBoundFlt(SrcVT.getScalarType().getFltSemantics());

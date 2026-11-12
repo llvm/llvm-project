@@ -350,15 +350,9 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v4i32_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
-; AVX512-NEXT:    vcvttps2udq %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmovdqa32 %xmm2, %xmm1 {%k1}
-; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %k0
+; AVX512-NEXT:    vfpclassps $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcvttps2udq %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %x = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %f)
   ret <4 x i32> %x
@@ -1061,15 +1055,9 @@ define <2 x i32> @test_unsigned_v2i32_v2f32(<2 x float> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v2i32_v2f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
-; AVX512-NEXT:    vcvttps2udq %xmm1, %xmm1
-; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmovdqa32 %xmm2, %xmm1 {%k1}
-; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %k0
+; AVX512-NEXT:    vfpclassps $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
 ; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcvttps2udq %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %x = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %f)
   ret <2 x i32> %x
@@ -2540,16 +2528,10 @@ define <8 x i32> @test_unsigned_v8i32_v8f16(<8 x half> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v8i32_v8f16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
-; AVX512-NEXT:    vmaxps %ymm1, %ymm0, %ymm1
-; AVX512-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %k1
-; AVX512-NEXT:    vcvttps2udq %ymm1, %ymm1
-; AVX512-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512-NEXT:    vmovdqa32 %ymm2, %ymm1 {%k1}
-; AVX512-NEXT:    vcmpunordps %ymm0, %ymm0, %k0
+; AVX512-NEXT:    vfpclassps $215, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveZero(ymm0) | isNegativeZero(ymm0) | isNegativeInfinity(ymm0) | isNegative(ymm0) | isSignalingNaN(ymm0)
 ; AVX512-NEXT:    knotb %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcvttps2udq %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %x = call <8 x i32> @llvm.fptoui.sat.v8i32.v8f16(<8 x half> %f)
   ret <8 x i32> %x

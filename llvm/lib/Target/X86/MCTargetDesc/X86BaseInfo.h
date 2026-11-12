@@ -48,6 +48,18 @@ enum STATIC_ROUNDING {
   NO_EXC = 8
 };
 
+/// AVX512 VFPCLASS immediate mask bits.
+enum FPClassMask : uint8_t {
+  FPClassQNaN = 1U << 0,
+  FPClassPosZero = 1U << 1,
+  FPClassNegZero = 1U << 2,
+  FPClassPosInf = 1U << 3,
+  FPClassNegInf = 1U << 4,
+  FPClassSubnormal = 1U << 5,
+  FPClassNegative = 1U << 6,
+  FPClassSNaN = 1U << 7,
+};
+
 /// The constants to describe instr prefixes if there are
 enum IPREFIXES {
   IP_NO_PREFIX = 0,
