@@ -7,7 +7,9 @@ declare nofpclass(nan inf pzero sub norm) float @returns_nzero()
 declare nofpclass(nan inf zero sub nnorm) float @returns_pnorm()
 declare nofpclass(nan inf norm zero) float @returns_sub()
 declare nofpclass(nan inf sub zero) float @returns_norm()
+declare nofpclass(nan zero sub norm) float @returns_inf()
 declare nofpclass(qnan inf norm sub zero) float @returns_snan()
+declare nofpclass(snan inf zero sub norm) float @returns_qnan()
 declare void @use(float)
 
 ; No inf result implies no inf inputs.
@@ -1567,5 +1569,220 @@ define nofpclass(inf zero sub norm) float @ret__nan__fmul__unknown__norm(float %
   ret float %mul
 }
 
+;-------------------------------------------------------------------------------
+
+define nofpclass(snan zero sub norm) float @ret__qnan_inf__fmul_square__demand_snan(i1 noundef %cond, float noundef %unknown) {
+; CHECK-LABEL: define nofpclass(snan zero sub norm) float @ret__qnan_inf__fmul_square__demand_snan(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call noundef float @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %snan = call noundef float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown
+  %mul = fmul float %select, %select
+  ret float %mul
+}
+
+define nofpclass(qnan zero sub norm) float @ret__snan_inf__fmul_square__no_demand_qnan(i1 noundef %cond, float noundef %unknown) {
+; CHECK-LABEL: define nofpclass(qnan zero sub norm) float @ret__snan_inf__fmul_square__no_demand_qnan(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[QNAN:%.*]] = call noundef float @returns_qnan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[QNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %qnan = call noundef float @returns_qnan()
+  %select = select i1 %cond, float %qnan, float %unknown
+  %mul = fmul float %select, %select
+  ret float %mul
+}
+
+define nofpclass(pinf) float @ret__no_pinf__fmul_square__no_demand_inf(i1 noundef %cond, float noundef %unknown) {
+; CHECK-LABEL: define nofpclass(pinf) float @ret__no_pinf__fmul_square__no_demand_inf(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[INF:%.*]] = call noundef float @returns_inf()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[INF]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %inf = call noundef float @returns_inf()
+  %select = select i1 %cond, float %inf, float %unknown
+  %mul = fmul float %select, %select
+  ret float %mul
+}
+
+define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fmul_square__no_demand_norm(i1 noundef %cond, float noundef %unknown) {
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fmul_square__no_demand_norm(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[NORM:%.*]] = call noundef float @returns_norm()
+; CHECK-NEXT:    ret float +qnan
+;
+  %norm = call noundef float @returns_norm()
+  %select = select i1 %cond, float %norm, float %unknown
+  %mul = fmul float %select, %select
+  ret float %mul
+}
+
+define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fmul_square__no_demand_zero(i1 noundef %cond, float noundef %unknown) {
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fmul_square__no_demand_zero(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[ZERO:%.*]] = call noundef float @returns_zero()
+; CHECK-NEXT:    ret float +qnan
+;
+  %zero = call noundef float @returns_zero()
+  %select = select i1 %cond, float %zero, float %unknown
+  %mul = fmul float %select, %select
+  ret float %mul
+}
+
+define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fmul_square_nsz__demand_zero(i1 noundef %cond, float noundef %unknown) {
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret__no_pinf_pzero_psub_pnorm__fmul_square_nsz__demand_zero(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[ZERO:%.*]] = call noundef float @returns_zero()
+; CHECK-NEXT:    ret float +qnan
+;
+  %zero = call noundef float @returns_zero()
+  %select = select i1 %cond, float %zero, float %unknown
+  %mul = fmul nsz float %select, %select
+  ret float %mul
+}
+
+; subnormal * subnormal is always zero in the default floating point
+; environment.
+define nofpclass(pzero) float @ret__no_pzero__fmul_square__no_demand_sub(i1 noundef %cond, float noundef %unknown) {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__fmul_square__no_demand_sub(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %unknown
+  %mul = fmul float %select, %select
+  ret float %mul
+}
+
+define nofpclass(pzero) float @ret__no_pzero__fmul_square_nsz__no_demand_sub(i1 noundef %cond, float noundef %unknown) {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__fmul_square_nsz__no_demand_sub(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %unknown
+  %mul = fmul nsz float %select, %select
+  ret float %mul
+}
+
+define nofpclass(pzero) float @ret__no_pzero__fmul_square_nsz__demand_sub__ieee_dynamic(i1 noundef %cond, float noundef %unknown) #3 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__fmul_square_nsz__demand_sub__ieee_dynamic(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %unknown
+  %mul = fmul nsz float %select, %select
+  ret float %mul
+}
+
+define nofpclass(zero) float @ret__no_zero__fmul_square_nsz__no_demand_sub__ieee_dynamic(i1 noundef %cond, float noundef %unknown) #3 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__fmul_square_nsz__no_demand_sub__ieee_dynamic(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %unknown
+  %mul = fmul nsz float %select, %select
+  ret float %mul
+}
+
+define nofpclass(pzero) float @ret__no_pzero__fmul_square_nsz__no_demand_sub__dynamic_ieee(i1 noundef %cond, float noundef %unknown) #4 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__fmul_square_nsz__no_demand_sub__dynamic_ieee(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nsz float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %unknown
+  %mul = fmul nsz float %select, %select
+  ret float %mul
+}
+
+define nofpclass(nan pzero) float @ret__no_nan_pzero__fmul_square_rne__no_demand_sub(i1 noundef %cond, float noundef nofpclass(nan) %not.nan) #2 strictfp {
+; CHECK-LABEL: define nofpclass(nan pzero) float @ret__no_nan_pzero__fmul_square_rne__no_demand_sub(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[SELECT]], float [[SELECT]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %not.nan
+  %mul = call float @llvm.experimental.constrained.fmul.f32(float %select, float %select, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %mul
+}
+
+; subnormal * subnormal may round up to min-subnormal.
+define nofpclass(nan pzero) float @ret__no_nan_pzero__fmul_square_dyn__demand_sub(i1 noundef %cond, float noundef nofpclass(nan) %not.nan) #2 strictfp {
+; CHECK-LABEL: define nofpclass(nan pzero) float @ret__no_nan_pzero__fmul_square_dyn__demand_sub(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[SELECT]], float [[SELECT]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %not.nan
+  %mul = call float @llvm.experimental.constrained.fmul.f32(float %select, float %select, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %mul
+}
+
+define nofpclass(nan pzero) float @ret__no_nan_pzero__fmul_square_rtp__demand_sub(i1 noundef %cond, float noundef nofpclass(nan) %not.nan) #2 strictfp {
+; CHECK-LABEL: define nofpclass(nan pzero) float @ret__no_nan_pzero__fmul_square_rtp__demand_sub(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[SELECT]], float [[SELECT]], metadata !"round.upward", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %not.nan
+  %mul = call float @llvm.experimental.constrained.fmul.f32(float %select, float %select, metadata !"round.upward", metadata !"fpexcept.strict")
+  ret float %mul
+}
+
+; subnormal * subnormal will never become normal.
+define nofpclass(nan pzero psub) float @ret__no_nan_pzero_psub__fmul_square_dyn__no_demand_sub(i1 noundef %cond, float noundef nofpclass(nan) %not.nan) #2 strictfp {
+; CHECK-LABEL: define nofpclass(nan pzero psub) float @ret__no_nan_pzero_psub__fmul_square_dyn__no_demand_sub(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SUB:%.*]] = call noundef float @returns_sub()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SUB]], float [[NOT_NAN]]
+; CHECK-NEXT:    [[MUL:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[SELECT]], float [[SELECT]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sub = call noundef float @returns_sub()
+  %select = select i1 %cond, float %sub, float %not.nan
+  %mul = call float @llvm.experimental.constrained.fmul.f32(float %select, float %select, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %mul
+}
+
+;-------------------------------------------------------------------------------
+
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
+attributes #2 = { denormal_fpenv(ieee) }
+attributes #3 = { denormal_fpenv(ieee|dynamic) }
+attributes #4 = { denormal_fpenv(dynamic|ieee) }
