@@ -44,6 +44,17 @@ inline bool isStackArraysCandidateType(mlir::Type type) {
   return mlir::isa<fir::SequenceType, fir::CharacterType>(type);
 }
 
+/// Stack scopes of a block in which the allocations that must stay inside a
+/// loop share one llvm.stacksave/llvm.stackrestore pair.
+struct BlockStackScopes {
+  /// Whether a stack scope covering the whole block can be added without
+  /// reclaiming stack storage that is still in use.
+  bool canSaveRestore = false;
+  /// The llvm.stacksave/llvm.stackrestore pairs already in the block.
+  llvm::SmallVector<std::pair<mlir::Operation *, mlir::Operation *>> pairs;
+};
+using BlockStackScopesMap = llvm::DenseMap<mlir::Block *, BlockStackScopes>;
+
 /// Stores where an alloca should be inserted. If the PointerUnion is an
 /// Operation the alloca should be inserted /after/ the operation. If it is a
 /// block, the alloca can be placed anywhere in that block.
@@ -131,10 +142,10 @@ public:
 
   /// Determine where to insert the alloca operation. The returned value should
   /// be checked to see if it is inside a loop
-  static InsertionPoint findAllocaInsertionPoint(
-      fir::AllocMemOp &oldAlloc,
-      const llvm::SmallVector<mlir::Operation *> &freeOps,
-      llvm::DenseMap<mlir::Block *, bool> &blockCanSaveRestore);
+  static InsertionPoint
+  findAllocaInsertionPoint(fir::AllocMemOp &oldAlloc,
+                           const llvm::SmallVector<mlir::Operation *> &freeOps,
+                           BlockStackScopesMap &blockStackScopes);
 
 private:
   /// Handle to the DFA (already run)
@@ -149,7 +160,7 @@ private:
   static InsertionPoint findAllocaLoopInsertionPoint(
       fir::AllocMemOp &oldAlloc,
       const llvm::SmallVector<mlir::Operation *> &freeOps,
-      llvm::DenseMap<mlir::Block *, bool> &blockCanSaveRestore);
+      BlockStackScopesMap &blockStackScopes);
 
   /// Returns the alloca if it was successfully inserted, otherwise {}
   std::optional<fir::AllocaOp>

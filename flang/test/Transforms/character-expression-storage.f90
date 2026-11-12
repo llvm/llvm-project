@@ -1,7 +1,7 @@
-! RUN: bbc -emit-fir %s -o - | fir-opt --canonicalize --allocation-placement | FileCheck %s
-! RUN: bbc -emit-hlfir %s -o - | fir-opt --inline-elementals | FileCheck %s --check-prefix=INLINE
-! RUN: bbc -emit-hlfir %s -o - | fir-opt --lower-hlfir-ordered-assignments | FileCheck %s --check-prefix=WHERE
-! RUN: bbc -emit-hlfir %s -o - | fir-opt --inline-elementals --opt-bufferization | FileCheck %s --check-prefix=OPT
+! RUN: %flang_fc1 -emit-fir %s -o - | fir-opt --canonicalize --allocation-placement | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | fir-opt --inline-elementals | FileCheck %s --check-prefix=INLINE
+! RUN: %flang_fc1 -emit-hlfir %s -o - | fir-opt --lower-hlfir-ordered-assignments | FileCheck %s --check-prefix=WHERE
+! RUN: %flang_fc1 -emit-hlfir %s -o - | fir-opt --inline-elementals --opt-bufferization | FileCheck %s --check-prefix=OPT
 
 ! A statement in an unstructured loop must reclaim its character temporaries
 ! before the backedge, including when the statement is under an IF.

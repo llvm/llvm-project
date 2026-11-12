@@ -1586,8 +1586,7 @@ hlfir::convertCharacterKind(mlir::Location loc, fir::FirOpBuilder &builder,
                                      scalarChar.getFortranElementType());
   assert(src.first.getCharBox() && "must be scalar character");
   fir::CharBoxValue res = fir::factory::convertCharacterKind(
-      builder, loc, *src.first.getCharBox(), toKind,
-      /*useHeap=*/!fir::getIntIfConstant(src.first.getCharBox()->getLen()));
+      builder, loc, *src.first.getCharBox(), toKind, /*useHeap=*/true);
   if (src.second.has_value())
     src.second.value()();
 

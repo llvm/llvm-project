@@ -520,9 +520,17 @@ struct AssociateOpConversion
     // has zero materialized users at this point.
     // So allOtherUsesAreSafeForAssociate() may incorrectly return
     // true here.
-    if (!isTrivialValue && allOtherUsesAreSafeForAssociate(
-                               associate.getSource(), associate.getOperation(),
-                               getEndAssociate(associate))) {
+    // An hlfir.no_reassoc shares the storage of its operand, so the operand
+    // uses must also be safe for the associate to take over that storage.
+    mlir::Operation *endAssociate = getEndAssociate(associate);
+    auto noReassoc = mlir::dyn_cast_or_null<hlfir::NoReassocOp>(
+        associate.getSource().getDefiningOp());
+    if (!isTrivialValue &&
+        allOtherUsesAreSafeForAssociate(
+            associate.getSource(), associate.getOperation(), endAssociate) &&
+        (!noReassoc || allOtherUsesAreSafeForAssociate(noReassoc.getVal(),
+                                                       noReassoc.getOperation(),
+                                                       endAssociate))) {
       // Re-use hlfir.expr buffer if this is the only use of the hlfir.expr
       // outside of the hlfir.destroy. Take on the cleaning-up responsibility
       // for the related hlfir.end_associate, and erase the hlfir.destroy (if
@@ -533,8 +541,7 @@ struct AssociateOpConversion
       eraseAllUsesInDestroys(associate.getSource(), rewriter);
       // Make sure to erase the hlfir.destroy if there is an indirection through
       // a hlfir.no_reassoc operation.
-      if (auto noReassoc = mlir::dyn_cast_or_null<hlfir::NoReassocOp>(
-              associate.getSource().getDefiningOp()))
+      if (noReassoc)
         eraseAllUsesInDestroys(noReassoc.getVal(), rewriter);
       return mlir::success();
     }
