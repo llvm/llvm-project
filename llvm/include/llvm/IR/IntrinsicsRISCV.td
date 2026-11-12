@@ -2130,6 +2130,16 @@ class RVPBinaryIntrinsic
   def int_riscv_sati  : RVPScalarSaturationIntrinsic;
   def int_riscv_usati : RVPScalarSaturationIntrinsic;
 
+  // Scalar Narrowing Clip.
+  class RVPScalarNarrowingClipIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i64_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_nclipu_u32  : RVPScalarNarrowingClipIntrinsic;
+  def int_riscv_nclipru_u32 : RVPScalarNarrowingClipIntrinsic;
+  def int_riscv_nsrar_i32   : RVPScalarNarrowingClipIntrinsic;
+  def int_riscv_nclip_i32   : RVPScalarNarrowingClipIntrinsic;
+  def int_riscv_nclipr_i32  : RVPScalarNarrowingClipIntrinsic;
+
   // Packed Exchanged Addition and Subtraction.
   def int_riscv_pas  : RVPBinaryIntrinsic;
   def int_riscv_psa  : RVPBinaryIntrinsic;
