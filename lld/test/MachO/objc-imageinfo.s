@@ -13,8 +13,8 @@
 # RUN: cat %t/invalid-size.s      %t/foo-cls.s > %t/invalid-size-1.s
 # RUN: cat %t/swift-version-1.s   %t/foo-cls.s > %t/swift-version-1-1.s
 # RUN: cat %t/swift-version-2.s   %t/foo-cls.s > %t/swift-version-2-1.s
-## For the signed class_ro_t flag, ld64 only counts an input as defining a class
-## if it has an __objc_classlist entry, as root-cls.s does and foo-cls.s doesn't.
+## For the signed class_ro_t flag, ld-prime counts an input as defining a class
+## if it has an __objc_classlist entry, like root-cls.s and unlike foo-cls.s.
 # RUN: cat %t/signed-class-ro.s   %t/root-cls.s > %t/signed-class-ro-1.s
 # RUN: cat %t/with-category-cls.s %t/root-cls.s > %t/unsigned-class-ro-1.s
 # RUN: cat %t/signed-class-ro.s   %t/foo-cls.s  > %t/signed-no-cls-1.s
@@ -63,9 +63,9 @@
 # RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" \
 # RUN:   %t/test-signed2 | FileCheck %s --check-prefix=SIGNED-CLASS-RO
 
-## An input without the flag that defines a class clears it. ld64 warns about
-## it if the earlier inputs that define classes were all signed, and about each
-## signed input after it.
+## An input without the flag that defines a class clears it. ld-prime warns
+## about it if the earlier inputs that define classes were all signed, and about
+## each signed input after it.
 # RUN: %no-fatal-warnings-lld -dylib -lSystem %t/signed-class-ro.o \
 # RUN:   %t/unsigned-class-ro.o -o %t/test-unsigned 2>&1 | FileCheck %s \
 # RUN:   --check-prefix=WARN-UNSIGNED --implicit-check-not=warning:
@@ -77,7 +77,7 @@
 # RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" \
 # RUN:   %t/test-unsigned2 | FileCheck %s --check-prefix=HAS-CAT-CLS
 
-## A signed input that defines no class doesn't make ld64 warn about a later
+## A signed input that defines no class doesn't make ld-prime warn about a later
 ## unsigned one.
 # RUN: %lld -dylib -lSystem %t/signed-no-cls.o %t/unsigned-class-ro.o -o %t/test-unsigned3
 # RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" \

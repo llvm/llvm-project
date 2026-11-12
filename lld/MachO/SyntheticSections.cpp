@@ -1969,7 +1969,7 @@ static std::string swiftVersionString(uint8_t version) {
   }
 }
 
-// ld64 counts an input as defining classes if it has __objc_classlist entries.
+// ld-prime treats an input with __objc_classlist entries as defining classes.
 static bool definesObjCClasses(const InputFile *file) {
   for (const Section *sec : file->sections)
     if (sec->name == section_names::objcClassList)
@@ -1989,7 +1989,7 @@ void ObjCImageInfoSection::finalizeContents() {
   assert(files.size() != 0); // should have already been checked via isNeeded()
 
   info.hasCategoryClassProperties = true;
-  // Like ld64, warn about a signed input if an earlier input that defines
+  // Like ld-prime, warn about a signed input if an earlier input that defines
   // classes was unsigned, and about an unsigned input that defines classes if
   // all earlier ones were signed. Once an input that defines classes is
   // unsigned, so is the output.
