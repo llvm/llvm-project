@@ -16,14 +16,6 @@ namespace hlsl {
 // unsigned integer and floating point. Keeping this ordering consistent will
 // help keep this file manageable as it grows.
 
-#define _HLSL_BUILTIN_ALIAS(builtin)                                           \
-  __attribute__((clang_builtin_alias(builtin)))
-#define _HLSL_AVAILABILITY(platform, version)                                  \
-  __attribute__((availability(platform, introduced = version)))
-#define _HLSL_AVAILABILITY_STAGE(platform, version, stage)                     \
-  __attribute__((                                                              \
-      availability(platform, introduced = version, environment = stage)))
-
 #ifdef __HLSL_ENABLE_16_BIT
 #define _HLSL_16BIT_AVAILABILITY(platform, version, ...)                       \
   __attribute__((availability(platform, introduced = version)))
