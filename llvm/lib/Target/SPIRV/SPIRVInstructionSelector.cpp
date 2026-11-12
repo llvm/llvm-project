@@ -5214,16 +5214,12 @@ bool SPIRVInstructionSelector::selectExtractElt(Register ResVReg,
           : SPIRVTypeInst();
   if (ElemType && ElemType != ResType &&
       ResType->getOpcode() == SPIRV::OpTypePointer &&
-      ElemType->getOpcode() == SPIRV::OpTypePointer) {
-    Register ElemReg = MRI->createVirtualRegister(GR.getRegClass(ElemType));
-    if (!selectExtractElt(ElemReg, ElemType, I))
-      return false;
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpBitcast))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(ElemReg)
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
+      ElemType->getOpcode() == SPIRV::OpTypePointer &&
+      GR.getPointerStorageClass(ElemType) ==
+          GR.getPointerStorageClass(ResType)) {
+    Register ElemReg = createVirtualRegister(ElemType, &GR, MRI, MRI->getMF());
+    return selectExtractElt(ElemReg, ElemType, I) &&
+           selectOpWithSrcs(ResVReg, ResType, I, {ElemReg}, SPIRV::OpBitcast);
   }
   if (getImm(I.getOperand(3), MRI))
     return selectExtractVal(ResVReg, ResType, I);
