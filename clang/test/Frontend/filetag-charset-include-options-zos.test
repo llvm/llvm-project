@@ -1,0 +1,16 @@
+// Test that filetag-based charset conversion works with -include on z/OS.
+
+// Input files were converted using `uconv -f UTF-8 -t IBM1047_LF`.
+warn.h:
+```
+#warning Hello, world!
+```
+// We copy it to a temp location and apply a CCSID 1047 filetag.
+
+// REQUIRES: system-zos
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: cp %S/Inputs/InputCharsetIBM1047/warn.h %t/warn.h
+// RUN: chtag -tc 1047 %t/warn.h
+// RUN: %clang_cc1 -E -o /dev/null -include %t/warn.h -x c %S/Inputs/empty.h 2>&1 | FileCheck --check-prefix=CHECK-HELLO %s
+// CHECK-HELLO: Hello, world!
