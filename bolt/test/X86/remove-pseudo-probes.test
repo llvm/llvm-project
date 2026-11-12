@@ -1,0 +1,23 @@
+## Check that BOLT omits pseudo probe metadata only when requested.
+
+# REQUIRES: system-linux
+
+# RUN: llvm-readelf -SW \
+# RUN:   %S/../../../llvm/test/tools/llvm-profgen/X86/Inputs/noinline-cs-pseudoprobe.perfbin \
+# RUN:   | FileCheck %s --check-prefix=CHECK
+# RUN: llvm-bolt \
+# RUN:   %S/../../../llvm/test/tools/llvm-profgen/X86/Inputs/noinline-cs-pseudoprobe.perfbin \
+# RUN:   -o %t.default
+# RUN: llvm-readelf -SW %t.default | FileCheck %s --check-prefix=CHECK
+# RUN: llvm-bolt \
+# RUN:   %S/../../../llvm/test/tools/llvm-profgen/X86/Inputs/noinline-cs-pseudoprobe.perfbin \
+# RUN:   -o %t.removed --remove-pseudo-probes
+# RUN: llvm-readelf -SW %t.removed | FileCheck %s --check-prefix=CHECK-PROBES
+
+# CHECK-DAG: .pseudo_probe PROGBITS
+# CHECK-DAG: .pseudo_probe_desc PROGBITS
+
+# CHECK-PROBES: Section Headers:
+# CHECK-PROBES-NOT: .pseudo_probe
+# CHECK-PROBES-NOT: .pseudo_probe_desc
+# CHECK-PROBES: Key to Flags:
