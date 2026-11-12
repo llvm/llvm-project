@@ -31,6 +31,7 @@ bool vputils::propagatesFirstLaneUse(const VPUser *U, const VPValue *Op) {
     return false;
   unsigned Opcode = VPI->getOpcode();
   switch (Opcode) {
+  case Instruction::ExtractValue:
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
