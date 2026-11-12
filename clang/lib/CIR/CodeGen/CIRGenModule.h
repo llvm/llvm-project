@@ -141,6 +141,11 @@ private:
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
+  /// Symbols created as the target of a weakref. They are extern_weak until
+  /// something names them in a way that is not itself weak, such as an
+  /// ordinary declaration or definition of the target.
+  llvm::SmallPtrSet<mlir::Operation *, 4> weakRefReferences;
+
   /// -------
   /// Annotations
   /// -------
@@ -174,7 +179,7 @@ private:
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
   void constructFunctionArgumentAttributes(
-      const CIRGenFunctionInfo &info, const clang::Decl *targetDecl,
+      const CIRGenFunctionInfo &info, clang::GlobalDecl calleeDecl,
       bool isThunk, bool attrOnCallSite,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
@@ -289,11 +294,17 @@ public:
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
   cir::GlobalOp getOrCreateCIRGlobal(llvm::StringRef mangledName, mlir::Type ty,
-                                     LangAS langAS, const VarDecl *d,
+                                     LangAS langAS, mlir::Location loc,
+                                     const VarDecl *d,
                                      ForDefinition_t isForDefinition);
 
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
+
+  /// Return the symbol that a weakref declaration refers to: the cir.func or
+  /// cir.global named by its alias target, declared extern_weak if it did not
+  /// already exist.
+  mlir::Operation *getWeakRefReference(const clang::ValueDecl *vd);
 
   cir::GlobalOp
   createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
@@ -441,24 +452,6 @@ public:
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
                                           bool forEH = false);
 
-  static mlir::SymbolTable::Visibility getMLIRVisibility(Visibility v) {
-    switch (v) {
-    case DefaultVisibility:
-      return mlir::SymbolTable::Visibility::Public;
-    case HiddenVisibility:
-      return mlir::SymbolTable::Visibility::Private;
-    case ProtectedVisibility:
-      // The distinction between ProtectedVisibility and DefaultVisibility is
-      // that symbols with ProtectedVisibility, while visible to the dynamic
-      // linker like DefaultVisibility, are guaranteed to always dynamically
-      // resolve to a symbol in the current shared object. There is currently no
-      // equivalent MLIR visibility, so we fall back on the fact that the symbol
-      // is visible.
-      return mlir::SymbolTable::Visibility::Public;
-    }
-    llvm_unreachable("unknown visibility!");
-  }
-
   static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
     switch (v) {
     case DefaultVisibility:
@@ -512,6 +505,16 @@ public:
   /// expectations of the AST, rather than using the target's allocation address
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
+
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 
   /// Return the CIR address space attribute for a global in \p as, honoring
   /// the target address space map where the LangAS fold would lose it.
@@ -644,11 +647,20 @@ public:
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  cir::FuncOp getRawFunctionPointer(GlobalDecl GD);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  cir::FuncOp getFunctionPointer(GlobalDecl GD);
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
-    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             getTriple().isNVPTX());
+    return (forEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Emit type info if type of an expression is a variably modified
@@ -664,9 +676,12 @@ public:
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
 
-  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
-                          GlobalDecl aliasGD, cir::FuncOp aliasee,
-                          cir::GlobalLinkageKind linkage);
+  /// Emit `aliasGD` as an alias of `aliasee`, replacing any existing
+  /// declaration `op`, and return the alias.
+  cir::FuncOp emitAliasForGlobal(llvm::StringRef mangledName,
+                                 mlir::Operation *op, GlobalDecl aliasGD,
+                                 cir::FuncOp aliasee,
+                                 cir::GlobalLinkageKind linkage);
 
   /// Emit a definition for an `__attribute__((alias))` declaration.
   void emitAliasDefinition(GlobalDecl gd);
@@ -1026,16 +1041,6 @@ private:
 
   /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
   cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
-
-  /// Return the AST address space of the underlying global variable for D, as
-  /// determined by its declaration. Normally this is the same as the address
-  /// space of D's type, but in CUDA, address spaces are associated with
-  /// declarations, not types. If D is nullptr, return the default address
-  /// space for global variable.
-  ///
-  /// For languages without explicit address spaces, if D has default address
-  /// space, target-specific global or constant address space may be returned.
-  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 };
 } // namespace CIRGen
 

@@ -49,7 +49,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[COPY]], %bb.0, [[PHI]], %bb.1
   ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; GCN-NEXT:   S_CMP_EQ_U64 [[PHI1]], killed [[S_MOV_B64_]], implicit-def $scc
+  ; GCN-NEXT:   S_CMP_EQ_U64 [[PHI1]], [[S_MOV_B64_]], implicit-def $scc
   ; GCN-NEXT:   [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 1311768467463790320
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.4
@@ -59,10 +59,10 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[PHI1]], [[COPY1]], implicit-def dead $scc
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub1
-  ; GCN-NEXT:   [[S_LSHR_B64_1:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[PHI1]], killed [[COPY2]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHR_B64_1:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[PHI1]], [[COPY2]], implicit-def dead $scc
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_1]].sub1
-  ; GCN-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[COPY3]], [[COPY1]], implicit-def dead $scc
-  ; GCN-NEXT:   [[S_LSHR_B64_2:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[PHI1]], killed [[S_OR_B32_]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY3]], [[COPY1]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_LSHR_B64_2:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[PHI1]], [[S_OR_B32_]], implicit-def dead $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   bb.0:
     liveins: $sgpr8_sgpr9, $sgpr10
@@ -84,17 +84,17 @@ body:             |
   bb.3:
     %6:sreg_64 = PHI %1:sreg_64, %bb.0, %4:sreg_64, %bb.1
     %7:sreg_64 = S_MOV_B64 0
-    S_CMP_EQ_U64 %6, killed %7, implicit-def $scc
+    S_CMP_EQ_U64 %6, %7, implicit-def $scc
     S_CBRANCH_SCC1 %bb.1, implicit $scc
     S_BRANCH %bb.4
 
   bb.4:
     %8:sreg_64 = S_LSHR_B64 %6, %3, implicit-def dead $scc
     %9:sreg_32 = COPY %8.sub1
-    %10:sreg_64 = S_LSHR_B64 %6, killed %9, implicit-def dead $scc
+    %10:sreg_64 = S_LSHR_B64 %6, %9, implicit-def dead $scc
     %11:sreg_32 = COPY %10.sub1
-    %12:sreg_32 = S_OR_B32 killed %11, %3, implicit-def dead $scc
-    %5:sreg_64 = S_LSHR_B64 %6, killed %12, implicit-def dead $scc
+    %12:sreg_32 = S_OR_B32 %11, %3, implicit-def dead $scc
+    %5:sreg_64 = S_LSHR_B64 %6, %12, implicit-def dead $scc
     S_BRANCH %bb.1
 
 ...

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s %}
 // PR8864
 
 struct Foo {

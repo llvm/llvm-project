@@ -26,6 +26,8 @@ licenses(["notice"])
 
 exports_files([
     "LICENSE.TXT",
+    "scripts/framework-header-fix.py",
+    "scripts/version-header-fix.py",
     "source/API/liblldb-private.exports",
     "source/API/liblldb.exports",
     "test/lldbflakes.py",

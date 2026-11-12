@@ -28,6 +28,7 @@ struct BlockFlags {
   static constexpr uint8_t Extern = 1u << 0u;
   static constexpr uint8_t Dead = 1u << 1u;
   static constexpr uint8_t Weak = 1u << 2u;
+  static constexpr uint8_t ConstexprUnknown = 1u << 3u;
 
   uint8_t V = 0;
   constexpr BlockFlags(uint8_t V = 0) : V(V) {}
@@ -41,6 +42,9 @@ struct BlockFlags {
   }
   constexpr BlockFlags withWeak(bool B = true) const {
     return BlockFlags(V | (B * Weak));
+  }
+  constexpr BlockFlags withConstexprUnknown(bool B = true) const {
+    return BlockFlags(V | (B * ConstexprUnknown));
   }
 };
 
@@ -87,7 +91,7 @@ public:
     case Global:
       return sizeof(GlobalInlineDescriptor);
     case Local:
-      return sizeof(InlineDescriptor);
+      return sizeof(LocalInlineDescriptor);
     }
     llvm_unreachable("Unhandled Block kind");
   }
@@ -111,6 +115,9 @@ public:
     return Result;
   }
   bool isDead() const { return Flags.V & BlockFlags::Dead; }
+  bool isConstexprUnknown() const {
+    return Flags.V & BlockFlags::ConstexprUnknown;
+  }
   bool isAccessible() const { return Flags.V == 0; }
   /// Returns the size of the block, excluding metadata.
   unsigned getSize() const { return DescSize; }
@@ -133,15 +140,6 @@ public:
   std::byte *data() { return rawData() + MDSize; }
   const std::byte *data() const { return rawData() + MDSize; }
 
-  /// Returns a pointer to the raw data, including metadata.
-  /// You are allowed to read Desc->getAllocSize() bytes from this address.
-  std::byte *rawData() {
-    return reinterpret_cast<std::byte *>(this) + sizeof(Block);
-  }
-  const std::byte *rawData() const {
-    return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
-  }
-
   template <typename T> const T &deref() const {
     return *reinterpret_cast<const T *>(data());
   }
@@ -152,7 +150,7 @@ public:
 
     if constexpr (std::is_same_v<T, GlobalInlineDescriptor>)
       assert(Kind == Global);
-    else if constexpr (std::is_same_v<T, InlineDescriptor>)
+    else if constexpr (std::is_same_v<T, LocalInlineDescriptor>)
       assert(Kind == Local);
     else
       assert(Kind == None);
@@ -213,6 +211,15 @@ private:
 
   /// For DynamicAllocator.
   void markDead() { Flags = Flags.withDead(); }
+
+  /// Returns a pointer to the raw data, including metadata.
+  /// You are allowed to read Desc->getAllocSize() bytes from this address.
+  std::byte *rawData() {
+    return reinterpret_cast<std::byte *>(this) + sizeof(Block);
+  }
+  const std::byte *rawData() const {
+    return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
+  }
 
   /// Pointer to the stack slot descriptor.
   const Descriptor *const Desc;

@@ -3,11 +3,11 @@
 ; CHECK: target datalayout = "P40"
 
 ; We should get a sensible error for a non-program address call:
-; RUN: not llvm-as -data-layout "P39" %s -o /dev/null 2>&1 | FileCheck %s -check-prefix ERR-AS39
+; RUN: not llvm-as -data-layout "P39" %s -disable-output 2>&1 | FileCheck %s -check-prefix ERR-AS39
 ; ERR-AS39: error: '%0' defined with type 'ptr addrspace(40)' but expected 'ptr addrspace(39)'
 
 ; And also if we don't set a custom program address space:
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s -check-prefix ERR-AS0
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s -check-prefix ERR-AS0
 ; ERR-AS0: error: '%0' defined with type 'ptr addrspace(40)' but expected 'ptr'
 
 %fun1 = type i16 (i16)

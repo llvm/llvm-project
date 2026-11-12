@@ -3,8 +3,8 @@
 # RUN: llc -mtriple=amdgpu12.50 %s -run-pass two-address-instruction -o - | FileCheck -check-prefixes=GCN,GFX1250 %s
 
 # GCN-LABEL: name: test_fmamk_reg_imm_f64
-# GFX90A: V_FMA_F64_e64 0, killed %0, 0, %2, 0, killed %1, 0, 0, implicit $mode, implicit $exec
-# GFX1250: V_FMAMK_F64 killed %0, 4607182418800017408, killed %1, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %0, 0, %2, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 %0, 4607182418800017408, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f64
 registers:
@@ -18,13 +18,13 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0
     %2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %3 = V_FMAC_F64_e32 killed %0, %2, killed %1, implicit $mode, implicit $exec
+    %3 = V_FMAC_F64_e32 %0, %2, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_fmamk_imm_reg_f64
-# GFX90A: V_FMA_F64_e64 0, %2, 0, killed %0.sub0_sub1, 0, killed %1, 0, 0, implicit $mode, implicit $exec
-# GFX1250: V_FMAMK_F64 killed %0.sub0_sub1, 4607182418800017408, killed %1, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %2, 0, %0.sub0_sub1, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 %0.sub0_sub1, 4607182418800017408, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_imm_reg_f64
 registers:
@@ -38,13 +38,13 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub2_sub3
     %2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %3 = V_FMAC_F64_e32 %2, killed %0.sub0_sub1, killed %1, implicit $mode, implicit $exec
+    %3 = V_FMAC_F64_e32 %2, %0.sub0_sub1, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_fmaak_f64
-# GFX90A: V_FMA_F64_e64 0, killed %0.sub0_sub1, 0, %0.sub2_sub3, 0, %1, 0, 0, implicit $mode, implicit $exec
-# GFX1250: V_FMAAK_F64 killed %0.sub0_sub1, %0.sub2_sub3, 4607182418800017408, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %0.sub0_sub1, 0, %0.sub2_sub3, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAAK_F64 %0.sub0_sub1, %0.sub2_sub3, 4607182418800017408, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_f64
 registers:
@@ -56,13 +56,13 @@ body:             |
 
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %2 = V_FMAC_F64_e32 killed %0.sub0_sub1, %0.sub2_sub3, %1, implicit $mode, implicit $exec
+    %2 = V_FMAC_F64_e32 %0.sub0_sub1, %0.sub2_sub3, %1, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %1
 ...
 
 # GCN-LABEL: name: test_fmaak_sgpr_src0_f64
-# GFX90A: V_FMA_F64_e64 0, killed %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
-# GFX1250: V_FMAMK_F64 killed %0, 4607182418800017408, %2, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 %0, 4607182418800017408, %2, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_sgpr_src0_f64
@@ -77,7 +77,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
     %2 = IMPLICIT_DEF
-    %3 = V_FMAC_F64_e32 killed %0, %1, %2, implicit $mode, implicit $exec
+    %3 = V_FMAC_F64_e32 %0, %1, %2, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %2
 ...
 
@@ -141,8 +141,8 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmamk_reg_unfoldable_literal_src0_f64
-# GFX90A: V_FMA_F64_e64 0, %2, 0, killed %0, 0, killed %1, 0, 0, implicit $mode, implicit $exec
-# GFX1250: V_FMAMK_F64 killed %0, 123456, killed %1, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %2, 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 %0, 123456, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_unfoldable_literal_src0_f64
 registers:
@@ -156,13 +156,13 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0
     %2 = V_MOV_B64_PSEUDO 123456, implicit $exec
-    %3 = V_FMAC_F64_e32 %2, killed %0, killed %1, implicit $mode, implicit $exec
+    %3 = V_FMAC_F64_e32 %2, %0, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_fmamk_reg_unfoldable_literal_src1_f64
-# GFX90A: V_FMA_F64_e64 0, killed %0, 0, %2, 0, killed %1, 0, 0, implicit $mode, implicit $exec
-# GFX1250: V_FMAMK_F64 killed %0, 123456, killed %1, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %0, 0, %2, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAMK_F64 %0, 123456, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_unfoldable_literal_src1_f64
 registers:
@@ -176,13 +176,13 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0
     %2 = V_MOV_B64_PSEUDO 123456, implicit $exec
-    %3 = V_FMAC_F64_e32 killed %0, %2, killed %1, implicit $mode, implicit $exec
+    %3 = V_FMAC_F64_e32 %0, %2, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_fmaak_reg_unfoldable_literal_src2_f64
-# GFX90A: V_FMA_F64_e64 0, killed %0, 0, killed %1, 0, %2, 0, 0, implicit $mode, implicit $exec
-# GFX1250: V_FMAAK_F64 killed %0, killed %1, 123456, implicit $mode, implicit $exec
+# GFX90A: V_FMA_F64_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+# GFX1250: V_FMAAK_F64 %0, %1, 123456, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_reg_unfoldable_literal_src2_f64
 registers:
@@ -196,6 +196,6 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0
     %2 = V_MOV_B64_PSEUDO 123456, implicit $exec
-    %3 = V_FMAC_F64_e32 killed %0, killed %1, %2, implicit $mode, implicit $exec
+    %3 = V_FMAC_F64_e32 %0, %1, %2, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %2
 ...

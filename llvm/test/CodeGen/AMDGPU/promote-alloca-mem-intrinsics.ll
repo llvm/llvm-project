@@ -13,7 +13,7 @@ declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture, i8, i32, i1) #0
 declare i32 @llvm.objectsize.i32.p5(ptr addrspace(5), i1, i1, i1) #1
 
 ; CHECK-LABEL: @promote_with_memcpy(
-; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [64 x [17 x i32]], ptr addrspace(3) @promote_with_memcpy.alloca, i32 0, i32 %{{[0-9]+}}
+; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [68 x i8], ptr addrspace(3) @promote_with_memcpy.alloca, i32 %{{[0-9]+}}
 ; CHECK: call void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) align 4 [[GEP]], ptr addrspace(1) align 4 %in, i32 68, i1 false)
 ; CHECK: call void @llvm.memcpy.p1.p3.i32(ptr addrspace(1) align 4 %out, ptr addrspace(3) align 4 [[GEP]], i32 68, i1 false)
 define amdgpu_kernel void @promote_with_memcpy(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
@@ -24,7 +24,7 @@ define amdgpu_kernel void @promote_with_memcpy(ptr addrspace(1) %out, ptr addrsp
 }
 
 ; CHECK-LABEL: @promote_with_memmove(
-; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [64 x [17 x i32]], ptr addrspace(3) @promote_with_memmove.alloca, i32 0, i32 %{{[0-9]+}}
+; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [68 x i8], ptr addrspace(3) @promote_with_memmove.alloca, i32 %{{[0-9]+}}
 ; CHECK: call void @llvm.memmove.p3.p1.i32(ptr addrspace(3) align 4 [[GEP]], ptr addrspace(1) align 4 %in, i32 68, i1 false)
 ; CHECK: call void @llvm.memmove.p1.p3.i32(ptr addrspace(1) align 4 %out, ptr addrspace(3) align 4 [[GEP]], i32 68, i1 false)
 define amdgpu_kernel void @promote_with_memmove(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
@@ -35,7 +35,7 @@ define amdgpu_kernel void @promote_with_memmove(ptr addrspace(1) %out, ptr addrs
 }
 
 ; CHECK-LABEL: @promote_with_memset(
-; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [64 x [17 x i32]], ptr addrspace(3) @promote_with_memset.alloca, i32 0, i32 %{{[0-9]+}}
+; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds [68 x i8], ptr addrspace(3) @promote_with_memset.alloca, i32 %{{[0-9]+}}
 ; CHECK: call void @llvm.memset.p3.i32(ptr addrspace(3) align 4 [[GEP]], i8 7, i32 68, i1 false)
 define amdgpu_kernel void @promote_with_memset(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %alloca = alloca [17 x i32], align 4, addrspace(5)
@@ -44,7 +44,7 @@ define amdgpu_kernel void @promote_with_memset(ptr addrspace(1) %out, ptr addrsp
 }
 
 ; CHECK-LABEL: @promote_with_objectsize(
-; CHECK: [[PTR:%[0-9]+]] = getelementptr inbounds [64 x [17 x i32]], ptr addrspace(3) @promote_with_objectsize.alloca, i32 0, i32 %{{[0-9]+}}
+; CHECK: [[PTR:%[0-9]+]] = getelementptr inbounds [68 x i8], ptr addrspace(3) @promote_with_objectsize.alloca, i32 %{{[0-9]+}}
 ; CHECK: call i32 @llvm.objectsize.i32.p3(ptr addrspace(3) [[PTR]], i1 false, i1 false, i1 false)
 define amdgpu_kernel void @promote_with_objectsize(ptr addrspace(1) %out) #0 {
   %alloca = alloca [17 x i32], align 4, addrspace(5)

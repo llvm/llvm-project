@@ -10,6 +10,7 @@
 #define _LIBCPP___PSTL_BACKENDS_STATPART_FOR_EACH_H
 
 #include <__algorithm/for_each.h>
+#include <__assert>
 #include <__config>
 #include <__execution/is_execution_policy.h>
 #include <__iterator/concepts.h>

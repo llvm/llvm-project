@@ -235,9 +235,9 @@ body:             |
     %17:sreg_64_xexec = IMPLICIT_DEF
     %10:vgpr_32 = V_SET_INACTIVE_B32 0, %11, 0, undef %12, undef %17, implicit $exec, implicit-def $scc
     %14:vgpr_32 = COPY %7
-    %13:vgpr_32 = V_MOV_B32_dpp %14, killed %10, 323, 12, 15, 0, implicit $exec
-    early-clobber %15:vgpr_32 = STRICT_WWM killed %13, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET_exact killed %15, %6, %7, 4, 0, 0, implicit $exec
+    %13:vgpr_32 = V_MOV_B32_dpp %14, %10, 323, 12, 15, 0, implicit $exec
+    early-clobber %15:vgpr_32 = STRICT_WWM %13, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET_exact %15, %6, %7, 4, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -285,7 +285,7 @@ body:             |
     %12:sreg_32_xm0 = V_READLANE_B32 %11:vgpr_32, 63
     early-clobber %13:vgpr_32 = STRICT_WWM %9:vgpr_32, implicit $exec
 
-    BUFFER_STORE_DWORD_OFFSET_exact killed %13, %4, %5, 4, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET_exact %13, %4, %5, 4, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

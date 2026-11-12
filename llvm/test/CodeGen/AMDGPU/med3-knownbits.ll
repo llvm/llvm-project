@@ -51,7 +51,6 @@ define i32 @v_known_signbits_smed3(i16 %a, i16 %b) {
 ; SI-SDAG-NEXT:    v_rcp_f32_e32 v1, v1
 ; SI-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 1, v0
 ; SI-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v1
-; SI-SDAG-NEXT:    v_trunc_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

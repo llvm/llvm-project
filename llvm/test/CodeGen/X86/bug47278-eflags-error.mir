@@ -7,7 +7,6 @@
 
 ---
 name: live_through_ecx
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: live_through_ecx
   ; CHECK: bb.0:
@@ -30,7 +29,6 @@ body:             |
 
 ---
 name: live_out_ecx
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: live_out_ecx
   ; CHECK: bb.0:
@@ -55,7 +53,6 @@ body:             |
 
 ---
 name: live_out_eflags
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: live_out_eflags
   ; CHECK: bb.0:

@@ -25,7 +25,6 @@
 ---
 name:            one_ptr_add
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -49,7 +48,6 @@ body:             |
 ---
 name:            add_to_offset
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -73,7 +71,6 @@ body:             |
 ---
 name:            two_ptr_adds_same_offset
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -105,7 +102,6 @@ body:             |
 ---
 name:            two_ptr_adds_different_offset
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -142,7 +138,6 @@ body:             |
 ---
 name:            ptr_add_chain
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -171,7 +166,6 @@ body:             |
 ---
 name:            dont_fold_negative_offset
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -196,7 +190,6 @@ body:             |
 ---
 name:            dont_min_offset_less_than_curr_offset
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -222,7 +215,6 @@ body:             |
 ---
 name:            dont_fold_max_offset
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -247,7 +239,6 @@ body:             |
 ---
 name:            dont_fold_offset_larger_than_type_alloc
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -269,7 +260,6 @@ body:             |
 ---
 name:            dont_fold_unsized_type
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -291,7 +281,6 @@ body:             |
 ---
 name:            dont_fold_thread_local
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

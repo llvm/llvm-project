@@ -581,10 +581,10 @@ private:
                          ProgramStateRef State) const;
 
   /// Emit resource leak warnings for the given symbols.
-  /// Createn a non-fatal error node for these, and returns it (if any warnings
-  /// were generated). Return value is non-null.
+  /// Returns either the non-fatal error node (where the warnings are emitted),
+  /// or 'C.getPredecessor()' when 'LeakedSyms' is empty or node creation fails.
   ExplodedNode *reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
-                            CheckerContext &C, ExplodedNode *Pred) const;
+                            CheckerContext &C) const;
 
   /// Find the description data of the function called by a call event.
   /// Returns nullptr if no function is recognized.
@@ -1914,8 +1914,8 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
       C.emitReport(std::make_unique<PathSensitiveBugReport>(
           BT_UseAfterOpenFailed,
           "Stream might be invalid after "
-          "(re-)opening it has failed. "
-          "Can cause undefined behaviour.",
+          "(re-)opening it has failed; "
+          "can cause undefined behaviour",
           N));
       return nullptr;
     }
@@ -1928,8 +1928,8 @@ ProgramStateRef StreamChecker::ensureNoFilePositionIndeterminate(
     SVal StreamVal, CheckerContext &C, ProgramStateRef State) const {
   static const char *BugMessage =
       "File position of the stream might be 'indeterminate' "
-      "after a failed operation. "
-      "Can cause undefined behavior.";
+      "after a failed operation; "
+      "can cause undefined behavior";
 
   SymbolRef Sym = StreamVal.getAsSymbol();
   if (!Sym)
@@ -2002,8 +2002,8 @@ void StreamChecker::reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         BT_StreamEof,
-        "Read function called when stream is in EOF state. "
-        "Function has no effect.",
+        "Read function called when stream is in EOF state; "
+        "function has no effect",
         N);
     R->markInteresting(StreamSym);
     C.emitReport(std::move(R));
@@ -2014,10 +2014,12 @@ void StreamChecker::reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
 
 ExplodedNode *
 StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
-                           CheckerContext &C, ExplodedNode *Pred) const {
-  ExplodedNode *Err = C.generateNonFatalErrorNode(C.getState(), Pred);
+                           CheckerContext &C) const {
+  if (LeakedSyms.empty())
+    return C.getPredecessor();
+  ExplodedNode *Err = C.generateNonFatalErrorNode();
   if (!Err)
-    return Pred;
+    return C.getPredecessor();
 
   for (SymbolRef LeakSym : LeakedSyms) {
     // Resource leaks can result in multiple warning that describe the same kind
@@ -2042,7 +2044,7 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
     std::unique_ptr<PathSensitiveBugReport> R =
         std::make_unique<PathSensitiveBugReport>(
             BT_ResourceLeak,
-            "Opened stream never closed. Potential resource leak.", Err,
+            "Opened stream never closed; potential resource leak", Err,
             LocUsedForUniqueing, StreamOpenNode->getStackFrame()->getDecl());
     R->markInteresting(LeakSym);
     R->addVisitor<NoStreamStateChangeVisitor>(LeakSym, this);
@@ -2069,11 +2071,7 @@ void StreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
     State = State->remove<StreamMap>(Sym);
   }
 
-  ExplodedNode *N = C.getPredecessor();
-  if (!LeakedSyms.empty())
-    N = reportLeaks(LeakedSyms, C, N);
-
-  C.addTransition(State, N);
+  C.addTransition(State, reportLeaks(LeakedSyms, C));
 }
 
 ProgramStateRef StreamChecker::checkPointerEscape(

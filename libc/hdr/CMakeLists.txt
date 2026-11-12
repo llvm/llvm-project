@@ -261,6 +261,14 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_sem_macros
 )
 
+add_proxy_header_library(
+  sys_shm_macros
+  HDRS
+    sys_shm_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_shm_macros
+)
+
 add_header_library(sys_socket_overlay HDRS sys_socket_overlay.h)
 add_proxy_header_library(
   sys_socket_macros

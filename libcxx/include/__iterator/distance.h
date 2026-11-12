@@ -44,14 +44,12 @@ using __iter_distance_t _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::diffe
 #endif
 
 template <class _RandIter, __enable_if_t<__has_random_access_iterator_category<_RandIter>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_RandIter>
-__distance(_RandIter __first, _RandIter __last) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_RandIter> __distance(_RandIter __first, _RandIter __last) {
   return __last - __first;
 }
 
 template <class _InputIter, class _Sent>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_InputIter>
-__distance(_InputIter __first, _Sent __last) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX17 __iter_distance_t<_InputIter> __distance(_InputIter __first, _Sent __last) {
   __iter_distance_t<_InputIter> __r(0);
 #if _LIBCPP_STD_VER >= 20
   if constexpr (same_as<_InputIter, _Sent> && __is_segmented_iterator_v<_InputIter>) {
@@ -68,8 +66,7 @@ __distance(_InputIter __first, _Sent __last) {
 }
 
 template <class _InputIter>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
-typename iterator_traits<_InputIter>::difference_type
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX17 typename iterator_traits<_InputIter>::difference_type
 distance(_InputIter __first, _InputIter __last) {
   return std::__distance(__first, __last);
 }
@@ -82,13 +79,12 @@ namespace ranges {
 struct __distance {
   template <class _Ip, sentinel_for<_Ip> _Sp>
     requires(!sized_sentinel_for<_Sp, _Ip>)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip __first, _Sp __last) const {
+  [[nodiscard]] constexpr iter_difference_t<_Ip> operator()(_Ip __first, _Sp __last) const {
     return std::__distance(std::move(__first), std::move(__last));
   }
 
   template <class _Ip, sized_sentinel_for<decay_t<_Ip>> _Sp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<decay_t<_Ip>>
-  operator()(_Ip&& __first, _Sp __last) const {
+  [[nodiscard]] constexpr iter_difference_t<decay_t<_Ip>> operator()(_Ip&& __first, _Sp __last) const {
     if constexpr (!is_array_v<remove_reference_t<_Ip>>) {
       return __last - __first;
     } else {
@@ -97,7 +93,7 @@ struct __distance {
   }
 
   template <range _Rp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_difference_t<_Rp> operator()(_Rp&& __r) const {
+  [[nodiscard]] constexpr range_difference_t<_Rp> operator()(_Rp&& __r) const {
     if constexpr (sized_range<_Rp>) {
       return static_cast<range_difference_t<_Rp>>(ranges::size(__r));
     } else {

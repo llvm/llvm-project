@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bitsur.h"
+#include "src/stdfix/bitsur.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned fract
 #include "include/llvm-libc-types/uint_ur_t.h"
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION

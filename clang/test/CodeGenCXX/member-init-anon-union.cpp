@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++11 -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -std=c++11 -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s %}
 
 // PR10531.
 

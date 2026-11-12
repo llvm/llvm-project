@@ -1,0 +1,12 @@
+# The crash message must tell users where to file a bug, whatever the build
+# configuration.
+
+# The driver prints the message from its own signal handler, which only runs
+# when the signal re-raises after liblldb's handler returns. A faulting access
+# re-raises, abort() doesn't.
+
+# REQUIRES: python
+# UNSUPPORTED: system-windows
+# RUN: not --crash %lldb --no-lldbinit -b -o 'script import ctypes; ctypes.string_at(0)' 2>&1 | FileCheck %s
+
+# CHECK: PLEASE submit a bug report to {{[a-z-]+://[^[:space:]]+}} and include

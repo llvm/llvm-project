@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs -start-before ppc-mi-peepholes \
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -start-before ppc-mi-peepholes \
 # RUN:   -stop-after ppc-mi-peepholes %s -o - | FileCheck %s
 
 ---

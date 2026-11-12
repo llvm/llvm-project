@@ -8,9 +8,9 @@
 
 # CHECK-LABEL: name: mem_dependency
 # CHECK: DS_READ2_B32 %0, 0, 1,
-# CHECK: DS_WRITE_B32 %0, killed %1, 64,
+# CHECK: DS_WRITE_B32 %0, %1, 64,
 # CHECK: DS_READ2_B32 %0, 16, 17,
-# CHECK: DS_WRITE_B32 killed %0, %5, 0
+# CHECK: DS_WRITE_B32 %0, %5, 0
 
 --- |
   define amdgpu_kernel void @mem_dependency(ptr addrspace(3) %ptr.0) nounwind {
@@ -100,15 +100,15 @@ body:             |
     %1:vgpr_32 = COPY $vgpr0
     $m0 = S_MOV_B32 -1
     %2:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from %ir.ptr.0)
-    DS_WRITE_B32 %1, killed %2, 64, 0, implicit $m0, implicit $exec :: (store (s32) into %ir.ptr.64)
+    DS_WRITE_B32 %1, %2, 64, 0, implicit $m0, implicit $exec :: (store (s32) into %ir.ptr.64)
 
     ; Make this load unmergeable, to tempt SILoadStoreOptimizer into merging the
     ; other two loads.
     %6:vreg_64 = DS_READ2_B32 %1, 16, 17, 0, implicit $m0, implicit $exec :: (load (s64) from %ir.ptr.64, align 4)
     %3:vgpr_32 = COPY %6.sub0
     %4:vgpr_32 = DS_READ_B32 %1, 4, 0, implicit $m0, implicit $exec :: (load (s32) from %ir.ptr.4)
-    %5:vgpr_32 = V_ADD_CO_U32_e32 killed %3, killed %4, implicit-def $vcc, implicit $exec
-    DS_WRITE_B32 killed %1, %5, 0, 0, implicit killed $m0, implicit $exec :: (store (s32) into %ir.ptr.0)
+    %5:vgpr_32 = V_ADD_CO_U32_e32 %3, %4, implicit-def $vcc, implicit $exec
+    DS_WRITE_B32 %1, %5, 0, 0, implicit killed $m0, implicit $exec :: (store (s32) into %ir.ptr.0)
     S_ENDPGM 0
 
 ...
@@ -154,16 +154,16 @@ body:             |
     %3:sgpr_64 = COPY $sgpr0_sgpr1
     %6:sreg_32_xm0_xexec = S_MOV_B32 0
     %7:sreg_32_xm0 = S_MOV_B32 0
-    %8:sreg_64_xexec = REG_SEQUENCE killed %6, %subreg.sub0, %7, %subreg.sub1
-    %9:sgpr_128 = S_LOAD_DWORDX4_IMM killed %8, 0, 0 :: (invariant load (s128), addrspace 6)
+    %8:sreg_64_xexec = REG_SEQUENCE %6, %subreg.sub0, %7, %subreg.sub1
+    %9:sgpr_128 = S_LOAD_DWORDX4_IMM %8, 0, 0 :: (invariant load (s128), addrspace 6)
     %31:sreg_64_xexec = S_BUFFER_LOAD_DWORDX2_IMM %9, 0, 0 :: (dereferenceable invariant load (s32))
     %10:sreg_32_xm0_xexec = COPY %31.sub0
-    %11:sreg_32_xm0_xexec = COPY killed %31.sub1
+    %11:sreg_32_xm0_xexec = COPY %31.sub1
     %12:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %9, 2, 0 :: (dereferenceable invariant load (s32))
-    %13:sreg_64 = V_CMP_NE_U32_e64 killed %11, 0, implicit $exec
-    %15:sreg_64 = V_CMP_NE_U32_e64 killed %12, 0, implicit $exec
-    %17:sreg_64_xexec = S_AND_B64 killed %13, killed %15, implicit-def dead $scc
-    S_CMP_EQ_U32 killed %10, 0, implicit-def $scc
+    %13:sreg_64 = V_CMP_NE_U32_e64 %11, 0, implicit $exec
+    %15:sreg_64 = V_CMP_NE_U32_e64 %12, 0, implicit $exec
+    %17:sreg_64_xexec = S_AND_B64 %13, %15, implicit-def dead $scc
+    S_CMP_EQ_U32 %10, 0, implicit-def $scc
     %18:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %9, 3, 0 :: (dereferenceable invariant load (s32))
     S_ENDPGM 0
 ...

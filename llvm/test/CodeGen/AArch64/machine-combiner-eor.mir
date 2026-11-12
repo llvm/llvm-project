@@ -39,8 +39,8 @@ body:             |
     %1:zpr = COPY $z1
     %0:zpr = COPY $z0
     %4:zpr = EOR_ZZZ %0, %1
-    %5:zpr = EOR_ZZZ killed %4, %2
-    %6:zpr = EOR_ZZZ killed %5, %3
+    %5:zpr = EOR_ZZZ %4, %2
+    %6:zpr = EOR_ZZZ %5, %3
     $z0 = COPY %6
     RET_ReallyLR implicit $z0
 
@@ -77,8 +77,8 @@ body:             |
     %1:zpr = COPY $z1
     %0:zpr = COPY $z0
     %4:zpr = AND_ZZZ %0, %1
-    %5:zpr = EOR_ZZZ killed %4, %2
-    %6:zpr = EOR_ZZZ killed %5, %3
+    %5:zpr = EOR_ZZZ %4, %2
+    %6:zpr = EOR_ZZZ %5, %3
     $z0 = COPY %6
     RET_ReallyLR implicit $z0
 

@@ -1782,6 +1782,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   for (Block *bb : blocks) {
     CapturingIRBuilder builder(*llvmModule,
                                llvm::TargetFolder(llvmModule->getDataLayout()));
+    builder.disableGEPCanonicalization();
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
                                 /*recordInsertions=*/true)))
       return failure();
@@ -2418,6 +2419,25 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
 
+void ModuleTranslation::setTBAAStructMetadata(ArrayAttr fields,
+                                              llvm::Instruction *inst) {
+  if (!fields || fields.empty())
+    return;
+
+  // The node is a flat list of (offset, size, tag) triples, not a list of
+  // per-field nodes.
+  SmallVector<llvm::MDBuilder::TBAAStructField> structFields;
+  structFields.reserve(fields.size());
+  for (Attribute field : fields) {
+    auto fieldAttr = cast<TBAAStructFieldAttr>(field);
+    structFields.emplace_back(fieldAttr.getOffset(), fieldAttr.getSize(),
+                              getTBAANode(fieldAttr.getTag()));
+  }
+  inst->setMetadata(
+      llvm::LLVMContext::MD_tbaa_struct,
+      llvm::MDBuilder(getLLVMContext()).createTBAAStructNode(structFields));
+}
+
 void ModuleTranslation::setDereferenceableMetadata(
     DereferenceableOpInterface op, llvm::Instruction *inst) {
   DereferenceableAttr derefAttr = op.getDereferenceableOrNull();
@@ -2504,6 +2524,16 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
   mlirModule->walk([&](AliasAnalysisOpInterface analysisOpInterface) {
     if (auto attr = analysisOpInterface.getTBAATagsOrNull())
       walker.walk(attr);
+  });
+
+  // The tags inside a `tbaa_struct` are reachable from nowhere else, so without
+  // this walk they never get an MDNode and the exported node has null tags.
+  auto walkStructFields = [&](ArrayAttr fields) {
+    if (fields)
+      walker.walk(fields);
+  };
+  mlirModule->walk([&](TBAAStructOpInterface tbaaStructOp) {
+    walkStructFields(tbaaStructOp.getTBAAStructOrNull());
   });
 
   return success();

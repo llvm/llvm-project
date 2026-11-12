@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "PrimType.h"
-#include "Reflect.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -21,7 +20,7 @@ using namespace clang::interp;
 Pointer Program::getPtrGlobal(unsigned Idx) const {
   assert(Idx < Globals.size());
 
-  Block *B = Globals[Idx]->block();
+  Block *B = Globals[Idx];
 
   // Force de-serialization of a redeclaration that might initialize this
   // global.
@@ -33,7 +32,7 @@ Pointer Program::getPtrGlobal(unsigned Idx) const {
         MD->evaluateValue();
         // Note that we need to get Globals[Idx] here again since the code block
         // above might've actually changed what global Idx points to.
-        return Pointer(Globals[Idx]->block());
+        return Pointer(Globals[Idx]);
       }
     }
   }
@@ -80,11 +79,12 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
 }
 
 UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
-                                     bool IsConstexprUnknown) {
+                                     bool IsConstexprUnknown,
+                                     bool CanBeExtern) {
   bool IsExtern;
   bool IsWeak = VD->isWeak();
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
-    IsExtern = Var->hasExternalStorage();
+    IsExtern = CanBeExtern && !Init && Var->hasExternalStorage();
   } else {
     assert((isa<UnnamedGlobalConstantDecl, MSGuidDecl, TemplateParamObjectDecl>(
         VD)));
@@ -98,7 +98,7 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
   if (!Idx)
     return std::nullopt;
 
-  Global *NewGlobal = Globals[*Idx];
+  Block *NewGlobal = Globals[*Idx];
   GlobalIndices[VD] = *Idx;
 
   for (const Decl *Redecl = VD->getPreviousDecl(); Redecl;
@@ -113,13 +113,15 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
       continue;
     }
 
-    Block *RedeclBlock = Globals[Iter->second]->block();
+    Block *RedeclBlock = Globals[Iter->second];
     // All pointers pointing to the previous extern decl now point to the
     // new decl.
     // A previous iteration might've already fixed up the pointers for this
     // global.
-    if (RedeclBlock != NewGlobal->block())
-      RedeclBlock->movePointersTo(NewGlobal->block());
+    if (RedeclBlock != NewGlobal) {
+      RedeclBlock->movePointersTo(NewGlobal);
+      RedeclBlock->invokeDtor();
+    }
 
     Globals[Iter->second] = NewGlobal;
     Iter->second = *Idx;
@@ -163,20 +165,21 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
 
   if (!Desc)
     return std::nullopt;
-  Desc->IsConstexprUnknown = IsConstexprUnknown;
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
-  BlockFlags Flags = BlockFlags().withExtern(IsExtern).withWeak(IsWeak);
-  auto *G = new (Allocator,
-                 Desc->getAllocSize() + Block::getMetadataSize(Block::Global))
-      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::Global, Flags);
-  G->block()->invokeCtor();
+  BlockFlags Flags =
+      BlockFlags().withExtern(IsExtern).withWeak(IsWeak).withConstexprUnknown(
+          IsConstexprUnknown);
+  auto *G =
+      new (Allocate(Block::allocSize(Desc, Block::Global), alignof(Block)))
+          Block(Ctx.getEvalID(), getCurrentDecl(), Desc, Block::Global, Flags);
+  G->invokeCtor();
 
   // Initialize GlobalInlineDescriptor fields.
-  auto *GD = new (&G->block()->getBlockDesc<GlobalInlineDescriptor>())
-      GlobalInlineDescriptor();
+  auto *GD =
+      new (&G->getBlockDesc<GlobalInlineDescriptor>()) GlobalInlineDescriptor();
   if (!Init)
     GD->InitState = GlobalInitState::NoInitializer;
   Globals.push_back(G);

@@ -18,6 +18,7 @@
 #include "OffloadAPI.h"
 #include "Shared/APITypes.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBufferRef.h"
 
 class ProgramTy {
 public:
@@ -33,15 +34,29 @@ public:
   llvm::Expected<void *> getGlobalAddress(const char *Name,
                                           size_t *Size = nullptr) const;
 
+  /// Copy the \p Size bytes of the global variable \p Name from the host-side
+  /// program image into \p Dst. Fails if the global's size is not \p Size.
+  llvm::Error readGlobalFromImage(const char *Name, void *Dst,
+                                  size_t Size) const;
+
   /// Return the symbol handle for the kernel \p Name.
   llvm::Expected<ol_symbol_handle_t> getKernelAddress(const char *Name) const;
 
   ol_program_handle_t getHandle() const { return Handle; }
 
+  /// The image loaded for this program.
+  llvm::Expected<llvm::MemoryBufferRef> getImage() const;
+
+  /// The IR image this program was created from, or an empty buffer if the
+  /// input was not IR.
+  llvm::MemoryBufferRef getIRImage() const { return IRImage; }
+
 private:
-  explicit ProgramTy(ol_program_handle_t Handle) : Handle(Handle) {}
+  ProgramTy(ol_program_handle_t Handle, llvm::MemoryBufferRef IRImage)
+      : Handle(Handle), IRImage(IRImage) {}
 
   ol_program_handle_t Handle = nullptr;
+  llvm::MemoryBufferRef IRImage;
 };
 
 #endif

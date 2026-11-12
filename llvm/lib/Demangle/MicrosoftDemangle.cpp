@@ -2547,6 +2547,10 @@ char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
     OF = OutputFlags(OF | OF_NoVoidParameter);
   if (Flags & MSDF_NoDecorativeRTTITypeDescriptor)
     OF = OutputFlags(OF | OF_NoDecorativeRTTITypeDescriptor);
+  if (Flags & MSDF_CompactTemplateLists)
+    OF = OutputFlags(OF | OF_CompactTemplateLists);
+  if (Flags & MSDF_SplitTemplateClosers)
+    OF = OutputFlags(OF | OF_SplitTemplateClosers);
 
   int InternalStatus = demangle_success;
   char *Buf;

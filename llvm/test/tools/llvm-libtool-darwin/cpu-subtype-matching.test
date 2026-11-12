@@ -27,6 +27,7 @@
 ## CPUTYPE:    CPU_TYPE_ARM
 ## CPUSUBTYPE: CPU_SUBTYPE_ARM_V6
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x0000000C
@@ -84,6 +85,7 @@ LinkEditData:
 ## CPUTYPE:    CPU_TYPE_ARM
 ## CPUSUBTYPE: CPU_SUBTYPE_ARM_V7
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x0000000C
@@ -164,6 +166,7 @@ LinkEditData:
 ## CPUTYPE:    CPU_TYPE_X86_64
 ## CPUSUBTYPE: CPU_SUBTYPE_X86_64_ALL
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -222,6 +225,7 @@ LinkEditData:
 ## CPUTYPE:    CPU_TYPE_X86_64
 ## CPUSUBTYPE: CPU_SUBTYPE_X86_64_H
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

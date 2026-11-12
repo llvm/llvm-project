@@ -22,14 +22,12 @@
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
 #include <type_traits>
@@ -44,12 +42,11 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
 
 namespace {
-#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
-
 //===----------------------------------------------------------------------===//
 // Dialect Function Inliner Interface.
 //===----------------------------------------------------------------------===//
@@ -119,7 +116,6 @@ struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
     return success();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -5199,13 +5195,6 @@ LogicalResult WhileOp::inferReturnTypeComponents(
   }
 
   return success();
-}
-
-std::optional<SmallVector<int64_t, 4>>
-ApplyScaleOp::getIterationShapeToUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType()))
-    return llvm::to_vector<4>(vt.getShape());
-  return std::nullopt;
 }
 
 static void printInitializationList(OpAsmPrinter &parser,

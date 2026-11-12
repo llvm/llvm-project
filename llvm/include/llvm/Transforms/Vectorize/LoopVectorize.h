@@ -19,8 +19,9 @@
 // 1. The main loop pass that drives the different parts.
 // 2. LoopVectorizationLegality - A unit that checks for the legality
 //    of the vectorization.
-// 3. InnerLoopVectorizer - A unit that performs the actual
-//    widening of instructions.
+// 3. LoopVectorizationPlanner - A unit that builds VPlans for the candidate
+//    vectorization factors, selects the best one and executes it to generate
+//    the vector code.
 // 4. LoopVectorizationCostModel - A unit that checks for the profitability
 //    of vectorization. It decides on the optimal vector width, which
 //    can be one, if vectorization is not profitable.
