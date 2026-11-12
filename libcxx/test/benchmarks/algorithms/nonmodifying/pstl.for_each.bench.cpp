@@ -51,11 +51,9 @@ int main(int argc, char** argv) {
         ->Arg(1 << 26) // 67'108'864
         ->UseRealTime();
   };
-#if defined(TEST_PSTL_ENABLE_SEQ_BASELINES)
   bm("std::for_each(std::execution::seq, vector<double>) (minimal)", std::execution::seq, minimal);
   bm("std::for_each(std::execution::seq, vector<double>) (cheap)", std::execution::seq, cheap);
   bm("std::for_each(std::execution::seq, vector<double>) (expensive)", std::execution::seq, expensive);
-#endif
   bm("std::for_each(std::execution::par, vector<double>) (minimal)", std::execution::par, minimal);
   bm("std::for_each(std::execution::par, vector<double>) (cheap)", std::execution::par, cheap);
   bm("std::for_each(std::execution::par, vector<double>) (expensive)", std::execution::par, expensive);
