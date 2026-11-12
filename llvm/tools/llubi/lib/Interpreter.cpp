@@ -1148,7 +1148,7 @@ public:
           CurrentFrame->ResolvedCallee->getAttributes().getRetAttrs();
       if (auto *FPMO = dyn_cast<FPMathOperator>(&CB)) {
         if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
-          RetVal = handleFMFFlags(std::move(RetVal), FMF, /*IsInput=*/true);
+          RetVal = handleFMFFlags(std::move(RetVal), FMF, /*IsInput=*/false);
       }
       handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
       handleMetadata(RetTy, RetVal, CB);
