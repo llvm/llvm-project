@@ -157,6 +157,27 @@ uptr FakeStack::AddrIsInFakeStack(uptr ptr, uptr* frame_beg, uptr* frame_end) {
 
 void FakeStack::HandleNoReturn() { needs_gc_ = true; }
 
+// Calls fn(frame, class_id, flag) for every frame whose allocation flag is set.
+template <typename Fn>
+ALWAYS_INLINE void FakeStack::ForEachAllocatedFrame(Fn fn) {
+  for (uptr class_id = 0; class_id < kNumberOfSizeClasses; class_id++) {
+    u8* flags = GetFlags(stack_size_log(), class_id);
+    const uptr n = NumberOfFrames(stack_size_log(), class_id);
+    for (uptr i = 0; i < n; i++) {
+      // Most flags are usually clear: skip 8 at once.
+      if (i + sizeof(u64) <= n && IsAligned((uptr)&flags[i], sizeof(u64)) &&
+          *reinterpret_cast<u64*>(&flags[i]) == 0) {
+        i += sizeof(u64) - 1;
+        continue;
+      }
+      if (!flags[i])
+        continue;
+      u8* frame = GetFrame(stack_size_log(), class_id, i);
+      fn(reinterpret_cast<FakeFrame*>(frame), class_id, &flags[i]);
+    }
+  }
+}
+
 // Hack: The statement below is not true if we take into account sigaltstack or
 // makecontext. It should be possible to make GC to discard wrong stack frame if
 // we use these tools. For now, let's support the simplest case and allow GC to
@@ -178,39 +199,23 @@ NOINLINE void FakeStack::GC(uptr real_stack) {
   if (real_stack < bottom || real_stack > top)
     return;  // Not the default stack.
 
-  for (uptr class_id = 0; class_id < kNumberOfSizeClasses; class_id++) {
-    u8* flags = GetFlags(stack_size_log(), class_id);
-    for (uptr i = 0, n = NumberOfFrames(stack_size_log(), class_id); i < n;
-         i++) {
-      if (flags[i] == 0)
-        continue;  // not allocated.
-      FakeFrame* ff =
-          reinterpret_cast<FakeFrame*>(GetFrame(stack_size_log(), class_id, i));
-      // GC only on the default stack.
-      if (bottom < ff->real_stack && ff->real_stack < real_stack) {
-        flags[i] = 0;
-        // Poison the frame, so the any access will be reported as UAR.
-        SetShadow(reinterpret_cast<uptr>(ff), BytesInSizeClass(class_id),
-                  class_id, kMagic8);
-      }
+  ForEachAllocatedFrame([&](FakeFrame* ff, uptr class_id, u8* flag) {
+    // GC only on the default stack.
+    if (bottom < ff->real_stack && ff->real_stack < real_stack) {
+      *flag = 0;
+      // Poison the frame, so any access will be reported as UAR.
+      SetShadow(reinterpret_cast<uptr>(ff), BytesInSizeClass(class_id),
+                class_id, kMagic8);
     }
-  }
+  });
   needs_gc_ = false;
 }
 
 void FakeStack::ForEachFakeFrame(RangeIteratorCallback callback, void* arg) {
-  for (uptr class_id = 0; class_id < kNumberOfSizeClasses; class_id++) {
-    u8* flags = GetFlags(stack_size_log(), class_id);
-    for (uptr i = 0, n = NumberOfFrames(stack_size_log(), class_id); i < n;
-         i++) {
-      if (flags[i] == 0)
-        continue;  // not allocated.
-      FakeFrame* ff =
-          reinterpret_cast<FakeFrame*>(GetFrame(stack_size_log(), class_id, i));
-      uptr begin = reinterpret_cast<uptr>(ff);
-      callback(begin, begin + FakeStack::BytesInSizeClass(class_id), arg);
-    }
-  }
+  ForEachAllocatedFrame([&](FakeFrame* ff, uptr class_id, u8*) {
+    uptr begin = reinterpret_cast<uptr>(ff);
+    callback(begin, begin + BytesInSizeClass(class_id), arg);
+  });
 }
 
 #if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
