@@ -42,8 +42,14 @@ const TargetRegisterClass *SparcInstrInfo::getInlineAsmMemoryOperandRegClass(
 bool SparcInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                           const MachineBasicBlock *MBB,
                                           const MachineFunction &MF) const {
-  return MI.getOpcode() == SP::RESTORErr || MI.getOpcode() == SP::RESTOREri ||
-         TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+  switch (MI.getOpcode()) {
+  case SP::SAVErr:
+  case SP::SAVEri:
+  case SP::RESTORErr:
+  case SP::RESTOREri:
+    return true;
+  }
+  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
