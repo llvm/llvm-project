@@ -2379,6 +2379,10 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
                             {3}, VT, Custom);
+  if (Subtarget->isLittleEndian() &&
+      (VT.getScalarSizeInBits() == 8 || VT.getScalarSizeInBits() == 16))
+    setVectorInterleaveAction(
+        {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {5, 7}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -35753,11 +35757,102 @@ static SDValue lowerPredicateInterleaveWithPackedVectors(SDValue Op,
   return DAG.getMergeValues(Results, DL);
 }
 
+static SDValue lowerInterleaveWithTBL(SDValue Op, SelectionDAG &DAG,
+                                      const AArch64Subtarget &Subtarget) {
+  unsigned Factor = Op->getNumOperands();
+  if (Factor != 5 && Factor != 7)
+    return SDValue();
+  EVT VT = Op.getValueType();
+  if (!Subtarget.isNeonAvailable() || !Subtarget.isLittleEndian() ||
+      (!VT.is64BitVector() && !VT.is128BitVector()) ||
+      (VT.getScalarSizeInBits() != 8 && VT.getScalarSizeInBits() != 16))
+    return SDValue();
+
+  SDLoc DL(Op);
+  unsigned ElementBytes = VT.getScalarSizeInBits() / 8;
+  MVT ByteVT = VT.is64BitVector() ? MVT::v8i8 : MVT::v16i8;
+  SmallVector<SDValue> Sources;
+  for (SDValue V : Op->ops())
+    Sources.push_back(DAG.getBitcast(ByteVT, V));
+
+  SmallVector<SDValue> Tables;
+  if (VT.is64BitVector()) {
+    // Pair 64-bit sources so all bytes fit in one TBL instruction.
+    for (unsigned I = 0; I < Factor; I += 2)
+      Tables.push_back(DAG.getNode(
+          ISD::CONCAT_VECTORS, DL, MVT::v16i8, Sources[I],
+          I + 1 < Factor ? Sources[I + 1] : DAG.getPOISON(MVT::v8i8)));
+  } else {
+    Tables = std::move(Sources);
+  }
+
+  bool IsInterleave = Op.getOpcode() == ISD::VECTOR_INTERLEAVE;
+  unsigned NumElements = VT.getVectorNumElements();
+  static constexpr Intrinsic::ID TblIDs[] = {
+      Intrinsic::aarch64_neon_tbl1, Intrinsic::aarch64_neon_tbl2,
+      Intrinsic::aarch64_neon_tbl3, Intrinsic::aarch64_neon_tbl4};
+  static constexpr Intrinsic::ID TbxIDs[] = {
+      Intrinsic::aarch64_neon_tbx1, Intrinsic::aarch64_neon_tbx2,
+      Intrinsic::aarch64_neon_tbx3, Intrinsic::aarch64_neon_tbx4};
+  SmallVector<int, 16> ElementsMask;
+  if (IsInterleave)
+    ElementsMask = createInterleaveMask(NumElements, Factor);
+  // For 64-bit types, gather two adjacent results with one 128-bit lookup.
+  unsigned ResultsPerLookup = IsInterleave && VT.is64BitVector() ? 2 : 1;
+  SmallVector<SDValue> Results;
+  for (unsigned Result = 0; Result < Factor; Result += ResultsPerLookup) {
+    unsigned NumResults = std::min(ResultsPerLookup, Factor - Result);
+    MVT LookupVT = NumResults == 2 ? MVT::v16i8 : ByteVT;
+    if (!IsInterleave)
+      ElementsMask = createStrideMask(Result, Factor, NumElements);
+    ArrayRef<int> ResultElementsMask = ElementsMask;
+    if (IsInterleave)
+      ResultElementsMask = ResultElementsMask.slice(Result * NumElements,
+                                                    NumResults * NumElements);
+    SmallVector<unsigned, 16> Indices;
+    // Expand element shuffle indices into byte indices for TBL.
+    for (int ElementMask : ResultElementsMask)
+      for (unsigned Byte = 0; Byte < ElementBytes; ++Byte)
+        Indices.push_back(ElementMask * ElementBytes + Byte);
+    auto BuildMask = [&](unsigned Base, unsigned NumRegs) {
+      auto Mask = map_to_vector(Indices, [&](unsigned Index) {
+        return DAG.getConstant(
+            Index < Base || Index >= Base + NumRegs * 16 ? 255 : Index - Base,
+            DL, MVT::i32);
+      });
+      return DAG.getBuildVector(LookupVT, DL, Mask);
+    };
+
+    SDValue Bytes;
+    for (unsigned TableStart = 0; TableStart < Tables.size(); TableStart += 4) {
+      unsigned NumRegs = std::min<unsigned>(Tables.size() - TableStart, 4);
+      bool IsFirst = TableStart == 0;
+      Intrinsic::ID ID = IsFirst ? TblIDs[NumRegs - 1] : TbxIDs[NumRegs - 1];
+      SmallVector<SDValue, 7> Ops = {DAG.getTargetConstant(ID, DL, MVT::i64)};
+      if (!IsFirst)
+        Ops.push_back(Bytes);
+      Ops.append(Tables.begin() + TableStart,
+                 Tables.begin() + TableStart + NumRegs);
+      Ops.push_back(BuildMask(TableStart * 16, NumRegs));
+      Bytes = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, LookupVT, Ops);
+    }
+    // Split the lookup into NumResults
+    for (unsigned I = 0; I < NumResults; ++I)
+      Results.push_back(DAG.getBitcast(
+          VT, DAG.getExtractSubvector(DL, ByteVT, Bytes,
+                                      I * ByteVT.getVectorNumElements())));
+  }
+  return DAG.getMergeValues(Results, DL);
+}
+
 SDValue
 AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
+
+  if (SDValue Result = lowerInterleaveWithTBL(Op, DAG, *Subtarget))
+    return Result;
 
   if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
@@ -35871,6 +35966,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
+
+  if (SDValue Result = lowerInterleaveWithTBL(Op, DAG, *Subtarget))
+    return Result;
 
   if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
