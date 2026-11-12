@@ -1742,6 +1742,9 @@ static void setupLinalgGenericOpInputAndIndexingMap(
     bool isConstant, tosa::RescaleOp op, Value &constant, int64_t &arg,
     bool isShift = false) {
 
+  assert(!(isConstant && values.empty()) &&
+         "constant rescale operand must have values");
+
   auto loc = op.getLoc();
   auto inputTy = cast<ShapedType>(op.getInput().getType());
   unsigned rank = inputTy.getRank();
@@ -1883,31 +1886,28 @@ public:
     }
 
     DenseElementsAttr shiftElems;
-    bool isShiftConstant = false;
-    if (matchPattern(op.getShift(), m_Constant(&shiftElems)))
-      isShiftConstant = true;
-
+    bool isShiftConstant = matchPattern(op.getShift(), m_Constant(&shiftElems));
     DenseElementsAttr multiplierElems;
-    bool isMultiplierConstant = false;
-    if (matchPattern(op.getMultiplier(), m_Constant(&multiplierElems)))
-      isMultiplierConstant = true;
+    bool isMultiplierConstant =
+        matchPattern(op.getMultiplier(), m_Constant(&multiplierElems));
 
     llvm::SmallVector<int32_t> shiftValues;
     llvm::SmallVector<int32_t> multiplierValues;
     bool doubleRound;
-
-    if (isMultiplierConstant && isShiftConstant) {
-      // explicit cast is required here
-      shiftValues = llvm::map_to_vector(
-          shiftElems.getValues<IntegerAttr>(), [](IntegerAttr attr) -> int32_t {
-            return static_cast<int32_t>(attr.getInt());
-          });
+    if (isMultiplierConstant) {
       multiplierValues =
           llvm::map_to_vector(multiplierElems.getValues<IntegerAttr>(),
                               [](IntegerAttr attr) -> int32_t {
                                 return static_cast<int32_t>(attr.getInt());
                               });
-
+    }
+    if (isShiftConstant) {
+      shiftValues = llvm::map_to_vector(
+          shiftElems.getValues<IntegerAttr>(), [](IntegerAttr attr) -> int32_t {
+            return static_cast<int32_t>(attr.getInt());
+          });
+    }
+    if (isMultiplierConstant && isShiftConstant) {
       // If we shift by more than the bitwidth, this just sets to 0.
       for (int i = 0, s = multiplierValues.size(); i < s; i++) {
         if (shiftValues[i] > 63) {
