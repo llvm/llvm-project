@@ -6198,7 +6198,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (DppCt) {
     using namespace AMDGPU::DPP;
 
-    unsigned DC = DppCt->getImm();
+    uint64_t DC = DppCt->getImm();
     if (DC == DppCtrl::DPP_UNUSED1 || DC == DppCtrl::DPP_UNUSED2 ||
         DC == DppCtrl::DPP_UNUSED3 || DC > DppCtrl::DPP_LAST ||
         (DC >= DppCtrl::DPP_UNUSED4_FIRST && DC <= DppCtrl::DPP_UNUSED4_LAST) ||

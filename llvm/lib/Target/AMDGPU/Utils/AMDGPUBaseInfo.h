@@ -1767,7 +1767,7 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 
 LLVM_READNONE
-inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
+inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, uint64_t DC) {
   if (isGFX12(ST))
     return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
   if (isGFX90A(ST))

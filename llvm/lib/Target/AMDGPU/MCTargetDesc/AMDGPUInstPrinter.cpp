@@ -1127,7 +1127,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
   using namespace AMDGPU::DPP;
 
-  unsigned Imm = MI->getOperand(OpNo).getImm();
+  uint64_t Imm = MI->getOperand(OpNo).getImm();
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) &&
