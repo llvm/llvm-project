@@ -88,8 +88,6 @@ STATISTIC(NumSaturating,
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumCmpIntr, "Number of llvm.[us]cmp intrinsics removed");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
-STATISTIC(NumFrozen, "Number of values frozen to make use of a select "
-                     "condition that may be undef");
 STATISTIC(NumSMinMax,
           "Number of llvm.s{min,max} intrinsics simplified to unsigned");
 STATISTIC(NumUDivURemsNarrowedExpanded,
@@ -696,7 +694,6 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
       FI->eraseFromParent();
       return false;
     }
-    ++NumFrozen;
     ++NumMinMax;
     MM->replaceAllUsesWith(FI);
     MM->eraseFromParent();
@@ -709,7 +706,6 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
       FI->eraseFromParent();
       return false;
     }
-    ++NumFrozen;
     ++NumMinMax;
     MM->replaceAllUsesWith(FI);
     MM->eraseFromParent();
