@@ -6521,8 +6521,10 @@ bool Sema::BuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID) {
   if (checkArgCount(TheCall, 2))
     return true;
 
+  // Nothing is evaluated in an unevaluated operand.
   if (BuiltinID == Builtin::BI__builtin_isunordered &&
-      TheCall->getFPFeaturesInEffect(getLangOpts()).getNoHonorNaNs())
+      TheCall->getFPFeaturesInEffect(getLangOpts()).getNoHonorNaNs() &&
+      !isUnevaluatedContext())
     Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 1 << 0 << TheCall->getSourceRange();
 
@@ -6563,14 +6565,18 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
     return true;
 
   FPOptions FPO = TheCall->getFPFeaturesInEffect(getLangOpts());
-  if (FPO.getNoHonorInfs() && (BuiltinID == Builtin::BI__builtin_isfinite ||
-                               BuiltinID == Builtin::BI__builtin_isinf ||
-                               BuiltinID == Builtin::BI__builtin_isinf_sign))
+  // Nothing is evaluated in an unevaluated operand.
+  bool Evaluated = !isUnevaluatedContext();
+  if (Evaluated && FPO.getNoHonorInfs() &&
+      (BuiltinID == Builtin::BI__builtin_isfinite ||
+       BuiltinID == Builtin::BI__builtin_isinf ||
+       BuiltinID == Builtin::BI__builtin_isinf_sign))
     Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 0 << 0 << TheCall->getSourceRange();
 
-  if (FPO.getNoHonorNaNs() && (BuiltinID == Builtin::BI__builtin_isnan ||
-                               BuiltinID == Builtin::BI__builtin_isunordered))
+  if (Evaluated && FPO.getNoHonorNaNs() &&
+      (BuiltinID == Builtin::BI__builtin_isnan ||
+       BuiltinID == Builtin::BI__builtin_isunordered))
     Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 1 << 0 << TheCall->getSourceRange();
 
@@ -10801,7 +10807,8 @@ static bool IsInfinityFunction(const FunctionDecl *FDecl) {
 
 void Sema::CheckInfNaNFunction(const CallExpr *Call,
                                const FunctionDecl *FDecl) {
-  if (!FDecl->getIdentifier())
+  // Nothing is evaluated in an unevaluated operand.
+  if (!FDecl->getIdentifier() || isUnevaluatedContext())
     return;
 
   FPOptions FPO = Call->getFPFeaturesInEffect(getLangOpts());

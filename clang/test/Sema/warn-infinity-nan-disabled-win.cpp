@@ -256,6 +256,15 @@ int compareit(float a, float b) {
 
   y = infinity(); // expected-no-diagnostics
 
+  // Nothing is evaluated in these operands, so none of them is diagnosed.
+  i = sizeof(decltype(__builtin_inf()));
+  i = sizeof(__builtin_nanf(""));
+  i = sizeof(__builtin_isnan(a));
+  i = sizeof(__builtin_isinf(a));
+  i = sizeof(__builtin_isunordered(a, b));
+  i = noexcept(std::isinf(a));
+  i = sizeof(std::numeric_limits<double>::infinity());
+
   return 0;
 
 }
