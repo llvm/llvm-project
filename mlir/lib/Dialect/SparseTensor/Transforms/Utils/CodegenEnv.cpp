@@ -41,12 +41,15 @@ static void sortDependentLoops(std::vector<LoopCoeffPair> &target) {
 //===----------------------------------------------------------------------===//
 
 CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
-                       unsigned numTensors, unsigned numLoops, unsigned maxRank)
+                       unsigned numTensors, unsigned numLoops, unsigned maxRank,
+                       bool enableStructureReuse)
     : linalgOp(linop), sparseOptions(opts),
       latticeMerger(numTensors, numLoops, maxRank), loopEmitter(),
-      sparseOut(nullptr), outerParNest(-1u), insChain(), expValues(),
-      expFilled(), expAdded(), expCount(), redVal(), redExp(detail::kInvalidId),
-      redCustom(detail::kInvalidId), redValidLexInsert() {}
+      sparseOut(nullptr), structureSource(nullptr),
+      enableStructureReuse(enableStructureReuse), outerParNest(-1u), insChain(),
+      expValues(), expFilled(), expAdded(), expCount(), redVal(),
+      redExp(detail::kInvalidId), redCustom(detail::kInvalidId),
+      redValidLexInsert() {}
 
 LogicalResult CodegenEnv::initTensorExp() {
   // Builds the tensor expression for the Linalg operation in SSA form.
@@ -157,6 +160,28 @@ bool CodegenEnv::isAdmissibleTensorExp(ExprId exp) {
   // [Bik96,Ch9], is also admissible without special env.
   if (latticeMerger.isSingleCondition(tensor, exp))
     return true;
+
+  // A materializing output can also reuse a statically known structure when
+  // its support is bounded by an input with the same encoding and indexing
+  // map. Treat the output accumulator and that input as the same structural
+  // condition; their values remain distinct.
+  if (enableStructureReuse && isMaterializing(lhs->get())) {
+    const auto outType = dyn_cast<RankedTensorType>(lhs->get().getType());
+    const AffineMap outMap = linalgOp.getMatchingIndexingMap(lhs);
+    if (outType) {
+      for (OpOperand *input : linalgOp.getDpsInputOperands()) {
+        if (input->get().getType() != outType ||
+            linalgOp.getMatchingIndexingMap(input) != outMap)
+          continue;
+        TensorId source = makeTensorId(input->getOperandNumber());
+        if (latticeMerger.isConditionedOn(source, exp, tensor)) {
+          structureSource = input;
+          latticeMerger.setOutStructure(source);
+          return true;
+        }
+      }
+    }
+  }
 
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
