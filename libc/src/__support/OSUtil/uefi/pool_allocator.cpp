@@ -52,11 +52,11 @@ static_assert(sizeof(AllocationHeader) % alignof(AllocationHeader) == 0,
 constexpr EFI_MEMORY_TYPE POOL_TYPE = EfiLoaderData;
 
 LIBC_INLINE AllocationHeader *header_of(void *ptr) {
-  return reinterpret_cast<AllocationHeader *>(ptr) - 1;
+  return static_cast<AllocationHeader *>(ptr) - 1;
 }
 
 LIBC_INLINE const AllocationHeader *header_of(const void *ptr) {
-  return reinterpret_cast<const AllocationHeader *>(ptr) - 1;
+  return static_cast<const AllocationHeader *>(ptr) - 1;
 }
 
 } // namespace
@@ -78,9 +78,10 @@ void *pool_allocate(size_t alignment, size_t size) {
   if (status != EFI_SUCCESS || base == nullptr)
     return nullptr;
 
-  uintptr_t user = reinterpret_cast<uintptr_t>(base) + sizeof(AllocationHeader);
-  user = (user + alignment - 1) & ~(static_cast<uintptr_t>(alignment) - 1);
-  void *ptr = reinterpret_cast<void *>(user);
+  cpp::byte *unaligned =
+      static_cast<cpp::byte *>(base) + sizeof(AllocationHeader);
+  size_t offset = (-cpp::bit_cast<uintptr_t>(unaligned)) & (alignment - 1);
+  void *ptr = unaligned + offset;
   *header_of(ptr) = {base, size};
   return ptr;
 }
