@@ -26,7 +26,8 @@
 _LIBCPP_PUSH_MACROS
 #include <__cxx03/__undef_macros>
 
-// TODO: Find out how altivec changes things and allow vectorizations there too.
+// The __cxx03 layer is a frozen C++03 ABI shim. Vectorization is handled by
+// the standard headers; do not enable it here.
 #define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
 
 #if _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS && !defined(__OPTIMIZE_SIZE__)
