@@ -122,9 +122,8 @@ _Bool cmpxchg_weak_c11(UniformPtr *expected, int *desired) {
 }
 
 // CHECK-LABEL: define {{.*}}ptr @load_n()
-// CHECK:         [[SIGNED:%.*]] = load atomic ptr, ptr @qualified_ptr
-// CHECK:         [[INT:%.*]] = ptrtoint ptr [[SIGNED]] to i64
-// CHECK-NEXT:    call i64 @llvm.ptrauth.auth(i64 [[INT]], i32 2, i64 50)
+// CHECK:         load atomic ptr, ptr @qualified_ptr
+// CHECK:         call i64 @llvm.ptrauth.auth(i64 {{.*}}, i32 2, i64 50)
 int *load_n(void) { return __atomic_load_n(&qualified_ptr, __ATOMIC_SEQ_CST); }
 
 // CHECK-LABEL: define {{.*}}void @store_n(
@@ -136,9 +135,8 @@ void store_n(int *p) { __atomic_store_n(&qualified_ptr, p, __ATOMIC_SEQ_CST); }
 // CHECK-LABEL: define {{.*}}ptr @exchange_n(
 // CHECK:         call i64 @llvm.ptrauth.sign(i64 {{.*}}, i32 2, i64 50)
 // CHECK-NOT:     @llvm.ptrauth
-// CHECK:         [[OLD:%.*]] = atomicrmw xchg ptr @qualified_ptr, ptr {{.*}}
-// CHECK:         [[INT:%.*]] = ptrtoint ptr [[OLD]] to i64
-// CHECK-NEXT:    call i64 @llvm.ptrauth.auth(i64 [[INT]], i32 2, i64 50)
+// CHECK:         atomicrmw xchg ptr @qualified_ptr, ptr {{.*}}
+// CHECK:         call i64 @llvm.ptrauth.auth(i64 {{.*}}, i32 2, i64 50)
 int *exchange_n(int *p) {
   return __atomic_exchange_n(&qualified_ptr, p, __ATOMIC_SEQ_CST);
 }

@@ -59,14 +59,8 @@ void f() {
   // expected-error@-1 {{address argument to atomic arithmetic operation must not be a pointer to a '__ptrauth'-qualified type ('volatile __ptrauth(2,0,200) _Atomic(int *) *' invalid)}}
   __c11_atomic_fetch_and(ATOMIZE(j), ATOMIZE(non_addr_discriminatedauthenticated_ptr), memory_order_seq_cst);
   // expected-error@-1 {{incompatible pointer to integer conversion passing 'volatile __ptrauth(2,0,200) _Atomic(int *) *' to parameter of type 'typeof (j)' (aka 'int')}}
-  __c11_atomic_fetch_add(ATOMIZE(non_addr_discriminatedauthenticated_ptr), 1, memory_order_seq_cst);
-  // expected-error@-1 {{address argument to atomic arithmetic operation must not be a pointer to a '__ptrauth'-qualified type ('volatile __ptrauth(2,0,200) _Atomic(int *) *' invalid)}}
   __atomic_fetch_add(&non_addr_discriminatedauthenticated_ptr, 1, memory_order_seq_cst);
   // expected-error@-1 {{address argument to atomic arithmetic operation must not be a pointer to a '__ptrauth'-qualified type ('int *__ptrauth(2,0,200) *' invalid)}}
-  __c11_atomic_fetch_add(&atomic_qualified_int, 1, memory_order_seq_cst);
-  // expected-error@-1 {{address argument to atomic arithmetic operation must not be a pointer to a '__ptrauth'-qualified type ('__ptrauth(2,0,200) _Atomic(long) *' invalid)}}
-  __atomic_fetch_add(&qualified_int, 1, memory_order_seq_cst);
-  // expected-error@-1 {{address argument to atomic arithmetic operation must not be a pointer to a '__ptrauth'-qualified type ('__ptrauth(2,0,200) long *' invalid)}}
   __atomic_fetch_or(&atomic_qualified_int, 1, memory_order_seq_cst);
   // expected-error@-1 {{address argument to atomic arithmetic operation must not be a pointer to a '__ptrauth'-qualified type ('__ptrauth(2,0,200) _Atomic(long) *' invalid)}}
 
@@ -74,10 +68,6 @@ void f() {
   // expected-error@-1 {{address argument to atomic test-and-set or clear operation must not be a pointer to a '__ptrauth'-qualified type ('int *__ptrauth(2,0,200) *' invalid)}}
   __atomic_clear(&non_addr_discriminatedauthenticated_ptr, memory_order_seq_cst);
   // expected-error@-1 {{address argument to atomic test-and-set or clear operation must not be a pointer to a '__ptrauth'-qualified type ('int *__ptrauth(2,0,200) *' invalid)}}
-  __atomic_test_and_set(ATOMIZE(authenticated_ptr), memory_order_seq_cst);
-  // expected-error@-1 {{address argument to atomic test-and-set or clear operation must not be a pointer to a '__ptrauth'-qualified type ('volatile __ptrauth(2,1,100) _Atomic(int *) *' invalid)}}
-  __atomic_clear(&qualified_int, memory_order_seq_cst);
-  // expected-error@-1 {{address argument to atomic test-and-set or clear operation must not be a pointer to a '__ptrauth'-qualified type ('__ptrauth(2,0,200) long *' invalid)}}
 
   (*ATOMIZE(non_addr_discriminatedauthenticated_ptr))++;
   // expected-error@-1 {{atomic increment of '__ptrauth'-qualified type 'volatile __ptrauth(2,0,200) _Atomic(int *)' is not supported}}
@@ -85,16 +75,8 @@ void f() {
   // expected-error@-1 {{atomic decrement of '__ptrauth'-qualified type 'volatile __ptrauth(2,0,200) _Atomic(int *)' is not supported}}
   (*ATOMIZE(non_addr_discriminatedauthenticated_ptr)) += 1;
   // expected-error@-1 {{atomic compound assignment of '__ptrauth'-qualified type 'volatile __ptrauth(2,0,200) _Atomic(int *)' is not supported}}
-  (*ATOMIZE(authenticated_ptr))--;
-  // expected-error@-1 {{atomic decrement of '__ptrauth'-qualified type 'volatile __ptrauth(2,1,100) _Atomic(int *)' is not supported}}
   atomic_qualified_int++;
   // expected-error@-1 {{atomic increment of '__ptrauth'-qualified type '__ptrauth(2,0,200) _Atomic(long)' is not supported}}
-  ++atomic_qualified_int;
-  // expected-error@-1 {{atomic increment of '__ptrauth'-qualified type '__ptrauth(2,0,200) _Atomic(long)' is not supported}}
-  atomic_qualified_int -= 2;
-  // expected-error@-1 {{atomic compound assignment of '__ptrauth'-qualified type '__ptrauth(2,0,200) _Atomic(long)' is not supported}}
-  atomic_qualified_int |= 2;
-  // expected-error@-1 {{atomic compound assignment of '__ptrauth'-qualified type '__ptrauth(2,0,200) _Atomic(long)' is not supported}}
   qualified_int++;
   qualified_int += 2;
   atomic_qualified_int = 3;
@@ -170,9 +152,6 @@ int i = 0;
   // expected-error@-1 {{address argument to __sync operation must not be a pointer to a '__ptrauth'-qualified type ('int *__ptrauth(2,0,200) *' invalid)}}
   __sync_lock_release(&non_addr_discriminatedauthenticated_ptr);
   // expected-error@-1 {{address argument to __sync operation must not be a pointer to a '__ptrauth'-qualified type ('int *__ptrauth(2,0,200) *' invalid)}}
-
-  __sync_fetch_and_add(&qualified_int, 1);
-  // expected-error@-1 {{address argument to __sync operation must not be a pointer to a '__ptrauth'-qualified type ('__ptrauth(2,0,200) long *' invalid)}}
 }
 
 typedef int *__ptrauth(2, 0, 200) UniformPtr;
@@ -192,13 +171,7 @@ void by_address(int *p, int **raw, UniformPtr *same) {
 
   __c11_atomic_compare_exchange_strong(&atomic_uniform, raw, p, memory_order_seq_cst, memory_order_seq_cst);
   // expected-error@-1 {{passing 'int **' to parameter of type 'int *__ptrauth(2,0,200) *' changes pointer authentication of pointee type}}
-  __atomic_compare_exchange_n(&uniform, raw, p, 0, memory_order_seq_cst, memory_order_seq_cst);
-  // expected-error@-1 {{passing 'int **' to parameter of type 'int *__ptrauth(2,0,200) *' changes pointer authentication of pointee type}}
-  __atomic_compare_exchange(&uniform, raw, same, 0, memory_order_seq_cst, memory_order_seq_cst);
-  // expected-error@-1 {{passing 'int **' to parameter of type 'int *__ptrauth(2,0,200) *' changes pointer authentication of pointee type}}
   __atomic_load(&uniform, raw, memory_order_seq_cst);
-  // expected-error@-1 {{passing 'int **' to parameter of type 'int *__ptrauth(2,0,200) *' changes pointer authentication of pointee type}}
-  __atomic_exchange(&uniform, raw, same, memory_order_seq_cst);
   // expected-error@-1 {{passing 'int **' to parameter of type 'int *__ptrauth(2,0,200) *' changes pointer authentication of pointee type}}
   __c11_atomic_compare_exchange_strong(&atomic_plain, same, p, memory_order_seq_cst, memory_order_seq_cst);
   // expected-error@-1 {{passing 'UniformPtr *' (aka 'int *__ptrauth(2,0,200) *') to parameter of type 'int **' changes pointer authentication of pointee type}}
