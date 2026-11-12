@@ -10,8 +10,7 @@ define i1 @ne_reuse_i64(i64 %x, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = and i64 [[X]], 63
 ; CHECK-NEXT:    store i64 [[WIDE]], ptr [[P]], align 4
-; CHECK-NEXT:    [[NARROW:%.*]] = and i64 [[X]], 62
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[NARROW]], 62
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[WIDE]], 62
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %wide = and i64 %x, 63
@@ -26,8 +25,7 @@ define i1 @eq_reuse_i64(i64 %x, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = and i64 [[X]], 63
 ; CHECK-NEXT:    store i64 [[WIDE]], ptr [[P]], align 4
-; CHECK-NEXT:    [[NARROW:%.*]] = and i64 [[X]], 62
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[NARROW]], 62
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[WIDE]], 61
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %wide = and i64 %x, 63
@@ -42,8 +40,7 @@ define i1 @ne_reuse_i32(i32 %x, ptr %p) {
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = and i32 [[X]], 255
 ; CHECK-NEXT:    store i32 [[WIDE]], ptr [[P]], align 4
-; CHECK-NEXT:    [[NARROW:%.*]] = and i32 [[X]], 240
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[NARROW]], 240
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[WIDE]], 240
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %wide = and i32 %x, 255
@@ -59,8 +56,7 @@ define i1 @eq_reuse_partial_low_mask(i32 %x, ptr %p) {
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = and i32 [[X]], 61
 ; CHECK-NEXT:    store i32 [[WIDE]], ptr [[P]], align 4
-; CHECK-NEXT:    [[NARROW:%.*]] = and i32 [[X]], 60
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[NARROW]], 60
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[WIDE]], 59
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %wide = and i32 %x, 61
@@ -75,8 +71,7 @@ define i1 @ne_reuse_commuted_compare(i64 %x, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = and i64 [[X]], 63
 ; CHECK-NEXT:    store i64 [[WIDE]], ptr [[P]], align 4
-; CHECK-NEXT:    [[NARROW:%.*]] = and i64 [[X]], 62
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[NARROW]], 62
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[WIDE]], 62
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %wide = and i64 %x, 63
@@ -191,8 +186,7 @@ define <4 x i1> @ne_reuse_splat(<4 x i32> %x, ptr %p) {
 ; CHECK-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[WIDE:%.*]] = and <4 x i32> [[X]], splat (i32 63)
 ; CHECK-NEXT:    store <4 x i32> [[WIDE]], ptr [[P]], align 16
-; CHECK-NEXT:    [[NARROW:%.*]] = and <4 x i32> [[X]], splat (i32 62)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[NARROW]], splat (i32 62)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult <4 x i32> [[WIDE]], splat (i32 62)
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %wide = and <4 x i32> %x, splat (i32 63)
@@ -237,8 +231,7 @@ define i1 @ne_reuse_through_trunc(i64 %x, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[EXT:%.*]] = and i64 [[X]], 63
 ; CHECK-NEXT:    store i64 [[EXT]], ptr [[P]], align 4
-; CHECK-NEXT:    [[TRUNC1:%.*]] = and i64 [[X]], 62
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[TRUNC1]], 62
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[EXT]], 62
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %wide = and i64 %x, 63
