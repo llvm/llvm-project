@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -ast-dump -ast-dump-filter=test -verify | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: FunctionDecl {{.*}} test_mul 'float2x3 (float2x3, float2x3)'
 // CHECK: BinaryOperator {{.*}} 'float2x3':'matrix<float, 2, 3>' '*'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_mul_square
 // CHECK: fmul {{.*}}<4 x float> %{{.*}}, %{{.*}}
 float2x2 test_mul_square(float2x2 a, float2x2 b) {
