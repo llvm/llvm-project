@@ -1650,7 +1650,46 @@ TEST(DWARFExpression, DW_OP_bit_piece_offset_overflow) {
 }
 
 TEST(DWARFExpression, DW_OP_bit_piece_empty_stack) {
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bit_piece, 0x08, 0x00}), llvm::Failed());
+  // As with DW_OP_piece, zeros stand in for unavailable bits for now.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bit_piece, 8, 0}),
+                       ExpectHostAddress({0x00}));
+
+  // The source offset is ignored, and the piece need not fit in a scalar.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bit_piece, 99, 127}),
+                       ExpectHostAddress(std::vector<uint8_t>(13, 0)));
+
+  // Empty zero-sized pieces do not contribute any data.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_bit_piece, 0, 127, DW_OP_lit7, DW_OP_stack_value,
+                DW_OP_bit_piece, 8, 0, DW_OP_bit_piece, 0, 127}),
+      ExpectHostAddress({0x07}));
+
+  MockDwarfDelegate dwarf5 = MockDwarfDelegate::Dwarf5();
+  for (lldb::ByteOrder byte_order :
+       {lldb::eByteOrderLittle, lldb::eByteOrderBig}) {
+    // Unavailable nibbles surround a byte-sized piece at an unaligned offset.
+    const uint8_t expr[] = {DW_OP_bit_piece,
+                            4,
+                            127,
+                            DW_OP_const1u,
+                            0xab,
+                            DW_OP_stack_value,
+                            DW_OP_piece,
+                            1,
+                            DW_OP_bit_piece,
+                            4,
+                            127};
+    DataExtractor extractor(expr, sizeof(expr), byte_order, /*addr_size=*/4);
+    const std::vector<uint8_t> expected =
+        byte_order == lldb::eByteOrderLittle ? std::vector<uint8_t>{0xb0, 0x0a}
+                                             : std::vector<uint8_t>{0x0a, 0xb0};
+    EXPECT_THAT_EXPECTED(
+        DWARFExpression::Evaluate(
+            /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{},
+            extractor, /*dwarf_cu=*/&dwarf5, lldb::eRegisterKindLLDB,
+            /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr),
+        ExpectHostAddress(expected));
+  }
 }
 
 TEST(DWARFExpression, DW_OP_deref_size_exceeds_address_size) {
