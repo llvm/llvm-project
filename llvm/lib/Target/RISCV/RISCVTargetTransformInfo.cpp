@@ -28,6 +28,13 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "riscvtti"
 
 InstructionCost
+RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, Type *Tp,
+                                      TTI::TargetCostKind CostKind) const {
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  return LT.first * getRISCVInstructionCost(OpCodes, LT.second, CostKind);
+}
+
+InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) const {
   // Check if the type is valid for all CostKind
@@ -2652,6 +2659,9 @@ RISCVTTIImpl::getStoreImmCost(Type *Ty, TTI::OperandValueInfo OpInfo,
     // with how we treat scalar constants themselves just above.
     return 1;
 
+  if (OpInfo.isIndexVecConstant())
+    return getRISCVInstructionCost(RISCV::VID_V, Ty, CostKind);
+
   return getConstantPoolLoadCost(Ty, CostKind);
 }
 
@@ -2725,6 +2735,9 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
       // We return 0 we currently ignore the cost of materializing scalar
       // constants in GPRs.
       return 0;
+
+    if (OpInfo.isIndexVecConstant())
+      return getRISCVInstructionCost(RISCV::VID_V, ValTy, CostKind);
 
     return getConstantPoolLoadCost(ValTy, CostKind);
   };
@@ -3170,6 +3183,9 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
       // We return 0 for both as we currently ignore the cost of materializing
       // scalar constants in GPRs.
       return 0;
+
+    if (OpInfo.isIndexVecConstant())
+      return getRISCVInstructionCost(RISCV::VID_V, Ty, CostKind);
 
     return getConstantPoolLoadCost(Ty, CostKind);
   };
