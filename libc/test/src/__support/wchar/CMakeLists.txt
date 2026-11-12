@@ -44,7 +44,7 @@ add_libc_test(
 add_libc_test(
   utf8_to_16_test
   SUITE
-    libc-support-tests
+    libc-support-wchar-tests
   SRCS
     utf8_to_16_test.cpp
   DEPENDS
@@ -57,7 +57,7 @@ add_libc_test(
 add_libc_test(
   utf16_to_8_test
   SUITE
-    libc-support-tests
+    libc-support-wchar-tests
   SRCS
     utf16_to_8_test.cpp
   DEPENDS

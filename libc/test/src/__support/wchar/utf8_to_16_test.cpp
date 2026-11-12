@@ -19,14 +19,19 @@
 #include "test/UnitTest/Test.h"
 
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
-using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::TypeList<char16_t, wchar_t>;
+using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::Types<char16_t, wchar_t>;
 #else
-using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::TypeList<char16_t>;
+using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::Types<char16_t>;
 #endif
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, OneByte,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+template <typename T>
+class LlvmLibcTypedCharacterConverterUTF8To16Test
+    : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedCharacterConverterUTF8To16Test,
+                 TestCharTypesUTF16);
+
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To16Test, OneByte) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -42,9 +47,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, OneByte,
   ASSERT_EQ(static_cast<int>(wch.value()), 65);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, TwoBytes,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To16Test, TwoBytes) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -62,9 +66,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, TwoBytes,
   ASSERT_EQ(static_cast<int>(wch.value()), 142);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, ThreeBytes,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To16Test, ThreeBytes) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -84,9 +87,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, ThreeBytes,
   ASSERT_EQ(static_cast<int>(wch.value()), 8721);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, FourBytes,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To16Test, FourBytes) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -113,9 +115,9 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, FourBytes,
   ASSERT_EQ(static_cast<int>(wch_l.value()), 56609);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, ValidTwoByteWithExtraRead,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To16Test,
+           ValidTwoByteWithExtraRead) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -137,9 +139,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, ValidTwoByteWithExtraRead,
   ASSERT_FALSE(wch.has_value());
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, TwoValidTwoBytes,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To16Test, TwoValidTwoBytes) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -168,9 +169,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, TwoValidTwoBytes,
 
 // Enable this test if we implement some hardening mode later
 #if false
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To16Test, InvalidPop,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To16Test, InvalidPop) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;

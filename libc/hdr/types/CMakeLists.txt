@@ -16,7 +16,6 @@ add_proxy_header_library(
     libc.hdr.uchar_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.char16_t
-    libc.include.uchar
 )
 
 add_proxy_header_library(

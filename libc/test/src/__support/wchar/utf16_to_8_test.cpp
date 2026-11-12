@@ -19,14 +19,18 @@
 #include "test/UnitTest/Test.h"
 
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
-using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::TypeList<char16_t, wchar_t>;
+using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::Types<char16_t, wchar_t>;
 #else
-using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::TypeList<char16_t>;
+using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::Types<char16_t>;
 #endif
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, OneByte,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+template <typename T>
+class LlvmLibcTypedCharacterConverterUTF16To8Test
+    : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedCharacterConverterUTF16To8Test, TestCharTypesUTF16);
+
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF16To8Test, OneByte) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
@@ -54,9 +58,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, OneByte,
   ASSERT_FALSE(popped.has_value());
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, TwoByte,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF16To8Test, TwoByte) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
@@ -93,9 +96,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, TwoByte,
   ASSERT_FALSE(popped.has_value());
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, ThreeByte,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF16To8Test, ThreeByte) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
@@ -140,9 +142,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, ThreeByte,
   ASSERT_FALSE(popped.has_value());
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, FourByte,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF16To8Test, FourByte) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
@@ -203,9 +204,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, FourByte,
 
 // Enable these tests if we implement some hardening mode later
 #if false
-TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, CantPushMidConversion,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF16To8Test, CantPushMidConversion) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
@@ -224,9 +224,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, CantPushMidConversion,
   ASSERT_EQ(err, -1);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF16To8Test, CantPopMidPushing,
-           TestCharTypesUTF16) {
-  using CharType16 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF16To8Test, CantPopMidPushing) {
+  using CharType16 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
