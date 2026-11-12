@@ -3019,25 +3019,22 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
                                   ? llvm::Intrinsic::type_checked_load_relative
                                   : llvm::Intrinsic::type_checked_load;
 
-  if (!ShouldEmitCFICheck) {
-    llvm::Value *CheckedLoad = Builder.CreateCall(
-        CGM.getIntrinsic(CheckedLoadIntrinsic),
-        {VTable, llvm::ConstantInt::get(Int32Ty, VTableByteOffset), TypeId});
-    return Builder.CreateBitCast(Builder.CreateExtractValue(CheckedLoad, 0),
-                                 VTableTy);
+  std::optional<SanitizerDebugLocation> SanScope;
+  if (ShouldEmitCFICheck) {
+    SanScope.emplace(this, SanitizerKind::SO_CFIVCall,
+                     SanitizerHandler::CFICheckFail);
   }
-
-  SanitizerDebugLocation SanScope(this, {SanitizerKind::SO_CFIVCall},
-                                  SanitizerHandler::CFICheckFail);
   llvm::Value *CheckedLoad = Builder.CreateCall(
       CGM.getIntrinsic(CheckedLoadIntrinsic),
       {VTable, llvm::ConstantInt::get(Int32Ty, VTableByteOffset), TypeId});
-  llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
-  bool UseCrossDsoSlowPath =
-      CGM.getCodeGenOpts().SanitizeCfiCrossDso &&
-      !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall);
-  EmitVTableCheck(CFITCK_VCall, T, MD, VTable, CheckResult, Loc,
-                  UseCrossDsoSlowPath);
+  if (ShouldEmitCFICheck) {
+    llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
+    bool UseCrossDsoSlowPath =
+        CGM.getCodeGenOpts().SanitizeCfiCrossDso &&
+        !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall);
+    EmitVTableCheck(CFITCK_VCall, T, MD, VTable, CheckResult, Loc,
+                    UseCrossDsoSlowPath);
+  }
   return Builder.CreateBitCast(Builder.CreateExtractValue(CheckedLoad, 0),
                                VTableTy);
 }

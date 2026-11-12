@@ -8,9 +8,6 @@
 // through a pointer to a derived class with the same layout. This must also
 // hold with -fwhole-program-vtables (the devirt test suites).
 
-// FIXME: With -fwhole-program-vtables, the checked load uses the derived class.
-// XFAIL: devirt
-
 #include "utils.h"
 
 struct A {
