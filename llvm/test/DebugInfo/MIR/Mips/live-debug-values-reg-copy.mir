@@ -97,7 +97,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: false
-registers:
 liveins:
   - { reg: '$f12', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }

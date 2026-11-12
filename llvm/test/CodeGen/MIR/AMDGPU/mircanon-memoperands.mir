@@ -10,14 +10,6 @@
 ---
 name:      f
 alignment: 1
-registers:
-  - { id: 0, class: sgpr_64 }
-  - { id: 1, class: sreg_64_xexec }
-  - { id: 2, class: sreg_64_xexec }
-  - { id: 3, class: sreg_64_xexec }
-  - { id: 4, class: sreg_64_xexec }
-  - { id: 5, class: sreg_64_xexec }
-  - { id: 6, class: sreg_64_xexec }
 liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '%4' }
 body:             |
@@ -32,12 +24,12 @@ body:             |
     ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
     ; CHECK-NEXT: %bb0_{{[0-9a-f]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM
 
-    %0 = COPY $sgpr4_sgpr5
-    %1 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
-    %2 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (             dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
-    %3 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                             invariant load (s64) from `ptr addrspace(4) poison`)
-    %4 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(4) poison`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(2) poison`)
-    %6 = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(1) poison`)
+    %0:sgpr_64 = COPY $sgpr4_sgpr5
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (             dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                             invariant load (s64) from `ptr addrspace(4) poison`)
+    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(4) poison`)
+    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(2) poison`)
+    %6:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (                                       load (s64) from `ptr addrspace(1) poison`)
 
 ...

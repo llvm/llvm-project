@@ -62,8 +62,6 @@
 ...
 ---
 name:            test
-registers:
-  - { id: 0, class: gr32 }
 frameInfo:
   maxAlignment:  4
 stack:
@@ -75,7 +73,7 @@ body: |
     ; CHECK: DBG_VALUE $noreg, 0, ![[VAR]], !DIExpression(), debug-location ![[VAR_LOC]]
     ; CHECK: $eax = COPY %0, debug-location ![[RET_LOC:[0-9]+]]
     ; CHECK: RET64 $eax, debug-location ![[RET_LOC]]
-    %0 = COPY $edi
+    %0:gr32 = COPY $edi
     DBG_VALUE _, 0, !12, !DIExpression(), debug-location !13
     ; Test whether debug-use is still recognized for compatibility with old
     ; files.
@@ -86,8 +84,6 @@ body: |
 ...
 ---
 name:            test_typed_immediates
-registers:
-  - { id: 0, class: gr32 }
 frameInfo:
   maxAlignment:  4
 stack:
@@ -96,7 +92,7 @@ body: |
   bb.0.entry:
     liveins: $edi
 
-    %0 = COPY $edi
+    %0:gr32 = COPY $edi
   ; CHECK:      DBG_VALUE $noreg, i32 0, ![[VAR]], !DIExpression()
   ; CHECK-NEXT: DBG_VALUE $noreg, i64 -22, ![[VAR]], !DIExpression()
   ; CHECK-NEXT: DBG_VALUE $noreg, i128 123492148938512984928424384934328985928, ![[VAR]], !DIExpression()
@@ -109,8 +105,6 @@ body: |
 ...
 ---
 name:            test_mir_created
-registers:
-  - { id: 0, class: gr32 }
 frameInfo:
   maxAlignment:  4
 stack:
@@ -119,7 +113,7 @@ body: |
   bb.0.entry:
     liveins: $edi
 
-    %0 = COPY $edi
+    %0:gr32 = COPY $edi
   ; CHECK-LABEL: name: test_mir_created
   ; CHECK:       MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0, debug-location !DILocation(line: 1, scope: !14)
   ; CHECK:       MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0, debug-location !DILocation(line: 2, column: 2, scope: !14)

@@ -116,7 +116,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: false
-registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 frameInfo:

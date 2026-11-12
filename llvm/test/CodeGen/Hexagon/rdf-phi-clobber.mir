@@ -37,7 +37,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$d0', virtual-reg: '' }
   - { reg: '$d3', virtual-reg: '' }

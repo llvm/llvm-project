@@ -21,19 +21,13 @@
 ...
 ---
 name: foo
-registers:
-  - { id: 0, class: intregs }
-  - { id: 1, class: predregs }
-  - { id: 2, class: intregs }
-  - { id: 3, class: intregs }
-  - { id: 4, class: intregs }
 body:             |
   bb.0:
     liveins: $r0
 
-    %0 = COPY $r0
-    %1 = C2_cmpeqi %0, 0
-    %2 = A2_tfrsi 123
+    %0:intregs = COPY $r0
+    %1:predregs = C2_cmpeqi %0, 0
+    %2:intregs = A2_tfrsi 123
     J2_jumpt %1, %bb.2, implicit-def dead $pc
     J2_jump %bb.1, implicit-def dead $pc
 
@@ -43,9 +37,9 @@ body:             |
     DBG_VALUE %0, $noreg
     DBG_VALUE %0, $noreg
     DBG_VALUE %0, $noreg
-    %3 = A2_tfrsi 321
+    %3:intregs = A2_tfrsi 321
 
   bb.2:
-    %4 = PHI %2, %bb.0, %3, %bb.1
+    %4:intregs = PHI %2, %bb.0, %3, %bb.1
 
 ...

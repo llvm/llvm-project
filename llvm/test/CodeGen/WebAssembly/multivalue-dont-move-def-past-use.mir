@@ -44,13 +44,6 @@ hasEHScopes:     false
 hasEHFunclets:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: i32, preferred-register: '' }
-  - { id: 1, class: i32, preferred-register: '' }
-  - { id: 2, class: i32, preferred-register: '' }
-  - { id: 3, class: i32, preferred-register: '' }
-  - { id: 4, class: i32, preferred-register: '' }
-  - { id: 5, class: i32, preferred-register: '' }
 liveins:
   - { reg: '$arguments', virtual-reg: '' }
 frameInfo:

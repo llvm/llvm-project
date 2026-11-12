@@ -1,17 +1,17 @@
 # RUN: llc %s -start-after=arm-mve-vpt-opts -stop-after=arm-prera-ldst-opt -o - | FileCheck %s
-# CHECK: %5:rgpr = t2MOVCCr %3, %4, 0 /* CC::eq */, $cpsr, debug-location !16
+# CHECK: %2:rgpr = t2MOVCCr %0, %1, 0 /* CC::eq */, $cpsr, debug-location !16
 # CHECK-NEXT: DBG_VALUE 0, $noreg, !12, !DIExpression(), debug-location !16
 # CHECK-NEXT: DBG_VALUE 1, $noreg, !12, !DIExpression(), debug-location !16
 # CHECK-NEXT: DBG_VALUE_LIST !12, !DIExpression(), $noreg, $noreg, debug-location !16
 # CHECK-NEXT: DBG_VALUE $noreg, $noreg, !12, !DIExpression(), debug-location !16
-# CHECK-NEXT: %0:rgpr = t2LDRi12 %5, 0, 14 /* CC::al */, $noreg, debug-location !16 :: (load (s32) from %ir..backtrace_user.ctl_default, align 8)
-# CHECK-NEXT: %6:rgpr = t2LDRi12 %5, 4, 14 /* CC::al */, $noreg, debug-location !16 :: (load (s32) from %ir.btc_user_copy)
-# CHECK-NEXT: %2:gpr = t2LDRi12 %5, 8, 14 /* CC::al */, $noreg, debug-location !16 :: (load (s32) from %ir.btc_user_copy_context, align 8)
-# CHECK-NEXT: DBG_VALUE %2, $noreg, !12, !DIExpression(), debug-location !16
-# CHECK-NEXT: %7:rgpr = t2ANDrr %6, %0, 14 /* CC::al */, $noreg, def $cpsr
-# CHECK-NEXT: %8:rgpr = t2ANDrr %6, %0, 14 /* CC::al */, $noreg, def $cpsr
-# CHECK-NEXT: %9:rgpr = t2ANDrr %6, %0, 14 /* CC::al */, $noreg, def $cpsr
-# CHECK-NEXT: %10:rgpr = t2ANDrr %6, %0, 14 /* CC::al */, $noreg, def $cpsr
+# CHECK-NEXT: %3:rgpr = t2LDRi12 %2, 0, 14 /* CC::al */, $noreg, debug-location !16 :: (load (s32) from %ir..backtrace_user.ctl_default, align 8)
+# CHECK-NEXT: %4:rgpr = t2LDRi12 %2, 4, 14 /* CC::al */, $noreg, debug-location !16 :: (load (s32) from %ir.btc_user_copy)
+# CHECK-NEXT: %5:gpr = t2LDRi12 %2, 8, 14 /* CC::al */, $noreg, debug-location !16 :: (load (s32) from %ir.btc_user_copy_context, align 8)
+# CHECK-NEXT: DBG_VALUE %5, $noreg, !12, !DIExpression(), debug-location !16
+# CHECK-NEXT: %6:rgpr = t2ANDrr %4, %3, 14 /* CC::al */, $noreg, def $cpsr
+# CHECK-NEXT: %7:rgpr = t2ANDrr %4, %3, 14 /* CC::al */, $noreg, def $cpsr
+# CHECK-NEXT: %8:rgpr = t2ANDrr %4, %3, 14 /* CC::al */, $noreg, def $cpsr
+# CHECK-NEXT: %9:rgpr = t2ANDrr %4, %3, 14 /* CC::al */, $noreg, def $cpsr
 
 # This test specifically checks if a DBG_VALUE_LIST that is succeeded by a DBG_VALUE can be properly undefed and the DBG_VALUE is the one that is moved. Assuming both instructions describe the same local variable. 
 
@@ -47,10 +47,6 @@
   !97 = !DISubroutineType(types: !96)
 name:            backtrace_user
 tracksRegLiveness: false
-registers:
-  - {id: 0, class: rgpr, }
-  - {id: 1, class: gpr, }
-  - {id: 2, class: gpr, }
 body:             |
   bb.0.entry:
     %10:rgpr = COPY $r2

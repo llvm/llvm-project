@@ -4,7 +4,6 @@
 ---
 # Completely invalid code, but it checks that noconvergent round-trips properly.
 name:            use_noconvergent
-registers:
 body: |
   bb.0:
     ; CHECK-LABEL: name: use_noconvergent

@@ -8,7 +8,6 @@
 name: bad_phys
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32, assigned-phys: '%0' }
 body: |
   bb.0:

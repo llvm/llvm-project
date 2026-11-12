@@ -93,9 +93,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:       
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr64, preferred-register: '' }
 liveins:         
   - { reg: '$ecx', virtual-reg: '%0' }
 frameInfo:       
@@ -125,11 +122,11 @@ body:             |
   bb.0.entry:
     liveins: $ecx
   
-    %0 = COPY $ecx
+    %0:gr32 = COPY $ecx
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0 :: (store (s32) into %ir.x.addr)
     DBG_VALUE %stack.0.x.addr, 0, !13, !DIExpression(), debug-location !14
     ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
-    %1 = LEA64r %stack.0.x.addr, 1, _, 0, _
+    %1:gr64 = LEA64r %stack.0.x.addr, 1, _, 0, _
     $rcx = COPY %1, debug-location !15
     CALL64pcrel32 @escape, csr_win64, implicit $rsp, implicit $ssp, implicit $rcx, implicit-def $rsp, implicit-def $ssp, debug-location !15
     ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
