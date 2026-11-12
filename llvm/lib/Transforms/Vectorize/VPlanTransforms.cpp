@@ -6524,6 +6524,40 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
   }
 }
 
+void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
+                                            VFRange &Range) {
+  if (Range.Start.isScalar())
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      VPValue *X;
+      if (!match(&R, m_Intrinsic<Intrinsic::mask_beforefirst>(m_VPValue(X))))
+        continue;
+      auto *BeforeFirst = cast<VPWidenIntrinsicRecipe>(&R);
+      auto IsCheap = [&](ElementCount VF) {
+        return BeforeFirst->computeCost(VF, Ctx) <=
+               TargetTransformInfo::TCC_Expensive;
+      };
+      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
+        continue;
+
+      VPBuilder Builder(BeforeFirst);
+      Type *Ty = Plan.getVF().getScalarType();
+      DebugLoc DL = BeforeFirst->getDebugLoc();
+      VPValue *FirstActive = Builder.createScalarZExtOrTrunc(
+          Builder.createFirstActiveLane(X, DL), Ty, DL);
+      VPValue *PartStart = Builder.createOverflowingOp(
+          VPInstruction::CanonicalIVIncrementForPart,
+          {Plan.getZero(Ty), &Plan.getVF()});
+      BeforeFirst->replaceAllUsesWith(Builder.createNaryOp(
+          VPInstruction::ActiveLaneMask, {PartStart, FirstActive}, DL));
+      BeforeFirst->eraseFromParent();
+    }
+  }
+}
+
 bool VPlanTransforms::widenCompressingPatterns(VPlan &Plan,
                                                VPRecipeBuilder &RecipeBuilder,
                                                ScalarEvolution &SE) {
