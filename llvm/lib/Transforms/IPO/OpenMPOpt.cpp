@@ -1606,7 +1606,6 @@ private:
         OMPRTL_omp_get_ancestor_thread_num,
         OMPRTL_omp_get_team_size,
         OMPRTL_omp_get_active_level,
-        OMPRTL_omp_in_final,
         OMPRTL_omp_get_proc_bind,
         OMPRTL_omp_get_num_places,
         OMPRTL_omp_get_num_procs,
