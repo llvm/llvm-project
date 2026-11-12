@@ -5489,6 +5489,10 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       VT != Op0->getType())
     return false;
 
+  // Exclude integer div/rem to avoid introducing poison into the divisor.
+  if (Op0->isIntDivRem() || Op1->isIntDivRem())
+    return false;
+
   auto *SVI0A = dyn_cast<Instruction>(Op0->getOperand(0));
   auto *SVI0B = dyn_cast<Instruction>(Op0->getOperand(1));
   auto *SVI1A = dyn_cast<Instruction>(Op1->getOperand(0));

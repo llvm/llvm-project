@@ -984,6 +984,93 @@ entry:
   ret <64 x i32> %6
 }
 
+; Negative tests for #237721: Do not fold select shuffle of udiv/sdiv/urem/srem,
+; as padding the divisor with poison lanes causes immediate UB.
+define <4 x i32> @test_udiv(<4 x i32> %x) {
+; CHECK-LABEL: @test_udiv(
+; CHECK-NEXT:    [[T0:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[D:%.*]] = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[Q:%.*]] = udiv <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[Q]], <4 x i32> [[M]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %t0 = add <4 x i32> %x, splat (i32 1)
+  %d = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %q = udiv <4 x i32> %t0, %d
+  %m = mul <4 x i32> %t0, %d
+  %r = shufflevector <4 x i32> %q, <4 x i32> %m, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @test_sdiv(<4 x i32> %x) {
+; CHECK-LABEL: @test_sdiv(
+; CHECK-NEXT:    [[T0:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[D:%.*]] = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[Q:%.*]] = sdiv <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[Q]], <4 x i32> [[M]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %t0 = add <4 x i32> %x, splat (i32 1)
+  %d = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %q = sdiv <4 x i32> %t0, %d
+  %m = mul <4 x i32> %t0, %d
+  %r = shufflevector <4 x i32> %q, <4 x i32> %m, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @test_urem(<4 x i32> %x) {
+; CHECK-LABEL: @test_urem(
+; CHECK-NEXT:    [[T0:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[D:%.*]] = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[Q:%.*]] = urem <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[Q]], <4 x i32> [[M]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %t0 = add <4 x i32> %x, splat (i32 1)
+  %d = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %q = urem <4 x i32> %t0, %d
+  %m = mul <4 x i32> %t0, %d
+  %r = shufflevector <4 x i32> %q, <4 x i32> %m, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @test_srem(<4 x i32> %x) {
+; CHECK-LABEL: @test_srem(
+; CHECK-NEXT:    [[T0:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[D:%.*]] = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[Q:%.*]] = srem <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[Q]], <4 x i32> [[M]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %t0 = add <4 x i32> %x, splat (i32 1)
+  %d = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %q = srem <4 x i32> %t0, %d
+  %m = mul <4 x i32> %t0, %d
+  %r = shufflevector <4 x i32> %q, <4 x i32> %m, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @test_udiv_op1(<4 x i32> %x) {
+; CHECK-LABEL: @test_udiv_op1(
+; CHECK-NEXT:    [[T0:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[D:%.*]] = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[Q:%.*]] = udiv <4 x i32> [[T0]], [[D]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[M]], <4 x i32> [[Q]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %t0 = add <4 x i32> %x, splat (i32 1)
+  %d = shufflevector <4 x i32> <i32 10, i32 12, i32 14, i32 16>, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %m = mul <4 x i32> %t0, %d
+  %q = udiv <4 x i32> %t0, %d
+  %r = shufflevector <4 x i32> %m, <4 x i32> %q, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x i32> %r
+}
+
 
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
