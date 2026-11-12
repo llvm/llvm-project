@@ -67,6 +67,7 @@
 
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1026,7 +1027,19 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   // that changes at some point.
   Register Reg = RegSubReg.Reg;
   RegSubRegPair CurSrcPair = RegSubReg;
-  SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
+  // The sources still to look at, each with the length Path had when it was
+  // found (for a PHI incoming value, Path then ends with that PHI's key).
+  SmallVector<std::pair<RegSubRegPair, unsigned>, 4> SrcToLook = {
+      {CurSrcPair, 0}};
+  // The keys inserted on the way from RegSubReg to CurSrcPair. A chain must
+  // not end on one of them: that would make RewriteMap cyclic, and
+  // getNewSource() would follow the cycle forever. Ending on any other key is
+  // fine, as everything reachable from it has been resolved for good: it
+  // leads only to finished keys and to Leaves.
+  SmallVector<RegSubRegPair, 8> Path;
+  // The suitable sources chains ended on. getNewSource() stops at one only
+  // while it is not a key, so none of them may become a key later.
+  SmallDenseSet<RegSubRegPair, 4> Leaves;
 
   unsigned PHICount = 0;
 
@@ -1036,7 +1049,12 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   RegSubRegPair SuitablePair = RegSubReg;
   bool Aborted = false;
   do {
-    CurSrcPair = SrcToLook.pop_back_val();
+    unsigned PathLen;
+    std::tie(CurSrcPair, PathLen) = SrcToLook.pop_back_val();
+    Path.truncate(PathLen);
+    // A PHI incoming value that another chain already ended on is resolved.
+    if (Leaves.contains(CurSrcPair))
+      continue;
     // As explained above, do not handle physical registers
     if (CurSrcPair.Reg.isPhysical()) {
       Aborted = true;
@@ -1068,9 +1086,18 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
           LLVM_DEBUG(dbgs()
                      << "findNextSource: found PHI cycle, aborting...\n");
           Aborted = true;
+        } else if (is_contained(Path, CurSrcPair)) {
+          // An entry still on the path leads back here.
+          LLVM_DEBUG(dbgs() << "findNextSource: chain re-entered its path, "
+                               "aborting...\n");
+          Aborted = true;
         }
         break;
       }
+      // A leaf is suitable without a subregister, whatever PHICount is, so a
+      // chain never continues through one; and popped leaves were skipped.
+      assert(!Leaves.contains(CurSrcPair) && "leaf became a key");
+      Path.push_back(CurSrcPair);
 
       // ValueTrackerResult usually have one source unless it's the result from
       // a PHI instruction. Add the found PHI edges to be looked up further.
@@ -1084,7 +1111,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         }
 
         for (unsigned i = 0; i < NumSrcs; ++i)
-          SrcToLook.push_back(Res.getSrc(i));
+          SrcToLook.emplace_back(Res.getSrc(i), Path.size());
         break;
       }
 
@@ -1109,6 +1136,15 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       if (PHICount > 0 && CurSrcPair.SubReg != 0)
         continue;
 
+      // A suitable source that is on the path is not a leaf: its entry leads
+      // back here (e.g. bitcasts of a loop carried PHI).
+      if (is_contained(Path, CurSrcPair)) {
+        LLVM_DEBUG(dbgs() << "findNextSource: chain ended on its path, "
+                             "aborting...\n");
+        Aborted = true;
+        break;
+      }
+
       // Don't stop at the first suitable source if it is still a subregister;
       // keep tracing to try to reach a deeper source. Remember it.
       if (CurSrcPair.SubReg != 0) {
@@ -1118,6 +1154,8 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       }
 
       // We found a suitable source, and are done with this chain.
+      if (!RewriteMap.contains(CurSrcPair))
+        Leaves.insert(CurSrcPair);
       break;
     }
 
@@ -1384,10 +1422,11 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
   // Rewrite each rewritable source by generating new COPYs. This works
   // differently from optimizeCoalescableCopy since it first makes sure that all
   // definitions can be rewritten.
-  RewriteMapTy RewriteMap;
   RegSubRegPair Src;
   RegSubRegPair Def;
-  SmallVector<RegSubRegPair, 4> RewritePairs;
+  // Each def gets a RewriteMap of its own: findNextSource() only keeps the
+  // entries it inserts itself free of cycles.
+  SmallVector<std::pair<RegSubRegPair, RewriteMapTy>, 2> RewritePairs;
   while (CpyRewriter.getNextRewritableSource(Src, Def)) {
     // If a physical register is here, this is probably for a good reason.
     // Do not rewrite that.
@@ -1401,14 +1440,15 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
 
     // If we do not know how to rewrite this definition, there is no point
     // in trying to kill this instruction.
+    RewriteMapTy RewriteMap;
     if (!findNextSource(DefRC, Def.SubReg, Def, RewriteMap))
       return false;
 
-    RewritePairs.push_back(Def);
+    RewritePairs.emplace_back(Def, std::move(RewriteMap));
   }
 
   // The change is possible for all defs, do it.
-  for (const RegSubRegPair &Def : RewritePairs) {
+  for (auto &[Def, RewriteMap] : RewritePairs) {
     // Rewrite the "copy" in a way the register coalescer understands.
     MachineInstr &NewCopy = rewriteSource(MI, Def, RewriteMap);
     LocalMIs.insert(&NewCopy);
