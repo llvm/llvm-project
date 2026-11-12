@@ -51,6 +51,7 @@ LLVM_ABI EnumStrings<uint8_t, 1> getFunctionOptionEnum();
 LLVM_ABI EnumStrings<uint16_t, 1> getLabelTypeEnum();
 LLVM_ABI EnumStrings<uint16_t, 1> getJumpTableEntrySizeNames();
 LLVM_ABI EnumStrings<uint16_t, 1> getAssociationKindNames();
+LLVM_ABI EnumStrings<uint16_t, 1> getCoroutineKindNames();
 
 } // end namespace codeview
 } // end namespace llvm

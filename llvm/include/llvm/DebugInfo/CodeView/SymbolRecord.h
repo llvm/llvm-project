@@ -855,13 +855,14 @@ public:
   uint16_t SectionIdOfExceptionHandler = 0;
   FrameProcedureOptions Flags = FrameProcedureOptions::None;
 
-  FrameProcedureOptions getFlags() const {
-    return Flags & ~FrameProcedureOptions::EncodedPointersMask;
-  }
+  static constexpr FrameProcedureOptions NonFlagsMask =
+      FrameProcedureOptions::EncodedPointersMask |
+      FrameProcedureOptions::CoroutineKindMask;
+
+  FrameProcedureOptions getFlags() const { return Flags & ~NonFlagsMask; }
 
   void setFlags(FrameProcedureOptions O) {
-    Flags = (Flags & FrameProcedureOptions::EncodedPointersMask) |
-            (O & ~FrameProcedureOptions::EncodedPointersMask);
+    Flags = (Flags & NonFlagsMask) | (O & ~NonFlagsMask);
   }
 
   void setEncodedLocalFramePtrReg(EncodedFramePtrReg R) {
@@ -900,6 +901,23 @@ public:
   /// Extract the register this frame uses to refer to parameters.
   RegisterId getParamFramePtrReg(CPUType CPU) const {
     return decodeFramePtrReg(getEncodedParamFramePtrReg(), CPU);
+  }
+
+  static constexpr uint32_t CoroutineKindMask =
+      static_cast<uint32_t>(FrameProcedureOptions::CoroutineKindMask);
+  static constexpr unsigned CoroutineKindShift =
+      countr_zero_constexpr(CoroutineKindMask);
+
+  CoroutineKind getCoroutineKind() const {
+    return CoroutineKind((static_cast<uint32_t>(Flags) & CoroutineKindMask) >>
+                         CoroutineKindShift);
+  }
+
+  void setCoroutineKind(CoroutineKind K) {
+    uint32_t Encoded =
+        (static_cast<uint32_t>(K) << CoroutineKindShift) & CoroutineKindMask;
+    Flags = static_cast<FrameProcedureOptions>(
+        (static_cast<uint32_t>(Flags) & ~CoroutineKindMask) | Encoded);
   }
 
   uint32_t RecordOffset = 0;

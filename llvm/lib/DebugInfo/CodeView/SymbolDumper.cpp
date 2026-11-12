@@ -443,6 +443,9 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   W.printEnum("ParamFramePtrReg",
               uint16_t(FrameProc.getParamFramePtrReg(CompilationCPUType)),
               getRegisterNames(CompilationCPUType));
+  CoroutineKind CoroKind = FrameProc.getCoroutineKind();
+  if (CoroKind != CoroutineKind::None)
+    W.printEnum("CoroutineKind", uint16_t(CoroKind), getCoroutineKindNames());
   return Error::success();
 }
 
