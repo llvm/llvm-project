@@ -415,7 +415,8 @@ private:
   int FixIndentationCallback(Editline *editline, const StringList &lines,
                              int cursor_position);
 
-  std::optional<std::string> SuggestionCallback(llvm::StringRef line);
+  std::optional<std::string> SuggestionCallback(llvm::StringRef line,
+                                                std::string &description);
 
   void AutoCompleteCallback(CompletionRequest &request);
 
