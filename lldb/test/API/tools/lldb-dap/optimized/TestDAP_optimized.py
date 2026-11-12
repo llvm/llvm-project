@@ -10,7 +10,7 @@ from lldbsuite.test.tools.lldb_dap.types import CompileUnitsArgs, LaunchArgs
 
 class TestDAP_optimized(DAPTestCaseBase):
     def test_stack_frame_name(self):
-        """Test optimized frame has special name suffix."""
+        """Test optimized frames are marked optimized."""
         program = self.getBuildArtifact("a.out")
         session = self.build_and_create_session()
 
@@ -25,9 +25,9 @@ class TestDAP_optimized(DAPTestCaseBase):
         frames = session.thread_context_from(stop_event).frames()
 
         leaf_frame = frames[0].frame
-        self.assertTrue(leaf_frame.name.endswith(" [opt]"))
+        self.assertTrue(leaf_frame.isOptimized)
         parent_frame = frames[1].frame
-        self.assertTrue(parent_frame.name.endswith(" [opt]"))
+        self.assertTrue(parent_frame.isOptimized)
 
     def test_compile_unit_is_optimized(self):
         """Test the compile unit of an optimized frame is marked optimized."""

@@ -368,7 +368,7 @@ void CodeGenPassBuilder::addISelPasses(PassManagerWrapper &PMW) {
     addFunctionPass(ObjCARCContractPass(), PMW);
     flushFPMsToMPM(PMW);
   }
-  addModulePass(PreISelIntrinsicLoweringPass(&TM), PMW);
+  addModulePass(PreISelIntrinsicLoweringPass(TM), PMW);
   addFunctionPass(ExpandIRInstsPass(TM, getOptLevel()), PMW);
 
   addIRPasses(PMW);
@@ -724,8 +724,7 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
-                         PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(), PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&

@@ -49,6 +49,9 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isConstInMutable() const {
+    return !isRoot() && getInlineDesc()->IsConstInMutable;
+  }
   bool isExtern() const { return Pointee && Pointee->isExtern(); }
   bool isVolatile() const {
     return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
@@ -57,8 +60,6 @@ struct PtrView {
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
   const Block *block() const { return Pointee; }
-
-  unsigned getEvalID() { return Pointee->getEvalID(); }
 
   bool isRoot() const { return Base == 0; }
 
@@ -971,11 +972,6 @@ public:
       return false;
     return view().isConst();
   }
-  bool isConstInMutable() const {
-    if (!isBlockPointer())
-      return false;
-    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
-  }
 
   /// Checks if an object or a subfield is volatile.
   bool isVolatile() const {
@@ -1413,6 +1409,10 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
     OS << " dead";
   if (P.isBlockPointer() && P.isBaseClass())
     OS << " base-class";
+  if (!P.isInitialized()) {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
+    OS << " uninitialized";
+  }
   return OS;
 }
 

@@ -482,6 +482,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
   case ISD::VECTOR_COMPRESS:
+  case ISD::VECTOR_SHUFFLE_VAR:
   case ISD::SCMP:
   case ISD::UCMP:
   case ISD::GET_ACTIVE_LANE_MASK:
@@ -1337,6 +1338,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
     return;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Results.push_back(TLI.expandVECTOR_SHUFFLE_VAR(Node, DAG));
+    return;
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
     Results.push_back(TLI.expandCttzElts(Node, DAG));
@@ -1750,7 +1754,8 @@ SDValue VectorLegalizer::ExpandVP_MERGE(SDNode *Node) {
   SDValue EVLMask =
       DAG.getSetCC(DL, MaskVT, StepVec, SplatEVL, ISD::CondCode::SETULT);
 
-  SDValue FullMask = DAG.getNode(ISD::AND, DL, MaskVT, Mask, EVLMask);
+  SDValue FullMask =
+      DAG.getNode(ISD::AND, DL, MaskVT, DAG.getFreeze(Mask), EVLMask);
   return DAG.getSelect(DL, Node->getValueType(0), FullMask, Op1, Op2);
 }
 
@@ -2257,7 +2262,7 @@ bool VectorLegalizer::tryExpandVecMathCall(
       LCImpl = Libcalls.getVectorLibcallImplOrMasked(GetLibcall(CallVT));
   }
 
-  const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
 
   auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(
       Ctx, DAG.getSubtarget().getTargetTriple(), DAG.getDataLayout(), LCImpl);

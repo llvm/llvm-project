@@ -71,6 +71,18 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //     }
 //   }
 //
+// The LLVM operation is built with default properties. `llvmOpProps` lists
+// CIR attributes and properties whose values are forwarded to it. Each value
+// is converted by the `convertToLLVMProperty` overload for its C++ type and
+// stored into the LLVM property of the same name, or of the name given as a
+// string when the two differ:
+//
+//   let llvmOp = "AddOp";
+//   let llvmOpProps = (ins $overflow_flags);
+//
+//   let llvmOp = "CountLeadingZerosOp";
+//   let llvmOpProps = (ins "is_zero_poison":$poison_zero);
+//
 // If you want fully customized LLVM IR lowering logic, simply exclude the
 // `llvmOp` field from your CIR operation definition.
 //
@@ -85,6 +97,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // exception-behavior metadata argument.
 class LLVMLoweringInfo {
   string llvmOp = "";
+  dag llvmOpProps = (ins);
   string constrainedLLVMIntrinsic = "";
   bit constrainedLLVMIntrinsicHasRoundingMode = true;
 }
@@ -1057,6 +1070,9 @@ def CIR_ReturnOp : CIR_Op<"return", [
     The operand type must match the signature of the function that contains
     the operation.
 
+    The `implicit` keyword marks a return that CIRGen synthesized because
+    control flows off the end of the function body.
+
     ```
       func @foo() -> i32 {
         ...
@@ -1067,10 +1083,12 @@ def CIR_ReturnOp : CIR_Op<"return", [
 
   // The return operation takes an optional input operand to return. This
   // value must match the return type of the enclosing function.
-  let arguments = (ins Variadic<CIR_AnyType>:$input);
+  let arguments = (ins Variadic<CIR_AnyType>:$input, UnitAttr:$implicit);
 
   // The return operation only emits the input in the format if it is present.
-  let assemblyFormat = "($input^ `:` type($input))? attr-dict ";
+  let assemblyFormat = [{
+    (`implicit` $implicit^)? ($input^ `:` type($input))? attr-dict
+  }];
 
   // Allow building a ReturnOp with no return operand.
   let builders = [
@@ -2832,27 +2850,22 @@ class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = [],
   }];
 }
 
-// Base class for binary ops that support integer overflow flags (nsw/nuw)
-// and saturated arithmetic.
-class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
-                                    list<Trait> traits = []>
-    : CIR_BinaryOp<mnemonic, type, !listconcat([Pure], traits)>
+class CIR_BinaryOpWithOverflowFlags<string mnemonic, string llvmOpName,
+                                    Type type, list<Trait> traits = []>
+    : CIR_BinaryOp<mnemonic, type, traits>
 {
-  let arguments = (ins
-    type:$lhs, type:$rhs,
-    UnitProp:$no_signed_wrap,
-    UnitProp:$no_unsigned_wrap,
-    UnitProp:$saturated
+  let append traits = [Pure];
+
+  let append arguments = (ins
+    DefaultValuedEnumProp<CIR_OverflowFlags, CIR_OFNone>:$overflow_flags
   );
 
   let assemblyFormat = [{
-    (`nsw` $no_signed_wrap^)?
-    (`nuw` $no_unsigned_wrap^)?
-    (`sat` $saturated^)?
-    $lhs `,` $rhs `:` type($lhs) attr-dict
+    ($overflow_flags^)? $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
 
-  let hasVerifier = 1;
+  let llvmOp = llvmOpName;
+  let llvmOpProps = (ins $overflow_flags);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2860,28 +2873,27 @@ class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
 //===----------------------------------------------------------------------===//
 
 def CIR_AddOp
-    : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyIntOrVecOrMatrixOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"add", "AddOp",
+                                    CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer addition";
   let description = [{
     The `cir.add` operation performs addition on integer operands. Both
     operands and the result must have the same integer, vector-of-integer or
     matrix-of-integer type.
 
-    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
-    attributes indicate that the result is poison if signed or unsigned
-    overflow occurs, respectively. The optional `sat` (saturated) attribute
-    clamps the result to the type's representable range instead of wrapping.
-    The `nsw`/`nuw` flags and `sat` are mutually exclusive.
+    The optional `nuw` (no unsigned wrap) and `nsw` (no signed wrap) flags
+    indicate that the result is poison if unsigned or signed overflow occurs,
+    respectively; both may be given as `nuw nsw`. Saturating addition is
+    `cir.add.sat`.
 
     Example:
 
     ```
     %0 = cir.add %a, %b : !s32i
     %1 = cir.add nsw %a, %b : !s32i
-    %2 = cir.add nuw %a, %b : !u32i
-    %3 = cir.add sat %a, %b : !s32i
-    %4 = cir.add %va, %vb : !cir.vector<4 x !s32i>
-    %5 = cir.add %ma, %mb : !cir.matrix<3 x 3 x !s32i>
+    %2 = cir.add nuw nsw %a, %b : !s32i
+    %3 = cir.add %va, %vb : !cir.vector<4 x !s32i>
+    %4 = cir.add %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -2891,25 +2903,25 @@ def CIR_AddOp
 //===----------------------------------------------------------------------===//
 
 def CIR_SubOp
-    : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyIntOrVecOrMatrixOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"sub", "SubOp",
+                                    CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer subtraction";
   let description = [{
     The `cir.sub` operation performs subtraction on integer operands. Both
     operands and the result must have the same integer, vector-of-integer or
     matrix-of-integer type.
 
-    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
-    attributes indicate that the result is poison if signed or unsigned
-    overflow occurs, respectively. The optional `sat` (saturated) attribute
-    clamps the result to the type's representable range. The `nsw`/`nuw`
-    flags and `sat` are mutually exclusive.
+    The optional `nuw` (no unsigned wrap) and `nsw` (no signed wrap) flags
+    indicate that the result is poison if unsigned or signed overflow occurs,
+    respectively; both may be given as `nuw nsw`. Saturating subtraction is
+    `cir.sub.sat`.
 
     Example:
 
     ```
     %0 = cir.sub %a, %b : !s32i
     %1 = cir.sub nsw %a, %b : !s32i
-    %2 = cir.sub sat %a, %b : !s32i
+    %2 = cir.sub nuw nsw %a, %b : !s32i
     %3 = cir.sub %va, %vb : !cir.vector<4 x !s32i>
     %4 = cir.sub %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
@@ -2920,39 +2932,68 @@ def CIR_SubOp
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
+def CIR_MulOp
+    : CIR_BinaryOpWithOverflowFlags<"mul", "MulOp",
+                                    CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer multiplication";
   let description = [{
     The `cir.mul` operation performs multiplication on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
     or matrix-of-integer type.
 
-    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
-    attributes indicate that the result is poison if signed or unsigned
-    overflow occurs, respectively.
+    The optional `nuw` (no unsigned wrap) and `nsw` (no signed wrap) flags
+    indicate that the result is poison if unsigned or signed overflow occurs,
+    respectively; both may be given as `nuw nsw`.
 
     Example:
 
     ```
     %0 = cir.mul %a, %b : !s32i
     %1 = cir.mul nsw %a, %b : !s32i
-    %2 = cir.mul nuw %a, %b : !u32i
+    %2 = cir.mul nuw nsw %a, %b : !u32i
     %3 = cir.mul %va, %vb : !cir.vector<4 x !s32i>
     %4 = cir.mul %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
+}
 
-  let arguments = (ins
-    CIR_AnyIntOrVecOrMatrixOfIntType:$lhs,
-    CIR_AnyIntOrVecOrMatrixOfIntType:$rhs,
-    UnitProp:$no_signed_wrap,
-    UnitProp:$no_unsigned_wrap
-  );
+//===----------------------------------------------------------------------===//
+// AddSatOp / SubSatOp
+//===----------------------------------------------------------------------===//
 
-  let assemblyFormat = [{
-    (`nsw` $no_signed_wrap^)?
-    (`nuw` $no_unsigned_wrap^)?
-    $lhs `,` $rhs `:` type($lhs) attr-dict
+def CIR_AddSatOp
+    : CIR_BinaryOp<"add.sat", CIR_AnyIntOrVecOrMatrixOfIntType, [Pure]> {
+  let summary = "Saturating integer addition";
+  let description = [{
+    The `cir.add.sat` operation adds its integer operands and clamps the
+    result to the range of the element type instead of wrapping. The clamp is
+    signed or unsigned according to the element type; vectors and matrices
+    saturate elementwise.
+
+    Example:
+
+    ```
+    %0 = cir.add.sat %a, %b : !s32i
+    %1 = cir.add.sat %va, %vb : !cir.vector<4 x !u8i>
+    ```
+  }];
+}
+
+def CIR_SubSatOp
+    : CIR_BinaryOp<"sub.sat", CIR_AnyIntOrVecOrMatrixOfIntType, [Pure]> {
+  let summary = "Saturating integer subtraction";
+  let description = [{
+    The `cir.sub.sat` operation subtracts its integer operands and clamps the
+    result to the range of the element type instead of wrapping. The clamp is
+    signed or unsigned according to the element type; vectors and matrices
+    saturate elementwise.
+
+    Example:
+
+    ```
+    %0 = cir.sub.sat %a, %b : !u32i
+    %1 = cir.sub.sat %va, %vb : !cir.vector<4 x !s16i>
+    ```
   }];
 }
 
@@ -3487,6 +3528,11 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
+    The `unnamed_addr` attribute indicates that the address of the global is
+    not significant, only its contents are. Such globals may be merged with
+    other globals that have identical contents. It is lowered to LLVM's
+    `unnamed_addr` (as opposed to `local_unnamed_addr`).
+
     The `dynamic_init_guard` attribute indicates that this global requires
     guarded dynamic initialization via the Itanium `__cxa_guard_*` protocol
     (e.g., C++ static local variables with non-constant initializers, or
@@ -3509,9 +3555,8 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedProp<
-                        EnumProp<CIR_VisibilityKind>,
-                        "cir::VisibilityKind::Default"
+                       DefaultValuedEnumProp<
+                        CIR_VisibilityKind, CIR_VisibilityDefault
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
@@ -3523,6 +3568,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
+                       UnitAttr:$unnamed_addr,
                        OptionalAttr<CIR_DynamicInitGuardAttr>:$dynamic_init_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
@@ -3546,6 +3592,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
+    (`unnamed_addr` $unnamed_addr^)?
     (`dynamic_init_guard` `` $dynamic_init_guard^)?
     (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
@@ -3710,7 +3757,14 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
 // VTableGetVPtr
 //===----------------------------------------------------------------------===//
 
-def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
+def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [
+  Pure,
+  TypesMatchWith<
+      "result is a vptr pointer in the address space of 'src'",
+      "src", "result",
+      "cir::PointerType::get(cir::VPtrType::get($_self.getContext()), "
+      "mlir::cast<cir::PointerType>($_self).getAddrSpace())">
+]> {
   let summary = "Get a the address of the vtable pointer for an object";
   let description = [{
     The `vtable.get_vptr` operation retrieves the address of the vptr for a
@@ -3719,7 +3773,7 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
     The vptr will always be at offset zero in the object, but this operation
     is more explicit about what is being retrieved than a direct bitcast.
 
-    The return type is always `!cir.ptr<!cir.vptr>`.
+    The return type is `!cir.ptr<!cir.vptr>` in the address space of `src`.
 
     Example:
     ```
@@ -3740,49 +3794,50 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
-// VTableGetVirtualFnAddrOp
+// VTableGetVirtualFnOp
 //===----------------------------------------------------------------------===//
 
-def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
-  Pure
+def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
+  MemoryEffects<[MemRead]>
 ]> {
-  let summary = "Get a the address of a virtual function pointer";
+  let summary = "Get a virtual function pointer from a vtable";
   let description = [{
-    The `vtable.get_virtual_fn_addr` operation retrieves the address of a
-    virtual function pointer from an object's vtable (__vptr).
-    This is an abstraction to perform the basic pointer arithmetic to get
-    the address of the virtual function pointer, which can then be loaded and
-    called.
+    The `vtable.get_virtual_fn` operation retrieves the pointer to a virtual
+    function from an object's vtable (__vptr). This is an ABI independent
+    abstraction of this operation: how the entry is stored and read is decided
+    when the operation is lowered.
 
-    The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
-    have been returned by a previous call to `cir.vtable.get_vptr`. The
-    `index` operand is an index of the virtual function in the vtable.
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the virtual function in the vtable, counted from the
+    address point.
 
-    The return type is a pointer-to-pointer to the function type.
+    The `invariant` attribute marks that the entry does not change for as long
+    as the vtable is live, which allows the load of it to be optimized.
+
+    The result is the pointer to the function.
 
     Example:
     ```
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
     %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
     %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
-    %5 = cir.vtable.get_virtual_fn_addr %4[2] : !cir.vptr
-                  -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>>
-    %6 = cir.load align(8) %5 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>)
-                                                                 -> !s32i>>>,
-                                !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
-    %7 = cir.call %6(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
+    %5 = cir.vtable.get_virtual_fn %4[2] : !cir.vptr
+                  -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    %6 = cir.call %5(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
                             !cir.ptr<!rec_C>) -> !s32i
     ```
   }];
 
   let arguments = (ins
     CIR_VPtrType:$vptr,
-    I64Attr:$index);
+    I64Attr:$index,
+    UnitAttr:$invariant);
 
-  let results = (outs CIR_PointerType:$result);
+  let results = (outs CIR_PtrToFunc:$result);
 
   let assemblyFormat = [{
-    $vptr `[` $index `]` attr-dict
+    $vptr `[` $index `]` (`invariant` $invariant^)? attr-dict
     `:` qualified(type($vptr)) `->` qualified(type($result))
   }];
 }
@@ -3856,7 +3911,8 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
     The second parameter `offset` provides a virtual step to adjust to
     the actual address point of the vtable.
 
-    The return type is always a `!cir.ptr<!cir.ptr<void>>`.
+    The return type is always a `!cir.ptr<!cir.ptr<void>>`. Either pointer
+    level may carry an address space.
 
     Example:
     ```
@@ -4402,6 +4458,9 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     // Inline information
     cir.func no_inline @some_method(...)
+
+    // The address of the function is not taken.
+    cir.func dso_local unnamed_addr @_ZN1SC2Ev(...)
     
     // Builtin function
     cir.func builtin @__builtin_coro_end(!cir.ptr<!s8i>, !cir.bool) -> !cir.bool
@@ -4416,9 +4475,8 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    DefaultValuedProp<
-      EnumProp<CIR_VisibilityKind>,
-      "cir::VisibilityKind::Default"
+    DefaultValuedEnumProp<
+      CIR_VisibilityKind, CIR_VisibilityDefault
     >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
@@ -4428,6 +4486,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     UnitAttr:$no_proto,
     UnitAttr:$requires_call_conv_lowering,
     UnitAttr:$dso_local,
+    UnitAttr:$unnamed_addr,
     DefaultValuedAttr<
       CIR_GlobalLinkageKindAttr,
       "cir::GlobalLinkageKind::ExternalLinkage"
@@ -4767,7 +4826,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
     /// Return the callee of this operation
     mlir::CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<mlir::SymbolRefAttr>("callee");
+      if (auto calling =
+              (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+        return calling;
+      return getOperand(0);
     }
 
     /// Set the callee for this operation.
@@ -5973,6 +6035,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
     order: output, input and then in/out operands. When several output operands
     are present, the result type may be represented as an anonymous record type.
 
+    The `convergent` attribute marks asm that may contain convergent
+    operations, so it must not be moved across divergent control flow.
+
     Example:
     ```C++
     __asm__("foo" : : : );
@@ -6015,13 +6080,13 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
+          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
       "llvm::ArrayRef<mlir::ValueRange>":$asmOperands,
       "llvm::StringRef":$asmString, "llvm::StringRef":$constraints,
-      "bool":$sideEffects, "AsmFlavor":$asmFlavor,
+      "bool":$sideEffects, "bool":$convergent, "AsmFlavor":$asmFlavor,
       "llvm::ArrayRef<mlir::Attribute>":$operandAttrs)>];
 
   let hasCustomAssemblyFormat = 1;
@@ -6038,9 +6103,14 @@ def CIR_UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
     program exhibits undefined behavior immediately. This operation is useful
     in cases where the unreachability of a program point needs to be explicitly
     marked.
+
+    The `implicit` keyword marks an unreachable that CIRGen synthesized because
+    control flows off the end of a non-void function body.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins UnitAttr:$implicit);
+
+  let assemblyFormat = "(`implicit` $implicit^)? attr-dict";
 
   let llvmOp = "UnreachableOp";
 }
@@ -6057,9 +6127,14 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
     example, an implementation may implement this operation by calling abort,
     while another implementation may implement this operation by executing an
     illegal instruction.
+
+    The `implicit` keyword marks a trap that CIRGen synthesized because control
+    flows off the end of a non-void function body.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins UnitAttr:$implicit);
+
+  let assemblyFormat = "(`implicit` $implicit^)? attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6427,6 +6502,8 @@ def CIR_VecInsertOp : CIR_Op<"vec.insert", [
     $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
     qualified(type($vec))
   }];
+
+  let llvmOp = "InsertElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6458,6 +6535,8 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
   }];
 
   let hasFolder = 1;
+
+  let llvmOp = "ExtractElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6516,9 +6595,9 @@ def CIR_VecReduceXorOp
     : CIR_VecReduceOp<"xor", CIR_VectorOfIntOrBoolType,
                       "vector_reduce_xor">;
 
-// Floating-point reductions use custom lowering to translate CIR fast-math
-// flags to the corresponding LLVM dialect attribute.
-class CIR_VecReduceFPOp<string mnemonic>
+// Floating-point reductions carry fast-math flags, forwarded to the LLVM op
+// through `llvmOpProps`.
+class CIR_VecReduceFPOp<string mnemonic, string llvmOpName>
     : CIR_Op<"vec.reduce." # mnemonic, [
   Pure,
   TypesMatchWith<"type of 'result' matches element type of 'input'",
@@ -6536,12 +6615,15 @@ class CIR_VecReduceFPOp<string mnemonic>
     `(` $input `)` `:` functional-type(operands, results)
     prop-dict attr-dict
   }];
+
+  let llvmOp = llvmOpName;
+  let llvmOpProps = (ins $fastmath_flags);
 }
 
-def CIR_VecReduceFMaxOp : CIR_VecReduceFPOp<"fmax">;
-def CIR_VecReduceFMinOp : CIR_VecReduceFPOp<"fmin">;
+def CIR_VecReduceFMaxOp : CIR_VecReduceFPOp<"fmax", "vector_reduce_fmax">;
+def CIR_VecReduceFMinOp : CIR_VecReduceFPOp<"fmin", "vector_reduce_fmin">;
 
-class CIR_VecReduceAccFPOp<string mnemonic>
+class CIR_VecReduceAccFPOp<string mnemonic, string llvmOpName>
     : CIR_Op<"vec.reduce." # mnemonic, [
   Pure,
   TypesMatchWith<"type of 'accumulator' matches element type of 'input'",
@@ -6563,10 +6645,13 @@ class CIR_VecReduceAccFPOp<string mnemonic>
     `(` $accumulator `,` $input `)` `:` functional-type(operands, results)
     prop-dict attr-dict
   }];
+
+  let llvmOp = llvmOpName;
+  let llvmOpProps = (ins $fastmath_flags);
 }
 
-def CIR_VecReduceFAddOp : CIR_VecReduceAccFPOp<"fadd">;
-def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul">;
+def CIR_VecReduceFAddOp : CIR_VecReduceAccFPOp<"fadd", "vector_reduce_fadd">;
+def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul", "vector_reduce_fmul">;
 
 //===----------------------------------------------------------------------===//
 // VecCmpOp
@@ -7734,6 +7819,8 @@ class CIR_BitZeroCountOpBase<string mnemonic, TypeConstraint operandTy>
     $input (`poison_zero` $poison_zero^)?
     `:` type($result) attr-dict
   }];
+
+  let llvmOpProps = (ins "is_zero_poison":$poison_zero);
 }
 
 def CIR_BitClrsbOp : CIR_BitOpBase<"clrsb", CIR_SIntOfWidths<[32, 64]>> {
@@ -7789,6 +7876,8 @@ def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
     %1 = cir.clz %0 poison_zero : !u32i
     ```
   }];
+
+  let llvmOp = "CountLeadingZerosOp";
 }
 
 def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
@@ -7814,6 +7903,8 @@ def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
     %1 = cir.ctz %0 poison_zero : !u32i
     ```
   }];
+
+  let llvmOp = "CountTrailingZerosOp";
 }
 
 def CIR_BitFfsOp : CIR_BitOpBase<"ffs", CIR_SIntOfWidths<[32, 64]>> {
@@ -7873,6 +7964,8 @@ def CIR_BitPopcountOp : CIR_BitOpBase<"popcount", CIR_AnyUIntType > {
     %1 = cir.popcount %0 : !u32i
     ```
   }];
+
+  let llvmOp = "CtPopOp";
 }
 
 def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
@@ -8113,6 +8206,9 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   let assemblyFormat = [{
     $src `,` enum($flags) `:` functional-type($src, $result) attr-dict
   }];
+
+  let llvmOp = "IsFPClass";
+  let llvmOpProps = (ins "bit":$flags);
 }
 
 //===----------------------------------------------------------------------===//
@@ -8679,6 +8775,9 @@ def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
   let results = (outs CIR_AnySIntOrVecOfSIntType:$result);
 
   let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
+
+  let llvmOp = "AbsOp";
+  let llvmOpProps = (ins "is_int_min_poison":$min_is_poison);
 }
 
 def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
@@ -8875,6 +8974,44 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
   }];
 
   let constrainedLLVMIntrinsic = "atan2";
+}
+
+def CIR_LdexpOp : CIR_Op<"ldexp",
+    !listconcat([AllTypesMatch<["src", "result"]>], CIR_FenvOpTraits)> {
+  let summary = "Multiplies a floating-point value by an integral power of two";
+  let description = [{
+    `cir.ldexp` computes `src * 2^exp`.
+
+    Lowers to `llvm.ldexp`, or to `llvm.experimental.constrained.ldexp` when
+    the `fenv` attribute is present.
+
+    Example:
+      %r = cir.ldexp %x, %e : !cir.float, !s32i
+  }];
+
+  let arguments = (ins
+    CIR_AnyFloatOrVecOfFloatType:$src,
+    CIR_AnyIntOrVecOfIntType:$exp,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = [{
+    $src `,` $exp `:` qualified(type($src)) `,` qualified(type($exp))
+    (`fenv` `` $fenv^)? attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$src, "mlir::Value":$exp), [{
+      build($_builder, $_state, src, exp, cir::FenvAttr{});
+    }]>
+  ];
+
+  let hasVerifier = 1;
+
+  let llvmOp = "LoadExpOp";
+  let constrainedLLVMIntrinsic = "ldexp";
 }
 
 def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {
