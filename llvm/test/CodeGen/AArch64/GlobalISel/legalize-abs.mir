@@ -47,7 +47,6 @@ body:             |
 ...
 ---
 name:            abs_v4s16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -75,7 +74,6 @@ body:             |
 ...
 ---
 name:            abs_v8s16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -103,7 +101,6 @@ body:             |
 ...
 ---
 name:            abs_v2s32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -131,7 +128,6 @@ body:             |
 ...
 ---
 name:            abs_v4s32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -159,7 +155,6 @@ body:             |
 ...
 ---
 name:            abs_v4s8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -187,7 +182,6 @@ body:             |
 ...
 ---
 name:            abs_v16s8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0

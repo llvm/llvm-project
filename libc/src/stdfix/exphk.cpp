@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "exphk.h"
+#include "src/stdfix/exphk.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
-#include "src/__support/fixed_point/fx_bits.h"
+#include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

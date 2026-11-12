@@ -8,6 +8,7 @@
 
 #include "LTO.h"
 #include "Config.h"
+#include "Driver.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -168,6 +169,12 @@ static lto::Config createConfig(Ctx &ctx) {
   if (ctx.arg.ltoEmitAsm) {
     c.CGFileType = CodeGenFileType::AssemblyFile;
     c.Options.MCOptions.AsmVerbose = true;
+  }
+
+  if (ctx.arg.thinLTOIndexOnly) {
+    c.PostRegularLTOLinkHook = [&ctx]() {
+      markBuffersAsDontNeed(ctx, /*skipLinkedOutput=*/true);
+    };
   }
 
   if (!ctx.arg.saveTempsArgs.empty())

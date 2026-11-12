@@ -13,7 +13,6 @@
 ...
 ---
 name:            outlined
-tracksRegLiveness: true
 isOutlined:      true
 body:             |
   bb.0:
@@ -38,7 +37,6 @@ body:             |
 ...
 ---
 name:            f0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: f0
   ; CHECK: bb.0:
@@ -64,7 +62,6 @@ body:             |
 ...
 ---
 name:            f1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: f1
   ; CHECK: bb.0:

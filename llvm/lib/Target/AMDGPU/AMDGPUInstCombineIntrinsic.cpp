@@ -941,7 +941,7 @@ matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
   unsigned AndMask = 0, OrMask = 0, XorMask = 0;
   for (unsigned B = 0; B < 5; ++B) {
     unsigned Bit0 = (Ids[0] >> B) & 1;
-    unsigned Bit1 = (Ids[1u << B] >> B) & 1;
+    unsigned Bit1 = (Ids[1ull << B] >> B) & 1;
     if (Bit0 != Bit1) {
       AndMask |= 1u << B;
       XorMask |= Bit0 << B;
@@ -2374,6 +2374,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   // Assume the arguments are unchanged and later override them, if needed.
   SmallVector<Value *, 16> Args(II.args());
+  uint64_t OffsetAdd = 0;
 
   if (DMaskIdx < 0) {
     // Buffer case.
@@ -2421,8 +2422,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
         auto *Offset = Args[OffsetIdx];
         uint64_t SingleComponentSizeInBits =
             IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
-        uint64_t OffsetAdd =
-            UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
+        OffsetAdd = UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
         auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
         Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);
       }
@@ -2496,6 +2496,18 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   NewCall->copyMetadata(II);
   AttributeList OldAttrList = II.getAttributes();
   NewCall->setAttributes(OldAttrList);
+
+  if (OffsetAdd != 0) {
+    unsigned RsrcArg =
+        AMDGPU::lookupRsrcIntrinsic(II.getIntrinsicID())->RsrcArg;
+    if (MaybeAlign RsrcAlign = NewCall->getParamAlign(RsrcArg)) {
+      NewCall->removeParamAttr(RsrcArg, Attribute::Alignment);
+      NewCall->addParamAttr(
+          RsrcArg,
+          Attribute::getWithAlignment(NewCall->getContext(),
+                                      commonAlignment(*RsrcAlign, OffsetAdd)));
+    }
+  }
 
   if (IsLoad) {
     if (NewNumElts == 1) {

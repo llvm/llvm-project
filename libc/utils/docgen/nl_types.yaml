@@ -1,3 +1,9 @@
+posix: posix-2024
+types:
+  nl_catd:
+    in-latest-posix: ''
+  nl_item:
+    in-latest-posix: ''
 functions:
   catclose:
     in-latest-posix: ""
