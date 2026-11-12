@@ -65,6 +65,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -1083,6 +1084,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom lowering for inline asm with 128-bit operands
   setOperationAction(ISD::CopyToReg, MVT::i128, Custom);
   setOperationAction(ISD::CopyFromReg, MVT::i128, Custom);
+
+  setOperationAction(ISD::FEXP, MVT::f32, Custom);
 
   // FEXP2 support:
   // - f32
@@ -3703,6 +3706,16 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return lowerMUL_LOHI(Op, DAG);
+  case ISD::FEXP: {
+    if (!Op->getFlags().hasApproximateFuncs())
+      return SDValue();
+    // exp(x) = exp2(x * log2(e)).
+    SDLoc DL(Op);
+    SDValue Log2E = DAG.getConstantFP(numbers::log2ef, DL, MVT::f32);
+    SDValue Scaled =
+        DAG.getNode(ISD::FMUL, DL, MVT::f32, Op.getOperand(0), Log2E);
+    return DAG.getNode(ISD::FEXP2, DL, MVT::f32, Scaled);
+  }
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
   case ISD::FCOPYSIGN:
