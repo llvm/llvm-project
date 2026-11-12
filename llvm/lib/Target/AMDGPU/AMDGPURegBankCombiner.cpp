@@ -533,28 +533,23 @@ bool AMDGPURegBankCombinerImpl::matchCombine_mul24(MachineInstr &MI) const {
     return false;
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
-  if (STI.hasMulU24() &&
-      VT->getKnownBits(Src0).countMinLeadingZeros() >= 8 &&
+  if (STI.hasMulU24() && VT->getKnownBits(Src0).countMinLeadingZeros() >= 8 &&
       VT->getKnownBits(Src1).countMinLeadingZeros() >= 8)
     return true;
-  return STI.hasMulI24() &&
-         VT->computeNumSignBits(Src0) >= 9 &&
+  return STI.hasMulI24() && VT->computeNumSignBits(Src0) >= 9 &&
          VT->computeNumSignBits(Src1) >= 9;
 }
 
 void AMDGPURegBankCombinerImpl::applyCombine_mul24(MachineInstr &MI) const {
-  Register Dst  = MI.getOperand(0).getReg();
+  Register Dst = MI.getOperand(0).getReg();
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
   Intrinsic::ID IntrID =
-      (STI.hasMulU24() &&
-       VT->getKnownBits(Src0).countMinLeadingZeros() >= 8 &&
+      (STI.hasMulU24() && VT->getKnownBits(Src0).countMinLeadingZeros() >= 8 &&
        VT->getKnownBits(Src1).countMinLeadingZeros() >= 8)
           ? Intrinsic::amdgcn_mul_u24
           : Intrinsic::amdgcn_mul_i24;
-  B.buildIntrinsic(IntrID, ArrayRef<Register>{Dst})
-      .addUse(Src0)
-      .addUse(Src1);
+  B.buildIntrinsic(IntrID, ArrayRef<Register>{Dst}).addUse(Src0).addUse(Src1);
   MI.eraseFromParent();
 }
 
