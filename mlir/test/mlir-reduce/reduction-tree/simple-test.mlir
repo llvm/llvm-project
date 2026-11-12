@@ -1,5 +1,6 @@
 // UNSUPPORTED: system-windows
 // RUN: mlir-reduce %s -reduction-tree='traversal-mode=0 test=%S/../script/true.sh' | FileCheck %s
+// RUN: mlir-reduce %s -reduction-tree='traversal-mode=2 test=%S/../script/true.sh' | FileCheck %s
 
 // Since the test.sh always returns 1 (interesting), 
 // all operations within the ModuleOp should be erased.

@@ -299,6 +299,9 @@ LogicalResult ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
   case TraversalMode::SinglePath:
     return findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
         module, region, reducerPatterns, tester);
+  case TraversalMode::MultiPath:
+    return findOptimal<ReductionNode::iterator<TraversalMode::MultiPath>>(
+        module, region, reducerPatterns, tester);
   default:
     return module.emitError() << "unsupported traversal mode detected";
   }
