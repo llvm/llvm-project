@@ -20,6 +20,8 @@
 // RUN:   -DOFFSET_LLVM=i32 -DOFFSET_CXX=int -DOFFSET_ZERO=0 -DOFFSET_CONST=1 \
 // RUN:   -DENTRY_CXX=int -DLOAD_LLVM="<2 x i32>" -DLOAD_CXX="int vector[2]"
 
+using namespace hlsl;
+
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DENTRY_TYPE=int2 \

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 int shl32(int V, int S) {
   return V << S;
 }

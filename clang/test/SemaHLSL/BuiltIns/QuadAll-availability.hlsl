@@ -5,6 +5,8 @@
 // RUN:   dxil-pc-shadermodel6.7-library %s -fhlsl-strict-availability \
 // RUN:   -fsyntax-only -verify=sm67
 
+using namespace hlsl;
+
 // sm67-no-diagnostics
 
 bool test_availability(bool cond) {

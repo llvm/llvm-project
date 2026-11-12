@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.6-library %s -fnative-int16-type -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 uint builtin_f32tof16_too_few_arg() {
   return __builtin_hlsl_elementwise_f32tof16();
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}

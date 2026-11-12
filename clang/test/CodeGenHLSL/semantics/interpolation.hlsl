@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -Wno-ignored-attributes -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 [shader("pixel")]
 float4 modes(float a : A,
              nointerpolation float b : B,

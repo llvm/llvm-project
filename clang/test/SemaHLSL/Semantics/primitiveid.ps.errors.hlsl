@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -fnative-half-type -fnative-int16-type -finclude-default-header -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -fnative-half-type -fnative-int16-type -finclude-default-header -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 // Invalid type, index and interpolation uses of SV_PrimitiveID. The valid
 // cases are covered by primitiveid.ps.hlsl, and the shader stage and IO
 // direction by primitiveid.stages.hlsl.

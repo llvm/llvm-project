@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 uint64_t5x5 mat;
 // expected-error@-1  {{unknown type name 'uint64_t5x5'}}
 

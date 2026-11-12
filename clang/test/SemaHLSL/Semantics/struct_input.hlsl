@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -o - %s -verify
 
+using namespace hlsl;
+
 struct S {
   float4 f0 : SV_Position;
 // expected-error@+2 {{semantic annotations must be present for all parameters of an entry function or patch constant function}}

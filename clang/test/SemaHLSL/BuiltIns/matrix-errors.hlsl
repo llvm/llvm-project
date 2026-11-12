@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 // Some bad declarations
 hlsl::matrix ShouldWorkSomeday; // expected-error{{use of alias template 'hlsl::matrix' requires template arguments}}
 // expected-note@*:* {{template declaration from hidden source: template <class element = float, int rows_count = 4, int cols_count = 4> requires rows_count <= 4 && cols_count <= 4 using matrix = matrix<element, rows_count, cols_count>}}

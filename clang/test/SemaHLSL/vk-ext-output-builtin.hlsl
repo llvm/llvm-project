@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -x hlsl -hlsl-entry foo  -finclude-default-header -o - %s -verify
 
+using namespace hlsl;
+
 // expected-error@+1 {{'vk::ext_builtin_output' attribute only applies to non-const static globals}}
 [[vk::ext_builtin_output(/* Position */ 0)]]
 float4 position0;

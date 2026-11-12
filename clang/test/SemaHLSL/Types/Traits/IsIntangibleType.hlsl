@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -fnative-half-type -fexperimental-new-constant-interpreter -verify %s
 // expected-no-diagnostics
 
+using namespace hlsl;
+
 _Static_assert(__builtin_hlsl_is_intangible(__hlsl_resource_t), "");
 // no need to check array of __hlsl_resource_t, arrays of sizeless types are not supported
 

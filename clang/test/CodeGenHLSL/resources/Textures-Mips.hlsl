@@ -19,6 +19,8 @@
 // RUN:   -DCOORD_LLVM=float -DCOORD_CXX=float -DINDEX_LLVM=i32 \
 // RUN:   -DINDEX_CXX=int -DOFFSET_LLVM=i32 -DOFFSET_ZERO=0
 
+using namespace hlsl;
+
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -emit-llvm -disable-llvm-passes  \
 // RUN:   -triple dxil-pc-shadermodel6.3-library %s -o - | FileCheck %s
 
+using namespace hlsl;
+
 // Test groupshared vector element store for uint.
 // CHECK-LABEL: test_uint4
 // CHECK: [[VAL:%.*]] = load i32, ptr %Val.addr, align 4

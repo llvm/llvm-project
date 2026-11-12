@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_step_half
 // CHECK: [[CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt half %p1, %p0
 // CHECK-NEXT: [[SELECT:%.*]] = select reassoc nnan ninf nsz arcp afn i1 [[CMP]], half 0.000000e+00, half 1.000000e+00

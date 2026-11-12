@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple spirv-vulkan-library -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | \
 // RUN:        llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,CHECK-SPV -DCONST_ADDR_SPACE=12 -DPADDING_TYPE="spirv.Padding"
 
+using namespace hlsl;
+
 struct S {
     float3 f3;
     int a;

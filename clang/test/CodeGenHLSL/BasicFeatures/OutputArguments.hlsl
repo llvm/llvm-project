@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes -emit-llvm -finclude-default-header -o - %s | FileCheck %s --check-prefixes=CHECK,ALL
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -O3 -emit-llvm -finclude-default-header -o - %s | FileCheck %s --check-prefixes=OPT,ALL
 
+using namespace hlsl;
+
 // Case 1: Simple floating integral conversion.
 // In this test case a float value is passed to an inout parameter taking an
 // integer. It is converted to an integer on call and converted back after the

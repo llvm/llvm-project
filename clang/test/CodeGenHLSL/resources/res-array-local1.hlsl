@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -finclude-default-header \
 // RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // This test verifies local arrays of resources in HLSL.
 
 // CHECK: @_ZL1A = internal global %"class.hlsl::RWBuffer" poison, align 4

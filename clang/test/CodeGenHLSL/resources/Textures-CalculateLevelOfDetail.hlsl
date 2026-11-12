@@ -12,6 +12,8 @@
 // RUN:   -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=0 -DGRAD_LLVM=float \
 // RUN:   -DGRAD_CXX=float
 
+using namespace hlsl;
+
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float \

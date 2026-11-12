@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -fnative-int16-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
 
+using namespace hlsl;
+
 struct MyStruct {
   float4 a;
   int2 b;

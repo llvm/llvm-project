@@ -11,6 +11,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 // CHECK: define [[FNATTRS]] i1 @_Z20test_isfinite_doubled(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[HLSLISFINITEI:%.*]] = call noundef i1 @llvm.[[TARGET]].isfinite.f32(float [[CONVI]])

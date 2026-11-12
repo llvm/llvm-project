@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK
 
+using namespace hlsl;
+
 // The followiong file contains both implicit and explicit vk::location, but
 // because each entrypoint has only one kind, this is allowed.
 

@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.3-library %s -disable-llvm-passes \
 // RUN:   -emit-llvm -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: Single
 
 // Setup local vars.

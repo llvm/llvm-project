@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 typedef vector<float, 3> float3;
 typedef vector<double, 2> double2;
 typedef vector<double, 3> double3;

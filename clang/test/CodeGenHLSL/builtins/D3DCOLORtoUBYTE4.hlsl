@@ -5,6 +5,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK %}
 
+using namespace hlsl;
+
 // CHECK-LABEL: D3DCOLORtoUBYTE4
 int4 test_D3DCOLORtoUBYTE4(float4 p1) {
   // CHECK: %[[SCALED:.*]] = fmul [[FMFLAGS:.*]][[FLOAT_TYPE:<4 x float>]] %{{.*}}, splat (float f0x437F0080)

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -fsyntax-only %s -DERROR=1 -verify
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -ast-dump %s | FileCheck %s
 
+using namespace hlsl;
+
 
 // Case 1: Prioritize splat without conversion over conversion. In this case the
 // called functions have valid overloads for each type, however one of the

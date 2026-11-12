@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 RWBuffer<uint> In : register(u0);
 RWStructuredBuffer<uint> Out0 : register(u1);
 RWStructuredBuffer<uint> Out1 : register(u2);

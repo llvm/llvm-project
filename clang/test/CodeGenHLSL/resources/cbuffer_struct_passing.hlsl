@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | \
 // RUN:     FileCheck %s -DCONST_ADDR_SPACE=2 -DPADDING_TYPE="dx.Padding"
 
+using namespace hlsl;
+
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s | \
 // RUN:     FileCheck %s -DCONST_ADDR_SPACE=12 -DPADDING_TYPE="spirv.Padding"
 

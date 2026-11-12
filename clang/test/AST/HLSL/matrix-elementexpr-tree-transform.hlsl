@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -std=hlsl202x \
 // RUN:   -finclude-default-header -ast-dump -ast-dump-filter=get00 %s | FileCheck %s
 
+using namespace hlsl;
+
 template <typename T>
 T get00(matrix<T, 2, 2> m) {
   return m._m00;

@@ -17,6 +17,8 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 
+using namespace hlsl;
+
 // NATIVE_HALF: define [[FNATTRS]] half @
 // NATIVE_HALF: %hlsl.frac = call reassoc nnan ninf nsz arcp afn half @llvm.[[TARGET]].frac.f16(
 // NATIVE_HALF: ret half %hlsl.frac

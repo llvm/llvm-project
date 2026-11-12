@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-pixel -hlsl-entry main1 %s -emit-llvm-only -disable-llvm-passes -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 // The following code is not legal: both semantics A and B will be lowered
 // into a Location decoration. And mixing implicit and explicit Location
 // assignment is not supported.

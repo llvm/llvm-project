@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s
 
+using namespace hlsl;
+
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -std=hlsl202x -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - -fexperimental-new-constant-interpreter | FileCheck %s

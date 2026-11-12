@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -std=hlsl202x -emit-llvm -disable-llvm-passes -hlsl-entry main -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 groupshared float4 SharedData;
 
 // CHECK-LABEL: define hidden void @_Z3fn1RU3AS3Dv4_f(ptr addrspace(3) noundef align 4 dereferenceable(16) %Sh)

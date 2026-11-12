@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -fnative-half-type -fnative-int16-type -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -DSEMANTIC=SV_GroupThreadID -o - %s | FileCheck %s -DINTRINSIC=spv.thread.id.in.group.i32
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -fnative-half-type -fnative-int16-type -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -DSEMANTIC=SV_GroupID -o - %s | FileCheck %s -DINTRINSIC=spv.group.id.i32
 
+using namespace hlsl;
+
 // Both signed and unsigned 16-bit inputs truncate the i32 intrinsic result.
 // CHECK-LABEL: define void @signed_scalar()
 // CHECK: %[[RAW:.*]] = call i32 @llvm.[[INTRINSIC]](i32 0)

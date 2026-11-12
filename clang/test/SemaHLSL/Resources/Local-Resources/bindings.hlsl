@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 // expected-no-diagnostics
 
 RWBuffer<uint> In : register(u0);

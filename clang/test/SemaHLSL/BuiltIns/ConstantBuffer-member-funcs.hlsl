@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -finclude-default-header -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 struct S {
     float a;
     

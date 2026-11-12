@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -fsyntax-only -verify \
 // RUN:   -verify-ignore-unexpected=note,warning
 
+using namespace hlsl;
+
 RWByteAddressBuffer BAB : register(u0);
 RasterizerOrderedByteAddressBuffer ROVB : register(u1);
 

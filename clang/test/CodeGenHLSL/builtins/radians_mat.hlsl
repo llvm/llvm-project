@@ -3,6 +3,8 @@
 // RUN:   -fnative-half-type -fnative-int16-type -emit-llvm -o - \
 // RUN:   | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_radians_half1x2
 // CHECK: fmul reassoc nnan ninf nsz arcp afn <2 x half> {{.*}}, splat (half 1.745610e-02)
 // CHECK: ret <2 x half>

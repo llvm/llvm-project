@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -hlsl-entry entry -ast-dump -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // Test that matrix aliases are set up properly for HLSL
 
 // CHECK: NamespaceDecl 0x{{[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> implicit referenced hlsl
@@ -18,32 +20,32 @@
 // CHECK-SAME: NonTypeTemplateParm 0x{{[0-9a-fA-F]+}} 'element_count' 'int'
 
 // Make sure we got a using directive at the end.
-// CHECK: UsingDirectiveDecl 0x{{[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> Namespace 0x{{[0-9a-fA-F]+}} 'hlsl'
+// CHECK: UsingDirectiveDecl {{.*}} Namespace {{.*}} 'hlsl'
 
 [shader("compute"), numthreads(1,1,1)]
 void entry() {
   // Verify that the alias is generated inside the hlsl namespace.
   hlsl::matrix<float, 2, 2> Mat2x2f;
 
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:26:3, col:36>
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:28:3, col:36>
   // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:29> col:29 Mat2x2f 'hlsl::matrix<float, 2, 2>'
 
   // Verify that you don't need to specify the namespace.
   matrix<int, 2, 2> Mat2x2i;
 
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:32:3, col:28>
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:34:3, col:28>
   // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:21> col:21 Mat2x2i 'matrix<int, 2, 2>'
 
   // Build a bigger matrix.
   matrix<double, 4, 4> Mat4x4d;
 
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:38:3, col:31>
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:40:3, col:31>
   // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:24> col:24 Mat4x4d 'matrix<double, 4, 4>'
 
   // Verify that the implicit arguments generate the correct type.
   matrix<> ImpMat4x4;
 
-  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:44:3, col:21>
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:46:3, col:21>
   // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:12> col:12 ImpMat4x4 'matrix<>':'matrix<float, 4, 4>'
   return;
 }

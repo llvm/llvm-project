@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -finclude-default-header -x hlsl -verify -o - %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
 
+using namespace hlsl;
+
 // Stage and IO direction checks for SV_PrimitiveID: only a pixel input.
 // Type, index and interpolation checks are covered by primitiveid.ps.hlsl and
 // primitiveid.ps.errors.hlsl.

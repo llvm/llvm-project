@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 // Parameters passed by reference are written by the entry point, so they are
 // verified against the output signature of the shader stage.
 

@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -fnative-half-type -fexperimental-new-constant-interpreter -verify %s
 // expected-no-diagnostics
 
+using namespace hlsl;
+
 // Case 1: How many ways can I come up with to represent three float values?
 struct ThreeFloats1 {
   float X, Y, Z;

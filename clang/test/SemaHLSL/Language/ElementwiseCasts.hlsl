@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -fnative-half-type %s -ast-dump | FileCheck %s
 
+using namespace hlsl;
+
 // truncation
 // CHECK-LABEL: call1
 // CHECK: CStyleCastExpr {{.*}} 'int[1]' <HLSLElementwiseCast>

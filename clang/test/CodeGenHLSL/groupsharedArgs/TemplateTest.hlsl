@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -std=hlsl202x -emit-llvm -disable-llvm-passes -hlsl-entry main -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // In the case the template type is specified the groupshared attribute is preserved in the type
 // CHECK-LABEL: define linkonce_odr hidden void @_Z4tfooIU3AS3Dv4_iEvT_S2_(ptr addrspace(3) noundef align 4 dereferenceable(16) %a, ptr addrspace(3) noundef align 4 dereferenceable(16) %b)
 // CHECK: [[AAddr:%.*]] = alloca ptr addrspace(3), align 4

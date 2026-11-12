@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 typedef vector<float, 5> float5;
 
 void foo() {

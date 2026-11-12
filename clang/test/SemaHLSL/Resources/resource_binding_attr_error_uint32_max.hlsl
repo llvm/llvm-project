@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
+using namespace hlsl;
+
 // test semantic validation for register numbers that exceed UINT32_MAX
 
 struct S {

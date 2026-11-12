@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -fnative-half-type %s -ast-dump | FileCheck %s
 
+using namespace hlsl;
+
 // splat from vec1 to vec
 // CHECK-LABEL: call1
 // CHECK: CStyleCastExpr {{.*}} 'int3':'vector<int, 3>' <HLSLAggregateSplatCast>

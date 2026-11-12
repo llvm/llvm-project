@@ -17,6 +17,8 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DTARGET=spv -DFNATTRS="hidden spir_func noundef"
 
+using namespace hlsl;
+
 // NATIVE_HALF: define [[FNATTRS]] i32 @
 // NATIVE_HALF: %hlsl.sign = call i32 @llvm.[[TARGET]].sign.f16(
 // NATIVE_HALF: ret i32 %hlsl.sign

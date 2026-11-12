@@ -13,6 +13,8 @@
 // RUN:   -DHANDLE_TY='target("spirv.Image", float, 0, 2, 0, 0, 1, 0)' \
 // RUN:   -DSCALAR_HANDLE_TY='target("spirv.Image", float, 0, 2, 0, 0, 1, 0)'
 
+using namespace hlsl;
+
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -std=hlsl202x -emit-llvm -disable-llvm-passes \

@@ -6,6 +6,8 @@
 // RUN:   -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_select_half2x3
 // NO_HALF: select {{.*}}<6 x i1> {{%.*}}, <6 x float> {{%.*}}, <6 x float> {{%.*}}
 // NATIVE_HALF: select {{.*}}<6 x i1> {{%.*}}, <6 x half> {{%.*}}, <6 x half> {{%.*}}

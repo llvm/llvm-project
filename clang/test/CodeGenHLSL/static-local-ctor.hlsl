@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -disable-llvm-passes %s | \
 // RUN:   llvm-cxxfilt | FileCheck %s
 
+using namespace hlsl;
+
 // Verify that no per variable _Init_thread instructions are emitted for non-trivial static locals
 // These would normally be emitted by the MicrosoftCXXABI, but the DirectX backend should exlude them
 // Instead, check for the guardvar operations that should protect the constructor initialization should

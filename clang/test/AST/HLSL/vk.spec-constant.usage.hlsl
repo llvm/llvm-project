@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -fnative-int16-type -triple spirv-unknown-vulkan-library -x hlsl -ast-dump -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: VarDecl {{.*}} bool_const 'const hlsl_private bool' static cinit
 // CHECK-NEXT: CallExpr {{.*}} 'bool'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'bool (*)(unsigned int, bool) noexcept' <FunctionToPointerDecay>

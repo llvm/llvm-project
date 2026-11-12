@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-DAG: [[ONE_STR:@.*]] = private unnamed_addr constant [4 x i8] c"One\00"
 // CHECK-DAG: [[ARRAY_STR:@.*]] = private unnamed_addr constant [6 x i8] c"Array\00"
 // CHECK-DAG: [[ONEWITHCOUNTER_STR:@.*]] = private unnamed_addr constant [15 x i8] c"OneWithCounter\00"

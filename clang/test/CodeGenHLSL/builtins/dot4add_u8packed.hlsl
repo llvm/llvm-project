@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.4-compute %s -emit-llvm -o - | FileCheck %s -DTARGET=dx
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan-compute %s -emit-llvm -o - | FileCheck %s -DTARGET=spv
 
+using namespace hlsl;
+
 // Test basic lowering to runtime function call.
 
 // CHECK-LABEL: test

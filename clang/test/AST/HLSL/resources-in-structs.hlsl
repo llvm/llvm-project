@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump %s | FileCheck %s -check-prefixes=CHECK,DXIL
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-library -ast-dump %s | FileCheck %s -check-prefixes=CHECK,SPIRV
 
+using namespace hlsl;
+
 // Single resource field in struct
 
 // CHECK: CXXRecordDecl {{.*}} struct A

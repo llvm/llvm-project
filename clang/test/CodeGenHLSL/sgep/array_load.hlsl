@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -finclude-default-header -fexperimental-logical-pointer -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -fexperimental-logical-pointer -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 void foo() {
 // CHECK: %array = call elementtype([3 x i32]) ptr @llvm.structured.alloca.p0()
   uint array[3] = { 0, 1, 2 };

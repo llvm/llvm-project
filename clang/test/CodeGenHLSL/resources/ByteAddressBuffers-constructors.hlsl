@@ -4,6 +4,8 @@
 // RUN-DISABLED: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | \
 //        llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
+using namespace hlsl;
+
 // NOTE: Itanium ABI for C++ requires Clang to generate 2 constructors types to support polymorphism:
 // - C1 - Complete object constructor - constructs the complete object, including virtual base classes.
 // - C2 - Base object constructor - creates the object itself and initializes data members and non-virtual base classes.

@@ -5,6 +5,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+using namespace hlsl;
+
 // NATIVE_HALF-LABEL: define hidden noundef nofpclass(nan inf) half @_Z13test_exp_half
 // NATIVE_HALF: [[EXP:%.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.exp.f16(
 // NATIVE_HALF: ret half [[EXP]]

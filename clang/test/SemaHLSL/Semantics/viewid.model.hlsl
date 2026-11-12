@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.2-library -finclude-default-header -x hlsl -verify=ok -o - %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify=ok -o - %s
 
+using namespace hlsl;
+
 // SV_ViewID requires shader model 6.1 for DXIL.
 // For SPIR-V, SV_ViewID is the ViewIndex built-in, which requires the
 // MultiView capability. MultiView is core from Vulkan 1.1, and Clang only

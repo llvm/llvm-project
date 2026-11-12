@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
 
+using namespace hlsl;
+
 // A *local* resource array indexed by a runtime value. Every element the index
 // can select holds the same global, so there is one unique binding and nothing
 // to warn about. `& 1` keeps the index off the unassigned elements 2 and 3.

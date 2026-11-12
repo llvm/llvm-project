@@ -9,6 +9,8 @@
 // RUN:   -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s -DINTRINSIC=spv.subgroup.multi.prefix.bit.xor
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_uint
 uint test_uint(uint value, uint4 mask) {
   // CHECK: %[[TOKEN:.*]] = call token @llvm.experimental.convergence.entry()

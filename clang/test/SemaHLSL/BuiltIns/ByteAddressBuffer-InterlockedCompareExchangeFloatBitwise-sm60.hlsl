@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.0-library %s -fsyntax-only -verify \
 // RUN:   -verify-ignore-unexpected=warning
 
+using namespace hlsl;
+
 // The float-bitwise compare reuses the 32-bit integer DXIL operation, so it
 // needs no capability bits and works from SM 6.0. The 64-bit compare-exchange
 // needs SM 6.6. This file checks both halves, so it proves the two are gated

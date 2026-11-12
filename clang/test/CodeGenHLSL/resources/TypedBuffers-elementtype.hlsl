@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -fnative-int16-type  \
 // RUN: -emit-llvm -o - -DRESOURCE=Buffer %s | FileCheck %s -DRESOURCE=Buffer -DRW=0 -check-prefixes=DXIL
 
+using namespace hlsl;
+
 // RUN: %clang_cc1 -triple spirv-pc-vulkan-compute -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -o - -DRESOURCE=Buffer %s | FileCheck %s -DRESOURCE=Buffer -DRW=1 -check-prefixes=SPV-RO
 

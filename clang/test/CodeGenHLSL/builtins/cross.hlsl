@@ -6,6 +6,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s -DSPIR_FUNC="spir_func "
 
+using namespace hlsl;
+
 // CHECK: define hidden [[SPIR_FUNC]]noundef nofpclass(nan inf) <3 x half> @_Z16test_cross_half3Dv3_DhS_(
 // CHECK-SAME: <3 x half> noundef nofpclass(nan inf) [[P0:%.*]], <3 x half> noundef nofpclass(nan inf) [[P1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

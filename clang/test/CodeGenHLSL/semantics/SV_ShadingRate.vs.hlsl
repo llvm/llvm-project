@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-SPIRV
 // RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.4-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-DXIL
 
+using namespace hlsl;
+
 // Behavior parity with DXC's hlsl/semantics/sv_shadingrate/shadingrate2.hlsl.
 
 struct VS_OUT {

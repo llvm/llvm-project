@@ -3,6 +3,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden void @_Z20ZerosSwizzleToScalarRu11matrix_typeILm4ELm4EdEd(
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], double noundef nofpclass(nan inf) [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

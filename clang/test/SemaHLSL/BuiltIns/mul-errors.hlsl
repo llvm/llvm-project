@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s -verify
 
+using namespace hlsl;
+
 // expected-note@*:* 108 {{candidate template ignored}}
 
 // Test mul error cases via template overload resolution

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -finclude-default-header -fnative-int16-type -fnative-half-type -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -finclude-default-header -fnative-int16-type -fnative-half-type                                         -verify=ref,both %s
 
+using namespace hlsl;
+
 const float3 F;
 
 struct S {

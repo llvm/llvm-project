@@ -5,6 +5,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefix=SPVCHECK
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) half @_Z17test_refract_halfDhDhDh(
 // CHECK-SAME: half noundef nofpclass(nan inf) [[I:%.*]], half noundef nofpclass(nan inf) [[N:%.*]], half noundef nofpclass(nan inf) [[ETA:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK:  [[ENTRY:.*:]]

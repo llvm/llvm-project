@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library \
 // RUN:   %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden noundef i1 @{{.*}}test_all_half{{.*}}(half
 // CHECK: [[CMP:%.*]] = fcmp {{.*}} une half {{.*}}, 0.000000e+00
 // CHECK: ret i1 [[CMP]]

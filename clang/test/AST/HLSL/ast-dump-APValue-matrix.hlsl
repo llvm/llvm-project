@@ -13,6 +13,8 @@
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
 // RUN: | FileCheck --strict-whitespace %s
 
+using namespace hlsl;
+
 export void Test() {
   constexpr int2x2 mat2x2 = {1, 2, 3, 4};
   // CHECK: VarDecl {{.*}} mat2x2 {{.*}} constexpr cinit

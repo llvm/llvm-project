@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-vulkan-library %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s --check-prefix=SPIRV
 
+using namespace hlsl;
+
 
 void test_clip_scalar(float Buf) {
   // CHECK:      define hidden void @{{.*}}test_clip_scalar{{.*}}(float {{.*}} [[VALP:%.*]])

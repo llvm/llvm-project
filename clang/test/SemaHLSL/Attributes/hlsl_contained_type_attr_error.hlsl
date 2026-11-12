@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -std=hlsl202x -x hlsl -o - %s -verify
 
+using namespace hlsl;
+
 typedef vector<float, 4> float4;
 
 // expected-error@+1{{'hlsl::contained_type' attribute cannot be applied to a declaration}}

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=column-major -o - %s | FileCheck %s --check-prefixes=CHECK,COL-CHECK
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
 
+using namespace hlsl;
+
 // vector flat cast from array
 // CHECK-LABEL: define void {{.*}}call2
 // CHECK: [[A:%.*]] = alloca [2 x [1 x i32]], align 4

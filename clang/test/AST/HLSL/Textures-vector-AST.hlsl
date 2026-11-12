@@ -11,6 +11,8 @@
 // RUN:   -DINDEX_TYPE="unsigned int" -DIS_ARRAY="" -DLOCATION_TYPE=float \
 // RUN:   -DGRADIENT_TYPE=float -DOFFSET_TYPE=int
 
+using namespace hlsl;
+
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \

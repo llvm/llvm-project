@@ -15,6 +15,8 @@
 // RUN:   -DFMT_FLOAT4=0 -DFMT_FLOAT=0 -DFMT_INT3=0 -DSPV_DIM=0 \
 // RUN:   -DINDEX_LLVM=i32 -DINDEX_CXX_U="unsigned int"
 
+using namespace hlsl;
+
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -Wno-sign-conversion \

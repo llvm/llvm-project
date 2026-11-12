@@ -1,6 +1,8 @@
 // RUN: %clang_dxc -T cs_6_3 -Xclang -emit-llvm -Xclang -disable-llvm-passes %s | FileCheck %s
 // RUN: %clang_dxc -T cs_6_3 -Xclang -emit-llvm -Xclang -disable-llvm-passes -Xclang -load-bool-from-mem=truncate %s 2>&1 | FileCheck %s --check-prefix=CHECK,TRUNCATE
 
+using namespace hlsl;
+
 // TRUNCATE: -load-bool-from-mem=truncate ignored for HLSL (always nonzero)
 
 StructuredBuffer<bool4> In : register(t0);

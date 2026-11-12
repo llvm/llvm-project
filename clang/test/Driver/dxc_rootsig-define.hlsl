@@ -14,6 +14,8 @@
 // RUN:  -fdx-rootsignature-define=CmdRS -D CmdRS='"SRV(t0)"' \
 // RUN:  | FileCheck %s --check-prefixes=CHECK,CMD
 
+using namespace hlsl;
+
 #define EmptyRS ""
 #define NotEmptyRS "CBV(b0)"
 

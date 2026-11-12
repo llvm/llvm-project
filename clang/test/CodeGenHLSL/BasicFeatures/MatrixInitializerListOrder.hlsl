@@ -4,6 +4,8 @@
 // RUN:   -emit-llvm -finclude-default-header -fmatrix-memory-layout=row-major -o - %s \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
 
+using namespace hlsl;
+
 // Verify that matrix initializer lists produce values in canonical column-major
 // register layout. The initializer list {1,2,3,4,5,6} for a float2x3 (2 rows,
 // 3 cols) is in row-major order: row0=[1,2,3], row1=[4,5,6].

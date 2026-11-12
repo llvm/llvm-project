@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", float, 1, 0, 0) }
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", float, 0, 0) }
 // CHECK: %"class.hlsl::SamplerState" = type { target("dx.Sampler", 0) }

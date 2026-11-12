@@ -5,6 +5,8 @@
 // RUN: %clang_dxc -T lib_6_3 -fcgl -pack-prefix-stable %s | FileCheck %s --check-prefixes=CHECK,STABLE
 // RUN: %clang_dxc -T lib_6_3 -fcgl -pack-optimized %s | FileCheck %s --check-prefixes=CHECK,OPTIMIZED
 
+using namespace hlsl;
+
 struct Varyings {
   float a : A;
   float2 b : B;

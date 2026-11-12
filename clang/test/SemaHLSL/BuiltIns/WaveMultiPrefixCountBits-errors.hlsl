@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -finclude-default-header -DTEST_UNSUPPORTED \
 // RUN:   -triple spirv-pc-vulkan-library -verify=spirv %s
 
+using namespace hlsl;
+
 #ifdef TEST_AVAILABILITY
 [shader("compute")]
 [numthreads(1, 1, 1)]

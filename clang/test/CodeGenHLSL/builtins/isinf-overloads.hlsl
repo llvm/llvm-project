@@ -11,6 +11,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 // CHECK: define [[FNATTRS]] i1 @_Z17test_isinf_doubled(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[HLSLISINFI:%.*]] = call noundef i1 @llvm.[[TARGET]].isinf.f32(float [[CONVI]])

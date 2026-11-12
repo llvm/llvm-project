@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -fsyntax-only -verify=spirv %s
 // spirv-no-diagnostics
 
+using namespace hlsl;
+
 // DXIL signatures cannot contain 64-bit components. Reject these types rather
 // than attempting to assign extra semantic indices to wide vectors.
 struct Input {

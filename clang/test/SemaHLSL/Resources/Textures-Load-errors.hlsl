@@ -26,6 +26,8 @@
 // RUN:   -DLOAD_FLOAT_TYPE=float3 -DNARROW_LOAD_TYPE=int2 \
 // RUN:   -DWIDE_LOAD_TYPE=int4 -DOFFSET_TYPE=int3 -verify %s
 
+using namespace hlsl;
+
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
 //

@@ -11,6 +11,8 @@
 // RUN:   -DINTRINSIC=spv.subgroup.multi.prefix.product \
 // RUN:   -DUINTRINSIC=spv.subgroup.multi.prefix.product
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_float
 float test_float(float value, uint4 mask) {
   // CHECK: %[[TOKEN:.*]] = call token @llvm.experimental.convergence.entry()

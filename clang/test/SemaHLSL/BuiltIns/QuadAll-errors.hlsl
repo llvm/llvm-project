@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   spirv-pc-vulkan-library %s -fsyntax-only -verify
 
+using namespace hlsl;
+
 bool test_too_few_args() {
   return __builtin_hlsl_quad_all();
   // expected-error@-1 {{too few arguments to function call, expected 1}}

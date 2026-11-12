@@ -5,6 +5,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm \
 // RUN:   -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: define {{.*}} double @{{.*}}fma_double{{.*}}(
 // CHECK: call reassoc nnan ninf nsz arcp afn double @llvm.fma.f64(double
 // CHECK: ret double

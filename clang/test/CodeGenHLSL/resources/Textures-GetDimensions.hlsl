@@ -13,6 +13,8 @@
 // RUN:   | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=Texture2D \
 // RUN:   -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1
 
+using namespace hlsl;
+
 // Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header \

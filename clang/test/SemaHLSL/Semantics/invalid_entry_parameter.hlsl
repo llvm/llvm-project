@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 // Type and index checks require an entry point.
 
 [shader("compute")][numthreads(8,8,1)]

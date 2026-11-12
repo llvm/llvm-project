@@ -7,6 +7,8 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   -DTARGET=spv -check-prefixes=CHECK,CHECK-SPIRV
 
+using namespace hlsl;
+
 // CHECK-DXIL: define hidden void @
 // CHECK-SPIRV: define hidden spir_func void @
 void test_AllMemoryBarrier() {

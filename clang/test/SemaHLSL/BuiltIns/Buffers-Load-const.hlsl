@@ -11,6 +11,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify \
 // RUN:   "-DRESOURCE=RWBuffer<uint>" -DREGISTER=u1 %s
 
+using namespace hlsl;
+
 // expected-no-diagnostics
 
 // Regression test for https://github.com/llvm/llvm-project/issues/192557

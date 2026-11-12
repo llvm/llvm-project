@@ -47,6 +47,8 @@
 // RUN:   -verify=expected,vecidx \
 // RUN:   -o - %s
 
+using namespace hlsl;
+
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
 //

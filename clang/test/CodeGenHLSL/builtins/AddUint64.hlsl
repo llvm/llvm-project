@@ -3,6 +3,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK
 
+using namespace hlsl;
+
 
 // CHECK-LABEL: define hidden noundef <2 x i32> @_Z20test_AddUint64_uint2Dv2_jS_(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]], <2 x i32> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {

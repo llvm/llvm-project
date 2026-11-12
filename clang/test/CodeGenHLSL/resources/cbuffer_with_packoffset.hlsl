@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.3-compute %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK:      %__cblayout_CB = type <{
 // CHECK-SAME:   target("dx.Padding", 16),
 // CHECK-SAME:   float,

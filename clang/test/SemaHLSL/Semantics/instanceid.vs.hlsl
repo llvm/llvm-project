@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fnative-half-type -fnative-int16-type -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -verify=dxil,expected -o - %s
 // RUN: %clang_cc1 -fnative-half-type -fnative-int16-type -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify=spirv,expected -o - %s
 
+using namespace hlsl;
+
 [shader("vertex")]
 float bad_type_float(float id : SV_InstanceID) : A {
 // dxil-error@-1 {{semantic 'SV_InstanceID' must be a scalar of 16 or 32 bit unsigned integer type (was 'float')}}

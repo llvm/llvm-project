@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 bool2x2 test_too_few_arg() {
   return __builtin_hlsl_elementwise_isinf();
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}

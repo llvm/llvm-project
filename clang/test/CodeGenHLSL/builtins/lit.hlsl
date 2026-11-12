@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_lit_half
 // CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %{{.*}}, 0.000000e+00
 // CHECK: %hlsl.select.i = select reassoc nnan ninf nsz arcp afn i1 %{{.*}}, half 0.000000e+00, half %{{.*}}

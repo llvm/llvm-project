@@ -2,6 +2,8 @@
 // RUN:  -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK \
 // RUN:  -DFLOATATTRS="reassoc nnan ninf nsz arcp afn"
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float {{.*}}test_pow_double
 // CHECK: [[CONV0:%.*]] = fptrunc [[FLOATATTRS]] double %{{.*}} to float
 // CHECK: [[CONV1:%.*]] = fptrunc [[FLOATATTRS]] double %{{.*}} to float

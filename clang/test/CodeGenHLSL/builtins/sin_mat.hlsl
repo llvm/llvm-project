@@ -6,6 +6,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_sin_half1x2
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.sin.v2f16
 // NO_HALF: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.sin.v2f32

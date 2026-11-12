@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library -ast-dump %s | FileCheck %s
 
+using namespace hlsl;
+
 // Global variables for ResourceDescriptorHeap and SamplerDescriptorHeap
 // CHECK: VarDecl {{.*}} used ResourceDescriptorHeap 'hlsl_private __detail::resource_descriptor_heap_struct' static internal-linkage
 // CHECK-NEXT: AvailabilityAttr {{.*}} shadermodel 6.6 0 0 "" "" 0

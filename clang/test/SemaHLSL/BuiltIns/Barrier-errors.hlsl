@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.8-library %s -fsyntax-only -verify \
 // RUN:   -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 RWBuffer<float> UAVBuffer;
 Buffer<float> ReadOnlyBuffer;
 

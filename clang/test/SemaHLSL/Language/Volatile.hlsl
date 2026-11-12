@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -verify %s
 
+using namespace hlsl;
+
 RWByteAddressBuffer gBuf : register(u0);
 
 [numthreads(1,1,1)]

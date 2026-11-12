@@ -3,6 +3,8 @@
 // RUN:   spirv-unknown-vulkan-compute %s -fnative-int16-type -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s
 
+using namespace hlsl;
+
 [[vk::constant_id(1)]]
 const bool bool_const = true;
 

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -finclude-default-header -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // This test verifies that matrix initializer lists in HLSL use row-major
 // element ordering. The elements in the AST InitListExpr remain in
 // row-major order as written in the source code.

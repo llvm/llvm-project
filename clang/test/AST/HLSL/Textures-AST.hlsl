@@ -6,6 +6,8 @@
 // RUN:   %s --check-prefixes=CHECK,SRV -DTEXTURE=Texture1D -DDIM_NAME=1D \
 // RUN:   -DINDEX_TYPE="unsigned int" -DLOCATION_TYPE=int
 
+using namespace hlsl;
+
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \

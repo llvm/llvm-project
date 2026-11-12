@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -o - %s | FileCheck %s 
 
+using namespace hlsl;
+
 typedef float float4x4 __attribute__((matrix_type(4,4)));
 typedef int int4x4 __attribute__((matrix_type(4,4)));
 

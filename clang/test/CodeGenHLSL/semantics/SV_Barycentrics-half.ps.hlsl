@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -fnative-half-type -finclude-default-header -DINTERPOLATION=linear -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=SPIRV,SPIRV-PERSPECTIVE
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -fnative-half-type -finclude-default-header -DINTERPOLATION=noperspective -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=SPIRV,SPIRV-AFFINE
 
+using namespace hlsl;
+
 #ifndef INTERPOLATION
 #define INTERPOLATION
 #endif

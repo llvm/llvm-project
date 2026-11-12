@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -std=hlsl202x -verify %s
 
+using namespace hlsl;
+
 void SplatOfUndersizedVectortoMat(int3 V){
     int2x2 M = V;
     // expected-error@-1 {{too few initializers in list for type 'int2x2' (aka 'matrix<int, 2, 2>') (expected 4 but found 3)}}

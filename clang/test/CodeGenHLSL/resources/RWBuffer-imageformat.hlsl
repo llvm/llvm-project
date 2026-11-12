@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // Signed integers
 // CHECK: %"class.hlsl::RWBuffer" = type { target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 24) }
 RWBuffer<int> rwb_int;

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: ClassTemplateSpecializationDecl {{.*}} class RWBuffer definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation
 // CHECK: TemplateArgument type 'float'
 // CHECK: BuiltinType {{.*}} 'float'

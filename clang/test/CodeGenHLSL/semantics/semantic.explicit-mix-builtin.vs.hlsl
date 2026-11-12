@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-vertex -x hlsl -hlsl-entry main1 -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // This is almost the same as semantic.explicit-mix-builtin.hlsl, except this
 // time we build a vertex shader. This means the SV_Position semantic output
 // is also a BuiltIn, This means we can mix implicit and explicit location

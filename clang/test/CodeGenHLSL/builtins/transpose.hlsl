@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROWMAJOR
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan1.3-library -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROWMAJOR
 
+using namespace hlsl;
+
 // CHECK-LABEL: define {{.*}}test_transpose_bool2x3
 // COLMAJOR:    [[A_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // ROWMAJOR:    [[A_ADDR:%.*]] = alloca [2 x <3 x i32>], align 4

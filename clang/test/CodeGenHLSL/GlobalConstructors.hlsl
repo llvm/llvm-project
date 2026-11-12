@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
 
+using namespace hlsl;
+
 RWBuffer<float> Buffer;
 
 [numthreads(1,1,1)]

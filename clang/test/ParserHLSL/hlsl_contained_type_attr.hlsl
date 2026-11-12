@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -std=hlsl202x -x hlsl -ast-dump -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 typedef vector<float, 4> float4;
 
 // CHECK: -TypeAliasDecl 0x{{[0-9a-f]+}} <line:[[# @LINE + 4]]:1, col:85>

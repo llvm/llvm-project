@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 // RWBuffer<int>
 using handle_t = __hlsl_resource_t
     [[hlsl::resource_class("UAV")]] [[hlsl::contained_type(int)]];

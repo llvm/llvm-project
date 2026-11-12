@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -finclude-default-header -fexperimental-new-constant-interpreter -verify -fnative-half-type -fnative-int16-type %s
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -finclude-default-header -fexperimental-new-constant-interpreter -verify -fnative-half-type -fnative-int16-type %s
 
+using namespace hlsl;
+
 // expected-no-diagnostics
 #define SizeCheck(Ty, SizeInBits)                                              \
   _Static_assert(sizeof(Ty) == SizeInBits / 8, #Ty " is " #SizeInBits "-bit"); \

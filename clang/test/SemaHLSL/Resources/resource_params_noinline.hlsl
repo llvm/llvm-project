@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only -finclude-default-header %s -verify
 
+using namespace hlsl;
+
 // expected-error@+2 {{resource type 'RWBuffer<float>' cannot be used as a parameter of a noinline function}}
 // expected-note@+1 {{attribute is here}}
 __attribute__((noinline)) float resource_param(RWBuffer<float> A) {}

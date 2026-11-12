@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -O0 %s | FileCheck %s -check-prefixes=DXIL,CHECK
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -emit-llvm -o - -O0 %s | FileCheck %s -check-prefixes=SPV,CHECK
 
+using namespace hlsl;
+
 struct S {
   float f;
 };

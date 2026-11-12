@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-library -fnative-half-type -fnative-int16-type -finclude-default-header -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -DSPIRV -fnative-half-type -fnative-int16-type -finclude-default-header -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 // Type, index and interpolation checks for SV_Barycentrics. These are
 // independent of the shader stage and IO direction, which are covered by
 // barycentrics.stages.hlsl.

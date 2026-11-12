@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -ast-dump -ast-dump-filter=test | FileCheck %s
 
+using namespace hlsl;
+
 // Regression test for issue llvm/llvm-project#213814
 
 // CHECK-LABEL: FunctionDecl {{.*}} test_lt 'int4 (half4, half4)'

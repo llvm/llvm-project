@@ -2,6 +2,8 @@
 // RUN:   -finclude-default-header -fnative-half-type -emit-llvm-only \
 // RUN:   -disable-llvm-passes -verify %s
 
+using namespace hlsl;
+
 // Texture2D<float4>
 using tex_t = __hlsl_resource_t [[hlsl::resource_class("SRV")]]
     [[hlsl::contained_type(float4)]] [[hlsl::dimension("2D")]];

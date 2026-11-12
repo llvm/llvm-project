@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 // Each keyword is incompatible with nointerpolation, in either order.
 void conflicts(
     // expected-error@+2 {{'nointerpolation' cannot be combined}}

@@ -20,6 +20,8 @@
 // RUN:   -finclude-default-header -fsyntax-only -verify=expected,dim3 \
 // RUN:   -DTEXTURE=TextureCubeArray -DLOD_TYPE=float3 %s
 
+using namespace hlsl;
+
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
 //

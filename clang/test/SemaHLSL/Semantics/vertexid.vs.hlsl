@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fnative-half-type -fnative-int16-type -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -verify -o - %s
 // RUN: %clang_cc1 -fnative-half-type -fnative-int16-type -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
 
+using namespace hlsl;
+
 // SV_VertexID accepts 16- and 32-bit signed or unsigned scalars.
 
 [shader("vertex")]

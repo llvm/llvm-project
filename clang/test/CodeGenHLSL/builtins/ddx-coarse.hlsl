@@ -5,6 +5,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s -DTGT=spv
 
+using namespace hlsl;
+
 // CHECK-LABEL: half @_Z19test_f16_ddx_coarseDh
 // CHECK: %hlsl.ddx.coarse = call {{.*}} half @llvm.[[TGT]].ddx.coarse.f16(half %{{.*}})
 // CHECK: ret half %hlsl.ddx.coarse

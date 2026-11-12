@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.8-library %s -emit-llvm \
 // RUN:   -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 RWBuffer<float> UAVBuffer;
 RWByteAddressBuffer Bytes;
 

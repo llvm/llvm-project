@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -fsyntax-only -verify
 
+using namespace hlsl;
+
 struct S; // expected-note {{forward declaration of 'S'}}
 
 // expected-error@hlsl/hlsl_spirv.h:24 {{argument type 'S' is incomplete}}

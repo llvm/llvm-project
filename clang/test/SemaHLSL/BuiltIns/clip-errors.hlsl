@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -verify
 
+using namespace hlsl;
+
 
 void test_arg_missing() {
   __builtin_hlsl_elementwise_clip();

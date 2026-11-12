@@ -10,6 +10,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -finclude-default-header -DCENTROID -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=SPIRV,SPIRV-AFFINE,SPIRV-CENTROID
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -finclude-default-header -DPERSPECTIVE -DSAMPLE -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=SPIRV,SPIRV-PERSPECTIVE,SPIRV-SAMPLE
 
+using namespace hlsl;
+
 #ifdef CENTROID
 #define SAMPLING centroid
 #elif defined(SAMPLE)

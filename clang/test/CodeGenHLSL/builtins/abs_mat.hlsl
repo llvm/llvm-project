@@ -6,6 +6,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_abs_int2x3
 // CHECK: call <6 x i32> @llvm.abs.v6i32(<6 x i32> %{{.*}}, i1 false)
 int2x3 test_abs_int2x3(int2x3 p0) { return abs(p0); }

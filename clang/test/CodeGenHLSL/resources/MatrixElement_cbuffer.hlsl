@@ -5,6 +5,8 @@
 // RUN:   -emit-llvm -finclude-default-header -fmatrix-memory-layout=row-major \
 // RUN:   -o - %s | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
 
+using namespace hlsl;
+
 
 cbuffer CB {
   float3x2 Mat;

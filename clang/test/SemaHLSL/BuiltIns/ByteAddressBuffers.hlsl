@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 ByteAddressBuffer Buf : register(t0);
 RWByteAddressBuffer RWBuf : register(u0);
 

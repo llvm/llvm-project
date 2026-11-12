@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 [shader("vertex")]
 uint vs_vertexid_out(uint ID : SV_VertexID) : SV_VertexID { return ID; }
 // expected-error@-1 {{semantic 'SV_VertexID' is not supported in vertex shader outputs}}

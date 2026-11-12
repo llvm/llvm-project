@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm-only -verify
 
+using namespace hlsl;
+
 RWBuffer<float> UAVBuffer;
 
 void test_spirv() {

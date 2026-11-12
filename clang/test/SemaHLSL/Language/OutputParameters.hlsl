@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -verify -Wdouble-promotion %s
 
+using namespace hlsl;
+
 void OutVecFn(out float3) {}
 void InOutVecFn(inout float3) {}
 

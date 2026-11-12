@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -fnative-half-type -fnative-int16-type -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -fnative-half-type -fnative-int16-type -fmatrix-memory-layout=column-major -o - %s | FileCheck %s --check-prefixes=CHECK,COL-CHECK
 
+using namespace hlsl;
+
 
 // ROW-CHECK-LABEL: define hidden noundef <6 x i32> @_Z22elementwise_type_cast0u11matrix_typeILm3ELm2EfE(
 // ROW-CHECK-SAME: <6 x float> noundef nofpclass(nan inf) [[F32:%.*]]) #[[ATTR0:[0-9]+]] {

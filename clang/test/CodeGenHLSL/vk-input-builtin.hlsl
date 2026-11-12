@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan1.3-compute %s -emit-llvm -O3 -o - | FileCheck %s
 
+using namespace hlsl;
+
 [[vk::ext_builtin_input(/* WorkgroupId */ 26)]]
 static const uint3 groupid;
 // CHECK: @_ZL7groupid = external hidden local_unnamed_addr addrspace(7) externally_initialized constant <3 x i32>, align 4, !spirv.Decorations [[META0:![0-9]+]]

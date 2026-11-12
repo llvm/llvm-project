@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.8-compute -hlsl-entry main \
 // RUN:   -fhlsl-strict-availability -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 void barrier_helper() {
   // expected-error@+1 {{GROUP_SCOPE requires a nonzero MemoryTypeFlags argument}}
   Barrier(0, GROUP_SCOPE);

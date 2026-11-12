@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 float test_too_few_arg() {
   return dot2add();
   // expected-error@-1 {{no matching function for call to 'dot2add'}}

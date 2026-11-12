@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 struct Collide {
   float4 A : USER0;
 // expected-note@-1 {{previous use is here}}

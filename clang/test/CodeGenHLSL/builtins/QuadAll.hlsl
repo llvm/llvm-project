@@ -5,6 +5,8 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPIRV
 
+using namespace hlsl;
+
 // CHECK-LABEL: define {{.*}}test_quad_all{{.*}}(
 // SPIRV: %[[TOKEN:.*]] = call token @llvm.experimental.convergence.entry()
 // DXIL: %[[RET:.*]] = call i1 @llvm.dx.quad.all(i1 %{{.*}})

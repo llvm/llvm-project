@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -Whlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
+using namespace hlsl;
+
 // expected-warning@+1 {{resource has implicit register binding}}
 cbuffer cb0 {
   int a;

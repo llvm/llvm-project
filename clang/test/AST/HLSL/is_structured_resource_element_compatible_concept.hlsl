@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -ast-dump-filter=__is_structured_resource_element_compatible %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: ConceptDecl {{.*}} __is_structured_resource_element_compatible
 // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 element_type
 // CHECK: `-BinaryOperator {{.*}} 'bool' lvalue '&&'

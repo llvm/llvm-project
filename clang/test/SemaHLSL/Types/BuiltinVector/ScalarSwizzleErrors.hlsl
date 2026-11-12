@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 int2 ToTwoInts(int V) {
   return V.xy; // expected-error{{vector component access exceeds type 'vector<int, 1>' (vector of 1 'int' value)}}
 }

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 struct A {
   RWBuffer<float> Buf;
   RWBuffer<float> ManyBufs[5];

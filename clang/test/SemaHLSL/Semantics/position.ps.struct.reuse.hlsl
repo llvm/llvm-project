@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -finclude-default-header -o - %s -ast-dump | FileCheck %s
 
+using namespace hlsl;
+
 struct A {
   float4 x : A;
 // CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:10 referenced x 'float4':'vector<float, 4>'

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-unkown-vulkan1.3-compute -x hlsl -hlsl-entry foo  -finclude-default-header -o - %s -verify
 
+using namespace hlsl;
+
 // expected-error@+1 {{'vk::ext_builtin_input' attribute only applies to static const globals}}
 [[vk::ext_builtin_input(/* WorkgroupId */ 26)]]
 const uint3 groupid1;

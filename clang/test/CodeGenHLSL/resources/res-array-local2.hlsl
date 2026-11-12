@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -finclude-default-header \
 // RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // This test verifies handling of local arrays of resources when used as a function argument.
 
 // Resource array elements are initialized on access; there should never a global

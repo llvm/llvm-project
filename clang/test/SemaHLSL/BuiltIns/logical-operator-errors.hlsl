@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify -DTEST_FUNC=__builtin_hlsl_or
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify -DTEST_FUNC=__builtin_hlsl_and
 
+using namespace hlsl;
+
 
 bool test_too_few_arg(bool a)
 {

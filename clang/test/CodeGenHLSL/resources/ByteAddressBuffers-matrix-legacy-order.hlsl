@@ -4,6 +4,8 @@
 // RUN:   -fspv-use-legacy-buffer-matrix-order -emit-llvm -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,LEGACY
 
+using namespace hlsl;
+
 // Raw buffers carry no layout information. By default, a matrix read from or
 // written to a raw buffer is assumed to be stored in column-major order,
 // matching the native in-register representation, so no reordering is

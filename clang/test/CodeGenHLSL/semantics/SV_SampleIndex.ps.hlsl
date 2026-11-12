@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SPIRV %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -fnative-half-type -fnative-int16-type -disable-llvm-passes -DINT16 -o - %s | FileCheck --check-prefix=SPIRV16 %s
 
+using namespace hlsl;
+
 #ifdef INT16
 #define TYPE int16_t
 #else

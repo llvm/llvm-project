@@ -7,6 +7,8 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck \
 // RUN:   --check-prefix=COMPUTE %s
 
+using namespace hlsl;
+
 #ifdef VERTEX
 [shader("vertex")]
 float4 main() : SV_Position {

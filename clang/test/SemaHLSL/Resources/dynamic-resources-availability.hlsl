@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -fhlsl-strict-availability \
 // RUN:   -triple dxil-pc-shadermodel6.5-library -verify %s
 
+using namespace hlsl;
+
 export void testUnavailable(unsigned Index) {
   
   // expected-error@+2 {{'ResourceDescriptorHeap' is only available on Shader Model 6.6 or newer}}

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=column-major -o - | FileCheck %s
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - | FileCheck %s
 
+using namespace hlsl;
+
 // row_major float2x3 -> 2 rows of <3 x float>, 16-byte row stride:
 //   { [1 x { <3 x float>, pad(4) }], <3 x float> }
 // CHECK: %__cblayout_CB_RM = type <{ <{ [1 x <{ <3 x float>, target("dx.Padding", 4) }>], <3 x float> }> }>

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -emit-llvm -disable-llvm-passes -hlsl-entry main -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // Verify we are calling the correct overloads
 void fn(groupshared float4 Arr[2]);
 void fn(inout float4 Arr[2]);

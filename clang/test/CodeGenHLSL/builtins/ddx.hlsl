@@ -5,6 +5,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s -DCALL=spv.ddx -DVAR=spv.ddx
 
+using namespace hlsl;
+
 // CHECK-LABEL: define {{.*}} half @_ZN4hlsl8__detail8ddx_implIDhEET_S2_
 // CHECK: %[[VAR]] = call {{.*}} half @llvm.[[CALL]].f16(half %{{.*}})
 // CHECK: ret half %[[VAR]]

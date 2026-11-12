@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 float test_no_second_arg(float2 p0) {
   return smoothstep(p0);
   // expected-error@-1 {{no matching function for call to 'smoothstep'}}

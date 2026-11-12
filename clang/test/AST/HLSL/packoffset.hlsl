@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.3-library -S -finclude-default-header -fnative-half-type -fnative-int16-type -ast-dump  -x hlsl %s | FileCheck %s
 
+using namespace hlsl;
+
 
 // CHECK: HLSLBufferDecl {{.*}} cbuffer A
 cbuffer A

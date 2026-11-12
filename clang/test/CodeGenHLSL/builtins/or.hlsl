@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden noundef i1 @_Z14test_or_scalarbb(
 // CHECK-SAME: i1 noundef [[X:%.*]], i1 noundef [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:

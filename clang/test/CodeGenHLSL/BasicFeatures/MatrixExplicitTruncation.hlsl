@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.7-library -disable-llvm-passes -emit-llvm -finclude-default-header -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.7-library -disable-llvm-passes -emit-llvm -finclude-default-header -fmatrix-memory-layout=column-major -o - %s | FileCheck %s --check-prefixes=CHECK,COL-CHECK
 
+using namespace hlsl;
+
 // ROW-CHECK-LABEL: define hidden noundef <12 x i32> @_Z10trunc_castu11matrix_typeILm4ELm4EiE(
 // ROW-CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0:[0-9]+]] {
 // ROW-CHECK-NEXT:  [[ENTRY:.*:]]

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: %__cblayout_CBScalars = type <{
 // CHECK-SAME:   float, target("dx.Padding", 4), double,
 // CHECK-SAME:   half, target("dx.Padding", 6), i64,

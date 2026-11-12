@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -fsyntax-only -finclude-default-header -verify -DSCALAR_FIRST %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -fsyntax-only -finclude-default-header -verify -USCALAR_FIRST %s
 
+using namespace hlsl;
+
 // Texture resource classes are declared as a primary class template, used for
 // scalar element types, plus a partial specialization used for vector element
 // types. Both patterns are only defined on demand by HLSLExternalSemaSource, so

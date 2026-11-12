@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes -finclude-default-header -ast-dump -ast-dump-filter=case %s | FileCheck %s
 
+using namespace hlsl;
+
 struct TwoFloats {
   float X, Y;
 };

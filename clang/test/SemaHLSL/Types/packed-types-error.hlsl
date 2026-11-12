@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -fsyntax-only -verify -triple dxil-unknown-shadermodel6.6-library %s
 
+using namespace hlsl;
+
 typedef float int8_t4_packed; // expected-error {{cannot combine with previous 'float' declaration specifier}} expected-warning {{typedef requires a name}}
 typedef float uint8_t4_packed; // expected-error {{cannot combine with previous 'float' declaration specifier}} expected-warning {{typedef requires a name}}
 

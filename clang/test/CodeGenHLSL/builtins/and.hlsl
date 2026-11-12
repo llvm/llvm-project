@@ -3,6 +3,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden noundef i1 @_Z15test_and_scalarbb(
 // CHECK-SAME: i1 noundef [[X:%.*]], i1 noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -finclude-default-header -disable-llvm-passes -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROW
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -finclude-default-header -disable-llvm-passes -fmatrix-memory-layout=column-major -o - %s | FileCheck %s --check-prefixes=CHECK,COLUMN
 
+using namespace hlsl;
+
 // Explicit layout overrides the default. A row-major 2x3 matrix occupies two
 // signature rows, but direct arguments and returns are column-major vectors.
 [shader("vertex")]

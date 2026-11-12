@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes -emit-llvm -finclude-default-header -o - -fmatrix-memory-layout=column-major %s | FileCheck %s --check-prefixes=CHECK,COL-CHECK
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes -emit-llvm -finclude-default-header -o - -fmatrix-memory-layout=row-major %s | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z2fnu11matrix_typeILm2ELm2EfE(
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

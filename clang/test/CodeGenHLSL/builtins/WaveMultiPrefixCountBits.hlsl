@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.5-library %s -emit-llvm \
 // RUN:   -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_bool
 uint test_bool(bool value, uint4 mask) {
   // CHECK: %[[TOKEN:.*]] = call token @llvm.experimental.convergence.entry()

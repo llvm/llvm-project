@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -fsyntax-only -finclude-default-header %s -verify
 
+using namespace hlsl;
+
 // unbounded resource array parameter whose resource type has not been used earlier
 // expected-error@+1 {{incomplete resource array in a function parameter}}
 void no_prior_use(RWByteAddressBuffer array_arg[]) {}

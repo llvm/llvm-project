@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-compute -verify %s
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.8-library -verify %s
 
+using namespace hlsl;
+
 #ifndef __spirv__
 // expected-warning@+2{{'vk::constant_id' attribute ignored}}
 #endif

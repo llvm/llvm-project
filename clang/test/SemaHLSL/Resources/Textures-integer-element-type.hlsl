@@ -19,6 +19,8 @@
 // RUN:   -DTEXTURE=Texture2D -DGRAD_TYPE=float2 -DCOORD_TYPE=float2 \
 // RUN:   -verify=expected %s
 
+using namespace hlsl;
+
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
 //

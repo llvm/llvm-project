@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -finclude-default-header -emit-pch -o %t %S/Inputs/pch.hlsl
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -finclude-default-header -include-pch %t -ast-dump-all %s | FileCheck  %s
 
+using namespace hlsl;
+
 float3x2 gM;
 
 // CHECK: FunctionDecl {{.*}} getRow 'float2 (uint)'

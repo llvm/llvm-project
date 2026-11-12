@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan-compute -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 struct S {
   uint32_t a : 1;
   uint32_t b : 1;

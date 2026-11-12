@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.7-library -disable-llvm-passes -emit-llvm -finclude-default-header -fmatrix-memory-layout=row-major -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 cbuffer CB {
   float3x2 Mat;
 }

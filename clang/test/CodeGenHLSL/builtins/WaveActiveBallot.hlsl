@@ -5,6 +5,8 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
+using namespace hlsl;
+
 // Test basic lowering to runtime function call for int values.
 
 // CHECK-LABEL: define {{.*}}test

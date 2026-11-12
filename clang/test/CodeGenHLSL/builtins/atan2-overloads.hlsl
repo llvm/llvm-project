@@ -2,6 +2,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm  \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" 
 
+using namespace hlsl;
+
 // CHECK: define [[FNATTRS]] float @_Z17test_atan2_doubledd(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[CONV1I:%.*]] = fptrunc {{.*}} double %{{.*}} to float

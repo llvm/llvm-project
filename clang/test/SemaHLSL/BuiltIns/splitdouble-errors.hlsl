@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -verify
 
+using namespace hlsl;
+
 void test_no_second_arg(double D) {
   __builtin_hlsl_elementwise_splitdouble(D);
  // expected-error@-1 {{too few arguments to function call, expected 3, have 1}}

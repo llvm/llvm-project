@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 int2x2 test_first_arg_wrong_type(int2x2 p0, int2x2 t0, int2x2 f0) {
   // expected-error@+4{{cannot pass object of non-trivial type 'int2x2' (aka 'matrix<int, 2, 2>') through variadic function; call will abort at runtime}}
   // expected-error@+3{{cannot pass object of non-trivial type 'int2x2' (aka 'matrix<int, 2, 2>') through variadic function; call will abort at runtime}}

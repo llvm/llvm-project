@@ -2,6 +2,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: define {{.*}} void @_Z1fu14int8_t4_packedu15uint8_t4_packed(i32 %{{.*}}, i32 %{{.*}})
 void f(int8_t4_packed s_arg, uint8_t4_packed u_arg) {
   // CHECK: %{{.*}} = alloca i32, align 4

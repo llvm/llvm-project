@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 int test_too_few_arg0() {
   return __builtin_hlsl_dot4add_u8packed();
   // expected-error@-1 {{too few arguments to function call, expected 3, have 0}}

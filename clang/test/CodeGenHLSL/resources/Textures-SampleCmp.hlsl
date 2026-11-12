@@ -16,6 +16,8 @@
 // RUN:   -DCOORD_LLVM=float -DCOORD_CXX=float -DOFFSET_LLVM=i32 \
 // RUN:   -DOFFSET_CXX=int -DOFFSET_ZERO=0
 
+using namespace hlsl;
+
 // Texture1DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DOFFSET_ARG="1" \

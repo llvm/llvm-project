@@ -5,6 +5,8 @@
 // RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s
 
+using namespace hlsl;
+
  half2 half_vec_mod_by_int(half2 p1) {
 // CHECK-LABEL: half_vec_mod_by_int
 // CHECK: %rem = frem reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, splat (half 2.000000e+00)

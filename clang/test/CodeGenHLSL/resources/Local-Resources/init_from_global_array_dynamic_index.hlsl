@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -O1 -o - | FileCheck %s
 
+using namespace hlsl;
+
 RWByteAddressBuffer GBufArray[4] : register(u0);
 
 // CHECK-LABEL: define {{.*}}@main(

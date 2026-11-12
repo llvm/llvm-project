@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 export double2 double_vec_mod_by_int(double2 p1) {
     return  p1 % 2;
     // expected-error@-1 {{invalid operands to binary expression ('double2' (aka 'vector<double, 2>') and 'int')}}

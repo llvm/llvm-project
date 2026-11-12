@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -include-pch %t.pch %s -ast-dump | FileCheck --check-prefix=AST %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -include-pch %t.pch %s -ast-print | FileCheck %s
 
+using namespace hlsl;
+
 
 #ifndef TEST_HLSL
 #define TEST_HLSL

@@ -18,6 +18,8 @@
 // RUN:   -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DDIM=2 \
 // RUN:   -DOFFSET_CONST="<i32 1, i32 2>"
 
+using namespace hlsl;
+
 // Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \

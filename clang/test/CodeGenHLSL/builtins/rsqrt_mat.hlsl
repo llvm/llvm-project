@@ -17,6 +17,8 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DTARGET=spv
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_rsqrt_half1x2
 // NATIVE_HALF: %hlsl.rsqrt = call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.[[TARGET]].rsqrt.v2f16
 // NATIVE_HALF: ret <2 x half>

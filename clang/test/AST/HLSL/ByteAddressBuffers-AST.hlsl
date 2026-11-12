@@ -30,6 +30,8 @@
 
 #ifndef EMPTY
 
+using namespace hlsl;
+
 RESOURCE Buffer;
 
 #endif

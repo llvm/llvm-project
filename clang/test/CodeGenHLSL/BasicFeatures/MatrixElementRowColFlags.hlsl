@@ -5,6 +5,8 @@
 // RUN:   -emit-llvm -finclude-default-header -fmatrix-memory-layout=row-major \
 // RUN:   -o - %s | FileCheck %s --check-prefixes=CHECK,ROW
 
+using namespace hlsl;
+
 // For a float3x2 matrix (3 rows, 2 columns):
 //   Column-major flat vector: [_11, _21, _31, _12, _22, _32]
 //                         idx:  0    1    2    3    4    5

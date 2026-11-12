@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 struct EmptyStruct {
 };
 

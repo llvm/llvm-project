@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -ast-dump | FileCheck %s
 
+using namespace hlsl;
+
 typedef vector<int,4> int8[2];
 
 export void fn(int8 A) {

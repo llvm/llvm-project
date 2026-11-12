@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // NOTE: This test is only to confirm we can do codgen with the matrix alias.
 
 // CHECK-LABEL: define {{.*}}transpose_half_2x2

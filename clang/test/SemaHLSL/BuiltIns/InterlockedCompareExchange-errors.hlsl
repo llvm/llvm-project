@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only \
 // RUN:   -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 // InterlockedCompareExchange is provided as a set of address-space-qualified
 // overloads (groupshared/device, {int,uint,int64_t,uint64_t}). It reports the
 // value that was in the destination, so it has a single 4-argument form with a

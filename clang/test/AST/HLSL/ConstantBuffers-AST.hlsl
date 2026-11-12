@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: ClassTemplateDecl {{.*}} ConstantBuffer
 // CHECK: TemplateTypeParmDecl {{.*}} element_type
 // CHECK: CXXRecordDecl {{.*}} ConstantBuffer definition

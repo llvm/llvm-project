@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -emit-llvm -disable-llvm-passes \
 // RUN:     -finclude-default-header -o - -DCHECK2 %s | FileCheck %s -check-prefix=CHECK2
 
+using namespace hlsl;
+
 // Regression test for issue llvm/llvm-project#183788
 
 // empty struct

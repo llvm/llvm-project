@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -finclude-default-header -Wno-ignored-attributes -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,PS -DAS=7 -DBUILTIN=15
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-vertex -DVERTEX -finclude-default-header -Wno-ignored-attributes -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,VS -DAS=8 -DBUILTIN=0
 
+using namespace hlsl;
+
 struct Inner {
   float inherited;
   linear float overridden;

@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.8-library %s -fsyntax-only -verify
 // expected-no-diagnostics
 
+using namespace hlsl;
+
 RWBuffer<float> UAVBuffer;
 
 [shader("vertex")]

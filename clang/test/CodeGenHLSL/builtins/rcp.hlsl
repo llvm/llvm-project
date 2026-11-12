@@ -13,6 +13,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF,SPIR_NO_HALF,SPIR_CHECK
 
+using namespace hlsl;
+
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) half @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) half @
 // NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn half 1.000000e+00, %{{.*}} 

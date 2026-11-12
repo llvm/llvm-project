@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // array splat
 // CHECK-LABEL: define void {{.*}}call4
 // CHECK: [[B:%.*]] = alloca [2 x i32], align 4

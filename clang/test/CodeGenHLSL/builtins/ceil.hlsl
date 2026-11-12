@@ -5,6 +5,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+using namespace hlsl;
+
 using hlsl::ceil;
 
 // NATIVE_HALF-LABEL: define hidden noundef nofpclass(nan inf) half @_Z14test_ceil_half

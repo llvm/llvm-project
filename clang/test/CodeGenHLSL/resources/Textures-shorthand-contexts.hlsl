@@ -7,6 +7,8 @@
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 -DDXIL_TY=2 -DRW=0 \
 // RUN:   --check-prefixes=CHECK,CHECK-TEXEL
 
+using namespace hlsl;
+
 // Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -emit-llvm -disable-llvm-passes \

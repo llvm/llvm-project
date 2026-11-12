@@ -6,6 +6,8 @@
 // RUN:   -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_select_bool_int
 // CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, i32 {{%.*}}, i32 {{%.*}}
 // CHECK: ret i32 [[SELECT]]

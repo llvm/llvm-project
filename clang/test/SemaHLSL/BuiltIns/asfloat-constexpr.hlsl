@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library -fexperimental-new-constant-interpreter %s -verify
 
+using namespace hlsl;
+
 // expected-no-diagnostics
 
 // Because asfloat should be constant evaluated, all the static asserts below

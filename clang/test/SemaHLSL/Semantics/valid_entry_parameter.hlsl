@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -hlsl-entry CSMain -finclude-default-header -ast-dump  -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 [numthreads(8,8,1)]
 void CSMain(uint ID : SV_DispatchThreadID) {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:6 CSMain 'void (uint)'

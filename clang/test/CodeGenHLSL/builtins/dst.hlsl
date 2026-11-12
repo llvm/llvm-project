@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.2-library %s -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 
 // CHECK-LABEL: define {{.*}} <4 x float> @{{[A-Za-z1-9_]+}}dstWithFloat{{[A-Za-z1-9_]*}}(
 // CHECK-SAME: <4 x float> {{[A-Za-z )(]*}} [[P:%.*]], <4 x float> {{[A-Za-z )(]*}} [[Q:%.*]]) #[[ATTR0:[0-9]+]] {

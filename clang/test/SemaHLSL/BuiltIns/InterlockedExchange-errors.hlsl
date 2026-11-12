@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only \
 // RUN:   -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 // InterlockedExchange is provided as a set of address-space-qualified
 // overloads (groupshared/device, {int,uint,int64_t,uint64_t,float}). It always
 // reports the previous value, so there is no 2-argument form. Only 32-bit

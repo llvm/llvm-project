@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-vulkan-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
+using namespace hlsl;
+
 // Scenario 1: Basic Padding (No row crossing).
 struct Basic {
   float3 a;

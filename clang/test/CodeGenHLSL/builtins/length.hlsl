@@ -3,6 +3,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s
 
+using namespace hlsl;
+
 // RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN: spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -O1 -o - | FileCheck %s --check-prefix=SPVCHECK

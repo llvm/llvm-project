@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-library -std=hlsl202x -emit-llvm-only -disable-llvm-passes %s 2>&1 | FileCheck %s
 
+using namespace hlsl;
+
 float2 clamp_test1(float2 p0, float2 p1, float p2) {
   // CHECK: warning: 'clamp<float, 2U>' is deprecated: In 202x mismatched vector/scalar lowering for clamp is deprecated. Explicitly cast parameters.
   return clamp(p0, p1, p2);

@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only \
 // RUN:   -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 // InterlockedCompareStore is provided as a set of address-space-qualified
 // overloads (groupshared/device, {int,uint,int64_t,uint64_t}). It reports
 // nothing, so it has a single 3-argument form and no out parameter.

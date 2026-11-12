@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.7-library %s -fhlsl-strict-availability \
 // RUN:   -fsyntax-only -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 RWBuffer<float> UAVBuffer;
 
 void test_availability() {

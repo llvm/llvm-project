@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only -Wno-legacy-constant-register-binding %s -verify
 
+using namespace hlsl;
+
 // expected-no-diagnostics
 float f2 : register(b9);
 

@@ -71,12 +71,13 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   defineHLSLTypesWithForwardDeclarations();
   defineHLSLAtomicIntrinsics();
 
+  if (SemaPtr->getLangOpts().getHLSLVersion() >= LangOptions::HLSL_202x)
+    return;
+
   // This adds a `using namespace hlsl` directive. In DXC, we don't put HLSL's
   // built in types inside a namespace, but we are planning to change that in
-  // the near future. In order to be source compatible older versions of HLSL
-  // will need to implicitly use the hlsl namespace. For now in clang everything
-  // will get added to the namespace, and we can remove the using directive for
-  // future language versions to match HLSL's evolution.
+  // the near future. In order to be source compatible, HLSL before 202x
+  // will need to implicitly use the hlsl namespace.
   auto *UsingDecl = UsingDirectiveDecl::Create(
       AST, AST.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
       NestedNameSpecifierLoc(), SourceLocation(), HLSLNamespace,

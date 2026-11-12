@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
+using namespace hlsl;
+
 // The following code is allowed because the `SV_Position` semantic is here
 // translated into a SPIR-V builtin. Meaning there is no implicit `Location`
 // assignment.

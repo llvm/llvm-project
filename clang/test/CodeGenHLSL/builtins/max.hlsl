@@ -5,6 +5,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+using namespace hlsl;
+
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF-LABEL: define hidden noundef i16 @_Z14test_max_short
 // NATIVE_HALF: call i16 @llvm.smax.i16(

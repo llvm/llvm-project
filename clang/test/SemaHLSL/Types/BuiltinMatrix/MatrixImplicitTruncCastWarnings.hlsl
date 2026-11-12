@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 export int3x4 trunc_cast(int4x4 i44) {
     int3x4 i34 = i44;
     // expected-warning@-1{{implicit conversion truncates matrix: 'int4x4' (aka 'matrix<int, 4, 4>') to 'int3x4' (aka 'matrix<int, 3, 4>')}}

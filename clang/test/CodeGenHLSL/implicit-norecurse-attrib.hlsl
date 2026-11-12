@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -x hlsl -triple dxil-pc-shadermodel6.3-library  -finclude-default-header %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 // RUN: %clang_cc1 -x hlsl -triple dxil-pc-shadermodel6.0-compute  -finclude-default-header %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // Verify that a few different function types all get the NoRecurse attribute
 
 #define MAX 100

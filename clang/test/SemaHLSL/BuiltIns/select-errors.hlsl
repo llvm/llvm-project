@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 
 int test_select_first_arg_wrong_type(int1 p0, int t0, int f0) {
   return select(p0, t0, f0); // expected-warning{{implicit conversion turns vector to scalar: 'int1' (aka 'vector<int, 1>') to 'bool'}}

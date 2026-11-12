@@ -8,6 +8,8 @@
 // CHECK: [[Buf5:@.*]] = private unnamed_addr constant [5 x i8] c"Buf5\00"
 // CHECK: [[Buf6:@.*]] = private unnamed_addr constant [5 x i8] c"Buf6\00"
 
+using namespace hlsl;
+
 [[vk::binding(23, 102)]] StructuredBuffer<float> Buf;
 [[vk::binding(14, 1)]] StructuredBuffer<float> Buf2 : register(t23, space102);
 [[vk::binding(14)]] StructuredBuffer<float> Buf3 : register(t23, space102);

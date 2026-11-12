@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library -Wno-conversion -Wno-vector-conversion -Wno-matrix-conversion -verify %s
 
+using namespace hlsl;
+
 // expected-no-diagnostics
 
 void test() {

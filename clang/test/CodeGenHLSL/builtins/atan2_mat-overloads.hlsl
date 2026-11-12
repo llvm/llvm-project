@@ -5,6 +5,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm  \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK -DSPIR_FUNC="spir_func "
 
+using namespace hlsl;
+
 
 // CHECK: define hidden [[SPIR_FUNC]]noundef nofpclass(nan inf) <12 x float> @_{{.*}}test_atan2_double3x4{{.*}}(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} <12 x double> %{{.*}} to <12 x float>

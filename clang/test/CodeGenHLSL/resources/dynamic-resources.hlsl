@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-vulkan-library \
 // RUN:   -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPV
 
+using namespace hlsl;
+
 // CHECK: %S = type <{ i32 }>
 
 // CHECK: @hlsl::ResourceDescriptorHeap = internal {{.*}}global %"struct.hlsl::__detail::resource_descriptor_heap_struct" zeroinitializer, align 1

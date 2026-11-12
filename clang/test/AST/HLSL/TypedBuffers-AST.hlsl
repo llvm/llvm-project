@@ -12,6 +12,8 @@
 // RUN:   -DRESOURCE=Buffer %s | FileCheck -DRESOURCE=Buffer \
 // RUN:   -check-prefixes=CHECK,CHECK-SRV %s
 
+using namespace hlsl;
+
 // TODO: Add AST tests for RasterizerOrderedBuffer here
 
 // This test tests two different AST generations each typed buffer.

@@ -2,6 +2,8 @@
 // RUN:  -emit-llvm -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK -DFNATTRS="hidden noundef nofpclass(nan inf)"
 
+using namespace hlsl;
+
 // CHECK: define [[FNATTRS]] float @_Z15test_cos_doubled(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[V2:%.*]] = call {{.*}} float @llvm.cos.f32(float [[CONVI]])

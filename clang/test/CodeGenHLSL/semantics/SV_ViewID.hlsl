@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck --check-prefixes=CHECK-SPIRV,SPIRV-VS %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck --check-prefixes=CHECK-SPIRV,SPIRV-PS %s
 
+using namespace hlsl;
+
 #if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL
 #define OUTPUT SV_Target
 #else

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header \
 // RUN:   -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s -check-prefixes=CHECK
 
+using namespace hlsl;
+
 // CHECK: [[BufA:@.*]] = private unnamed_addr constant [2 x i8] c"A\00", align 1
 // CHECK: [[BufB:@.*]] = private unnamed_addr constant [2 x i8] c"B\00", align 1
 

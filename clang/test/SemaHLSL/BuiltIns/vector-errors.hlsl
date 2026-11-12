@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 // Some bad declarations
 hlsl::vector ShouldWorkSomeday; // expected-error{{use of alias template 'hlsl::vector' requires template arguments}}
 // expected-note@*:* {{template declaration from hidden source: template <class element = float, int element_count = 4> using vector = vector<element, element_count>}}

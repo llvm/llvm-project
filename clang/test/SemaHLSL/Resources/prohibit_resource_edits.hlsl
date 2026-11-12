@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -o - -fsyntax-only %s -verify
 
+using namespace hlsl;
+
 RWBuffer<float> A[10]; // expected-note {{variable 'A' is declared here}} expected-note {{variable 'A' is declared here}} // expected-note {{variable 'A' is declared here}}
 RWBuffer<float> B;     // expected-note {{variable 'B' is declared here}}
 RWBuffer<float> C[10];

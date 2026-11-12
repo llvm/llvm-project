@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -fsyntax-only -verify
 
+using namespace hlsl;
+
 // expected-error@hlsl/hlsl_spirv.h:18 {{the argument to vk::Literal must be a vk::integral_constant}}
 
 typedef vk::SpirvOpaqueType<28, vk::Literal<float>> T; // #1

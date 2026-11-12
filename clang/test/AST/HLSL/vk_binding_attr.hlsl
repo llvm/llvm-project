@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-library -finclude-default-header -ast-dump -o - %s | FileCheck %s -check-prefixes=SPV,CHECK
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.8-library -finclude-default-header -ast-dump -o - %s | FileCheck %s -check-prefixes=DXIL,CHECK
 
+using namespace hlsl;
+
 // CHECK: VarDecl {{.*}} Buf 'StructuredBuffer<float>':'hlsl::StructuredBuffer<float>'
 // CHECK-NEXT: CallExpr {{.*}} 'StructuredBuffer<float>':'hlsl::StructuredBuffer<float>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::StructuredBuffer<float> (*)(unsigned int, unsigned int, int, unsigned int, const char *)' <FunctionToPointerDecay>

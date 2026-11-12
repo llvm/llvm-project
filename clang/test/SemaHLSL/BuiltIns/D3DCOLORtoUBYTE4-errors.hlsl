@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 int4 test_too_few_arg() {
   return D3DCOLORtoUBYTE4();
   // expected-error@-1 {{no matching function for call to 'D3DCOLORtoUBYTE4'}}

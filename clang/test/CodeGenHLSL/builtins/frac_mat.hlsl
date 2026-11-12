@@ -17,6 +17,8 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:   -DTARGET=spv
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_frac_half1x2
 // NATIVE_HALF: %hlsl.frac = call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.[[TARGET]].frac.v2f16
 // NATIVE_HALF: ret <2 x half>

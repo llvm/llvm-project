@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -fnative-half-type -fexperimental-new-constant-interpreter -verify %s
 // expected-no-diagnostics
 
+using namespace hlsl;
+
 
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(int), "");
 _Static_assert(__builtin_hlsl_is_typed_resource_element_compatible(float), "");

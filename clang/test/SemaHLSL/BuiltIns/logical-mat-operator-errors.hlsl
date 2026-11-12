@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify -DTEST_FUNC=or
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify -DTEST_FUNC=and
 
+using namespace hlsl;
+
 bool2x2 test_mismatched_args(bool2x2 a, bool3x3 b)
 {
   return TEST_FUNC(a, b);

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -x hlsl -ast-dump %s | FileCheck %s
 
+using namespace hlsl;
+
 typedef uint4 uint32_t4;
 typedef uint32_t4 uint32_t8[2];
 

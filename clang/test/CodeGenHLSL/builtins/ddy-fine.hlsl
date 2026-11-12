@@ -5,6 +5,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s -DTGT=spv
 
+using namespace hlsl;
+
 // CHECK-LABEL: half @_Z17test_f16_ddy_fineDh
 // CHECK: %hlsl.ddy.fine = call {{.*}} half @llvm.[[TGT]].ddy.fine.f16(half %{{.*}})
 // CHECK: ret half %hlsl.ddy.fine

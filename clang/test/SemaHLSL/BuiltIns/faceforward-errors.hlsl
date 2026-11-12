@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 float test_double_inputs(double p0, double p1, double p2) {
   return faceforward(p0, p1, p2);
   // expected-error@-1  {{call to 'faceforward' is ambiguous}}

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -x hlsl -verify -o - %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
 
+using namespace hlsl;
+
 // SV_ShadingRate is not an input in mesh or amplification shaders
 
 [shader("mesh")]

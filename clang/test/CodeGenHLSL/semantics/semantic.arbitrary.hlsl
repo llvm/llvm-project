@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV -DTARGET=spv
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL -DTARGET=dx
 
+using namespace hlsl;
+
 // CHECK-SPIRV-DAG:  @AAA0 = external hidden thread_local addrspace(7) externally_initialized constant float, !spirv.Decorations ![[#METADATA_0:]]
 // CHECK-SPIRV-DAG:    @B0 = external hidden thread_local addrspace(7) externally_initialized constant i32, !spirv.Decorations ![[#METADATA_2:]]
 // CHECK-SPIRV-DAG:   @CC0 = external hidden thread_local addrspace(7) externally_initialized constant <2 x float>, !spirv.Decorations ![[#METADATA_4:]]

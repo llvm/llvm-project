@@ -5,6 +5,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_normalize_half
 // CHECK: [[ABS:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) half @llvm.fabs.f16(half %{{.*}})
 // CHECK-NEXT: [[RET:%.*]] = fdiv reassoc nnan ninf nsz arcp afn half %{{.*}}, [[ABS]]

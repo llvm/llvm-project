@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
 
+using namespace hlsl;
+
 // Tests that user functions will always be inlined.
 // This includes exported functions and mangled entry point implementation functions.
 // The unmangled entry functions must not be alwaysinlined.

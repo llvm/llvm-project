@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -emit-llvm-only -disable-llvm-passes -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 float test_no_second_arg(float2 p0) {
   return __builtin_hlsl_dot(p0);
   // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}

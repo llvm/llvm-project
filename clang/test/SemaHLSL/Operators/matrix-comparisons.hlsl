@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -Wno-implicit-int-float-conversion %s -ast-dump -ast-dump-filter=test | FileCheck %s
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -Wno-implicit-int-float-conversion %s -DERRORS -verify
 
+using namespace hlsl;
+
 // CHECK-LABEL: FunctionDecl {{.*}} test_matrix_matrix 'bool2x2 (float2x2, float2x2)'
 // CHECK: BinaryOperator {{.*}} 'matrix<bool, 2, 2>' '<'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x2':'matrix<float, 2, 2>' <LValueToRValue>

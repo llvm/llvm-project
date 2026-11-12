@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DMS -o - %s | FileCheck %s -DTEXTURE=Texture2DMS -DINDEX_SIZE=2
 
+using namespace hlsl;
+
 // The class template: an `element_type` type parameter followed by an `int`
 // `sample_count` non-type parameter that defaults to 0.
 // CHECK: ClassTemplateDecl {{.*}} [[TEXTURE]]

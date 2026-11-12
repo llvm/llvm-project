@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 [shader("compute")][numthreads(1,1,1)]
 void empty_input(uint V[0] : SV_GroupIndex) {}
 // expected-error@-1 {{semantic 'SV_GroupIndex' cannot be applied to a zero-sized array}}

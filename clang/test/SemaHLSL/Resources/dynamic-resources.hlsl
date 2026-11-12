@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library -verify %s
 
+using namespace hlsl;
+
 void useBuffer(RWBuffer<int> Buffer) {}
 void useSampler(SamplerState Sampler) {}
 

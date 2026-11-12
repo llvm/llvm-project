@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: define linkonce_odr hidden noundef nofpclass(nan inf) half @_ZN4hlsl5ldexpEDhDh
 // CHECK: [[EXP2:%.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.exp2.f16(half %{{.*}})
 // CHECK: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[EXP2]], %{{.*}}

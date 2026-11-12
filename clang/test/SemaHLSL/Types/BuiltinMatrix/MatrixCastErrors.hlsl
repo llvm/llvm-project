@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -std=hlsl202x -verify %s
 
+using namespace hlsl;
+
 // Note column is too large
 export int3x2 shape_cast_error(float2x3 f23) {
     int3x2 i32 = (int3x2)f23;

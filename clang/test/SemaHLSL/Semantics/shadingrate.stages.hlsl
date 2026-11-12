@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -finclude-default-header -x hlsl -verify -o - %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
 
+using namespace hlsl;
+
 // Stage and IO direction checks for SV_ShadingRate: a vertex output and a pixel input.
 // Type and index checks are covered by shadingrate.ps.hlsl.
 

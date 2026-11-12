@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
 
+using namespace hlsl;
+
 // SV_ShadingRate lowers to a BuiltIn, not a Location. It must therefore not
 // count towards the explicit/implicit vk::location consistency check or
 // advance the implicit location index.

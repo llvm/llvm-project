@@ -14,6 +14,8 @@
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue
 // NonTypeTemplateParm {{.*}} 'element_count' 'int'
 
+using namespace hlsl;
+
 // Make sure we got a using directive at the end.
 // CHECK: UsingDirectiveDecl {{.*}} Namespace {{.*}} 'hlsl'
 

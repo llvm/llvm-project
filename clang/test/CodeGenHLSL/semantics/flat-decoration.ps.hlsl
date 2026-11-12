@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-SPIRV
 
+using namespace hlsl;
+
 // CHECK-SPIRV-DAG:  @A0 = external hidden thread_local addrspace(7) externally_initialized constant float, !spirv.Decorations ![[#FLOAT_MD:]]
 // CHECK-SPIRV-DAG:  @B0 = external hidden thread_local addrspace(7) externally_initialized constant i32, !spirv.Decorations ![[#INT_MD:]]
 // CHECK-SPIRV-DAG:  @C0 = external hidden thread_local addrspace(7) externally_initialized constant double, !spirv.Decorations ![[#DOUBLE_MD:]]

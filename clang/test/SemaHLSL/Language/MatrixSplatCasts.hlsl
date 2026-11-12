@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -fnative-half-type %s -ast-dump | FileCheck %s
 
+using namespace hlsl;
+
 // Test matrix splats where the initializer scalar type differs from matrix element type.
 
 // Bool to int matrix splat

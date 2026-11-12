@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.2-library %s -fnative-half-type -fnative-int16-type -emit-llvm -O1 -o - | FileCheck %s
 
+using namespace hlsl;
+
 //CHECK-LABEL: define {{.*}}test_ints
 //CHECK-SAME: {{.*}}(i16 {{.*}} [[VAL:%.*]]){{.*}}
 //CHECK-NOT: bitcast

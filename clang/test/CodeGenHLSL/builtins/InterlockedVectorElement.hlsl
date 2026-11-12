@@ -2,6 +2,8 @@
 // RUN:   dxil-pc-shadermodel6.6-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,DXCHECK
 
+using namespace hlsl;
+
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK

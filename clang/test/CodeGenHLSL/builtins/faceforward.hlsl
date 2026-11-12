@@ -5,6 +5,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_faceforward_half
 // CHECK: %hlsl.dot.i = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK: %cmp.i = fcmp reassoc nnan ninf nsz arcp afn olt half %hlsl.dot.i, 0.000000e+00

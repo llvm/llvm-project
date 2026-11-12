@@ -6,6 +6,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+using namespace hlsl;
+
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF-LABEL: test_max_short1x2
 // NATIVE_HALF: call <2 x i16> @llvm.smax.v2i16(<2 x i16> %{{.*}}, <2 x i16> %{{.*}})

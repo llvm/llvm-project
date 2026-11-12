@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 // Vertex return declarations have the same interpolation restrictions as pixel
 // inputs. Check the return type, not the function type.
 [shader("vertex")]

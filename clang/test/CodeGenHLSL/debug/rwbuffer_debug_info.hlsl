@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -x hlsl -emit-llvm -disable-llvm-passes -o - -hlsl-entry main %s -debug-info-kind=standalone -dwarf-version=4  | FileCheck %s
 
+using namespace hlsl;
+
 
 // CHECK: [[DWTag:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "RWBuffer<float>",
 // CHECK: [[thisType:![0-9]+]] = !DIDerivedType(tag: DW_TAG_reference_type, baseType: [[DWTag]], size: 32)

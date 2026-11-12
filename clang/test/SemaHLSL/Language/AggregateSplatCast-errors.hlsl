@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 struct S {
   int A : 8;
   int B;

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DMS -DLOCATION_TYPE=int2 -o - %s | FileCheck %s --check-prefix=DXIL -DCOORD_DIM=2 -DKIND=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DMS -DLOCATION_TYPE=int2 -o - %s | FileCheck %s --check-prefix=SPIRV -DCOORD_DIM=2 -DARRAYED=0
 
+using namespace hlsl;
+
 // Load on a multisampled texture takes a separate sample index (rather than a
 // packed mip level) and lowers to the MS-specific resource.load.ms intrinsic on
 // a dx.MSTexture (DXIL) / multisampled spirv.Image (SPIR-V) handle. The correct

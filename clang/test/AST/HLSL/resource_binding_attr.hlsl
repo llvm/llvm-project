@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -ast-dump -o - %s | FileCheck %s -check-prefixes=CHECK,DXIL
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-library -finclude-default-header -ast-dump -o - %s | FileCheck %s -check-prefixes=CHECK,SPV
 
+using namespace hlsl;
+
 // CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 4]]:9 cbuffer CB
 // CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "b3" "space2"

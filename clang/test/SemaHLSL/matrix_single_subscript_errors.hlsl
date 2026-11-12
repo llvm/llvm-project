@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -finclude-default-header -verify %s
 
+using namespace hlsl;
+
 float2x3 gM;
 
 void bad_index_type(float f) {

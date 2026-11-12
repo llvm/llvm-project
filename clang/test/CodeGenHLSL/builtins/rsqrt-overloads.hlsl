@@ -11,6 +11,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 // CHECK: define [[FNATTRS]] float @_Z17test_rsqrt_doubled(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[HLSLRSQRTI:%.*]] = call {{.*}} float @llvm.[[TARGET]].rsqrt.f32(float [[CONVI]])

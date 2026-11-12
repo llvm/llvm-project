@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fsyntax-only -verify
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-library %s -fnative-half-type -fsyntax-only -verify
 
+using namespace hlsl;
+
 // expected-no-diagnostics
 
 void test_long_vector_types(vector<half, 5> H, vector<float, 5> F) {

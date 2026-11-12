@@ -3,6 +3,8 @@
 // RUN:   -fnative-half-type -fnative-int16-type -emit-llvm -o - \
 // RUN:   | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_step_half2x3
 // CHECK: [[CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <6 x half> %{{.*}}, %{{.*}}
 // CHECK: select reassoc nnan ninf nsz arcp afn <6 x i1> [[CMP]], <6 x half> zeroinitializer, <6 x half> splat (half 1.000000e+00)

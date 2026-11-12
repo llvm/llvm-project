@@ -6,6 +6,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,DXCHECK
 
+using namespace hlsl;
+
 //
 // ---------- No Native Half support test -----------
 //

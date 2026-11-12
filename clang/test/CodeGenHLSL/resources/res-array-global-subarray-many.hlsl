@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-compute -finclude-default-header \
 // RUN:   -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: @[[BufA:.*]] = private unnamed_addr constant [2 x i8] c"A\00", align 1
 
 RWBuffer<float> A[5][4][3][2] : register(u10, space2);

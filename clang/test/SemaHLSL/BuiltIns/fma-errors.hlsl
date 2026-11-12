@@ -7,6 +7,8 @@
 // RUN:   -emit-llvm-only -disable-llvm-passes -verify \
 // RUN:   -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 float bad_float(float a, float b, float c) {
   // Overload resolution selects 'double fma(double, double, double)'; args promoted to double.
   return fma(a, b, c);

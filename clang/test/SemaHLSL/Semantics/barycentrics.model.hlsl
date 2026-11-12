@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.1-library -finclude-default-header -x hlsl -verify=ok -o - %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify=ok -o - %s
 
+using namespace hlsl;
+
 // SV_Barycentrics requires shader model 6.1 for DXIL.
 // The shader model does not apply to SPIR-V, which is only run to check that no error is emitted.
 

@@ -2,6 +2,8 @@
 // RUN:   -fmath-errno -ffp-contract=on -fno-rounding-math -finclude-default-header \
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 int test_too_few_arg() {
   return __builtin_hlsl_wave_prefix_count_bits();
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}

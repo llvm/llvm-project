@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 struct Inner {
     uint b : B;
 };

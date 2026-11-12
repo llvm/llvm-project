@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -fnative-half-type -fnative-int16-type -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 struct S {
   int X;
   float Y;

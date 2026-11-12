@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -ast-dump %s | FileCheck %s
 
+using namespace hlsl;
+
 struct MyStruct {
   float f;
   RWBuffer<float> Buf;

@@ -7,6 +7,8 @@
 // RUN: %clang_cc1 -finclude-default-header -DTEST_AVAILABILITY \
 // RUN:   -triple dxil-pc-shadermodel6.4-library -verify=availability %s
 
+using namespace hlsl;
+
 #ifdef TEST_AVAILABILITY
 [shader("compute")]
 [numthreads(1, 1, 1)]

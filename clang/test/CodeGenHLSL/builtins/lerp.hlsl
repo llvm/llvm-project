@@ -5,6 +5,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s %}
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_lerp_half
 // CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, [[SUB]]

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.0-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: define internal{{.*}} void @__cxx_global_var_init()
 // CHECK: [[entry_token:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK: br label %[[loop_entry:.*]]

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -fsyntax-only -verify -DTEXTURE=Texture2DMS -DLOCATION_TYPE=int2 -DINDEX_TYPE=uint2 %s
 
+using namespace hlsl;
+
 // A multisampled texture supports the sample-indexed Load and operator[], but
 // does not support Sample/SampleBias/SampleGrad/SampleLevel/SampleCmp, Gather,
 // CalculateLevelOfDetail, or mips.

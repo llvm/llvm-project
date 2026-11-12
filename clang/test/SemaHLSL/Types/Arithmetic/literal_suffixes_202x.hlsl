@@ -7,6 +7,8 @@
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -finclude-default-header -fexperimental-new-constant-interpreter -verify %s
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -finclude-default-header -fexperimental-new-constant-interpreter -verify -fnative-half-type %s
 
+using namespace hlsl;
+
 // This test is adapted from the test in DXC:
 // tools/clang/test/SemaHLSL/v202x/conforming-literals/valid-literals.hlsl
 

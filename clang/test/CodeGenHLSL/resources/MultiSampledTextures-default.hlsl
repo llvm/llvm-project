@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DMS -o - %s | FileCheck %s --check-prefix=DXIL -DTEXTURE=Texture2DMS -DDXIL_ARGS="<4 x float>, 0, 0, 0, 3" -DDXIL_ARGS4="<4 x float>, 0, 4, 0, 3"
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DMS -o - %s | FileCheck %s --check-prefix=SPIRV -DTEXTURE=Texture2DMS -DSPIRV_ARGS="float, 1, 2, 0, 1, 1, 0"
 
+using namespace hlsl;
+
 // A multisampled texture lowers to a multisampled resource target type. For
 // DXIL this is the dedicated `dx.MSTexture` type carrying the multisampled
 // resource kind; for SPIR-V it is a `spirv.Image` with the Multisampled (MS)

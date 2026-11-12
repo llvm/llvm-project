@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes -emit-llvm -finclude-default-header -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: increment
 void increment(inout int Arr[2]) {
   for (int I = 0; I < 2; I++)

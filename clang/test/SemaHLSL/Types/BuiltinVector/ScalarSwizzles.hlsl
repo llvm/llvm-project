@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library  -x hlsl \
 // RUN:   -finclude-default-header -ast-dump %s | FileCheck %s
 
+using namespace hlsl;
+
 
 // CHECK-LABEL: ToTwoInts
 // CHECK: ExtVectorElementExpr {{.*}} 'vector<int, 2>' xx

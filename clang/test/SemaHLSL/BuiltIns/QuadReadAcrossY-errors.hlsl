@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify
 
+using namespace hlsl;
+
 int test_too_few_arg() {
   return __builtin_hlsl_quad_read_across_y();
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}

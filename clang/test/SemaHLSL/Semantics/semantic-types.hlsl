@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fnative-half-type -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 [shader("pixel")]
 double4 target_double(float4 P : SV_Position) : SV_Target { return (double4)P; }
 // expected-error@-1 {{semantic 'SV_Target' must be a scalar or vector of up to 4 components of 16 or 32 bit floating-point type (was 'double4' (aka 'vector<double, 4>'))}}

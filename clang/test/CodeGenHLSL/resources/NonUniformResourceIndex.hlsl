@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-compute -emit-llvm -disable-llvm-passes -o - %s \
 // RUN:   | llvm-cxxfilt | FileCheck -DTARGET=spv %s
 
+using namespace hlsl;
+
 RWBuffer<float> A[10];
 
 [numthreads(4,1,1)]

@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple spirv1.6-unknown-vulkan1.3-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %if spirv-registered-target && spirv-val %{ %clang_cc1 -triple spirv1.6-unknown-vulkan1.3-compute -O3 -emit-obj -o %t.spv %s && spirv-val --target-env vulkan1.3 %t.spv %}
 
+using namespace hlsl;
+
 // When processing a struct containing resources, we should split members recursively into
 // their own global variables, and not emit a global of struct or array of
 // struct type which contains a resource

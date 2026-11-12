@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 void test_too_few_arg()
 {
   return step();

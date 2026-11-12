@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fnative-half-type -fnative-int16-type -triple dxil-pc-shadermodel6.4-library -finclude-default-header -x hlsl -verify=dxil,expected -o - %s
 // RUN: %clang_cc1 -fnative-half-type -fnative-int16-type -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify=spirv,expected -o - %s
 
+using namespace hlsl;
+
 // Type and index checks for SV_ShadingRate. These are independent of the
 // shader stage and IO direction, which are covered by shadingrate.stages.hlsl.
 

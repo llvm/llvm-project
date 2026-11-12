@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -finclude-default-header -o - %s -ast-dump | FileCheck %s
 
+using namespace hlsl;
+
 struct S {
   float4 f0 : SV_Position;
 // CHECK: FieldDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:10 f0 'float4':'vector<float, 4>'
@@ -13,8 +15,8 @@ struct S {
 float4 main(S s) : SV_Target {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:8 main 'float4 (S)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:15 used s 'S'
-// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:4:15> "SV_Position" 0
-// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:8:15> "USER" 3
+// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:6:15> "SV_Position" 0
+// CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:10:15> "USER" 3
 
 // CHECK:       HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:20> "SV_Target" 0
   return s.f1;

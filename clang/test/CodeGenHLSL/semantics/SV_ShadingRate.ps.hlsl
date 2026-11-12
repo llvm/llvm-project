@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-SPIRV
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-DXIL
 
+using namespace hlsl;
+
 // Behavior parity with DXC's hlsl/semantics/sv_shadingrate/shadingrate1.hlsl.
 
 // CHECK-SPIRV-DAG: @SV_ShadingRate = external hidden thread_local addrspace(7) externally_initialized constant i32, !spirv.Decorations ![[#MD_0:]]

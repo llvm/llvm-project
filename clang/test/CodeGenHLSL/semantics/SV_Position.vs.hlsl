@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.8-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-DXIL %s
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-vertex -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck --check-prefix=CHECK-SPIRV  %s
 
+using namespace hlsl;
+
 // CHECK-SPIRV: @SV_Position0 = external hidden thread_local addrspace(7) externally_initialized constant <4 x i32>, !spirv.Decorations ![[#MD_0:]]
 // CHECK-SPIRV: @SV_Position = external hidden thread_local addrspace(8) global <4 x float>, !spirv.Decorations ![[#MD_2:]]
 

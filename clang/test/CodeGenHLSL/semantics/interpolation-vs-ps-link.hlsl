@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 struct Nested {
   float inherited : INHERIT;
   linear float overrideMode : OVERRIDE;

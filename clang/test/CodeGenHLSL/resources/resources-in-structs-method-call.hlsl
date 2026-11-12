@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -disable-llvm-passes -finclude-default-header -o - %s | llvm-cxxfilt | FileCheck %s
 
+using namespace hlsl;
+
 struct MyStruct {
   float f;
   RWBuffer<float> Buf;

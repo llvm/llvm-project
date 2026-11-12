@@ -5,6 +5,8 @@
 // RUN:   -fsyntax-only -verify -finclude-default-header \
 // RUN:   -DTEXTURE=Texture2DArray -DOFFSET_TYPE=int2 -DCOORD_TYPE=float3 %s
 
+using namespace hlsl;
+
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
 //

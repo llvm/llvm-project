@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DMS -DLOCATION_TYPE=int2 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=Texture2DMS -DCOORD_DIM=2 -DKIND=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DMS -DLOCATION_TYPE=int2 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=Texture2DMS -DCOORD_DIM=2 -DARRAYED=0
 
+using namespace hlsl;
+
 // A multisampled texture with an explicit register/space binding is initialized
 // from that binding through __createFromBinding, identically to a non-MS
 // texture; only the resource handle type differs (dx.MSTexture / a multisampled

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.8-library -fnative-half-type -fnative-int16-type -finclude-default-header -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -fnative-half-type -fnative-int16-type -finclude-default-header -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 // Type and index checks for SV_StartVertexLocation. These are independent of
 // the shader stage and IO direction, which are covered by
 // startvertexlocation.stages.hlsl.

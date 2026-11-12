@@ -6,6 +6,8 @@
 // RUN: -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s -DTARGET=spv
 
+using namespace hlsl;
+
 #ifdef __HLSL_ENABLE_16_BIT
 // CHECK-LABEL: test_firstbitlow_ushort
 // CHECK: call i32 @llvm.[[TARGET]].firstbitlow.i16

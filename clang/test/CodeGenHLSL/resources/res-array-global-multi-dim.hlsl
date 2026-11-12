@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute \
 // RUN:   -emit-llvm -disable-llvm-passes -o - %s | llvm-cxxfilt | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: @[[BufB:.*]] = private unnamed_addr constant [2 x i8] c"B\00", align 1
 // CHECK: @[[BufC:.*]] = private unnamed_addr constant [2 x i8] c"C\00", align 1
 // CHECK: @[[BufD:.*]] = private unnamed_addr constant [2 x i8] c"D\00", align 1

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -verify
 
+using namespace hlsl;
+
 
 uint4 test_asuint_too_many_arg(float p0, float p1) {
   return asuint(p0, p1);

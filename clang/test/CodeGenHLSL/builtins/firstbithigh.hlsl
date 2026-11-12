@@ -6,6 +6,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -fnative-half-type \
 // RUN:   -fnative-int16-type -emit-llvm -O1 -o - | FileCheck %s -DTARGET=spv
 
+using namespace hlsl;
+
 #ifdef __HLSL_ENABLE_16_BIT
 // CHECK-LABEL: test_firstbithigh_ushort
 // CHECK: [[FBH:%.*]] = tail call {{.*}}i32 @llvm.[[TARGET]].firstbituhigh.i16

@@ -5,6 +5,8 @@
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK-SPIRV
 
+using namespace hlsl;
+
 // CHECK-LABEL: define {{.*}} half @_ZN4hlsl8__detail11fwidth_implIDhEET_S2_
 // CHECK: %hlsl.ddx.coarse = call {{.*}} half @llvm.dx.ddx.coarse.f16(half %{{.*}})
 // CHECK: %{{.*}} = call {{.*}} half @llvm.fabs.f16(half %{{.*}})

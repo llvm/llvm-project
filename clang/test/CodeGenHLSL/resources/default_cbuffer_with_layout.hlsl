@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK:      %"__cblayout_$Globals" = type <{
 // CHECK-SAME:   float,
 // CHECK-SAME:   target("dx.Padding", 12),

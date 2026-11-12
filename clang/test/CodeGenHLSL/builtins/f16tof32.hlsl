@@ -5,6 +5,8 @@
 // RUN:   -triple spirv-unknown-vulkan-library %s -emit-llvm -O0 -o - | \
 // RUN:   FileCheck %s --check-prefix=SPIRV
 
+using namespace hlsl;
+
 // CHECK: define hidden noundef nofpclass(nan inf) float
 // CHECK: %hlsl.f16tof32 = call reassoc nnan ninf nsz arcp afn float @llvm.dx.legacyf16tof32.i32(i32 %[[#]])
 // CHECK: ret float %hlsl.f16tof32

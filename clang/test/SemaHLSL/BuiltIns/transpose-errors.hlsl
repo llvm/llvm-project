@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s -verify
 
+using namespace hlsl;
+
 // Test transpose error cases
 
 float test_transpose_scalar(float a) {

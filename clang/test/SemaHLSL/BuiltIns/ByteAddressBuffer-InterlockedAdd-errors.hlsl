@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -fsyntax-only -verify \
 // RUN:   -verify-ignore-unexpected=note,warning
 
+using namespace hlsl;
+
 // notes that are ignored are strictly ones of the form:
 // (frontend): candidate function not viable: requires X arguments, but Y was provided
 // or

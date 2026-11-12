@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -finclude-default-header -O1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -emit-llvm -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROWMAJOR,DXIL
 // RUN: %clang_cc1 -finclude-default-header -O1 -triple spirv-unknown-vulkan1.3-library -fnative-half-type -emit-llvm -fmatrix-memory-layout=row-major -o - %s | FileCheck %s --check-prefixes=CHECK,ROWMAJOR,SPIRV
 
+using namespace hlsl;
+
 // -- Case 1: scalar * scalar -> scalar --
 
 // CHECK-LABEL: test_scalar_mulf

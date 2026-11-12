@@ -4,9 +4,11 @@
 // RUN:  -finclude-default-header -include-pch %t -ast-dump-all %s \
 // RUN: | FileCheck  %s
 
+using namespace hlsl;
+
 // Make sure PCH works by using function declared in PCH header and declare a SpirvType in current file.
 // CHECK:FunctionDecl 0x[[FOO:[0-9a-f]+]] <{{.*}}:2:1, line:4:1> line:2:8 imported used foo 'float2 (float2, float2)'
-// CHECK:VarDecl 0x{{[0-9a-f]+}} <{{.*}}:10:1, col:92> col:92 buffers2 'vk::SpirvOpaqueType<28, RWBuffer<float>, vk::integral_constant<uint, 4>>':'__hlsl_spirv_type<28, 0, 0, RWBuffer<float>, vk::integral_constant<unsigned int, 4>>'
+// CHECK:VarDecl 0x{{[0-9a-f]+}} <{{.*}}:12:1, col:92> col:92 buffers2 'vk::SpirvOpaqueType<28, RWBuffer<float>, vk::integral_constant<uint, 4>>':'__hlsl_spirv_type<28, 0, 0, RWBuffer<float>, vk::integral_constant<unsigned int, 4>>'
 vk::SpirvOpaqueType</* OpTypeArray */ 28, RWBuffer<float>, vk::integral_constant<uint, 4>> buffers2;
 
 float2 bar(float2 a, float2 b) {

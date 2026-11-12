@@ -5,6 +5,8 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-SPV
 
+using namespace hlsl;
+
 // Test lowering of asdouble expansion to shuffle/bitcast and splat when required
 
 // CHECK-LABEL: define {{.*}}test_uint

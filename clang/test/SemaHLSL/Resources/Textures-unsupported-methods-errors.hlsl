@@ -36,6 +36,8 @@
 // RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture3D \
 // RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float3 -DOFFSET_TYPE=int3 -verify %s
 
+using namespace hlsl;
+
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
 //

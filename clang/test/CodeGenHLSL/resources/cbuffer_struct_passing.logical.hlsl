@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s -fexperimental-logical-pointer | FileCheck %s --check-prefixes=CHECK-DXIL
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -emit-llvm -disable-llvm-passes -o - %s -fexperimental-logical-pointer | FileCheck %s --check-prefixes=CHECK-SPIR
 
+using namespace hlsl;
+
 struct S {
   float3 a;
   float4 b;

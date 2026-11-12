@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -verify
 
+using namespace hlsl;
+
 export void cantCast() {
   int A[3] = {1,2,3};
   int B[4] = {1,2,3,4};

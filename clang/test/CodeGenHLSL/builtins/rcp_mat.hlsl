@@ -6,6 +6,8 @@
 // RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_rcp_half1x2
 // NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <2 x half> splat (half 1.000000e+00), %{{.*}}
 // NATIVE_HALF: ret <2 x half>

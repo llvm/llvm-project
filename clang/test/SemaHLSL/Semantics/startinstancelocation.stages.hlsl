@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.8-library -finclude-default-header -x hlsl -verify -o - %s
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-library -finclude-default-header -x hlsl -verify -o - %s
 
+using namespace hlsl;
+
 // Stage and IO direction checks for SV_StartInstanceLocation: only a vertex input.
 // Type and index checks are covered by startinstancelocation.vs.hlsl.
 

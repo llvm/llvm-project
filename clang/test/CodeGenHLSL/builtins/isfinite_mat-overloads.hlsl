@@ -9,6 +9,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s \
 // RUN:   -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 // CHECK-LABEL: define {{.*}} <2 x i1> @_{{.*}}test_isfinite_double1x2{{.*}}(
 // CHECK:    [[CONV:%.*]] = fptrunc {{.*}} <2 x double> %{{.*}} to <2 x float>
 // CHECK:    [[RET:%.*]] = call <2 x i1> @llvm.[[TARGET]].isfinite.v2f32(<2 x float> [[CONV]])

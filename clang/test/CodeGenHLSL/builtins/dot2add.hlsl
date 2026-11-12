@@ -5,6 +5,8 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
+using namespace hlsl;
+
 // Test basic lowering to runtime function call.
 
 // CHECK-LABEL: define {{.*}}test_default_parameter_type

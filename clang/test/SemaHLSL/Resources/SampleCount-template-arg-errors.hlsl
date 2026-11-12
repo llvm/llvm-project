@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -fsyntax-only -verify %s
 
+using namespace hlsl;
+
 // The `sample_count` non-type template parameter only exists on multisampled
 // texture types. Every other resource type takes just an `element_type`, so
 // providing a second template argument must be diagnosed as too many template

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -verify -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -Wno-conversion -DNO_ERR -ast-dump %s | FileCheck %s
 
+using namespace hlsl;
+
 void test() {
 
   // CHECK: VarDecl {{.*}} used f3 'vector<float, 3>' cinit

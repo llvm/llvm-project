@@ -6,6 +6,8 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
 // RUN:   --check-prefixes=CHECK,CHECK-DXIL
 
+using namespace hlsl;
+
 // CHECK-SPIRV: define hidden spir_func noundef i32 @{{.*test_1.*}}() [[A0:#[0-9]+]] {
 // CHECK-DXIL: define hidden noundef i32 @{{.*test_1.*}}() [[A0:#[0-9]+]] {
 // CHECK-SPIRV: %[[CI:[0-9]+]] = call token @llvm.experimental.convergence.entry()

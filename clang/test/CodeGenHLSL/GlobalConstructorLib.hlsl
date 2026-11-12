@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes %s -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,NOINLINE
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -O0 %s -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,INLINE
 
+using namespace hlsl;
+
 // Make sure global variable for ctors exist for lib profile.
 // CHECK:@llvm.global_ctors
 

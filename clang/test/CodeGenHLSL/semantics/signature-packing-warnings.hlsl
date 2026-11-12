@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -finclude-default-header -disable-llvm-passes -fdx-semantic-signature-packing-mode=optimized -o /dev/null -verify=library %t/library.hlsl
 
 //--- vertex.hlsl
+using namespace hlsl;
+
 // Vertex targets warn about their fixed input layout, including empty inputs.
 [shader("vertex")]
 // vertex-warning@+1 {{semantic signature packing mode 'prefix-stable' is ignored as vertex shader inputs always use stacked packing}}
@@ -21,6 +23,8 @@ float4 vertex_output_only() : SV_Position {
 void vertex_empty() {}
 
 //--- pixel.hlsl
+using namespace hlsl;
+
 // Pixel targets warn about their fixed output layout, including empty outputs.
 [shader("pixel")]
 // pixel-warning@+1 {{semantic signature packing mode 'optimized' is ignored as pixel shader outputs always use indexed packing}}

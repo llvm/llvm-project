@@ -66,6 +66,8 @@
 
 #ifndef EMPTY
 
+using namespace hlsl;
+
 RESOURCE<float> Buffer;
 
 #endif

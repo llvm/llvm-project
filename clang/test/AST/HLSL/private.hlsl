@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: VarDecl {{.*}} global_scalar 'hlsl_private int' static cinit
 static int global_scalar = 0;
 
