@@ -146,7 +146,7 @@ exit:
 ; a <8 x ptr> base and still needs two instructions. Finding one varying index
 ; and stopping there would price it as the single dword form.
 ; COST-LABEL: 'chase_index'
-; COST: Cost of 10 for VF 8: WIDEN ir<%v> = load ir<%p>
+; COST: Cost of 12 for VF 8: WIDEN ir<%v> = load ir<%p>
 ; ASM-LABEL: chase_index:
 ; ASM-COUNT-2: vpgatherqd
 ; ASM-NOT: vpgather

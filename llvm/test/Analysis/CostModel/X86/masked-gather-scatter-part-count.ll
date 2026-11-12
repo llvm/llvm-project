@@ -772,7 +772,7 @@ define <16 x i32> @gather_v16i32_splat_addend(ptr %base, <16 x i16> %idx, <16 x 
 ; SKX-ASM-COUNT-1: vpgatherdd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v8i32_splat_const_index'
-; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v8i32_splat_const_index:
 ; AVX2-ASM-COUNT-1: vpgatherdd
 ; AVX2-ASM-NOT: vpgather

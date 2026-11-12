@@ -153,14 +153,19 @@ class MemIntrinsicCostAttributes {
 
   const Value *StrideVal;
 
+  /// Whether every lane shares the base pointer of \p Ptr. Set only by callers
+  /// that pass an address they have not widened yet, where the base is not
+  /// otherwise distinguishable from an index. Left empty when unknown.
+  std::optional<bool> UniformBase;
+
 public:
   MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, const Value *Ptr,
                              bool VariableMask, Align Alignment,
                              const Instruction *I = nullptr,
-                             const Value *StrideVal = nullptr)
-
+                             const Value *StrideVal = nullptr,
+                             std::optional<bool> UniformBase = std::nullopt)
       : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
-        Alignment(Alignment), StrideVal(StrideVal) {}
+        Alignment(Alignment), StrideVal(StrideVal), UniformBase(UniformBase) {}
 
   MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, Align Alignment,
                              unsigned AddressSpace = 0,
@@ -183,6 +188,7 @@ public:
   unsigned getAddressSpace() const { return AddressSpace; }
   Align getAlignment() const { return Alignment; }
   const Value *getStrideVal() const { return StrideVal; }
+  std::optional<bool> getUniformBase() const { return UniformBase; }
 };
 
 /// Represents a hint about the context in which a vector instruction or
