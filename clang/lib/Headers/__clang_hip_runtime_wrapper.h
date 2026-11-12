@@ -44,7 +44,11 @@ typedef __SIZE_TYPE__ __hip_size_t;
 extern "C" {
 #endif //__cplusplus
 
-#if HIP_VERSION_MAJOR * 100 + HIP_VERSION_MINOR >= 405
+#if __has_feature(device_address_sanitizer)
+// Defined by the device sanitizer runtime.
+__device__ void *malloc(__hip_size_t __size);
+__device__ void free(void *__ptr);
+#elif HIP_VERSION_MAJOR * 100 + HIP_VERSION_MINOR >= 405
 __device__ unsigned long long __ockl_dm_alloc(unsigned long long __size);
 __device__ void __ockl_dm_dealloc(unsigned long long __addr);
 #if __has_feature(address_sanitizer)

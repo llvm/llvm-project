@@ -9916,6 +9916,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     // Without this check using it on the host would result in linker errors.
     if (requiresUBSanRT(ID) && !HasSanitizerRT)
       return false;
+    // The device sanitizer has a runtime of its own on this side, which the
+    // device link asks for by the same lookup the host one uses.
+    if (requiresUBSanRT(ID) && TC.getSanitizerArgs(Args).needsDasanRt() &&
+        !ToolChainHasRT(TC, "dasan"))
+      return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;
   };

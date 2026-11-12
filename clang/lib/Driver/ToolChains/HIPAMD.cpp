@@ -130,6 +130,11 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
     LldArgs.push_back(Input.getFilename());
   TC.addProfileRTLibs(Args, LldArgs);
 
+  // Link the sanitizer runtimes for the standalone LLD invocation.
+  if (TC.getSanitizerArgs(Args).needsDasanRt())
+    LldArgs.push_back(
+        TC.getCompilerRTArgString(Args, "dasan", ToolChain::FT_Static));
+
   LldArgs.push_back("--no-whole-archive");
 
   const char *Lld = Args.MakeArgStringRef(getToolChain().GetProgramPath("lld"));
