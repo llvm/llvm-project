@@ -250,7 +250,7 @@ private:
   DenseSet<const BasicBlock *> HoistBarrier;
   SmallVector<BasicBlock *, 32> IDFBlocks;
   unsigned NumFuncArgs;
-  const bool HoistingGeps = false;
+  const bool HoistingGeps = true;
 
   enum InsKind { Unknown, Scalar, Load, Store };
 

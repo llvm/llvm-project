@@ -39,10 +39,8 @@ define void @test2(i1 %b, ptr %x) {
 ; CHECK-NEXT:    store i32 2, ptr [[TMP0]], align 4, !tbaa [[CHAR_TBAA0]]
 ; CHECK-NEXT:    br i1 [[B]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
 ; CHECK-NEXT:    br label %[[IF_END:.*]]
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    ret void
@@ -72,10 +70,8 @@ define void @test3(i1 %b, ptr %x) {
 ; CHECK-NEXT:    store i32 2, ptr [[TMP0]], align 4, !tbaa [[CHAR_TBAA0]]
 ; CHECK-NEXT:    br i1 [[B]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
 ; CHECK-NEXT:    br label %[[IF_END:.*]]
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[X]], i64 1
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    ret void
