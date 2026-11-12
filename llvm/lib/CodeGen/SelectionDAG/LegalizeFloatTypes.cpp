@@ -35,6 +35,26 @@ static void reportNoLibcall(SelectionDAG &DAG, SDNode *N, EVT VT) {
 /// GetFPLibCall - Return the right libcall for the given floating point type.
 /// FIXME: This is a local version of RTLIB::getFPLibCall that should be
 ///        refactored away (see RTLIB::getPOWI for an example).
+// A ppcf128 is softened to the i128 of a bitcast, whose halves are its two
+// doubles. The high double, which has the sign of the value, is the high half
+// on big-endian targets and the low half on little-endian ones.
+static SDValue getSoftenedPPCf128Hi(SelectionDAG &DAG, const SDLoc &dl,
+                                    SDValue Op) {
+  return DAG.getNode(
+      ISD::EXTRACT_ELEMENT, dl, MVT::i64, Op,
+      DAG.getIntPtrConstant(DAG.getDataLayout().isBigEndian() ? 1 : 0, dl));
+}
+
+// Negates the softened ppcf128 Op, both of its doubles, if the sign bit of
+// the i64 Flip is set.
+static SDValue flipSoftenedPPCf128(SelectionDAG &DAG, const SDLoc &dl,
+                                   SDValue Op, SDValue Flip) {
+  Flip = DAG.getNode(ISD::AND, dl, MVT::i64, Flip,
+                     DAG.getConstant(APInt::getSignMask(64), dl, MVT::i64));
+  return DAG.getNode(ISD::XOR, dl, MVT::i128, Op,
+                     DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i128, Flip, Flip));
+}
+
 static RTLIB::Libcall GetFPLibCall(EVT VT,
                                    RTLIB::Libcall Call_F32,
                                    RTLIB::Libcall Call_F64,
@@ -326,6 +346,13 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   unsigned Size = NVT.getSizeInBits();
 
+  // A ppcf128 is negated if its high double is negative.
+  if (N->getValueType(0) == MVT::ppcf128) {
+    SDLoc dl(N);
+    SDValue Op = GetSoftenedFloat(N->getOperand(0));
+    return flipSoftenedPPCf128(DAG, dl, Op, getSoftenedPPCf128Hi(DAG, dl, Op));
+  }
+
   // Mask = ~(1 << (Size-1))
   APInt API = APInt::getAllOnes(Size);
   API.clearBit(Size - 1);
@@ -430,6 +457,26 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN(SDNode *N) {
 
   unsigned LSize = LVT.getSizeInBits();
   unsigned RSize = RVT.getSizeInBits();
+
+  // A ppcf128 is negated if the sign of its high double differs from that of
+  // the second operand, which is that of its high double if it is a ppcf128.
+  if (N->getValueType(0) == MVT::ppcf128) {
+    SDValue Sign;
+    if (N->getOperand(1).getValueType() == MVT::ppcf128) {
+      Sign = getSoftenedPPCf128Hi(DAG, dl, RHS);
+    } else if (RSize > 64) {
+      Sign = DAG.getNode(ISD::SRL, dl, RVT, RHS,
+                         DAG.getShiftAmountConstant(RSize - 64, RVT, dl));
+      Sign = DAG.getNode(ISD::TRUNCATE, dl, MVT::i64, Sign);
+    } else {
+      Sign = DAG.getNode(ISD::SHL, dl, MVT::i64,
+                         DAG.getAnyExtOrTrunc(RHS, dl, MVT::i64),
+                         DAG.getShiftAmountConstant(64 - RSize, MVT::i64, dl));
+    }
+    SDValue Flip = DAG.getNode(ISD::XOR, dl, MVT::i64,
+                               getSoftenedPPCf128Hi(DAG, dl, LHS), Sign);
+    return flipSoftenedPPCf128(DAG, dl, LHS, Flip);
+  }
 
   // First get the sign bit of second operand.
   SDValue SignBit = DAG.getNode(
@@ -556,6 +603,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FNEG(SDNode *N) {
 
   // Expand Y = FNEG(X) -> Y = X ^ sign mask
   APInt SignMask = APInt::getSignMask(NVT.getSizeInBits());
+  // Both doubles of a ppcf128 have a sign bit.
+  if (N->getValueType(0) == MVT::ppcf128)
+    SignMask = APInt::getSplat(128, APInt::getSignMask(64));
   return DAG.getNode(ISD::XOR, dl, NVT, GetSoftenedFloat(N->getOperand(0)),
                      DAG.getConstant(SignMask, dl, NVT));
 }
