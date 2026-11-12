@@ -1609,8 +1609,13 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
     // True while SCC holds the compare result.
     bool SCCValid = false;
     bool ReadsMode = TII.get(Opcode).hasImplicitUseOfPhysReg(AMDGPU::MODE);
+    // Restores past the limit keep the saved SCC.
+    constexpr unsigned MaxInstScan = 64;
+    unsigned NumInst = 0;
     for (auto It = std::next(MachineBasicBlock::iterator(I)); NumRestores;) {
       MachineInstr &MI = *It++;
+      if (!MI.isDebugInstr() && ++NumInst > MaxInstScan)
+        break;
       // An FP compare is not repeatable once the FP mode changes.
       if (ReadsMode && MI.modifiesRegister(AMDGPU::MODE, &TRI))
         break;
