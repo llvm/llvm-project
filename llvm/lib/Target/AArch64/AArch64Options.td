@@ -348,6 +348,8 @@ defm : ValueField<"sve-scatter-overhead", "std::optional<unsigned>", "std::nullo
   "">;
 defm : ValueField<"sve-tail-folding-insn-threshold", "unsigned", "15",
   "">;
+defm : ValueField<"sve-wide-vector-constant-materialization-overhead", "unsigned", "5",
+  "">;
 
 // GISel/AArch64PostLegalizerCombiner.cpp
 defm : BoolField<"aarch64-postlegalizer-consecutive-memops", "true",

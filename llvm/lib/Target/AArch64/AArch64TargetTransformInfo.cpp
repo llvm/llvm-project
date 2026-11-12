@@ -5154,8 +5154,13 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   // TODO: Model the scalarization overhead of wide fixed-length SVE vectors
   // accurately.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  bool IsWideFixedLengthSVE =
+      Ty->getPrimitiveSizeInBits().getFixedValue() > AArch64::SVEBitsPerBlock &&
+      ST->useSVEForFixedLengthVectors(LT.second);
   unsigned FixedLengthSVECost =
-      ST->useSVEForFixedLengthVectors(LT.second) ? 5 : 0;
+      IsWideFixedLengthSVE
+          ? ST->getCLOpts().sve_wide_vector_constant_materialization_overhead
+          : 0;
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind) +
