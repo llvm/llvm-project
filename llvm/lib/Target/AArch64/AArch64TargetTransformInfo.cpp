@@ -1005,6 +1005,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                              nullptr, nullptr);
       return Cost;
     }
+    // Without BEXT and BDEP, scalars expand to the whole-word network.
+    if (!RetTy->isVectorTy() && BW <= 64)
+      return getPEXTPDEPNetworkCost(ICA.getID(), RetTy, /*Bytewise=*/false,
+                                    CostKind);
     break;
   }
   case Intrinsic::ctpop: {
