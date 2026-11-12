@@ -860,15 +860,14 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_add_i32 s1, s1, s3
 ; GFX1032-NEXT:    s_mul_hi_u32 s1, s2, s1
 ; GFX1032-NEXT:    s_mul_i32 s3, s1, s0
+; GFX1032-NEXT:    s_add_i32 s4, s1, 1
 ; GFX1032-NEXT:    s_sub_i32 s2, s2, s3
-; GFX1032-NEXT:    s_add_i32 s3, s1, 1
-; GFX1032-NEXT:    s_sub_i32 s4, s2, s0
+; GFX1032-NEXT:    s_sub_i32 s3, s2, s0
 ; GFX1032-NEXT:    s_cmp_ge_u32 s2, s0
-; GFX1032-NEXT:    s_cselect_b32 s1, s3, s1
-; GFX1032-NEXT:    s_cselect_b32 s2, s4, s2
-; GFX1032-NEXT:    s_add_i32 s3, s1, 1
+; GFX1032-NEXT:    s_cselect_b32 s2, s3, s2
+; GFX1032-NEXT:    s_cselect_b32 s1, s4, s1
 ; GFX1032-NEXT:    s_cmp_ge_u32 s2, s0
-; GFX1032-NEXT:    s_cselect_b32 s4, s3, s1
+; GFX1032-NEXT:    s_addc_u32 s4, s1, 0
 ; GFX1032-NEXT:  .LBB15_3: ; %bb.split
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s4
@@ -1008,15 +1007,14 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_add_i32 s1, s1, s3
 ; GFX1064-NEXT:    s_mul_hi_u32 s1, s2, s1
 ; GFX1064-NEXT:    s_mul_i32 s3, s1, s0
+; GFX1064-NEXT:    s_add_i32 s4, s1, 1
 ; GFX1064-NEXT:    s_sub_i32 s2, s2, s3
-; GFX1064-NEXT:    s_add_i32 s3, s1, 1
-; GFX1064-NEXT:    s_sub_i32 s4, s2, s0
+; GFX1064-NEXT:    s_sub_i32 s3, s2, s0
 ; GFX1064-NEXT:    s_cmp_ge_u32 s2, s0
-; GFX1064-NEXT:    s_cselect_b32 s1, s3, s1
-; GFX1064-NEXT:    s_cselect_b32 s2, s4, s2
-; GFX1064-NEXT:    s_add_i32 s3, s1, 1
+; GFX1064-NEXT:    s_cselect_b32 s2, s3, s2
+; GFX1064-NEXT:    s_cselect_b32 s1, s4, s1
 ; GFX1064-NEXT:    s_cmp_ge_u32 s2, s0
-; GFX1064-NEXT:    s_cselect_b32 s4, s3, s1
+; GFX1064-NEXT:    s_addc_u32 s4, s1, 0
 ; GFX1064-NEXT:  .LBB15_3: ; %bb.split
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, s4

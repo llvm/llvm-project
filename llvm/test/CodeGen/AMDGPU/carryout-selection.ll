@@ -2788,15 +2788,14 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; CISI-NEXT:    s_mul_i32 s0, s0, s2
 ; CISI-NEXT:    s_sub_i32 s0, s10, s0
 ; CISI-NEXT:    s_sub_i32 s1, s0, s2
-; CISI-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
 ; CISI-NEXT:    s_cmp_ge_u32 s0, s2
-; CISI-NEXT:    s_cselect_b64 vcc, -1, 0
+; CISI-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
 ; CISI-NEXT:    s_cselect_b32 s0, s1, s0
-; CISI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; CISI-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
-; CISI-NEXT:    s_cmp_ge_u32 s0, s2
 ; CISI-NEXT:    s_cselect_b64 vcc, -1, 0
+; CISI-NEXT:    s_cmp_ge_u32 s0, s2
 ; CISI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; CISI-NEXT:    s_cselect_b64 vcc, -1, 0
+; CISI-NEXT:    v_addc_u32_e32 v0, vcc, 0, v0, vcc
 ; CISI-NEXT:    v_mov_b32_e32 v1, 0
 ; CISI-NEXT:  .LBB16_3: ; %.split
 ; CISI-NEXT:    s_mov_b32 s11, 0xf000
@@ -2933,15 +2932,14 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; VI-NEXT:    s_mul_i32 s3, s3, s4
 ; VI-NEXT:    s_sub_i32 s2, s2, s3
 ; VI-NEXT:    s_sub_i32 s3, s2, s4
-; VI-NEXT:    v_add_u32_e32 v1, vcc, 1, v0
 ; VI-NEXT:    s_cmp_ge_u32 s2, s4
-; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    v_add_u32_e32 v1, vcc, 1, v0
 ; VI-NEXT:    s_cselect_b32 s2, s3, s2
-; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v1, vcc, 1, v0
-; VI-NEXT:    s_cmp_ge_u32 s2, s4
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    s_cmp_ge_u32 s2, s4
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; VI-NEXT:    s_cselect_b64 vcc, -1, 0
+; VI-NEXT:    v_addc_u32_e32 v0, vcc, 0, v0, vcc
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:  .LBB16_3: ; %.split
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
@@ -3078,16 +3076,15 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX9-NEXT:    s_mul_hi_u32 s3, s4, s3
 ; GFX9-NEXT:    s_add_i32 s4, s4, s3
 ; GFX9-NEXT:    s_mul_hi_u32 s3, s2, s4
-; GFX9-NEXT:    s_mul_i32 s7, s3, s6
-; GFX9-NEXT:    s_sub_i32 s2, s2, s7
-; GFX9-NEXT:    s_add_i32 s4, s3, 1
-; GFX9-NEXT:    s_sub_i32 s7, s2, s6
+; GFX9-NEXT:    s_mul_i32 s4, s3, s6
+; GFX9-NEXT:    s_sub_i32 s2, s2, s4
+; GFX9-NEXT:    s_add_i32 s7, s3, 1
+; GFX9-NEXT:    s_sub_i32 s4, s2, s6
 ; GFX9-NEXT:    s_cmp_ge_u32 s2, s6
-; GFX9-NEXT:    s_cselect_b32 s3, s4, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s7, s2
-; GFX9-NEXT:    s_add_i32 s4, s3, 1
+; GFX9-NEXT:    s_cselect_b32 s2, s4, s2
+; GFX9-NEXT:    s_cselect_b32 s3, s7, s3
 ; GFX9-NEXT:    s_cmp_ge_u32 s2, s6
-; GFX9-NEXT:    s_cselect_b32 s4, s4, s3
+; GFX9-NEXT:    s_addc_u32 s4, s3, 0
 ; GFX9-NEXT:  .LBB16_3: ; %.split
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
@@ -3227,15 +3224,14 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1010-NEXT:    s_add_i32 s3, s3, s4
 ; GFX1010-NEXT:    s_mul_hi_u32 s3, s2, s3
 ; GFX1010-NEXT:    s_mul_i32 s4, s3, s6
+; GFX1010-NEXT:    s_add_i32 s7, s3, 1
 ; GFX1010-NEXT:    s_sub_i32 s2, s2, s4
-; GFX1010-NEXT:    s_add_i32 s4, s3, 1
-; GFX1010-NEXT:    s_sub_i32 s7, s2, s6
+; GFX1010-NEXT:    s_sub_i32 s4, s2, s6
 ; GFX1010-NEXT:    s_cmp_ge_u32 s2, s6
-; GFX1010-NEXT:    s_cselect_b32 s3, s4, s3
-; GFX1010-NEXT:    s_cselect_b32 s2, s7, s2
-; GFX1010-NEXT:    s_add_i32 s4, s3, 1
+; GFX1010-NEXT:    s_cselect_b32 s2, s4, s2
+; GFX1010-NEXT:    s_cselect_b32 s3, s7, s3
 ; GFX1010-NEXT:    s_cmp_ge_u32 s2, s6
-; GFX1010-NEXT:    s_cselect_b32 s4, s4, s3
+; GFX1010-NEXT:    s_addc_u32 s4, s3, 0
 ; GFX1010-NEXT:  .LBB16_3: ; %.split
 ; GFX1010-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1010-NEXT:    v_mov_b32_e32 v0, s4
@@ -3375,15 +3371,14 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1030W32-NEXT:    s_add_i32 s3, s3, s5
 ; GFX1030W32-NEXT:    s_mul_hi_u32 s3, s2, s3
 ; GFX1030W32-NEXT:    s_mul_i32 s5, s3, s4
+; GFX1030W32-NEXT:    s_add_i32 s6, s3, 1
 ; GFX1030W32-NEXT:    s_sub_i32 s2, s2, s5
-; GFX1030W32-NEXT:    s_add_i32 s5, s3, 1
-; GFX1030W32-NEXT:    s_sub_i32 s6, s2, s4
+; GFX1030W32-NEXT:    s_sub_i32 s5, s2, s4
 ; GFX1030W32-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX1030W32-NEXT:    s_cselect_b32 s3, s5, s3
-; GFX1030W32-NEXT:    s_cselect_b32 s2, s6, s2
-; GFX1030W32-NEXT:    s_add_i32 s5, s3, 1
+; GFX1030W32-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX1030W32-NEXT:    s_cselect_b32 s3, s6, s3
 ; GFX1030W32-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX1030W32-NEXT:    s_cselect_b32 s6, s5, s3
+; GFX1030W32-NEXT:    s_addc_u32 s6, s3, 0
 ; GFX1030W32-NEXT:  .LBB16_3: ; %.split
 ; GFX1030W32-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1030W32-NEXT:    v_mov_b32_e32 v0, s6
@@ -3523,15 +3518,14 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1030W64-NEXT:    s_add_i32 s3, s3, s5
 ; GFX1030W64-NEXT:    s_mul_hi_u32 s3, s2, s3
 ; GFX1030W64-NEXT:    s_mul_i32 s5, s3, s4
+; GFX1030W64-NEXT:    s_add_i32 s6, s3, 1
 ; GFX1030W64-NEXT:    s_sub_i32 s2, s2, s5
-; GFX1030W64-NEXT:    s_add_i32 s5, s3, 1
-; GFX1030W64-NEXT:    s_sub_i32 s6, s2, s4
+; GFX1030W64-NEXT:    s_sub_i32 s5, s2, s4
 ; GFX1030W64-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX1030W64-NEXT:    s_cselect_b32 s3, s5, s3
-; GFX1030W64-NEXT:    s_cselect_b32 s2, s6, s2
-; GFX1030W64-NEXT:    s_add_i32 s5, s3, 1
+; GFX1030W64-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX1030W64-NEXT:    s_cselect_b32 s3, s6, s3
 ; GFX1030W64-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX1030W64-NEXT:    s_cselect_b32 s6, s5, s3
+; GFX1030W64-NEXT:    s_addc_u32 s6, s3, 0
 ; GFX1030W64-NEXT:  .LBB16_3: ; %.split
 ; GFX1030W64-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1030W64-NEXT:    v_mov_b32_e32 v0, s6
@@ -3684,17 +3678,16 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s3, s3, s5
 ; GFX11-NEXT:    s_mul_hi_u32 s3, s2, s3
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mul_i32 s5, s3, s4
+; GFX11-NEXT:    s_add_i32 s6, s3, 1
 ; GFX11-NEXT:    s_sub_i32 s2, s2, s5
-; GFX11-NEXT:    s_add_i32 s5, s3, 1
-; GFX11-NEXT:    s_sub_i32 s6, s2, s4
+; GFX11-NEXT:    s_sub_i32 s5, s2, s4
 ; GFX11-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX11-NEXT:    s_cselect_b32 s3, s5, s3
-; GFX11-NEXT:    s_cselect_b32 s2, s6, s2
-; GFX11-NEXT:    s_add_i32 s5, s3, 1
+; GFX11-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX11-NEXT:    s_cselect_b32 s3, s6, s3
 ; GFX11-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX11-NEXT:    s_cselect_b32 s6, s5, s3
+; GFX11-NEXT:    s_addc_u32 s6, s3, 0
 ; GFX11-NEXT:  .LBB16_3: ; %.split
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s7
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s6
@@ -3834,16 +3827,15 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_mul_hi_u32 s3, s2, s3
 ; GFX1250-NEXT:    s_mul_i32 s4, s3, s6
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_add_co_i32 s7, s3, 1
 ; GFX1250-NEXT:    s_sub_co_i32 s2, s2, s4
-; GFX1250-NEXT:    s_add_co_i32 s4, s3, 1
-; GFX1250-NEXT:    s_sub_co_i32 s7, s2, s6
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_sub_co_i32 s4, s2, s6
 ; GFX1250-NEXT:    s_cmp_ge_u32 s2, s6
-; GFX1250-NEXT:    s_cselect_b32 s3, s4, s3
-; GFX1250-NEXT:    s_cselect_b32 s2, s7, s2
-; GFX1250-NEXT:    s_add_co_i32 s4, s3, 1
+; GFX1250-NEXT:    s_cselect_b32 s2, s4, s2
+; GFX1250-NEXT:    s_cselect_b32 s3, s7, s3
 ; GFX1250-NEXT:    s_cmp_ge_u32 s2, s6
-; GFX1250-NEXT:    s_cselect_b32 s4, s4, s3
+; GFX1250-NEXT:    s_add_co_ci_u32 s4, s3, 0
 ; GFX1250-NEXT:  .LBB16_3: ; %.split
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
@@ -3979,16 +3971,15 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_mul_hi_u32 s3, s2, s3
 ; GFX13-NEXT:    s_mul_i32 s5, s3, s4
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_add_co_i32 s6, s3, 1
 ; GFX13-NEXT:    s_sub_co_i32 s2, s2, s5
-; GFX13-NEXT:    s_add_co_i32 s5, s3, 1
-; GFX13-NEXT:    s_sub_co_i32 s6, s2, s4
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_sub_co_i32 s5, s2, s4
 ; GFX13-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX13-NEXT:    s_cselect_b32 s3, s5, s3
-; GFX13-NEXT:    s_cselect_b32 s2, s6, s2
-; GFX13-NEXT:    s_add_co_i32 s5, s3, 1
+; GFX13-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX13-NEXT:    s_cselect_b32 s3, s6, s3
 ; GFX13-NEXT:    s_cmp_ge_u32 s2, s4
-; GFX13-NEXT:    s_cselect_b32 s6, s5, s3
+; GFX13-NEXT:    s_add_co_ci_u32 s6, s3, 0
 ; GFX13-NEXT:  .LBB16_3: ; %.split
 ; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s6
@@ -4041,32 +4032,32 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-ISEL-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY14]], [[COPY15]], implicit-def dead $scc
 ; GCN-ISEL-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_]]
 ; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY12]], [[COPY16]], implicit $exec
-; GCN-ISEL-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1
 ; GCN-ISEL-NEXT:   [[COPY17:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_1]]
-; GCN-ISEL-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY17]], [[S_MOV_B32_2]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY18:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_1]]
-; GCN-ISEL-NEXT:   [[S_MUL_I32_1:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY18]], [[COPY11]]
+; GCN-ISEL-NEXT:   [[S_MUL_I32_1:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY17]], [[COPY11]]
 ; GCN-ISEL-NEXT:   [[S_SUB_I32_1:%[0-9]+]]:sreg_32 = S_SUB_I32 [[COPY12]], [[S_MUL_I32_1]], implicit-def dead $scc
 ; GCN-ISEL-NEXT:   [[S_SUB_I32_2:%[0-9]+]]:sreg_32 = S_SUB_I32 [[S_SUB_I32_1]], [[COPY11]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+; GCN-ISEL-NEXT:   [[COPY18:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_1]]
+; GCN-ISEL-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY18]], [[S_MOV_B32_2]], implicit-def dead $scc
 ; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_SUB_I32_1]], [[COPY11]], implicit-def $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_SUB_I32_2]], [[S_SUB_I32_1]], implicit $scc
 ; GCN-ISEL-NEXT:   [[COPY19:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_1]]
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_1:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_ADD_I32_1]], [[COPY19]], implicit $scc
-; GCN-ISEL-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_CSELECT_B32_1]], [[S_MOV_B32_2]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_CSELECT_B32_]], [[COPY11]], implicit-def $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_2:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_ADD_I32_2]], [[S_CSELECT_B32_1]], implicit $scc
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_ADD_I32_1]], [[COPY19]], implicit $scc
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_1:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_SUB_I32_2]], [[S_SUB_I32_1]], implicit $scc
+; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_CSELECT_B32_1]], [[COPY11]], implicit-def $scc
+; GCN-ISEL-NEXT:   [[COPY20:%[0-9]+]]:sreg_64_xexec = COPY $scc
+; GCN-ISEL-NEXT:   [[S_ADD_C:%[0-9]+]]:sreg_32, [[S_ADD_C1:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[S_CSELECT_B32_]], [[S_MOV_B32_1]], [[COPY20]], implicit-def dead $scc
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_CSELECT_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY20:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE3]]
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_ADD_C]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY21:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE3]]
 ; GCN-ISEL-NEXT:   S_BRANCH %bb.3
 ; GCN-ISEL-NEXT: {{  $}}
 ; GCN-ISEL-NEXT: bb.2 (%ir-block.10):
 ; GCN-ISEL-NEXT:   successors: %bb.3(0x80000000)
 ; GCN-ISEL-NEXT: {{  $}}
-; GCN-ISEL-NEXT:   [[COPY21:%[0-9]+]]:sreg_32 = COPY [[COPY9]].sub0
-; GCN-ISEL-NEXT:   [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[COPY21]], 0, 0, implicit $mode, implicit $exec
-; GCN-ISEL-NEXT:   [[COPY22:%[0-9]+]]:sreg_32 = COPY [[COPY9]].sub1
-; GCN-ISEL-NEXT:   [[V_CVT_F32_U32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[COPY22]], 0, 0, implicit $mode, implicit $exec
+; GCN-ISEL-NEXT:   [[COPY22:%[0-9]+]]:sreg_32 = COPY [[COPY9]].sub0
+; GCN-ISEL-NEXT:   [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[COPY22]], 0, 0, implicit $mode, implicit $exec
+; GCN-ISEL-NEXT:   [[COPY23:%[0-9]+]]:sreg_32 = COPY [[COPY9]].sub1
+; GCN-ISEL-NEXT:   [[V_CVT_F32_U32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[COPY23]], 0, 0, implicit $mode, implicit $exec
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sgpr_32 = S_MOV_B32 1333788672
 ; GCN-ISEL-NEXT:   [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[V_CVT_F32_U32_e64_1]], 0, [[S_MOV_B32_4]], 0, [[V_CVT_F32_U32_e64_]], 0, 0, implicit $mode, implicit $exec
 ; GCN-ISEL-NEXT:   [[V_RCP_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RCP_F32_e64 0, [[V_MAC_F32_e64_]], 0, 0, implicit $mode, implicit $exec
@@ -4080,185 +4071,185 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-ISEL-NEXT:   [[V_CVT_U32_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_U32_F32_e64 0, [[V_MAC_F32_e64_1]], 0, 0, implicit $mode, implicit $exec
 ; GCN-ISEL-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
 ; GCN-ISEL-NEXT:   [[S_SUB_U:%[0-9]+]]:sreg_64 = S_SUB_U64_PSEUDO [[S_MOV_B64_]], [[COPY9]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY23:%[0-9]+]]:sreg_32 = COPY [[S_SUB_U]].sub1
-; GCN-ISEL-NEXT:   [[COPY24:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_]]
-; GCN-ISEL-NEXT:   [[S_MUL_I32_2:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY23]], [[COPY24]]
-; GCN-ISEL-NEXT:   [[COPY25:%[0-9]+]]:sreg_32 = COPY [[S_SUB_U]].sub0
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_2:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY25]], [[V_CVT_U32_F32_e64_]], implicit $exec
+; GCN-ISEL-NEXT:   [[COPY24:%[0-9]+]]:sreg_32 = COPY [[S_SUB_U]].sub1
+; GCN-ISEL-NEXT:   [[COPY25:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_]]
+; GCN-ISEL-NEXT:   [[S_MUL_I32_2:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY24]], [[COPY25]]
+; GCN-ISEL-NEXT:   [[COPY26:%[0-9]+]]:sreg_32 = COPY [[S_SUB_U]].sub0
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_2:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY26]], [[V_CVT_U32_F32_e64_]], implicit $exec
 ; GCN-ISEL-NEXT:   [[V_CVT_U32_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_U32_F32_e64 0, [[V_MUL_F32_e64_1]], 0, 0, implicit $mode, implicit $exec
-; GCN-ISEL-NEXT:   [[COPY26:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_1]]
-; GCN-ISEL-NEXT:   [[S_MUL_I32_3:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY25]], [[COPY26]]
-; GCN-ISEL-NEXT:   [[COPY27:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_2]]
-; GCN-ISEL-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY27]], [[S_MUL_I32_3]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_ADD_I32_4:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_3]], [[S_MUL_I32_2]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_3:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[V_CVT_U32_F32_e64_]], [[S_ADD_I32_4]], implicit $exec
-; GCN-ISEL-NEXT:   [[COPY28:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_]]
-; GCN-ISEL-NEXT:   [[S_MUL_I32_4:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY28]], [[S_ADD_I32_4]]
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_4]], %subreg.sub0, [[V_MUL_HI_U32_e64_3]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY27:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_1]]
+; GCN-ISEL-NEXT:   [[S_MUL_I32_3:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY26]], [[COPY27]]
+; GCN-ISEL-NEXT:   [[COPY28:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_2]]
+; GCN-ISEL-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY28]], [[S_MUL_I32_3]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_2]], [[S_MUL_I32_2]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_3:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[V_CVT_U32_F32_e64_]], [[S_ADD_I32_3]], implicit $exec
 ; GCN-ISEL-NEXT:   [[COPY29:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_]]
-; GCN-ISEL-NEXT:   [[S_MUL_I32_5:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY25]], [[COPY29]]
+; GCN-ISEL-NEXT:   [[S_MUL_I32_4:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY29]], [[S_ADD_I32_3]]
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_4]], %subreg.sub0, [[V_MUL_HI_U32_e64_3]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY30:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_]]
+; GCN-ISEL-NEXT:   [[S_MUL_I32_5:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY26]], [[COPY30]]
 ; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_4:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[V_CVT_U32_F32_e64_]], [[S_MUL_I32_5]], implicit $exec
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_8:%[0-9]+]]:sreg_32 = S_MOV_B32 0
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_MUL_HI_U32_e64_4]], %subreg.sub0, [[S_MOV_B32_8]], %subreg.sub1
 ; GCN-ISEL-NEXT:   [[S_ADD_U:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[REG_SEQUENCE5]], [[REG_SEQUENCE4]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY30:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U]].sub0
+; GCN-ISEL-NEXT:   [[COPY31:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U]].sub0
 ; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_5:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[V_CVT_U32_F32_e64_1]], [[S_MUL_I32_5]], implicit $exec
-; GCN-ISEL-NEXT:   [[COPY31:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_1]]
-; GCN-ISEL-NEXT:   [[S_MUL_I32_6:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY31]], [[S_MUL_I32_5]]
+; GCN-ISEL-NEXT:   [[COPY32:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_1]]
+; GCN-ISEL-NEXT:   [[S_MUL_I32_6:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY32]], [[S_MUL_I32_5]]
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_6]], %subreg.sub0, [[V_MUL_HI_U32_e64_5]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY32:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE6]].sub0
-; GCN-ISEL-NEXT:   [[S_UADDO:%[0-9]+]]:sreg_32, [[S_UADDO1:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[COPY30]], [[COPY32]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY33:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U]].sub1
-; GCN-ISEL-NEXT:   [[COPY34:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE6]].sub1
-; GCN-ISEL-NEXT:   [[S_ADD_C:%[0-9]+]]:sreg_32, [[S_ADD_C1:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY33]], [[COPY34]], [[S_UADDO1]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_6:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[V_CVT_U32_F32_e64_1]], [[S_ADD_I32_4]], implicit $exec
+; GCN-ISEL-NEXT:   [[COPY33:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE6]].sub0
+; GCN-ISEL-NEXT:   [[S_UADDO:%[0-9]+]]:sreg_32, [[S_UADDO1:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[COPY31]], [[COPY33]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY34:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U]].sub1
+; GCN-ISEL-NEXT:   [[COPY35:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE6]].sub1
+; GCN-ISEL-NEXT:   [[S_ADD_C2:%[0-9]+]]:sreg_32, [[S_ADD_C3:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY34]], [[COPY35]], [[S_UADDO1]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_6:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[V_CVT_U32_F32_e64_1]], [[S_ADD_I32_3]], implicit $exec
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-; GCN-ISEL-NEXT:   [[COPY35:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_6]]
-; GCN-ISEL-NEXT:   [[S_ADD_C2:%[0-9]+]]:sreg_32, [[S_ADD_C3:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY35]], [[S_MOV_B32_9]], [[S_ADD_C1]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY36:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_1]]
-; GCN-ISEL-NEXT:   [[S_MUL_I32_7:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY36]], [[S_ADD_I32_4]]
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE7:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_7]], %subreg.sub0, [[S_ADD_C2]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE8:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_UADDO]], %subreg.sub0, [[S_ADD_C]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY37:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE8]].sub1
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE9:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY37]], %subreg.sub0, [[S_MOV_B32_9]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY36:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_6]]
+; GCN-ISEL-NEXT:   [[S_ADD_C4:%[0-9]+]]:sreg_32, [[S_ADD_C5:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY36]], [[S_MOV_B32_9]], [[S_ADD_C3]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY37:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_1]]
+; GCN-ISEL-NEXT:   [[S_MUL_I32_7:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY37]], [[S_ADD_I32_3]]
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE7:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_7]], %subreg.sub0, [[S_ADD_C4]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE8:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_UADDO]], %subreg.sub0, [[S_ADD_C2]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY38:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE8]].sub1
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE9:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY38]], %subreg.sub0, [[S_MOV_B32_9]], %subreg.sub1
 ; GCN-ISEL-NEXT:   [[S_ADD_U1:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[REG_SEQUENCE9]], [[REG_SEQUENCE7]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY38:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U1]].sub0
-; GCN-ISEL-NEXT:   [[COPY39:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_]]
-; GCN-ISEL-NEXT:   [[S_UADDO2:%[0-9]+]]:sreg_32, [[S_UADDO3:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[COPY39]], [[COPY38]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY40:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U1]].sub1
-; GCN-ISEL-NEXT:   [[COPY41:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_1]]
-; GCN-ISEL-NEXT:   [[S_ADD_C4:%[0-9]+]]:sreg_32, [[S_ADD_C5:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY41]], [[COPY40]], [[S_UADDO3]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_MUL_I32_8:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY25]], [[S_UADDO2]]
-; GCN-ISEL-NEXT:   [[COPY42:%[0-9]+]]:vgpr_32 = COPY [[S_MUL_I32_8]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_7:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[S_ADD_C4]], [[COPY42]], implicit $exec
-; GCN-ISEL-NEXT:   [[S_MUL_I32_9:%[0-9]+]]:sreg_32 = S_MUL_I32 [[S_ADD_C4]], [[S_MUL_I32_8]]
+; GCN-ISEL-NEXT:   [[COPY39:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U1]].sub0
+; GCN-ISEL-NEXT:   [[COPY40:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_]]
+; GCN-ISEL-NEXT:   [[S_UADDO2:%[0-9]+]]:sreg_32, [[S_UADDO3:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[COPY40]], [[COPY39]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY41:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U1]].sub1
+; GCN-ISEL-NEXT:   [[COPY42:%[0-9]+]]:sreg_32 = COPY [[V_CVT_U32_F32_e64_1]]
+; GCN-ISEL-NEXT:   [[S_ADD_C6:%[0-9]+]]:sreg_32, [[S_ADD_C7:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY42]], [[COPY41]], [[S_UADDO3]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_MUL_I32_8:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY26]], [[S_UADDO2]]
+; GCN-ISEL-NEXT:   [[COPY43:%[0-9]+]]:vgpr_32 = COPY [[S_MUL_I32_8]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_7:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[S_ADD_C6]], [[COPY43]], implicit $exec
+; GCN-ISEL-NEXT:   [[S_MUL_I32_9:%[0-9]+]]:sreg_32 = S_MUL_I32 [[S_ADD_C6]], [[S_MUL_I32_8]]
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE10:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_9]], %subreg.sub0, [[V_MUL_HI_U32_e64_7]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY43:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE10]].sub0
-; GCN-ISEL-NEXT:   [[S_MUL_I32_10:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY25]], [[S_ADD_C4]]
-; GCN-ISEL-NEXT:   [[COPY44:%[0-9]+]]:vgpr_32 = COPY [[S_UADDO2]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_8:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY25]], [[COPY44]], implicit $exec
-; GCN-ISEL-NEXT:   [[COPY45:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_8]]
-; GCN-ISEL-NEXT:   [[S_ADD_I32_5:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY45]], [[S_MUL_I32_10]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_MUL_I32_11:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY23]], [[S_UADDO2]]
-; GCN-ISEL-NEXT:   [[S_ADD_I32_6:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_5]], [[S_MUL_I32_11]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY46:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_6]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_9:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[S_UADDO2]], [[COPY46]], implicit $exec
-; GCN-ISEL-NEXT:   [[S_MUL_I32_12:%[0-9]+]]:sreg_32 = S_MUL_I32 [[S_UADDO2]], [[S_ADD_I32_6]]
+; GCN-ISEL-NEXT:   [[COPY44:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE10]].sub0
+; GCN-ISEL-NEXT:   [[S_MUL_I32_10:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY26]], [[S_ADD_C6]]
+; GCN-ISEL-NEXT:   [[COPY45:%[0-9]+]]:vgpr_32 = COPY [[S_UADDO2]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_8:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY26]], [[COPY45]], implicit $exec
+; GCN-ISEL-NEXT:   [[COPY46:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_8]]
+; GCN-ISEL-NEXT:   [[S_ADD_I32_4:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY46]], [[S_MUL_I32_10]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_MUL_I32_11:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY24]], [[S_UADDO2]]
+; GCN-ISEL-NEXT:   [[S_ADD_I32_5:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_4]], [[S_MUL_I32_11]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY47:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_5]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_9:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[S_UADDO2]], [[COPY47]], implicit $exec
+; GCN-ISEL-NEXT:   [[S_MUL_I32_12:%[0-9]+]]:sreg_32 = S_MUL_I32 [[S_UADDO2]], [[S_ADD_I32_5]]
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE11:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_12]], %subreg.sub0, [[V_MUL_HI_U32_e64_9]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY47:%[0-9]+]]:vgpr_32 = COPY [[S_MUL_I32_8]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_10:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[S_UADDO2]], [[COPY47]], implicit $exec
+; GCN-ISEL-NEXT:   [[COPY48:%[0-9]+]]:vgpr_32 = COPY [[S_MUL_I32_8]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_10:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[S_UADDO2]], [[COPY48]], implicit $exec
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE12:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_MUL_HI_U32_e64_10]], %subreg.sub0, [[S_MOV_B32_8]], %subreg.sub1
 ; GCN-ISEL-NEXT:   [[S_ADD_U2:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[REG_SEQUENCE12]], [[REG_SEQUENCE11]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY48:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U2]].sub0
-; GCN-ISEL-NEXT:   [[S_UADDO4:%[0-9]+]]:sreg_32, [[S_UADDO5:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[COPY48]], [[COPY43]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY49:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE10]].sub1
-; GCN-ISEL-NEXT:   [[COPY50:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U2]].sub1
-; GCN-ISEL-NEXT:   [[S_ADD_C6:%[0-9]+]]:sreg_32, [[S_ADD_C7:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY50]], [[COPY49]], [[S_UADDO5]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE13:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_UADDO4]], %subreg.sub0, [[S_ADD_C6]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY51:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE13]].sub1
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE14:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY51]], %subreg.sub0, [[S_MOV_B32_9]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY52:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_6]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_11:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[S_ADD_C4]], [[COPY52]], implicit $exec
-; GCN-ISEL-NEXT:   [[COPY53:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_11]]
-; GCN-ISEL-NEXT:   [[S_ADD_C8:%[0-9]+]]:sreg_32, [[S_ADD_C9:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY53]], [[S_MOV_B32_9]], [[S_ADD_C7]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_MUL_I32_13:%[0-9]+]]:sreg_32 = S_MUL_I32 [[S_ADD_C4]], [[S_ADD_I32_6]]
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE15:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_13]], %subreg.sub0, [[S_ADD_C8]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY49:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U2]].sub0
+; GCN-ISEL-NEXT:   [[S_UADDO4:%[0-9]+]]:sreg_32, [[S_UADDO5:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[COPY49]], [[COPY44]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY50:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE10]].sub1
+; GCN-ISEL-NEXT:   [[COPY51:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U2]].sub1
+; GCN-ISEL-NEXT:   [[S_ADD_C8:%[0-9]+]]:sreg_32, [[S_ADD_C9:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY51]], [[COPY50]], [[S_UADDO5]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE13:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_UADDO4]], %subreg.sub0, [[S_ADD_C8]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY52:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE13]].sub1
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE14:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY52]], %subreg.sub0, [[S_MOV_B32_9]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY53:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_I32_5]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_11:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[S_ADD_C6]], [[COPY53]], implicit $exec
+; GCN-ISEL-NEXT:   [[COPY54:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_11]]
+; GCN-ISEL-NEXT:   [[S_ADD_C10:%[0-9]+]]:sreg_32, [[S_ADD_C11:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY54]], [[S_MOV_B32_9]], [[S_ADD_C9]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_MUL_I32_13:%[0-9]+]]:sreg_32 = S_MUL_I32 [[S_ADD_C6]], [[S_ADD_I32_5]]
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE15:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_13]], %subreg.sub0, [[S_ADD_C10]], %subreg.sub1
 ; GCN-ISEL-NEXT:   [[S_ADD_U3:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[REG_SEQUENCE14]], [[REG_SEQUENCE15]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY54:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U3]].sub0
-; GCN-ISEL-NEXT:   [[S_UADDO6:%[0-9]+]]:sreg_32, [[S_UADDO7:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[S_UADDO2]], [[COPY54]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY55:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U3]].sub1
-; GCN-ISEL-NEXT:   [[S_ADD_C10:%[0-9]+]]:sreg_32, [[S_ADD_C11:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[S_ADD_C4]], [[COPY55]], [[S_UADDO7]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY56:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub0
-; GCN-ISEL-NEXT:   [[COPY57:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_C10]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_12:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY56]], [[COPY57]], implicit $exec
-; GCN-ISEL-NEXT:   [[S_MUL_I32_14:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY56]], [[S_ADD_C10]]
+; GCN-ISEL-NEXT:   [[COPY55:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U3]].sub0
+; GCN-ISEL-NEXT:   [[S_UADDO6:%[0-9]+]]:sreg_32, [[S_UADDO7:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[S_UADDO2]], [[COPY55]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY56:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U3]].sub1
+; GCN-ISEL-NEXT:   [[S_ADD_C12:%[0-9]+]]:sreg_32, [[S_ADD_C13:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[S_ADD_C6]], [[COPY56]], [[S_UADDO7]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY57:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub0
+; GCN-ISEL-NEXT:   [[COPY58:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_C12]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_12:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY57]], [[COPY58]], implicit $exec
+; GCN-ISEL-NEXT:   [[S_MUL_I32_14:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY57]], [[S_ADD_C12]]
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE16:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_14]], %subreg.sub0, [[V_MUL_HI_U32_e64_12]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY58:%[0-9]+]]:vgpr_32 = COPY [[S_UADDO6]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_13:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY56]], [[COPY58]], implicit $exec
+; GCN-ISEL-NEXT:   [[COPY59:%[0-9]+]]:vgpr_32 = COPY [[S_UADDO6]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_13:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY57]], [[COPY59]], implicit $exec
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE17:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_MUL_HI_U32_e64_13]], %subreg.sub0, [[S_MOV_B32_8]], %subreg.sub1
 ; GCN-ISEL-NEXT:   [[S_ADD_U4:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[REG_SEQUENCE17]], [[REG_SEQUENCE16]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY59:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U4]].sub0
-; GCN-ISEL-NEXT:   [[COPY60:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub1
-; GCN-ISEL-NEXT:   [[COPY61:%[0-9]+]]:vgpr_32 = COPY [[S_UADDO6]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_14:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY60]], [[COPY61]], implicit $exec
-; GCN-ISEL-NEXT:   [[S_MUL_I32_15:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY60]], [[S_UADDO6]]
+; GCN-ISEL-NEXT:   [[COPY60:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U4]].sub0
+; GCN-ISEL-NEXT:   [[COPY61:%[0-9]+]]:sreg_32 = COPY [[COPY8]].sub1
+; GCN-ISEL-NEXT:   [[COPY62:%[0-9]+]]:vgpr_32 = COPY [[S_UADDO6]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_14:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY61]], [[COPY62]], implicit $exec
+; GCN-ISEL-NEXT:   [[S_MUL_I32_15:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY61]], [[S_UADDO6]]
 ; GCN-ISEL-NEXT:   [[REG_SEQUENCE18:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_15]], %subreg.sub0, [[V_MUL_HI_U32_e64_14]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY62:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE18]].sub0
-; GCN-ISEL-NEXT:   [[S_UADDO8:%[0-9]+]]:sreg_32, [[S_UADDO9:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[COPY59]], [[COPY62]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY63:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U4]].sub1
-; GCN-ISEL-NEXT:   [[COPY64:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE18]].sub1
-; GCN-ISEL-NEXT:   [[S_ADD_C12:%[0-9]+]]:sreg_32, [[S_ADD_C13:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY63]], [[COPY64]], [[S_UADDO9]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY65:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_C10]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_15:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY60]], [[COPY65]], implicit $exec
-; GCN-ISEL-NEXT:   [[COPY66:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_15]]
-; GCN-ISEL-NEXT:   [[S_ADD_C14:%[0-9]+]]:sreg_32, [[S_ADD_C15:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY66]], [[S_MOV_B32_9]], [[S_ADD_C13]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_MUL_I32_16:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY60]], [[S_ADD_C10]]
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE19:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_16]], %subreg.sub0, [[S_ADD_C14]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE20:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_UADDO8]], %subreg.sub0, [[S_ADD_C12]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY67:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE20]].sub1
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE21:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY67]], %subreg.sub0, [[S_MOV_B32_9]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY63:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE18]].sub0
+; GCN-ISEL-NEXT:   [[S_UADDO8:%[0-9]+]]:sreg_32, [[S_UADDO9:%[0-9]+]]:sreg_64_xexec = S_UADDO_PSEUDO [[COPY60]], [[COPY63]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY64:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U4]].sub1
+; GCN-ISEL-NEXT:   [[COPY65:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE18]].sub1
+; GCN-ISEL-NEXT:   [[S_ADD_C14:%[0-9]+]]:sreg_32, [[S_ADD_C15:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY64]], [[COPY65]], [[S_UADDO9]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY66:%[0-9]+]]:vgpr_32 = COPY [[S_ADD_C12]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_15:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY61]], [[COPY66]], implicit $exec
+; GCN-ISEL-NEXT:   [[COPY67:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_15]]
+; GCN-ISEL-NEXT:   [[S_ADD_C16:%[0-9]+]]:sreg_32, [[S_ADD_C17:%[0-9]+]]:sreg_64_xexec = S_ADD_CO_PSEUDO [[COPY67]], [[S_MOV_B32_9]], [[S_ADD_C15]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_MUL_I32_16:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY61]], [[S_ADD_C12]]
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE19:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MUL_I32_16]], %subreg.sub0, [[S_ADD_C16]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE20:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_UADDO8]], %subreg.sub0, [[S_ADD_C14]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY68:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE20]].sub1
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE21:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY68]], %subreg.sub0, [[S_MOV_B32_9]], %subreg.sub1
 ; GCN-ISEL-NEXT:   [[S_ADD_U5:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[REG_SEQUENCE21]], [[REG_SEQUENCE19]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY68:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U5]].sub1
-; GCN-ISEL-NEXT:   [[S_MUL_I32_17:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY21]], [[COPY68]]
-; GCN-ISEL-NEXT:   [[COPY69:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U5]].sub0
-; GCN-ISEL-NEXT:   [[COPY70:%[0-9]+]]:vgpr_32 = COPY [[COPY69]]
-; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_16:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY21]], [[COPY70]], implicit $exec
-; GCN-ISEL-NEXT:   [[COPY71:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_16]]
-; GCN-ISEL-NEXT:   [[S_ADD_I32_7:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY71]], [[S_MUL_I32_17]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_MUL_I32_18:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY22]], [[COPY69]]
-; GCN-ISEL-NEXT:   [[S_ADD_I32_8:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_7]], [[S_MUL_I32_18]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_SUB_I32_3:%[0-9]+]]:sreg_32 = S_SUB_I32 [[COPY60]], [[S_ADD_I32_8]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_MUL_I32_19:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY21]], [[COPY69]]
-; GCN-ISEL-NEXT:   [[S_USUBO:%[0-9]+]]:sreg_32, [[S_USUBO1:%[0-9]+]]:sreg_64_xexec = S_USUBO_PSEUDO [[COPY56]], [[S_MUL_I32_19]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_SUB_C:%[0-9]+]]:sreg_32, [[S_SUB_C1:%[0-9]+]]:sreg_64_xexec = S_SUB_CO_PSEUDO [[S_SUB_I32_3]], [[COPY22]], [[S_USUBO1]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[S_USUBO2:%[0-9]+]]:sreg_32, [[S_USUBO3:%[0-9]+]]:sreg_64_xexec = S_USUBO_PSEUDO [[S_USUBO]], [[COPY21]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[COPY69:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U5]].sub1
+; GCN-ISEL-NEXT:   [[S_MUL_I32_17:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY22]], [[COPY69]]
+; GCN-ISEL-NEXT:   [[COPY70:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U5]].sub0
+; GCN-ISEL-NEXT:   [[COPY71:%[0-9]+]]:vgpr_32 = COPY [[COPY70]]
+; GCN-ISEL-NEXT:   [[V_MUL_HI_U32_e64_16:%[0-9]+]]:vgpr_32 = V_MUL_HI_U32_e64 [[COPY22]], [[COPY71]], implicit $exec
+; GCN-ISEL-NEXT:   [[COPY72:%[0-9]+]]:sreg_32 = COPY [[V_MUL_HI_U32_e64_16]]
+; GCN-ISEL-NEXT:   [[S_ADD_I32_6:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY72]], [[S_MUL_I32_17]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_MUL_I32_18:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY23]], [[COPY70]]
+; GCN-ISEL-NEXT:   [[S_ADD_I32_7:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_ADD_I32_6]], [[S_MUL_I32_18]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_SUB_I32_3:%[0-9]+]]:sreg_32 = S_SUB_I32 [[COPY61]], [[S_ADD_I32_7]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_MUL_I32_19:%[0-9]+]]:sreg_32 = S_MUL_I32 [[COPY22]], [[COPY70]]
+; GCN-ISEL-NEXT:   [[S_USUBO:%[0-9]+]]:sreg_32, [[S_USUBO1:%[0-9]+]]:sreg_64_xexec = S_USUBO_PSEUDO [[COPY57]], [[S_MUL_I32_19]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_SUB_C:%[0-9]+]]:sreg_32, [[S_SUB_C1:%[0-9]+]]:sreg_64_xexec = S_SUB_CO_PSEUDO [[S_SUB_I32_3]], [[COPY23]], [[S_USUBO1]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   [[S_USUBO2:%[0-9]+]]:sreg_32, [[S_USUBO3:%[0-9]+]]:sreg_64_xexec = S_USUBO_PSEUDO [[S_USUBO]], [[COPY22]], implicit-def dead $scc
 ; GCN-ISEL-NEXT:   [[S_SUB_C2:%[0-9]+]]:sreg_32, [[S_SUB_C3:%[0-9]+]]:sreg_64_xexec = S_SUB_CO_PSEUDO [[S_SUB_C]], [[S_MOV_B32_9]], [[S_USUBO3]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_SUB_C2]], [[COPY22]], implicit-def $scc
+; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_SUB_C2]], [[COPY23]], implicit-def $scc
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_2:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_10]], [[S_MOV_B32_9]], implicit $scc
+; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_USUBO2]], [[COPY22]], implicit-def $scc
 ; GCN-ISEL-NEXT:   [[S_CSELECT_B32_3:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_10]], [[S_MOV_B32_9]], implicit $scc
-; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_USUBO2]], [[COPY21]], implicit-def $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_4:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_10]], [[S_MOV_B32_9]], implicit $scc
-; GCN-ISEL-NEXT:   S_CMP_EQ_U32 [[S_SUB_C2]], [[COPY22]], implicit-def $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_5:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_CSELECT_B32_4]], [[S_CSELECT_B32_3]], implicit $scc
-; GCN-ISEL-NEXT:   [[COPY72:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_5]]
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE22:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY69]], %subreg.sub0, [[COPY68]], %subreg.sub1
+; GCN-ISEL-NEXT:   S_CMP_EQ_U32 [[S_SUB_C2]], [[COPY23]], implicit-def $scc
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_4:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_CSELECT_B32_3]], [[S_CSELECT_B32_2]], implicit $scc
+; GCN-ISEL-NEXT:   [[COPY73:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_4]]
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE22:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY70]], %subreg.sub0, [[COPY69]], %subreg.sub1
 ; GCN-ISEL-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 1
 ; GCN-ISEL-NEXT:   [[S_ADD_U6:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[REG_SEQUENCE22]], [[S_MOV_B64_1]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY73:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U6]].sub0
+; GCN-ISEL-NEXT:   [[COPY74:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U6]].sub0
 ; GCN-ISEL-NEXT:   [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 2
 ; GCN-ISEL-NEXT:   [[S_ADD_U7:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[REG_SEQUENCE22]], [[S_MOV_B64_2]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   [[COPY74:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U7]].sub0
-; GCN-ISEL-NEXT:   S_CMP_LG_U32 [[COPY72]], [[S_MOV_B32_9]], implicit-def $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_6:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY74]], [[COPY73]], implicit $scc
-; GCN-ISEL-NEXT:   [[COPY75:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U6]].sub1
-; GCN-ISEL-NEXT:   [[COPY76:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U7]].sub1
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_7:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY76]], [[COPY75]], implicit $scc
-; GCN-ISEL-NEXT:   [[S_SUB_C4:%[0-9]+]]:sreg_32, [[S_SUB_C5:%[0-9]+]]:sreg_64_xexec = S_SUB_CO_PSEUDO [[COPY60]], [[S_ADD_I32_8]], [[S_USUBO1]], implicit-def dead $scc
-; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_SUB_C4]], [[COPY22]], implicit-def $scc
+; GCN-ISEL-NEXT:   [[COPY75:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U7]].sub0
+; GCN-ISEL-NEXT:   S_CMP_LG_U32 [[COPY73]], [[S_MOV_B32_9]], implicit-def $scc
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_5:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY75]], [[COPY74]], implicit $scc
+; GCN-ISEL-NEXT:   [[COPY76:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U6]].sub1
+; GCN-ISEL-NEXT:   [[COPY77:%[0-9]+]]:sreg_32 = COPY [[S_ADD_U7]].sub1
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_6:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY77]], [[COPY76]], implicit $scc
+; GCN-ISEL-NEXT:   [[S_SUB_C4:%[0-9]+]]:sreg_32, [[S_SUB_C5:%[0-9]+]]:sreg_64_xexec = S_SUB_CO_PSEUDO [[COPY61]], [[S_ADD_I32_7]], [[S_USUBO1]], implicit-def dead $scc
+; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_SUB_C4]], [[COPY23]], implicit-def $scc
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_7:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_10]], [[S_MOV_B32_9]], implicit $scc
+; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_USUBO]], [[COPY22]], implicit-def $scc
 ; GCN-ISEL-NEXT:   [[S_CSELECT_B32_8:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_10]], [[S_MOV_B32_9]], implicit $scc
-; GCN-ISEL-NEXT:   S_CMP_GE_U32 [[S_USUBO]], [[COPY21]], implicit-def $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_9:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_MOV_B32_10]], [[S_MOV_B32_9]], implicit $scc
-; GCN-ISEL-NEXT:   S_CMP_EQ_U32 [[S_SUB_C4]], [[COPY22]], implicit-def $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_10:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_CSELECT_B32_9]], [[S_CSELECT_B32_8]], implicit $scc
-; GCN-ISEL-NEXT:   [[COPY77:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_10]]
-; GCN-ISEL-NEXT:   S_CMP_LG_U32 [[COPY77]], [[S_MOV_B32_9]], implicit-def $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_11:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_CSELECT_B32_7]], [[COPY68]], implicit $scc
-; GCN-ISEL-NEXT:   [[S_CSELECT_B32_12:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_CSELECT_B32_6]], [[COPY69]], implicit $scc
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE23:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_CSELECT_B32_12]], %subreg.sub0, [[S_CSELECT_B32_11]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY78:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE23]]
+; GCN-ISEL-NEXT:   S_CMP_EQ_U32 [[S_SUB_C4]], [[COPY23]], implicit-def $scc
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_9:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_CSELECT_B32_8]], [[S_CSELECT_B32_7]], implicit $scc
+; GCN-ISEL-NEXT:   [[COPY78:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_9]]
+; GCN-ISEL-NEXT:   S_CMP_LG_U32 [[COPY78]], [[S_MOV_B32_9]], implicit-def $scc
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_10:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_CSELECT_B32_6]], [[COPY69]], implicit $scc
+; GCN-ISEL-NEXT:   [[S_CSELECT_B32_11:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_CSELECT_B32_5]], [[COPY70]], implicit $scc
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE23:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_CSELECT_B32_11]], %subreg.sub0, [[S_CSELECT_B32_10]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY79:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE23]]
 ; GCN-ISEL-NEXT: {{  $}}
 ; GCN-ISEL-NEXT: bb.3..split:
-; GCN-ISEL-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[COPY78]], %bb.2, [[COPY20]], %bb.1
-; GCN-ISEL-NEXT:   [[COPY79:%[0-9]+]]:sreg_32 = COPY [[COPY7]].sub1
-; GCN-ISEL-NEXT:   [[COPY80:%[0-9]+]]:sreg_32 = COPY [[COPY7]].sub0
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE24:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY80]], %subreg.sub0, [[COPY79]], %subreg.sub1
-; GCN-ISEL-NEXT:   [[COPY81:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE24]].sub1
-; GCN-ISEL-NEXT:   [[COPY82:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE24]].sub0
+; GCN-ISEL-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[COPY79]], %bb.2, [[COPY21]], %bb.1
+; GCN-ISEL-NEXT:   [[COPY80:%[0-9]+]]:sreg_32 = COPY [[COPY7]].sub1
+; GCN-ISEL-NEXT:   [[COPY81:%[0-9]+]]:sreg_32 = COPY [[COPY7]].sub0
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE24:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY81]], %subreg.sub0, [[COPY80]], %subreg.sub1
+; GCN-ISEL-NEXT:   [[COPY82:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE24]].sub1
+; GCN-ISEL-NEXT:   [[COPY83:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE24]].sub0
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_11:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
 ; GCN-ISEL-NEXT:   [[S_MOV_B32_12:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-; GCN-ISEL-NEXT:   [[REG_SEQUENCE25:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY82]], %subreg.sub0, [[COPY81]], %subreg.sub1, [[S_MOV_B32_12]], %subreg.sub2, [[S_MOV_B32_11]], %subreg.sub3
-; GCN-ISEL-NEXT:   [[COPY83:%[0-9]+]]:vreg_64 = COPY [[PHI]]
-; GCN-ISEL-NEXT:   BUFFER_STORE_DWORDX2_OFFSET [[COPY83]], [[REG_SEQUENCE25]], 0, 0, 0, 0, implicit $exec :: (store (s64) into %ir.13, addrspace 1)
+; GCN-ISEL-NEXT:   [[REG_SEQUENCE25:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY83]], %subreg.sub0, [[COPY82]], %subreg.sub1, [[S_MOV_B32_12]], %subreg.sub2, [[S_MOV_B32_11]], %subreg.sub3
+; GCN-ISEL-NEXT:   [[COPY84:%[0-9]+]]:vreg_64 = COPY [[PHI]]
+; GCN-ISEL-NEXT:   BUFFER_STORE_DWORDX2_OFFSET [[COPY84]], [[REG_SEQUENCE25]], 0, 0, 0, 0, implicit $exec :: (store (s64) into %ir.13, addrspace 1)
 ; GCN-ISEL-NEXT:   S_ENDPGM 0
   %result = udiv i64 %x, %y
   store i64 %result, ptr addrspace(1) %out

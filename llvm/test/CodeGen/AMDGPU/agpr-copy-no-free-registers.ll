@@ -538,11 +538,10 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX908-NEXT:    s_and_b32 s24, s2, 0xffff
 ; GFX908-NEXT:    s_cmp_ge_u32 s10, s3
-; GFX908-NEXT:    s_cselect_b32 s8, s11, s8
 ; GFX908-NEXT:    s_cselect_b32 s10, s12, s10
-; GFX908-NEXT:    s_add_i32 s11, s8, 1
-; GFX908-NEXT:    s_cmp_ge_u32 s10, s3
 ; GFX908-NEXT:    s_cselect_b32 s8, s11, s8
+; GFX908-NEXT:    s_cmp_ge_u32 s10, s3
+; GFX908-NEXT:    s_addc_u32 s8, s8, 0
 ; GFX908-NEXT:    s_lshr_b32 s7, s7, 16
 ; GFX908-NEXT:    v_cvt_f32_f16_e32 v13, s7
 ; GFX908-NEXT:    s_mul_i32 s14, s1, s24
@@ -677,11 +676,10 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX90A-NEXT:    s_and_b32 s24, s2, 0xffff
 ; GFX90A-NEXT:    s_cmp_ge_u32 s10, s3
-; GFX90A-NEXT:    s_cselect_b32 s8, s11, s8
 ; GFX90A-NEXT:    s_cselect_b32 s10, s12, s10
-; GFX90A-NEXT:    s_add_i32 s11, s8, 1
-; GFX90A-NEXT:    s_cmp_ge_u32 s10, s3
 ; GFX90A-NEXT:    s_cselect_b32 s8, s11, s8
+; GFX90A-NEXT:    s_cmp_ge_u32 s10, s3
+; GFX90A-NEXT:    s_addc_u32 s8, s8, 0
 ; GFX90A-NEXT:    s_lshr_b32 s7, s7, 16
 ; GFX90A-NEXT:    v_cvt_f32_f16_e32 v1, s7
 ; GFX90A-NEXT:    s_mul_i32 s14, s1, s24
