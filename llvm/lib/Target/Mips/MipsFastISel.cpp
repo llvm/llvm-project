@@ -420,8 +420,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
   emitInst(Mips::LW, DestReg)
       .addReg(MFI->getGlobalBaseReg(*MF))
       .addGlobalAddress(GV, 0, MipsII::MO_GOT);
-  if ((GV->hasInternalLinkage() ||
-       (GV->hasLocalLinkage() && !isa<Function>(GV)))) {
+  if (GV->hasLocalLinkage()) {
     Register TempReg = createResultReg(RC);
     emitInst(Mips::ADDiu, TempReg)
         .addReg(DestReg)
@@ -1587,8 +1586,7 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (Symbol)
       MIB.addSym(Symbol, MipsII::MO_JALR);
     else
-      MIB.addSym(FuncInfo.MF->getContext().getOrCreateSymbol(
-	                   Addr.getGlobalValue()->getName()), MipsII::MO_JALR);
+      MIB.addSym(TM.getSymbol(Addr.getGlobalValue()), MipsII::MO_JALR);
   }
 
   // Finish off the call including any return values.

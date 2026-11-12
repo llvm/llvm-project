@@ -180,6 +180,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+### Changes to the Windows installer
+
+* LLVM versions 23.1.3 and earlier may appear as separate side-by-side
+  installations, even though they share a single installation on disk. Users
+  who want a clean installation may uninstall the existing installations
+  before installing this release.
+
 ### Changes to TableGen
 
 * Outer let statements use ``ID{n-m}`` instead of ``ID<n-m>`` to be consistent

@@ -142,6 +142,12 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
         return Error::success();
       }
+
+      Error abort() override {
+        Error E1 = CachedFileStream::abort();
+        Error E2 = TempFile.discard();
+        return joinErrors(std::move(E1), std::move(E2));
+      }
     };
 
     return [=](size_t Task, const Twine &ModuleName)

@@ -66,6 +66,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -1824,7 +1825,12 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   Module *M = F.getParent();
   IRBuilder<> Builder(&SI);
   Type *Int64Ty = Builder.getInt64Ty();
-  auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
+  Value *Cond = SI.getCondition();
+  // Freeze the condition so that a poison condition can only increment by
+  // 0 or 1, but not some other value.
+  if (!isGuaranteedNotToBePoison(Cond))
+    Cond = Builder.CreateFreeze(Cond);
+  auto *Step = Builder.CreateZExt(Cond, Int64Ty);
   auto *NormalizedFuncNameVarPtr =
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(
           FuncNameVar, PointerType::get(M->getContext(), 0));
