@@ -2412,10 +2412,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
         WidenIterIV = new VPWidenIntOrFpInductionRecipe(
             /*IV=*/nullptr, One, One, &Plan.getVF(),
             InductionDescriptor::getCanonicalIntInduction(TCTy, *PSE.getSE()),
-            VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false),
+            VPIRFlags::WrapFlagsTy(/*HasNUW=*/false, /*HasNSW=*/false),
             DebugLoc::getUnknown());
         WidenIterIV->insertBefore(FindPhiR);
       }
+      IVOp = WidenIterIV;
       VPValue *Zero = Plan.getZero(TCTy);
       FindIVPhiR = new VPReductionPHIRecipe(
           /*Phi=*/nullptr, RecurKind::FindIV, *Zero, *Zero, RdxUnordered{1}, {},
@@ -2454,8 +2455,6 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
           VPInstruction::ExtractLane, {FirstActive, FindBackedge}, ExitDL);
       FindResult->replaceAllUsesWith(NewFindLastResult);
       FindResult->eraseFromParent();
-
-      return false;
     }
 
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
