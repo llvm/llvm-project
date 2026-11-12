@@ -246,8 +246,9 @@ entry:
 define void @store_i32_by_i8_bswap_volatile(i32 signext %m, ptr %p) {
 ; CHECK-PPC64LE-LABEL: store_i32_by_i8_bswap_volatile:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NEXT:    li 5, 2
-; CHECK-PPC64LE-NEXT:    sthbrx 3, 4, 5
+; CHECK-PPC64LE-NEXT:    srwi 5, 3, 8
+; CHECK-PPC64LE-NEXT:    stb 3, 3(4)
+; CHECK-PPC64LE-NEXT:    stb 5, 2(4)
 ; CHECK-PPC64LE-NEXT:    srwi 5, 3, 16
 ; CHECK-PPC64LE-NEXT:    srwi 3, 3, 24
 ; CHECK-PPC64LE-NEXT:    stb 5, 1(4)
@@ -256,7 +257,9 @@ define void @store_i32_by_i8_bswap_volatile(i32 signext %m, ptr %p) {
 ;
 ; CHECK-PPC64-LABEL: store_i32_by_i8_bswap_volatile:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NEXT:    sth 3, 2(4)
+; CHECK-PPC64-NEXT:    srwi 5, 3, 8
+; CHECK-PPC64-NEXT:    stb 3, 3(4)
+; CHECK-PPC64-NEXT:    stb 5, 2(4)
 ; CHECK-PPC64-NEXT:    srwi 5, 3, 16
 ; CHECK-PPC64-NEXT:    srwi 3, 3, 24
 ; CHECK-PPC64-NEXT:    stb 5, 1(4)

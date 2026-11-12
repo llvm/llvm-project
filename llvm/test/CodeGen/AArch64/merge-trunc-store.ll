@@ -524,10 +524,11 @@ define void @le_i64_to_i16_order(i64 %x, ptr %p0) {
 define void @be_i64_to_i16(i64 %x, ptr %p0) {
 ; LE-LABEL: be_i64_to_i16:
 ; LE:       // %bb.0:
-; LE-NEXT:    ror w8, w0, #16
+; LE-NEXT:    lsr x8, x0, #16
 ; LE-NEXT:    lsr x9, x0, #32
 ; LE-NEXT:    lsr x10, x0, #48
-; LE-NEXT:    str w8, [x1, #4]
+; LE-NEXT:    strh w0, [x1, #6]
+; LE-NEXT:    strh w8, [x1, #4]
 ; LE-NEXT:    strh w9, [x1, #2]
 ; LE-NEXT:    strh w10, [x1]
 ; LE-NEXT:    ret
