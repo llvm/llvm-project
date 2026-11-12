@@ -4187,6 +4187,18 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
   case Instruction::UDiv:
     if (Instruction *I = foldICmpUDivConstant(Cmp, BO, C))
       return I;
+    // (icmp ugt (udiv A, B), C) -> (icmp uge A, B * (C + 1))
+    // if B * (C + 1) is known not to overflow.
+    if (Cmp.getPredicate() == ICmpInst::ICMP_UGT && !C.isMaxValue() &&
+        BO->hasOneUse()) {
+      Value *A = BO->getOperand(0), *B = BO->getOperand(1);
+      Constant *Factor = ConstantInt::get(BO->getType(), C + 1);
+      if (computeOverflowForUnsignedMul(B, Factor, &Cmp) ==
+          OverflowResult::NeverOverflows)
+        return new ICmpInst(ICmpInst::ICMP_UGE, A,
+                            Builder.CreateMul(B, Factor, "",
+                                              /*HasNUW=*/true));
+    }
     [[fallthrough]];
   case Instruction::SDiv:
     if (Instruction *I = foldICmpDivConstant(Cmp, BO, C))
