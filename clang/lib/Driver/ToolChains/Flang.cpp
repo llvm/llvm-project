@@ -292,6 +292,10 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fno_openacc_multiple_names_in_routine,
                    options::OPT_finstrument_functions});
 
+  // Forward whichever of -fbacktrace/-fno-backtrace appears last. Pass
+  // neither when the user did not specify one; the frontend default is on.
+  Args.addLastArg(CmdArgs, options::OPT_fbacktrace, options::OPT_fno_backtrace);
+
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   bool hasDwarfNArg = getDwarfNArg(Args) != nullptr;
   if (Args.hasArg(options::OPT_gN_Group)) {

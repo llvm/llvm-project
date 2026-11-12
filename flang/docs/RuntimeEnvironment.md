@@ -100,6 +100,24 @@ treated as big-endian for both input and output, while units 26 and 27 will be
 treated as little-endian for both input and output.
 
 
+## `FLANG_ERROR_BACKTRACE`
+
+Controls the stack trace printed for a fatal runtime error, an `ERROR STOP`
+statement, the `ABORT` extension, or a deadly signal such as `SIGSEGV` or
+`SIGFPE`. A normal `STOP` statement does not print a trace.
+`CALL BACKTRACE()` always prints one, whether or not this variable disables
+the others.
+
+Only the first character is significant. `1`, `Y`, or `y` enables the trace,
+and `0`, `N`, or `n` disables it. Any other value is ignored. When the
+variable is unset, the trace is enabled.
+
+`-fbacktrace` is the compiler default and does not set the variable.
+`-fno-backtrace` sets `FLANG_ERROR_BACKTRACE=0` only when the variable is not
+already set, so a value in the environment wins over the option. The variable
+is not read when the runtime is built for a GPU, and signal handlers are not
+installed there.
+
 ## `FLANG_RT_COPYOUT_MODIFIED_ONLY`
 
 The system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY` selects how

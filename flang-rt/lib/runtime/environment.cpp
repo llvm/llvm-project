@@ -326,6 +326,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  // FLANG_ERROR_BACKTRACE overrides the -fbacktrace default. Only the first
+  // character is significant, matching gfortran: 1/Y/y enables, 0/N/n disables.
+  // Any other value is ignored. -fno-backtrace supplies "0" when the variable
+  // is not already set.
+  backtrace = true;
+  if (auto *x{std::getenv("FLANG_ERROR_BACKTRACE")}) {
+    if (*x == '1' || *x == 'Y' || *x == 'y') {
+      backtrace = true;
+    } else if (*x == '0' || *x == 'N' || *x == 'n') {
+      backtrace = false;
+    }
+  }
+
   if (auto *x{std::getenv("NO_STOP_MESSAGE")}) {
     char *end;
     auto n{std::strtol(x, &end, 10)};
