@@ -14140,7 +14140,7 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 }
 
 // Return the CallExpr if builtin call returns cooperative matrix.
-CallExpr *Sema::getCoopMatrixBuiltinCall(Expr *RHSExpr) {
+CallExpr *Sema::getCoopMatrixBuiltinCall(Expr *RHSExpr, bool &IsLoad) {
   RHSExpr = RHSExpr->IgnoreParens();
   auto Call = dyn_cast<CallExpr>(RHSExpr);
   if (!Call)
@@ -14150,6 +14150,8 @@ CallExpr *Sema::getCoopMatrixBuiltinCall(Expr *RHSExpr) {
     return nullptr;
   switch (F->getBuiltinID()) {
   case Builtin::BIcoop_mat_load:
+    IsLoad = true;
+    [[fallthrough]];
   case Builtin::BIcoop_mat_mulAdd:
   case Builtin::BIcoop_mat_binary_add:
   case Builtin::BIcoop_mat_binary_sub:
@@ -14386,8 +14388,13 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // Set return type of builtin call using type of LHS variable.
   // This is done for builtin calls that return cooperative matrix.
   if (getLangOpts().OpenCL) {
-    if (CallExpr *Call = getCoopMatrixBuiltinCall(Init)) {
+    bool IsLoad = false;
+    if (CallExpr *Call = getCoopMatrixBuiltinCall(Init, IsLoad)) {
       if (!VDecl->getType()->isCooperativeMatrixType()) {
+        Diag(VDecl->getLocation(), diag::err_invalid_coopmat_assignment);
+        return;
+      }
+      if (IsLoad && (Call->getType() != VDecl->getType())) {
         Diag(VDecl->getLocation(), diag::err_invalid_coopmat_assignment);
         return;
       }

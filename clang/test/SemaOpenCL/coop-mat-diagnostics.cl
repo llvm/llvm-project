@@ -39,18 +39,13 @@ typedef float4 __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatVecElem_t; // 
 // Assignment of coop_mat_load result to a plain scalar
 kernel void test_bad_assignment(__global float *ptr) {
     float bad;
-	bad = coop_mat_load(ptr, ROW_MAJOR, 16); // expected-error {{builtin return value must be assigned to cooperative matrix type variable}}
+    MatA_t a;
+	bad = coop_mat_load(ptr, a, ROW_MAJOR, 16); // expected-error {{builtin return value must be assigned to cooperative matrix type variable}}
     (void)bad;
 }
 
 // Kernel parameter cannot be of cooperative matrix type.
 kernel void test_bad_kernel_param(MatA_t a) {} // expected-error {{cannot be used as the type of a kernel parameter}}
-
-// Invalid memory layout for cooperative matrix load.
-kernel void test_invalid_load_layout(__global float *ptr) {
-    MatA_t a;
-    a = coop_mat_load(ptr, 99, 16); // expected-error {{memory layout for cooperative matrix load/store should be CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR or CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR}}
-}
 
 // Invalid memory layout for cooperative matrix store.
 kernel void test_invalid_store_layout(__global float *ptr) {
@@ -65,7 +60,7 @@ kernel void test_invalid_load_stride(__global float *ptr) {
         int X;
     };
     struct S stride;
-    a = coop_mat_load(ptr, ROW_MAJOR, stride); // expected-error-re {{passing{{.*}}struct S{{.*}} to parameter of incompatible type 'unsigned int'}}
+    a = coop_mat_load(ptr, a, ROW_MAJOR, stride); // expected-error-re {{passing{{.*}}struct S{{.*}} to parameter of incompatible type 'unsigned int'}}
 }
 
 // Invalid stride type for cooperative matrix store.
@@ -76,6 +71,19 @@ kernel void test_invalid_store_stride(__global float *ptr) {
     };
     struct S stride;
     coop_mat_store(ptr, a, ROW_MAJOR, stride); // expected-error-re {{passing{{.*}}struct S{{.*}} to parameter of incompatible type 'unsigned int'}}
+}
+
+void test_invalid_coop_mat_input_for_load(__global float *ptr) {
+  MatA_t a;
+  int value = 0;
+  a = coop_mat_load(ptr, value, ROW_MAJOR, 16); // expected-error {{argument must be a valid cooperative matrix}}
+}
+
+void test_invalid_coop_mat_input_for_load_2(__global float *ptr) {
+  MatA_t a;
+  MatB_t b;
+  int value = 0;
+  b = coop_mat_load(ptr, a, ROW_MAJOR, 16); // expected-error {{builtin return value must be assigned to cooperative matrix type variable}}
 }
 
 void test_invalid_coop_mat_input_for_store(__global float *ptr) {
