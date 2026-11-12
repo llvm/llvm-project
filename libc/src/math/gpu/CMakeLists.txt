@@ -6,7 +6,7 @@ endif()
 # implementations live in the corresponding subdirectory and take precedence
 # over the ones listed here.
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND
-   NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   return()
 endif()
 
