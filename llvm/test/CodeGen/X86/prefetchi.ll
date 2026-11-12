@@ -9,6 +9,10 @@ define dso_local void @t(ptr %ptr) nounwind  {
 ; CHECK-NEXT:    prefetchit0 (%rdi)
 ; CHECK-NEXT:    prefetchit1 t(%rip)
 ; CHECK-NEXT:    prefetchit0 ext(%rip)
+; CHECK-NEXT:    prefetchit1 (%rdi)
+; CHECK-NEXT:    prefetchit1 (%rdi)
+; CHECK-NEXT:    prefetchit0 (%rdi)
+; CHECK-NEXT:    prefetchit1 (%rdi)
 ; CHECK-NEXT:    retq
 ;
 ; NOPREFETCHI-LABEL: t:
@@ -19,6 +23,14 @@ entry:
   tail call void @llvm.prefetch(ptr %ptr, i32 0, i32 3, i32 0)
   tail call void @llvm.prefetch(ptr @t,   i32 0, i32 2, i32 0)
   tail call void @llvm.prefetch(ptr @ext, i32 0, i32 3, i32 0)
+
+  ; Test for locality 0 and 1 (fallback to PREFETCHIT1)
+  tail call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 0)
+  tail call void @llvm.prefetch(ptr %ptr, i32 0, i32 1, i32 0)
+
+  ; Test for rw=1 (fallback to PREFETCHIT1/PREFETCHIT0 depending on locality)
+  tail call void @llvm.prefetch(ptr %ptr, i32 1, i32 3, i32 0)
+  tail call void @llvm.prefetch(ptr %ptr, i32 1, i32 2, i32 0)
   ret void
 }
 
