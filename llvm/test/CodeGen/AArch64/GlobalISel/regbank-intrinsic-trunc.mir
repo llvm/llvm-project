@@ -6,7 +6,6 @@
 name:            test_f32.intrinsic_trunc
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -31,7 +30,6 @@ body:             |
 name:            test_f64.intrinsic_trunc
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}

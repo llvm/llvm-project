@@ -105,6 +105,12 @@ void privatizeSymbol(
     bool forceHeapAllocationForPrivateDynamicArrays = false,
     bool isLinear = false);
 
+/// Return the symbols whose storage is in COMMON block \p commonBlock: the
+/// objects named in its COMMON statements and the objects of the same scope
+/// that EQUIVALENCE associates with them.
+llvm::SmallVector<const semantics::Symbol *>
+getCommonBlockStorageMembers(const semantics::Symbol &commonBlock);
+
 } // end namespace Fortran::lower
 
 // DenseMapInfo for pointers to Fortran::lower::SomeExpr.

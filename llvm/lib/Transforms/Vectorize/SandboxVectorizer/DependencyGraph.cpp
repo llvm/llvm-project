@@ -473,6 +473,9 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
   auto *N = getOrCreateNode(I);
   auto *MemN = dyn_cast<MemDGNode>(N);
 
+  if (Sched)
+    Sched->notifyCreateInstrBeforeDAGUpdates(N);
+
   // Update the MemDGNode chain if this is a memory node.
   if (MemN != nullptr) {
     if (auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false)) {
@@ -498,6 +501,10 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
            MemDGNodeIntervalBuilder::make(BelowIntvl, *this))
         scanAndAddDeps(BelowN, Interval<MemDGNode>(MemN, MemN));
     }
+  }
+
+  if (Sched != nullptr) {
+    Sched->notifyCreateInstrAfterDAGUpdates(N);
   }
 }
 
@@ -599,6 +606,10 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
     }
     // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
   }
+
+  if (Sched != nullptr)
+    Sched->notifyEraseInstr(I);
+
   // Finally erase the Node.
   InstrToNodeMap.erase(I);
 }

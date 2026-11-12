@@ -18,7 +18,6 @@
 name:            and_i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -41,7 +40,6 @@ body:             |
 name:            or_i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -64,7 +62,6 @@ body:             |
 name:            xor_i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -87,7 +84,6 @@ body:             |
 name:            shl
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -110,7 +106,6 @@ body:             |
 name:            ashr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -133,7 +128,6 @@ body:             |
 name:            lshr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -156,7 +150,6 @@ body:             |
 name:            shlv
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -179,7 +172,6 @@ body:             |
 name:            ashrv
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -202,7 +194,6 @@ body:             |
 name:            lshrv
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5

@@ -271,7 +271,10 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
           !target->hasAttr(r.type, RelocAttrBits::AUTH)) {
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.getAddend(), r.getAuthInfo());
+        const AuthInfo *auth = r.getAuthInfo();
+        if (!auth)
+          auth = getImplicitAuthInfo(this, referentSym);
+        writeChainedFixup(loc, referentSym, r.getAddend(), auth);
         continue;
       }
     } else if (auto *referentIsec =
@@ -419,6 +422,18 @@ bool macho::isEhFrameSection(const InputSection *isec) {
 bool macho::usesAuthGot(const InputSection *isec) {
   // arm64e's unwinder expects signed personality pointers.
   return config->arch() == AK_arm64e && isEhFrameSection(isec);
+}
+
+const AuthInfo *macho::getImplicitAuthInfo(const InputSection *isec,
+                                           const Symbol *sym) {
+  // The only pointer bound from a TLV descriptor is its thunk, which TLV
+  // accesses call with blraaz.
+  static constexpr AuthInfo tlvThunk = {/*diversity=*/0, PtrAuthKeyIA,
+                                        /*addrDiv=*/false};
+  if (config->arch() == AK_arm64e && isThreadLocalVariables(isec->getFlags()) &&
+      needsBinding(sym))
+    return &tlvThunk;
+  return nullptr;
 }
 
 bool macho::isGccExceptTabSection(const InputSection *isec) {

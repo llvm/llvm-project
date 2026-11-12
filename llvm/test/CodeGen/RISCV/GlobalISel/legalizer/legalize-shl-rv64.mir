@@ -3,11 +3,13 @@
 # RUN: | FileCheck %s
 ---
 name:            shl_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
@@ -26,11 +28,13 @@ body:             |
 ...
 ---
 name:            shl_i15
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i15
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32767
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
@@ -49,11 +53,13 @@ body:             |
 ...
 ---
 name:            shl_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
@@ -72,11 +78,13 @@ body:             |
 ...
 ---
 name:            shl_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SLLW:%[0-9]+]]:_(s64) = G_SLLW [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLLW]](s64)
@@ -93,11 +101,13 @@ body:             |
 ...
 ---
 name:            shl_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: shl_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[COPY1]](s64)
     ; CHECK-NEXT: $x10 = COPY [[SHL]](s64)
@@ -111,11 +121,13 @@ body:             |
 ...
 ---
 name:            shl_i72
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: shl_i72
-    ; CHECK: %x00:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x00:_(s64) = COPY $x10
     ; CHECK-NEXT: %x01:_(s64) = COPY $x11
     ; CHECK-NEXT: %y00:_(s64) = COPY $x12
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
@@ -153,11 +165,13 @@ body:             |
 ...
 ---
 name:            shl_i128
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: shl_i128
-    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %hi1:_(s64) = COPY $x11
     ; CHECK-NEXT: %lo2:_(s64) = COPY $x12
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
@@ -192,11 +206,13 @@ body:             |
 ...
 ---
 name:            shl_i192
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13, $x14, $x15
     ; CHECK-LABEL: name: shl_i192
-    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14, $x15
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %mid1:_(s64) = COPY $x11
     ; CHECK-NEXT: %hi1:_(s64) = COPY $x12
     ; CHECK-NEXT: %lo2:_(s64) = COPY $x13
@@ -262,7 +278,6 @@ body:             |
 ...
 ---
 name:            shl_i48
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10, $x11

@@ -2265,10 +2265,17 @@ public:
                                   const LibcallLoweringInfo &Libcalls) const;
 
 protected:
-  Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                            bool UseTLS) const;
+  Value *
+  getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
+                                     const LibcallLoweringInfo &Libcalls) const;
 
 public:
+  /// Emits a call to the libcall returning the address of the unsafe stack
+  /// pointer. Returns nullptr if the libcall is unavailable.
+  Value *
+  getSafeStackPointerAddressCall(IRBuilderBase &IRB,
+                                 const LibcallLoweringInfo &Libcalls) const;
+
   /// Returns the target-specific address of the unsafe stack pointer.
   virtual Value *
   getSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -3837,14 +3844,6 @@ public:
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
-
-  /// Get the CallingConv that should be used for the specified libcall
-  /// implementation.
-  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    return Libcalls.getLibcallImplCallingConv(Call);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall.
   // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
@@ -4409,10 +4408,7 @@ public:
                                           EVT RetVT, ArrayRef<SDValue> Ops,
                                           MakeLibCallOptions CallOptions,
                                           const SDLoc &dl,
-                                          SDValue Chain = SDValue()) const {
-    return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
-                       Chain);
-  }
+                                          SDValue Chain = SDValue()) const;
 
   /// Build a call argument list for \p FuncTy, taking the argument node values
   /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
@@ -6155,6 +6151,9 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_SHUFFLE_VAR into variable-index element extracts.
+  SDValue expandVECTOR_SHUFFLE_VAR(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand a CTTZ_ELTS or CTTZ_ELTS_ZERO_POISON by calculating (VL - i) for
   /// each active lane (i), getting the maximum and subtracting it from VL.

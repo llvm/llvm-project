@@ -1063,6 +1063,22 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+  case ISD::ATOMIC_CMP_SWAP:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    cast<AtomicSDNode>(Node)->getMemoryVT());
+    break;
   case ISD::SELECT_CC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
@@ -2443,7 +2459,8 @@ SDValue SelectionDAGLegalize::ExpandSincosStretLibCall(SDNode *Node) const {
   /// - Single return as vector elements
   /// - sret struct
 
-  const RTLIB::RuntimeLibcallsInfo &CallsInfo = TLI.getRuntimeLibcallsInfo();
+  const RTLIB::RuntimeLibcallsInfo &CallsInfo =
+      DAG.getLibcalls().getRuntimeLibcallsInfo();
 
   const DataLayout &DL = DAG.getDataLayout();
 
@@ -3356,6 +3373,22 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue NewRHS =
         DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
     SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_LOAD_AND: {
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    if (TLI.getOperationAction(ISD::ATOMIC_LOAD_CLR, AN->getMemoryVT()) ==
+        TargetLowering::Expand)
+      break;
+
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    SDValue NewRHS = DAG.getNOT(DL, Node->getOperand(2), VT);
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_CLR, DL, AN->getMemoryVT(),
                                 Node->getOperand(0), Node->getOperand(1),
                                 NewRHS, AN->getMemOperand());
     Results.push_back(Res);

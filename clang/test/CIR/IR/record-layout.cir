@@ -10,7 +10,13 @@ module attributes {
                                 unadjusted_align = 4>,
     TU = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
                             has_trivial_dtor = true, record_align = 4,
-                            transparent_union = true>
+                            transparent_union = true>,
+    FAM = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 4,
+                             flexible_array_member = true>,
+    NoFAM = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                               has_trivial_dtor = true, record_align = 4,
+                               flexible_array_member = false>
   }
 } {}
 
@@ -19,3 +25,7 @@ module attributes {
 // CHECK-DAG: Raised = #cir.record_layout<arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true, record_align = 16, unadjusted_align = 4>
 // CHECK-DAG: Same = #cir.record_layout<arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true, record_align = 4>
 // CHECK-DAG: TU = #cir.record_layout<arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true, record_align = 4, transparent_union = true>
+
+// flexible_array_member is printed only when true.
+// CHECK-DAG: FAM = #cir.record_layout<arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true, record_align = 4, flexible_array_member = true>
+// CHECK-DAG: NoFAM = #cir.record_layout<arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true, record_align = 4>{{[,}]}}

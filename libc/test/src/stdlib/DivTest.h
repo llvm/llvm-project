@@ -8,12 +8,10 @@
 
 #include "test/UnitTest/Test.h"
 
-template <typename IntType, typename ReturnType>
-class DivTest : public LIBC_NAMESPACE::testing::Test {
+class LlvmLibcDivTest : public LIBC_NAMESPACE::testing::Test {
 public:
-  using DivFunc = ReturnType(IntType, IntType);
-
-  void simpleTest(DivFunc func) {
+  template <typename IntType, typename ReturnType>
+  void simpleTest(ReturnType (&func)(IntType, IntType)) {
     auto result = func(10, 3);
     EXPECT_EQ(result.quot, IntType(3));
     EXPECT_EQ(result.rem, IntType(1));
@@ -33,5 +31,6 @@ public:
 };
 
 #define LIST_DIV_TESTS(IntType, ReturnType, func)                              \
-  using LlvmLibcDivTest = DivTest<IntType, ReturnType>;                        \
-  TEST_F(LlvmLibcDivTest, SimpleTest##ReturnType) { simpleTest(func); }
+  TEST_F(LlvmLibcDivTest, SimpleTest##ReturnType) {                            \
+    simpleTest<IntType, ReturnType>(func);                                     \
+  }

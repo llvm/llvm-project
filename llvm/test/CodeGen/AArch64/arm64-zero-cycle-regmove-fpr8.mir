@@ -6,7 +6,6 @@
 
 ---
 name: zero_cycle_regmove_FPR8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $b0

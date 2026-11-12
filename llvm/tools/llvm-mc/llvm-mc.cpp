@@ -14,8 +14,6 @@
 #include "Disassembler.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
-#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -50,8 +48,6 @@
 #include <optional>
 
 using namespace llvm;
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 static cl::OptionCategory MCCategory("MC Options");
 
@@ -220,10 +216,6 @@ static cl::opt<bool> LexMotorolaIntegers(
 
 static cl::opt<bool> NoExecStack("no-exec-stack",
                                  cl::desc("File doesn't need an exec stack"),
-                                 cl::cat(MCCategory));
-
-static cl::opt<bool> ValidateCFI("validate-cfi",
-                                 cl::desc("Validate the CFI directives"),
                                  cl::cat(MCCategory));
 
 static cl::list<std::string>
@@ -403,7 +395,8 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+  cl::parseCommandLineOptions(LibraryOptions, mc::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "llvm machine code playground\n");
 
   if (TimeTrace)
@@ -419,7 +412,7 @@ int main(int argc, char **argv) {
     timeTraceProfilerCleanup();
   });
 
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = mc::getMCTargetOptions(LibraryOptions);
   MCOptions.LibraryOptions = &LibraryOptions;
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
@@ -653,16 +646,7 @@ int main(int argc, char **argv) {
   assert(MCII && "Unable to create instruction info!");
 
   std::unique_ptr<MCInstPrinter> IP;
-  if (ValidateCFI) {
-    // TODO: The DWARF CFI checker support for emitting anything other than
-    // errors and warnings has not been implemented yet. Because of this, it is
-    // assert-checked that the filetype output is null.
-    assert(FileType == OFT_Null);
-    auto FFA = std::make_unique<CFIFunctionFrameAnalyzer>(Ctx, *MCII);
-    auto FFS = std::make_unique<CFIFunctionFrameStreamer>(Ctx, std::move(FFA));
-    TheTarget->createNullTargetStreamer(*FFS);
-    Str = std::move(FFS);
-  } else if (FileType == OFT_AssemblyFile) {
+  if (FileType == OFT_AssemblyFile) {
     unsigned AsmVariant = MAI->getOutputAssemblerDialect();
     IP.reset(TheTarget->createMCInstPrinter(Triple(TripleName), AsmVariant,
                                             *MAI, *MCII, *MRI));

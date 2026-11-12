@@ -39,7 +39,7 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 static lto::Config createConfig() {
   lto::Config c;
   c.LibraryOptions = &config->libraryOptions;
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options = getTargetOptions(config->libraryOptions);
   c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe ||
                           config->icfLevel == ICFLevel::safe_thunks;
   for (StringRef C : config->mllvmOpts)
