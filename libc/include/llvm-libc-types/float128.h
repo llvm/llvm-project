@@ -29,7 +29,7 @@ typedef _Float128 float128;
 // Disable on x86_64 Clang version less than 18.1 due to issue passing
 // __float128 via varargs prior to
 // https://github.com/llvm/llvm-project/pull/75156.
-#if !(defined(LIBC_COMPILER_CLANG_VER) && LIBC_COMPILER_CLANG_VER < 1801 &&    \
+#if !(defined(__clang__) && __clang_major__ < 18 && __clang_minor__ < 1 &&     \
       defined(__x86_64__))
 #define LIBC_TYPES_HAS_NATIVE_FLOAT128
 typedef __float128 float128;
