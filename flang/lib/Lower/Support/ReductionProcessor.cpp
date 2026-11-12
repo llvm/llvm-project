@@ -370,6 +370,19 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
   llvm_unreachable("Unhandled Reduction identifier : getReductionInitValue");
 }
 
+template <typename IntOp, typename LogicalOp>
+static mlir::Value createBitwiseOrLogicalOp(fir::FirOpBuilder &builder,
+                                            mlir::Location loc, mlir::Type type,
+                                            mlir::Value op1, mlir::Value op2) {
+  if (type.isIntOrIndex()) {
+    return IntOp::create(builder, loc, op1, op2);
+  } else {
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    return LogicalOp::create(builder, loc, type, v1, v2);
+  }
+}
+
 mlir::Value ReductionProcessor::createScalarCombiner(
     fir::FirOpBuilder &builder, mlir::Location loc, ReductionIdentifier redId,
     mlir::Type type, mlir::Value op1, mlir::Value op2) {
@@ -400,31 +413,19 @@ mlir::Value ReductionProcessor::createScalarCombiner(
   // identifiers stand for the bitwise intrinsics IAND, IOR and IEOR, which
   // lower to the corresponding arith ops instead of the fir logical ones.
   case ReductionIdentifier::AND:
-    if (type.isIntOrIndex()) {
-      reductionOp = mlir::arith::AndIOp::create(builder, loc, op1, op2);
-    } else {
-      mlir::Value v1 = builder.createConvert(loc, type, op1);
-      mlir::Value v2 = builder.createConvert(loc, type, op2);
-      reductionOp = fir::LogicalAndOp::create(builder, loc, type, v1, v2);
-    }
+    reductionOp =
+        createBitwiseOrLogicalOp<mlir::arith::AndIOp, fir::LogicalAndOp>(
+            builder, loc, type, op1, op2);
     break;
   case ReductionIdentifier::OR:
-    if (type.isIntOrIndex()) {
-      reductionOp = mlir::arith::OrIOp::create(builder, loc, op1, op2);
-    } else {
-      mlir::Value v1 = builder.createConvert(loc, type, op1);
-      mlir::Value v2 = builder.createConvert(loc, type, op2);
-      reductionOp = fir::LogicalOrOp::create(builder, loc, type, v1, v2);
-    }
+    reductionOp =
+        createBitwiseOrLogicalOp<mlir::arith::OrIOp, fir::LogicalOrOp>(
+            builder, loc, type, op1, op2);
     break;
   case ReductionIdentifier::NEQV:
-    if (type.isIntOrIndex()) {
-      reductionOp = mlir::arith::XOrIOp::create(builder, loc, op1, op2);
-    } else {
-      mlir::Value v1 = builder.createConvert(loc, type, op1);
-      mlir::Value v2 = builder.createConvert(loc, type, op2);
-      reductionOp = fir::NeqvOp::create(builder, loc, type, v1, v2);
-    }
+    reductionOp =
+        createBitwiseOrLogicalOp<mlir::arith::XOrIOp, fir::LogicalNeqvOp>(
+            builder, loc, type, op1, op2);
     break;
   case ReductionIdentifier::EQV: {
     mlir::Value v1 = builder.createConvert(loc, type, op1);
