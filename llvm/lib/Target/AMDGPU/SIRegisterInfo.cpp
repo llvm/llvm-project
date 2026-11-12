@@ -4655,7 +4655,8 @@ bool SIRegisterInfo::countsTowardRegisterUsage(const MachineOperand &MO) {
   if (!MO.isUse() || !MO.isUndef())
     return true;
   const MachineInstr &MI = *MO.getParent();
-  return MI.isReturn() || MI.isInlineAsm();
+  return MI.isReturn() || MI.isInlineAsm() ||
+         MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
 }
 
 SmallVector<StringLiteral>

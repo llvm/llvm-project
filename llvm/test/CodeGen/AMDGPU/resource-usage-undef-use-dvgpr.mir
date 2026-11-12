@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=amdgpu12.00-amd-amdpal -start-before=amdgpu-resource-usage -o - %s | FileCheck %s
+
+# With dynamic VGPRs a function is given only the VGPR blocks it counts, so an
+# undef use still counts there.
+
+# CHECK-LABEL: {{^}}dvgpr:
+# CHECK: NumVgprs: 41
+---
+name: dvgpr
+machineFunctionInfo:
+  dynamicVGPRBlockSize: 16
+body: |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr40, implicit $exec
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: {{^}}no_dvgpr:
+# CHECK: NumVgprs: 1
+---
+name: no_dvgpr
+body: |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr40, implicit $exec
+    S_ENDPGM 0
+...

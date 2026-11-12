@@ -506,11 +506,13 @@ public:
   // is true names it or an alias, or, if \p IncludeCalls is true, a call may
   // clobber it.
   bool isPhysRegCounted(const MachineRegisterInfo &MRI, MCRegister Reg,
-                        bool IncludeCalls = true) const;
+                        bool IncludeCalls) const;
 
   // Whether \p MO counts toward the registers a function uses. An undef use
-  // reads no value and does not, except on a return, where the return address
-  // or values an epilog reads can be undef, and in inline asm.
+  // reads no value and does not, except on a return, which reads the return
+  // address and the values an epilog reads even when they are marked undef, in
+  // inline asm, and with dynamic VGPRs, where the function is given only the
+  // VGPR blocks it counts.
   static bool countsTowardRegisterUsage(const MachineOperand &MO);
 
   std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {

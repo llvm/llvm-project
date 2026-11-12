@@ -44,6 +44,15 @@ body: |
     SI_RETURN implicit undef $vgpr200
 ...
 
+# CHECK-LABEL: {{^}}undef_vgpr_use_on_return_to_epilog:
+# CHECK: NumVgprs: 201
+---
+name: undef_vgpr_use_on_return_to_epilog
+body: |
+  bb.0:
+    SI_RETURN_TO_EPILOG undef $vgpr200
+...
+
 # CHECK-LABEL: {{^}}undef_vgpr_use_in_inline_asm:
 # CHECK: NumVgprs: 201
 ---
@@ -97,8 +106,7 @@ body: |
     SI_RETURN implicit undef $vgpr200
 ...
 
-# A callee counts the registers it reads, so an undef operand of the call does
-# not count here.
+# An undef operand of a call does not count either.
 # CHECK-LABEL: {{^}}calls_undef_sgpr_use_on_call:
 # CHECK: .set .Lcalls_undef_sgpr_use_on_call.numbered_sgpr, max(32, amdgpu.max_num_sgpr){{$}}
 ---
