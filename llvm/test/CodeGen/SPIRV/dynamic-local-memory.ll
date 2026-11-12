@@ -59,7 +59,8 @@ exit:
 
 ; Kernels get the argument, stored on entry after the allocas. Attributes and
 ; metadata are kept.
-; IR-LABEL: define spir_kernel void @kernel(ptr addrspace(1) noundef %out, ptr addrspace(3) %dyn_local_mem) addrspace(9) #0 !kernel_arg_addr_space
+; IR-LABEL: define spir_kernel void @kernel(
+; IR-SAME: ptr addrspace(1) noundef %out, ptr addrspace(3) %dyn_local_mem) addrspace(9) #[[KERNEL_ATTRS:[0-9]+]] !kernel_arg_addr_space
 ; IR-NEXT: entry:
 ; IR-NEXT: %a = alloca i32
 ; IR-NEXT: store ptr addrspace(3) %dyn_local_mem, ptr addrspace(3) @__spirv_dynamic_local_memory
@@ -80,7 +81,47 @@ define spir_kernel void @nouse() addrspace(9) {
   ret void
 }
 
-; IR: attributes #0 = { memory(readwrite) "foo" }
+; Functions should receive modified memory attributes
+; IR-LABEL: define spir_func ptr addrspace(3) @nouse_function()
+; IR-SAME: addrspace(9) #[[READ_ATTRS:[0-9]+]] {
+; IR-NEXT: %[[PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR-NEXT: ret ptr addrspace(3) %[[PTR]]
+define spir_func ptr addrspace(3) @nouse_function() addrspace(9) memory(none) {
+  ret ptr addrspace(3) @buf
+}
+
+; Memory attributes of a caller must be updated
+; IR-LABEL: define spir_func ptr addrspace(3) @caller()
+; IR-SAME: addrspace(9) #[[READ_ATTRS]] {
+; IR-NEXT: %[[PTR:.*]] = call spir_func addrspace(9) ptr addrspace(3) @nouse_function() #[[READ_ATTRS]]
+; IR-NEXT: ret ptr addrspace(3) %[[PTR]]
+define spir_func ptr addrspace(3) @caller() addrspace(9) memory(none) {
+  %ptr = call spir_func addrspace(9) ptr addrspace(3) @nouse_function()
+  ret ptr addrspace(3) %ptr
+}
+
+; Memory attributes of a whole call chain must be updated
+; IR-LABEL: define spir_func ptr addrspace(3) @caller_chain()
+; IR-SAME: addrspace(9) #[[READ_ATTRS]] {
+; IR-NEXT: %[[PTR:.*]] = call spir_func addrspace(9) ptr addrspace(3) @caller() #[[READ_ATTRS]]
+; IR-NEXT: ret ptr addrspace(3) %[[PTR]]
+define spir_func ptr addrspace(3) @caller_chain() addrspace(9) memory(none) {
+  %ptr = call spir_func addrspace(9) ptr addrspace(3) @caller()
+  ret ptr addrspace(3) %ptr
+}
+
+; Memory attributes of a call instruction must be updated
+; IR-LABEL: define spir_func ptr addrspace(3) @call_instruction()
+; IR-SAME: addrspace(9) #[[READ_ATTRS]] {
+; IR-NEXT: %[[PTR:.*]] = call spir_func addrspace(9) ptr addrspace(3) @caller() #[[READ_ATTRS]]
+; IR-NEXT: ret ptr addrspace(3) %[[PTR]]
+define spir_func ptr addrspace(3) @call_instruction() addrspace(9) memory(none) {
+  %ptr = call spir_func addrspace(9) ptr addrspace(3) @caller() memory(none)
+  ret ptr addrspace(3) %ptr
+}
+
+; IR: attributes #[[KERNEL_ATTRS]] = { memory(readwrite) "foo" }
+; IR: attributes #[[READ_ATTRS]] = { memory(read, argmem: none, inaccessiblemem: none, errnomem: none, target_mem: none) }
 
 ; SPV-DAG: OpEntryPoint Kernel %[[#KERNEL:]] "kernel"
 ; SPV-DAG: OpEntryPoint Kernel %[[#NOUSE:]] "nouse"

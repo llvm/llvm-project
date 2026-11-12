@@ -41,6 +41,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "spirv-lower-dynamic-local-memory"
@@ -90,6 +91,36 @@ Function *appendKernelParam(Function &F, Type *ParamTy) {
   F.replaceAllUsesWith(NewF);
   F.eraseFromParent();
   return NewF;
+}
+
+void updateMemoryEffectsInChain(Function *F, MemoryEffects NewEffects) {
+  SmallVector<Function *> Worklist;
+  SmallPtrSet<Function *, 16> Visited;
+  Worklist.push_back(F);
+
+  while (!Worklist.empty()) {
+    Function *Current = Worklist.pop_back_val();
+
+    // Record visited functions, skip if function was
+    // already processed.
+    if (!Visited.insert(Current).second)
+      continue;
+
+    Current->setMemoryEffects(Current->getMemoryEffects() | NewEffects);
+
+    // Add callers of the function into worklist
+    for (auto &U : Current->uses()) {
+      if (auto *CB = dyn_cast<CallBase>(U.getUser())) {
+        if (CB->isCallee(&U)) {
+          auto *Caller = CB->getCaller();
+          Worklist.push_back(Caller);
+
+          // Update call instruction with new effects
+          CB->setMemoryEffects(CB->getMemoryEffects() | NewEffects);
+        }
+      }
+    }
+  }
 }
 
 bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
@@ -145,6 +176,13 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
         InsertPt = PN->getIncomingBlock(U)->getTerminator();
       IRBuilder<> Builder(InsertPt);
       U.set(Builder.CreateLoad(LocalPtrTy, Slot, "dyn_local_mem"));
+
+      // Modify memory effects of the function and it's callers, a function that would
+      // reference SLM pointer might have ModeRefInfo::NoModRef, but adding the load
+      // requires change it to at least ModRefInfo::Ref
+      Function *F = I->getFunction();
+      updateMemoryEffectsInChain(F, MemoryEffects::otherMemOnly(ModRefInfo::Ref));
+      
     }
     GV->eraseFromParent();
   }
