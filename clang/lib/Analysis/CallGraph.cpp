@@ -154,14 +154,6 @@ CallGraph::CallGraph() {
 
 CallGraph::~CallGraph() = default;
 
-bool CallGraph::includeInGraph(const Decl *D) {
-  assert(D);
-  if (!D->hasBody())
-    return false;
-
-  return includeCalleeInGraph(D);
-}
-
 bool CallGraph::includeCalleeInGraph(const Decl *D) {
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     // We skip function template definitions, as their semantics is
