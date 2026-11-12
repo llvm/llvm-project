@@ -3182,10 +3182,12 @@ private:
 
   // Coop matrix handling.
   bool CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx);
+  bool CheckCoopMatrixLoadStoreCoopMat(Expr *MatExpr);
   bool CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr);
   bool CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx);
-  ExprResult BuiltinCoopMatrixStore(CallExpr *TheCall, ExprResult CallResult);
-  ExprResult BuiltinCoopMatrixLoad(CallExpr *TheCall, ExprResult CallResult);
+  ExprResult BuiltinCoopMatrixLoadStore(CallExpr *TheCall,
+                                        ExprResult CallResult,
+                                        unsigned BuiltinID);
   bool CheckCoopMatrixMatMulOutput(CallExpr *TheCall);
   ExprResult BuiltinCoopMatrixMulAdd(CallExpr *TheCall, ExprResult CallResult);
   ExprResult CreateCoopMatBinOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
@@ -15568,7 +15570,7 @@ public:
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
 
-  CallExpr *getCoopMatrixBuiltinCall(Expr *RHSExpr);
+  CallExpr *getCoopMatrixBuiltinCall(Expr *RHSExpr, bool &IsLoad);
 
   /// Build a function type.
   ///

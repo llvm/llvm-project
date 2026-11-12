@@ -16124,8 +16124,14 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   switch (Opc) {
   case BO_Assign:
     if (getLangOpts().OpenCL) {
-      if (CallExpr *Call = getCoopMatrixBuiltinCall(RHSExpr->IgnoreParens())) {
+      bool IsLoad = false;
+      if (CallExpr *Call =
+              getCoopMatrixBuiltinCall(RHSExpr->IgnoreParens(), IsLoad)) {
         if (!LHSExpr->getType()->isCooperativeMatrixType()) {
+          Diag(LHSExpr->getBeginLoc(), diag::err_invalid_coopmat_assignment);
+          return ExprError();
+        }
+        if (IsLoad && (LHSExpr->getType() != Call->getType())) {
           Diag(LHSExpr->getBeginLoc(), diag::err_invalid_coopmat_assignment);
           return ExprError();
         }

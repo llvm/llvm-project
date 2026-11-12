@@ -4194,10 +4194,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
 
   case Builtin::BIcoop_mat_load:
-    return BuiltinCoopMatrixLoad(TheCall, TheCallResult);
-
   case Builtin::BIcoop_mat_store:
-    return BuiltinCoopMatrixStore(TheCall, TheCallResult);
+    return BuiltinCoopMatrixLoadStore(TheCall, TheCallResult, BuiltinID);
 
   case Builtin::BIcoop_mat_mulAdd:
     return BuiltinCoopMatrixMulAdd(TheCall, TheCallResult);
@@ -17584,6 +17582,16 @@ bool Sema::CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx) {
   return ArgError;
 }
 
+// Check coop_mat_load/store cooperative matrix argument
+bool Sema::CheckCoopMatrixLoadStoreCoopMat(Expr *MatExpr) {
+  auto *MTy = MatExpr->getType()->getAs<CooperativeMatrixType>();
+  if (!MTy) {
+    Diag(MatExpr->getBeginLoc(), diag::err_invalid_coopmat_arg);
+    return true;
+  }
+  return false;
+}
+
 // Check coop_mat_load/store layout argument
 bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
   bool ArgError = false;
@@ -17615,34 +17623,21 @@ bool Sema::CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx) {
   return false;
 }
 
-ExprResult Sema::BuiltinCoopMatrixLoad(CallExpr *TheCall,
-                                       ExprResult CallResult) {
-  if (checkArgCount(TheCall, 3))
-    return ExprError();
-  if (CheckCoopMatrixLoadStorePtr(TheCall, 0))
-    return ExprError();
-  if (CheckCoopMatrixLoadStoreLayout(TheCall->getArg(1)))
-    return ExprError();
-  if (CheckCoopMatrixLoadStoreStride(TheCall, 2 /*ArgIdx*/))
-    return ExprError();
-  return CallResult;
-}
-
-ExprResult Sema::BuiltinCoopMatrixStore(CallExpr *TheCall,
-                                        ExprResult CallResult) {
+ExprResult Sema::BuiltinCoopMatrixLoadStore(CallExpr *TheCall,
+                                            ExprResult CallResult,
+                                            unsigned BuiltinID) {
   if (checkArgCount(TheCall, 4))
     return ExprError();
-  auto *MTy = TheCall->getArg(1)->getType()->getAs<CooperativeMatrixType>();
-  if (!MTy) {
-    Diag(TheCall->getArg(1)->getBeginLoc(), diag::err_invalid_coopmat_arg);
-    return ExprError();
-  }
   if (CheckCoopMatrixLoadStorePtr(TheCall, 0))
+    return ExprError();
+  if (CheckCoopMatrixLoadStoreCoopMat(TheCall->getArg(1)))
     return ExprError();
   if (CheckCoopMatrixLoadStoreLayout(TheCall->getArg(2)))
     return ExprError();
   if (CheckCoopMatrixLoadStoreStride(TheCall, 3 /*ArgIdx*/))
     return ExprError();
+  if (BuiltinID == Builtin::BIcoop_mat_load)
+    TheCall->setType(TheCall->getArg(1)->getType());
   return CallResult;
 }
 
@@ -17774,6 +17769,7 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
       (M0Ty->getNumColumns() != M1Ty->getNumRows()))
     return ExprError(Diag(Loc1, diag::err_coopmat_shapes_incompatible));
 
+  TheCall->setType(Arg2->getType());
   return CallResult;
 }
 

@@ -33,9 +33,9 @@ kernel void test_muladd_f32_16x16(__global float *ptr) {
     MatF_16x16_A a;
     MatF_16x16_B b;
     MatF_16x16_C c, r;
-    a = coop_mat_load(ptr, ROW_MAJOR, 16);
-    b = coop_mat_load(ptr, ROW_MAJOR, 16);
-    c = coop_mat_load(ptr, ROW_MAJOR, 16);
+    a = coop_mat_load(ptr, a, ROW_MAJOR, 16);
+    b = coop_mat_load(ptr, b, ROW_MAJOR, 16);
+    c = coop_mat_load(ptr, c, ROW_MAJOR, 16);
     r = coop_mat_mulAdd(a, b, c);
     (void)r;
 }
@@ -50,9 +50,9 @@ kernel void test_muladd_f32_8x32(__global float *ptr) {
     MatF_8x32_A  a;
     MatF_32x8_B  b;
     MatF_8x8_C   c, r;
-    a = coop_mat_load(ptr, ROW_MAJOR, 8);
-    b = coop_mat_load(ptr, ROW_MAJOR, 32);
-    c = coop_mat_load(ptr, ROW_MAJOR, 8);
+    a = coop_mat_load(ptr, a, ROW_MAJOR, 8);
+    b = coop_mat_load(ptr, b, ROW_MAJOR, 32);
+    c = coop_mat_load(ptr, c, ROW_MAJOR, 8);
     r = coop_mat_mulAdd(a, b, c);
     (void)r;
 }
@@ -67,9 +67,9 @@ kernel void test_muladd_i32_16x16(__global int *iptr) {
     MatI_16x16_A a;
     MatI_16x16_B b;
     MatI_16x16_C c, r;
-    a = coop_mat_load(iptr, ROW_MAJOR, 16);
-    b = coop_mat_load(iptr, ROW_MAJOR, 16);
-    c = coop_mat_load(iptr, ROW_MAJOR, 16);
+    a = coop_mat_load(iptr, a, ROW_MAJOR, 16);
+    b = coop_mat_load(iptr, b, ROW_MAJOR, 16);
+    c = coop_mat_load(iptr, c, ROW_MAJOR, 16);
     r = coop_mat_mulAdd(a, b, c);
     (void)r;
 }
@@ -81,12 +81,12 @@ kernel void test_muladd_i32_16x16(__global int *iptr) {
 // Must produce distinct mangled function names.
 kernel void test_load_global(__global float *ptr) {
     MatF_16x16_A a;
-    a = coop_mat_load(ptr, ROW_MAJOR, 16);
+    a = coop_mat_load(ptr, a, ROW_MAJOR, 16);
     (void)a;
 }
 kernel void test_load_local(__local float *ptr) {
     MatF_16x16_A a;
-    a = coop_mat_load(ptr, ROW_MAJOR, 16);
+    a = coop_mat_load(ptr, a, ROW_MAJOR, 16);
     (void)a;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_load_global

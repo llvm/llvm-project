@@ -4772,9 +4772,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       CGM.ErrorUnsupported(E, "coop_mat_load without coop_mat output operand");
 
     auto Ptr = EmitScalarExpr(E->getArg(0));
-    auto Layout = EmitScalarExpr(E->getArg(1));
+    auto Layout = EmitScalarExpr(E->getArg(2));
     Layout = Builder.CreateZExtOrTrunc(Layout, Int32Ty);
-    auto Stride = EmitScalarExpr(E->getArg(2));
+    auto Stride = EmitScalarExpr(E->getArg(3));
     Stride = Builder.CreateZExtOrTrunc(Stride, Int32Ty);
     // Create a TargetExtType to represent the coop matrix type
     llvm::TargetExtType *RetType = getTargetExtType(CGM, MTy);
