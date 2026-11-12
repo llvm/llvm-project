@@ -9,7 +9,6 @@
 name:            test_no_stackslot_scavenging
 # CHECK: name: test_no_stackslot_scavenging
 # CHECK: STRXui $x0, $sp, 2
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:  16
 stack:

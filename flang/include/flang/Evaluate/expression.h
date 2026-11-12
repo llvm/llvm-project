@@ -45,18 +45,18 @@ using common::RelationalOperator;
 // is a std::variant<> discriminated union over all of the representational
 // types for the constants, variables, operations, and other entities that
 // can be valid expressions in that context:
-// - Expr<Type<CATEGORY>> represents an expression whose result is of a
-//   specific intrinsic type category, e.g. Type<TypeCategory::Real>
-// - Expr<SomeDerived> wraps data and procedure references that result in an
-//   instance of a derived type (or CLASS(*) unlimited polymorphic)
-// - Expr<SomeKind<CATEGORY>> is equivalent to Expr<Type<CATEGORY>>
-// - Expr<SomeType> is a union of Expr<SomeKind<CATEGORY>> over the five
-//   intrinsic type categories of Fortran.  It represents any valid expression.
+// - Expr<Type<CATEGORY>> represents an expression whose result is of an
+//   intrinsic type category, e.g. Type<TypeCategory::Real>, of any kind
+// - Expr<Type<TypeCategory::Derived>> wraps data and procedure references
+//   that result in an instance of a derived type (or CLASS(*) unlimited
+//   polymorphic)
+// - Expr<SomeType> is a union of Expr<Type<CATEGORY>> over all type
+//   categories of Fortran.  It represents any valid expression.
 //
 // Everything that can appear in, or as, a valid Fortran expression must be
 // represented with an instance of some class containing a Result typedef that
-// maps to some instantiation of Type<CATEGORY>, SomeKind<CATEGORY>,
-// or SomeType.  (Exception: BOZ literal constants in generic Expr<SomeType>.)
+// maps to some instantiation of Type<CATEGORY> or SomeType.
+// (Exception: BOZ literal constants in generic Expr<SomeType>.)
 template <typename A> using ResultType = typename std::decay_t<A>::Result;
 template <typename A> constexpr int ResultKind = std::decay_t<A>::kind();
 
@@ -121,9 +121,9 @@ public:
   using Derived = DERIVED;
   using Result = RESULT;
   static constexpr std::size_t operands{sizeof...(OPERANDS)};
-  // Allow specific intrinsic types and Parentheses<SomeDerived>
+  // Allow specific intrinsic types and Parentheses<Type<TypeCategory::Derived>>
   static_assert(IsSpecificIntrinsicType<Result> ||
-      (operands == 1 && std::is_same_v<Result, SomeDerived>));
+      (operands == 1 && std::is_same_v<Result, Type<TypeCategory::Derived>>));
   template <int J> using Operand = std::tuple_element_t<J, OperandTypes>;
 
   constexpr int kind() const { return kind_; }
@@ -215,7 +215,7 @@ private:
 // Conversions to specific types from expressions of known category and
 // dynamic kind.
 template <typename TO, TypeCategory FROMCAT = TO::category>
-struct Convert : public Operation<Convert<TO, FROMCAT>, TO, SomeKind<FROMCAT>> {
+struct Convert : public Operation<Convert<TO, FROMCAT>, TO, Type<FROMCAT>> {
   // Fortran doesn't have conversions between kinds of CHARACTER apart from
   // assignments, and in those the data must be convertible to/from 7-bit ASCII.
   static_assert(
@@ -226,7 +226,7 @@ struct Convert : public Operation<Convert<TO, FROMCAT>, TO, SomeKind<FROMCAT>> {
               FROMCAT == TypeCategory::Unsigned)) ||
       TO::category == FROMCAT);
   using Result = TO;
-  using Operand = SomeKind<FROMCAT>;
+  using Operand = Type<FROMCAT>;
   using Base = Operation<Convert, Result, Operand>;
   using Base::Base;
   using Base::kind;
@@ -245,17 +245,19 @@ struct Parentheses : public Operation<Parentheses<A>, A, A> {
 };
 
 template <>
-struct Parentheses<SomeDerived>
-    : public Operation<Parentheses<SomeDerived>, SomeDerived, SomeDerived> {
+struct Parentheses<Type<TypeCategory::Derived>>
+    : public Operation<Parentheses<Type<TypeCategory::Derived>>,
+          Type<TypeCategory::Derived>, Type<TypeCategory::Derived>> {
 public:
-  using Result = SomeDerived;
-  using Operand = SomeDerived;
-  using Base = Operation<Parentheses, SomeDerived, SomeDerived>;
+  using Result = Type<TypeCategory::Derived>;
+  using Operand = Type<TypeCategory::Derived>;
+  using Base = Operation<Parentheses, Type<TypeCategory::Derived>,
+      Type<TypeCategory::Derived>>;
   using Base::Base;
   DynamicType GetType() const;
 
-  explicit Parentheses(const Expr<SomeDerived> &x);
-  explicit Parentheses(Expr<SomeDerived> &&x);
+  explicit Parentheses(const Expr<Type<TypeCategory::Derived>> &x);
+  explicit Parentheses(Expr<Type<TypeCategory::Derived>> &&x);
 };
 
 template <typename A> struct Negate : public Operation<Negate<A>, A, A> {
@@ -340,11 +342,12 @@ template <typename A> struct Power : public Operation<Power<A>, A, A, A> {
 };
 
 template <typename A>
-struct RealToIntPower : public Operation<RealToIntPower<A>, A, A, SomeInteger> {
-  using Base = Operation<RealToIntPower, A, A, SomeInteger>;
+struct RealToIntPower
+    : public Operation<RealToIntPower<A>, A, A, Type<TypeCategory::Integer>> {
+  using Base = Operation<RealToIntPower, A, A, Type<TypeCategory::Integer>>;
   using Result = A;
   using BaseOperand = A;
-  using ExponentOperand = SomeInteger;
+  using ExponentOperand = Type<TypeCategory::Integer>;
   using Base::Base;
 };
 
@@ -594,10 +597,10 @@ private:
 };
 
 template <>
-class ArrayConstructor<SomeDerived>
-    : public ArrayConstructorValues<SomeDerived> {
+class ArrayConstructor<Type<TypeCategory::Derived>>
+    : public ArrayConstructorValues<Type<TypeCategory::Derived>> {
 public:
-  using Result = SomeDerived;
+  using Result = Type<TypeCategory::Derived>;
   using Base = ArrayConstructorValues<Result>;
 
   static constexpr int kind() { return 0; }
@@ -835,20 +838,21 @@ public:
 // StructureConstructor pairs a StructureConstructorValues instance
 // (a map associating symbols with expressions) with a derived type
 // specification.  There are two other similar classes:
-//  - ArrayConstructor<SomeDerived> comprises a derived type spec &
-//    zero or more instances of Expr<SomeDerived>; it has rank 1
-//    but not (in the most general case) a known shape.
-//  - Constant<SomeDerived> comprises a derived type spec, zero or more
-//    homogeneous instances of StructureConstructorValues whose type
-//    parameters and component expressions are all constant, and a
-//    known shape (possibly scalar).
+//  - ArrayConstructor<Type<TypeCategory::Derived>> comprises a derived type
+//    spec & zero or more instances of Expr<Type<TypeCategory::Derived>>; it has
+//    rank 1 but not (in the most general case) a known shape.
+//  - Constant<Type<TypeCategory::Derived>> comprises a derived type spec, zero
+//    or more homogeneous instances of StructureConstructorValues whose type
+//    parameters and component expressions are all constant, and a known shape
+//    (possibly scalar).
 // StructureConstructor represents a scalar value of derived type that
-// is not necessarily a constant.  It is used only as an Expr<SomeDerived>
-// alternative and as the type Scalar<SomeDerived> (with an assumption
-// of constant component value expressions).
+// is not necessarily a constant.  It is used only as an
+// Expr<Type<TypeCategory::Derived>> alternative and as the type
+// Scalar<Type<TypeCategory::Derived>> (with an assumption of constant component
+// value expressions).
 class StructureConstructor {
 public:
-  using Result = SomeDerived;
+  using Result = Type<TypeCategory::Derived>;
 
   static constexpr int kind() { return 0; }
 
@@ -894,9 +898,11 @@ private:
 };
 
 // An expression whose result has a derived type.
-template <> class Expr<SomeDerived> : public ExpressionBase<SomeDerived> {
+template <>
+class Expr<Type<TypeCategory::Derived>>
+    : public ExpressionBase<Type<TypeCategory::Derived>> {
 public:
-  using Result = SomeDerived;
+  using Result = Type<TypeCategory::Derived>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   std::variant<Constant<Result>, ArrayConstructor<Result>, StructureConstructor,
       Designator<Result>, FunctionRef<Result>, Parentheses<Result>,
@@ -904,31 +910,7 @@ public:
       u;
 };
 
-// A polymorphic expression of known intrinsic type category, but dynamic
-// kind.
-// TODO: Expr<Type<CAT>> can now also hold expressions of any kind, so
-// Expr<SomeKind<CAT>> has become redundant and can be removed.
-template <TypeCategory CAT>
-class Expr<SomeKind<CAT>> : public ExpressionBase<SomeKind<CAT>> {
-public:
-  using Result = SomeKind<CAT>;
-  EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
-
-  using ExpressionBase<SomeKind<CAT>>::kind;
-
-  common::MapTemplate<evaluate::Expr, CategoryTypes<CAT>> u;
-};
-
-template <> class Expr<SomeCharacter> : public ExpressionBase<SomeCharacter> {
-public:
-  using Result = SomeCharacter;
-  EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
-  std::optional<Expr<SubscriptInteger>> LEN() const;
-  common::MapTemplate<Expr, CategoryTypes<TypeCategory::Character>> u;
-};
-
-// A variant comprising the Expr<> instantiations over SomeDerived and
-// SomeKind<CATEGORY>.
+// A variant comprising the Expr<> instantiations over all type categories.
 using CategoryExpression = common::MapTemplate<Expr, SomeCategory>;
 
 // BOZ literal "typeless" constants must be wide enough to hold a numeric
@@ -968,23 +950,6 @@ public:
   // its destructor is externalized to reduce redundant default instances.
   ~Expr();
 
-  template <TypeCategory CAT>
-  explicit Expr(const Expr<Type<CAT>> &x) : u{Expr<SomeKind<CAT>>{x}} {}
-
-  template <TypeCategory CAT>
-  explicit Expr(Expr<Type<CAT>> &&x) : u{Expr<SomeKind<CAT>>{std::move(x)}} {}
-
-  template <TypeCategory CAT> Expr &operator=(const Expr<Type<CAT>> &x) {
-    u = Expr<SomeKind<CAT>>{x};
-    return *this;
-  }
-
-  template <TypeCategory CAT> Expr &operator=(Expr<Type<CAT>> &&x) {
-    u = Expr<SomeKind<CAT>>{std::move(x)};
-    return *this;
-  }
-
-public:
   common::CombineVariants<TypelessExpression, CategoryExpression> u;
 };
 
@@ -1030,14 +995,12 @@ struct GenericAssignmentWrapper {
   std::optional<Assignment> v; // vacant if error
 };
 
-FOR_EACH_CATEGORY_TYPE(extern template class Expr, )
 FOR_EACH_TYPE_AND_KIND(extern template class ExpressionBase, )
 FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructorValues, )
 FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructor, )
 
 // Template instantiations to resolve these "extern template" declarations.
 #define INSTANTIATE_EXPRESSION_TEMPLATES \
-  FOR_EACH_CATEGORY_TYPE(template class Expr, ) \
   template class Relational<Type<TypeCategory::Integer>>; \
   template class Relational<Type<TypeCategory::Unsigned>>; \
   template class Relational<Type<TypeCategory::Real>>; \

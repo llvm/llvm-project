@@ -777,11 +777,9 @@ struct GenericAtomicRMWOpLowering
       mapping.map(nestedOp.getResults(), clone->getResults());
     }
 
+    // Values defined outside the region are not in the mapping.
     Value result =
-        mapping.lookupOrNull(entryBlock.getTerminator()->getOperand(0));
-    if (!result) {
-      return atomicOp.emitError("result not defined in region");
-    }
+        mapping.lookupOrDefault(entryBlock.getTerminator()->getOperand(0));
     if (needsBitcast)
       result = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, result);
 

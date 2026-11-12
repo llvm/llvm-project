@@ -16,7 +16,6 @@
 ...
 ---
 name:            func1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -43,7 +42,6 @@ body:             |
 ...
 ---
 name:            func2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -70,7 +68,6 @@ body:             |
 ...
 ---
 name:            func3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10, $x11

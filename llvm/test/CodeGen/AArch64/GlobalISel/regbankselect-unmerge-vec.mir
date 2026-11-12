@@ -4,7 +4,6 @@
 name:            unmerge
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 body:             |
@@ -29,7 +28,6 @@ body:             |
 name:            unmerge_s128
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 body:             |

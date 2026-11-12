@@ -5,7 +5,6 @@
 ---
 name:            test_uavgfloor_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -47,7 +46,6 @@ body:             |
 ---
 name:            test_uavgfloor_v8s16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -79,7 +77,6 @@ body:             |
 ---
 name:            test_savgfloor_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -119,7 +116,6 @@ body:             |
 ---
 name:            test_savgfloor_v8s16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -151,7 +147,6 @@ body:             |
 ---
 name:            test_negative_floor
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -193,7 +188,6 @@ body:             |
 ---
 name:            test_uavgceil_s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -233,7 +227,6 @@ body:             |
 ---
 name:            test_savgceil_s32_associative
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -271,7 +264,6 @@ body:             |
 ---
 name:            test_uavgceil_v8s16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -302,7 +294,6 @@ body:             |
 ---
 name:            test_negative_ceil_bad_constant
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1

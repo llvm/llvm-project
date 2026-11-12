@@ -20,9 +20,9 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[INDEX1]], 2
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr nuw i8, ptr [[INDEX:%.*]], i64 [[TMP1]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP2]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
-; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[IN:%.*]], <vscale x 2 x i64> [[TMP3]]
+; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], ptr [[IN:%.*]], <vscale x 2 x i64> [[TMP3]]
 ; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> align 4 [[TMP4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
-; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[OUT:%.*]], <vscale x 2 x i64> [[TMP3]]
+; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr [[OUT:%.*]], <vscale x 2 x i64> [[TMP3]]
 ; IF-EVL-NEXT:    call void @llvm.vp.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> [[WIDE_MASKED_GATHER]], <vscale x 2 x ptr> align 4 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP6]], [[INDEX1]]
@@ -50,9 +50,9 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; NO-VP-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[INDVARS_IV1]], 2
 ; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[INDEX:%.*]], i64 [[TMP5]]
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP6]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]])
-; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[IN:%.*]], <vscale x 2 x i64> [[TMP7]]
+; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x i8], ptr [[IN:%.*]], <vscale x 2 x i64> [[TMP7]]
 ; NO-VP-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> align 4 [[TMP8]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x float> poison)
-; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[OUT:%.*]], <vscale x 2 x i64> [[TMP7]]
+; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i8], ptr [[OUT:%.*]], <vscale x 2 x i64> [[TMP7]]
 ; NO-VP-NEXT:    call void @llvm.masked.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> [[WIDE_MASKED_GATHER]], <vscale x 2 x ptr> align 4 [[TMP9]], <vscale x 2 x i1> splat (i1 true))
 ; NO-VP-NEXT:    [[INDVARS_IV_NEXT1]] = add nuw i64 [[INDVARS_IV1]], [[TMP12]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT1]], [[N_VEC]]

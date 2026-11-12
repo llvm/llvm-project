@@ -268,8 +268,14 @@ lldb::addr_t SBFrame::GetCFA() const {
     return LLDB_INVALID_ADDRESS;
   }
 
-  if (StackFrame *frame = exe_ctx->GetFramePtr())
-    return frame->GetStackID().GetCallFrameAddressWithoutMetadata();
+  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+    const StackID &id = frame->GetStackID();
+    // A tail call frame's StackID borrows the CFA of the frame that replaced
+    // it.
+    if (id.GetTailCallDepth())
+      return LLDB_INVALID_ADDRESS;
+    return id.GetCallFrameAddressWithoutMetadata();
+  }
   return LLDB_INVALID_ADDRESS;
 }
 

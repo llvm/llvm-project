@@ -606,6 +606,10 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
     }
     // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
   }
+
+  if (Sched != nullptr)
+    Sched->notifyEraseInstr(I);
+
   // Finally erase the Node.
   InstrToNodeMap.erase(I);
 }
