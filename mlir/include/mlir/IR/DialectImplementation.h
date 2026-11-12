@@ -110,6 +110,42 @@ struct FieldParser<
   }
 };
 
+/// Parse an optional plain `char` as a single-character keyword-or-string.
+/// Identifier characters (e.g. `A`) are accepted as bare keywords; all other
+/// values use a quoted+escaped string with two-digit hex escapes (e.g. `"\0A"`
+/// for newline), covering all 256 byte values. Named escapes such as `\n` are
+/// also accepted as input but are not the canonical printed form. Returns
+/// `std::nullopt` if no keyword or string is present.
+template <>
+struct FieldParser<std::optional<char>> {
+  static constexpr bool isKeyValueCompositional = false;
+
+  static FailureOr<std::optional<char>> parse(AsmParser &parser) {
+    std::string str;
+    auto loc = parser.getCurrentLocation();
+    if (failed(parser.parseOptionalKeywordOrString(&str)))
+      return {std::nullopt};
+    if (str.size() != 1)
+      return parser.emitError(loc, "expected a single character");
+    return {std::optional<char>(str[0])};
+  }
+};
+
+/// Parse a plain `char` as a single-character keyword-or-string, see
+/// `FieldParser<std::optional<char>>`.
+template <>
+struct FieldParser<char> {
+  static FailureOr<char> parse(AsmParser &parser) {
+    std::string str;
+    auto loc = parser.getCurrentLocation();
+    if (failed(parser.parseKeywordOrString(&str)))
+      return failure();
+    if (str.size() != 1)
+      return parser.emitError(loc, "expected a single character");
+    return str[0];
+  }
+};
+
 /// Parse any integer.
 template <typename IntT>
 struct FieldParser<IntT, std::enable_if_t<(std::is_integral<IntT>::value ||
