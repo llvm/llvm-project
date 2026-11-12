@@ -9409,6 +9409,23 @@ call void @foo(), !inline_history !0
 !0 = !{ptr @bar, null, ptr @baz}
 ```
 
+### '`call_target`' Matadata
+The `call_target` metadata may be attached to a call instruction. It
+identifies expected type information of indirect calls by providing
+a sample function. For virtual calls in object oriented languages, this
+is expected to be the member function in the base class.
+
+This is intended to be used by debuggers to detect when the current
+call matches the frame function.
+
+```llvm
+%0 = load ptr, ptr %virtualfunction, align 8, !dbg !47
+call void %0(ptr noundef nonnull align 8 dereferenceable(8) %obj), !call_target !0
+
+!0 = !DISubprogram(name: "foo", linkageName: "_ZN5CBase2f00Ev", virtualIndex: 0, 
+flags: DIFlagPrototyped, spFlags: DISPFlagVirtual, ...)
+```
+
 #### '`elf_section_properties`' Metadata
 
 The '`elf_section_properties`' metadata is attached to a function or
