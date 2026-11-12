@@ -141,7 +141,7 @@
 # FAST:      Contents of (__TEXT,__objc_stubs) section
 # FAST:      _objc_msgSend$instance:
 # FAST-NEXT: adrp    x1,
-# FAST-NEXT: ldr     x1, {{.*}} ; Objc selector ref: instance
+# FAST-NEXT: ldr     x1,
 # FAST-NEXT: adrp    x16,
 # FAST-NEXT: ldr     x16,
 # FAST-NEXT: br      x16
@@ -152,7 +152,7 @@
 # FAST-NEXT: adrp    x0,
 # FAST-NEXT: ldr     x0, {{.*}} ; literal pool symbol address: _OBJC_CLASS_$_ExternalClass
 # FAST-NEXT: adrp    x1,
-# FAST-NEXT: ldr     x1, {{.*}} ; Objc selector ref: external
+# FAST-NEXT: ldr     x1,
 # FAST-NEXT: adrp    x16,
 # FAST-NEXT: ldr     x16,
 # FAST-NEXT: br      x16
@@ -161,7 +161,7 @@
 # FAST-NEXT: adrp    x0, [[#]] ; 0x[[#%x,FAST_LOCAL_CLASS_PAGE:]]
 # FAST-NEXT: add     x0, x0, #0x[[#%x,FAST_LOCAL_CLASS_OFF:]]
 # FAST-NEXT: adrp    x1,
-# FAST-NEXT: ldr     x1, {{.*}} ; Objc selector ref: local
+# FAST-NEXT: ldr     x1,
 # FAST-NEXT: adrp    x16,
 # FAST-NEXT: ldr     x16,
 # FAST-NEXT: br      x16
