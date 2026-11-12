@@ -5604,7 +5604,7 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         "dereferenceable, dereferenceable_or_null "
         "apply only to pointer types",
         &I);
-  Check((isa<LoadInst>(I) || isa<IntToPtrInst>(I)),
+  Check((isa<LoadInst, IntToPtrInst, PHINode>(I)),
         "dereferenceable, dereferenceable_or_null apply only to load"
         " and inttoptr instructions, use attributes for calls or invokes",
         &I);
@@ -6172,13 +6172,14 @@ void Verifier::visitInstruction(Instruction &I) {
   }
 
   if (MDNode *Range = I.getMetadata(LLVMContext::MD_range)) {
-    Check(isa<LoadInst>(I) || isa<CallInst>(I) || isa<InvokeInst>(I),
-          "Ranges are only for loads, calls and invokes!", &I);
+    Check((isa<LoadInst, CallInst, InvokeInst, PHINode>(I)),
+          "Ranges are only for loads, calls, invokes and phi nodes!", &I);
     visitRangeMetadata(I, Range, I.getType());
   }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofpclass)) {
-    Check(isa<LoadInst>(I), "nofpclass is only for loads", &I);
+    Check((isa<LoadInst, PHINode>(I)),
+          "nofpclass is only for loads and phi nodes", &I);
     visitNoFPClassMetadata(I, MD, I.getType());
   }
 
@@ -6205,15 +6206,16 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
     Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
           &I);
-    Check(isa<LoadInst>(I),
-          "nonnull applies only to load instructions, use attributes"
-          " for calls or invokes",
+    Check((isa<LoadInst, PHINode>(I)),
+          "nonnull applies only to load instructions or phi nodes, use "
+          "attributes for calls or invokes",
           &I);
     Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
   }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_noundef)) {
-    Check(isa<LoadInst>(I), "noundef applies only to load instructions", &I);
+    Check((isa<LoadInst, PHINode>(I)),
+          "noundef applies only to load instructions or phi nodes", &I);
     Check(MD->getNumOperands() == 0, "noundef metadata must be empty", &I);
   }
 
@@ -6243,8 +6245,8 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *AlignMD = I.getMetadata(LLVMContext::MD_align)) {
     Check(I.getType()->isPointerTy(), "align applies only to pointer types",
           &I);
-    Check(isa<LoadInst>(I),
-          "align applies only to load instructions, "
+    Check((isa<LoadInst, PHINode>(I)),
+          "align applies only to load instructions or phi nodes, "
           "use attributes for calls or invokes",
           &I);
     Check(AlignMD->getNumOperands() == 1, "align takes one operand!", &I);

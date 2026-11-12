@@ -1309,11 +1309,6 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       A->getScalarType() == Def->getScalarType())
     return A;
 
-  // Simplify MaskedCond with no block mask to its single operand.
-  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
-      !cast<VPInstruction>(Def)->isMasked())
-    return Def->getOperand(0);
-
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
