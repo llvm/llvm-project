@@ -472,13 +472,18 @@ struct ExpOpPattern final : OpConversionPattern<ComplexOp> {
   }
 };
 
-/// Computes complex.log(z) as log(abs(z)) + i*atan2(im, re).
-template <typename SqrtOp, typename LogOp, typename Atan2Op>
-struct LogOpPattern final : OpConversionPattern<complex::LogOp> {
-  using OpConversionPattern<complex::LogOp>::OpConversionPattern;
+/// Lowers complex.log/log1p following the identities
+/// log(x + iy) = log(abs(x + iy)) + i * atan2(y, x)
+/// log1p(x + iy) = log(abs(1 + x + iy)) + i * atan2(y, 1 + x)
+template <bool IsLog1p, typename SqrtOp, typename LogOp, typename Atan2Op,
+          typename ComplexOp =
+              std::conditional_t<IsLog1p, complex::Log1pOp, complex::LogOp>>
+struct LogOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
 
   LogicalResult
-  matchAndRewrite(complex::LogOp op, OpAdaptor adaptor,
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type spirvType =
         this->getTypeConverter()->convertType(op.getResult().getType());
@@ -492,6 +497,11 @@ struct LogOpPattern final : OpConversionPattern<complex::LogOp> {
         spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
     Value im =
         spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    if (IsLog1p) {
+      Value one = createFPConstant(rewriter, loc, re.getType(), 1.0);
+      re = spirv::FAddOp::create(rewriter, loc, one, re);
+    }
 
     Value reSq = spirv::FMulOp::create(rewriter, loc, re, re);
     Value imSq = spirv::FMulOp::create(rewriter, loc, im, im);
@@ -500,44 +510,6 @@ struct LogOpPattern final : OpConversionPattern<complex::LogOp> {
 
     Value resultRe = LogOp::create(rewriter, loc, abs);
     Value resultIm = Atan2Op::create(rewriter, loc, im, re);
-
-    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
-        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
-    return success();
-  }
-};
-
-/// Computes complex.log1p(z) as log(abs(1 + z)) + i*atan2(im, 1 + re).
-template <typename SqrtOp, typename LogOp, typename Atan2Op>
-struct Log1pOpPattern final : OpConversionPattern<complex::Log1pOp> {
-  using OpConversionPattern<complex::Log1pOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(complex::Log1pOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type spirvType =
-        this->getTypeConverter()->convertType(op.getResult().getType());
-    if (!spirvType)
-      return rewriter.notifyMatchFailure(op, "unable to convert result type");
-
-    Location loc = op.getLoc();
-    Value complexVal = adaptor.getComplex();
-
-    Value re =
-        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
-    Value im =
-        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
-
-    Value one = createFPConstant(rewriter, loc, re.getType(), 1.0);
-    Value onePlusRe = spirv::FAddOp::create(rewriter, loc, one, re);
-
-    Value reSq = spirv::FMulOp::create(rewriter, loc, onePlusRe, onePlusRe);
-    Value imSq = spirv::FMulOp::create(rewriter, loc, im, im);
-    Value sum = spirv::FAddOp::create(rewriter, loc, reSq, imSq);
-    Value abs = SqrtOp::create(rewriter, loc, sum);
-
-    Value resultRe = LogOp::create(rewriter, loc, abs);
-    Value resultIm = Atan2Op::create(rewriter, loc, im, onePlusRe);
 
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
         op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
@@ -587,9 +559,12 @@ void mlir::populateComplexToSPIRVPatterns(
                         spirv::GLCosOp>,
            ExpOpPattern</*IsExpm1=*/true, spirv::CLExpOp, spirv::CLSinOp,
                         spirv::CLCosOp>,
-           LogOpPattern<spirv::GLSqrtOp, spirv::GLLogOp, spirv::GLAtan2Op>,
-           LogOpPattern<spirv::CLSqrtOp, spirv::CLLogOp, spirv::CLAtan2Op>,
-           Log1pOpPattern<spirv::GLSqrtOp, spirv::GLLogOp, spirv::GLAtan2Op>,
-           Log1pOpPattern<spirv::CLSqrtOp, spirv::CLLogOp, spirv::CLAtan2Op>>(
-          typeConverter, context);
+           LogOpPattern</*IsLog1p=*/false, spirv::GLSqrtOp, spirv::GLLogOp,
+                        spirv::GLAtan2Op>,
+           LogOpPattern</*IsLog1p=*/false, spirv::CLSqrtOp, spirv::CLLogOp,
+                        spirv::CLAtan2Op>,
+           LogOpPattern</*IsLog1p=*/true, spirv::GLSqrtOp, spirv::GLLogOp,
+                        spirv::GLAtan2Op>,
+           LogOpPattern</*IsLog1p=*/true, spirv::CLSqrtOp, spirv::CLLogOp,
+                        spirv::CLAtan2Op>>(typeConverter, context);
 }
