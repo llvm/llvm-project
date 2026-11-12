@@ -20853,7 +20853,7 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
       continue;
 
     // Avoid undoing target combines that widen vector integer to fp operands.
-    if (N0.getOpcode() == ISD::SIGN_EXTEND &&
+    if (ISD::isExtOpcode(N0.getOpcode()) &&
         NarrowVT == N0.getOperand(0).getValueType())
       continue;
 
@@ -20925,7 +20925,7 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
       continue;
 
     // Avoid undoing a target combine that widened the source operand.
-    if (N0.getOpcode() == ISD::ZERO_EXTEND &&
+    if (ISD::isExtOpcode(N0.getOpcode()) &&
         NarrowVT == N0.getOperand(0).getValueType())
       continue;
 
