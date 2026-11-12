@@ -3968,6 +3968,39 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
           (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
 }
 
+// Returns true for an i32 or i64 equality test against the sign bit (INT32_MIN
+// or INT64_MIN), which no CMP/CMN immediate encodes.
+static bool isSignBitEqualityCmp(SDValue RHS, ISD::CondCode CC) {
+  EVT VT = RHS.getValueType();
+  if ((VT != MVT::i32 && VT != MVT::i64) || !isIntEqualitySetCC(CC))
+    return false;
+  auto *C = dyn_cast<ConstantSDNode>(RHS);
+  return C && C->getAPIntValue().isMinSignedValue();
+}
+
+// Zero minus x overflows exactly when x is INT_MIN, so x == INT_MIN is
+// SUBS xzr, x tested with VS (VC for !=): no constant is materialized and the
+// compare still fuses with a following B.cond. A CCMP if CCOp is set. The
+// SUBS is built directly as emitComparison would turn (SUBS 0, (SUB 0, y))
+// into a CMN, which does not overflow for the same values.
+static SDValue emitSignBitEqualityCmp(SDValue X, ISD::CondCode CC, SDValue CCOp,
+                                      AArch64CC::CondCode Predicate,
+                                      AArch64CC::CondCode &OutCC,
+                                      const SDLoc &DL, SelectionDAG &DAG) {
+  EVT VT = X.getValueType();
+  OutCC = CC == ISD::SETEQ ? AArch64CC::VS : AArch64CC::VC;
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  if (!CCOp) {
+    SDVTList VTs = DAG.getVTList(VT, FlagsVT);
+    return DAG.getNode(AArch64ISD::SUBS, DL, VTs, Zero, X).getValue(1);
+  }
+  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(
+      AArch64CC::getInvertedCondCode(OutCC));
+  return DAG.getNode(AArch64ISD::CCMP, DL, FlagsVT, Zero, X,
+                     DAG.getConstant(NZCV, DL, MVT::i32),
+                     getCondCode(DAG, Predicate), CCOp);
+}
+
 static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &DL,
                                       SelectionDAG &DAG, SDValue Chain,
                                       bool IsSignaling) {
@@ -4250,6 +4283,8 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
     SDLoc DL(Val);
     // Determine OutCC and handle FP special case.
     if (isInteger) {
+      if (isSignBitEqualityCmp(RHS, CC))
+        return emitSignBitEqualityCmp(LHS, CC, CCOp, Predicate, OutCC, DL, DAG);
       OutCC = changeIntCCToAArch64CC(CC, RHS);
     } else {
       assert(LHS.getValueType().isFloatingPoint());
@@ -4434,6 +4469,13 @@ static bool shouldBeAdjustedToZero(SDValue LHS, const APInt &C,
 static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                              SDValue &AArch64cc, SelectionDAG &DAG,
                              const SDLoc &DL) {
+  if (isSignBitEqualityCmp(RHS, CC)) {
+    AArch64CC::CondCode AArch64CC;
+    SDValue Cmp = emitSignBitEqualityCmp(LHS, CC, SDValue(), AArch64CC::AL,
+                                         AArch64CC, DL, DAG);
+    AArch64cc = getCondCode(DAG, AArch64CC);
+    return Cmp;
+  }
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     EVT VT = RHS.getValueType();
     APInt C = RHSC->getAPIntValue();
