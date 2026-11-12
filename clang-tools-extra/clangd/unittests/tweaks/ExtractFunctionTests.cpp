@@ -663,19 +663,24 @@ TEST_F(ExtractFunctionTest, SingleStatement) {
     })cpp"),
               HasSubstr("extracted"));
   // Selecting a subexpression of an operator call (rather than the whole
-  // statement) must not be extracted: it is not a standalone statement, and
-  // "extracting" it would replace only part of the expression.
-  EXPECT_EQ(apply(R"cpp(
+  // statement) isn't a standalone statement, so it's not handled by
+  // statement extraction -- but it's exactly what expression extraction
+  // is for: the call substitutes in place of the "3" alone, leaving the
+  // rest of the expression (the "stream <<" part) untouched.
+  EXPECT_THAT(apply(R"cpp(
     struct Stream {};
     Stream &operator<<(Stream &, int);
     Stream stream;
     void test() {
       stream << [[3]];
     })cpp"),
-            "unavailable");
+              HasSubstr("stream << extracted();"));
   // Same as above, but the selected subexpression is itself an
   // (Unselected-but-fully-covered) CXXOperatorCallExpr nested as an argument
-  // of an outer call, rather than a Complete leaf expression.
+  // of an outer call, rather than a Complete leaf expression. Unlike the
+  // "3" case above, `stream << 3` returns `Stream &` -- an lvalue -- so
+  // this one is still rejected (expression extraction doesn't support
+  // lvalue-returning extraction yet).
   EXPECT_EQ(apply(R"cpp(
     struct Stream {};
     Stream &operator<<(Stream &, int);
@@ -689,22 +694,31 @@ TEST_F(ExtractFunctionTest, SingleStatement) {
 
 TEST_F(ExtractFunctionTest, ControlFlowConditions) {
   Context = File;
-  // The condition of an `if` is not a discardable statement -- its value is
-  // consumed by the `if` itself.
-  EXPECT_EQ(apply(R"cpp(
+  // The condition of an `if` is not a discardable statement -- its value
+  // is consumed by the `if` itself -- so this isn't handled by statement
+  // extraction. It's squarely what expression extraction is for, though
+  // (this is clangd/clangd#698's own motivating example): the call
+  // substitutes in place of the condition, which still works exactly the
+  // same way.
+  EXPECT_THAT(apply(R"cpp(
     int example(int event1, bool event2, double event3) {
       if ([[event1 == 2 && event2 && event3 == 10.3]])
         return 1;
       return 0;
     })cpp"),
-            "unavailable");
+              HasSubstr("if (extracted(event1, event2, event3))"));
   // Same, but for other control-flow constructs' conditions.
-  EXPECT_EQ(apply("void f(int x) { while ([[x > 0]]) --x; }"), "unavailable");
-  EXPECT_EQ(apply("void f(int x) { do {} while ([[x > 0]]); }"), "unavailable");
-  EXPECT_EQ(apply("void f(int x) { for (; [[x > 0]];) ; }"), "unavailable");
-  EXPECT_EQ(apply("void f(int x) { switch ([[x + 1]]) {} }"), "unavailable");
-  // A condition-variable declaration (`if (T x = ...)`) is likewise not a
-  // discardable statement: its truthiness *is* the condition.
+  EXPECT_THAT(apply("void f(int x) { while ([[x > 0]]) --x; }"),
+              HasSubstr("while (extracted(x)) --x;"));
+  EXPECT_THAT(apply("void f(int x) { do {} while ([[x > 0]]); }"),
+              HasSubstr("do {} while (extracted(x));"));
+  EXPECT_THAT(apply("void f(int x) { for (; [[x > 0]];) ; }"),
+              HasSubstr("for (; extracted(x);) ;"));
+  EXPECT_THAT(apply("void f(int x) { switch ([[x + 1]]) {} }"),
+              HasSubstr("switch (extracted(x)) {}"));
+  // A condition-variable declaration (`if (T x = ...)`) is different: the
+  // selection there is a declaration, not an expression, so there's no
+  // single Expr node for expression extraction to find either.
   EXPECT_EQ(apply("bool cond(); void f() { if ([[bool b = cond()]]) ; }"),
             "unavailable");
   // Unlike the condition, a loop's initializer and increment clauses have
@@ -751,24 +765,25 @@ TEST_F(ExtractFunctionTest, RangeBasedFor) {
 
 TEST_F(ExtractFunctionTest, VarDeclInitializer) {
   Context = File;
-  // The initializer of a variable declaration is not a discardable
-  // statement either: its value is required to initialize the variable, so
-  // replacing it with a call to a void-returning extracted function would
-  // not compile. Ascending from the initializer lands on the VarDecl itself (a
-  // Decl, not a Stmt or Expr), which the general "is this a genuine statement"
-  // check must also reject.
-  EXPECT_EQ(apply(R"cpp(
-    int func();
-    void f() { auto A = [[func()]]; }
+  // The initializer of a variable declaration isn't a discardable
+  // statement -- its value is required to initialize the variable -- but
+  // that's no obstacle to expression extraction: substituting the call
+  // in place of the initializer still produces a value, same as before.
+  // (func(1), not func(): a bare zero-argument call would be a pure
+  // forwarding wrapper, suppressed regardless of this test's own
+  // concern -- see RejectPureForwarding* below for that check's own
+  // coverage, including this exact VarDecl-initializer context.)
+  EXPECT_THAT(apply(R"cpp(
+    int func(int);
+    void f() { auto A = [[func(1)]]; }
   )cpp"),
-            "unavailable");
-  // Same without `auto`: the type doesn't matter, only that a value is
-  // required.
-  EXPECT_EQ(apply(R"cpp(
-    int func();
-    void f() { int A = [[func()]]; }
+              HasSubstr("void f() { auto A = extracted(); }"));
+  // Same without `auto`: the type doesn't matter.
+  EXPECT_THAT(apply(R"cpp(
+    int func(int);
+    void f() { int A = [[func(1)]]; }
   )cpp"),
-            "unavailable");
+              HasSubstr("void f() { int A = extracted(); }"));
   // Sanity check: extracting the whole declaration statement (as opposed to
   // just its initializer) is unaffected.
   EXPECT_THAT(apply(R"cpp(
@@ -776,6 +791,19 @@ TEST_F(ExtractFunctionTest, VarDeclInitializer) {
     void f() { [[int A = func();]] }
   )cpp"),
               HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RejectPureForwardingVarDeclInitializer) {
+  Context = File;
+  // The forwarding-wrapper check applies to a bare expression extraction
+  // (Expr is-a Stmt) exactly as it does to a whole statement: `int A =
+  // func();` becoming `int A = extracted();` is just as much a pure
+  // rename.
+  EXPECT_EQ(apply(R"cpp(
+    int func();
+    void f() { auto A = [[func()]]; }
+  )cpp"),
+            "unavailable");
 }
 
 TEST_F(ExtractFunctionTest, ConstParameters) {
@@ -1616,6 +1644,234 @@ TEST_F(ExtractFunctionTest, RejectPureForwardingStructuredBinding) {
       [[foo(A);]]
     })cpp"),
             "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionFromCondition) {
+  // The original motivating case (clangd/clangd#698): extracting a
+  // sub-expression embedded inside a larger condition, not a whole
+  // statement.
+  Context = File;
+  EXPECT_THAT(apply("void f(int a) { if ([[a < 5]] && true) {} }"),
+              AllOf(HasSubstr("bool extracted(int a) {\nreturn a < 5;\n}"),
+                    HasSubstr("if (extracted(a) && true)")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionAssignmentRHS) {
+  // Unlike Extract Variable, extracting an assignment's RHS is useful
+  // here: the result isn't redundant, unlike `auto v = RHS; x = v;`.
+  Context = File;
+  EXPECT_THAT(apply("void f(int a, int b) { int x; x = [[a + b]]; }"),
+              HasSubstr("x = extracted(a, b);"));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionFromReturn) {
+  // A return statement's operand is a value-consuming slot just like a
+  // condition (see ExpressionExtractionFromCondition): replacing it with a
+  // call to a void-returning extracted function would not compile, so this
+  // must fall through from whole-statement to expression extraction.
+  Context = File;
+  EXPECT_THAT(apply("int f(int a, int b) { return [[a + b]]; }"),
+              AllOf(HasSubstr("int extracted(int a, int b) {\nreturn a + "
+                              "b;\n}"),
+                    HasSubstr("return extracted(a, b);")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionRejectVoid) {
+  Context = File;
+  EXPECT_THAT(apply("void g(); void f() { (void)([[g()]]); }"),
+              StartsWith("unavailable"));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionRejectLValue) {
+  // A bare variable reference is an lvalue; extracting it would need the
+  // extracted function to return a reference to stay usable as e.g. an
+  // assignment target. Not yet supported.
+  Context = File;
+  EXPECT_THAT(apply("void f(int a) { [[a]] = 5; }"), StartsWith("unavailable"));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionRejectArrayType) {
+  // A function can't return an array type. Reached through a prvalue
+  // struct's array member, an xvalue since C++11 (member access on a
+  // non-lvalue base yields an xvalue, not a prvalue) -- so this isn't
+  // caught by ExpressionExtractionRejectLValue above.
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    struct S { int Arr[3]; };
+    S getS();
+    void use(const int *);
+    void f() { use([[getS().Arr]]); }
+  )cpp"),
+              StartsWith("unavailable"));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprCaseLabel) {
+  // A case label's value must be a constant expression. Rather than reject
+  // the extraction outright, mark the extracted function constexpr so the
+  // call there is still well-formed.
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    int f(int x) {
+      switch (x) {
+        case [[1 + 1]]:
+          return 0;
+      }
+      return 1;
+    })cpp"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("case extracted():")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprNestedCaseLabel) {
+  // The selected sub-expression isn't the whole case value, just an operand
+  // of the outer `+ 1`: the constant-expression requirement still has to
+  // propagate down to it through that enclosing BinaryOperator.
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    int f(int x) {
+      switch (x) {
+        case [[1 + 1]] + 1:
+          return 0;
+      }
+      return 1;
+    })cpp"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("case extracted() + 1:")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprIfConstexpr) {
+  Context = File;
+  ExtraArgs.push_back("-std=c++17");
+  EXPECT_THAT(apply(R"cpp(
+    void f() {
+      if constexpr ([[1 + 1]] > 0) {}
+    })cpp"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("if constexpr (extracted() > 0)")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprBitFieldWidth) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    void f() {
+      struct S {
+        int a : [[1 + 1]];
+      };
+    })cpp"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("int a : extracted();")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprEnumConstant) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    void f() {
+      enum E { A = [[1 + 1]] };
+    })cpp"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("A = extracted()")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprVarInitializer) {
+  Context = File;
+  EXPECT_THAT(apply("void f() { constexpr int x = [[1 + 1]]; }"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("constexpr int x = extracted();")));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectConstantExpressionContext) {
+  // C has no constexpr-function escape hatch (its C23 constexpr applies
+  // only to objects, never functions), so a constant-expression-required
+  // context is still rejected outright there.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    int f(int x) {
+      switch (x) {
+        case [[1 + 1]]:
+          return 0;
+      }
+      return 1;
+    })cpp"),
+              StartsWith("unavailable"));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectCaseRangeBound) {
+  // A GNU case range's bounds (`case A ... B:`) are both consumed by the
+  // switch just like a plain case value -- this covers the upper bound,
+  // which the plain-case-label tests above don't exercise.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    int f(int x) {
+      switch (x) {
+        case 1 ... [[1 + 4]]:
+          return 0;
+      }
+      return 1;
+    })cpp"),
+              StartsWith("unavailable"));
+}
+
+TEST_F(ExtractFunctionTest, PreCpp11RejectConstantExpressionContext) {
+  // constexpr functions don't exist before C++11 either, same as C.
+  Context = File;
+  ExtraArgs.push_back("-std=c++03");
+  EXPECT_THAT(apply(R"cpp(
+    int f(int x) {
+      switch (x) {
+        case [[1 + 1]]:
+          return 0;
+      }
+      return 1;
+    })cpp"),
+              StartsWith("unavailable"));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprTemplateArgument) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+    template <int N> struct Array { int data[N]; };
+    void f() { Array<[[1 + 2]]> a; })cpp"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 2;\n}"),
+                    HasSubstr("Array<extracted()> a;")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprConstinitVar) {
+  // constinit (unlike constexpr) isn't a VarDecl bit, just an attribute,
+  // but it requires a constant initializer all the same.
+  ExtraArgs.push_back("-std=c++20");
+  Context = File;
+  EXPECT_THAT(apply("void f() { static constinit int x = [[1 + 1]]; }"),
+              AllOf(HasSubstr("constexpr int extracted() {\nreturn 1 + 1;\n}"),
+                    HasSubstr("static constinit int x = extracted();")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprStaticAssert) {
+  Context = File;
+  EXPECT_THAT(
+      apply("void f() { static_assert([[1 + 1 == 2]], \"\"); }"),
+      AllOf(HasSubstr("constexpr bool extracted() {\nreturn 1 + 1 == 2;\n}"),
+            HasSubstr("static_assert(extracted(), \"\");")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionConstexprNoexcept) {
+  Context = File;
+  EXPECT_THAT(
+      apply("void f() noexcept([[1 + 1 == 2]]) {}"),
+      AllOf(HasSubstr("constexpr bool extracted() {\nreturn 1 + 1 == 2;\n}"),
+            HasSubstr("void f() noexcept(extracted()) {}")));
+}
+
+TEST_F(ExtractFunctionTest, ExpressionExtractionDefaultArgNotConstexpr) {
+  // A parameter's default argument, unlike the function's own
+  // noexcept-specifier, isn't required to be a constant expression --
+  // it's evaluated at each call site -- so no constexpr marking is
+  // needed (or wanted) here.
+  Context = File;
+  EXPECT_THAT(apply("void f(int x = [[1 + 1]]) {}"),
+              AllOf(HasSubstr("int extracted() {\nreturn 1 + 1;\n}"),
+                    Not(HasSubstr("constexpr"))));
 }
 
 } // namespace
