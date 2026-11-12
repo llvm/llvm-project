@@ -418,8 +418,8 @@ SDValue DAGTypeLegalizer::ExpandOp_EXTRACT_ELEMENT(SDNode *N) {
   return N->getConstantOperandVal(1) ? Hi : Lo;
 }
 
-// Split the integer operand in two and create a second FAKE_USE node for
-// the other half. The original SDNode is updated in place.
+// Split the operand in two and create a second FAKE_USE node for the other
+// half. The original SDNode is updated in place.
 SDValue DAGTypeLegalizer::ExpandOp_FAKE_USE(SDNode *N) {
   SDValue Lo, Hi;
   SDValue Chain = N->getOperand(0);

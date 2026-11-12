@@ -2184,6 +2184,7 @@ bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::BITCAST:         Res = ExpandOp_BITCAST(N); break;
   case ISD::BUILD_VECTOR:    Res = ExpandOp_BUILD_VECTOR(N); break;
   case ISD::EXTRACT_ELEMENT: Res = ExpandOp_EXTRACT_ELEMENT(N); break;
+  case ISD::FAKE_USE:        Res = ExpandOp_FAKE_USE(N); break;
 
   case ISD::BR_CC:      Res = ExpandFloatOp_BR_CC(N); break;
   case ISD::FCOPYSIGN:  Res = ExpandFloatOp_FCOPYSIGN(N); break;
