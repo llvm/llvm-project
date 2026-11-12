@@ -292,6 +292,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v16i64, MVT::v16i32, Expand);
 
   setOperationAction(ISD::GlobalAddress, {MVT::i32, MVT::i64}, Custom);
+
+  // Only for an alloca in the VGPR ("as memory") address space.
+  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress, {MVT::i32, MVT::i64}, Custom);
   setOperationAction(ISD::ExternalSymbol, {MVT::i32, MVT::i64}, Custom);
 
@@ -7756,6 +7759,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
+  case ISD::FrameIndex:
+    return lowerFrameIndex(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
@@ -10278,6 +10283,23 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), GOTAddr, PtrInfo, Alignment,
                      MachineMemOperand::MODereferenceable |
                          MachineMemOperand::MOInvariant);
+}
+
+// An alloca in the VGPR ("as memory") address space has no registers to live
+// in, so its stack offset must not be taken for a register address. Every
+// other frame index keeps its default lowering.
+SDValue SITargetLowering::lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  int FI = cast<FrameIndexSDNode>(Op)->getIndex();
+  const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI);
+  if (!Alloca || Alloca->getAddressSpace() != AMDGPUAS::VGPR)
+    return SDValue();
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      MF.getFunction(),
+      "unsupported alloca in VGPR 'as memory' address space (13)",
+      Alloca->getDebugLoc()));
+  return DAG.getPOISON(MVT::i32);
 }
 
 SDValue SITargetLowering::LowerExternalSymbol(SDValue Op,
@@ -13684,13 +13706,35 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
   // reach the containing dword rather than the bytes asked for.
   if (MemOp->getAlign() < Align(4))
     return reportUnsupported();
-  // Only a width some VGPR tuple has is looked up.
-  if (!Subtarget->getRegisterInfo()->getVGPRClassForBitWidth(BitWidth) ||
-      !AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(BitWidth))
-    return reportUnsupported();
   auto *Store = dyn_cast<StoreSDNode>(MemOp);
   if (Store && Store->isTruncatingStore())
     return reportUnsupported();
+  // Only a width some VGPR tuple has is looked up. A whole-dword access of any
+  // other width is done as one of <N x i32>, which type legalization splits.
+  auto *Load = dyn_cast<LoadSDNode>(MemOp);
+  if (!Subtarget->getRegisterInfo()->getVGPRClassForBitWidth(BitWidth) ||
+      !AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(BitWidth)) {
+    if (BitWidth % 32 != 0)
+      return reportUnsupported();
+    EVT ViewVT = getEquivalentMemType(*DAG.getContext(), MemVT);
+    if (Store) {
+      if (MemVT == ViewVT)
+        return SDValue();
+      return DAG.getStore(Store->getChain(), DL,
+                          DAG.getBitcast(ViewVT, Store->getValue()),
+                          Store->getBasePtr(), Store->getMemOperand());
+    }
+    if (MemVT == ViewVT && Load->getExtensionType() == ISD::NON_EXTLOAD)
+      return SDValue();
+    // The range is for the elements of MemVT, not for dwords.
+    Load->getMemOperand()->clearRanges();
+    SDValue NewLoad = DAG.getLoad(ViewVT, DL, Load->getChain(),
+                                  Load->getBasePtr(), Load->getMemOperand());
+    SDValue Value = getLoadExtOrTrunc(DAG, Load->getExtensionType(),
+                                      DAG.getBitcast(MemVT, NewLoad), DL,
+                                      Load->getValueType(0));
+    return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);
+  }
 
   SDValue Chain = MemOp->getChain();
   SDValue Index = DAG.getNode(ISD::SRL, DL, MVT::i32, MemOp->getBasePtr(),
@@ -13712,14 +13756,13 @@ SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
         {Chain, Value, Index}, MemVT, Store->getMemOperand());
   }
 
-  auto *LoadOp = cast<LoadSDNode>(MemOp);
   SDValue NewLoad = DAG.getMemIntrinsicNode(
       AMDGPUISD::REG_LOAD, DL, DAG.getVTList(RegVT, MVT::Other), {Chain, Index},
-      MemVT, LoadOp->getMemOperand());
+      MemVT, Load->getMemOperand());
   SDValue Value = DAG.getBitcast(MemVT, NewLoad);
   // The combiner folds an extension of a whole-dword load into the load.
-  Value = getLoadExtOrTrunc(DAG, LoadOp->getExtensionType(), Value, DL,
-                            LoadOp->getValueType(0));
+  Value = getLoadExtOrTrunc(DAG, Load->getExtensionType(), Value, DL,
+                            Load->getValueType(0));
   if (Value == NewLoad)
     return NewLoad;
   return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);

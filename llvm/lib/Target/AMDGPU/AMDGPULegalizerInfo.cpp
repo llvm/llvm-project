@@ -952,7 +952,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32)
       .clampMaxNumElements(0, S32, 16);
 
-  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({PrivatePtr});
+  // An alloca in the VGPR ("as memory") address space is diagnosed; see
+  // legalizeFrameIndexVGPR.
+  getActionDefinitionsBuilder(G_FRAME_INDEX)
+      .legalFor({PrivatePtr})
+      .customFor({VGPRPtr});
 
   // If the amount is divergent, we have to do a wave reduction to get the
   // maximum value, so this is expanded during RegBankSelect.
@@ -2379,6 +2383,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ADDRSPACE_CAST:
     return legalizeAddrSpaceCast(MI, MRI, B);
+  case TargetOpcode::G_FRAME_INDEX:
+    return legalizeFrameIndexVGPR(MI, B);
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
     return legalizeFroundeven(MI, MRI, B);
   case TargetOpcode::G_FCEIL:
@@ -3524,6 +3530,44 @@ static LLT widenToNextPowerOf2(LLT Ty) {
   return Ty.changeElementSize(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
+// An alloca in the VGPR ("as memory") address space has no registers to live
+// in. Parallels SITargetLowering::lowerFrameIndex.
+bool AMDGPULegalizerInfo::legalizeFrameIndexVGPR(MachineInstr &MI,
+                                                 MachineIRBuilder &B) const {
+  MachineFunction &MF = B.getMF();
+  int FI = MI.getOperand(1).getIndex();
+  const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI);
+  assert(Alloca && Alloca->getAddressSpace() == AMDGPUAS::VGPR);
+
+  MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported(
+      MF.getFunction(),
+      "unsupported alloca in VGPR 'as memory' address space (13)",
+      Alloca->getDebugLoc()));
+  B.buildUndef(MI.getOperand(0));
+  MI.eraseFromParent();
+  return true;
+}
+
+// The widest part of a VGPR access of type \p Ty that a VGPR tuple holds, in
+// whole elements if \p Ty is a vector; failing that, one element of whole
+// dwords. No type if there is neither.
+static LLT getVGPRLoadStorePartType(LLT Ty) {
+  const unsigned EltSize = Ty.isVector() ? Ty.getScalarSizeInBits() : 32;
+  for (unsigned Size = std::min<unsigned>(Ty.getSizeInBits(), MaxRegisterSize);
+       Size >= 32; Size -= 32) {
+    if (Size % EltSize != 0 ||
+        !AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(Size))
+      continue;
+    if (!Ty.isVector())
+      return Ty.changeElementSize(Size);
+    return LLT::scalarOrVector(ElementCount::getFixed(Size / EltSize),
+                               Ty.getElementType());
+  }
+  if (EltSize % 32 == 0)
+    return Ty.getElementType();
+  return LLT();
+}
+
 /// Lower a whole-dword load or store on AMDGPUAS::VGPR into
 /// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels
 /// SITargetLowering::lowerLoadStoreVGPR.
@@ -3565,9 +3609,8 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
 
   // The index is the pointer >> 2, so an under-aligned access would silently
   // reach the containing dword.
-  if (!isVGPRLoadStoreSizeSupported(MMO.getMemoryType().getSizeInBits(),
-                                    ValSize) ||
-      LdSt.getAlign() < Align(4)) {
+  const unsigned MemSize = MMO.getMemoryType().getSizeInBits();
+  if (MemSize != ValSize || MemSize % 32 != 0 || LdSt.getAlign() < Align(4)) {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
@@ -3578,6 +3621,18 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
       B.buildUndef(ValReg);
     LdSt.eraseFromParent();
     return true;
+  }
+
+  // A width no VGPR tuple has is split, the widest part first, and each part is
+  // legalized again. When there is no part, the access is first made one of
+  // <N x i32>.
+  if (!isVGPRLoadStoreSizeSupported(MemSize, ValSize)) {
+    LLT PartTy = getVGPRLoadStorePartType(ValTy);
+    LegalizerHelper::LegalizeResult Res =
+        PartTy.isValid()
+            ? Helper.reduceLoadStoreWidth(LdSt, 0, PartTy)
+            : Helper.bitcast(LdSt, 0, LLT::fixed_vector(ValSize / 32, I32));
+    return Res == LegalizerHelper::Legalized;
   }
 
   const MachineInstrBuilder PtrAsInt = B.buildPtrToInt(I32, PtrReg);
