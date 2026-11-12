@@ -131,6 +131,12 @@ mlir::quant::fakeQuantAttrsToType(Location loc, unsigned numBits, double rmin,
   int64_t nudgedZeroPoint;
   getNudgedScaleAndZeroPoint(qmin, qmax, rmin, rmax, scale, nudgedZeroPoint);
 
+  // Skip quantization if the dynamically generated scale is not finite.
+  // This occurs frequently in quantized JAX models where padding values
+  // bounded at -jnp.inf trigger overflow during fake quantization bounding.
+  if (!std::isfinite(scale))
+    return nullptr;
+
   return UniformQuantizedType::getChecked(loc, flags, storageType,
                                           expressedType, scale, nudgedZeroPoint,
                                           qmin, qmax);
@@ -173,6 +179,8 @@ UniformQuantizedPerAxisType mlir::quant::fakeQuantAttrsToType(
     double scale;
     int64_t nudgedZeroPoint;
     getNudgedScaleAndZeroPoint(qmin, qmax, rmin, rmax, scale, nudgedZeroPoint);
+    if (!std::isfinite(scale))
+      return nullptr;
     scales.push_back(scale);
     zeroPoints.push_back(nudgedZeroPoint);
   }
