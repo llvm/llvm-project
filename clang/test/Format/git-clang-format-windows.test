@@ -1,0 +1,19 @@
+// REQUIRES: system-windows
+
+// RUN: rm -rf %t.dir
+// RUN: mkdir -p %t.dir/mock_bin
+
+// Case 1: python is in PATH, py and python3 are unavailable.
+// RUN: echo @echo MOCK_PYTHON %%* > %t.dir/mock_bin/python.bat
+// RUN: cmd /c "set PATH=%t.dir\mock_bin;%SystemRoot%\System32& \"%S/../../tools/clang-format/git-clang-format.bat\" --style=\"{BasedOnStyle: LLVM}\" \"test file.cpp\"" | FileCheck --check-prefix=CHECK-PYTHON %s
+// CHECK-PYTHON: MOCK_PYTHON "{{.*}}git-clang-format" --style="{BasedOnStyle: LLVM}" "test file.cpp"
+
+// Case 2: python is unavailable, fallback to py -3.
+// RUN: rm -f %t.dir/mock_bin/python.bat
+// RUN: echo @echo MOCK_PY %%* > %t.dir/mock_bin/py.bat
+// RUN: cmd /c "set PATH=%t.dir\mock_bin;%SystemRoot%\System32& \"%S/../../tools/clang-format/git-clang-format.bat\" --style=\"{BasedOnStyle: LLVM}\" \"test file.cpp\"" | FileCheck --check-prefix=CHECK-PY %s
+// CHECK-PY: MOCK_PY -3 "{{.*}}git-clang-format" --style="{BasedOnStyle: LLVM}" "test file.cpp"
+
+// Case 3: Error exit code preservation (ensuring fallback is not executed on failure).
+// RUN: echo @exit /b 42 > %t.dir/mock_bin/python.bat
+// RUN: not cmd /c "set PATH=%t.dir\mock_bin;%SystemRoot%\System32& \"%S/../../tools/clang-format/git-clang-format.bat\""
