@@ -19,6 +19,15 @@
 
 namespace lldb_private::dil {
 
+/// Evaluate a Data Inspection Language expression in the given context.
+/// \see https://lldb.llvm.org/resources/dil.html
+lldb::ValueObjectSP EvaluateDILExpression(ExecutionContext exe_ctx,
+                                          llvm::StringRef var_expr,
+                                          lldb::DynamicValueType use_dynamic,
+                                          uint32_t options,
+                                          lldb::VariableSP &var_sp,
+                                          Status &error, lldb::DILMode mode);
+
 /// Given the name of a persistent identifier (i.e., one that starts with a $),
 /// find the ValueObject for that name (if it exists).
 lldb::ValueObjectSP LookupPersistentIdentifier(llvm::StringRef name_ref,

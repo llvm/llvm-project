@@ -1593,6 +1593,41 @@ public:
       const EvaluateExpressionOptions &options = EvaluateExpressionOptions(),
       std::string *fixed_expression = nullptr, ValueObject *ctx_obj = nullptr);
 
+  /// Create a ValueObject from a simple expression, evaluated by
+  /// Data Inspection Language. Only the target is used as context.
+  /// \see https://lldb.llvm.org/resources/dil.html
+  ///
+  /// \param[in] var_expr
+  ///     The DIL expression to evaluate.
+  ///
+  /// \param[in] use_dynamic
+  ///     Whether the correct dynamic type of an object pointer should be
+  ///     determined before creating the object, or if the static type is
+  ///     sufficient.  One of the DynamicValueType enumerated values.
+  ///
+  /// \param[in] options
+  ///     An unsigned integer of flags, values from
+  ///     StackFrame::ExpressionPathOption enum.
+  ///
+  /// \param[out] var_sp
+  ///     A VariableSP that will be set to the variable described in the
+  ///     var_expr path. Set to nullptr if the result is an evaluated
+  ///     const value.
+  ///
+  /// \param[out] error
+  ///     Record any errors encountered while evaluating var_expr.
+  ///
+  /// \param[in] mode
+  ///     Data Inspection Language (DIL) evaluation mode.
+  ///     \see lldb::DILMode
+  ///
+  /// \return
+  ///     A shared pointer to the ValueObject described by var_expr.
+  lldb::ValueObjectSP GetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull);
+
   lldb::ExpressionVariableSP GetPersistentVariable(ConstString name);
 
   lldb::addr_t GetPersistentSymbol(ConstString name);

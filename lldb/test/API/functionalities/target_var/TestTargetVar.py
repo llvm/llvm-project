@@ -32,7 +32,10 @@ class targetCommandTestCase(TestBase):
         self.expect(
             "target variable var[0]",
             error=True,
-            substrs=["can't find global variable 'var[0]'"],
+            substrs=[
+                "can't resolve global variable expression:",
+                'failed to use pointer as array for index 0 for "(incomplete *) var"',
+            ],
         )
 
         command_result = lldb.SBCommandReturnObject()

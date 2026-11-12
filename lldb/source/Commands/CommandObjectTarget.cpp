@@ -876,41 +876,44 @@ public:
         valobj_sp->IsRuntimeSupportValue())
       return;
 
-    switch (var_sp->GetScope()) {
-    case eValueTypeVariableGlobal:
-      if (m_option_variable.show_scope)
-        s.PutCString("GLOBAL: ");
-      break;
+    // var_sp could be nullptr if valobj_sp is a result of a DIL expression.
+    if (var_sp) {
+      switch (var_sp->GetScope()) {
+      case eValueTypeVariableGlobal:
+        if (m_option_variable.show_scope)
+          s.PutCString("GLOBAL: ");
+        break;
 
-    case eValueTypeVariableStatic:
-      if (m_option_variable.show_scope)
-        s.PutCString("STATIC: ");
-      break;
+      case eValueTypeVariableStatic:
+        if (m_option_variable.show_scope)
+          s.PutCString("STATIC: ");
+        break;
 
-    case eValueTypeVariableArgument:
-      if (m_option_variable.show_scope)
-        s.PutCString("   ARG: ");
-      break;
+      case eValueTypeVariableArgument:
+        if (m_option_variable.show_scope)
+          s.PutCString("   ARG: ");
+        break;
 
-    case eValueTypeVariableLocal:
-      if (m_option_variable.show_scope)
-        s.PutCString(" LOCAL: ");
-      break;
+      case eValueTypeVariableLocal:
+        if (m_option_variable.show_scope)
+          s.PutCString(" LOCAL: ");
+        break;
 
-    case eValueTypeVariableThreadLocal:
-      if (m_option_variable.show_scope)
-        s.PutCString("THREAD: ");
-      break;
+      case eValueTypeVariableThreadLocal:
+        if (m_option_variable.show_scope)
+          s.PutCString("THREAD: ");
+        break;
 
-    default:
-      break;
-    }
+      default:
+        break;
+      }
 
-    if (m_option_variable.show_decl) {
-      bool show_fullpaths = false;
-      bool show_module = true;
-      if (var_sp->DumpDeclaration(&s, show_fullpaths, show_module))
-        s.PutCString(": ");
+      if (m_option_variable.show_decl) {
+        bool show_fullpaths = false;
+        bool show_module = true;
+        if (var_sp->DumpDeclaration(&s, show_fullpaths, show_module))
+          s.PutCString(": ");
+      }
     }
 
     const Format format = m_option_format.GetFormat();
@@ -995,6 +998,28 @@ protected:
               arg.c_str(), m_exe_ctx.GetBestExecutionContextScope(),
               GetVariableCallback, target, variable_list, valobj_list));
           matches = variable_list.GetSize();
+          // If we're not using regex and the previous search hasn't found
+          // anything, attempt evaluating the argument with DIL.
+          if (matches == 0) {
+            Status dil_error;
+            uint32_t expr_path_options =
+                StackFrame::eExpressionPathOptionCheckPtrVsMember |
+                StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
+                StackFrame::eExpressionPathOptionsInspectAnonymousUnions;
+            lldb::VariableSP var_sp;
+            ValueObjectSP valobj_sp = target->GetValueForVariableExpressionPath(
+                arg.ref(), m_varobj_options.use_dynamic, expr_path_options,
+                var_sp, dil_error);
+            if (dil_error.Fail() || !valobj_sp) {
+              result.AppendErrorWithFormatv(
+                  "can't resolve global variable expression:\n{0}",
+                  dil_error.Fail() ? dil_error.AsCString() : "unknown error");
+              return;
+            }
+            DumpValueObject(result.GetOutputStream(), var_sp, valobj_sp,
+                            valobj_sp->GetName().GetCString());
+            continue;
+          }
         }
 
         if (matches == 0) {

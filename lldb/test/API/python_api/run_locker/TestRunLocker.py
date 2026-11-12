@@ -88,6 +88,13 @@ class TestRunLocker(TestBase):
             error.GetCString(),
             "Stopped by stop locker",
         )
+        val = target.GetValueForVariablePath("1+2")
+        error = val.GetError()
+        self.assertIn(
+            "can't inspect data when the process is running",
+            error.GetCString(),
+            "Stopped by stop locker",
+        )
 
         # This should also fail if we try to use the script interpreter directly:
         interp = self.dbg.GetCommandInterpreter()

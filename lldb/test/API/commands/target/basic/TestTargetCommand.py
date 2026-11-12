@@ -62,6 +62,15 @@ class targetCommandTestCase(TestBase):
 
         self.do_target_variable_command_no_fail("globals")
 
+    @skipIfDarwin  # Chained Fixups
+    def test_target_variable_dil_command(self):
+        """Test DIL behavior with 'target variable' command."""
+        d = {"C_SOURCES": "globals.c", "EXE": self.getBuildArtifact("globals")}
+        self.build(dictionary=d)
+        self.addTearDownCleanup(dictionary=d)
+
+        self.do_target_variable_dil_command("globals")
+
     def do_target_command(self):
         """Exercise 'target create', 'target list', 'target select' commands."""
         exe_a = self.getBuildArtifact("a.out")
@@ -323,6 +332,57 @@ class targetCommandTestCase(TestBase):
             "target variable my_global_char",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["my_global_char", "'X'"],
+        )
+
+    def do_target_variable_dil_command(self, exe_name):
+        """Test DIL behavior with 'target variable' command."""
+        self.runCmd("file " + self.getBuildArtifact(exe_name), CURRENT_EXECUTABLE_SET)
+
+        # Check that DIL evaluates expressions and outputs errors.
+        self.expect(
+            "target variable my_static_int+1",
+            substrs=["int", "229"],
+        )
+        self.expect(
+            "target variable my_global_str[1]",
+            substrs=["(const char) my_global_str[1] = 'b'"],
+        )
+        self.expect(
+            "target variable (my_static_int+)",
+            error=True,
+            substrs=[
+                "can't resolve global variable expression:",
+                "Unexpected token: <')' (r_paren)>",
+            ],
+        )
+
+        # Check that with multiple arguments `target variable` outputs
+        # successful results before outputting the error.
+        res = lldb.SBCommandReturnObject()
+        self.ci.HandleCommand(
+            "target variable my_static_int 123 my_static_int->member", res
+        )
+        self.assertFalse(res.Succeeded())
+        self.assertIn("(int) my_static_int = 228", res.GetOutput())
+        self.assertIn("(int) result = 123", res.GetOutput())
+        self.assertIn("can't resolve global variable expression:", res.GetError())
+        self.assertIn("member reference type 'int' is not a pointer", res.GetError())
+
+        # Check that the stack frame does not get passed to DIL through
+        # `target variable`.
+        self.runCmd("b main")
+        self.runCmd("run")
+        self.expect(
+            "frame variable argc",
+            substrs=["(int) argc = 1"],
+        )
+        self.expect(
+            "target variable argc",
+            error=True,
+            substrs=[
+                "can't resolve global variable expression:",
+                "use of undeclared identifier 'argc'",
+            ],
         )
 
     @no_debug_info_test

@@ -33,7 +33,10 @@ class GlobalVariablesCppTestCase(TestBase):
             "target variable xyz::g_file_global_int",
             VARIABLES_DISPLAYED_CORRECTLY,
             error=True,
-            substrs=["can't find global variable"],
+            substrs=[
+                "can't resolve global variable expression:",
+                "use of undeclared identifier 'xyz::g_file_global_int'",
+            ],
         )
 
         # Check that we can access g_file_global_const_int by its name
@@ -51,7 +54,10 @@ class GlobalVariablesCppTestCase(TestBase):
             "target variable xyz::g_file_global_const_int",
             VARIABLES_DISPLAYED_CORRECTLY,
             error=True,
-            substrs=["can't find global variable"],
+            substrs=[
+                "can't resolve global variable expression:",
+                "use of undeclared identifier 'xyz::g_file_global_const_int'",
+            ],
         )
 
         # Try accessing a global variable in anonymous namespace.
@@ -64,7 +70,10 @@ class GlobalVariablesCppTestCase(TestBase):
             "target variable abc::g_anon_namespace_const_int",
             VARIABLES_DISPLAYED_CORRECTLY,
             error=True,
-            substrs=["can't find global variable"],
+            substrs=[
+                "can't resolve global variable expression:",
+                "use of undeclared identifier 'abc::g_anon_namespace_const_int'",
+            ],
         )
         var = target.FindFirstGlobalVariable(
             "abc::(anonymous namespace)::g_anon_namespace_const_int"

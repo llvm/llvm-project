@@ -29,5 +29,8 @@ class TestFrameVarAnonStruct(TestBase):
         self.expect(
             "target variable 'b.x'",
             error=True,
-            substrs=["can't find global variable 'b.x'"],
+            substrs=[
+                "can't resolve global variable expression:",
+                '"x" is not a member of "(B) ::b"',
+            ],
         )

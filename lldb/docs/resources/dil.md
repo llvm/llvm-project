@@ -135,15 +135,16 @@ on the full expression evaluator. For more information on this, see the section
 
 ## Where and how DIL is used in LLDB
 
-### `frame variable`, `print`, and `expr` commands
+### `frame variable`, `print`, `expr` and `target variable` commands
 
-LLDB has three main commands that allow users to look at the values of program
-data, and to evaluate various types of expressions on them. These three commands
+LLDB has four main commands that allow users to look at the values of program
+data, and to evaluate various types of expressions on them. These four commands
 are:
 
 - `frame variable`, aka `frame var` or `v`
 - `dwim-print`, aka `print` or `p`
 - `expression`, aka `expr`
+- `target variable`, aka `target var` or `target v`
 
 
 Historically `frame variable` was intended to handle path expressions (including
@@ -187,6 +188,11 @@ else to the full expression evaluator. Therefore, to avoid the slow path of
 running code in the target (and potentially changing the program state) when it
 is not necessary, it is better for users to use either `v` or `expr` explicitly,
 and avoid `dwim-print` or `p`.
+
+`target variable` now also uses DIL and can be used to evaluate expressions that
+include global variables without running the program. If the program was launched
+and there is a current stack frame, DIL called from `target variable` will not
+look up local variables and use only the target as evaluation context.
 
 ### User options and flags to control using DIL
 
@@ -290,7 +296,7 @@ calls `GetTryDILFirst`, and acts appropriately, either calling DIL first
 (falling back on the expression evaluator if necessary), or bypassing DIL and
 going straight to the expression evaluator.
 
-#### SBFrame::GetValueForVariablePathWithMode
+#### SBTarget and SBFrame::GetValueForVariablePathWithMode
 
 Initially we wanted to update `SBFrame::GetValueForVariablePath` directly to use
 DIL, controlled by a `DILMode` parameter. However, that involved making a
@@ -308,7 +314,9 @@ lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
 
 As you might guess, they are similar to `SBFrame::GetValueForVariablePath`, but
 they use DIL and allow explicitly setting which `DILMode` to use, rather than 
-using the default (`eDILModeFull`).
+using the default (`eDILModeFull`). There are equivalent functions
+`SBTarget::GetValueForVariablePath` and `SBTarget::GetValueForVariablePathWithMode`
+that can be run without a stack frame and use only the target as evaluation context.
 
 
 #### Uses of DIL inside lldb-dap

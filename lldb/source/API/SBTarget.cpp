@@ -2525,6 +2525,65 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
   return expr_result;
 }
 
+lldb::SBValue SBTarget::GetValueForVariablePath(const char *var_path) {
+  LLDB_INSTRUMENT_VA(this, var_path);
+  return GetValueForVariablePathWithMode(var_path, DILMode::eDILModeFull);
+}
+
+lldb::SBValue SBTarget::GetValueForVariablePath(const char *var_path,
+                                                DynamicValueType use_dynamic) {
+  LLDB_INSTRUMENT_VA(this, var_path, use_dynamic);
+  return GetValueForVariablePathWithMode(var_path, DILMode::eDILModeFull,
+                                         use_dynamic);
+}
+
+lldb::SBValue SBTarget::GetValueForVariablePathWithMode(const char *var_path,
+                                                        lldb::DILMode mode) {
+  LLDB_INSTRUMENT_VA(this, var_path, mode);
+
+  SBValue sb_value;
+  if (TargetSP target_sp = GetSP()) {
+    lldb::DynamicValueType use_dynamic = target_sp->GetPreferDynamicValue();
+    sb_value = GetValueForVariablePathWithMode(var_path, mode, use_dynamic);
+  }
+
+  return sb_value;
+}
+
+lldb::SBValue SBTarget::GetValueForVariablePathWithMode(
+    const char *var_path, lldb::DILMode mode, DynamicValueType use_dynamic) {
+  LLDB_INSTRUMENT_VA(this, var_path, mode, use_dynamic);
+
+  SBValue sb_value;
+  if (var_path == nullptr || var_path[0] == '\0') {
+    return sb_value;
+  }
+
+  if (TargetSP target_sp = GetSP()) {
+    TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
+
+    Process::StopLocker stop_locker;
+    ProcessSP process_sp = target_sp->GetProcessSP();
+    if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {
+      sb_value.SetSP(ValueObjectConstResult::Create(
+          nullptr, Status::FromErrorString("can't inspect data when the "
+                                           "process is running.")));
+      return sb_value;
+    }
+
+    VariableSP var_sp;
+    Status error;
+    ValueObjectSP value_sp(target_sp->GetValueForVariableExpressionPath(
+        var_path, eNoDynamicValues,
+        StackFrame::eExpressionPathOptionCheckPtrVsMember |
+            StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
+        var_sp, error, mode));
+    sb_value.SetSP(value_sp, use_dynamic);
+  }
+  return sb_value;
+}
+
 lldb::addr_t SBTarget::GetStackRedZoneSize() {
   LLDB_INSTRUMENT_VA(this);
 
