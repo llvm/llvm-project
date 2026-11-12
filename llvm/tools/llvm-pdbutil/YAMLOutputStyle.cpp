@@ -37,10 +37,13 @@ static bool checkModuleSubsection(opts::ModuleSubsection MS) {
                 });
 }
 
-YAMLOutputStyle::YAMLOutputStyle(PDBFile &File)
-    : File(File), Out(outs()), Obj(File.getAllocator()) {
+YAMLOutputStyle::YAMLOutputStyle(PDBFile &File, raw_ostream &OS)
+    : File(File), Out(OS), Obj(File.getAllocator()) {
   Out.setWriteDefaultValues(!opts::pdb2yaml::Minimal);
 }
+
+YAMLOutputStyle::YAMLOutputStyle(PDBFile &File)
+    : YAMLOutputStyle::YAMLOutputStyle(File, llvm::outs()) {}
 
 Error YAMLOutputStyle::dump() {
   if (opts::pdb2yaml::StreamDirectory)
