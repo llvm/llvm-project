@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -93,6 +94,57 @@ void applyFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                                "(XLEN={1}, ValBits={2}):\n  {3}\n",
                                DEBUG_TYPE, XLen, ValBits, MI));
 #endif
+}
+
+// Match (X << (8 - Y)) - (X >> Y), where only bit Y in each byte of X
+// can be nonzero. For Y == 0 the right operand is X itself.
+bool matchSubShiftsToOrcB(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          const RISCVSubtarget &STI, GISelValueTracking &VT,
+                          Register &MatchInfo) {
+  if (!STI.hasStdExtZbb())
+    return false;
+
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (Ty != LLT::scalar(STI.getXLen()))
+    return false;
+
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  Register Src;
+  int64_t LeftShift;
+  if (!mi_match(LHS, MRI, m_GShl(m_Reg(Src), m_ICst(LeftShift))) ||
+      LeftShift < 1 || LeftShift > 8 || MRI.getType(Src) != Ty)
+    return false;
+
+  unsigned RightShift = 8 - LeftShift;
+  if (RightShift == 0) {
+    if (RHS != Src)
+      return false;
+  } else {
+    int64_t Shift;
+    if (!mi_match(RHS, MRI, m_GLShr(m_SpecificReg(Src), m_ICst(Shift))) ||
+        Shift != RightShift)
+      return false;
+  }
+
+  // At least one shift must disappear to make the replacement profitable.
+  if (!MRI.hasOneNonDBGUse(LHS) &&
+      (RightShift == 0 || !MRI.hasOneNonDBGUse(RHS)))
+    return false;
+
+  APInt Mask = APInt::getSplat(STI.getXLen(), APInt(8, 1U << RightShift));
+  if (!VT.maskedValueIsZero(Src, ~Mask))
+    return false;
+
+  MatchInfo = Src;
+  return true;
+}
+
+void applySubShiftsToOrcB(MachineInstr &MI, MachineIRBuilder &B, Register Src) {
+  // The Zbb predicate and native XLEN type make this intrinsic legal here.
+  // Leave dead shifts to the combiner's DCE so other users remain intact.
+  B.buildIntrinsic(Intrinsic::riscv_orc_b, {MI.getOperand(0)}).addUse(Src);
+  MI.eraseFromParent();
 }
 
 class RISCVPostLegalizerCombinerImpl : public Combiner {
