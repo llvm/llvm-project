@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %s -o %t.o
-# RUN: %lld -lSystem -dead_strip --threads=1 -why_live _foo -why_live _undef \
+# RUN: %lld -dead_strip --threads=1 -why_live _foo -why_live _undef \
 # RUN:   -U _undef -why_live _support -why_live _support_refs_dylib_fun \
 # RUN:   -why_live _abs %t.o -o /dev/null 2>&1 | FileCheck %s
 

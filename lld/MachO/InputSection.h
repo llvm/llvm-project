@@ -201,6 +201,7 @@ struct StringPiece {
 
   // Thread-safe iff `hash` is not modified concurrently.
   bool isLive() const {
+    // &inSecOff + 1 points to the `live` bitfield.
     auto &word = utils::atomicRef(*(&inSecOff + 1));
     return word.load(std::memory_order_relaxed) & liveBit;
   }
