@@ -336,16 +336,9 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
   if (NeedsFixup || !DTy)
     return;
 
-  // The base type for PTR/CONST/VOLATILE could be void.
-  const DIType *ResolvedType = tryRemoveAtomicType(DTy->getBaseType());
-  if (!ResolvedType) {
-    assert((Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_CONST ||
-            Kind == BTF::BTF_KIND_VOLATILE) &&
-           "Invalid null basetype");
-    BTFType.Type = 0;
-  } else {
-    BTFType.Type = BDebug.getTypeId(ResolvedType);
-  }
+  // A pointer, qualifier, or typedef can refer to void.
+  const DIType *Base = tryRemoveAtomicType(DTy->getBaseType());
+  BTFType.Type = Base ? BDebug.getTypeId(Base) : 0;
 }
 
 void BTFTypeDerived::emitType(MCStreamer &OS) { BTFTypeBase::emitType(OS); }

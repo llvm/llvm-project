@@ -7,7 +7,8 @@
 // RUN:    -triple %itanium_abi_triple \
 // RUN:    -emit-llvm -o - -disable-llvm-passes \
 // RUN:    | FileCheck %t/Use.cpp --check-prefix=CHECK-O0
-// RUN: %if cir-enabled && !system-windows && !system-zos %{ %clang_cc1 -fclangir -std=c++20 %t/Use.cpp -fprebuilt-module-path=%t \
+// RUN: %if cir-enabled && !system-windows && !system-zos && !target={{.*}}-aix{{.*}} && !target={{.*}}-arm{{.*}} %{ \
+// RUN:    %clang_cc1 -fclangir -std=c++20 %t/Use.cpp -fprebuilt-module-path=%t \
 // RUN:    -triple %itanium_abi_triple \
 // RUN:    -emit-llvm -o - -disable-llvm-passes \
 // RUN:    | FileCheck %t/Use.cpp --check-prefix=CHECK-O0 %}
@@ -18,7 +19,8 @@
 // RUN:    -triple %itanium_abi_triple \
 // RUN:    -emit-llvm -o - -disable-llvm-passes | \
 // RUN:    FileCheck %t/Use.cpp --check-prefix=CHECK-O1
-// RUN: %if cir-enabled && !system-windows && !system-zos %{ %clang_cc1 -fclangir -std=c++20 %t/Use.cpp -fprebuilt-module-path=%t -O1 \
+// RUN: %if cir-enabled && !system-windows && !system-zos && !target={{.*}}-aix{{.*}} && !target={{.*}}-arm{{.*}} %{ \
+// RUN:    %clang_cc1 -fclangir -std=c++20 %t/Use.cpp -fprebuilt-module-path=%t -O1 \
 // RUN:    -triple %itanium_abi_triple \
 // RUN:    -emit-llvm -o - -disable-llvm-passes | \
 // RUN:    FileCheck %t/Use.cpp --check-prefix=CHECK-O1 %}

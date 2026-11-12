@@ -1477,9 +1477,11 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
+    assert(Opcode != VPInstruction::MaskedCond &&
+           "Should be expanded in VPlanPredicator");
+
     // These VPInstruction can be (optionally) masked.
-    if (Opcode == VPInstruction::MaskedCond ||
-        Opcode == VPInstruction::WideVectorLoad ||
+    if (Opcode == VPInstruction::WideVectorLoad ||
         Opcode == VPInstruction::WideVectorStore)
       return false;
 

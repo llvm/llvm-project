@@ -28,6 +28,7 @@ unittest("OrcJITTests") {
     "InstanceSymbolGeneratorTest.cpp",
     "JITLinkRedirectionManagerTest.cpp",
     "JITTargetMachineBuilderTest.cpp",
+    "LLJITTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
     "LibraryResolverTest.cpp",
     "LinkGraphLinkingLayerTest.cpp",

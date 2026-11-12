@@ -1155,6 +1155,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                        .addUse(AsmReg);
     for (unsigned IntrIdx = 3; IntrIdx < I1->getNumOperands(); ++IntrIdx)
       AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
+    AsmCall->setDebugLoc(I2->getDebugLoc());
 
     // IRTranslator gets a bit confused when lowering inline ASM with outputs
     // and inserts a spurious COPY & TRUNC as registers are assumed to be i64;
