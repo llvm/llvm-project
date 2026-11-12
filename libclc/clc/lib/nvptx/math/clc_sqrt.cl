@@ -8,15 +8,12 @@
 
 #include "clc/math/clc_sqrt.h"
 
-float __nv_sqrtf(float);
-double __nv_sqrt(double);
-
-_CLC_OVERLOAD _CLC_DEF float __clc_sqrt(float x) { return __nv_sqrtf(x); }
+_CLC_OVERLOAD _CLC_DEF float __clc_sqrt(float x) { return __builtin_sqrtf(x); }
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_OVERLOAD _CLC_DEF double __clc_sqrt(double x) { return __nv_sqrt(x); }
+_CLC_OVERLOAD _CLC_DEF double __clc_sqrt(double x) { return __builtin_sqrt(x); }
 
 #endif
 
