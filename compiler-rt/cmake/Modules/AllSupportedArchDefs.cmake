@@ -3,6 +3,7 @@ set(AMDGPU amdgcn amdgpu)
 set(ARM64 aarch64)
 set(ARM32 arm armhf)
 set(HEXAGON hexagon)
+set(HPPA hppa)
 set(X86 i386)
 set(X86_64 x86_64)
 set(LOONGARCH64 loongarch64)
@@ -44,7 +45,7 @@ endif()
 
 set(ALL_SANITIZER_COMMON_SUPPORTED_ARCH ${X86} ${X86_64} ${PPC64} ${RISCV64}
     ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} ${S390X} ${SPARC} ${SPARCV9}
-    ${HEXAGON} ${LOONGARCH64} ${ALPHA})
+    ${HEXAGON} ${LOONGARCH64} ${ALPHA} ${HPPA})
 set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${RISCV64}
     ${MIPS32} ${MIPS64} ${PPC64} ${S390X} ${SPARC} ${SPARCV9} ${HEXAGON}
     ${LOONGARCH64} ${ALPHA})
