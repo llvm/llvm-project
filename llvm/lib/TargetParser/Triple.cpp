@@ -2599,11 +2599,14 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   case aarch64_be:
   case aarch64_32:
     // AArch64 uses IEEE quad, except on Windows and Darwin.
-    if (isOSWindows() || isOSDarwin())
+    if (isOSWindows() || isOSDarwin() || isUEFI())
       return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case mips64:
   case mips64el:
+    // 64-bit MIPS uses IEEE quad, except on FreeBSD.
+    if (isOSFreeBSD())
+      return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case avr:
   case tce:
