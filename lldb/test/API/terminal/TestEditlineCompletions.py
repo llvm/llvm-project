@@ -48,20 +48,16 @@ class EditlineCompletionsTest(PExpectTest):
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    def test_multiline_description(self):
-        """Test that multi-line descriptions are correctly padded and truncated."""
+    def test_cut_off_multiline_description(self):
+        """Test that only the first line of a multi-line description is shown."""
         self.launch(dimensions=(10, 72))
         self.child.send("k\t")
+        # We check that these two lines are next to each other to make sure the
+        # multiline description of kdb-remote is not shown in full.
         self.child.expect(
-            "        kdp-remote -- Connect to a process via remote KDP server."
+            "        kdp-remote -- Connect to a process via remote KDP server.\r\n"
+            "        kill       -- Terminate the current target process."
         )
-        self.child.expect(
-            "                      If no UDP port is specified, port 41139 is assu..."
-        )
-        self.child.expect(
-            "                      kdp-remote is an abbreviation for 'process conn..."
-        )
-        self.child.expect("        kill       -- Terminate the current target process.")
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
@@ -77,22 +73,4 @@ class EditlineCompletionsTest(PExpectTest):
         self.child.expect("        _regexp-display")
         self.child.expect("        _regexp-down")
         self.child.expect("        _regexp-env")
-        self.child.expect("More")
-
-    @skipIfAsan
-    @skipIfEditlineSupportMissing
-    def test_completion_multiline_pagination(self):
-        """Test that we use the terminal height for pagination and account for multi-line descriptions."""
-        self.launch(dimensions=(6, 72))
-        self.child.send("k\t")
-        self.child.expect("Available completions:")
-        self.child.expect(
-            "        kdp-remote -- Connect to a process via remote KDP server."
-        )
-        self.child.expect(
-            "                      If no UDP port is specified, port 41139 is assu..."
-        )
-        self.child.expect(
-            "                      kdp-remote is an abbreviation for 'process conn..."
-        )
         self.child.expect("More")
