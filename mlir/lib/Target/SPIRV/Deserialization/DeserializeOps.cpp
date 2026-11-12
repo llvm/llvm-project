@@ -180,12 +180,21 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processCapability(operands);
   case spirv::Opcode::OpExtension:
     return processExtension(operands);
-  case spirv::Opcode::OpExtInst: {
-    DenseMap<uint32_t, StringRef>::iterator setIt =
-        operands.size() >= 4 ? extendedInstSets.find(operands[2])
-                             : extendedInstSets.end();
-    if (setIt != extendedInstSets.end() && setIt->second == extDebugInfo)
+  case spirv::Opcode::OpExtInst:
+  case spirv::Opcode::OpExtInstWithForwardRefsKHR: {
+    StringRef setName = operands.size() >= 4
+                            ? extendedInstSets.lookup(operands[2])
+                            : StringRef();
+    if (setName == extDebugInfo)
       return processDebugInfoExtInst(operands, deferInstructions);
+    if (setName == extShaderDebugInfo100 || setName == extShaderDebugInfo200)
+      return processShaderDebugInfoExtInst(operands);
+    // SPV_KHR_non_semantic_info allows ignoring all NonSemantic.* sets.
+    if (setName.starts_with("NonSemantic."))
+      return success();
+    if (opcode == spirv::Opcode::OpExtInstWithForwardRefsKHR)
+      return emitError(unknownLoc, "OpExtInstWithForwardRefsKHR must use a "
+                                   "non-semantic extended instruction set");
     return processExtInst(operands);
   }
   case spirv::Opcode::OpExtInstImport:
@@ -495,6 +504,35 @@ spirv::Deserializer::processDebugInfoExtInst(ArrayRef<uint32_t> operands,
   }
   }
 
+  return success();
+}
+
+LogicalResult spirv::Deserializer::processShaderDebugInfoExtInst(
+    ArrayRef<uint32_t> operands) {
+  switch (static_cast<spirv::ShaderDebugInfoExtInst>(operands[3])) {
+  case spirv::ShaderDebugInfoExtInst::DebugSource:
+    if (operands.size() < 5)
+      return emitError(unknownLoc, "DebugSource must have a File operand");
+    // Let DebugLine resolve the file name like OpLine does.
+    debugInfoMap[operands[1]] = debugInfoMap.lookup(operands[4]);
+    return success();
+  case spirv::ShaderDebugInfoExtInst::DebugLine: {
+    if (operands.size() != 9)
+      return emitError(unknownLoc, "DebugLine must have 5 operands");
+    IntegerAttr lineAttr = getConstantInt(operands[5]);
+    IntegerAttr columnAttr = getConstantInt(operands[7]);
+    if (!lineAttr || !columnAttr)
+      return emitError(unknownLoc,
+                       "DebugLine line and column must be integer constants");
+    uint32_t line = lineAttr.getValue().getZExtValue();
+    uint32_t column = columnAttr.getValue().getZExtValue();
+    debugLine = DebugLine{operands[4], line, column};
+    return success();
+  }
+  case spirv::ShaderDebugInfoExtInst::DebugNoLine:
+    clearDebugLine();
+    return success();
+  }
   return success();
 }
 
