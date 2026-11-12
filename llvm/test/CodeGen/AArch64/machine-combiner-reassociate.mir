@@ -9,7 +9,6 @@
 ---
 name:            fadd_no_reassoc
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }
@@ -52,7 +51,6 @@ body:             |
 ---
 name:            fadd_reassoc
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }
@@ -93,7 +91,6 @@ body:             |
 ---
 name:            fadd_flags
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }

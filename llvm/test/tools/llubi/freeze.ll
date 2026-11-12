@@ -25,6 +25,17 @@ define void @main() {
   %vec_bytes2 = insertelement <4 x b8> %vec_bytes1, b8 %byte_with_provenance, i32 3
   %bytes = bitcast <4 x b8> %vec_bytes2 to b32
   %bytes_freeze = freeze b32 %bytes
+
+  ; Freezing a poison byte value makes all value bits concrete, so the
+  ; padding bits must be zero after the store.
+  %b12_freeze = freeze b12 poison
+  %b12_alloc = alloca i16
+  store b12 %b12_freeze, ptr %b12_alloc
+  %b12_freeze_bytes = load b16, ptr %b12_alloc
+  %b7_freeze = freeze b7 poison
+  %b7_alloc = alloca i8
+  store b7 %b7_freeze, ptr %b7_alloc
+  %b7_freeze_bytes = load b8, ptr %b7_alloc
   ret void
 }
 ; CHECK: Entering function: main
@@ -47,5 +58,13 @@ define void @main() {
 ; CHECK-NEXT:   %vec_bytes2 = insertelement <4 x b8> %vec_bytes1, b8 %byte_with_provenance, i32 3 => { b8 0x00 , b8 0x!! , b8 0x!! , b8 00001000(00011001)  }
 ; CHECK-NEXT:   %bytes = bitcast <4 x b8> %vec_bytes2 to b32 => b32 0x00 0x!! 0x!! 00001000(00011001) 
 ; CHECK-NEXT:   %bytes_freeze = freeze b32 %bytes => b32 0x00 0x13 0xF8 00001000(00011001) 
+; CHECK-NEXT:   %b12_freeze = freeze b12 poison => b12 0x8E 0110 
+; CHECK-NEXT:   %b12_alloc = alloca i16, align 2 => ptr 0x12 [b12_alloc]
+; CHECK-NEXT:   store b12 %b12_freeze, ptr %b12_alloc, align 2
+; CHECK-NEXT:   %b12_freeze_bytes = load b16, ptr %b12_alloc, align 2 => b16 0x8E 0x06 
+; CHECK-NEXT:   %b7_freeze = freeze b7 poison => b7 0111000 
+; CHECK-NEXT:   %b7_alloc = alloca i8, align 1 => ptr 0x15 [b7_alloc]
+; CHECK-NEXT:   store b7 %b7_freeze, ptr %b7_alloc, align 1
+; CHECK-NEXT:   %b7_freeze_bytes = load b8, ptr %b7_alloc, align 1 => b8 0x38 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

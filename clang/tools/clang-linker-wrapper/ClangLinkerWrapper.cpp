@@ -727,16 +727,15 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
 // Compile the module to an object file using the appropriate target machine for
 // the host triple.
-Expected<StringRef>
-compileModule(const cl::LibraryOptionsContext &LibraryOptions, Module &M,
-              OffloadKind Kind) {
+Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Compile module");
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
   if (!T)
     return createStringError(Msg);
 
-  auto Options = codegen::getTargetOptions(LibraryOptions, M.getTargetTriple());
+  auto Options = codegen::getTargetOptions(M.getContext().getLibraryOptions(),
+                                           M.getTargetTriple());
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
@@ -790,7 +789,8 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       "-o",
       *BitcodeOrErr,
   };
-  if (Kind == OFK_OpenMP && Args.hasArg(OPT_relocatable))
+  if ((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
+      Args.hasArg(OPT_relocatable))
     WrapperArgs.push_back("--relocatable");
   for (const auto &Buffer : Buffers)
     WrapperArgs.push_back(Buffer->getBufferIdentifier());
@@ -828,8 +828,7 @@ wrapDeviceImagesVerbose(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 /// Creates the object file containing the device image and runtime
 /// registration code from the device images stored in \p Images.
 Expected<StringRef>
-wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
-                 ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
+wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
                  const ArgList &Args, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Wrap bundled images");
 
@@ -862,6 +861,12 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
     if (Error Err = offloading::wrapOpenMPBinaries(
             M, BuffersToWrap, offloading::getOffloadEntryArray(M),
             /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable)))
+      return std::move(Err);
+    break;
+  case OFK_OpenACC:
+    if (Error Err = offloading::wrapOpenACCBinaries(
+            M, BuffersToWrap, offloading::getOffloadEntryArray(M),
+            /*Relocatable=*/Args.hasArg(OPT_relocatable)))
       return std::move(Err);
     break;
   case OFK_Cuda:
@@ -903,15 +908,16 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
     WriteBitcodeToFile(M, OS);
   }
 
-  auto FileOrErr = compileModule(LibraryOptions, M, Kind);
+  auto FileOrErr = compileModule(M, Kind);
   if (!FileOrErr)
     return FileOrErr.takeError();
   return *FileOrErr;
 }
 
-/// Perform the OpenMP bundling with 'llvm-offload-binary' in verbose mode.
+/// Perform the OpenMP and OpenACC bundling with 'llvm-offload-binary' in
+/// verbose mode.
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOpenMPVerbose(ArrayRef<OffloadingImage> Images) {
+bundleOmpAccVerbose(ArrayRef<OffloadingImage> Images) {
   Expected<std::string> OffloadBinaryPath = findProgram(
       "llvm-offload-binary", {getExecutableDir("llvm-offload-binary")});
   if (!OffloadBinaryPath)
@@ -954,7 +960,7 @@ bundleOpenMPVerbose(ArrayRef<OffloadingImage> Images) {
 }
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-bundleOpenMP(ArrayRef<OffloadingImage> Images) {
+bundleOmpAcc(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
   for (const OffloadingImage &Image : Images)
     Buffers.emplace_back(
@@ -1038,8 +1044,9 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   llvm::TimeTraceScope TimeScope("Bundle linked output");
   switch (Kind) {
   case OFK_OpenMP:
-    return (Verbose && SaveTemps) ? bundleOpenMPVerbose(Images)
-                                  : bundleOpenMP(Images);
+  case OFK_OpenACC:
+    return (Verbose && SaveTemps) ? bundleOmpAccVerbose(Images)
+                                  : bundleOmpAcc(Images);
   case OFK_SYCL:
     return bundleSYCL(Images);
   case OFK_Cuda:
@@ -1148,8 +1155,7 @@ Error handleOverrideImages(
 
 /// Writes the output of --sycl-device-link: the wrapped SYCL device object,
 /// to be used later in a host link. The host linker is not run.
-Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
-                               ArrayRef<StringRef> WrappedFiles,
+Error emitSYCLDeviceLinkOutput(ArrayRef<StringRef> WrappedFiles,
                                const ArgList &Args) {
   // All SYCL device code is wrapped into at most one object.
   assert(WrappedFiles.size() <= 1 &&
@@ -1165,7 +1171,7 @@ Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
     Module M("offload.wrapper.module", Context);
     M.setTargetTriple(HostTriple);
     M.setDataLayout(HostTriple.computeDataLayout());
-    auto FileOrErr = compileModule(LibraryOptions, M, OFK_SYCL);
+    auto FileOrErr = compileModule(M, OFK_SYCL);
     if (!FileOrErr)
       return FileOrErr.takeError();
     WrappedFile = *FileOrErr;
@@ -1185,8 +1191,7 @@ Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
 /// be registered by the runtime. If NeedsWrapping is false, writes bundled
 /// output directly without wrapping or host linking.
 Expected<SmallVector<StringRef>>
-linkAndWrapDeviceFiles(const cl::LibraryOptionsContext &LibraryOptions,
-                       ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
+linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
                        const InputArgList &Args, char **Argv, int Argc,
                        bool NeedsWrapping) {
   llvm::TimeTraceScope TimeScope("Handle all device input");
@@ -1241,7 +1246,7 @@ linkAndWrapDeviceFiles(const cl::LibraryOptionsContext &LibraryOptions,
       return OutputOrErr.takeError();
 
     // Store the offloading image for each linked output file.
-    for (OffloadKind Kind = OFK_OpenMP; Kind != OFK_LAST;
+    for (OffloadKind Kind = OFK_FIRST; Kind != OFK_LAST;
          Kind = static_cast<OffloadKind>((uint16_t)(Kind) << 1)) {
       if ((ActiveOffloadKindMask & Kind) == 0)
         continue;
@@ -1318,8 +1323,7 @@ linkAndWrapDeviceFiles(const cl::LibraryOptionsContext &LibraryOptions,
       continue;
     }
 
-    auto OutputOrErr = wrapDeviceImages(LibraryOptions, *BundledImagesOrErr,
-                                        Args, WrapperKind);
+    auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, WrapperKind);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
     WrappedOutput.push_back(*OutputOrErr);
@@ -1824,14 +1828,13 @@ int main(int Argc, char **Argv) {
 
     // Link and process the device images. The function may emit a direct fat
     // binary if --emit-fatbin-only is specified.
-    auto FilesOrErr = linkAndWrapDeviceFiles(LibraryOptions, *DeviceInputFiles,
-                                             Args, Argv, Argc, !EmitFatbinOnly);
+    auto FilesOrErr = linkAndWrapDeviceFiles(*DeviceInputFiles, Args, Argv,
+                                             Argc, !EmitFatbinOnly);
     if (!FilesOrErr)
       reportError(FilesOrErr.takeError());
 
     if (SYCLDeviceLink) {
-      if (Error Err =
-              emitSYCLDeviceLinkOutput(LibraryOptions, *FilesOrErr, Args))
+      if (Error Err = emitSYCLDeviceLinkOutput(*FilesOrErr, Args))
         reportError(std::move(Err));
     } else if (!EmitFatbinOnly) {
       // Run the host linking job with the rendered arguments.
