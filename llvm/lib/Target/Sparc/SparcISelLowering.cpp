@@ -2083,7 +2083,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::BSWAP, ISD::STORE});
 
   if (Subtarget->hasLeonCycleCounter())
-    setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
+    setOperationAction({ISD::READCYCLECOUNTER, ISD::READSTEADYCOUNTER},
+                       MVT::i64, Custom);
 
   if (Subtarget->isVIS3()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Legal);
@@ -3808,11 +3809,48 @@ SDValue SparcTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+static MachineBasicBlock *emitReadCycleCounter(MachineInstr &MI,
+                                               MachineBasicBlock *BB) {
+  MachineFunction &MF = *BB->getParent();
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  MachineFunction::iterator It = ++BB->getIterator();
+  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MF.insert(It, LoopMBB);
+  MF.insert(It, DoneMBB);
+
+  DoneMBB->splice(DoneMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+  BB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(DoneMBB);
+
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  Register Lo = MI.getOperand(0).getReg();
+  Register Hi = MI.getOperand(1).getReg();
+  Register HiAgain = MRI.createVirtualRegister(&SP::IntRegsRegClass);
+  DebugLoc DL = MI.getDebugLoc();
+
+  BuildMI(LoopMBB, DL, TII.get(SP::RDASR), Hi).addReg(SP::ASR22);
+  BuildMI(LoopMBB, DL, TII.get(SP::RDASR), Lo).addReg(SP::ASR23);
+  BuildMI(LoopMBB, DL, TII.get(SP::RDASR), HiAgain).addReg(SP::ASR22);
+  BuildMI(LoopMBB, DL, TII.get(SP::SUBCCrr), SP::G0).addReg(Hi).addReg(HiAgain);
+  BuildMI(LoopMBB, DL, TII.get(SP::BCOND)).addMBB(LoopMBB).addImm(SPCC::ICC_NE);
+
+  MI.eraseFromParent();
+  return DoneMBB;
+}
+
 MachineBasicBlock *
 SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unknown SELECT_CC!");
+  default:
+    llvm_unreachable("Unknown custom-inserter instruction");
+  case SP::ReadCycleCounter:
+    return emitReadCycleCounter(MI, BB);
   case SP::SELECT_CC_Int_ICC:
   case SP::SELECT_CC_FP_ICC:
   case SP::SELECT_CC_DFP_ICC:
@@ -4152,14 +4190,15 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(Res.getValue(1));
     return;
   }
-  case ISD::READCYCLECOUNTER: {
+  case ISD::READCYCLECOUNTER:
+  case ISD::READSTEADYCOUNTER: {
     assert(Subtarget->hasLeonCycleCounter());
-    SDValue Lo = DAG.getCopyFromReg(N->getOperand(0), dl, SP::ASR23, MVT::i32);
-    SDValue Hi = DAG.getCopyFromReg(Lo, dl, SP::G0, MVT::i32);
-    SDValue Ops[] = { Lo, Hi };
-    SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Ops);
-    Results.push_back(Pair);
-    Results.push_back(N->getOperand(0));
+    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
+    SDValue Counter =
+        DAG.getNode(SPISD::READ_CYCLE_COUNTER, dl, VTs, N->getOperand(0));
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Counter,
+                                  Counter.getValue(1)));
+    Results.push_back(Counter.getValue(2));
     return;
   }
   case ISD::SINT_TO_FP:

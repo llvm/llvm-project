@@ -1,4 +1,4 @@
-//===- TestOps.cpp - MLIR Test Dialect Operations ------------------------===//
+//===- TestOpsAttributes.h - Test dialect ops in `Attributes` ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestOps.h"
+#ifndef MLIR_TEST_DIALECT_TEST_TESTOPSATTRIBUTES_H
+#define MLIR_TEST_DIALECT_TEST_TESTOPSATTRIBUTES_H
+
 #include "TestDialect.h"
-#include "TestFormatUtils.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 
-using namespace mlir;
-using namespace test;
+#define GET_OP_CLASSES
+#include "TestOpsAttributes.h.inc"
 
-#include "TestOps.cpp.inc"
+#endif // MLIR_TEST_DIALECT_TEST_TESTOPSATTRIBUTES_H

@@ -1668,6 +1668,58 @@ std::error_code closeFile(file_t &F) {
   return std::error_code();
 }
 
+#if LLVM_WINDOWS_RESTRICTED_APIS
+// Remove a file or an empty directory. Like IFileOperation, this also removes
+// read-only entries. Junctions and symlinks are removed, not their targets.
+static std::error_code removeEntry(ArrayRef<wchar_t> Path16, DWORD Attrs) {
+  auto Remove = [&] {
+    return (Attrs & FILE_ATTRIBUTE_DIRECTORY)
+               ? ::RemoveDirectoryW(Path16.data())
+               : ::DeleteFileW(Path16.data());
+  };
+  if (Remove())
+    return std::error_code();
+  DWORD Err = ::GetLastError();
+  if (Err != ERROR_ACCESS_DENIED || !(Attrs & FILE_ATTRIBUTE_READONLY))
+    return mapWindowsError(Err);
+  DWORD NewAttrs = Attrs & ~FILE_ATTRIBUTE_READONLY;
+  if (!::SetFileAttributesW(Path16.data(),
+                            NewAttrs ? NewAttrs : FILE_ATTRIBUTE_NORMAL) ||
+      !Remove())
+    return mapWindowsError(::GetLastError());
+  return std::error_code();
+}
+
+static std::error_code removeTree(const Twine &Path, bool IgnoreErrors) {
+  SmallVector<wchar_t, 128> Path16;
+  if (std::error_code EC = widenPath(Path, Path16))
+    return EC;
+  DWORD Attrs = ::GetFileAttributesW(Path16.data());
+  if (Attrs == INVALID_FILE_ATTRIBUTES)
+    return mapWindowsError(::GetLastError());
+
+  // Do not recurse through junctions and symlinks.
+  if ((Attrs & FILE_ATTRIBUTE_DIRECTORY) &&
+      !(Attrs & FILE_ATTRIBUTE_REPARSE_POINT)) {
+    std::error_code EC;
+    for (directory_iterator I(Path, EC, false), E; I != E; I.increment(EC)) {
+      EC = removeTree(I->path(), IgnoreErrors);
+      if (EC && !IgnoreErrors)
+        return EC;
+    }
+    if (EC && !IgnoreErrors)
+      return EC;
+  }
+  return removeEntry(Path16, Attrs);
+}
+
+std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  std::error_code EC = removeTree(path, IgnoreErrors);
+  if (EC && EC != errc::no_such_file_or_directory && !IgnoreErrors)
+    return EC;
+  return std::error_code();
+}
+#else
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
   SmallString<128> NativePath;
   llvm::sys::path::native(path, NativePath, path::Style::windows_backslash);
@@ -1717,6 +1769,7 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
     return mapWindowsError(HRESULT_CODE(HR));
   return std::error_code();
 }
+#endif
 
 static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   // Path does not begin with a tilde expression.
@@ -1881,34 +1934,7 @@ std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
 } // end namespace fs
 
 namespace path {
-static bool getKnownFolderPath(KNOWNFOLDERID folderId,
-                               SmallVectorImpl<char> &result) {
-  wchar_t *path = nullptr;
-  if (::SHGetKnownFolderPath(folderId, KF_FLAG_CREATE, nullptr, &path) != S_OK)
-    return false;
-
-  bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
-  ::CoTaskMemFree(path);
-  if (ok)
-    llvm::sys::path::make_preferred(result);
-  return ok;
-}
-
-bool home_directory(SmallVectorImpl<char> &result) {
-  return getKnownFolderPath(FOLDERID_Profile, result);
-}
-
-bool user_config_directory(SmallVectorImpl<char> &result) {
-  // Either local or roaming appdata may be suitable in some cases, depending
-  // on the data. Local is more conservative, Roaming may not always be correct.
-  return getKnownFolderPath(FOLDERID_LocalAppData, result);
-}
-
-bool cache_directory(SmallVectorImpl<char> &result) {
-  return getKnownFolderPath(FOLDERID_LocalAppData, result);
-}
-
-static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
+static bool getEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   SmallVector<wchar_t, 1024> Buf;
   size_t Size = 1024;
   do {
@@ -1924,10 +1950,49 @@ static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   return !windows::UTF16ToUTF8(Buf.data(), Size, Res);
 }
 
+// EnvVar is the environment variable that normally points at folderId. It is
+// used instead of shell32 when LLVM_WINDOWS_RESTRICTED_APIS is set.
+static bool getKnownFolderPath(KNOWNFOLDERID folderId, const wchar_t *EnvVar,
+                               SmallVectorImpl<char> &result) {
+#if LLVM_WINDOWS_RESTRICTED_APIS
+  (void)folderId;
+  if (!getEnvVar(EnvVar, result))
+    return false;
+  llvm::sys::path::make_preferred(result);
+  // Match KF_FLAG_CREATE.
+  return !fs::create_directories(result);
+#else
+  (void)EnvVar;
+  wchar_t *path = nullptr;
+  if (::SHGetKnownFolderPath(folderId, KF_FLAG_CREATE, nullptr, &path) != S_OK)
+    return false;
+
+  bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
+  ::CoTaskMemFree(path);
+  if (ok)
+    llvm::sys::path::make_preferred(result);
+  return ok;
+#endif
+}
+
+bool home_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(FOLDERID_Profile, L"USERPROFILE", result);
+}
+
+bool user_config_directory(SmallVectorImpl<char> &result) {
+  // Either local or roaming appdata may be suitable in some cases, depending
+  // on the data. Local is more conservative, Roaming may not always be correct.
+  return getKnownFolderPath(FOLDERID_LocalAppData, L"LOCALAPPDATA", result);
+}
+
+bool cache_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(FOLDERID_LocalAppData, L"LOCALAPPDATA", result);
+}
+
 static bool getTempDirEnvVar(SmallVectorImpl<char> &Res) {
   const wchar_t *EnvironmentVariables[] = {L"TMP", L"TEMP", L"USERPROFILE"};
   for (auto *Env : EnvironmentVariables) {
-    if (getTempDirEnvVar(Env, Res))
+    if (getEnvVar(Env, Res))
       return true;
   }
   return false;

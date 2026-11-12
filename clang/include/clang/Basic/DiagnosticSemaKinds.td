@@ -12817,7 +12817,7 @@ def err_omp_wrong_dependency_iterator_type : Error<
 def err_omp_stmt_expr_in_non_rectangular_loop : Error<
   "statement expression is not supported in the loop %select{initializer|condition}0 of a non-rectangular loop nest">;
 def err_target_unsupported_type
-    : Error<"%0 requires %select{|%2 bit size}1 %3 %select{|return }4type support,"
+    : Error<"%0 requires %select{|%2 bit size }1%3 %select{|return }4type support,"
             " but target '%5' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
@@ -13908,6 +13908,9 @@ def err_hlsl_semantic_in_wrong_shader_model
 def err_hlsl_semantic_partial_explicit_indexing
     : Error<"partial explicit stage input location assignment via "
             "vk::location(X) unsupported">;
+def err_hlsl_vk_builtin_unsupported_value
+    : Error<"'%0' is not a supported value for the 'vk::builtin' attribute; "
+            "supported values are: %1">;
 
 def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
 def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;

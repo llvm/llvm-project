@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 import re
 import sys
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 from header import Header
 
@@ -58,7 +58,6 @@ def check_api(header: Header, api: Dict):
         "c-reference-root",
         "standard",
         "posix",
-        "provider",
         "family-note",
     ):
         if key in api and not isinstance(api[key], str):
@@ -345,8 +344,111 @@ def print_families_md(header: Header, api: Dict):
         print("  </tbody>\n</table></div>\n```\n")
 
 
+def _tone(pct: float) -> str:
+    if pct >= 99.95:
+        return "green"
+    return "blue" if pct >= 50.0 else ("amber" if pct > 0.0 else "muted")
+
+
+def _progress_bar_html(pct: float, label: str, tone: str, extra_cls: str = "") -> str:
+    cls = f"hc-progress-track {extra_cls}".strip()
+    esc = html.escape(label, quote=True)
+    return (
+        f'<div class="{cls}" role="progressbar" aria-label="{esc}" '
+        f'aria-valuenow="{pct:.1f}" aria-valuemin="0" aria-valuemax="100">'
+        f'<div class="hc-progress-fill" '
+        f'style="background:var(--hc-{tone}-text);width:{pct:.1f}%"></div></div>'
+    )
+
+
+def _mini_card_html(scope: str, title: str, imp: int, tot: int, tone: str = "") -> str:
+    pct = (imp / tot * 100.0) if tot else 0.0
+    t = tone or _tone(pct)
+    bar = _progress_bar_html(pct, f"{scope} {title} completion", t)
+    return (
+        f'<div class="hc-mini-card"><div class="hc-mini-title">'
+        f"{html.escape(title)}</div>"
+        f'<div class="hc-mini-val">{imp:,} / {tot:,} '
+        f'<span style="color:var(--hc-{t}-text)">({pct:.1f}%)</span></div>{bar}</div>'
+    )
+
+
+def _precision_grid_html(header_name: str, precisions: List[Dict]) -> str:
+    cards = "".join(
+        _mini_card_html(header_name, p["label"], p["implemented"], p["total"])
+        for p in precisions
+    )
+    return f'<div class="hc-grid-prec">{cards}</div>'
+
+
+def _header_pills_html(stats: Dict, short: bool = False) -> str:
+    pills = []
+    if stats["standard"] == "c23":
+        lbl = "C23" if short else "C23 Standard"
+        pills.append(f'<span class="hc-pill hc-pill-c23">{lbl}</span>')
+    elif stats["standard"] == "iso-tr-18037":
+        lbl = "TR 18037" if short else "ISO/IEC TR 18037"
+        pills.append(f'<span class="hc-pill hc-pill-ext">{lbl}</span>')
+    if stats["posix"] == "posix-2024":
+        lbl = "POSIX" if short else "POSIX.1-2024"
+        pills.append(f'<span class="hc-pill hc-pill-posix">{lbl}</span>')
+    if not pills:
+        if stats["removed_posix"]:
+            lbl = "Removed" if short else "Removed in POSIX.1-2024"
+        else:
+            lbl = "Ext" if short else "Extension Header"
+        pills.append(f'<span class="hc-pill hc-pill-ext">{lbl}</span>')
+    return "".join(pills)
+
+
+def print_summary_card(header: Header, api: Dict):
+    stats = header.get_summary_stats(api)
+    imp, tot = stats["overall"]["implemented"], stats["overall"]["total"]
+    if not tot:
+        return
+    pct = imp / tot * 100.0
+    tone = _tone(pct)
+    pills_html = _header_pills_html(stats)
+
+    cards = "".join(
+        _mini_card_html(
+            header.name, title, stats[k]["implemented"], stats[k]["total"], c
+        )
+        for k, title, c in (
+            ("c23", "C23 Standard", "green"),
+            ("tr18037", "ISO/IEC TR 18037", "purple"),
+            ("posix_spec", "POSIX.1-2024", "blue"),
+            ("families", "Base Families", "green"),
+            ("raw_functions", "Functions", "green"),
+            ("macros", "Macros", "blue"),
+            ("types", "Types", "purple"),
+            ("objects", "Global Variables", "amber"),
+        )
+        if stats[k]["total"]
+    )
+    overall_bar = _progress_bar_html(
+        pct, f"{header.name} overall implementation progress", tone, "hc-progress-lg"
+    )
+    print(
+        "```{raw} html\n"
+        f'<div class="hc-card"><div class="hc-summary-top">'
+        f'<div class="hc-pill-row">{pills_html}</div>'
+        f'<div class="hc-overall-stat">{imp:,} / {tot:,} '
+        f'<span style="color:var(--hc-{tone}-text)">({pct:.1f}%)</span></div></div>'
+        f'{overall_bar}<div class="hc-grid-cards">{cards}</div></div>'
+    )
+    if stats["precisions"]:
+        print(
+            '<div class="hc-card">'
+            '<div class="hc-subcard-title">Precision Coverage</div>'
+            f'{_precision_grid_html(header.name, stats["precisions"])}</div>'
+        )
+    print("```\n")
+
+
 def print_header_status_md(header: Header, api: Dict):
     print(f"# {header.name}\n")
+    print_summary_card(header, api)
 
     if api.get("families"):
         print_families_md(header, api)
@@ -409,15 +511,121 @@ def get_choices() -> list:
     return sorted(choices)
 
 
+def _std_card_html(title: str, imp: int, tot: int, tone: str) -> str:
+    pct = (imp / tot * 100.0) if tot else 0.0
+    bar = _progress_bar_html(pct, title, tone, "hc-progress-lg")
+    return (
+        f'<div class="hc-card"><div class="hc-std-title">{title}</div>'
+        f'<div class="hc-std-val" style="color:var(--hc-{tone}-text)">'
+        f"{pct:.1f}% <span>({imp:,} / {tot:,})</span></div>{bar}</div>"
+    )
+
+
+def generate_index_md():
+    headers_data = []
+    totals = {
+        k: [0, 0]
+        for k in ("c23", "posix_spec", "functions", "macros", "types", "objects")
+    }
+    for hname in get_choices():
+        hdr = Header(hname)
+        check_api(hdr, hdr.api)
+        stats = hdr.get_summary_stats(hdr.api)
+        headers_data.append((hdr, hdr.api, stats))
+        for k, pair in totals.items():
+            pair[0] += stats[k]["implemented"]
+            pair[1] += stats[k]["total"]
+
+    n_c23 = sum(1 for _, _, s in headers_data if s["standard"] == "c23")
+    n_posix = sum(1 for _, _, s in headers_data if s["posix"] == "posix-2024")
+    c23_card = _std_card_html("C23 Standard Completeness", *totals["c23"], "green")
+    pos_card = _std_card_html(
+        "POSIX.1-2024 Completeness", *totals["posix_spec"], "blue"
+    )
+    cat_cards = "".join(
+        _mini_card_html("Overall", title, *totals[k], tone)
+        for k, title, tone in (
+            ("functions", "Functions", "green"),
+            ("macros", "Macros", "blue"),
+            ("types", "Types", "purple"),
+            ("objects", "Global Variables", "amber"),
+        )
+    )
+    print(
+        "(implementation_status)=\n\n(headers_index)=\n\n# Implementation Status\n\n"
+        f"Live symbol coverage across {len(headers_data)} headers ({n_c23} C23 "
+        f"standard headers, {n_posix} POSIX.1-2024 headers, and extensions), verified "
+        "directly against LLVM-libc source files, header generation specifications, "
+        "and exported entrypoints.  Purely compiler-provided freestanding C headers "
+        "(`iso646.h`, `stdalign.h`, `stdarg.h`, `stdatomic.h`, `stdbool.h`, "
+        "`stddef.h`, `stdnoreturn.h`, and `tgmath.h`) come from the host compiler "
+        "(`Clang` or `GCC`) rather than LLVM-libc and are omitted below.\n\n"
+        "```{raw} html\n"
+        f'<div class="hc-grid-standards">{c23_card}{pos_card}</div>'
+        f'<div class="hc-grid-cards">{cat_cards}</div>\n```\n\n'
+        "## All Headers\n\n```{raw} html\n"
+        '<div id="headers-list" class="hc-headers-list">'
+    )
+    for hdr, api, stats in headers_data:
+        imp, tot = stats["overall"]["implemented"], stats["overall"]["total"]
+        pct = (imp / tot * 100.0) if tot else 0.0
+        std_tags = []
+        if stats["standard"] == "c23":
+            std_tags.append("c23")
+        if stats["posix"] == "posix-2024":
+            std_tags.append("posix")
+        if not std_tags:
+            std_tags.append("ext")
+        status_attr = (
+            "complete" if tot and imp == tot else ("inprogress" if imp else "planned")
+        )
+        syms = [
+            s
+            for sec in ("families", "functions", "macros", "types", "objects")
+            for s in (api.get(sec) or {})
+        ] + [
+            v
+            for fd in (api.get("families") or {}).values()
+            for v in ((fd or {}).get("variants") or {}).values()
+            if v
+        ]
+        stem = html.escape(hdr.stem, quote=True)
+        hname = html.escape(hdr.name, quote=True)
+        syms_attr = html.escape(" ".join(syms).lower(), quote=True)
+        bar = _progress_bar_html(pct, f"{hdr.name} implementation progress", _tone(pct))
+        print(
+            f'<details class="header-card" data-stem="{stem}" data-name="{hname}" '
+            f'data-standard="{" ".join(std_tags)}" data-status="{status_attr}" '
+            f'data-pct="{pct:.2f}" data-missing="{tot - imp}" '
+            f'data-symbols="{syms_attr}"><summary>'
+            f'<div class="hc-header-title-col"><code class="hc-sym">&lt;{hname}&gt;'
+            f"</code>{_header_pills_html(stats, short=True)}</div>"
+            f'<div class="hc-thermometer-col">{bar}'
+            f'<span class="hc-row-pct">{pct:.1f}%</span>'
+            f'<span class="hc-row-frac">({imp}/{tot})</span></div>'
+            f'<div class="hc-action-col"><a class="hc-page-link" href="{stem}.html" '
+            f'onclick="event.stopPropagation();" '
+            f'aria-label="Open {hname} status page">'
+            'Page <span aria-hidden="true">&#8599;</span></a></div>'
+            "</summary></details>"
+        )
+    stems = "\n".join(hdr.stem for hdr, _, _ in headers_data)
+    print(f"</div>\n```\n\n```{{toctree}}\n:hidden: true\n:maxdepth: 1\n\n{stems}\n```")
+
+
 def parse_args() -> Namespace:
     parser = ArgumentParser()
-    parser.add_argument("header_name", choices=get_choices())
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("header_name", nargs="?", choices=get_choices())
+    group.add_argument("--index", action="store_true")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    header = Header(args.header_name)
-    check_api(header, header.api)
-
-    print_header_status_md(header, header.api)
+    if args.index:
+        generate_index_md()
+    else:
+        header = Header(args.header_name)
+        check_api(header, header.api)
+        print_header_status_md(header, header.api)
