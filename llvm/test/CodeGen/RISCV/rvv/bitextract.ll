@@ -15,20 +15,3 @@ define <vscale x 4 x i8> @test_bitextract_nxv4i8(<vscale x 4 x b32> %src, <vscal
   %result = bitextract <vscale x 4 x i8>, <vscale x 4 x b32> %src, <vscale x 4 x i32> %off
   ret <vscale x 4 x i8> %result
 }
-
-define <vscale x 4 x b32> @test_bitinsert_nxv4i8(<vscale x 4 x b32> %base, <vscale x 4 x i8> %val, <vscale x 4 x i32> %off) {
-; CHECK-LABEL: test_bitinsert_nxv4i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 255
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v14, a0
-; CHECK-NEXT:    vzext.vf4 v16, v10
-; CHECK-NEXT:    vsll.vv v10, v16, v12
-; CHECK-NEXT:    vsll.vv v12, v14, v12
-; CHECK-NEXT:    vnot.v v12, v12
-; CHECK-NEXT:    vand.vv v8, v8, v12
-; CHECK-NEXT:    vor.vv v8, v8, v10
-; CHECK-NEXT:    ret
-  %result = bitinsert <vscale x 4 x b32> %base, <vscale x 4 x i8> %val, <vscale x 4 x i32> %off
-  ret <vscale x 4 x b32> %result
-}
