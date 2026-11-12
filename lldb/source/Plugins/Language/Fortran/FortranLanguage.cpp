@@ -35,8 +35,6 @@ StringRef FortranLanguage::GetPluginNameStatic() {
 
 StringRef FortranLanguage::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t FortranLanguage::GetPluginVersion() { return 1; }
-
 Language *FortranLanguage::CreateInstance(LanguageType language) {
   if (Language::LanguageIsFortran(language))
     return new FortranLanguage();

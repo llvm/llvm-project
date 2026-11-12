@@ -38,8 +38,6 @@ public:
 
   llvm::StringRef GetPluginName() override;
 
-  uint32_t GetPluginVersion();
-
   bool IsSourceFile(llvm::StringRef file_path) const override;
 };
 
