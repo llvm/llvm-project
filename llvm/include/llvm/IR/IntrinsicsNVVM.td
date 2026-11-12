@@ -3916,6 +3916,28 @@ foreach shape = ["32x32b", "16x32bx2"] in {
   } // num
 } // shape
 
+// tcgen05.ld{.red}.spcompress intrinsics
+class NVVM_TCGEN05_LD_SPCOMPRESS<bit IsRed> :
+  DefaultAttrsIntrinsicFlags<
+    !listconcat([llvm_anyint_ty,                   // mdata
+                 llvm_any_vector_float_ty],        // cdata
+                !if(IsRed, [llvm_float_ty], [])),  // redval
+    [llvm_tmem_ptr_ty],                            // taddr
+    !listconcat([llvm_i32_ty,                      // rowop
+                 llvm_i1_ty],                      // abs
+                !if(IsRed, [llvm_i1_ty], []),      // nan
+                [llvm_i32_ty]),                    // idx_size
+    !listconcat([IntrConvergent, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+                 Range<ArgIndex<1>, 0, 2>,
+                 ArgInfo<ArgIndex<1>, [ArgName<"rowop">]>,
+                 ArgInfo<ArgIndex<2>, [ArgName<"abs">]>],
+                !if(IsRed, [ArgInfo<ArgIndex<3>, [ArgName<"nan">]>], []),
+                [RangeList<ArgIndex<!if(IsRed, 4, 3)>, [2]>,
+                 ArgInfo<ArgIndex<!if(IsRed, 4, 3)>, [ArgName<"idx_size">]>])>;
+
+def int_nvvm_tcgen05_ld_spcompress_32x32b : NVVM_TCGEN05_LD_SPCOMPRESS<false>;
+def int_nvvm_tcgen05_ld_red_spcompress_32x32b : NVVM_TCGEN05_LD_SPCOMPRESS<true>;
+
 //
 // Bulk store intrinsics
 //
