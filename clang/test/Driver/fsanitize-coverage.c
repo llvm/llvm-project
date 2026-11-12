@@ -170,3 +170,16 @@
 // CHECK-NO-SHADOWCALLSTACK-NOT: unknown argument
 // CHECK-NO-SHADOWCALLSTACK-NOT: -fsanitize=shadow-call-stack
 // CHECK-NO-SHADOWCALLSTACK: -fsanitize-coverage-trace-pc-guard
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-coverage=trace-args %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACE-ARGS
+// CHECK-TRACE-ARGS: -fsanitize-coverage-type=3
+// CHECK-TRACE-ARGS: -fsanitize-coverage-trace-args
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-coverage=trace-ret %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACE-RET
+// CHECK-TRACE-RET: -fsanitize-coverage-type=3
+// CHECK-TRACE-RET: -fsanitize-coverage-trace-ret
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-coverage=edge,trace-args,trace-ret %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TRACE-ARGS-RET
+// CHECK-TRACE-ARGS-RET: -fsanitize-coverage-type=3
+// CHECK-TRACE-ARGS-RET: -fsanitize-coverage-trace-args
+// CHECK-TRACE-ARGS-RET: -fsanitize-coverage-trace-ret
