@@ -3,9 +3,6 @@
 // omp_test_lock in device code tries to take the lock and reports whether it
 // succeeded.
 
-// The other AMDGPU device lock routines are not implemented yet.
-// XFAIL: amdgpu
-
 #include <omp.h>
 #include <stdio.h>
 
