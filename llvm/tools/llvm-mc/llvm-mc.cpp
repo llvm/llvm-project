@@ -36,6 +36,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SourceMgrDiagnosticVerifier.h"
 #include "llvm/Support/TargetSelect.h"
