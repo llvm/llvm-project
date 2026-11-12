@@ -112,6 +112,20 @@ __attribute__((visibility("protected"), used)) int x;
 // CUDA: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.cuda.image.{{.*}}.o
 
 // RUN: llvm-offload-binary -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%t.elf.o,kind=openacc,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=OPENMP-OPENACC
+
+// The device images are linked together, and the result is registered with both
+// runtimes.
+// OPENMP-OPENACC: clang{{.*}} -o {{.*}}.img -dumpdir a.out.nvptx64.sm_70.img. --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
+// OPENMP-OPENACC-NOT: --target=nvptx64-nvidia-cuda
+// OPENMP-OPENACC: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.openacc.image.{{.*}}.o
+
+// RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_80 \
 // RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_75 \
 // RUN:   --image=file=%t.elf.o,kind=cuda,triple=nvptx64-nvidia-cuda,arch=sm_70 \
