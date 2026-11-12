@@ -228,10 +228,10 @@ static bool isCompatibleObject(uint32_t cpuType, uint32_t cpuSubtype) {
   return !isArm64e || hasCompatiblePtrAuthABI(cpuSubtype);
 }
 
-// ld64 is laxer with dylibs and bundle loaders than with objects: an arm64 link
-// takes any arm64e dylib, and an arm64e link takes dylibs with userland pointer
-// authentication ABI version 0 or 1, as macOS executables are marked, and
-// arm64e.x1 dylibs with version 0.
+// ld-prime is laxer with dylibs and bundle loaders than with objects: an arm64
+// link takes any arm64e dylib, and an arm64e link takes dylibs with userland
+// pointer authentication ABI version 0 or 1, as macOS executables are marked,
+// and arm64e.x1 dylibs with version 0.
 static bool isCompatibleDylib(uint32_t cpuType, uint32_t cpuSubtype) {
   if (cpuType != getCPUTypeFromArchitecture(config->arch()).first)
     return false;
@@ -251,7 +251,7 @@ static bool isCompatibleDylib(uint32_t cpuType, uint32_t cpuSubtype) {
   }
 }
 
-// Like ld64, ignore an input for another architecture with a warning, or
+// Like ld-prime, ignore an input for another architecture with a warning, or
 // reject it with -arch_errors_fatal.
 static void reportIncompatibleArch(const InputFile *file, uint32_t cpuType,
                                    uint32_t cpuSubtype) {
@@ -2598,9 +2598,10 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                                                utostr(offsetInArchive)));
   obj = check(lto::InputFile::create(mbref));
 
-  // Like ld64, ignore bitcode for another architecture. Check it as the object
-  // that LTO will produce, which for arm64e has userland pointer authentication
-  // ABI version 0. Bitcode whose triple has no Mach-O CPU type isn't checked.
+  // Like ld-prime, ignore bitcode for another architecture. Check it as the
+  // object that LTO will produce, which for arm64e has userland pointer
+  // authentication ABI version 0. Bitcode whose triple has no Mach-O CPU type
+  // isn't checked.
   Triple triple(obj->getTargetTriple());
   std::optional<uint32_t> cpuType =
       expectedToOptional(MachO::getCPUType(triple));

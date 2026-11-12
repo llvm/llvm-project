@@ -41,10 +41,10 @@
 # RUN: not %no-fatal-warnings-lld -arch arm64 -arch_errors_fatal %t/main-arm64.o \
 # RUN:   %t/v1.o -o %t/out 2>&1 | FileCheck %s --check-prefix=V1-ARM64
 
-## Dylibs and bundle loaders are checked more loosely. Like ld64, an arm64e link
-## also takes dylibs with userland version 1, as macOS executables are marked,
-## and arm64e.x1 dylibs with version 0, and an arm64 link takes any arm64e
-## dylib. An ignored dylib gets no load command.
+## Dylibs and bundle loaders are checked more loosely. Like ld-prime, an arm64e
+## link also takes dylibs with userland version 1, as macOS executables are
+## marked, and arm64e.x1 dylibs with version 0, and an arm64 link takes any
+## arm64e dylib. An ignored dylib gets no load command.
 # RUN: yaml2obj -DSUBTYPE=0x80000002 %t/dylib.yaml -o %t/libv0.dylib
 # RUN: yaml2obj -DSUBTYPE=0x81000002 %t/dylib.yaml -o %t/libv1.dylib
 # RUN: yaml2obj -DSUBTYPE=0x8000000C %t/dylib.yaml -o %t/libx1.dylib
