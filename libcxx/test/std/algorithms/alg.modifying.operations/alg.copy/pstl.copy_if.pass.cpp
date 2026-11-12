@@ -77,21 +77,17 @@ struct TestInt {
       assert(o[0] == -1);
     }
     { // Check two, true then false
-      int a[] = {0, 1};
+      int a[] = {1, 2};
       int o[] = {-1, -1};
-      auto r  = std::copy_if(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(o)), [](int x) {
-        return x == 0;
-      });
+      auto r  = std::copy_if(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(o)), is_odd);
       assert(r == Iter2(std::begin(o) + 1));
-      assert(o[0] == 0);
+      assert(o[0] == 1);
       assert(o[1] == -1);
     }
     { // Check two, false then true
-      int a[] = {0, 1};
+      int a[] = {2, 1};
       int o[] = {-1, -1};
-      auto r  = std::copy_if(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(o)), [](int x) {
-        return x != 0;
-      });
+      auto r  = std::copy_if(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(o)), is_odd);
       assert(r == Iter2(std::begin(o) + 1));
       assert(o[0] == 1);
       assert(o[1] == -1);
