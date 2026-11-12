@@ -140,7 +140,8 @@ std::string InputSection::getLocation(uint64_t off) const {
       .str();
 }
 
-std::string InputSection::getSourceLocation(uint64_t off) const {
+std::string InputSection::getSourceLocation(uint64_t off,
+                                            StringRef symName) const {
   auto *obj = dyn_cast_or_null<ObjFile>(getFile());
   if (!obj)
     return {};
@@ -170,10 +171,12 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
     return createMsg(li->FileName, li->Line);
 
   // If it failed, look up again as a variable.
-  if (const Defined *sym = getContainingSymbol(off)) {
+  if (symName.empty())
+    if (const Defined *sym = getContainingSymbol(off))
+      symName = sym->getName();
+  if (!symName.empty()) {
     // Symbols are generally prefixed with an underscore, which is not included
     // in the debug information.
-    StringRef symName = sym->getName();
     symName.consume_front("_");
 
     if (std::optional<std::pair<std::string, unsigned>> fileLine =
