@@ -39,8 +39,8 @@ AMDGPUMCExpr::AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args,
   //
   // Will result in an asan failure if allocated on the heap through standard
   // allocation (e.g., through SmallVector's grow).
-  RawArgs = static_cast<const MCExpr **>(
-      Ctx.allocate(sizeof(const MCExpr *) * Args.size()));
+  RawArgs = static_cast<const MCExpr **>(Ctx.allocate(
+      static_cast<unsigned>(sizeof(const MCExpr *) * Args.size())));
   llvm::uninitialized_copy(Args, RawArgs);
   this->Args = ArrayRef<const MCExpr *>(RawArgs, Args.size());
 }
@@ -210,15 +210,22 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
   if (!Success || !evaluateMCExprs(Args.slice(7, 2), Asm, {NumSGPRs, NumVGPRs}))
     return false;
 
-  unsigned Occupancy = InitOccupancy;
+  unsigned Occupancy = static_cast<unsigned>(InitOccupancy);
   if (NumSGPRs)
-    Occupancy = std::min(Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
-                                        NumSGPRs, MaxWaves, SGPRTotal,
-                                        SGPRGranule, SGPRTrapReserve));
+    Occupancy =
+        std::min(Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
+                                static_cast<unsigned>(NumSGPRs),
+                                static_cast<unsigned>(MaxWaves),
+                                static_cast<unsigned>(SGPRTotal),
+                                static_cast<unsigned>(SGPRGranule),
+                                static_cast<unsigned>(SGPRTrapReserve)));
   if (NumVGPRs)
-    Occupancy = std::min(Occupancy,
-                         IsaInfo::getNumWavesPerEUWithNumVGPRs(
-                             NumVGPRs, Granule, MaxWaves, TargetTotalNumVGPRs));
+    Occupancy =
+        std::min(Occupancy, IsaInfo::getNumWavesPerEUWithNumVGPRs(
+                                static_cast<unsigned>(NumVGPRs),
+                                static_cast<unsigned>(Granule),
+                                static_cast<unsigned>(MaxWaves),
+                                static_cast<unsigned>(TargetTotalNumVGPRs)));
 
   Res = MCValue::get(Occupancy);
   return true;

@@ -23,12 +23,12 @@ namespace llvm::AMDGPU {
 /// Map from the encoding of a sendmsg/hwreg asm operand to it's name.
 template <size_t N>
 static StringRef getNameFromOperandTable(const CustomOperand (&Table)[N],
-                                         unsigned Encoding,
+                                         uint64_t Encoding,
                                          const MCSubtargetInfo &STI) {
   // Find the first entry with the target encoding
   auto First =
       std::lower_bound(Table, Table + N, Encoding,
-                       [](const CustomOperand &Entry, unsigned TargetEncoding) {
+                       [](const CustomOperand &Entry, uint64_t TargetEncoding) {
                          return Entry.Encoding < TargetEncoding;
                        });
 
