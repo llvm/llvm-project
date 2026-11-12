@@ -2243,7 +2243,6 @@ body:             |
 ...
 
 ---
----
 name:            fold_redundant_and_imm_in_src0
 tracksRegLiveness: true
 

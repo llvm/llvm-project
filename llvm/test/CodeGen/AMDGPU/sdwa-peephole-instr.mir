@@ -466,7 +466,7 @@ body:             |
     %6:vgpr_32 = V_BFE_U32_e64 %4, 8, 8, implicit $exec
     %7:vgpr_32 = nnan nofpexcept V_ADD_F32_e32 %5, %6, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %7
-
+...
 # GCN-LABEL: name: negative_v_ashrrev_i16
 # GCN-NOT: V_XOR_B32_sdwa
 # GCN: S_ENDPGM 0

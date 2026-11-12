@@ -30,3 +30,4 @@ body:             |
     $w2 = COPY %2(s32), debug-location !68
     %3:_(s32) = G_CONSTANT i32 0, debug-location !71
     $w0 = COPY %3(s32), debug-location !71
+...
