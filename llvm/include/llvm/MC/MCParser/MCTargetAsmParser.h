@@ -408,6 +408,12 @@ public:
   virtual bool parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                              SMLoc &EndLoc) = 0;
 
+  /// Parse a register operand in a CFI directive and return its DWARF register
+  /// number. Targets may override this to support register names which do not
+  /// have a corresponding LLVM register.
+  virtual bool parseCFIRegister(int64_t &DwarfReg, SMLoc &StartLoc,
+                                SMLoc &EndLoc);
+
   /// tryParseRegister - parse one register if possible
   ///
   /// Check whether a register specification can be parsed at the current
