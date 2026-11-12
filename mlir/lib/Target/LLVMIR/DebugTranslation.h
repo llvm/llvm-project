@@ -73,6 +73,7 @@ private:
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
   llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);
   llvm::DIDerivedType *translateImpl(DIDerivedTypeAttr attr);
+  llvm::DIEnumerator *translateImpl(DIEnumeratorAttr attr);
   llvm::DIStringType *translateImpl(DIStringTypeAttr attr);
   llvm::DIFile *translateImpl(DIFileAttr attr);
   llvm::DIImportedEntity *translateImpl(DIImportedEntityAttr attr);
