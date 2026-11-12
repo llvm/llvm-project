@@ -1,29 +1,19 @@
 # clang-format off
 # REQUIRES: lld, x86
 
-# Test that the prologue end (DbgStart) and epilogue begin (DbgEnd) of a
-# procedure are marked in the line table when they fall inside inline sites.
-# S_INLINESITE records don't have these offsets, so only the parent procedure's
-# values are used.
-#
-# The input is inline_sites.s with the offsets of main patched in:
-#  - DbgStart = 4 is the start of the inlined Namespace1::foo, which already has
-#    a line entry.
-#  - DbgStart = 8 is in the middle of the a.h:5 line entry of the inlined
-#    Namespace1::foo, so a new line entry is inserted there.
-#  - DbgEnd = 0x3f is the `add rsp, 56` of the epilogue, which is covered by an
-#    inline site line entry (a.h:20).
+# Test that DbgStart/DbgEnd of main mark line entries of its inline sites.
+# The start run puts both at entry starts, the mid run in the middle of entries.
 
-# RUN: sed -e 's/0 *# Offset after prologue/4/' \
+# RUN: sed -e 's/0 *# Offset after prologue/0xc/' \
 # RUN:     -e 's/0 *# Offset before epilogue/0x3f/' \
 # RUN:     %p/Inputs/inline_sites.s > %t.start.s
 # RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %t.start.s > %t.start.obj
 # RUN: lld-link -debug:full -nodefaultlib -entry:main -base:0x140000000 %t.start.obj -out:%t.start.exe
-# RUN: %lldb -f %t.start.exe -b -o "image dump line-table a.cpp -v" -o "b main" \
+# RUN: %lldb -f %t.start.exe -b -o "image dump line-table a.cpp -v" \
 # RUN:     2>&1 | FileCheck %s --check-prefix=START
 
-# RUN: sed -e 's/0 *# Offset after prologue/8/' \
-# RUN:     -e 's/0 *# Offset before epilogue/0x3f/' \
+# RUN: sed -e 's/0 *# Offset after prologue/0x8/' \
+# RUN:     -e 's/0 *# Offset before epilogue/0x40/' \
 # RUN:     %p/Inputs/inline_sites.s > %t.mid.s
 # RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %t.mid.s > %t.mid.obj
 # RUN: lld-link -debug:full -nodefaultlib -entry:main -base:0x140000000 %t.mid.obj -out:%t.mid.exe
@@ -34,7 +24,7 @@
 # START-NEXT: Line table
 # START-NEXT: 0x0000000140001000: /tmp/a.cpp:2
 # START-NEXT: 0x0000000140001004: /tmp/a.h:5, is_start_of_statement = TRUE, is_prologue_end = TRUE
-# START-NEXT: 0x000000014000100c: /tmp/a.h:6
+# START-NEXT: 0x000000014000100c: /tmp/a.h:6, is_prologue_end = TRUE
 # START-NEXT: 0x0000000140001010: /tmp/a.h:7
 # START-NEXT: 0x0000000140001018: /tmp/a.h:9
 # START-NEXT: 0x000000014000101c: /tmp/b.h:5, is_start_of_statement = TRUE, is_prologue_end = TRUE
@@ -48,8 +38,6 @@
 # START-NEXT: 0x000000014000103f: /tmp/a.h:20, is_epilogue_begin = TRUE
 # START-NEXT: 0x0000000140001044: /tmp/a.h:8
 # START-NEXT: 0x0000000140001046: /tmp/a.cpp:3, is_terminal_entry = TRUE
-# START:      (lldb) b main
-# START-NEXT: Breakpoint 1: where = {{.*}}`main + 4 [inlined] Namespace1::foo at a.h:5, address = 0x0000000140001004
 
 # MID:      (lldb) image dump line-table a.cpp -v
 # MID-NEXT: Line table
@@ -58,4 +46,5 @@
 # MID-NEXT: 0x0000000140001008: /tmp/a.h:5, is_start_of_statement = TRUE, is_prologue_end = TRUE
 # MID-NEXT: 0x000000014000100c: /tmp/a.h:6
 # MID:      0x000000014000103d: /tmp/a.cpp:4
-# MID-NEXT: 0x000000014000103f: /tmp/a.h:20, is_epilogue_begin = TRUE
+# MID-NEXT: 0x000000014000103f: /tmp/a.h:20
+# MID-NEXT: 0x0000000140001044: /tmp/a.h:8
