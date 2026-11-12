@@ -1,0 +1,10 @@
+# RUN: llvm-mc -triple=xtensa -disassemble %s | FileCheck %s
+
+[0x01,0x00,0x00]
+# CHECK: l32r a0, . -262144
+
+[0x01,0xff,0x7f]
+# CHECK: l32r a0, . -131076
+
+[0xf1,0xff,0xff]
+# CHECK: l32r a15, . -4
