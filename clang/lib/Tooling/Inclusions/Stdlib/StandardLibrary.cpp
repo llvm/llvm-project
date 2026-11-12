@@ -10,11 +10,15 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
+#include <limits>
 #include <optional>
+#include <utility>
 
 namespace clang {
 namespace tooling {
@@ -23,6 +27,72 @@ namespace stdlib {
 namespace {
 // Symbol name -> Symbol::ID, within a namespace.
 using NSSymbolMap = llvm::DenseMap<llvm::StringRef, unsigned>;
+
+using SymbolNamespaceLength = uint8_t;
+using SymbolMappingDef = llvm::EnumStringDef<SymbolNamespaceLength>;
+using SymbolMapping = llvm::EnumString<SymbolNamespaceLength>;
+using SymbolMappingTable = llvm::EnumStrings<SymbolNamespaceLength>;
+static_assert(sizeof(SymbolMapping) == 4,
+              "update the standard symbol table partition size");
+
+template <size_t Size>
+constexpr SymbolNamespaceLength getSymbolNamespaceLength(const char (&)[Size]) {
+  static_assert(Size - 1 <= std::numeric_limits<SymbolNamespaceLength>::max(),
+                "symbol namespace length does not fit in one byte");
+  return static_cast<SymbolNamespaceLength>(Size - 1);
+}
+
+static constexpr SymbolMappingDef CSymbolDefs[] = {
+#define SYMBOL(Name, NS, Header)                                               \
+  {{llvm::StringLiteral::withInnerNUL(#NS #Name "\0" #Header)},                \
+   getSymbolNamespaceLength(#NS)},
+#include "CSpecialSymbolMap.inc"
+#include "CSymbolMap.inc"
+#undef SYMBOL
+};
+static constexpr auto CSymbols = BUILD_ENUM_STRINGS(CSymbolDefs);
+
+static constexpr SymbolMappingDef CXXSpecialSymbolDefs[] = {
+#define SYMBOL(Name, NS, Header)                                               \
+  {{llvm::StringLiteral::withInnerNUL(#NS #Name "\0" #Header)},                \
+   getSymbolNamespaceLength(#NS)},
+#include "StdSpecialSymbolMap.inc"
+#undef SYMBOL
+};
+static constexpr auto CXXSpecialSymbols =
+    BUILD_ENUM_STRINGS(CXXSpecialSymbolDefs);
+
+#define SYMBOL_MAP_BEGIN(Index)                                                \
+  static constexpr SymbolMappingDef CXXSymbolDefs##Index[] = {
+#define SYMBOL(Name, NS, Header)                                               \
+  {{llvm::StringLiteral::withInnerNUL(#NS #Name "\0" #Header)},                \
+   getSymbolNamespaceLength(#NS)},
+#define SYMBOL_MAP_END(Index)                                                  \
+  }                                                                            \
+  ;                                                                            \
+  static constexpr auto CXXSymbols##Index =                                    \
+      BUILD_ENUM_STRINGS(CXXSymbolDefs##Index);
+#include "StdSymbolMap.inc"
+#undef SYMBOL_MAP_END
+#undef SYMBOL
+#undef SYMBOL_MAP_BEGIN
+
+static constexpr SymbolMappingDef CXXTsSymbolDefs[] = {
+#define SYMBOL(Name, NS, Header)                                               \
+  {{llvm::StringLiteral::withInnerNUL(#NS #Name "\0" #Header)},                \
+   getSymbolNamespaceLength(#NS)},
+#include "StdTsSymbolMap.inc"
+#undef SYMBOL
+};
+static constexpr auto CXXTsSymbols = BUILD_ENUM_STRINGS(CXXTsSymbolDefs);
+
+static std::pair<StringRef, StringRef>
+splitSymbolMapping(const SymbolMapping &Mapping) {
+  StringRef Name = Mapping.name();
+  size_t Delimiter = Name.find('\0');
+  assert(Delimiter != StringRef::npos && "missing symbol mapping delimiter");
+  return {Name.take_front(Delimiter), Name.drop_front(Delimiter + 1)};
+}
 
 // A Mapping per language.
 struct SymbolHeaderMapping {
@@ -54,37 +124,27 @@ static const SymbolHeaderMapping *getMappingPerLang(Lang L) {
   return LanguageMappings[static_cast<unsigned>(L)];
 }
 
-static int countSymbols(Lang Language) {
-  ArrayRef<const char *> Symbols;
-#define SYMBOL(Name, NS, Header) #NS #Name,
-  switch (Language) {
-  case Lang::C: {
-    static constexpr const char *CSymbols[] = {
-#include "CSpecialSymbolMap.inc"
-#include "CSymbolMap.inc"
-    };
-    Symbols = CSymbols;
-    break;
+static unsigned countSymbols(ArrayRef<SymbolMappingTable> SymbolMappingTables) {
+  unsigned Count = 0;
+  StringRef Previous;
+  for (const SymbolMappingTable &Table : SymbolMappingTables) {
+    for (const SymbolMapping &Mapping : Table) {
+      StringRef QName = splitSymbolMapping(Mapping).first;
+      if (Previous != QName) {
+        ++Count;
+        Previous = QName;
+      }
+    }
   }
-  case Lang::CXX: {
-    static constexpr const char *CXXSymbols[] = {
-#include "StdSpecialSymbolMap.inc"
-#include "StdSymbolMap.inc"
-#include "StdTsSymbolMap.inc"
-    };
-    Symbols = CXXSymbols;
-    break;
-  }
-  }
-#undef SYMBOL
-  return llvm::DenseSet<StringRef>(llvm::from_range, Symbols).size();
+  return Count;
 }
 
-static int initialize(Lang Language) {
+static int initialize(Lang Language,
+                      ArrayRef<SymbolMappingTable> SymbolMappingTables) {
   SymbolHeaderMapping *Mapping = new SymbolHeaderMapping();
   LanguageMappings[static_cast<unsigned>(Language)] = Mapping;
 
-  unsigned SymCount = countSymbols(Language);
+  unsigned SymCount = countSymbols(SymbolMappingTables);
   Mapping->SymbolCount = SymCount;
   Mapping->SymbolNames =
       new std::remove_reference_t<decltype(*Mapping->SymbolNames)>[SymCount];
@@ -137,42 +197,40 @@ static int initialize(Lang Language) {
     NSSymbols.try_emplace(QName.drop_front(NSLen), SymIndex);
   };
 
-  struct Symbol {
-    const char *QName;
-    unsigned NSLen;
-    const char *HeaderName;
-  };
-#define SYMBOL(Name, NS, Header)                                               \
-  {#NS #Name, static_cast<decltype(Symbol::NSLen)>(StringRef(#NS).size()),     \
-   #Header},
-  switch (Language) {
-  case Lang::C: {
-    static constexpr Symbol CSymbols[] = {
-#include "CSpecialSymbolMap.inc"
-#include "CSymbolMap.inc"
-    };
-    for (const Symbol &S : CSymbols)
-      Add(S.QName, S.NSLen, S.HeaderName);
-    break;
+  for (const SymbolMappingTable &Table : SymbolMappingTables) {
+    for (const SymbolMapping &Mapping : Table) {
+      auto [QName, HeaderName] = splitSymbolMapping(Mapping);
+      Add(QName, Mapping.value(), HeaderName);
+    }
   }
-  case Lang::CXX: {
-    static constexpr Symbol CXXSymbols[] = {
-#include "StdSpecialSymbolMap.inc"
-#include "StdSymbolMap.inc"
-#include "StdTsSymbolMap.inc"
-    };
-    for (const Symbol &S : CXXSymbols)
-      Add(S.QName, S.NSLen, S.HeaderName);
-    break;
-  }
-  }
-#undef SYMBOL
 
   Mapping->HeaderNames = new llvm::StringRef[Mapping->HeaderIDs->size()];
   for (const auto &E : *Mapping->HeaderIDs)
     Mapping->HeaderNames[E.second] = E.first;
 
   return 0;
+}
+
+static int initialize(Lang Language) {
+  switch (Language) {
+  case Lang::C: {
+    const SymbolMappingTable SymbolMappingTables[] = {CSymbols};
+    return initialize(Language, SymbolMappingTables);
+  }
+  case Lang::CXX: {
+    const SymbolMappingTable SymbolMappingTables[] = {CXXSpecialSymbols,
+#define SYMBOL(Name, NS, Header)
+#define SYMBOL_MAP_BEGIN(Index) CXXSymbols##Index,
+#define SYMBOL_MAP_END(Index)
+#include "StdSymbolMap.inc"
+#undef SYMBOL_MAP_END
+#undef SYMBOL_MAP_BEGIN
+#undef SYMBOL
+                                                      CXXTsSymbols};
+    return initialize(Language, SymbolMappingTables);
+  }
+  }
+  llvm_unreachable("unknown language");
 }
 
 static void ensureInitialized() {
