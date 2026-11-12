@@ -2490,6 +2490,9 @@ const Init *FieldInit::getBit(unsigned Bit) const {
 
 const Init *FieldInit::resolveReferences(Resolver &R) const {
   const Init *NewRec = Rec->resolveReferences(R);
+  // A field of an unset record is unset.
+  if (isa<UnsetInit>(NewRec))
+    return NewRec;
   if (NewRec != Rec)
     return FieldInit::get(NewRec, FieldName)->Fold(R.getCurrentRecord());
   return this;
@@ -3314,11 +3317,14 @@ const Init *RecordResolver::resolve(const Init *VarName) {
     return nullptr; // prevent infinite recursion
 
   if (const RecordVal *RV = getCurrentRecord()->getValue(VarName)) {
-    if (!isa<UnsetInit>(RV->getValue())) {
-      Val = RV->getValue();
+    const Init *Value = RV->getValue();
+    if (!isa<UnsetInit>(Value)) {
       Stack.push_back(VarName);
-      Val = Val->resolveReferences(*this);
+      Val = Value->resolveReferences(*this);
       Stack.pop_back();
+    } else if (isFinal()) {
+      // The record is complete, so the field is unset.
+      Val = Value;
     }
   } else if (Name && VarName == getCurrentRecord()->getNameInit()) {
     Stack.push_back(VarName);
