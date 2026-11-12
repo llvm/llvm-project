@@ -1210,10 +1210,22 @@ void State::addInfoForInductions(BasicBlock &BB) {
   PHINode *PN = nullptr;
   const APInt *IncStep = nullptr;
   CmpPredicate Pred;
-  auto BaseInd = m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep));
+  struct HeaderPhi_match {
+    PHINode *&PN;
+    const BasicBlock *Header;
+    bool match(Value *V) const {
+      auto *P = dyn_cast<PHINode>(V);
+      if (!P || P->getParent() != Header)
+        return false;
+      PN = P;
+      return true;
+    }
+  };
+  HeaderPhi_match HeaderPhi{PN, Header};
+  auto BaseInd = m_CombineOr(HeaderPhi, m_IncrementOf(HeaderPhi, IncStep));
   auto IndValue = m_Value(
       A,
-      m_CombineOr(BaseInd, m_CombineOr(m_ZExt(m_Phi(PN)), m_SExt(m_Phi(PN)))));
+      m_CombineOr(BaseInd, m_CombineOr(m_ZExt(HeaderPhi), m_SExt(HeaderPhi))));
 
   auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
   if (!Br)
@@ -1232,15 +1244,17 @@ void State::addInfoForInductions(BasicBlock &BB) {
       return;
   }
 
-  if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
-      !SE->isSCEVable(PN->getType()))
+  if (PN->getNumIncomingValues() != 2 || !SE->isSCEVable(PN->getType()))
     return;
 
-  bool IsZExt = match(A, m_ZExt(m_Specific(PN)));
-  bool IsSExt = match(A, m_SExt(m_Specific(PN)));
+  bool IsZExt = isa<ZExtInst>(A);
+  bool IsSExt = isa<SExtInst>(A);
   bool IsWidened = IsZExt || IsSExt;
-  if (IsWidened && (&BB != Header || IncStep))
-    return;
+  if (IsWidened) {
+    assert(!IncStep && "Unexpected post-inc widened induction");
+    if (&BB != Header)
+      return;
+  }
 
   bool ContinueOnTrue =
       Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
@@ -1265,20 +1279,30 @@ void State::addInfoForInductions(BasicBlock &BB) {
   DomTreeNode *HeaderDTN = DT.getNode(Header);
 
   MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
-  // For widened inductions, the narrow phi can wrap before reaching B if B
-  // exceeds the narrow type's range, unless the narrow induction itself is
-  // guaranteed not to wrap. Also bail out on decreasing steps (including i1
-  // true, which is -1 when sign-extended).
-  if ((IsZExt && !Info.Unsigned) ||
-      (IsSExt && (!Info.Signed || Info.Decreasing)))
-    return;
-
   Value *IndTarget = PN;
   Value *ExtStartValue = StartValue;
   if (IsWidened) {
     auto *StartC = dyn_cast<ConstantInt>(StartValue);
     if (!StartC)
       return;
+    // For widened inductions, the narrow phi can wrap before reaching B if B
+    // exceeds the narrow type's range, unless the narrow induction itself is
+    // guaranteed not to wrap. A non-negative start with a non-decreasing nsw
+    // step stays in [0, INT_MAX], which neither signed-wraps nor unsigned-wraps
+    // (and keeps `zext nneg` non-poison). Also bail out on decreasing steps
+    // (including i1 true, which is -1 when sign-extended).
+    bool NonNegSignedInc =
+        Info.Signed && !Info.Decreasing && !StartC->isNegative();
+    if (IsZExt) {
+      if (cast<ZExtInst>(A)->hasNonNeg()) {
+        if (!NonNegSignedInc)
+          return;
+      } else if (!Info.Unsigned && !NonNegSignedInc) {
+        return;
+      }
+    } else if (!Info.Signed || Info.Decreasing) {
+      return;
+    }
     IndTarget = A;
     unsigned BitWidth = A->getType()->getScalarSizeInBits();
     ExtStartValue = ConstantInt::get(

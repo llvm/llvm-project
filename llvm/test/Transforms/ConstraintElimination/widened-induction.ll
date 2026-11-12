@@ -335,3 +335,191 @@ exit:
   %r = phi i1 [ %c, %loop ], [ %c, %latch ]
   ret i1 %r
 }
+
+; Negative start with `zext nneg`: `%i.zext` is poison on iteration 0 while `%i`
+; is concrete `-1` (poison-blocked by `select`), so `%check` must not fold to `false`.
+define i1 @zext_nneg_neg_start(i1 %go) {
+; CHECK-LABEL: define i1 @zext_nneg_neg_start(
+; CHECK-SAME: i1 [[GO:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ -1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[I_ZEXT:%.*]] = zext nneg i8 [[I]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[I_ZEXT]], 255
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[GO]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[I]], 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[I]], 0
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ -1, %entry ], [ %iv.next, %loop.latch ]
+  %i.zext = zext nneg i8 %i to i16
+  %cmp = icmp ne i16 %i.zext, 255
+  %cond = select i1 %go, i1 %cmp, i1 false
+  br i1 %cond, label %loop.latch, label %exit
+
+loop.latch:
+  %iv.next = add nuw i8 %i, 1
+  br label %loop
+
+exit:
+  %check = icmp slt i8 %i, 0
+  ret i1 %check
+}
+
+; Non-negative start crossing INT_MAX (`127 -> -128`) under `add nuw` without `nsw`:
+; `%i` becomes concrete `-128` while `%i.zext` (`zext nneg`) becomes poison, so
+; `%check` must not fold to `false`.
+define i1 @zext_nneg_pos_start_no_nsw(i1 %go0, i1 %go1) {
+; CHECK-LABEL: define i1 @zext_nneg_pos_start_no_nsw(
+; CHECK-SAME: i1 [[GO0:%.*]], i1 [[GO1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 127, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[GO:%.*]] = phi i1 [ [[GO0]], %[[ENTRY]] ], [ [[GO1]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[I_ZEXT:%.*]] = zext nneg i8 [[I]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[I_ZEXT]], 128
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[GO]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[I]], 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[I]], 0
+; CHECK-NEXT:    ret i1 [[CHECK]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ 127, %entry ], [ %iv.next, %loop.latch ]
+  %go = phi i1 [ %go0, %entry ], [ %go1, %loop.latch ]
+  %i.zext = zext nneg i8 %i to i16
+  %cmp = icmp ne i16 %i.zext, 128
+  %cond = select i1 %go, i1 %cmp, i1 false
+  br i1 %cond, label %loop.latch, label %exit
+
+loop.latch:
+  %iv.next = add nuw i8 %i, 1
+  br label %loop
+
+exit:
+  %check = icmp slt i8 %i, 0
+  ret i1 %check
+}
+
+; Canonical InstCombine pattern for `sext` of a non-negative `nsw` induction:
+; `zext nneg` with `add nsw` (without `nuw`) and commuted `icmp eq`.
+define void @test_zext_nneg_nsw_only(i64 %vec_size) {
+; CHECK-LABEL: define void @test_zext_nneg_nsw_only(
+; CHECK-SAME: i64 [[VEC_SIZE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp sge i64 [[VEC_SIZE]], 0
+; CHECK-NEXT:    br i1 [[PRE]], label %[[LOOP:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[I_EXT:%.*]] = zext nneg i32 [[I]] to i64
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[VEC_SIZE]], [[I_EXT]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT]], label %[[LOOP_BODY:.*]]
+; CHECK:       [[LOOP_BODY]]:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp sge i64 %vec_size, 0
+  br i1 %pre, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %i.ext = zext nneg i32 %i to i64
+  %cmp.not = icmp eq i64 %vec_size, %i.ext
+  br i1 %cmp.not, label %exit, label %loop.body
+
+loop.body:
+  %check.slt = icmp slt i64 %i.ext, %vec_size
+  %check.ult = icmp ult i64 %i.ext, %vec_size
+  call void @use(i1 %check.slt)
+  call void @use(i1 %check.ult)
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i32 %i, 1
+  br label %loop
+
+exit:
+  ret void
+}
+
+; Nested loop where InstCombine places the outer-loop PHI (higher complexity)
+; on the LHS of `icmp eq` and the widened inner PHI on the RHS.
+define void @test_zext_nested_outer_phi_bound(i64 %n) {
+; CHECK-LABEL: define void @test_zext_nested_outer_phi_bound(
+; CHECK-SAME: i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[OUTER_CMP:%.*]] = icmp ult i64 [[OUTER]], [[N]]
+; CHECK-NEXT:    br i1 [[OUTER_CMP]], label %[[INNER_HEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[INNER_HEADER]]:
+; CHECK-NEXT:    [[INNER:%.*]] = phi i32 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[INNER_ZEXT:%.*]] = zext i32 [[INNER]] to i64
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[OUTER]], [[INNER_ZEXT]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[OUTER_LATCH]], label %[[INNER_BODY:.*]]
+; CHECK:       [[INNER_BODY]]:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[INNER_NEXT]] = add nuw nsw i32 [[INNER]], 1
+; CHECK-NEXT:    br label %[[INNER_HEADER]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[OUTER_NEXT]] = add nuw nsw i64 [[OUTER]], 1
+; CHECK-NEXT:    br label %[[OUTER_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer = phi i64 [ 0, %entry ], [ %outer.next, %outer.latch ]
+  %outer.cmp = icmp ult i64 %outer, %n
+  br i1 %outer.cmp, label %inner.header, label %exit
+
+inner.header:
+  %inner = phi i32 [ 0, %outer.header ], [ %inner.next, %inner.latch ]
+  %inner.zext = zext i32 %inner to i64
+  %cmp.not = icmp eq i64 %outer, %inner.zext
+  br i1 %cmp.not, label %outer.latch, label %inner.body
+
+inner.body:
+  %check = icmp ult i64 %inner.zext, %outer
+  call void @use(i1 %check)
+  br label %inner.latch
+
+inner.latch:
+  %inner.next = add nuw nsw i32 %inner, 1
+  br label %inner.header
+
+outer.latch:
+  %outer.next = add nuw nsw i64 %outer, 1
+  br label %outer.header
+
+exit:
+  ret void
+}
