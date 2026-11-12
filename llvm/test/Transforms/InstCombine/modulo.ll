@@ -136,10 +136,7 @@ define <2 x i32> @modulo32_vec(<2 x i32> %x) {
 
 define <2 x i32> @modulo16_32_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @modulo16_32_vec(
-; CHECK-NEXT:    [[REM_I:%.*]] = srem <2 x i32> [[X:%.*]], <i32 16, i32 32>
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt <2 x i32> [[REM_I]], zeroinitializer
-; CHECK-NEXT:    [[ADD_I:%.*]] = select <2 x i1> [[CMP_I]], <2 x i32> <i32 16, i32 32>, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[RET_I:%.*]] = add nsw <2 x i32> [[ADD_I]], [[REM_I]]
+; CHECK-NEXT:    [[RET_I:%.*]] = and <2 x i32> [[X:%.*]], <i32 15, i32 31>
 ; CHECK-NEXT:    ret <2 x i32> [[RET_I]]
 ;
   %rem.i = srem <2 x i32> %x, <i32 16, i32 32>
