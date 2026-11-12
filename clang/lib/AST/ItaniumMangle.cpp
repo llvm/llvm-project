@@ -33,7 +33,10 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Thunk.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -210,6 +213,9 @@ public:
 
   bool isInternalLinkageDecl(const NamedDecl *ND);
 
+  bool InHashMangle = false;
+  bool ScopeOnly = false;
+
   /// @}
 };
 
@@ -227,6 +233,8 @@ class CXXNameMangler {
   /// calculate ABI tags for the function return value or the variable type.
   /// Also it is required to avoid infinite recursion in some cases.
   bool DisableDerivedAbiTags = false;
+
+  bool isScopeOnly() const { return Context.ScopeOnly; }
 
   /// The "structor" is the top-level declaration being mangled, if
   /// that's not a template specialization; otherwise it's the pattern
@@ -810,6 +818,8 @@ bool ItaniumMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
 
 void CXXNameMangler::writeAbiTags(const NamedDecl *ND,
                                   ArrayRef<StringRef> AdditionalAbiTags) {
+  if (isScopeOnly())
+    return;
   assert(AbiTags && "require AbiTagState");
   AbiTags->write(Out, ND,
                  DisableDerivedAbiTags ? ArrayRef<StringRef>{}
@@ -846,6 +856,12 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
   // Don't mangle in the type if this isn't a decl we should typically mangle.
   if (!Context.shouldMangleDeclName(FD)) {
     mangleName(GD);
+    return;
+  }
+
+  if (isScopeOnly()) {
+    mangleName(GD);
+    Out << 'v';
     return;
   }
 
@@ -1019,6 +1035,10 @@ static TemplateName asTemplateName(GlobalDecl GD) {
 }
 
 void CXXNameMangler::mangleName(GlobalDecl GD) {
+  if (isScopeOnly()) {
+    mangleNameWithAbiTags(GD);
+    return;
+  }
   const NamedDecl *ND = cast<NamedDecl>(GD.getDecl());
   if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
     // Variables should have implicit tags from its type.
@@ -1197,7 +1217,7 @@ void CXXNameMangler::mangleUnscopedTemplateName(
   const TemplateDecl *ND = cast<TemplateDecl>(GD.getDecl());
   //     <unscoped-template-name> ::= <unscoped-name>
   //                              ::= <substitution>
-  if (mangleSubstitution(ND))
+  if (!isScopeOnly() && mangleSubstitution(ND))
     return;
 
   // <template-template-param> ::= <template-param>
@@ -1212,7 +1232,8 @@ void CXXNameMangler::mangleUnscopedTemplateName(
                        AdditionalAbiTags);
   }
 
-  addSubstitution(ND);
+  if (!isScopeOnly())
+    addSubstitution(ND);
 }
 
 void CXXNameMangler::mangleFloat(const llvm::APFloat &f) {
@@ -1591,8 +1612,11 @@ void CXXNameMangler::mangleUnqualifiedName(
     if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
       // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/63.
       Out << "TA";
-      mangleValueInTemplateArg(TPO->getType().getUnqualifiedType(),
-                               TPO->getValue(), /*TopLevel=*/true);
+      if (isScopeOnly())
+        mangleType(TPO->getType().getUnqualifiedType());
+      else
+        mangleValueInTemplateArg(TPO->getType().getUnqualifiedType(),
+                                 TPO->getValue(), /*TopLevel=*/true);
       break;
     }
 
@@ -1873,7 +1897,8 @@ void CXXNameMangler::mangleNestedName(GlobalDecl GD, const DeclContext *DC,
   //       <template-args> E
 
   Out << 'N';
-  if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(ND)) {
+  if (const CXXMethodDecl *Method =
+          !isScopeOnly() ? dyn_cast<CXXMethodDecl>(ND) : nullptr) {
     Qualifiers MethodQuals = Method->getMethodQualifiers();
     // We do not consider restrict a distinguishing attribute for overloading
     // purposes so we must not mangle it.
@@ -1886,7 +1911,9 @@ void CXXNameMangler::mangleNestedName(GlobalDecl GD, const DeclContext *DC,
 
   // Check if we have a template.
   const TemplateArgumentList *TemplateArgs = nullptr;
-  if (GlobalDecl TD = isTemplate(GD, TemplateArgs)) {
+  if (GlobalDecl TD = (isScopeOnly() && isa<CXXConversionDecl>(ND))
+                          ? GlobalDecl()
+                          : isTemplate(GD, TemplateArgs)) {
     mangleTemplatePrefix(TD, NoFunction);
     mangleTemplateArgs(asTemplateName(TD), *TemplateArgs);
   } else {
@@ -2245,6 +2272,10 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
 }
 
 void CXXNameMangler::mangleLambdaSig(const CXXRecordDecl *Lambda) {
+  if (isScopeOnly()) {
+    Out << 'v';
+    return;
+  }
   // Proposed on https://github.com/itanium-cxx-abi/cxx-abi/issues/31.
   for (auto *D : Lambda->getLambdaExplicitTemplateParameters())
     mangleTemplateParamDecl(D);
@@ -2362,12 +2393,12 @@ void CXXNameMangler::mangleTemplatePrefix(TemplateName Template) {
   // Clang 11 and before mangled the substitution for a dependent template name
   // after already having emitted (a substitution for) the prefix.
   bool Clang11Compat = isCompatibleWith(LangOptions::ClangABI::Ver11);
-  if (!Clang11Compat && mangleSubstitution(Template))
+  if (!isScopeOnly() && !Clang11Compat && mangleSubstitution(Template))
     return;
 
   manglePrefix(Dependent->getQualifier());
 
-  if (Clang11Compat && mangleSubstitution(Template))
+  if (!isScopeOnly() && Clang11Compat && mangleSubstitution(Template))
     return;
 
   if (IdentifierOrOverloadedOperator Name = Dependent->getName();
@@ -2376,7 +2407,8 @@ void CXXNameMangler::mangleTemplatePrefix(TemplateName Template) {
   else
     mangleOperatorName(Name.getOperator(), UnknownArity);
 
-  addSubstitution(Template);
+  if (!isScopeOnly())
+    addSubstitution(Template);
 }
 
 void CXXNameMangler::mangleTemplatePrefix(GlobalDecl GD,
@@ -2388,7 +2420,7 @@ void CXXNameMangler::mangleTemplatePrefix(GlobalDecl GD,
   // <template-template-param> ::= <template-param>
   //                               <substitution>
 
-  if (mangleSubstitution(ND))
+  if (!isScopeOnly() && mangleSubstitution(ND))
     return;
 
   // <template-template-param> ::= <template-param>
@@ -2403,7 +2435,8 @@ void CXXNameMangler::mangleTemplatePrefix(GlobalDecl GD,
       mangleUnqualifiedName(GD.getWithDecl(ND->getTemplatedDecl()), DC);
   }
 
-  addSubstitution(ND);
+  if (!isScopeOnly())
+    addSubstitution(ND);
 }
 
 const NamedDecl *CXXNameMangler::getClosurePrefix(const Decl *ND) {
@@ -2735,7 +2768,10 @@ void CXXNameMangler::mangleOperatorName(DeclarationName Name, unsigned Arity) {
   case DeclarationName::CXXConversionFunctionName:
     // <operator-name> ::= cv <type>    # (cast)
     Out << "cv";
-    mangleType(Name.getCXXNameType());
+    if (isScopeOnly() && Name.getCXXNameType()->isDependentType())
+      Out << 'v';
+    else
+      mangleType(Name.getCXXNameType());
     break;
 
   case DeclarationName::CXXLiteralOperatorName:
@@ -4546,7 +4582,7 @@ void CXXNameMangler::mangleType(const ObjCObjectType *T) {
 
   mangleType(T->getBaseType());
 
-  if (T->isSpecialized()) {
+  if (!isScopeOnly() && T->isSpecialized()) {
     // Mangle type arguments as I <type>+ E
     Out << 'I';
     for (auto typeArg : T->getTypeArgs())
@@ -6417,6 +6453,8 @@ struct CXXNameMangler::TemplateArgManglingInfo {
 void CXXNameMangler::mangleTemplateArgs(TemplateName TN,
                                         const TemplateArgumentLoc *TemplateArgs,
                                         unsigned NumTemplateArgs) {
+  if (isScopeOnly())
+    return;
   // <template-args> ::= I <template-arg>+ [Q <requires-clause expr>] E
   Out << 'I';
   TemplateArgManglingInfo Info(*this, TN);
@@ -6429,6 +6467,8 @@ void CXXNameMangler::mangleTemplateArgs(TemplateName TN,
 
 void CXXNameMangler::mangleTemplateArgs(TemplateName TN,
                                         const TemplateArgumentList &AL) {
+  if (isScopeOnly())
+    return;
   // <template-args> ::= I <template-arg>+ [Q <requires-clause expr>] E
   Out << 'I';
   TemplateArgManglingInfo Info(*this, TN);
@@ -6441,6 +6481,8 @@ void CXXNameMangler::mangleTemplateArgs(TemplateName TN,
 
 void CXXNameMangler::mangleTemplateArgs(TemplateName TN,
                                         ArrayRef<TemplateArgument> Args) {
+  if (isScopeOnly())
+    return;
   // <template-args> ::= I <template-arg>+ [Q <requires-clause expr>] E
   Out << 'I';
   TemplateArgManglingInfo Info(*this, TN);
@@ -7295,6 +7337,9 @@ bool CXXNameMangler::mangleStandardSubstitution(const NamedDecl *ND) {
     return false;
   }
 
+  if (isScopeOnly())
+    return false;
+
   if (const ClassTemplateDecl *TD = dyn_cast<ClassTemplateDecl>(ND)) {
     if (!isStdNamespace(Context.getEffectiveDeclContext(TD)))
       return false;
@@ -7435,6 +7480,156 @@ bool CXXNameMangler::shouldHaveAbiTags(ItaniumMangleContextImpl &C,
   return TrackAbiTags.AbiTagsRoot.getUsedAbiTags().size();
 }
 
+/// Declarations inside top-level C++ standard/runtime namespaces (`std`,
+/// `__gnu_cxx`, `__gnu_debug`, `__cxxabiv1`, including inline namespaces such
+/// as `std::__1` and `std::__cxx11`) are kept unhashed to preserve ABI
+/// compatibility with prebuilt C++ standard and runtime libraries. Functions
+/// and types outside `std` that take `std::*` parameters are hashed normally.
+static bool isInStdOrRuntimeNamespace(ItaniumMangleContextImpl &Ctx,
+                                      const NamedDecl *D) {
+  if (!D)
+    return false;
+  for (const DeclContext *DC = Ctx.getEffectiveDeclContext(D);
+       DC && !DC->isTranslationUnit(); DC = Ctx.getEffectiveParentContext(DC)) {
+    if (const auto *NS = dyn_cast<NamespaceDecl>(DC)) {
+      if (Ctx.getEffectiveParentContext(NS)->isTranslationUnit()) {
+        if (const IdentifierInfo *II = NS->getFirstDecl()->getIdentifier()) {
+          if (II->isStr("std") || II->isStr("__gnu_cxx") ||
+              II->isStr("__gnu_debug") || II->isStr("__cxxabiv1"))
+            return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+static const NamedDecl *getRTTIDecl(QualType Ty) {
+  while (!Ty.isNull()) {
+    if (const auto *Tag = Ty->getAsTagDecl())
+      return Tag;
+    QualType Pointee = Ty->getPointeeType();
+    if (!Pointee.isNull()) {
+      Ty = Pointee;
+      continue;
+    }
+    if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
+      Ty = AT->getElementType();
+      continue;
+    }
+    break;
+  }
+  return nullptr;
+}
+
+/// CUDA/HIP `__global__` and OpenCL/device `__attribute__((device_kernel))`
+/// entry points (and device variables / nested local entities) must keep
+/// standard Itanium manglings so host launch stubs match device toolchains
+/// such as `nvcc` that do not pass `-fhash-mangled-names`.
+static bool isDeviceKernelOrVarDecl(const NamedDecl *D) {
+  if (!D)
+    return false;
+  if (D->hasAttr<CUDAGlobalAttr>() || D->hasAttr<DeviceKernelAttr>())
+    return true;
+  if (isa<VarDecl>(D) &&
+      (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()))
+    return true;
+  for (const DeclContext *DC = D->getDeclContext();
+       DC && !DC->isTranslationUnit(); DC = DC->getParent()) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
+      if (FD->hasAttr<CUDAGlobalAttr>() || FD->hasAttr<DeviceKernelAttr>())
+        return true;
+    }
+  }
+  return false;
+}
+
+/// Global ::operator new / ::operator new[] / ::operator delete /
+/// ::operator delete[] overloads (including C++17 aligned/nothrow and custom
+/// global placement/tagged forms) are ABI/runtime entry points matched by
+/// literal symbol name in LLVM TargetLibraryInfo, MemProf/AllocToken passes,
+/// sanitizer interceptors, and C++ allocator libraries. Keep their standard
+/// Itanium manglings unhashed.
+static bool isGlobalAllocationFunction(ItaniumMangleContextImpl &Ctx,
+                                       const NamedDecl *D) {
+  const auto *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
+    return false;
+  switch (FD->getOverloadedOperator()) {
+  case OO_New:
+  case OO_Array_New:
+  case OO_Delete:
+  case OO_Array_Delete:
+    return Ctx.getEffectiveDeclContext(FD)->isTranslationUnit();
+  default:
+    return false;
+  }
+}
+
+static bool shouldTryHashMangle(ItaniumMangleContextImpl &Ctx,
+                                const NamedDecl *D, bool AllowHash = true) {
+  // Non-ELF object formats (e.g. NVPTX PTX where '.' is a syntax error in
+  // ptxas, Mach-O, COFF, WASM, SPIR-V) and CUDA/HIP device or auxiliary device
+  // manglings must keep standard dot-free Itanium manglings.
+  return AllowHash && !Ctx.InHashMangle &&
+         !Ctx.isHashMangledNamesSuppressed() &&
+         Ctx.getASTContext().getLangOpts().HashMangledNames && !Ctx.isAux() &&
+         !Ctx.getASTContext().getLangOpts().CUDAIsDevice &&
+         Ctx.getASTContext().getTargetInfo().getTriple().isOSBinFormatELF() &&
+         !isDeviceKernelOrVarDecl(D) && !isInStdOrRuntimeNamespace(Ctx, D);
+}
+
+template <typename Fn>
+static void mangleWithOptionalHash(ItaniumMangleContextImpl &Ctx,
+                                   raw_ostream &Out, Fn &&MangleFn) {
+  llvm::SaveAndRestore<bool> InHashGuard(Ctx.InHashMangle, true);
+  const unsigned NumErrorsBefore = Ctx.getDiags().getNumErrors();
+  SmallString<256> FullName;
+  {
+    llvm::raw_svector_ostream FullOS(FullName);
+    MangleFn(FullOS);
+  }
+
+  // Only hash Itanium '_Z' manglings when mangling itself emitted no new
+  // diagnostic errors and the full mangled name is long enough that
+  // '<short>.h.<uint64>' can be strictly shorter. Minimum suffix '.h.<digit>'
+  // is 4 chars and minimum '_Z' short name is 3 chars, so FullName must be at
+  // least 8 chars to possibly shrink. Emitting a standard '.<alpha>+.<digit>+'
+  // clone suffix after a complete Itanium mangled prefix allows existing
+  // Itanium demanglers (such as llvm::itaniumDemangle, libc++abi, libiberty,
+  // and LLDB) to demangle hashed symbols without modification.
+  constexpr size_t MinHashSuffixOverhead = 4;
+  if (!FullName.starts_with("_Z") ||
+      FullName.size() <= 3 + MinHashSuffixOverhead ||
+      Ctx.getDiags().getNumErrors() != NumErrorsBefore) {
+    Out << FullName;
+    return;
+  }
+
+  SmallString<128> ShortName;
+  {
+    llvm::SaveAndRestore<bool> ScopeGuard(Ctx.ScopeOnly, true);
+    llvm::raw_svector_ostream ShortOS(ShortName);
+    MangleFn(ShortOS);
+  }
+
+  if (Ctx.getDiags().getNumErrors() == NumErrorsBefore &&
+      ShortName.size() + MinHashSuffixOverhead < FullName.size()) {
+    auto Hash = llvm::BLAKE3::hash<8>(llvm::arrayRefFromStringRef(FullName));
+    uint64_t HashVal = llvm::support::endian::read64le(Hash.data());
+    SmallString<24> HashSuffix;
+    {
+      llvm::raw_svector_ostream SuffixOS(HashSuffix);
+      SuffixOS << ".h." << HashVal;
+    }
+    if (ShortName.size() + HashSuffix.size() < FullName.size()) {
+      Out << ShortName << HashSuffix;
+      return;
+    }
+  }
+  Out << FullName;
+}
+
 /// Mangles the name of the declaration \p GD and emits that name to the given
 /// output stream \p Out.
 void ItaniumMangleContextImpl::mangleCXXName(GlobalDecl GD,
@@ -7442,6 +7637,9 @@ void ItaniumMangleContextImpl::mangleCXXName(GlobalDecl GD,
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
   assert((isa<FunctionDecl, VarDecl, TemplateParamObjectDecl>(D)) &&
          "Invalid mangleName() call, argument is not a variable or function!");
+  if (shouldTryHashMangle(*this, D, !isGlobalAllocationFunction(*this, D)))
+    return mangleWithOptionalHash(
+        *this, Out, [&](raw_ostream &OS) { mangleCXXName(GD, OS); });
 
   PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
                                  getASTContext().getSourceManager(),
@@ -7465,12 +7663,18 @@ void ItaniumMangleContextImpl::mangleCXXName(GlobalDecl GD,
 
 void ItaniumMangleContextImpl::mangleCXXCtorComdat(const CXXConstructorDecl *D,
                                                    raw_ostream &Out) {
+  if (shouldTryHashMangle(*this, D))
+    return mangleWithOptionalHash(
+        *this, Out, [&](raw_ostream &OS) { mangleCXXCtorComdat(D, OS); });
   CXXNameMangler Mangler(*this, Out, D, Ctor_Comdat);
   Mangler.mangle(GlobalDecl(D, Ctor_Comdat));
 }
 
 void ItaniumMangleContextImpl::mangleCXXDtorComdat(const CXXDestructorDecl *D,
                                                    raw_ostream &Out) {
+  if (shouldTryHashMangle(*this, D))
+    return mangleWithOptionalHash(
+        *this, Out, [&](raw_ostream &OS) { mangleCXXDtorComdat(D, OS); });
   CXXNameMangler Mangler(*this, Out, D, Dtor_Comdat);
   Mangler.mangle(GlobalDecl(D, Dtor_Comdat));
 }
@@ -7558,6 +7762,10 @@ void ItaniumMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
 
   assert(!isa<CXXDestructorDecl>(MD) &&
          "Use mangleCXXDtor for destructor decls!");
+  if (shouldTryHashMangle(*this, MD))
+    return mangleWithOptionalHash(*this, Out, [&](raw_ostream &OS) {
+      mangleThunk(MD, Thunk, ElideOverrideInfo, OS);
+    });
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZT";
   if (!Thunk.Return.isEmpty())
@@ -7573,7 +7781,7 @@ void ItaniumMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
                              Thunk.Return.Virtual.Itanium.VBaseOffsetOffset);
 
   Mangler.mangleFunctionEncoding(MD);
-  if (!ElideOverrideInfo)
+  if (!ScopeOnly && !ElideOverrideInfo)
     mangleOverrideDiscrimination(Mangler, getASTContext(), Thunk);
 }
 
@@ -7584,6 +7792,10 @@ void ItaniumMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
                                                   raw_ostream &Out) {
   //  <special-name> ::= T <call-offset> <base encoding>
   //                      # base is the nominal target function of thunk
+  if (shouldTryHashMangle(*this, DD))
+    return mangleWithOptionalHash(*this, Out, [&](raw_ostream &OS) {
+      mangleCXXDtorThunk(DD, Type, Thunk, ElideOverrideInfo, OS);
+    });
   CXXNameMangler Mangler(*this, Out, DD, Type);
   Mangler.getStream() << "_ZT";
 
@@ -7593,7 +7805,7 @@ void ItaniumMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
                            ThisAdjustment.Virtual.Itanium.VCallOffsetOffset);
 
   Mangler.mangleFunctionEncoding(GlobalDecl(DD, Type));
-  if (!ElideOverrideInfo)
+  if (!ScopeOnly && !ElideOverrideInfo)
     mangleOverrideDiscrimination(Mangler, getASTContext(), Thunk);
 }
 
@@ -7602,6 +7814,9 @@ void ItaniumMangleContextImpl::mangleStaticGuardVariable(const VarDecl *D,
                                                          raw_ostream &Out) {
   //  <special-name> ::= GV <object name>       # Guard variable for one-time
   //                                            # initialization
+  if (shouldTryHashMangle(*this, D))
+    return mangleWithOptionalHash(
+        *this, Out, [&](raw_ostream &OS) { mangleStaticGuardVariable(D, OS); });
   CXXNameMangler Mangler(*this, Out);
   // GCC 5.3.0 doesn't emit derived ABI tags for local names but that seems to
   // be a bug that is fixed in trunk.
@@ -7665,6 +7880,10 @@ void ItaniumMangleContextImpl::mangleSEHFinallyBlock(
 void ItaniumMangleContextImpl::mangleItaniumThreadLocalInit(const VarDecl *D,
                                                             raw_ostream &Out) {
   //  <special-name> ::= TH <object name>
+  if (shouldTryHashMangle(*this, D))
+    return mangleWithOptionalHash(*this, Out, [&](raw_ostream &OS) {
+      mangleItaniumThreadLocalInit(D, OS);
+    });
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTH";
   Mangler.mangleName(D);
@@ -7674,6 +7893,10 @@ void
 ItaniumMangleContextImpl::mangleItaniumThreadLocalWrapper(const VarDecl *D,
                                                           raw_ostream &Out) {
   //  <special-name> ::= TW <object name>
+  if (shouldTryHashMangle(*this, D))
+    return mangleWithOptionalHash(*this, Out, [&](raw_ostream &OS) {
+      mangleItaniumThreadLocalWrapper(D, OS);
+    });
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTW";
   Mangler.mangleName(D);
@@ -7684,6 +7907,10 @@ void ItaniumMangleContextImpl::mangleReferenceTemporary(const VarDecl *D,
                                                         raw_ostream &Out) {
   // We match the GCC mangling here.
   //  <special-name> ::= GR <object name>
+  if (shouldTryHashMangle(*this, D))
+    return mangleWithOptionalHash(*this, Out, [&](raw_ostream &OS) {
+      mangleReferenceTemporary(D, ManglingNumber, OS);
+    });
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZGR";
   Mangler.mangleName(D);
@@ -7694,6 +7921,9 @@ void ItaniumMangleContextImpl::mangleReferenceTemporary(const VarDecl *D,
 void ItaniumMangleContextImpl::mangleCXXVTable(const CXXRecordDecl *RD,
                                                raw_ostream &Out) {
   // <special-name> ::= TV <type>  # virtual table
+  if (shouldTryHashMangle(*this, RD))
+    return mangleWithOptionalHash(
+        *this, Out, [&](raw_ostream &OS) { mangleCXXVTable(RD, OS); });
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTV";
   Mangler.mangleCXXRecordDecl(RD);
@@ -7702,6 +7932,9 @@ void ItaniumMangleContextImpl::mangleCXXVTable(const CXXRecordDecl *RD,
 void ItaniumMangleContextImpl::mangleCXXVTT(const CXXRecordDecl *RD,
                                             raw_ostream &Out) {
   // <special-name> ::= TT <type>  # VTT structure
+  if (shouldTryHashMangle(*this, RD))
+    return mangleWithOptionalHash(
+        *this, Out, [&](raw_ostream &OS) { mangleCXXVTT(RD, OS); });
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTT";
   Mangler.mangleCXXRecordDecl(RD);
@@ -7712,6 +7945,10 @@ void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
                                                    const CXXRecordDecl *Type,
                                                    raw_ostream &Out) {
   // <special-name> ::= TC <type> <offset number> _ <base type>
+  if (shouldTryHashMangle(*this, RD))
+    return mangleWithOptionalHash(*this, Out, [&](raw_ostream &OS) {
+      mangleCXXCtorVTable(RD, Offset, Type, OS);
+    });
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTC";
   // Older versions of clang did not add the record as a substitution candidate
@@ -7727,6 +7964,9 @@ void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
 void ItaniumMangleContextImpl::mangleCXXRTTI(QualType Ty, raw_ostream &Out) {
   // <special-name> ::= TI <type>  # typeinfo structure
   assert(!Ty.hasQualifiers() && "RTTI info cannot have top-level qualifiers");
+  if (shouldTryHashMangle(*this, getRTTIDecl(Ty)))
+    return mangleWithOptionalHash(
+        *this, Out, [&](raw_ostream &OS) { mangleCXXRTTI(Ty, OS); });
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTI";
   Mangler.mangleType(Ty);

@@ -2485,6 +2485,9 @@ static void getTrivialDefaultFunctionAttributes(
   if (!AttrOnCallSite) {
     TargetInfo::BranchProtectionInfo BPI(LangOpts);
     TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+    if (LangOpts.HashMangledNames)
+      FuncAttrs.addAttribute("sample-profile-suffix-elision-policy",
+                             "selected");
   }
 }
 

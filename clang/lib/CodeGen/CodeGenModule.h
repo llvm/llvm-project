@@ -504,6 +504,8 @@ private:
   /// An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<GlobalDecl, StringRef> MangledDeclNames;
   llvm::StringMap<GlobalDecl, llvm::BumpPtrAllocator> Manglings;
+  mutable llvm::StringMap<std::string, llvm::BumpPtrAllocator>
+      UnhashedManglings;
 
   /// Global annotations.
   std::vector<llvm::Constant*> Annotations;
@@ -1538,6 +1540,7 @@ public:
   StringRef getMangledName(GlobalDecl GD);
   std::string getMangledNameIgnoringAsmLabel(GlobalDecl GD,
                                              const NamedDecl *ND);
+  StringRef getUnhashedMangledName(StringRef Name) const;
   StringRef getBlockMangledName(GlobalDecl GD, const BlockDecl *BD);
   const GlobalDecl getMangledNameDecl(StringRef);
 

@@ -541,6 +541,9 @@ LANGOPT(Reflection      , 1, 0, NotCompatible, "C++26 Reflection")
 
 LANGOPT(StablePointerSubtraction, 1, 0, NotCompatible, "Make unaligned pointer subtraction stable")
 
+LANGOPT(HashMangledNames, 1, 0, Benign,
+        "hash template and function parameters in C++ mangled names")
+
 #undef LANGOPT
 #undef ENUM_LANGOPT
 #undef VALUE_LANGOPT

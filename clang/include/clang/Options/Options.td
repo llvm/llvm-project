@@ -5149,6 +5149,15 @@ defm unique_internal_linkage_names : BoolFOption<"unique-internal-linkage-names"
           "Uniqueify Internal Linkage Symbol Names by appending"
             " the MD5 hash of the module path">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption]>>;
+defm hash_mangled_names : BoolFOption<"hash-mangled-names",
+  LangOpts<"HashMangledNames">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Shorten C++ mangled names by hashing template and function parameters (ELF Only)">,
+  NegFlag<SetFalse>>,
+  DocBrief<[{When enabled on ELF targets, shorten long Itanium C++ mangled names by
+emitting a scope-only mangling followed by a ``.h.<uint64>`` suffix computed from the
+64-bit BLAKE3 hash of the full mangled name whenever that representation is strictly
+shorter. Off by default.}]>;
 defm unique_section_names : BoolFOption<"unique-section-names",
   CodeGenOpts<"UniqueSectionNames">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
