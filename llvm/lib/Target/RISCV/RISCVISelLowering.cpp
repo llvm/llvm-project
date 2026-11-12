@@ -6471,6 +6471,7 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
 
 // Match an interleave shuffle that forms a P-extension packed zip:
 //   <a0, b0, a1, b1, ...> -> zip*p/wzip*p
+//   <aN/2, bN/2, aN/2+1, bN/2+1, ...> -> zip*hp
 static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
                                          const RISCVSubtarget &Subtarget,
                                          SelectionDAG &DAG) {
@@ -6504,6 +6505,13 @@ static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
       V1 = DAG.getExtractSubvector(DL, HalfVT, V1, 0);
       V2 = DAG.getExtractSubvector(DL, HalfVT, V2, 0);
       return DAG.getNode(RISCVISD::PWZIP, DL, VT, V2, V1);
+    }
+    if (Subtarget.is64Bit()) {
+      unsigned HalfNumElts = NumElts / 2;
+      if (EvenSrc == HalfNumElts && OddSrc == NumElts + HalfNumElts)
+        return DAG.getNode(RISCVISD::PZIPH, DL, VT, V1, V2);
+      if (EvenSrc == NumElts + HalfNumElts && OddSrc == HalfNumElts)
+        return DAG.getNode(RISCVISD::PZIPH, DL, VT, V2, V1);
     }
   }
 

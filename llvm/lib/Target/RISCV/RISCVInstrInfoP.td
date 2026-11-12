@@ -2198,6 +2198,7 @@ def SDT_RISCVPZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                          SDTCisSameAs<0, 1>,
                                          SDTCisSameAs<0, 2>]>;
 def riscv_pzip : RVSDNode<"PZIP", SDT_RISCVPZip>;
+def riscv_pziph : RVSDNode<"PZIPH", SDT_RISCVPZip>;
 
 def SDT_RISCVPWZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSubVecOfVec<1, 0>,
@@ -3821,6 +3822,8 @@ let append Predicates = [IsRV64] in {
   // Packed zip.
   def : PatGprGpr<riscv_pzip, ZIP8P,  v8i8>;
   def : PatGprGpr<riscv_pzip, ZIP16P, v4i16>;
+  def : PatGprGpr<riscv_pziph, ZIP8HP,  v8i8>;
+  def : PatGprGpr<riscv_pziph, ZIP16HP, v4i16>;
 
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
   def : PatGprGpr<riscv_ppaire,  PACK,      v2i32>;
