@@ -1,0 +1,10 @@
+inputs:
+  devenv:
+    url: github:cachix/devenv
+  nixpkgs:
+    url: github:cachix/devenv-nixpkgs?ref=rolling
+  devshell:
+    url: github:numtide/devshell
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
