@@ -1,4 +1,4 @@
-! Test lowering of Constant<SomeDerived>.
+! Test lowering of Constant<Type<TypeCategory::Derived>>.
 ! RUN: bbc -emit-hlfir -o - -I nowhere %s 2>&1 | FileCheck %s
 
 subroutine test_constant_scalar()

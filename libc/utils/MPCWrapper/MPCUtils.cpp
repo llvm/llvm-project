@@ -235,7 +235,7 @@ template bool compare_unary_operation_single_output_different_type(
 template <typename InputType, typename OutputType>
 void explain_unary_operation_single_output_different_type_error(
     Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
-    RoundingMode rounding, MatchResultListener *listener) {
+    RoundingMode rounding) {
 
   unsigned int precision =
       mpfr::get_precision<make_real_t<InputType>>(ulp_tolerance);
@@ -271,22 +271,20 @@ void explain_unary_operation_single_output_different_type_error(
       << '\n'
       << "  ULP error: " << mpfr_result.ulp_as_mpfr_number(libc_result).str()
       << '\n';
-  *listener << msg.str();
+  tlog << msg.str();
   mpc_clear(mpc_result_val);
   mpfr_clear(real);
 }
 
 template void explain_unary_operation_single_output_different_type_error(
-    Operation, _Complex float, float, double, RoundingMode,
-    MatchResultListener *);
+    Operation, _Complex float, float, double, RoundingMode);
 template void explain_unary_operation_single_output_different_type_error(
-    Operation, _Complex double, double, double, RoundingMode,
-    MatchResultListener *);
+    Operation, _Complex double, double, double, RoundingMode);
 
 template <typename InputType, typename OutputType>
 void explain_unary_operation_single_output_same_type_error(
     Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
-    RoundingMode rounding, MatchResultListener *listener) {
+    RoundingMode rounding) {
 
   unsigned int precision =
       mpfr::get_precision<make_real_t<InputType>>(ulp_tolerance);
@@ -342,18 +340,16 @@ void explain_unary_operation_single_output_same_type_error(
                      .imag)
              .str()
       << '\n';
-  *listener << msg.str();
+  tlog << msg.str();
   mpc_clear(mpc_result_val);
   mpfr_clear(real);
   mpfr_clear(imag);
 }
 
 template void explain_unary_operation_single_output_same_type_error(
-    Operation, _Complex float, _Complex float, double, RoundingMode,
-    MatchResultListener *);
+    Operation, _Complex float, _Complex float, double, RoundingMode);
 template void explain_unary_operation_single_output_same_type_error(
-    Operation, _Complex double, _Complex double, double, RoundingMode,
-    MatchResultListener *);
+    Operation, _Complex double, _Complex double, double, RoundingMode);
 
 } // namespace internal
 

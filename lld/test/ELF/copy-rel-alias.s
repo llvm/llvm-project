@@ -25,7 +25,7 @@
 #--- 1.s
 .global _start
 _start:
-movl $5, a1
+movl $5, a1(%rip)
 mov $b1 - ., %eax
 mov $b2 - ., %eax
 
