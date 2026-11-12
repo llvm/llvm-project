@@ -240,8 +240,8 @@ define i64 @select_eq_t0_i64(i64 %c, i64 %a, i64 %b) {
 ; LA32-LABEL: select_eq_t0_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    or $a0, $a0, $a1
-; LA32-NEXT:    sltu $a0, $zero, $a0
-; LA32-NEXT:    addi.w $a1, $a0, -1
+; LA32-NEXT:    sltui $a0, $a0, 1
+; LA32-NEXT:    sub.w $a1, $zero, $a0
 ; LA32-NEXT:    and $a0, $a1, $a2
 ; LA32-NEXT:    and $a1, $a1, $a3
 ; LA32-NEXT:    ret
@@ -363,8 +363,8 @@ define i64 @select_ne_t0_i64(i64 %c, i64 %a, i64 %b) {
 ; LA32-LABEL: select_ne_t0_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    or $a0, $a0, $a1
-; LA32-NEXT:    sltui $a0, $a0, 1
-; LA32-NEXT:    addi.w $a1, $a0, -1
+; LA32-NEXT:    sltu $a0, $zero, $a0
+; LA32-NEXT:    sub.w $a1, $zero, $a0
 ; LA32-NEXT:    and $a0, $a1, $a2
 ; LA32-NEXT:    and $a1, $a1, $a3
 ; LA32-NEXT:    ret
@@ -522,8 +522,8 @@ define i64 @select_sext_i32(i32 signext %c, i64 %a) {
 ;
 ; LA32-LABEL: select_sext_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sltui $a0, $a0, 1
-; LA32-NEXT:    addi.w $a3, $a0, -1
+; LA32-NEXT:    sltu $a0, $zero, $a0
+; LA32-NEXT:    sub.w $a3, $zero, $a0
 ; LA32-NEXT:    and $a0, $a3, $a1
 ; LA32-NEXT:    and $a1, $a3, $a2
 ; LA32-NEXT:    ret

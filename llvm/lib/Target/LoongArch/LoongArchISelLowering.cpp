@@ -6924,6 +6924,22 @@ static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
   if (!N0C)
     return SDValue();
 
+  // (sub 0, X) is a negation, not a constant materialization; rewriting it
+  // as (add (setcc inv), -1) changes the condition code and can duplicate a
+  // compare, without saving any instruction.
+  if (N0C->isZero() && !N->hasOneUse())
+    return SDValue();
+
+  // The result of this fold is only folded into an ADDI when it is used
+  // directly.  When it feeds an extend, the original (sub C, X) form usually
+  // combines better with the surrounding zext/negate/xor.
+  if (N->hasOneUse()) {
+    unsigned UserOpc = N->use_begin()->getUser()->getOpcode();
+    if (UserOpc == ISD::ZERO_EXTEND || UserOpc == ISD::SIGN_EXTEND ||
+        UserOpc == ISD::ANY_EXTEND || UserOpc == ISD::SUB)
+      return SDValue();
+  }
+
   // All our optimizations involve subtracting 1 from the immediate and
   // forming an ADDI. Make sure the new immediate is valid for an ADDI.
   APInt ImmValMinus1 = N0C->getAPIntValue() - 1;
@@ -9400,6 +9416,31 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   unsigned Opc = Src.getOpcode();
   SDLoc DL(N);
 
+  // Leave the sign extension in place when it feeds an xor with another
+  // sign-extended value; the generic xor-of-sext_inregs combine can then
+  // fold both extensions into a single one.
+  if (N->hasOneUse()) {
+    SDNode *User = N->use_begin()->getUser();
+    if (User->getOpcode() == ISD::XOR) {
+      SDValue Other = User->getOperand(0).getNode() == N ? User->getOperand(1)
+                                                         : User->getOperand(0);
+      if (Other.getOpcode() == ISD::SIGN_EXTEND_INREG)
+        return SDValue();
+    }
+  }
+
+  // Do not hide a sign-extended boolean from a compare against zero: the
+  // generic combiner folds (setcc (sext_inreg X, i1), 0, setlt) back to X.
+  for (SDNode *User : N->users()) {
+    if (User->getOpcode() != ISD::SETCC)
+      continue;
+    if ((User->getOperand(0).getNode() == N &&
+         isNullConstant(User->getOperand(1))) ||
+        (User->getOperand(1).getNode() == N &&
+         isNullConstant(User->getOperand(0))))
+      return SDValue();
+  }
+
   // Fold (sext_inreg (shl X, Y), i32) -> (sll.w X, Y) iff Y u< 32.
   if (DCI.isAfterLegalizeDAG() && Subtarget.is64Bit() && SrcVT == MVT::i32 &&
       VT == MVT::i64 && Opc == ISD::SHL &&
@@ -9407,6 +9448,20 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       DAG.computeKnownBits(Src.getOperand(1)).countMaxActiveBits() <= 5) {
     return DAG.getNode(LoongArchISD::SLL_W, DL, VT, Src.getOperand(0),
                        Src.getOperand(1));
+  }
+
+  // The SETCC/XOR folds replace the sign extension itself.  When the result
+  // has several users they do not save an instruction and can duplicate the
+  // compare; leave it to the generic combiner.
+  if (!N->hasOneUse())
+    return SDValue();
+
+  // Similarly, a sign-extended boolean that feeds a sign-bit extraction is
+  // usually part of a compare that the generic combiner can fold away.
+  for (SDNode *User : N->users()) {
+    if ((User->getOpcode() == ISD::SRL || User->getOpcode() == ISD::SRA) &&
+        isa<ConstantSDNode>(User->getOperand(1)))
+      return SDValue();
   }
 
   // Fold (sext_inreg (setcc X, Y, CC), i1) -> (sub 0, (setcc X, Y, CC)) if CC
@@ -9417,19 +9472,6 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // setcc, so only do it when it has a single use; otherwise (e.g. an FP
   // compare shared with another user) this would introduce a second compare.
   if (Opc == ISD::SETCC && SrcVT == MVT::i1) {
-    // Leave the sign extension in place when it feeds an xor with another
-    // sign-extended value; the generic xor-of-sext_inregs combine can then
-    // fold both extensions into a single one.
-    if (N->hasOneUse()) {
-      SDNode *User = N->use_begin()->getUser();
-      if (User->getOpcode() == ISD::XOR) {
-        SDValue Other = User->getOperand(0).getNode() == N
-                            ? User->getOperand(1)
-                            : User->getOperand(0);
-        if (Other.getOpcode() == ISD::SIGN_EXTEND_INREG)
-          return SDValue();
-      }
-    }
     ISD::CondCode CC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
     if (Src.hasOneUse() && Src.getOperand(0).getValueType().isInteger()) {
       switch (CC) {
@@ -9472,6 +9514,30 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     // upper bits undefined.
     ISD::CondCode CC = cast<CondCodeSDNode>(XorOp.getOperand(2))->get();
     EVT OpVT = XorOp.getOperand(0).getValueType();
+
+    // Inverting an FP compare is free, so this fold does not save anything
+    // and can duplicate a shared fcmp.  Keep the original form.
+    if (OpVT.isFloatingPoint())
+      return SDValue();
+
+    // Reusing the original compare is only possible when the setcc is
+    // otherwise dead.  Inverting a shared compare duplicates it (e.g. an FP
+    // compare used by a zext as well).
+    if (!XorOp.hasOneUse())
+      return SDValue();
+
+    // A constant compare with a greater-than style condition code cannot use
+    // the slti/sltui immediate patterns; leave it to the generic combiner,
+    // which canonicalizes it to setlt/setult first.
+    if (isa<ConstantSDNode>(XorOp.getOperand(1)) && CC != ISD::SETLT &&
+        CC != ISD::SETULT)
+      return SDValue();
+
+    // The generic (sub X, (0 - Y)) -> (add X, Y) fold is better than
+    // rewriting the sign-extended boolean here.
+    if (N->hasOneUse() && N->use_begin()->getUser()->getOpcode() == ISD::SUB)
+      return SDValue();
+
     // For integer compares, sext(!setcc CC) == -(setcc inv(CC)). Only keep
     // CC (as add -1) when CC itself is the single-instruction form; otherwise
     // negate the inverted setcc, which also CSEs with an existing one.
