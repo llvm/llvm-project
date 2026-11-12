@@ -267,6 +267,18 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   }
 
+  // Widening bf16 conversions and extending loads are exact, so expand them to
+  // the generic shift sequence. Narrowing conversions must round to nearest
+  // even (generic Expand truncates toward zero), so custom-lower FP_TO_BF16.
+  for (MVT VT : {MVT::f32, MVT::f64, MVT::f128, MVT::ppcf128}) {
+    setOperationAction(ISD::STRICT_FP_TO_BF16, VT, Expand);
+    setOperationAction(ISD::STRICT_BF16_TO_FP, VT, Expand);
+    setOperationAction(ISD::FP_TO_BF16, VT, Custom);
+    setOperationAction(ISD::BF16_TO_FP, VT, Expand);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::bf16, Expand);
+    setTruncStoreAction(VT, MVT::bf16, Expand);
+  }
+
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
   // PowerPC has pre-inc load and store's.
@@ -12564,6 +12576,35 @@ SDValue PPCTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   return Op;
 }
 
+SDValue PPCTargetLowering::LowerFP_TO_BF16(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  // Round to nearest even, matching IEEE-754 semantics for fp_to_bf16.
+  // Wider sources (e.g., f64, f128) are first narrowed to f32 using
+  // round-to-odd so the subsequent rounding to bf16 cannot double-round.
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  if (Src.getValueType() != MVT::f32)
+    Src = expandRoundInexactToOdd(MVT::f32, Src, DL, DAG);
+  SDValue IsNaN = DAG.getSetCC(
+      DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32),
+      Src, Src, ISD::SETUO);
+  SDValue Bits = DAG.getBitcast(MVT::i32, Src);
+  SDValue Sixteen = DAG.getShiftAmountConstant(16, MVT::i32, DL);
+
+  // Quiet NaNs; this also keeps them from rounding into infinities.
+  SDValue NaN = DAG.getNode(ISD::OR, DL, MVT::i32, Bits,
+                            DAG.getConstant(0x400000, DL, MVT::i32));
+  SDValue Lsb = DAG.getNode(ISD::AND, DL, MVT::i32,
+                            DAG.getNode(ISD::SRL, DL, MVT::i32, Bits, Sixteen),
+                            DAG.getConstant(1, DL, MVT::i32));
+  SDValue Bias = DAG.getNode(ISD::ADD, DL, MVT::i32, Lsb,
+                             DAG.getConstant(0x7fff, DL, MVT::i32));
+  SDValue Rounded = DAG.getNode(ISD::ADD, DL, MVT::i32, Bits, Bias);
+  SDValue Res = DAG.getSelect(DL, MVT::i32, IsNaN, NaN, Rounded);
+  Res = DAG.getNode(ISD::SRL, DL, MVT::i32, Res, Sixteen);
+  return DAG.getAnyExtOrTrunc(Res, DL, Op.getValueType());
+}
+
 // Custom lowering for fpext vf32 to v2f64
 SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
@@ -13026,6 +13067,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return LowerFP_TO_BF16(Op, DAG);
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
   // For counter-based loop handling.
