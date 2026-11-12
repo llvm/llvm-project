@@ -16,14 +16,21 @@ define double @pr241254() nounwind {
 ; SSE-NEXT:    movq %rsp, %rbp
 ; SSE-NEXT:    andq $-32, %rsp
 ; SSE-NEXT:    subq $32, %rsp
+; SSE-NEXT:    xorpd %xmm0, %xmm0
 ; SSE-NEXT:    movq c@GOTPCREL(%rip), %rax
-; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    movaps %xmm0, (%rax)
-; SSE-NEXT:    movaps %xmm0, 16(%rax)
-; SSE-NEXT:    movaps %xmm0, (%rsp)
-; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    movaps %xmm0, 32(%rax)
-; SSE-NEXT:    movaps %xmm0, 48(%rax)
+; SSE-NEXT:    movapd %xmm0, (%rax)
+; SSE-NEXT:    movapd %xmm0, 16(%rax)
+; SSE-NEXT:    xorpd %xmm1, %xmm1
+; SSE-NEXT:    cmpneqpd %xmm1, %xmm1
+; SSE-NEXT:    xorpd %xmm2, %xmm2
+; SSE-NEXT:    divpd %xmm2, %xmm2
+; SSE-NEXT:    andpd %xmm1, %xmm2
+; SSE-NEXT:    movapd %xmm2, (%rsp)
+; SSE-NEXT:    movapd %xmm2, {{[0-9]+}}(%rsp)
+; SSE-NEXT:    cmpneqpd %xmm2, %xmm0
+; SSE-NEXT:    andpd %xmm2, %xmm0
+; SSE-NEXT:    movapd %xmm0, 32(%rax)
+; SSE-NEXT:    movapd %xmm0, 48(%rax)
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movq %rbp, %rsp
 ; SSE-NEXT:    popq %rbp
@@ -38,8 +45,7 @@ define double @pr241254() nounwind {
 ; AVX-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %ymm0, (%rax)
-; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
-; AVX-NEXT:    vmovaps %ymm1, (%rsp)
+; AVX-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX-NEXT:    vmovaps %ymm0, 32(%rax)
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    movq %rbp, %rsp
@@ -69,12 +75,16 @@ define double @pr241254() nounwind {
 define i64 @and_fdiv_zero_elt(<2 x double> %a, <2 x double> %b, <2 x i64> %z) {
 ; SSE-LABEL: and_fdiv_zero_elt:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    movq %xmm2, %rcx
+; SSE-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; SSE-NEXT:    andq %rcx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: and_fdiv_zero_elt:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    vmovq %xmm2, %rcx
+; AVX-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; AVX-NEXT:    andq %rcx, %rax
 ; AVX-NEXT:    retq
   %x = shufflevector <2 x double> %a, <2 x double> zeroinitializer, <2 x i32> <i32 2, i32 1>
   %y = shufflevector <2 x double> %b, <2 x double> zeroinitializer, <2 x i32> <i32 2, i32 1>
@@ -88,12 +98,16 @@ define i64 @and_fdiv_zero_elt(<2 x double> %a, <2 x double> %b, <2 x i64> %z) {
 define i64 @and_frem_zero_elt(<2 x double> %a, <2 x double> %b, <2 x i64> %z) {
 ; SSE-LABEL: and_frem_zero_elt:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    movq %xmm2, %rcx
+; SSE-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; SSE-NEXT:    andq %rcx, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: and_frem_zero_elt:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    vmovq %xmm2, %rcx
+; AVX-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
+; AVX-NEXT:    andq %rcx, %rax
 ; AVX-NEXT:    retq
   %x = shufflevector <2 x double> %a, <2 x double> zeroinitializer, <2 x i32> <i32 2, i32 1>
   %y = shufflevector <2 x double> %b, <2 x double> zeroinitializer, <2 x i32> <i32 2, i32 1>
