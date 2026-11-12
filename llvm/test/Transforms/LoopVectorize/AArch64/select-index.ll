@@ -1143,9 +1143,9 @@ define i32 @argmin_trunc_iv(ptr %src) {
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <4 x i64> [[STEP_ADD_2]], splat (i64 4)
 ; CHECK-NEXT:    [[IV:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[GEP_SRC]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[GEP_SRC]], i64 8
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[GEP_SRC]], i64 12
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[GEP_SRC]], i64 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[GEP_SRC]], i64 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[GEP_SRC]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
