@@ -205,10 +205,12 @@ multiclass DS_1A2D_Off8_NORET_mc <string opName, RegisterOperand rc = VGPROp_32>
   def "" : DS_1A2D_Off8_NORET<opName, rc>;
 
   let has_m0_read = 0 in {
-    def _gfx9 : DS_1A2D_Off8_NORET<opName, rc>;
+    def _gfx9 : DS_1A2D_Off8_NORET<opName, rc>,
+                AGPRFormTable<"VGPR", NAME # "_agpr">;
 
     let SubtargetPredicate = isGFX90APlus in {
-      def _agpr : DS_1A2D_Off8_NORET<opName, getEquivalentAGPROperand<rc>.ret>;
+      def _agpr : DS_1A2D_Off8_NORET<opName, getEquivalentAGPROperand<rc>.ret>,
+                  AGPRFormTable<"AGPR">;
     }
   }
 }
