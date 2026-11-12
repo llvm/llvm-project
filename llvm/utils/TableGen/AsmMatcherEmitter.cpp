@@ -1349,11 +1349,20 @@ void AsmMatcherInfo::buildRegisterClasses(
     }
     const CodeGenRegisterClass *FromRC = Target.getRegBank().getRegClass(
         Def->getValueAsDef("CoerceFromRegClass"));
+    SmallVector<RegConversion, 0> Conversions;
     for (const Record *From : FromRC->getOrder()) {
       const Record *To =
           RegsByAsmName.lookup(From->getValueAsString("AsmName"));
       if (To && To != From)
-        RegConversions[Def].push_back({From, To});
+        Conversions.push_back({From, To});
+    }
+    if (!Conversions.empty()) {
+      llvm::sort(Conversions,
+                 [&](const RegConversion &LHS, const RegConversion &RHS) {
+                   return Target.getRegBank().getReg(LHS.From)->EnumValue <
+                          Target.getRegBank().getReg(RHS.From)->EnumValue;
+                 });
+      RegConversions.try_emplace(Def, std::move(Conversions));
     }
   }
 
@@ -2555,18 +2564,58 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   OS << "};\n\n";
 
   // Spit out the functions converting registers matched via CoerceFromRegClass.
-  for (const Record *RC : CoercedRegClasses) {
+  CodeGenRegBank &RegBank = Target.getRegBank();
+  auto emitRegCoercionFunc = [&](const Record *RC) {
+    ArrayRef<AsmMatcherInfo::RegConversion> Conversions =
+        Info.RegConversions.find(RC)->second;
     OS << "static MCRegister convertTo" << RC->getName()
-       << "(MCRegister Reg) {\n"
-       << "  switch (Reg.id()) {\n";
-    for (const AsmMatcherInfo::RegConversion &C :
-         Info.RegConversions.lookup(RC))
+       << "(MCRegister Reg) {\n";
+    auto getEnum = [&](const Record *R) -> int64_t {
+      return RegBank.getReg(R)->EnumValue;
+    };
+    if (Conversions.size() >= 2) {
+      int64_t FirstFrom = getEnum(Conversions[0].From);
+      int64_t FirstTo = getEnum(Conversions[0].To);
+      int64_t FromStride = getEnum(Conversions[1].From) - FirstFrom;
+      int64_t ToStride = getEnum(Conversions[1].To) - FirstTo;
+      bool IsLinear =
+          ToStride > 0 && all_of(enumerate(Conversions), [&](const auto &Item) {
+            int64_t Idx = Item.index();
+            return getEnum(Item.value().From) == FirstFrom + Idx * FromStride &&
+                   getEnum(Item.value().To) == FirstTo + Idx * ToStride;
+          });
+      if (IsLinear) {
+        std::string FirstFromName = getQualifiedName(Conversions.front().From);
+        std::string LastFromName = getQualifiedName(Conversions.back().From);
+        std::string FirstToName = getQualifiedName(Conversions.front().To);
+        OS << "  assert(Reg.id() >= " << FirstFromName
+           << " && Reg.id() <= " << LastFromName;
+        if (FromStride > 1)
+          OS << " &&\n         (Reg.id() - " << FirstFromName << ") % "
+             << FromStride << " == 0";
+        OS << " && \"unexpected register\");\n"
+           << "  return " << FirstToName << " + (Reg.id() - " << FirstFromName
+           << ")";
+        if (FromStride != ToStride) {
+          if (FromStride > 1)
+            OS << " / " << FromStride;
+          if (ToStride > 1)
+            OS << " * " << ToStride;
+        }
+        OS << ";\n}\n\n";
+        return;
+      }
+    }
+    OS << "  switch (Reg.id()) {\n";
+    for (const AsmMatcherInfo::RegConversion &C : Conversions)
       OS << "  case " << getQualifiedName(C.From) << ": return "
          << getQualifiedName(C.To) << ";\n";
     OS << "  default: llvm_unreachable(\"unexpected register\");\n"
        << "  }\n"
        << "}\n\n";
-  }
+  };
+  for (const Record *RC : CoercedRegClasses)
+    emitRegCoercionFunc(RC);
 
   // Spit out the conversion driver function.
   OS << ConvertFnBody;
