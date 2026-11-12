@@ -267,7 +267,7 @@ void onlyLoopConditions(int arg) {
 // #119388 ensures that if the loop condition is opaque and there were at
 // least two iterations, the analyzer does not make the assumption that it
 // can enter the third iteration.
-// Before Clang 20.1.0 the plausbile was present because when the loop
+// Before Clang 20.1.0 the plausible path was present because when the loop
 // iterated over a two or more elements data structure the analyzer could not
 // understand the loop condition and assumed that there might be a
 // third, fourth, etc. iteration.
