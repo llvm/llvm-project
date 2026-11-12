@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUInstrInfo.h"
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -323,11 +324,13 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
     break;
   }
 
-  auto *Aux = cast<ConstantInt>(I.getArgOperand(I.arg_size() - 1));
+  const AMDGPU::BufferIntrinsicInfo &BufInfo =
+      *AMDGPU::lookupBufferIntrinsic(I.getIntrinsicID());
+  auto *Aux = cast<ConstantInt>(I.getArgOperand(*BufInfo.getAuxArg()));
   if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
     return;
 
-  const unsigned ValIdx = 0;
+  const unsigned ValIdx = *BufInfo.getVDataArg();
 
   const bool ValDivergent = UA.isDivergentAtUse(I.getOperandUse(ValIdx));
 

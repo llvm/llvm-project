@@ -28,6 +28,7 @@ class SIMachineFunctionInfo;
 class SIRegisterInfo;
 
 namespace AMDGPU {
+struct BufferIntrinsicInfo;
 struct ImageDimIntrinsicInfo;
 }
 
@@ -98,10 +99,17 @@ private:
                        SDValue Offset, SDValue CachePolicy, SelectionDAG &DAG,
                        MachineMemOperand *MMO = nullptr) const;
 
-  SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
-                                     unsigned NewOpcode) const;
-  SDValue lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
-                                        unsigned NewOpcode) const;
+  SmallVector<SDValue, 10>
+  getBufferIntrinsicOps(SDValue Op, const AMDGPU::BufferIntrinsicInfo &Info,
+                        SelectionDAG &DAG, SDValue VData = SDValue()) const;
+  SDValue lowerBufferIntrinsicWithChain(SDValue Op,
+                                        const AMDGPU::BufferIntrinsicInfo &Info,
+                                        SelectionDAG &DAG) const;
+  SDValue lowerBufferIntrinsicVoid(SDValue Op,
+                                   const AMDGPU::BufferIntrinsicInfo &Info,
+                                   SelectionDAG &DAG) const;
+  SDValue lowerBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
+                                  unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,

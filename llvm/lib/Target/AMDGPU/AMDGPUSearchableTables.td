@@ -30,6 +30,76 @@ foreach intr = !listconcat(AMDGPUBufferIntrinsics,
   def : RsrcIntrinsic<!cast<AMDGPURsrcIntrinsic>(intr)>;
 }
 
+//===----------------------------------------------------------------------===//
+// Buffer intrinsic argument layout table.
+//===----------------------------------------------------------------------===//
+
+def BufferIntrinsicKind : GenericEnum {
+  let FilterClass = "AMDGPUBufferIntrinsicKind";
+  let NameField = "KindName";
+  let ValueField = "Value";
+  let UnderlyingType = "uint8_t";
+}
+
+class BufferIntrinsicInfo<AMDGPUBufferIntrinsic intr> {
+  Intrinsic Intr = !cast<Intrinsic>(intr);
+  AMDGPUBufferIntrinsicKind Kind = intr.BufferKind;
+  bits<8> RsrcArg = intr.RsrcArg;
+  bits<8> VDataArg = intr.VDataArg;
+  bits<8> SizeArg = intr.SizeArg;
+  bits<8> VIndexArg = intr.VIndexArg;
+  bits<8> VOffsetArg = intr.VOffsetArg;
+  bits<8> SOffsetArg = intr.SOffsetArg;
+  bits<8> ImmOffsetArg = intr.ImmOffsetArg;
+  bits<8> FormatArg = intr.FormatArg;
+  bits<8> AuxArg = intr.AuxArg;
+  bit IsFormat = intr.IsFormat;
+  bit IsAsync = intr.IsAsync;
+
+  // Check the computed layout against the intrinsic's signature. Absent
+  // arguments (255) are looked up in a trailing i32 sentinel so that the checks
+  // don't need to special-case them.
+  defvar Name = !cast<string>(Intr);
+  defvar Params = Intr.ParamTypes;
+  defvar PaddedParams = !listconcat(Params, [llvm_i32_ty]);
+  defvar ArgIsI32 =
+    !foldl(true, [intr.VIndexArg, intr.VOffsetArg, intr.SOffsetArg,
+                  intr.ImmOffsetArg, intr.FormatArg, intr.AuxArg, intr.SizeArg],
+           acc, idx,
+           !and(acc, !eq(PaddedParams[!if(!eq(idx, 255), !size(Params), idx)],
+                         llvm_i32_ty)));
+  defvar LDSPtrIdx = !if(!eq(Kind, AMDGPUBufferKindLoadToLDS),
+                         !add(intr.RsrcArg, 1), !size(Params));
+  assert !eq(!size(Params), intr.NumArgs),
+    "buffer intrinsic layout of " # Name # " has " # intr.NumArgs #
+    " arguments, but the intrinsic has " # !size(Params);
+  assert !or(!eq(Params[intr.RsrcArg], llvm_v4i32_ty),
+             !eq(Params[intr.RsrcArg], AMDGPUBufferRsrcTy)),
+    "rsrc argument of " # Name # " is not at position " # intr.RsrcArg;
+  assert ArgIsI32,
+    "offset/index/size/aux arguments of " # Name # " are not all i32";
+  // There's code relying on this invariant, so we verify it. Didn't seem worth a table slot.
+  assert !or(!eq(LDSPtrIdx, !size(Params)),
+             !isa<LLVMQualPointerType>(PaddedParams[LDSPtrIdx])),
+    "LDS pointer of " # Name # " does not follow the rsrc";
+}
+
+def BufferIntrinsicsTable : GenericTable {
+  let FilterClass = "BufferIntrinsicInfo";
+  let CppTypeName = "BufferIntrinsicInfo";
+  let Fields = ["Intr", "Kind", "RsrcArg", "VDataArg", "SizeArg", "VIndexArg",
+                "VOffsetArg", "SOffsetArg", "ImmOffsetArg", "FormatArg",
+                "AuxArg", "IsFormat", "IsAsync"];
+  string TypeOf_Kind = "BufferIntrinsicKind";
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupBufferIntrinsic";
+}
+
+foreach intr = AMDGPUBufferIntrinsics in {
+  def : BufferIntrinsicInfo<intr>;
+}
+
 class GcnBufferFormatBase<bits<8> f, bits<8> bpc, bits<8> numc, bits<8> nfmt, bits<8> dfmt> {
   bits<8> Format = f;
   bits<8> BitsPerComp = bpc;
@@ -242,74 +312,12 @@ def : SourceOfDivergence<int_amdgcn_global_atomic_fmax_num>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_ordered_add_b64>;
 def : SourceOfDivergence<int_amdgcn_flat_atomic_fmin_num>;
 def : SourceOfDivergence<int_amdgcn_flat_atomic_fmax_num>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_swap>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_add>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_sub>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_smin>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_umin>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_smax>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_umax>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_and>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_or>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_xor>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_inc>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_dec>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_fadd>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_fmin>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_fmax>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_cmpswap>;
-def : SourceOfDivergence<int_amdgcn_raw_buffer_atomic_cond_sub_u32>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_swap>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_add>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_sub>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_smin>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_umin>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_smax>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_umax>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_and>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_or>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_xor>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_inc>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_dec>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_fadd>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_fmin>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_fmax>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_cmpswap>;
-def : SourceOfDivergence<int_amdgcn_raw_ptr_buffer_atomic_cond_sub_u32>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_swap>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_add>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_sub>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_smin>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_umin>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_smax>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_umax>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_and>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_or>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_xor>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_inc>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_dec>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_fadd>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_fmin>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_fmax>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_cmpswap>;
-def : SourceOfDivergence<int_amdgcn_struct_buffer_atomic_cond_sub_u32>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_swap>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_add>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_sub>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_smin>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_umin>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_smax>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_umax>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_and>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_or>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_xor>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_inc>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_dec>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_fadd>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_fmin>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_fmax>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_cmpswap>;
-def : SourceOfDivergence<int_amdgcn_struct_ptr_buffer_atomic_cond_sub_u32>;
+// The results of buffer atomics differ in each lane.
+foreach intr = AMDGPUBufferIntrinsics in {
+  if !or(!eq(intr.BufferKind, AMDGPUBufferKindAtomicRMW),
+         !eq(intr.BufferKind, AMDGPUBufferKindAtomicCmpSwap)) then
+    def : SourceOfDivergence<!cast<Intrinsic>(intr)>;
+}
 def : SourceOfDivergence<int_amdgcn_ps_live>;
 def : SourceOfDivergence<int_amdgcn_live_mask>;
 def : SourceOfDivergence<int_amdgcn_ds_swizzle>;
