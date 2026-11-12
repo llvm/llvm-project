@@ -6,9 +6,6 @@
 // public LTO visibility: their vtables may come from outside of the LTO unit,
 // like the one defined in a non-LTO object here.
 
-// FIXME: The checked load traps on the vtable from the non-LTO object.
-// XFAIL: *
-
 struct [[clang::lto_visibility_public]] A {
   virtual void f();
 };
