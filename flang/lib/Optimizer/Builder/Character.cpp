@@ -486,31 +486,6 @@ void fir::factory::CharacterExprHelper::createAssign(
   }
 }
 
-fir::CharBoxValue fir::factory::CharacterExprHelper::createConcatenate(
-    const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs) {
-  auto lhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
-                                      lhs.getLen());
-  auto rhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
-                                      rhs.getLen());
-  mlir::Value len = mlir::arith::AddIOp::create(builder, loc, lhsLen, rhsLen);
-  auto temp = createCharacterTemp(getCharacterType(rhs), len);
-  createCopy(temp, lhs, lhsLen);
-  auto one = builder.createIntegerConstant(loc, len.getType(), 1);
-  auto upperBound = mlir::arith::SubIOp::create(builder, loc, len, one);
-  auto lhsLenIdx = builder.createConvert(loc, builder.getIndexType(), lhsLen);
-  auto fromBuff = getCharBoxBuffer(rhs);
-  auto toBuff = getCharBoxBuffer(temp);
-  fir::factory::DoLoopHelper{builder, loc}.createLoop(
-      lhsLenIdx, upperBound, one,
-      [&](fir::FirOpBuilder &bldr, mlir::Value index) {
-        auto rhsIndex =
-            mlir::arith::SubIOp::create(bldr, loc, index, lhsLenIdx);
-        auto charVal = createLoadCharAt(fromBuff, rhsIndex);
-        createStoreCharAt(toBuff, index, charVal);
-      });
-  return temp;
-}
-
 mlir::Value fir::factory::CharacterExprHelper::genSubstringBase(
     mlir::Value stringRawAddr, mlir::Value lowerBound,
     mlir::Type substringAddrType, mlir::Value one) {
