@@ -3373,11 +3373,9 @@ void InformationCache::collectAssumeOnlyValues(FunctionInfo &FI) {
     }
   };
 
-  for (Instruction *I : *Calls) {
-    if (auto *Assume = dyn_cast<AssumeInst>(I)) {
-      AssumeOnlyValues.insert(Assume);
-      AddToAssumeUsesMap(*Assume->getArgOperand(0));
-    }
+  for (AssumeInst *Assume : make_isa_range<AssumeInst>(*Calls)) {
+    AssumeOnlyValues.insert(Assume);
+    AddToAssumeUsesMap(*Assume->getArgOperand(0));
   }
 }
 
