@@ -576,8 +576,11 @@ UnrollCostEstimator::UnrollCostEstimator(
     const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns,
     bool PrepareForLTO, bool TripCountIsUniform) {
   CodeMetrics Metrics;
+  // TODO: Right now we ignore the PrepareForLTO option here as there are
+  // performance regressions when using it for cost estimation. Eventually
+  // these should be fixed and we should use PrepareForLTO for cost estimation.
   for (BasicBlock *BB : L->blocks())
-    Metrics.analyzeBasicBlock(BB, TTI, EphValues, PrepareForLTO, L);
+    Metrics.analyzeBasicBlock(BB, TTI, EphValues, /*PrepareForLTO=*/false, L);
   NumInlineCandidates = Metrics.NumInlineCandidates;
   NotDuplicatable = Metrics.notDuplicatable;
   Convergence = Metrics.Convergence;
