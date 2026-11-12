@@ -314,12 +314,9 @@ bool ProcessMinidump::IsAlive() { return true; }
 
 bool ProcessMinidump::WarnBeforeDetach() const { return false; }
 
-size_t ProcessMinidump::ReadMemory(const ProcessAddress &process_addr,
-                                   void *buf, size_t size, Status &error) {
-  lldb::addr_t addr = process_addr.GetValue();
-  // Don't allow the caching that lldb_private::Process::ReadMemory does since
-  // we have it all cached in our dump file anyway.
-  return DoReadMemory(addr, buf, size, error);
+bool ProcessMinidump::ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+  // The dump file is already a local copy of this memory.
+  return false;
 }
 
 size_t ProcessMinidump::DoReadMemory(const ProcessAddress &process_addr,

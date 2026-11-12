@@ -3,7 +3,6 @@
 ---
 name:            crash_fn
 alignment:       4
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.1:

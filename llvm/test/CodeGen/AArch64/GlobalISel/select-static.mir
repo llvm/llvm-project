@@ -47,7 +47,6 @@ body:             |
     $x0 = COPY %0(p0)
 ...
 
----
 
 ---
 # CHECK-LABEL: name: ptr_mask
@@ -205,7 +204,6 @@ body:             |
 name:            phi
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '', flags: [  ] }
@@ -243,7 +241,6 @@ body:             |
 name:            select
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '', flags: [  ] }

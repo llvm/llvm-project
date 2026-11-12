@@ -829,7 +829,7 @@ void cir::ConditionOp::getSuccessorRegions(
     if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
       regions.emplace_back(cleanup);
     else
-      regions.emplace_back(getOperation());
+      regions.emplace_back(loopOp.getOperation());
     return;
   }
 
@@ -2869,6 +2869,12 @@ cir::VTTAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!op)
     return emitOpError("'")
            << name << "' does not reference a valid cir.global";
+  auto resultType = mlir::cast<cir::PointerType>(getAddr().getType());
+  if (op.getAddrSpaceAttr() != resultType.getAddrSpace())
+    return emitOpError()
+           << "result type address space does not match the address "
+              "space of the global @"
+           << name;
   std::optional<mlir::Attribute> init = op.getInitialValue();
   if (!init)
     return success();
@@ -2888,9 +2894,13 @@ LogicalResult cir::VTTAddrPointOp::verify() {
   if (getSymAddr())
     return success();
 
-  mlir::Type resultType = getAddr().getType();
+  // Both pointer levels may carry an address space.
+  auto resultType = mlir::cast<cir::PointerType>(getAddr().getType());
+  auto eltTy = mlir::dyn_cast<cir::PointerType>(resultType.getPointee());
   mlir::Type resTy = cir::PointerType::get(
-      cir::PointerType::get(cir::VoidType::get(getContext())));
+      cir::PointerType::get(cir::VoidType::get(getContext()),
+                            eltTy ? eltTy.getAddrSpace() : nullptr),
+      resultType.getAddrSpace());
 
   if (resultType != resTy)
     return emitOpError("result type must be ")
@@ -4978,6 +4988,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   p << ')';
   if (getSideEffects())
     p << " side_effects";
+  if (getConvergent())
+    p << " convergent";
 
   p.printOptionalAttrDict(
       getOperation()->getDiscardableAttrDictionary().getValue());
@@ -4989,7 +5001,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
 void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                              ArrayRef<ValueRange> asmOperands,
                              StringRef asmString, StringRef constraints,
-                             bool sideEffects, cir::AsmFlavor asmFlavor,
+                             bool sideEffects, bool convergent,
+                             cir::AsmFlavor asmFlavor,
                              ArrayRef<Attribute> operandAttrs) {
   // Set up the operands_segments for VariadicOfVariadic
   SmallVector<int32_t> segments;
@@ -5008,6 +5021,9 @@ void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 
   if (sideEffects)
     odsState.addAttribute("side_effects", odsBuilder.getUnitAttr());
+
+  if (convergent)
+    odsState.addAttribute("convergent", odsBuilder.getUnitAttr());
 
   odsState.addAttribute("operand_attrs", odsBuilder.getArrayAttr(operandAttrs));
 }
@@ -5119,6 +5135,9 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 
   if (parser.parseOptionalKeyword("side_effects").succeeded())
     result.attributes.set("side_effects", UnitAttr::get(ctxt));
+
+  if (parser.parseOptionalKeyword("convergent").succeeded())
+    result.attributes.set("convergent", UnitAttr::get(ctxt));
 
   if (parser.parseOptionalAttrDict(result.attributes).failed())
     return mlir::failure();

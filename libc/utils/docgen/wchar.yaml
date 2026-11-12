@@ -1,4 +1,40 @@
+standard: c23
+posix: posix-2024
 c-reference-root: string/wide
+types:
+  FILE:
+    in-latest-posix: ''
+  errno_t:
+    c-definition: K.3.9
+    c-reference: error
+  locale_t:
+    in-latest-posix: ''
+  mbstate_t:
+    c-definition: 7.31.1
+    c-reference: string/multibyte/mbstate_t
+    in-latest-posix: ''
+  rsize_t:
+    c-definition: K.3.9
+    c-reference: error
+  size_t:
+    c-definition: 7.31.1
+    c-reference: types/size_t
+    in-latest-posix: ''
+  struct tm:
+    c-definition: 7.31.1
+    c-reference: chrono/tm
+    in-latest-posix: ''
+  va_list:
+    in-latest-posix: ''
+  wchar_t:
+    c-definition: 7.31.1
+    c-reference: types
+    in-latest-posix: ''
+  wctype_t:
+    in-latest-posix: ''
+  wint_t:
+    c-definition: 7.31.1
+    in-latest-posix: ''
 functions:
   btowc:
     c-definition: 7.31.6.2.1
@@ -166,9 +202,54 @@ functions:
   wscanf:
     c-definition: 7.31.2.13
     c-reference: io/fwscanf
+  mbsnrtowcs:
+    in-latest-posix: ''
+  open_wmemstream:
+    in-latest-posix: ''
+  wcpcpy:
+    in-latest-posix: ''
+  wcpncpy:
+    in-latest-posix: ''
+  wcscasecmp_l:
+    in-latest-posix: ''
+  wcscoll_l:
+    in-latest-posix: ''
+  wcsdup:
+    in-latest-posix: ''
+  wcsftime_l:
+    in-latest-posix: ''
+  wcslcat:
+    in-latest-posix: ''
+  wcslcpy:
+    in-latest-posix: ''
+  wcsncasecmp_l:
+    in-latest-posix: ''
+  wcsnlen:
+    in-latest-posix: ''
+  wcsnrtombs:
+    in-latest-posix: ''
+  wcswidth:
+    in-latest-posix: ''
+  wcsxfrm_l:
+    in-latest-posix: ''
+  wcwidth:
+    in-latest-posix: ''
+  wmempcpy:
+    extension: gnu
 macros:
   WEOF:
     c-definition: 7.31.1
+    in-latest-posix: ''
   __STDC_VERSION_WCHAR_H__:
     c-definition: 7.31.1
 
+  'NULL':
+    c-definition: 7.31.1
+    c-reference: types/NULL
+    in-latest-posix: ''
+  WCHAR_MAX:
+    c-definition: 7.31.1
+    in-latest-posix: ''
+  WCHAR_MIN:
+    c-definition: 7.31.1
+    in-latest-posix: ''

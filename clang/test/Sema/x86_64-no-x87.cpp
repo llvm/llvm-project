@@ -19,13 +19,13 @@ double decl_ld_del(double) = delete;
 float decl_ld_del(float) = delete;
 
 #ifndef NOERROR
-// expected-error@+4{{'def' requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+// expected-error@+4{{'def' requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 // expected-note@+3{{'def' defined here}}
 // expected-note@+2{{'x' defined here}}
 #endif
 int def(long_double x) {
 #ifndef NOERROR
-// expected-error@+2{{'x' requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+// expected-error@+2{{'x' requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 #endif
   return (int)x;
 }
@@ -38,7 +38,7 @@ int ld_args(long_double x, long_double y);
 
 int call1(float x, float y) {
 #ifndef NOERROR
-  // expected-error@+2 2{{'ld_args' requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+2 2{{'ld_args' requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 #endif
   return ld_args(x, y);
 }
@@ -50,14 +50,14 @@ long_double ld_ret(double x, double y);
 
 int call2(float x, float y) {
 #ifndef NOERROR
-  // expected-error@+2{{'ld_ret' requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+2{{'ld_ret' requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 #endif
   return (int)ld_ret(x, y);
 }
 
 int binop(double x, double y) {
 #ifndef NOERROR
-  // expected-error@+2 2{{expression requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+2 2{{expression requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 #endif
   double z = (long_double)x * (long_double)y;
   return (int)z;
@@ -65,7 +65,7 @@ int binop(double x, double y) {
 
 void assign1(long_double *ret, double x) {
 #ifndef NOERROR
-  // expected-error@+2{{expression requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+2{{expression requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 #endif
   *ret = x;
 }
@@ -94,8 +94,8 @@ struct st_long_double3 {
 void assign2() {
   struct st_long_double1 st;
 #ifndef NOERROR
-  // expected-error@+3{{expression requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
-  // expected-error@+2{{'ld' requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+3{{expression requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+2{{'ld' requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 #endif
   st.ld = 0.42;
 }
@@ -103,8 +103,8 @@ void assign2() {
 void assign3() {
   struct st_long_double2 st;
 #ifndef NOERROR
-  // expected-error@+3{{expression requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
-  // expected-error@+2{{'ld' requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+3{{expression requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+2{{'ld' requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 #endif
   st.ld = 42;
 }
@@ -112,8 +112,8 @@ void assign3() {
 void assign4(double d) {
   struct st_long_double3 st;
 #ifndef NOERROR
-  // expected-error@+3{{expression requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
-  // expected-error@+2{{'ld' requires  'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+3{{expression requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
+  // expected-error@+2{{'ld' requires 'long_double' (aka 'long double') type support, but target 'x86_64-unknown-linux-gnu' does not support it}}
 #endif
   st.ld = d;
 }

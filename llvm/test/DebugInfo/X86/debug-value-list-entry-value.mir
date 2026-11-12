@@ -60,7 +60,6 @@
 ---
 name:            blah
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef:   true
 tracksDebugUserValues: true
 registers:       []

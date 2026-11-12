@@ -46,7 +46,6 @@
     ret void
   }
 ...
----
 
 ---
 # Check for awareness that s_or_saveexec_b64 clobbers SCC
