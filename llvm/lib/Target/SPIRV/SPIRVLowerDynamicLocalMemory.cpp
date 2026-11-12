@@ -32,6 +32,7 @@
 #include "SPIRV.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/IRBuilder.h"
@@ -174,23 +175,30 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   SmallVector<Constant *> DynMemConsts(DynMems.begin(), DynMems.end());
   convertUsersOfConstantsToInstructions(DynMemConsts);
   for (GlobalVariable *GV : DynMems) {
-    for (Use &U : make_early_inc_range(GV->uses())) {
+    DenseMap<Function *, SmallVector<Use *>> UsesOfGV;
+    for (Use &U : GV->uses()) {
       auto *I = dyn_cast<Instruction>(U.getUser());
       if (!I)
         reportFatalUsageError("dynamic local memory '" + GV->getName() +
                               "' cannot be referenced by a constant");
-      Instruction *InsertPt = I;
-      if (auto *PN = dyn_cast<PHINode>(I))
-        InsertPt = PN->getIncomingBlock(U)->getTerminator();
-      IRBuilder<> Builder(InsertPt);
-      U.set(Builder.CreateLoad(LocalPtrTy, Slot, "dyn_local_mem"));
+
+      Function *F = I->getFunction();
+      UsesOfGV[F].push_back(&U);
+    }
+
+    for (auto &[F, Uses] : UsesOfGV) {
+      IRBuilder<> Builder(F->getEntryBlock().getFirstInsertionPt());
+      auto *LoadedSlot = Builder.CreateLoad(LocalPtrTy, Slot, "dyn_local_mem");
+
+      for (Use *U : Uses)
+        U->set(LoadedSlot);
 
       // Modify memory effects of the function and it's callers, a function that
       // would reference SLM pointer might have ModeRefInfo::NoModRef, but
       // adding the load requires change it to at least ModRefInfo::Ref
-      Function *F = I->getFunction();
       updateMemoryEffects(F, MemoryEffects::otherMemOnly(ModRefInfo::Ref));
     }
+
     GV->eraseFromParent();
   }
 

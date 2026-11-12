@@ -42,10 +42,11 @@ define spir_func ptr addrspace(4) @generic() addrspace(9) {
   ret ptr addrspace(4) addrspacecast (ptr addrspace(3) @other to ptr addrspace(4))
 }
 
-; Uses in PHIs load in the incoming block.
+; Uses in PHIs are also valid
 ; IR-LABEL: define spir_func ptr addrspace(3) @phi(
-; IR: then:
+; IR: entry
 ; IR-NEXT: %[[PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR: then:
 ; IR-NEXT: br label %exit
 ; IR: phi ptr addrspace(3) [ %[[PTR]], %then ], [ @sized, %entry ]
 define spir_func ptr addrspace(3) @phi(i1 %c) addrspace(9) {
@@ -70,6 +71,32 @@ entry:
   %a = alloca i32
   %v = call spir_func addrspace(9) i32 @load(i64 0)
   store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; Kernels that use the memory load the slot once, after storing the argument,
+; and reuse the loaded pointer for every access.
+; IR-LABEL: define spir_kernel void @use_kernel(
+; IR-SAME: ptr addrspace(1) noundef %out, ptr addrspace(3) %[[LOCAL_ARG:[a-zA-Z0-9_]+]]) addrspace(9)
+; IR-NEXT: entry:
+; IR-NEXT: store ptr addrspace(3) %[[LOCAL_ARG]], ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR-NEXT: %[[LOCAL_PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
+; IR-NEXT: %p0 = getelementptr i32, ptr addrspace(3) %[[LOCAL_PTR]], i64 0
+; IR-NEXT: %v0 = load i32, ptr addrspace(3) %p0
+; IR-NEXT: store i32 %v0, ptr addrspace(1) %out
+; IR-NEXT: %p1 = getelementptr i32, ptr addrspace(3) %[[LOCAL_PTR]], i64 1
+; IR-NEXT: %v1 = load i32, ptr addrspace(3) %p1
+; IR-NEXT: store i32 %v1, ptr addrspace(1) %out
+; IR-NEXT: ret void
+; IR-NEXT: }
+define spir_kernel void @use_kernel(ptr addrspace(1) noundef %out) addrspace(9) #0 !kernel_arg_addr_space !0 {
+entry:
+  %p0 = getelementptr i32, ptr addrspace(3) @buf, i64 0
+  %v0 = load i32, ptr addrspace(3) %p0
+  store i32 %v0, ptr addrspace(1) %out
+  %p1 = getelementptr i32, ptr addrspace(3) @buf, i64 1
+  %v1 = load i32, ptr addrspace(3) %p1
+  store i32 %v1, ptr addrspace(1) %out
   ret void
 }
 
