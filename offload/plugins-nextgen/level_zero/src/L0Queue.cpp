@@ -16,7 +16,6 @@
 #include "L0Plugin.h"
 #include "L0Trace.h"
 #include "PluginInterface.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -67,11 +66,16 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   if (AppendLaunchKernelWithArgsAvailable &&
       Device.getL0Driver().AppendLaunchKernelWithArgsSupported.load(
           std::memory_order_acquire)) {
-    SmallVector<void *> Args(ArrayRef(KEnv.ArgPtrs, KEnv.NumArgs));
-    if (KEnv.HasDynSharedMemoryArg)
-      Args.push_back(&DynSharedMemorySize);
+    void **ArgPtrs = KEnv.ArgPtrs;
+    SmallVector<void *> ArgsWithDynMem;
+    if (KEnv.HasDynSharedMemoryArg) {
+      ArgsWithDynMem.append(KEnv.ArgPtrs, KEnv.ArgPtrs + KEnv.NumArgs);
+      ArgsWithDynMem.push_back(&DynSharedMemorySize);
+      ArgPtrs = ArgsWithDynMem.data();
+    }
+
     auto Err = CmdList->appendLaunchKernelWithArgs(
-        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, Args.data(), SignalEvent,
+        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, ArgPtrs, SignalEvent,
         NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 
     if (!Err)
