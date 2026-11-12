@@ -91,15 +91,6 @@ LIBC_INLINE ErrorOr<int> execve_shell_fallback(const char *path,
   return linux_syscalls::execve(DEFAULT_BSHELL, new_argv, envp);
 }
 
-LIBC_INLINE ErrorOr<int> execve_with_shell_fallback(const char *path,
-                                                    char *const argv[],
-                                                    char *const envp[]) {
-  auto ret = linux_syscalls::execve(path, argv, envp);
-  if (!ret && ret.error() == ENOEXEC)
-    return execve_shell_fallback(path, argv, envp);
-  return ret;
-}
-
 LIBC_INLINE ErrorOr<int> execvpe(const char *file, char *const argv[],
                                  char *const envp[]) {
   cpp::string_view file_view(file);
@@ -107,8 +98,12 @@ LIBC_INLINE ErrorOr<int> execvpe(const char *file, char *const argv[],
     return Error(ENOENT);
 
   // If there's a / in file, treat it as a path.
-  if (file_view.find_first_of('/') != cpp::string_view::npos)
-    return execve_with_shell_fallback(file, argv, envp);
+  if (file_view.find_first_of('/') != cpp::string_view::npos) {
+    auto ret = linux_syscalls::execve(file, argv, envp);
+    if (ret || ret.error() != ENOEXEC)
+      return ret;
+    return execve_shell_fallback(file, argv, envp);
+  }
 
   // Otherwise treat file as the name of a file in a directory, search the
   // directories listed in PATH.
