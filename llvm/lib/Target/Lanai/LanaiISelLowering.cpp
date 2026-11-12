@@ -1287,6 +1287,8 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes, SDValue &CC,
     return false;
   case ISD::SELECT: {
     CC = N->getOperand(0);
+    if (CC.getOpcode() != ISD::SETCC)
+      return false;
     SDValue N1 = N->getOperand(1);
     SDValue N2 = N->getOperand(2);
     if (isZeroOrAllOnes(N1, AllOnes)) {
@@ -1306,7 +1308,7 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes, SDValue &CC,
     if (AllOnes)
       return false;
     CC = N->getOperand(0);
-    if (CC.getValueType() != MVT::i1)
+    if (CC.getValueType() != MVT::i1 || CC.getOpcode() != ISD::SETCC)
       return false;
     SDLoc dl(N);
     EVT VT = N->getValueType(0);
@@ -1316,7 +1318,7 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes, SDValue &CC,
   }
   case ISD::SIGN_EXTEND: {
     CC = N->getOperand(0);
-    if (CC.getValueType() != MVT::i1)
+    if (CC.getValueType() != MVT::i1 || CC.getOpcode() != ISD::SETCC)
       return false;
     SDLoc dl(N);
     EVT VT = N->getValueType(0);
@@ -1403,6 +1405,15 @@ static SDValue PerformSUBCombine(SDNode *N,
 
 SDValue LanaiTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
+  // combineSelectAndUse creates ISD::SELECT nodes. Because ISD::SELECT_CC is
+  // Custom on Lanai, DAGCombiner::visitSELECT only folds ISD::SELECT to
+  // ISD::SELECT_CC before LegalizeOps on legal types when the condition is an
+  // ISD::SETCC. Creating ISD::SELECT after LegalizeOps (where ISD::SELECT is
+  // Expand) or on illegal types causes infinite combine cycles with
+  // DAGCombiner::foldSelectOfBinops.
+  if (!DCI.isBeforeLegalizeOps() || !isTypeLegal(N->getValueType(0)))
+    return SDValue();
+
   switch (N->getOpcode()) {
   default:
     break;
