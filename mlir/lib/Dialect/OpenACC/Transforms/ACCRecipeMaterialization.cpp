@@ -490,7 +490,7 @@ template <typename OpTy>
 LogicalResult ACCRecipeMaterialization::materializeForACCOp(
     OpTy accOp, acc::OpenACCSupport &accSupport,
     acc::ACCToGPUMappingPolicy &policy) const {
-  assert(isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(accOp));
+  assert((isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(accOp)));
 
   // Reduction recipes use the original variable both to initialize the
   // private reduction value and to combine the result. Preserve copy semantics
