@@ -102,7 +102,6 @@
 ---
 name:            main
 alignment:       16
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

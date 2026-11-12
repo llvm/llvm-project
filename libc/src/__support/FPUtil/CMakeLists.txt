@@ -106,7 +106,6 @@ add_header_library(
     .normal_float
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
-    libc.src.__support.macros.optimization
 )
 
 add_header_library(
