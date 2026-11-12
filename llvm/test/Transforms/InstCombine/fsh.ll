@@ -759,23 +759,8 @@ define i32 @fsh_rotate_18(i8 %x, i32 %y) {
 define i32 @fsh_load_rotate_12(ptr %data) {
 ; CHECK-LABEL: @fsh_load_rotate_12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[DATA:%.*]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[CONV]], 24
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 16
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL3]], [[SHL]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
-; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
-; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 8
-; CHECK-NEXT:    [[OR7:%.*]] = or disjoint i32 [[OR]], [[SHL6]]
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
-; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
-; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[CONV9]]
+; CHECK-NEXT:    [[DOTWIDE:%.*]] = load i32, ptr [[DATA:%.*]], align 1
+; CHECK-NEXT:    [[OR10:%.*]] = call i32 @llvm.bswap.i32(i32 [[DOTWIDE]])
 ; CHECK-NEXT:    [[OR15:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR10]], i32 [[OR10]], i32 12)
 ; CHECK-NEXT:    ret i32 [[OR15]]
 ;
@@ -807,23 +792,8 @@ entry:
 define i32 @fsh_load_rotate_25(ptr %data) {
 ; CHECK-LABEL: @fsh_load_rotate_25(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[DATA:%.*]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[CONV]], 24
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 16
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL3]], [[SHL]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
-; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
-; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 8
-; CHECK-NEXT:    [[OR7:%.*]] = or disjoint i32 [[OR]], [[SHL6]]
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
-; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
-; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[CONV9]]
+; CHECK-NEXT:    [[DOTWIDE:%.*]] = load i32, ptr [[DATA:%.*]], align 1
+; CHECK-NEXT:    [[OR10:%.*]] = call i32 @llvm.bswap.i32(i32 [[DOTWIDE]])
 ; CHECK-NEXT:    [[OR15:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR10]], i32 [[OR10]], i32 25)
 ; CHECK-NEXT:    ret i32 [[OR15]]
 ;
