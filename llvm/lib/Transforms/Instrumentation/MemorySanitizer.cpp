@@ -2729,6 +2729,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                             : Ty->getPrimitiveSizeInBits();
   }
 
+  Value *CreateScalableShadowCast(IRBuilder<> &IRB, Value *V,
+                                  ScalableVectorType *DstVTy, bool Signed) {
+    Type *SrcTy = V->getType();
+    auto *SrcVTy = dyn_cast<VectorType>(SrcTy);
+    assert(SrcTy->isIntOrIntVectorTy() &&
+           DstVTy->getElementType()->isIntegerTy() && "Invalid shadow type");
+    assert(
+        (!SrcVTy || SrcVTy->getElementCount() == DstVTy->getElementCount()) &&
+        "Unsupported scalable shadow cast");
+    Type *CastTy = SrcVTy ? DstVTy : DstVTy->getElementType();
+    if (SrcTy->getScalarSizeInBits() > CastTy->getScalarSizeInBits())
+      V = IRB.CreateSExt(IRB.CreateICmpNE(V, getCleanShadow(V)), CastTy);
+    else
+      V = IRB.CreateIntCast(V, CastTy, Signed);
+    return SrcVTy ? V : IRB.CreateVectorSplat(DstVTy->getElementCount(), V);
+  }
+
   /// Cast between two shadow types, extending or truncating as
   /// necessary.
   Value *CreateShadowCast(IRBuilder<> &IRB, Value *V, Type *dstTy,
@@ -2736,6 +2753,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *srcTy = V->getType();
     if (srcTy == dstTy)
       return V;
+    if (auto *DstVTy = dyn_cast<ScalableVectorType>(dstTy))
+      return CreateScalableShadowCast(IRB, V, DstVTy, Signed);
+    assert(!isa<ScalableVectorType>(srcTy) &&
+           "Unsupported scalable shadow cast");
     size_t srcSizeInBits = VectorOrPrimitiveTypeSizeInBits(srcTy);
     size_t dstSizeInBits = VectorOrPrimitiveTypeSizeInBits(dstTy);
     if (srcSizeInBits > 1 && dstSizeInBits == 1)
