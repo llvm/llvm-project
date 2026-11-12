@@ -77,6 +77,16 @@ template <int N> int variable_template = []() {
 }();
 int instantiation = variable_template<1>;
 
+#pragma omp begin declare target device_type(host)
+auto host_only = []() {
+  int v = 0;
+// CHECK-DAG: define internal void @{{"?}}__omp_offloading_{{.*}}clEv_l[[#@LINE+2]]{{"?}}(
+// DEVICE-DAG: define weak_odr protected void @{{"?}}__omp_offloading_{{.*}}clEv_l[[#@LINE+1]]{{"?}}(
+#pragma omp target
+  v = 42;
+};
+#pragma omp end declare target
+
 // Reproducer from GH136652.
 auto slice_work = [](__SIZE_TYPE__ device, float start, float end) {
 // CHECK-DAG: define internal void @{{"?}}__omp_offloading_{{.*}}clEmff_l[[#@LINE+2]]{{"?}}(
@@ -132,6 +142,21 @@ struct Derived : AbstractBase {
   void f() override {}
 };
 
+struct InheritedBase {
+  InheritedBase(int) {}
+};
+struct Inheriting : InheritedBase {
+  using InheritedBase::InheritedBase;
+  int member = [](int d) {
+// CHECK-DAG: define internal void @__omp_offloading_{{.*}}_ZNK10Inheriting6memberMUliE_clEi_l[[#@LINE+2]](
+// DEVICE-DAG: define weak_odr protected void @__omp_offloading_{{.*}}_ZNK10Inheriting6memberMUliE_clEi_l[[#@LINE+1]](
+#pragma omp target teams device(d)
+    {
+    }
+    return d;
+  }(0);
+};
+
 void use() {
   lambda();
   nested_lambda()();
@@ -139,12 +164,15 @@ void use() {
   nested_in_parallel();
   static_local();
   default_argument();
+  host_only();
   slice_work(0, 0, 0);
   LocalObject local_object;
   (void)local_object;
   Holder<int>::member(0);
   Derived derived;
   (void)derived;
+  Inheriting inheriting(1);
+  (void)inheriting;
   // Control: named after the enclosing function.
   static auto static_local_lambda = [](__SIZE_TYPE__ device) {
 // CHECK-DAG: define internal void @__omp_offloading_{{.*}}_Z3usev_l[[#@LINE+2]](

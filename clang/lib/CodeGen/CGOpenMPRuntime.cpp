@@ -6484,6 +6484,11 @@ void CGOpenMPRuntime::emitHostKernelEnvironment(const OMPExecutableDirective &D,
 
 StringRef
 CGOpenMPRuntime::getTargetRegionParentName(const FunctionDecl *FD) const {
+  // Regions in a closure are named after its enclosing non-closure function
+  // (CodeGenFunction::CurFuncDecl), if there is one.
+  if (const auto *Parent =
+          dyn_cast_or_null<FunctionDecl>(FD->getNonClosureContext()))
+    FD = Parent;
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
     return CGM.getMangledName(GlobalDecl(Ctor, Ctor_Complete));
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(FD))
@@ -11597,27 +11602,23 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     return;
   }
 
-  // An implicitly-defined constructor is only reachable from its uses.
-  if (const auto *E = dyn_cast<CXXConstructExpr>(S)) {
-    const CXXConstructorDecl *Ctor = E->getConstructor();
-    if (!Ctor->isUserProvided() && Ctor->hasBody() &&
-        ScannedImplicitCtors.insert(Ctor).second)
-      scanConstructorForTargetRegions(Ctor, ParentName);
-  }
+  // Implicit and inheriting constructors are only reachable from their uses.
+  const CXXConstructorDecl *Ctor = nullptr;
+  if (const auto *E = dyn_cast<CXXConstructExpr>(S))
+    Ctor = E->getConstructor();
+  else if (const auto *E = dyn_cast<CXXInheritedCtorInitExpr>(S))
+    Ctor = E->getConstructor();
+  if (Ctor && (!Ctor->isUserProvided() || Ctor->isInheritingConstructor()) &&
+      Ctor->hasBody() && ScannedImplicitCtors.insert(Ctor).second)
+    scanConstructorForTargetRegions(Ctor, ParentName);
 
-  // Regions in a lambda are named after its enclosing non-closure function
-  // (CurFuncDecl) or, when there is none, after the call operator itself.
+  // If this is a lambda function, look into its body.
   if (const auto *L = dyn_cast<LambdaExpr>(S)) {
     const CXXMethodDecl *CallOp = L->getCallOperator();
-    if (const auto *Parent =
-            dyn_cast_or_null<FunctionDecl>(CallOp->getNonClosureContext())) {
-      ParentName = getTargetRegionParentName(Parent);
-    } else {
-      // Specializations of a generic lambda are scanned as top-level decls.
-      if (CallOp->isTemplated())
-        return;
-      ParentName = CGM.getMangledName(GlobalDecl(CallOp));
-    }
+    // Specializations of a generic lambda are scanned as top-level decls.
+    if (CallOp->isTemplated())
+      return;
+    ParentName = getTargetRegionParentName(CallOp);
     S = L->getBody();
   }
 
@@ -11680,12 +11681,9 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
-  if (isAssumedToBeNotEmitted(cast<ValueDecl>(GD.getDecl()),
-                              CGM.getLangOpts().OpenMPIsTargetDevice))
-    return true;
-
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
-    return false;
+    return isAssumedToBeNotEmitted(cast<ValueDecl>(GD.getDecl()),
+                                   /*IsDevice=*/false);
 
   // Check if there are Ctors/Dtors in this declaration and look for target
   // regions in it. We use the complete variant to produce the kernel name
@@ -11703,6 +11701,9 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
   // Lambdas in the initializer are reached from nowhere else.
   if (const Expr *Init = VD->getInit())
     scanForTargetRegionsFunctions(Init, CGM.getMangledName(GD));
+
+  if (isAssumedToBeNotEmitted(VD, /*IsDevice=*/true))
+    return true;
 
   // Do not emit variable if it is not marked as declare target.
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =

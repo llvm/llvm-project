@@ -1426,8 +1426,9 @@ public:
                                           bool IsOffloadEntry,
                                           const RegionCodeGenTy &CodeGen);
 
-  /// Returns the parent name of the target regions in \a FD; constructors and
-  /// destructors use their complete variant.
+  /// Returns the parent name of the target regions in \a FD: its enclosing
+  /// non-closure function if \a FD is a closure, otherwise \a FD itself;
+  /// constructors and destructors use their complete variant.
   StringRef getTargetRegionParentName(const FunctionDecl *FD) const;
 
   /// Emit the target offloading code associated with \a D. The emitted
