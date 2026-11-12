@@ -5474,7 +5474,6 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   auto *Regs = Subtarget.getSpecialRegisters();
-  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
@@ -5482,15 +5481,7 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
 
   SDValue Chain = Op.getOperand(0);
   SDValue NewSP = Op.getOperand(1);
-  SDValue Backchain;
   SDLoc DL(Op);
-
-  if (StoreBackchain) {
-    SDValue OldSP = DAG.getCopyFromReg(
-        Chain, DL, Regs->getStackPointerRegister(), MVT::i64);
-    Backchain = DAG.getLoad(MVT::i64, DL, Chain, getBackchainAddress(OldSP, DAG),
-                            MachinePointerInfo());
-  }
 
   // XPLINK: @@ALCAXP (lowerDYNAMIC_STACKALLOC_XPLINK) moves the frame header
   // (register save area and reserved words at SP + bias) down with the stack
@@ -5505,10 +5496,21 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
     SDValue Glue;
     Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R1D, NewSP, Glue);
     Glue = Chain.getValue(1);
-    Chain = DAG.getNode(SystemZISD::XPLINK_STACKRESTORE, DL, MVT::Other, Chain,
-                        Glue);
-  } else
-    Chain = DAG.getCopyToReg(Chain, DL, Regs->getStackPointerRegister(), NewSP);
+    return DAG.getNode(SystemZISD::XPLINK_STACKRESTORE, DL, MVT::Other, Chain,
+                       Glue);
+  }
+
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
+  SDValue Backchain;
+  if (StoreBackchain) {
+    SDValue OldSP = DAG.getCopyFromReg(
+        Chain, DL, Regs->getStackPointerRegister(), MVT::i64);
+    Backchain =
+        DAG.getLoad(MVT::i64, DL, Chain, getBackchainAddress(OldSP, DAG),
+                    MachinePointerInfo());
+  }
+
+  Chain = DAG.getCopyToReg(Chain, DL, Regs->getStackPointerRegister(), NewSP);
 
   if (StoreBackchain)
     Chain = DAG.getStore(Chain, DL, Backchain, getBackchainAddress(NewSP, DAG),

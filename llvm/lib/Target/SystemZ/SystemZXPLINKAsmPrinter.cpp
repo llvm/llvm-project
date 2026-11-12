@@ -24,7 +24,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -160,7 +159,7 @@ void SystemZXPLINKAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case SystemZ::XPLINK_STACKRESTORE: {
     if (!StackRestoreStub)
-      report_fatal_error("stack restore without llvm.stackrestore in module");
+      StackRestoreStub = OutContext.createTempSymbol("stackrestore");
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LARL)
                                      .addReg(SystemZ::R3D)
                                      .addExpr(MCSymbolRefExpr::create(
@@ -282,6 +281,15 @@ void SystemZXPLINKAsmPrinter::emitXXStructorList(const DataLayout &DL,
       OutStreamer->emitValue(ADAFuncRefExpr, PointerSizeInBytes);
     }
   }
+}
+
+bool SystemZXPLINKAsmPrinter::doFinalization(Module &M) {
+  // The stack restore stub follows the last function. It must be emitted
+  // before the debug information is finalized, which may end the code section
+  // (emitEndOfAsmFile is too late).
+  if (StackRestoreStub)
+    emitStackRestoreStub();
+  return SystemZAsmPrinter::doFinalization(M);
 }
 
 void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -703,13 +711,6 @@ void SystemZXPLINKAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const Function *MainFn = M.getFunction("main");
       MainFn && !MainFn->isDeclaration())
     emitCELQMAIN(*MainFn);
-  // Like CELQMAIN, the stack restore stub is emitted at the start of the file.
-  // It is needed by every function that uses llvm.stackrestore.
-  for (const Function &F : M)
-    if (F.getIntrinsicID() == Intrinsic::stackrestore && !F.use_empty()) {
-      emitStackRestoreStub();
-      break;
-    }
   AsmPrinter::emitStartOfAsmFile(M);
 }
 
@@ -741,7 +742,6 @@ void SystemZXPLINKAsmPrinter::emitStackRestoreStub() {
   OutStreamer->emitIntValueInHex(0x00C300C500C500, 7);
   OutStreamer->AddComment("Mark Type C'4'");
   OutStreamer->emitInt8(0xF4);
-  StackRestoreStub = OutContext.createTempSymbol("stackrestore");
   OutStreamer->emitLabel(StackRestoreStub);
 
   SystemZXPLINK64Registers Regs;
