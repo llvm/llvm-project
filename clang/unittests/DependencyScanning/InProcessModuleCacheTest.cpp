@@ -33,7 +33,8 @@ TEST(InProcessModuleCache, ReadWriteInvalidation) {
   EXPECT_EQ(Buf->getBuffer(), "original\n");
 
   auto NewBuf = llvm::MemoryBuffer::getMemBufferCopy("modified\n", Path);
-  ASSERT_EQ(ModCache->write(Path, *NewBuf, Size, ModTime), std::error_code{});
+  ASSERT_EQ(ModCache->write(Path, std::move(NewBuf), Size, ModTime).getError(),
+            std::error_code{});
 
   // Writing a new buffer should not invalidate the previously-read buffer.
   EXPECT_EQ(Buf->getBuffer(), "original\n");
@@ -73,4 +74,43 @@ TEST(InProcessModuleCache, ReadReadInvalidation) {
   // All read buffers should point to the same memory.
   EXPECT_EQ(Buf1->getBuffer().begin(), Buf2->getBuffer().begin());
   EXPECT_EQ(Buf1->getBuffer().end(), Buf2->getBuffer().end());
+}
+
+TEST(InProcessModuleCache, WriteReturnsSharedBuffer) {
+  ModuleCacheEntries Entries;
+  AtomicLineLogger Logger;
+  std::shared_ptr<ModuleCache> ModCache =
+      makeInProcessModuleCache(Entries, Logger);
+
+  llvm::SmallString<256> Path;
+  llvm::sys::fs::createUniquePath("M-%%%%%%.pcm", Path, /*MakeAbsolute=*/true);
+
+  off_t Size;
+  time_t ModTime;
+  std::unique_ptr<llvm::MemoryBuffer> Written;
+  {
+    std::string Contents = "contents\n";
+    auto WrittenOrErr = ModCache->write(
+        Path, llvm::MemoryBuffer::getMemBufferCopy(Contents, Path), Size,
+        ModTime);
+    ASSERT_EQ(WrittenOrErr.getError(), std::error_code{});
+    Written = std::move(*WrittenOrErr);
+  }
+  // The returned buffer doesn't reference the written contents.
+  ASSERT_TRUE(Written);
+  EXPECT_EQ(Written->getBuffer(), "contents\n");
+
+  // Reads share the memory of the written buffer.
+  std::unique_ptr<llvm::MemoryBuffer> Read;
+  ASSERT_THAT_ERROR(ModCache->read(Path, Size, ModTime).moveInto(Read),
+                    llvm::Succeeded());
+  EXPECT_EQ(Read->getBufferStart(), Written->getBufferStart());
+
+  // Writing the same PCM again shares the memory of the first write.
+  auto RewrittenOrErr = ModCache->write(
+      Path, llvm::MemoryBuffer::getMemBufferCopy("contents\n", Path), Size,
+      ModTime);
+  ASSERT_EQ(RewrittenOrErr.getError(), std::error_code{});
+  ASSERT_TRUE(*RewrittenOrErr);
+  EXPECT_EQ((*RewrittenOrErr)->getBufferStart(), Written->getBufferStart());
 }

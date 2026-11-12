@@ -338,7 +338,9 @@ TEST_F(ModuleCacheTest, WriteReportsFullSize) {
   StringRef Contents = "contents\n";
   off_t Size;
   time_t ModTime;
-  ASSERT_EQ(writeImpl(Path, MemoryBufferRef(Contents, Path), Size, ModTime),
+  ASSERT_EQ(writeImpl(Path, MemoryBufferRef(Contents, Path), Size, ModTime,
+                      /*ReadBack=*/false)
+                .getError(),
             std::error_code{});
   EXPECT_EQ(Size, off_t(Contents.size()));
 }
