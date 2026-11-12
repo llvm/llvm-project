@@ -141,7 +141,9 @@ set(LLVM_CONFIG_BINARY_DIR "\${LLVM_INSTALL_PREFIX}")
 extend_path(LLVM_CONFIG_CMAKE_DIR "\${LLVM_INSTALL_PREFIX}" "${LLVM_INSTALL_PACKAGE_DIR}")
 extend_path(LLVM_CONFIG_TOOLS_BINARY_DIR "\${LLVM_INSTALL_PREFIX}" "${LLVM_TOOLS_INSTALL_DIR}")
 
-# Generate a default location for lit
+# Generate a default location for lit, or none if it is not installed, rather
+# than the one in the build tree from above.
+set(LLVM_CONFIG_DEFAULT_EXTERNAL_LIT)
 if (LLVM_INSTALL_UTILS AND LLVM_BUILD_UTILS)
   if (CMAKE_HOST_WIN32 AND NOT CYGWIN)
     set(LLVM_CONFIG_DEFAULT_EXTERNAL_LIT "${LLVM_CONFIG_TOOLS_BINARY_DIR}/llvm-lit.py")
