@@ -615,7 +615,8 @@ int f29(int i, int j, int k, int l, int m) {
   l29->s1[m] = 2;
   char input[] = {'a', 'b', 'c', 'd'};
   memcpy(l29->s1, input, 4);
-  clang_analyzer_eval(m29[0].s3[0] == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(m29[0].s3[0] == 1); // expected-warning{{UNKNOWN}}\
+  expected-warning{{Potential leak of memory pointed to by field 's4'}}
   clang_analyzer_eval(m29[0].s3[1] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(m29[0].s3[2] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(m29[0].s3[3] == 1); // expected-warning{{UNKNOWN}}
@@ -627,7 +628,7 @@ int f29(int i, int j, int k, int l, int m) {
   clang_analyzer_eval(m29[i].s3[1] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(m29[i].s3[2] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(m29[i].s3[3] == 1); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(m29[j].s3[k] == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(m29[j].s3[k] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(l29->s1[m] == 2); // expected-warning{{UNKNOWN}}
   // FIXME: Should warn that m29[i].s4 leaks. But not on the previous line,
   // because l29 and m29 alias.
