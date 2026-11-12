@@ -1286,3 +1286,38 @@ define i32 @pdep_single_bit_i32_minsize(i32 %mask, i32 %n) nounwind minsize {
   %res = call i32 @llvm.pdep.i32(i32 %bit, i32 %mask)
   ret i32 %res
 }
+
+define i64 @pdep_single_bit_i64_minsize(i64 %mask, i64 %n) minsize {
+; SLOW-ZNVER-LABEL: pdep_single_bit_i64_minsize:
+; SLOW-ZNVER:       # %bb.0:
+; SLOW-ZNVER-NEXT:    pushq $1
+; SLOW-ZNVER-NEXT:    .cfi_adjust_cfa_offset 8
+; SLOW-ZNVER-NEXT:    popq %rax
+; SLOW-ZNVER-NEXT:    .cfi_adjust_cfa_offset -8
+; SLOW-ZNVER-NEXT:    shlxq %rsi, %rax, %rax
+; SLOW-ZNVER-NEXT:    pdepq %rdi, %rax, %rax
+; SLOW-ZNVER-NEXT:    retq
+;
+; SLOW-BDVER4-LABEL: pdep_single_bit_i64_minsize:
+; SLOW-BDVER4:       # %bb.0:
+; SLOW-BDVER4-NEXT:    pushq $1
+; SLOW-BDVER4-NEXT:    .cfi_adjust_cfa_offset 8
+; SLOW-BDVER4-NEXT:    popq %rax
+; SLOW-BDVER4-NEXT:    .cfi_adjust_cfa_offset -8
+; SLOW-BDVER4-NEXT:    shlxq %rsi, %rax, %rax
+; SLOW-BDVER4-NEXT:    pdepq %rdi, %rax, %rax
+; SLOW-BDVER4-NEXT:    retq
+;
+; FAST-LABEL: pdep_single_bit_i64_minsize:
+; FAST:       # %bb.0:
+; FAST-NEXT:    pushq $1
+; FAST-NEXT:    .cfi_adjust_cfa_offset 8
+; FAST-NEXT:    popq %rax
+; FAST-NEXT:    .cfi_adjust_cfa_offset -8
+; FAST-NEXT:    shlxq %rsi, %rax, %rax
+; FAST-NEXT:    pdepq %rdi, %rax, %rax
+; FAST-NEXT:    retq
+  %bit = shl i64 1, %n
+  %r = call i64 @llvm.pdep.i64(i64 %bit, i64 %mask)
+  ret i64 %r
+}
