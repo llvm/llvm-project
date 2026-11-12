@@ -145,15 +145,10 @@ public:
   ///   A pointer that contains the offset from which the data will be decoded
   ///   from that gets updated as data gets decoded.
   ///
-  /// \param[out] uuid_mismatch
-  ///   Set to true if a cache file exists but the UUID didn't match, false
-  ///   otherwise.
-  ///
   /// \return
   ///   True if the symbol table is successfully decoded and can be used,
   ///   false otherwise.
-  bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
-              bool &uuid_mismatch);
+  bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr);
 
   /// Encode this object into a data encoder object.
   ///

@@ -51,10 +51,31 @@ class SymtabStateTestCase(TestBase):
         del main_module
         self.dbg.DeleteTarget(target)
         del target
-        lldb.SBModule.GarbageCollectAllocatedModules()
+        state = self.get_symtab_state_in_new_target()
+        self.assertTrue(state & lldb.eSymtabStateLoadedFromCache)
 
+        # A cache file that can't be decoded must be replaced, not left in
+        # place where it would keep the symbol table from ever being cached.
+        cache_file = self.get_module_cache_files("a.out")[0]
+        with open(cache_file, "r+b") as f:
+            f.truncate(os.path.getsize(cache_file) // 2)
+        state = self.get_symtab_state_in_new_target()
+        self.assertTrue(state & lldb.eSymtabStateParsedFromObjectFile)
+        self.assertTrue(state & lldb.eSymtabStateSavedToCache)
+        state = self.get_symtab_state_in_new_target()
+        self.assertTrue(state & lldb.eSymtabStateLoadedFromCache)
+
+    def get_symtab_state_in_new_target(self):
+        """
+        Return the main module's symtab state from a newly created target,
+        after releasing the modules of any previous target.
+        """
+        lldb.SBModule.GarbageCollectAllocatedModules()
         target = self.createTestTarget(load_dependent_modules=False)
         main_module = target.GetModuleAtIndex(0)
         self.assertTrue(main_module.IsValid())
         main_module.GetNumSymbols()
-        self.assertTrue(main_module.GetSymtabState() & lldb.eSymtabStateLoadedFromCache)
+        state = main_module.GetSymtabState()
+        del main_module
+        self.dbg.DeleteTarget(target)
+        return state

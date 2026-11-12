@@ -1287,19 +1287,15 @@ bool Symtab::Encode(DataEncoder &encoder) const {
   return true;
 }
 
-bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
-                    bool &signature_mismatch) {
-  signature_mismatch = false;
+bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr) {
   CacheSignature signature;
   StringTableReader strtab;
   { // Scope for "elapsed" object below so it can measure the time parse.
     ElapsedTime elapsed(m_objfile->GetModule()->GetSymtabParseTime());
     if (!signature.Decode(data, offset_ptr))
       return false;
-    if (CacheSignature(m_objfile) != signature) {
-      signature_mismatch = true;
+    if (CacheSignature(m_objfile) != signature)
       return false;
-    }
     // We now decode the string table for all strings in the data cache file.
     if (!strtab.Decode(data, offset_ptr))
       return false;
@@ -1368,10 +1364,11 @@ bool Symtab::LoadFromCache() {
                      mem_buffer_up->getBufferSize(),
                      m_objfile->GetByteOrder(),
                      m_objfile->GetAddressByteSize());
-  bool signature_mismatch = false;
   lldb::offset_t offset = 0;
-  const bool result = Decode(data, &offset, signature_mismatch);
-  if (signature_mismatch)
+  const bool result = Decode(data, &offset);
+  // SaveToCache won't overwrite an existing cache file, so remove any file
+  // that can't be used or it will stop this symbol table from being cached.
+  if (!result)
     cache->RemoveCacheFile(GetCacheKey());
   if (result)
     SetWasLoadedFromCache();
