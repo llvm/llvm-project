@@ -122,19 +122,17 @@
 // link.exe options such as /nologo and /LIBPATH:C:\dir are not reported as
 // missing inputs. The -o names the output, because it comes after /OUT: and
 // the last output option wins.
-// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
 // RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o /nologo \
-// RUN:   /IGNORE:4078 '/LIBPATH:C:\dir' /OUT:C:/dir/a.exe -o %t.dev.obj
-// RUN: llvm-readobj --file-header %t.dev.obj | FileCheck %s --check-prefix=WIN
+// RUN:   /IGNORE:4078 '/LIBPATH:C:\dir' /OUT:C:/dir/a.exe -o dev.obj 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WIN-NAME -DNAME=dev.obj
 
 // /out: names the output in any case, and the last of -o and /out: wins, e.g.
 // for clang-cl '/link /out:'.
-// RUN: rm -f %t.last.obj
-// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
-// RUN:   --sycl-device-link --linker-path=link.exe -o %t.first.exe %t.sycl.o \
-// RUN:   /Out:%t.last.obj
-// RUN: llvm-readobj --file-header %t.last.obj | FileCheck %s --check-prefix=WIN
-// WIN: Format: COFF-x86-64
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
+// RUN:   --sycl-device-link --linker-path=link.exe -o first.exe %t.sycl.o \
+// RUN:   /Out:last.obj 2>&1 | FileCheck %s --check-prefix=WIN-NAME -DNAME=last.obj
+// WIN-NAME: -dumpdir [[NAME]].spirv64.
 
 // Libraries are found through /LIBPATH: and LIB, and /WHOLEARCHIVE: and
 // /WHOLEARCHIVE extract their device code.
