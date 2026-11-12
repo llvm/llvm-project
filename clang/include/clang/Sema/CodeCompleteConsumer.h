@@ -1174,6 +1174,10 @@ public:
   /// Whether to include global (top-level) declaration results.
   bool includeGlobals() const { return CodeCompleteOpts.IncludeGlobals; }
 
+  bool includeHLSLSwizzleCompletions() const {
+    return CodeCompleteOpts.IncludeHLSLSwizzleCompletions;
+  }
+
   /// Whether to include declarations in namespace contexts (including
   /// the global namespace). If this is false, `includeGlobals()` will be
   /// ignored.
