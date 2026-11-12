@@ -39,3 +39,7 @@ endif()
 if(Python3_RPATH)
   set_property(TARGET APITests APPEND PROPERTY BUILD_RPATH "${Python3_RPATH}")
 endif()
+
+if(TARGET lldb-python)
+  add_dependencies(APITests lldb-python)
+endif()
