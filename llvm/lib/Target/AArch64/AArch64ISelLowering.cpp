@@ -22412,18 +22412,25 @@ static SDValue performReinterpretCastCombine(SDNode *N) {
   return SDValue();
 }
 
+// Match:
+//   Lo = ANY_EXTEND_VECTOR_INREG(Src) or UUNPKLO(Src)
+//   (Even, Odd) = VECTOR_DEINTERLEAVE(Lo, UUNPKHI(Src))
+//   AND(Even, SPLAT(Mask)) or AND(Odd, SPLAT(Mask))
+// Replace the AND with:
+//   Even -> BITCAST(TRN1(Src, Zero))
+//   Odd  -> BITCAST(TRN2(Src, Zero))
+// Mask clears the extra upper bits
 static SDValue performSVEDeinterleaveExtendCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
 
-  if (DCI.getDAGCombineLevel() != AfterLegalizeTypes)
+  if (DCI.getDAGCombineLevel() != AfterLegalizeTypes &&
+      DCI.getDAGCombineLevel() != AfterLegalizeVectorOps)
     return SDValue();
 
   EVT VT = N->getValueType(0);
 
   bool IsSupportedType =
-    VT == MVT::nxv8i16 ||
-    VT == MVT::nxv4i32 ||
-    VT == MVT::nxv2i64;
+      VT == MVT::nxv8i16 || VT == MVT::nxv4i32 || VT == MVT::nxv2i64;
 
   if (!IsSupportedType)
     return SDValue();
@@ -22435,20 +22442,20 @@ static SDValue performSVEDeinterleaveExtendCombine(
   unsigned ExpectedSplatValue = 0;
   EVT ExpectedSourceVT;
   switch (VT.getSimpleVT().SimpleTy) {
-    case MVT::nxv8i16:
-      ExpectedSplatValue = 0xff;
-      ExpectedSourceVT = MVT::nxv16i8;
-      break;
-    case MVT::nxv4i32:
-      ExpectedSplatValue = 0xffff;
-      ExpectedSourceVT = MVT::nxv8i16;
-      break;
-    case MVT::nxv2i64:
-      ExpectedSplatValue = 0xffffffff;
-      ExpectedSourceVT = MVT::nxv4i32;
-      break;
-    default:
-      return SDValue();
+  case MVT::nxv8i16:
+    ExpectedSplatValue = 0xff;
+    ExpectedSourceVT = MVT::nxv16i8;
+    break;
+  case MVT::nxv4i32:
+    ExpectedSplatValue = 0xffff;
+    ExpectedSourceVT = MVT::nxv8i16;
+    break;
+  case MVT::nxv2i64:
+    ExpectedSplatValue = 0xffffffff;
+    ExpectedSourceVT = MVT::nxv4i32;
+    break;
+  default:
+    return SDValue();
   }
 
   auto *SplatValue = dyn_cast<ConstantSDNode>(Splat.getOperand(0));
@@ -22462,12 +22469,17 @@ static SDValue performSVEDeinterleaveExtendCombine(
   if (Deinterleave.getNumOperands() != 2)
     return SDValue();
 
-  if (Deinterleave->getNumValues() != 2)
-    return SDValue();
+  assert(Deinterleave->getNumValues() == 2 &&
+         "VECTOR_DEINTERLEAVE with 2 operands should have 2 results");
 
   SDValue VectorExtend = Deinterleave.getOperand(0);
   SDValue UunpkHi = Deinterleave.getOperand(1);
-  if (VectorExtend.getOpcode() != ISD::ANY_EXTEND_VECTOR_INREG ||
+
+  bool IsSupportedVectorExtendOpcode =
+      VectorExtend.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
+      VectorExtend.getOpcode() == AArch64ISD::UUNPKLO;
+
+  if (!IsSupportedVectorExtendOpcode ||
       UunpkHi.getOpcode() != AArch64ISD::UUNPKHI)
     return SDValue();
 
@@ -22483,7 +22495,8 @@ static SDValue performSVEDeinterleaveExtendCombine(
 
   SDLoc DL(N);
   SDValue Zero = DAG.getConstant(0, DL, ExpectedSourceVT);
-  SDValue Transpose = DAG.getNode(TrnOpcode, DL, ExpectedSourceVT, Source, Zero);
+  SDValue Transpose =
+      DAG.getNode(TrnOpcode, DL, ExpectedSourceVT, Source, Zero);
 
   SDValue Result = DAG.getNode(ISD::BITCAST, DL, VT, Transpose);
   return Result;
@@ -31897,105 +31910,6 @@ static bool isDeinterleave4ForWideningUToFP(SDNode *N) {
   return llvm::all_of(Users, [](SDNode *User) { return User != nullptr; });
 }
 
-static SDValue
-tryPartialSVEDeinterleave(SDNode *N,
-                          TargetLowering::DAGCombinerInfo &DCI,
-                          SelectionDAG &DAG) {
-  if (!DCI.isBeforeLegalize())
-    return SDValue();
-
-  if (N->getOpcode() != ISD::VECTOR_DEINTERLEAVE)
-    return SDValue();
-
-  if (N->getNumOperands() != 4 || N->getNumValues() != 4)
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-
-  bool IsSupportedType =
-    VT == MVT::nxv1i64 ||
-    VT == MVT::nxv2i32 ||
-    VT == MVT::nxv4i16 ||
-    VT == MVT::nxv8i8;
-
-  if (!IsSupportedType)
-    return SDValue();
-
-  // Ensure each extract is consecutive and from the same widevec
-  unsigned MinNumElements = VT.getVectorMinNumElements();
-  SDValue Op0 = N->getOperand(0);
-  SDValue WideVec = Op0->getOperand(0);
-
-  for (unsigned I = 0; I != N->getNumOperands(); ++I) {
-    SDValue OpI = N->getOperand(I);
-    if (OpI.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        OpI->getOperand(0) != WideVec)
-      return SDValue();
-
-    if (OpI->getConstantOperandVal(1) != I * MinNumElements)
-      return SDValue();
-  }
-
-  switch (VT.getSimpleVT().SimpleTy) {
-    case MVT::nxv1i64:
-      break;
-    case MVT::nxv2i32:
-      break;
-    case MVT::nxv4i16: // NOTE: This is the current implementation
-      break;
-    case MVT::nxv8i8:
-      break;
-    default:
-      return SDValue();
-  }
-
-  if (WideVec.getValueType() != MVT::nxv16i16)
-    return SDValue();
-
-  auto *Load = dyn_cast<LoadSDNode>(WideVec);
-  if (!Load || !Load->hasNUsesOfValue(N->getNumOperands(), 0) ||
-      !Load->isSimple() || !ISD::isNormalLoad(Load) ||
-      !Load->getOffset().isUndef())
-    return SDValue();
-
-  SDLoc DL(N);
-  EVT FullVecType = MVT::nxv8i16;
-  EVT PredType = MVT::nxv8i1;
-  SDValue Pred = DAG.getConstant(1, DL, PredType);
-
-  SmallVector<EVT, 3> LoadResultTypes(2, FullVecType);
-  LoadResultTypes.push_back(MVT::Other);
-  SDValue LoadOperands[] = {
-      Load->getChain(),
-      DAG.getConstant(Intrinsic::aarch64_sve_ld2_sret, DL, MVT::i32),
-      Pred,
-      Load->getBasePtr()};
-  SDValue NewLoad = DAG.getMemIntrinsicNode(
-      ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(LoadResultTypes), LoadOperands,
-      Load->getMemoryVT(), Load->getMemOperand());
-
-  SDValue AC = NewLoad.getValue(0);
-  SDValue BD = NewLoad.getValue(1);
-  SDValue ACLo = DAG.getExtractSubvector(DL, VT, AC, 0);
-  SDValue ACHi = DAG.getExtractSubvector(DL, VT, AC, MinNumElements);
-  SDValue BDLo = DAG.getExtractSubvector(DL, VT, BD, 0);
-  SDValue BDHi = DAG.getExtractSubvector(DL, VT, BD, MinNumElements);
-
-  SDVTList DeinterleaveTypes = DAG.getVTList(VT, VT);
-  SDValue DeinterleaveAC = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                                       DeinterleaveTypes, {ACLo, ACHi});
-  SDValue DeinterleaveBD = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                                       DeinterleaveTypes, {BDLo, BDHi});
-
-  SmallVector<SDValue, 4> Results = {
-      DeinterleaveAC.getValue(0), DeinterleaveBD.getValue(0),
-      DeinterleaveAC.getValue(1), DeinterleaveBD.getValue(1)};
-
-  // preserve memory chain
-  DAG.ReplaceAllUsesOfValueWith(WideVec.getValue(1), NewLoad.getValue(2));
-  return DCI.CombineTo(N, Results, false);
-}
-
 static SDValue performLegalizedVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   // Type legalization splits a wide load into consecutive legal loads. Combine
@@ -32087,9 +32001,6 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
 
 static SDValue performVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
-  if (SDValue Res = tryPartialSVEDeinterleave(N, DCI, DAG))
-    return Res;
-
   if (SDValue Res = performLegalizedVectorDeinterleaveCombine(N, DCI, DAG))
     return Res;
 
