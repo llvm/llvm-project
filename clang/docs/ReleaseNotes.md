@@ -820,6 +820,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling floating-point
+  exception behavior via the appropriate flags or pragmas on supported targets. (#GH128239)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
