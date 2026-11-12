@@ -3782,6 +3782,9 @@ bool Compiler<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
       return false;
     return this->emitInitField(*Field->T, Field->Offset, E);
   }
+  if (E->isStoredAsStringLiteral())
+    return this->emitGetStringPtr(E->createStringLiteral(Ctx.getASTContext()),
+                                  E);
 
   PrimType T = classifyPrim(E->getType());
   return this->visitAPValue(E->getAPValue(), T, E);

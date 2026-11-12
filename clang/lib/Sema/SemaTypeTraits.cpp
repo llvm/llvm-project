@@ -338,6 +338,10 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   switch (UTT) {
   default:
     llvm_unreachable("not a UTT");
+    // Mangling a type does not require its definition.
+  case UTT_MangledName:
+    return true;
+
     // is_complete_type somewhat obviously cannot require a complete type.
   case UTT_IsCompleteType:
     // Fall-through
@@ -631,6 +635,14 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
   default:
     return false;
   }
+}
+
+static std::string ComputeMangledName(Sema &S, QualType T) {
+  std::unique_ptr<MangleContext> MC(S.Context.createMangleContext());
+  std::string MangledName;
+  llvm::raw_string_ostream Out(MangledName);
+  MC->mangleCanonicalTypeName(T, Out);
+  return MangledName;
 }
 
 static ComparisonCategoryResult EvaluateTypeOrder(Sema &S, QualType LHS,
@@ -1430,6 +1442,21 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
   return false;
 }
 
+static std::string
+EvaluateStringLiteralTypeTrait(Sema &S, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               bool IsDependent) {
+  if (IsDependent)
+    return {};
+
+  switch (Kind) {
+  case UTT_MangledName:
+    return ComputeMangledName(S, Args[0]->getType());
+  default:
+    llvm_unreachable("not a string literal type trait");
+  }
+}
+
 static ExprResult
 EvaluateStrongOrderingTypeTrait(Sema &S, TypeTrait Kind, SourceLocation KWLoc,
                                 ArrayRef<TypeSourceInfo *> Args,
@@ -1515,6 +1542,7 @@ enum class TypeTraitReturnType {
   Bool,
   SizeT,
   StrongOrdering,
+  StringLiteral,
 };
 
 static TypeTraitReturnType GetReturnType(TypeTrait Kind) {
@@ -1522,6 +1550,8 @@ static TypeTraitReturnType GetReturnType(TypeTrait Kind) {
     return TypeTraitReturnType::SizeT;
   if (Kind == TypeTrait::BTT_TypeOrder)
     return TypeTraitReturnType::StrongOrdering;
+  if (Kind == TypeTrait::UTT_MangledName)
+    return TypeTraitReturnType::StringLiteral;
   return TypeTraitReturnType::Bool;
 }
 
@@ -1561,6 +1591,13 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
   case TypeTraitReturnType::StrongOrdering:
     return EvaluateStrongOrderingTypeTrait(*this, Kind, KWLoc, Args, RParenLoc,
                                            Dependent);
+  case TypeTraitReturnType::StringLiteral: {
+    std::string Result =
+        EvaluateStringLiteralTypeTrait(*this, Kind, Args, Dependent);
+    QualType ResultTy = Context.getPointerType(Context.CharTy.withConst());
+    return TypeTraitExpr::Create(Context, ResultTy, KWLoc, Kind, Args,
+                                 RParenLoc, Result);
+  }
   }
   llvm_unreachable("unhandled type trait return type");
 }
