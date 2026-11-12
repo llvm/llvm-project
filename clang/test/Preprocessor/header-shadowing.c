@@ -15,10 +15,10 @@
 // SHADOWING-NOT: {{.*}} warning: multiple candidates for header 'stdio.h' found; directory '{{.*}}system1' chosen, ignoring others including '{{.*}}system2' [-Wshadow-header]
 // SHADOWING: warning: system1/stdio.h included!
 
-/// Check that the diagnostic is only performed once in MSVC compatibility mode.
+/// Check that the diagnostic is only performed once in MSVC header search mode.
 /// The file found in the includer's directory is the one that ends up being
 /// used, so the candidates found in the search paths must not be reported.
-// RUN: %clang_cc1 -fms-compatibility -Wshadow-header -Eonly %t/t.c \
+// RUN: %clang_cc1 -fheader-search=microsoft -Wshadow-header -Eonly %t/t.c \
 // RUN: -I %t/ms_include1 -I %t/ms_include2 2>&1 | FileCheck %s \
 // RUN: --check-prefix=SHADOWING-MS --implicit-check-not="multiple candidates"
 
