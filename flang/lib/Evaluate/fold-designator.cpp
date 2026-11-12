@@ -14,6 +14,49 @@ namespace Fortran::evaluate {
 DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(OffsetSymbol)
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
+    const Designator<Type<TypeCategory::Character>> &designator,
+    ConstantSubscript which) {
+  const int kind{designator.kind()};
+  return common::visit(
+      common::visitors{
+          [&, kind](const Substring &ss) {
+            if (const auto *dataRef{ss.GetParentIf<DataRef>()}) {
+              if (auto result{FoldDesignator(*dataRef, which)}) {
+                if (auto start{ToInt64(ss.lower())}) {
+                  std::optional<ConstantSubscript> end;
+                  auto len{dataRef->LEN()};
+                  if (ss.upper()) {
+                    end = ToInt64(*ss.upper());
+                  } else if (len) {
+                    end = ToInt64(*len);
+                  }
+                  if (end) {
+                    if (*start < 1) {
+                      isOutOfRange_ = true;
+                    }
+                    result->Augment(kind * (*start - 1));
+                    result->set_size(
+                        *end >= *start ? kind * (*end - *start + 1) : 0);
+                    if (len) {
+                      if (auto lenVal{ToInt64(*len)}) {
+                        if (*end > *lenVal) {
+                          isOutOfRange_ = true;
+                        }
+                      }
+                    }
+                    return result;
+                  }
+                }
+              }
+            }
+            return std::optional<OffsetSymbol>{};
+          },
+          [&](const auto &x) { return FoldDesignator(x, which); },
+      },
+      designator.u);
+}
+
+std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
     const Symbol &symbol, ConstantSubscript which) {
   // A named constant is used through its ultimate symbol: the local alias
   // of a use- or host-associated named constant has no object details of
@@ -338,38 +381,31 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
       } else if (auto type{DynamicType::From(symbol)}) {
         if (auto elementBytes{
                 ToInt64(type->MeasureSizeInBytes(context, true))}) {
-          if (auto *zExpr{std::get_if<Expr<SomeComplex>>(&result->u)}) {
+          if (auto *zExpr{
+                  std::get_if<Expr<Type<TypeCategory::Complex>>>(&result->u)}) {
             if (size * 2 > static_cast<std::size_t>(*elementBytes)) {
               return result;
             } else if (offset == 0 || offset * 2 == *elementBytes) {
               // Pick a COMPLEX component
               auto part{
                   offset == 0 ? ComplexPart::Part::RE : ComplexPart::Part::IM};
-              return common::visit(
-                  [&](const auto &z) -> std::optional<Expr<SomeType>> {
-                    using PartType = typename ResultType<decltype(z)>::Part;
-                    const int kind{z.kind()};
-                    return AsGenericExpr(Designator<PartType>{kind,
-                        ComplexPart{
-                            ExtractDataRef(std::move(*zExpr)).value(), part}});
-                  },
-                  zExpr->u);
+              using PartType = Type<TypeCategory::Complex>::Part;
+              const int kind{zExpr->kind()};
+              return AsGenericExpr(Designator<PartType>{kind,
+                  ComplexPart{
+                      ExtractDataRef(std::move(*zExpr)).value(), part}});
             }
           } else if (auto *cExpr{
-                         std::get_if<Expr<SomeCharacter>>(&result->u)}) {
+                         std::get_if<Expr<Type<TypeCategory::Character>>>(
+                             &result->u)}) {
             if (offset > 0 || size != static_cast<std::size_t>(*elementBytes)) {
               // Select a substring
-              return common::visit(
-                  [&](const auto &x) -> std::optional<Expr<SomeType>> {
-                    using T = typename std::decay_t<decltype(x)>::Result;
-                    const int kind{x.kind()};
-                    return AsGenericExpr(Designator<T>{kind,
-                        Substring{ExtractDataRef(std::move(*cExpr)).value(),
-                            MakeSubscriptIntExpr(1 + (offset / kind)),
-                            MakeSubscriptIntExpr(
-                                1 + ((offset + size - 1) / kind))}});
-                  },
-                  cExpr->u);
+              using T = Type<TypeCategory::Character>;
+              const int kind{cExpr->kind()};
+              return AsGenericExpr(Designator<T>{kind,
+                  Substring{ExtractDataRef(std::move(*cExpr)).value(),
+                      MakeSubscriptIntExpr(1 + (offset / kind)),
+                      MakeSubscriptIntExpr(1 + ((offset + size - 1) / kind))}});
             }
           }
         }

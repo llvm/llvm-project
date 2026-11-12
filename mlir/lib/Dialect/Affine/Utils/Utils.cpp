@@ -580,22 +580,11 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
 
   // Construct the new upper bound value map.
   AffineMap oldLbMap = op.getLowerBoundMap();
-  // The upper bound can have multiple results. To use
-  // AffineValueMap::difference, we need to have the same number of results in
-  // both lower and upper bound maps. So, we just create a value map for the
-  // lower bound with the only available lower bound result repeated to pad up
-  // to the number of upper bound results.
-  SmallVector<AffineExpr> lbExprs(op.getUpperBoundMap().getNumResults(),
-                                  op.getLowerBoundMap().getResult(0));
   AffineValueMap lbMap(oldLbMap, op.getLowerBoundOperands());
-  AffineMap paddedLbMap =
-      AffineMap::get(oldLbMap.getNumDims(), oldLbMap.getNumSymbols(), lbExprs,
-                     op.getContext());
-  AffineValueMap paddedLbValueMap(paddedLbMap, op.getLowerBoundOperands());
   AffineValueMap ubValueMap(op.getUpperBoundMap(), op.getUpperBoundOperands());
   AffineValueMap newUbValueMap;
-  // Compute the `upper bound - lower bound`.
-  AffineValueMap::difference(ubValueMap, paddedLbValueMap, &newUbValueMap);
+  // Subtract the single lower bound from each upper bound.
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbMap, &newUbValueMap);
   (void)newUbValueMap.canonicalize();
 
   // Scale down the upper bound value map by the loop step.

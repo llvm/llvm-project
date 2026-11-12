@@ -33,13 +33,13 @@
 
 ; CHECK: declare <vscale x 2 x double> @armpl_svcbrt_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>) [[ATTRS]]
 
-; CHECK: declare void @armpl_svcexpi_f32_x(...)
+; CHECK: declare { <vscale x 4 x float>, <vscale x 4 x float> } @armpl_svcexpi_f32_x(<vscale x 4 x float>, <vscale x 4 x i1>)
 
-; CHECK: declare void @armpl_svcexpi_f64_x(...)
+; CHECK: declare { <vscale x 2 x double>, <vscale x 2 x double> } @armpl_svcexpi_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
 
-; CHECK: declare void @armpl_svcexpipi_f32_x(...)
+; CHECK: declare { <vscale x 4 x float>, <vscale x 4 x float> } @armpl_svcexpipi_f32_x(<vscale x 4 x float>, <vscale x 4 x i1>)
 
-; CHECK: declare void @armpl_svcexpipi_f64_x(...)
+; CHECK: declare { <vscale x 2 x double>, <vscale x 2 x double> } @armpl_svcexpipi_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
 
 ; CHECK: declare <vscale x 4 x float> @armpl_svcopysign_f32_x(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i1>) [[ATTRS]]
 
@@ -133,11 +133,11 @@
 
 ; CHECK: declare <vscale x 2 x double> @armpl_svlog_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>) [[ATTRS]]
 
-; CHECK: declare void @armpl_svmodf_f32_stret_x(...)
+; CHECK: declare { <vscale x 4 x float>, <vscale x 4 x float> } @armpl_svmodf_f32_stret_x(<vscale x 4 x float>, <vscale x 4 x i1>)
 
 ; CHECK: declare <vscale x 4 x float> @armpl_svmodf_f32_x(<vscale x 4 x float>, ptr noalias nonnull writeonly align 4, <vscale x 4 x i1>) [[ATTRS_PTR_ARG:#[0-9]+]]
 
-; CHECK: declare void @armpl_svmodf_f64_stret_x(...)
+; CHECK: declare { <vscale x 2 x double>, <vscale x 2 x double> } @armpl_svmodf_f64_stret_x(<vscale x 2 x double>, <vscale x 2 x i1>)
 
 ; CHECK: declare <vscale x 2 x double> @armpl_svmodf_f64_x(<vscale x 2 x double>, ptr noalias nonnull writeonly align 8, <vscale x 2 x i1>) [[ATTRS_PTR_ARG]]
 
@@ -217,13 +217,13 @@
 
 ; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vcbrtq_f64(<2 x double>) [[ATTRS]]
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vcexpipiq_f32(...)
+; CHECK: declare aarch64_vector_pcs { <4 x float>, <4 x float> } @armpl_vcexpipiq_f32(<4 x float>)
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vcexpipiq_f64(...)
+; CHECK: declare aarch64_vector_pcs { <2 x double>, <2 x double> } @armpl_vcexpipiq_f64(<2 x double>)
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vcexpiq_f32(...)
+; CHECK: declare aarch64_vector_pcs { <4 x float>, <4 x float> } @armpl_vcexpiq_f32(<4 x float>)
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vcexpiq_f64(...)
+; CHECK: declare aarch64_vector_pcs { <2 x double>, <2 x double> } @armpl_vcexpiq_f64(<2 x double>)
 
 ; CHECK: declare aarch64_vector_pcs <4 x float> @armpl_vcopysignq_f32(<4 x float>, <4 x float>) [[ATTRS]]
 
@@ -319,11 +319,11 @@
 
 ; CHECK: declare aarch64_vector_pcs <4 x float> @armpl_vmodfq_f32(<4 x float>, ptr noalias nonnull writeonly align 4 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vmodfq_f32_stret(...)
+; CHECK: declare aarch64_vector_pcs { <4 x float>, <4 x float> } @armpl_vmodfq_f32_stret(<4 x float>)
 
 ; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vmodfq_f64(<2 x double>, ptr noalias nonnull writeonly align 8 dereferenceable(16)) [[ATTRS_PTR_ARG]]
 
-; CHECK: declare aarch64_vector_pcs void @armpl_vmodfq_f64_stret(...)
+; CHECK: declare aarch64_vector_pcs { <2 x double>, <2 x double> } @armpl_vmodfq_f64_stret(<2 x double>)
 
 ; CHECK: declare aarch64_vector_pcs <4 x float> @armpl_vnextafterq_f32(<4 x float>, <4 x float>) [[ATTRS]]
 
@@ -369,5 +369,5 @@
 
 ; CHECK: declare aarch64_vector_pcs <2 x double> @armpl_vtgammaq_f64(<2 x double>) [[ATTRS]]
 
-; CHECK: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CHECK-DAG: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }
+; CHECK-DAG: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

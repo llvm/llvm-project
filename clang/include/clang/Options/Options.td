@@ -2676,7 +2676,7 @@ def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
 def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
     MetaVarName<"<pathname>">,
-    HelpText<"Use memory profile for profile-guided memory optimization">,
+    HelpText<"Use memory profile for profile-guided memory optimization (MemPGO)">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
 
 defm copyprof : BoolFOption<"copyprof",
@@ -5170,7 +5170,7 @@ defm partition_static_data_sections: BoolFOption<"partition-static-data-sections
   CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " partition static data sections using PGO profile information and MemProf (x86 and aarch64 ELF). See LLVM MemProf doc for usage.">>;
+  BothFlags<[], [ClangOption], " partition static data sections using MemPGO profiles with fall back to PGO (x86 and aarch64 ELF). See LLVM MemPGO doc for usage.">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,
@@ -5351,6 +5351,12 @@ defm codeview_command_line : BoolOption<"g", "codeview-command-line",
   CodeGenOpts<"CodeViewCommandLine">, DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption], "Emit compiler path and command line into CodeView debug information">,
   NegFlag<SetFalse, [], [ClangOption], "Don't emit compiler path and command line into CodeView debug information">,
+  BothFlags<[], [ClangOption, CLOption, DXCOption, CC1Option]>>,
+  Group<g_flags_Group>;
+defm codeview_cwd : BoolOption<"g", "codeview-cwd",
+  CodeGenOpts<"CodeViewEmitCurrentWorkdir">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Emit current working directory into CodeView debug information">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't emit current working directory into CodeView debug information">,
   BothFlags<[], [ClangOption, CLOption, DXCOption, CC1Option]>>,
   Group<g_flags_Group>;
 defm inline_line_tables : BoolGOption<"inline-line-tables",
@@ -7297,6 +7303,10 @@ def mv79 : Flag<["-"], "mv79">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv79"]>;
 def mv81 : Flag<["-"], "mv81">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv81"]>;
+def mv83 : Flag<["-"], "mv83">, Group<m_hexagon_Features_Group>,
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv83"]>;
+def mv85 : Flag<["-"], "mv85">, Group<m_hexagon_Features_Group>,
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv85"]>;
 def mhexagon_hvx : Flag<["-"], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon Vector eXtensions">;
 def mhexagon_hvx_EQ : Joined<["-"], "mhvx=">,
@@ -7363,6 +7373,12 @@ def mno_nvs : Flag<["-"], "mno-nvs">, Group<m_hexagon_Features_Group>,
   HelpText<"Disable generation of new-value stores">;
 def mcabac: Flag<["-"], "mcabac">, Group<m_hexagon_Features_Group>,
   HelpText<"Enable CABAC instructions">;
+def mhexagon_hlx : Flag<["-"], "mhlx">, Group<m_hexagon_Features_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable Hexagon eLementwise eXtensions">;
+def mno_hexagon_hlx : Flag<["-"], "mno-hlx">, Group<m_hexagon_Features_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable Hexagon eLementwise eXtensions">;
 
 // SPARC feature flags
 let Flags = [TargetSpecific] in {
@@ -8142,6 +8158,16 @@ let Visibility = [CC1Option, CC1AsOption] in {
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<CodeGenOpts<"MacroDebugInfo">>;
+def debug_info_macro_expansion_loc
+    : Flag<["-"], "debug-info-macro-expansion-loc">,
+      HelpText<"Use expansion location for debug info for multi line macros">,
+      MarshallingInfoFlag<CodeGenOpts<"DebugInfoMacroExpansionLoc">>;
+def debug_info_macro_max_depth_EQ
+    : Joined<["-"], "debug-info-macro-max-depth=">,
+      MetaVarName<"<N>">,
+      HelpText<"Use expansion location for debug info for macro arguments "
+               "nested deeper than <N> macro expansions (default 64)">,
+      MarshallingInfoInt<CodeGenOpts<"DebugInfoMacroMaxDepth">, "64">;
 def default_function_attr : Separate<["-"], "default-function-attr">,
   HelpText<"Apply given attribute to all functions">,
   MarshallingInfoStringVector<CodeGenOpts<"DefaultFunctionAttrs">>;
@@ -8167,6 +8193,10 @@ def reloc_section_sym : Joined<["--"], "reloc-section-sym=">,
   NormalizedValuesScope<"llvm::RelocSectionSymType">,
   NormalizedValues<["All", "Internal", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"RelocSectionSym">, "All">;
+def grelocatable_dwarf : Flag<["-"], "grelocatable-dwarf">,
+  HelpText<"Relocate offsets from one DWARF section into another in Mach-O "
+           "object files">,
+  MarshallingInfoFlag<CodeGenOpts<"MachORelocatableDwarf">>;
 // The leading 'g' is misleading. This is an unwind tables option, not
 // a debug option. But uses this name for gnu compatibility.
 def gsframe : Flag<["--"], "gsframe">,
@@ -10207,6 +10237,16 @@ def fhlsl_spv_preserve_interface
                "dead-code elimination of variables with Location or BuiltIn "
                "decorations.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvPreserveInterface">>;
+
+def fhlsl_spv_support_nonzero_base_instance
+    : Flag<["-"], "fvk-support-nonzero-base-instance">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Follow Vulkan spec to use gl_BaseInstance as the first "
+               "vertex instance, which makes SV_InstanceID = gl_InstanceIndex "
+               "- gl_BaseInstance (without this option, SV_InstanceID = "
+               "gl_InstanceIndex).">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvSupportNonzeroBaseInstance">>;
 
 def fexperimental_logical_pointer
     : Flag<["-"], "fexperimental-logical-pointer">,

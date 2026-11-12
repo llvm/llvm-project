@@ -1802,16 +1802,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Compute the shadow address for a given function argument.
   ///
   /// Shadow = ParamTLS+ArgOffset.
-  Value *getShadowPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
-    return IRB.CreatePtrAddWithSignedOffset(MS.ParamTLS, ArgOffset, "_msarg");
+  Value *getShadowPtrForArgument(IRBuilder<> &IRB, unsigned ArgOffset) {
+    return IRB.CreatePtrAddWithUnsignedOffset(MS.ParamTLS, ArgOffset, "_msarg");
   }
 
   /// Compute the origin address for a given function argument.
-  Value *getOriginPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
+  Value *getOriginPtrForArgument(IRBuilder<> &IRB, unsigned ArgOffset) {
     if (!MS.TrackOrigins)
       return nullptr;
-    return IRB.CreatePtrAddWithSignedOffset(MS.ParamOriginTLS, ArgOffset,
-                                            "_msarg_o");
+    return IRB.CreatePtrAddWithUnsignedOffset(MS.ParamOriginTLS, ArgOffset,
+                                              "_msarg_o");
   }
 
   /// Compute the shadow address for a retval.
@@ -3005,7 +3005,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitXor(BinaryOperator &I) { handleShadowOr(I); }
 
   void handleIntegerDiv(Instruction &I) {
-    IRBuilder<> IRB(&I);
     // Strict on the second argument.
     insertCheckShadowOf(I.getOperand(1), &I);
     setShadow(&I, getShadow(&I, 0));
@@ -8372,12 +8371,12 @@ struct VarArgHelperBase : public VarArgHelper {
   }
 
   /// Compute the origin address for a given va_arg.
-  Value *getOriginPtrForVAArgument(IRBuilder<> &IRB, int ArgOffset) {
+  Value *getOriginPtrForVAArgument(IRBuilder<> &IRB, unsigned ArgOffset) {
     // getOriginPtrForVAArgument() is always called after
     // getShadowPtrForVAArgument(), so __msan_va_arg_origin_tls can never
     // overflow.
-    return IRB.CreatePtrAddWithSignedOffset(MS.VAArgOriginTLS, ArgOffset,
-                                            "_msarg_va_o");
+    return IRB.CreatePtrAddWithUnsignedOffset(MS.VAArgOriginTLS, ArgOffset,
+                                              "_msarg_va_o");
   }
 
   void CleanUnusedTLS(IRBuilder<> &IRB, Value *ShadowBase,
@@ -8747,14 +8746,15 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
   }
 
   // Retrieve a va_list field of 'void*' size.
-  Value *getVAField64(IRBuilder<> &IRB, Value *VAListTag, int offset) {
-    Value *SaveAreaPtrPtr = IRB.CreatePtrAddWithSignedOffset(VAListTag, offset);
+  Value *getVAField64(IRBuilder<> &IRB, Value *VAListTag, unsigned Offset) {
+    Value *SaveAreaPtrPtr =
+        IRB.CreatePtrAddWithUnsignedOffset(VAListTag, Offset);
     return IRB.CreateLoad(Type::getInt64Ty(*MS.C), SaveAreaPtrPtr);
   }
 
   // Retrieve a va_list field of 'int' size.
-  Value *getVAField32(IRBuilder<> &IRB, Value *VAListTag, int offset) {
-    Value *SaveAreaPtr = IRB.CreatePtrAddWithSignedOffset(VAListTag, offset);
+  Value *getVAField32(IRBuilder<> &IRB, Value *VAListTag, unsigned Offset) {
+    Value *SaveAreaPtr = IRB.CreatePtrAddWithUnsignedOffset(VAListTag, Offset);
     Value *SaveArea32 = IRB.CreateLoad(IRB.getInt32Ty(), SaveAreaPtr);
     return IRB.CreateSExt(SaveArea32, MS.IntptrTy);
   }

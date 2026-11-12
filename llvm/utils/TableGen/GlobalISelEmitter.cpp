@@ -611,9 +611,8 @@ GlobalISelEmitter::getEquivNode(const Record &Equiv,
 }
 
 GlobalISelEmitter::GlobalISelEmitter(const RecordKeeper &RK)
-    : GlobalISelMatchTableExecutorEmitter(), RK(RK),
-      CGP(RK, /*ExpandHwMode=*/false), Target(CGP.getTargetInfo()),
-      CGRegs(Target.getRegBank()) {
+    : GlobalISelMatchTableExecutorEmitter(), RK(RK), CGP(RK),
+      Target(CGP.getTargetInfo()), CGRegs(Target.getRegBank()) {
   ClassName = Target.getName().str() + "InstructionSelector";
 }
 
@@ -2301,7 +2300,6 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   if (auto Error = importRulePredicates(M, Predicates))
     return std::move(Error);
 
-  assert(P.getHwModeFeatures().empty() && "HwMode should not be expanded");
   std::string HwModeCheck = getHwModeCheck(P, Target.getHwModes());
   if (!HwModeCheck.empty())
     M.addHwModeIdx(declareHwModeCheck(HwModeCheck));

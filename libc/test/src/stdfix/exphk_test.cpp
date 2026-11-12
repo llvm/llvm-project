@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ExpTest.h"
+#include "test/src/stdfix/ExpTest.h"
 
 #include "src/stdfix/exphk.h"
 

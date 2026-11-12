@@ -157,11 +157,11 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
-// PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
+// PowerPC64, Sparc64, SystemZ, VE need signext/zeroext on i32 parameters and
 // returns corresponding to C-level ints and unsigned ints.
 static bool shouldExtI32(const Triple &T) {
   return T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-         T.getArch() == Triple::systemz;
+         T.getArch() == Triple::systemz || T.getArch() == Triple::ve;
 }
 
 // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
@@ -304,6 +304,8 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
     return Type::getPPC_FP128Ty(Ctx);
   case Ptr:
     return PointerType::get(Ctx, 0);
+  case AllocaPtr:
+    return DL.getAllocaPtrType(Ctx);
   case V2F32:
     return FixedVectorType::get(Type::getFloatTy(Ctx), 2);
   case V4F32:
@@ -339,8 +341,17 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
   case NXV4I32:
     return ScalableVectorType::get(Type::getInt32Ty(Ctx), 4);
   default:
-    return nullptr;
+    break;
   }
+
+  ArrayRef<FuncArgTypeID> EltIDs = getStructElementTypes(ID);
+  if (EltIDs.empty())
+    return nullptr;
+
+  SmallVector<Type *, 2> EltTys;
+  for (FuncArgTypeID EltID : EltIDs)
+    EltTys.push_back(convertToIRType(EltID, Ctx, TT, DL, LdblFormat));
+  return StructType::get(Ctx, EltTys);
 }
 
 static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
@@ -405,7 +416,8 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   const FuncArgTypeID *ProtoTypes =
       &SignatureTable[SignatureOffset[LibcallImpl]];
 
-  if (ProtoTypes[0] == NoFuncArgType)
+  if (ProtoTypes[0] == NoFuncArgType || ProtoTypes[0] == Variable ||
+      ProtoTypes[0] == ThreadLocalVariable)
     return {};
 
   FuncArgTypeID LastID = ProtoTypes[0];
@@ -414,6 +426,10 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   if (Attribute::AttrKind AK =
           getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
     RetAttrs = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
+  if (isInRegStruct(LastID))
+    RetAttrs = RetAttrs.addAttribute(Ctx, Attribute::InReg);
+  RetAttrs = RetAttrs.addAttributes(
+      Ctx, getLibcallImplRetAttributes(Ctx, LibcallImpl));
 
   SmallVector<Type *, 4> ArgTys;
   SmallVector<AttributeSet, 4> ArgAttrs;
@@ -474,15 +490,63 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
                              RetAttrs, ArgAttrs)};
 }
 
+Type *
+RuntimeLibcallsInfo::getVariableType(LLVMContext &Ctx, const Triple &TT,
+                                     const DataLayout &DL,
+                                     RTLIB::LibcallImpl LibcallImpl) const {
+  const FuncArgTypeID *ProtoTypes =
+      &SignatureTable[SignatureOffset[LibcallImpl]];
+  if (ProtoTypes[0] != Variable && ProtoTypes[0] != ThreadLocalVariable)
+    return nullptr;
+  return convertToIRType(ProtoTypes[1], Ctx, TT, DL, LongDoubleFmt);
+}
+
+FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
+    Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(!isVariable(LibcallImpl) && "not a function declaration");
+
+  const DataLayout &DL = M.getDataLayout();
+  auto [FuncTy, FuncAttrs] =
+      getFunctionTy(M.getContext(), M.getTargetTriple(), DL, LibcallImpl);
+
+  // TODO: Every libcall should have a known signature.
+  if (!FuncTy) {
+    FuncTy = FunctionType::get(Type::getVoidTy(M.getContext()), {},
+                               /*IsVarArg=*/true);
+  }
+
+  StringRef Name = getLibcallImplName(LibcallImpl);
+  if (GlobalValue *GV = M.getNamedValue(Name))
+    return {FuncTy, GV};
+
+  Function *F = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
+                                 DL.getProgramAddressSpace(), Name, &M);
+  F->setAttributes(FuncAttrs);
+  F->setCallingConv(getLibcallImplCallingConv(LibcallImpl));
+  return {FuncTy, F};
+}
+
+GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(
+    Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(isVariable(LibcallImpl) && "not a variable declaration");
+
+  StringRef Name = getLibcallImplName(LibcallImpl);
+  if (GlobalValue *GV = M.getNamedValue(Name))
+    return GV;
+
+  Type *VarTy = getVariableType(M.getContext(), M.getTargetTriple(),
+                                M.getDataLayout(), LibcallImpl);
+  return new GlobalVariable(
+      M, VarTy, /*isConstant=*/false, GlobalValue::ExternalLinkage, nullptr,
+      Name, nullptr,
+      isThreadLocalVariable(LibcallImpl) ? GlobalValue::InitialExecTLSModel
+                                         : GlobalValue::NotThreadLocal);
+}
+
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                    const DataLayout &DL,
                                    RTLIB::LibcallImpl LibcallImpl) const {
-  static constexpr Attribute::AttrKind MemoryFnAttrs[] = {
-      Attribute::NoUnwind, Attribute::WillReturn};
-  static constexpr Attribute::AttrKind CommonPtrArgAttrs[] = {
-      Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
-
   switch (LibcallImpl) {
   // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
@@ -525,149 +589,6 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
             : static_cast<Type *>(StructType::get(ScalarTy, ScalarTy));
 
     return {FunctionType::get(RetTy, {ScalarTy}, false), Attrs};
-  }
-  case RTLIB::impl_malloc:
-  case RTLIB::impl_calloc: {
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : MemoryFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addAttribute(Attribute::NoFree);
-
-    AllocFnKind AllocKind = AllocFnKind::Alloc;
-    if (LibcallImpl == RTLIB::impl_malloc)
-      AllocKind |= AllocFnKind::Uninitialized;
-
-    // TODO: Set memory attribute
-    FuncAttrBuilder.addAllocKindAttr(AllocKind);
-    FuncAttrBuilder.addAttribute("alloc-family", "malloc");
-    FuncAttrBuilder.addAllocSizeAttr(0, LibcallImpl == RTLIB::impl_malloc
-                                            ? std::nullopt
-                                            : std::make_optional(1));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    {
-      AttrBuilder ArgAttrBuilder(Ctx);
-      for (Attribute::AttrKind AK : CommonPtrArgAttrs)
-        ArgAttrBuilder.addAttribute(AK);
-
-      Attrs = Attrs.addRetAttribute(Ctx, Attribute::NoUndef);
-      Attrs = Attrs.addRetAttribute(Ctx, Attribute::NoAlias);
-      Attrs = Attrs.addParamAttribute(Ctx, 0, Attribute::NoUndef);
-      if (LibcallImpl == RTLIB::impl_calloc)
-        Attrs = Attrs.addParamAttribute(Ctx, 1, Attribute::NoUndef);
-    }
-
-    IntegerType *SizeT = getSizeTType(Ctx, DL);
-    PointerType *PtrTy = PointerType::get(Ctx, 0);
-    SmallVector<Type *, 2> ArgTys = {SizeT};
-    if (LibcallImpl == RTLIB::impl_calloc)
-      ArgTys.push_back(SizeT);
-
-    return {FunctionType::get(PtrTy, ArgTys, false), Attrs};
-  }
-  case RTLIB::impl_free: {
-    // TODO: Set memory attribute
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : MemoryFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-
-    FuncAttrBuilder.addAllocKindAttr(AllocFnKind::Free);
-    FuncAttrBuilder.addAttribute("alloc-family", "malloc");
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    {
-      AttrBuilder ArgAttrBuilder(Ctx);
-      ArgAttrBuilder.addAttribute(Attribute::NoUndef);
-      ArgAttrBuilder.addAttribute(Attribute::AllocatedPointer);
-      ArgAttrBuilder.addCapturesAttr(CaptureInfo::none());
-      Attrs = Attrs.addParamAttributes(Ctx, 0, ArgAttrBuilder);
-    }
-
-    return {FunctionType::get(Type::getVoidTy(Ctx), {PointerType::get(Ctx, 0)},
-                              false),
-            Attrs};
-  }
-  case RTLIB::impl___aeabi_idivmod:
-  case RTLIB::impl___aeabi_uidivmod:
-  case RTLIB::impl___aeabi_ldivmod:
-  case RTLIB::impl___aeabi_uldivmod:
-  case RTLIB::impl___rt_sdiv:
-  case RTLIB::impl___rt_udiv:
-  case RTLIB::impl___rt_sdiv64:
-  case RTLIB::impl___rt_udiv64: {
-    // The ARM AEABI (__aeabi_*divmod) and Windows (__rt_*div*) divmod functions
-    // return both values modeled as an inreg { iN, iN } struct (quotient,
-    // remainder). The __rt_*div* cases pass the arguments in opposite order,
-    // though this doesn't affect the declaration.
-    bool IsSigned;
-    unsigned Bits;
-    switch (LibcallImpl) {
-    case RTLIB::impl___aeabi_idivmod:
-    case RTLIB::impl___rt_sdiv:
-      IsSigned = true;
-      Bits = 32;
-      break;
-    case RTLIB::impl___aeabi_uidivmod:
-    case RTLIB::impl___rt_udiv:
-      IsSigned = false;
-      Bits = 32;
-      break;
-    case RTLIB::impl___aeabi_ldivmod:
-    case RTLIB::impl___rt_sdiv64:
-      IsSigned = true;
-      Bits = 64;
-      break;
-    case RTLIB::impl___aeabi_uldivmod:
-    case RTLIB::impl___rt_udiv64:
-      IsSigned = false;
-      Bits = 64;
-      break;
-    default:
-      llvm_unreachable("unexpected divmod libcall");
-    }
-
-    Type *IntTy = IntegerType::get(Ctx, Bits);
-    StructType *RetTy = StructType::get(IntTy, IntTy);
-    FunctionType *FuncTy = FunctionType::get(RetTy, {IntTy, IntTy}, false);
-
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    Attribute::AttrKind ExtKind = IsSigned ? Attribute::SExt : Attribute::ZExt;
-    Attrs = Attrs.addRetAttribute(Ctx, Attribute::InReg);
-    Attrs = Attrs.addParamAttribute(Ctx, 0, ExtKind);
-    Attrs = Attrs.addParamAttribute(Ctx, 1, ExtKind);
-
-    return {FuncTy, Attrs};
-  }
-  case RTLIB::impl_sqrtf:
-  case RTLIB::impl_sqrt: {
-    AttrBuilder FuncAttrBuilder(Ctx);
-
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::errnoMemOnly(ModRefInfo::Mod));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    Type *ScalarTy = LibcallImpl == RTLIB::impl_sqrtf ? Type::getFloatTy(Ctx)
-                                                      : Type::getDoubleTy(Ctx);
-    FunctionType *FuncTy = FunctionType::get(ScalarTy, {ScalarTy}, false);
-
-    Attrs = Attrs.addRetAttribute(
-        Ctx, Attribute::getWithNoFPClass(Ctx, fcNegInf | fcNegSubnormal |
-                                                  fcNegNormal));
-    return {FuncTy, Attrs};
   }
   default:
     break;

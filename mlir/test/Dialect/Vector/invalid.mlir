@@ -961,6 +961,16 @@ func.func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>
 
 // -----
 
+func.func @contraction_scalar_acc_0d_result(%arg0: vector<10xf32>, %arg1: vector<10xf32>, %acc: f32) {
+  // expected-error@+1 {{expected same accumulator and result type}}
+  %0 = "vector.contract"(%arg0, %arg1, %acc) <{
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = [#vector.iterator_type<reduction>],
+    kind = #vector.kind<add>}> : (vector<10xf32>, vector<10xf32>, f32) -> vector<f32>
+}
+
+// -----
+
 #contraction_accesses = [
   affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
   affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
@@ -2097,6 +2107,26 @@ func.func @vector_mask_non_empty_mixed_return(%t: tensor<?xf32>, %idx: index,
 
 // -----
 
+func.func @vector_mask_already_masked_transfer_read(%base: memref<?xf32>, %c0: index, %pad: f32, %m: vector<4xi1>) -> vector<4xf32> {
+  // expected-error@+1 {{doesn't expect a mask operand for the masked transfer operation}}
+  %0 = vector.mask %m {
+    vector.transfer_read %base[%c0], %pad, %m {in_bounds = [true]} : memref<?xf32>, vector<4xf32>
+  } : vector<4xi1> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @vector_mask_already_masked_transfer_write(%base: memref<?xf32>, %c0: index, %v: vector<4xf32>, %m: vector<4xi1>) {
+  // expected-error@+1 {{doesn't expect a mask operand for the masked transfer operation}}
+  vector.mask %m {
+    vector.transfer_write %v, %base[%c0], %m {in_bounds = [true]} : vector<4xf32>, memref<?xf32>
+  } : vector<4xi1>
+  return
+}
+
+// -----
+
 func.func @vector_scalable_insert_unaligned(%subv: vector<4xi32>, %vec: vector<[16]xi32>) {
   // expected-error@+1 {{op failed to verify that position is a multiple of the source length.}}
   %0 = vector.scalable.insert %subv, %vec[2] : vector<4xi32> into vector<[16]xi32>
@@ -2185,7 +2215,7 @@ func.func @deinterleave_n_dim_rank_fail(%vec : vector<2x3x4xf32>) {
 // -----
 
 func.func @deinterleave_scalable_dim_size_fail(%vec : vector<2x[4]xf32>) {
-  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {res1, res2} have same type}}
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {resultEven, resultOdd} have same type}}
   %0, %1 = "vector.deinterleave" (%vec) : (vector<2x[4]xf32>) -> (vector<2x[2]xf32>, vector<2x[1]xf32>)
   return
 }
@@ -2193,7 +2223,7 @@ func.func @deinterleave_scalable_dim_size_fail(%vec : vector<2x[4]xf32>) {
 // -----
 
 func.func @deinterleave_scalable_rank_fail(%vec : vector<2x[4]xf32>) {
-  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {res1, res2} have same type}}
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {resultEven, resultOdd} have same type}}
   %0, %1 = "vector.deinterleave" (%vec) : (vector<2x[4]xf32>) -> (vector<2x[2]xf32>, vector<[2]xf32>)
   return
 }
@@ -2234,7 +2264,7 @@ func.func @from_elements_wrong_operand_type(%a: f32, %b: i32) {
 // -----
 
 func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
-  // expected-error @+1 {{'dest' must be fixed-length vector of any non-token type values, but got 'vector<[2]xf32>'}}
+  // expected-error @+1 {{'result' must be fixed-length vector of any non-token type values, but got 'vector<[2]xf32>'}}
   vector.from_elements %a, %b : vector<[2]xf32>
   return
 }

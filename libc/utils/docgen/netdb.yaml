@@ -1,0 +1,106 @@
+posix: posix-2024
+functions:
+  endhostent:
+    in-latest-posix: ''
+  endnetent:
+    in-latest-posix: ''
+  endprotoent:
+    in-latest-posix: ''
+  endservent:
+    in-latest-posix: ''
+  freeaddrinfo:
+    in-latest-posix: ''
+  gai_strerror:
+    in-latest-posix: ''
+  getaddrinfo:
+    in-latest-posix: ''
+  gethostent:
+    in-latest-posix: ''
+  getnameinfo:
+    in-latest-posix: ''
+  getnetbyaddr:
+    in-latest-posix: ''
+  getnetbyname:
+    in-latest-posix: ''
+  getnetent:
+    in-latest-posix: ''
+  getprotobyname:
+    in-latest-posix: ''
+  getprotobynumber:
+    in-latest-posix: ''
+  getprotoent:
+    in-latest-posix: ''
+  getservbyname:
+    in-latest-posix: ''
+  getservbyport:
+    in-latest-posix: ''
+  getservent:
+    in-latest-posix: ''
+  sethostent:
+    in-latest-posix: ''
+  setnetent:
+    in-latest-posix: ''
+  setprotoent:
+    in-latest-posix: ''
+  setservent:
+    in-latest-posix: ''
+macros:
+  AI_ADDRCONFIG:
+    in-latest-posix: ''
+  AI_ALL:
+    in-latest-posix: ''
+  AI_CANONNAME:
+    in-latest-posix: ''
+  AI_NUMERICHOST:
+    in-latest-posix: ''
+  AI_NUMERICSERV:
+    in-latest-posix: ''
+  AI_PASSIVE:
+    in-latest-posix: ''
+  AI_V4MAPPED:
+    in-latest-posix: ''
+  EAI_AGAIN:
+    in-latest-posix: ''
+  EAI_BADFLAGS:
+    in-latest-posix: ''
+  EAI_FAIL:
+    in-latest-posix: ''
+  EAI_FAMILY:
+    in-latest-posix: ''
+  EAI_MEMORY:
+    in-latest-posix: ''
+  EAI_NONAME:
+    in-latest-posix: ''
+  EAI_OVERFLOW:
+    in-latest-posix: ''
+  EAI_SERVICE:
+    in-latest-posix: ''
+  EAI_SOCKTYPE:
+    in-latest-posix: ''
+  EAI_SYSTEM:
+    in-latest-posix: ''
+  NI_DGRAM:
+    in-latest-posix: ''
+  NI_NAMEREQD:
+    in-latest-posix: ''
+  NI_NOFQDN:
+    in-latest-posix: ''
+  NI_NUMERICHOST:
+    in-latest-posix: ''
+  NI_NUMERICSCOPE:
+    in-latest-posix: ''
+  NI_NUMERICSERV:
+    in-latest-posix: ''
+types:
+  socklen_t:
+    in-latest-posix: ''
+  struct addrinfo:
+    in-latest-posix: ''
+  struct hostent:
+    in-latest-posix: ''
+  struct netent:
+    in-latest-posix: ''
+  struct protoent:
+    in-latest-posix: ''
+  struct servent:
+    in-latest-posix: ''
