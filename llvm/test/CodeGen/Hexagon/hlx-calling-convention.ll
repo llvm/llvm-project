@@ -10,7 +10,7 @@ define i32 @nohlx_signature() nounwind {
 
 ; CHECK-LABEL: name: hlx_signature_ret_vec
 define <1024 x i16> @hlx_signature_ret_vec() nounwind {
-  ret <1024 x i16> undef
+  ret <1024 x i16> poison
 }
 
 ; CHECK-LABEL: name: hlx_signature_arg_vec
