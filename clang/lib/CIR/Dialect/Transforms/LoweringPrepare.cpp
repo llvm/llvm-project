@@ -101,6 +101,8 @@ struct LoweringPreparePass
   void lowerLocalInitOp(cir::LocalInitOp op);
   void lowerRegisterExitDtorOp(cir::RegisterExitDtorOp op);
   void lowerStdOp(cir::StdOpInterface op);
+  void lowerIfOp(cir::IfOp op);
+  void lowerTernaryOp(cir::TernaryOp op);
 
   /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
   /// member to avoid the O(M) module-wide scan that the static
@@ -2810,6 +2812,59 @@ void LoweringPreparePass::lowerStdOp(cir::StdOpInterface typedOp) {
   op->erase();
 }
 
+/// If `cond` is the result of a chain of cir.not ops, sets it to the input of
+/// the innermost cir.not and erases the cir.not ops left without uses.  An
+/// odd number of cir.not ops inverts the condition, so `trueRegion` and
+/// `falseRegion` are swapped.  If one region is empty, the other is empty
+/// after a swap, and the caller restores any region its op requires.  Returns
+/// true if the regions were swapped.
+static bool stripNotsFromCondition(mlir::OpOperand &cond,
+                                   mlir::Region &trueRegion,
+                                   mlir::Region &falseRegion) {
+  llvm::SmallVector<cir::NotOp> notOps;
+  mlir::Value value = cond.get();
+  while (auto notOp = value.getDefiningOp<cir::NotOp>()) {
+    notOps.push_back(notOp);
+    value = notOp.getInput();
+  }
+  if (notOps.empty())
+    return false;
+
+  cond.set(value);
+  bool swapped = notOps.size() % 2 == 1;
+  if (swapped) {
+    mlir::Region trueBody;
+    trueBody.takeBody(trueRegion);
+    trueRegion.takeBody(falseRegion);
+    falseRegion.takeBody(trueBody);
+  }
+  for (cir::NotOp notOp : notOps) {
+    if (!notOp->use_empty())
+      break;
+    notOp.erase();
+  }
+  return swapped;
+}
+
+void LoweringPreparePass::lowerIfOp(cir::IfOp op) {
+  bool hadElse = !op.getElseRegion().empty();
+  bool swapped = stripNotsFromCondition(op.getConditionMutable(),
+                                        op.getThenRegion(), op.getElseRegion());
+  if (!swapped || hadElse)
+    return;
+
+  // The then body was swapped into the else region.  Only the else region of
+  // a cir.if may be empty, so give the then region a block that just yields.
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.createBlock(&op.getThenRegion());
+  cir::YieldOp::create(builder, op.getLoc());
+}
+
+void LoweringPreparePass::lowerTernaryOp(cir::TernaryOp op) {
+  stripNotsFromCondition(op.getCondMutable(), op.getTrueRegion(),
+                         op.getFalseRegion());
+}
+
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
@@ -2859,6 +2914,10 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerThreeWayCmpOp(threeWayCmp);
   } else if (auto initOp = dyn_cast<cir::LocalInitOp>(op)) {
     lowerLocalInitOp(initOp);
+  } else if (auto ifOp = dyn_cast<cir::IfOp>(op)) {
+    lowerIfOp(ifOp);
+  } else if (auto ternaryOp = dyn_cast<cir::TernaryOp>(op)) {
+    lowerTernaryOp(ternaryOp);
   }
 }
 
@@ -3542,7 +3601,8 @@ void LoweringPreparePass::runOnOperation() {
                   cir::ComplexFMulOp, cir::ComplexFDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
                   cir::StoreOp, cir::CmpThreeWayOp, cir::LocalInitOp,
-                  cir::RegisterExitDtorOp, cir::StdOpInterface>(op))
+                  cir::RegisterExitDtorOp, cir::StdOpInterface, cir::IfOp,
+                  cir::TernaryOp>(op))
       opsToTransform.push_back(op);
   });
 

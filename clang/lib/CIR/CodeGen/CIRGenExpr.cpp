@@ -2850,12 +2850,6 @@ mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
   assert(!cir::MissingFeatures::generateDebugInfo());
   cond = cond->IgnoreParens();
 
-  // In LLVM the condition is reversed here for efficient codegen.
-  // This should be done in CIR prior to LLVM lowering, if we do now
-  // we can make CIR based diagnostics misleading.
-  //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
-  assert(!cir::MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
-
   if (const ConditionalOperator *condOp = dyn_cast<ConditionalOperator>(cond)) {
     Expr *trueExpr = condOp->getTrueExpr();
     Expr *falseExpr = condOp->getFalseExpr();

@@ -109,7 +109,6 @@ struct MissingFeatures {
 
   // Clang early optimizations or things defered to LLVM lowering.
   static bool mayHaveIntegerOverflow() { return false; }
-  static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
   // RecordType
   static bool astRecordDeclAttr() { return false; }
