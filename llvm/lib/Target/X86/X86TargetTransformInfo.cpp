@@ -51,6 +51,7 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
@@ -7263,36 +7264,129 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
   auto getIndexSizeInBits = [&](const Value *Ptr) {
     unsigned IndexSize = PtrSizeInBits;
     const GetElementPtrInst *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr);
-    if (IndexSize < 64 || !GEP)
+    if (IndexSize != 64 || !GEP)
       return IndexSize;
 
     unsigned NumOfVarIndices = 0;
     const Value *Ptrs = GEP->getPointerOperand();
     if (Ptrs->getType()->isVectorTy() && !getSplatValue(Ptrs))
       return IndexSize;
+
+    // combineGatherScatter narrows through three routes: folding a constant,
+    // shortening an extension that still fits a signed dword, and truncating
+    // where that removes an illegal type. Only the last depends on the
+    // subtarget -- sixteen qword indices are illegal everywhere, but the dword
+    // form they narrow to is legal only once a 512-bit register is available --
+    // so the same gather keeps qword indices on AVX2 and narrows on AVX-512.
+    LLVMContext &Ctx = SrcVTy->getContext();
+
+    // An extension needs as many bits as its source, and one more for a zero
+    // extension, which spends a bit on the sign.
+    auto ExtendedBits = [](const Value *V) -> std::optional<unsigned> {
+      const auto *Ext = dyn_cast<CastInst>(V);
+      if (!Ext || (Ext->getOpcode() != Instruction::SExt &&
+                   Ext->getOpcode() != Instruction::ZExt))
+        return std::nullopt;
+      return Ext->getSrcTy()->getScalarSizeInBits() +
+             (Ext->getOpcode() == Instruction::ZExt);
+    };
+    auto NarrowsOnItsOwn = [&](const Value *V) {
+      if (V->getType()->getScalarSizeInBits() <= 32 || isa<Constant>(V))
+        return true;
+      std::optional<unsigned> Bits = ExtendedBits(V);
+      return Bits && *Bits <= 32;
+    };
+    auto TruncationRemovesIllegalType = [&]() {
+      return !TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i64, VF)) &&
+             TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i32, VF));
+    };
+
+    // A constant splat added to the index is scaled and folded into the base,
+    // so the index the instruction sees is the other addend. The fold needs a
+    // pointer-width index element, where the scaling cannot wrap.
+    auto PeelSplatAddend = [&](const Value *V) -> const Value * {
+      const auto *Add = dyn_cast<BinaryOperator>(V);
+      if (!Add || Add->getOpcode() != Instruction::Add ||
+          !Add->getType()->isVectorTy() ||
+          Add->getType()->getScalarSizeInBits() != PtrSizeInBits)
+        return V;
+      for (unsigned I = 0; I != 2; ++I)
+        if (isa<Constant>(Add->getOperand(I)) &&
+            getSplatValue(Add->getOperand(I)))
+          return Add->getOperand(1 - I);
+      return V;
+    };
     for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
          GTI != GTE; ++GTI) {
       const Value *Operand = GTI.getOperand();
-      if (isa<Constant>(Operand))
+
+      // An index that holds the same value in every lane contributes a fixed
+      // byte offset, which folds into the base pointer instead of reaching the
+      // index operand. That covers every struct member, named by a scalar
+      // constant, as well as a splat. A constant that is not a splat does
+      // reach the index, so it is examined like any other.
+      if (isa<Constant>(Operand) && (!Operand->getType()->isVectorTy() ||
+                                     getSplatValue(Operand) != nullptr))
         continue;
-      Type *IndxTy = Operand->getType();
-      if (auto *IndexVTy = dyn_cast<VectorType>(IndxTy))
-        IndxTy = IndexVTy->getElementType();
-      if ((IndxTy->getPrimitiveSizeInBits() == 64 && !isa<SExtInst>(Operand)) ||
-          ++NumOfVarIndices > 1)
-        return IndexSize; // 64
-      // The narrow index only reaches the instruction if the addressing mode
-      // can apply its stride as a scale, and the scale field encodes 1, 2, 4
-      // and 8. Any other stride has to be multiplied into the index first,
-      // and that product is pointer-width, so the operation ends up gathering
-      // with 64-bit indices however narrow the index started out.
+
+      if (++NumOfVarIndices > 1)
+        return IndexSize;
+
+      Operand = PeelSplatAddend(Operand);
+
+      unsigned IndexBits;
+      if (Operand->getType()->isVectorTy()) {
+        // Match the backend: combineGatherScatter narrows an index vector
+        // that is representable in a signed dword, and tests that with
+        // ComputeNumSignBits rather than by declared width and opcode.
+        IndexBits = ComputeMaxSignificantBits(Operand, DL);
+      } else if (std::optional<unsigned> Bits = ExtendedBits(Operand)) {
+        // A scalar index reaches here from a caller that has not widened the
+        // address yet. Widening preserves the extension, so its source width
+        // is what the index operand will hold.
+        IndexBits = *Bits;
+      } else {
+        // Nothing says how the remaining lanes differ, so keep the declared
+        // width.
+        IndexBits = Operand->getType()->getPrimitiveSizeInBits();
+      }
+      if (IndexBits > 32)
+        return IndexSize;
+
       TypeSize EltSize = DL.getTypeAllocSize(GTI.getIndexedType());
       if (EltSize.isScalable())
-        return IndexSize; // 64
+        return IndexSize;
       uint64_t Stride = EltSize.getFixedValue();
-      if (!isPowerOf2_64(Stride) || Stride > 8)
-        return IndexSize; // 64
+
+      // A stride the scale field encodes -- 1, 2, 4 or 8 -- is applied by the
+      // addressing mode, so the index reaches the combine as it was written.
+      if (isPowerOf2_64(Stride) && Stride <= 8) {
+        if (NarrowsOnItsOwn(Operand) || TruncationRemovesIllegalType())
+          continue;
+        return IndexSize;
+      }
+
+      // Any other stride is multiplied into the index first, and the product
+      // is what the combine sees. It has to fit a signed dword with the stride
+      // included, and it is no longer an extension node. ComputeNumSignBits
+      // adds the two significant widths, and a positive constant spends one
+      // bit on the sign, so a stride of 12 contributes five bits and not four.
+      if (IndexBits + APInt(64, Stride).getSignificantBits() > 32)
+        return IndexSize;
+      if (!isa<Constant>(Operand) && !TruncationRemovesIllegalType())
+        return IndexSize;
     }
+
+    // Every index holds the same value in every lane, so the component that
+    // varies has to be the base pointer, and the operation gathers from a
+    // vector of pointers at pointer width. A caller that has already widened
+    // the address says as much with a vector base, which is answered above;
+    // LoopVectorize asks with the original scalar address, where a pointer
+    // chase like p[i]->y is otherwise indistinguishable from a uniform base
+    // reached through a narrow index.
+    if (NumOfVarIndices == 0)
+      return IndexSize;
+
     return (unsigned)32;
   };
 

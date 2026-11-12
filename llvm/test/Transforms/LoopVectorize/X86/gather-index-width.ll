@@ -28,7 +28,7 @@
 ; index list alone would find no varying index and price this as a dword form
 ; covering all eight in one.
 ; COST-LABEL: 'chase'
-; COST: Cost of 10 for VF 8: WIDEN ir<%y> = load ir<%field>
+; COST: Cost of 12 for VF 8: WIDEN ir<%y> = load ir<%field>
 ; ASM-LABEL: chase:
 ; ASM-COUNT-2: vpgatherqd
 ; ASM-NOT: vpgather
@@ -85,7 +85,7 @@ exit:
 ; nine significant bits still leave the index a dword. Reading the opcode
 ; rather than the width the extension produces would price this wide.
 ; COST-LABEL: 'narrow_zext_index'
-; COST: Cost of 12 for VF 8: WIDEN ir<%valB> = load ir<%inB>
+; COST: Cost of 10 for VF 8: WIDEN ir<%valB> = load ir<%inB>
 ; ASM-LABEL: narrow_zext_index:
 ; ASM-COUNT-1: vpgatherdd
 ; ASM-NOT: vpgather
