@@ -5948,6 +5948,23 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
            });
   }
 
+  case ISD::LOAD: {
+    // If we're loading an unindexed constant pool, check if the constant
+    // contains poison/undef - skip ANYEXT loads.
+    // TODO: DemandedElts and type size mismatch handling.
+    auto *LD = cast<LoadSDNode>(Op);
+    if (ISD::isUNINDEXEDLoad(LD) && !ISD::isEXTLoad(LD)) {
+      if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
+        if (includesPoison(Kind) && Cst->containsPoisonElement())
+          return false;
+        if (includesUndef(Kind) && Cst->containsUndefElement())
+          return false;
+        return true;
+      }
+    }
+    break;
+  }
+
     // TODO: Search for noundef attributes from library functions.
 
     // TODO: Pointers dereferenced by ISD::LOAD/STORE ops are noundef.
