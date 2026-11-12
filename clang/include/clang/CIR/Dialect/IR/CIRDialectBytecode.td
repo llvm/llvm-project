@@ -55,6 +55,39 @@ class EnumParam<string name> :
   WithPrinter<"$_writer.writeVarInt(static_cast<uint64_t>($_getter))",
   WithType<"cir::" # name>>>;
 
+// A type parameter that may be null; presence is a flag of its own.
+def OptionalType :
+  WithParser <"succeeded(readOptionalType($_reader, $_var))",
+  WithPrinter<"writeOptionalType($_writer, $_getter)",
+  WithType<"mlir::Type", Type>>>;
+
+def ElementCountParam :
+  WithParser <"succeeded(readElementCount($_reader, $_var))",
+  WithBuilder<"$_args",
+  WithPrinter<"writeElementCount($_writer, $_getter)",
+  WithType   <"llvm::ElementCount">>>>;
+
+// A whole record, read and written by readRecord and writeRecord.
+class RecordParam<string type> :
+  WithParser <"succeeded(readRecord($_reader, $_var))",
+  WithBuilder<"$_args",
+  WithPrinter<"writeRecord($_writer, $_getter)",
+  WithGetter <"$_attrType",
+  WithType   <type>>>>>;
+
+// The default builder only finds a getChecked without a context and otherwise
+// builds unchecked. A type whose verifying getChecked takes one uses this;
+// `args` converts what the default arguments do not.
+class CheckedDialectType<dag d, string args = "$_args"> : DialectType<d> {
+  let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, " # args # ")";
+}
+
+// A struct or union, named by the def.
+class RecordDialectType :
+    DialectType<(type RecordParam<"cir::" # NAME>:$record)> {
+  let cBuilder = "$_args";
+}
+
 def CtorKindParam : EnumParam<"CtorKind">;
 def AssignKindParam : EnumParam<"AssignKind">;
 
@@ -258,6 +291,12 @@ def MethodAttr : DialectAttribute<(attr
   let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, $_args)";
 }
 
+def BitFieldDeclAttr : DialectAttribute<(attr
+  Type:$declared_type,
+  VarInt:$width,
+  Bool:$is_unnamed
+)>;
+
 def CIRDialectAttributes : DialectAttributes<"CIR"> {
   let elems = [
     OptInfoAttr,
@@ -288,10 +327,131 @@ def CIRDialectAttributes : DialectAttributes<"CIR"> {
     ConstComplexAttr,
     DataMemberAttr,
     MethodAttr,
+    BitFieldDeclAttr,
     // APPEND ONLY. An entry's position in this list *is* its kind
     // discriminator on disk, so inserting one renumbers every entry after
     // it. No dialect version is recorded yet, so this is a same-revision
     // scheme, not a compatibility promise.
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// Types
+//===----------------------------------------------------------------------===//
+//
+// Without an encoding, a type is stored as its printed form, which expands
+// every record it reaches through a pointer. Every type that refers to one
+// stores a type-table reference instead, so each record body is stored once.
+
+def IntType : CheckedDialectType<(type
+  CheckedUnsigned:$width,
+  Bool:$is_signed,
+  Bool:$is_bit_int
+)>;
+
+def SingleType : DialectType<(type)>;
+def DoubleType : DialectType<(type)>;
+def FP16Type : DialectType<(type)>;
+def BF16Type : DialectType<(type)>;
+def FP80Type : DialectType<(type)>;
+def FP128Type : DialectType<(type)>;
+
+def LongDoubleType : CheckedDialectType<(type
+  Type:$underlying
+)>;
+
+def ComplexType : DialectType<(type
+  Type:$elementType
+)>;
+
+def PointerType : DialectType<(type
+  Type:$pointee,
+  OptionalAttribute<"mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
+)>;
+
+def DataMemberType : DialectType<(type
+  Type:$member_ty,
+  Ty<"cir::RecordType">:$class_ty
+)>;
+
+def VPtrType : DialectType<(type)>;
+def CUDADeviceSurfaceType : DialectType<(type)>;
+def CUDADeviceTextureType : DialectType<(type)>;
+def BoolType : DialectType<(type)>;
+
+def ArrayType : DialectType<(type
+  Type:$elementType,
+  VarInt:$size
+)>;
+
+def VectorType : DialectType<(type
+  Type:$element_type,
+  ElementCountParam:$size
+)>;
+
+def MatrixType : DialectType<(type
+  Type:$element_type,
+  VarInt:$num_rows,
+  VarInt:$num_columns
+)>;
+
+// The getChecked without a context takes it from the return type, which is
+// null when the function returns nothing.
+def FuncType : CheckedDialectType<(type
+  Array<Type>:$inputs,
+  OptionalType:$optionalReturnType,
+  Bool:$varArg
+), "llvm::ArrayRef(inputs), optionalReturnType, varArg">;
+
+def MethodType : DialectType<(type
+  Ty<"cir::FuncType">:$member_func_ty,
+  Ty<"cir::RecordType">:$class_ty
+)>;
+
+def VoidType : DialectType<(type)>;
+
+def BitFieldType : CheckedDialectType<(type
+  OptionalType:$storage_type,
+  Array<List<Attr<"cir::BitFieldDeclAttr">>>:$fields
+), "storage_type, llvm::ArrayRef(fields)">;
+
+def StructType : RecordDialectType;
+def UnionType : RecordDialectType;
+
+def EhTokenType : DialectType<(type)>;
+def CleanupTokenType : DialectType<(type)>;
+def CatchTokenType : DialectType<(type)>;
+
+def CIRDialectTypes : DialectTypes<"CIR"> {
+  let elems = [
+    IntType,
+    SingleType,
+    DoubleType,
+    FP16Type,
+    BF16Type,
+    FP80Type,
+    FP128Type,
+    LongDoubleType,
+    ComplexType,
+    PointerType,
+    DataMemberType,
+    VPtrType,
+    CUDADeviceSurfaceType,
+    CUDADeviceTextureType,
+    BoolType,
+    ArrayType,
+    VectorType,
+    MatrixType,
+    FuncType,
+    MethodType,
+    VoidType,
+    BitFieldType,
+    StructType,
+    UnionType,
+    EhTokenType,
+    CleanupTokenType,
+    CatchTokenType,
+    // APPEND ONLY, as for the attributes above.
   ];
 }
 

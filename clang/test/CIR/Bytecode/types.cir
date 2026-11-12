@@ -1,0 +1,59 @@
+// RUN: cir-opt %s -verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --emit-bytecode | llvm-strings | FileCheck %s --check-prefix=NATIVE
+
+// Round-trip every CIR type. A record that refers back to itself is bound
+// before its members are read.
+//
+// Check that no type is string-encoded in the blob, nor the bit-field
+// declarations a bit-field type holds.
+// NATIVE-NOT: !cir.
+// NATIVE-NOT: #cir.bitfield_decl
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_Node = !cir.struct<"Node" {data !s32i, data !cir.ptr<!cir.struct<"Node">>}>
+!rec_A = !cir.struct<class "A" {data !cir.ptr<!cir.struct<"B" {data !cir.ptr<!cir.struct<class "A">>, data !s32i}>>}>
+!rec_Packed = !cir.struct<"Packed" packed {data !u8i, data !s32i}>
+!rec_Bits = !cir.struct<"Bits" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, pad !cir.array<!u8i x 3>}>
+!rec_Opaque = !cir.struct<"Opaque" incomplete>
+!rec_COpaque = !cir.struct<class "COpaque" incomplete>
+!rec_Anon = !cir.struct<{data !s32i, data !cir.ptr<!rec_Node>}>
+!rec_U = !cir.union<"U" {data !s32i, data !cir.ptr<!cir.union<"U">>}, padding = {!cir.array<!u8i x 4>}>
+!rec_UOpaque = !cir.union<"UOpaque" incomplete>
+!rec_UAnon = !cir.union<{data !s32i, data !u8i}>
+
+module {
+  cir.func private @ints(!s32i, !u8i, !cir.int<s, 128, bitint>, !cir.bool)
+  cir.func private @floats(!cir.float, !cir.double, !cir.f16, !cir.bf16, !cir.f80, !cir.f128, !cir.long_double<!cir.f80>, !cir.complex<!cir.float>)
+  cir.func private @pointers(!cir.ptr<!cir.void>, !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!s32i, lang_address_space(offload_global)>, !cir.vptr)
+  cir.func private @aggregates(!cir.array<!s32i x 4>, !cir.vector<4 x !s32i>, !cir.vector<[16] x !u8i>, !cir.matrix<2 x 3 x !cir.float>)
+  cir.func private @members(!cir.data_member<!s32i in !rec_Node>, !cir.method<!cir.func<(!s32i)> in !rec_A>)
+  cir.func private @functions(!cir.ptr<!cir.func<()>>, !cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>) -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Node>) -> !rec_Node>>
+  cir.func private @structs(!rec_Node, !cir.ptr<!rec_A>, !rec_Packed, !rec_Bits, !cir.ptr<!rec_Opaque>, !cir.ptr<!rec_COpaque>, !rec_Anon)
+  cir.func private @unions(!rec_U, !cir.ptr<!rec_UOpaque>, !rec_UAnon)
+  cir.func private @tokens(!cir.eh_token, !cir.cleanup_token, !cir.catch_token)
+  cir.func private @cuda(!cir.cuda_surface, !cir.cuda_texture)
+}
+
+// CHECK-DAG: !rec_Node = !cir.struct<"Node" {data !s32i, data !cir.ptr<!cir.struct<"Node">>}>
+// CHECK-DAG: !rec_A = !cir.struct<class "A" {data !cir.ptr<!rec_B>}>
+// CHECK-DAG: !rec_B = !cir.struct<"B" {data !cir.ptr<!cir.struct<class "A" {data !cir.ptr<!cir.struct<"B">>}>>, data !s32i}>
+// CHECK-DAG: !rec_Packed = !cir.struct<"Packed" packed {data !u8i, data !s32i}>
+// CHECK-DAG: !rec_Bits = !cir.struct<"Bits" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, pad !cir.array<!u8i x 3>}>
+// CHECK-DAG: !rec_Opaque = !cir.struct<"Opaque" incomplete>
+// CHECK-DAG: !rec_COpaque = !cir.struct<class "COpaque" incomplete>
+// CHECK-DAG: !rec_anon_struct = !cir.struct<{data !s32i, data !cir.ptr<!rec_Node>}>
+// CHECK-DAG: !rec_U = !cir.union<"U" {data !s32i, data !cir.ptr<!cir.union<"U">>}, padding = {!cir.array<!u8i x 4>}>
+// CHECK-DAG: !rec_UOpaque = !cir.union<"UOpaque" incomplete>
+// CHECK-DAG: !rec_anon_union = !cir.union<{data !s32i, data !u8i}>
+
+// CHECK: cir.func private @ints(!s32i, !u8i, !s128i_bitint, !cir.bool)
+// CHECK: cir.func private @floats(!cir.float, !cir.double, !cir.f16, !cir.bf16, !cir.f80, !cir.f128, !cir.long_double<!cir.f80>, !cir.complex<!cir.float>)
+// CHECK: cir.func private @pointers(!cir.ptr<!void>, !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!s32i, lang_address_space(offload_global)>, !cir.vptr)
+// CHECK: cir.func private @aggregates(!cir.array<!s32i x 4>, !cir.vector<4 x !s32i>, !cir.vector<[16] x !u8i>, !cir.matrix<2 x 3 x !cir.float>)
+// CHECK: cir.func private @members(!cir.data_member<!s32i in !rec_Node>, !cir.method<!cir.func<(!s32i)> in !rec_A>)
+// CHECK: cir.func private @functions(!cir.ptr<!cir.func<()>>, !cir.ptr<!cir.func<(!s32i, ...) -> !s32i>>) -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Node>) -> !rec_Node>>
+// CHECK: cir.func private @structs(!rec_Node, !cir.ptr<!rec_A>, !rec_Packed, !rec_Bits, !cir.ptr<!rec_Opaque>, !cir.ptr<!rec_COpaque>, !rec_anon_struct)
+// CHECK: cir.func private @unions(!rec_U, !cir.ptr<!rec_UOpaque>, !rec_anon_union)
+// CHECK: cir.func private @tokens(!cir.eh_token, !cir.cleanup_token, !cir.catch_token)
+// CHECK: cir.func private @cuda(!cir.cuda_surface, !cir.cuda_texture)
