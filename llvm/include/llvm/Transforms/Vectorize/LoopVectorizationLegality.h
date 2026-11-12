@@ -26,16 +26,17 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONLEGALITY_H
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONLEGALITY_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
-class BlockFrequencyInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -44,7 +45,6 @@ class LoopInfo;
 class Metadata;
 class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
-class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
@@ -132,8 +132,7 @@ public:
   /// Mark the loop L as already vectorized by setting the width to 1.
   LLVM_ABI void setAlreadyVectorized();
 
-  LLVM_ABI bool allowVectorization(Function *F, Loop *L,
-                                   bool VectorizeOnlyWhenForced) const;
+  LLVM_ABI bool allowVectorization(Loop *L, bool VectorizeOnlyWhenForced) const;
 
   /// Dumps all the hint information.
   LLVM_ABI void emitRemarkWithHints() const;
@@ -279,9 +278,7 @@ enum class UncountableExitTrait { None, ReadOnly, ReadWrite };
 /// * Scalars checks - The code in canVectorizeInstrs and canVectorizeMemory
 /// checks for a number of different conditions, such as the availability of a
 /// single induction variable, that all types are supported and vectorize-able,
-/// etc. This code reflects the capabilities of InnerLoopVectorizer.
-/// This class is also used by InnerLoopVectorizer for identifying
-/// induction variable and the different reduction variables.
+/// etc. It also identifies the induction and reduction variables of the loop.
 class LoopVectorizationLegality {
 public:
   LoopVectorizationLegality(const VectorizeOptions &Opts, Loop *L,
@@ -353,6 +350,11 @@ public:
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
+  /// Returns the conditional inductions found in the loop.
+  const ConditionalInductionList &getConditionalInductions() const {
+    return ConditionalInductions;
+  }
+
   bool hasConditionalInductions() const {
     return !ConditionalInductions.empty();
   }
@@ -397,7 +399,7 @@ public:
   /// 1 - Address is consecutive.
   /// -1 - Address is consecutive, and decreasing.
   /// NOTE: This method must only be used before modifying the original scalar
-  /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
+  /// loop. Do not use after executing a VPlan (PR34965).
   LLVM_ABI int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
   /// Returns true if \p V is invariant across all loop iterations according to
@@ -483,16 +485,32 @@ public:
   /// Returns a HistogramInfo* for the given instruction if it was determined
   /// to be part of a load -> update -> store sequence where multiple lanes
   /// may be working on the same memory address.
-  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+  const HistogramInfo *getHistogramInfo(Instruction *I) const {
     for (const HistogramInfo &HGram : Histograms)
       if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
         return &HGram;
 
-    return std::nullopt;
+    return nullptr;
   }
 
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
+
+  /// Returns the CompressedPtrInfo for \p Ptr if the pointer is defined via
+  /// a conditional induction PHI, otherwise std::nullopt.
+  std::optional<CompressedPtrInfo> getCompressedPtrInfo(Value *Ptr) const {
+    auto It = CompressedPtrs.find(Ptr);
+    if (It != CompressedPtrs.end())
+      return It->second;
+    return std::nullopt;
+  }
+
+  /// Returns true for \p I if it corresponds to a compressed load or store
+  /// (which can map to an llvm.masked.expandload or llvm.masked.compressstore).
+  bool isCompressedLoadOrStore(Instruction *I) {
+    return isa<LoadInst, StoreInst>(I) &&
+           getCompressedPtrInfo(getLoadStorePointerOperand(I)).has_value();
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -527,9 +545,15 @@ private:
   bool canVectorizeLoopNestCFG(Loop *Lp, bool UseVPlanNativePath);
 
   /// Set up outer loop inductions by checking Phis in outer loop header for
-  /// supported inductions (int inductions). Return false if any of these Phis
-  /// is not a supported induction or if we fail to find an induction.
+  /// supported inductions (int and pointer inductions). Return false if any of
+  /// these Phis is not a supported induction or if we fail to find any
+  /// induction.
   bool setupOuterLoopInductions();
+
+  /// Return true if the widest induction type, used for the canonical IV and
+  /// trip count, can be determined, i.e. there is at least one integer or
+  /// pointer induction. Otherwise report the reason and return false.
+  bool canDetermineWidestInductionType();
 
   /// Return true if the pre-header, exiting and latch blocks of \p Lp
   /// (non-recursive) are considered legal for vectorization.
@@ -574,7 +598,8 @@ private:
   ///   2. The loop has only one early uncountable exit
   ///   3. The early exit block dominates the latch block.
   ///   4. The latch block has an exact exit count.
-  ///   5. The loop does not contain reductions or recurrences.
+  ///   5. The loop does not contain fixed-order recurrences or reductions where
+  ///   the live-out value is used from a non-latch exit..
   ///   6. We can prove at compile-time that loops will not contain faulting
   ///      loads, or that any faulting loads would also occur in a purely
   ///      scalar loop.
@@ -650,15 +675,24 @@ private:
   /// for it.
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
+  struct SafeAccessInfo {
+    uint64_t MaxSizeInBytes = 0;
+    Align MaxAlign = Align(1);
+  };
+
+  /// Maps a pointer to its maximum fixed access size and safe alignment.
+  using SafeAccessesTy = SmallDenseMap<Value *, SafeAccessInfo, 8>;
+
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
-  /// \p SafePtrs is a list of addresses that are known to be legal and we know
-  /// that we can read from them without segfault.
+  /// \p SafeAccesses records pointers that can be accessed unconditionally,
+  /// together with the fixed access sizes and alignments justified for each
+  /// pointer.
   /// \p MaskedOp is a list of instructions that have to be transformed into
   /// calls to the appropriate masked intrinsic when the loop is vectorized
   /// or dropped if the instruction is a conditional assume intrinsic.
   bool
-  blockCanBePredicated(BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+  blockCanBePredicated(BasicBlock *BB, SafeAccessesTy &SafeAccesses,
                        SmallPtrSetImpl<const Instruction *> &MaskedOp) const;
 
   /// Updates the vectorization state by adding \p Phi to the inductions list.

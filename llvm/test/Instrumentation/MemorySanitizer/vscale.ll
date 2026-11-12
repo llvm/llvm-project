@@ -50,7 +50,7 @@ define void @test_load_store_i32(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP14]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr [4 x i8], ptr [[TMP12]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP15]], ptr [[TMP20]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP19]]
@@ -131,7 +131,7 @@ define void @test_load_store_add_int(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP25]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP23]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr [4 x i8], ptr [[TMP23]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP26]], ptr [[TMP31]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP30]]
@@ -194,7 +194,7 @@ define void @test_load_store_float(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP14]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr [4 x i8], ptr [[TMP12]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP15]], ptr [[TMP20]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP19]]
@@ -275,7 +275,7 @@ define void @test_load_store_add_float(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP25]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP23]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr [4 x i8], ptr [[TMP23]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP26]], ptr [[TMP31]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP30]]
@@ -369,7 +369,7 @@ define void @test_ret(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP11]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP9]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP17:%.*]] = getelementptr [4 x i8], ptr [[TMP9]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP12]], ptr [[TMP17]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP16]]
@@ -417,7 +417,7 @@ define void @fn_param(<vscale x 2 x float> %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP13:%.*]] = getelementptr [4 x i8], ptr [[TMP5]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP8]], ptr [[TMP13]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP12]]
@@ -447,7 +447,7 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @fn_param(<vscale x 2 x float> [[TMP2]], ptr [[B]])
@@ -472,7 +472,7 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP10]], 0
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; ORIGIN:       11:
-; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP9]]) #[[ATTR5:[0-9]+]]
+; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP9]]) #[[ATTR6:[0-9]+]]
 ; ORIGIN-NEXT:    unreachable
 ; ORIGIN:       12:
 ; ORIGIN-NEXT:    call void @fn_param(<vscale x 2 x float> [[TMP3]], ptr [[B]])

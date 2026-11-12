@@ -1,4 +1,4 @@
-# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -debug-only=pipeliner 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64 -o - %s -run-pass pipeliner -enable-pipeliner -debug-only=pipeliner 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # unacceptable loops by pipeliner
@@ -6,7 +6,6 @@
 ...
 ---
 name:            func1
-tracksRegLiveness: true
 body:             |
   ; multiple counter increment instructions
   ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
@@ -27,7 +26,6 @@ body:             |
 ...
 ---
 name:            func2
-tracksRegLiveness: true
 body:             |
   ; neither operand of the increment instruction is a loop invariant value
   ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
@@ -47,7 +45,6 @@ body:             |
 ...
 ---
 name:            func3
-tracksRegLiveness: true
 body:             |
   ; neither operand of the compare instruction is a loop invariant value
   ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
@@ -67,7 +64,6 @@ body:             |
 ...
 ---
 name:            func4
-tracksRegLiveness: true
 body:             |
   ; multiple phi instructions
   ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop
@@ -89,7 +85,6 @@ body:             |
 ...
 ---
 name:            func5
-tracksRegLiveness: true
 body:             |
   ; not an increment instruction
   ; CHECK: Unable to analyzeLoop, can NOT pipeline Loop

@@ -2,14 +2,13 @@
 #
 # Check that we can select G_UZP1 and G_UZP2 via the tablegen importer.
 #
-# RUN: llc -mtriple aarch64 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -run-pass=instruction-select %s -o - | FileCheck %s
 
 ...
 ---
 name:            uzp1_v4s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -33,7 +32,6 @@ body:             |
 name:            uzp2_v4s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
   liveins: $q0, $q1

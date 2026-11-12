@@ -30,7 +30,7 @@ function(lldb_tablegen)
     list(APPEND LTG_UNPARSED_ARGUMENTS -DNDEBUG)
   endif()
 
-  tablegen(LLDB ${LTG_UNPARSED_ARGUMENTS})
+  tablegen_internal(LLDB ${LTG_UNPARSED_ARGUMENTS})
 
   if(LTG_TARGET)
     add_public_tablegen_target(${LTG_TARGET})
@@ -60,6 +60,18 @@ function(_lldb_links_liblldb_check out_var libs)
   endforeach()
 endfunction()
 
+# The static linker binds each undefined symbol to the first library on the
+# command line that defines it. Listing liblldb last keeps symbols liblldb
+# re-exports bound to the static libraries.
+function(lldb_check_liblldb_last name libs)
+  list(FIND libs liblldb index)
+  list(LENGTH libs length)
+  math(EXPR last "${length} - 1")
+  if(NOT index EQUAL -1 AND NOT index EQUAL last)
+    message(FATAL_ERROR "Target ${name} must list liblldb last in LINK_LIBS.")
+  endif()
+endfunction()
+
 function(_lldb_propagate_links_liblldb name libs)
   _lldb_links_liblldb_check(_links_liblldb "${libs}")
   set_target_properties(${name} PROPERTIES LLDB_LINKS_LIBLLDB ${_links_liblldb})
@@ -86,6 +98,9 @@ function(lldb_record_dynamic_script_interpreter_exports target)
   set(extra_args)
   if(APPLE)
     list(APPEND extra_args --mach-o)
+    foreach(arch ${CMAKE_OSX_ARCHITECTURES})
+      list(APPEND extra_args --arch ${arch})
+    endforeach()
   endif()
 
   add_custom_command(
@@ -192,6 +207,8 @@ function(add_lldb_library name)
     "INSTALL_PREFIX"
     "LINK_LIBS;CLANG_LIBS;ALLOWED_INTERNAL_DEPENDENCIES"
     ${ARGN})
+
+  lldb_check_liblldb_last(${name} "${PARAM_LINK_LIBS}")
 
   foreach(link_lib ${PARAM_LINK_LIBS})
     # May not be a target yet.
@@ -386,6 +403,8 @@ function(add_lldb_executable name)
     "LINK_LIBS;CLANG_LIBS;LINK_COMPONENTS;BUILD_RPATH;INSTALL_RPATH"
     ${ARGN}
     )
+
+  lldb_check_liblldb_last(${name} "${ARG_LINK_LIBS}")
 
   if(LLDB_NO_INSTALL_DEFAULT_RPATH)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)

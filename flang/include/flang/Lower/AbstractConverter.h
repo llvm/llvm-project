@@ -209,16 +209,19 @@ public:
   /// expression value. The clean-up for this temporary is added to \p context.
   virtual fir::ExtendedValue genExprAddr(const SomeExpr &expr,
                                          StatementContext &context,
-                                         mlir::Location *locPtr = nullptr) = 0;
+                                         mlir::Location *locPtr = nullptr,
+                                         bool allowCoarray = false) = 0;
 
   /// Generate the address of the location holding the expression, \p expr.
   fir::ExtendedValue genExprAddr(mlir::Location loc, const SomeExpr *expr,
-                                 StatementContext &stmtCtx) {
-    return genExprAddr(*expr, stmtCtx, &loc);
+                                 StatementContext &stmtCtx,
+                                 bool allowCoarray = false) {
+    return genExprAddr(*expr, stmtCtx, &loc, allowCoarray);
   }
   fir::ExtendedValue genExprAddr(mlir::Location loc, const SomeExpr &expr,
-                                 StatementContext &stmtCtx) {
-    return genExprAddr(expr, stmtCtx, &loc);
+                                 StatementContext &stmtCtx,
+                                 bool allowCoarray = false) {
+    return genExprAddr(expr, stmtCtx, &loc, allowCoarray);
   }
 
   /// Generate the computations of the expression to produce a value.
@@ -241,7 +244,8 @@ public:
   /// storage without making a temporary.
   virtual fir::ExtendedValue genExprBox(mlir::Location loc,
                                         const SomeExpr &expr,
-                                        StatementContext &stmtCtx) = 0;
+                                        StatementContext &stmtCtx,
+                                        bool allowCoarray = false) = 0;
 
   /// Generate the address of the box describing the variable designated
   /// by the expression. The expression must be an allocatable or pointer

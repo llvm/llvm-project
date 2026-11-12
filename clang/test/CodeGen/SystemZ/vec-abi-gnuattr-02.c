@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple s390x-ibm-linux -emit-llvm -fzvector -o - %s 2>&1 \
 // RUN:   | FileCheck  %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple s390x-ibm-linux -emit-llvm -fzvector -o - %s 2>&1   | FileCheck  %s %}
 //
 // Test that the "s390x-visible-vector-ABI" module flag is not emitted.
 

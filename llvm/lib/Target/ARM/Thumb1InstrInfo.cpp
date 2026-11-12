@@ -183,7 +183,7 @@ void Thumb1InstrInfo::expandLoadStackGuard(
          "TLS stack protector not supported for Thumb1 targets");
 
   unsigned Instr;
-  if (!GV->isDSOLocal())
+  if (!MF.getTarget().shouldAssumeDSOLocal(GV))
     Instr = ARM::tLDRLIT_ga_pcrel;
   else if (ST.genExecuteOnly() && ST.hasV8MBaselineOps())
     Instr = ARM::t2MOVi32imm;

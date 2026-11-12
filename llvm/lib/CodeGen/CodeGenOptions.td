@@ -10,6 +10,12 @@ include "llvm/Option/LibraryOptions.td"
 
 def CodeGenOptions : OptionsStruct;
 
+// BasicBlockMatchingAndInference.cpp
+defm : ValueField<"propeller-infer-threshold", "float", "0.6f",
+  "Threshold for infer stale profile">;
+defm : BoolField<"propeller-match-bbid", "false",
+  "Match basic blocks using BBIDs instead of hashes for Propeller inference">;
+
 // CodeGenPrepare.cpp
 defm : BoolField<"bbsections-guided-section-prefix", "true",
   "Use the basic-block-sections profile to determine the text section prefix for hot functions. "
@@ -153,6 +159,8 @@ defm : BoolField<"enable-implicit-null-checks", "false",
   "Fold null checks into faulting memory operations">;
 defm : OptionalBoolField<"enable-ipra",
   "Enable interprocedural register allocation to reduce load/store at procedure calls">;
+defm : OptionalBoolField<"enable-pipeliner",
+  "Enable the MachinePipeliner (overrides the target's default)">;
 defm : EnumField<"function-splitting", "std::optional<FunctionSplittingMode>", "std::nullopt",
   "none,bbsections,all",
   ["FunctionSplittingMode::None", "FunctionSplittingMode::BBSectionsOnly",

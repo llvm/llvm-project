@@ -301,6 +301,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("ir-block-address-taken", MIToken::kw_ir_block_address_taken)
       .Case("machine-block-address-taken",
             MIToken::kw_machine_block_address_taken)
+      .Case("label-must-be-emitted", MIToken::kw_label_must_be_emitted)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("max-bytes-for-alignment", MIToken::kw_max_bytes_for_alignment)
       .Case("noconvergent", MIToken::kw_noconvergent)
@@ -643,6 +644,17 @@ static Cursor maybeLexFloatHexBits(Cursor C, MIToken &Token) {
   return C;
 }
 
+static Cursor maybeLexInfinityLiteral(Cursor C, MIToken &Token) {
+  if ((C.peek() != '+' && C.peek() != '-') || C.peek(1) != 'i' ||
+      C.peek(2) != 'n' || C.peek(3) != 'f' || isIdentifierChar(C.peek(4)))
+    return std::nullopt;
+
+  Cursor Range = C;
+  C.advance(4);
+  Token.reset(MIToken::FloatingPointLiteral, Range.upto(C));
+  return C;
+}
+
 static Cursor maybeLexNumericalLiteral(Cursor C, MIToken &Token) {
   if (!isdigit(C.peek()) && (C.peek() != '-' || !isdigit(C.peek(1))))
     return std::nullopt;
@@ -782,6 +794,8 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
     return R.remaining();
   if (Cursor R = maybeLexFloatHexBits(C, Token))
+    return R.remaining();
+  if (Cursor R = maybeLexInfinityLiteral(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexIdentifier(C, Token))
     return R.remaining();

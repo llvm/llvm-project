@@ -52,6 +52,7 @@ define i32 @f() #0 {
 ; CHECK-PAUTHLR:       // %bb.0: // %entry
 ; CHECK-PAUTHLR-NEXT:    cmp sp, #0
 ; CHECK-PAUTHLR-NEXT:    csetm x16, ne
+; CHECK-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; CHECK-PAUTHLR-NEXT:  .Ltmp0:
 ; CHECK-PAUTHLR-NEXT:    paciasppc
 ; CHECK-PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
@@ -65,8 +66,8 @@ define i32 @f() #0 {
 ; CHECK-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-PAUTHLR-NEXT:    and x30, x30, x16
 ; CHECK-PAUTHLR-NEXT:    csdb
-; CHECK-PAUTHLR-NEXT:    mov x1, sp
 ; CHECK-PAUTHLR-NEXT:    autiasppc .Ltmp0
+; CHECK-PAUTHLR-NEXT:    mov x1, sp
 ; CHECK-PAUTHLR-NEXT:    and x1, x1, x16
 ; CHECK-PAUTHLR-NEXT:    mov sp, x1
 ; CHECK-PAUTHLR-NEXT:    ret
@@ -75,6 +76,7 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-PAUTHLR:       // %bb.0: // %entry
 ; CHECK-PAUTH-PAUTHLR-NEXT:    cmp sp, #0
 ; CHECK-PAUTH-PAUTHLR-NEXT:    csetm x16, ne
+; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; CHECK-PAUTH-PAUTHLR-NEXT:  .Ltmp0:
 ; CHECK-PAUTH-PAUTHLR-NEXT:    paciasppc
 ; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
@@ -88,8 +90,8 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-PAUTHLR-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-PAUTH-PAUTHLR-NEXT:    and x30, x30, x16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    csdb
-; CHECK-PAUTH-PAUTHLR-NEXT:    mov x1, sp
 ; CHECK-PAUTH-PAUTHLR-NEXT:    autiasppc .Ltmp0
+; CHECK-PAUTH-PAUTHLR-NEXT:    mov x1, sp
 ; CHECK-PAUTH-PAUTHLR-NEXT:    and x1, x1, x16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    mov sp, x1
 ; CHECK-PAUTH-PAUTHLR-NEXT:    ret

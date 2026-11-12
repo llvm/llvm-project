@@ -153,9 +153,9 @@ define void @foo1(ptr nocapture noalias %A, ptr nocapture %PtrPtr) {
 ; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <2 x i32> poison, i32 [[TMP35]], i64 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <2 x i32> [[TMP37]], i32 [[TMP36]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 2
-; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 4
-; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 6
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 8
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 16
+; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 24
 ; CHECK-NEXT:    store <2 x i32> [[TMP8]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP30]], ptr [[TMP40]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP34]], ptr [[TMP41]], align 4

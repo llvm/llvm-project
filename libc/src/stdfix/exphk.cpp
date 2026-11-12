@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "exphk.h"
+#include "src/stdfix/exphk.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
-#include "src/__support/fixed_point/fx_bits.h"
+#include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -18,22 +19,24 @@ namespace {
 
 // Look up tables for exp(hi) and exp(mid).
 // Generated with Sollya:
-// > for i from 0 to 89 do {
-//     hi = floor(i/8) - 5;
-//     m = i/8 - floor(i/8) - 0.5;
+// > for i from 0 to 11 do {
+//     hi = i - 6;
 //     e_hi = nearestint(exp(hi) * 2^7) * 2^-7;
-//     e_mid = nearestint(exp(m) * 2^7) * 2^-7;
-//     print(hi, e_hi, m, e_mid);
+//     print(hi, e_hi);
 //   };
-// Notice that when i = 88 and 89, e_hi will overflow short accum range.
+// > for i from 0 to 7 do {
+//     m = i/8;
+//     e_mid = nearestint(exp(m) * 2^7) * 2^-7;
+//     print(m, e_mid);
+//   };
 static constexpr short accum EXP_HI[12] = {
-    0x1.0p-7hk, 0x1.0p-6hk, 0x1.8p-5hk,  0x1.1p-3hk,  0x1.78p-2hk,  0x1.0p0hk,
-    0x1.5cp1hk, 0x1.d9p2hk, 0x1.416p4hk, 0x1.b4dp5hk, 0x1.28d4p7hk, SACCUM_MAX,
+    0x0.0p0hk, 0x1.0p-7hk, 0x1.0p-6hk, 0x1.8p-5hk,  0x1.1p-3hk,  0x1.78p-2hk,
+    0x1.0p0hk, 0x1.5cp1hk, 0x1.d9p2hk, 0x1.416p4hk, 0x1.b4dp5hk, 0x1.28d4p7hk,
 };
 
 static constexpr short accum EXP_MID[8] = {
-    0x1.38p-1hk, 0x1.6p-1hk, 0x1.9p-1hk, 0x1.c4p-1hk,
-    0x1.0p0hk,   0x1.22p0hk, 0x1.48p0hk, 0x1.74p0hk,
+    0x1.0p0hk,  0x1.22p0hk, 0x1.48p0hk, 0x1.74p0hk,
+    0x1.a6p0hk, 0x1.dep0hk, 0x1.0fp1hk, 0x1.33p1hk,
 };
 
 } // anonymous namespace
@@ -42,7 +45,8 @@ LLVM_LIBC_FUNCTION(short accum, exphk, (short accum x)) {
   using FXRep = fixed_point::FXRep<short accum>;
   using StorageType = typename FXRep::StorageType;
   // Output overflow
-  if (LIBC_UNLIKELY(x >= 0x1.64p2hk))
+  //   ceil(log(2^8) * 2^7) * 2^-7
+  if (LIBC_UNLIKELY(x >= 0x1.63p2hk))
     return FXRep::MAX();
   // Lower bound where exp(x) -> 0:
   //   floor(log(2^-8) * 2^7) * 2^-7
@@ -50,7 +54,7 @@ LLVM_LIBC_FUNCTION(short accum, exphk, (short accum x)) {
     return FXRep::ZERO();
 
   // Current range of x:
-  //   -0x1.628p2 <= x <= 0x1.638p2
+  //   -0x1.628p2 <= x <= 0x1.628p2
   // Range reduction:
   //   x = hi + mid + lo,
   // where:
@@ -62,9 +66,9 @@ LLVM_LIBC_FUNCTION(short accum, exphk, (short accum x)) {
   // with relative errors < |lo|^2 <= 2^-8.
   //   exp(hi) and exp(mid) are extracted from small lookup tables.
 
-  // Round-to-nearest 1/8, tie-to-(+Int):
+  // Round-to-nearest 1/8, tie-to-(+Inf):
   constexpr short accum ONE_SIXTEENTH = 0x1.0p-4hk;
-  // x_rounded = floor(x + 1/16).
+  // x_rounded = floor((x + 1/16) * 2^3) * 2^-3.
   short accum x_rounded = ((x + ONE_SIXTEENTH) >> (FXRep::FRACTION_LEN - 3))
                           << (FXRep::FRACTION_LEN - 3);
   short accum lo = x - x_rounded;
@@ -72,22 +76,24 @@ LLVM_LIBC_FUNCTION(short accum, exphk, (short accum x)) {
   // Range of x_rounded:
   //   x_rounded >= floor((-0x1.628p2 + 0x1.0p-4) * 2^3) * 2^-3
   //              = -0x1.6p2 = -5.5
-  // To get the indices, we shift the values so that it start with 0.
-  // Range of indices:  0 <= indices <= 89
-  StorageType indices = cpp::bit_cast<StorageType>((x_rounded + 0x1.6p2hk) >>
+  //   x_rounded <= floor((0x1.628p2 + 0x1.0p-4) * 2^3) * 2^-3
+  //              = 0x1.6p2 = 5.5
+  // As hi = floor(x_rounded) >= -6, we add 6 (0x1.8p2hk) so that hi + 6 >= 0.
+  // Range of indices:  4 <= indices <= 92
+  StorageType indices = cpp::bit_cast<StorageType>((x_rounded + 0x1.8p2hk) >>
                                                    (FXRep::FRACTION_LEN - 3));
   // So we have the following relation:
-  //   indices = (hi + mid + 44/8) * 8
+  //   indices = (hi + mid + 6) * 8
   // That implies:
-  //   hi + mid = indices/8 - 5.5
+  //   hi + mid = indices/8 - 6
   // So for lookup tables, we can use the upper 4 bits to get:
-  //   exp( floor(indices / 8) - 5 )
+  //   exp( floor(indices / 8) - 6 )
   // and lower 3 bits for:
-  //   exp( (indices - floor(indices)) - 0.5 )
+  //   exp( indices/8 - floor(indices / 8) )
   short accum exp_hi = EXP_HI[indices >> 3];
   short accum exp_mid = EXP_MID[indices & 0x7];
   // exp(x) ~ exp(hi) * exp(mid) * (1 + lo);
-  return (exp_hi * (exp_mid * (0x1.0p0hk + lo)));
+  return exp_hi * (exp_mid * (0x1.0p0hk + lo));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

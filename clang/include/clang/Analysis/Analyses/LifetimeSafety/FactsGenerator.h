@@ -21,6 +21,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang::lifetimes::internal {
@@ -40,6 +41,7 @@ public:
   void VisitDeclStmt(const DeclStmt *DS);
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *DAE);
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
   void VisitMemberExpr(const MemberExpr *ME);
@@ -120,6 +122,16 @@ private:
   ///   argument origins should flow to the returned origin.
   void handleFunctionCall(const Expr *Call, bool IsGslConstruction = false);
 
+  // Handles calls that allocate memory (e.g. functions annotated with
+  // `ownership_returns`): the call result is a fresh allocation, so a new
+  // loan is issued for it.
+  void handleAllocatingCall(const Expr *Call, const FunctionDecl *FD);
+
+  // Handles calls that free memory (e.g. functions annotated with
+  // `ownership_takes`): the freed arguments' origins are invalidated.
+  void handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
+                         ArrayRef<const Expr *> Args);
+
   // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
@@ -165,7 +177,7 @@ private:
   bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
-  void issueFieldPlaceholderLoans(const CXXMethodDecl *MD,
+  void issueFieldPlaceholderLoans(const CXXRecordDecl *ClassDef,
                                   llvm::SmallVectorImpl<Fact *> &Facts);
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
@@ -175,6 +187,10 @@ private:
   // appended at the end of CurrentBlockFacts to ensure they appear after
   // ExpireFact entries.
   llvm::SmallVector<Fact *> EscapesInCurrentBlock;
+  // Lifetime-extended temporaries, keyed by the variable they expire with.
+  llvm::DenseMap<const ValueDecl *,
+                 llvm::SmallVector<const MaterializeTemporaryExpr *, 1>>
+      ExtendedTemporaries;
   const CFGBlock *CurrentBlock;
   bool IsCMode = false;
 };

@@ -41,7 +41,7 @@ struct S {
 
 
 // CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN1S2hdE"> @_ZN1S2hdE = #cir.zero : !rec_HasDtor align(1) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = true, tsk = undeclared>
-// CIR-LABEL: cir.func comdat("_ZN1S2hdE") internal private @__cxx_global_var_init() {
+// CIR-LABEL: cir.func comdat("_ZN1S2hdE") internal private @__cxx_global_var_init(){{.*}} {
 // CIR: %[[GET_GUARD:.*]] = cir.get_global @_ZGVN1S2hdE : !cir.ptr<!s64i>
 // CIR: %[[TO_CHAR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
 // CIR: %[[LOAD_GUARD:.*]] = cir.load align(8) syncscope(system) atomic(acquire) %[[TO_CHAR]] : !cir.ptr<!s8i>, !s8i
@@ -92,7 +92,7 @@ struct Outer {
   };
 };
 // CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN5Outer5Inner2hdE"> @_ZN5Outer5Inner2hdE = #cir.zero : !rec_HasDtor align(1) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = true, tsk = undeclared>
-// CIR-LABEL: cir.func comdat("_ZN5Outer5Inner2hdE") internal private @__cxx_global_var_init.1() {
+// CIR-LABEL: cir.func comdat("_ZN5Outer5Inner2hdE") internal private @__cxx_global_var_init.1(){{.*}} {
 // CIR: %[[GET_GUARD:.*]] = cir.get_global @_ZGVN5Outer5Inner2hdE : !cir.ptr<!s64i>
 // CIR: %[[TO_CHAR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
 // CIR: %[[LOAD_GUARD:.*]] = cir.load align(8) syncscope(system) atomic(acquire) %[[TO_CHAR]] : !cir.ptr<!s8i>, !s8i
@@ -147,7 +147,7 @@ int useRefMember() {
 }
 
 // CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN9RefMember3refE"> @_ZN9RefMember3refE = #cir.ptr<null> : !cir.ptr<!s32i> align(8) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = true, tsk = undeclared>
-// CIR-LABEL: cir.func comdat("_ZN9RefMember3refE") internal private @__cxx_global_var_init.2() {
+// CIR-LABEL: cir.func comdat("_ZN9RefMember3refE") internal private @__cxx_global_var_init.2(){{.*}} {
 // CIR: %[[GET_GUARD:.*]] = cir.get_global @_ZGVN9RefMember3refE : !cir.ptr<!s64i>
 // CIR: %[[TO_CHAR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
 // CIR: %[[LOAD_GUARD:.*]] = cir.load align(8) syncscope(system) atomic(acquire) %[[TO_CHAR]] : !cir.ptr<!s8i>, !s8i
@@ -201,14 +201,14 @@ int get_weak_dep();
 int weak_dep = get_weak_dep();
 __attribute__((weak)) int weak_after_dep = weak_dep + 1;
 
-// CIR-LABEL: cir.func internal private @__cxx_global_var_init.3() {
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.3(){{.*}} {
 // CIR:         cir.call @_Z12get_weak_depv()
 
 // LLVM-LABEL: define internal void @__cxx_global_var_init.3()
 // LLVM:         call {{.*}}i32 @_Z12get_weak_depv()
 // LLVM:         store i32 %{{.*}}, ptr @weak_dep
 
-// CIR-LABEL: cir.func internal private @__cxx_global_var_init.4() {
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.4(){{.*}} {
 // CIR:         cir.get_global @_ZGV14weak_after_dep
 
 // LLVM-LABEL: define internal void @__cxx_global_var_init.4()
@@ -230,7 +230,7 @@ int useNonThreadSafe() {
 
 // CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN13NonThreadSafeIiE1fE"> @_ZN13NonThreadSafeIiE1fE = #cir.int<0> : !s32i align(4) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = false, tsk = implicit_instantiation>
 
-// CIR-LABEL: cir.func comdat("_ZN13NonThreadSafeIiE1fE") internal private @__cxx_global_var_init.5() {
+// CIR-LABEL: cir.func comdat("_ZN13NonThreadSafeIiE1fE") internal private @__cxx_global_var_init.5(){{.*}} {
 // CIR:   %[[GET_GUARD:.*]] = cir.get_global @_ZGVN13NonThreadSafeIiE1fE : !cir.ptr<!s64i>
 // CIR:   %[[TO_CHAR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
 // CIR:   %[[LOAD_GUARD:.*]] = cir.load align(8) %[[TO_CHAR]] : !cir.ptr<!s8i>, !s8i

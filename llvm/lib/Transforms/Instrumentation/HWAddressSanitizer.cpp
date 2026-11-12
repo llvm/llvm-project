@@ -351,8 +351,7 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
     return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
   const Triple &TargetTriple = M.getTargetTriple();
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (shouldUseStackSafetyAnalysis(Opts, TargetTriple,
                                    Options.DisableOptimization))
     SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
@@ -1339,6 +1338,7 @@ void HWAddressSanitizer::instrumentStack(OptimizationRemarkEmitter &ORE,
     auto *AI = KV.first;
     memtag::AllocaInfo &Info = KV.second;
     IRBuilder<> IRB(AI->getNextNode());
+    IRB.disableGEPCanonicalization();
 
     // Replace uses of the alloca with tagged address.
     Value *Tag = getAllocaTag(IRB, StackTag, N);
@@ -1530,6 +1530,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(InsertPt);
+  EntryIRB.disableGEPCanonicalization();
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ Opts.hwasan_record_stack_history !=
                        RecordStackHistoryMode::none &&

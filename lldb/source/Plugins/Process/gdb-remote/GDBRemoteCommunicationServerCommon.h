@@ -25,7 +25,7 @@ class ProcessGDBRemote;
 
 class GDBRemoteCommunicationServerCommon : public GDBRemoteCommunicationServer {
 public:
-  GDBRemoteCommunicationServerCommon();
+  explicit GDBRemoteCommunicationServerCommon(llvm::StringRef name);
 
   ~GDBRemoteCommunicationServerCommon() override;
 

@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; The %ord operand of the indexed-field tensormap.replace intrinsics must be in
 ; the range [0, 5), per the PTX ISA (`tensormap.replace`: "The only valid values

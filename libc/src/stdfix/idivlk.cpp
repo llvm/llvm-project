@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "idivlk.h"
+#include "src/stdfix/idivlk.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // long accum
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION
 #include "src/__support/fixed_point/fx_bits.h"      // fixed_point

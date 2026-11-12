@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILRemoveUnusedResources.h"
 #include "DirectX.h"
 #include "MCTargetDesc/DirectXMCOptions.h"
 #include "llvm/ADT/SetVector.h"
@@ -108,8 +107,8 @@ static bool removeUnusedResources(Function &F) {
   return true;
 }
 
-PreservedAnalyses DXILRemoveUnusedResources::run(Function &F,
-                                                 FunctionAnalysisManager &AM) {
+PreservedAnalyses
+DXILRemoveUnusedResourcesPass::run(Function &F, FunctionAnalysisManager &AM) {
   removeUnusedResources(F);
   return PreservedAnalyses::all();
 }

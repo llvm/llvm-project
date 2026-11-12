@@ -72,7 +72,7 @@ defm : BoolField<"riscv-regalloc-hints", "true",
 // RISCVSubtarget.cpp
 defm : BoolField<"riscv-constant-pool-for-large-ints", "true",
   "Enable using constant pool for large integers">;
-defm : ValueField<"riscv-max-build-ints-cost", "unsigned", "0",
+defm : ValueField<"riscv-max-build-ints-cost", "std::optional<unsigned>", "std::nullopt",
   "The maximum cost used for building integers">;
 defm : ValueField<"riscv-min-jump-table-entries", "std::optional<unsigned>", "std::nullopt",
   "Set minimum number of entries to use a jump table on RISCV">;
@@ -103,8 +103,6 @@ defm : BoolField<"riscv-enable-loop-data-prefetch", "true",
   "Enable the loop data prefetch pass">;
 defm : BoolField<"riscv-enable-machine-combiner", "true",
   "Enable the machine combiner pass">;
-defm : BoolField<"riscv-enable-pipeliner", "false",
-  "Enable Machine Pipeliner for RISC-V">;
 defm : BoolField<"riscv-enable-sink-fold", "true",
   "Enable sinking and folding of instruction copies">;
 defm : BoolField<"riscv-select-opt", "true",

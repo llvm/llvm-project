@@ -2,15 +2,15 @@ add_llvm_component_group(DirectX)
 
 set(LLVM_TARGET_DEFINITIONS DirectX.td)
 
-tablegen(LLVM DirectXGenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM DirectXGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM DirectXGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(DirectXGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(DirectXGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(DirectXGenRegisterInfo.inc -gen-register-info)
 
 set(LLVM_TARGET_DEFINITIONS DXIL.td)
-tablegen(LLVM DXILOperation.inc -gen-dxil-operation)
+llvm_tablegen(DXILOperation.inc -gen-dxil-operation)
 
 set(LLVM_TARGET_DEFINITIONS MCTargetDesc/DirectXMCOptions.td)
-tablegen(LLVM DirectXMCOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(DirectXMCOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(DirectXCommonTableGen)
 
@@ -22,9 +22,9 @@ add_llvm_target(DirectXCodeGen
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
   DirectXTargetTransformInfo.cpp
-  DXContainerGlobals.cpp
-  DXContainerPDB.cpp
   DXILCBufferAccess.cpp
+  DXILContainerGlobals.cpp
+  DXILContainerPDB.cpp
   DXILDataScalarization.cpp
   DXILFinalizeLinkage.cpp
   DXILForwardHandleAccesses.cpp

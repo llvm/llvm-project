@@ -6,10 +6,10 @@
 
 # GCN-LABEL: {{^}}name: vop2_64bit
 
-# GCN: %{{[0-9]+}}:vgpr_32 = V_BCNT_U32_B32_e64 %{{[0-9]+}}, killed %{{[0-9]+}}, implicit-def $vcc, implicit $exec
-# GCN: %{{[0-9]+}}:vgpr_32 = V_BFM_B32_e64 %{{[0-9]+}}, killed %{{[0-9]+}}, implicit-def $vcc, implicit $exec
-# GCN: %{{[0-9]+}}:vgpr_32 = V_CVT_PKNORM_I16_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 0, implicit-def $vcc, implicit $exec
-# GCN: %{{[0-9]+}}:sgpr_32 = V_READLANE_B32 killed %{{[0-9]+}}, 0, implicit-def $vcc, implicit $exec
+# GCN: %{{[0-9]+}}:vgpr_32 = V_BCNT_U32_B32_e64 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def $vcc, implicit $exec
+# GCN: %{{[0-9]+}}:vgpr_32 = V_BFM_B32_e64 %{{[0-9]+}}, %{{[0-9]+}}, implicit-def $vcc, implicit $exec
+# GCN: %{{[0-9]+}}:vgpr_32 = V_CVT_PKNORM_I16_F32_e64 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, implicit-def $vcc, implicit $exec
+# GCN: %{{[0-9]+}}:sgpr_32 = V_READLANE_B32 %{{[0-9]+}}, 0, implicit-def $vcc, implicit $exec
 
 ---
 name:            vop2_64bit
@@ -44,16 +44,16 @@ body:             |
     %3 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
 
     %12 = V_LSHRREV_B32_e64 16, %3, implicit $exec
-    %13 = V_BCNT_U32_B32_e64 %3, killed %12, implicit-def $vcc, implicit $exec
+    %13 = V_BCNT_U32_B32_e64 %3, %12, implicit-def $vcc, implicit $exec
 
     %14 = V_LSHRREV_B32_e64 16, %13, implicit $exec
-    %15 = V_BFM_B32_e64 %13, killed %14, implicit-def $vcc, implicit $exec
+    %15 = V_BFM_B32_e64 %13, %14, implicit-def $vcc, implicit $exec
 
     %16 = V_LSHRREV_B32_e64 16, %15, implicit $exec
-    %17 = V_CVT_PKNORM_I16_F32_e64 0, %15, 0, killed %16, 0, implicit-def $vcc, implicit $exec
+    %17 = V_CVT_PKNORM_I16_F32_e64 0, %15, 0, %16, 0, implicit-def $vcc, implicit $exec
 
     %18 = V_LSHRREV_B32_e64 16, %17, implicit $exec
-    %19 = V_READLANE_B32 killed %18, 0, implicit-def $vcc, implicit $exec
+    %19 = V_READLANE_B32 %18, 0, implicit-def $vcc, implicit $exec
     %20 = V_MOV_B32_e64 %19, implicit $exec
 
     FLAT_STORE_DWORD %0, %20, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
