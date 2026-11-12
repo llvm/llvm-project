@@ -31,7 +31,7 @@ QualType inferPossibleType(const CallExpr *E, const ASTContext &Ctx,
                            const CastExpr *CastE);
 
 /// Maps the allocation calls in \p Body whose result is used as placement-new
-/// storage, directly or via a local variable initialized with it, to the type
+/// storage, directly or via a local variable holding it, to the type
 /// constructed (null if different types are constructed into the same
 /// storage). This covers the "allocate raw storage, then construct in place"
 /// idiom; the constructed type is more precise than a sizeof or a cast, which
@@ -43,8 +43,9 @@ QualType inferPossibleType(const CallExpr *E, const ASTContext &Ctx,
 ///   auto res = size_returning_alloc(size);
 ///   new (res.p) MyType();              // infers 'MyType' (via member .p)
 ///
-/// Like the other inference heuristics, this ignores control flow and
-/// reassignments of the variable.
+/// Variables are resolved with a lexical def-use chain: the nearest preceding
+/// definition that dominates the use, with no conflicting later definition in
+/// an enclosing loop; otherwise nothing is inferred.
 llvm::DenseMap<const CallExpr *, QualType>
 collectPlacementNewTypes(const Stmt *Body);
 

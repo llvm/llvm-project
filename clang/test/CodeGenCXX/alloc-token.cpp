@@ -4,6 +4,7 @@
 extern "C" {
 void *aligned_alloc(size_t alignment, size_t size) __attribute__((malloc));
 void *malloc(size_t size) __attribute__((malloc));
+void free(void *);
 void *calloc(size_t num, size_t size) __attribute__((malloc));
 void *realloc(void *ptr, size_t size) __attribute__((malloc));
 void *reallocarray(void *ptr, size_t nmemb, size_t size) __attribute__((malloc));
@@ -322,6 +323,79 @@ void test_placement_new_lambda() {
   void *mem2 = malloc(64);
   auto construct2 = [mem2](auto x) { sink = new (mem2) decltype(x)(); };
   construct2(PlacedNoPtr{});
+}
+
+// Variables are resolved with a lexical def-use chain: the nearest preceding
+// definition that dominates the use.
+// CHECK-LABEL: define dso_local void @_Z27test_placement_new_reassignv(
+// CHECK: call noalias ptr @malloc(i64 noundef 8)
+// CHECK-NOT: @malloc{{.*}}!alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 8){{.*}} !alloc_token [[META_LONG]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+void test_placement_new_reassign() {
+  // The first allocation is freed and the variable reassigned before the
+  // placement new: only the second allocation is typed.
+  void *p = malloc(8);
+  free(p);
+  p = malloc(8);
+  sink = new (p) long(10);
+  // Declared without initializer, assigned later.
+  void *q;
+  q = malloc(64);
+  sink = new (q) PlacedNoPtr();
+  // Each definition is matched to the uses that follow it.
+  void *r = malloc(64);
+  sink = new (r) PlacedWithPtr();
+  r = malloc(64);
+  sink = new (r) PlacedNoPtr();
+}
+
+// Definitions that do not dominate the use, later definitions in a loop, and
+// other writes to the variable make the use ambiguous: nothing is inferred.
+// CHECK-LABEL: define dso_local void @_Z29test_placement_new_ambiguous2b(
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 32)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 32)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: ret void
+void test_placement_new_ambiguous2(bool c) {
+  // A definition in a branch does not dominate the use after it.
+  void *p = malloc(64);
+  if (c)
+    p = malloc(32);
+  sink = new (p) PlacedNoPtr();
+  // A definition after the use inside the loop reaches it around the back
+  // edge.
+  void *q = malloc(64);
+  for (int i = 0; i < 2; ++i) {
+    sink = new (q) PlacedNoPtr();
+    q = malloc(32);
+  }
+  // Address taken: the variable may be written through the pointer.
+  void *r = malloc(64);
+  sink = &r;
+  sink = new (r) PlacedNoPtr();
+}
+
+// Uses inside a branch or loop are dominated by a definition before it.
+// CHECK-LABEL: define dso_local void @_Z29test_placement_new_dominatingb(
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+void test_placement_new_dominating(bool c) {
+  void *p = malloc(64);
+  if (c)
+    sink = new (p) PlacedNoPtr();
+  void *q = malloc(64);
+  for (int i = 0; i < 2; ++i)
+    sink = new (q) PlacedWithPtr();
 }
 
 template <typename T>

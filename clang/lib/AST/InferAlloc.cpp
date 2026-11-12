@@ -19,7 +19,10 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include <vector>
 
 using namespace clang;
 using namespace infer_alloc;
@@ -203,9 +206,9 @@ const Expr *stripToStorageSource(const Expr *E) {
   }
 }
 
-/// Finds the allocation call that initializes a variable, looking through
-/// casts and the temporaries and trivial copies a class-typed initializer may
-/// carry.
+/// Finds the allocation call an initializer or assigned value consists of,
+/// looking through casts and the temporaries and trivial copies a class-typed
+/// value may carry.
 const CallExpr *initializingCall(const Expr *Init) {
   while (Init) {
     Init = Init->IgnoreParenCasts();
@@ -232,17 +235,55 @@ const CallExpr *initializingCall(const Expr *Init) {
 }
 
 /// Records, per allocation call, the type placement-constructed into its
-/// result. A variable's declaration precedes its uses in traversal order, so
-/// uses through a variable are resolved to the initializing call on the fly.
+/// result.
+///
+/// Placement arguments that name a variable are resolved with a lexical
+/// def-use chain: a use `new (p) T` is matched to the nearest preceding
+/// definition of `p` (its initializer or an assignment `p = <call>`) in
+/// traversal order, provided that definition lexically dominates the use,
+/// i.e. it is in the same control-flow context as the use or an enclosing
+/// one. A definition in a branch that does not enclose the use, a later
+/// definition that can reach the use around a loop, or any other write to
+/// the variable (compound assignment, increment, address-of) makes the use
+/// ambiguous and nothing is inferred for it.
 class PlacementNewCollector : public ConstDynamicRecursiveASTVisitor {
 public:
   explicit PlacementNewCollector(
       llvm::DenseMap<const CallExpr *, QualType> &CallTypes)
-      : CallTypes(CallTypes) {}
+      : CallTypes(CallTypes) {
+    // Context 0 is the function body itself.
+    Contexts.push_back({/*Parent=*/-1, /*IsLoop=*/false});
+  }
+
+  void finish() {
+    for (const Use &U : Uses) {
+      const CallExpr *CE = resolve(U);
+      if (CE)
+        record(CE, U.Type);
+    }
+  }
 
   bool VisitVarDecl(const VarDecl *VD) override {
-    if (const CallExpr *CE = initializingCall(VD->getInit()))
-      VarCalls.try_emplace(VD, CE);
+    if (VD->isLocalVarDecl())
+      addDef(VD, initializingCall(VD->getInit()));
+    return true;
+  }
+
+  bool VisitBinaryOperator(const BinaryOperator *BO) override {
+    if (!BO->isAssignmentOp())
+      return true;
+    if (const VarDecl *VD = referencedVar(BO->getLHS()))
+      addDef(VD, BO->getOpcode() == BO_Assign ? initializingCall(BO->getRHS())
+                                              : nullptr);
+    return true;
+  }
+
+  bool VisitUnaryOperator(const UnaryOperator *UO) override {
+    if (UO->getOpcode() != UO_AddrOf && !UO->isIncrementDecrementOp())
+      return true;
+    // The variable may be written through the pointer or reference.
+    if (const VarDecl *VD = referencedVar(UO->getSubExpr()))
+      addDef(VD, nullptr);
     return true;
   }
 
@@ -258,33 +299,132 @@ public:
         !OperatorNew->isReservedGlobalPlacementOperator())
       return true;
     const Expr *Source = stripToStorageSource(NE->getPlacementArg(0));
-    const CallExpr *CE = dyn_cast<CallExpr>(Source);
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(Source))
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-        CE = VarCalls.lookup(VD);
-    if (!CE)
-      return true;
     QualType T = NE->getAllocatedType();
+    if (const auto *CE = dyn_cast<CallExpr>(Source))
+      record(CE, T);
+    else if (const VarDecl *VD = referencedVar(Source))
+      Uses.push_back({VD, Seq++, CurContext, T});
+    return true;
+  }
+
+  // Control-flow constructs open a new context for the statements they
+  // contain; a definition inside one does not dominate uses outside it.
+#define PLACEMENT_CONTEXT(CLASS, IS_LOOP)                                      \
+  bool Traverse##CLASS(const CLASS *S) override {                              \
+    return inContext(IS_LOOP, [&] {                                            \
+      return ConstDynamicRecursiveASTVisitor::Traverse##CLASS(S);              \
+    });                                                                        \
+  }
+  PLACEMENT_CONTEXT(IfStmt, false)
+  PLACEMENT_CONTEXT(SwitchStmt, false)
+  PLACEMENT_CONTEXT(ConditionalOperator, false)
+  PLACEMENT_CONTEXT(BinaryConditionalOperator, false)
+  PLACEMENT_CONTEXT(LambdaExpr, false)
+  PLACEMENT_CONTEXT(StmtExpr, false)
+  PLACEMENT_CONTEXT(ForStmt, true)
+  PLACEMENT_CONTEXT(WhileStmt, true)
+  PLACEMENT_CONTEXT(DoStmt, true)
+  PLACEMENT_CONTEXT(CXXForRangeStmt, true)
+#undef PLACEMENT_CONTEXT
+
+private:
+  struct Context {
+    int Parent;
+    bool IsLoop;
+  };
+  struct Def {
+    unsigned Seq;
+    int Context;
+    const CallExpr *Call; // null: a write that is not an allocation call
+  };
+  struct Use {
+    const VarDecl *Var;
+    unsigned Seq;
+    int Context;
+    QualType Type;
+  };
+
+  bool inContext(bool IsLoop, llvm::function_ref<bool()> Traverse) {
+    int Saved = CurContext;
+    Contexts.push_back({Saved, IsLoop});
+    CurContext = Contexts.size() - 1;
+    bool Result = Traverse();
+    CurContext = Saved;
+    return Result;
+  }
+
+  static const VarDecl *referencedVar(const Expr *E) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
+      return dyn_cast<VarDecl>(DRE->getDecl());
+    return nullptr;
+  }
+
+  void addDef(const VarDecl *VD, const CallExpr *CE) {
+    Defs[VD].push_back({Seq++, CurContext, CE});
+  }
+
+  bool isAncestorOrSelf(int Ancestor, int Ctx) const {
+    for (; Ctx >= 0; Ctx = Contexts[Ctx].Parent)
+      if (Ctx == Ancestor)
+        return true;
+    return false;
+  }
+
+  bool isInLoop(int Ctx) const {
+    for (; Ctx >= 0; Ctx = Contexts[Ctx].Parent)
+      if (Contexts[Ctx].IsLoop)
+        return true;
+    return false;
+  }
+
+  /// Returns the allocation call that defines the variable of \p U at the
+  /// use, or null if there is none or it cannot be determined.
+  const CallExpr *resolve(const Use &U) const {
+    auto It = Defs.find(U.Var);
+    if (It == Defs.end())
+      return nullptr;
+    const Def *Reaching = nullptr;
+    bool LaterDef = false;
+    for (const Def &D : It->second) {
+      if (D.Seq < U.Seq)
+        Reaching = &D; // defs are in traversal order; keep the last one
+      else
+        LaterDef = true;
+    }
+    if (!Reaching || !Reaching->Call ||
+        !isAncestorOrSelf(Reaching->Context, U.Context))
+      return nullptr;
+    // A later definition can reach the use around a loop back edge.
+    if (LaterDef && isInLoop(U.Context))
+      return nullptr;
+    return Reaching->Call;
+  }
+
+  void record(const CallExpr *CE, QualType T) {
     auto [It, Inserted] = CallTypes.try_emplace(CE, T);
     // Different types constructed into the same storage: ambiguous.
     if (!Inserted && !It->second.isNull() &&
         It->second.getCanonicalType() != T.getCanonicalType())
       It->second = QualType();
-    return true;
   }
 
-private:
   llvm::DenseMap<const CallExpr *, QualType> &CallTypes;
-  // Variable -> allocation call initializing it.
-  llvm::DenseMap<const VarDecl *, const CallExpr *> VarCalls;
+  std::vector<Context> Contexts;
+  int CurContext = 0;
+  unsigned Seq = 0;
+  llvm::DenseMap<const VarDecl *, llvm::SmallVector<Def, 2>> Defs;
+  std::vector<Use> Uses;
 };
 } // namespace
 
 llvm::DenseMap<const CallExpr *, QualType>
 infer_alloc::collectPlacementNewTypes(const Stmt *Body) {
   llvm::DenseMap<const CallExpr *, QualType> CallTypes;
-  if (Body)
-    PlacementNewCollector(CallTypes).TraverseStmt(Body);
+  if (Body) {
+    PlacementNewCollector Collector(CallTypes);
+    Collector.TraverseStmt(Body);
+    Collector.finish();
+  }
   return CallTypes;
 }
 
