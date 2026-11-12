@@ -452,24 +452,6 @@ public:
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc, QualType ty,
                                           bool forEH = false);
 
-  static mlir::SymbolTable::Visibility getMLIRVisibility(Visibility v) {
-    switch (v) {
-    case DefaultVisibility:
-      return mlir::SymbolTable::Visibility::Public;
-    case HiddenVisibility:
-      return mlir::SymbolTable::Visibility::Private;
-    case ProtectedVisibility:
-      // The distinction between ProtectedVisibility and DefaultVisibility is
-      // that symbols with ProtectedVisibility, while visible to the dynamic
-      // linker like DefaultVisibility, are guaranteed to always dynamically
-      // resolve to a symbol in the current shared object. There is currently no
-      // equivalent MLIR visibility, so we fall back on the fact that the symbol
-      // is visible.
-      return mlir::SymbolTable::Visibility::Public;
-    }
-    llvm_unreachable("unknown visibility!");
-  }
-
   static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
     switch (v) {
     case DefaultVisibility:
@@ -523,6 +505,16 @@ public:
   /// expectations of the AST, rather than using the target's allocation address
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
+
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 
   /// Return the CIR address space attribute for a global in \p as, honoring
   /// the target address space map where the LangAS fold would lose it.
@@ -1049,16 +1041,6 @@ private:
 
   /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
   cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
-
-  /// Return the AST address space of the underlying global variable for D, as
-  /// determined by its declaration. Normally this is the same as the address
-  /// space of D's type, but in CUDA, address spaces are associated with
-  /// declarations, not types. If D is nullptr, return the default address
-  /// space for global variable.
-  ///
-  /// For languages without explicit address spaces, if D has default address
-  /// space, target-specific global or constant address space may be returned.
-  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 };
 } // namespace CIRGen
 

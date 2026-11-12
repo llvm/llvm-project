@@ -8,7 +8,6 @@
 name:            fpext_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_h
@@ -30,7 +29,6 @@ body:             |
 name:            fptrunc_f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_f
@@ -52,7 +50,6 @@ body:             |
 name:            fpext_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_h
@@ -74,7 +71,6 @@ body:             |
 name:            fptrunc_f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $f10_d

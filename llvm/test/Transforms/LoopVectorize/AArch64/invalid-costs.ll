@@ -25,9 +25,9 @@ define void @replicate_sdiv_conditional(ptr noalias %a, ptr noalias %b, ptr noal
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = mul nuw nsw i64 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP4]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP4]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP4]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP27]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i32>, ptr [[TMP31]], align 4
@@ -37,9 +37,9 @@ define void @replicate_sdiv_conditional(ptr noalias %a, ptr noalias %b, ptr noal
 ; CHECK-NEXT:    [[TMP43:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP47:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP6]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP6]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[TMP6]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [4 x i8], ptr [[TMP6]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr [4 x i8], ptr [[TMP6]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr [4 x i8], ptr [[TMP6]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD4:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP16]], <vscale x 4 x i1> [[TMP39]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP17]], <vscale x 4 x i1> [[TMP43]], <vscale x 4 x i32> poison)
@@ -73,9 +73,9 @@ define void @replicate_sdiv_conditional(ptr noalias %a, ptr noalias %b, ptr noal
 ; CHECK-NEXT:    [[PREDPHI8:%.*]] = select <vscale x 4 x i1> [[TMP43]], <vscale x 4 x i32> [[TMP41]], <vscale x 4 x i32> [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[PREDPHI9:%.*]] = select <vscale x 4 x i1> [[TMP47]], <vscale x 4 x i32> [[TMP42]], <vscale x 4 x i32> [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP14]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP14]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP14]], i64 [[TMP23]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[PREDPHI]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[PREDPHI7]], ptr [[TMP44]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[PREDPHI8]], ptr [[TMP45]], align 4

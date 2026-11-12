@@ -399,7 +399,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP17:%.*]] = and <vscale x 4 x i32> [[TMP16]], splat (i32 1)
 ; PRED-NEXT:    [[TMP18:%.*]] = xor <vscale x 4 x i32> [[TMP17]], splat (i32 1)
 ; PRED-NEXT:    [[TMP19:%.*]] = zext <vscale x 4 x i32> [[TMP18]] to <vscale x 4 x i64>
-; PRED-NEXT:    [[DOTSPLAT:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP19]]
+; PRED-NEXT:    [[DOTSPLAT:%.*]] = getelementptr [4 x i8], ptr [[SRC_2]], <vscale x 4 x i64> [[TMP19]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP0]])
 ; PRED-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP2]])
 ; PRED-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vscale.i32()
@@ -427,7 +427,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[DOTSPLAT]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> poison)
 ; PRED-NEXT:    [[TMP36:%.*]] = lshr <vscale x 4 x i32> [[TMP35]], splat (i32 1)
 ; PRED-NEXT:    [[TMP37:%.*]] = zext <vscale x 4 x i32> [[TMP36]] to <vscale x 4 x i64>
-; PRED-NEXT:    [[TMP38:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP37]]
+; PRED-NEXT:    [[TMP38:%.*]] = getelementptr [4 x i8], ptr [[SRC_2]], <vscale x 4 x i64> [[TMP37]]
 ; PRED-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP38]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> poison)
 ; PRED-NEXT:    [[TMP39:%.*]] = or <vscale x 4 x i32> [[WIDE_MASKED_GATHER]], [[VEC_PHI]]
 ; PRED-NEXT:    [[TMP40:%.*]] = or <vscale x 4 x i32> [[TMP39]], [[WIDE_MASKED_GATHER7]]
@@ -510,9 +510,9 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP5]], 1
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = mul nuw nsw i64 [[TMP5]], 3
-; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[TMP13]], i64 [[TMP5]]
-; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[TMP13]], i64 [[TMP9]]
-; DEFAULT-NEXT:    [[TMP14:%.*]] = getelementptr i16, ptr [[TMP13]], i64 [[TMP10]]
+; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr [2 x i8], ptr [[TMP13]], i64 [[TMP5]]
+; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr [2 x i8], ptr [[TMP13]], i64 [[TMP9]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = getelementptr [2 x i8], ptr [[TMP13]], i64 [[TMP10]]
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP13]], align 2
 ; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i16>, ptr [[TMP18]], align 2
 ; DEFAULT-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 4 x i16>, ptr [[TMP12]], align 2
@@ -606,9 +606,9 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP11:%.*]] = shl nuw nsw i64 [[TMP7]], 1
 ; VSCALEFORTUNING2-NEXT:    [[TMP10:%.*]] = mul nuw nsw i64 [[TMP7]], 3
-; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[TMP8]], i64 [[TMP7]]
-; VSCALEFORTUNING2-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[TMP8]], i64 [[TMP11]]
-; VSCALEFORTUNING2-NEXT:    [[TMP28:%.*]] = getelementptr i16, ptr [[TMP8]], i64 [[TMP10]]
+; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = getelementptr [2 x i8], ptr [[TMP8]], i64 [[TMP7]]
+; VSCALEFORTUNING2-NEXT:    [[TMP18:%.*]] = getelementptr [2 x i8], ptr [[TMP8]], i64 [[TMP11]]
+; VSCALEFORTUNING2-NEXT:    [[TMP28:%.*]] = getelementptr [2 x i8], ptr [[TMP8]], i64 [[TMP10]]
 ; VSCALEFORTUNING2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP8]], align 2
 ; VSCALEFORTUNING2-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i16>, ptr [[TMP12]], align 2
 ; VSCALEFORTUNING2-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 4 x i16>, ptr [[TMP18]], align 2

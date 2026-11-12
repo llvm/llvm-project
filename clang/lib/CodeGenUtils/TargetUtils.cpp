@@ -180,6 +180,10 @@ std::optional<MSVCIntrin> translateX86ToMsvcIntrin(unsigned BuiltinID) {
     return MSVCIntrin::_InterlockedDecrement;
   case clang::X86::BI_InterlockedIncrement64:
     return MSVCIntrin::_InterlockedIncrement;
+  case clang::X86::BI_ReadWriteBarrier:
+  case clang::X86::BI_ReadBarrier:
+  case clang::X86::BI_WriteBarrier:
+    return MSVCIntrin::_ReadWriteBarrier;
   }
   llvm_unreachable("must return from switch");
 }

@@ -57,16 +57,16 @@ class ErrorReporter {
     return Device ? std::to_string(Device->getDeviceId()) : "n/a";
   }
 
-  /// Return a nice name for an TargetAllocTy.
-  static StringRef getAllocTyName(TargetAllocTy Kind) {
+  /// Return a nice name for an ol_alloc_type_t.
+  static StringRef getAllocTyName(ol_alloc_type_t Kind) {
     switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
+    case OL_ALLOC_TYPE_DEVICE:
       return "device memory";
-    case TARGET_ALLOC_HOST:
+    case OL_ALLOC_TYPE_HOST:
       return "pinned host memory";
-    case TARGET_ALLOC_SHARED:
+    case OL_ALLOC_TYPE_MANAGED:
       return "managed memory";
+    default:
       break;
     }
     llvm_unreachable("Unknown target alloc kind");
@@ -208,7 +208,7 @@ public:
   abortExecution();
 
   static void reportDeallocationOfNonAllocatedPtr(void *DevicePtr,
-                                                  TargetAllocTy Kind,
+                                                  ol_alloc_type_t Kind,
                                                   AllocationTraceInfoTy *ATI,
                                                   std::string &StackTrace) {
     DEALLOCATION_ERROR("deallocation of non-allocated %s: %p",
@@ -216,7 +216,7 @@ public:
   }
 
   static void reportDeallocationOfDeallocatedPtr(void *DevicePtr,
-                                                 TargetAllocTy Kind,
+                                                 ol_alloc_type_t Kind,
                                                  AllocationTraceInfoTy *ATI,
                                                  std::string &StackTrace) {
     DEALLOCATION_ERROR("double-free of %s: %p", getAllocTyName(Kind).data(),
@@ -224,7 +224,7 @@ public:
   }
 
   static void reportDeallocationOfWrongPtrKind(void *DevicePtr,
-                                               TargetAllocTy Kind,
+                                               ol_alloc_type_t Kind,
                                                AllocationTraceInfoTy *ATI,
                                                std::string &StackTrace) {
     DEALLOCATION_ERROR("deallocation requires %s but allocation was %s: %p",

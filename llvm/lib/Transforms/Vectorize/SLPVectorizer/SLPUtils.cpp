@@ -309,19 +309,8 @@ std::optional<unsigned> getExtractIndex(const Instruction *E) {
   assert((Opcode == Instruction::ExtractElement ||
           Opcode == Instruction::ExtractValue) &&
          "Expected extractelement or extractvalue instruction.");
-  if (Opcode == Instruction::ExtractElement) {
-    auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
-    if (!CI)
-      return std::nullopt;
-    // Check if the index is out of bound. We can get the source vector from
-    // operand 0.
-    unsigned Idx = CI->getZExtValue();
-    auto *EE = cast<ExtractElementInst>(E);
-    const unsigned VF = getNumElements(EE->getVectorOperandType());
-    if (Idx >= VF)
-      return std::nullopt;
-    return Idx;
-  }
+  if (Opcode == Instruction::ExtractElement)
+    return getInsertExtractIndex<ExtractElementInst>(E, /*Offset=*/0);
   auto *EI = cast<ExtractValueInst>(E);
   if (EI->getNumIndices() != 1)
     return std::nullopt;
