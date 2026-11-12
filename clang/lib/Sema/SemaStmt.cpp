@@ -519,7 +519,10 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
                       : getCurCompoundScope().InitialFPFeatures;
   FPOptionsOverride FPDiff = getCurFPFeatures().getChangesFrom(FPO);
 
-  return CompoundStmt::Create(Context, Elts, FPDiff, L, R);
+  CompoundStmt *CS = CompoundStmt::Create(Context, Elts, FPDiff, L, R);
+  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
+    OpenMP().diagnoseLockstepLocks(CS);
+  return CS;
 }
 
 ExprResult

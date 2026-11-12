@@ -18,6 +18,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/OpenMPLockSequence.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1387,6 +1388,20 @@ void CGOpenMPRuntimeGPU::emitLaneSerializedRegion(
   InsertPointTy AfterIP =
       cantFail(OMPBuilder.createLaneSerializedRegion(CGF.Builder, BodyGenCB));
   CGF.Builder.restoreIP(AfterIP);
+}
+
+unsigned CGOpenMPRuntimeGPU::emitStmtSequence(CodeGenFunction &CGF,
+                                              ArrayRef<Stmt *> Stmts) {
+  if (!CGM.getTarget().getGridValue().GV_Lockstep_Lanes)
+    return 0;
+  OMPLockSequence Seq = matchOMPLockSequence(Stmts, CGM.getContext());
+  if (!Seq.Length)
+    return 0;
+  emitLaneSerializedRegion(CGF, [&] {
+    for (const Stmt *S : Stmts.take_front(Seq.Length))
+      CGF.EmitStmt(S);
+  });
+  return Seq.Length;
 }
 
 void CGOpenMPRuntimeGPU::emitCriticalRegion(
