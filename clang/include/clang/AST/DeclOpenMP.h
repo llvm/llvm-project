@@ -365,7 +365,7 @@ class OMPDeclareMapperDecl final : public OMPDeclarativeDirective<ValueDecl>,
                        QualType Ty, DeclarationName VarName,
                        OMPDeclareMapperDecl *PrevDeclInScope)
       : OMPDeclarativeDirective<ValueDecl>(OMPDeclareMapper, DC, L, Name, Ty),
-        DeclContext(OMPDeclareMapper, this), VarName(VarName),
+        DeclContext(OMPDeclareMapper), VarName(VarName),
         PrevDeclInScope(PrevDeclInScope) {}
 
   void setPrevDeclInScope(OMPDeclareMapperDecl *Prev) {

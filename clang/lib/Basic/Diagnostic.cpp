@@ -23,6 +23,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -263,11 +264,9 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
   llvm::errs() << ": " << CurDiagState << "\n";
 
   SmallVector<std::pair<FileID, File *>, 16> SortedFiles;
-  for (auto &F : Files)
-    SortedFiles.emplace_back(F.first, F.second.get());
-  llvm::sort(SortedFiles, [](const auto &LHS, const auto &RHS) {
-    return LHS.first.getOpaqueValue() < RHS.first.getOpaqueValue();
-  });
+  for (const auto &[ID, FilePtr] : Files)
+    SortedFiles.emplace_back(ID, FilePtr.get());
+  llvm::sort(SortedFiles, llvm::less_first());
 
   for (auto &F : SortedFiles) {
     FileID ID = F.first;

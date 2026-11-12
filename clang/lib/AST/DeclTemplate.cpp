@@ -1961,7 +1961,7 @@ SourceRange ExplicitInstantiationDecl::getSourceRange() const {
 
 CXXExpansionStmtDecl::CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
                                            NonTypeTemplateParmDecl *NTTP)
-    : Decl(CXXExpansionStmt, DC, Loc), DeclContext(CXXExpansionStmt, this),
+    : Decl(CXXExpansionStmt, DC, Loc), DeclContext(CXXExpansionStmt),
       IndexNTTP(NTTP) {}
 
 CXXExpansionStmtDecl *

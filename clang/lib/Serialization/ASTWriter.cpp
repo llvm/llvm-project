@@ -3421,11 +3421,9 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
   SmallVector<std::pair<FileID, const DiagnosticsEngine::DiagStateMap::File *>,
               16>
       Files;
-  for (auto &FileIDAndFile : Diag.DiagStatesByLoc.Files)
-    Files.emplace_back(FileIDAndFile.first, FileIDAndFile.second.get());
-  llvm::sort(Files, [](const auto &LHS, const auto &RHS) {
-    return LHS.first.getOpaqueValue() < RHS.first.getOpaqueValue();
-  });
+  for (const auto &[ID, FilePtr] : Diag.DiagStatesByLoc.Files)
+    Files.emplace_back(ID, FilePtr.get());
+  llvm::sort(Files, llvm::less_first());
 
   for (auto [FID, File] : Files) {
     if (!FID.isValid() || !File->HasLocalTransitions)
