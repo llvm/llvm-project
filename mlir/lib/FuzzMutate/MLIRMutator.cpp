@@ -11,6 +11,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/FuzzMutate/Random.h"
@@ -20,6 +21,9 @@ using namespace mlir;
 
 RandomMLIRBuilder::RandomMLIRBuilder(int Seed, ModuleOp root)
     : Rand(Seed), root(root) {
+  // A base is the smallest op a point mutation can act on: no regions, no
+  // successors, not a terminator. Collected and bucketed by the
+  // operand+result type table for donor lookup.
   root->walk([&](Operation *op) {
     if (op->getNumRegions() != 0 || op->getNumSuccessors() != 0 ||
         op->hasTrait<OpTrait::IsTerminator>())
@@ -32,21 +36,19 @@ RandomMLIRBuilder::RandomMLIRBuilder(int Seed, ModuleOp root)
 RandomMLIRBuilder::AlleleMenu
 RandomMLIRBuilder::collectAlleles(Operation *at) {
   AlleleMenu menu;
-  Operation *cur = at;
-  bool first = true;
-  while (cur) {
-    Block *blk = cur->getBlock();
-    if (!blk)
-      break;
-    for (BlockArgument arg : blk->getArguments())
-      menu[arg.getType()].push_back(arg);
-    auto end = first ? cur->getIterator() : std::next(cur->getIterator());
-    for (auto it = blk->begin(); it != end; ++it)
-      for (Value r : it->getResults())
-        menu[r.getType()].push_back(r);
-    first = false;
-    cur = blk->getParentOp();
-  }
+  DominanceInfo dom;
+  auto collect = [&](Value v) {
+    if (dom.properlyDominates(v, at))
+      menu[v.getType()].push_back(v);
+  };
+  root->walk([&](Operation *op) {
+    for (Value res : op->getResults())
+      collect(res);
+    for (Region &region : op->getRegions())
+      for (Block &block : region.getBlocks())
+        for (BlockArgument arg : block.getArguments())
+          collect(arg);
+  });
   return menu;
 }
 
@@ -64,21 +66,20 @@ Operation *RandomMLIRBuilder::findSameGene(Operation *exemplar) {
   if (it == geneBuckets.end())
     return nullptr;
   const auto &ops = it->second;
-  unsigned total = ops.size() - 1;
-  if (!total)
+  auto donorSampler = llvm::makeSampler(
+      Rand, llvm::make_filter_range(ops, [exemplar](Operation *op) {
+        return op != exemplar;
+      }));
+  if (donorSampler.isEmpty())
     return nullptr;
-  unsigned pick = std::uniform_int_distribution<unsigned>(0, total - 1)(Rand);
-  unsigned i = 0;
-  for (Operation *op : ops) {
-    if (op == exemplar)
-      continue;
-    if (i++ == pick)
-      return op;
-  }
-  return nullptr;
+  return donorSampler.getSelection();
 }
 
 Operation *RandomMLIRBuilder::findDiffGene(Operation *exemplar) {
+  // Pick a signature class at random, then a random op within it — uniform
+  // random no matter how ops are spread across signatures. The != compares
+  // pointers safely: bucket keys and the query signature come from the same
+  // type uniquing, so one type table is literally one instance.
   Type exemplarSig = getSignature(exemplar);
   llvm::SmallVector<const llvm::SmallVector<Operation *> *, 8> classes;
   for (auto &bucket : geneBuckets)
@@ -118,13 +119,11 @@ uint64_t NonsenseMutationStrategy::getWeight(size_t CurrentSize, size_t MaxSize,
 }
 
 void NonsenseMutationStrategy::mutate(ModuleOp module, RandomMLIRBuilder &IB) {
-  llvm::SmallVector<Operation *, 8> bases;
-  module.walk([&](Operation *op) {
-    if (op->getNumRegions() == 0 && !op->hasTrait<OpTrait::IsTerminator>())
-      bases.push_back(op);
-  });
+  llvm::SmallVector<Operation *, 8> bases(IB.bases().begin(), IB.bases().end());
   if (bases.empty())
     return;
+  // Unlike synonymous/missense (one op per call), nonsense shuffles the
+  // bases and poisons the first k, with k random (at least 1).
   std::shuffle(bases.begin(), bases.end(), IB.getRand());
   size_t count =
       std::uniform_int_distribution<size_t>(1, bases.size())(IB.getRand());
@@ -136,8 +135,7 @@ void NonsenseMutationStrategy::mutate(ModuleOp module, RandomMLIRBuilder &IB) {
     llvm::SmallVector<Value> replacements;
     for (Type ty : op->getResultTypes())
       replacements.push_back(ub::PoisonOp::create(opBuilder, op->getLoc(), ty));
-    for (auto [j, res] : llvm::enumerate(op->getResults()))
-      res.replaceAllUsesWith(replacements[j]);
+    op->replaceAllUsesWith(replacements);
     op->erase();
   }
 }
@@ -168,8 +166,7 @@ void SynonymousMutationStrategy::mutate(ModuleOp module,
         exemplar->getOperands(), donor->getAttrDictionary(),
         donor->getPropertiesStorage(), /*successors=*/{}, /*numRegions=*/0);
     opBuilder.insert(clone);
-    for (auto [i, res] : llvm::enumerate(exemplar->getResults()))
-      res.replaceAllUsesWith(clone->getResult(i));
+    exemplar->replaceAllUsesWith(clone);
     exemplar->erase();
     return;
   }
@@ -189,16 +186,12 @@ void MissenseMutationStrategy::mutate(ModuleOp module,
     return;
   OpBuilder opBuilder(module->getContext());
   opBuilder.getContext()->getOrLoadDialect<ub::UBDialect>();
-  // Shuffle the bases and stop after the first point mutation,
-  // simulating a point mutation at a random position.
   std::shuffle(bases.begin(), bases.end(), IB.getRand());
   for (Operation *exemplar : bases) {
     Operation *donor = IB.findDiffGene(exemplar);
     if (!donor)
       continue;
     opBuilder.setInsertionPoint(exemplar);
-    // Donor inputs first: input poisons must precede the replacement, or
-    // they fail to dominate it.
     RandomMLIRBuilder::AlleleMenu inputMenu = IB.collectAlleles(exemplar);
     llvm::SmallVector<Value> donorInputs;
     for (Type ty : donor->getOperandTypes()) {
@@ -212,15 +205,15 @@ void MissenseMutationStrategy::mutate(ModuleOp module,
         donorInputs, donor->getAttrDictionary(), donor->getPropertiesStorage(),
         /*successors=*/{}, /*numRegions=*/0);
     opBuilder.insert(clone);
-    // Old outputs: consumers rewire from the menu (now includes the
-    // clone's results); poison on miss.
     RandomMLIRBuilder::AlleleMenu outputMenu = IB.collectAlleles(exemplar);
-    for (Value res : exemplar->getResults()) {
-      Value allele = IB.pickAllele(outputMenu, res.getType());
+    llvm::SmallVector<Value> oldOutputs;
+    for (Type ty : exemplar->getResultTypes()) {
+      Value allele = IB.pickAllele(outputMenu, ty);
       if (!allele)
-        allele = ub::PoisonOp::create(opBuilder, exemplar->getLoc(), res.getType());
-      res.replaceAllUsesWith(allele);
+        allele = ub::PoisonOp::create(opBuilder, exemplar->getLoc(), ty);
+      oldOutputs.push_back(allele);
     }
+    exemplar->replaceAllUsesWith(oldOutputs);
     exemplar->erase();
     return;
   }
