@@ -401,6 +401,26 @@ TEST(RandomIRBuilderTest, findOrCreateGlobalVariable) {
   ASSERT_TRUE(DidCreate2);
 }
 
+TEST(RandomIRBuilderTest, findOrCreateGlobalVariableSkipsUnsized) {
+  // An opaque struct global can't be loaded, so it must not be returned as a
+  // match even when the predicate accepts any type.
+  LLVMContext Ctx;
+  const char *SourceCode = "\n\
+    %opaque = type opaque\n\
+    @G0 = external global %opaque \n\
+  ";
+  std::array<Type *, 1> Types = {Type::getInt32Ty(Ctx)};
+  RandomIRBuilder IB(Seed, Types);
+
+  std::unique_ptr<Module> M = parseAssembly(SourceCode, Ctx);
+  ASSERT_FALSE(M->globals().begin()->getValueType()->isSized());
+  auto [GV, DidCreate] =
+      IB.findOrCreateGlobalVariable(&*M, {}, fuzzerop::anyType());
+  EXPECT_TRUE(DidCreate);
+  EXPECT_TRUE(GV->getValueType()->isSized());
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+}
+
 /// Checks if the source and sink we find for an instruction has correct
 /// domination relation.
 TEST(RandomIRBuilderTest, findSourceAndSink) {
