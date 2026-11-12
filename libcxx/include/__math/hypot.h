@@ -27,11 +27,23 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+#if defined(_LIBCPP_MSVCRT)
+extern "C" {
+_LIBCPP_CRT_FUNC float __cdecl _hypotf(float, float);
+}
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __math {
 
-inline _LIBCPP_HIDE_FROM_ABI float hypot(float __x, float __y) _NOEXCEPT { return __builtin_hypotf(__x, __y); }
+inline _LIBCPP_HIDE_FROM_ABI float hypot(float __x, float __y) _NOEXCEPT {
+#if defined(_LIBCPP_MSVCRT)
+  return ::_hypotf(__x, __y);
+#else
+  return __builtin_hypotf(__x, __y);
+#endif
+}
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double hypot(double __x, double __y) _NOEXCEPT {
@@ -39,7 +51,11 @@ _LIBCPP_HIDE_FROM_ABI double hypot(double __x, double __y) _NOEXCEPT {
 }
 
 inline _LIBCPP_HIDE_FROM_ABI long double hypot(long double __x, long double __y) _NOEXCEPT {
+#if defined(_LIBCPP_MSVCRT)
+  return (long double)__math::hypot((double)__x, (double)__y);
+#else
   return __builtin_hypotl(__x, __y);
+#endif
 }
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
