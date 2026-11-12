@@ -1390,7 +1390,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
     {
       llvm::TimeTraceScope timeScope("Link regular LTO");
       for (auto &M : RegularLTO.ModsWithSummaries)
-        if (Error Err = linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
+        if (Error Err =
+                linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
           return Err;
       RegularLTO.ModsWithSummaries.clear();
       RegularLTO.ModsWithSummaries.shrink_to_fit();
