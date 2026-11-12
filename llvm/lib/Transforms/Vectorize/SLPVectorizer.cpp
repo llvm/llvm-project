@@ -2566,12 +2566,12 @@ private:
 
   /// \returns the cost of the shuffles that take the values in \p VL from the
   /// vectorized tree entries. Only the values in \p DemandedElts with a zero
-  /// insert cost are counted.
+  /// insert cost are counted, as returned by \p GetInsertCost for the lane.
   /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
-  InstructionCost getVectorizedScalarsShuffleCost(ArrayRef<Value *> VL,
-                                                  const APInt &DemandedElts,
-                                                  bool ForPoisonSrc,
-                                                  Type *ScalarTy) const;
+  InstructionCost getVectorizedScalarsShuffleCost(
+      ArrayRef<Value *> VL, const APInt &DemandedElts, bool ForPoisonSrc,
+      Type *ScalarTy,
+      function_ref<InstructionCost(const APInt &)> GetInsertCost) const;
 
   /// \returns the cost of the shuffles that put the lanes of the tree entries
   /// in \p ValueMasks into the vector \p Base of \p ScalarTy elements.
@@ -21911,12 +21911,18 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
                             VecTy, CostKind, Mask);
     };
     InstructionCost ShuffleCost = GetShuffleCost(SubMask, Entries, VecTy);
+    auto GetInsertCost = [&](const APInt &DemandedElts) {
+      return getScalarizationOverhead(*TTI, Opts.slp_revec,
+                                      VL.front()->getType(), MaskVecTy,
+                                      DemandedElts, /*Insert=*/true,
+                                      /*Extract=*/false, CostKind);
+    };
     auto GetVectorizedScalarsCost = [&](const APInt &DemandedElts,
                                         bool ForPoisonSrc) -> InstructionCost {
       if (MinBWs.contains(TE))
         return TTI::TCC_Free;
-      return getVectorizedScalarsShuffleCost(VL, DemandedElts, ForPoisonSrc,
-                                             VL.front()->getType());
+      return getVectorizedScalarsShuffleCost(
+          VL, DemandedElts, ForPoisonSrc, VL.front()->getType(), GetInsertCost);
     };
     InstructionCost FirstShuffleCost = 0;
     SmallVector<int> FirstMask(SubMask.begin(), SubMask.end());
@@ -21937,10 +21943,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       }
       if (!IsIdentity)
         FirstShuffleCost = GetShuffleCost(FirstMask, Entries.front(), VecTy);
-      FirstShuffleCost +=
-          getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
-                                   MaskVecTy, DemandedElts, /*Insert=*/true,
-                                   /*Extract=*/false, CostKind);
+      FirstShuffleCost += GetInsertCost(DemandedElts);
       FirstShuffleCost +=
           GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/false);
     }
@@ -21965,10 +21968,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       }
       if (!IsIdentity)
         SecondShuffleCost = GetShuffleCost(SecondMask, Entries[1], VecTy);
-      SecondShuffleCost +=
-          getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
-                                   MaskVecTy, DemandedElts, /*Insert=*/true,
-                                   /*Extract=*/false, CostKind);
+      SecondShuffleCost += GetInsertCost(DemandedElts);
       SecondShuffleCost +=
           GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/false);
     }
@@ -21976,10 +21976,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     for (auto [I, Idx] : enumerate(SubMask))
       if (Idx == PoisonMaskElem)
         DemandedElts.clearBit(I);
-    InstructionCost BuildVectorCost =
-        getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
-                                 MaskVecTy, DemandedElts, /*Insert=*/true,
-                                 /*Extract=*/false, CostKind);
+    InstructionCost BuildVectorCost = GetInsertCost(DemandedElts);
     BuildVectorCost +=
         GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/true);
     const TreeEntry *BestEntry = nullptr;
@@ -22209,7 +22206,8 @@ InstructionCost BoUpSLP::getEntriesLanesShuffleCost(
 
 InstructionCost BoUpSLP::getVectorizedScalarsShuffleCost(
     ArrayRef<Value *> VL, const APInt &DemandedElts, bool ForPoisonSrc,
-    Type *ScalarTy) const {
+    Type *ScalarTy,
+    function_ref<InstructionCost(const APInt &)> GetInsertCost) const {
   if (isa<VectorType>(ScalarTy))
     return TTI::TCC_Free;
   const unsigned VF = VL.size();
@@ -22223,11 +22221,10 @@ InstructionCost BoUpSLP::getVectorizedScalarsShuffleCost(
     const auto *It = find_if(VTEs, [&](const TreeEntry *E) {
       return !TransformedToGatherNodes.contains(E) && !DeletedNodes.contains(E);
     });
-    if (It == VTEs.end() ||
-        getScalarizationOverhead(*TTI, Opts.slp_revec, ScalarTy, VecTy,
-                                 APInt::getOneBitSet(VF, I), /*Insert=*/true,
-                                 /*Extract=*/false, CostKind,
-                                 /*ForPoisonSrc=*/true, VL) != TTI::TCC_Free)
+    if (It == VTEs.end())
+      continue;
+    // A paid insert also covers the lane move, as the extract folds into it.
+    if (GetInsertCost(APInt::getOneBitSet(VF, I)) != TTI::TCC_Free)
       continue;
     EntryMasks.try_emplace(*It, VF, PoisonMaskElem).first->second[I] =
         (*It)->findLaneForValue(V);
@@ -22253,8 +22250,7 @@ InstructionCost BoUpSLP::getVectorizedScalarsShuffleCost(
   Cost += getEntriesLanesShuffleCost(
       MutableArrayRef(Vector.data(), Vector.size()), Base, ScalarTy,
       [](InstructionCost C, const TreeEntry &) { return C; });
-  // Keep the insert cost alone if the target has no valid cost for the
-  // shuffles.
+  // Keep the inserts alone if the target has no valid cost for the shuffles.
   if (!Cost.isValid())
     return TTI::TCC_Free;
   return Cost;
@@ -22298,17 +22294,19 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                        cast<VectorType>(VecTy), CostKind, ConstantShuffleMask);
   }
 
+  auto GetInsertCost = [&](const APInt &DemandedElts) {
+    return getScalarizationOverhead(
+        *TTI, Opts.slp_revec, ScalarTy, cast<VectorType>(VecTy), DemandedElts,
+        /*Insert=*/true,
+        /*Extract=*/false, CostKind, ForPoisonSrc && !IsAnyNonUndefConst, VL);
+  };
   // 2. Insert unique non-constants.
   if (!DemandedElements.isZero())
-    Cost += getScalarizationOverhead(*TTI, Opts.slp_revec, ScalarTy,
-                                     cast<VectorType>(VecTy), DemandedElements,
-                                     /*Insert=*/true,
-                                     /*Extract=*/false, CostKind,
-                                     ForPoisonSrc && !IsAnyNonUndefConst, VL);
+    Cost += GetInsertCost(DemandedElements);
 
   // 3. Shuffle the scalars of the vectorized entries.
   Cost += getVectorizedScalarsShuffleCost(VL, DemandedElements, ForPoisonSrc,
-                                          ScalarTy);
+                                          ScalarTy, GetInsertCost);
   return Cost;
 }
 
