@@ -15,6 +15,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/WithColor.h"
+#include <optional>
 
 DEF_DIAGTOOL("tree", "Show warning flags in a tree view", TreeView)
 
@@ -142,32 +144,30 @@ static void printUsage() {
          "[<diagnostic-group>]\n";
 }
 
-namespace {
-enum class ColorMode { Auto, Always, Never, Invalid };
-} // namespace
-
 int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
   bool Internal = false;
-  ColorMode Color = ColorMode::Auto;
+  llvm::ColorMode Color = llvm::ColorMode::Auto;
 
   while (argc > 0) {
     StringRef Arg(*argv);
     if (Arg == "--internal") {
       Internal = true;
     } else if (Arg == "--color") {
-      Color = ColorMode::Always;
+      Color = llvm::ColorMode::Enable;
     } else if (Arg.consume_front("--color=")) {
-      Color = llvm::StringSwitch<ColorMode>(Arg)
-                  .Case("always", ColorMode::Always)
-                  .Case("auto", ColorMode::Auto)
-                  .Case("never", ColorMode::Never)
-                  .Default(ColorMode::Invalid);
-      if (Color == ColorMode::Invalid) {
+      std::optional<llvm::ColorMode> ParsedColor =
+          llvm::StringSwitch<std::optional<llvm::ColorMode>>(Arg)
+              .Case("always", llvm::ColorMode::Enable)
+              .Case("auto", llvm::ColorMode::Auto)
+              .Case("never", llvm::ColorMode::Disable)
+              .Default(std::nullopt);
+      if (!ParsedColor) {
         llvm::errs() << "Invalid value for --color: '" << Arg
                      << "'; expected 'always', 'auto', or 'never'\n";
         printUsage();
         return -1;
       }
+      Color = *ParsedColor;
     } else {
       break;
     }
@@ -195,17 +195,15 @@ int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
   }
 
   switch (Color) {
-  case ColorMode::Always:
+  case llvm::ColorMode::Enable:
     out.enable_colors(true);
     break;
-  case ColorMode::Never:
+  case llvm::ColorMode::Disable:
     out.enable_colors(false);
     break;
-  case ColorMode::Auto:
+  case llvm::ColorMode::Auto:
     out.enable_colors(out.has_colors());
     break;
-  case ColorMode::Invalid:
-    llvm_unreachable("invalid color mode");
   }
 
   TreePrinter TP(out);
