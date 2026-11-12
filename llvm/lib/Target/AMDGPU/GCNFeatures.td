@@ -1636,6 +1636,10 @@ defm PkAddMinMaxInsts : AMDGPUSubtargetFeature<"pk-add-min-max-insts",
   "Has v_pk_add_{min|max}_{i|u}16 instructions"
 >;
 
+defm PkMinMax3Insts : AMDGPUSubtargetFeature<"pk-min-max3-insts",
+  "Has v_pk_{min|max}3_{i|u}16 instructions"
+>;
+
 defm VMemToLDSLoad : AMDGPUSubtargetFeature<"vmem-to-lds-load-insts",
   "The platform has memory to lds instructions (global_load w/lds bit set, buffer_load"
   "w/lds bit set or global_load_lds. This does not include scratch_load_lds."
@@ -2573,6 +2577,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureAddMinMaxInsts,
    FeatureMinMaxI64Insts,
    FeaturePkAddMinMaxInsts,
+   FeaturePkMinMax3Insts,
    FeatureLdsBarrierArriveAtomic,
    FeatureLdsAtomicAddF64,
    FeatureSetPrioIncWgInst,
