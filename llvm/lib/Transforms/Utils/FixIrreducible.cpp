@@ -172,6 +172,7 @@ INITIALIZE_PASS_BEGIN(FixIrreducible, "fix-irreducible",
                       false /* Only looks at CFG */, false /* Analysis Pass */)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_END(FixIrreducible, "fix-irreducible",
                     "Convert irreducible control-flow into natural loops",
                     false /* Only looks at CFG */, false /* Analysis Pass */)
@@ -326,7 +327,11 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
     }
   }
 
-  // Redirect external incoming edges. This includes the edges on the header.
+  // Redirect external edges incident on any entry (including the header).
+  // Ignore external edges to non-entry blocks, which can only come from
+  // unreachable predecessors; redirecting them would make the hub branch to a
+  // non-entry block, effectively turning it into a new entry.
+  SmallPtrSet<BasicBlock *, 8> Entries(from_range, CI.getEntries(C));
   Predecessors.clear();
   for (BasicBlock *E : CI.getEntries(C)) {
     for (BasicBlock *P : predecessors(E)) {
@@ -339,16 +344,16 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
     Instruction *Term = P->getTerminator();
     if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor();
-      Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
+      Succ0 = Entries.contains(Succ0) ? Succ0 : nullptr;
       CHub.addBranch(P, Succ0);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
                         << " -> " << printBasicBlock(Succ0) << '\n');
     } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
-      Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
+      Succ0 = Entries.contains(Succ0) ? Succ0 : nullptr;
       BasicBlock *Succ1 = Branch->getSuccessor(1);
-      Succ1 = CI.contains(C, Succ1) ? Succ1 : nullptr;
+      Succ1 = Entries.contains(Succ1) ? Succ1 : nullptr;
       CHub.addBranch(P, Succ0, Succ1);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
@@ -359,7 +364,7 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
       SmallDenseMap<BasicBlock *, BasicBlock *> MultiBrTargets;
       for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
         BasicBlock *Succ = Term->getSuccessor(I);
-        if (!CI.contains(C, Succ))
+        if (!Entries.contains(Succ))
           continue;
         auto It = MultiBrTargets.find(Succ);
         BasicBlock *ExistingTarget =
@@ -386,14 +391,6 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   // of guard blocks that manage the flow of control from the
   // predecessors to the headers.
   SmallVector<BasicBlock *> GuardBlocks;
-
-  // Minor optimization: The cycle entries are discovered in an order that is
-  // the opposite of the order in which these blocks appear as branch targets.
-  // This results in a lot of condition inversions in the control flow out of
-  // the new ControlFlowHub, which can be mitigated if the orders match. So we
-  // reverse the entries when adding them to the hub.
-  SetVector<BasicBlock *> Entries;
-  Entries.insert(CI.getEntries(C).rbegin(), CI.getEntries(C).rend());
 
   CHub.finalize(&DTU, GuardBlocks, "irr");
 #if defined(EXPENSIVE_CHECKS)

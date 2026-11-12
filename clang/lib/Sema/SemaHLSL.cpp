@@ -4012,6 +4012,18 @@ static bool CheckWavePrefix(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckWaveMultiPrefixMask(Sema *S, CallExpr *TheCall) {
+  QualType MaskTy = TheCall->getArg(1)->getType();
+  QualType UInt4Ty = S->Context.getExtVectorType(S->Context.UnsignedIntTy, 4);
+  if (S->Context.hasSameUnqualifiedType(MaskTy, UInt4Ty))
+    return false;
+
+  S->Diag(TheCall->getArg(1)->getBeginLoc(),
+          diag::err_typecheck_convert_incompatible)
+      << MaskTy << UInt4Ty << 1 << 0 << 0;
+  return true;
+}
+
 static bool CheckBoolSelect(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() == 3);
   Expr *Arg1 = TheCall->getArg(1);
@@ -4956,14 +4968,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
-  case Builtin::BI__builtin_hlsl_all:
-  case Builtin::BI__builtin_hlsl_any: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
-      return true;
-    break;
-  }
   case Builtin::BI__builtin_hlsl_asdouble: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
@@ -5302,8 +5306,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
-    if (SemaRef.checkArgCount(TheCall, 1))
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_count_bits: {
+    bool IsMultiPrefix =
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_count_bits;
+    if (SemaRef.checkArgCount(TheCall, IsMultiPrefix ? 2 : 1))
       return true;
 
     QualType ArgType = TheCall->getArg(0)->getType();
@@ -5320,6 +5327,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                    diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
           << ArgType << 0;
       return true;
+    }
+
+    if (IsMultiPrefix) {
+      if (CheckWaveMultiPrefixMask(&SemaRef, TheCall))
+        return true;
+
+      // Alias validation uses calls with an invalid source location.
+      if (TheCall->getBeginLoc().isValid() &&
+          !getASTContext().getTargetInfo().getTriple().isDXIL()) {
+        SemaRef.Diag(TheCall->getBeginLoc(),
+                     diag::err_builtin_target_unsupported)
+            << TheCall->getSourceRange();
+        return true;
+      }
     }
 
     break;
@@ -5375,6 +5396,39 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();
     TheCall->setType(ArgTyExpr);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_and:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_or:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_bit_xor:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_product:
+  case Builtin::BI__builtin_hlsl_wave_multi_prefix_sum: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    if (CheckAnyScalarOrVectorOrMatrix(&SemaRef, TheCall, 0) ||
+        CheckNotBoolScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    QualType ValueTy = TheCall->getArg(0)->getType();
+    QualType ElementTy = getScalarComponentType(ValueTy);
+    bool IsArithmetic =
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_product ||
+        BuiltinID == Builtin::BI__builtin_hlsl_wave_multi_prefix_sum;
+    if ((!ElementTy->isIntegerType() &&
+         !(IsArithmetic && ElementTy->hasFloatingRepresentation())) ||
+        ElementTy->isBooleanType()) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << (ValueTy->isMatrixType() ? 3 : 5) << 1 << IsArithmetic
+          << ValueTy;
+      return true;
+    }
+
+    if (CheckWaveMultiPrefixMask(&SemaRef, TheCall))
+      return true;
+
+    TheCall->setType(ValueTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_quad_read_across_x:
@@ -6340,9 +6394,8 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     }
 
     // Process resources in user-defined structs, or arrays of such structs.
-    const Type *VDTy = VD->getType().getTypePtr();
-    if (VD->getStorageClass() != SC_Static && VDTy->isHLSLIntangibleType() &&
-        !isResourceRecordTypeOrArrayOf(VD))
+    if (VD->getStorageClass() != SC_Static &&
+        isStructOrArrayOfWithResources(VD->getType()))
       handleGlobalStructOrArrayOfWithResources(VD);
 
     // Mark groupshared variables as extern so they will have

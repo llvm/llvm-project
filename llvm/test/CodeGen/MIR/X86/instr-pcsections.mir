@@ -15,7 +15,6 @@
 ---
 name:            test
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 frameInfo:

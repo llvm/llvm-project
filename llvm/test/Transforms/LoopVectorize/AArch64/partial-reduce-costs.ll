@@ -32,7 +32,7 @@
 target triple = "aarch64"
 
 ; sub(i16, zext(i8)->i16 * zext(i8)->i16)
-define i16 @sub_reduction_i16_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i16 %init, i32 %n) {
+define i16 @sub_reduction_i16_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i16 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i16_zext_i8_zext_i8'
 ; NEON:  Cost of 2 for VF 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i16), (ir<%load2> zext to i16))
 ; NEON:  Cost of 2 for VF 16: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i16), (ir<%load3> zext to i16)))
@@ -105,7 +105,7 @@ exit:
 ; high expansion cost, hence no costs for a partial.reduce.add EXPRESSION.
 ;
 ; sub(i16, zext(i8)->i16 * sext(i8)->i16)
-define i16 @sub_reduction_i16_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i16 %init, i32 %n) {
+define i16 @sub_reduction_i16_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i16 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i16_zext_i8_sext_i8'
 ; SVE-LABEL: 'sub_reduction_i16_zext_i8_sext_i8'
 ; SVE2-LABEL: 'sub_reduction_i16_zext_i8_sext_i8'
@@ -145,7 +145,7 @@ exit:
 !5 = !{!"llvm.loop.vectorize.width", i32 16}
 
 ; sub(i32, zext(i8)->i32 * zext(i8)->i32)
-define i32 @sub_reduction_i32_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i32 %init, i32 %n) {
+define i32 @sub_reduction_i32_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i32 %init, i32 %n) vscale_range(1,16) {
 ; For the NEON run line, no partial reductions are generated because the operation is not natively supported (hence no check line for EXPRESSION).
 ;
 ; NEON-LABEL: 'sub_reduction_i32_zext_i8_zext_i8'
@@ -217,7 +217,7 @@ exit:
 !8 = !{!"llvm.loop.vectorize.width", i32 16}
 
 ; sub(i32, zext(i8)->i32 * sext(i8)->i32)
-define i32 @sub_reduction_i32_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i32 %init, i32 %n) {
+define i32 @sub_reduction_i32_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i32 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i32_zext_i8_sext_i8'
 ; SVE-LABEL: 'sub_reduction_i32_zext_i8_sext_i8'
 ; SVE2-LABEL: 'sub_reduction_i32_zext_i8_sext_i8'
@@ -262,7 +262,7 @@ exit:
 !11 = !{!"llvm.loop.vectorize.width", i32 16}
 
 ; sub(i64, zext(i8)->i64 * zext(i8)->i64)
-define i64 @sub_reduction_i64_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) {
+define i64 @sub_reduction_i64_zext_i8_zext_i8(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) vscale_range(1,16) {
 ; For the NEON run line, no partial reductions are generated because the operation is not natively supported (hence no check line for EXPRESSION).
 ;
 ; NEON-LABEL: 'sub_reduction_i64_zext_i8_zext_i8'
@@ -337,7 +337,7 @@ exit:
 ; high expansion cost, hence no costs for a partial.reduce.add EXPRESSION.
 ;
 ; sub(i64, zext(i8)->i64 * sext(i8)->i64)
-define i64 @sub_reduction_i64_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) {
+define i64 @sub_reduction_i64_zext_i8_sext_i8(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i64_zext_i8_sext_i8'
 ; SVE-LABEL: 'sub_reduction_i64_zext_i8_sext_i8'
 ; SVE2-LABEL: 'sub_reduction_i64_zext_i8_sext_i8'
@@ -377,7 +377,7 @@ exit:
 !17 = !{!"llvm.loop.vectorize.width", i32 16}
 
 ; sub(i32, zext(i16)->i32 * zext(i16)->i32)
-define i32 @sub_reduction_i32_zext_i16_zext_i16(ptr %src1, ptr %src2, ptr %src3, i32 %init, i32 %n) {
+define i32 @sub_reduction_i32_zext_i16_zext_i16(ptr %src1, ptr %src2, ptr %src3, i32 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i32_zext_i16_zext_i16'
 ; NEON:  Cost of 2 for VF 8: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i32), (ir<%load2> zext to i32))
 ; NEON:  Cost of 2 for VF 8: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i32), (ir<%load3> zext to i32)))
@@ -450,7 +450,7 @@ exit:
 ; high expansion cost, hence no costs for a partial.reduce.add EXPRESSION.
 ;
 ; sub(i32, zext(i16)->i32 * sext(i16)->i32)
-define i32 @sub_reduction_i32_zext_i16_sext_i16(ptr %src1, ptr %src2, ptr %src3, i32 %init, i32 %n) {
+define i32 @sub_reduction_i32_zext_i16_sext_i16(ptr %src1, ptr %src2, ptr %src3, i32 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i32_zext_i16_sext_i16'
 ; SVE-LABEL: 'sub_reduction_i32_zext_i16_sext_i16'
 ; SVE2-LABEL: 'sub_reduction_i32_zext_i16_sext_i16'
@@ -490,7 +490,7 @@ exit:
 !23 = !{!"llvm.loop.vectorize.width", i32 8}
 
 ; sub(i64, zext(i16)->i64 * zext(i16)->i64)
-define i64 @sub_reduction_i64_zext_i16_zext_i16(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) {
+define i64 @sub_reduction_i64_zext_i16_zext_i16(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) vscale_range(1,16) {
 ; For the NEON run line, no partial reductions are generated because the operation is not natively supported (hence no check line for EXPRESSION).
 ;
 ; NEON-LABEL: 'sub_reduction_i64_zext_i16_zext_i16'
@@ -562,7 +562,7 @@ exit:
 !26 = !{!"llvm.loop.vectorize.width", i32 8}
 
 ; sub(i64, zext(i16)->i64 * sext(i16)->i64)
-define i64 @sub_reduction_i64_zext_i16_sext_i16(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) {
+define i64 @sub_reduction_i64_zext_i16_sext_i16(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i64_zext_i16_sext_i16'
 ; SVE-LABEL: 'sub_reduction_i64_zext_i16_sext_i16'
 ; SVE2-LABEL: 'sub_reduction_i64_zext_i16_sext_i16'
@@ -602,7 +602,7 @@ exit:
 !29 = !{!"llvm.loop.vectorize.width", i32 8}
 
 ; sub(i64, zext(i32)->i64 * zext(i32)->i64)
-define i64 @sub_reduction_i64_zext_i32_zext_i32(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) {
+define i64 @sub_reduction_i64_zext_i32_zext_i32(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i64_zext_i32_zext_i32'
 ; NEON:  Cost of 2 for VF 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%load1> zext to i64), (ir<%load2> zext to i64))
 ; NEON:  Cost of 2 for VF 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.add (sub (0, mul (ir<%load2> zext to i64), (ir<%load3> zext to i64)))
@@ -675,7 +675,7 @@ exit:
 ; high expansion cost, hence no costs for a partial.reduce.add EXPRESSION.
 ;
 ; sub(i64, zext(i32)->i64 * sext(i32)->i64)
-define i64 @sub_reduction_i64_zext_i32_sext_i32(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) {
+define i64 @sub_reduction_i64_zext_i32_sext_i32(ptr %src1, ptr %src2, ptr %src3, i64 %init, i32 %n) vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_i64_zext_i32_sext_i32'
 ; SVE-LABEL: 'sub_reduction_i64_zext_i32_sext_i32'
 ; SVE2-LABEL: 'sub_reduction_i64_zext_i32_sext_i32'
@@ -710,7 +710,7 @@ exit:
   ret i64 %sub2
 }
 
-define i32 @reduce_sub_add_chain_without_mul(ptr %a, ptr noalias %b) {
+define i32 @reduce_sub_add_chain_without_mul(ptr %a, ptr noalias %b) vscale_range(1,16) {
 ; NEON-LABEL: 'reduce_sub_add_chain_without_mul'
 ; NEON:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; NEON:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
@@ -771,7 +771,7 @@ for.exit:
   ret i32 %add
 }
 
-define float @reduce_fsub_fadd_chain_without_mul(ptr %a, ptr noalias %b) {
+define float @reduce_fsub_fadd_chain_without_mul(ptr %a, ptr noalias %b) vscale_range(1,16) {
 ; NEON-LABEL: 'reduce_fsub_fadd_chain_without_mul'
 ; NEON:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
 ; NEON:  Cost of 2 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
@@ -842,7 +842,7 @@ for.exit:
 !35 = !{!"llvm.loop.vectorize.width", i32 4}
 
 ; fsub(float, fpext(half)->float * fpext(half)->float)
-define float @sub_reduction_float_fpext_half_fpext_half(ptr %src1, ptr %src2, ptr %src3, float %init, i32 %n) {
+define float @sub_reduction_float_fpext_half_fpext_half(ptr %src1, ptr %src2, ptr %src3, float %init, i32 %n) vscale_range(1,16) {
 ; For the SVE run line, no partial reductions are generated because the operation is not natively supported (hence no check line for EXPRESSION).
 ;
 ; NEON-LABEL: 'sub_reduction_float_fpext_half_fpext_half'
@@ -910,7 +910,7 @@ exit:
 }
 
 ; fsub(float, fpext(bfloat)->float * fpext(bfloat)->float)
-define float @sub_reduction_float_fpext_bfloat_fpext_bfloat(ptr %src1, ptr %src2, ptr %src3, float %init, i32 %n) "target-features"="+bf16" {
+define float @sub_reduction_float_fpext_bfloat_fpext_bfloat(ptr %src1, ptr %src2, ptr %src3, float %init, i32 %n) "target-features"="+bf16" vscale_range(1,16) {
 ; NEON-LABEL: 'sub_reduction_float_fpext_bfloat_fpext_bfloat'
 ; NEON:  Cost of 2 for VF 4: EXPRESSION vp<[[VP10:%[0-9]+]]> = ir<%acc> + partial.reduce.fadd (mul (ir<%load1> fpext to float), (ir<%load2> fpext to float))
 ; NEON:  Cost of 3 for VF 4: EXPRESSION vp<[[VP11:%[0-9]+]]> = vp<[[VP10]]> + partial.reduce.fadd (sub (0, mul (ir<%load2> fpext to float), (ir<%load3> fpext to float)))
@@ -986,7 +986,7 @@ exit:
 
 ;; Using partial reductions by default, in place of a normal add or fadd.
 
-define half @sum_half(ptr %h) {
+define half @sum_half(ptr %h) vscale_range(1,16) {
 ;; This previously caused crashes in codegen due to the illegal type.
 ;; The SVE/SME runlines won't generate a plan since we force scalable
 ;; vectorization and the trip count is 2 (below minimum threshold), so
@@ -1021,7 +1021,7 @@ exit:
 !40 = !{!"llvm.loop.interleave.count", i32 1}
 !41 = !{!"llvm.loop.vectorize.width", i32 2}
 
-define float @sum_float(ptr %in, i64 %limit) {
+define float @sum_float(ptr %in, i64 %limit) vscale_range(1,16) {
 ; NEON-LABEL: 'sum_float'
 ; NEON:  Cost of 1 for VF 4: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)
 ; NEON:  Cost of 1 for VF 4: PARTIAL-REDUCE ir<%sum.next> = ir<%sum> + fast reduce.fadd (ir<%l>)

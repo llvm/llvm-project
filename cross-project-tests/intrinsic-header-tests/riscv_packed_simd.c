@@ -5799,67 +5799,100 @@ void test_pst_u32x2_aligned(uint32_t *p, uint32x2_t v) {
 }
 
 // CHECK-LABEL: test_pset_i8_i8x4:
-// CHECK:        mvm
+// CHECK:         slli{{[[:space:]]}}
+// CHECK-NEXT:    lui{{[[:space:]]}}
+// CHECK-NEXT:    mvm{{[[:space:]]}}
 int8x4_t test_pset_i8_i8x4(int8x4_t v, int8_t e) {
   return __riscv_pset_i8_i8x4(v, e, 2);
 }
 
 // CHECK-LABEL: test_pset_u8_u8x4:
-// CHECK:        mvm
+// RV32:         slli{{[[:space:]]}}
+// RV32-NEXT:    lui{{[[:space:]]}}
+// RV32-NEXT:    mvm{{[[:space:]]}}
+// RV64:         li{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    mvm{{[[:space:]]}}
 uint8x4_t test_pset_u8_u8x4(uint8x4_t v, uint8_t e) {
   return __riscv_pset_u8_u8x4(v, e, 3);
 }
 
 // CHECK-LABEL: test_pset_i16_i16x2:
-// RV32:         pack
-// RV64:         mvm
+// RV32:         pack{{[[:space:]]}}
+// RV64:         lui{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    mvm{{[[:space:]]}}
 int16x2_t test_pset_i16_i16x2(int16x2_t v, int16_t e) {
   return __riscv_pset_i16_i16x2(v, e, 1);
 }
 
 // CHECK-LABEL: test_pset_u16_u16x2:
-// CHECK:        and
-// CHECK:        or
+// CHECK:        lui{{[[:space:]]}}
+// CHECK:        and{{[[:space:]]}}
+// CHECK:        or{{[[:space:]]}}
 uint16x2_t test_pset_u16_u16x2(uint16x2_t v, uint16_t e) {
   return __riscv_pset_u16_u16x2(v, e, 0);
 }
 
 // CHECK-LABEL: test_pset_i8_i8x8:
-// CHECK:        mvm
+// RV32:         lui{{[[:space:]]}}
+// RV32-NEXT:    slli{{[[:space:]]}}
+// RV32-NEXT:    addi{{[[:space:]]}}
+// RV32-NEXT:    mvm{{[[:space:]]}}
+// RV64:         li{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    mvm{{[[:space:]]}}
 int8x8_t test_pset_i8_i8x8(int8x8_t v, int8_t e) {
   return __riscv_pset_i8_i8x8(v, e, 5);
 }
 
 // CHECK-LABEL: test_pset_u8_u8x8:
-// CHECK:        mvm
+// RV32:         slli{{[[:space:]]}}
+// RV32-NEXT:    lui{{[[:space:]]}}
+// RV32-NEXT:    mvm{{[[:space:]]}}
+// RV64:         li{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    mvm{{[[:space:]]}}
 uint8x8_t test_pset_u8_u8x8(uint8x8_t v, uint8_t e) {
   return __riscv_pset_u8_u8x8(v, e, 7);
 }
 
 // CHECK-LABEL: test_pset_i16_i16x4:
-// RV32:         pack
-// RV64:         mvm
+// RV32:         pack{{[[:space:]]}}
+// RV64:         li{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    mvm{{[[:space:]]}}
 int16x4_t test_pset_i16_i16x4(int16x4_t v, int16_t e) {
   return __riscv_pset_i16_i16x4(v, e, 3);
 }
 
 // CHECK-LABEL: test_pset_u16_u16x4:
-// RV32:         pack
-// RV64:         mvm
+// RV32:         srli{{[[:space:]]}}
+// RV32-NEXT     pack{{[[:space:]]}}
+// RV64:         lui
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    slli{{[[:space:]]}}
+// RV64-NEXT:    mvm
 uint16x4_t test_pset_u16_u16x4(uint16x4_t v, uint16_t e) {
   return __riscv_pset_u16_u16x4(v, e, 2);
 }
 
 // CHECK-LABEL: test_pset_i32_i32x2:
 // RV32:         mv{{[[:space:]]}}
-// RV64:         pack
+// RV64:         pack{{[[:space:]]}}
 int32x2_t test_pset_i32_i32x2(int32x2_t v, int32_t e) {
   return __riscv_pset_i32_i32x2(v, e, 1);
 }
 
 // CHECK-LABEL: test_pset_u32_u32x2:
 // RV32:         mv{{[[:space:]]}}
-// RV64:         pack
+// RV64:         srli{{[[:space:]]}}
+// RV64-NEXT:    pack{{[[:space:]]}}
 uint32x2_t test_pset_u32_u32x2(uint32x2_t v, uint32_t e) {
   return __riscv_pset_u32_u32x2(v, e, 0);
 }

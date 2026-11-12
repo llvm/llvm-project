@@ -10,7 +10,6 @@
 #include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"

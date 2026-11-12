@@ -4661,6 +4661,7 @@ struct OmpIterationOffset {
 // iteration ->
 //    induction-variable [iteration-offset]         // since 4.5
 struct OmpIteration {
+  CharBlock source;
   TUPLE_CLASS_BOILERPLATE(OmpIteration);
   std::tuple<Name, std::optional<OmpIterationOffset>> t;
 };

@@ -509,15 +509,16 @@ bool isVectorType(SPIRVTypeInst SPVTy);
 
 // Per spec: "Vector types must be parameterized only with 2, 3, or
 // 4 components, plus any additional sizes enabled by capabilities.", and
-// we always enable the Vector16 capability.
-inline bool requiresLongVectorEXT(unsigned NumComponents) {
+// we enable the Vector16 capability where available.
+inline bool requiresLongVectorEXT(unsigned NumComponents,
+                                  bool CanUseVector16 = true) {
   return NumComponents != 2 && NumComponents != 3 && NumComponents != 4 &&
-         NumComponents != 8 && NumComponents != 16;
+         (!CanUseVector16 || (NumComponents != 8 && NumComponents != 16));
 }
 
-inline bool isLongVectorEXT(const Type *Ty) {
+inline bool isLongVectorEXT(const Type *Ty, bool CanUseVector16 = true) {
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
-    return requiresLongVectorEXT(FVTy->getNumElements());
+    return requiresLongVectorEXT(FVTy->getNumElements(), CanUseVector16);
   return false;
 }
 

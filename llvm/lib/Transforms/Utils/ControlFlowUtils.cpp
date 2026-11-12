@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -68,15 +69,19 @@ static void setupBranchForGuard(ArrayRef<BasicBlock *> GuardBlocks,
                                 BBPredicates &GuardPredicates) {
   assert(Outgoing.size() > 1);
   assert(GuardBlocks.size() == Outgoing.size() - 1);
+  // The guard predicates are PHIs merging values from all the incoming blocks,
+  // so the probability of each guard branch cannot be derived locally.
   int I = 0;
   for (int E = GuardBlocks.size() - 1; I != E; ++I) {
     BasicBlock *Out = Outgoing[I];
-    CondBrInst::Create(GuardPredicates[Out], Out, GuardBlocks[I + 1],
-                       GuardBlocks[I]);
+    auto *Br = CondBrInst::Create(GuardPredicates[Out], Out, GuardBlocks[I + 1],
+                                  GuardBlocks[I]);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
   }
   BasicBlock *Out = Outgoing[I];
-  CondBrInst::Create(GuardPredicates[Out], Out, Outgoing[I + 1],
-                     GuardBlocks[I]);
+  auto *Br = CondBrInst::Create(GuardPredicates[Out], Out, Outgoing[I + 1],
+                                GuardBlocks[I]);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
 }
 
 // Assign an index to each outgoing block. At the corresponding guard
@@ -351,10 +356,11 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     DTU->applyUpdates(Updates);
   }
 
-  for (auto I : DeletionCandidates) {
-    if (I->use_empty())
-      if (auto *Inst = dyn_cast_or_null<Instruction>(I))
+  for (auto &I : DeletionCandidates) {
+    if (auto *Inst = dyn_cast_if_present<Instruction>(I)) {
+      if (Inst->use_empty())
         Inst->eraseFromParent();
+    }
   }
 
   return {FirstGuardBlock, true};

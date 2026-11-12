@@ -86,7 +86,7 @@ class PrintArrayTestCase(TestBase):
             ],
         )
         self.expect(
-            "expr --element-count 10 -- (void*)123",
+            "expr --element-count 10 -- (void*)data",
             error=True,
             substrs=[
                 "expression cannot be used with --element-count as it refers to a pointer to void"

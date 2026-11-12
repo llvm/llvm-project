@@ -4649,7 +4649,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
     default:
       return getInvalidInstructionMapping();
-    case Intrinsic::amdgcn_div_fmas:
+    case Intrinsic::amdgcn_div_fmas: {
+      // The unscaled IEEE-input case can select S_FMAC_F32.
+      if (Subtarget.hasSALUFloatInsts() &&
+          MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(32) &&
+          isSALUMapping(MI) && AMDGPU::isUnscaledIEEEDivFmas(MI, MRI))
+        return getDefaultMappingSOP(MI);
+      return getDefaultMappingVOP(MI);
+    }
     case Intrinsic::amdgcn_div_fixup:
     case Intrinsic::amdgcn_trig_preop:
     case Intrinsic::amdgcn_sin:
