@@ -29994,6 +29994,10 @@
 // See https://github.com/llvm/llvm-project/issues/108009.
 {"_ZN3FooIiE6methodIb3BarEEvT0_IT_ES3_IiE", "void Foo<int>::method<bool, Bar>(Bar<bool>, Bar<int>)"},
 
+// Cast target types must be printed in full.
+{"_Z1fIXscA_iLi0EEEvv", "void f<static_cast<int []>(0)>()"},
+{"_Z3fooIXscPFviEadL_Z5printiEEEvv", "void foo<static_cast<void (*)(int)>(&print(int))>()"},
+
 // C++20 class type non-type template parameters:
 {"_Z1fIXtl1BLPi0ELi1EEEEvv", "void f<B{(int*)0, 1}>()"},
 {"_Z1fIXtl1BLPi32EEEEvv", "void f<B{(int*)32}>()"},
