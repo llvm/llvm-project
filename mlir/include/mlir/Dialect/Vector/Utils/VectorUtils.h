@@ -207,6 +207,29 @@ public:
                             PatternRewriter &rewriter) const = 0;
 };
 
+/// Convenience wrapper for patterns that are only intended for default
+/// contractions, i.e. contractions for which the combining op is an ADD.
+///
+/// When using this wrapper, implement `matchAndRewriteAddContractOp` instead
+/// of plain `matchAndRewrite`.
+struct AddContractionOpRewritePattern : OpRewritePattern<ContractionOp> {
+  using OpRewritePattern<ContractionOp>::OpRewritePattern;
+  using Base = AddContractionOpRewritePattern;
+
+private:
+  LogicalResult matchAndRewrite(vector::ContractionOp sourceOp,
+                                PatternRewriter &rewriter) const final {
+    if (sourceOp.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(sourceOp, "expected ADD contraction");
+    return matchAndRewriteAddContractOp(sourceOp, rewriter);
+  }
+
+public:
+  virtual LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const = 0;
+};
+
 /// Returns true if the input Vector type can be linearized.
 ///
 /// Linearization is meant in the sense of flattening vectors, e.g.:

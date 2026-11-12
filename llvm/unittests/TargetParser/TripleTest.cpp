@@ -1706,7 +1706,7 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("powerpcle-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
             Triple("powerpcle-unknown-linux").getDefaultLongDoubleFormat());
-  // ... except on AIX, FreeBSD, OpenBSD, and Musl, which use IEEE double.
+  // ... except on AIX, FreeBSD, OpenBSD, SPE, and Musl, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("powerpc-ibm-aix").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
@@ -1715,6 +1715,9 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("powerpc64-unknown-freebsd").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("powerpc64-unknown-openbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("powerpcspe-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(
       LongDoubleFormat::IEEEdouble,
       Triple("powerpc64-unknown-linux-musl").getDefaultLongDoubleFormat());
@@ -1747,6 +1750,8 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("i686-pc-windows-msvc").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("x86_64-unknown-uefi").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-uefi").getDefaultLongDoubleFormat());
   // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("i686-unknown-linux-android").getDefaultLongDoubleFormat());
@@ -1773,6 +1778,8 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   // ... except on Windows and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-uefi").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
   EXPECT_EQ(
@@ -1819,6 +1826,9 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("riscv32be-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("riscv64be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("loongarch32-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
       Triple("loongarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());

@@ -157,11 +157,11 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
-// PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
+// PowerPC64, Sparc64, SystemZ, VE need signext/zeroext on i32 parameters and
 // returns corresponding to C-level ints and unsigned ints.
 static bool shouldExtI32(const Triple &T) {
   return T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-         T.getArch() == Triple::systemz;
+         T.getArch() == Triple::systemz || T.getArch() == Triple::ve;
 }
 
 // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
@@ -589,47 +589,6 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
             : static_cast<Type *>(StructType::get(ScalarTy, ScalarTy));
 
     return {FunctionType::get(RetTy, {ScalarTy}, false), Attrs};
-  }
-  case RTLIB::impl___aeabi_idivmod:
-  case RTLIB::impl___aeabi_uidivmod:
-  case RTLIB::impl___aeabi_ldivmod:
-  case RTLIB::impl___aeabi_uldivmod:
-  case RTLIB::impl___rt_sdiv:
-  case RTLIB::impl___rt_udiv:
-  case RTLIB::impl___rt_sdiv64:
-  case RTLIB::impl___rt_udiv64:
-  case RTLIB::impl___divmodqi4:
-  case RTLIB::impl___udivmodqi4:
-  case RTLIB::impl___divmodhi4:
-  case RTLIB::impl___udivmodhi4:
-  case RTLIB::impl_avr___divmodsi4:
-  case RTLIB::impl_avr___udivmodsi4: {
-    auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
-    return {FuncTy, Attrs.addFnAttributes(Ctx, FuncAttrBuilder)};
-  }
-  case RTLIB::impl_sqrtf:
-  case RTLIB::impl_sqrt: {
-    AttrBuilder FuncAttrBuilder(Ctx);
-
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::errnoMemOnly(ModRefInfo::Mod));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    Type *ScalarTy = LibcallImpl == RTLIB::impl_sqrtf ? Type::getFloatTy(Ctx)
-                                                      : Type::getDoubleTy(Ctx);
-    FunctionType *FuncTy = FunctionType::get(ScalarTy, {ScalarTy}, false);
-
-    Attrs = Attrs.addRetAttribute(
-        Ctx, Attribute::getWithNoFPClass(Ctx, fcNegInf | fcNegSubnormal |
-                                                  fcNegNormal));
-    return {FuncTy, Attrs};
   }
   default:
     break;

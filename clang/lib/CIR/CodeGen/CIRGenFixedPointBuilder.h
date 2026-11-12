@@ -49,8 +49,6 @@ struct CIRGenFixedPointBuilder {
 
   mlir::Value createFloatingToFixed(mlir::Value src,
                                     const llvm::FixedPointSemantics &dstSema) {
-
-    bool useSigned = dstSema.isSigned() || dstSema.hasUnsignedPadding();
     mlir::Value result = src;
     mlir::Type opTy = getAccommodatingFloatType(src.getType(), dstSema);
 
@@ -70,23 +68,17 @@ struct CIRGenFixedPointBuilder {
     cir::ConstantOp fpConst = builder.getConstFP(loc, opTy, scaleVal);
     result = builder.createFMul(loc, result, fpConst);
 
-    cir::IntType resultTy = cir::IntType::get(
-        builder.getContext(), dstSema.getWidth(), dstSema.isSigned());
-
+    cir::IntType opIntTy = getOpIntType(dstSema);
     if (dstSema.isSaturated()) {
-      result = builder.emitIntrinsicCallOp(
-          loc, useSigned ? "fptosi.sat" : "fptoui.sat", resultTy, result);
+      result = builder.createFPToIntSat(loc, result, opIntTy);
+      if (dstSema.hasUnsignedPadding())
+        result = clampNegativeToZero(result);
     } else {
-      result = builder.createCast(loc, cir::CastKind::float_to_int, result,
-                                  resultTy);
+      result =
+          builder.createCast(loc, cir::CastKind::float_to_int, result, opIntTy);
     }
 
-    // When saturating unsigned-with-padding using signed operations, we may
-    // get negative values. Emit an extra clamp to zero.
-    if (dstSema.isSaturated() && dstSema.hasUnsignedPadding())
-      result = clampNegativeToZero(result);
-
-    return result;
+    return builder.createIntCast(result, getIntType(dstSema));
   }
 
   mlir::Value createFixedToInteger(mlir::Value src,
@@ -157,6 +149,13 @@ struct CIRGenFixedPointBuilder {
 
     return createFixedToFixed(result, commonSema,
                               lhsSema.getCommonSemantics(rhsSema));
+  }
+
+  /// Negates \p value as 0 - value, so that saturating types saturate.
+  mlir::Value createNeg(mlir::Value value,
+                        const llvm::FixedPointSemantics &sema) {
+    return createSub(builder.getNullValue(value.getType(), loc), sema, value,
+                     sema);
   }
 
   mlir::Value createMul(mlir::Value lhs,
@@ -299,8 +298,7 @@ private:
       result = builder.createShiftRight(loc, result, srcScale - dstScale);
     }
 
-    cir::IntType dstIntTy =
-        cir::IntType::get(builder.getContext(), dstWidth, dstSema.isSigned());
+    cir::IntType dstIntTy = getIntType(dstSema);
 
     if (!dstSema.isSaturated()) {
       // Resize.
@@ -344,9 +342,9 @@ private:
         result = builder.createSelect(loc, tooLow, min, result);
       }
 
-      // Resize the integer part to get the final destination size.
-      if (resultWidth != dstWidth)
-        result = builder.createIntCast(result, dstIntTy);
+      // Unlike LLVM integers, CIR integers carry signedness, so the cast is
+      // needed even when only the signedness differs.
+      result = builder.createIntCast(result, dstIntTy);
     }
     return result;
   }
@@ -373,6 +371,12 @@ private:
     return llvm::FixedPointSemantics(
         c.getWidth() + static_cast<unsigned>(bothPadded && c.isSaturated()),
         c.getScale(), c.isSigned(), c.isSaturated(), bothPadded);
+  }
+
+  /// The CIR integer type that holds values of \p sema.
+  cir::IntType getIntType(const llvm::FixedPointSemantics &sema) {
+    return cir::IntType::get(builder.getContext(), sema.getWidth(),
+                             sema.isSigned());
   }
 
   /// Padded unsigned semantics compute as signed, as llvm::FixedPointBuilder

@@ -3757,7 +3757,14 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
 // VTableGetVPtr
 //===----------------------------------------------------------------------===//
 
-def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
+def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [
+  Pure,
+  TypesMatchWith<
+      "result is a vptr pointer in the address space of 'src'",
+      "src", "result",
+      "cir::PointerType::get(cir::VPtrType::get($_self.getContext()), "
+      "mlir::cast<cir::PointerType>($_self).getAddrSpace())">
+]> {
   let summary = "Get a the address of the vtable pointer for an object";
   let description = [{
     The `vtable.get_vptr` operation retrieves the address of the vptr for a
@@ -3766,7 +3773,7 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
     The vptr will always be at offset zero in the object, but this operation
     is more explicit about what is being retrieved than a direct bitcast.
 
-    The return type is always `!cir.ptr<!cir.vptr>`.
+    The return type is `!cir.ptr<!cir.vptr>` in the address space of `src`.
 
     Example:
     ```
@@ -3787,49 +3794,50 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
-// VTableGetVirtualFnAddrOp
+// VTableGetVirtualFnOp
 //===----------------------------------------------------------------------===//
 
-def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
-  Pure
+def CIR_VTableGetVirtualFnOp : CIR_Op<"vtable.get_virtual_fn", [
+  MemoryEffects<[MemRead]>
 ]> {
-  let summary = "Get a the address of a virtual function pointer";
+  let summary = "Get a virtual function pointer from a vtable";
   let description = [{
-    The `vtable.get_virtual_fn_addr` operation retrieves the address of a
-    virtual function pointer from an object's vtable (__vptr).
-    This is an abstraction to perform the basic pointer arithmetic to get
-    the address of the virtual function pointer, which can then be loaded and
-    called.
+    The `vtable.get_virtual_fn` operation retrieves the pointer to a virtual
+    function from an object's vtable (__vptr). This is an ABI independent
+    abstraction of this operation: how the entry is stored and read is decided
+    when the operation is lowered.
 
-    The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
-    have been returned by a previous call to `cir.vtable.get_vptr`. The
-    `index` operand is an index of the virtual function in the vtable.
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`. The `index` operand
+    is the index of the virtual function in the vtable, counted from the
+    address point.
 
-    The return type is a pointer-to-pointer to the function type.
+    The `invariant` attribute marks that the entry does not change for as long
+    as the vtable is live, which allows the load of it to be optimized.
+
+    The result is the pointer to the function.
 
     Example:
     ```
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
     %3 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
     %4 = cir.load %3 : !cir.ptr<!cir.vptr>, !cir.vptr
-    %5 = cir.vtable.get_virtual_fn_addr %4[2] : !cir.vptr
-                  -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>>
-    %6 = cir.load align(8) %5 : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_C>)
-                                                                 -> !s32i>>>,
-                                !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
-    %7 = cir.call %6(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
+    %5 = cir.vtable.get_virtual_fn %4[2] : !cir.vptr
+                  -> !cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>
+    %6 = cir.call %5(%2) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_C>) -> !s32i>>,
                             !cir.ptr<!rec_C>) -> !s32i
     ```
   }];
 
   let arguments = (ins
     CIR_VPtrType:$vptr,
-    I64Attr:$index);
+    I64Attr:$index,
+    UnitAttr:$invariant);
 
-  let results = (outs CIR_PointerType:$result);
+  let results = (outs CIR_PtrToFunc:$result);
 
   let assemblyFormat = [{
-    $vptr `[` $index `]` attr-dict
+    $vptr `[` $index `]` (`invariant` $invariant^)? attr-dict
     `:` qualified(type($vptr)) `->` qualified(type($result))
   }];
 }
@@ -6027,6 +6035,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
     order: output, input and then in/out operands. When several output operands
     are present, the result type may be represented as an anonymous record type.
 
+    The `convergent` attribute marks asm that may contain convergent
+    operations, so it must not be moved across divergent control flow.
+
     Example:
     ```C++
     __asm__("foo" : : : );
@@ -6069,13 +6080,13 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
+          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
       "llvm::ArrayRef<mlir::ValueRange>":$asmOperands,
       "llvm::StringRef":$asmString, "llvm::StringRef":$constraints,
-      "bool":$sideEffects, "AsmFlavor":$asmFlavor,
+      "bool":$sideEffects, "bool":$convergent, "AsmFlavor":$asmFlavor,
       "llvm::ArrayRef<mlir::Attribute>":$operandAttrs)>];
 
   let hasCustomAssemblyFormat = 1;

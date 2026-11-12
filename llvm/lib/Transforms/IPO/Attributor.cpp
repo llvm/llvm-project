@@ -1096,7 +1096,7 @@ Argument *IRPosition::getAssociatedArgument() const {
 
 ChangeStatus AbstractAttribute::update(Attributor &A) {
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
-  if (getState().isAtFixpoint())
+  if (isStateAtFixpoint())
     return HasChanged;
 
   LLVM_DEBUG(dbgs() << "[Attributor] Update: " << *this << "\n");
@@ -1407,8 +1407,8 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   }
 }
 
-void IRPosition::verify() {
 #ifdef EXPENSIVE_CHECKS
+void IRPosition::verify() {
   switch (getPositionKind()) {
   case IRP_INVALID:
     assert((CBContext == nullptr) &&
@@ -1472,8 +1472,8 @@ void IRPosition::verify() {
     return;
   }
   }
-#endif
 }
+#endif
 
 std::optional<Constant *>
 Attributor::getAssumedConstant(const IRPosition &IRP,
@@ -2261,14 +2261,13 @@ void Attributor::runTillFixpoint() {
     // Update all abstract attribute in the work list and record the ones that
     // changed.
     for (AbstractAttribute *AA : Worklist) {
-      const auto &AAState = AA->getState();
-      if (!AAState.isAtFixpoint())
+      if (!AA->isStateAtFixpoint())
         if (updateAA(*AA) == ChangeStatus::CHANGED)
           ChangedAAs.push_back(AA);
 
       // Use the InvalidAAs vector to propagate invalid states fast transitively
       // without requiring updates.
-      if (!AAState.isValidState())
+      if (!AA->getState().isValidState())
         InvalidAAs.insert(AA);
     }
 
@@ -2350,7 +2349,7 @@ ChangeStatus Attributor::manifestAttributes() {
     // optimistic state. This is correct because we enforced a pessimistic one
     // on abstract attributes that were transitively dependent on a changed one
     // already above.
-    if (!State.isAtFixpoint())
+    if (!AA->isStateAtFixpoint())
       State.indicateOptimisticFixpoint();
 
     // We must not manifest Attributes that use Callbase info.
@@ -2783,7 +2782,7 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
                      /* CheckBBLivenessOnly */ true))
     CS = AA.update(*this);
 
-  if (!AA.isQueryAA() && DV.empty() && !AA.getState().isAtFixpoint()) {
+  if (!AA.isQueryAA() && DV.empty() && !AA.isStateAtFixpoint()) {
     // If the AA did not rely on outside information but changed, we run it
     // again to see if it found a fixpoint. Most AAs do but we don't require
     // them to. Hence, it might take the AA multiple iterations to get to a
@@ -2799,7 +2798,7 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
       AAState.indicateOptimisticFixpoint();
   }
 
-  if (!AAState.isAtFixpoint())
+  if (!AA.isStateAtFixpoint())
     rememberDependences();
 
   // Verify the stack was used properly, that is we pop the dependence vector we
@@ -3284,30 +3283,6 @@ void InformationCache::initializeInformationCache(const Function &CF,
   // queried by abstract attributes during their initialization or update.
   // This has to happen before we create attributes.
 
-  DenseMap<const Value *, std::optional<short>> AssumeUsesMap;
-
-  // Add \p V to the assume uses map which track the number of uses outside of
-  // "visited" assumes. If no outside uses are left the value is added to the
-  // assume only use vector.
-  auto AddToAssumeUsesMap = [&](const Value &V) -> void {
-    SmallVector<const Instruction *> Worklist;
-    if (auto *I = dyn_cast<Instruction>(&V))
-      Worklist.push_back(I);
-    while (!Worklist.empty()) {
-      const Instruction *I = Worklist.pop_back_val();
-      std::optional<short> &NumUses = AssumeUsesMap[I];
-      if (!NumUses)
-        NumUses = I->getNumUses();
-      NumUses = *NumUses - /* this assume */ 1;
-      if (*NumUses != 0)
-        continue;
-      AssumeOnlyValues.insert(I);
-      for (const Value *Op : I->operands())
-        if (auto *OpI = dyn_cast<Instruction>(Op))
-          Worklist.push_back(OpI);
-    }
-  };
-
   for (Instruction &I : instructions(&F)) {
     bool IsInterestingOpcode = false;
 
@@ -3327,9 +3302,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // For `llvm.assume` calls we also fill the KnowledgeMap as we find them.
       // For `must-tail` calls we remember the caller and callee.
       if (auto *Assume = dyn_cast<AssumeInst>(&I)) {
-        AssumeOnlyValues.insert(Assume);
         fillMapFromAssume(*Assume, KnowledgeMap);
-        AddToAssumeUsesMap(*Assume->getArgOperand(0));
       } else if (cast<CallInst>(I).isMustTailCall()) {
         FI.ContainsMustTailCall = true;
         if (auto *Callee = dyn_cast_if_present<Function>(
@@ -3365,9 +3338,46 @@ void InformationCache::initializeInformationCache(const Function &CF,
       FI.RWInsts.push_back(&I);
   }
 
-  if (F.hasFnAttribute(Attribute::AlwaysInline) &&
-      isInlineViable(F).isSuccess())
+  bool IsInlineable = F.hasFnAttribute(Attribute::AlwaysInline) &&
+                      isInlineViable(F).isSuccess();
+  if (IsInlineable)
     InlineableFunctions.insert(&F);
+  FI.IsExactOrInlineable = IsInlineable || F.hasExactDefinition();
+}
+
+void InformationCache::collectAssumeOnlyValues(FunctionInfo &FI) {
+  FI.AssumeOnlyValuesCollected = true;
+  InstructionVectorTy *Calls = FI.OpcodeInstMap[Instruction::Call];
+  if (!Calls)
+    return;
+
+  DenseMap<const Value *, std::optional<short>> AssumeUsesMap;
+
+  // Add \p V to the assume uses map which track the number of uses outside of
+  // "visited" assumes. If no outside uses are left the value is added to the
+  // assume only use vector.
+  auto AddToAssumeUsesMap = [&](const Value &V) -> void {
+    SmallVector<const Instruction *> Worklist;
+    if (auto *I = dyn_cast<Instruction>(&V))
+      Worklist.push_back(I);
+    while (!Worklist.empty()) {
+      const Instruction *I = Worklist.pop_back_val();
+      std::optional<short> &NumUses = AssumeUsesMap[I];
+      if (!NumUses)
+        NumUses = I->getNumUses();
+      NumUses = *NumUses - /* this assume */ 1;
+      if (*NumUses != 0)
+        continue;
+      AssumeOnlyValues.insert(I);
+      for (const Instruction *OpI : make_isa_range<Instruction>(I->operands()))
+        Worklist.push_back(OpI);
+    }
+  };
+
+  for (AssumeInst *Assume : make_isa_range<AssumeInst>(*Calls)) {
+    AssumeOnlyValues.insert(Assume);
+    AddToAssumeUsesMap(*Assume->getArgOperand(0));
+  }
 }
 
 InformationCache::FunctionInfo::~FunctionInfo() {
@@ -3401,7 +3411,7 @@ void Attributor::recordDependence(const AbstractAttribute &FromAA,
   // put all AAs into the initial worklist anyway.
   if (DependenceStack.empty())
     return;
-  if (FromAA.getState().isAtFixpoint())
+  if (FromAA.isStateAtFixpoint())
     return;
   DependenceStack.back()->push_back({&FromAA, &ToAA, DepClass});
 }
@@ -3715,16 +3725,20 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
                              UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAInvariantLoadPointer>(
           IRPosition::value(*LI->getPointerOperand()));
-      getOrCreateAAFor<AAAddressSpace>(
-          IRPosition::value(*LI->getPointerOperand()));
+      if (InfoCache.getFlatAddressSpace().has_value()) {
+        getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*LI->getPointerOperand()));
+      }
     } else {
       auto &SI = cast<StoreInst>(I);
       getOrCreateAAFor<AAIsDead>(IRPosition::inst(I));
       getAssumedSimplified(IRPosition::value(*SI.getValueOperand()), nullptr,
                            UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAAlign>(IRPosition::value(*SI.getPointerOperand()));
-      getOrCreateAAFor<AAAddressSpace>(
-          IRPosition::value(*SI.getPointerOperand()));
+      if (InfoCache.getFlatAddressSpace().has_value()) {
+        getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*SI.getPointerOperand()));
+      }
     }
     return true;
   };
