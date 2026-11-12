@@ -8,6 +8,7 @@
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=51 -cpp -E %s | FileCheck %s --check-prefix=OPENMP-VERSION-51
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -cpp -E %s | FileCheck %s --check-prefix=OPENMP-VERSION-52
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=60 -cpp -E %s | FileCheck %s --check-prefix=OPENMP-VERSION-60
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=61 -cpp -E %s | FileCheck %s --check-prefix=OPENMP-VERSION-61
 
 ! DEFAULT-OPENMP-VERSION: integer :: var1 = 201107
 ! OPENMP-VERSION-31: integer :: var1 = 201107
@@ -17,6 +18,7 @@
 ! OPENMP-VERSION-51: integer :: var1 = 202011
 ! OPENMP-VERSION-52: integer :: var1 = 202111
 ! OPENMP-VERSION-60: integer :: var1 = 202411
+! OPENMP-VERSION-61: integer :: var1 = 202611
 
 #if _OPENMP
   integer :: var1 = _OPENMP
