@@ -1283,8 +1283,10 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   // Invoke pre-codegen callback from plugin, which might want to take over the
   // entire code generation itself.
   for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
-    if (Plugin->invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS,
-                                         DwoOS ? &DwoOS->os() : nullptr))
+    if (Plugin->invokePreCodeGenCallback(
+            *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
+            !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
+            /*MSI=*/nullptr, CI.getVirtualFileSystemPtr()))
       return;
   }
 

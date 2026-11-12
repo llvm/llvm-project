@@ -949,8 +949,10 @@ static void generateMachineCodeOrAssemblyImpl(
   // Invoke pre-codegen callback from plugin, which might want to take over the
   // entire code generation itself.
   for (const std::unique_ptr<llvm::PassPlugin> &plugin : ci.getPassPlugins()) {
-    if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os,
-                                         dwoOS ? &dwoOS->os() : nullptr)) {
+    if (plugin->invokePreCodeGenCallback(
+            tm, llvmModule, os, dwoOS ? &dwoOS->os() : nullptr, cgft,
+            /*DisableVerify=*/true, /*DisableSimplifyLibCalls=*/false,
+            /*MSI=*/nullptr, llvm::vfs::getRealFileSystem())) {
       if (dwoOS)
         dwoOS->keep();
       return;

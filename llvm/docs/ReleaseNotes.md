@@ -558,13 +558,8 @@ Makes programs 10x faster by doing Special New Thing.
   A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
   `LLVM_PLUGIN_API_VERSION` is now 3.
 
-* `PassPluginLibraryInfo::PreCodeGenCallback` receives the output stream for
-  split DWARF as an additional `raw_pwrite_stream *DwoOS` parameter, which
-  aligns its signature with the new `llvm::runCodeGenPipeline()`.
-  `DwoOS` is null unless the `.dwo` contents go to a separate file.
-  If set, it behaves like `OS` with respect to the result of
-  `invokePreCodeGenCallback()`: returning true means that the plugin wrote the
-  `.dwo` contents, otherwise another plugin or the default pipeline writes them.
+* `PassPluginLibraryInfo::PreCodeGenCallback` now matches the parameters of the
+  new `llvm::runCodeGenPipeline()`.
   This is also covered by the `LLVM_PLUGIN_API_VERSION` bump to 3.
 
 * llvm-offload-binary can now compress packaged binaries using zstd or zlib.

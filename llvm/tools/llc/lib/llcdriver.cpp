@@ -50,6 +50,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
@@ -724,8 +725,10 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
   for (auto &Plugin : PluginList) {
     CodeGenFileType CGFT = codegen::getFileType(Context.getLibraryOptions());
-    if (Plugin.invokePreCodeGenCallback(*M, *Target, CGFT, Out->os(),
-                                        DwoOut ? &DwoOut->os() : nullptr)) {
+    if (Plugin.invokePreCodeGenCallback(
+            *Target, *M, Out->os(), DwoOut ? &DwoOut->os() : nullptr, CGFT,
+            NoVerify, DisableSimplifyLibCalls, /*MSI=*/nullptr,
+            vfs::getRealFileSystem())) {
       // TODO: Deduplicate code with below and the NewPMDriver.
       if (Context.getDiagHandlerPtr()->HasErrors)
         exit(1);
