@@ -184,7 +184,7 @@ def combine_fmul_with_select_to_fldexp : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match  (G_FMUL $dst, $x, $select):$root,
           (G_SELECT $select, $y, $A, $B):$sel,
-          [{ return Helper.matchCombineFmulWithSelectToFldexp(*${root}, *${sel}, ${matchinfo}); }]),
+          [{ return Helper.matchCombineFmulWithSelectToFldexp(*${root}, *${sel}, ${x}.getReg(), ${matchinfo}); }]),
   (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 // (shift x, (zext amt)) -> (shift x, (and (anyext amt), mask)
@@ -294,22 +294,27 @@ def trunc_lshr16_to_unmerge : GICombineGroup<[
 
 // (add x, (zext carry:i1))  -> (uadde x, 0, carry)
 // (sub x, (zext carry:i1))  -> (usube x, 0, carry)
+//
+// The G_ADD rule also matches (add (zext carry:i1), x). When both operands are
+// a carry, the RHS one is tried first and is folded, so that the two carries
+// never have to be live at the same time.
+// For G_ADD, leave a zero addend to the right_identity_zero combine.
 class fold_carry_into_addsub<dag addsubPat, Instruction carryOpcode,
-                             bit CheckRHS = 0> : GICombineRule<
+                             bit CheckZero = 0> : GICombineRule<
   (defs root:$dst),
   (match (G_ZEXT i32:$zext, i1:$carry),
          addsubPat,
          !strconcat(
            [{ return MRI.hasOneNonDBGUse(${zext}.getReg()) &&
                      isCarryOut(${carry}.getReg()) }],
-           !if(CheckRHS, [{ && shouldFoldCarryIntoAdd(${src}.getReg()) }], ""),
+           !if(CheckZero,
+               [{ && !mi_match(${src}.getReg(), MRI, m_SpecificICst(0)) }], ""),
            [{;}])),
   (apply (carryOpcode $dst, GITypeOf<"$carry">:$carry_out,
                       $src, (GITypeOf<"$dst"> 0), $carry))>;
 
 def fold_carry_into_addsub_combines : GICombineGroup<[
-  fold_carry_into_addsub<(G_ADD i32:$dst, i32:$src, $zext), G_UADDE>,
-  fold_carry_into_addsub<(G_ADD i32:$dst, $zext, i32:$src), G_UADDE, CheckRHS = 1>,
+  fold_carry_into_addsub<(G_ADD i32:$dst, i32:$src, $zext), G_UADDE, CheckZero = 1>,
   fold_carry_into_addsub<(G_SUB i32:$dst, i32:$src, $zext), G_USUBE>
 ]>;
 
