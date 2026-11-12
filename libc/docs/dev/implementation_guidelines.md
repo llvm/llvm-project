@@ -122,7 +122,7 @@ non-math maintainers. It needs review by the math maintainers.
 ```
 
 - New functions are expected to be correctly rounded in all rounding modes.
-  The {doc}`math status tables <../headers/math/index>` record the accuracy of
+  The {doc}`math.h status tables <../headers/math>` record the accuracy of
   each function.
 - The implementation lives in a header under `src/__support/math/`, and the
   entrypoint is a thin wrapper. `libc/src/math/docs/add_math_function.md` is
