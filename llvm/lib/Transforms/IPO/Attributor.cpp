@@ -3368,9 +3368,8 @@ void InformationCache::collectAssumeOnlyValues(FunctionInfo &FI) {
       if (*NumUses != 0)
         continue;
       AssumeOnlyValues.insert(I);
-      for (const Value *Op : I->operands())
-        if (auto *OpI = dyn_cast<Instruction>(Op))
-          Worklist.push_back(OpI);
+      for (const Instruction *OpI : make_isa_range<Instruction>(I->operands()))
+        Worklist.push_back(OpI);
     }
   };
 
