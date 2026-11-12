@@ -424,13 +424,22 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 }
 
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  assert(K != TargetTransformInfo::RGK_Scalar);
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
+  // Don't maximize bandwidth for i1s. The legal width of predicates is derived
+  // from the data vectors they are used with. Maximizing the predicate width
+  // will just result in excessive VFs with a lot of unpacking.
+  if (ElementTy && ElementTy->isIntegerTy(1))
+    return false;
 
-  if (K == TargetTransformInfo::RGK_FixedWidthVector && ST->isNeonAvailable())
+  // If we don't know the specific class of vector just return true. Later VF
+  // selection will ask us about fixed or scalable vectors.
+  if (K == TargetTransformInfo::VectorKind::FixedOrScalable)
     return true;
 
-  return K == TargetTransformInfo::RGK_ScalableVector &&
+  if (K == TargetTransformInfo::VectorKind::FixedWidth && ST->isNeonAvailable())
+    return true;
+
+  return K == TargetTransformInfo::VectorKind::Scalable &&
          ST->isSVEorStreamingSVEAvailable() &&
          !ST->disableMaximizeScalableBandwidth();
 }
@@ -4067,6 +4076,19 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                        ISD::BITCAST, ISD::ADDRSPACECAST},
                       ISD))
       return InstructionCost::getInvalid();
+  }
+
+  // A non-power-of-2 i1 vector that fits in a single register has no bitmask
+  // lowering, so its lanes are extracted and combined one by one.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      ISD == ISD::BITCAST && SrcVTy && Dst->isIntegerTy() &&
+      Src->isIntOrIntVectorTy(1) && !isPowerOf2_32(SrcVTy->getNumElements()) &&
+      getTypeLegalizationCost(SrcVTy).first == 1) {
+    unsigned NumElts = SrcVTy->getNumElements();
+    return getScalarizationOverhead(SrcVTy, APInt::getAllOnes(NumElts),
+                                    /*Insert=*/false, /*Extract=*/true,
+                                    CostKind) +
+           NumElts - 1;
   }
 
   // If the cast is observable, and it is used by a widening instruction (e.g.,

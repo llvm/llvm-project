@@ -151,6 +151,13 @@ static bool isRelExpr(RelExpr expr) {
                RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
+// True if a reference to a non-absolute symbol is independent of the load base
+// of the ELF file.
+static bool isLoadBaseIndependent(Ctx &ctx, RelExpr expr, RelType type) {
+  return oneof<R_SIZE, RE_RISCV_LEB128>(expr) || isRelExpr(expr) ||
+         ctx.target->usesOnlyLowPageBits(type);
+}
+
 static RelExpr toPlt(RelExpr expr) {
   switch (expr) {
   case RE_LOONGARCH_PAGE_PC:
@@ -882,22 +889,11 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (!ctx.arg.isPic)
     return true;
 
-  // Constant when referencing a non-preemptible symbol.
-  if (e == R_SIZE || e == RE_RISCV_LEB128)
-    return true;
-
-  // For the target and the relocation, we want to know if they are
-  // absolute or relative.
   bool absVal = isAbsoluteOrTls(sym) && e != RE_PPC64_TOCBASE;
-  bool relE = isRelExpr(e);
-  if (absVal && !relE)
+  if (!absVal)
+    return isLoadBaseIndependent(ctx, e, type);
+  if (oneof<R_SIZE, RE_RISCV_LEB128>(e) || !isRelExpr(e))
     return true;
-  if (!absVal && relE)
-    return true;
-  if (!absVal && !relE)
-    return ctx.target->usesOnlyLowPageBits(type);
-
-  assert(absVal && relE);
 
   // Allow R_PLT_PC (optimized to R_PC here) to a hidden undefined weak symbol
   // in PIC mode. This is a little strange, but it allows us to link function
@@ -1060,9 +1056,11 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
 
   // When producing an executable, we can perform copy relocations (for
   // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
+  // In a PIE, the reference must be independent of the load base.
   // Copy relocations/canonical PLT entries are unsupported for
   // R_AARCH64_AUTH_ABS64.
   if (!ctx.arg.shared && sym.isShared() &&
+      (!ctx.arg.pie || isLoadBaseIndependent(ctx, expr, type)) &&
       !(ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(ctx, sym)) {
       auto diag = Err(ctx);
