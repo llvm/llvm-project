@@ -14,18 +14,12 @@ define void @nest_store_zero_invariant_exit(ptr %p, i64 %n, i64 %m, i64 %k) {
 ; CHECK:       [[OUTER_PREHEADER]]:
 ; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[K]], i64 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[M_FR]], -1
-; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ugt i64 [[SMAX]], [[TMP0]]
-; CHECK-NEXT:    br label %[[OUTER:.*]]
-; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_SPLIT:.*]] ], [ 0, %[[OUTER_PREHEADER]] ]
-; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label %[[OUTER_SPLIT]], label %[[TRAP:.*]]
-; CHECK:       [[OUTER_SPLIT]]:
-; CHECK-NEXT:    [[ROW:%.*]] = mul i64 [[I]], [[M_FR]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[ROW]]
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 [[TMP1]], i8 0, i64 [[M_FR]], i1 false)
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[OUTER]]
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp samesign ugt i64 [[SMAX]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label %[[OUTER_PREHEADER_SPLIT:.*]], label %[[TRAP:.*]]
+; CHECK:       [[OUTER_PREHEADER_SPLIT]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[M_FR]], [[N]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[TRAP]]:
@@ -84,15 +78,15 @@ define void @nest_guarded_invariant_exit(ptr %p, i64 %bp0, i64 %n, i64 %umax, i6
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[UMAX]], [[BP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[OUTER_PREHEADER1_SPLIT:.*]], label %[[OOB_TRAP:.*]]
+; CHECK:       [[OUTER_PREHEADER1_SPLIT]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 [[BP0]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[R_NEXT:%.*]], %[[OUTER_SPLIT:.*]] ], [ 0, %[[OUTER_PREHEADER1]] ]
-; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[OUTER_SPLIT]], label %[[OOB_TRAP:.*]]
-; CHECK:       [[OUTER_SPLIT]]:
-; CHECK-NEXT:    [[V:%.*]] = trunc i64 [[R]] to i8
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[R_NEXT:%.*]], %[[OUTER]] ], [ 0, %[[OUTER_PREHEADER1_SPLIT]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[N]], [[R]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP3]]
+; CHECK-NEXT:    [[V:%.*]] = trunc i64 [[R]] to i8
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 [[V]], i64 [[N]], i1 false)
 ; CHECK-NEXT:    [[R_NEXT]] = add i64 [[R]], 1
 ; CHECK-NEXT:    [[ODONE:%.*]] = icmp eq i64 [[R_NEXT]], [[ROWS]]
@@ -162,12 +156,10 @@ define void @nest_copy_invariant_exit(ptr noalias %dst, ptr noalias readonly %sr
 ; CHECK:       [[OUTER_PREHEADER]]:
 ; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[K]], i64 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[M_FR]], -1
-; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ugt i64 [[SMAX]], [[TMP0]]
-; CHECK-NEXT:    br label %[[OUTER:.*]]
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp samesign ugt i64 [[SMAX]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label %[[OUTER:.*]], label %[[TRAP:.*]]
 ; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_SPLIT:.*]] ], [ 0, %[[OUTER_PREHEADER]] ]
-; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label %[[OUTER_SPLIT]], label %[[TRAP:.*]]
-; CHECK:       [[OUTER_SPLIT]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER]] ], [ 0, %[[OUTER_PREHEADER]] ]
 ; CHECK-NEXT:    [[ROW:%.*]] = mul i64 [[I]], [[M_FR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[ROW]]
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP1]], ptr align 1 [[SRC]], i64 [[M_FR]], i1 false)

@@ -11,10 +11,10 @@ define void @outermost_two_level(ptr %p, i64 %n, i64 %m, i64 %k) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[M]], i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[K]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[K]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[K]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
@@ -88,10 +88,10 @@ define void @middle_of_three_levels(ptr %p, ptr %q, i64 %n, i64 %m) {
 ; CHECK-NEXT:    [[K:%.*]] = load i64, ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[K]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[K]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[L2:.*]]
 ; CHECK:       [[L2]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[L1]] ], [ [[I_NEXT:%.*]], %[[L2_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[K]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[L2]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
@@ -339,11 +339,11 @@ define void @two_predicated_exits(ptr %p, i64 %n, i64 %m, i64 %k1, i64 %k2) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[K2]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[TMP2]])
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[UMIN]], i64 [[K1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[K1]], [[UMIN1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[K2]], [[UMIN1]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[K1]], [[UMIN1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[K2]], [[UMIN1]]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
