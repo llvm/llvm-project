@@ -405,6 +405,10 @@ class DocgenTest(unittest.TestCase):
         self.assertIn('data-stem="stdio"', out)
         self.assertIn('data-stem="arpa/inet"', out)
         self.assertIn("acosf128", out)
+        self.assertIn('class="dashboard-controls"', out)
+        self.assertIn('class="hc-chip-missing"', out)
+        self.assertIn('class="hc-chip-impl"', out)
+        self.assertIn('href="https://en.cppreference.com/w/c/io/clearerr"', out)
         self.assertIn("```{toctree}\n:hidden: true", out)
 
 
