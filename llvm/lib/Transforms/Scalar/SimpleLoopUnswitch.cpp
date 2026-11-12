@@ -2152,7 +2152,7 @@ static void unswitchNontrivialInvariants(
       bool Succ1Exits = !L.contains(BI->getSuccessor(1));
       unsigned InLoopIdx = Succ0Exits ? 1 : 0;
       SmallVector<uint32_t, 2> Weights;
-      if (EstimateProfile && !ProfcheckDisableMetadataFixes &&
+      if (Opts.simple_loop_unswitch_estimate_profile && !ProfcheckDisableMetadataFixes &&
           (Succ0Exits != Succ1Exits) && extractBranchWeights(*BI, Weights) &&
           Weights[InLoopIdx] != 0) {
         if (std::optional<unsigned> TC = getLoopEstimatedTripCount(&L);
