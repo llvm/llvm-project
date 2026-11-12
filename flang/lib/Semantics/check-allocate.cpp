@@ -627,7 +627,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
       }
     } else {
       if (hasAllocateShapeBoundsSpec_) {
-        // F'2023 allocate-shape-bounds-spec
+        // F2023 allocate-shape-bounds-spec
         context.Say(
             name_.source, "rank-1 integer array bounds in ALLOCATE"_todo_en_US);
         return false;

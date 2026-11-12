@@ -6387,7 +6387,7 @@ bool CheckMisparsedArrayElement(
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}
 
-// F'2023 R933: the parenthesized bounds of an allocation are either an
+// F2023 R933: the parenthesized bounds of an allocation are either an
 // allocate-shape-spec-list of scalar bounds, or a single
 // [lower-bounds-expr :] upper-bounds-expr whose bounds are rank-1 integer
 // arrays (either of which may also be a scalar that is broadcast).  The two

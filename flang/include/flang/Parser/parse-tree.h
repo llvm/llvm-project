@@ -1992,8 +1992,8 @@ struct AllocateCoarraySpec {
 // R932 allocation ->
 //        allocate-object [( allocate-shape-spec-list )]
 //        [lbracket allocate-coarray-spec rbracket]
-// Fortran 2023 (R933) adds a second form, in which the bounds of all of the
-// dimensions are given by rank-1 integer array expressions:
+// F2023 R933 adds a second form, in which the bounds of all of the dimensions
+// are given by rank-1 integer array expressions:
 //        allocate-object ( [lower-bounds-expr :] upper-bounds-expr )
 //        [lbracket allocate-coarray-spec rbracket]
 // (The standard's text of that rule omits the allocate-object, which is a
@@ -2005,8 +2005,8 @@ struct AllocateCoarraySpec {
 //   allocate-shape-spec-list-or-bounds ->
 //        allocate-shape-spec-list | allocate-shape-bounds-spec
 //   allocate-shape-bounds-spec -> [lower-bounds-expr :] upper-bounds-expr
-// F'2023 R937 lower-bounds-expr -> int-expr
-// F'2023 R939 upper-bounds-expr -> int-expr
+// F2023 R937 lower-bounds-expr -> int-expr
+// F2023 R939 upper-bounds-expr -> int-expr
 // The two forms can't be distinguished without knowing the ranks of the
 // bounds, so the parser always produces an allocate-shape-spec-list, and
 // expression semantics rewrites it into an allocate-shape-bounds-spec.
