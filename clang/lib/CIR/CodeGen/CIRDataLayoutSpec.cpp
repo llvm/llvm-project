@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file attaches the DLTI data-layout spec, including the CIR-native
-// pointer entry, to a CIR module.
+// pointer and _BitInt entries, to a CIR module.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,8 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/IR/DataLayout.h"
 
-void cir::setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl) {
+void cir::setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl,
+                            unsigned bitIntMaxAlign) {
   mlir::MLIRContext *mlirContext = mod.getContext();
   mlir::DataLayoutSpecInterface dlSpec =
       mlir::translateDataLayout(dl, mlirContext);
@@ -43,6 +44,12 @@ void cir::setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl) {
   llvm::SmallVector<mlir::DataLayoutEntryInterface> entries(
       dlSpec.getEntries().begin(), dlSpec.getEntries().end());
   entries.push_back(mlir::DataLayoutEntryAttr::get(ptrKey, ptrSpec));
+
+  // The key names the _BitInt class. max_align is
+  // TargetInfo::getBitIntMaxAlign(), in bits.
+  auto bitIntKey = cir::IntType::getBitIntMaxAlignKey(mlirContext);
+  auto bitIntSpec = cir::BitIntSpecAttr::get(mlirContext, bitIntMaxAlign);
+  entries.push_back(mlir::DataLayoutEntryAttr::get(bitIntKey, bitIntSpec));
 
   mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
                mlir::DataLayoutSpecAttr::get(mlirContext, entries));

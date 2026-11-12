@@ -15,22 +15,24 @@
 ; RUN:   -r=%t.dir/main.bc,call_it,plx
 ; RUN: llvm-dis %t.dir/out.1.4.opt.bc -o - | FileCheck %s
 
-; FIXME: LowerTypeTests runs first, so the sample profile loader sees @add1.cfi
-; and @add2.cfi colliding with the @add1 and @add2 declarations, and does not
-; annotate them with entry counts.
-; CHECK: define hidden {{.*}}i32 @add1.cfi(i32 {{.*}}%x) #{{[0-9]+}} !dbg ![[#]] !type ![[#]] !guid ![[#]] {
-; CHECK: define hidden {{.*}}i32 @add2.cfi(i32 {{.*}}%x) #{{[0-9]+}} !dbg ![[#]] !type ![[#]] !guid ![[#]] {
+; The sample profile loader saw @add1 and @add2 under their original names and
+; annotated them with entry counts before they were renamed to .cfi.
+; CHECK: define hidden {{.*}}i32 @add1.cfi(i32 {{.*}}%x){{.*}} !prof ![[ENTRY1:[0-9]+]]
+; CHECK: define hidden {{.*}}i32 @add2.cfi(i32 {{.*}}%x){{.*}} !prof ![[ENTRY2:[0-9]+]]
 
-; FIXME: Both indirect call targets are promoted, but each comparison is against
-; the .cfi body instead of the jump table entry (@add1 / @add2), so it never
-; matches a function pointer taken from the jump table.
+; Both indirect call targets were promoted. Each comparison is redirected to
+; the jump table entry (@add1 / @add2), while the direct calls target the .cfi
+; bodies (@add1.cfi is inlined; noinline @add2.cfi remains a direct call).
 ; CHECK-LABEL: define hidden {{.*}}i32 @call_it(ptr {{.*}}%f, i32 {{.*}}%x)
-; CHECK: icmp eq ptr {{.*}}, @add1.cfi
+; CHECK: icmp eq ptr {{.*}}, @add1{{$|,}}
 ; CHECK: add i32 %x, 1
 ; CHECK-NOT: call {{.*}}@add1
-; CHECK: icmp eq ptr {{.*}}, @add2.cfi
+; CHECK: icmp eq ptr {{.*}}, @add2{{$|,}}
 ; CHECK: call i32 @add2.cfi(i32 %x)
 ; CHECK: call i32 %f(i32 %x)
+
+; CHECK: ![[ENTRY1]] = !{!"function_entry_count", i64 {{[0-9]+}}}
+; CHECK: ![[ENTRY2]] = !{!"function_entry_count", i64 {{[0-9]+}}}
 
 ;--- main.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

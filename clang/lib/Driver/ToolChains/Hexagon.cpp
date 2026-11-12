@@ -247,6 +247,11 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mhvx-ieee-fp");
   }
 
+  if (Args.hasFlag(options::OPT_mhexagon_hmx, options::OPT_mno_hexagon_hmx,
+                   false)) {
+    CmdArgs.push_back("-mhmx");
+  }
+
   if (Args.hasFlag(options::OPT_mhexagon_hlx, options::OPT_mno_hexagon_hlx,
                    false))
     CmdArgs.push_back("-mhlx");

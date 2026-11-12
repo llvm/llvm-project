@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDenseDataFlowAnalysis.h"
-#include "TestOps.h"
+#include "TestOpsInterfaces.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
 #include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"

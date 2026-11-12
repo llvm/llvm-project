@@ -464,7 +464,8 @@ optMain(int argc, char **argv,
 
   LLVMContext Context;
   if (!cl::parseCommandLineOptions(
-          Context.getLibraryOptions(), ArrayRef(argv, argc),
+          Context.getLibraryOptions(), codegen::getToolOptions(),
+          ArrayRef(argv, argc),
           "llvm .bc -> .bc modular optimizer and analysis printer\n",
           &errs())) {
     // Unpinned pass names are not options; point `opt -passname` users to

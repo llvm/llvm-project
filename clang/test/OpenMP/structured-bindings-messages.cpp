@@ -147,6 +147,73 @@ void test_pair_map() {
   }
 }
 
+// GH116258
+void test_pair_task() {
+  auto [a, b] = std::make_pair(1, 2);
+  // expected-note@-1 4{{'a' declared here}}
+  // expected-note@-2{{'b' declared here}}
+#pragma omp task
+  {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+  [[omp::directive(task)]]
+  {
+    use(b);
+    // expected-error@-1{{capturing tuple-like structured binding 'b' is not yet supported in OpenMP}}
+  }
+#pragma omp taskloop
+  for (int i = 0; i < 2; ++i) {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+#pragma omp task firstprivate(a)
+  {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+#pragma omp parallel firstprivate(a)
+  {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+}
+
+auto [ga, gb] = std::make_pair(1, 2);
+// expected-note@-1 2{{'ga' declared here}}
+
+void test_pair_global() {
+#pragma omp parallel private(ga)
+  use(ga);
+#pragma omp task
+  use(ga);
+#pragma omp task firstprivate(ga)
+  {
+    use(ga);
+    // expected-error@-1{{capturing tuple-like structured binding 'ga' is not yet supported in OpenMP}}
+  }
+#pragma omp parallel for lastprivate(ga)
+  for (int i = 0; i < 2; ++i) {
+    use(ga);
+    // expected-error@-1{{capturing tuple-like structured binding 'ga' is not yet supported in OpenMP}}
+  }
+}
+
+template <typename T> void test_pair_task_template(T p) {
+  auto [a, b] = p;
+  // expected-note@-1{{'a' declared here}}
+#pragma omp task
+  {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+}
+
+void instantiate_pair_task_template() {
+  test_pair_task_template(std::make_pair(1, 2));
+  // expected-note@-1{{in instantiation of function template specialization}}
+}
+
 void test_tuple() {
   std::tuple<int, int, int> t = {1, 2, 3};
   auto [x, y, z] = t;

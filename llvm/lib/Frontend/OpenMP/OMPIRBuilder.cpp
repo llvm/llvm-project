@@ -19,11 +19,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/Offloading/Utility.h"
@@ -48,19 +45,14 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Value.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include "llvm/Transforms/Utils/LoopPeel.h"
-#include "llvm/Transforms/Utils/UnrollLoop.h"
 
 #include <cstdint>
 #include <optional>
@@ -75,12 +67,6 @@ static cl::opt<bool>
                          cl::desc("Use optimistic attributes describing "
                                   "'as-if' properties of runtime calls."),
                          cl::init(false));
-
-static cl::opt<double> UnrollThresholdFactor(
-    "openmp-ir-builder-unroll-threshold-factor", cl::Hidden,
-    cl::desc("Factor for the unroll threshold to account for code "
-             "simplifications still taking place"),
-    cl::init(1.5));
 
 static cl::opt<bool> UseDefaultMaxThreads(
     "openmp-ir-builder-use-default-max-threads", cl::Hidden,
@@ -7984,180 +7970,6 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   addLoopMetadata(CanonicalLoop, LoopMDList);
 }
 
-/// Create the TargetMachine object to query the backend for optimization
-/// preferences.
-///
-/// Ideally, this would be passed from the front-end to the OpenMPBuilder, but
-/// e.g. Clang does not pass it to its CodeGen layer and creates it only when
-/// needed for the LLVM pass pipline. We use some default options to avoid
-/// having to pass too many settings from the frontend that probably do not
-/// matter.
-///
-/// Currently, TargetMachine is only used sometimes by the unrollLoopPartial
-/// method. If we are going to use TargetMachine for more purposes, especially
-/// those that are sensitive to TargetOptions, RelocModel and CodeModel, it
-/// might become be worth requiring front-ends to pass on their TargetMachine,
-/// or at least cache it between methods. Note that while fontends such as Clang
-/// have just a single main TargetMachine per translation unit, "target-cpu" and
-/// "target-features" that determine the TargetMachine are per-function and can
-/// be overrided using __attribute__((target("OPTIONS"))).
-static std::unique_ptr<TargetMachine>
-createTargetMachine(Function *F, CodeGenOptLevel OptLevel) {
-  Module *M = F->getParent();
-
-  StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
-  StringRef Features = F->getFnAttribute("target-features").getValueAsString();
-  const llvm::Triple &Triple = M->getTargetTriple();
-
-  std::string Error;
-  const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
-  if (!TheTarget)
-    return {};
-
-  llvm::TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-      Triple, CPU, Features, Options, /*RelocModel=*/std::nullopt,
-      /*CodeModel=*/std::nullopt, OptLevel));
-}
-
-/// Heuristically determine the best-performant unroll factor for \p CLI. This
-/// depends on the target processor. We are re-using the same heuristics as the
-/// LoopUnrollPass.
-static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
-  Function *F = CLI->getFunction();
-
-  // Assume the user requests the most aggressive unrolling, even if the rest of
-  // the code is optimized using a lower setting.
-  CodeGenOptLevel OptLevel = CodeGenOptLevel::Aggressive;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine(F, OptLevel);
-
-  // Blocks must have terminators.
-  // FIXME: Don't run analyses on incomplete/invalid IR.
-  SmallVector<Instruction *> UIs;
-  for (BasicBlock &BB : *F)
-    if (!BB.hasTerminator())
-      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
-
-  FunctionAnalysisManager FAM;
-  FAM.registerPass([]() { return TargetLibraryAnalysis(); });
-  FAM.registerPass([]() { return AssumptionAnalysis(); });
-  FAM.registerPass([]() { return DominatorTreeAnalysis(); });
-  FAM.registerPass([]() { return LoopAnalysis(); });
-  FAM.registerPass([]() { return ScalarEvolutionAnalysis(); });
-  FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
-  TargetIRAnalysis TIRA;
-  if (TM)
-    TIRA = TargetIRAnalysis(
-        [&](const Function &F) { return TM->getTargetTransformInfo(F); });
-  FAM.registerPass([&]() { return TIRA; });
-
-  TargetIRAnalysis::Result &&TTI = TIRA.run(*F, FAM);
-  ScalarEvolutionAnalysis SEA;
-  ScalarEvolution &&SE = SEA.run(*F, FAM);
-  DominatorTreeAnalysis DTA;
-  DominatorTree &&DT = DTA.run(*F, FAM);
-  LoopAnalysis LIA;
-  LoopInfo &&LI = LIA.run(*F, FAM);
-  AssumptionAnalysis ACT;
-  AssumptionCache &&AC = ACT.run(*F, FAM);
-  OptimizationRemarkEmitter ORE{F};
-
-  for (Instruction *I : UIs)
-    I->eraseFromParent();
-
-  Loop *L = LI.getLoopFor(CLI->getHeader());
-  assert(L && "Expecting CanonicalLoopInfo to be recognized as a loop");
-
-  TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
-      L, SE, TTI,
-      /*BlockFrequencyInfo=*/nullptr,
-      /*ProfileSummaryInfo=*/nullptr, ORE, static_cast<int>(OptLevel),
-      /*UserThreshold=*/std::nullopt,
-      /*UserAllowPartial=*/true,
-      /*UserAllowRuntime=*/true,
-      /*UserUpperBound=*/std::nullopt,
-      /*UserFullUnrollMaxCount=*/std::nullopt);
-
-  UP.Force = true;
-
-  // Account for additional optimizations taking place before the LoopUnrollPass
-  // would unroll the loop.
-  UP.Threshold *= UnrollThresholdFactor;
-  UP.PartialThreshold *= UnrollThresholdFactor;
-
-  // Use normal unroll factors even if the rest of the code is optimized for
-  // size.
-  UP.OptSizeThreshold = UP.Threshold;
-  UP.PartialOptSizeThreshold = UP.PartialThreshold;
-
-  LLVM_DEBUG(dbgs() << "Unroll heuristic thresholds:\n"
-                    << "  Threshold=" << UP.Threshold << "\n"
-                    << "  PartialThreshold=" << UP.PartialThreshold << "\n"
-                    << "  OptSizeThreshold=" << UP.OptSizeThreshold << "\n"
-                    << "  PartialOptSizeThreshold="
-                    << UP.PartialOptSizeThreshold << "\n");
-
-  // Disable peeling.
-  TargetTransformInfo::PeelingPreferences PP =
-      gatherPeelingPreferences(L, SE, TTI,
-                               /*UserAllowPeeling=*/false,
-                               /*UserAllowProfileBasedPeeling=*/false,
-                               /*UnrollingSpecficValues=*/false);
-
-  SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
-
-  // Assume that reads and writes to stack variables can be eliminated by
-  // Mem2Reg, SROA or LICM. That is, don't count them towards the loop body's
-  // size.
-  for (BasicBlock *BB : L->blocks()) {
-    for (Instruction &I : *BB) {
-      Value *Ptr;
-      if (auto *Load = dyn_cast<LoadInst>(&I)) {
-        Ptr = Load->getPointerOperand();
-      } else if (auto *Store = dyn_cast<StoreInst>(&I)) {
-        Ptr = Store->getPointerOperand();
-      } else
-        continue;
-
-      Ptr = Ptr->stripPointerCasts();
-
-      if (auto *Alloca = dyn_cast<AllocaInst>(Ptr)) {
-        if (Alloca->getParent() == &F->getEntryBlock())
-          EphValues.insert(&I);
-      }
-    }
-  }
-
-  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
-
-  // Loop is not unrollable if the loop contains certain instructions.
-  if (!UCE.canUnroll()) {
-    LLVM_DEBUG(dbgs() << "Loop not considered unrollable\n");
-    return 1;
-  }
-
-  LLVM_DEBUG(dbgs() << "Estimated loop size is " << UCE.getRolledLoopSize()
-                    << "\n");
-
-  // TODO: Determine trip count of \p CLI if constant, computeUnrollCount might
-  // be able to use it.
-  int TripCount = 0;
-  int MaxTripCount = 0;
-  bool MaxOrZero = false;
-  unsigned TripMultiple = 0;
-
-  unsigned Factor =
-      computeUnrollCount(L, TTI, DT, &LI, &AC, SE, EphValues, &ORE, TripCount,
-                         MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP);
-  LLVM_DEBUG(dbgs() << "Suggesting unroll factor of " << Factor << "\n");
-
-  // This function returns 1 to signal to not unroll a loop.
-  if (Factor == 0)
-    return 1;
-  return Factor;
-}
-
 void OpenMPIRBuilder::unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop,
                                         int32_t Factor,
                                         CanonicalLoopInfo **UnrolledCLI) {
@@ -8184,11 +7996,10 @@ void OpenMPIRBuilder::unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop,
     return;
   }
 
-  // Heuristically determine the unroll factor.
   if (Factor == 0) {
     if (Loop->VirtualCollapse)
       Loop->reportUnsupportedVirtualCollapse();
-    Factor = computeHeuristicUnrollFactor(Loop);
+    Factor = omp::DefaultPartialUnrollFactor;
   }
 
   // No change required with unroll factor 1.
@@ -10919,7 +10730,8 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
                                    llvm::Value *BeginArg)>
         GenMapInfoCB,
     Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB,
-    bool PreserveMemberOfFlags, bool PropagatePresentToPointee) {
+    bool PreserveMemberOfFlags, bool PropagatePresentToPointeeStorage,
+    bool PropagatePresentToNonPointeeStorage) {
   SmallVector<Type *> Params;
   Params.emplace_back(Builder.getPtrTy());
   Params.emplace_back(Builder.getPtrTy());
@@ -11022,6 +10834,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     constexpr uint64_t AttachBit =
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    constexpr uint64_t PtrAndObjBit =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ);
 
     // Add MEMBER_OF (ShiftedPreviousSize) to group this sub-map with the
     // current array element (N = __tgt_mapper_num_components() at loop body
@@ -11180,33 +10995,40 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     //
     // ALWAYS/DELETE/CLOSE are propagated to every (non-ATTACH) entry.
     //
-    // PRESENT is propagated only to entries that have an attach ptr
-    // (HasAttachPtr): the pointee data, which occupies a different storage
-    // block than the struct being mapped and so is not covered by the
-    // present-check on the struct's own storage. A present modifier on the
-    // outer clause must still require that pointee to be present on the device.
+    // PRESENT propagation is controlled independently for entries describing
+    // pointee storage (HasAttachPtr) and entries describing non-pointee
+    // storage. This lets frontends select current Clang behavior (pointee only)
+    // or OpenMP 6.x behavior for mapper propagation (all eligible storage).
+    // PRESENT is not propagated to ATTACH or PTR_AND_OBJ entries.
     //
-    // This is gated on \p PropagatePresentToPointee (set by callers only for
-    // OpenMP >= 6.0). Before 6.0 the present modifier is treated as not
-    // applying to the pointee: the spec committee confirmed the divergence
-    // between the present "motion" modifier (to/from) and the present map-type
-    // modifier (map) was unintentional, to be fixed as an OpenMP 6.0 erratum,
-    // so for 5.2 present is ignored for the pointee for both map and to/from.
+    // Pointee storage is gated on \p PropagatePresentToPointeeStorage (set by
+    // caller only for OpenMP >= 6.0). Before 6.0 the present modifier is
+    // treated as not applying to the pointee: the spec committee confirmed the
+    // divergence between the present "motion" modifier (to/from) and the
+    // present map-type modifier (map) was unintentional, to be fixed as an
+    // OpenMP 6.0 erratum, so for 5.2 present is ignored for the pointee for
+    // both map and to/from.
     //
-    // TODO: PRESENT should also be propagated to the struct's own members
-    // (e.g. the s.x, s.y of map(present, mapper(id): s)) so that an absent
-    // member triggers the present-check. We cannot do that yet: while pointer
-    // members are mapped with PTR_AND_OBJ, a single combined entry allocates
-    // the whole struct (including the pointer's storage), so propagating
-    // PRESENT to it would wrongly require the pointer's pointee to be present.
-    // Enable member propagation once Clang stops emitting PTR_AND_OBJ and uses
-    // attach-style maps throughout.
+    // Non-pointee storage is gated on \p PropagatePresentToNonPointeeStorage:
+    // PRESENT is ten propagated to the struct's own members (e.g. the s.x,
+    // s.y of map(present, mapper(id): s)) so that an absent member triggers
+    // the present-check.
+    //
+    // Present cannot be mapped to members with PTR_AND_OBJ, a single combined
+    // entry allocates the whole struct (including the pointer's storage),
+    // so propagating PRESENT to it would wrongly require the pointer's
+    // pointee to be present.
     uint64_t ModifierBits =
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
             OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
             OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
-    if (PropagatePresentToPointee && Info->HasAttachPtr[I])
+    bool IsPresentEligibleStorage = !(RawType & (AttachBit | PtrAndObjBit));
+    bool PropagatePresent =
+        IsPresentEligibleStorage &&
+        (Info->HasAttachPtr[I] ? PropagatePresentToPointeeStorage
+                               : PropagatePresentToNonPointeeStorage);
+    if (PropagatePresent)
       ModifierBits |=
           static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
               OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);

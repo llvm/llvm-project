@@ -1098,11 +1098,16 @@ ModulePassManager PassBuilder::buildModuleSimplificationPipeline(
   else if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
     MPM.addPass(AttributorLightPass());
 
-  // Lower type metadata and the type.test intrinsic in the ThinLTO
-  // post link pipeline after ICP. This is to enable usage of the type
-  // tests in ICP sequences.
-  if (isThinLTOPostLink(Phase))
+  // Lower type metadata and the type.test intrinsic in the ThinLTO post link
+  // pipeline after ICP. This is to enable usage of the type tests in ICP
+  // sequences. It also lets ICP (including the ICP performed by the sample
+  // profile loader) see the original names of the CFI functions it wants to
+  // promote to, which LowerTypeTests renames to <name>.cfi.
+  if (isThinLTOPostLink(Phase)) {
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     MPM.addPass(DropTypeTestsPass());
+  }
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
 
@@ -1859,10 +1864,10 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
       MPM.addPass(MemProfContextDisambiguation(
           ImportSummary, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
-    // These passes import type identifier resolutions for whole-program
-    // devirtualization and CFI. They must run early because other passes may
-    // disturb the specific instruction patterns that these passes look for,
-    // creating dependencies on resolutions that may not appear in the summary.
+    // WholeProgramDevirt imports type identifier resolutions for whole-program
+    // devirtualization. It must run early because later passes may disturb the
+    // specific instruction patterns that it looks for, creating dependencies on
+    // resolutions that may not appear in the summary.
     //
     // For example, GVN may transform the pattern assume(type.test) appearing in
     // two basic blocks into assume(phi(type.test, type.test)), which would
@@ -1872,13 +1877,16 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // Also, WPD has access to more precise information than ICP and can
     // devirtualize more effectively, so it should operate on the IR first.
     //
-    // The WPD and LowerTypeTest passes need to run at -O0 to lower type
-    // metadata and intrinsics.
+    // It also needs to run at -O0 to lower type metadata and intrinsics.
     MPM.addPass(WholeProgramDevirtPass(nullptr, ImportSummary));
-    MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
 
+  // LowerTypeTests renames CFI functions to <name>.cfi, so with optimization
+  // it runs in buildModuleSimplificationPipeline after ICP. Otherwise, lower
+  // type tests here.
   if (Level == OptimizationLevel::O0) {
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
     MPM.addPass(DropTypeTestsPass());
@@ -1899,6 +1907,10 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
+    // FIXME: Move LowerTypeTestsPass (and DropTypeTestsPass) into
+    // buildModuleInlinerPipeline after ModuleInlinerPass, which performs ICP.
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     MPM.addPass(
         buildModuleInlinerPipeline(Level, ThinOrFullLTOPhase::ThinLTOPostLink));
   } else {

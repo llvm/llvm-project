@@ -3671,6 +3671,8 @@ bool SemaHLSL::ActOnResourceMemberAccessExpr(MemberExpr *ME) {
       E = SubME->getBase();
     } else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       E = ICE->getSubExpr();
+    } else if (isa<CXXThisExpr>(E)) {
+      return true;
     } else {
       llvm_unreachable("unexpected expr type in resource member access");
     }
