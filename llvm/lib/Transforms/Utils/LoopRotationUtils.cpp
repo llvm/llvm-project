@@ -959,10 +959,20 @@ bool LoopRotate::processLoop(Loop *L) {
   assert((!MadeChange || L->isLoopExiting(L->getLoopLatch())) &&
          "Loop latch should be exiting after loop-rotate.");
 
-  // Restore the loop metadata.
-  // NB! We presume LoopRotation DOESN'T ADD its own metadata.
-  if ((MadeChange || SimplifiedLatch) && LoopMD)
-    L->setLoopID(LoopMD);
+  // Restore metadata from the old latch. If simplifyLoopLatch kept non-debug
+  // loop properties on the new latch, do not overwrite them with an ID that
+  // exists only to describe source locations. This matches the metadata that
+  // would survive without debug info.
+  if ((MadeChange || SimplifiedLatch) && LoopMD) {
+    BasicBlock *Latch = L->getLoopLatch();
+    assert(Latch && "loop rotation should leave a latch");
+    bool LoopMDHasNonDebugLoc =
+        any_of(drop_begin(LoopMD->operands()),
+               [](const MDOperand &Op) { return !isa<DILocation>(Op.get()); });
+    if (!SimplifiedLatch || LoopMDHasNonDebugLoc ||
+        !Latch->getTerminator()->hasNonDebugLocLoopMetadata())
+      L->setLoopID(LoopMD);
+  }
 
   return MadeChange || SimplifiedLatch;
 }
