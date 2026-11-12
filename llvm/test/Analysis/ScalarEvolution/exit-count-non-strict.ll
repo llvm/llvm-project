@@ -445,28 +445,28 @@ define void @le_from_int_min_no_nuw_nsw(i32 %M, i32 %N) {
 ; CHECK-NEXT:  Determining loop execution counts for: @le_from_int_min_no_nuw_nsw
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    predicated exit count for loop: (-2147483648 + (2147483648 umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw>
+; CHECK-NEXT:    predicated exit count for loop: i64 0
 ; CHECK-NEXT:     Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <irr>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    exit count for latch: (-2147483648 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-2147483648 + %N)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    predicated symbolic max exit count for loop: (-2147483648 + (2147483648 umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw>
+; CHECK-NEXT:    predicated symbolic max exit count for loop: i64 0
 ; CHECK-NEXT:     Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <irr>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    symbolic max exit count for latch: (-2147483648 + %N)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-2147483648 + (2147483648 umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw> umin_seq (zext i32 (-2147483648 + %N) to i64))
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is i64 0
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nusw>
-; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 2147483648
+; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <irr>
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 0
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nusw>
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-2147483648 + (2147483648 umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw> umin_seq (zext i32 (-2147483648 + %N) to i64))
+; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <irr>
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is i64 0
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <irr>
 ;
 entry:
   br label %loop
