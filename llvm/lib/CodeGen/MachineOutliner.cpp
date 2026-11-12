@@ -55,6 +55,7 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/MachineOutliner.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -1022,6 +1023,8 @@ void MachineOutliner::recordUnprofitableCandidate(OutlinedFunction &OF) {
     return;
 
   const unsigned SequenceID = UnprofitableCandidates.size();
+  // This temporary tree uses the terminal field for a one-based sequence ID,
+  // not an occurrence count. Reserve zero for sequences without a terminal.
   UnprofitableCandidateHashTree.insert({HashSequence, SequenceID + 1});
   UnprofitableCandidates.push_back(std::move(HashSequence));
 }
@@ -1033,10 +1036,29 @@ bool MachineOutliner::publishUnprofitableCandidates(InstructionMapper &Mapper) {
 
   SmallVector<std::vector<Candidate>> CandidateGroups(
       UnprofitableCandidates.size());
+  BitVector ConflictingGroups(UnprofitableCandidates.size());
+  SmallVector<MatchedEntry> ActiveMatches;
   for (const auto &ME :
        getMatchedEntries(Mapper, UnprofitableCandidateHashTree)) {
     assert(ME.Count && ME.Count <= CandidateGroups.size());
-    auto &Candidates = CandidateGroups[ME.Count - 1];
+    // Unlike the global tree, this tree stores SequenceID + 1 in its terminal
+    // field. Decode the sequence index; ME.Count is not an occurrence count.
+    const unsigned SequenceID = ME.Count - 1;
+
+    // Matches arrive in start-index order. Keep the ranges overlapping this
+    // match, including those rejected by the same-sequence overlap check below.
+    llvm::erase_if(ActiveMatches, [&](const MatchedEntry &Other) {
+      return Other.EndIdx < ME.StartIdx;
+    });
+    for (const MatchedEntry &Other : ActiveMatches) {
+      if (Other.Count != ME.Count) {
+        ConflictingGroups.set(SequenceID);
+        ConflictingGroups.set(Other.Count - 1);
+      }
+    }
+    ActiveMatches.push_back(ME);
+
+    auto &Candidates = CandidateGroups[SequenceID];
     if (!Candidates.empty() && ME.StartIdx <= Candidates.back().getEndIdx())
       continue;
 
@@ -1049,7 +1071,11 @@ bool MachineOutliner::publishUnprofitableCandidates(InstructionMapper &Mapper) {
 
   bool Published = false;
   for (auto [SequenceID, Candidates] : llvm::enumerate(CandidateGroups)) {
-    if (Candidates.empty())
+    // Publishing competing sequences would count the same instructions twice.
+    // Read mode prunes overlapping sites, but cannot reconcile their merged
+    // counts across modules. Conservatively discard both groups rather than
+    // assigning sites using a local order that can differ from Read mode.
+    if (Candidates.empty() || ConflictingGroups.test(SequenceID))
       continue;
 
     unsigned NumSites = 0;
