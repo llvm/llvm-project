@@ -3808,16 +3808,16 @@ TEST(TripleTest, isArmMClass) {
   }
 }
 
-TEST(TripleTest, DXILNormaizeWithVersion) {
+TEST(TripleTest, DXILNormalizeWithVersion) {
   EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
             Triple::normalize("dxilv1.0--shadermodel6.0"));
   EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
             Triple::normalize("dxil--shadermodel6.0"));
   EXPECT_EQ("dxilv1.1-unknown-shadermodel6.1-library",
             Triple::normalize("dxil-shadermodel6.1-unknown-library"));
-  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
-            Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
-  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.9-unknown",
+            Triple::normalize("dxil-unknown-shadermodel6.9-unknown"));
+  EXPECT_EQ("dxilv1.10-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
