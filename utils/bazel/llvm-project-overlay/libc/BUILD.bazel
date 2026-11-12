@@ -2834,6 +2834,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_fchown",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/fchown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_gid_t",
+        ":types_uid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_ftruncate",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/ftruncate.h"],
     target_compatible_with = select({
@@ -18842,6 +18859,25 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_sched_yield",
         ":errno",
+    ],
+)
+
+libc_function(
+    name = "fchown",
+    srcs = ["src/unistd/linux/fchown.cpp"],
+    hdrs = ["src/unistd/fchown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_fchown",
+        ":errno",
+        ":types_gid_t",
+        ":types_uid_t",
     ],
 )
 
