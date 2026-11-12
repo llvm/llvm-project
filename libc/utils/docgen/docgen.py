@@ -521,6 +521,102 @@ def _std_card_html(title: str, imp: int, tot: int, tone: str) -> str:
     )
 
 
+def _chip_html(
+    header: Header, api: Dict, name: str, kind: str, item: Dict, is_missing: bool
+) -> str:
+    cls = "hc-chip-missing" if is_missing else "hc-chip-impl"
+    esc = html.escape(name)
+    cdef = str(item.get("c-definition") or "")
+    url, title = "", ""
+    if api.get("standard") == "c23" and _C_SECTION_RE.match(cdef):
+        url = cppreference_url(header, name, kind, item, api)
+        title = f"{name} on cppreference.com"
+    if not url:
+        url = posix_url(header, name, kind, item)
+        title = f"{name} in POSIX"
+    if url:
+        href = html.escape(url, quote=True)
+        esc_t = html.escape(title, quote=True)
+        return (
+            f'<a class="{cls}" href="{href}" target="_blank" rel="noopener" '
+            f'title="{esc_t}">{esc}</a>'
+        )
+    return f'<span class="{cls}">{esc}</span>'
+
+
+def _chip_group_html(
+    header: Header, api: Dict, entries: List, label: str, tone: str, is_missing: bool
+) -> str:
+    if not entries:
+        return ""
+    chips = "".join(
+        _chip_html(header, api, n, k, it, is_missing) for n, k, it in entries[:16]
+    )
+    rem = len(entries) - 16
+    more = f'<span class="hc-chip-more">+{rem} more...</span>' if rem > 0 else ""
+    return (
+        f'<div class="hc-chip-row"><span class="hc-chip-lbl" '
+        f'style="color:var(--hc-{tone}-text)">{label} ({len(entries)}):</span>'
+        f"{chips}{more}</div>"
+    )
+
+
+def _toolbar_html(total_headers: int) -> str:
+    std_btns = "".join(
+        f'<button type="button" class="filter-btn hc-toggle-btn" '
+        f'aria-pressed="{"true" if v == "all" else "false"}" '
+        f"onclick=\"setStandardFilter('{v}', this)\">{lbl}</button>"
+        for v, lbl in (
+            ("all", "All Headers"),
+            ("c23", "C23 Standard"),
+            ("posix", "POSIX.1-2024"),
+            ("ext", "Extensions"),
+        )
+    )
+    st_btns = "".join(
+        f'<button type="button" class="status-btn hc-toggle-btn" '
+        f'aria-pressed="{"true" if v == "all" else "false"}" '
+        f"onclick=\"setStatusFilter('{v}', this)\">{lbl}</button>"
+        for v, lbl in (
+            ("all", "All"),
+            ("complete", "Complete (100%)"),
+            ("inprogress", "In Progress (1\u201399%)"),
+            ("planned", "Planned (0%)"),
+        )
+    )
+    return (
+        '<div class="dashboard-controls" role="region" '
+        'aria-label="Filter and sort headers"><div class="hc-ctrl-row">'
+        '<div class="hc-search-wrap"><label for="header-search" class="hc-sr-only">'
+        "Search headers or symbols</label>"
+        '<input type="search" id="header-search" class="hc-input" '
+        'aria-label="Search headers or symbols" '
+        'placeholder="Search headers (stdio, sys/stat) or symbols (printf, errno)..." '
+        'oninput="filterHeaders()"></div>'
+        '<div class="hc-ctrl-grp"><label for="sort-select" class="hc-ctrl-lbl">'
+        'Sort:</label><select id="sort-select" class="hc-input" '
+        'onchange="sortHeaders()">'
+        '<option value="name-asc">Header Name (A\u2013Z)</option>'
+        '<option value="pct-desc">Completion % (High \u2192 Low)</option>'
+        '<option value="pct-asc">Completion % (Low \u2192 High)</option>'
+        '<option value="missing-desc">Most Missing Items</option></select></div>'
+        '<div class="hc-ctrl-grp">'
+        '<button type="button" class="hc-btn" onclick="toggleAllDetails(true)">'
+        "Expand All</button>"
+        '<button type="button" class="hc-btn" onclick="toggleAllDetails(false)">'
+        "Collapse All</button></div></div>"
+        '<div class="hc-ctrl-row">'
+        '<div class="hc-ctrl-grp" role="group" aria-label="Filter by standard">'
+        f'<span class="hc-ctrl-lbl">Standard:</span>{std_btns}</div>'
+        '<div class="hc-ctrl-grp" role="group" '
+        'aria-label="Filter by implementation status">'
+        f'<span class="hc-ctrl-lbl">Status:</span>{st_btns}</div></div>'
+        '<div id="filter-count" class="hc-filter-count" role="status" '
+        'aria-live="polite" aria-atomic="true">'
+        f"Showing {total_headers} of {total_headers} headers</div></div>"
+    )
+
+
 def generate_index_md():
     headers_data = []
     totals = {
@@ -552,7 +648,7 @@ def generate_index_md():
         )
     )
     print(
-        "(implementation_status)=\n\n(headers_index)=\n\n# Implementation Status\n\n"
+        "(implementation_status)=\n\n(headers_index)=\n\n# Headers\n\n"
         f"Live symbol coverage across {len(headers_data)} headers ({n_c23} C23 "
         f"standard headers, {n_posix} POSIX.1-2024 headers, and extensions), verified "
         "directly against LLVM-libc source files, header generation specifications, "
@@ -563,7 +659,11 @@ def generate_index_md():
         "```{raw} html\n"
         f'<div class="hc-grid-standards">{c23_card}{pos_card}</div>'
         f'<div class="hc-grid-cards">{cat_cards}</div>\n```\n\n'
-        "## All Headers\n\n```{raw} html\n"
+        "## All Headers\n\n"
+        "Filter, search, or click any header to inspect category breakdowns, "
+        "precision coverage, and missing or implemented symbols.\n\n"
+        "```{raw} html\n"
+        f"{_toolbar_html(len(headers_data))}"
         '<div id="headers-list" class="hc-headers-list">'
     )
     for hdr, api, stats in headers_data:
@@ -589,6 +689,51 @@ def generate_index_md():
             for v in ((fd or {}).get("variants") or {}).values()
             if v
         ]
+        missing, impl_syms = [], []
+        sym_sources = [
+            (
+                "family",
+                api.get("families") or {},
+                lambda n, d: hdr.evaluate_family(n, d)["implemented"],
+            ),
+            ("function", api.get("functions") or {}, lambda n, _: hdr.implements_fn(n)),
+            ("macro", api.get("macros") or {}, lambda n, _: hdr.implements_macro(n)),
+            ("type", api.get("types") or {}, lambda n, _: hdr.implements_type(n)),
+            ("object", api.get("objects") or {}, lambda n, _: hdr.implements_object(n)),
+        ]
+        for kind, entries, check_fn in sym_sources:
+            for name in sorted(entries.keys()):
+                item = entries[name] or {}
+                (impl_syms if check_fn(name, item) else missing).append(
+                    (name, kind, item)
+                )
+
+        mini_cards = "".join(
+            _mini_card_html(
+                hdr.name, title, stats[k]["implemented"], stats[k]["total"], c
+            )
+            for k, title, c in (
+                ("families", "Base Families", "green"),
+                ("raw_functions", "Functions", "green"),
+                ("macros", "Macros", "blue"),
+                ("types", "Types", "purple"),
+                ("objects", "Global Variables", "amber"),
+            )
+            if stats[k]["total"]
+        )
+        prec_block = (
+            '<div class="hc-drawer-prec">'
+            '<div class="hc-subcard-title">Precision Coverage</div>'
+            f'{_precision_grid_html(hdr.name, stats["precisions"])}</div>'
+            if stats["precisions"]
+            else ""
+        )
+        miss_html = _chip_group_html(
+            hdr, api, missing, "Missing Symbols", "amber", True
+        )
+        impl_html = _chip_group_html(
+            hdr, api, impl_syms, "Implemented Symbols", "green", False
+        )
         stem = html.escape(hdr.stem, quote=True)
         hname = html.escape(hdr.name, quote=True)
         syms_attr = html.escape(" ".join(syms).lower(), quote=True)
@@ -598,16 +743,21 @@ def generate_index_md():
             f'data-standard="{" ".join(std_tags)}" data-status="{status_attr}" '
             f'data-pct="{pct:.2f}" data-missing="{tot - imp}" '
             f'data-symbols="{syms_attr}"><summary>'
-            f'<div class="hc-header-title-col"><code class="hc-sym">&lt;{hname}&gt;'
-            f"</code>{_header_pills_html(stats, short=True)}</div>"
+            '<div class="hc-header-title-col">'
+            '<span class="hc-chevron" aria-hidden="true">&#9656;</span>'
+            f'<code class="hc-sym">&lt;{hname}&gt;</code>'
+            f"{_header_pills_html(stats, short=True)}</div>"
             f'<div class="hc-thermometer-col">{bar}'
             f'<span class="hc-row-pct">{pct:.1f}%</span>'
             f'<span class="hc-row-frac">({imp}/{tot})</span></div>'
             f'<div class="hc-action-col"><a class="hc-page-link" href="{stem}.html" '
             f'onclick="event.stopPropagation();" '
             f'aria-label="Open {hname} status page">'
-            'Page <span aria-hidden="true">&#8599;</span></a></div>'
-            "</summary></details>"
+            'Page <span aria-hidden="true">&#8599;</span></a></div></summary>'
+            f'<div class="hc-drawer"><div class="hc-grid-cards">{mini_cards}</div>'
+            f"{prec_block}{miss_html}{impl_html}"
+            f'<div class="hc-drawer-foot"><a class="hc-page-link" href="{stem}.html">'
+            f"View full &lt;{hname}&gt; page &rarr;</a></div></div></details>"
         )
     stems = "\n".join(hdr.stem for hdr, _, _ in headers_data)
     print(f"</div>\n```\n\n```{{toctree}}\n:hidden: true\n:maxdepth: 1\n\n{stems}\n```")

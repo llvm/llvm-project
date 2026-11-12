@@ -135,7 +135,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_apply",
-            "values": {"c++17": 201603},
+            "values": {
+                "c++17": 201603,
+                # "c++26": 202506,  # P1317R2: Remove return type deduction in std::apply
+            },
             "headers": ["tuple"],
         },
         {
@@ -189,8 +192,17 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_atomic_min_max",
-            "values": {"c++26": 202403}, # P0493R5: Atomic minimum/maximum
+            "values": {
+                "c++26": 202403,  # P0493R5 Atomic minimum/maximum
+                # "c++26": 202506,  # P3008R6 Atomic floating-point min/max
+            },
             "headers": ["atomic"],
+        },
+        {
+            "name": "__cpp_lib_atomic_reductions",
+            "values": {"c++26": 202506},
+            "headers": ["atomic"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_ref",
@@ -449,7 +461,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_memory",
-            "values": {"c++20": 201811, "c++23": 202202},
+            "values": {
+                "c++20": 201811,
+                "c++23": 202202,
+                # "c++26": 202506,  # P3037R6 constexpr std::shared_ptr and friends
+            },
             "headers": ["memory"],
         },
         {
@@ -565,6 +581,14 @@ feature_test_macros = [
             "headers": ["coroutine"],
         },
         {
+            "name": "__cpp_lib_counting_scope",
+            "values": {
+                "c++26": 202506  # P3149R11 async_scope - Creating scopes for non-sequential concurrency
+            },
+            "headers": ["execution"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_debugging",
             "values": {
                 "c++26": 202403,  # P2810R4: is_debugger_present is_replaceable
@@ -577,6 +601,12 @@ feature_test_macros = [
             "name": "__cpp_lib_default_template_type_for_algorithm_values",
             "values": {"c++26": 202403}, # P2248R8: Enabling list-initialization for algorithms
             "headers": ["algorithm", "deque", "forward_list", "list", "ranges", "string", "vector"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_define_static",
+            "values": {"c++26": 202506},
+            "headers": ["meta"],
             "unimplemented": True,
         },
         {
@@ -610,6 +640,12 @@ feature_test_macros = [
                 "unordered_set",
                 "vector",
             ],
+        },
+        {
+            "name": "__cpp_lib_exception_ptr_cast",
+            "values": {"c++26": 202506},
+            "headers": ["exception"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_exchange_function",
@@ -669,7 +705,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_format_path",
-            "values": {"c++26": 202403},  # P2845R8: Formatting of std::filesystem::path
+            "values": {
+                "c++26": 202403,  # P2845R8 Formatting of std::filesystem::path
+                # "c++26": 202506,  # P2319R5 Prevent path presentation problems
+            },
             "headers": ["filesystem"],
             "unimplemented": True,
         },
@@ -1239,6 +1278,12 @@ feature_test_macros = [
             "headers": ["iterator"],
         },
         {
+            "name": "__cpp_lib_observable_checkpoint",
+            "values": {"c++26": 202506},
+            "headers": ["utility"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_optional",
             "values": {
                 "c++17": 201606,
@@ -1265,8 +1310,17 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_parallel_algorithm",
-            "values": {"c++17": 201603},
+            "values": {
+                "c++17": 201603
+                # "c++26": 202506,  # P3179R9 Parallel Range Algorithms
+            },
             "headers": ["algorithm", "numeric"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_parallel_scheduler",
+            "values": {"c++26": 202506},  # P2079R10 Parallel scheduler
+            "headers": ["execution"],
             "unimplemented": True,
         },
         {
@@ -1470,6 +1524,16 @@ feature_test_macros = [
             "headers": ["functional"],
         },
         {
+            "name": "__cpp_lib_reflection",
+            "values": {
+                "c++26": 202506,  # P2996R13 Reflection for C++26 (library support)
+                #                 # P3560R2 Error Handling in Reflection
+                # "c++26": 202603,  # P3795R2 Miscellaneous Reflection Cleanup
+            },
+            "headers": ["meta"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_remove_cvref",
             "values": {"c++20": 201711},
             "headers": ["type_traits"],
@@ -1510,7 +1574,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_senders",
-            "values": {"c++26": 202406},  # P2300R10 std::execution
+            "values": {
+                "c++26": 202406,  # P2300R10 std::execution
+                # "c++26": 202506,  # P3570R2 optional variants in sender/receiver
+            },
             "headers": ["execution"],
             "unimplemented": True,
         },
@@ -1546,8 +1613,11 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_simd",
             "values": {
-                "c++26": 202606
-            },  # P3319R6 Add an iota object for simd (and more)
+                "c++26": 202411,  # P1928R15: std::simd — merge data-parallel types from the Parallelism TS 2
+                # "c++26": 202506,  # P2876R3: Proposal to extend std::simd with more constructors and accessors
+                #                   # P3480R6: std::simd is a range
+                # "c++29": 202606,  # P3319R6 Add an iota object for simd (and more)
+            },
             "headers": ["simd"],
             "unimplemented": True,
         },
@@ -1569,8 +1639,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_simd_permutations",
             "values": {
-                "c++26": 202606
-            },  # P3319R6 Add an iota object for simd (and more)
+                "c++26": 202506,  # P3480R6 std::simd is a range
+                # "c++29": 202606,  # P3319R6 Add an iota object for simd (and more)
+            },
             "headers": ["simd"],
             "unimplemented": True,
         },
@@ -1683,6 +1754,12 @@ feature_test_macros = [
             "headers": ["syncstream"],
             "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM",
             "libcxx_guard": "_LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM",
+        },
+        {
+            "name": "__cpp_lib_task",
+            "values": {"c++26": 202506},
+            "headers": ["execution"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_text_encoding",

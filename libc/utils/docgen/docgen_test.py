@@ -398,6 +398,7 @@ class DocgenTest(unittest.TestCase):
         out = buf.getvalue()
         self.assertIn("(implementation_status)=", out)
         self.assertIn("(headers_index)=", out)
+        self.assertIn("# Headers\n", out)
         self.assertIn("C23 Standard Completeness", out)
         self.assertIn("POSIX.1-2024 Completeness", out)
         self.assertIn("Global Variables", out)
@@ -405,7 +406,12 @@ class DocgenTest(unittest.TestCase):
         self.assertIn('data-stem="stdio"', out)
         self.assertIn('data-stem="arpa/inet"', out)
         self.assertIn("acosf128", out)
+        self.assertIn('class="dashboard-controls"', out)
+        self.assertIn('class="hc-chip-missing"', out)
+        self.assertIn('class="hc-chip-impl"', out)
+        self.assertIn('href="https://en.cppreference.com/w/c/io/clearerr"', out)
         self.assertIn("```{toctree}\n:hidden: true", out)
+        self.assertIn("\npoll\npthread\npwd\n", out)
 
 
 if __name__ == "__main__":

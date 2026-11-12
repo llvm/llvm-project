@@ -1560,6 +1560,32 @@ def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BitIntSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
+  let summary = "!cir.int _BitInt data layout spec";
+  let description = [{
+    Upper bound, in bits, on the ABI alignment of a `_BitInt`. This is
+    `TargetInfo::getBitIntMaxAlign()`. `_BitInt(N)` is aligned to
+    `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte.
+
+    Used as the value of the `!cir.int<u, 1, bitint>`-keyed data-layout
+    entry. The key names the `_BitInt` class. Its width is not a layout
+    input.
+
+    ```mlir
+    #dlti.dl_spec<!cir.int<u, 1, bitint> =
+        #cir.bitint_spec<max_align = 64>>
+    ```
+  }];
+  let parameters = (ins "uint32_t":$max_align);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
