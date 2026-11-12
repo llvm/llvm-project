@@ -26,7 +26,7 @@
 ; CHECK-DAG: OpDecorate %[[#r3]] FPRoundingMode RTP
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-NOEXT --implicit-check-not=FPRoundingMode
-; TODO: remove the following check FPRoundingMode is placed correctly
+; TODO: update once FPRoundingMode is no longer emitted on fadd/fsub/fmul.
 ; CHECK-NOEXT-COUNT-3: FPRoundingMode
 
 
