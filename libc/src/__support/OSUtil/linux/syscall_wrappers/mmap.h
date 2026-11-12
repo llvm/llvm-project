@@ -34,9 +34,8 @@ LIBC_INLINE ErrorOr<void *> mmap(void *addr, size_t size, int prot, int flags,
   offset /= MMAP2_FACTOR;
   long syscall_number = SYS_mmap2;
 #elif defined(SYS_mmap)
-  // The kernel takes the offset as unsigned, and drivers use the top bits to
-  // say what a mapping is: KFD's doorbells are at 0xebff000000000000. Leave
-  // validating the offset to the kernel.
+  // The kernel takes the offset as unsigned, and some drivers expect large
+  // offsets with the top bit set. Leave validating the offset to the kernel.
   long syscall_number = SYS_mmap;
 #else
 #error "mmap or mmap2 syscalls not available."
