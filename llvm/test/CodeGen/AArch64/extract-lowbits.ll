@@ -777,10 +777,10 @@ define i64 @bzhi64_constant_mask8_load(ptr %val) nounwind {
 define i64 @bzhi64_32_e0(i64 %val, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_32_e0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    mvn w8, w8
-; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bic x0, x0, x8
 ; CHECK-NEXT:    ret
   %notmask = shl i32 -1, %numlowbits
   %mask = xor i32 %notmask, -1
@@ -792,10 +792,10 @@ define i64 @bzhi64_32_e0(i64 %val, i32 %numlowbits) nounwind {
 define i64 @bzhi64_32_e1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_32_e1_indexzext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    mvn w8, w8
-; CHECK-NEXT:    and x0, x8, x0
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bic x0, x0, x8
 ; CHECK-NEXT:    ret
   %conv = zext i8 %numlowbits to i32
   %notmask = shl i32 -1, %conv
@@ -808,11 +808,11 @@ define i64 @bzhi64_32_e1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 define i64 @bzhi64_32_e2_load(ptr %w, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_32_e2_load:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    mvn w8, w8
-; CHECK-NEXT:    and x0, x8, x9
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bic x0, x9, x8
 ; CHECK-NEXT:    ret
   %val = load i64, ptr %w
   %notmask = shl i32 -1, %numlowbits
@@ -825,10 +825,10 @@ define i64 @bzhi64_32_e2_load(ptr %w, i32 %numlowbits) nounwind {
 define i64 @bzhi64_32_e3_commutative(i64 %val, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_32_e3_commutative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    mvn w8, w8
-; CHECK-NEXT:    and x0, x0, x8
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bic x0, x0, x8
 ; CHECK-NEXT:    ret
   %notmask = shl i32 -1, %numlowbits
   %mask = xor i32 %notmask, -1
@@ -842,10 +842,11 @@ define i64 @bzhi64_32_e3_commutative(i64 %val, i32 %numlowbits) nounwind {
 define i64 @bzhi64_32_e4_shifted_val(i64 %val, i32 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_32_e4_shifted_val:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    mvn w8, w8
-; CHECK-NEXT:    and x0, x8, x0, lsr #40
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsr x9, x0, #40
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bic x0, x9, x8
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %val, 40
   %notmask = shl i32 -1, %numlowbits
@@ -858,10 +859,10 @@ define i64 @bzhi64_32_e4_shifted_val(i64 %val, i32 %numlowbits) nounwind {
 define i64 @bzhi64_16_e0(i64 %val, i16 %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_16_e0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    bic w8, w0, w8
-; CHECK-NEXT:    and x0, x8, #0xffff
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    bic x0, x0, x8
 ; CHECK-NEXT:    ret
   %notmask = shl i16 -1, %numlowbits
   %mask = xor i16 %notmask, -1

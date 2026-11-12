@@ -1236,8 +1236,9 @@ define i64 @andnot_zext_lowmask_i64_i32(i64 %a0, i32 %a1) nounwind {
 ;
 ; X64-BMI-LABEL: andnot_zext_lowmask_i64_i32:
 ; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-BMI-NEXT:    shll $8, %esi
-; X64-BMI-NEXT:    bextrl %esi, %edi, %eax
+; X64-BMI-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI-NEXT:    retq
   %notmask = shl i32 -1, %a1
   %mask = xor i32 %notmask, -1
@@ -1260,10 +1261,9 @@ define i64 @andnot_zext_lowmask_i64_i16(i64 %a0, i16 %a1) nounwind {
 ;
 ; X86-BMI-LABEL: andnot_zext_lowmask_i64_i16:
 ; X86-BMI:       # %bb.0:
-; X86-BMI-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    shll $8, %ecx
-; X86-BMI-NEXT:    bextrl %ecx, %eax, %eax
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    shll $8, %eax
+; X86-BMI-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    xorl %edx, %edx
 ; X86-BMI-NEXT:    retl
 ;
@@ -1280,9 +1280,9 @@ define i64 @andnot_zext_lowmask_i64_i16(i64 %a0, i16 %a1) nounwind {
 ;
 ; X64-BMI-LABEL: andnot_zext_lowmask_i64_i16:
 ; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-BMI-NEXT:    shll $8, %esi
-; X64-BMI-NEXT:    bextrl %esi, %edi, %eax
-; X64-BMI-NEXT:    movzwl %ax, %eax
+; X64-BMI-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI-NEXT:    retq
   %notmask = shl i16 -1, %a1
   %mask = xor i16 %notmask, -1
@@ -1304,10 +1304,9 @@ define i32 @andnot_zext_lowmask_i32_i16(i32 %a0, i16 %a1) nounwind {
 ;
 ; X86-BMI-LABEL: andnot_zext_lowmask_i32_i16:
 ; X86-BMI:       # %bb.0:
-; X86-BMI-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    shll $8, %ecx
-; X86-BMI-NEXT:    bextrl %ecx, %eax, %eax
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    shll $8, %eax
+; X86-BMI-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: andnot_zext_lowmask_i32_i16:
@@ -1325,7 +1324,6 @@ define i32 @andnot_zext_lowmask_i32_i16(i32 %a0, i16 %a1) nounwind {
 ; X64-BMI:       # %bb.0:
 ; X64-BMI-NEXT:    shll $8, %esi
 ; X64-BMI-NEXT:    bextrl %esi, %edi, %eax
-; X64-BMI-NEXT:    movzwl %ax, %eax
 ; X64-BMI-NEXT:    retq
   %notmask = shl i16 -1, %a1
   %mask = xor i16 %notmask, -1
