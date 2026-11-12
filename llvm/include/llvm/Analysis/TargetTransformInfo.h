@@ -1174,6 +1174,16 @@ public:
       function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
       const;
 
+  /// Returns true if the target reports, through getBuildVectorContextHint(),
+  /// that the splat \p Scalars is folded into all the users collected by \p
+  /// GatherUseOps, so that no broadcast is emitted. The non-poison lanes must
+  /// hold the same non-constant value. Undef lanes are rejected, since the
+  /// splat may need a freeze.
+  LLVM_ABI bool
+  isSplatFolded(ArrayRef<Value *> Scalars,
+                function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)>
+                    GatherUseOps) const;
+
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.  The involved values may be passed in VL if
