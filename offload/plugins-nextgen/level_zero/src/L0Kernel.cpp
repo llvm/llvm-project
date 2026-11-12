@@ -46,6 +46,22 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   return Plugin::success();
 }
 
+static bool requiresSharedLocalMemory(ze_module_handle_t Module) {
+  size_t DynLocalMemSize = 0;
+  void *DynLocalMemPtr = nullptr;
+
+  ze_result_t RC;
+
+  // Detect marker added by SPIRVLowerDynamicLocalMemory pass
+  CALL_ZE(RC, zeModuleGetGlobalPointer, Module,
+          "__spirv_dynamic_local_memory_present", &DynLocalMemSize,
+          &DynLocalMemPtr);
+  if (RC == ZE_RESULT_SUCCESS && DynLocalMemPtr)
+    return true;
+
+  return false;
+}
+
 Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   const auto *KernelName = getName();
 
@@ -59,6 +75,10 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   CALL_ZE_RET_ERROR(zeKernelCreate, Module, &KernelDesc, &zeKernel);
   if (auto Err = readKernelProperties(Program))
     return Err;
+
+  if (requiresSharedLocalMemory(Module)) {
+    Properties.UsesDynamicSharedMem = true;
+  }
 
   // When checking that dynamic SLM arguments fit, the driver counts static
   // SLM in 1 KiB units
@@ -190,11 +210,27 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                       << " groups (max: " << MaxCooperativeGroupCount << ")";
   }
 
-  // Kernels accessing dynamic shared memory take it as a trailing `__local`
-  // argument, which is not part of the launch arguments and is appended here.
-  // The SPIR-V backend gives one to every kernel of a module accessing such
-  // memory, so it is set even if no memory is requested. Kernels without it
-  // cannot access the memory, so a request for them is ignored.
+  if (KernelPR.UsesDynamicSharedMem) {
+    if (KernelPR.NumKernelArgs == LaunchArgs.NumArgs + 1)
+      KEnv.HasDynSharedMemoryArg = true;
+    else
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "number of arguments (%u) does not match the number of arguments "
+          "runtime expects for the kernel (%u). Last argument of this kernel "
+          "is "
+          "`__local` pointer to shared local memory added by SPIR-V backend, "
+          "which should be omitted in olLaunchKernel.",
+          LaunchArgs.NumArgs, KernelPR.NumKernelArgs - 1);
+  } else {
+    if (KernelPR.NumKernelArgs != LaunchArgs.NumArgs)
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "number of arguments (%u) does not match the number of arguments "
+          "expected by the kernel (%u).",
+          LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
+  }
+
   if (KernelPR.NumKernelArgs == LaunchArgs.NumArgs + 1) {
     KEnv.HasDynSharedMemoryArg = true;
   } else if (KernelPR.NumKernelArgs == LaunchArgs.NumArgs) {

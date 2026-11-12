@@ -162,6 +162,14 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
   Slot->setAlignment(M.getDataLayout().getPointerABIAlignment(LocalAS));
   Slot->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
+  // Marker detected by liboffload to add SLM argument
+  auto *MarkerTy = Type::getInt8Ty(M.getContext());
+  new GlobalVariable(
+      M, MarkerTy, /*isConstant=*/false, GlobalValue::ExternalLinkage,
+      ConstantInt::get(MarkerTy, 1), "__spirv_dynamic_local_memory_present",
+      /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal,
+      storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup));
+
   // Replace the uses of the memory, which must all be in instructions.
   SmallVector<Constant *> DynMemConsts(DynMems.begin(), DynMems.end());
   convertUsersOfConstantsToInstructions(DynMemConsts);

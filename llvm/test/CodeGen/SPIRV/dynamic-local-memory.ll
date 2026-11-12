@@ -22,6 +22,7 @@
 ; IR: @unused = external addrspace(3) global [0 x i8]
 ; IR: @sized = internal addrspace(3) global [4 x i32] poison
 ; IR: @__spirv_dynamic_local_memory = internal unnamed_addr addrspace(3) global ptr addrspace(3) poison, align 8
+; IR: @__spirv_dynamic_local_memory_present = addrspace(1) global i8 1
 
 ; IR-LABEL: define spir_func i32 @load(
 ; IR: %[[PTR:.*]] = load ptr addrspace(3), ptr addrspace(3) @__spirv_dynamic_local_memory
@@ -127,8 +128,12 @@ define spir_func ptr addrspace(3) @call_instruction() addrspace(9) memory(none) 
 ; SPV-DAG: OpEntryPoint Kernel %[[#NOUSE:]] "nouse"
 ; SPV-NOT: LinkageAttributes "buf"
 ; SPV-NOT: LinkageAttributes "other"
+; SPV-DAG: OpDecorate %[[#MARKER:]] LinkageAttributes "__spirv_dynamic_local_memory_present" Export
 ; SPV-DAG: %[[#I8:]] = OpTypeInt 8 0
 ; SPV-DAG: %[[#LOCALPTR:]] = OpTypePointer Workgroup %[[#I8]]
+; SPV-DAG: %[[#GLOBALPTR:]] = OpTypePointer CrossWorkgroup %[[#I8]]
+; SPV-DAG: %[[#ONE:]] = OpConstant %[[#I8]] 1{{$}}
+; SPV-DAG: %[[#MARKER]] = OpVariable %[[#GLOBALPTR]] CrossWorkgroup %[[#ONE]]
 ; SPV: %[[#KERNEL]] = OpFunction
 ; SPV-NEXT: OpFunctionParameter
 ; SPV-NEXT: OpFunctionParameter %[[#LOCALPTR]]
