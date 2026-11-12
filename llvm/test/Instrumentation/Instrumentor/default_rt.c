@@ -97,6 +97,16 @@ void *__instrumentor_pre_store_ind(void *pointer, int32_t pointer_as, void *base
   return pointer;
 }
 
+void *__instrumentor_pre_atomicrmw(void *pointer, int32_t pointer_as, void *base_pointer_info, int64_t val_operand, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t value_sub_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int32_t operation, int8_t is_volatile, int32_t id) {
+  printf("atomicrmw pre -- pointer: %p, pointer_as: %" PRId32 ", base_pointer_info: %p, val_operand: %" PRId64 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %s, value_sub_type_id: %s, atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", operation: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, base_pointer_info, val_operand, value_size, alignment, getLLVMTypeIDName(value_type_id), getLLVMTypeIDName(value_sub_type_id), atomicity_ordering, sync_scope_id, operation, is_volatile, id);
+  return pointer;
+}
+
+void *__instrumentor_pre_atomicrmw_ind(void *pointer, int32_t pointer_as, void *base_pointer_info, int64_t *val_operand_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t value_sub_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int32_t operation, int8_t is_volatile, int32_t id) {
+  printf("atomicrmw pre -- pointer: %p, pointer_as: %" PRId32 ", base_pointer_info: %p, val_operand: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %s, value_sub_type_id: %s, atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", operation: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, base_pointer_info, val_operand_ptr, value_size, alignment, getLLVMTypeIDName(value_type_id), getLLVMTypeIDName(value_sub_type_id), atomicity_ordering, sync_scope_id, operation, is_volatile, id);
+  return pointer;
+}
+
 void __instrumentor_pre_cast(int64_t input, int32_t input_type_id, int32_t input_sub_type_id, int32_t input_size, int32_t result_type_id, int32_t result_sub_type_id, int32_t result_size, int32_t opcode, int32_t id) {
   printf("cast pre -- input: %" PRId64 ", input_type_id: %s, input_sub_type_id: %s, input_size: %" PRId32 ", result_type_id: %s, result_sub_type_id: %s, result_size: %" PRId32 ", opcode: %" PRId32 ", id: %" PRId32 "\n", input, getLLVMTypeIDName(input_type_id), getLLVMTypeIDName(input_sub_type_id), input_size, getLLVMTypeIDName(result_type_id), getLLVMTypeIDName(result_sub_type_id), result_size, opcode, id);
 }
@@ -125,6 +135,15 @@ void __instrumentor_post_store(void *pointer, int32_t pointer_as, void *base_poi
 
 void __instrumentor_post_store_ind(void *pointer, int32_t pointer_as, void *base_pointer_info, int64_t *value_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t value_sub_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int8_t is_volatile, int32_t id) {
   printf("store post -- pointer: %p, pointer_as: %" PRId32 ", base_pointer_info: %p, value: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %s, value_sub_type_id: %s, atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, base_pointer_info, value_ptr, value_size, alignment, getLLVMTypeIDName(value_type_id), getLLVMTypeIDName(value_sub_type_id), atomicity_ordering, sync_scope_id, is_volatile, id);
+}
+
+int64_t __instrumentor_post_atomicrmw(void *pointer, int32_t pointer_as, void *base_pointer_info, int64_t val_operand, int64_t prev_value, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t value_sub_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int32_t operation, int8_t is_volatile, int32_t id) {
+  printf("atomicrmw post -- pointer: %p, pointer_as: %" PRId32 ", base_pointer_info: %p, val_operand: %" PRId64 ", prev_value: %" PRId64 ", value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %s, value_sub_type_id: %s, atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", operation: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, base_pointer_info, val_operand, prev_value, value_size, alignment, getLLVMTypeIDName(value_type_id), getLLVMTypeIDName(value_sub_type_id), atomicity_ordering, sync_scope_id, operation, is_volatile, id);
+  return prev_value;
+}
+
+void __instrumentor_post_atomicrmw_ind(void *pointer, int32_t pointer_as, void *base_pointer_info, int64_t *val_operand_ptr, int64_t *prev_value_ptr, int64_t value_size, int64_t alignment, int32_t value_type_id, int32_t value_sub_type_id, int32_t atomicity_ordering, int8_t sync_scope_id, int32_t operation, int8_t is_volatile, int32_t id) {
+  printf("atomicrmw post -- pointer: %p, pointer_as: %" PRId32 ", base_pointer_info: %p, val_operand: %p, prev_value: %p, value_size: %" PRId64 ", alignment: %" PRId64 ", value_type_id: %s, value_sub_type_id: %s, atomicity_ordering: %" PRId32 ", sync_scope_id: %" PRId32 ", operation: %" PRId32 ", is_volatile: %" PRId32 ", id: %" PRId32 "\n", pointer, pointer_as, base_pointer_info, val_operand_ptr, prev_value_ptr, value_size, alignment, getLLVMTypeIDName(value_type_id), getLLVMTypeIDName(value_sub_type_id), atomicity_ordering, sync_scope_id, operation, is_volatile, id);
 }
 
 int64_t __instrumentor_post_cast(int64_t input, int32_t input_type_id, int32_t input_sub_type_id, int32_t input_size, int64_t result, int32_t result_type_id, int32_t result_sub_type_id, int32_t result_size, int32_t opcode, int32_t id) {
