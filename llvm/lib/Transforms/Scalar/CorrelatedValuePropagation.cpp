@@ -679,17 +679,15 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
   //   select (m < 0), (shl x, (sub 0, smin(m, 0))), 0
   //     --> m.fr = freeze m
   //         select (m.fr < 0), (shl x, (sub 0, m.fr)), 0
-  ConstantRange FrozenLRange =
-      LVI->getConstantRangeAtUse(MM->getOperandUse(0), /*UndefAllowed*/ false,
-                                 /*AssumeFrozen*/ true);
-  ConstantRange FrozenRRange =
-      LVI->getConstantRangeAtUse(MM->getOperandUse(1), /*UndefAllowed*/ false,
-                                 /*AssumeFrozen*/ true);
-  // Freeze the operands whose range is narrowed by it (there is at least one,
-  // as the fold without freezing failed above).
-  if (FrozenLRange != LRange && FrozenLRange.icmp(Pred, RRange)) {
-    Value *LHS = MM->getLHS();
-    auto *FI = new FreezeInst(LHS, LHS->getName() + ".fr", MM->getIterator());
+  auto TryFoldWithFreeze = [&](unsigned OpIdx,
+                               const ConstantRange &OtherRange) {
+    ConstantRange FrozenRange = LVI->getConstantRangeAtUse(
+        MM->getOperandUse(OpIdx),
+        /*UndefAllowed*/ false, /*AssumeFrozen*/ true);
+    if (!FrozenRange.icmp(Pred, OtherRange))
+      return false;
+    Value *Op = MM->getOperand(OpIdx);
+    auto *FI = new FreezeInst(Op, Op->getName() + ".fr", MM->getIterator());
     if (!freezeUsesAfterDef(*FI, *DT)) {
       FI->eraseFromParent();
       return false;
@@ -698,19 +696,9 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
     MM->replaceAllUsesWith(FI);
     MM->eraseFromParent();
     return true;
-  }
-  if (FrozenRRange != RRange && FrozenRRange.icmp(Pred, LRange)) {
-    Value *RHS = MM->getRHS();
-    auto *FI = new FreezeInst(RHS, RHS->getName() + ".fr", MM->getIterator());
-    if (!freezeUsesAfterDef(*FI, *DT)) {
-      FI->eraseFromParent();
-      return false;
-    }
-    ++NumMinMax;
-    MM->replaceAllUsesWith(FI);
-    MM->eraseFromParent();
+  };
+  if (TryFoldWithFreeze(0, RRange) || TryFoldWithFreeze(1, LRange))
     return true;
-  }
 
   if (MM->isSigned() &&
       ConstantRange::areInsensitiveToSignednessOfICmpPredicate(LRange,
