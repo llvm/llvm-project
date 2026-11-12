@@ -2458,19 +2458,20 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     unsigned NextIdx = Idx + 1;
     for (; NextIdx < End; ++NextIdx) {
       // Skip if MemOpb has been clustered already or can't cluster with MemOpa.
-      if (!SUnit2ClusterInfo.count(MemOpRecords[NextIdx].SU->NodeNum)) {
-        if (FastCluster) {
-          // If FastCluster is enabled, we assume everything is unrelated and
-          // therefore trivially clusterable.
-          Relationship = MemOpRelationship::Unrelated;
-          break;
-        }
+      if (SUnit2ClusterInfo.count(MemOpRecords[NextIdx].SU->NodeNum))
+        continue;
 
-        Relationship =
-            computeRelationship(DAG, MemOpa.SU, MemOpRecords[NextIdx].SU);
-        if (Relationship != MemOpRelationship::Path)
-          break;
+      // If FastCluster is enabled, we assume everything is unrelated and
+      // therefore trivially clusterable.
+      if (FastCluster) {
+        Relationship = MemOpRelationship::Unrelated;
+        break;
       }
+
+      Relationship =
+          computeRelationship(DAG, MemOpa.SU, MemOpRecords[NextIdx].SU);
+      if (Relationship != MemOpRelationship::Path)
+        break;
     }
 
     if (NextIdx == End)
