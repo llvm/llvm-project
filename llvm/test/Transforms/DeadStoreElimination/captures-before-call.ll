@@ -11,6 +11,7 @@ define i32 @other_value_escapes_before_call() {
 ; CHECK-NEXT:    [[V2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[V1]], align 4
 ; CHECK-NEXT:    call void @escape(ptr nonnull [[V1]])
+; CHECK-NEXT:    store i32 55555, ptr [[V2]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    store i32 [[CALL]], ptr [[V2]], align 4
 ; CHECK-NEXT:    call void @escape(ptr nonnull [[V2]])
@@ -45,6 +46,7 @@ declare void @clobber()
 define i32 @test_not_captured_before_call_same_bb() {
 ; CHECK-LABEL: @test_not_captured_before_call_same_bb(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @escape_and_clobber(ptr [[A]])
@@ -61,6 +63,7 @@ define i32 @test_not_captured_before_call_same_bb() {
 define i32 @test_not_captured_before_call_same_bb_escape_unreachable_block() {
 ; CHECK-LABEL: @test_not_captured_before_call_same_bb_escape_unreachable_block(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @escape_and_clobber(ptr [[A]])
@@ -103,6 +106,7 @@ define i32 @test_captured_and_clobbered_after_load_same_bb_2() {
 define i32 @test_captured_after_call_same_bb_2_clobbered_later() {
 ; CHECK-LABEL: @test_captured_after_call_same_bb_2_clobbered_later(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    call void @escape_writeonly(ptr [[A]])
 ; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
@@ -121,6 +125,7 @@ define i32 @test_captured_after_call_same_bb_2_clobbered_later() {
 define i32 @test_captured_sibling_path_to_call_other_blocks_1(i1 %c.1) {
 ; CHECK-LABEL: @test_captured_sibling_path_to_call_other_blocks_1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @escape_writeonly(ptr [[A]])
@@ -291,6 +296,7 @@ exit:
 define i32 @test_not_captured_before_call_other_blocks_1(i1 %c.1) {
 ; CHECK-LABEL: @test_not_captured_before_call_other_blocks_1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -322,6 +328,7 @@ exit:
 define i32 @test_not_captured_before_call_other_blocks_2(i1 %c.1) {
 ; CHECK-LABEL: @test_not_captured_before_call_other_blocks_2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -355,6 +362,7 @@ exit:
 define i32 @test_not_captured_before_call_other_blocks_3(i1 %c.1) {
 ; CHECK-LABEL: @test_not_captured_before_call_other_blocks_3(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -386,6 +394,7 @@ exit:
 define i32 @test_not_captured_before_call_other_blocks_4(i1 %c.1) {
 ; CHECK-LABEL: @test_not_captured_before_call_other_blocks_4(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -422,6 +431,7 @@ define i32 @test_not_captured_before_call_other_blocks_5(i1 %c.1) {
 ; CHECK-LABEL: @test_not_captured_before_call_other_blocks_5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
@@ -489,6 +499,7 @@ define i32 @test_not_captured_before_call_other_blocks_7(i1 %c.1) {
 ; CHECK-LABEL: @test_not_captured_before_call_other_blocks_7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
 ; CHECK-NEXT:    call void @escape_writeonly(ptr [[A]])
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
@@ -543,6 +554,7 @@ define i32 @test_not_captured_before_call_same_bb_but_read() {
 define i32 @test_captured_after_loop(i1 %c.1) {
 ; CHECK-LABEL: @test_captured_after_loop(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval()
@@ -600,6 +612,7 @@ define void @test_escaping_store_removed(ptr %src, ptr %escape) {
 ; CHECK-LABEL: @test_escaping_store_removed(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 0, ptr [[A]], align 8
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A]], ptr [[SRC:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    store ptr [[A]], ptr [[ESCAPE:%.*]], align 8
@@ -626,23 +639,24 @@ define void @test_invoke_captures() personality ptr undef {
 ; CHECK-LABEL: @test_invoke_captures(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    invoke void @clobber()
-; CHECK-NEXT:    to label [[BB2:%.*]] unwind label [[BB5:%.*]]
+; CHECK-NEXT:            to label [[BB2:%.*]] unwind label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 8
 ; CHECK-NEXT:    invoke void @escape(ptr [[A]])
-; CHECK-NEXT:    to label [[BB9:%.*]] unwind label [[BB10:%.*]]
+; CHECK-NEXT:            to label [[BB9:%.*]] unwind label [[BB10:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[LP_1:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb9:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[LP_2:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -679,6 +693,7 @@ declare i32 @getval_nounwind() nounwind
 define i32 @test_not_captured_before_load_same_bb_noalias_call() {
 ; CHECK-LABEL: @test_not_captured_before_load_same_bb_noalias_call(
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @alloc()
+; CHECK-NEXT:    store i32 55, ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval_nounwind()
 ; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @escape_and_clobber(ptr [[A]])
@@ -694,8 +709,9 @@ define i32 @test_not_captured_before_load_same_bb_noalias_call() {
 
 define i32 @test_not_captured_before_load_same_bb_noalias_arg(ptr noalias %a) {
 ; CHECK-LABEL: @test_not_captured_before_load_same_bb_noalias_arg(
+; CHECK-NEXT:    store i32 55, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @getval_nounwind()
-; CHECK-NEXT:    store i32 99, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @escape_and_clobber(ptr [[A]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
