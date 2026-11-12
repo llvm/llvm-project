@@ -256,6 +256,7 @@ struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
                      IndividualVI.second);
     }
   }
+  static const bool flow = true;
 };
 
 // exegesis::Measure is rendererd as a flow instead of a list.
