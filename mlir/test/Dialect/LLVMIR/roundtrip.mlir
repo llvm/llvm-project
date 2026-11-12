@@ -422,12 +422,6 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   %12 = llvm.bitcast %arg1 : i64 to !llvm.byte<64>
 // CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i64
   %13 = llvm.bitcast %12 : !llvm.byte<64> to i64
-// CHECK:  = llvm.bitcast %[[I64]] : i64 to !llvm.byte<8>
-  %14 = llvm.bitcast %arg1 : i64 to !llvm.byte<8>
-// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i32
-  %15 = llvm.bitcast %12 : !llvm.byte<64> to i32
-// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
-  %16 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
 // CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
   %17 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
 // CHECK:  = llvm.bitcast %[[PTR]] : !llvm.ptr to !llvm.byte<8>
@@ -1369,6 +1363,34 @@ llvm.func @masked_nontemporal_no_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>)
   %0 = llvm.intr.masked.load(%ptr, %mask) <nontemporal> : (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
   // CHECK: llvm.intr.masked.store(%{{.*}}, %{{.*}}, %{{.*}}) <nontemporal> :
   llvm.intr.masked.store(%0, %ptr, %mask) <nontemporal> : vector<7xf32>, vector<7xi1> into !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: @bitcast_same_size
+llvm.func @bitcast_same_size(%arg0: !llvm.ppc_fp128, %arg1: vector<[4]xi32>,
+                              %arg2: !llvm.x86_amx) {
+  // CHECK: llvm.bitcast {{.*}} : !llvm.ppc_fp128 to i128
+  %0 = llvm.bitcast %arg0 : !llvm.ppc_fp128 to i128
+  // CHECK: llvm.bitcast {{.*}} : vector<[4]xi32> to vector<[8]xi16>
+  %1 = llvm.bitcast %arg1 : vector<[4]xi32> to vector<[8]xi16>
+  // CHECK: llvm.bitcast {{.*}} : !llvm.x86_amx to vector<256xi32>
+  %2 = llvm.bitcast %arg2 : !llvm.x86_amx to vector<256xi32>
+  // CHECK: llvm.bitcast {{.*}} : i64 to vector<4xbf16>
+  %c = llvm.mlir.constant(0 : i64) : i64
+  %3 = llvm.bitcast %c : i64 to vector<4xbf16>
+  llvm.return
+}
+
+// CHECK-LABEL: @bitcast_byte
+llvm.func @bitcast_byte(%ptr: !llvm.ptr, %i64: i64) {
+  // CHECK: llvm.bitcast {{.*}} : i64 to !llvm.byte<64>
+  %0 = llvm.bitcast %i64 : i64 to !llvm.byte<64>
+  // CHECK: llvm.bitcast {{.*}} : !llvm.byte<64> to i64
+  %1 = llvm.bitcast %0 : !llvm.byte<64> to i64
+  // CHECK: llvm.bitcast {{.*}} : !llvm.ptr to !llvm.byte<64>
+  %2 = llvm.bitcast %ptr : !llvm.ptr to !llvm.byte<64>
+  // CHECK: llvm.bitcast {{.*}} : !llvm.byte<64> to !llvm.ptr
+  %3 = llvm.bitcast %2 : !llvm.byte<64> to !llvm.ptr
   llvm.return
 }
 
