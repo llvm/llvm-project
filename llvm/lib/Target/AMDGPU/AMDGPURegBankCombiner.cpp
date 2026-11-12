@@ -432,6 +432,11 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   const int64_t CleanHi16 = 0x000000000000FFFF;
 
   auto TryApplyD16Load = [&](unsigned D16Opc, GAnyLoad *SmallLoad) {
+    LLT DstTy = MRI.getType(Dst);
+    if (DstTy != LLT::fixed_vector(2, LLT::integer(16)) &&
+        DstTy != LLT::fixed_vector(2, LLT::float16()))
+      return false;
+
     MachineInstr *DstDef = MRI.getVRegDef(Dst);
     MachineInstr *InsertPt = SmallLoad;
     if (SmallLoad->isSimple() && isObviouslySafeToFold(*SmallLoad, MI))
@@ -491,11 +496,10 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
-    // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
-    // fake16: and  (sextload i8 -> s32), 0xFFFF
-    // true16: zext (sextload i8 -> s16) -> s32
+    // The shift discards the upper half of the sign-extending load.
     if (mi_match(Load, MRI,
-                 m_any_of(m_GAnd(m_OneUse(m_GSExtLoad(SextLoad, m_MMO(MMO))),
+                 m_any_of(m_GSExtLoad(SextLoad, m_MMO(MMO)),
+                          m_GAnd(m_OneUse(m_GSExtLoad(SextLoad, m_MMO(MMO))),
                                  m_Copy(m_SpecificICst(CleanHi16))),
                           m_GZExt(m_all_of(
                               m_SpecificType(LLT::scalar(16)),
@@ -561,18 +565,18 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     break;
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMAXIMUMNUM:
     AMDGPUOpc = AMDGPU::G_AMDGPU_FMAX3;
     break;
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMINNUM_IEEE:
+  case AMDGPU::G_FMINIMUMNUM:
     AMDGPUOpc = AMDGPU::G_AMDGPU_FMIN3;
     break;
   case AMDGPU::G_FMAXIMUM:
-  case AMDGPU::G_FMAXIMUMNUM:
     AMDGPUOpc = AMDGPU::G_AMDGPU_FMAXIMUM3;
     break;
   case AMDGPU::G_FMINIMUM:
-  case AMDGPU::G_FMINIMUMNUM:
     AMDGPUOpc = AMDGPU::G_AMDGPU_FMINIMUM3;
     break;
   default:

@@ -6,7 +6,6 @@
 ---
 name:            load_i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -29,7 +28,6 @@ body:             |
 ---
 name:            load_i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -52,7 +50,6 @@ body:             |
 ---
 name:            load_i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -75,7 +72,6 @@ body:             |
 ---
 name:            load_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -96,7 +92,6 @@ body:             |
 ---
 name:            load_ptr
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -117,7 +112,6 @@ body:             |
 ---
 name:            zextload_i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -138,7 +132,6 @@ body:             |
 ---
 name:            zextload_i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -159,7 +152,6 @@ body:             |
 ---
 name:            zextload_i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -180,7 +172,6 @@ body:             |
 ---
 name:            sextload_i8
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -201,7 +192,6 @@ body:             |
 ---
 name:            sextload_i16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10
@@ -222,7 +212,6 @@ body:             |
 ---
 name:            sextload_i32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x10

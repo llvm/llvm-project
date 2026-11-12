@@ -48,12 +48,12 @@ llvm.func @mbarrier_arrive_expect_tx_shared(%barrier: !llvm.ptr<3>, %txcount : i
 
 llvm.func @mbarrier_arrive_expect_tx_shared_cluster(%barrier: !llvm.ptr<7>, %txcount : i32) {
   // CHECK-LABEL: define void @mbarrier_arrive_expect_tx_shared_cluster(ptr addrspace(7) %0, i32 %1) {
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   nvvm.mbarrier.arrive.expect_tx %barrier, %txcount : !llvm.ptr<7>, i32
@@ -66,3 +66,22 @@ llvm.func @mbarrier_arrive_expect_tx_shared_cluster(%barrier: !llvm.ptr<7>, %txc
   llvm.return
 }
 
+llvm.func @mbarrier_arrive_expect_tx_shared_cluster_multicast(%barrier: !llvm.ptr<7>, %txcount: i32, %mc: i32) {
+  // CHECK-LABEL: define void @mbarrier_arrive_expect_tx_shared_cluster_multicast(ptr addrspace(7) %0, i32 %1, i32 %2) {
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: ret void
+  // CHECK-NEXT: }
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount multicast_mask = %mc : !llvm.ptr<7>, i32, i32
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount multicast_mask = %mc scope = cta : !llvm.ptr<7>, i32, i32
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount multicast_mask = %mc scope = cluster : !llvm.ptr<7>, i32, i32
+
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount multicast_mask = %mc relaxed = true : !llvm.ptr<7>, i32, i32
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount multicast_mask = %mc scope = cta relaxed = true : !llvm.ptr<7>, i32, i32
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount multicast_mask = %mc scope = cluster relaxed = true : !llvm.ptr<7>, i32, i32
+  llvm.return
+}

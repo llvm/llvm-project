@@ -629,7 +629,8 @@ TEST(DenseMapCustomTest, InitFromIterator) {
     Values.emplace_back(i, CountCopyAndMove(i));
 
   CountCopyAndMove::ResetCounts();
-  DenseMap<int, CountCopyAndMove> Map(Values.begin(), Values.end());
+  [[maybe_unused]] DenseMap<int, CountCopyAndMove> Map(Values.begin(),
+                                                       Values.end());
   // Check that no move occurred
   EXPECT_EQ(0, CountCopyAndMove::TotalMoves());
   // Check that copy was called the expected number of times
@@ -1285,7 +1286,7 @@ TEST(DenseMapCustomTest, MoveConstructInvalidatesIterators) {
   DenseMap<int, int> M;
   M.try_emplace(1, 10);
   auto It = M.find(1);
-  DenseMap<int, int> Other = std::move(M);
+  [[maybe_unused]] DenseMap<int, int> Other = std::move(M);
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 
@@ -1293,7 +1294,7 @@ TEST(DenseMapCustomTest, MoveAssignInvalidatesIterators) {
   DenseMap<int, int> M;
   M.try_emplace(1, 10);
   auto It = M.find(1);
-  DenseMap<int, int> Other;
+  [[maybe_unused]] DenseMap<int, int> Other;
   Other = std::move(M);
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }

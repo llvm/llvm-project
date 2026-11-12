@@ -34,7 +34,7 @@
 ## hi20 = foo@plt - pc + (1 << 17) >> 18 = 0x1234520 - 0x1274670 + 0x20000 >> 18 = -1
 ## lo18 = foo@plt - pc & (1 << 18) - 1 = 0x1234520 - 0x1274670 & 0x3ffff = -336
 # SO-NEXT: pcaddu18i $t0, -1{{$}}
-# SO-NEXT: jirl $zero, $t0, -336 <.plt+0x20>{{$}}
+# SO-NEXT: jirl $zero, $t0, -336 <foo@plt>{{$}}
 
 # GOTPLT:      section '.got.plt':
 # GOTPLT-NEXT: 0x01274730 00000000 00000000 00000000 00000000

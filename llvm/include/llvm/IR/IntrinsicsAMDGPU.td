@@ -3049,16 +3049,21 @@ def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
 // Sets a marker in the stream of async requests. Modelled as InaccessibleMem.
+// The argument is a mask of the async stages to create a mark for.
+// A zero mask marks every stage.
 def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
-                     IntrNoCallback, IntrNoFree]>;
+  Intrinsic<[], [llvm_i32_ty],
+            [ImmArg<ArgIndex<0>>, Range<ArgIndex<0>, 0, 2048>,
+             IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// Waits until the Nth previous marker is completed, if it exists.
+// Waits until the Nth previous marker is completed in each async stage's sequence,
+// if it exists. The second argument is a mask of the stages to wait on.
+// A zero mask waits on every stage.
 def int_amdgcn_wait_asyncmark :
     ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
-    Intrinsic<[], [llvm_i16_ty],
-              [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects,
-               IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+    Intrinsic<[], [llvm_i16_ty, llvm_i32_ty],
+              [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 0, 2048>,
+               IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
@@ -3436,12 +3441,18 @@ def int_amdgcn_ds_bpermute_fi_b32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// A prefetch cache policy sets th (bits 0-2) to anything but the reserved
+// value 7, scope (bits 3-4) and nv (bit 5).
+defvar PrefetchCachePolicyRanges =
+    !foreach(i, !range(8), [!mul(i, 8), !add(!mul(i, 8), 6)]);
+
 def int_amdgcn_flat_prefetch : ClangBuiltin<"__builtin_amdgcn_flat_prefetch">,
   DefaultAttrsIntrinsic<[],
     [llvm_ptr_ty,  // Pointer
      llvm_i32_ty], // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
-     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+     RangeSet<ArgIndex<1>, PrefetchCachePolicyRanges>],
     "",
     [SDNPMemOperand]
   >;
@@ -3451,7 +3462,8 @@ def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch"
     [LLVMQualPointerType<1>, // Pointer
      llvm_i32_ty],           // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
-     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+     RangeSet<ArgIndex<1>, PrefetchCachePolicyRanges>],
     "",
     [SDNPMemOperand]
   >;
@@ -4462,8 +4474,10 @@ class AMDGPUTensorLoadStore:
     "", [SDNPMemOperand]
   >;
 
+let TargetFeatures = "tdm-insts" in {
 def int_amdgcn_tensor_load_to_lds    : ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
 def int_amdgcn_tensor_store_from_lds : ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
+} // End TargetFeatures = "tdm-insts"
 
 class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<

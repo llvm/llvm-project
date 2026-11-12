@@ -1369,6 +1369,20 @@ static Intrinsic::ID shouldUpgradeNVPTXTMAReductionIntrinsics(StringRef Name) {
       .Default(Intrinsic::not_intrinsic);
 }
 
+static Intrinsic::ID
+shouldUpgradeNVVMBarrierMulticastIntrinsic(Function *F, StringRef Name) {
+  if (!Name.consume_front("mbarrier.") ||
+      !Name.consume_back(".space.cluster") || F->arg_size() != 2)
+    return Intrinsic::not_intrinsic;
+
+  Intrinsic::ID IID = F->getIntrinsicID();
+  if (IID == Intrinsic::not_intrinsic ||
+      Intrinsic::getType(F->getContext(), IID) == F->getFunctionType())
+    return Intrinsic::not_intrinsic;
+
+  return IID;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
                                                               StringRef Name) {
   if (Name.consume_front("mapa.shared.cluster"))
@@ -1777,6 +1791,17 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       switch (F->getIntrinsicID()) {
       default:
         break;
+      // Legacy asyncmark intrinsics without the stage operand.
+      case Intrinsic::amdgcn_asyncmark:
+      case Intrinsic::amdgcn_wait_asyncmark: {
+        Intrinsic::ID ID = F->getIntrinsicID();
+        if (F->arg_size() == (ID == Intrinsic::amdgcn_asyncmark ? 0u : 1u)) {
+          rename(F);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break;
+      }
       // Legacy wmma iu intrinsics without the optional clamp operand.
       case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
         if (F->arg_size() == 7) {
@@ -2126,6 +2151,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       // llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>* =>
       // llvm.nvvm.cp.async.bulk.tensor.reduce.<shape>*
       IID = shouldUpgradeNVPTXTMAReductionIntrinsics(Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
+      // Upgrade the shared::cluster mbarrier expect_tx/complete_tx/arrive*
+      // intrinsics to the forms carrying the 32-bit multicast CTA mask and
+      // the is-multicast flag.
+      IID = shouldUpgradeNVVMBarrierMulticastIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
@@ -6311,6 +6345,37 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+    // clang-format off
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cluster: {
+    // clang-format on
+    SmallVector<Value *, 8> Args(CI->args());
+    Args.push_back(Builder.getInt32(0)); // cta-mask
+    Args.push_back(Builder.getFalse());  // is-multicast
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
   case Intrinsic::nvvm_mbarrier_init: {
     SmallVector<Value *, 3> Args(CI->args());
     // The .shared variant folded into the overloaded form without gaining an
@@ -6472,6 +6537,24 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Args[2], FixedVectorType::get(Builder.getBFloatTy(), NumElts));
 
     NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+
+  case Intrinsic::amdgcn_asyncmark:
+  case Intrinsic::amdgcn_wait_asyncmark: {
+    // Legacy asyncmark intrinsics missed the stage mask operand. Append a zero
+    // mask, which names every stage and so preserves the behavior they had.
+    SmallVector<Value *, 2> Args(CI->args());
+    Args.push_back(Builder.getInt32(0));
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    NewCall = Builder.CreateCall(NewFn, Args, Bundles);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->copyMetadata(*CI);
     break;
   }
 
@@ -7241,6 +7324,7 @@ bool llvm::UpgradeModuleFlags(Module &M) {
     return Changed;
 
   bool HasObjCFlag = false, HasClassProperties = false;
+  bool HasClassROSigning = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;
@@ -7267,6 +7351,8 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       HasObjCFlag = true;
     if (ID->getString() == "Objective-C Class Properties")
       HasClassProperties = true;
+    if (ID->getString() == "Objective-C Enforce ClassRO Pointer Signing")
+      HasClassROSigning = true;
     // Upgrade PIC from Error/Max to Min.
     if (ID->getString() == "PIC Level") {
       if (auto *Behavior =
@@ -7390,6 +7476,16 @@ bool llvm::UpgradeModuleFlags(Module &M) {
   if (HasObjCFlag && !HasClassProperties) {
     M.addModuleFlag(llvm::Module::Override, "Objective-C Class Properties",
                     (uint32_t)0);
+    Changed = true;
+  }
+
+  // Likewise, ObjC bitcode from before "Objective-C Enforce ClassRO Pointer
+  // Signing" was added does not sign class_ro_t pointers. Give it the flag with
+  // value 0, so that linking it with bitcode that signs them does not set
+  // SignedClassRO.
+  if (HasObjCFlag && !HasClassROSigning) {
+    M.addModuleFlag(Module::Override,
+                    "Objective-C Enforce ClassRO Pointer Signing", (uint32_t)0);
     Changed = true;
   }
 

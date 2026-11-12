@@ -1,12 +1,120 @@
-# ====- Information about standard headers used by docgen  ----*- python -*--==#
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-# ==-------------------------------------------------------------------------==#
+# ===----------------------------------------------------------------------===##
+from functools import lru_cache
 from pathlib import Path
-from typing import Generator
+import re
+import sys
+from typing import Dict, Generator, List, Optional, Set, Tuple
+import yaml
+
+_C_SEC_RE = re.compile(r"^([0-9]+|[FGHJK])\.")
+
+
+def _stat(flags: List[bool]) -> Dict[str, int]:
+    return {"total": len(flags), "implemented": sum(flags)}
+
+
+def _is_stub_file(path: Path) -> bool:
+    text = path.read_text(encoding="utf-8")
+    has_todo = "todo" in text.lower() or "unimplemented" in text.lower()
+    if not has_todo and "math" not in path.parts:
+        return False
+
+    idx = text.find("LLVM_LIBC_FUNCTION")
+    if idx == -1:
+        return False
+    open_brace = text.find("{", idx)
+    if open_brace == -1:
+        return False
+
+    depth, body = 0, ""
+    for i in range(open_brace, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                body = text[open_brace + 1 : i]
+                break
+
+    clean = re.sub(r"//.*$", "", body, flags=re.MULTILINE)
+    clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL).strip()
+    stmts = [s.strip() for s in clean.split(";") if s.strip()]
+    if len(stmts) == 0:
+        return has_todo
+    if len(stmts) > 2:
+        return False
+
+    for stmt in stmts:
+        if stmt.startswith(("libc_errno =", "return", "*signp = 0")):
+            no_cast = re.sub(
+                r"(const_cast|reinterpret_cast|static_cast)\s*<[^>]+>", "", stmt
+            )
+            if "::" in no_cast:
+                return False
+            ret = no_cast.replace("return", "").strip()
+            if re.search(r"\b[A-Za-z0-9_]+\s*\(", ret):
+                return False
+        else:
+            return False
+    return True
+
+
+_VARIABLE_RE = re.compile(
+    r"LLVM_LIBC_VARIABLE\s*\([^,]+,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)"
+)
+
+
+@lru_cache(maxsize=None)
+def _load_implemented_functions(
+    libc_root: Path,
+) -> Tuple[Set[str], Dict[str, Set[str]]]:
+    stubs, reals = set(), set()
+    vars_by_target: Dict[str, Set[str]] = {}
+    src_dir = libc_root / "src"
+    if src_dir.exists():
+        for p in src_dir.rglob("*.cpp"):
+            if _is_stub_file(p):
+                stubs.add(p.stem)
+            else:
+                reals.add(p.stem)
+                for var in _VARIABLE_RE.findall(p.read_text(encoding="utf-8")):
+                    vars_by_target.setdefault(p.stem, set()).add(var)
+
+    stub_only = stubs - reals
+    all_fns: Set[str] = set()
+    by_stem: Dict[str, Set[str]] = {}
+    config_dir = libc_root / "config"
+    if config_dir.exists():
+        for ep_file in config_dir.rglob("entrypoints.txt"):
+            for line in ep_file.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line.startswith("libc.src."):
+                    parts = line.split(".")
+                    sym = parts[-1]
+                    if sym not in stub_only:
+                        stem = "/".join(parts[2:-1])
+                        exported = {sym} | vars_by_target.get(sym, set())
+                        all_fns |= exported
+                        by_stem.setdefault(stem, set()).update(exported)
+    return all_fns, by_stem
+
+
+def _load_include_yaml(yaml_path: Path) -> Dict:
+    if not yaml_path.exists():
+        return {}
+    data = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
+    for rel in data.get("merge_yaml_files", []):
+        merged = _load_include_yaml((yaml_path.parent / rel).resolve())
+        for key in ("macros", "types", "enums", "objects", "functions"):
+            if key in merged:
+                data.setdefault(key, []).extend(merged[key])
+    return data
 
 
 class Header:
@@ -16,32 +124,28 @@ class Header:
     * where is its macros file
     * where is its docgen yaml file
 
-    By convention, the macro-only part of a header file is in a header-specific
-    file somewhere in the directory tree with root at
-    ``$LLVM_PROJECT_ROOT/libc/include/llvm-libc-macros``.  Docgen expects that
-    if a macro is implemented, that it appears in a string
-    ``#define MACRO_NAME`` in some ``*-macros.h`` file in the directory tree.
-    Docgen searches for this string in the file to set the implementation status
-    shown in the generated rst docs rendered as html for display at
-    <libc.llvm.org>.
+    Macro implementation status is checked across header-specific
+    ``*-macros.h`` files under ``$LLVM_PROJECT_ROOT/libc/include/llvm-libc-macros``,
+    macro and enum entries in ``$LLVM_PROJECT_ROOT/libc/include/<header>.yaml``
+    (including shared ``macro_header`` definitions), and ``include/<header>.h.def``
+    templates.
 
-    By convention, each function for a header is implemented in a function-specific
-    cpp file somewhere in the directory tree with root at, e.g,
-    ``$LLVM_PROJECT_ROOT/libc/src/fenv``. Some headers have architecture-specific
-    implementations, like ``math``, and some don't, like ``fenv``. Docgen uses the
-    presence of this function-specific cpp file to set the implementation status
-    shown in the generated rst docs rendered as html for display at
-    <libc.llvm.org>.
+    Function implementation status is determined from the union of exported
+    entrypoints across ``$LLVM_PROJECT_ROOT/libc/config/**/entrypoints.txt``,
+    excluding source files under ``libc/src/`` whose only implementation is a
+    ``TODO`` stub.
     """
 
-    def __init__(self, header_name: str):
+    def __init__(self, header_name: str, libc_root: Optional[Path] = None):
         """
         :param header_name: e.g., ``"threads.h"`` or ``"signal.h"``
         """
         self.name = header_name
-        self.stem = header_name.rstrip(".h")
+        self.stem = header_name[:-2] if header_name.endswith(".h") else header_name
         self.docgen_root = Path(__file__).parent
-        self.libc_root = self.docgen_root.parent.parent
+        self.libc_root = (
+            libc_root if libc_root is not None else self.docgen_root.parent.parent
+        )
         self.docgen_yaml = self.docgen_root / Path(header_name).with_suffix(".yaml")
         # Path to libc/include/<name>.yaml
         self.include_yaml = Path(
@@ -50,31 +154,39 @@ class Header:
         self.fns_dir = Path(self.libc_root, "src", self.stem)
         self.macros_dir = Path(self.libc_root, "include", "llvm-libc-macros")
 
+    @property
+    def api(self) -> Dict:
+        if not hasattr(self, "_api"):
+            self._api = (
+                yaml.safe_load(self.docgen_yaml.read_text(encoding="utf-8"))
+                if self.docgen_yaml.exists()
+                else {}
+            ) or {}
+        return self._api
+
+    @property
+    def include_data(self) -> Dict:
+        if not hasattr(self, "_include_data"):
+            self._include_data = _load_include_yaml(self.include_yaml)
+        return self._include_data
+
     def macro_file_exists(self) -> bool:
-        for _ in self.__get_macro_files():
+        if any(self.__get_macro_files()):
             return True
-
-        if self.include_yaml.exists():
-            import yaml
-
-            parsed = yaml.safe_load(self.include_yaml.read_text(encoding="utf-8"))
-            if (
-                parsed
-                and "macros" in parsed
-                and any("macro_value" in m for m in parsed["macros"])
-            ):
-                return True
-
-        return False
+        return bool(self.include_data.get("macros"))
 
     def fns_dir_exists(self) -> bool:
         return self.fns_dir.exists() and self.fns_dir.is_dir()
 
     def implements_fn(self, fn_name: str) -> bool:
-        for _ in self.fns_dir.glob(f"**/{fn_name}.cpp"):
+        all_fns, by_stem = _load_implemented_functions(self.libc_root)
+        if fn_name in by_stem.get(self.stem, set()):
             return True
-
-        return False
+        if not hasattr(self, "_declared_fns"):
+            self._declared_fns = {
+                f["name"] for f in self.include_data.get("functions", []) if "name" in f
+            }
+        return fn_name in all_fns and fn_name in self._declared_fns
 
     def implements_macro(self, m_name: str) -> bool:
         """
@@ -86,20 +198,95 @@ class Header:
 
         :param m_name: name of macro, e.g., ``FE_ALL_EXCEPT``
         """
+        macro_re = re.compile(rf"^\s*#\s*define\s+{re.escape(m_name)}\b", re.MULTILINE)
         for f in self.__get_macro_files():
-            if f"#define {m_name}" in f.read_text():
+            if macro_re.search(f.read_text(encoding="utf-8")):
                 return True
 
-        if self.include_yaml.exists():
-            import yaml
+        if any(
+            m.get("macro_name") == m_name
+            and ("macro_value" in m or "macro_header" in m)
+            for m in self.include_data.get("macros", [])
+        ):
+            return True
 
-            parsed = yaml.safe_load(self.include_yaml.read_text(encoding="utf-8"))
-            if parsed and "macros" in parsed:
-                for macro in parsed["macros"]:
-                    if macro.get("macro_name") == m_name and "macro_value" in macro:
-                        return True
+        if any(e.get("name") == m_name for e in self.include_data.get("enums", [])):
+            return True
+
+        def_file = self.libc_root / "include" / f"{self.name}.def"
+        if def_file.exists() and macro_re.search(def_file.read_text(encoding="utf-8")):
+            return True
 
         return False
+
+    def _load_exposed_types(self) -> Set[str]:
+        hdrgen_dir = str(self.docgen_root.parent / "hdrgen")
+        if hdrgen_dir not in sys.path:
+            sys.path.insert(0, hdrgen_dir)
+        from hdrgen.header import COMPILER_HEADER_TYPES, HeaderFile
+        from hdrgen.yaml_to_classes import load_yaml_file
+
+        queue = []
+        if self.include_yaml.exists() and "header" in self.include_data:
+            header_file = load_yaml_file(self.include_yaml, HeaderFile, None)
+            queue.extend(t.name for t in header_file.all_types())
+        else:
+            queue.extend(
+                t["type_name"]
+                for t in self.include_data.get("types", [])
+                if "type_name" in t
+            )
+
+        def_file = self.libc_root / "include" / f"{self.name}.def"
+        if def_file.exists():
+            queue.extend(
+                re.findall(
+                    r"llvm-libc-types/([A-Za-z0-9_]+)\.h",
+                    def_file.read_text(encoding="utf-8"),
+                )
+            )
+
+        found: Set[str] = set()
+        seen: Set[str] = set()
+        types_dir = self.libc_root / "include" / "llvm-libc-types"
+        while queue:
+            type_name = queue.pop()
+            if type_name in seen:
+                continue
+            seen.add(type_name)
+
+            type_path = types_dir / f"{type_name}.h"
+            if type_name in COMPILER_HEADER_TYPES or type_path.exists():
+                found.add(type_name)
+            if type_path.exists():
+                queue.extend(
+                    re.findall(
+                        r'#include\s+"(?:.*/)?([A-Za-z0-9_]+)\.h"',
+                        type_path.read_text(encoding="utf-8"),
+                    )
+                )
+        typedef_re = re.compile(
+            r"^\s*typedef\b[^;{]*?\b([A-Za-z_][A-Za-z0-9_]*)\s*;", re.MULTILINE
+        )
+        for mf in self.__get_macro_files():
+            found.update(typedef_re.findall(mf.read_text(encoding="utf-8")))
+        return found
+
+    def implements_type(self, t_name: str) -> bool:
+        if not hasattr(self, "_exposed_types"):
+            self._exposed_types = self._load_exposed_types()
+        return (
+            t_name in self._exposed_types
+            or t_name.replace(" ", "_") in self._exposed_types
+        )
+
+    def implements_object(self, o_name: str) -> bool:
+        if not any(
+            o.get("object_name") == o_name for o in self.include_data.get("objects", [])
+        ):
+            return False
+        all_syms, by_stem = _load_implemented_functions(self.libc_root)
+        return o_name in by_stem.get(self.stem, set()) or o_name in all_syms
 
     def __get_macro_files(self) -> Generator[Path, None, None]:
         """
@@ -113,4 +300,106 @@ class Header:
         libc/include/llvm-libc-macros/sys-mman-macros.h
         """
         stem = self.stem.replace("/", "-")
-        return self.macros_dir.glob(f"**/{stem}-macros.h")
+        yield from self.macros_dir.glob(f"**/{stem}-macros.h")
+        def_file = self.libc_root / "include" / f"{self.name}.def"
+        if def_file.exists():
+            for rel in re.findall(
+                r'#include\s+"(?:.*/)?llvm-libc-macros/([^"]+)"',
+                def_file.read_text(encoding="utf-8"),
+            ):
+                macro_path = self.macros_dir / rel
+                if macro_path.exists():
+                    yield macro_path
+
+    def evaluate_family(self, fam_name: str, fam_data: Dict) -> Dict:
+        variants = fam_data.get("variants") or {}
+        accuracy = fam_data.get("accuracy") or {}
+        results = {}
+        implemented_count = 0
+        for prec, sym in variants.items():
+            impl = bool(sym) and self.implements_fn(sym)
+            if impl:
+                implemented_count += 1
+            results[prec] = {
+                "symbol": sym or "",
+                "implemented": impl,
+                "accuracy": accuracy.get(prec, ""),
+            }
+        return {
+            "name": fam_name,
+            "implemented": implemented_count > 0,
+            "variants": results,
+            "implemented_count": implemented_count,
+            "total_variants": len(variants),
+        }
+
+    def get_summary_stats(self, api: Optional[Dict] = None) -> Dict:
+        api = api if api is not None else self.api
+        families = api.get("families") or {}
+        fam_eval = {
+            fn: self.evaluate_family(fn, fd or {}) for fn, fd in families.items()
+        }
+        precisions = []
+        for col in api.get("family-columns") or []:
+            vals = [
+                r["variants"][col["key"]]["implemented"]
+                for r in fam_eval.values()
+                if col["key"] in r["variants"]
+            ]
+            if vals:
+                precisions.append(
+                    {"key": col["key"], "label": col["label"], **_stat(vals)}
+                )
+
+        all_items: List[Tuple[Dict, bool]] = [
+            (fd or {}, fam_eval[n]["implemented"]) for n, fd in families.items()
+        ]
+        counts = {"families": _stat([i for _, i in all_items])}
+        for key, sec_name, check_fn in (
+            ("raw_functions", "functions", self.implements_fn),
+            ("macros", "macros", self.implements_macro),
+            ("types", "types", self.implements_type),
+            ("objects", "objects", self.implements_object),
+        ):
+            pairs = [
+                (it or {}, check_fn(n)) for n, it in (api.get(sec_name) or {}).items()
+            ]
+            counts[key] = _stat([i for _, i in pairs])
+            all_items.extend(pairs)
+
+        std = api.get("standard", "")
+        removed = ("removed-in-posix-2024", "removed-in-posix-2008")
+        return {
+            "header": self.name,
+            "standard": std,
+            "posix": api.get("posix", ""),
+            "removed_posix": not std
+            and not api.get("posix")
+            and bool(all_items)
+            and all(any(k in it for k in removed) for it, _ in all_items),
+            "overall": _stat([i for _, i in all_items]),
+            "functions": {
+                "total": counts["families"]["total"] + counts["raw_functions"]["total"],
+                "implemented": counts["families"]["implemented"]
+                + counts["raw_functions"]["implemented"],
+            },
+            **counts,
+            "c23": _stat(
+                [
+                    i
+                    for it, i in all_items
+                    if std == "c23"
+                    and _C_SEC_RE.match(str(it.get("c-definition") or ""))
+                ]
+            ),
+            "tr18037": _stat(
+                [
+                    i
+                    for it, i in all_items
+                    if std == "iso-tr-18037"
+                    and str(it.get("c-definition") or "").startswith("TR 18037")
+                ]
+            ),
+            "posix_spec": _stat([i for it, i in all_items if "in-latest-posix" in it]),
+            "precisions": precisions,
+        }

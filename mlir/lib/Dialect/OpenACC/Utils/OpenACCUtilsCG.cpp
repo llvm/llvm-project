@@ -699,6 +699,9 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
   case DataClause::acc_detach:
     flags = flags | MapFlags::detach;
     break;
+  case DataClause::acc_declare_link:
+    flags = flags | MapFlags::link;
+    break;
   default:
     break;
   }

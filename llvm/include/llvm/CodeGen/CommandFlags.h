@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_COMMANDFLAGS_H
 #define LLVM_CODEGEN_COMMANDFLAGS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -30,6 +31,10 @@ class AttrBuilder;
 class Function;
 class Triple;
 class TargetMachine;
+
+namespace cl {
+class LibraryOptions;
+}
 
 namespace codegen {
 
@@ -105,8 +110,6 @@ LLVM_ABI bool getUniqueBasicBlockSectionNames();
 
 LLVM_ABI bool getSeparateNamedSections();
 
-LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
-
 LLVM_ABI llvm::VectorLibrary getVectorLibrary();
 
 LLVM_ABI bool getEnableStackSizeSection();
@@ -143,6 +146,10 @@ struct RegisterCodeGenFlags {
   LLVM_ABI RegisterCodeGenFlags();
 };
 
+/// The options that a tool reading getTargetOptions passes to
+/// cl::parseCommandLineOptions.
+LLVM_ABI ArrayRef<const cl::LibraryOptions *> getToolOptions();
+
 /// Tools that support subtarget tuning should create this object with static
 /// storage to register the -mtune command line option.
 struct RegisterMTuneFlag {
@@ -161,13 +168,14 @@ LLVM_ABI llvm::BasicBlockSection
 getBBSectionsMode(llvm::TargetOptions &Options);
 
 /// Common utility function tightly tied to the options listed here. Initializes
-/// a TargetOptions object with CodeGen flags and returns it.
+/// a TargetOptions object with CodeGen options and returns it.
 /// \p TheTriple is used to determine the default value for options if
 ///    options are not explicitly specified. If those triple dependant options
 ///    value do not have effect for your component, a default Triple() could be
 ///    passed in.
 LLVM_ABI TargetOptions
-InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
+getTargetOptions(const cl::LibraryOptionsContext &LibraryOptions,
+                 const llvm::Triple &TheTriple);
 
 LLVM_ABI std::string getCPUStr();
 

@@ -17,8 +17,6 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
-#include "llvm/FuzzMutate/Operations.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -26,7 +24,6 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
@@ -126,7 +123,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   // Created after the targets register their library options.
   static cl::LibraryOptionsContext LibraryOptions;
   handleExecNameEncodedBEOpts(LibraryOptions, ExecName);
-  parseFuzzerCLOpts(LibraryOptions, *argc, *argv);
+  parseFuzzerCLOpts(LibraryOptions, codegen::getToolOptions(), *argc, *argv);
 
   if (TargetTriple.empty()) {
     errs() << ExecName << ": -mtriple must be specified\n";

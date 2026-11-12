@@ -1013,7 +1013,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm FMAX_ZPZI    : sve_fp_2op_i_p_zds_hfd<"FMAX_ZPmI", sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmax_p>;
   defm FMIN_ZPZI    : sve_fp_2op_i_p_zds_hfd<"FMIN_ZPmI", sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmin_p>;
 
-  let Predicates = [HasSVE, UseExperimentalZeroingPseudos] in {
+  let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
     defm FADD_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FADD_ZPmI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fadd>;
     defm FSUB_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FSUB_ZPmI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fsub>;
     defm FMUL_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FMUL_ZPmI", sve_fpimm_half_two, fpimm_half, fpimm_two, int_aarch64_sve_fmul>;
@@ -1440,6 +1440,10 @@ let Predicates = [HasSVE_or_SME] in {
   defm : sve_ld1rq_duplane_pat<nxv8i16, v8i16, AArch64duplane128, LD1RQ_H_IMM, PTRUE_H, LD1RQ_H, am_sve_regreg_lsl1>;
   defm : sve_ld1rq_duplane_pat<nxv4i32, v4i32, AArch64duplane128, LD1RQ_W_IMM, PTRUE_S, LD1RQ_W, am_sve_regreg_lsl2>;
   defm : sve_ld1rq_duplane_pat<nxv2i64, v2i64, AArch64duplane128, LD1RQ_D_IMM, PTRUE_D, LD1RQ_D, am_sve_regreg_lsl3>;
+  defm : sve_ld1rq_duplane_pat<nxv8f16, v8f16, AArch64duplane128, LD1RQ_H_IMM, PTRUE_H, LD1RQ_H, am_sve_regreg_lsl1>;
+  defm : sve_ld1rq_duplane_pat<nxv8bf16, v8bf16, AArch64duplane128, LD1RQ_H_IMM, PTRUE_H, LD1RQ_H, am_sve_regreg_lsl1>;
+  defm : sve_ld1rq_duplane_pat<nxv4f32, v4f32, AArch64duplane128, LD1RQ_W_IMM, PTRUE_S, LD1RQ_W, am_sve_regreg_lsl2>;
+  defm : sve_ld1rq_duplane_pat<nxv2f64, v2f64, AArch64duplane128, LD1RQ_D_IMM, PTRUE_D, LD1RQ_D, am_sve_regreg_lsl3>;
 
   // continuous load with reg+reg addressing.
   defm LD1B    : sve_mem_cld_ss<0b0000, "ld1b",  Z_b, ZPR8,  GPR64NoXZRshifted8>;

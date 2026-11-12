@@ -88,6 +88,21 @@ entry:
 }
 
 ; CHECK: OpFunction
+; CHECK: %[[#A5:]] = OpFunctionParameter %[[#Int]]
+; CHECK: %[[#B5:]] = OpFunctionParameter %[[#Int]]
+; CHECK: %[[#Res5:]] = OpISub %[[#Int]] %[[#A5]] %[[#B5]]
+; CHECK: %[[#CmpAB5:]] = OpSLessThan %[[#Bool]] %[[#A5]] %[[#B5]]
+; CHECK: %[[#ResLt05:]] = OpSLessThan %[[#Bool]] %[[#Res5]] %[[#NullInt]]
+; CHECK: %[[#Overflow5:]] = OpLogicalNotEqual %[[#Bool]] %[[#CmpAB5]] %[[#ResLt05]]
+; CHECK: OpReturnValue %[[#Overflow5]]
+define spir_func i1 @test_ssub_overflow_flag_only(i32 %a, i32 %b) {
+entry:
+  %res = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)
+  %ofl = extractvalue { i32, i1 } %res, 1
+  ret i1 %ofl
+}
+
+; CHECK: OpFunction
 ; CHECK: %[[#AR:]] = OpFunctionParameter %[[#Int]]
 ; CHECK: %[[#BR:]] = OpFunctionParameter %[[#Int]]
 ; CHECK: %[[#ResR:]] = OpIAdd %[[#Int]] %[[#AR]] %[[#BR]]

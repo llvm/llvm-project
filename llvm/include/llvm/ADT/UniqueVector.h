@@ -9,6 +9,7 @@
 #ifndef LLVM_ADT_UNIQUEVECTOR_H
 #define LLVM_ADT_UNIQUEVECTOR_H
 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <map>
@@ -21,7 +22,7 @@ namespace llvm {
 /// unique entry that is added.  T is the type of entries in the vector. This
 /// class should have an implementation of operator== and of operator<.
 /// Entries can be fetched using operator[] with the entry ID.
-template<class T> class UniqueVector {
+template <class T> class LLVM_ATTRIBUTE_WARN_UNUSED UniqueVector {
 public:
   using VectorType = typename std::vector<T>;
   using iterator = typename VectorType::iterator;

@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_STATPART_TRANSFORM_REDUCE_H
 #define _LIBCPP___PSTL_BACKENDS_STATPART_TRANSFORM_REDUCE_H
 
+#include <__assert>
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__execution/is_execution_policy.h>

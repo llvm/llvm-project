@@ -361,8 +361,9 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorIdEXT(
     uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder) {
-  assert((NumElems < 2 || NumElems > 16 ||
-          (NumElems != 3 && NumElems != 4 && NumElems != 8)) &&
+  assert(NumElems != 2 && NumElems != 3 && NumElems != 4 &&
+         (!MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>().isKernel() ||
+          (NumElems != 8 && NumElems != 16)) &&
          "SPIR-V OpTypeVectorIdExt should only be used for extended vectors");
   return getOpTypeVectorImpl(NumElems, ElemType, MIRBuilder, true);
 }
@@ -1260,7 +1261,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       AccQual, ExplicitLayoutRequired, EmitIR);
     unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
     const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
-    if (isLongVectorEXT(Ty) &&
+    if (isLongVectorEXT(Ty, STI.isKernel()) &&
         STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
       return getOpTypeVectorIdEXT(NumElts, El, MIRBuilder);
     return getOpTypeVector(NumElts, El, MIRBuilder);
@@ -2202,6 +2203,7 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
   case SPIRV::OpTypeFloat:
     return &SPIRV::fIDRegClass;
   case SPIRV::OpTypePointer:
+  case SPIRV::OpTypeUntypedPointerKHR:
     return &SPIRV::pIDRegClass;
   case SPIRV::OpTypeVector:
   case SPIRV::OpTypeVectorIdEXT: {
@@ -2209,7 +2211,7 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
     unsigned ElemOpcode = ElemType ? ElemType->getOpcode() : 0;
     if (ElemOpcode == SPIRV::OpTypeFloat)
       return &SPIRV::vfIDRegClass;
-    if (ElemOpcode == SPIRV::OpTypePointer)
+    if (ElemType && ElemType.isPointer())
       return &SPIRV::vpIDRegClass;
     return &SPIRV::viIDRegClass;
   }
