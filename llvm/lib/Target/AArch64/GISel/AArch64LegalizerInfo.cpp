@@ -28,6 +28,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/MathExtras.h"
 #include <initializer_list>
 
