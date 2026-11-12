@@ -255,15 +255,10 @@ define <2 x i4> @vec_with_2elts_128bits_i4(ptr align 16 dereferenceable(16) %p) 
 ; Shrinking this to <9 x double> would change the legalized type.
 
 define <8 x double> @load_v16f64(ptr %p) {
-; SSE-LABEL: @load_v16f64(
-; SSE-NEXT:    [[TMP1:%.*]] = load <10 x double>, ptr [[P:%.*]], align 512
-; SSE-NEXT:    [[S:%.*]] = shufflevector <10 x double> [[TMP1]], <10 x double> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
-; SSE-NEXT:    ret <8 x double> [[S]]
-;
-; AVX-LABEL: @load_v16f64(
-; AVX-NEXT:    [[TMP1:%.*]] = load <12 x double>, ptr [[P:%.*]], align 512
-; AVX-NEXT:    [[S:%.*]] = shufflevector <12 x double> [[TMP1]], <12 x double> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
-; AVX-NEXT:    ret <8 x double> [[S]]
+; CHECK-LABEL: @load_v16f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
+; CHECK-NEXT:    [[S:%.*]] = load <8 x double>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    ret <8 x double> [[S]]
 ;
   %l = load <16 x double>, ptr %p, align 512
   %s = shufflevector <16 x double> %l, <16 x double> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
