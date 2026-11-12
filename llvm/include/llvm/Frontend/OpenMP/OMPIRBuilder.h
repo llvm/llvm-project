@@ -3011,6 +3011,10 @@ public:
     bool HasMapper = false;
     /// The total number of pointers passed to the runtime library.
     unsigned NumberOfPtrs = 0u;
+    /// If the offloading arrays contain dynamic segments, the total number of
+    /// pointers as an i64 value. NumberOfPtrs then counts only the static
+    /// entries, which come first.
+    Value *RuntimeNumberOfPtrs = nullptr;
 
     bool EmitDebug = false;
 
@@ -3027,12 +3031,14 @@ public:
       RTArgs = TargetDataRTArgs();
       HasMapper = false;
       NumberOfPtrs = 0u;
+      RuntimeNumberOfPtrs = nullptr;
     }
     /// Return true if the current target data information has valid arrays.
     bool isValid() {
       return RTArgs.BasePointersArray && RTArgs.PointersArray &&
              RTArgs.SizesArray && RTArgs.MapTypesArray &&
-             (!HasMapper || RTArgs.MappersArray) && NumberOfPtrs;
+             (!HasMapper || RTArgs.MappersArray) &&
+             (NumberOfPtrs || RuntimeNumberOfPtrs);
     }
     bool requiresDevicePointerInfo() { return RequiresDevicePointerInfo; }
     bool separateBeginEndCalls() { return SeparateBeginEndCalls; }
@@ -3089,6 +3095,33 @@ public:
     MapHasAttachPtrArrayTy HasAttachPtr;
     StructNonContiguousInfo NonContigInfo;
 
+    /// A run of map entries whose number is only known at run time, such as
+    /// the entries that an iterator modifier expands a list item into. The
+    /// entries of all segments are placed after the static entries above, so
+    /// they must not be MEMBER_OF another entry.
+    struct DynamicSegment {
+      struct Entry {
+        Value *BasePointer;
+        Value *Pointer;
+        Value *Size;
+      };
+      /// Number of entries in the segment, as a non-negative i64 value.
+      Value *Count = nullptr;
+      /// Emits the entry with the given i64 index in [0, Count) at the
+      /// insertion point of the builder, which is inside a loop over the
+      /// segment. It is called after the map information has been generated,
+      /// so it must not refer to state that does not outlive that.
+      std::function<Expected<Entry>(IRBuilderBase &, Value *Index)> GenEntry;
+      /// Map type of every entry in the segment.
+      omp::OpenMPOffloadMappingFlags Type =
+          omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+      /// User-defined mapper for every entry in the segment, if any.
+      Function *Mapper = nullptr;
+      /// Map name of every entry in the segment, if any.
+      Constant *Name = nullptr;
+    };
+    SmallVector<DynamicSegment, 0> DynamicSegments;
+
     /// Append arrays in \a CurInfo.
     void append(MapInfosTy &CurInfo) {
       BasePointers.append(CurInfo.BasePointers.begin(),
@@ -3109,6 +3142,8 @@ public:
                                   CurInfo.NonContigInfo.Counts.end());
       NonContigInfo.Strides.append(CurInfo.NonContigInfo.Strides.begin(),
                                    CurInfo.NonContigInfo.Strides.end());
+      DynamicSegments.append(CurInfo.DynamicSegments.begin(),
+                             CurInfo.DynamicSegments.end());
     }
   };
   using MapInfosOrErrorTy = Expected<MapInfosTy &>;
@@ -3188,6 +3223,14 @@ public:
   /// return nullptr by reference. Accepts a reference to a MapInfosTy object
   /// that contains information generated for mappable clauses,
   /// including base pointers, pointers, sizes, map types, user-defined mappers.
+  ///
+  /// If \p CombinedInfo has dynamic segments, the arrays are sized at run time
+  /// and allocated at \p CodeGenIP, so the caller must release them after the
+  /// runtime call, e.g. with stacksave/stackrestore. The entries of the
+  /// segments are stored in loops, so code generation continues at the
+  /// insertion point of Builder, which is in a new block. This is only
+  /// supported for contiguous entries that do not need device pointer
+  /// information, and the arrays must not be used for the end call of a region.
   LLVM_ABI Error emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
       TargetDataInfo &Info, CustomMapperCallbackTy CustomMapperCB,

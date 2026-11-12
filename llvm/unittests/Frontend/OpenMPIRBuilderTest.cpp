@@ -6328,6 +6328,281 @@ TEST_F(OpenMPIRBuilderTest, TargetExitData) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+// Return the values stored into the offloading array \p Array, in layout order.
+static SmallVector<Value *> getStoredValues(Function &F, Value *Array) {
+  SmallVector<Value *> Values;
+  for (Instruction &I : instructions(F))
+    if (auto *SI = dyn_cast<StoreInst>(&I))
+      if (SI->getPointerOperand()->stripInBoundsOffsets() == Array)
+        Values.push_back(SI->getValueOperand());
+  return Values;
+}
+
+// Return the index that \p V is stored at in an offloading array.
+static Value *getStoreIndex(Function &F, Value *Array, Value *V) {
+  for (Instruction &I : instructions(F))
+    if (auto *SI = dyn_cast<StoreInst>(&I))
+      if (SI->getValueOperand() == V &&
+          SI->getPointerOperand()->stripInBoundsOffsets() == Array)
+        return cast<GetElementPtrInst>(SI->getPointerOperand())->getOperand(1);
+  return nullptr;
+}
+
+// Return the value stored at index \p Idx of an offloading array.
+static Value *getStoredValueAt(Function &F, Value *Array, Value *Idx) {
+  for (Instruction &I : instructions(F))
+    if (auto *SI = dyn_cast<StoreInst>(&I))
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(SI->getPointerOperand()))
+        if (GEP->getPointerOperand() == Array && GEP->getOperand(1) == Idx)
+          return SI->getValueOperand();
+  return nullptr;
+}
+
+TEST_F(OpenMPIRBuilderTest, TargetDataDynamicMapSegments) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  using MapInfosTy = OpenMPIRBuilder::MapInfosTy;
+  using EntryTy = MapInfosTy::DynamicSegment::Entry;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  InsertPointTy AllocaIP(F->getEntryBlock().getFirstInsertionPt());
+
+  AllocaInst *Scalar = Builder.CreateAlloca(Builder.getInt32Ty());
+  AllocaInst *IntArray =
+      Builder.CreateAlloca(Builder.getInt32Ty(), Builder.getInt64(16));
+  AllocaInst *LongArray =
+      Builder.CreateAlloca(Builder.getInt64Ty(), Builder.getInt64(16));
+  Value *Count = Builder.CreateZExt(F->getArg(0), Builder.getInt64Ty());
+  Function *Mapper = Function::Create(
+      FunctionType::get(Builder.getVoidTy(), /*isVarArg=*/false),
+      GlobalValue::ExternalLinkage, "mapper", M.get());
+  uint32_t StrSize;
+  Constant *ScalarName = OMPBuilder.getOrCreateSrcLocStr("scalar", StrSize);
+  Constant *ArrayName = OMPBuilder.getOrCreateSrcLocStr("array", StrSize);
+
+  // Map the elements of IntArray and LongArray one by one.
+  auto GenIntEntry = [&](IRBuilderBase &B, Value *Index) -> Expected<EntryTy> {
+    Value *Ptr = B.CreateInBoundsGEP(B.getInt32Ty(), IntArray, Index);
+    return EntryTy{IntArray, Ptr, B.getInt64(4)};
+  };
+  auto GenLongEntry = [&](IRBuilderBase &B, Value *Index) -> Expected<EntryTy> {
+    Value *Ptr = B.CreateInBoundsGEP(B.getInt64Ty(), LongArray, Index);
+    return EntryTy{LongArray, Ptr, B.getInt64(8)};
+  };
+
+  OpenMPOffloadMappingFlags To = OpenMPOffloadMappingFlags::OMP_MAP_TO;
+  OpenMPOffloadMappingFlags From = OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+  OpenMPOffloadMappingFlags PresentTo =
+      To | OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+  MapInfosTy CombinedInfo;
+  auto GenMapInfoCB = [&](InsertPointTy CodeGenIP) -> MapInfosTy & {
+    CombinedInfo.BasePointers.push_back(Scalar);
+    CombinedInfo.Pointers.push_back(Scalar);
+    CombinedInfo.DevicePointers.push_back(OpenMPIRBuilder::DeviceInfoTy::None);
+    CombinedInfo.Sizes.push_back(Builder.getInt64(4));
+    CombinedInfo.Types.push_back(To);
+    CombinedInfo.Names.push_back(ScalarName);
+    CombinedInfo.DynamicSegments.push_back(
+        {Count, GenIntEntry, From, /*Mapper=*/nullptr, ArrayName});
+    CombinedInfo.DynamicSegments.push_back({Builder.getInt64(3), GenLongEntry,
+                                            PresentTo, Mapper,
+                                            /*Name=*/nullptr});
+    return CombinedInfo;
+  };
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
+  OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/false,
+                                       /*SeparateBeginEndCalls=*/true);
+
+  RuntimeFunction RTLFunc = OMPRTL___tgt_target_data_update_mapper;
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, AfterIP,
+      OMPBuilder.createTargetData(
+          Loc, AllocaIP, Builder.saveIP(), {}, Builder.getInt64(2),
+          /*IfCond=*/nullptr, Info, GenMapInfoCB, CustomMapperCB, &RTLFunc));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  // The arrays hold the static entry followed by the entries of both
+  // segments: 1 + Count + 3.
+  EXPECT_EQ(Info.NumberOfPtrs, 1u);
+  auto *NumPtrs = dyn_cast_or_null<BinaryOperator>(Info.RuntimeNumberOfPtrs);
+  ASSERT_NE(NumPtrs, nullptr);
+  auto *SecondOffset = dyn_cast<BinaryOperator>(NumPtrs->getOperand(0));
+  ASSERT_NE(SecondOffset, nullptr);
+  EXPECT_EQ(SecondOffset->getOperand(0), Builder.getInt64(1));
+  EXPECT_EQ(SecondOffset->getOperand(1), Count);
+  EXPECT_EQ(NumPtrs->getOperand(1), Builder.getInt64(3));
+
+  CallInst *UpdateCall =
+      findSingleCall(F, OMPRTL___tgt_target_data_update_mapper, OMPBuilder);
+  ASSERT_NE(UpdateCall, nullptr);
+  auto *PointerNum = dyn_cast<TruncInst>(UpdateCall->getArgOperand(2));
+  ASSERT_NE(PointerNum, nullptr);
+  EXPECT_EQ(PointerNum->getOperand(0), NumPtrs);
+
+  // Base pointers, pointers, sizes, map types, map names and mappers are
+  // runtime-sized arrays.
+  SmallVector<AllocaInst *> Arrays;
+  for (unsigned ArgNo = 3; ArgNo <= 8; ++ArgNo) {
+    auto *A = dyn_cast<AllocaInst>(UpdateCall->getArgOperand(ArgNo));
+    ASSERT_NE(A, nullptr);
+    EXPECT_EQ(A->getArraySize(), NumPtrs);
+    Arrays.push_back(A);
+  }
+  AllocaInst *BasePtrs = Arrays[0], *Ptrs = Arrays[1], *Sizes = Arrays[2],
+             *MapTypes = Arrays[3], *MapNames = Arrays[4], *Mappers = Arrays[5];
+
+  // The arrays live from a stacksave before them to a stackrestore right
+  // after the runtime call.
+  auto *Restore = dyn_cast_or_null<IntrinsicInst>(UpdateCall->getNextNode());
+  ASSERT_NE(Restore, nullptr);
+  EXPECT_EQ(Restore->getIntrinsicID(), Intrinsic::stackrestore);
+  auto *Save = dyn_cast<IntrinsicInst>(Restore->getArgOperand(0));
+  ASSERT_NE(Save, nullptr);
+  EXPECT_EQ(Save->getIntrinsicID(), Intrinsic::stacksave);
+  EXPECT_TRUE(Save->comesBefore(BasePtrs));
+
+  auto MapType = [&](OpenMPOffloadMappingFlags Flags) -> Value * {
+    return Builder.getInt64(
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(Flags));
+  };
+  Constant *Null = ConstantPointerNull::get(Builder.getPtrTy());
+  EXPECT_THAT(getStoredValues(*F, BasePtrs),
+              testing::ElementsAre(Scalar, IntArray, LongArray));
+  EXPECT_THAT(
+      getStoredValues(*F, MapTypes),
+      testing::ElementsAre(MapType(To), MapType(From), MapType(PresentTo)));
+  EXPECT_THAT(getStoredValues(*F, MapNames),
+              testing::ElementsAre(ScalarName, ArrayName, Null));
+  EXPECT_THAT(getStoredValues(*F, Mappers),
+              testing::ElementsAre(Null, Null, Mapper));
+
+  // Each segment stores its entries in a loop over the segment, starting after
+  // the entries before it.
+  auto ExpectSegment = [&](OpenMPOffloadMappingFlags Flags, Value *Offset,
+                           Value *TripCount, Value *Base, Value *Size) {
+    auto *Idx = dyn_cast_or_null<BinaryOperator>(
+        getStoreIndex(*F, MapTypes, MapType(Flags)));
+    ASSERT_NE(Idx, nullptr);
+    EXPECT_EQ(Idx->getOpcode(), Instruction::Add);
+    EXPECT_EQ(Idx->getOperand(0), Offset);
+    auto *IV = dyn_cast<PHINode>(Idx->getOperand(1));
+    ASSERT_NE(IV, nullptr);
+    auto CmpIt = find_if(IV->users(), IsaPred<ICmpInst>);
+    ASSERT_TRUE(CmpIt != IV->user_end());
+    EXPECT_EQ(cast<ICmpInst>(*CmpIt)->getOperand(1), TripCount);
+    auto *Ptr =
+        dyn_cast_or_null<GetElementPtrInst>(getStoredValueAt(*F, Ptrs, Idx));
+    ASSERT_NE(Ptr, nullptr);
+    EXPECT_EQ(Ptr->getPointerOperand(), Base);
+    EXPECT_EQ(Ptr->getOperand(1), IV);
+    EXPECT_EQ(getStoredValueAt(*F, Sizes, Idx), Size);
+  };
+  ExpectSegment(From, Builder.getInt64(1), Count, IntArray,
+                Builder.getInt64(4));
+  ExpectSegment(PresentTo, SecondOffset, Builder.getInt64(3), LongArray,
+                Builder.getInt64(8));
+}
+
+TEST_F(OpenMPIRBuilderTest, TargetDataDynamicMapSegmentsWithIf) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  using MapInfosTy = OpenMPIRBuilder::MapInfosTy;
+  using EntryTy = MapInfosTy::DynamicSegment::Entry;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  InsertPointTy AllocaIP(F->getEntryBlock().getFirstInsertionPt());
+
+  AllocaInst *Array =
+      Builder.CreateAlloca(Builder.getInt32Ty(), Builder.getInt64(16));
+  Value *Count = Builder.CreateZExt(F->getArg(0), Builder.getInt64Ty());
+  Value *IfCond = Builder.CreateICmpNE(F->getArg(0), Builder.getInt32(0));
+  auto GenEntry = [&](IRBuilderBase &B, Value *Index) -> Expected<EntryTy> {
+    Value *Ptr = B.CreateInBoundsGEP(B.getInt32Ty(), Array, Index);
+    return EntryTy{Array, Ptr, B.getInt64(4)};
+  };
+  MapInfosTy CombinedInfo;
+  auto GenMapInfoCB = [&](InsertPointTy CodeGenIP) -> MapInfosTy & {
+    CombinedInfo.DynamicSegments.push_back(
+        {Count, GenEntry, OpenMPOffloadMappingFlags::OMP_MAP_TO});
+    return CombinedInfo;
+  };
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
+  OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/false,
+                                       /*SeparateBeginEndCalls=*/true);
+
+  RuntimeFunction RTLFunc = OMPRTL___tgt_target_data_begin_mapper;
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, AfterIP,
+      OMPBuilder.createTargetData(Loc, AllocaIP, Builder.saveIP(), {},
+                                  Builder.getInt64(2), IfCond, Info,
+                                  GenMapInfoCB, CustomMapperCB, &RTLFunc));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  EXPECT_EQ(Info.NumberOfPtrs, 0u);
+  ASSERT_NE(Info.RuntimeNumberOfPtrs, nullptr);
+  CallInst *BeginCall =
+      findSingleCall(F, OMPRTL___tgt_target_data_begin_mapper, OMPBuilder);
+  ASSERT_NE(BeginCall, nullptr);
+  auto *PointerNum = dyn_cast<TruncInst>(BeginCall->getArgOperand(2));
+  ASSERT_NE(PointerNum, nullptr);
+  EXPECT_EQ(PointerNum->getOperand(0), Info.RuntimeNumberOfPtrs);
+  EXPECT_TRUE(isa<AllocaInst>(BeginCall->getArgOperand(3)));
+  // Without names or mappers, those arrays are not passed.
+  EXPECT_TRUE(isa<ConstantPointerNull>(BeginCall->getArgOperand(7)));
+  EXPECT_TRUE(isa<ConstantPointerNull>(BeginCall->getArgOperand(8)));
+
+  // The arrays only live in the then branch of the if clause.
+  auto *Restore = dyn_cast_or_null<IntrinsicInst>(BeginCall->getNextNode());
+  ASSERT_NE(Restore, nullptr);
+  EXPECT_EQ(Restore->getIntrinsicID(), Intrinsic::stackrestore);
+  auto *Save = dyn_cast<IntrinsicInst>(Restore->getArgOperand(0));
+  ASSERT_NE(Save, nullptr);
+  EXPECT_EQ(Save->getParent()->getName(), "omp_if.then");
+  BasicBlock *RestoreSucc = Restore->getParent()->getSingleSuccessor();
+  ASSERT_NE(RestoreSucc, nullptr);
+  EXPECT_EQ(RestoreSucc->getName(), "omp_if.end");
+}
+
+TEST_F(OpenMPIRBuilderTest, TargetDataDynamicMapSegmentError) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  using MapInfosTy = OpenMPIRBuilder::MapInfosTy;
+  using EntryTy = MapInfosTy::DynamicSegment::Entry;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  InsertPointTy AllocaIP(F->getEntryBlock().getFirstInsertionPt());
+
+  auto GenEntry = [](IRBuilderBase &, Value *) -> Expected<EntryTy> {
+    return createStringError("cannot generate map entry");
+  };
+  MapInfosTy CombinedInfo;
+  auto GenMapInfoCB = [&](InsertPointTy CodeGenIP) -> MapInfosTy & {
+    CombinedInfo.DynamicSegments.push_back(
+        {Builder.getInt64(4), GenEntry, OpenMPOffloadMappingFlags::OMP_MAP_TO});
+    return CombinedInfo;
+  };
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
+  OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/false,
+                                       /*SeparateBeginEndCalls=*/true);
+
+  RuntimeFunction RTLFunc = OMPRTL___tgt_target_data_begin_mapper;
+  EXPECT_THAT_EXPECTED(
+      OMPBuilder.createTargetData(
+          Loc, AllocaIP, Builder.saveIP(), {}, Builder.getInt64(2),
+          /*IfCond=*/nullptr, Info, GenMapInfoCB, CustomMapperCB, &RTLFunc),
+      FailedWithMessage("cannot generate map entry"));
+}
+
 TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();

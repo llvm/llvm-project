@@ -9028,6 +9028,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
   auto BeginThenGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                           ArrayRef<BasicBlock *> DeallocBlocks) -> Error {
     MapInfo = &GenMapInfoCB(Builder.saveIP());
+    assert((MapInfo->DynamicSegments.empty() ||
+            (IsStandAlone && !Info.HasNoWait)) &&
+           "dynamic map segments are only supported on standalone constructs "
+           "without nowait");
+    // The offloading arrays of dynamic segments are allocated on the stack at
+    // run time, so release them after the runtime call.
+    Value *StackPtr = MapInfo->DynamicSegments.empty()
+                          ? nullptr
+                          : Builder.CreateStackSave("offload.stack");
     if (Error Err = emitOffloadingArrays(
             AllocaIP, Builder.saveIP(), *MapInfo, Info, CustomMapperCB,
             /*IsNonContiguous=*/true, DeviceAddrCB))
@@ -9037,7 +9046,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     emitOffloadingArraysArgument(Builder, RTArgs, Info);
 
     // Emit the number of elements in the offloading arrays.
-    Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
+    Value *PointerNum = Info.RuntimeNumberOfPtrs
+                            ? Builder.CreateTrunc(Info.RuntimeNumberOfPtrs,
+                                                  Builder.getInt32Ty())
+                            : Builder.getInt32(Info.NumberOfPtrs);
 
     // Source location for the ident struct
     if (!SrcLocInfo) {
@@ -9085,6 +9097,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
       else
         cantFail(emitTargetTask(TaskBodyCB, DeviceID, SrcLocInfo, AllocaIP,
                                 /*Dependencies=*/{}, RTArgs, Info.HasNoWait));
+      if (StackPtr)
+        Builder.CreateStackRestore(StackPtr);
     } else {
       Function *BeginMapperFunc = getOrCreateRuntimeFunctionPtr(
           omp::OMPRTL___tgt_target_data_begin_mapper);
@@ -10255,6 +10269,8 @@ static Error emitTargetCall(
           ArrayRef<BasicBlock *> DeallocBlocks) -> Error {
     Info.HasNoWait = HasNoWait;
     OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(Builder.saveIP());
+    assert(MapInfo.DynamicSegments.empty() &&
+           "dynamic map segments are not supported on target regions");
 
     OpenMPIRBuilder::TargetDataRTArgs RTArgs;
     if (Error Err = OMPBuilder.emitOffloadingArraysAndArgs(
@@ -10551,6 +10567,23 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
   auto Int64Ty = Type::getInt64Ty(M.getContext());
   auto Int64PtrTy = UnqualPtrTy;
 
+  // Runtime-sized arrays are passed as they are.
+  if (Info.RuntimeNumberOfPtrs) {
+    assert(!ForEndCall &&
+           "runtime-sized offloading arrays have no end map types");
+    RTArgs.BasePointersArray = Info.RTArgs.BasePointersArray;
+    RTArgs.PointersArray = Info.RTArgs.PointersArray;
+    RTArgs.SizesArray = Info.RTArgs.SizesArray;
+    RTArgs.MapTypesArray = Info.RTArgs.MapTypesArray;
+    RTArgs.MapNamesArray = Info.EmitDebug
+                               ? Info.RTArgs.MapNamesArray
+                               : ConstantPointerNull::get(VoidPtrPtrTy);
+    RTArgs.MappersArray = Info.HasMapper
+                              ? Info.RTArgs.MappersArray
+                              : ConstantPointerNull::get(VoidPtrPtrTy);
+    return;
+  }
+
   if (!Info.NumberOfPtrs) {
     RTArgs.BasePointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
     RTArgs.PointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
@@ -10803,6 +10836,8 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   MapInfosOrErrorTy Info = GenMapInfoCB(Builder.saveIP(), PtrPHI, BeginIn);
   if (!Info)
     return Info.takeError();
+  assert(Info->DynamicSegments.empty() &&
+         "dynamic map segments are not supported in mappers");
 
   // Call the runtime API __tgt_mapper_num_components to get the number of
   // pre-existing components.
@@ -11074,6 +11109,132 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   return MapperFn;
 }
 
+/// Emit runtime-sized offloading arrays for \p CombinedInfo, which has dynamic
+/// segments. The static entries are stored first, followed by the entries of
+/// each segment, which are generated and stored in a loop over the segment.
+static Error emitDynamicOffloadingArrays(
+    OpenMPIRBuilder &OMPBuilder, OpenMPIRBuilder::InsertPointTy CodeGenIP,
+    OpenMPIRBuilder::MapInfosTy &CombinedInfo,
+    OpenMPIRBuilder::TargetDataInfo &Info,
+    OpenMPIRBuilder::CustomMapperCallbackTy CustomMapperCB) {
+  using MapFlagsTy = std::underlying_type_t<OpenMPOffloadMappingFlags>;
+  assert(none_of(CombinedInfo.Types,
+                 [](OpenMPOffloadMappingFlags Flags) {
+                   return static_cast<MapFlagsTy>(
+                              Flags &
+                              OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG) !=
+                          0;
+                 }) &&
+         "non-contiguous entries are not supported with dynamic segments");
+  assert((!Info.requiresDevicePointerInfo() ||
+          all_of(CombinedInfo.DevicePointers,
+                 [](OpenMPIRBuilder::DeviceInfoTy D) {
+                   return D == OpenMPIRBuilder::DeviceInfoTy::None;
+                 })) &&
+         "device pointers are not supported with dynamic segments");
+
+  IRBuilderBase &Builder = OMPBuilder.Builder;
+  const DataLayout &DL = OMPBuilder.M.getDataLayout();
+  PointerType *PtrTy = Builder.getPtrTy();
+  IntegerType *Int64Ty = Builder.getInt64Ty();
+  unsigned NumStatic = Info.NumberOfPtrs;
+  restoreIPandDebugLoc(Builder, CodeGenIP);
+  DebugLoc ArraysDL = Builder.getCurrentDebugLocation();
+
+  // The entries of each segment start where the previous segment ends.
+  Value *Total = Builder.getInt64(NumStatic);
+  SmallVector<Value *> SegmentOffsets;
+  bool HasNames = !CombinedInfo.Names.empty();
+  for (const OpenMPIRBuilder::MapInfosTy::DynamicSegment &Seg :
+       CombinedInfo.DynamicSegments) {
+    assert(Seg.Count && Seg.Count->getType() == Int64Ty && Seg.GenEntry &&
+           "dynamic segment needs an i64 count and an entry generator");
+    assert(static_cast<MapFlagsTy>(
+               Seg.Type & (OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF |
+                           OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG)) ==
+               0 &&
+           "dynamic segment entries must be standalone and contiguous");
+    SegmentOffsets.push_back(Total);
+    Total = Builder.CreateAdd(Total, Seg.Count, "offload.count");
+    HasNames |= Seg.Name != nullptr;
+    Info.HasMapper |= Seg.Mapper != nullptr;
+  }
+  Info.RuntimeNumberOfPtrs = Total;
+  Info.EmitDebug = HasNames;
+
+  Info.RTArgs.BasePointersArray =
+      Builder.CreateAlloca(PtrTy, Total, ".offload_baseptrs");
+  Info.RTArgs.PointersArray =
+      Builder.CreateAlloca(PtrTy, Total, ".offload_ptrs");
+  Info.RTArgs.SizesArray =
+      Builder.CreateAlloca(Int64Ty, Total, ".offload_sizes");
+  Info.RTArgs.MapTypesArray =
+      Builder.CreateAlloca(Int64Ty, Total, ".offload_maptypes");
+  Info.RTArgs.MappersArray =
+      Builder.CreateAlloca(PtrTy, Total, ".offload_mappers");
+  Info.RTArgs.MapNamesArray =
+      HasNames ? static_cast<Value *>(
+                     Builder.CreateAlloca(PtrTy, Total, ".offload_mapnames"))
+               : ConstantPointerNull::get(PtrTy);
+
+  auto StoreEntry = [&](Value *Idx, Value *BasePtr, Value *Ptr, Value *Size,
+                        OpenMPOffloadMappingFlags MapType, Value *Mapper,
+                        Value *Name) {
+    auto Store = [&](Value *Array, Type *ElemTy, Value *Val) {
+      Value *Addr = Builder.CreateInBoundsGEP(ElemTy, Array, Idx);
+      Builder.CreateAlignedStore(Val, Addr, DL.getPrefTypeAlign(ElemTy));
+    };
+    Store(Info.RTArgs.BasePointersArray, PtrTy, BasePtr);
+    Store(Info.RTArgs.PointersArray, PtrTy, Ptr);
+    Store(Info.RTArgs.SizesArray, Int64Ty,
+          Builder.CreateIntCast(Size, Int64Ty, /*isSigned=*/true));
+    Store(Info.RTArgs.MapTypesArray, Int64Ty,
+          Builder.getInt64(static_cast<MapFlagsTy>(MapType)));
+    Store(Info.RTArgs.MappersArray, PtrTy,
+          Mapper ? Mapper : ConstantPointerNull::get(PtrTy));
+    if (HasNames)
+      Store(Info.RTArgs.MapNamesArray, PtrTy,
+            Name ? Name : ConstantPointerNull::get(PtrTy));
+  };
+
+  for (unsigned I = 0; I < NumStatic; ++I) {
+    Expected<Function *> Mapper = CustomMapperCB(I);
+    if (!Mapper)
+      return Mapper.takeError();
+    StoreEntry(Builder.getInt64(I), CombinedInfo.BasePointers[I],
+               CombinedInfo.Pointers[I], CombinedInfo.Sizes[I],
+               CombinedInfo.Types[I], *Mapper,
+               CombinedInfo.Names.empty() ? nullptr : CombinedInfo.Names[I]);
+  }
+
+  for (unsigned S = 0, E = CombinedInfo.DynamicSegments.size(); S < E; ++S) {
+    OpenMPIRBuilder::MapInfosTy::DynamicSegment &Seg =
+        CombinedInfo.DynamicSegments[S];
+    auto BodyGen = [&](OpenMPIRBuilder::InsertPointTy BodyIP,
+                       Value *Index) -> Error {
+      Builder.restoreIP(BodyIP);
+      Expected<OpenMPIRBuilder::MapInfosTy::DynamicSegment::Entry> Entry =
+          Seg.GenEntry(Builder, Index);
+      if (!Entry)
+        return Entry.takeError();
+      StoreEntry(Builder.CreateAdd(SegmentOffsets[S], Index),
+                 Entry->BasePointer, Entry->Pointer, Entry->Size, Seg.Type,
+                 Seg.Mapper, Seg.Name);
+      return Error::success();
+    };
+    OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+        OMPBuilder.createIteratorLoop(
+            OpenMPIRBuilder::LocationDescription(Builder), Seg.Count, BodyGen,
+            "offload.segment");
+    if (!AfterIP)
+      return AfterIP.takeError();
+    Builder.restoreIP(*AfterIP);
+    // GenEntry may have changed the debug location.
+    Builder.SetCurrentDebugLocation(ArraysDL);
+  }
+  return Error::success();
+}
+
 Error OpenMPIRBuilder::emitOffloadingArrays(
     InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
     TargetDataInfo &Info, CustomMapperCallbackTy CustomMapperCB,
@@ -11083,6 +11244,10 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
   // Reset the array information.
   Info.clearArrayInfo();
   Info.NumberOfPtrs = CombinedInfo.BasePointers.size();
+
+  if (!CombinedInfo.DynamicSegments.empty())
+    return emitDynamicOffloadingArrays(*this, CodeGenIP, CombinedInfo, Info,
+                                       CustomMapperCB);
 
   if (Info.NumberOfPtrs == 0)
     return Error::success();
