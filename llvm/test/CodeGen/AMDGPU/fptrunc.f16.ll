@@ -3398,7 +3398,7 @@ define i32 @fptrunc_f32_to_f16_sext_i32(float %a) #0 {
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-SDAG-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: fptrunc_f32_to_f16_sext_i32:
@@ -3406,7 +3406,7 @@ define i32 @fptrunc_f32_to_f16_sext_i32(float %a) #0 {
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-SDAG-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-TRUE16-LABEL: fptrunc_f32_to_f16_sext_i32:
@@ -3414,7 +3414,7 @@ define i32 @fptrunc_f32_to_f16_sext_i32(float %a) #0 {
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-GISEL-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: fptrunc_f32_to_f16_sext_i32:
@@ -3422,7 +3422,7 @@ define i32 @fptrunc_f32_to_f16_sext_i32(float %a) #0 {
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-GISEL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: fptrunc_f32_to_f16_sext_i32:
@@ -3431,7 +3431,7 @@ define i32 @fptrunc_f32_to_f16_sext_i32(float %a) #0 {
 ; GFX1250-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-SDAG-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1250-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: fptrunc_f32_to_f16_sext_i32:
@@ -3440,7 +3440,7 @@ define i32 @fptrunc_f32_to_f16_sext_i32(float %a) #0 {
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-TRUE16-LABEL: fptrunc_f32_to_f16_sext_i32:
@@ -3449,7 +3449,7 @@ define i32 @fptrunc_f32_to_f16_sext_i32(float %a) #0 {
 ; GFX1250-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-GISEL-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX1250-GISEL-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: fptrunc_f32_to_f16_sext_i32:
@@ -3458,7 +3458,7 @@ define i32 @fptrunc_f32_to_f16_sext_i32(float %a) #0 {
 ; GFX1250-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %r.val = fptrunc float %a to half
   %r.i16 = bitcast half %r.val to i16

@@ -3181,9 +3181,23 @@ def : GCNPat<
   (V_BFE_I32_e64 i32:$src, (i32 0), (i32 8))
 >;
 
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (i32 (DivergentSextInreg<i16> i32:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 16))
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat<
+  (i32 (DivergentSextInreg<i16> i32:$src)),
+  (V_CVT_I32_I16_t16_e64 SRCMODS.NONE,
+    (i16 (EXTRACT_SUBREG VGPR_32:$src, lo16)))
+>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat<
+  (i32 (DivergentSextInreg<i16> i32:$src)),
+  (V_CVT_I32_I16_fake16_e64 VGPR_32:$src)
 >;
 
 def : GCNPat <
@@ -3200,11 +3214,36 @@ def : GCNPat <
     (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8))), sub1)
 >;
 
+let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (i64 (DivergentSextInreg<i16> i64:$src)),
   (REG_SEQUENCE VReg_64,
     (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16)), sub0,
     (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16))), sub1)
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat<
+  (i64 (DivergentSextInreg<i16> i64:$src)),
+  (REG_SEQUENCE VReg_64,
+    (i32 (V_CVT_I32_I16_t16_e64 SRCMODS.NONE,
+      (i16 (EXTRACT_SUBREG
+        (i32 (EXTRACT_SUBREG i64:$src, sub0)), lo16)))), sub0,
+    (i32 (V_ASHRREV_I32_e32 (i32 31),
+      (i32 (V_CVT_I32_I16_t16_e64 SRCMODS.NONE,
+        (i16 (EXTRACT_SUBREG
+          (i32 (EXTRACT_SUBREG i64:$src, sub0)), lo16)))))), sub1)
+>;
+
+let True16Predicate = UseFakeTrue16Insts in
+def : GCNPat<
+  (i64 (DivergentSextInreg<i16> i64:$src)),
+  (REG_SEQUENCE VReg_64,
+    (i32 (V_CVT_I32_I16_fake16_e64
+      (i32 (EXTRACT_SUBREG i64:$src, sub0)))), sub0,
+    (i32 (V_ASHRREV_I32_e32 (i32 31),
+      (i32 (V_CVT_I32_I16_fake16_e64
+        (i32 (EXTRACT_SUBREG i64:$src, sub0)))))), sub1)
 >;
 
 def : GCNPat <

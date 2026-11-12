@@ -90,7 +90,7 @@ define amdgpu_kernel void @sextload_global_i8_to_i64(ptr addrspace(1) %out, ptr 
 ; GFX11-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-REAL16-NEXT:    global_load_d16_i8 v0, v2, s[2:3]
 ; GFX11-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-REAL16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-REAL16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX11-REAL16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -103,7 +103,7 @@ define amdgpu_kernel void @sextload_global_i8_to_i64(ptr addrspace(1) %out, ptr 
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_i8 v0, v2, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX11-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -182,7 +182,7 @@ define amdgpu_kernel void @sextload_global_i16_to_i64(ptr addrspace(1) %out, ptr
 ; GFX11-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-REAL16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
 ; GFX11-REAL16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-REAL16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-REAL16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
 ; GFX11-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-REAL16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX11-REAL16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -195,7 +195,7 @@ define amdgpu_kernel void @sextload_global_i16_to_i64(ptr addrspace(1) %out, ptr
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v2, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX11-FAKE16-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
