@@ -618,10 +618,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
       setOperationAction(ISD::BUILD_VECTOR, {MVT::v4i16, MVT::v8i8}, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
       setOperationAction({ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT},
-                         {MVT::v4i16, MVT::v8i8}, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i32, Custom);
+                         P64VecVTs, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
                          Legal);
@@ -11979,6 +11977,11 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     if (VecVT != MVT::v4i16 && VecVT != MVT::v2i16 && VecVT != MVT::v8i8 &&
         VecVT != MVT::v4i8 && VecVT != MVT::v2i32)
       return SDValue();
+
+    // v2i32 on RV32 lives in a GPR pair; constant index extracts are selected
+    // with EXTRACT_SUBREG.
+    if (!Subtarget.is64Bit() && VecVT == MVT::v2i32)
+      return isa<ConstantSDNode>(Idx) ? Op : SDValue();
 
     if (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8)) {
       auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
