@@ -1,0 +1,240 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+module host_call_targets
+  interface device_generic
+    module procedure device_value
+  end interface
+  interface device_generic_sub
+    module procedure device_sub
+  end interface
+  interface operator(.adddevice.)
+    module procedure device_add
+  end interface
+  abstract interface
+    attributes(device) integer function device_callback(n)
+      integer, value :: n
+    end function
+  end interface
+contains
+  attributes(device) pure integer function device_value(n)
+    integer, value :: n
+    device_value = n + 1
+  end function
+
+  attributes(device) integer function device_add(lhs, rhs)
+    integer, value :: lhs, rhs
+    device_add = lhs + rhs
+  end function
+
+  attributes(device) subroutine device_sub()
+  end subroutine
+
+  integer function host_value(n)
+    integer, value :: n
+    host_value = n + 2
+  end function
+
+  attributes(host,device) integer function both_value(n)
+    integer, value :: n
+    both_value = n + 3
+  end function
+
+  subroutine host_sub()
+  end subroutine
+
+  attributes(host,device) subroutine both_sub()
+  end subroutine
+
+  attributes(global) subroutine kernel()
+    call device_sub()
+  end subroutine
+
+  attributes(grid_global) subroutine grid_kernel()
+    call device_sub()
+  end subroutine
+
+  subroutine accepts_callback(p)
+    procedure(device_callback) :: p
+  end subroutine
+
+  subroutine implicit_host(n)
+    integer, intent(out) :: n
+    !ERROR: 'device_sub', a procedure with the DEVICE attribute, may not be called from host code
+    call device_sub()
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = device_value(1)
+    !ERROR: No specific function of generic 'device_generic' matches the actual arguments
+    n = device_generic(1)
+    !ERROR: No specific subroutine of generic 'device_generic_sub' matches the actual arguments
+    call device_generic_sub()
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = host_value(device_value(1))
+    call host_sub()
+    call both_sub()
+    n = host_value(1) + both_value(1)
+    call kernel<<<1,1>>>()
+    call grid_kernel<<<1,1>>>()
+    call accepts_callback(device_value)
+  end subroutine
+
+  attributes(host) integer function explicit_host(n)
+    integer, value :: n
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    explicit_host = device_value(n)
+  end function
+
+  subroutine host_expressions(n)
+    integer, intent(inout) :: n
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    if (device_value(n) > 0) n = 1
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    do n = 1, device_value(1)
+    end do
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    print *, device_value(n)
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    call kernel<<<device_value(1),1>>>()
+    block
+      !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+      n = device_value(1)
+    end block
+  end subroutine
+
+  subroutine callback_caller(p, n)
+    procedure(device_callback) :: p
+    integer, intent(out) :: n
+    !ERROR: 'p', a procedure with the DEVICE attribute, may not be called from host code
+    n = p(1)
+  end subroutine
+
+  subroutine indirect_caller(n)
+    integer, intent(out) :: n
+    procedure(device_value), pointer :: p
+    p => device_value
+    !ERROR: 'p', a procedure with the DEVICE attribute, may not be called from host code
+    n = p(1)
+    !ERROR: No intrinsic or user-defined .ADDDEVICE. matches operand types INTEGER(4) and INTEGER(4)
+    n = 1 .adddevice. 2
+  end subroutine
+
+  subroutine host_specification(n)
+    integer, intent(in) :: n
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    integer :: local(device_value(n))
+    local = 0
+  end subroutine
+
+  subroutine statement_function_caller(n)
+    integer, intent(out) :: n
+    integer :: local_value, k
+    local_value(k) = device_value(k)
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = local_value(1)
+  end subroutine
+
+  subroutine host_statement_controls(n)
+    integer, intent(inout) :: n
+    character(20) :: buffer
+    write(buffer, *) n
+    read(buffer, *) n
+    print *, n
+    select case (n)
+    case (0)
+      n = 1
+    end select
+    goto 10
+10  continue
+    entry alternate_host_entry(n)
+    call host_sub()
+  end subroutine
+end module
+
+module renamed_host_calls
+  use host_call_targets, only: renamed_value => device_value, renamed_sub => device_sub
+contains
+  subroutine renamed_caller(n)
+    integer, intent(out) :: n
+    !ERROR: 'renamed_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = renamed_value(1)
+    !ERROR: 'renamed_sub', a procedure with the DEVICE attribute, may not be called from host code
+    call renamed_sub()
+  end subroutine
+end module
+
+program host_main
+  use host_call_targets, only: device_value, device_sub
+  integer :: n
+  !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+  n = device_value(1)
+  !ERROR: 'device_sub', a procedure with the DEVICE attribute, may not be called from host code
+  call device_sub()
+contains
+  subroutine internal_host()
+    !ERROR: 'device_sub', a procedure with the DEVICE attribute, may not be called from host code
+    call device_sub()
+  end subroutine
+end program
+
+module host_module_interfaces
+  use host_call_targets, only: device_value
+  interface
+    module subroutine separate_host(n)
+      integer, intent(out) :: n
+    end subroutine
+    attributes(device) module integer function separate_device(n)
+      integer, intent(in) :: n
+    end function
+    attributes(host,device) module integer function separate_both(n)
+      integer, intent(in) :: n
+    end function
+  end interface
+end module
+
+submodule(host_module_interfaces) host_module_implementations
+contains
+  module procedure separate_host
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = device_value(1)
+    !ERROR: 'separate_device', a procedure with the DEVICE attribute, may not be called from host code
+    n = separate_device(1)
+  end procedure
+  module procedure separate_device
+    separate_device = device_value(n)
+  end procedure
+  module procedure separate_both
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
+    separate_both = device_value(n)
+  end procedure
+end submodule
+
+module designator_evaluation
+  abstract interface
+    subroutine callback()
+    end subroutine
+    integer function value_callback()
+    end function
+  end interface
+  type item
+    procedure(callback), pointer, nopass :: action => null()
+    procedure(value_callback), pointer, nopass :: value => null()
+  end type
+contains
+  attributes(device) integer function device_index()
+    device_index = 1
+  end function
+  subroutine host_action()
+  end subroutine
+  integer function host_value()
+    host_value = 1
+  end function
+  subroutine caller(objects, n)
+    type(item) :: objects(2)
+    integer :: n
+    objects(1)%action => host_action
+    objects(1)%value => host_value
+    !ERROR: 'device_index', a procedure with the DEVICE attribute, may not be called from host code
+    call objects(device_index())%action()
+    !ERROR: 'device_index', a procedure with the DEVICE attribute, may not be called from host code
+    n = objects(device_index())%value()
+  end subroutine
+end module

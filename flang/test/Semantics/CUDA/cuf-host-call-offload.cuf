@@ -1,0 +1,126 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenacc -fdoconcurrent-offload
+
+module host_offload_calls
+contains
+  attributes(device) pure integer function device_value(n)
+    integer, value :: n
+    device_value = n + 1
+  end function
+
+  subroutine cuf_caller(n)
+    integer, intent(out) :: n
+    integer, device :: a(4)
+    integer :: i
+    !$cuf kernel do
+    do i = 1, 4
+      a(i) = device_value(i)
+    end do
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = device_value(1)
+  end subroutine
+
+  subroutine cuf_controls(a, n)
+    integer :: n, i, j
+    integer, device :: a(n,n)
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    !$cuf kernel do <<<device_value(n),128>>>
+    do i = 1, n
+      a(i,1) = device_value(i)
+    end do
+    !$cuf kernel do(2) <<<*,*>>>
+    do j = 1, n
+      !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+      do i = 1, device_value(n)
+        a(i,j) = device_value(i)
+      end do
+    end do
+    !$cuf kernel do(1) <<<*,*>>>
+    do j = 1, n
+      do i = 1, device_value(n)
+        a(i,j) = device_value(i)
+      end do
+    end do
+  end subroutine
+
+  subroutine cuf_concurrent_caller(a, n)
+    integer :: n, i, j, k
+    integer, device :: a(n,n)
+    !$cuf kernel do(2) <<<*,*>>>
+    do concurrent (i = 1:n, j = 1:n)
+      do k = 1, device_value(n)
+        a(i,j) = device_value(k)
+      end do
+    end do
+  end subroutine
+
+  subroutine acc_caller(a, n)
+    integer :: a(4)
+    integer, intent(out) :: n
+    integer :: i
+    !$acc parallel loop copy(a)
+    do i = 1, 4
+      a(i) = device_value(i)
+    end do
+    !$acc serial copy(a)
+      a(1) = device_value(1)
+    !$acc end serial
+    !$acc kernels copy(a)
+      a(2) = device_value(2)
+    !$acc end kernels
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    !$acc parallel if(device_value(n) > 0) copy(a)
+      a(3) = device_value(3)
+    !$acc end parallel
+    !$acc data copy(a)
+      !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+      n = device_value(1)
+    !$acc end data
+    !$acc host_data use_device(a)
+      !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+      n = device_value(1)
+    !$acc end host_data
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = device_value(1)
+  end subroutine
+
+  subroutine acc_loop_controls(a, n)
+    integer :: n, i, j, a(n,n)
+    !$acc parallel loop collapse(2) copy(a)
+    do j = 1, device_value(n)
+      do i = 1, device_value(n)
+        a(i,j) = device_value(i)
+      end do
+    end do
+    !$acc parallel copy(a)
+    !$acc loop seq
+    do i = 1, device_value(n)
+      a(i,1) = device_value(i)
+    end do
+    !$acc end parallel
+  end subroutine
+
+  subroutine acc_routine_caller(n)
+    !$acc routine seq
+    integer :: n
+    n = device_value(n)
+  end subroutine
+
+  subroutine acc_nohost_caller(n)
+    !$acc routine seq nohost
+    integer :: n
+    n = device_value(n)
+  end subroutine
+
+  subroutine concurrent_caller(a, n)
+    integer :: a(4), n, i
+    do concurrent (i = 1:4, device_value(i) > 0)
+      a(i) = device_value(i)
+    end do
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    n = device_value(1)
+    !ERROR: 'device_value', a procedure with the DEVICE attribute, may not be called from host code
+    do concurrent (i = 1:device_value(n))
+      a(i) = device_value(i)
+    end do
+  end subroutine
+end module
