@@ -80,6 +80,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <utility>
 
@@ -1074,6 +1075,19 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
         Known.Zero.setHighBits(
             (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
       }
+    }
+    if (Pred == ICmpInst::ICMP_SGT) {
+      std::function<bool(const Value *, unsigned)> IsOperandOfOrTree =
+          [&](const Value *Tree, unsigned MaxDepth) -> bool {
+        Value *X, *Y;
+        if (MaxDepth == 0 || !match(Tree, m_Or(m_Value(X), m_Value(Y))))
+          return false;
+        return X == V || Y == V || IsOperandOfOrTree(X, MaxDepth - 1) ||
+               IsOperandOfOrTree(Y, MaxDepth - 1);
+      };
+      // (X | Y | ...) s> -1 -> each operand s> -1
+      if (C->isAllOnes() && IsOperandOfOrTree(LHS, MaxAnalysisRecursionDepth))
+        Known.makeNonNegative();
     }
   } break;
   }
@@ -11194,6 +11208,22 @@ void llvm::findValuesAffectedByCondition(
                 match(A, m_NUWAdd(m_Value(X), m_Value(Y)))) {
               AddAffected(X);
               AddAffected(Y);
+            }
+          }
+          // (X | Y | ...) s> -1 -> each operand s> -1.
+          if (ICmpInst::isSigned(Pred) && match(B, m_AllOnes())) {
+            SmallVector<Value *, 4> OrOps;
+            OrOps.push_back(A);
+            unsigned Budget = MaxAnalysisRecursionDepth;
+            while (!OrOps.empty() && Budget--) {
+              Value *Op = OrOps.pop_back_val();
+              Value *Y;
+              if (match(Op, m_Or(m_Value(X), m_Value(Y)))) {
+                AddAffected(X);
+                AddAffected(Y);
+                OrOps.push_back(X);
+                OrOps.push_back(Y);
+              }
             }
           }
         }
