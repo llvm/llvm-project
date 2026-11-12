@@ -181,6 +181,34 @@ LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
 
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
+LIBC_INLINE_VAR constexpr double PI = 0x1.921fb54442d18p1;
+LIBC_INLINE_VAR constexpr double PI_LO = 0x1.1a62633145c07p-53;
+LIBC_INLINE_VAR constexpr double PI_OVER_4 = 0x1.921fb54442d18p-1;
+LIBC_INLINE_VAR constexpr double PI_OVER_2 = 0x1.921fb54442d18p0;
+LIBC_INLINE_VAR constexpr double THREE_PI_OVER_4 = 0x1.2d97c7f3321d2p+1;
+
+// Adjustment for constant term:
+//   CONST_ADJ[x_sign][y_sign][recip]
+LIBC_INLINE_VAR constexpr fputil::DoubleDouble CONST_ADJ[2][2][2] = {
+    {{{0.0, 0.0}, {-PI_LO / 2, -PI_OVER_2}},
+     {{-0.0, -0.0}, {-PI_LO / 2, -PI_OVER_2}}},
+    {{{-PI_LO, -PI}, {PI_LO / 2, PI_OVER_2}},
+     {{-PI_LO, -PI}, {PI_LO / 2, PI_OVER_2}}}};
+
+// Exceptional cases:
+//   EXCEPT[y_except][x_except][x_is_neg]
+// with x_except & y_except:
+//   0: zero
+//   1: finite, non-zero
+//   2: infinity
+LIBC_INLINE_VAR constexpr double EXCEPTS[3][3][2] = {
+    {{0.0, PI}, {0.0, PI}, {0.0, PI}},
+    {{PI_OVER_2, PI_OVER_2}, {0.0, 0.0}, {0.0, PI}},
+    {{PI_OVER_2, PI_OVER_2},
+     {PI_OVER_2, PI_OVER_2},
+     {PI_OVER_4, THREE_PI_OVER_4}},
+};
+
 } // namespace atan2f_internal
 
 // There are several range reduction steps we can take for atan2(y, x) as
@@ -244,18 +272,6 @@ LIBC_INLINE float atan2f(float y, float x) {
   using namespace atan_internal;
   using FPBits = typename fputil::FPBits<float>;
   constexpr double IS_NEG[2] = {1.0, -1.0};
-  constexpr double PI = 0x1.921fb54442d18p1;
-  constexpr double PI_LO = 0x1.1a62633145c07p-53;
-  constexpr double PI_OVER_4 = 0x1.921fb54442d18p-1;
-  constexpr double PI_OVER_2 = 0x1.921fb54442d18p0;
-  constexpr double THREE_PI_OVER_4 = 0x1.2d97c7f3321d2p+1;
-  // Adjustment for constant term:
-  //   CONST_ADJ[x_sign][y_sign][recip]
-  constexpr fputil::DoubleDouble CONST_ADJ[2][2][2] = {
-      {{{0.0, 0.0}, {-PI_LO / 2, -PI_OVER_2}},
-       {{-0.0, -0.0}, {-PI_LO / 2, -PI_OVER_2}}},
-      {{{-PI_LO, -PI}, {PI_LO / 2, PI_OVER_2}},
-       {{-PI_LO, -PI}, {PI_LO / 2, PI_OVER_2}}}};
 
   FPBits x_bits(x), y_bits(y);
   bool x_sign = x_bits.sign().is_neg();
@@ -281,20 +297,6 @@ LIBC_INLINE float atan2f(float y, float x) {
     double y_d = static_cast<double>(y);
     size_t x_except = (x_d == 0.0) ? 0 : (x_abs == 0x7f80'0000 ? 2 : 1);
     size_t y_except = (y_d == 0.0) ? 0 : (y_abs == 0x7f80'0000 ? 2 : 1);
-
-    // Exceptional cases:
-    //   EXCEPT[y_except][x_except][x_is_neg]
-    // with x_except & y_except:
-    //   0: zero
-    //   1: finite, non-zero
-    //   2: infinity
-    constexpr double EXCEPTS[3][3][2] = {
-        {{0.0, PI}, {0.0, PI}, {0.0, PI}},
-        {{PI_OVER_2, PI_OVER_2}, {0.0, 0.0}, {0.0, PI}},
-        {{PI_OVER_2, PI_OVER_2},
-         {PI_OVER_2, PI_OVER_2},
-         {PI_OVER_4, THREE_PI_OVER_4}},
-    };
 
     double r = IS_NEG[y_sign] * EXCEPTS[y_except][x_except][x_sign];
 
