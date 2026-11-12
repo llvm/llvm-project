@@ -4527,10 +4527,11 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
   mlir::ArrayAttr lhsElts = lhsVecAttr.getElts();
   mlir::ArrayAttr rhsElts = rhsVecAttr.getElts();
   uint64_t vecSize = lhsElts.size();
-  SmallVector<mlir::Attribute, 16> elements(vecSize);
-  for (uint64_t i = 0; i < vecSize; i++) {
-    auto lhsFP = mlir::cast<cir::FPAttr>(lhsElts[i]);
-    auto rhsFP = mlir::cast<cir::FPAttr>(rhsElts[i]);
+  SmallVector<mlir::Attribute, 16> elements;
+  elements.reserve(vecSize);
+  for (auto [lhsElt, rhsElt] : llvm::zip_equal(lhsElts, rhsElts)) {
+    auto lhsFP = mlir::cast<cir::FPAttr>(lhsElt);
+    auto rhsFP = mlir::cast<cir::FPAttr>(rhsElt);
 
     llvm::APFloat::cmpResult cr = lhsFP.getValue().compare(rhsFP.getValue());
     bool unordered = cr == llvm::APFloat::cmpUnordered;
@@ -4589,8 +4590,8 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
     // A true result is all bits set (-1 in two's complement), and a false
     // result is all bits clear. For a 1-bit element type these are the same
     // bit pattern as 1 and 0, respectively.
-    elements[i] =
-        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL);
+    elements.push_back(
+        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL));
   }
 
   return cir::ConstVectorAttr::get(
