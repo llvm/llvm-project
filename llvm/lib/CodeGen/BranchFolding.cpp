@@ -2068,9 +2068,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator FIE = FBB->end();
   MachineFunction &MF = *TBB->getParent();
   while (TIB != TIE && FIB != FIE) {
-    // Skip dbg_value instructions. These do not count.
-    TIB = skipDebugInstructionsForward(TIB, TIE, false);
-    FIB = skipDebugInstructionsForward(FIB, FIE, false);
+    // Skip debug instructions and pseudo probes. These do not count; the probes
+    // stay in their blocks.
+    TIB = skipDebugInstructionsForward(TIB, TIE);
+    FIB = skipDebugInstructionsForward(FIB, FIE);
     if (TIB == TIE || FIB == FIE)
       break;
 
@@ -2181,7 +2182,9 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   // If we're hoisting from a single block then just splice. Else step through
   // and merge the debug locations.
   if (TBB == FBB) {
-    MBB->splice(Loc, TBB, TBB->begin(), TIB);
+    for (MachineInstr &MI : make_early_inc_range(make_range(TBB->begin(), TIB)))
+      if (!MI.isPseudoProbe())
+        MI.moveBefore(&*Loc);
   } else {
     // Merge the debug locations, and hoist and kill the debug instructions from
     // both branches. FIXME: We could probably try harder to preserve some debug
@@ -2216,10 +2219,19 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     for (MachineBasicBlock::iterator TI :
          make_early_inc_range(make_range(TBB->begin(), TIB))) {
       // Hoist and kill debug instructions from FBB. After this loop FI points
-      // to the next non-debug instruction to hoist (checked in assert after the
-      // TBB debug instruction handling code).
-      while (FI != FE && FI->isDebugInstr())
-        HoistAndKillDbgInstr(FI++);
+      // to the next non-debug, non-probe instruction to hoist (checked in
+      // assert after the TBB debug instruction handling code). Pseudo probes
+      // stay in FBB.
+      while (FI != FE && (FI->isDebugInstr() || FI->isPseudoProbe())) {
+        if (FI->isPseudoProbe())
+          ++FI;
+        else
+          HoistAndKillDbgInstr(FI++);
+      }
+
+      // Pseudo probes stay in TBB.
+      if (TI->isPseudoProbe())
+        continue;
 
       // Kill debug instructions before moving.
       if (TI->isDebugInstr()) {
@@ -2229,9 +2241,6 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
       // FI and TI now point to identical non-debug instructions.
       assert(FI != FE && "Unexpected end of FBB range");
-      // Pseudo probes are excluded from the range when identifying foldable
-      // instructions, so we don't expect to see one now.
-      assert(!TI->isPseudoProbe() && "Unexpected pseudo probe in range");
       // NOTE: The loop above checks CheckKillDead but we can't do that here as
       // it modifies some kill markers after the check.
       assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
@@ -2249,7 +2258,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     }
   }
 
-  FBB->erase(FBB->begin(), FIB);
+  // Erase the merged instructions from FBB but keep its pseudo probes.
+  for (MachineInstr &MI : make_early_inc_range(make_range(FBB->begin(), FIB)))
+    if (!MI.isPseudoProbe())
+      MI.eraseFromParent();
 
   if (UpdateLiveIns)
     fullyRecomputeLiveIns({TBB, FBB});
