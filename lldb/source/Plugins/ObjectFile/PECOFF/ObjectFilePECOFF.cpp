@@ -779,6 +779,9 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
 }
 
 void ObjectFilePECOFF::ParseSymtab(Symtab &symtab) {
+  // An image read from memory may not hold enough data for llvm::object.
+  if (!CreateBinary())
+    return;
   SectionList *sect_list = GetSectionList();
   rva_symbol_list_t sorted_exports = AppendFromExportTable(sect_list, symtab);
   AppendFromCOFFSymbolTable(sect_list, symtab, sorted_exports);
@@ -954,6 +957,8 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
 
 lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() const {
   addr_t addr = LLDB_INVALID_ADDRESS;
+  if (!m_binary)
+    return addr;
   if (m_binary->is64()) {
     if (m_binary->getTLSDirectory64())
       addr = m_binary->getTLSDirectory64()->AddressOfIndex.value();
@@ -1037,7 +1042,8 @@ size_t ObjectFilePECOFF::GetSectionDataSize(Section *section) {
   // FileAlignment and the actual section size is in VirtualSize
   // (getByteSize()). See the comment on
   // llvm::object::COFFObjectFile::getSectionSize().
-  if (m_binary->getPE32Header() || m_binary->getPE32PlusHeader())
+  if (CreateBinary() &&
+      (m_binary->getPE32Header() || m_binary->getPE32PlusHeader()))
     return std::min(section->GetByteSize(), section->GetFileSize());
   return section->GetFileSize();
 }
