@@ -1926,16 +1926,13 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), Ty);
 
   if (I.isExact()) {
-    // sdiv exact X, 1<<C --> ashr exact X, C   iff  1<<C  is non-negative
-    if (match(Op1, m_Power2()) && match(Op1, m_NonNegative())) {
-      Constant *C = ConstantExpr::getExactLogBase2(cast<Constant>(Op1));
-      return BinaryOperator::CreateExactAShr(Op0, C);
-    }
-
-    // sdiv exact X, (1<<ShAmt) --> ashr exact X, ShAmt (if shl is non-negative)
-    Value *ShAmt;
-    if (match(Op1, m_NSWShl(m_One(), m_Value(ShAmt))))
-      return BinaryOperator::CreateExactAShr(Op0, ShAmt);
+    // sdiv exact X, Y --> ashr exact X, log2(Y) iff Y is a non-negative power
+    // of 2. Y can be assumed non-zero, as division by zero is UB.
+    if (takeLog2(Op1, /*Depth=*/0, /*AssumeNonZero=*/true, /*DoFold=*/false) &&
+        isKnownNonNegative(Op1, SQ.getWithInstruction(&I)))
+      return BinaryOperator::CreateExactAShr(
+          Op0, takeLog2(Op1, /*Depth=*/0, /*AssumeNonZero=*/true,
+                        /*DoFold=*/true));
 
     // sdiv exact X, -1<<C --> -(ashr exact X, C)
     if (match(Op1, m_NegatedPower2())) {
