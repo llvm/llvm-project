@@ -100,6 +100,37 @@ func.func @unaccepted_std_attr() -> () {
 
 // -----
 
+// CHECK-LABEL: func @null_const
+func.func @null_const() -> () {
+  // CHECK: spirv.Constant #spirv.null : !spirv.ptr<i32, CrossWorkgroup>
+  %0 = spirv.Constant #spirv.null : !spirv.ptr<i32, CrossWorkgroup>
+  // CHECK: spirv.Constant #spirv.null : !spirv.array<4 x !spirv.ptr<f32, Function>>
+  %1 = spirv.Constant #spirv.null : !spirv.array<4 x !spirv.ptr<f32, Function>>
+  // CHECK: spirv.Constant #spirv.null : !spirv.struct<S, (i32, !spirv.ptr<f32, Function>)>
+  %2 = spirv.Constant #spirv.null : !spirv.struct<S, (i32, !spirv.ptr<f32, Function>)>
+  // CHECK: spirv.Constant [#spirv.null : !spirv.ptr<f32, Function>, 1 : i32] : !spirv.struct<(!spirv.ptr<f32, Function>, i32)>
+  %3 = spirv.Constant [#spirv.null : !spirv.ptr<f32, Function>, 1 : i32] : !spirv.struct<(!spirv.ptr<f32, Function>, i32)>
+  return
+}
+
+// -----
+
+func.func @null_const_scalar() -> () {
+  // expected-error @+1 {{must have spirv.ptr, spirv.array or spirv.struct result type for null value}}
+  %0 = spirv.Constant #spirv.null : i32
+  return
+}
+
+// -----
+
+func.func @null_const_type_mismatch() -> () {
+  // expected-error @+1 {{result type ('!spirv.ptr<i32, Function>') does not match value type ('!spirv.ptr<f32, Function>')}}
+  %0 = "spirv.Constant"() <{value = #spirv.null : !spirv.ptr<f32, Function>}> : () -> !spirv.ptr<i32, Function>
+  return
+}
+
+// -----
+
 func.func @array_constant() -> () {
   // expected-error @+1 {{result or element type ('vector<2xf32>') does not match value type ('vector<2xi32>')}}
   %0 = spirv.Constant [dense<3.0> : vector<2xf32>, dense<4> : vector<2xi32>] : !spirv.array<2xvector<2xf32>>
