@@ -625,7 +625,7 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
-uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt) {
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(uint64_t Fmt) {
   switch (Fmt) {
   case WMMA::MATRIX_FMT_FP8:
   case WMMA::MATRIX_FMT_BF8:
@@ -640,17 +640,17 @@ uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt) {
   llvm_unreachable("covered switch over wmma scale formats");
 }
 
-const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
-                                                      unsigned FmtB,
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(uint64_t FmtA,
+                                                      uint64_t FmtB,
                                                       unsigned F8F8Opcode) {
   uint8_t SrcANumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtA);
   uint8_t SrcBNumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtB);
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
-bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
-                                    unsigned BFmt, unsigned BScale) {
-  auto isValid = [](unsigned Fmt, unsigned Scale) -> bool {
+bool isValidWMMAScaleFmtCombination(uint64_t AFmt, uint64_t AScale,
+                                    uint64_t BFmt, uint64_t BScale) {
+  auto isValid = [](uint64_t Fmt, uint64_t Scale) -> bool {
     switch (Fmt) {
     case WMMA::MATRIX_FMT_FP8:
     case WMMA::MATRIX_FMT_BF8:

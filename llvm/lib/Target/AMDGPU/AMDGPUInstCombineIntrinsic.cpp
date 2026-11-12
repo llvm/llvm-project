@@ -2299,7 +2299,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4: {
     Value *Src0 = II.getArgOperand(1);
     Value *Src1 = II.getArgOperand(3);
-    unsigned FmtA = cast<ConstantInt>(II.getArgOperand(0))->getZExtValue();
+    uint64_t FmtA = cast<ConstantInt>(II.getArgOperand(0))->getZExtValue();
     uint64_t FmtB = cast<ConstantInt>(II.getArgOperand(2))->getZExtValue();
     auto *Src0Ty = cast<FixedVectorType>(Src0->getType());
     auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
