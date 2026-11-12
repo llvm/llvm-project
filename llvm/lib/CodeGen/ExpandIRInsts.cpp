@@ -1151,8 +1151,12 @@ static void expandIToFP(Instruction *IToFP) {
   }
   Value *Or35 = nullptr;
   if (FloatWidth > 80) {
-    Value *And29Trunc = Builder.CreateTrunc(And29, Builder.getInt128Ty());
-    Value *Or31 = Builder.CreateOr(And29Trunc, And34);
+    // And29 holds the sign of the integer taken as signed, which only sitofp
+    // takes, as for the other formats below.
+    Value *Or31 = And34;
+    if (IsSigned)
+      Or31 = Builder.CreateOr(Builder.CreateTrunc(And29, Builder.getInt128Ty()),
+                              And34);
     Value *Or34 = Builder.CreateShl(Or31, Builder.getIntN(128, 64));
     Value *Temp3 = Builder.CreateShl(Builder.getIntN(128, 1),
                                      Builder.getIntN(128, FPMantissaWidth));

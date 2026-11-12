@@ -336,9 +336,7 @@ define x86_fp80 @ui129tox86_fp80(i129 %a) {
 ; CHECK-NEXT:    [[TMP41:%.*]] = shl i64 [[TMP40]], 48
 ; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[TMP41]], 4611404543450677248
 ; CHECK-NEXT:    [[TMP43:%.*]] = zext i64 [[TMP42]] to i128
-; CHECK-NEXT:    [[TMP44:%.*]] = trunc i129 [[AND29]] to i128
-; CHECK-NEXT:    [[TMP45:%.*]] = or i128 [[TMP44]], [[TMP43]]
-; CHECK-NEXT:    [[TMP46:%.*]] = shl i128 [[TMP45]], 64
+; CHECK-NEXT:    [[TMP46:%.*]] = shl i128 [[TMP43]], 64
 ; CHECK-NEXT:    [[TMP47:%.*]] = and i128 [[TMP39]], 5192296858534827628530496329220095
 ; CHECK-NEXT:    [[TMP48:%.*]] = or i128 [[TMP46]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = bitcast i128 [[TMP48]] to fp128
@@ -421,9 +419,7 @@ define fp128 @ui129tofp128(i129 %a) {
 ; CHECK-NEXT:    [[TMP41:%.*]] = shl i64 [[TMP40]], 48
 ; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[TMP41]], 4611404543450677248
 ; CHECK-NEXT:    [[TMP43:%.*]] = zext i64 [[TMP42]] to i128
-; CHECK-NEXT:    [[TMP44:%.*]] = trunc i129 [[AND29]] to i128
-; CHECK-NEXT:    [[TMP45:%.*]] = or i128 [[TMP44]], [[TMP43]]
-; CHECK-NEXT:    [[TMP46:%.*]] = shl i128 [[TMP45]], 64
+; CHECK-NEXT:    [[TMP46:%.*]] = shl i128 [[TMP43]], 64
 ; CHECK-NEXT:    [[TMP47:%.*]] = and i128 [[TMP39]], 5192296858534827628530496329220095
 ; CHECK-NEXT:    [[TMP48:%.*]] = or i128 [[TMP46]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = bitcast i128 [[TMP48]] to fp128
