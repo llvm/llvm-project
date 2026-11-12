@@ -6,7 +6,7 @@ func.func @shapeof_asexpr(%arg0: !fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir
   %59:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
   %60 = fir.box_addr %arg0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
   %61 = fir.shape_shift %59#0, %59#1 : (index, index) -> !fir.shapeshift<1>
-  %62:2 = hlfir.declare %60(%61) {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
+  %62:2 = hlfir.declare %60(%61) uniq_name(".tmp.intrinsic_result") : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>)
   %true = arith.constant true
   %63 = hlfir.as_expr %62#0 move %true : (!fir.box<!fir.array<?xf32>>, i1) -> !hlfir.expr<?xf32>
   %64 = hlfir.shape_of %63 : (!hlfir.expr<?xf32>) -> !fir.shape<1>

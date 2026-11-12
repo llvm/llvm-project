@@ -10,12 +10,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_function_macros.h"
 #include "src/math/f16sqrt.h"
 #include "utils/MPFRWrapper/mpfr_inc.h"
 #include <cstdint>
 #include <cstring>
 #include <iostream>
-#include <math.h>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   mpfr_t input;

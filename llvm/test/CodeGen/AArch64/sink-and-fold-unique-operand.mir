@@ -38,14 +38,14 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
-    ; CHECK-NEXT: [[SBFMXri:%[0-9]+]]:gpr64common = SBFMXri killed [[INSERT_SUBREG]], 0, 31
+    ; CHECK-NEXT: [[SBFMXri:%[0-9]+]]:gpr64common = SBFMXri [[INSERT_SUBREG]], 0, 31
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: STRHHroX [[COPY1]], [[SBFMXri]], [[SBFMXri]], 0, 0 :: (store (s16) into %ir.0)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32 = COPY $w0
     %2:gpr64all = IMPLICIT_DEF
     %1:gpr64 = INSERT_SUBREG %2, %0, %subreg.sub_32
-    %3:gpr64common = SBFMXri killed %1, 0, 31
+    %3:gpr64common = SBFMXri %1, 0, 31
     %4:gpr32 = COPY $wzr
     STRHHroX %4, %3, %3, 0, 0 :: (store (s16) into %ir.0)
     RET_ReallyLR

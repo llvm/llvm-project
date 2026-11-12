@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_HANDLER_IMPL
-#define _LIBSYCL_HANDLER_IMPL
+#ifndef _LIBSYCL_SRC_DETAIL_HANDLER_IMPL_HPP
+#define _LIBSYCL_SRC_DETAIL_HANDLER_IMPL_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
@@ -33,7 +33,7 @@ class QueueImpl;
 
 /// Stores the deferred command group state for a sycl::handler submission.
 struct HandlerImpl {
-  HandlerImpl(QueueImpl &Queue) : MQueue(Queue) {}
+  explicit HandlerImpl(QueueImpl &Queue) : MQueue(Queue) {}
 
   HandlerImpl(const HandlerImpl &) = delete;
   HandlerImpl(HandlerImpl &&) = delete;
@@ -51,6 +51,9 @@ struct HandlerImpl {
   /// Captured kernel argument data.
   std::vector<char> MArgData;
 
+  /// Pattern used for fill and memset operations.
+  std::vector<unsigned char> MFillPattern;
+
   /// Kernel execution range in liboffload format, set by setKernelRange().
   ol_kernel_launch_size_args_t MRange = {};
 };
@@ -59,4 +62,4 @@ struct HandlerImpl {
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_HANDLER_IMPL
+#endif // _LIBSYCL_SRC_DETAIL_HANDLER_IMPL_HPP

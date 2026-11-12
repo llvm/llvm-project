@@ -48,6 +48,7 @@ private:
   Value *convert(Instruction *I, Type *ToTy);
   void cleanup();
 
+  unsigned MaxIntegerBW = 0;
   MapVector<Instruction *, ConstantRange> SeenInsts;
   SmallSetVector<Instruction *, 8> Roots;
   EquivalenceClasses<Instruction *> ECs;

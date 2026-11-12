@@ -4,7 +4,7 @@
 ! The denormal-operand exception is an x86 SSE feature (__FE_DENORM); on other
 ! architectures it is not available, so restrict this test to x86 glibc.
 ! REQUIRES: target=x86_64{{.*}}-linux-gnu
-! UNSUPPORTED: offload-cuda
+! UNSUPPORTED: offload-cuda, wsl1
 
 ! Built without traps: the operation on a subnormal operand completes and the
 ! program exits normally.

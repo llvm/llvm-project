@@ -62,7 +62,7 @@ llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
     Version = Data.getU8(Cur);
     if (!Cur)
       break;
-    if (Version < 2 || Version > 5)
+    if (Version < 2 || Version > 6)
       return createError("unsupported BB address map version: " +
                          Twine(Version));
     Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
@@ -84,6 +84,13 @@ llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
       return createError("version should be >= 5 for BB address map when "
                          "post link cfg feature is enabled: version = " +
                          Twine(Version) + " feature = " + Twine(Feature));
+    if (FeatEnable.FuncGUID && Version < 6)
+      return createError("version should be >= 6 for BB address map when "
+                         "function GUID feature is enabled: version = " +
+                         Twine(Version) + " feature = " + Twine(Feature));
+    uint64_t FuncGUID = FeatEnable.FuncGUID ? Data.getU64(Cur) : 0;
+    if (!Cur)
+      break;
     uint32_t NumBlocksInBBRange = 0;
     uint32_t NumBBRanges = 1;
     uint64_t RangeBaseAddress = 0;
@@ -153,7 +160,7 @@ llvm::object::decodeBBAddrMapPayload(AddressExtractor &Extractor,
       }
       BBRangeEntries.push_back({RangeBaseAddress, std::move(BBEntries)});
     }
-    FunctionEntries.push_back({std::move(BBRangeEntries)});
+    FunctionEntries.push_back({std::move(BBRangeEntries), FuncGUID});
 
     if (PGOAnalyses || FeatEnable.hasPGOAnalysis()) {
       // Function entry count

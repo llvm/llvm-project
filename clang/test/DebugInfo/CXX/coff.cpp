@@ -32,6 +32,37 @@
 // CHECK-NEXT:   ]
 // CHECK-NEXT: ]
 
+// UEFI targets follow the MSVC toolchain conventions and emit the same
+// minimal compiler info.
+
+// RUN: %clang --target=x86_64-unknown-uefi -S -emit-llvm %s -o - | FileCheck --check-prefix=IR %s
+
+// RUN: %clang --target=x86_64-unknown-uefi -c %s -o %t.uefi.o
+// RUN: llvm-readobj --codeview %t.uefi.o | FileCheck --check-prefix=UEFI %s
+// UEFI:      CodeViewDebugInfo [
+// UEFI-NEXT:   Section: .debug$S ({{[0-9]+}})
+// UEFI-NEXT:   Magic: 0x4
+// UEFI-NEXT:   Subsection [
+// UEFI-NEXT:     SubSectionType: Symbols (0xF1)
+// UEFI-NEXT:     SubSectionSize:
+// UEFI-NEXT:     ObjNameSym {
+// UEFI-NEXT:       Kind: S_OBJNAME (0x1101)
+// UEFI-NEXT:       Signature: 0x0
+// UEFI-NEXT:       ObjectName:
+// UEFI-NEXT:     }
+// UEFI-NEXT:     Compile3Sym {
+// UEFI-NEXT:       Kind: S_COMPILE3 (0x113C)
+// UEFI-NEXT:       Language: Cpp (0x1)
+// UEFI-NEXT:       Flags [ (0x0)
+// UEFI-NEXT:       ]
+// UEFI-NEXT:       Machine: X64 (0xD0)
+// UEFI-NEXT:       FrontendVersion:
+// UEFI-NEXT:       BackendVersion:
+// UEFI-NEXT:       VersionName: {{.*}}clang version
+// UEFI-NEXT:     }
+// UEFI-NEXT:   ]
+// UEFI-NEXT: ]
+
 int main() {
   return 0;
 }

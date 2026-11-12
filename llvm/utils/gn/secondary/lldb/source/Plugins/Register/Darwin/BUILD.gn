@@ -1,0 +1,20 @@
+static_library("Darwin") {
+  output_name = "lldbPluginRegisterDarwin"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Register",
+    "//lldb/source/Target",
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+  ]
+
+  include_dirs = [ "//lldb/source" ]
+  sources = [
+    "RegisterContextDarwin_arm.cpp",
+    "RegisterContextDarwin_arm64.cpp",
+    "RegisterContextDarwin_riscv32.cpp",
+    "RegisterContextDarwin_x86_64.cpp",
+    "RegisterContextMach_arm.cpp",
+    "RegisterContextMach_x86_64.cpp",
+  ]
+}

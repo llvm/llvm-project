@@ -8,7 +8,7 @@ define <2 x i64> @_mm_insert_epi16(<2 x i64> %a, i32 %b, i32 %imm) nounwind read
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movzwl 8(%ebp), %ecx
 ; X86-NEXT:    andl $7, %eax

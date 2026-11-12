@@ -306,6 +306,30 @@ func.func @test_dynamic_argmax(%arg0 : tensor<2x?xi32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_static_argmin
+func.func @test_static_argmin(%arg0 : tensor<2x3xi32>) -> () {
+  // CHECK: tosa.argmin %arg0 axis(0) : (tensor<2x3xi32>) -> tensor<3xi32>
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<2x3xi32>) -> tensor<?xi32>
+
+  // CHECK: tosa.argmin %arg0 axis(1) : (tensor<2x3xi32>) -> tensor<2xi32>
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<2x3xi32>) -> tensor<?xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_dynamic_argmin
+func.func @test_dynamic_argmin(%arg0 : tensor<2x?xi32>) -> () {
+  // CHECK: tosa.argmin %arg0 axis(0) : (tensor<2x?xi32>) -> tensor<?xi32>
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<2x?xi32>) -> tensor<?xi32>
+
+  // CHECK: tosa.argmin %arg0 axis(1) : (tensor<2x?xi32>) -> tensor<2xi32>
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<2x?xi32>) -> tensor<?xi32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_static_matmul
 func.func @test_static_matmul(%arg0 : tensor<2x3x4xi32>, %arg1 : tensor<2x4x5xi32>) -> () {
   // CHECK tosa.matmul %arg0, %arg1, %0, %1 : (tensor<2x3x4xi32>, tensor<2x4x5xi32>, tensor<1xi32>, tensor<1xi32>)  -> tensor<2x3x5xi32>
@@ -809,6 +833,17 @@ func.func @test_padding_simple(%arg0 : tensor<1x2xf32>) -> () {
   %1 = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
   // CHECK: tosa.pad %arg0, %0, %1  : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<4x9xf32>
   %2 = tosa.pad %arg0, %0, %1  : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_padding_constant_arithmetic
+func.func @test_padding_constant_arithmetic(%arg0 : tensor<10x20xf32>) {
+  %0 = tosa.const_shape values(dense<[-1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %1 = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // CHECK: tosa.pad %arg0, %0, %1 : (tensor<10x20xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<11x27xf32>
+  %2 = tosa.pad %arg0, %0, %1 : (tensor<10x20xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x?xf32>
   return
 }
 
@@ -2303,5 +2338,19 @@ func.func @while_with_sparse_tensor_encoding() {
     %3 = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
     tosa.yield %3 : tensor<1xi32>
   }
+  return
+}
+
+// -----
+
+// A resize with invalid (non-positive) scale values cannot infer an output
+// shape, so the result type is left unchanged.
+// CHECK-LABEL: @resize_invalid_scale
+func.func @resize_invalid_scale(%arg0: tensor<1x50x48x1xf32>) {
+  %scale = tosa.const_shape values(dense<[2, 0, -1, 2]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %offset = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %border = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // CHECK: -> tensor<?x?x?x?xf32>
+  %0 = tosa.resize %arg0, %scale, %offset, %border mode<NEAREST_NEIGHBOR> : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
   return
 }

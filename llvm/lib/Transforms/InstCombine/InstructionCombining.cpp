@@ -37,6 +37,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -82,6 +83,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -131,9 +133,6 @@ STATISTIC(NumFactor   , "Number of factorizations");
 STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
-
-InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
-    default;
 
 void InstCombiner::IRBuilderInstCombineInserter::InsertHelper(
     Instruction *I, const Twine &Name, BasicBlock::iterator InsertPt) const {
@@ -499,6 +498,13 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op0, A, B, C)) {
+          I.swapOperands();
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "B op C" simplify?
         if (Value *V = simplifyBinOp(Opcode, B, C, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "A op V".
@@ -532,6 +538,13 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op1, C, B, A)) {
+          I.swapOperands();
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "A op B" simplify?
         if (Value *V = simplifyBinOp(Opcode, A, B, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "V op C".
@@ -561,6 +574,12 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
 
+        if (tryReassociateAndFoldSymmetricPair(I, *Op0, B, A, C)) {
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
+
         // Does "C op A" simplify?
         if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
           // It simplifies to V.  Form "V op B".
@@ -581,6 +600,12 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         Value *A = I.getOperand(0);
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
+
+        if (tryReassociateAndFoldSymmetricPair(I, *Op1, B, C, A)) {
+          Changed = true;
+          ++NumReassoc;
+          continue;
+        }
 
         // Does "C op A" simplify?
         if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
@@ -1325,6 +1350,35 @@ InstCombinerImpl::matchSymmetricPair(Value *LHS, Value *RHS) {
   }
 }
 
+bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
+    BinaryOperator &OuterOp, BinaryOperator &InnerOp, Value *InnerVal0,
+    Value *InnerVal1, Value *OuterVal) {
+  assert(OuterOp.isCommutative() && OuterOp.isAssociative() &&
+         "OuterOp must be commutative and associative");
+  assert(OuterOp.getOpcode() == InnerOp.getOpcode() &&
+         "OuterOp and InnerOp must have same opcode");
+  if (!InnerOp.isAssociative() || !InnerOp.hasOneUse())
+    return false;
+
+  unsigned OuterValIdx = OuterOp.getOperand(0) == OuterVal ? 0 : 1;
+  assert(OuterOp.getOperand(OuterValIdx) == OuterVal &&
+         "OuterVal must be an operand of OuterOp");
+
+  auto Pair = matchSymmetricPair(InnerVal1, OuterVal);
+  if (!Pair)
+    return false;
+
+  replaceOperand(InnerOp, 0, Pair->first);
+  replaceOperand(InnerOp, 1, Pair->second);
+  InnerOp.dropPoisonGeneratingAnnotations();
+  InnerOp.dropUBImplyingAttrsAndMetadata();
+  replaceOperand(OuterOp, OuterValIdx, InnerVal0);
+  if (!isa<FPMathOperator>(OuterOp))
+    OuterOp.dropPoisonGeneratingFlags();
+  OuterOp.dropUBImplyingAttrsAndMetadata();
+  return true;
+}
+
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {
@@ -1348,17 +1402,17 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 
   Value *Cond, *True = nullptr, *False = nullptr;
 
-  // If V is a select whose condition is implied by Cond, resolve it to the
-  // appropriate arm for this value of Cond.
-  auto simplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+  // If V is a select whose condition is implied by Cond, try to resolve it to
+  // the appropriate arm for this value of Cond.
+  auto SimplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
                                            bool CondIsTrue) -> Value * {
     auto *InnerSI = dyn_cast<SelectInst>(V);
     if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
       return V;
 
-    if (std::optional<bool> Implied =
-            isImpliedCondition(Cond, InnerSI->getCondition(), DL, CondIsTrue))
-      return InnerSI->getOperand(*Implied ? 1 : 2);
+    if (Value *Arm =
+            simplifyNestedSelectsUsingImpliedCond(*InnerSI, Cond, CondIsTrue))
+      return Arm;
     return V;
   };
 
@@ -1397,8 +1451,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (LHSIsSelect && LHS->hasOneUse()) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
-    Value *TrueRHS = simplifySelectWithImpliedCond(RHS, Cond, true);
-    Value *FalseRHS = simplifySelectWithImpliedCond(RHS, Cond, false);
+    Value *TrueRHS = SimplifySelectWithImpliedCond(RHS, Cond, true);
+    Value *FalseRHS = SimplifySelectWithImpliedCond(RHS, Cond, false);
     True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
     False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
@@ -1406,8 +1460,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
-    Value *TrueLHS = simplifySelectWithImpliedCond(LHS, Cond, true);
-    Value *FalseLHS = simplifySelectWithImpliedCond(LHS, Cond, false);
+    Value *TrueLHS = SimplifySelectWithImpliedCond(LHS, Cond, true);
+    Value *FalseLHS = SimplifySelectWithImpliedCond(LHS, Cond, false);
     True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
@@ -2736,7 +2790,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   Instruction *Sel;
   Value *Cond;
   Constant *TrueC, *FalseC;
-  if (!match(GEP.getPointerOperand(), m_Instruction(Sel)) ||
+  if (!match(GEP.getPointerOperand(), m_OneUse(m_Instruction(Sel))) ||
       !match(Sel,
              m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
     return nullptr;
@@ -2763,7 +2817,7 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   auto &DL = IC.getDataLayout();
   Value *Base;
   const APInt *C1;
-  if (!match(Src, m_PtrAdd(m_Value(Base), m_APInt(C1))))
+  if (!match(Src, m_PtrAdd(DL, m_Value(Base), m_APInt(C1))))
     return nullptr;
   Value *VarIndex;
   const APInt *C2;
@@ -2771,8 +2825,7 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   unsigned IndexSizeInBits = DL.getIndexTypeSizeInBits(PtrTy);
   if (!match(GEP.getOperand(1), m_AddLike(m_Value(VarIndex), m_APInt(C2))))
     return nullptr;
-  if (C1->getBitWidth() != IndexSizeInBits ||
-      C2->getBitWidth() != IndexSizeInBits)
+  if (C2->getBitWidth() != IndexSizeInBits)
     return nullptr;
   Type *BaseType = GEP.getSourceElementType();
   if (isa<ScalableVectorType>(BaseType))
@@ -3123,9 +3176,17 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                          LocalDoesConsume, Depth);
       DoesConsume = LocalDoesConsume;
-      if (IsLogical)
-        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
-      return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
+      if (!Builder)
+        return NonNull;
+      if (IsLogical) {
+        Value *InvertedLogicalOp = Builder->CreateLogicalOp(
+            Opcode, NotA, NotB, "",
+            ProfcheckDisableMetadataFixes ? nullptr : dyn_cast<SelectInst>(V));
+        if (auto *SI = dyn_cast<SelectInst>(InvertedLogicalOp))
+          SI->swapProfMetadata();
+        return InvertedLogicalOp;
+      }
+      return Builder->CreateBinOp(Opcode, NotA, NotB);
     }
 
     return nullptr;
@@ -3383,27 +3444,17 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return replaceInstUsesWith(GEP, NewGEP);
   }
 
-  // Strip trailing zero indices.
-  auto *LastIdx = dyn_cast<Constant>(Indices.back());
-  if (LastIdx && LastIdx->isNullValue() && !LastIdx->getType()->isVectorTy()) {
-    return replaceInstUsesWith(
-        GEP, Builder.CreateGEP(GEP.getSourceElementType(), PtrOp,
-                               drop_end(Indices), "", GEP.getNoWrapFlags()));
-  }
-
-  // Strip leading zero indices.
-  auto *FirstIdx = dyn_cast<Constant>(Indices.front());
-  if (FirstIdx && FirstIdx->isNullValue() &&
-      !FirstIdx->getType()->isVectorTy()) {
-    gep_type_iterator GTI = gep_type_begin(GEP);
-    ++GTI;
-    if (!GTI.isStruct() && GTI.getSequentialElementStride(DL) ==
-                               DL.getTypeAllocSize(GTI.getIndexedType()))
-      return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
-                                                        GEP.getPointerOperand(),
-                                                        drop_begin(Indices), "",
-                                                        GEP.getNoWrapFlags()));
-  }
+  // Canonicalize to getelementptr i8 or getelementptr [Stride x i8]
+  // via IRBuilder.
+  auto IsCanonicalType = [](Type *Ty) {
+    if (auto *AT = dyn_cast<ArrayType>(Ty))
+      Ty = AT->getElementType();
+    return Ty->isIntegerTy(8);
+  };
+  if (!IsCanonicalType(GEPEltType) || Indices.size() != 1)
+    return replaceInstUsesWith(GEP,
+                               Builder.CreateGEP(GEPEltType, PtrOp, Indices, "",
+                                                 GEP.getNoWrapFlags()));
 
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.
   // Note that this looses information about undef lanes; we run it after
@@ -3429,50 +3480,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       Res = Builder.CreateVectorSplat(EC, Res);
     }
     return replaceInstUsesWith(GEP, Res);
-  }
-
-  bool SeenNonZeroIndex = false;
-  for (auto [IdxNum, Idx] : enumerate(Indices)) {
-    // Ignore one leading zero index.
-    auto *C = dyn_cast<Constant>(Idx);
-    if (C && C->isNullValue() && IdxNum == 0)
-      continue;
-
-    if (!SeenNonZeroIndex) {
-      SeenNonZeroIndex = true;
-      continue;
-    }
-
-    // GEP has multiple non-zero indices: Split it.
-    ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
-    Value *FrontGEP =
-        Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,
-                          GEP.getName() + ".split", GEP.getNoWrapFlags());
-
-    SmallVector<Value *> BackIndices;
-    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
-    append_range(BackIndices, drop_begin(Indices, IdxNum));
-    return GetElementPtrInst::Create(
-        GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
-        BackIndices, GEP.getNoWrapFlags());
-  }
-
-  // Canonicalize gep %T to gep [sizeof(%T) x i8]:
-  auto IsCanonicalType = [](Type *Ty) {
-    if (auto *AT = dyn_cast<ArrayType>(Ty))
-      Ty = AT->getElementType();
-    return Ty->isIntegerTy(8);
-  };
-  if (Indices.size() == 1 && !IsCanonicalType(GEPEltType)) {
-    TypeSize Scale = DL.getTypeAllocSize(GEPEltType);
-    assert(!Scale.isScalable() && "Should have been handled earlier");
-    Type *NewElemTy = Builder.getInt8Ty();
-    if (Scale.getFixedValue() != 1)
-      NewElemTy = ArrayType::get(NewElemTy, Scale.getFixedValue());
-    GEP.setSourceElementType(NewElemTy);
-    GEP.setResultElementType(NewElemTy);
-    // Don't bother revisiting the GEP after this change.
-    MadeIRChange = true;
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -4229,7 +4236,7 @@ Instruction *InstCombinerImpl::visitUncondBrInst(UncondBrInst &BI) {
     do {
       if (BBI != FirstInstr)
         --BBI;
-    } while (BBI != FirstInstr && BBI->isDebugOrPseudoInst());
+    } while (BBI != FirstInstr && isa<PseudoProbeInst>(BBI));
 
     return dyn_cast<StoreInst>(BBI);
   };
@@ -4701,7 +4708,8 @@ static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
 
   Value *NewSel = Builder.CreateSelectFMF(
       Cond, ConstIsTrue ? ConstantMantissa : NewEV,
-      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp");
+      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp",
+      ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
   return NewSel;
 }
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
@@ -4830,6 +4838,37 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   // and if again single-use then via load (gep (gep)) to load (gep).
   // However, double extracts from e.g. function arguments or return values
   // aren't handled yet.
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::visitBitInsertInst(BitInsertInst &BI) {
+  Value *Base = BI.getOperand(0);
+  Value *Val = BI.getOperand(1);
+  Value *Offset = BI.getOperand(2);
+  if (Value *V =
+          simplifyBitInsertInst(Base, Val, Offset, SQ.getWithInstruction(&BI)))
+    return replaceInstUsesWith(BI, V);
+
+  // bitinsert (bN x), (ty y), 0 -> bitcast y to bN, if ty is N bits wide
+  if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(Val->getType()) ==
+                                     DL.getTypeSizeInBits(Base->getType()))
+    return new BitCastInst(Val, Base->getType());
+
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::visitBitExtractInst(BitExtractInst &BE) {
+  Value *Src = BE.getOperand(0);
+  Value *Offset = BE.getOperand(1);
+  if (Value *V = simplifyBitExtractInst(BE.getType(), Src, Offset,
+                                        SQ.getWithInstruction(&BE)))
+    return replaceInstUsesWith(BE, V);
+
+  // bitextract ty, (bN x), 0 -> bitcast x to ty, if ty is N bits wide
+  if (match(Offset, m_Zero()) && DL.getTypeSizeInBits(BE.getType()) ==
+                                     DL.getTypeSizeInBits(Src->getType()))
+    return new BitCastInst(Src, BE.getType());
+
   return nullptr;
 }
 
@@ -5323,8 +5362,7 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // replacement below is still necessary.
   BasicBlock::iterator MoveBefore;
   if (isa<Argument>(Op)) {
-    MoveBefore =
-        FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
   } else {
     auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
     if (!MoveBeforeOpt)
@@ -5585,20 +5623,29 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
         return false;
   }
 
+  SmallVector<AssumeInst *, 2> AssumesToSink;
   I->dropDroppableUses([&](const Use *U) {
-    auto *I = dyn_cast<Instruction>(U->getUser());
-    if (I && I->getParent() != DestBlock) {
-      Worklist.add(I);
+    auto *User = dyn_cast<Instruction>(U->getUser());
+    if (User && User->getParent() != DestBlock) {
+      if (auto *Assume = dyn_cast<AssumeInst>(User);
+          Assume && Assume->getParent() == SrcBlock) {
+        AssumesToSink.push_back(Assume);
+        return false;
+      }
+      Worklist.add(User);
       return true;
     }
     return false;
   });
-  /// FIXME: We could remove droppable uses that are not dominated by
-  /// the new position.
 
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(*DestBlock, InsertPos);
   ++NumSunkInst;
+
+  // Sink the collected assumes right after I in DestBlock so that the
+  // alignment/attribute guarantees they encode remain visible to later passes.
+  for (AssumeInst *Assume : AssumesToSink)
+    Assume->moveAfter(I);
 
   // Also sink all related debug uses from the source basic block. Otherwise we
   // get debug use before the def. Attempt to salvage debug uses first, to
@@ -5801,7 +5848,7 @@ bool InstCombinerImpl::run() {
           // removed.
           auto II = dyn_cast<IntrinsicInst>(User);
           if (II->getIntrinsicID() != Intrinsic::assume ||
-              !II->getOperandBundle("dereferenceable"))
+              !II->hasOperandBundle(LLVMContext::OB_Dereferenceable))
             continue;
         }
 
@@ -5954,6 +6001,40 @@ bool InstCombinerImpl::run() {
 class AliasScopeTracker {
   SmallPtrSet<const MDNode *, 8> UsedAliasScopesAndLists;
   SmallPtrSet<const MDNode *, 8> UsedNoAliasScopesAndLists;
+  // Scopes used by every !alias.scope list that scopes from a disjoint-scope
+  // domain appears in. This is used to catch scopes that don't actually make
+  // anything noalias.
+  SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4>
+      CommonScopesOfDisjointDomain;
+
+  // Record, for each disjoint-scope domain \p ScopeList uses, which of its
+  // scopes are used by \p ScopeList, adding to a running intersection.
+  void recordDisjointDomainScopes(const MDNode *ScopeList) {
+    SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4> UsedScopes;
+    for (const MDOperand &MDOperand : ScopeList->operands()) {
+      const auto *MDScope = cast<MDNode>(MDOperand);
+      const MDNode *Domain = AliasScopeNode(MDScope).getDomain();
+      if (AliasScopeDomainNode(Domain).hasDisjointScopes())
+        UsedScopes[Domain].insert(MDScope);
+    }
+
+    for (auto &[Domain, Scopes] : UsedScopes) {
+      auto [It, Inserted] =
+          CommonScopesOfDisjointDomain.try_emplace(Domain, Scopes);
+      if (!Inserted)
+        llvm::set_intersect(It->second, Scopes);
+    }
+  }
+
+  // Return true if \p Scope is on the implicit !noalias list of one of the
+  // analysed accesses, that is, if it belongs to a disjoint-scope domain and
+  // some access uses that domain without using \p Scope.
+  bool isImplicitlyNoAlias(const MDNode *Scope) const {
+    auto It =
+        CommonScopesOfDisjointDomain.find(AliasScopeNode(Scope).getDomain());
+    return It != CommonScopesOfDisjointDomain.end() &&
+           !It->second.contains(Scope);
+  }
 
 public:
   void analyse(Instruction *I) {
@@ -5961,16 +6042,20 @@ public:
     if (!I->hasMetadataOtherThanDebugLoc())
       return;
 
-    auto Track = [](Metadata *ScopeList, auto &Container) {
+    auto Track = [](Metadata *ScopeList, auto &Container) -> const MDNode * {
       const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
       if (!MDScopeList || !Container.insert(MDScopeList).second)
-        return;
+        return nullptr;
       for (const auto &MDOperand : MDScopeList->operands())
         if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
           Container.insert(MDScope);
+      return MDScopeList;
     };
 
-    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists);
+    if (const MDNode *AliasScopeList =
+            Track(I->getMetadata(LLVMContext::MD_alias_scope),
+                  UsedAliasScopesAndLists))
+      recordDisjointDomainScopes(AliasScopeList);
     Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists);
   }
 
@@ -5985,9 +6070,13 @@ public:
     assert(MDSL->getNumOperands() == 1 &&
            "llvm.experimental.noalias.scope should refer to a single scope");
     auto &MDOperand = MDSL->getOperand(0);
+    // A scope is relevant if it appears in an !alias.scope list, and either it
+    // appears in a !noalias list, or it is on the implicit !noalias list of
+    // some access using its disjoint-scope domain.
     if (auto *MD = dyn_cast<MDNode>(MDOperand))
       return !UsedAliasScopesAndLists.contains(MD) ||
-             !UsedNoAliasScopesAndLists.contains(MD);
+             (!UsedNoAliasScopesAndLists.contains(MD) &&
+              !isImplicitlyNoAlias(MD));
 
     // Not an MDNode ? throw away.
     return true;
@@ -6063,10 +6152,10 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
         }
       }
 
-      // Skip processing debug and pseudo intrinsics in InstCombine. Processing
+      // Skip processing pseudo intrinsics in InstCombine. Processing
       // these call instructions consumes non-trivial amount of time and
       // provides no value for the optimization.
-      if (!Inst.isDebugOrPseudoInst()) {
+      if (!isa<PseudoProbeInst>(Inst)) {
         InstrsForInstructionWorklist.push_back(&Inst);
         SeenAliasScopes.analyse(&Inst);
       }
@@ -6165,7 +6254,7 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
-  const InstCombineCLOptions &CLOpts = InstCombineCLOptions::Global;
+  const auto &CLOpts = getInstCombineCLOptions(F);
   bool MadeIRChange = false;
   if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);

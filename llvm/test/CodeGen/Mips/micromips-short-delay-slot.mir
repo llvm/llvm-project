@@ -48,24 +48,24 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r31', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
 constants:
 body:             |
   bb.0.entry:
-    liveins: $ra
+    liveins: $r31
 
-    $sp = ADDiu $sp, -24
+    $r29 = ADDiu $r29, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
-    CFI_INSTRUCTION offset $ra_64, -4
-    $a0 = LI16_MM 1
-    $a1 = LI16_MM 2
-    JAL_MM @callee13, csr_o32, implicit-def dead $ra, implicit killed $a0, implicit killed $a1, implicit-def $sp, implicit-def $v0
-    $ra = LW $sp, 20 :: (load (s32) from %stack.0)
-    $sp = ADDiu $sp, 24
-    PseudoReturn undef $ra, implicit $v0
+    SW killed $r31, $r29, 20 :: (store (s32) into %stack.0)
+    CFI_INSTRUCTION offset $r31_64, -4
+    $r4 = LI16_MM 1
+    $r5 = LI16_MM 2
+    JAL_MM @callee13, csr_o32, implicit-def dead $r31, implicit killed $r4, implicit killed $r5, implicit-def $r29, implicit-def $r2
+    $r31 = LW $r29, 20 :: (load (s32) from %stack.0)
+    $r29 = ADDiu $r29, 24
+    PseudoReturn undef $r31, implicit $r2
 
 
 ...

@@ -101,7 +101,7 @@ inline_bcmp_aarch64_with_fp(CPtr p1, CPtr p2, size_t count) {
 }
 #endif
 
-[[gnu::flatten]] LIBC_INLINE BcmpReturnType
+LIBC_FLATTEN LIBC_INLINE BcmpReturnType
 inline_bcmp_aarch64_dispatch(CPtr p1, CPtr p2, size_t count) {
 #if defined(__ARM_NEON)
   return inline_bcmp_aarch64_with_fp(p1, p2, count);

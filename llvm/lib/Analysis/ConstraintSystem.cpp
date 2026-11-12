@@ -14,6 +14,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <numeric>
 #include <string>
 
 using namespace llvm;
@@ -143,6 +144,7 @@ bool ConstraintSystem::eliminateUsingFM() {
       }
       if (Overflow || NR.empty())
         continue;
+      normalizeByGCD(NR);
       Constraints.push_back(std::move(NR));
       // Give up if the new system gets too big.
       if (Constraints.size() > 500)
@@ -152,6 +154,26 @@ bool ConstraintSystem::eliminateUsingFM() {
   NumVariables -= 1;
 
   return true;
+}
+
+void ConstraintSystem::normalizeByGCD(MutableArrayRef<Entry> R) {
+  // The sum of the variable terms is a multiple of G, so it is <= C iff it is
+  // <= floor(C / G) * G.
+  int64_t G = 0;
+  for (const Entry &E : R) {
+    if (E.Id == 0)
+      continue;
+    if (E.Coefficient == std::numeric_limits<int64_t>::min())
+      return;
+    G = std::gcd(G, E.Coefficient);
+    if (G == 1)
+      return;
+  }
+  if (G == 0)
+    return;
+  for (Entry &E : R)
+    E.Coefficient =
+        E.Id == 0 ? divideFloorSigned(E.Coefficient, G) : E.Coefficient / G;
 }
 
 bool ConstraintSystem::mayHaveSolutionImpl() {
@@ -299,6 +321,12 @@ bool ConstraintSystem::isConditionImplied(RowTy R) const {
   // 0, R is always true, regardless of the system.
   if (isConstantOnly(R))
     return getConstant(R) >= 0;
+
+  normalizeByGCD(R);
+
+  // R is trivially implied if a single row of the system implies it.
+  if (isImpliedBySingleRow(R))
+    return true;
 
   // If there is no solution with the negation of R added to the system, the
   // condition must hold based on the existing constraints.

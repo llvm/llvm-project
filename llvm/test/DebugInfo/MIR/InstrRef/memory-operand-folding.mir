@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations \
-# RUN:    -run-pass=greedy,virtregrewriter | FileCheck %s
+# RUN:    -run-pass=greedy,virt-reg-rewriter | FileCheck %s
 #
 # This test is for stack spill folding -- the SETCC near the start of the MIR
 # below show be morphed into an SETCCm by the register allocator, making it

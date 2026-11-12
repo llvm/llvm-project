@@ -40,7 +40,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   std::vector<lldb::ValueObjectSP> m_children;

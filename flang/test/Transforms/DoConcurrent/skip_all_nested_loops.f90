@@ -32,13 +32,10 @@ end
 ! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
 ! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[I_ARG:[^,]+]],
 ! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[J_ARG:[^,]+]],
-! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[A_ARG:[^,]+]],
-! DEVICE-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
-! DEVICE-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
-! DEVICE-SAME:   %{{[^[:space:]]+}} -> %{{[^:]+}} :
+! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[A_ARG:[^:]+]] :
 ! DEVICE-SAME:   {{.*}}) {
 
-! DEVICE: %[[TARGET_J_DECL:.*]]:2 = hlfir.declare %[[J_ARG]] {uniq_name = "_QFEj"}
+! DEVICE: %[[TARGET_J_DECL:.*]]:2 = hlfir.declare %[[J_ARG]] uniq_name("_QFEj")
 
 ! DEVICE: omp.teams
 

@@ -1,5 +1,7 @@
 # RUN: not llvm-mc -triple=riscv64 < %s 2>&1 | FileCheck %s -check-prefixes=CHECK-FEATURE
 # RUN: not llvm-mc -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=riscv32 -mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl < %s 2>&1 \
+# RUN:   | FileCheck %s -check-prefix=RV32
 
 mips.pause 10
 # CHECK: error: unexpected extra operand for instruction
@@ -42,3 +44,9 @@ mips.swp x18, x19, 8(x2)
 
 mips.sdp 0x10, x3, 12(x4)
 # CHECK: error: register must be a GPR
+
+mips.ldp s1, s2, 8(sp)
+# RV32: :[[@LINE-1]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+
+mips.sdp s5, s6, 16(s7)
+# RV32: :[[@LINE-1]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}

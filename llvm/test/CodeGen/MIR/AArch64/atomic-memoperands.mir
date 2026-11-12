@@ -3,6 +3,7 @@
 
 ---
 name:            atomic_memoperands
+tracksRegLiveness: false
 body: |
   bb.0:
 

@@ -8,11 +8,11 @@ compiler instrumentation module and a run-time library.
 
 Typical slowdown introduced by MemorySanitizer is **3x**.
 
-Here is a not comprehensive of list cases when MemorySanitizer will report an error:
+Here is a non-exhaustive list of cases when MemorySanitizer will report an error:
 
 - Uninitialized value was used in a conditional branch.
 - Uninitialized pointer was used for memory accesses.
-- Uninitialized value was passed or returned from a function call, which is considered an undefined behavior. The check can be disabled with `-fno-sanitize-memory-param-retval`.
+- Uninitialized value was passed to or returned from a function call, which is considered as an undefined behavior. The check can be disabled with `-fno-sanitize-memory-param-retval`.
 - Uninitialized data was passed into some libc calls.
 
 ## How to build

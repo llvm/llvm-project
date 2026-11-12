@@ -123,6 +123,7 @@ TEST(ModuleSpecTest, TestMachOFile) {
 
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x0100000C

@@ -261,6 +261,8 @@ static void emitAsmStores(CIRGenFunction &cgf, const AsmStmt &s,
 }
 
 mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
+  FullExprCleanupScope cleanups(*this, &s);
+
   // Assemble the final asm string.
   std::string asmString = s.generateAsmString(getContext());
   SourceLocation srcLoc = s.getAsmLoc();

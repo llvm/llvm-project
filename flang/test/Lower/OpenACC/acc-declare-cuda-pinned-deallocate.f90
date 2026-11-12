@@ -9,7 +9,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPdeclare_pinned_deallocate(
 ! CHECK-SAME: %[[A_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_ARG]]
-! CHECK: cuf.deallocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> {acc.declare_action = #acc.declare_action<preDealloc = @{{.*}}_acc_declare_pre_dealloc, postDealloc = @{{.*}}_acc_declare_post_dealloc>, data_attr = #cuf.cuda<pinned>} -> i32
+! CHECK: cuf.deallocate %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>> data_attr(pinned) {acc.declare_action = #acc.declare_action<preDealloc = @{{.*}}_acc_declare_pre_dealloc, postDealloc = @{{.*}}_acc_declare_post_dealloc>} -> i32
 
 ! CHECK-LABEL: func.func private @{{.*}}_acc_declare_pre_dealloc(
 ! CHECK-SAME: %[[PRE_DEALLOC_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>)

@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "test_helpers.hpp"
 #include <mock/helpers.hpp>
 
@@ -34,6 +42,23 @@ TEST(Handler, MemcpyViaSubmit) {
 
   EXPECT_CALL(Mock.get(), olSyncEvent(_)).Times(1);
   E.wait();
+}
+
+TEST(Handler, CopyViaSubmit) {
+  struct Elem {
+    char Data[3];
+  };
+  constexpr std::size_t Count = 16;
+
+  mock::MockWrapper Mock;
+  queue Q;
+
+  Elem Src[Count] = {};
+  Elem Dst[Count] = {};
+
+  EXPECT_CALL(Mock.get(), olMemcpy(_, Dst, _, Src, _, sizeof(Src))).Times(1);
+
+  Q.submit([&](handler &CGH) { CGH.copy(Src, Dst, Count); });
 }
 
 TEST(Handler, DependsOnWithMemcpy) {

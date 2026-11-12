@@ -1,3 +1,5 @@
+# RUN: llvm-mc %s -triple=mipsel -mattr=micromips -filetype=obj | \
+# RUN:   llvm-objdump -d --no-print-imm-hex - | FileCheck %s --check-prefix=DIS
 # RUN: llvm-mc %s -triple=mipsel -show-encoding -mattr=micromips | \
 # RUN: FileCheck -check-prefix=CHECK-EL %s
 # RUN: llvm-mc %s -triple=mips -show-encoding -mattr=micromips | \
@@ -127,7 +129,7 @@
     sll16   $3, $16, 5
     srl16   $4, $17, 6
     lbu16   $3, 4($17)
-    lbu16   $3, -1($16)
+    lbu16   $3, -1($16)  # DIS: lbu16 $3, -1($16)
     lhu16   $3, 4($16)
     lw16    $4, 8($17)
     sb16    $3, 4($16)
@@ -136,7 +138,7 @@
     sw16    $0, 4($17)
     lw      $3, 32($gp)
     lw      $3, 32($sp)
-    sw      $4, 124($sp)
+    sw      $4, 124($sp) # DIS: sw $4, 124($sp)
     li16    $3, -1
     li16    $3, 126
     addiur1sp $7, 4
@@ -163,3 +165,17 @@
     b16 132
     break16 8
     sdbbp16 14
+
+# Scaled memory offset boundaries.
+    lhu16   $3, 30($17)     # CHECK-EL: lhu16 $3, 30($17) # encoding: [0x9f,0x29]
+                            # CHECK-EB: lhu16 $3, 30($17) # encoding: [0x29,0x9f]
+                            # DIS: lhu16 $3, 30($17)
+    lw16    $3, 60($16)     # CHECK-EL: lw16 $3, 60($16) # encoding: [0x8f,0x69]
+                            # CHECK-EB: lw16 $3, 60($16) # encoding: [0x69,0x8f]
+                            # DIS: lw16 $3, 60($16)
+    lw      $3, 124($sp)    # CHECK-EL: lw $3, 124($sp) # encoding: [0x7f,0x48]
+                            # CHECK-EB: lw $3, 124($sp) # encoding: [0x48,0x7f]
+                            # DIS: lw $3, 124($sp)
+    lw      $3, -256($gp)   # CHECK-EL: lw $3, -256($gp) # encoding: [0xc0,0x65]
+                            # CHECK-EB: lw $3, -256($gp) # encoding: [0x65,0xc0]
+                            # DIS: lw $3, -256($gp)

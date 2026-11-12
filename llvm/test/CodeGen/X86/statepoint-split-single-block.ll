@@ -61,7 +61,7 @@ entry:
   br label %do_call
 
 do_call:
-  ; Basic block with two use intructions inside:
+  ; Basic block with two use instructions inside:
   ; copy to rdi as an argument to call and use in statepoint instruction as gc-live and deopt value.
   %statepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void (ptr addrspace(1))) @bar, i32 1, i32 0, ptr addrspace(1) %arg, i32 0, i32 0) [ "deopt"(ptr addrspace(1) %arg), "gc-live"(ptr addrspace(1) %arg) ]
   %arg.reloc = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %statepoint_token, i32 0, i32 0)

@@ -15,9 +15,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 func.func @_QPtest() {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFtestEx"}
-  %2 = fir.declare %1 {uniq_name = "_QFtestEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %2 = fir.declare %1 uniq_name("_QFtestEx") : (!fir.ref<f32>) -> !fir.ref<f32>
   %3 = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFtestEy"}
-  %4 = fir.declare %3 {uniq_name = "_QFtestEy"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %4 = fir.declare %3 uniq_name("_QFtestEy") : (!fir.ref<f32>) -> !fir.ref<f32>
   %5 = fir.load %4 : !fir.ref<f32>
   fir.store %5 to %2 : !fir.ref<f32>
   return

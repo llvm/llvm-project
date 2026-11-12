@@ -9,12 +9,14 @@
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/RecordProxy.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/COFF.h"
@@ -66,6 +68,21 @@ struct RegisterObjectSections {
   using SPSSig = void(SPSExecutorAddr, SPSCOFFObjectSectionsMap, bool);
 };
 } // namespace llvm::orc::coff_sps_ci
+
+// Descriptors for the call-controller handlers that the COFF platform runtime
+// calls.
+namespace llvm::orc::coff_sps_handlers {
+struct LookupSymbol {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_coff_symbol_lookup_tag");
+  using SPSSig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
+};
+struct PushInitializers {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_coff_push_initializers_tag");
+  using SPSSig = SPSExpected<SPSCOFFJITDylibDepInfoMap>(SPSExecutorAddr);
+};
+} // namespace llvm::orc::coff_sps_handlers
 
 namespace {
 
@@ -653,20 +670,14 @@ void COFFPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 }
 
 Error COFFPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
-  using LookupSymbolSPSSig =
-      SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
-  WFs[ES.intern("__orc_rt_coff_symbol_lookup_tag")] =
-      ES.wrapAsyncWithSPS<LookupSymbolSPSSig>(this,
-                                              &COFFPlatform::rt_lookupSymbol);
-  using PushInitializersSPSSig =
-      SPSExpected<SPSCOFFJITDylibDepInfoMap>(SPSExecutorAddr);
-  WFs[ES.intern("__orc_rt_coff_push_initializers_tag")] =
-      ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
-          this, &COFFPlatform::rt_pushInitializers);
-
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandler<
+          sps::HandlerSpec<coff_sps_handlers::LookupSymbol>>(
+          this, &COFFPlatform::rt_lookupSymbol),
+      bindCallControllerHandler<
+          sps::HandlerSpec<coff_sps_handlers::PushInitializers>>(
+          this, &COFFPlatform::rt_pushInitializers));
 }
 
 Error COFFPlatform::runBootstrapInitializers(JDBootstrapState &BState) {

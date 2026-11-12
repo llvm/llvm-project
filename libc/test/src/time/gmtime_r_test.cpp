@@ -59,8 +59,8 @@ TEST_F(LlvmLibcGmTimeR, Max64BitYear) {
 }
 
 TEST_F(LlvmLibcGmTimeR, NullPtr) {
-  struct tm tm_data;
-  time_t seconds = 0;
+  [[maybe_unused]] struct tm tm_data;
+  [[maybe_unused]] time_t seconds = 0;
   EXPECT_DEATH([] { LIBC_NAMESPACE::gmtime_r(nullptr, nullptr); },
                WITH_SIGNAL(-1));
   EXPECT_DEATH([&] { LIBC_NAMESPACE::gmtime_r(nullptr, &tm_data); },

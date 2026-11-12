@@ -56,7 +56,7 @@ module attributes {
 // is gone and no scratch alloca/reload is introduced.
 
 cir.func @takes_two_long(%arg0: !rec_TwoLong)
-    attributes { test_classify = #expand_two } {
+    requires_call_conv_lowering attributes { test_classify = #expand_two } {
   %0 = cir.alloca "p" align(8) init : !cir.ptr<!rec_TwoLong>
   cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
   cir.return
@@ -76,7 +76,7 @@ cir.func @takes_two_long(%arg0: !rec_TwoLong)
 // stays; only the original arg store is replaced.
 
 cir.func @returns_expanded(%arg0: !rec_TwoLong) -> !rec_TwoLong
-    attributes { test_classify = #expand_two } {
+    requires_call_conv_lowering attributes { test_classify = #expand_two } {
   %0 = cir.alloca "s" align(8) init : !cir.ptr<!rec_TwoLong>
   cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
   %1 = cir.load %0 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
@@ -96,7 +96,7 @@ cir.func @returns_expanded(%arg0: !rec_TwoLong) -> !rec_TwoLong
 // Three-field expansion.
 
 cir.func @takes_three_int(%arg0: !rec_ThreeInt)
-    attributes { test_classify = #expand_three } {
+    requires_call_conv_lowering attributes { test_classify = #expand_three } {
   %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_ThreeInt>
   cir.store %arg0, %0 : !rec_ThreeInt, !cir.ptr<!rec_ThreeInt>
   cir.return
@@ -115,7 +115,7 @@ cir.func @takes_three_int(%arg0: !rec_ThreeInt)
 // Forward declaration: signature is flattened, no body to instrument.
 
 cir.func private @takes_two_long_decl(!rec_TwoLong)
-    attributes { test_classify = #expand_two }
+    requires_call_conv_lowering attributes { test_classify = #expand_two }
 
 // CHECK-LABEL: cir.func{{.*}} @takes_two_long_decl(!s64i, !s64i)
 // CHECK-NOT:   !rec_TwoLong
@@ -123,7 +123,7 @@ cir.func private @takes_two_long_decl(!rec_TwoLong)
 // Caller whose operand is a load of an alloca: read each member directly
 // from that alloca (get_member + load); the whole-struct load is dropped.
 
-cir.func @caller_two_long() attributes { test_classify = #passthrough } {
+cir.func @caller_two_long() requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_TwoLong>
   %1 = cir.load %0 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
   cir.call @takes_two_long(%1) : (!rec_TwoLong) -> ()
@@ -143,7 +143,7 @@ cir.func @caller_two_long() attributes { test_classify = #passthrough } {
 // the members are read from the address the load used.
 
 cir.func @caller_two_long_through_cast()
-    attributes { test_classify = #passthrough } {
+    requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %raw = cir.alloca "raw" align(8) : !cir.ptr<!cir.array<!s8i x 16>>
   %s = cir.cast bitcast %raw
       : !cir.ptr<!cir.array<!s8i x 16>> -> !cir.ptr<!rec_TwoLong>
@@ -166,7 +166,7 @@ cir.func @caller_two_long_through_cast()
 // address space from the address the load used.
 
 cir.func @caller_two_long_addrspace()
-    attributes { test_classify = #passthrough } {
+    requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %raw = cir.alloca "raw" align(8) : !cir.ptr<!rec_TwoLong>
   %s = cir.cast address_space %raw
       : !cir.ptr<!rec_TwoLong> -> !cir.ptr<!rec_TwoLong, target_address_space(5)>
@@ -189,7 +189,7 @@ cir.func @caller_two_long_addrspace()
 
 cir.func @expand_ignore_expand_callee(
     %a: !rec_TwoLong, %b: !rec_TwoLong, %c: !rec_TwoLong)
-    attributes { test_classify = #expand_ignore_expand } {
+    requires_call_conv_lowering attributes { test_classify = #expand_ignore_expand } {
   %0 = cir.alloca "a" align(8) init : !cir.ptr<!rec_TwoLong>
   %1 = cir.alloca "c" align(8) init : !cir.ptr<!rec_TwoLong>
   cir.store %a, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
@@ -213,7 +213,7 @@ cir.func @expand_ignore_expand_callee(
 // One-field expansion: the single block arg is retyped in place.
 
 cir.func @takes_one_int(%arg0: !rec_OneInt)
-    attributes { test_classify = #expand_one } {
+    requires_call_conv_lowering attributes { test_classify = #expand_one } {
   %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_OneInt>
   cir.store %arg0, %0 : !rec_OneInt, !cir.ptr<!rec_OneInt>
   cir.return
@@ -230,7 +230,7 @@ cir.func @takes_one_int(%arg0: !rec_OneInt)
 // store position, so the field-store ordering is deterministic.
 
 cir.func @two_expand_args(%a: !rec_TwoLong, %b: !rec_ThreeInt)
-    attributes { test_classify = #expand_expand } {
+    requires_call_conv_lowering attributes { test_classify = #expand_expand } {
   %0 = cir.alloca "a" align(8) init : !cir.ptr<!rec_TwoLong>
   %1 = cir.alloca "b" align(4) init : !cir.ptr<!rec_ThreeInt>
   cir.store %a, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
@@ -249,7 +249,7 @@ cir.func @two_expand_args(%a: !rec_TwoLong, %b: !rec_ThreeInt)
 
 // Caller with two Expand operands, both loads of allocas.
 
-cir.func @caller_two_expand() attributes { test_classify = #passthrough } {
+cir.func @caller_two_expand() requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %0 = cir.alloca "a" align(8) : !cir.ptr<!rec_TwoLong>
   %1 = cir.alloca "b" align(4) : !cir.ptr<!rec_ThreeInt>
   %a = cir.load %0 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
@@ -273,7 +273,7 @@ cir.func @caller_two_expand() attributes { test_classify = #passthrough } {
 // Fallback: the operand is not a load of an alloca (here a struct constant),
 // so members are taken with cir.extract_member on the value.
 
-cir.func @caller_const() attributes { test_classify = #passthrough } {
+cir.func @caller_const() requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %v = cir.const #cir.zero : !rec_TwoLong
   cir.call @takes_two_long(%v) : (!rec_TwoLong) -> ()
   cir.return
@@ -289,7 +289,7 @@ cir.func @caller_const() attributes { test_classify = #passthrough } {
 // and the Expand arg's two scalar block args follow at slots 1 and 2.
 
 cir.func @sret_and_expand(%arg0: !rec_TwoLong) -> !rec_TwoLong
-    attributes { test_classify = #sret_expand } {
+    requires_call_conv_lowering attributes { test_classify = #sret_expand } {
   %0 = cir.alloca "s" align(8) init : !cir.ptr<!rec_TwoLong>
   cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
   %1 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_TwoLong>
@@ -313,7 +313,7 @@ cir.func @sret_and_expand(%arg0: !rec_TwoLong) -> !rec_TwoLong
 // still flattened to scalar field args, but no get_member/store is emitted.
 
 cir.func @takes_two_long_unused(%arg0: !rec_TwoLong)
-    attributes { test_classify = #expand_two } {
+    requires_call_conv_lowering attributes { test_classify = #expand_two } {
   cir.return
 }
 

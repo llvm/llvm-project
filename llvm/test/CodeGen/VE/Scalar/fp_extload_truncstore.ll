@@ -8,8 +8,8 @@ define float @func_fp16fp32(ptr %a) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -240(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -18,7 +18,7 @@ define float @func_fp16fp32(ptr %a) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
 ; CHECK-NEXT:    lea %s1, __extendhfsf2@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -40,8 +40,8 @@ define double @func_fp16fp64(ptr %a) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -240(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -50,7 +50,7 @@ define double @func_fp16fp64(ptr %a) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
 ; CHECK-NEXT:    lea %s1, __extendhfsf2@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -73,8 +73,8 @@ define half @func_fp32fp16(ptr %fl.ptr, float %a) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -240(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -83,7 +83,7 @@ define half @func_fp32fp16(ptr %fl.ptr, float %a) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:  .LBB2_1:
 ; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, __truncsfhf2@lo
@@ -121,8 +121,8 @@ define void @func_fp64fp16(ptr %fl.ptr, double %val) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -240(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -131,7 +131,7 @@ define void @func_fp64fp16(ptr %fl.ptr, double %val) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:  .LBB4_1:
 ; CHECK-NEXT:    st %s18, 288(, %s11) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, __truncdfhf2@lo

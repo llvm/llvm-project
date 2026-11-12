@@ -37,12 +37,11 @@ define i32 @bmsk_clamp(i32 %a, i32 %b) {
 define i32 @bmsk_wrap_ii() {
 ; CHECK-LABEL: bmsk_wrap_ii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, 5;
-; CHECK-NEXT:    bmsk.wrap.b32 %r2, %r1, 6;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    bmsk.wrap.b32 %r1, 5, 6;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %c = call i32 @llvm.nvvm.bmsk.wrap(i32 5, i32 6)
   ret i32 %c

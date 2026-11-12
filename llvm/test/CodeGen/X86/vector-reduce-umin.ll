@@ -1091,7 +1091,7 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE41-NEXT:    pushl %ebp
 ; X86-SSE41-NEXT:    movl %esp, %ebp
 ; X86-SSE41-NEXT:    andl $-16, %esp
-; X86-SSE41-NEXT:    subl $48, %esp
+; X86-SSE41-NEXT:    subl $32, %esp
 ; X86-SSE41-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; X86-SSE41-NEXT:    movdqa 24(%ebp), %xmm6

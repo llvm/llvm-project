@@ -627,9 +627,6 @@ bool polly::isIgnoredIntrinsic(const Value *V) {
     case llvm::Intrinsic::annotation:
     case llvm::Intrinsic::donothing:
     case llvm::Intrinsic::assume:
-    // Some debug info intrinsics are supported/ignored.
-    case llvm::Intrinsic::dbg_value:
-    case llvm::Intrinsic::dbg_declare:
       return true;
     default:
       break;

@@ -17,8 +17,8 @@ subroutine foo(n)
   end do
 end subroutine
 
-! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFfooEi"}
-! CHECK-DAG: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFfooEa"}
+! CHECK-DAG: %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFfooEi")
+! CHECK-DAG: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFfooEa")
 
 ! CHECK-DAG: %[[I_MAP:.*]] = omp.map.info var_ptr(%[[I_DECL]]#1 : {{.*}}) name("_QFfooEi")
 ! CHECK-DAG: %[[A_MAP:.*]] = omp.map.info var_ptr(%[[A_DECL]]#1 : {{.*}}) name("_QFfooEa")

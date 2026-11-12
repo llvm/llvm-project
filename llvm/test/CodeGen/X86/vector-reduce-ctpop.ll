@@ -2443,7 +2443,7 @@ define i64 @reduce_ctpop_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE4-NEXT:    pushl %ebp
 ; X86-SSE4-NEXT:    movl %esp, %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
-; X86-SSE4-NEXT:    subl $32, %esp
+; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    movaps %xmm2, (%esp) # 16-byte Spill
 ; X86-SSE4-NEXT:    movdqa %xmm0, %xmm2
 ; X86-SSE4-NEXT:    movdqa 40(%ebp), %xmm5
@@ -2636,7 +2636,7 @@ define i64 @reduce_ctpop_v16i64(<16 x i64> %a0) nounwind {
 ; X86-AVX1-NEXT:    pushl %ebp
 ; X86-AVX1-NEXT:    movl %esp, %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
-; X86-AVX1-NEXT:    subl $96, %esp
+; X86-AVX1-NEXT:    subl $64, %esp
 ; X86-AVX1-NEXT:    vmovaps %ymm1, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
 ; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
@@ -3743,7 +3743,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
-; X86-SSE2-NEXT:    subl $80, %esp
+; X86-SSE2-NEXT:    subl $64, %esp
 ; X86-SSE2-NEXT:    movdqa 24(%ebp), %xmm6
 ; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm5
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm3
@@ -4295,7 +4295,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-SSE4-NEXT:    pushl %ebp
 ; X86-SSE4-NEXT:    movl %esp, %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
-; X86-SSE4-NEXT:    subl $80, %esp
+; X86-SSE4-NEXT:    subl $64, %esp
 ; X86-SSE4-NEXT:    movdqa 24(%ebp), %xmm6
 ; X86-SSE4-NEXT:    movdqa {{.*#+}} xmm4 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; X86-SSE4-NEXT:    movdqa %xmm1, %xmm5
@@ -5037,7 +5037,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-AVX2-NEXT:    pushl %ebp
 ; X86-AVX2-NEXT:    movl %esp, %ebp
 ; X86-AVX2-NEXT:    andl $-32, %esp
-; X86-AVX2-NEXT:    subl $192, %esp
+; X86-AVX2-NEXT:    subl $160, %esp
 ; X86-AVX2-NEXT:    vmovdqa 40(%ebp), %ymm6
 ; X86-AVX2-NEXT:    vmovdqa 8(%ebp), %ymm5
 ; X86-AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]

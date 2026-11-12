@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_LINALG_IR_LINALGDIALECT_H
 #define MLIR_DIALECT_LINALG_IR_LINALGDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 

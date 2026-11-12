@@ -46,7 +46,7 @@ for.end:                                          ; preds = %for.body
 }
 ; CHECK: !0 = !{!1}
 ; CHECK: !1 = distinct !{!1, !2}
-; CHECK: !2 = distinct !{!2, !"LVerDomain"}
+; CHECK: !2 = distinct !{!2, i1 false, !"LVerDomain"}
 ; CHECK: !3 = !{!4}
 ; CHECK: !4 = distinct !{!4, !2}
 ; CHECK: !5 = !{!6}

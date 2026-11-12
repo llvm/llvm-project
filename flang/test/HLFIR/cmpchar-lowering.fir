@@ -10,29 +10,29 @@ func.func @_QPlge_test() {
 // CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<3x!fir.char<1,3>> <{bindc_name = "c1", uniq_name = "_QFlge_testEc1"}>
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) typeparams %[[VAL_2]] {uniq_name = "_QFlge_testEc1"} : (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.ref<!fir.array<3x!fir.char<1,3>>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) typeparams %[[VAL_2]] uniq_name("_QFlge_testEc1") : (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.ref<!fir.array<3x!fir.char<1,3>>>)
 // CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<3x!fir.char<1,7>> <{bindc_name = "c2", uniq_name = "_QFlge_testEc2"}>
 // CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) typeparams %[[VAL_1]] {uniq_name = "_QFlge_testEc2"} : (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.ref<!fir.array<3x!fir.char<1,7>>>)
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) typeparams %[[VAL_1]] uniq_name("_QFlge_testEc2") : (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.ref<!fir.array<3x!fir.char<1,7>>>)
 // CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.array<3x!fir.logical<4>> <{bindc_name = "l", uniq_name = "_QFlge_testEl"}>
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_11]]) {uniq_name = "_QFlge_testEl"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
+// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_11]]) uniq_name("_QFlge_testEl") : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
 // CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.logical<4>> {
     %0 = fir.dummy_scope : !fir.dscope
     %c3 = arith.constant 3 : index
     %c3_0 = arith.constant 3 : index
     %1 = fir.alloca !fir.array<3x!fir.char<1,3>> {bindc_name = "c1", uniq_name = "_QFlge_testEc1"}
     %2 = fir.shape %c3_0 : (index) -> !fir.shape<1>
-    %3:2 = hlfir.declare %1(%2) typeparams %c3 {uniq_name = "_QFlge_testEc1"} : (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.ref<!fir.array<3x!fir.char<1,3>>>)
+    %3:2 = hlfir.declare %1(%2) typeparams %c3 uniq_name("_QFlge_testEc1") : (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,3>>>, !fir.ref<!fir.array<3x!fir.char<1,3>>>)
     %c7 = arith.constant 7 : index
     %c3_1 = arith.constant 3 : index
     %4 = fir.alloca !fir.array<3x!fir.char<1,7>> {bindc_name = "c2", uniq_name = "_QFlge_testEc2"}
     %5 = fir.shape %c3_1 : (index) -> !fir.shape<1>
-    %6:2 = hlfir.declare %4(%5) typeparams %c7 {uniq_name = "_QFlge_testEc2"} : (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.ref<!fir.array<3x!fir.char<1,7>>>)
+    %6:2 = hlfir.declare %4(%5) typeparams %c7 uniq_name("_QFlge_testEc2") : (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,7>>>, !fir.ref<!fir.array<3x!fir.char<1,7>>>)
     %c3_2 = arith.constant 3 : index
     %7 = fir.alloca !fir.array<3x!fir.logical<4>> {bindc_name = "l", uniq_name = "_QFlge_testEl"}
     %8 = fir.shape %c3_2 : (index) -> !fir.shape<1>
-    %9:2 = hlfir.declare %7(%8) {uniq_name = "_QFlge_testEl"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
+    %9:2 = hlfir.declare %7(%8) uniq_name("_QFlge_testEl") : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
     %10 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.logical<4>> {
     ^bb0(%arg0: index):
       %14 = hlfir.designate %3#0 (%arg0)  typeparams %c3 : (!fir.ref<!fir.array<3x!fir.char<1,3>>>, index, index) -> !fir.ref<!fir.char<1,3>>
@@ -148,11 +148,11 @@ func.func @_QPcmp_char(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"}, 
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "y"}) {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_charEl"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] uniq_name("_QFcmp_charEl") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 typeparams %[[VAL_3]]#1 dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_charEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 typeparams %[[VAL_3]]#1 dummy_scope %[[VAL_1]] uniq_name("_QFcmp_charEx") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_5:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_charEy"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_1]] uniq_name("_QFcmp_charEy") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_3]]#1 : (index) -> i64
@@ -163,11 +163,11 @@ func.func @_QPcmp_char(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"}, 
 // CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_2]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK:           return
     %0 = fir.dummy_scope : !fir.dscope
-    %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFcmp_charEl"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+    %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFcmp_charEl") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 {uniq_name = "_QFcmp_charEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 uniq_name("_QFcmp_charEx") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     %4:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-    %5:2 = hlfir.declare %4#0 typeparams %4#1 dummy_scope %0 {uniq_name = "_QFcmp_charEy"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+    %5:2 = hlfir.declare %4#0 typeparams %4#1 dummy_scope %0 uniq_name("_QFcmp_charEy") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
     %6 = hlfir.cmpchar eq %3#0 %5#0 : (!fir.boxchar<1>, !fir.boxchar<1>) -> i1
     %7 = fir.convert %6 : (i1) -> !fir.logical<4>
     hlfir.assign %7 to %1#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
@@ -181,11 +181,11 @@ func.func @_QPcmp_char4(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<4> {fir.bindc_name = "y"}) {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_char4El"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] uniq_name("_QFcmp_char4El") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
-// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 typeparams %[[VAL_3]]#1 dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_char4Ex"} : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 typeparams %[[VAL_3]]#1 dummy_scope %[[VAL_1]] uniq_name("_QFcmp_char4Ex") : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
 // CHECK:           %[[VAL_5:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_char4Ey"} : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_1]] uniq_name("_QFcmp_char4Ey") : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_3]]#1 : (index) -> i64
@@ -196,11 +196,11 @@ func.func @_QPcmp_char4(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"},
 // CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_2]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK:           return
     %0 = fir.dummy_scope : !fir.dscope
-    %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFcmp_char4El"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+    %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFcmp_char4El") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
-    %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 {uniq_name = "_QFcmp_char4Ex"} : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
+    %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 uniq_name("_QFcmp_char4Ex") : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
     %4:2 = fir.unboxchar %arg2 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
-    %5:2 = hlfir.declare %4#0 typeparams %4#1 dummy_scope %0 {uniq_name = "_QFcmp_char4Ey"} : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
+    %5:2 = hlfir.declare %4#0 typeparams %4#1 dummy_scope %0 uniq_name("_QFcmp_char4Ey") : (!fir.ref<!fir.char<4,?>>, index, !fir.dscope) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
     %6 = hlfir.cmpchar eq %3#0 %5#0 : (!fir.boxchar<4>, !fir.boxchar<4>) -> i1
     %7 = fir.convert %6 : (i1) -> !fir.logical<4>
     hlfir.assign %7 to %1#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
@@ -214,11 +214,11 @@ func.func @_QPcmp_char2(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<2> {fir.bindc_name = "y"}) {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_char2El"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_1]] uniq_name("_QFcmp_char2El") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_3:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
-// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 typeparams %[[VAL_3]]#1 dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_char2Ex"} : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 typeparams %[[VAL_3]]#1 dummy_scope %[[VAL_1]] uniq_name("_QFcmp_char2Ex") : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
 // CHECK:           %[[VAL_5:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_1]] {uniq_name = "_QFcmp_char2Ey"} : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_1]] uniq_name("_QFcmp_char2Ey") : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<i16>
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<i16>
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_3]]#1 : (index) -> i64
@@ -229,11 +229,11 @@ func.func @_QPcmp_char2(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"},
 // CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_2]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK:           return
     %0 = fir.dummy_scope : !fir.dscope
-    %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFcmp_char2El"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+    %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFcmp_char2El") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
     %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
-    %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 {uniq_name = "_QFcmp_char2Ex"} : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
+    %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 uniq_name("_QFcmp_char2Ex") : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
     %4:2 = fir.unboxchar %arg2 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
-    %5:2 = hlfir.declare %4#0 typeparams %4#1 dummy_scope %0 {uniq_name = "_QFcmp_char2Ey"} : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
+    %5:2 = hlfir.declare %4#0 typeparams %4#1 dummy_scope %0 uniq_name("_QFcmp_char2Ey") : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
     %6 = hlfir.cmpchar eq %3#0 %5#0 : (!fir.boxchar<2>, !fir.boxchar<2>) -> i1
     %7 = fir.convert %6 : (i1) -> !fir.logical<4>
     hlfir.assign %7 to %1#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>

@@ -331,3 +331,18 @@ namespace UnionNoActivate {
   }
   static_assert(g()); // both-error {{constant expression}} both-note {{in call}}
 }
+
+namespace UninitializedMemberFromConsteval {
+  struct A {
+    int x; // both-note {{subobject declared here}}
+    consteval A() { x = 4; }
+    consteval A(const A &) {}
+  };
+  void f() {
+    auto b = [] { // both-error {{call to immediate function}} \
+                  // both-note {{subobject 'x' is not initialized}}
+      auto z = [a = A()] {};
+      return z;
+    }();
+  }
+}

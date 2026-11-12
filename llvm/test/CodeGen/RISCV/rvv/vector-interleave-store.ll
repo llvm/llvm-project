@@ -341,9 +341,8 @@ define void @store_factor2_oneactive(<vscale x 2 x i32> %a, ptr %p) {
 define void @store_factor3_oneactive(<vscale x 2 x i32> %a, ptr %p) {
 ; CHECK-LABEL: store_factor3_oneactive:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 12
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg3e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = call <vscale x 6 x i32> @llvm.vector.interleave3(<vscale x 2 x i32> %a, <vscale x 2 x i32> poison, <vscale x 2 x i32> poison)
   store <vscale x 6 x i32> %v, ptr %p

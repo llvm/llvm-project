@@ -469,6 +469,24 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       decl.SetColumn(form_value.Unsigned());
       break;
 
+    case DW_AT_address_class: {
+      uint64_t val = form_value.Unsigned();
+      if (val == llvm::dwarf::DW_ADDR_none)
+        break;
+      constexpr uint64_t max_target_as =
+          clang::Qualifiers::MaxAddressSpace -
+          llvm::to_underlying(clang::LangAS::FirstTargetAddressSpace);
+      if (val <= max_target_as) {
+        address_class =
+            clang::getLangASFromTargetAS(static_cast<unsigned>(val));
+      } else {
+        die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
+            "[{0:x16}]: invalid DW_AT_address_class {1:x}", die.GetOffset(),
+            val);
+      }
+      break;
+    }
+
     case DW_AT_declaration:
       is_forward_declaration = form_value.Boolean();
       break;
@@ -812,6 +830,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   }
   case DW_TAG_pointer_type:
     encoding_data_type = Type::eEncodingIsPointerUID;
+    payload = TypePayloadClang(attrs.address_class);
     break;
   case DW_TAG_reference_type:
     encoding_data_type = Type::eEncodingIsLValueReferenceUID;
@@ -1748,6 +1767,20 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
   unique_typename = ConstString(qualified_name);
 }
 
+/// The ASTImporter copies attributes only when a decl is first imported, so
+/// this must run before the decl is imported into an expression context.
+static void ApplyObjCRuntimeName(const DWARFDIE &die, CompilerType type) {
+  clang::ObjCInterfaceDecl *decl =
+      TypeSystemClang::GetAsObjCInterfaceDecl(type);
+  if (!decl)
+    return;
+  if (const char *runtime_name =
+          DWARFASTParser::GetAnnotation(die, "objc_runtime_name")
+              .GetAttributeValueAsString(DW_AT_const_value, nullptr))
+    decl->addAttr(clang::ObjCRuntimeNameAttr::CreateImplicit(
+        decl->getASTContext(), runtime_name));
+}
+
 TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
     const SymbolContext &sc, const DWARFDIE &die,
     const ParsedDWARFTypeAttributes &attrs) {
@@ -1905,6 +1938,7 @@ TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
     clang_type = m_ast.CreateRecordType(
         containing_decl_ctx, GetOwningClangModule(die), attrs.name.GetCString(),
         tag_decl_kind, attrs.class_language, metadata, attrs.exports_symbols);
+    ApplyObjCRuntimeName(die, clang_type);
   }
 
   TypeSP type_sp = dwarf->MakeType(

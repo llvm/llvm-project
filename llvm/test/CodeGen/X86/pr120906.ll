@@ -5,16 +5,7 @@ define i32 @PR120906(ptr %p) {
 ; CHECK-LABEL: PR120906:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $564341309, (%rdi) # imm = 0x21A32A3D
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [11,11,11,11,u,u,u,u,u,u,u,u,u,u,u,u]
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; CHECK-NEXT:    por %xmm0, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movl $11, %eax
 ; CHECK-NEXT:    retq
   store i32 564341309, ptr %p, align 4
   %load = load i32, ptr %p, align 4

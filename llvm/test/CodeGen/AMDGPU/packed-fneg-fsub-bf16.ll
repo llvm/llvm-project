@@ -15,7 +15,6 @@ define <2 x bfloat> @v_fadd_v2bf16_neg1(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_add_bf16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -38,7 +37,6 @@ define <4 x bfloat> @v_fadd_v4bf16_neg1(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_add_bf16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    v_pk_add_bf16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
@@ -64,7 +62,6 @@ define <8 x bfloat> @v_fadd_v8bf16_neg1(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_add_bf16 v0, v0, v4 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    v_pk_add_bf16 v1, v1, v5 neg_lo:[0,1] neg_hi:[0,1]
@@ -89,7 +86,6 @@ define <2 x bfloat> @v_fneg_v2bf16(<2 x bfloat> %a) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -111,7 +107,6 @@ define <4 x bfloat> @v_fneg_v4bf16(<4 x bfloat> %a) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
 ; GFX1310-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
@@ -136,7 +131,6 @@ define <8 x bfloat> @v_fneg_v8bf16(<8 x bfloat> %a) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
 ; GFX1310-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
@@ -160,7 +154,6 @@ define <2 x bfloat> @v_fabs_v2bf16(<2 x bfloat> %a) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -182,7 +175,6 @@ define <4 x bfloat> @v_fabs_v4bf16(<4 x bfloat> %a) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX1310-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
@@ -207,7 +199,6 @@ define <8 x bfloat> @v_fabs_v8bf16(<8 x bfloat> %a) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
 ; GFX1310-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
@@ -231,7 +222,6 @@ define <2 x bfloat> @v_fsub_v2bf16_neg1(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_add_bf16 v0, v0, v1
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -254,7 +244,6 @@ define <4 x bfloat> @v_fsub_v4bf16_neg1(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_add_bf16 v0, v0, v2
 ; GFX1310-NEXT:    v_pk_add_bf16 v1, v1, v3
@@ -280,7 +269,6 @@ define <8 x bfloat> @v_fsub_v8bf16_neg1(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_add_bf16 v0, v0, v4
 ; GFX1310-NEXT:    v_pk_add_bf16 v1, v1, v5
@@ -305,7 +293,6 @@ define <2 x bfloat> @v_fmul_v2bf16_neg1(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_mul_bf16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -328,7 +315,6 @@ define <4 x bfloat> @v_fmul_v4bf16_neg1(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_mul_bf16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    v_pk_mul_bf16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
@@ -354,7 +340,6 @@ define <8 x bfloat> @v_fmul_v8bf16_neg1(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_mul_bf16 v0, v0, v4 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    v_pk_mul_bf16 v1, v1, v5 neg_lo:[0,1] neg_hi:[0,1]
@@ -379,7 +364,6 @@ define <2 x bfloat> @v_fma_v2bf16_neg1(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bf
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_fma_bf16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -402,7 +386,6 @@ define <4 x bfloat> @v_fma_v4bf16_neg1(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bf
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_fma_bf16 v0, v0, v2, v4 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1310-NEXT:    v_pk_fma_bf16 v1, v1, v3, v5 neg_lo:[0,1,0] neg_hi:[0,1,0]
@@ -428,7 +411,6 @@ define <8 x bfloat> @v_fma_v8bf16_neg1(<8 x bfloat> %a, <8 x bfloat> %b, <8 x bf
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_fma_bf16 v0, v0, v4, v8 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX1310-NEXT:    v_pk_fma_bf16 v1, v1, v5, v9 neg_lo:[0,1,0] neg_hi:[0,1,0]
@@ -453,7 +435,6 @@ define <2 x bfloat> @v_minnum_v2bf16_neg1(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_min_num_bf16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -476,7 +457,6 @@ define <4 x bfloat> @v_minnum_v4bf16_neg1(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_min_num_bf16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    v_pk_min_num_bf16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
@@ -499,7 +479,6 @@ define <2 x bfloat> @v_maxnum_v2bf16_neg1(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_max_num_bf16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -522,7 +501,6 @@ define <4 x bfloat> @v_maxnum_v4bf16_neg1(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_max_num_bf16 v0, v0, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    v_pk_max_num_bf16 v1, v1, v3 neg_lo:[0,1] neg_hi:[0,1]
@@ -545,7 +523,6 @@ define bfloat @v_fadd_bf16_neg(bfloat %a, bfloat %b) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_add_bf16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1310-NEXT:    s_set_pc_i64 s[30:31]
@@ -570,7 +547,6 @@ define bfloat @v_fadd_bf16_chain(bfloat %a, bfloat %b, bfloat %c) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_pk_add_bf16 v0, v0, v1
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1)

@@ -129,11 +129,18 @@ TEST(Bytecode, AlignmentFailure) {
   OwningOpRef<Operation *> module =
       parseSourceString<Operation *>(irWithResources, parseConfig);
   ASSERT_TRUE(module);
+  // Ensure that the resource section needs an explicit alignment marker. The
+  // test below exercises the reader's handling of that marker.
+  module.get()->setDiscardableAttr("bytecode.padding",
+                                   builder.getStringAttr("padding"));
 
   // Write the module to bytecode.
   std::string serializedBytecode;
   llvm::raw_string_ostream ostream(serializedBytecode);
-  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
+  // Hardcode the producer to make sure that the length of the producer string
+  // does not affect the alignment.
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream,
+                                            BytecodeWriterConfig("MLIR"))));
 
   // Create copy of buffer which is not aligned to requested resource alignment.
   std::string buffer(serializedBytecode);

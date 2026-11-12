@@ -34,7 +34,7 @@
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define float @fma_float_var(float noundef %0, float noundef %1, float noundef %2) {
 ; CHECK-LABEL: fma_float_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s3, fmaf@lo
 ; CHECK-NEXT:    and %s3, %s3, (32)0
 ; CHECK-NEXT:    lea.sl %s12, fmaf@hi(, %s3)
@@ -50,7 +50,7 @@ declare float @llvm.fma.f32(float, float, float)
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define double @fma_double_var(double noundef %0, double noundef %1, double noundef %2) {
 ; CHECK-LABEL: fma_double_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s3, fma@lo
 ; CHECK-NEXT:    and %s3, %s3, (32)0
 ; CHECK-NEXT:    lea.sl %s12, fma@hi(, %s3)
@@ -66,7 +66,7 @@ declare double @llvm.fma.f64(double, double, double)
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define fp128 @fma_quad_var(fp128 noundef %0, fp128 noundef %1, fp128 noundef %2) {
 ; CHECK-LABEL: fma_quad_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s6, fmal@lo
 ; CHECK-NEXT:    and %s6, %s6, (32)0
 ; CHECK-NEXT:    lea.sl %s12, fmal@hi(, %s6)
@@ -138,7 +138,7 @@ define fp128 @fma_quad_back_zero(fp128 noundef %0, fp128 noundef returned %1) {
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define float @fma_float_fore_const(float noundef %0, float noundef %1) {
 ; CHECK-LABEL: fma_float_fore_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s2, 0, %s1
 ; CHECK-NEXT:    lea %s1, fmaf@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -153,7 +153,7 @@ define float @fma_float_fore_const(float noundef %0, float noundef %1) {
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define double @fma_double_fore_const(double noundef %0, double noundef %1) {
 ; CHECK-LABEL: fma_double_fore_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s2, 0, %s1
 ; CHECK-NEXT:    lea %s1, fma@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -168,7 +168,7 @@ define double @fma_double_fore_const(double noundef %0, double noundef %1) {
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define fp128 @fma_quad_fore_const(fp128 noundef %0, fp128 noundef %1) {
 ; CHECK-LABEL: fma_quad_fore_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s4, 0, %s2
 ; CHECK-NEXT:    or %s5, 0, %s3
 ; CHECK-NEXT:    lea %s2, .LCPI{{[0-9]+}}_0@lo
@@ -188,7 +188,7 @@ define fp128 @fma_quad_fore_const(fp128 noundef %0, fp128 noundef %1) {
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define float @fma_float_back_const(float noundef %0, float noundef %1) {
 ; CHECK-LABEL: fma_float_back_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s2, 0, %s1
 ; CHECK-NEXT:    lea %s1, fmaf@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -203,7 +203,7 @@ define float @fma_float_back_const(float noundef %0, float noundef %1) {
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define double @fma_double_back_const(double noundef %0, double noundef %1) {
 ; CHECK-LABEL: fma_double_back_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s2, 0, %s1
 ; CHECK-NEXT:    lea %s1, fma@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -218,7 +218,7 @@ define double @fma_double_back_const(double noundef %0, double noundef %1) {
 ; Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
 define fp128 @fma_quad_back_const(fp128 noundef %0, fp128 noundef %1) {
 ; CHECK-LABEL: fma_quad_back_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s4, 0, %s2
 ; CHECK-NEXT:    or %s5, 0, %s3
 ; CHECK-NEXT:    lea %s2, .LCPI{{[0-9]+}}_0@lo

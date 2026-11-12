@@ -16,7 +16,6 @@
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
 #include "src/stdio/scanf_core/reader.h"

@@ -5,7 +5,7 @@
 
 ; xUN: llc -mtriple=amdgpu8.02--amdhsa -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX802-GISEL %s
 ; xUN: llc -mtriple=amdgpu10.10--amdhsa -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1010-GISEL %s
-; RUN: llc -mtriple=amdgpu11.00--amdhsa -amdgpu-enable-vopd=0 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
+; RUN: llc -mtriple=amdgpu11.00--amdhsa -amdgpu-enable-vopd=0 -global-isel < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
 
 declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.writelane.i64(i64, i32, i64) #0

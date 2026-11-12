@@ -12,39 +12,9 @@
 
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
+#include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 
-namespace orc_rt {
-
-/// SPS serialization for NativeDylibManager::LookupFlags as a bool.
-///
-/// RequiredSymbol serializes as true, WeaklyReferencedSymbol as false. This
-/// matches the wire format of llvm::orc::RemoteSymbolLookupSetElement, which
-/// uses a bool 'Required' field.
-template <>
-class SPSSerializationTraits<bool, NativeDylibManager::LookupFlags> {
-public:
-  static size_t size(NativeDylibManager::LookupFlags) { return sizeof(bool); }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        NativeDylibManager::LookupFlags L) {
-    return SPSSerializationTraits<bool, bool>::serialize(
-        OB, L == NativeDylibManager::RequiredSymbol);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          NativeDylibManager::LookupFlags &L) {
-    bool Required;
-    if (!SPSSerializationTraits<bool, bool>::deserialize(IB, Required))
-      return false;
-    L = Required ? NativeDylibManager::RequiredSymbol
-                 : NativeDylibManager::WeaklyReferencedSymbol;
-    return true;
-  }
-};
-
-} // namespace orc_rt
-
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_NativeDylibManager_load,
@@ -53,9 +23,8 @@ ORC_RT_SPS_WRAPPER_IMPL(
 
 ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_NativeDylibManager_lookup,
-    SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
-        SPSExecutorAddr, SPSExecutorAddr,
-        SPSSequence<SPSTuple<SPSString, bool>>),
+    SPSExpected<SPSSymbolLookupResult>(SPSExecutorAddr, SPSExecutorAddr,
+                                       SPSSymbolLookupSet),
     WrapperFunction::handleWithAsyncMethod(&NativeDylibManager::lookup))
 
 static std::pair<SymbolNameSpec, const void *>
@@ -67,4 +36,4 @@ Error addNativeDylibManager(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_NativeDylibManager_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

@@ -1,5 +1,7 @@
 import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/triples.gni")
+import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("bolt_lit_site_cfg_files.gni")
 
@@ -67,6 +69,18 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "HOST_ARCH=powerpc64le" ]
   } else {
     assert(false, "unimplemented host_cpu " + host_cpu)
+  }
+
+  if (llvm_enable_zlib) {
+    extra_values += [ "LLVM_ENABLE_ZLIB=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_ZLIB=0" ]  # Must be 0.
+  }
+
+  if (llvm_enable_zstd) {
+    extra_values += [ "LLVM_ENABLE_ZSTD=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_ZSTD=0" ]  # Must be 0.
   }
 }
 

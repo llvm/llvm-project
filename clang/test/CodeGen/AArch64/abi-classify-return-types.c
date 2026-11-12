@@ -1,15 +1,15 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,LE
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,LE
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,LE
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,BE
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,BE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE --implicit-check-not="not yet implemented"
 
 // This test is verifying that the LLVM ABI library classifies return types in
 // the same way that Clang does without the library.
@@ -220,3 +220,59 @@ v8f32 ret_v8f32(void) { return (v8f32){0}; }
 typedef char v17i8 __attribute__((vector_size(17)));
 v17i8 ret_v17i8(void) { return (v17i8){0}; }
 // CHECK: define{{.*}} void @ret_v17i8(ptr dead_on_unwind noalias writable sret(<17 x i8>) align 16 %{{.*}})
+
+// Aggregates of at most 16 bytes are returned in registers. Little-endian
+// values of at most 8 bytes keep their exact width. Big-endian values are
+// widened to a multiple of 8 bytes. A result widened to 16 bytes is a pair
+// of i64 unless its ABI alignment is 16 bytes, in which case it is an i128.
+// Larger aggregates are returned indirectly. LE is every little-endian
+// triple in this file. BE is aarch64_be.
+
+typedef struct { char c; } OneChar;
+OneChar ret_one_char(void) { return (OneChar){0}; }
+// LE: define{{.*}} i8 @ret_one_char
+// BE: define{{.*}} i64 @ret_one_char
+
+typedef struct { char a, b, c; } ThreeChars;
+ThreeChars ret_three_chars(void) { return (ThreeChars){0}; }
+// LE: define{{.*}} i24 @ret_three_chars
+// BE: define{{.*}} i64 @ret_three_chars
+
+typedef struct { int a; } OneInt;
+OneInt ret_one_int(void) { return (OneInt){0}; }
+// LE: define{{.*}} i32 @ret_one_int
+// BE: define{{.*}} i64 @ret_one_int
+
+typedef struct { int a, b; } TwoInts;
+TwoInts ret_two_ints(void) { return (TwoInts){0}; }
+// CHECK: define{{.*}} i64 @ret_two_ints
+
+typedef struct { int a, b, c; } ThreeInts;
+ThreeInts ret_three_ints(void) { return (ThreeInts){0}; }
+// CHECK: define{{.*}} [2 x i64] @ret_three_ints
+
+typedef struct { int a, b, c, d; } FourInts;
+FourInts ret_four_ints(void) { return (FourInts){0}; }
+// CHECK: define{{.*}} [2 x i64] @ret_four_ints
+
+typedef struct { __int128 x; } OneI128;
+OneI128 ret_i128(void) { return (OneI128){0}; }
+// CHECK: define{{.*}} i128 @ret_i128
+
+typedef struct __attribute__((aligned(16))) { int a; } OveralignedInt;
+OveralignedInt ret_overaligned_int(void) { return (OveralignedInt){0}; }
+// CHECK: define{{.*}} i128 @ret_overaligned_int
+
+typedef struct { long a, b; } TwoLongs;
+TwoLongs ret_two_longs(void) { return (TwoLongs){0}; }
+// LONG64: define{{.*}} [2 x i64] @ret_two_longs
+// LONG32: define{{.*}} i64 @ret_two_longs
+
+typedef struct { long a, b, c; } ThreeLongs;
+ThreeLongs ret_three_longs(void) { ThreeLongs s = {0}; return s; }
+// LONG64: define{{.*}} void @ret_three_longs(ptr dead_on_unwind noalias writable sret(%struct.ThreeLongs) align 8 %{{.*}})
+// LONG32: define{{.*}} [2 x i64] @ret_three_longs
+
+typedef struct { int a[5]; } FiveInts;
+FiveInts ret_five_ints(void) { FiveInts s = {0}; return s; }
+// CHECK: define{{.*}} void @ret_five_ints(ptr dead_on_unwind noalias writable sret(%struct.FiveInts) align 4 %{{.*}})

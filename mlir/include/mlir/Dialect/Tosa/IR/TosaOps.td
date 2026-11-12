@@ -63,11 +63,47 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax", [NoMemoryEffect]> {
       "functional-type(operands, results)";
 }
 
+
+//===----------------------------------------------------------------------===//
+// Operator: argmin
+//===----------------------------------------------------------------------===//
+def Tosa_ArgMinOp : Tosa_InferShapedTypeOp<"argmin", [NoMemoryEffect]> {
+  let summary = "Perform argmin on the input.";
+
+  let description = [{
+    This returns the index with the smallest value across the given axis of the
+    input tensor. If multiple locations have equal values, returns the first
+    match along the search axis.
+
+    This operation is not pure. Undefined behaviour may occur if the min index
+    is out of bounds for the output data type.
+  }];
+
+  let arguments = (ins
+    Tosa_TensorAtLeast1D: $input,
+    I32Attr: $axis,
+    DefaultValuedAttr<Tosa_NanPropagationModeAttr, "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode
+  );
+
+  let results = (outs
+    Tosa_Tensor: $output
+  );
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` "
+      "oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
+}
+
+
 //===----------------------------------------------------------------------===//
 // Accumulator types.
 //===----------------------------------------------------------------------===//
 
-def Tosa_AccType : AnyTypeOf<[I<32>, I<48>, F16, F32, BF16]>;
+def Tosa_AccType : AnyTypeOf<[I<32>, I<48>, I<64>, F16, F32, BF16]>;
 
 //===----------------------------------------------------------------------===//
 // Operator: avg_pool2d
@@ -134,6 +170,9 @@ def Tosa_AvgPool2dAdaptiveOp
     average, only the number of valid input tensor values, but not padding, are
     used to calculate the divisor. Compared to avg_pool2d, the kernel/stride/
     pad values are provided as inputs.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins Tosa_Tensor4D:$input,
@@ -1207,7 +1246,10 @@ def Tosa_MulOp : Tosa_Op<"mul", [
     Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
     match.
 
-    This operation is not pure. Undefined behaviour may occur if the specifed
+    For int32_t input data, shift must be in the range [0, 63]. For all other
+    input data types, shift must be 0.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
     shift is out of range or the result overflows.
   }];
 
@@ -2072,20 +2114,15 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad", [Pure]> {
     Returns a new tensor with the padding included. The pad_const value includes
     the zero point if the tensor uses a zero point.
 
+    The padding amounts must be non-negative. The TOSA specification requires
+    a negative padding to be diagnosed (`ERROR_IF`).
+
     Example:
 
     ```mlir
     %pad_const = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
     %padding = tosa.const_shape values(dense<[1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
     tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<4x9xf32>
-    ```
-
-    Example 2:
-
-    ```mlir
-    %pad_const = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
-    %padding = tosa.const_shape values(dense<[-1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
-    tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x9xf32>
     ```
   }];
 

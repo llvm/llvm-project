@@ -26,7 +26,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
 
@@ -37,11 +36,6 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
-
-static cl::opt<bool>
-    EnableMachinePipeliner("ppc-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for PPC"),
-                           cl::init(false), cl::Hidden);
 
 PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                             StringRef TuneCPU,
@@ -154,7 +148,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
 
 bool PPCSubtarget::enableMachinePipeliner() const {
-  return getSchedModel().hasInstrSchedModel() && EnableMachinePipeliner;
+  return getSchedModel().hasInstrSchedModel();
 }
 
 bool PPCSubtarget::useDFAforSMS() const { return false; }

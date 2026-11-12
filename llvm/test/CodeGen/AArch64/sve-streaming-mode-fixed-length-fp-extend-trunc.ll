@@ -411,12 +411,9 @@ define void @fcvt_v1f16_v1f64(ptr %a, ptr %b) {
 ;
 ; NONEON-NOSVE-LABEL: fcvt_v1f16_v1f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    ldr h0, [x0]
 ; NONEON-NOSVE-NEXT:    fcvt d0, h0
 ; NONEON-NOSVE-NEXT:    str d0, [x1]
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <1 x half>, ptr %a
   %res = fpext <1 x half> %op1 to <1 x double>

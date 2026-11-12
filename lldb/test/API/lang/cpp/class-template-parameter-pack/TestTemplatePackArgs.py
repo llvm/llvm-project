@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 class TemplatePackArgsTestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_template_argument_pack(self):
         self.build()
         (target, _, thread, _) = lldbutil.run_to_source_breakpoint(

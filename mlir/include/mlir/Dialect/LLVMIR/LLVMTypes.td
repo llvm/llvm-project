@@ -18,6 +18,7 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 /// Base class for all LLVM dialect types.
 class LLVMType<string typeName, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<LLVM_Dialect, typeName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/LLVMTypes.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -258,6 +259,10 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
     /// Checks if a struct is packed.
     bool isPacked() const;
 
+    /// Returns the byte offset of the element at the given index.
+    uint64_t getElementOffset(const DataLayout &dataLayout,
+                              unsigned index) const;
+
     /// Checks if a struct is identified.
     bool isIdentified() const;
 
@@ -274,7 +279,14 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
     static LogicalResult
     verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
                      ArrayRef<Type> types, bool);
-    using Base::verifyInvariants;
+    /// Verifies a literal struct's storage key, which sub-element replacement
+    /// passes to get().
+    template <typename StorageKey>
+    static LogicalResult
+    verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.getTypeList(), key.isPacked());
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;

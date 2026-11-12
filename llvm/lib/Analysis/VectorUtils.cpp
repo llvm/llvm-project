@@ -11,13 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/VectorUtils.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
@@ -26,18 +29,11 @@
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "vectorutils"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-/// Maximum factor for an interleaved memory access.
-static cl::opt<unsigned> MaxInterleaveGroupFactor(
-    "max-interleave-group-factor", cl::Hidden,
-    cl::desc("Maximum factor for an interleaved access group (default = 8)"),
-    cl::init(8));
 
 /// Return true if all of the intrinsic's arguments and return type are scalars
 /// for the scalar form of the intrinsic, and vectors for the vector form of the
@@ -159,6 +155,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::is_fpclass:
   case Intrinsic::powi:
   case Intrinsic::vector_extract:
+  case Intrinsic::masked_compressstore:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
@@ -173,6 +170,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return ScalarOpdIdx == 0 || ScalarOpdIdx == 1;
   case Intrinsic::experimental_vp_strided_store:
     return ScalarOpdIdx == 1 || ScalarOpdIdx == 2;
+  case Intrinsic::masked_expandload:
+    return ScalarOpdIdx == 0;
   case Intrinsic::loop_dependence_war_mask:
     return true;
   default:
@@ -198,6 +197,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::scmp:
   case Intrinsic::vector_extract:
   case Intrinsic::loop_dependence_war_mask:
+  case Intrinsic::masked_expandload:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:
@@ -211,8 +211,48 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
     return OpdIdx == -1 || OpdIdx == 0 || OpdIdx == 1;
   case Intrinsic::experimental_vp_strided_store:
     return OpdIdx == 0 || OpdIdx == 1 || OpdIdx == 2;
+  case Intrinsic::masked_compressstore:
+    return OpdIdx == 0 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
+  }
+}
+
+std::optional<unsigned>
+llvm::getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::experimental_vp_strided_store:
+  case Intrinsic::masked_compressstore:
+    return 1;
+  case Intrinsic::experimental_vp_strided_load:
+  case Intrinsic::masked_expandload:
+    return 0;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<unsigned>
+llvm::getVectorStoreIntrinsicDataArgIdx(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::experimental_vp_strided_store:
+  case Intrinsic::masked_compressstore:
+    return 0;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<unsigned> llvm::getVectorIntrinsicMaskArgIdx(Intrinsic::ID ID) {
+  if (auto MaskPos = VPIntrinsic::getMaskParamPos(ID))
+    return MaskPos;
+  switch (ID) {
+  case Intrinsic::masked_compressstore:
+    return 2;
+  case Intrinsic::masked_expandload:
+    return 1;
+  default:
+    return std::nullopt;
   }
 }
 
@@ -245,6 +285,28 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
       ID == Intrinsic::sideeffect || ID == Intrinsic::pseudoprobe)
     return ID;
   return Intrinsic::not_intrinsic;
+}
+
+bool llvm::shouldSplitVectorSinCos(const TargetLibraryInfo &TLI, Type *ScalarTy,
+                                   ElementCount EC, Module *M) {
+  auto HasIntrinsicMapping = [&](Intrinsic::ID ID) {
+    return TLI.isFunctionVectorizable(Intrinsic::getName(ID, ScalarTy, M), EC);
+  };
+  // If a vector sincos mapping exists for the intrinsic name (e.g.
+  // "llvm.sincos.f32") or for the scalar libcall name ("sincos"/"sincosf"),
+  // SelectionDAG legalization handles it via expandMultipleResultFPLibCall
+  // when the runtime libcall impl is enabled.
+  if (HasIntrinsicMapping(Intrinsic::sincos))
+    return false;
+  LibFunc LF = NotLibFunc;
+  if (ScalarTy->isFloatTy())
+    LF = LibFunc_sincosf;
+  else if (ScalarTy->isDoubleTy())
+    LF = LibFunc_sincos;
+  if (LF != NotLibFunc && TLI.isFunctionVectorizable(TLI.getName(LF), EC))
+    return false;
+  return HasIntrinsicMapping(Intrinsic::sin) &&
+         HasIntrinsicMapping(Intrinsic::cos);
 }
 
 unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
@@ -1287,9 +1349,17 @@ APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
   return DemandedElts;
 }
 
-bool InterleavedAccessInfo::isStrided(int Stride) {
+InterleavedAccessInfo::InterleavedAccessInfo(PredicatedScalarEvolution &PSE,
+                                             Loop *L, DominatorTree *DT,
+                                             LoopInfo *LI,
+                                             const LoopAccessInfo *LAI,
+                                             bool OptForSize)
+    : Opts(getAnalysisOptions(*L)), PSE(PSE), TheLoop(L), DT(DT), LI(LI),
+      LAI(LAI), OptForSize(OptForSize) {}
+
+bool InterleavedAccessInfo::isStrided(int Stride) const {
   unsigned Factor = std::abs(Stride);
-  return Factor >= 2 && Factor <= MaxInterleaveGroupFactor;
+  return Factor >= 2 && Factor <= Opts.max_interleave_group_factor;
 }
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
@@ -1330,7 +1400,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
 
-      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
+      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
                                               getLoadStoreAlignment(&I));
     }
@@ -1589,7 +1659,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
     if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+                     /*ShouldCheckWrap=*/true)
             .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "

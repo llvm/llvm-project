@@ -151,7 +151,7 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB,
 }
 
 static void lowerAwaitSuspends(Function &F, coro::Shape &Shape) {
-  IRBuilder<> Builder(F.getContext());
+  IRBuilder<> Builder(*F.getParent());
   for (auto *AWS : Shape.CoroAwaitSuspends)
     lowerAwaitSuspend(Builder, AWS, Shape);
 }
@@ -170,9 +170,9 @@ static void maybeFreeRetconStorage(IRBuilder<> &Builder,
 /// frame.
 static Value *createSwitchDestroyPtr(const coro::Shape &Shape,
                                      IRBuilder<> &Builder, Value *FramePtr) {
-  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
-                                  Shape.SwitchLowering.DestroyOffset);
-  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "destroy.addr");
+  return Builder.CreatePtrAddWithUnsignedOffset(
+      FramePtr, Shape.SwitchLowering.DestroyOffset, "destroy.addr",
+      GEPNoWrapFlags::inBounds());
 }
 
 /// Make resume-clone coro.free conditional on whether the frame is elided.
@@ -356,9 +356,9 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
 /// Create a pointer to the switch index field in the coroutine frame.
 static Value *createSwitchIndexPtr(const coro::Shape &Shape,
                                    IRBuilder<> &Builder, Value *FramePtr) {
-  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
-                                  Shape.SwitchLowering.IndexOffset);
-  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "index.addr");
+  return Builder.CreatePtrAddWithUnsignedOffset(
+      FramePtr, Shape.SwitchLowering.IndexOffset, "index.addr",
+      GEPNoWrapFlags::inBounds());
 }
 
 // Mark a coroutine as done, which implies that the coroutine is finished and
@@ -644,8 +644,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     }
 
     // Create a swifterror alloca.
-    IRBuilder<> Builder(&F.getEntryBlock(),
-                        F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrPseudoProbe());
     auto Alloca = Builder.CreateAlloca(ValueTy);
     Alloca->setSwiftError(true);
 
@@ -796,6 +795,32 @@ void coro::BaseCloner::replaceEntryBlock() {
   }
 }
 
+/// Returns the location of the first instruction after \p ActiveSuspend with a
+/// non-zero line, or an empty location if there is none.
+static DebugLoc getFirstNonZeroLocAfterSuspend(Instruction *ActiveSuspend) {
+  if (!ActiveSuspend->getNextNode())
+    return {};
+
+  BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
+  // Corosplit splits the BB around ActiveSuspend, so the meaningful
+  // instructions are not in the same BB.
+  // FIXME: remove this hardcoded number of tries.
+  for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
+    auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
+    if (!Branch)
+      break;
+    Successor = Branch->getSuccessor()->getFirstNonPHIOrPseudoProbe();
+  }
+
+  BasicBlock *PBB = Successor->getParent();
+  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
+    auto DL = Successor->getDebugLoc();
+    if (DL && DL.getLine() != 0)
+      return DL;
+  }
+  return {};
+}
+
 /// Derive the value of the new frame pointer.
 Value *coro::BaseCloner::deriveNewFramePointer() {
   // Builder should be inserting to the front of the new entry block.
@@ -815,20 +840,23 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
     auto *CalleeContext = NewF->getArg(ContextIdx);
     auto *ProjectionFunc =
         ActiveAsyncSuspend->getAsyncContextProjectionFunction();
-    auto DbgLoc =
-        cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend])->getDebugLoc();
+    auto *NewSuspend = cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend]);
+    DebugLoc DbgLoc = NewSuspend->getDebugLoc();
+    // The projection may update the async context slot of the frame. With a
+    // line 0 location, prologue_end is placed after that update, but debuggers
+    // expect the slot to be unchanged at prologue_end.
+    if (DbgLoc && DbgLoc.getLine() == 0)
+      if (DebugLoc NonZeroLoc = getFirstNonZeroLocAfterSuspend(NewSuspend))
+        DbgLoc = NonZeroLoc;
     // Calling i8* (i8*)
     auto *CallerContext = Builder.CreateCall(ProjectionFunc->getFunctionType(),
                                              ProjectionFunc, CalleeContext);
     CallerContext->setCallingConv(ProjectionFunc->getCallingConv());
     CallerContext->setDebugLoc(DbgLoc);
     // The frame is located after the async_context header.
-    auto &Context = Builder.getContext();
-    auto *FramePtrAddr = Builder.CreateInBoundsPtrAdd(
-        CallerContext,
-        ConstantInt::get(Type::getInt64Ty(Context),
-                         Shape.AsyncLowering.FrameOffset),
-        "async.ctx.frameptr");
+    auto *FramePtrAddr = Builder.CreatePtrAddWithUnsignedOffset(
+        CallerContext, Shape.AsyncLowering.FrameOffset, "async.ctx.frameptr",
+        GEPNoWrapFlags::inBounds());
     // Inline the projection function.
     InlineFunctionInfo InlineInfo;
     auto InlineRes = InlineFunction(*CallerContext, InlineInfo);
@@ -864,46 +892,11 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   if (!ActiveSuspend)
     return;
 
-  // No subsequent instruction -> fallback to the location of ActiveSuspend.
-  if (!ActiveSuspend->getNextNode()) {
-    if (auto DL = ActiveSuspend->getDebugLoc())
-      if (SPToUpdate.getFile() == DL->getFile())
-        SPToUpdate.setScopeLine(DL->getLine());
-    return;
-  }
-
-  BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
-  // Corosplit splits the BB around ActiveSuspend, so the meaningful
-  // instructions are not in the same BB.
-  // FIXME: remove this hardcoded number of tries.
-  for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
-    auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
-    if (!Branch)
-      break;
-    Successor = Branch->getSuccessor()->getFirstNonPHIOrDbg();
-  }
-
-  // Find the first successor of ActiveSuspend with a non-zero line location.
-  // If that matches the file of ActiveSuspend, use it.
-  BasicBlock *PBB = Successor->getParent();
-  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
-    Successor = skipDebugIntrinsics(Successor);
-    auto DL = Successor->getDebugLoc();
-    if (!DL || DL.getLine() == 0)
-      continue;
-
-    if (SPToUpdate.getFile() == DL->getFile()) {
-      SPToUpdate.setScopeLine(DL.getLine());
-      return;
-    }
-
-    break;
-  }
-
-  // If the search above failed, fallback to the location of ActiveSuspend.
-  if (auto DL = ActiveSuspend->getDebugLoc())
-    if (SPToUpdate.getFile() == DL->getFile())
-      SPToUpdate.setScopeLine(DL->getLine());
+  DebugLoc DL = getFirstNonZeroLocAfterSuspend(ActiveSuspend);
+  if (!DL || SPToUpdate.getFile() != DL->getFile())
+    DL = ActiveSuspend->getDebugLoc();
+  if (DL && SPToUpdate.getFile() == DL->getFile())
+    SPToUpdate.setScopeLine(DL.getLine());
 }
 
 static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
@@ -1690,7 +1683,6 @@ private:
   static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
                               Function *DestroyFn, Function *CleanupFn) {
     IRBuilder<> Builder(&*Shape.getInsertPtAfterFramePtr());
-    LLVMContext &C = ResumeFn->getContext();
 
     // Resume function pointer
     Value *ResumeAddr = Shape.FramePtr;
@@ -1710,11 +1702,9 @@ private:
     }
 
     // Destroy function pointer
-    Value *DestroyAddr = Builder.CreateInBoundsPtrAdd(
-        Shape.FramePtr,
-        ConstantInt::get(Type::getInt64Ty(C),
-                         Shape.SwitchLowering.DestroyOffset),
-        "destroy.addr");
+    Value *DestroyAddr = Builder.CreatePtrAddWithUnsignedOffset(
+        Shape.FramePtr, Shape.SwitchLowering.DestroyOffset, "destroy.addr",
+        GEPNoWrapFlags::inBounds());
     Builder.CreateStore(DestroyOrCleanupFn, DestroyAddr);
   }
 
@@ -1824,11 +1814,9 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   auto *FramePtr = Id->getStorage();
   FramePtr = Builder.CreateBitOrPointerCast(FramePtr, Int8PtrTy);
-  FramePtr = Builder.CreateInBoundsPtrAdd(
-      FramePtr,
-      ConstantInt::get(Type::getInt64Ty(Context),
-                       Shape.AsyncLowering.FrameOffset),
-      "async.ctx.frameptr");
+  FramePtr = Builder.CreatePtrAddWithUnsignedOffset(
+      FramePtr, Shape.AsyncLowering.FrameOffset, "async.ctx.frameptr",
+      GEPNoWrapFlags::inBounds());
 
   // Map all uses of llvm.coro.begin to the allocated frame pointer.
   {
@@ -2365,8 +2353,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
       // Query BFI to get the actual estimated execution profile count of the
       // basic block where this suspension point resides.
-      std::optional<uint64_t> Count =
-          BFI.getBlockProfileCount(BB, /*AllowSynthetic=*/true);
+      std::optional<uint64_t> Count = BFI.getBlockProfileCount(BB);
       if (Count.has_value()) {
         if (!Shape.ResumeEntryCount.has_value()) {
           // For the first suspend point visited, initialize the total sum.

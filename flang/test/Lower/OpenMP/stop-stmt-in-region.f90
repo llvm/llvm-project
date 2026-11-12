@@ -44,7 +44,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPtest_stop_in_region3() {
 ! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_stop_in_region3Ex"}>
-! CHECK:         %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_stop_in_region3Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFtest_stop_in_region3Ex") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         omp.parallel   {
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : i32
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_0_DECL]]#0 : i32, !fir.ref<i32>
@@ -78,10 +78,10 @@ end
 ! CHECK-LABEL: func.func @_QPtest_stop_in_region4() {
 
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFtest_stop_in_region4Ei"}>
-! CHECK:         %[[VAL_1_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest_stop_in_region4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_1_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFtest_stop_in_region4Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:         %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_stop_in_region4Ex"}>
-! CHECK:         %[[VAL_2_DECL:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QFtest_stop_in_region4Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         %[[VAL_2_DECL:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFtest_stop_in_region4Ex") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i32
@@ -89,7 +89,7 @@ end
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 1 : i32
 ! CHECK:         omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_0:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:      omp.loop_nest (%[[VAL_6:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
-! CHECK:             %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_stop_in_region4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFtest_stop_in_region4Ei") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             hlfir.assign %[[VAL_6]] to %[[VAL_0_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 3 : i32
 ! CHECK:             hlfir.assign %[[VAL_7]] to %[[VAL_2_DECL]]#0 : i32, !fir.ref<i32>

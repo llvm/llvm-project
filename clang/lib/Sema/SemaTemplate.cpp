@@ -5245,13 +5245,17 @@ bool Sema::CheckTemplateTypeArgument(
     // expression; see if maybe it is missing the "typename" keyword.
     CXXScopeSpec SS;
     DeclarationNameInfo NameInfo;
+    TemplateArgument Pattern = Arg;
+    if (Pattern.isPackExpansion())
+      Pattern = Pattern.getPackExpansionPattern();
+    Expr *E = Pattern.getAsExpr();
 
-   if (DependentScopeDeclRefExpr *ArgExpr =
-               dyn_cast<DependentScopeDeclRefExpr>(Arg.getAsExpr())) {
+    if (DependentScopeDeclRefExpr *ArgExpr =
+            dyn_cast<DependentScopeDeclRefExpr>(E)) {
       SS.Adopt(ArgExpr->getQualifierLoc());
       NameInfo = ArgExpr->getNameInfo();
     } else if (CXXDependentScopeMemberExpr *ArgExpr =
-               dyn_cast<CXXDependentScopeMemberExpr>(Arg.getAsExpr())) {
+                   dyn_cast<CXXDependentScopeMemberExpr>(E)) {
       if (ArgExpr->isImplicitAccess()) {
         SS.Adopt(ArgExpr->getQualifierLoc());
         NameInfo = ArgExpr->getMemberNameInfo();
@@ -5282,6 +5286,12 @@ bool Sema::CheckTemplateTypeArgument(
         TL.setElaboratedKeywordLoc(SourceLocation(/*synthesized*/));
         TL.setQualifierLoc(SS.getWithLocInContext(Context));
         TL.setNameLoc(NameInfo.getLoc());
+        if (Arg.isPackExpansion()) {
+          ArgType = Context.getPackExpansionType(ArgType, std::nullopt);
+          PackExpansionTypeLoc TL = TLB.push<PackExpansionTypeLoc>(ArgType);
+          TL.setEllipsisLoc(
+              cast<PackExpansionExpr>(Arg.getAsExpr())->getEllipsisLoc());
+        }
         TSI = TLB.getTypeSourceInfo(Context, ArgType);
 
         // Overwrite our input TemplateArgumentLoc so that we can recover
@@ -5597,6 +5607,22 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
     if (NTTP->isParameterPack() && NTTP->isExpandedParameterPack())
       NTTPType = NTTP->getExpansionType(ArgumentPackIndex);
 
+    // C++26 [dcl.type.auto.deduct]p3:
+    //   If the placeholder-type-specifier is of the form type-constraint_opt
+    //   auto, [...] If E is a value synthesized for a constant template
+    //   parameter of type decltype(auto) ([temp.func.order]), the declaration
+    //   is ill-formed.
+    auto isUndeducedAuto = [](QualType T, bool DecltypeAuto) {
+      const AutoType *AT = T->getContainedAutoType();
+      return AT && AT->isDecltypeAuto() == DecltypeAuto &&
+             AT->getDeducedType().isNull();
+    };
+    if (CTAI.PartialOrdering &&
+        isUndeducedAuto(NTTPType, /*DecltypeAuto=*/false) &&
+        isUndeducedAuto(getTypeOfConstantTemplateParameter(Arg),
+                        /*DecltypeAuto=*/true))
+      return true;
+
     if (NTTPType->isInstantiationDependentType()) {
       // Do substitution on the type of the non-type template parameter.
       InstantiatingTemplate Inst(*this, TemplateLoc, Template, NTTP,
@@ -5851,11 +5877,10 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
 }
 
 /// Diagnose a missing template argument.
-template<typename TemplateParmDecl>
-static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
+template <typename TemplateParmDecl>
+static void diagnoseMissingArgument(Sema &S, SourceLocation Loc,
                                     TemplateDecl *TD,
-                                    const TemplateParmDecl *D,
-                                    TemplateArgumentListInfo &Args) {
+                                    const TemplateParmDecl *D) {
   // Dig out the most recent declaration of the template parameter; there may be
   // declarations of the template that are more recent than TD.
   D = cast<TemplateParmDecl>(cast<TemplateDecl>(TD->getMostRecentDecl())
@@ -5870,7 +5895,7 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
                             D->getDefaultArgumentLoc(), Modules,
                             Sema::MissingImportKind::DefaultArgument,
                             /*Recover*/true);
-    return true;
+    return;
   }
 
   // FIXME: If there's a more recent default argument that *is* visible,
@@ -5883,7 +5908,6 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
     << (int)S.getTemplateNameKindForDiagnostics(TemplateName(TD))
     << TD;
   S.NoteTemplateLocation(*TD, Params->getSourceRange());
-  return true;
 }
 
 /// Check that the given template argument list is well-formed
@@ -6159,16 +6183,13 @@ bool Sema::CheckTemplateArgumentList(
 
     if (Arg.getArgument().isNull()) {
       if (!HasDefaultArg) {
-        if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(*Param))
-          return diagnoseMissingArgument(*this, TemplateLoc, Template, TTP,
-                                         NewArgs);
-        if (NonTypeTemplateParmDecl *NTTP =
-                dyn_cast<NonTypeTemplateParmDecl>(*Param))
-          return diagnoseMissingArgument(*this, TemplateLoc, Template, NTTP,
-                                         NewArgs);
-        return diagnoseMissingArgument(*this, TemplateLoc, Template,
-                                       cast<TemplateTemplateParmDecl>(*Param),
-                                       NewArgs);
+        if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(*Param))
+          diagnoseMissingArgument(*this, TemplateLoc, Template, TTP);
+        else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*Param))
+          diagnoseMissingArgument(*this, TemplateLoc, Template, NTTP);
+        else
+          diagnoseMissingArgument(*this, TemplateLoc, Template,
+                                  cast<TemplateTemplateParmDecl>(*Param));
       }
       return true;
     }
@@ -8135,6 +8156,18 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
   return E;
 }
 
+/// Construct a new reflect expression that refers to the given
+/// entity with the given source-location of the reflection operator.
+static ExprResult BuildExpressionFromReflection(Sema &S, const APValue &RV,
+                                                SourceLocation CaretCaretLoc) {
+  // TODO(Reflection): Add support for NamespaceReference, TemplateReference,
+  // and DeclRefExpr.
+  return CXXReflectExpr::Create(
+      S.Context, CaretCaretLoc,
+      static_cast<TypeSourceInfo *>(
+          const_cast<void *>(RV.getReflectionOpaqueOperand())));
+}
+
 static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     Sema &S, QualType T, const APValue &Val, SourceLocation Loc) {
   auto MakeInitList = [&](ArrayRef<Expr *> Elts) -> Expr * {
@@ -8200,7 +8233,7 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
   case APValue::Indeterminate:
     llvm_unreachable("Unexpected APValue kind.");
   case APValue::LValue:
-  case APValue::MemberPointer:
+  case APValue::MemberPointer: {
     // There isn't necessarily a valid equivalent source-level syntax for
     // these; in particular, a naive lowering might violate access control.
     // So for now we lower to a ConstantExpr holding the value, wrapped around
@@ -8213,6 +8246,9 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     }
     auto *OVE = new (S.Context) OpaqueValueExpr(Loc, T, VK);
     return ConstantExpr::Create(S.Context, OVE, Val);
+  }
+  case APValue::Reflection:
+    return BuildExpressionFromReflection(S, Val, Loc).get();
   }
   llvm_unreachable("Unhandled APValue::ValueKind enum");
 }
@@ -10626,12 +10662,11 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                false, TypeResult(), /*IsTypeSpecifier*/ false,
                /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
+  assert(!IsDependent &&
+         "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)
     return true;
-
-  assert(!IsDependent &&
-         "explicit instantiation of dependent name not yet handled");
 
   TagDecl *Tag = cast<TagDecl>(TagD);
   assert(!Tag->isEnum() && "shouldn't see enumerations here");
@@ -11940,10 +11975,10 @@ private:
       return;
 
     auto From = SD->getSpecializedTemplateOrPartial();
-    if (auto *TD = From.dyn_cast<ClassTemplateDecl *>())
+    if (auto *TD = dyn_cast<ClassTemplateDecl *>(From))
       checkTemplate(TD);
     else if (auto *TD =
-                 From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+                 dyn_cast<ClassTemplatePartialSpecializationDecl *>(From)) {
       if (!CheckDeclaration(TD))
         diagnose(TD, true);
       checkTemplate(TD);
@@ -11956,10 +11991,10 @@ private:
       return;
 
     auto From = SD->getSpecializedTemplateOrPartial();
-    if (auto *TD = From.dyn_cast<VarTemplateDecl *>())
+    if (auto *TD = dyn_cast<VarTemplateDecl *>(From))
       checkTemplate(TD);
     else if (auto *TD =
-                 From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+                 dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
       if (!CheckDeclaration(TD))
         diagnose(TD, true);
       checkTemplate(TD);

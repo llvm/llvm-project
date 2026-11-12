@@ -117,6 +117,28 @@ module {
     cir.return
   }
 
+  // CHECK-LABEL: llvm.func @ldexp_variants
+  cir.func @ldexp_variants(%a: !cir.double, %e: !s32i) {
+    // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
+    %0 = cir.ldexp %a, %e : !cir.double, !s32i
+    // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.upward">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.ldexp"(%{{.*}}, %{{.*}}, %[[RM]], %[[EB]]) : (f64, i32, !llvm.metadata, !llvm.metadata) -> f64
+    %1 = cir.ldexp %a, %e : !cir.double, !s32i fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = true>
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @ldexp_vector_variants
+  cir.func @ldexp_vector_variants(%a: !cir.vector<4 x !cir.float>, %e: !cir.vector<4 x !s32i>) {
+    // CHECK: llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (vector<4xf32>, vector<4xi32>) -> vector<4xf32>
+    %0 = cir.ldexp %a, %e : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+    // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.upward">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.ldexp"(%{{.*}}, %{{.*}}, %[[RM]], %[[EB]]) : (vector<4xf32>, vector<4xi32>, !llvm.metadata, !llvm.metadata) -> vector<4xf32>
+    %1 = cir.ldexp %a, %e : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = true>
+    cir.return
+  }
+
   // CHECK-LABEL: llvm.func @ternary_fp_builtins
   cir.func @ternary_fp_builtins(%a: !cir.double, %b: !cir.double,
                                 %c: !cir.double) {
@@ -247,6 +269,15 @@ module {
     %3 = cir.llrint %a : !cir.double -> !s64i fenv<strict_except = true>
     // CHECK: llvm.intr.lround(%{{.*}}) : (f64) -> i64
     %4 = cir.lround %a : !cir.double -> !s64i
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @fastmath_flags
+  cir.func @fastmath_flags(%a: !cir.float, %b: !cir.float) {
+    // CHECK: llvm.fmul %{{.*}}, %{{.*}} fastmath<contract> : f32
+    %0 = cir.fmul %a, %b : !cir.float <fastmath_flags = [contract]>
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<contract>} : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+    %1 = cir.fadd %0, %b : !cir.float fenv<> <fastmath_flags = [contract]>
     cir.return
   }
 }

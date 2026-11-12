@@ -17,7 +17,7 @@ func.func @declare_wraps_array_coor(%arg0: !fir.ref<!fir.array<10xi32>>, %v: i32
   %c10 = arith.constant 10 : index
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
   %elem = fir.array_coor %arg0(%shape) %c1 : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-  %decl = fir.declare %elem {uniq_name = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %decl = fir.declare %elem uniq_name("x") : (!fir.ref<i32>) -> !fir.ref<i32>
   %load = fir.load %decl : !fir.ref<i32>
   fir.store %v to %decl : !fir.ref<i32>
   return
