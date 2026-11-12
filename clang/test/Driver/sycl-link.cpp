@@ -52,11 +52,13 @@
 // RUN:   | FileCheck %s --check-prefix=WINDOWS-LIBPATH
 // WINDOWS-LIBPATH: clang-linker-wrapper"{{.*}} "--sycl-device-link" "-o" "dev.obj"
 // WINDOWS-LIBPATH-SAME: "-libpath:/foo" "{{[^"]*}}a.o" "/wholearchive:bar.lib"{{$}}
+// The input is given with /Tp, because clang-cl would read a path under /Users
+// (common on macOS) as the /U option.
 // RUN: %clang_cl -### --target=x86_64-pc-windows-msvc -fsycl -fsycl-link \
-// RUN:   %t.a.o /link /wholearchive:bar.lib /libpath:dir /out:dev.obj 2>&1 \
+// RUN:   /Tp%s /link /wholearchive:bar.lib /libpath:dir /out:dev.obj 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CL-LINK
 // CL-LINK: clang-linker-wrapper"{{.*}} "--sycl-device-link" "-o"
-// CL-LINK-SAME: "{{[^"]*}}a.o" "/wholearchive:bar.lib" "/libpath:dir" "/out:dev.obj"{{$}}
+// CL-LINK-SAME: "{{[^"]*}}.obj" "/wholearchive:bar.lib" "/libpath:dir" "/out:dev.obj"{{$}}
 
 /// Without -fsycl-link, the host link is run as usual.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %t.a.o 2>&1 \
