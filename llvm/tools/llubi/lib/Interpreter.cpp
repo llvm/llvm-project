@@ -1075,6 +1075,35 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                                         std::move(Data), Mode, IsStore);
   }
 
+  /// Implements llvm.experimental.vp.strided.{load,store} as a vp.gather or
+  /// vp.scatter of the pointers <Ptr, Ptr + Stride, Ptr + 2 * Stride, ...>.
+  /// \p Stride is signed and the arithmetic wraps in the pointer index type. An
+  /// align attribute on the base pointer applies to every lane's pointer.
+  AnyValue callVPStridedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
+                                           const AnyValue &Stride,
+                                           const AnyValue &Mask,
+                                           const AnyValue &EVL, AnyValue Data,
+                                           bool IsStore) {
+    const unsigned IndexBW =
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(IsStore ? 1 : 0)->getType());
+    std::vector<AnyValue> LanePtrs(Mask.asAggregate().size(),
+                                   AnyValue::poison());
+    if (!Stride.isPoison()) {
+      const APInt StrideIdx = Stride.asInteger().sextOrTrunc(IndexBW);
+      for (auto [I, LanePtr] : enumerate(LanePtrs)) {
+        AnyValue AccumulatedOffset = AnyValue::poison();
+        LanePtr = Ctx.computePtrAdd(Ptr, StrideIdx * APInt(IndexBW, I),
+                                    GEPNoWrapFlags::none(), AccumulatedOffset);
+      }
+    }
+    AnyValue Ptrs(std::move(LanePtrs));
+    if (MaybeAlign Alignment = CB.getParamAlign(IsStore ? 1 : 0))
+      applyAlignAttr(Ptrs, *Alignment);
+    return callVPLoadStoreIntrinsic(CB, std::move(Ptrs), Mask, EVL,
+                                    std::move(Data), MaskedAddrMode::PerLane,
+                                    IsStore);
+  }
+
   /// Implements llvm.matrix.column.major.store. Column C of \p Data is stored
   /// as a <Rows x ElemTy> vector at an inbounds nuw GEP of C * \p Stride
   /// elements from \p Ptr.
@@ -2086,6 +2115,14 @@ public:
       return callVPLoadStoreIntrinsic(CB, Args[1], Args[2], Args[3], Args[0],
                                       MaskedAddrMode::PerLane,
                                       /*IsStore=*/true);
+    case Intrinsic::experimental_vp_strided_load:
+      return callVPStridedLoadStoreIntrinsic(
+          CB, Args[0], Args[1], Args[2], Args[3],
+          AnyValue::getPoisonValue(Ctx, RetTy), /*IsStore=*/false);
+    case Intrinsic::experimental_vp_strided_store:
+      return callVPStridedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[3],
+                                             Args[4], Args[0],
+                                             /*IsStore=*/true);
     case Intrinsic::matrix_transpose: {
       const auto &Vec = Args[0].asAggregate();
       const unsigned Rows =
