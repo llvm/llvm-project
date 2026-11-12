@@ -1865,22 +1865,22 @@ void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
   // first.
   if (!isa<MemoryUse>(MA)) {
     auto DefsIt = PerBlockDefs.find(BB);
-    auto &Defs = DefsIt->second;
-    Defs->remove(*MA);
-    if (Defs->empty())
+    DefsList &Defs = *DefsIt->second;
+    Defs.remove(*MA);
+    if (Defs.empty())
       PerBlockDefs.erase(DefsIt);
   }
 
   // The erase call here will delete it. If we don't want it deleted, we call
   // remove instead.
   auto AccessIt = PerBlockAccesses.find(BB);
-  auto &Accesses = AccessIt->second;
+  AccessList &Accesses = *AccessIt->second;
   if (ShouldDelete)
-    Accesses->erase(MA);
+    Accesses.erase(MA);
   else
-    Accesses->remove(MA);
+    Accesses.remove(MA);
 
-  if (Accesses->empty()) {
+  if (Accesses.empty()) {
     PerBlockAccesses.erase(AccessIt);
     BlockNumberingValid.erase(BB);
   }
