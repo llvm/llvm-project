@@ -202,13 +202,13 @@ public:
   /// the parameter \p Pred. Allows checkers to make a chain of nodes.
   /// Can return nullptr if the node creation fails (when it would recreate
   /// an existing node or when the state is posteriorly overconstrained).
-  ///
-  /// Can return getPredecessor(), the node that was passed to the constructor
-  /// of CheckerContext (often the ancestor of \p Pred) in some corner cases.
-  /// FIXME: This is bad logic and should be fixed in the next non-NFC change.
+  /// Can return \p Pred instead of creating a new node when the state is null
+  /// or when the state would remain unchanged and there is no explicitly
+  /// specified tag.
   ///
   /// @param State The state of the generated node.
   /// @param Pred The node that will become the predecessor of the new node.
+  ///        When null, the method falls back to using 'getPredecessor()'.
   /// @param Tag A ProgramPointTag that will be attached to the node. This is
   ///        primarily useful for attaching a NoteTag; but another tag could be
   ///        used as a workaround when the node wouldn't be unique otherwise.
@@ -216,15 +216,12 @@ public:
   ///        active checker as the tag.
   ExplodedNode *addTransition(ProgramStateRef State, ExplodedNode *Pred,
                               const ProgramPointTag *Tag = nullptr) {
-    // FIXME: In these two early return statements we should use 'Pred' and
-    // 'Pred->getState()' (the node received as an argument and its state)
-    // instead of 'getPredecessor()' and 'getState()' (the older node received
-    // by the constructor of CheckerContext, and its state).
-    // Alternatively, we should perhaps return null if the state is null.
+    if (!Pred)
+      Pred = getPredecessor();
     if (!State)
-      return getPredecessor();
-    if (State == getState() && !Tag)
-      return getPredecessor();
+      return Pred;
+    if (State == Pred->getState() && !Tag)
+      return Pred;
     return addTransitionImpl(State, false, Pred, Tag);
   }
 
