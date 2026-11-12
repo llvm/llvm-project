@@ -14,6 +14,7 @@
 #include "XtensaInstrInfo.h"
 #include "XtensaMachineFunctionInfo.h"
 #include "XtensaSubtarget.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -205,6 +206,11 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
           .addCFIIndex(CFIIndex);
     }
   }
+
+  // Mark all the instructions added to the prologue as frame setup, so the
+  // scavenger doesn't place emergency spills above them.
+  for (MachineInstr &MI : make_range(MBB.begin(), MBBI))
+    MI.setFlag(MachineInstr::FrameSetup);
 
   if (StackSize != PrevStackSize) {
     MFI.setStackSize(StackSize);
