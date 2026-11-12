@@ -5125,6 +5125,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     CmdArgs.push_back("-dwarf-explicit-import");
 
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
+  if (useMachORelocatableDwarf(T, EffectiveDWARFVersion))
+    CmdArgs.push_back("-grelocatable-dwarf");
   renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 
   // This controls whether or not we perform JustMyCode instrumentation.
@@ -5832,10 +5834,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fembed-bitcode=marker");
 
   // We normally speed up the clang process a bit by skipping destructors at
-  // exit. Diagnostic compilations and reusable in-process callbacks must run
-  // the normal cleanup instead.
-  if (!C.isForDiagnostics() &&
-      (!C.isCC1MainReusable() || D.CCPrintProcessStats))
+  // exit, but when we're generating diagnostics we can rely on some of the
+  // cleanup.
+  if (!C.isForDiagnostics())
     CmdArgs.push_back("-disable-free");
   CmdArgs.push_back("-clear-ast-before-backend");
 
@@ -9457,6 +9458,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
   renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
+  if (useMachORelocatableDwarf(Triple, DwarfVersion))
+    CmdArgs.push_back("-grelocatable-dwarf");
   renderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
 
   // Handle -fPIC et al -- the relocation-model affects the assembler

@@ -19,6 +19,10 @@ class PluginPythonOSPlugin(TestBase):
         self.run_python_os_funcionality()
 
     @skipIfWindowsAndNoLLDBServer  # This is flaky on Windows
+    @expectedFailureWindowsAndLLDBServer(
+        archs=["aarch64"],
+        bugnumber="https://github.com/llvm/llvm-project/issues/240868",
+    )
     def test_run_python_os_step(self):
         """Test that the Python operating system plugin works correctly when single stepping a virtual thread"""
         self.build()

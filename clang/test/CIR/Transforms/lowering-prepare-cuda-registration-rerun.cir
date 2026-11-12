@@ -19,7 +19,7 @@
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = true, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 16, long_double_size = 0, enable_noundef_attrs = true, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "x86_64-unknown-linux-gnu"} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = true, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 16, long_double_size = 0, enable_noundef_attrs = true, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global "private" internal dso_local @dv = #cir.undef : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<dv, Variable>}
   cir.global constant external @_Z1kv = #cir.global_view<@_Z16__device_stub__kv> : !cir.ptr<!cir.func<()>> align(8)
   cir.func @_Z16__device_stub__kv() attributes {cu.kernel_name = #cir.cu.kernel_name<"_Z1kv">} {

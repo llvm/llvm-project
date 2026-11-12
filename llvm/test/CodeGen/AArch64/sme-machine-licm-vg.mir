@@ -3,7 +3,6 @@
 # RUN: llc -mtriple=aarch64--linux-gnu -passes=early-machinelicm %s -o - | FileCheck %s
 ---
 name:            test_should_hoist_pfalse
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_should_hoist_pfalse
   ; CHECK: bb.0:

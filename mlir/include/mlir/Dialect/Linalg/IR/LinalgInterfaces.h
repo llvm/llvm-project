@@ -143,6 +143,11 @@ std::optional<SmallVector<int64_t>> isaBroadcastOpInterface(LinalgOp linalgOp);
 std::optional<SmallVector<int64_t>>
 isaTransposeOpInterface(GenericOp genericOp);
 
+/// Checks whether the `genericOp` is semantically equivalent to a
+/// `linalg.reduce`. Returns the reduction dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaReductionOpInterface(GenericOp genericOp);
+
 /// Checks whether a given `genericOp` is semantically equivalent to a single
 /// linalg elementwise unary op, e.g.
 /// `linalg.elementwise <exp>`.
