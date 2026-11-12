@@ -223,7 +223,6 @@ def HasHINTE         : Predicate<"Subtarget->hasHINTE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureHINTE), "hinte">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
-def NoLSCP           : Predicate<"!Subtarget->hasLSCP()">;
 def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p2), "sve2p2">;
 def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_B16MM()">,
@@ -3932,6 +3931,7 @@ defm LDAP  : LoadAcquirePairOffset<0b0101, "ldap">;
 defm LDAPP : LoadAcquirePairOffset<0b0111, "ldapp">;
 defm STLP  : StoreAcquirePairOffset<0b0101, "stlp">;
 
+let AddedComplexity = 1 in
 def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
           (STLPi GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
 }
@@ -12543,7 +12543,6 @@ let Predicates = [HasRCPC3] in {
   def LDIAPPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
 
   def : Pat<(AArch64ldiapp GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
-  let Predicates = [HasRCPC3, NoLSCP] in
   def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
             (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
 
