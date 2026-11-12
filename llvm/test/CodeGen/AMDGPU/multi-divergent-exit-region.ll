@@ -68,8 +68,8 @@
 ; GCN-DAG:  s_xor_b64
 
 ; GCN: ; %LeafBlock1
-; GCN-NEXT: s_mov_b64           [[EXIT0]], exec
 ; GCN-NEXT: v_cmp_ne_u32_e64    [[EXIT1]], 2,
+; GCN-NEXT: s_mov_b64           [[EXIT0]], exec
 
 ; GCN: ; %Flow
 ; GCN-NEXT: s_andn2_saveexec_b64

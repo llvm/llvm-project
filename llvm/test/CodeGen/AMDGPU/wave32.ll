@@ -360,36 +360,36 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-LABEL: test_loop_with_if:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1032-NEXT:    s_mov_b32 s2, 0
-; GFX1032-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX1032-NEXT:    ; implicit-def: $vgpr1_vgpr2
 ; GFX1032-NEXT:    s_branch .LBB10_2
 ; GFX1032-NEXT:  .LBB10_1: ; %bb13
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GFX1032-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0xfe, v4
-; GFX1032-NEXT:    v_add_nc_u32_e32 v1, 1, v4
+; GFX1032-NEXT:    v_add_nc_u32_e32 v3, 1, v4
 ; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
 ; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
 ; GFX1032-NEXT:    s_cbranch_execz .LBB10_8
 ; GFX1032-NEXT:  .LBB10_2: ; %bb2
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1032-NEXT:    v_cmp_ge_i32_e64 s4, v1, v0
-; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v1, v0
+; GFX1032-NEXT:    v_cmp_ge_i32_e64 s4, v3, v0
+; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v3, v0
 ; GFX1032-NEXT:    s_mov_b32 s3, 0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s5, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB10_4
 ; GFX1032-NEXT:  ; %bb.3: ; %bb5
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
-; GFX1032-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX1032-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; GFX1032-NEXT:    s_andn2_b32 s4, s4, exec_lo
 ; GFX1032-NEXT:    s_mov_b32 s3, exec_lo
-; GFX1032-NEXT:    v_lshlrev_b64 v[2:3], 2, v[1:2]
+; GFX1032-NEXT:    v_lshlrev_b64 v[1:2], 2, v[3:4]
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_add_co_u32 v2, vcc_lo, s0, v2
-; GFX1032-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, s1, v3, vcc_lo
-; GFX1032-NEXT:    global_load_dword v4, v[2:3], off
+; GFX1032-NEXT:    v_add_co_u32 v1, vcc_lo, s0, v1
+; GFX1032-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, s1, v2, vcc_lo
+; GFX1032-NEXT:    global_load_dword v4, v[1:2], off
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 11, v4
 ; GFX1032-NEXT:    s_or_b32 s4, s4, vcc_lo
@@ -401,9 +401,9 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_xor_b32 s4, exec_lo, s5
 ; GFX1032-NEXT:  ; %bb.5: ; %bb11
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
-; GFX1032-NEXT:    v_lshrrev_b32_e32 v4, 31, v1
+; GFX1032-NEXT:    v_lshrrev_b32_e32 v4, 31, v3
 ; GFX1032-NEXT:    s_andn2_b32 s3, s3, exec_lo
-; GFX1032-NEXT:    v_add_nc_u32_e32 v4, v1, v4
+; GFX1032-NEXT:    v_add_nc_u32_e32 v4, v3, v4
 ; GFX1032-NEXT:    v_ashrrev_i32_e32 v4, 1, v4
 ; GFX1032-NEXT:  ; %bb.6: ; %Flow1
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
@@ -412,8 +412,8 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_cbranch_execz .LBB10_1
 ; GFX1032-NEXT:  ; %bb.7: ; %bb10
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
-; GFX1032-NEXT:    v_mov_b32_e32 v4, v1
-; GFX1032-NEXT:    global_store_dword v[2:3], v0, off
+; GFX1032-NEXT:    v_mov_b32_e32 v4, v3
+; GFX1032-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX1032-NEXT:    s_branch .LBB10_1
 ; GFX1032-NEXT:  .LBB10_8: ; %bb1
 ; GFX1032-NEXT:    s_endpgm
@@ -421,36 +421,36 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1064-LABEL: test_loop_with_if:
 ; GFX1064:       ; %bb.0: ; %bb
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
-; GFX1064-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX1064-NEXT:    ; implicit-def: $vgpr1_vgpr2
 ; GFX1064-NEXT:    s_branch .LBB10_2
 ; GFX1064-NEXT:  .LBB10_1: ; %bb13
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
 ; GFX1064-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX1064-NEXT:    v_cmp_lt_i32_e32 vcc, 0xfe, v4
-; GFX1064-NEXT:    v_add_nc_u32_e32 v1, 1, v4
+; GFX1064-NEXT:    v_add_nc_u32_e32 v3, 1, v4
 ; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
 ; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
 ; GFX1064-NEXT:    s_cbranch_execz .LBB10_8
 ; GFX1064-NEXT:  .LBB10_2: ; %bb2
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    v_cmp_ge_i32_e64 s[6:7], v1, v0
-; GFX1064-NEXT:    v_cmp_lt_i32_e32 vcc, v1, v0
+; GFX1064-NEXT:    v_cmp_ge_i32_e64 s[6:7], v3, v0
+; GFX1064-NEXT:    v_cmp_lt_i32_e32 vcc, v3, v0
 ; GFX1064-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GFX1064-NEXT:    s_cbranch_execz .LBB10_4
 ; GFX1064-NEXT:  ; %bb.3: ; %bb5
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
-; GFX1064-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX1064-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; GFX1064-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; GFX1064-NEXT:    s_mov_b64 s[4:5], exec
-; GFX1064-NEXT:    v_lshlrev_b64 v[2:3], 2, v[1:2]
+; GFX1064-NEXT:    v_lshlrev_b64 v[1:2], 2, v[3:4]
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_add_co_u32 v2, vcc, s0, v2
-; GFX1064-NEXT:    v_add_co_ci_u32_e32 v3, vcc, s1, v3, vcc
-; GFX1064-NEXT:    global_load_dword v4, v[2:3], off
+; GFX1064-NEXT:    v_add_co_u32 v1, vcc, s0, v1
+; GFX1064-NEXT:    v_add_co_ci_u32_e32 v2, vcc, s1, v2, vcc
+; GFX1064-NEXT:    global_load_dword v4, v[1:2], off
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_cmp_gt_i32_e32 vcc, 11, v4
 ; GFX1064-NEXT:    s_or_b64 s[6:7], s[6:7], vcc
@@ -462,9 +462,9 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_xor_b64 s[6:7], exec, s[8:9]
 ; GFX1064-NEXT:  ; %bb.5: ; %bb11
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
-; GFX1064-NEXT:    v_lshrrev_b32_e32 v4, 31, v1
+; GFX1064-NEXT:    v_lshrrev_b32_e32 v4, 31, v3
 ; GFX1064-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
-; GFX1064-NEXT:    v_add_nc_u32_e32 v4, v1, v4
+; GFX1064-NEXT:    v_add_nc_u32_e32 v4, v3, v4
 ; GFX1064-NEXT:    v_ashrrev_i32_e32 v4, 1, v4
 ; GFX1064-NEXT:  ; %bb.6: ; %Flow1
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
@@ -473,8 +473,8 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_cbranch_execz .LBB10_1
 ; GFX1064-NEXT:  ; %bb.7: ; %bb10
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
-; GFX1064-NEXT:    v_mov_b32_e32 v4, v1
-; GFX1064-NEXT:    global_store_dword v[2:3], v0, off
+; GFX1064-NEXT:    v_mov_b32_e32 v4, v3
+; GFX1064-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX1064-NEXT:    s_branch .LBB10_1
 ; GFX1064-NEXT:  .LBB10_8: ; %bb1
 ; GFX1064-NEXT:    s_endpgm
