@@ -325,21 +325,15 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 
     MachineBasicBlock &B = *MX.At->getParent();
     const DebugLoc &DL = B.findDebugLoc(MX.At);
+    // Only when the mux takes Def2's place do values in the gap precede it.
+    // Call before the mux is created.
+    if (&*MX.At == MX.Def2)
+      HII->moveDependentDebugValues(*MX.Def1, *MX.Def2);
     auto NewMux = BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR)
                       .addReg(MX.PredR)
                       .add(*MX.SrcT)
                       .add(*MX.SrcF);
     NewMux->clearKillInfo();
-    if (&*MX.At == MX.Def2) {
-      // Debug instructions for DR between the two transfers would now precede
-      // the mux that defines DR. Move them after the mux.
-      MachineInstr *Mux = NewMux.getInstr();
-      for (MachineInstr &MI : llvm::make_early_inc_range(llvm::make_range(
-               std::next(MX.Def1->getIterator()), Mux->getIterator()))) {
-        if (MI.isDebugInstr() && MI.readsRegister(MX.DefR, HRI))
-          MI.moveBefore(MX.Def2);
-      }
-    }
     B.remove(MX.Def1);
     B.remove(MX.Def2);
     Changed = true;
