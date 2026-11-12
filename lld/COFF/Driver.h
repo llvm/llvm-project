@@ -93,6 +93,9 @@ public:
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
+  // Records a file the link reads, for /dependency-file:.
+  void addDependencyFile(StringRef path);
+
   void enqueuePath(StringRef path, bool lazy,
                    InputOpt inputOpt = InputOpt::None);
 

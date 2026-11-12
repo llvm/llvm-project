@@ -337,6 +337,8 @@ def wrap : P_priv<"wrap">;
 
 def vfsoverlay : P<"vfsoverlay", "Path to a vfsoverlay yaml file to optionally look for /defaultlib's in">;
 
+def dependency_file : P<"dependency-file", "Write a dependency file">;
+
 def show_timing : F<"time">,
     HelpText<"Print the time spent in each phase of linking">;
 def time_trace_eq: Joined<["--"], "time-trace=">, MetaVarName<"<file>">,

@@ -1343,6 +1343,7 @@ void SymbolTable::parseModuleDefs(StringRef path) {
   COFFModuleDefinition m = check(parseCOFFModuleDefinition(
       mb->getMemBufferRef(), machine, ctx.config.mingw));
 
+  ctx.driver.addDependencyFile(path);
   // Include in /reproduce: output if applicable.
   ctx.driver.takeBuffer(std::move(mb));
 
