@@ -39,12 +39,13 @@ public:
 
     // Conditionally set the statistic based on the function name (leaving it
     // undefined for all other functions)
-    if (Name == "func_one")
+    if (Name == "func_one") {
       DemoStat.set(1);
-    else if (Name == "func_two")
+    } else if (Name == "func_two") {
       DemoStat.set(2);
-    else
-      ; // For any other function (e.g., "func_none") don't set the statistic
+    } else {
+      // For any other function (e.g., "func_none") don't set the statistic
+    }
   }
 };
 
