@@ -16,7 +16,13 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).parent))
-from docgen import check_api, cppreference_url, posix_url, print_header_status_md
+from docgen import (
+    check_api,
+    cppreference_url,
+    generate_index_md,
+    posix_url,
+    print_header_status_md,
+)
 from header import Header, _is_stub_file
 
 
@@ -384,6 +390,22 @@ class DocgenTest(unittest.TestCase):
         self.assertEqual(len(fx_stats["precisions"]), 12)
         self.assertGreater(fx_stats["tr18037"]["implemented"], 0)
         self.assertEqual(fx_stats["c23"]["total"], 0)
+
+    def test_index_output_generation(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf), redirect_stderr(io.StringIO()):
+            generate_index_md()
+        out = buf.getvalue()
+        self.assertIn("(implementation_status)=", out)
+        self.assertIn("(headers_index)=", out)
+        self.assertIn("C23 Standard Completeness", out)
+        self.assertIn("POSIX.1-2024 Completeness", out)
+        self.assertIn("Global Variables", out)
+        self.assertIn("`stdarg.h`", out)
+        self.assertIn('data-stem="stdio"', out)
+        self.assertIn('data-stem="arpa/inet"', out)
+        self.assertIn("acosf128", out)
+        self.assertIn("```{toctree}\n:hidden: true", out)
 
 
 if __name__ == "__main__":
