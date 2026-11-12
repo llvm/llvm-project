@@ -97,7 +97,7 @@ if(LLVM_ENABLE_SPHINX)
       foreach(stem IN LISTS docgen_list)
         list(APPEND libc_generated_docs "headers/${stem}.md")
       endforeach()
-      list(APPEND libc_generated_docs configure.rst)
+      list(APPEND libc_generated_docs headers/index.md configure.rst)
       add_sphinx_source_sync_target(copy-libc-rst-docs
         "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
         PRESERVE_DOCS ${libc_generated_docs})
@@ -141,6 +141,11 @@ if(LLVM_ENABLE_SPHINX)
         # depend on the docgen invocation.
         add_dependencies(docs-libc-html ${docgen_target_name})
       endforeach()
+      add_custom_target(libc-docgen-index
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../utils/docgen/docgen.py --index >
+          ${CMAKE_CURRENT_BINARY_DIR}/headers/index.md)
+      add_dependencies(libc-docgen-index copy-libc-rst-docs)
+      add_dependencies(docs-libc-html libc-docgen-index)
     endif()
   endif()
 endif()

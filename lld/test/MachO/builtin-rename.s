@@ -25,18 +25,37 @@
 
 # CHECK-DAG: __TEXT,__text __TEXT__StaticInit
 
+## __objc_dataobj remains in __DATA even when -data_const is enabled.
+# CHECK-DAG: __DATA,__objc_dataobj __DATA__objc_dataobj
+
+## ld64 only moves these sections when additional conditions are met.
+# CHECK-DAG: __DATA,__objc_const __DATA__objc_const
+# CHECK-DAG: __DATA,__objc_selrefs __DATA__objc_selrefs
+# CHECK-DAG: __DATA,__objc_classrefs __DATA__objc_classrefs
+# CHECK-DAG: __DATA,__objc_superrefs __DATA__objc_superrefs
+# CHECK-DAG: __DATA,__objc_protorefs __DATA__objc_protorefs
+
 # NDATA-DAG: __DATA,__auth_got __DATA__auth_got
 # NDATA-DAG: __DATA,__auth_ptr __DATA__auth_ptr
 # NDATA-DAG: __DATA,__nl_symbol_ptr __DATA__nl_symbol_ptr
 # NDATA-DAG: __DATA,__const __DATA__const
 # NDATA-DAG: __DATA,__cfstring __DATA__cfstring
+# NDATA-DAG: __DATA,__objc_intobj __DATA__objc_intobj
+# NDATA-DAG: __DATA,__objc_floatobj __DATA__objc_floatobj
+# NDATA-DAG: __DATA,__objc_doubleobj __DATA__objc_doubleobj
+# NDATA-DAG: __DATA,__objc_dateobj __DATA__objc_dateobj
+# NDATA-DAG: __DATA,__objc_dictobj __DATA__objc_dictobj
+# NDATA-DAG: __DATA,__objc_arrayobj __DATA__objc_arrayobj
+# NDATA-DAG: __DATA,__objc_arraydata __DATA__objc_arraydata
 # NDATA-DAG: __DATA,__mod_init_func __DATA__mod_init_func
 # NDATA-DAG: __DATA,__mod_term_func __DATA__mod_term_func
 # NDATA-DAG: __DATA,__objc_classlist __DATA__objc_classlist
 # NDATA-DAG: __DATA,__objc_nlclslist __DATA__objc_nlclslist
 # NDATA-DAG: __DATA,__objc_catlist __DATA__objc_catlist
+# NDATA-DAG: __DATA,__objc_catlist2 __DATA__objc_catlist2
 # NDATA-DAG: __DATA,__objc_nlcatlist __DATA__objc_nlcatlist
 # NDATA-DAG: __DATA,__objc_protolist __DATA__objc_protolist
+# NDATA-DAG: __DATA,__const_cfobj2 __DATA__const_cfobj2
 # NDATA-DAG: __DATA,__nl_symbol_ptr __IMPORT__pointers
 
 # YDATA-DAG: __DATA_CONST,__auth_got __DATA__auth_got
@@ -44,13 +63,22 @@
 # YDATA-DAG: __DATA_CONST,__nl_symbol_ptr __DATA__nl_symbol_ptr
 # YDATA-DAG: __DATA_CONST,__const __DATA__const
 # YDATA-DAG: __DATA_CONST,__cfstring __DATA__cfstring
+# YDATA-DAG: __DATA_CONST,__objc_intobj __DATA__objc_intobj
+# YDATA-DAG: __DATA_CONST,__objc_floatobj __DATA__objc_floatobj
+# YDATA-DAG: __DATA_CONST,__objc_doubleobj __DATA__objc_doubleobj
+# YDATA-DAG: __DATA_CONST,__objc_dateobj __DATA__objc_dateobj
+# YDATA-DAG: __DATA_CONST,__objc_dictobj __DATA__objc_dictobj
+# YDATA-DAG: __DATA_CONST,__objc_arrayobj __DATA__objc_arrayobj
+# YDATA-DAG: __DATA_CONST,__objc_arraydata __DATA__objc_arraydata
 # YDATA-DAG: __DATA_CONST,__mod_init_func __DATA__mod_init_func
 # YDATA-DAG: __DATA_CONST,__mod_term_func __DATA__mod_term_func
 # YDATA-DAG: __DATA_CONST,__objc_classlist __DATA__objc_classlist
 # YDATA-DAG: __DATA_CONST,__objc_nlclslist __DATA__objc_nlclslist
 # YDATA-DAG: __DATA_CONST,__objc_catlist __DATA__objc_catlist
+# YDATA-DAG: __DATA_CONST,__objc_catlist2 __DATA__objc_catlist2
 # YDATA-DAG: __DATA_CONST,__objc_nlcatlist __DATA__objc_nlcatlist
 # YDATA-DAG: __DATA_CONST,__objc_protolist __DATA__objc_protolist
+# YDATA-DAG: __DATA_CONST,__const_cfobj2 __DATA__const_cfobj2
 # YDATA-DAG: __DATA_CONST,__nl_symbol_ptr __IMPORT__pointers
 
 ## Check that the SG_READ_ONLY flag is set on __DATA_CONST.
@@ -67,7 +95,7 @@
 # FLAGS-NEXT: filesize
 # FLAGS-NEXT:  maxprot rw-
 # FLAGS-NEXT: initprot rw-
-# FLAGS-NEXT:   nsects 13
+# FLAGS-NEXT:   nsects 22
 # FLAGS-NEXT:    flags SG_READ_ONLY
 
 ## LLD doesn't support defining symbols in synthetic sections, so we test them
@@ -113,6 +141,46 @@ __DATA__const:
 __DATA__cfstring:
   .space 8
 
+.section __DATA,__objc_intobj
+.global __DATA__objc_intobj
+__DATA__objc_intobj:
+  .space 8
+
+.section __DATA,__objc_floatobj
+.global __DATA__objc_floatobj
+__DATA__objc_floatobj:
+  .space 8
+
+.section __DATA,__objc_doubleobj
+.global __DATA__objc_doubleobj
+__DATA__objc_doubleobj:
+  .space 8
+
+.section __DATA,__objc_dataobj
+.global __DATA__objc_dataobj
+__DATA__objc_dataobj:
+  .space 8
+
+.section __DATA,__objc_dateobj
+.global __DATA__objc_dateobj
+__DATA__objc_dateobj:
+  .space 8
+
+.section __DATA,__objc_dictobj
+.global __DATA__objc_dictobj
+__DATA__objc_dictobj:
+  .space 8
+
+.section __DATA,__objc_arrayobj
+.global __DATA__objc_arrayobj
+__DATA__objc_arrayobj:
+  .space 8
+
+.section __DATA,__objc_arraydata
+.global __DATA__objc_arraydata
+__DATA__objc_arraydata:
+  .space 8
+
 .section __DATA,__mod_init_func,mod_init_funcs
 .global __DATA__mod_init_func
 __DATA__mod_init_func:
@@ -138,6 +206,11 @@ __DATA__objc_nlclslist:
 __DATA__objc_catlist:
   .space 8
 
+.section __DATA,__objc_catlist2
+.global __DATA__objc_catlist2
+__DATA__objc_catlist2:
+  .space 8
+
 .section __DATA,__objc_nlcatlist
 .global __DATA__objc_nlcatlist
 __DATA__objc_nlcatlist:
@@ -146,6 +219,36 @@ __DATA__objc_nlcatlist:
 .section __DATA,__objc_protolist
 .global __DATA__objc_protolist
 __DATA__objc_protolist:
+  .space 8
+
+.section __DATA,__const_cfobj2
+.global __DATA__const_cfobj2
+__DATA__const_cfobj2:
+  .space 8
+
+.section __DATA,__objc_const
+.global __DATA__objc_const
+__DATA__objc_const:
+  .space 8
+
+.section __DATA,__objc_selrefs
+.global __DATA__objc_selrefs
+__DATA__objc_selrefs:
+  .space 8
+
+.section __DATA,__objc_classrefs
+.global __DATA__objc_classrefs
+__DATA__objc_classrefs:
+  .space 8
+
+.section __DATA,__objc_superrefs
+.global __DATA__objc_superrefs
+__DATA__objc_superrefs:
+  .space 8
+
+.section __DATA,__objc_protorefs
+.global __DATA__objc_protorefs
+__DATA__objc_protorefs:
   .space 8
 
 ## __objc_imageinfo should get moved under __DATA_CONST as well, but symbols
