@@ -14,7 +14,10 @@
 // RUN: %run %t5 2>&1 | FileCheck --check-prefix=NCFI %s
 
 // RUN: %clangxx_cfi_diag -o %t6 %s
-// RUN: %run %t6 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
+// RUN: %run %t6 2>&1 | FileCheck --check-prefix=%if devirt %{CFI-DEVIRT-DIAG%} %else %{CFI-DIAG%} %s
+
+// RUN: %clangxx_cfi_diag -DB32 -o %t7 %s
+// RUN: %run %t7 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 
 // Tests that the CFI mechanism crashes the program when a virtual table is
 // replaced with a compatible table of function pointers that does not belong to
@@ -47,10 +50,14 @@ int main() {
 
   // CFI: 1
   // NCFI: 1
+  // CFI-DEVIRT-DIAG: 1
   fprintf(stderr, "1\n");
 
   // CFI-NOT: foo
   // NCFI: foo
+  // CFI-DEVIRT-DIAG-NOT: foo
+  // CFI-DEVIRT-DIAG-NOT: runtime error
+  // CFI-DEVIRT-DIAG-NOT: SUMMARY
   // CFI-DIAG: runtime error: control flow integrity check for type 'A' failed during virtual call
   // CFI-DIAG-NEXT: note: invalid vtable
   // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-vcall
@@ -61,5 +68,6 @@ int main() {
   // rather than crashing.
 
   // NCFI: {{^2$}}
+  // CFI-DEVIRT-DIAG: {{^2$}}
   fprintf(stderr, "2\n");
 }
