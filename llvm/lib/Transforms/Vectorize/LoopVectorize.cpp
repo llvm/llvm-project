@@ -6553,6 +6553,10 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
                  *OrigLoop, CostCtx, Range);
 
+  if (Legal->hasUncountableExitWithSideEffects())
+    RUN_VPLAN_PASS(VPlanTransforms::expandMaskBeforeFirst, *Plan, CostCtx,
+                   Range);
+
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
     Range.End = Range.Start * 2;
