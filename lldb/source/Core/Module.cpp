@@ -1095,7 +1095,8 @@ void Module::ReportWarningOptimization(
      << " was compiled with optimization - stepping may behave "
         "oddly; variables may not be available";
   llvm::StringRef msg = ss.GetString();
-  Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(msg.str(), debugger_id);
 }
 
 void Module::ReportWarningUnsupportedLanguage(
@@ -1106,7 +1107,8 @@ void Module::ReportWarningUnsupportedLanguage(
      << "\". "
         "Inspection of frame variables will be limited";
   llvm::StringRef msg = ss.GetString();
-  Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(msg.str(), debugger_id);
 }
 
 void Module::ReportErrorIfModifyDetected(
@@ -1126,12 +1128,8 @@ void Module::ReportErrorIfModifyDetected(
   }
 }
 
-std::once_flag *Module::GetDiagnosticOnceFlag(llvm::StringRef msg) {
-  std::lock_guard<std::recursive_mutex> guard(m_diagnostic_mutex);
-  auto &once_ptr = m_shown_diagnostics[llvm::stable_hash_name(msg)];
-  if (!once_ptr)
-    once_ptr = std::make_unique<std::once_flag>();
-  return once_ptr.get();
+bool Module::ShouldReportDiagnostic(llvm::StringRef msg) {
+  return m_shown_diagnostics.Insert(llvm::stable_hash_name(msg));
 }
 
 void Module::ReportError(const llvm::formatv_object_base &payload) {
@@ -1139,7 +1137,8 @@ void Module::ReportError(const llvm::formatv_object_base &payload) {
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
   std::string msg = payload.str();
   strm << ' ' << msg;
-  Debugger::ReportError(strm.GetString().str(), {}, GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportError(strm.GetString().str());
 }
 
 void Module::ReportWarning(const llvm::formatv_object_base &payload) {
@@ -1147,8 +1146,8 @@ void Module::ReportWarning(const llvm::formatv_object_base &payload) {
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
   std::string msg = payload.str();
   strm << ' ' << msg;
-  Debugger::ReportWarning(strm.GetString().str(), {},
-                          GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(strm.GetString().str());
 }
 
 void Module::LogMessage(Log *log, const llvm::formatv_object_base &payload) {
@@ -1600,10 +1599,9 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
       HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_name.str()});
 
   if (!sdk_path_or_err) {
-    Debugger::ReportError("Error while searching for Xcode SDK: " +
-                              toString(sdk_path_or_err.takeError()),
-                          /*debugger_id=*/std::nullopt,
-                          GetDiagnosticOnceFlag(sdk_name));
+    std::string error = toString(sdk_path_or_err.takeError());
+    if (ShouldReportDiagnostic(sdk_name))
+      Debugger::ReportError("Error while searching for Xcode SDK: " + error);
     return;
   }
 

@@ -163,6 +163,10 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- On 32-bit Arm Windows, the C++ throw information (`ThrowInfo`,
+  `CatchableTypeArray` and `CatchableType`) is now image-relative, as the MSVC
+  runtime expects.
+
 - On Windows targets using Microsoft C++ ABI, fixed returning a class with
   a deleted template constructor which should be returned in a register.
   This affects the ABI of `std::strong_ordering` in some versions of the

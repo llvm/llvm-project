@@ -10051,12 +10051,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FEXP10))
           return;
         break;
-      case LibFunc_ldexp:
-      case LibFunc_ldexpf:
-      case LibFunc_ldexpl:
-        if (visitBinaryFloatCall(I, ISD::FLDEXP))
-          return;
-        break;
       case LibFunc_strstr:
         if (visitStrstrCall(I))
           return;

@@ -167,3 +167,39 @@ body[data-theme="dark"] {
   outline: 2px solid var(--hc-blue-text);
   outline-offset: 2px;
 }
+
+.hc-table-families th,
+.hc-table-families td {
+  padding: 7px 8px;
+}
+
+.hc-status-ulp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--hc-green-bg);
+  color: var(--hc-green-text);
+  border: 1px solid var(--hc-green-border);
+}
+
+.hc-status-na {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--color-foreground-muted, #8c959f);
+  opacity: 0.65;
+  white-space: nowrap;
+}
+
+.hc-c-cell {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
