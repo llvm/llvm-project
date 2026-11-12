@@ -24,10 +24,12 @@ using namespace cir;
 
 namespace {
 
-// Both namespaces declare a BoolAttr, named unqualified below. This must live
-// in the inner namespace: at global scope it merges with the using-directives
-// and stays ambiguous.
+// Both namespaces declare these, named unqualified below. This must live in
+// the inner namespace: at global scope it merges with the using-directives and
+// stays ambiguous.
 using cir::BoolAttr;
+using cir::ComplexType;
+using cir::VectorType;
 
 //===--------------------------------------------------------------------===//
 // Helpers referenced by the generated readers
@@ -166,6 +168,191 @@ static LogicalResult readCheckedInt(DialectBytecodeReader &reader,
     result = static_cast<IntTy>(value);
   }
   return success();
+}
+
+// A type parameter that may be null carries presence as a flag of its own.
+static LogicalResult readOptionalType(DialectBytecodeReader &reader,
+                                      Type &result) {
+  bool present = false;
+  if (failed(reader.readBool(present)))
+    return failure();
+  if (!present) {
+    result = {};
+    return success();
+  }
+  return reader.readType(result);
+}
+
+static void writeOptionalType(DialectBytecodeWriter &writer, Type type) {
+  writer.writeOwnedBool(static_cast<bool>(type));
+  if (type)
+    writer.writeType(type);
+}
+
+static LogicalResult readElementCount(DialectBytecodeReader &reader,
+                                      llvm::ElementCount &result) {
+  unsigned minValue = 0;
+  bool scalable = false;
+  if (failed(readCheckedInt(reader, minValue)) ||
+      failed(reader.readBool(scalable)))
+    return failure();
+  result = llvm::ElementCount::get(minValue, scalable);
+  return success();
+}
+
+static void writeElementCount(DialectBytecodeWriter &writer,
+                              llvm::ElementCount count) {
+  writer.writeVarInt(count.getKnownMinValue());
+  writer.writeOwnedBool(count.isScalable());
+}
+
+//===--------------------------------------------------------------------===//
+// Records
+//===--------------------------------------------------------------------===//
+//
+// A record is written as its key, that is its name (null when anonymous) and,
+// for a struct, whether it is a class. Then comes whether it is incomplete and,
+// if it is not, its body. A member can point back at a named record, so the
+// reader binds the record before it reads the members and completes it after.
+
+/// The body of a complete record.
+struct RecordBody {
+  bool packed = false;
+  SmallVector<Type> members;
+  SmallVector<RecordMemberKind> kinds;
+  /// Unions only.
+  Type padding;
+};
+
+static void writeRecordBody(DialectBytecodeWriter &writer, RecordType type) {
+  writer.writeOwnedBool(type.getPacked());
+  writer.writeTypes(type.getMembers());
+  writer.writeListWithKnownSize(
+      type.getMemberKinds(), [&](RecordMemberKind kind) {
+        writer.writeVarInt(static_cast<uint64_t>(kind));
+      });
+}
+
+static LogicalResult readRecordBody(DialectBytecodeReader &reader,
+                                    RecordBody &body) {
+  if (failed(reader.readBool(body.packed)) ||
+      failed(reader.readTypes(body.members)))
+    return failure();
+  return reader.readListWithKnownSize(
+      body.kinds, body.members.size(), [&](RecordMemberKind &kind) {
+        return readEnum(reader, kind, symbolizeRecordMemberKind,
+                        "RecordMemberKind");
+      });
+}
+
+/// Complete the named record `type` with a verified body. A record that is
+/// already complete in the context must have this body.
+static LogicalResult completeRecord(DialectBytecodeReader &reader,
+                                    RecordType type, const RecordBody &body) {
+  if (type.isIncomplete()) {
+    type.complete(body.members, body.packed, body.padding, body.kinds);
+    return success();
+  }
+  bool sameBody = type.getMembers() == ArrayRef(body.members) &&
+                  type.getPacked() == body.packed &&
+                  type.getMemberKinds() == ArrayRef(body.kinds);
+  if (auto unionType = dyn_cast<UnionType>(type))
+    sameBody &= unionType.getPadding() == body.padding;
+  if (sameBody)
+    return success();
+  return reader.emitError() << "record '" << type.getName().getValue()
+                            << "' redefined with a different body";
+}
+
+static void writeRecord(DialectBytecodeWriter &writer, StructType type) {
+  writer.writeOptionalAttribute(type.getName());
+  writer.writeOwnedBool(type.isClass());
+  writer.writeOwnedBool(type.isIncomplete());
+  if (type.isIncomplete())
+    return;
+  writeRecordBody(writer, type);
+}
+
+static LogicalResult readRecord(DialectBytecodeReader &reader,
+                                StructType &result) {
+  MLIRContext *context = reader.getContext();
+  auto emitError = [&] { return reader.emitError(); };
+  StringAttr name;
+  bool isClass = false, incomplete = false;
+  if (failed(reader.readOptionalAttribute(name)) ||
+      failed(reader.readBool(isClass)) || failed(reader.readBool(incomplete)))
+    return failure();
+
+  RecordBody body;
+  if (!name) {
+    if (incomplete)
+      return reader.emitError("anonymous records must be complete");
+    if (failed(readRecordBody(reader, body)))
+      return failure();
+    result = StructType::getChecked(emitError, context, ArrayRef(body.members),
+                                    body.packed, isClass, ArrayRef(body.kinds));
+    return success(!!result);
+  }
+
+  result = StructType::getChecked(emitError, context, name, isClass);
+  if (!result)
+    return failure();
+  if (incomplete)
+    return success();
+  if (failed(reader.bindResult(result)) ||
+      failed(readRecordBody(reader, body)) ||
+      failed(StructType::verifyInvariants(emitError, body.members, name,
+                                          /*incomplete=*/false, body.packed,
+                                          body.kinds, isClass)))
+    return failure();
+  return completeRecord(reader, result, body);
+}
+
+static void writeRecord(DialectBytecodeWriter &writer, UnionType type) {
+  writer.writeOptionalAttribute(type.getName());
+  writer.writeOwnedBool(type.isIncomplete());
+  if (type.isIncomplete())
+    return;
+  writeRecordBody(writer, type);
+  writeOptionalType(writer, type.getPadding());
+}
+
+static LogicalResult readRecord(DialectBytecodeReader &reader,
+                                UnionType &result) {
+  MLIRContext *context = reader.getContext();
+  auto emitError = [&] { return reader.emitError(); };
+  StringAttr name;
+  bool incomplete = false;
+  if (failed(reader.readOptionalAttribute(name)) ||
+      failed(reader.readBool(incomplete)))
+    return failure();
+
+  RecordBody body;
+  if (!name) {
+    if (incomplete)
+      return reader.emitError("anonymous records must be complete");
+    if (failed(readRecordBody(reader, body)) ||
+        failed(readOptionalType(reader, body.padding)))
+      return failure();
+    result =
+        UnionType::getChecked(emitError, context, ArrayRef(body.members),
+                              body.packed, body.padding, ArrayRef(body.kinds));
+    return success(!!result);
+  }
+
+  result = UnionType::getChecked(emitError, context, name);
+  if (!result)
+    return failure();
+  if (incomplete)
+    return success();
+  if (failed(reader.bindResult(result)) ||
+      failed(readRecordBody(reader, body)) ||
+      failed(readOptionalType(reader, body.padding)) ||
+      failed(UnionType::verifyInvariants(emitError, body.members, name,
+                                         /*incomplete=*/false, body.packed,
+                                         body.padding, body.kinds)))
+    return failure();
+  return completeRecord(reader, result, body);
 }
 
 //===--------------------------------------------------------------------===//
