@@ -11697,8 +11697,7 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
     const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
     Value *Expr, AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
-    AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr,
-    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
+    AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr, AtomicControl AC) {
   assert(!isConflictIP(Loc.IP, AllocaIP) && "IPs must not be ambiguous");
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -11713,9 +11712,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
            "OMP atomic update expected a scalar or struct type");
   });
 
-  Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
-      AllocaIP, X.Var, X.ElemTy, Expr, AO, RMWOp, UpdateOp, X.IsVolatile,
-      IsXBinopExpr, IsIgnoreDenormalMode, IsFineGrainedMemory, IsRemoteMemory);
+  Expected<std::pair<Value *, Value *>> AtomicResult =
+      emitAtomicUpdate(AllocaIP, X.Var, X.ElemTy, Expr, AO, RMWOp, UpdateOp,
+                       X.IsVolatile, IsXBinopExpr, AC);
   if (!AtomicResult)
     return AtomicResult.takeError();
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Update);
@@ -11787,16 +11786,14 @@ static AtomicOrdering TransformReleaseAcquireRelease(AtomicOrdering AO) {
 }
 
 static void setAtomicRMWMetadata(AtomicRMWInst *RMWInst, const Triple &T,
-                                 bool IsIgnoreDenormalMode,
-                                 bool IsFineGrainedMemory,
-                                 bool IsRemoteMemory) {
+                                 AtomicControl AC) {
   MDNode *Empty = MDNode::get(RMWInst->getContext(), {});
-  if (IsIgnoreDenormalMode)
+  if (AC.IgnoreDenormalMode)
     RMWInst->setMetadata(LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
   if (T.isAMDGPU()) {
-    if (!IsFineGrainedMemory)
+    if (!AC.FineGrainedMemory)
       RMWInst->setMetadata("amdgpu.no.fine.grained.memory", Empty);
-    if (!IsRemoteMemory)
+    if (!AC.RemoteMemory)
       RMWInst->setMetadata("amdgpu.no.remote.memory", Empty);
   }
 }
@@ -11805,7 +11802,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
     AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr,
-    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
+    AtomicControl AC) {
   // TODO: handle the case where XElemTy is not byte-sized or not a power of 2.
   bool emitRMWOp = false;
   switch (RMWOp) {
@@ -11840,8 +11837,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   if (emitRMWOp) {
     AtomicRMWInst *RMWInst =
         Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
-    setAtomicRMWMetadata(RMWInst, T, IsIgnoreDenormalMode, IsFineGrainedMemory,
-                         IsRemoteMemory);
+    setAtomicRMWMetadata(RMWInst, T, AC);
     Res.first = RMWInst;
     // not needed except in case of postfix captures. Generate anyway for
     // consistency with the else part. Will be removed with any DCE pass.
@@ -11975,7 +11971,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     AtomicOpValue &V, Value *Expr, AtomicOrdering AO,
     AtomicRMWInst::BinOp RMWOp, AtomicUpdateCallbackTy &UpdateOp,
     bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr,
-    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
+    AtomicControl AC) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -11992,9 +11988,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',
   // 'x' is simply atomically rewritten with 'expr'.
   AtomicRMWInst::BinOp AtomicOp = (UpdateExpr ? RMWOp : AtomicRMWInst::Xchg);
-  Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
-      AllocaIP, X.Var, X.ElemTy, Expr, AO, AtomicOp, UpdateOp, X.IsVolatile,
-      IsXBinopExpr, IsIgnoreDenormalMode, IsFineGrainedMemory, IsRemoteMemory);
+  Expected<std::pair<Value *, Value *>> AtomicResult =
+      emitAtomicUpdate(AllocaIP, X.Var, X.ElemTy, Expr, AO, AtomicOp, UpdateOp,
+                       X.IsVolatile, IsXBinopExpr, AC);
   if (!AtomicResult)
     return AtomicResult.takeError();
   Value *CapturedVal =
@@ -12009,22 +12005,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, bool IsWeak, bool IsIgnoreDenormalMode,
-    bool IsFineGrainedMemory, bool IsRemoteMemory) {
+    bool IsFailOnly, bool IsWeak, AtomicControl AC) {
 
   AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
   return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
-                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak,
-                             IsIgnoreDenormalMode, IsFineGrainedMemory,
-                             IsRemoteMemory);
+                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak, AC);
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak,
-    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
+    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak, AtomicControl AC) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -12331,8 +12323,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
     AtomicRMWInst *OldValue =
         Builder.CreateAtomicRMW(NewOp, X.Var, E, MaybeAlign(), AO);
-    setAtomicRMWMetadata(OldValue, T, IsIgnoreDenormalMode, IsFineGrainedMemory,
-                         IsRemoteMemory);
+    setAtomicRMWMetadata(OldValue, T, AC);
     if (V.Var) {
       Value *CapturedValue = nullptr;
       if (IsPostfixUpdate) {
