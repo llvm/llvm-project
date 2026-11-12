@@ -3725,12 +3725,11 @@ public:
     } else
       assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
   }
-  VPExpressionRecipe(VPSingleDefRecipe *InLoopOp, VPSingleDefRecipe *VPMerge)
+  VPExpressionRecipe(VPSingleDefRecipe *InLoopOp,
+                     VPWidenIntrinsicRecipe *VPMerge)
       : VPExpressionRecipe(ExpressionTypes::FoldedVPMerge,
                            {InLoopOp, VPMerge}) {
-    assert(isa<VPWidenIntrinsicRecipe>(VPMerge) &&
-           cast<VPWidenIntrinsicRecipe>(VPMerge)->getVectorIntrinsicID() ==
-               Intrinsic::vp_merge &&
+    assert(VPMerge->getVectorIntrinsicID() == Intrinsic::vp_merge &&
            "Expected a vp.merge");
   }
 
