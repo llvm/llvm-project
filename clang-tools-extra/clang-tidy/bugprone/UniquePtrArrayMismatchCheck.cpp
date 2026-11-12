@@ -20,8 +20,9 @@ UniquePtrArrayMismatchCheck::SmartPtrClassMatcher
 UniquePtrArrayMismatchCheck::getSmartPointerClassMatcher() const {
   const auto DeleterDecl = classTemplateSpecializationDecl(
       hasName("::std::default_delete"), templateArgumentCountIs(1),
-      hasTemplateArgument(0, templateArgument(refersToType(
-                                 qualType(equalsBoundNode(PointerTypeN))))));
+      hasTemplateArgument(
+          0, templateArgument(refersToType(qualType(hasUnqualifiedDesugaredType(
+                 equalsBoundNode(PointerTypeN)))))));
   return classTemplateSpecializationDecl(
       hasName("::std::unique_ptr"), templateArgumentCountIs(2),
       hasTemplateArgument(
