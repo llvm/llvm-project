@@ -4987,6 +4987,9 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   if (!TInfo->getType()->isDependentType()) {
     // The operand of sizeof is parsed in an unevaluated context, but a
     // variably modified operand is evaluated if the sizeof itself is.
+    // FIXME: TransformToPotentiallyEvaluated() above should take care of this,
+    // but it only runs if an array bound is written inside the sizeof, not
+    // whenever the sizeof is potentially evaluated.
     std::optional<EnterExpressionEvaluationContext> Evaluated;
     if ((ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
         isUnevaluatedContext())
