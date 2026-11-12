@@ -17540,7 +17540,7 @@ libc_support_library(
     srcs = ["src/stdlib/environ_internal.cpp"],
     hdrs = ["src/stdlib/environ_internal.h"],
     deps = [
-        ":__support_alloc_checker",
+        ":__support_checked_ptr",
         ":__support_common",
         ":__support_cpp_new",
         ":__support_cpp_optional",

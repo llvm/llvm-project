@@ -91,7 +91,7 @@ endif()
 set(environ_internal_deps
   libc.config.app_h
   libc.hdr.types.size_t
-  libc.src.__support.alloc_checker
+  libc.src.__support.checked_ptr
   libc.src.__support.CPP.new
   libc.src.__support.CPP.optional
   libc.src.__support.CPP.string_view
