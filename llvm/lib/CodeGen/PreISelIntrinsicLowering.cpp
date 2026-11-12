@@ -625,7 +625,6 @@ static bool expandProtectedFieldPtr(Function &Intr) {
       reportFatalUsageError("software encoding currently unsupported");
 
     auto *DS = getDeactivationSymbol(Call);
-    OperandBundleDef DSBundle("deactivation-symbol", DS);
 
     for (Use &U : llvm::make_early_inc_range(Call->uses())) {
       // Comparisons against null cannot be used to recover the original

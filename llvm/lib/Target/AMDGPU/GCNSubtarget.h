@@ -508,6 +508,12 @@ public:
 
   bool enableSubRegLiveness() const override { return true; }
 
+  // canReassign() walks the whole allocation order of the evictee on every
+  // local eviction query, which is expensive with a very large VGPR file.
+  bool enableRALocalReassignment(CodeGenOptLevel OptLevel) const override {
+    return !hasVGPRMSBs();
+  }
+
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
 
@@ -562,9 +568,6 @@ public:
   }
 
   bool hasMadF16() const;
-
-  // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return HasGFX1250Insts; }
 
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return HasGFX1250Insts; }

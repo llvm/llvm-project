@@ -2184,6 +2184,9 @@ class RVPBinaryIntrinsic
   def int_riscv_asub_i32  : RVPScalarBinaryIntrinsic;
   def int_riscv_asubu_u32 : RVPScalarBinaryIntrinsic;
 
+  // Scalar Shift-Add. On RV64 this maps to pssh1sadd.w on the low words.
+  def int_riscv_ssh1sadd_i32 : RVPScalarBinaryIntrinsic;
+
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.
   class RVPScalarMulHighIntrinsic

@@ -93,7 +93,11 @@ def L4_sub_memoph_zomapAlias : InstAlias<"memh($Rs32) -= $Rt32", (L4_sub_memoph_
 def L4_sub_memopw_zomapAlias : InstAlias<"memw($Rs32) -= $Rt32", (L4_sub_memopw_io IntRegs:$Rs32, 0, IntRegs:$Rt32)>;
 def L6_deallocframe_map_to_rawAlias : InstAlias<"deallocframe", (L2_deallocframe D15, R30)>;
 def L6_return_map_to_rawAlias : InstAlias<"dealloc_return", (L4_return D15, R30)>;
+def LX_assign_altAlias : InstAlias<"$Ld16 = $Lu16", (LX_assign HlxLR:$Ld16, HlxLR:$Lu16)>, Requires<[HasV85, UseHLX]>;
+def LX_assign_w_altAlias : InstAlias<"$Ldd16 = $Luu16", (LX_assign_w HlxLLR:$Ldd16, HlxLLR:$Luu16)>, Requires<[HasV85, UseHLX]>;
 def LX_mux_h_altAlias : InstAlias<"if($Lv16.h<0) $Lx16.h = $Lu16.h", (LX_mux_h HlxLR:$Lx16, HlxLR:$Lu16, HlxLR:$Lv16)>, Requires<[HasV85, UseHLX]>;
+def LX_zeroAlias : InstAlias<"$Ld16 = #0", (LX_xor HlxLR:$Ld16, L15, L15)>, Requires<[HasV85, UseHLX]>;
+def LX_zero_wAlias : InstAlias<"$Ldd16 = #0", (LX_xor_w HlxLLR:$Ldd16, LL7, LL7)>, Requires<[HasV85, UseHLX]>;
 def M2_mpyuiAlias : InstAlias<"$Rd32 = mpyui($Rs32,$Rt32)", (M2_mpyi IntRegs:$Rd32, IntRegs:$Rs32, IntRegs:$Rt32)>;
 def M7_vdmpyAlias : InstAlias<"$Rdd32 = vdmpyw($Rss32,$Rtt32)", (M7_dcmpyrwc DoubleRegs:$Rdd32, DoubleRegs:$Rss32, DoubleRegs:$Rtt32)>;
 def M7_vdmpy_accAlias : InstAlias<"$Rxx32 += vdmpyw($Rss32,$Rtt32)", (M7_dcmpyrwc_acc DoubleRegs:$Rxx32, DoubleRegs:$Rss32, DoubleRegs:$Rtt32)>;
