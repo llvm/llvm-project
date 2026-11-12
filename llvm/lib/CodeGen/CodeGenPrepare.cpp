@@ -1974,7 +1974,7 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
 
 static bool isRemOfLoopIncrementWithLoopInvariant(
     Instruction *Rem, const LoopInfo *LI, Value *&RemAmtOut, Value *&AddInstOut,
-    Value *&AddOffsetOut, PHINode *&LoopIncrPNOut) {
+    Value *&AddOffsetOut, PHINode *&LoopIncrPNOut, Constant *&StepOut) {
   Value *Incr, *RemAmt;
   // NB: If RemAmt is a power of 2 it *should* have been transformed by now.
   if (!match(Rem, m_URem(m_Value(Incr), m_Value(RemAmt))))
@@ -1987,8 +1987,9 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
     AddInst = nullptr;
     AddOffset = nullptr;
   } else {
-    // Search through a NUW add on top of the loop increment.
-    if (!match(Incr, m_c_NUWAdd(m_Phi(PN), m_Value(AddOffset))))
+    // Search through a NUW add (or disjoint or) on top of the loop increment.
+    if (!match(Incr, m_CombineOr(m_c_NUWAdd(m_Phi(PN), m_Value(AddOffset)),
+                                 m_DisjointOr(m_Phi(PN), m_Value(AddOffset)))))
       return false;
     AddInst = Incr;
   }
@@ -2023,11 +2024,21 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
   if (!LoopIncrInfo)
     return false;
 
-  // We need remainder_amount % increment_amount to be zero. Increment of one
-  // satisfies that without any special logic and is overwhelmingly the common
-  // case.
-  if (!match(LoopIncrInfo->second, m_One()))
-    return false;
+  // The remainder must wrap at most once per iteration. That needs a known
+  // remainder amount unless the step is one.
+  Constant *Step = LoopIncrInfo->second;
+  if (!match(Step, m_One())) {
+    auto *StepC = dyn_cast<ConstantInt>(Step);
+    auto *RemC = dyn_cast<ConstantInt>(RemAmt);
+    if (!StepC || !RemC || StepC->isZero() ||
+        StepC->getValue().uge(RemC->getValue()))
+      return false;
+    // `rem + Step` must not overflow.
+    bool Overflow;
+    (void)(RemC->getValue() - 1).uadd_ov(StepC->getValue(), Overflow);
+    if (Overflow)
+      return false;
+  }
 
   // Need the increment to not overflow.
   if (!match(LoopIncrInfo->first, m_c_NUWAdd(m_Specific(PN), m_Value())))
@@ -2038,86 +2049,111 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
   LoopIncrPNOut = PN;
   AddInstOut = AddInst;
   AddOffsetOut = AddOffset;
+  StepOut = Step;
 
   return true;
 }
 
 // Try to transform:
 //
-// for(i = Start; i < End; ++i)
+// for(i = Start; i < End; i += Step)
 //    Rem = (i nuw+ IncrLoopInvariant) u% RemAmtLoopInvariant;
 //
 // ->
 //
 // Rem = (Start nuw+ IncrLoopInvariant) % RemAmtLoopInvariant;
-// for(i = Start; i < End; ++i, ++rem)
-//    Rem = rem == RemAmtLoopInvariant ? 0 : Rem;
+// for(i = Start; i < End; i += Step, rem += Step)
+//    Rem = rem u>= RemAmtLoopInvariant ? rem - RemAmtLoopInvariant : rem;
+//
+// Step must be 1 unless RemAmtLoopInvariant is a constant greater than Step.
 static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
                                     const LoopInfo *LI,
+                                    const TargetLowering *TLI,
+                                    DominatorTree &DT,
                                     SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                                     bool IsHuge) {
   Value *AddOffset, *RemAmt, *AddInst;
   PHINode *LoopIncrPN;
+  Constant *Step;
   if (!isRemOfLoopIncrementWithLoopInvariant(Rem, LI, RemAmt, AddInst,
-                                             AddOffset, LoopIncrPN))
-    return false;
-
-  // Only non-constant remainder as the extra IV is probably not profitable
-  // in that case.
-  //
-  // Potential TODO(1): `urem` of a const ends up as `mul` + `shift` + `add`. If
-  // we can rule out register pressure and ensure this `urem` is executed each
-  // iteration, its probably profitable to handle the const case as well.
-  //
-  // Potential TODO(2): Should we have a check for how "nested" this remainder
-  // operation is? The new code runs every iteration so if the remainder is
-  // guarded behind unlikely conditions this might not be worth it.
-  if (match(RemAmt, m_ImmConstant()))
+                                             AddOffset, LoopIncrPN, Step))
     return false;
 
   Loop *L = LI->getLoopFor(LoopIncrPN->getParent());
+  Type *Ty = Rem->getType();
+
+  // `urem` of a constant ends up as `mul` + `shift` + `sub`, so the extra IV
+  // is only worth it if the target says so and the `urem` runs every
+  // iteration.
+  //
+  // Potential TODO: Should we have a check for how "nested" a non-constant
+  // remainder operation is? The new code runs every iteration so if the
+  // remainder is guarded behind unlikely conditions this might not be worth
+  // it.
+  bool IsConstRem = isa<ConstantInt>(RemAmt);
+  if (match(RemAmt, m_ImmConstant())) {
+    // A power-of-2 `urem` is a single mask.
+    if (!IsConstRem || cast<ConstantInt>(RemAmt)->getValue().isPowerOf2() ||
+        !TLI || !TLI->shouldIncrementURemByConstantInLoop(Ty) ||
+        !DT.dominates(Rem->getParent(), L->getLoopLatch()))
+      return false;
+  }
+
   Value *Start = LoopIncrPN->getIncomingValueForBlock(L->getLoopPreheader());
   // If we have add create initial value for remainder.
   // The logic here is:
   // (urem (add nuw Start, IncrLoopInvariant), RemAmtLoopInvariant
   //
-  // Only proceed if the expression simplifies (otherwise we can't fully
-  // optimize out the urem).
+  // For a non-constant remainder amount, only proceed if the expression
+  // simplifies (otherwise we can't fully optimize out the urem). A constant
+  // one is cheap enough to compute once in the preheader.
+  IRBuilder<> PHBuilder(L->getLoopPreheader()->getTerminator());
   if (AddInst) {
     assert(AddOffset && "We found an add but missing values");
     // Without dom-condition/assumption cache we aren't likely to get much out
     // of a context instruction.
-    Start = simplifyAddInst(Start, AddOffset,
-                            match(AddInst, m_NSWAdd(m_Value(), m_Value())),
-                            /*IsNUW=*/true, *DL);
-    if (!Start)
+    Value *NewStart = simplifyAddInst(
+        Start, AddOffset, match(AddInst, m_NSWAdd(m_Value(), m_Value())),
+        /*IsNUW=*/true, *DL);
+    if (!NewStart && !IsConstRem)
       return false;
+    Start = NewStart ? NewStart : PHBuilder.CreateNUWAdd(Start, AddOffset);
   }
 
-  // If we can't fully optimize out the `rem`, skip this transform.
-  Start = simplifyURemInst(Start, RemAmt, *DL);
-  if (!Start)
-    return false;
+  Value *StartRem = simplifyURemInst(Start, RemAmt, *DL);
+  if (!StartRem) {
+    // If we can't fully optimize out the `rem`, skip this transform.
+    if (!IsConstRem)
+      return false;
+    StartRem = PHBuilder.CreateURem(Start, RemAmt);
+  }
 
   // Create new remainder with induction variable.
-  Type *Ty = Rem->getType();
   IRBuilder<> Builder(LoopIncrPN);
   PHINode *NewRem = Builder.CreatePHI(Ty, 2);
 
   Builder.SetInsertPoint(cast<Instruction>(
       LoopIncrPN->getIncomingValueForBlock(L->getLoopLatch())));
-  // `(add (urem x, y), 1)` is always nuw.
-  Value *RemAdd = Builder.CreateNUWAdd(NewRem, ConstantInt::get(Ty, 1));
-  Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
-  Value *RemSel =
-      Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+  // `(add (urem x, y), Step)` is nuw, see
+  // isRemOfLoopIncrementWithLoopInvariant.
+  Value *RemAdd = Builder.CreateNUWAdd(NewRem, Step);
+  Value *RemSel;
+  if (match(Step, m_One())) {
+    Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
+    RemSel = Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+  } else {
+    Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_UGE, RemAdd, RemAmt);
+    Value *RemSub = Builder.CreateNUWSub(RemAdd, RemAmt);
+    RemSel = Builder.CreateSelect(RemCmp, RemSub, RemAdd);
+  }
   if (auto *SI = dyn_cast<SelectInst>(RemSel))
     setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
 
-  NewRem->addIncoming(Start, L->getLoopPreheader());
+  NewRem->addIncoming(StartRem, L->getLoopPreheader());
   NewRem->addIncoming(RemSel, L->getLoopLatch());
 
   // Insert all touched BBs.
+  FreshBBs.insert(L->getLoopPreheader());
   FreshBBs.insert(LoopIncrPN->getParent());
   FreshBBs.insert(L->getLoopLatch());
   FreshBBs.insert(Rem->getParent());
@@ -2131,7 +2167,7 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
 }
 
 bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
-  if (foldURemOfLoopIncrement(Rem, DL, LI, FreshBBs, IsHugeFunc))
+  if (foldURemOfLoopIncrement(Rem, DL, LI, TLI, getDT(), FreshBBs, IsHugeFunc))
     return true;
   return false;
 }
@@ -4359,8 +4395,8 @@ private:
         // It must be a Phi node then.
         PHINode *CurrentPhi = cast<PHINode>(Current);
         unsigned PredCount = CurrentPhi->getNumIncomingValues();
-        PHINode *PHI =
-            PHINode::Create(CommonType, PredCount, "sunk_phi", CurrentPhi->getIterator());
+        PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
+                                       CurrentPhi->getIterator());
         Map[Current] = PHI;
         ST.insertNewPhi(PHI);
         append_range(Worklist, CurrentPhi->incoming_values());
@@ -5063,9 +5099,9 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     // Try to match an integer constant second to increase its chance of ending
     // up in `BaseOffs`, resp. decrease its chance of ending up in `BaseReg`.
     int First = 0, Second = 1;
-    if (isa<ConstantInt>(AddrInst->getOperand(First))
-      && !isa<ConstantInt>(AddrInst->getOperand(Second)))
-        std::swap(First, Second);
+    if (isa<ConstantInt>(AddrInst->getOperand(First)) &&
+        !isa<ConstantInt>(AddrInst->getOperand(Second)))
+      std::swap(First, Second);
     AddrMode.InBounds = false;
     if (matchAddr(AddrInst->getOperand(First), Depth + 1) &&
         matchAddr(AddrInst->getOperand(Second), Depth + 1))
@@ -5146,9 +5182,9 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     if (VariableOperand == -1) {
       AddrMode.BaseOffs += ConstantOffset;
       if (matchAddr(AddrInst->getOperand(0), Depth + 1)) {
-          if (!cast<GEPOperator>(AddrInst)->isInBounds())
-            AddrMode.InBounds = false;
-          return true;
+        if (!cast<GEPOperator>(AddrInst)->isInBounds())
+          AddrMode.InBounds = false;
+        return true;
       }
       AddrMode.BaseOffs -= ConstantOffset;
 

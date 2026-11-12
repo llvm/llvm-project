@@ -606,6 +606,12 @@ public:
     return true;
   }
 
+  /// Return true if `urem IV, C` of a loop induction variable IV and a constant
+  /// C should be replaced by a remainder that is updated each iteration.
+  virtual bool shouldIncrementURemByConstantInLoop(Type *Ty) const {
+    return false;
+  }
+
   /// Return true if SQRT(X) shouldn't be replaced with X*RSQRT(X).
   virtual bool isFsqrtCheap(SDValue X, SelectionDAG &DAG) const {
     // Default behavior is to replace SQRT(X) with X*RSQRT(X).
