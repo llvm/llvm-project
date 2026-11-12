@@ -1030,21 +1030,18 @@ define void @simple_urem_fail_intermediate_inc(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %r14d
-; CHECK-NEXT:    negl %r14d
-; CHECK-NEXT:    movl $1, %ebp
+; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl $1, %r14d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB17_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:    movl %r14d, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    leal 1(%r14,%rax), %eax
-; CHECK-NEXT:    cmpl $1, %eax
+; CHECK-NEXT:    incl %r14d
+; CHECK-NEXT:    decl %ebp
 ; CHECK-NEXT:    jne .LBB17_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
@@ -1197,22 +1194,20 @@ define void @simple_urem_to_sel_non_zero_start_through_add(i32 %N, i32 %rem_amt_
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %r14d
+; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    orl $16, %ebx
-; CHECK-NEXT:    negl %r14d
-; CHECK-NEXT:    movl $7, %ebp
+; CHECK-NEXT:    addl $-2, %ebp
+; CHECK-NEXT:    movl $7, %r14d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB21_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:    movl %r14d, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    leal 1(%r14,%rax), %eax
-; CHECK-NEXT:    cmpl $5, %eax
+; CHECK-NEXT:    incl %r14d
+; CHECK-NEXT:    decl %ebp
 ; CHECK-NEXT:    jne .LBB21_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
@@ -1248,22 +1243,20 @@ define void @simple_urem_to_sel_non_zero_start_through_add_fail_missing_nuw(i32 
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %r14d
+; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    orl $16, %ebx
-; CHECK-NEXT:    negl %r14d
-; CHECK-NEXT:    movl $7, %ebp
+; CHECK-NEXT:    addl $-2, %ebp
+; CHECK-NEXT:    movl $7, %r14d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB22_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:    movl %r14d, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    leal 1(%r14,%rax), %eax
-; CHECK-NEXT:    cmpl $5, %eax
+; CHECK-NEXT:    incl %r14d
+; CHECK-NEXT:    decl %ebp
 ; CHECK-NEXT:    jne .LBB22_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
@@ -1299,21 +1292,19 @@ define void @simple_urem_to_sel_non_zero_start_through_add_fail_no_simplify_rem(
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %r14d
-; CHECK-NEXT:    negl %r14d
-; CHECK-NEXT:    movl $7, %ebp
+; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    addl $-2, %ebp
+; CHECK-NEXT:    movl $7, %r14d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB23_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:    movl %r14d, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    leal 1(%r14,%rax), %eax
-; CHECK-NEXT:    cmpl $5, %eax
+; CHECK-NEXT:    incl %r14d
+; CHECK-NEXT:    decl %ebp
 ; CHECK-NEXT:    jne .LBB23_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
@@ -1392,16 +1383,15 @@ for.body:
 define void @simple_urem_to_sel_non_zero_start_through_sub_no_simplfy(i32 %N, i32 %rem_amt, i32 %start) nounwind {
 ; CHECK-LABEL: simple_urem_to_sel_non_zero_start_through_sub_no_simplfy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpl %edx, %edi
-; CHECK-NEXT:    jbe .LBB25_4
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movl %edi, %r14d
+; CHECK-NEXT:    subl %edx, %r14d
+; CHECK-NEXT:    jbe .LBB25_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    movl %edx, %ebx
 ; CHECK-NEXT:    movl %esi, %ebp
-; CHECK-NEXT:    movl %edi, %r14d
-; CHECK-NEXT:    negl %r14d
 ; CHECK-NEXT:    addl $-2, %ebx
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB25_2: # %for.body
@@ -1411,16 +1401,13 @@ define void @simple_urem_to_sel_non_zero_start_through_sub_no_simplfy(i32 %N, i3
 ; CHECK-NEXT:    divl %ebp
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    incl %ebx
-; CHECK-NEXT:    leal 1(%r14,%rax), %eax
-; CHECK-NEXT:    cmpl $-2, %eax
+; CHECK-NEXT:    decl %r14d
 ; CHECK-NEXT:    jne .LBB25_2
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:  .LBB25_3: # %for.cond.cleanup
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:  .LBB25_4: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
 entry:
   %cmp3.not = icmp ule i32 %N, %start
