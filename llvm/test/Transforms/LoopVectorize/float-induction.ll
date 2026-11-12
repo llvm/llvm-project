@@ -2586,7 +2586,7 @@ define double @fp_iv_trip_count_above_signed_i32_max(ptr noalias %A) {
 ; VEC4_INTERL2-NEXT:    [[STEP_ADD:%.*]] = fadd reassoc <4 x double> [[VEC_IND]], splat (double 4.000000e+00)
 ; VEC4_INTERL2-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64
 ; VEC4_INTERL2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP0]]
-; VEC4_INTERL2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 4
+; VEC4_INTERL2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 32
 ; VEC4_INTERL2-NEXT:    store <4 x double> [[VEC_IND]], ptr [[TMP1]], align 8
 ; VEC4_INTERL2-NEXT:    store <4 x double> [[STEP_ADD]], ptr [[TMP2]], align 8
 ; VEC4_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
