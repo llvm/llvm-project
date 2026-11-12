@@ -113,15 +113,20 @@ private:
 
 static bool hasScalableParamAttr(AttributeList Attrs, unsigned I) {
   if (Type *Ty = Attrs.getParamByValType(I))
-    if (Ty->isScalableTy()) return true;
+    if (Ty->isScalableTy())
+      return true;
   if (Type *Ty = Attrs.getParamStructRetType(I))
-    if (Ty->isScalableTy()) return true;
+    if (Ty->isScalableTy())
+      return true;
   if (Type *Ty = Attrs.getParamByRefType(I))
-    if (Ty->isScalableTy()) return true;
+    if (Ty->isScalableTy())
+      return true;
   if (Type *Ty = Attrs.getParamPreallocatedType(I))
-    if (Ty->isScalableTy()) return true;
+    if (Ty->isScalableTy())
+      return true;
   if (Type *Ty = Attrs.getParamInAllocaType(I))
-    if (Ty->isScalableTy()) return true;
+    if (Ty->isScalableTy())
+      return true;
   return false;
 }
 
