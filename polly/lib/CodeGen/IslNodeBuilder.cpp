@@ -1051,6 +1051,50 @@ void IslNodeBuilder::generateBeginScopTrace() {
   RuntimeDebugBuilder::createCPUPrinter(Builder, ArrayRef<Value *>(Values));
 }
 
+bool IslNodeBuilder::hasExceedingBitWidth(isl::ast_node Node) const {
+  switch (isl_ast_node_get_type(Node.get())) {
+  case isl_ast_node_error:
+    return true;
+  case isl_ast_node_for: {
+    isl::ast_node_for ForNode = Node.as<isl::ast_node_for>();
+    return ExprBuilder.hasExceedingBitWidth(ForNode.get_init()) ||
+           ExprBuilder.hasExceedingBitWidth(ForNode.get_cond()) ||
+           ExprBuilder.hasExceedingBitWidth(ForNode.get_inc()) ||
+           ExprBuilder.hasExceedingBitWidth(ForNode.get_iterator()) ||
+           hasExceedingBitWidth(ForNode.get_body());
+  }
+  case isl_ast_node_if: {
+    isl::ast_node_if IfNode = Node.as<isl::ast_node_if>();
+    if (ExprBuilder.hasExceedingBitWidth(IfNode.get_cond()) ||
+        hasExceedingBitWidth(IfNode.get_then_node()))
+      return true;
+    if (bool(IfNode.has_else_node()))
+      return hasExceedingBitWidth(IfNode.get_else_node());
+    return false;
+  }
+  case isl_ast_node_block: {
+    isl::ast_node_block BlockNode = Node.as<isl::ast_node_block>();
+    isl::ast_node_list List = BlockNode.get_children();
+    unsigned N = unsignedFromIslSize(List.size());
+    for (unsigned i = 0; i < N; ++i) {
+      if (hasExceedingBitWidth(List.at(i)))
+        return true;
+    }
+    return false;
+  }
+  case isl_ast_node_mark: {
+    isl::ast_node_mark MarkNode = Node.as<isl::ast_node_mark>();
+    return hasExceedingBitWidth(MarkNode.get_node());
+  }
+  case isl_ast_node_user: {
+    isl::ast_node_user UserNode = Node.as<isl::ast_node_user>();
+    return ExprBuilder.hasExceedingBitWidth(UserNode.get_expr());
+  }
+  }
+
+  return false;
+}
+
 void IslNodeBuilder::create(__isl_take isl_ast_node *Node) {
   switch (isl_ast_node_get_type(Node)) {
   case isl_ast_node_error:
@@ -1522,7 +1566,8 @@ Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
   // bits. These are -- in case wrapping intrinsics are used -- translated to
   // runtime library calls that are not available on all systems (e.g., Android)
   // and consequently will result in linker errors.
-  if (ExprBuilder.hasLargeInts(isl::manage_copy(Condition))) {
+  if (ExprBuilder.hasLargeInts(isl::manage_copy(Condition)) ||
+      ExprBuilder.hasExceedingBitWidth(isl::manage_copy(Condition))) {
     isl_ast_expr_free(Condition);
     return Builder.getFalse();
   }
