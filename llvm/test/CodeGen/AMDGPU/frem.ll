@@ -3461,7 +3461,7 @@ define double @frem_f64(double %in1, double %in2) #0 {
 ; GFX11-NEXT:  ; %bb.1: ; %frem.else
 ; GFX11-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, |v[2:3]|
 ; GFX11-NEXT:    v_and_b32_e32 v4, 0x80000000, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v5, v1, v4, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, v0, 0, vcc_lo
 ; GFX11-NEXT:  .LBB6_2: ; %Flow13
@@ -3563,7 +3563,7 @@ define double @frem_f64(double %in1, double %in2) #0 {
 ; GFX1150-NEXT:  ; %bb.1: ; %frem.else
 ; GFX1150-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, |v[2:3]|
 ; GFX1150-NEXT:    v_and_b32_e32 v4, 0x80000000, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    v_cndmask_b32_e32 v5, v1, v4, vcc_lo
 ; GFX1150-NEXT:    v_cndmask_b32_e64 v4, v0, 0, vcc_lo
 ; GFX1150-NEXT:  .LBB6_2: ; %Flow13
@@ -3669,7 +3669,7 @@ define double @frem_f64(double %in1, double %in2) #0 {
 ; GFX1200-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, |v[2:3]|
 ; GFX1200-NEXT:    v_and_b32_e32 v4, 0x80000000, v1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v5, v1, v4, vcc_lo
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v4, v0, 0, vcc_lo
 ; GFX1200-NEXT:  .LBB6_2: ; %Flow13
@@ -15790,7 +15790,7 @@ define <2 x double> @frem_v2f64(<2 x double> %in1, <2 x double> %in2) #0 {
 ; GFX11-NEXT:  ; %bb.1: ; %frem.else16
 ; GFX11-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, |v[4:5]|
 ; GFX11-NEXT:    v_and_b32_e32 v8, 0x80000000, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v9, v1, v8, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v8, v0, 0, vcc_lo
 ; GFX11-NEXT:  .LBB13_2: ; %Flow50
@@ -15883,7 +15883,7 @@ define <2 x double> @frem_v2f64(<2 x double> %in1, <2 x double> %in2) #0 {
 ; GFX11-NEXT:  ; %bb.9: ; %frem.else
 ; GFX11-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[2:3]|, |v[6:7]|
 ; GFX11-NEXT:    v_and_b32_e32 v10, 0x80000000, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v11, v3, v10, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v10, v2, 0, vcc_lo
 ; GFX11-NEXT:  .LBB13_10: ; %Flow46
@@ -15989,7 +15989,7 @@ define <2 x double> @frem_v2f64(<2 x double> %in1, <2 x double> %in2) #0 {
 ; GFX1150-NEXT:  ; %bb.1: ; %frem.else16
 ; GFX1150-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, |v[4:5]|
 ; GFX1150-NEXT:    v_and_b32_e32 v8, 0x80000000, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    v_cndmask_b32_e32 v9, v1, v8, vcc_lo
 ; GFX1150-NEXT:    v_cndmask_b32_e64 v8, v0, 0, vcc_lo
 ; GFX1150-NEXT:  .LBB13_2: ; %Flow50
@@ -16081,7 +16081,7 @@ define <2 x double> @frem_v2f64(<2 x double> %in1, <2 x double> %in2) #0 {
 ; GFX1150-NEXT:  ; %bb.9: ; %frem.else
 ; GFX1150-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[2:3]|, |v[6:7]|
 ; GFX1150-NEXT:    v_and_b32_e32 v10, 0x80000000, v3
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    v_cndmask_b32_e32 v11, v3, v10, vcc_lo
 ; GFX1150-NEXT:    v_cndmask_b32_e64 v10, v2, 0, vcc_lo
 ; GFX1150-NEXT:  .LBB13_10: ; %Flow46
@@ -16191,7 +16191,7 @@ define <2 x double> @frem_v2f64(<2 x double> %in1, <2 x double> %in2) #0 {
 ; GFX1200-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, |v[4:5]|
 ; GFX1200-NEXT:    v_and_b32_e32 v8, 0x80000000, v1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v9, v1, v8, vcc_lo
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v8, v0, 0, vcc_lo
 ; GFX1200-NEXT:  .LBB13_2: ; %Flow50
@@ -16290,7 +16290,7 @@ define <2 x double> @frem_v2f64(<2 x double> %in1, <2 x double> %in2) #0 {
 ; GFX1200-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[2:3]|, |v[6:7]|
 ; GFX1200-NEXT:    v_and_b32_e32 v10, 0x80000000, v3
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v11, v3, v10, vcc_lo
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v10, v2, 0, vcc_lo
 ; GFX1200-NEXT:  .LBB13_10: ; %Flow46
@@ -17203,7 +17203,7 @@ define <2 x double> @frem_v2f64_const_one_denum(<2 x double> %in) #0 {
 ; GFX11-NEXT:  ; %bb.1: ; %frem.else16
 ; GFX11-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, 1.0
 ; GFX11-NEXT:    v_and_b32_e32 v4, 0x80000000, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v5, v1, v4, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, v0, 0, vcc_lo
 ; GFX11-NEXT:  .LBB15_2: ; %Flow50
@@ -17268,7 +17268,7 @@ define <2 x double> @frem_v2f64_const_one_denum(<2 x double> %in) #0 {
 ; GFX11-NEXT:  ; %bb.9: ; %frem.else
 ; GFX11-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[2:3]|, 1.0
 ; GFX11-NEXT:    v_and_b32_e32 v6, 0x80000000, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v7, v3, v6, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v2, 0, vcc_lo
 ; GFX11-NEXT:  .LBB15_10: ; %Flow46
@@ -17342,7 +17342,7 @@ define <2 x double> @frem_v2f64_const_one_denum(<2 x double> %in) #0 {
 ; GFX1150-NEXT:  ; %bb.1: ; %frem.else16
 ; GFX1150-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, 1.0
 ; GFX1150-NEXT:    v_and_b32_e32 v4, 0x80000000, v1
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    v_cndmask_b32_e32 v5, v1, v4, vcc_lo
 ; GFX1150-NEXT:    v_cndmask_b32_e64 v4, v0, 0, vcc_lo
 ; GFX1150-NEXT:  .LBB15_2: ; %Flow50
@@ -17407,7 +17407,7 @@ define <2 x double> @frem_v2f64_const_one_denum(<2 x double> %in) #0 {
 ; GFX1150-NEXT:  ; %bb.9: ; %frem.else
 ; GFX1150-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[2:3]|, 1.0
 ; GFX1150-NEXT:    v_and_b32_e32 v6, 0x80000000, v3
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    v_cndmask_b32_e32 v7, v3, v6, vcc_lo
 ; GFX1150-NEXT:    v_cndmask_b32_e64 v6, v2, 0, vcc_lo
 ; GFX1150-NEXT:  .LBB15_10: ; %Flow46
@@ -17486,7 +17486,7 @@ define <2 x double> @frem_v2f64_const_one_denum(<2 x double> %in) #0 {
 ; GFX1200-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[0:1]|, 1.0
 ; GFX1200-NEXT:    v_and_b32_e32 v4, 0x80000000, v1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v5, v1, v4, vcc_lo
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v4, v0, 0, vcc_lo
 ; GFX1200-NEXT:  .LBB15_2: ; %Flow50
@@ -17558,7 +17558,7 @@ define <2 x double> @frem_v2f64_const_one_denum(<2 x double> %in) #0 {
 ; GFX1200-NEXT:    v_cmp_eq_f64_e64 vcc_lo, |v[2:3]|, 1.0
 ; GFX1200-NEXT:    v_and_b32_e32 v6, 0x80000000, v3
 ; GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    v_cndmask_b32_e32 v7, v3, v6, vcc_lo
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v6, v2, 0, vcc_lo
 ; GFX1200-NEXT:  .LBB15_10: ; %Flow46

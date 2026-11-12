@@ -576,3 +576,4 @@ body:             |
     %extract_ext:_(i32) = G_ZEXT %extract(i1)
     $w0 = COPY %extract_ext(i32)
     RET_ReallyLR implicit $w0
+...

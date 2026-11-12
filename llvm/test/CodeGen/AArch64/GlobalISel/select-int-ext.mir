@@ -516,3 +516,4 @@ body:             |
     %1:fpr(<2 x i64>) = G_SEXT %0(<2 x i32>)
     $q0 = COPY %1(<2 x i64>)
     RET_ReallyLR implicit $q0
+...

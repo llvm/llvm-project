@@ -4628,3 +4628,19 @@ define i64 @srxi_i64_103(i64 %a, i64 %b) {
   %1 = tail call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 103)
   ret i64 %1
 }
+
+declare i32 @llvm.riscv.ssh1sadd.i32(i32, i32)
+
+define i32 @ssh1sadd_intrinsic_i32(i32 %a, i32 %b) nounwind {
+; RV32-LABEL: ssh1sadd_intrinsic_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ssh1sadd a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ssh1sadd_intrinsic_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pssh1sadd.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssh1sadd.i32(i32 %a, i32 %b)
+  ret i32 %res
+}

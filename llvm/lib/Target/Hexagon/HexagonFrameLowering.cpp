@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -65,6 +66,19 @@
 #include <vector>
 
 #define DEBUG_TYPE "hexagon-pei"
+
+static bool containsHLXObject(const llvm::HexagonSubtarget &HST,
+                              llvm::Type *Ty) {
+  if (Ty->isVectorTy())
+    return HST.isTypeForHLX(Ty);
+  if (auto *ArrayTy = llvm::dyn_cast<llvm::ArrayType>(Ty))
+    return containsHLXObject(HST, ArrayTy->getElementType());
+  if (auto *StructTy = llvm::dyn_cast<llvm::StructType>(Ty))
+    return llvm::any_of(StructTy->elements(), [&](llvm::Type *EltTy) {
+      return containsHLXObject(HST, EltTy);
+    });
+  return false;
+}
 
 // Hexagon stack frame layout as defined by the ABI:
 //
@@ -707,8 +721,10 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HII = *HST.getInstrInfo();
   auto &HRI = *HST.getRegisterInfo();
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
 
-  Align MaxAlign = std::max(MFI.getMaxAlign(), getStackAlign());
+  Align MaxAlign = std::max(getMaxStackAlign(MF), getStackAlign());
+  uint64_t VTCMFrameSize = HMFI.getVTCMFrameInfo().getStackSize();
 
   // Calculate the total stack frame size.
   // Get the number of bytes to allocate from the FrameInfo.
@@ -893,6 +909,10 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
           .setMIFlag(MachineInstr::FrameSetup);
     }
   }
+  if (VTCMFrameSize)
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::V2_vallocframe_imm))
+        .addImm(VTCMFrameSize / 2048)
+        .setMIFlag(MachineInstr::FrameSetup);
 }
 
 void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
@@ -904,6 +924,12 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
 
   MachineBasicBlock::iterator InsertPt = MBB.getFirstTerminator();
   DebugLoc dl = MBB.findDebugLoc(InsertPt);
+
+  const auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  uint64_t VTCMFrameSize = HMFI.getVTCMFrameInfo().getStackSize();
+  if (VTCMFrameSize)
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::V2_vdeallocframe_imm))
+        .addImm(VTCMFrameSize / 2048);
 
   if (!hasFP(MF)) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1474,6 +1500,8 @@ bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   }
 
   const auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  if (HMFI.getVTCMFrameInfo().getStackSize())
+    return true;
   if ((MFI.hasCalls() && !enableAllocFrameElim(MF)) || HMFI.hasClobberLR())
     return true;
 
@@ -1563,12 +1591,19 @@ HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  if (HMFI.isVTCMStackIndex(FI)) {
+    const MachineFrameInfo &VTCMFrameInfo = HMFI.getVTCMFrameInfo();
+    FrameReg = HRI.getVTCMStackRegister();
+    return StackOffset::getFixed(VTCMFrameInfo.getStackSize() +
+                                 HMFI.getMappedVTCMObjectOffset(FI));
+  }
+
   int Offset = MFI.getObjectOffset(FI);
   bool HasAlloca = MFI.hasVarSizedObjects();
   bool HasExtraAlign = HRI.hasStackRealignment(MF);
   bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
-  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
   unsigned FrameSize = MFI.getStackSize();
   Register SP = HRI.getStackRegister();
   Register FP = HRI.getFrameRegister();
@@ -1801,6 +1836,64 @@ MachineBasicBlock::iterator HexagonFrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(I);
 }
 
+void HexagonFrameLowering::computeVTCMStackOffsets(MachineFunction &MF) const {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  const auto &HRI = *HST.getRegisterInfo();
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  MachineFrameInfo &VTCMFrameInfo = HMFI.getVTCMFrameInfo();
+  const int64_t HlxLRSize = HRI.getSpillSize(Hexagon::HlxLRRegClass);
+
+  int64_t Offset = 0;
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    bool IsHlxLRSpill =
+        MFI.isSpillSlotObjectIndex(I) && MFI.getObjectSize(I) == HlxLRSize;
+    if (MFI.isDeadObjectIndex(I) || MFI.isFixedObjectIndex(I) ||
+        (!IsHlxLRSpill && MFI.isSpillSlotObjectIndex(I)) ||
+        MFI.isVariableSizedObjectIndex(I) || MFI.isObjectPreAllocated(I))
+      continue;
+    const AllocaInst *AI = MFI.getObjectAllocation(I);
+    if (!IsHlxLRSpill &&
+        (!AI || !containsHLXObject(HST, AI->getAllocatedType())))
+      continue;
+
+    int64_t Size = MFI.getObjectSize(I);
+    Align Alignment = MFI.getObjectAlign(I);
+    int VTCMIndex =
+        IsHlxLRSpill ? VTCMFrameInfo.CreateSpillStackObject(Size, Alignment)
+                     : VTCMFrameInfo.CreateStackObject(
+                           Size, Alignment, false, MFI.getObjectAllocation(I));
+    Offset += Size;
+    VTCMFrameInfo.setObjectOffset(VTCMIndex, -Offset);
+    HMFI.moveToVTCMStack(I, VTCMIndex);
+    MFI.RemoveStackObject(I);
+  }
+  VTCMFrameInfo.setStackSize(Offset);
+}
+
+void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  if (HST.hasV85OpsOnly() && HST.useHLXOps())
+    computeVTCMStackOffsets(MF);
+}
+
+Align HexagonFrameLowering::getMaxStackAlign(const MachineFunction &MF) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  if (!HST.hasV85OpsOnly() || !HST.useHLXOps())
+    return MFI.getMaxAlign();
+
+  Align MaxAlign(1);
+  for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); I != E;
+       ++I) {
+    if (MFI.isDeadObjectIndex(I))
+      continue;
+    MaxAlign = std::max(MaxAlign, MFI.getObjectAlign(I));
+  }
+  return MaxAlign;
+}
+
 /// Returns true if there are no caller-saved registers available in class RC.
 static bool needToReserveScavengingSpillSlots(MachineFunction &MF,
       const HexagonRegisterInfo &HRI, const TargetRegisterClass *RC) {
@@ -1896,9 +1989,12 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // and also have no sub-registers that are reserved. These will be the can-
   // didates for saving as a whole instead of their individual sub-registers.
   // (Saving R17:16 instead of R16 is fine, but only if R17 was not reserved.)
+  // HLX registers are saved individually: there is no HLX pair spill.
   BitVector TmpSup(Hexagon::NUM_TARGET_REGS);
   for (int x = SRegs.find_first(); x >= 0; x = SRegs.find_next(x)) {
     Register R = x;
+    if (Hexagon::HlxLRRegClass.contains(R))
+      continue;
     for (MCPhysReg SR : TRI->superregs(R))
       TmpSup[SR] = true;
   }
@@ -1959,6 +2055,13 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
     Register R = x;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R);
     unsigned Size = TRI->getSpillSize(*RC);
+    // HLX registers are saved in spill slots on the VTCM stack.
+    if (Hexagon::HlxLRRegClass.contains(R)) {
+      int FI = MFI.CreateSpillStackObject(Size, TRI->getSpillAlign(*RC));
+      CSI.push_back(CalleeSavedInfo(R, FI));
+      SRegs[R] = false;
+      continue;
+    }
     int64_t Off = MinOffset - Size;
     Align Alignment = std::min(TRI->getSpillAlign(*RC), getStackAlign());
     Off &= -Alignment.value();

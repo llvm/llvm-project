@@ -1309,11 +1309,6 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       A->getScalarType() == Def->getScalarType())
     return A;
 
-  // Simplify MaskedCond with no block mask to its single operand.
-  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
-      !cast<VPInstruction>(Def)->isMasked())
-    return Def->getOperand(0);
-
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
@@ -1907,8 +1902,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars.
-      if (!vputils::isSingleScalar(RepOrWidenR))
+      // Skip recipes that aren't single scalars or have no underlying
+      // instruction to create a single-scalar recipe from.
+      if (!RepOrWidenR->getUnderlyingValue() ||
+          !vputils::isSingleScalar(RepOrWidenR))
         continue;
 
       // Predicate to check if a user of Op introduces extra broadcasts.
@@ -2617,7 +2614,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // cannot use RAUW after creating a new truncate, as this would could make
   // other uses have different types for their operands, making them invalidly
   // typed.
-  DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
+  // An operand may be shared by recipes narrowed to different widths, so the
+  // truncates are keyed by operand and narrowed type.
+  DenseMap<std::pair<VPValue *, Type *>, VPWidenCastRecipe *> ProcessedTruncs;
   VPBasicBlock *PH = Plan.getVectorPreheader();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
@@ -2671,7 +2670,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         if (OpSizeInBits == NewResSizeInBits)
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
-        auto [ProcessedIter, Inserted] = ProcessedTruncs.try_emplace(Op);
+        auto [ProcessedIter, Inserted] =
+            ProcessedTruncs.try_emplace({Op, NewResTy});
         if (Inserted) {
           VPBuilder Builder;
           if (isa<VPIRValue>(Op))
