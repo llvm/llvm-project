@@ -4974,9 +4974,9 @@ def CallWithSegmentsOp : TEST_Op<"call_with_segments",
   );
   let results = (outs);
   let assemblyFormat = [{
-    $callee `(` $prefix `:` type($prefix) `)`
-            `(` $args `:` type($args) `)`
-            `(` $suffix `:` type($suffix) `)` attr-dict
+    $callee `(` $prefix (`:` type($prefix)^)? `)`
+            `(` $args (`:` type($args)^)? `)`
+            `(` $suffix (`:` type($suffix)^)? `)` attr-dict
   }];
 
   // Provide stub implementations for the ArgAndResultAttrsOpInterface.
