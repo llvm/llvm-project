@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMPowerPCDesc
   BinaryFormat
   CodeGenTypes
   MC
+  Option
   PowerPCInfo
   Support
   TargetParser

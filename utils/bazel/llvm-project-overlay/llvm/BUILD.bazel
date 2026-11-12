@@ -3511,6 +3511,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/PowerPC/PPCGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":PPCMCOptionsTableGen",
+            ":PPCOptionsTableGen",
+        ],
     },
     {
         "name": "RISCV",
@@ -4273,6 +4277,24 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/NVPTX/NVPTXOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/NVPTX/NVPTXOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PPCMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/PowerPC",
+    tbl_outs = {"lib/Target/PowerPC/PPCMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/MCTargetDesc/PPCMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PPCOptionsTableGen",
+    strip_include_prefix = "lib/Target/PowerPC",
+    tbl_outs = {"lib/Target/PowerPC/PPCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/PPCOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

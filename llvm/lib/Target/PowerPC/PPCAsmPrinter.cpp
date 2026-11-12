@@ -98,23 +98,6 @@ STATISTIC(NumTOCThreadLocal, "Number of Thread Local TOC Entries.");
 STATISTIC(NumTOCBlockAddress, "Number of Block Address TOC Entries.");
 STATISTIC(NumTOCEHBlock, "Number of EH Block TOC Entries.");
 
-static cl::opt<bool> EnableSSPCanaryBitInTB(
-    "ppc-aix-ssp-tb-bit", cl::init(false),
-    cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
-
-static cl::opt<bool> IFuncLocalIfProven(
-    "ppc-ifunc-local-if-proven", cl::init(false),
-    cl::desc("During ifunc lowering, the compiler assumes the resolver returns "
-             "dso-local functions and bails out if non-local functions are "
-             "detected; this flag flips the assumption: resolver returns "
-             "preemptible functions unless the compiler can prove all paths "
-             "return local functions."),
-    cl::Hidden);
-
-// this flag is used for testing only as it might generate bad code.
-static cl::opt<bool> IFuncWarnInsteadOfError("ppc-test-ifunc-warn-noerror",
-                                             cl::init(false), cl::ReallyHidden);
-
 // Specialize DenseMapInfo to allow
 // std::pair<const MCSymbol *, PPCMCExpr::Specifier> in DenseMap.
 // This specialization is needed here because that type is used as keys in the
@@ -2690,7 +2673,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   if (SecondHalfOfMandatoryField & TracebackTable::HasExtensionTableMask) {
     if (ShouldEmitEHBlock)
       ExtensionTableFlag |= ExtendedTBTableFlag::TB_EH_INFO;
-    if (EnableSSPCanaryBitInTB &&
+    if (Subtarget->getCLOpts().aix_ssp_tb_bit &&
         TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(MF))
       ExtensionTableFlag |= ExtendedTBTableFlag::TB_SSP_CANARY;
 
@@ -3423,7 +3406,8 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
 }
 
-static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
+static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI,
+                                                    bool LocalIfProven) {
   enum class IsLocal {
     Unknown, // Structure of the llvm::Value is not one of the recognizable
              // structures, and so it's unknown if the llvm::Value is the
@@ -3506,7 +3490,7 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
 
   auto *Resolver = GI.getResolverFunction();
   // If the resolver is preemptible then we cannot rely on its implementation.
-  if (IsLocalFunc(Resolver) == IsLocal::False && IFuncLocalIfProven)
+  if (IsLocalFunc(Resolver) == IsLocal::False && LocalIfProven)
     return true;
 
   // If one of the return values of the resolver function is not a
@@ -3524,7 +3508,7 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
   }
   // no TOC save/restore needed if either all functions were local or we're
   // being optimistic and no preemptible functions were seen.
-  if (Res == IsLocal::True || (Res == IsLocal::Unknown && !IFuncLocalIfProven))
+  if (Res == IsLocal::True || (Res == IsLocal::Unknown && !LocalIfProven))
     return false;
   return true;
 }
@@ -3553,6 +3537,8 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   const TargetSubtargetInfo *STI =
       TM.getSubtargetImpl(*GI.getResolverFunction());
   bool IsPPC64 = static_cast<const PPCSubtarget *>(STI)->isPPC64();
+  const PPCOptions &CLOpts =
+      static_cast<const PPCTargetMachine &>(TM).getCLOpts();
 
   // Create syms and sections that are part of the ifunc implementation:
   //  - Function descriptor symbol foo[RW]
@@ -3589,13 +3575,14 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   emitFunctionEntryLabel();
 
   // generate the code for .foo now:
-  if (TOCRestoreNeededForCallToImplementation(GI)) {
+  if (TOCRestoreNeededForCallToImplementation(GI,
+                                              CLOpts.ifunc_local_if_proven)) {
     SmallString<128> Msg;
     Msg.append("unimplemented: TOC register save/restore needed for ifunc \"");
     getNameWithPrefix(Msg, &GI);
     Msg.append("\", because couldn't prove all candidates are static or "
                "hidden/protected visibility definitions");
-    if (!IFuncWarnInsteadOfError)
+    if (!CLOpts.test_ifunc_warn_noerror)
       reportFatalUsageError(Msg.str());
     else
       dbgs() << Msg << "\n";

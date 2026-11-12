@@ -17,6 +17,12 @@ llvm_tablegen(PPCGenExegesis.inc -gen-exegesis)
 llvm_tablegen(PPCGenRegisterBank.inc -gen-register-bank)
 llvm_tablegen(PPCGenGlobalISel.inc -gen-global-isel)
 
+set(LLVM_TARGET_DEFINITIONS PPCOptions.td)
+llvm_tablegen(PPCOptions.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/PPCMCOptions.td)
+llvm_tablegen(PPCMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(PowerPCCommonTableGen)
 
 add_llvm_target(PowerPCCodeGen
@@ -71,6 +77,7 @@ add_llvm_target(PowerPCCodeGen
   Core
   GlobalISel
   MC
+  Option
   PowerPCDesc
   PowerPCInfo
   Scalar

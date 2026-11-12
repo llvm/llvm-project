@@ -17,11 +17,15 @@
 
 namespace llvm {
 
+struct PPCOptions;
+
 /// A MachineSchedStrategy implementation for PowerPC pre RA scheduling.
 class PPCPreRASchedStrategy : public GenericScheduler {
+  const PPCOptions &CLOpts;
+
 public:
-  PPCPreRASchedStrategy(const MachineSchedContext *C) :
-    GenericScheduler(C) {}
+  PPCPreRASchedStrategy(const MachineSchedContext *C);
+
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                     SchedBoundary *Zone) const override;
@@ -34,9 +38,10 @@ private:
 
 /// A MachineSchedStrategy implementation for PowerPC post RA scheduling.
 class PPCPostRASchedStrategy : public PostGenericScheduler {
+  const PPCOptions &CLOpts;
+
 public:
-  PPCPostRASchedStrategy(const MachineSchedContext *C) :
-    PostGenericScheduler(C) {}
+  PPCPostRASchedStrategy(const MachineSchedContext *C);
 
 protected:
   void initialize(ScheduleDAGMI *Dag) override;

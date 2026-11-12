@@ -30,6 +30,12 @@ tablegen("PPCGenSubtargetInfo") {
   td_file = "../PPC.td"
 }
 
+tablegen("PPCMCOptions") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "PPCMCOptions.td"
+}
+
 static_library("MCTargetDesc") {
   output_name = "LLVMPowerPCDesc"
 
@@ -40,12 +46,14 @@ static_library("MCTargetDesc") {
     ":PPCGenInstrInfo",
     ":PPCGenRegisterInfo",
     ":PPCGenSubtargetInfo",
+    ":PPCMCOptions",
   ]
   deps = [
     ":PPCGenAsmWriter",
     ":PPCGenMCCodeEmitter",
     "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target/PowerPC/TargetInfo",
     "//llvm/lib/TargetParser",
