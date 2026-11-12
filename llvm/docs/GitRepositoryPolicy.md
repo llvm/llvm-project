@@ -4,7 +4,7 @@ This document explains our current policies around git repositories. Everything
 not covered in this document is most likely a case-by-case decision. In these
 cases please create an issue in
 [LLVM's Github Issue Tracker](https://github.com/llvm/llvm-project/issues) and
-ping the[infrastructure area team](https://github.com/orgs/llvm/teams/infrastructure-area-team)
+ping the [infrastructure area team](https://github.com/orgs/llvm/teams/infrastructure-area-team)
 group.
 
 ## New GitHub repositories
@@ -26,7 +26,7 @@ look at the
 
 To request a new repository, please create an issue with in
 [LLVM's Github Issue Tracker](https://github.com/llvm/llvm-project/issues) and
-ping the[infrastructure area team](https://github.com/orgs/llvm/teams/infrastructure-area-team)
+ping the [infrastructure area team](https://github.com/orgs/llvm/teams/infrastructure-area-team)
 group.
 
 ## Repo access on GitHub
