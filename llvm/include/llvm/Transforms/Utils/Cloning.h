@@ -421,18 +421,26 @@ identifyNoAliasScopesToClone(BasicBlock::iterator Start,
 /// MDNode onto the cloned scope.
 /// Be aware that the cloned scopes are still part of the original scope domain,
 /// unless that domain has disjoint scopes, in which case they are placed in a
-/// clone of the domain.
-LLVM_ABI void cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
-                                 DenseMap<MDNode *, MDNode *> &ClonedScopes,
-                                 StringRef Ext, LLVMContext &Context);
+/// clone of the domain. ClonedDomains contains the mapping of such domains onto
+/// their clones.
+LLVM_ABI void
+cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
+                   DenseMap<MDNode *, MDNode *> &ClonedScopes,
+                   DenseMap<const MDNode *, MDNode *> &ClonedDomains,
+                   StringRef Ext, LLVMContext &Context);
 
 /// Adapt the metadata for the specified instruction according to the
 /// provided mapping. This is normally used after cloning an instruction, when
 /// some noalias scopes needed to be cloned.
+/// Scopes that belong to a domain in ClonedDomains but are not in ClonedScopes
+/// (because they have no declaration in the cloned code) are also cloned into
+/// the cloned domain, using 'Ext' as an extension to their name, and added to
+/// ClonedScopes.
 LLVM_ABI void
 adaptNoAliasScopes(llvm::Instruction *I,
-                   const DenseMap<MDNode *, MDNode *> &ClonedScopes,
-                   LLVMContext &Context);
+                   DenseMap<MDNode *, MDNode *> &ClonedScopes,
+                   const DenseMap<const MDNode *, MDNode *> &ClonedDomains,
+                   StringRef Ext, LLVMContext &Context);
 
 /// Clone the specified noalias decl scopes. Then adapt all instructions in the
 /// NewBlocks basicblocks to the cloned versions.
