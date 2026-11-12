@@ -34,6 +34,7 @@ namespace lldb_private::registers::wasm::id {
 //    2: Global
 //    3: Operand stack value
 enum WasmVirtualRegisterKinds : uint32_t {
+  // Virtual Register Tags.
   eWasmTagNotAWasmLocation = 0,
   eWasmTagLocal = 1,
   eWasmTagGlobal = 2,

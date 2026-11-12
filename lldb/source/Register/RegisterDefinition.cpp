@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Parsing and publication of external register images.
+///
+//===----------------------------------------------------------------------===//
 
 #include "lldb/Register/RegisterDefinition.h"
 #include "lldb/Utility/Format.h"
@@ -23,6 +28,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace {
+/// Stage external definitions until both metadata and byte placement validate.
+/// No partially built description or layout escapes through the public helpers.
 class RegisterDefinitionParser {
 public:
   using Register = RegisterDefinition;
@@ -496,8 +503,9 @@ void lldb_private::addSupplementaryRegister(
     llvm::append_range(regs[x.first].invalidate_registers, x.second);
 }
 
-// Packet placement is an adapter policy. The shared description contains only
-// the least-significant byte position of an alias in its parent value.
+/// Assign packet byte offsets after logical relationships have been resolved.
+/// Aliases use least-significant-byte offsets in metadata; translating them to
+/// an image offset depends on byte order and belongs to this adapter.
 static llvm::Expected<std::vector<uint32_t>>
 PlaceRegisters(const RegisterDescription &description,
                llvm::ArrayRef<uint32_t> supplied, ByteOrder byte_order) {
