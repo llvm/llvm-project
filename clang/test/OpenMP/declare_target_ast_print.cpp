@@ -215,19 +215,17 @@ struct C {
 // CHECK-NEXT: #pragma omp end declare target
 
 // CHECK: template<> struct C<int>
-  T t;
-// CHECK-NEXT: int t;
   static T ts;
-// CHECK-NEXT: #pragma omp declare target
+// CHECK: #pragma omp declare target
 // CHECK-NEXT: static int ts;
-// CHECK: #pragma omp end declare target
+// CHECK-NEXT: #pragma omp end declare target
 
   C(T t) : t(t) {
   }
 // CHECK: #pragma omp declare target
 // CHECK-NEXT: C(int t) : t(t) {
 // CHECK-NEXT: }
-// CHECK: #pragma omp end declare target
+// CHECK-NEXT: #pragma omp end declare target
 
   T foo() {
     return t;
@@ -236,7 +234,11 @@ struct C {
 // CHECK-NEXT: int foo() {
 // CHECK-NEXT: return this->t;
 // CHECK-NEXT: }
-// CHECK: #pragma omp end declare target
+// CHECK-NEXT: #pragma omp end declare target
+
+// Not inside a #pragma omp declare target.
+// CHECK-NEXT: int t;
+  T t;
 };
 
 template<class T>
