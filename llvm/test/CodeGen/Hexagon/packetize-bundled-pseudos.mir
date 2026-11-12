@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv79 -start-before=hexagon-packetizer -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv79 -start-before=hexagon-packetizer -filetype=obj -o /dev/null %s
+
+# finalizeBundle() can place pseudos that emit no code (INIT_UNDEF, created by
+# the InitUndef pass for a placeholder input of an early-clobber inline asm, and
+# ARITH_FENCE) inside a packet when they sit between two of its instructions.
+# They must not be lowered to MC: HexagonMCShuffler asserts on pseudos.
+
+# CHECK-LABEL: init_undef:
+# CHECK:      {
+# CHECK-DAG:    r2 = memw(r0+#0)
+# CHECK-DAG:    r0 = memw(r0+#4)
+# CHECK:      }
+# CHECK:      //# InlineAsm Start
+# CHECK-NEXT: {
+# CHECK-NEXT:   r3 = r1
+# CHECK-NEXT: }
+# CHECK-NEXT: //# InlineAsm End
+
+# CHECK-LABEL: arith_fence:
+# CHECK:      {
+# CHECK-DAG:    r1 = sfadd(r1,r2)
+# CHECK-DAG:    r3 = memw(r0+#4)
+# CHECK-DAG:    r4 = memw(r0+#0)
+# CHECK:      }
+# CHECK-NEXT: {
+# CHECK-NEXT:   r0 = sfadd(r4,r3)
+# CHECK-NEXT: }
+
+---
+name: init_undef
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0
+
+    renamable $r2 = L2_loadri_io renamable $r0, 0 :: (load (s32))
+    renamable $r1 = INIT_UNDEF
+    renamable $r0 = L2_loadri_io killed renamable $r0, 4 :: (load (s32))
+    INLINEASM &"$0 = $1", sideeffect attdialect, regdef-ec:IntRegs, def early-clobber renamable $r3, reguse:IntRegs, killed renamable $r1
+    renamable $r0 = M2_acci killed renamable $r0, killed renamable $r3, killed renamable $r2
+    PS_jmpret killed $r31, implicit-def $pc, implicit killed $r0
+...
+---
+name: arith_fence
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+
+    renamable $r3 = L2_loadri_io renamable $r0, 4 :: (load (s32))
+    renamable $r1 = F2_sfadd killed renamable $r1, killed renamable $r2, implicit $usr
+    renamable $r4 = L2_loadri_io killed renamable $r0, 0 :: (load (s32))
+    renamable $r1 = ARITH_FENCE killed renamable $r1
+    renamable $r0 = F2_sfadd killed renamable $r4, killed renamable $r3, implicit $usr
+    renamable $r0 = F2_sfadd killed renamable $r0, killed renamable $r1, implicit $usr
+    PS_jmpret killed $r31, implicit-def $pc, implicit killed $r0
+...

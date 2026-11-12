@@ -750,6 +750,22 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   }
 }
 
+/// Return true if MI is an instruction inside a BUNDLE that emits no machine
+/// code. The packetizer ignores such pseudos, but finalizeBundle() can still
+/// place them inside a packet when they sit between two of its instructions
+/// (e.g. an INIT_UNDEF created by the InitUndef pass).
+static bool isBundledNonCodeInstr(const MachineInstr &MI) {
+  if (MI.isDebugInstr() || MI.isImplicitDef())
+    return true;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::INIT_UNDEF:
+  case TargetOpcode::ARITH_FENCE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Print out a single Hexagon MI to the current output stream.
 void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
   Hexagon_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -765,7 +781,7 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
 
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)
-      if (!MII->isDebugInstr() && !MII->isImplicitDef())
+      if (!isBundledNonCodeInstr(*MII))
         HexagonLowerToMC(MCII, &*MII, MCB, *this);
   } else {
     HexagonLowerToMC(MCII, MI, MCB, *this);
