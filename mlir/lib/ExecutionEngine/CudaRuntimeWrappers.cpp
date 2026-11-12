@@ -324,6 +324,24 @@ mgpuMemHostUnregisterMemRef(int64_t rank,
   mgpuMemHostUnregister(ptr);
 }
 
+/// Returns 1 for registered host memory, 0 otherwise, or -1 on query failure.
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT int32_t
+mgpuMemHostIsRegistered(void *ptr) {
+  ScopedContext scopedContext;
+  unsigned int memoryType = 0;
+  CUresult result =
+      cuPointerGetAttribute(&memoryType, CU_POINTER_ATTRIBUTE_MEMORY_TYPE,
+                            reinterpret_cast<CUdeviceptr>(ptr));
+  // Unregistered host memory is not known to CUDA and yields INVALID_VALUE.
+  if (result == CUDA_ERROR_INVALID_VALUE)
+    return 0;
+  if (result != CUDA_SUCCESS) {
+    CUDA_REPORT_IF_ERROR(result);
+    return -1;
+  }
+  return memoryType == CU_MEMORYTYPE_HOST;
+}
+
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
 }
