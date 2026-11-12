@@ -15,3 +15,21 @@ define <4 x i8> @scalarized_add_v4i8(<4 x i8> %x, <4 x i8> %y) {
   %add = add <4 x i8> %x, %y
   ret <4 x i8> %add
 }
+
+define <3 x i8> @scalarized_add_v3i8(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: 'scalarized_add_v3i8'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %add = add <3 x i8> %x, %y
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <3 x i8> %add
+;
+  %add = add <3 x i8> %x, %y
+  ret <3 x i8> %add
+}
+
+define <8 x i8> @scalarized_add_v8i8(<8 x i8> %x, <8 x i8> %y) {
+; CHECK-LABEL: 'scalarized_add_v8i8'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %add = add <8 x i8> %x, %y
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i8> %add
+;
+  %add = add <8 x i8> %x, %y
+  ret <8 x i8> %add
+}
