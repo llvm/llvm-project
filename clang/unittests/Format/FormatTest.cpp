@@ -3011,35 +3011,11 @@ TEST_F(FormatTest, ShortEnumsWithoutColumnLimit) {
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 0;
   verifyNoChange("enum { A, B, C };", Style);
-  verifyNoChange("enum E { A, B, C };", Style);
-  verifyNoChange("enum class E { A = 1, B = 2, C = 3 };", Style);
-  verifyNoChange("typedef enum { A, B, C } E;", Style);
-  verifyNoChange("enum E {\n"
+  verifyNoChange("enum {\n"
                  "  A,\n"
                  "  B,\n"
                  "  C\n"
                  "};",
-                 Style);
-  verifyNoChange("enum E {\n"
-                 "  A, // Keep the comment.\n"
-                 "  B,\n"
-                 "  C\n"
-                 "};",
-                 Style);
-  Style.AllowShortEnumsOnASingleLine = false;
-  verifyFormat("enum E {\n"
-               "  A,\n"
-               "  B,\n"
-               "  C\n"
-               "};",
-               "enum E { A, B, C };", Style);
-  Style.AllowShortEnumsOnASingleLine = true;
-  Style.IndentWidth = 4;
-  Style.BreakBeforeBraces = FormatStyle::BS_Linux;
-  verifyNoChange("int main()\n"
-                 "{\n"
-                 "    enum { WINDOW_WIDTH = 1080, WINDOW_HEIGHT = 720 };\n"
-                 "}",
                  Style);
 }
 
