@@ -889,8 +889,10 @@ static void AddSectionsToRangeMap(SectionList *sectlist,
       if (child_sectlist.GetNumSections(0) > 0) {
         AddSectionsToRangeMap(&child_sectlist, section_ranges);
       } else {
+        // Debug info sections can share addresses with the sections that
+        // symbols are defined in.
         size_t size = sect_sp->GetByteSize();
-        if (size > 0) {
+        if (size > 0 && !sect_sp->ContainsOnlyDebugInfo()) {
           addr_t base_addr = sect_sp->GetFileAddress();
           RangeVector<addr_t, addr_t>::Entry entry;
           entry.SetRangeBase(base_addr);
