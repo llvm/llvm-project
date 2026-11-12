@@ -33,6 +33,7 @@
 #include "llvm/TextAPI/TextAPIWriter.h"
 #include <optional>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using namespace llvm;
@@ -377,8 +378,8 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
 
   // Attempt to merge input.
   IFSStub Stub;
-  std::map<std::tuple<std::string, std::string>, IFSSymbol> SymbolMap;
-  std::string PreviousInputFilePath;
+  std::vector<std::tuple<IFSSymbol, StringRef>> AllSymbols;
+  StringRef PreviousInputFilePath;
   for (const std::string &InputFilePath : Config.InputFilePaths) {
     Expected<std::unique_ptr<IFSStub>> StubOrErr =
         readInputFile(Config.InputFormat, InputFilePath);
@@ -426,47 +427,51 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
       }
     }
 
-    for (auto Symbol : TargetStub->Symbols) {
-      auto [SI, Inserted] =
-          SymbolMap.try_emplace({Symbol.Name, Symbol.Version}, Symbol);
-      if (Inserted)
-        continue;
+    for (const auto &Symbol : TargetStub->Symbols)
+      AllSymbols.push_back({Symbol, InputFilePath});
 
-      assert(Symbol.Name == SI->second.Name && "Symbol Names Must Match.");
+    PreviousInputFilePath = InputFilePath;
+  }
 
+  llvm::stable_sort(AllSymbols, [](const auto &Lhs, const auto &Rhs) {
+    return std::get<0>(Lhs) < std::get<0>(Rhs);
+  });
+
+  IFSSymbol InitialEmptySymbol;
+  IFSSymbol &PrevSymbol = InitialEmptySymbol;
+  for (const auto &[Symbol, InputFilePath] : AllSymbols) {
+    if (std::tie(PrevSymbol.Name, PrevSymbol.Version) !=
+        std::tie(Symbol.Name, Symbol.Version)) {
+      Stub.Symbols.push_back(Symbol);
+      PrevSymbol = Symbol;
+      continue;
+    }
+
+    {
       // Check conflicts:
-      if (Symbol.Type != SI->second.Type) {
+      if (Symbol.Type != PrevSymbol.Type) {
         WithColor::error() << "Interface Stub: Type Mismatch for "
                            << Symbol.Name << ".\nFilename: " << InputFilePath
-                           << "\nType Values: " << getTypeName(SI->second.Type)
+                           << "\nType Values: " << getTypeName(PrevSymbol.Type)
                            << " " << getTypeName(Symbol.Type) << "\n";
-
         return -1;
       }
-      if (Symbol.Size != SI->second.Size) {
+      if (Symbol.Size != PrevSymbol.Size) {
         WithColor::error() << "Interface Stub: Size Mismatch for "
                            << Symbol.Name << ".\nFilename: " << InputFilePath
-                           << "\nSize Values: " << SI->second.Size << " "
+                           << "\nSize Values: " << PrevSymbol.Size << " "
                            << Symbol.Size << "\n";
-
         return -1;
       }
-      if (Symbol.Default != SI->second.Default) {
+      if (Symbol.Default != PrevSymbol.Default) {
         WithColor::error() << "Interface Stub: Default Mismatch for "
                            << Symbol.Name << ".\nFilename: " << InputFilePath
-                           << "\nDefault Values: " << SI->second.Default << " "
+                           << "\nDefault Values: " << PrevSymbol.Default << " "
                            << Symbol.Default << "\n";
-
         return -1;
-      }
-      if (Symbol.Weak != SI->second.Weak) {
-        Symbol.Weak = false;
-        continue;
       }
       // TODO: Not checking Warning. Will be dropped.
     }
-
-    PreviousInputFilePath = InputFilePath;
   }
 
   if (Stub.IfsVersion != IfsVersionCurrent)
@@ -476,9 +481,6 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
                          << IfsVersionCurrent << ".\n";
       return -1;
     }
-
-  for (const auto &[Name, Symbol] : SymbolMap)
-    Stub.Symbols.push_back(Symbol);
 
   // Change SoName before emitting stubs.
   if (Config.SoName)
