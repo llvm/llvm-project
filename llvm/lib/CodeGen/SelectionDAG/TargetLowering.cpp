@@ -4623,32 +4623,6 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
     }
   }
 
-  // Reuse an existing wider mask of X:
-  // (X & C) == C --> (X & M) u>= C
-  // (X & C) != C --> (X & M) u< C
-  // iff C is a subset of M and M - C is a low-bit mask.
-  auto *N1C = dyn_cast<ConstantSDNode>(N1);
-  if (AndC && N1C && AndC->getAPIntValue() == N1C->getAPIntValue() &&
-      OpVT.isScalarInteger() && N0.hasOneUse()) {
-    const APInt &C = N1C->getAPIntValue();
-    ISD::CondCode NewCond = Cond == ISD::SETEQ ? ISD::SETUGE : ISD::SETULT;
-    SDValue Src = N0.getOperand(0);
-    if (DCI.isBeforeLegalizeOps() ||
-        isCondCodeLegal(NewCond, OpVT.getSimpleVT())) {
-      for (SDNode *User : Src->users()) {
-        if (User->getOpcode() != ISD::AND || User->getValueType(0) != OpVT ||
-            User->getOperand(0) != Src)
-          continue;
-        auto *MaskC = dyn_cast<ConstantSDNode>(User->getOperand(1));
-        if (!MaskC)
-          continue;
-        const APInt &M = MaskC->getAPIntValue();
-        if (C.isSubsetOf(M) && (M - C).isMask())
-          return DAG.getSetCC(DL, VT, SDValue(User, 0), N1, NewCond);
-      }
-    }
-  }
-
   // Match these patterns in any of their permutations:
   // (X & Y) == Y
   // (X & Y) != Y
