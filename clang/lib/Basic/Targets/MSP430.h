@@ -94,6 +94,16 @@ public:
     return "";
   }
 
+  // The registers that receive the exception pointer and the selector, R12
+  // and R13, as in GCC.
+  int getEHDataRegisterNumber(unsigned RegNo) const override {
+    if (RegNo == 0)
+      return 12;
+    if (RegNo == 1)
+      return 13;
+    return -1;
+  }
+
   BuiltinVaListKind getBuiltinVaListKind() const override {
     // FIXME: implement
     return TargetInfo::CharPtrBuiltinVaList;

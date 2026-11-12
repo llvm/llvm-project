@@ -70,7 +70,8 @@ TEST_F(RecordLayoutAttrTest, UnadjustedAlignDefaultsToRecordAlign) {
 TEST_F(RecordLayoutAttrTest, UnadjustedAlignDistinct) {
   auto attr = RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
                                     true, 16, /*unadjusted_align=*/4,
-                                    /*transparent_union=*/false);
+                                    /*transparent_union=*/false,
+                                    /*flexible_array_member=*/false);
   EXPECT_EQ(attr.getRecordAlign(), 16u);
   EXPECT_EQ(attr.getUnadjustedAlign(), 4u);
 }

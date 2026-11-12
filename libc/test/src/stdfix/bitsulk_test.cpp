@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BitsFxTest.h"
+#include "test/src/stdfix/BitsFxTest.h"
 
-#include "llvm-libc-types/uint_ulk_t.h" // uint_ulk_t
+#include "include/llvm-libc-types/uint_ulk_t.h" // uint_ulk_t
 #include "src/stdfix/bitsulk.h"
 
 LIST_BITSFX_TESTS(ulk, unsigned long accum, uint_ulk_t,

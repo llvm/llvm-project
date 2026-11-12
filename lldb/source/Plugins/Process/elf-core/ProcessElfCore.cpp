@@ -16,7 +16,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
@@ -525,15 +524,9 @@ Status ProcessElfCore::DoDestroy() { return Status(); }
 bool ProcessElfCore::IsAlive() { return true; }
 
 // Process Memory
-size_t ProcessElfCore::ReadMemory(const ProcessAddress &process_addr, void *buf,
-                                  size_t size, Status &error) {
-  lldb::addr_t addr = process_addr.GetValue();
-  if (lldb::ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
-
-  // Don't allow the caching that lldb_private::Process::ReadMemory does since
-  // in core files we have it all cached our our core file anyway.
-  return DoReadMemory(addr, buf, size, error);
+bool ProcessElfCore::ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+  // The core file is already a local copy of this memory.
+  return false;
 }
 
 Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
@@ -1121,11 +1114,15 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       lldb::offset_t offset = 0;
       const uint64_t count = note.data.GetAddress(&offset);
       m_nt_file_page_size = note.data.GetAddress(&offset);
+
+      const lldb::addr_t page_size =
+          note.data.GetAddress(&offset); // Skip page size
+
       for (uint64_t i = 0; i < count; ++i) {
         NT_FILE_Entry entry;
         entry.start = note.data.GetAddress(&offset);
         entry.end = note.data.GetAddress(&offset);
-        entry.file_ofs = note.data.GetAddress(&offset);
+        entry.original_file_offset = note.data.GetAddress(&offset) * page_size;
         m_nt_file_entries.push_back(entry);
       }
       for (uint64_t i = 0; i < count; ++i) {

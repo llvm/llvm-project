@@ -770,12 +770,12 @@ define void @geps(ptr %p, ptr %q, i1 %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[P2]], align 8
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, <2 x ptr> [[TMP0]], <2 x i64> <i64 4, i64 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, <2 x ptr> [[TMP1]], <2 x i64> <i64 4, i64 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], <2 x ptr> [[TMP0]], <2 x i64> <i64 4, i64 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], <2 x ptr> [[TMP1]], <2 x i64> <i64 4, i64 0>
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, <2 x ptr> [[TMP2]], <2 x i64> <i64 0, i64 4>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, <2 x ptr> [[TMP3]], <2 x i64> <i64 0, i64 4>
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [4 x i8], <2 x ptr> [[TMP2]], <2 x i64> <i64 0, i64 4>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], <2 x ptr> [[TMP3]], <2 x i64> <i64 0, i64 4>
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x ptr> [ [[TMP6]], %[[THEN]] ], [ splat (ptr null), %[[BB]] ]

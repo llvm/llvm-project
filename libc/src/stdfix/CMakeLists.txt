@@ -27,6 +27,12 @@ foreach(suffix IN ITEMS uhr ur ulr uhk uk)
 endforeach()
 
 foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
+  if(suffix MATCHES "^u")
+    set(int_type uint_${suffix}_t)
+  else()
+    set(int_type int_${suffix}_t)
+  endif()
+
   add_entrypoint_object(
     round${suffix}
     HDRS
@@ -44,8 +50,9 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     SRCS
       ${suffix}bits.cpp
     DEPENDS
+      libc.include.llvm-libc-macros.stdfix_macros
+      libc.include.llvm-libc-types.${int_type}
       libc.src.__support.CPP.bit
-      libc.src.__support.fixed_point.fx_bits
   )
 
   add_entrypoint_object(
@@ -55,8 +62,9 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     SRCS
       bits${suffix}.cpp
     DEPENDS
-      libc.src.__support.fixed_point.fx_bits
       libc.include.llvm-libc-macros.stdfix_macros
+      libc.include.llvm-libc-types.${int_type}
+      libc.src.__support.fixed_point.fx_bits
   )
 
   add_entrypoint_object(
@@ -146,7 +154,8 @@ foreach(suffix IN ITEMS hk k uhk uk)
     SRCS
       exp${suffix}.cpp
     DEPENDS
-      libc.src.__support.fixed_point.fx_rep
       libc.src.__support.CPP.bit
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.macros.optimization
   )
 endforeach()

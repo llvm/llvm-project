@@ -28,20 +28,20 @@ KnownFPClass KnownFPClass::applyInputDenormalMode(const KnownFPClass &KnownSrc,
   case DenormalMode::IEEE:
     return Known;
   case DenormalMode::PreserveSign:
-    if (KnownSrc.getKnownFPClasses() & fcPosSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
-    if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
+    if (!KnownSrc.isKnownNever(fcPosSubnormal))
+      Known |= fcPosZero;
+    if (!KnownSrc.isKnownNever(fcNegSubnormal))
+      Known |= fcNegZero;
     return Known;
   case DenormalMode::PositiveZero:
-    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
+    if (!KnownSrc.isKnownNever(fcSubnormal))
+      Known |= fcPosZero;
     return Known;
   default:
-    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
-    if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
+    if (!KnownSrc.isKnownNever(fcSubnormal))
+      Known |= fcPosZero;
+    if (!KnownSrc.isKnownNever(fcNegSubnormal))
+      Known |= fcNegZero;
     return Known;
   }
 
@@ -55,20 +55,20 @@ KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
   case DenormalMode::IEEE:
     return Known;
   case DenormalMode::PreserveSign:
-    if (KnownSrc.getKnownFPClasses() & fcPosSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
-    if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
+    if (!KnownSrc.isKnownNever(fcPosSubnormal))
+      Known |= fcPosZero;
+    if (!KnownSrc.isKnownNever(fcNegSubnormal))
+      Known |= fcNegZero;
     return Known;
   case DenormalMode::PositiveZero:
-    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
+    if (!KnownSrc.isKnownNever(fcSubnormal))
+      Known |= fcPosZero;
     return Known;
   default:
-    if (KnownSrc.getKnownFPClasses() & fcSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosZero);
-    if (KnownSrc.getKnownFPClasses() & fcNegSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegZero);
+    if (!KnownSrc.isKnownNever(fcSubnormal))
+      Known |= fcPosZero;
+    if (!KnownSrc.isKnownNever(fcNegSubnormal))
+      Known |= fcNegZero;
     return Known;
   }
 
