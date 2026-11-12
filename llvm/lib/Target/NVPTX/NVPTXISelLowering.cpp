@@ -5559,8 +5559,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
 
   case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
   case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b: {
-    auto *CDataTy = cast<FixedVectorType>(
-        cast<StructType>(I.getType())->getElementType(1));
+    auto *CDataTy =
+        cast<FixedVectorType>(cast<StructType>(I.getType())->getElementType(1));
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = EVT::getVectorVT(I.getContext(), MVT::f32,
                                   2 * CDataTy->getNumElements());
