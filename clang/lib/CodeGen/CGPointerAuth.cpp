@@ -264,7 +264,7 @@ CodeGenFunction::EmitPointerAuthQualify(PointerAuthQualifier DestQualifier,
                                         Address DestStorageAddress) {
   assert(DestQualifier);
   E = E->IgnoreParens();
-  while (const auto *Cast = dyn_cast<CastExpr>(E)) {
+  while (const auto *Cast = dyn_cast<ImplicitCastExpr>(E)) {
     if (Cast->getCastKind() != CK_NonAtomicToAtomic &&
         Cast->getCastKind() != CK_AtomicToNonAtomic)
       break;
