@@ -10238,6 +10238,16 @@ def fhlsl_spv_preserve_interface
                "decorations.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvPreserveInterface">>;
 
+def fhlsl_spv_support_nonzero_base_instance
+    : Flag<["-"], "fvk-support-nonzero-base-instance">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Follow Vulkan spec to use gl_BaseInstance as the first "
+               "vertex instance, which makes SV_InstanceID = gl_InstanceIndex "
+               "- gl_BaseInstance (without this option, SV_InstanceID = "
+               "gl_InstanceIndex).">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvSupportNonzeroBaseInstance">>;
+
 def fexperimental_logical_pointer
     : Flag<["-"], "fexperimental-logical-pointer">,
       Visibility<[CC1Option, DXCOption]>,

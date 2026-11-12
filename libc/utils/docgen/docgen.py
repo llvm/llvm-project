@@ -58,7 +58,6 @@ def check_api(header: Header, api: Dict):
         "c-reference-root",
         "standard",
         "posix",
-        "provider",
         "family-note",
     ):
         if key in api and not isinstance(api[key], str):

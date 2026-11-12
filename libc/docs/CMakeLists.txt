@@ -25,11 +25,22 @@ if(LLVM_ENABLE_SPHINX)
         fcntl
         fenv
         float
+        fmtmsg
+        fnmatch
+        ftw
         glob
+        grp
+        iconv
         inttypes
+        langinfo
         libgen
+        limits
         locale
         math
+        monetary
+        mqueue
+        ndbm
+        netdb
         nl_types
         net/if
         netinet/in
@@ -37,13 +48,17 @@ if(LLVM_ENABLE_SPHINX)
         poll
         pthread
         pwd
+        regex
         sched
         search
+        semaphore
         setjmp
         signal
         spawn
         stdbit
+        stdckdint
         stdfix
+        stdint
         stdio
         stdlib
         string
@@ -54,21 +69,30 @@ if(LLVM_ENABLE_SPHINX)
         sys/resource
         sys/select
         sys/sem
+        sys/shm
         sys/socket
         sys/stat
         sys/statvfs
         sys/time
+        sys/times
+        sys/types
         sys/uio
+        sys/un
         sys/utsname
         sys/wait
         syslog
+        tar
         termios
         threads
         time
         uchar
+        ulimit
         unistd
+        utime
+        utmpx
         wchar
         wctype
+        wordexp
       )
       foreach(stem IN LISTS docgen_list)
         list(APPEND libc_generated_docs "headers/${stem}.md")

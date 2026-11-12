@@ -69,18 +69,18 @@ struct RegisterObjectSections {
 };
 } // namespace llvm::orc::coff_sps_ci
 
-// Descriptors for the call-controller handlers that the COFF platform runtime
-// calls.
+// Specs for the call-controller handlers that the COFF platform runtime calls.
 namespace llvm::orc::coff_sps_handlers {
-struct LookupSymbol {
+struct LookupSymbol : sps::HandlerSpec<SPSExpected<SPSExecutorAddr>(
+                          SPSExecutorAddr, SPSString)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_coff_symbol_lookup_tag");
-  using SPSSig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
 };
-struct PushInitializers {
+struct PushInitializers
+    : sps::HandlerSpec<SPSExpected<SPSCOFFJITDylibDepInfoMap>(
+          SPSExecutorAddr)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_coff_push_initializers_tag");
-  using SPSSig = SPSExpected<SPSCOFFJITDylibDepInfoMap>(SPSExecutorAddr);
 };
 } // namespace llvm::orc::coff_sps_handlers
 
@@ -672,11 +672,9 @@ void COFFPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 Error COFFPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
   return ES.registerCallControllerHandlers(
       PlatformJD,
-      bindCallControllerHandler<
-          sps::HandlerSpec<coff_sps_handlers::LookupSymbol>>(
+      bindCallControllerHandler<coff_sps_handlers::LookupSymbol>(
           this, &COFFPlatform::rt_lookupSymbol),
-      bindCallControllerHandler<
-          sps::HandlerSpec<coff_sps_handlers::PushInitializers>>(
+      bindCallControllerHandler<coff_sps_handlers::PushInitializers>(
           this, &COFFPlatform::rt_pushInitializers));
 }
 
