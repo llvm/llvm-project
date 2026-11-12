@@ -53,43 +53,32 @@ class BufferIntrinsicInfo<AMDGPUBufferIntrinsic intr> {
   bits<8> ImmOffsetArg = intr.ImmOffsetArg;
   bits<8> FormatArg = intr.FormatArg;
   bits<8> AuxArg = intr.AuxArg;
-  bit IsFormat = intr.IsFormat;
+  // Typed intrinsics also convert their data according to a format.
+  bit IsFormat = !or(intr.IsFormat, intr.IsTyped);
   bit IsAsync = intr.IsAsync;
 
-  // Check the computed layout against the intrinsic's signature. Absent
-  // arguments (255) are looked up in a trailing i32 sentinel so that the checks
-  // don't need to special-case them.
+  // Check the computed layout against the intrinsic's signature. Absent arguments (255) are looked up in
+  // a trailing i32 sentinel so that the checks don't need to special-case them.
   defvar Name = !cast<string>(Intr);
   defvar Params = Intr.ParamTypes;
   defvar PaddedParams = !listconcat(Params, [llvm_i32_ty]);
-  defvar ArgIsI32 =
-    !foldl(true, [intr.VIndexArg, intr.VOffsetArg, intr.SOffsetArg,
-                  intr.ImmOffsetArg, intr.FormatArg, intr.AuxArg, intr.SizeArg],
-           acc, idx,
-           !and(acc, !eq(PaddedParams[!if(!eq(idx, 255), !size(Params), idx)],
-                         llvm_i32_ty)));
-  defvar LDSPtrIdx = !if(!eq(Kind, AMDGPUBufferKindLoadToLDS),
-                         !add(intr.RsrcArg, 1), !size(Params));
+  defvar ArgIsI32 = !foldl(true, [intr.VIndexArg, intr.VOffsetArg, intr.SOffsetArg, intr.ImmOffsetArg, intr.FormatArg, intr.AuxArg, intr.SizeArg],
+                           acc, idx, !and(acc, !eq(PaddedParams[!if(!eq(idx, 255), !size(Params), idx)], llvm_i32_ty)));
+  defvar LDSPtrIdx = !if(!eq(Kind, AMDGPUBufferKindLoadToLDS), !add(intr.RsrcArg, 1), !size(Params));
   assert !eq(!size(Params), intr.NumArgs),
-    "buffer intrinsic layout of " # Name # " has " # intr.NumArgs #
-    " arguments, but the intrinsic has " # !size(Params);
-  assert !or(!eq(Params[intr.RsrcArg], llvm_v4i32_ty),
-             !eq(Params[intr.RsrcArg], AMDGPUBufferRsrcTy)),
+    "buffer intrinsic layout of " # Name # " has " # intr.NumArgs # " arguments, but the intrinsic has " # !size(Params);
+  assert !or(!eq(Params[intr.RsrcArg], llvm_v4i32_ty), !eq(Params[intr.RsrcArg], AMDGPUBufferRsrcTy)),
     "rsrc argument of " # Name # " is not at position " # intr.RsrcArg;
-  assert ArgIsI32,
-    "offset/index/size/aux arguments of " # Name # " are not all i32";
+  assert ArgIsI32, "offset/index/size/aux arguments of " # Name # " are not all i32";
   // There's code relying on this invariant, so we verify it. Didn't seem worth a table slot.
-  assert !or(!eq(LDSPtrIdx, !size(Params)),
-             !isa<LLVMQualPointerType>(PaddedParams[LDSPtrIdx])),
+  assert !or(!eq(LDSPtrIdx, !size(Params)), !isa<LLVMQualPointerType>(PaddedParams[LDSPtrIdx])),
     "LDS pointer of " # Name # " does not follow the rsrc";
 }
 
 def BufferIntrinsicsTable : GenericTable {
   let FilterClass = "BufferIntrinsicInfo";
   let CppTypeName = "BufferIntrinsicInfo";
-  let Fields = ["Intr", "Kind", "RsrcArg", "VDataArg", "SizeArg", "VIndexArg",
-                "VOffsetArg", "SOffsetArg", "ImmOffsetArg", "FormatArg",
-                "AuxArg", "IsFormat", "IsAsync"];
+  let Fields = ["Intr", "Kind", "RsrcArg", "VDataArg", "SizeArg", "VIndexArg", "VOffsetArg", "SOffsetArg", "ImmOffsetArg", "FormatArg", "AuxArg", "IsFormat", "IsAsync"];
   string TypeOf_Kind = "BufferIntrinsicKind";
 
   let PrimaryKey = ["Intr"];
@@ -314,8 +303,7 @@ def : SourceOfDivergence<int_amdgcn_flat_atomic_fmin_num>;
 def : SourceOfDivergence<int_amdgcn_flat_atomic_fmax_num>;
 // The results of buffer atomics differ in each lane.
 foreach intr = AMDGPUBufferIntrinsics in {
-  if !or(!eq(intr.BufferKind, AMDGPUBufferKindAtomicRMW),
-         !eq(intr.BufferKind, AMDGPUBufferKindAtomicCmpSwap)) then
+  if !or(!eq(intr.BufferKind, AMDGPUBufferKindAtomicRMW), !eq(intr.BufferKind, AMDGPUBufferKindAtomicCmpSwap)) then
     def : SourceOfDivergence<!cast<Intrinsic>(intr)>;
 }
 def : SourceOfDivergence<int_amdgcn_ps_live>;

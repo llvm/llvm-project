@@ -2431,7 +2431,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
       }
 
       if (CanAdjustOffset) {
-        unsigned OffsetIdx = BufInfo->getVOffsetArg();
+        unsigned OffsetIdx = BufInfo->getOffsetArg();
         // Clear demanded bits and update the offset.
         DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
         auto *Offset = Args[OffsetIdx];

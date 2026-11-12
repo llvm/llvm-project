@@ -6790,7 +6790,7 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(
   Register VIndex = HasVIndex ? MI.getOperand(OpIdx(*VIndexArg)).getReg()
                               : B.buildConstant(I32, 0).getReg(0);
 
-  Register VOffset = MI.getOperand(OpIdx(Info.getVOffsetArg())).getReg();
+  Register VOffset = MI.getOperand(OpIdx(*Info.getVOffsetArg())).getReg();
   Register SOffset = MI.getOperand(OpIdx(*Info.getSOffsetArg())).getReg();
 
   unsigned Format = 0;
@@ -6909,7 +6909,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(
   Register VIndex = HasVIndex ? MI.getOperand(OpIdx(*VIndexArg)).getReg()
                               : B.buildConstant(I32, 0).getReg(0);
 
-  Register VOffset = MI.getOperand(OpIdx(Info.getVOffsetArg())).getReg();
+  Register VOffset = MI.getOperand(OpIdx(*Info.getVOffsetArg())).getReg();
   Register SOffset = MI.getOperand(OpIdx(*Info.getSOffsetArg())).getReg();
 
   unsigned Format = 0;
@@ -7206,7 +7206,7 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(
   Register VIndex = HasVIndex ? MI.getOperand(OpIdx(*VIndexArg)).getReg()
                               : B.buildConstant(LLT::integer(32), 0).getReg(0);
 
-  Register VOffset = MI.getOperand(OpIdx(Info.getVOffsetArg())).getReg();
+  Register VOffset = MI.getOperand(OpIdx(*Info.getVOffsetArg())).getReg();
   Register SOffset = MI.getOperand(OpIdx(*Info.getSOffsetArg())).getReg();
   unsigned AuxiliaryData = MI.getOperand(OpIdx(*Info.getAuxArg())).getImm();
 

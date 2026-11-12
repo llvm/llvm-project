@@ -96,9 +96,16 @@ public:
   /// The access size of loads to LDS and prefetches.
   std::optional<unsigned> getSizeArg() const { return getArg(SizeArg); }
   std::optional<unsigned> getVIndexArg() const { return getArg(VIndexArg); }
-  /// The voffset, which for scalar loads and prefetches is their only offset.
-  unsigned getVOffsetArg() const { return VOffsetArg; }
+  /// The voffset, which scalar loads and prefetches don't have.
+  std::optional<unsigned> getVOffsetArg() const { return getArg(VOffsetArg); }
+  /// The soffset, which is the only offset of scalar loads and prefetches.
   std::optional<unsigned> getSOffsetArg() const { return getArg(SOffsetArg); }
+  /// The main offset: the voffset if there is one, and the soffset otherwise.
+  unsigned getOffsetArg() const {
+    assert((VOffsetArg != NoArg || SOffsetArg != NoArg) &&
+           "buffer intrinsic without an offset");
+    return VOffsetArg != NoArg ? VOffsetArg : SOffsetArg;
+  }
   /// The immediate offset of loads to LDS.
   std::optional<unsigned> getImmOffsetArg() const {
     return getArg(ImmOffsetArg);

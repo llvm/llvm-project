@@ -5388,7 +5388,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       MapArg(*BufInfo->getLDSPtrArg(), /*IsSGPR=*/true); // M0
       if (std::optional<unsigned> VIndexArg = BufInfo->getVIndexArg())
         MapArg(*VIndexArg, /*IsSGPR=*/false);
-      MapArg(BufInfo->getVOffsetArg(), /*IsSGPR=*/false);
+      MapArg(*BufInfo->getVOffsetArg(), /*IsSGPR=*/false);
       MapArg(*BufInfo->getSOffsetArg(), /*IsSGPR=*/true);
       break;
     }

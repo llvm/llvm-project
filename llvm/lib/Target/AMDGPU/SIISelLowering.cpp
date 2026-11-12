@@ -11869,7 +11869,7 @@ SmallVector<SDValue, 10> SITargetLowering::getBufferIntrinsicOps(
 
   SDValue Rsrc = bufferRsrcPtrToVector(GetArg(Info.RsrcArg), DAG);
   auto [VOffset, Offset] =
-      splitBufferOffsets(GetArg(Info.getVOffsetArg()), DAG);
+      splitBufferOffsets(GetArg(*Info.getVOffsetArg()), DAG);
   SDValue SOffset =
       selectSOffset(GetArg(*Info.getSOffsetArg()), DAG, Subtarget);
 
@@ -11938,7 +11938,7 @@ SDValue SITargetLowering::lowerBufferIntrinsicWithChain(
     return lowerSBuffer(
         Op.getValueType(), M->getMemoryVT(), DL, Op.getOperand(0),
         bufferRsrcPtrToVector(GetArg(Info.RsrcArg), DAG),
-        GetArg(Info.getVOffsetArg()), CachePolicy, DAG, M->getMemOperand());
+        GetArg(*Info.getSOffsetArg()), CachePolicy, DAG, M->getMemOperand());
   }
   case AMDGPU::BufferKindLoad:
   case AMDGPU::BufferKindAtomicLoad: {
@@ -12634,7 +12634,7 @@ SDValue SITargetLowering::lowerBufferIntrinsicVoid(
     unsigned Opc;
     std::optional<unsigned> VIndexArg = Info.getVIndexArg();
     bool HasVIndex = VIndexArg.has_value();
-    SDValue VOffset = GetArg(Info.getVOffsetArg());
+    SDValue VOffset = GetArg(*Info.getVOffsetArg());
     bool HasVOffset = !isNullConstant(VOffset);
     unsigned Size = GetArg(*Info.getSizeArg())->getAsZExtVal();
 
@@ -12716,8 +12716,8 @@ SDValue SITargetLowering::lowerBufferIntrinsicVoid(
     SDValue Ops[] = {
         Chain,
         bufferRsrcPtrToVector(GetArg(Info.RsrcArg), DAG),
-        GetArg(Info.getVOffsetArg()), // offset
-        GetArg(*Info.getSizeArg()),   // length
+        GetArg(*Info.getSOffsetArg()), // soffset
+        GetArg(*Info.getSizeArg()),    // length
     };
 
     return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_PREFETCH_DATA, DL,

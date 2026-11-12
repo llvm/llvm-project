@@ -3571,7 +3571,7 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(
   if (HasVIndex)
     VIndex = GetArg(*VIndexArg).getReg();
 
-  Register VOffset = GetArg(Info.getVOffsetArg()).getReg();
+  Register VOffset = GetArg(*Info.getVOffsetArg()).getReg();
   std::optional<ValueAndVReg> MaybeVOffset =
       getIConstantVRegValWithLookThrough(VOffset, *MRI);
   const bool HasVOffset = !MaybeVOffset || MaybeVOffset->Value.getZExtValue();
