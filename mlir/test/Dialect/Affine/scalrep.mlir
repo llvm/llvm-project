@@ -1034,3 +1034,33 @@ func.func @vector_store_dead_elim_same_type(%arg0: memref<20x1xi64>) {
   affine.vector_store %cst2, %arg0[%c0, %c0] : memref<20x1xi64>, vector<5xi64>
   return
 }
+
+memref.global "private" @gv : memref<4xi64> = dense<[1, 2, 3, 4]>
+
+// CHECK-LABEL: func @load_cse_no_replace_with_erased_load
+func.func @load_cse_no_replace_with_erased_load() -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c7 = arith.constant 7 : i64
+  %m = memref.get_global @gv : memref<4xi64>
+  // CHECK: %[[A:.*]] = affine.load
+  %a = affine.load %m[3] : memref<4xi64>
+  affine.store %c7, %m[0] : memref<4xi64>
+  // CHECK-NOT: affine.load
+  // CHECK: scf.for
+  // CHECK: affine.load
+  %b = affine.load %m[3] : memref<4xi64>
+  %s = scf.for %i = %c0 to %c2 step %c1 iter_args(%acc = %c0) -> (index) {
+    %c = affine.load %m[3] : memref<4xi64>
+    %x = index.castu %c : i64 to index
+    %y = index.add %acc, %x
+    scf.yield %y : index
+  }
+  %p = index.castu %a : i64 to index
+  %q = index.castu %b : i64 to index
+  %r = index.add %s, %p
+  %t = index.add %r, %q
+  // CHECK: return
+  return %t : index
+}
