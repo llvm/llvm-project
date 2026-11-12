@@ -6629,7 +6629,7 @@ uint64_t test_merge_mvmn_u64(uint64_t rs2, uint64_t rs1, uint64_t rd) {
 }
 // CHECK-LABEL: test_merge_merge_i64:
 // RV32:        merge{{[[:space:]]}}
-// RV32-NEXT    merge{{[[:space:]]}}
+// RV32-NEXT:   merge{{[[:space:]]}}
 // RV64:        merge{{[[:space:]]}}
 int64_t test_merge_merge_i64(uint64_t rd, int64_t rs1, int64_t rs2) {
   return __riscv_merge_i64(rs1, rs2, rd);
