@@ -316,6 +316,8 @@ func.func @allocation_with_no_uses() {
   call @foo() : () -> ()
   memref.dealloc %alloc : memref<8xi32>
   return
+}
+
 // -----
 // CHECK-LABEL:   func.func @alias_user_outside_alloc_block() -> memref<4xf32> {
 // CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<4xf32>
