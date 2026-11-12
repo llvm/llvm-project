@@ -15,11 +15,9 @@ func.func @test(%arg0: () -> (), %arg1: !fir.ref<!fir.type<t{a:!fir.array<5xf64>
 // CHECK-X86-SAME:                    %[[VAL_2:.*]]: f64) {
 // CHECK-X86:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>
 // CHECK-X86:           %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (() -> ()) -> ((!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, f64) -> ())
-// CHECK-X86:           %[[VAL_5:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-X86:           %[[VAL_6:.*]] = fir.alloca !fir.type<t{a:!fir.array<5xf64>}>
 // CHECK-X86:           fir.store %[[VAL_3]] to %[[VAL_6]] : !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>
 // CHECK-X86:           fir.call %[[VAL_4]](%[[VAL_6]], %[[VAL_2]]) proc_attrs<bind_c> : (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>> {llvm.align = 8 : i32, llvm.byval = !fir.type<t{a:!fir.array<5xf64>}>}, f64) -> ()
-// CHECK-X86:           llvm.intr.stackrestore %[[VAL_5]] : !llvm.ptr
 // CHECK-X86:           return
 // CHECK-X86:         }
 
@@ -29,11 +27,9 @@ func.func @test(%arg0: () -> (), %arg1: !fir.ref<!fir.type<t{a:!fir.array<5xf64>
 // CHECK-S390-SAME:                    %[[VAL_2:.*]]: f64) {
 // CHECK-S390:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>
 // CHECK-S390:           %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (() -> ()) -> ((!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, f64) -> ())
-// CHECK-S390:           %[[VAL_5:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-S390:           %[[VAL_6:.*]] = fir.alloca !fir.type<t{a:!fir.array<5xf64>}>
 // CHECK-S390:           fir.store %[[VAL_3]] to %[[VAL_6]] : !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>
 // CHECK-S390:           fir.call %[[VAL_4]](%[[VAL_6]], %[[VAL_2]]) proc_attrs<bind_c> : (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>> {llvm.align = 8 : i32}, f64) -> ()
 // CHECK-S390-NOT:       llvm.byval
-// CHECK-S390:           llvm.intr.stackrestore %[[VAL_5]] : !llvm.ptr
 // CHECK-S390:           return
 // CHECK-S390:         }

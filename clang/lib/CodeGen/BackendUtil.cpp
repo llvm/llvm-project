@@ -485,6 +485,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.Crel = CodeGenOpts.Crel;
   Options.MCOptions.RelocSectionSym = CodeGenOpts.getRelocSectionSym();
   Options.MCOptions.ImplicitMapSyms = CodeGenOpts.ImplicitMapSyms;
+  Options.MCOptions.MachORelocatableDwarf = CodeGenOpts.MachORelocatableDwarf;
   Options.MCOptions.X86RelaxRelocations = CodeGenOpts.X86RelaxRelocations;
   Options.MCOptions.CompressDebugSections =
       CodeGenOpts.getCompressDebugSections();

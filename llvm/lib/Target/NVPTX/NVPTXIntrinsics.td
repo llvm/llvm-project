@@ -2479,6 +2479,27 @@ foreach rnd = FPRoundingModes in {
            (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", sat]>.ret)
              (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c, rnd_imm))]>,
         Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      def FMA_ # !toupper(rnd # "_f32x2_" # t.PtxType # "_f32x2_f32x2") :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b, B64:$c),
+          "fma." # rnd # ".f32x2." # t.PtxType # ".f32x2.f32x2">;
+
+      defvar Inst = !cast<Instruction>("FMA_" # !toupper(rnd # "_f32x2_" # t.PtxType #
+                                                         "_f32x2_f32x2"));
+
+      def : Pat<(v2f32 (int_nvvm_fma (fpextend_v2f32_from_packed t.Ty:$a),
+                                     v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst $a, $b, $c)>;
+
+      def : Pat<(v2f32 (int_nvvm_fma
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+    }
+  }
 }
 
 // Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
@@ -2488,6 +2509,19 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), (f32 (fpextend bf16:$b)), f32:$c)),
             (FMA_RN_F32_BF16 B16:$a, B16:$b, B32:$c)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("FMA_RN_F32X2_" # !toupper(t.PtxType) # "_F32X2_F32X2");
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b, v2f32:$c)),
+              (Inst $a, $b, $c)>;
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                     t.Ty.ElementType:$a1),
+                          v2f32:$b, v2f32:$c)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+  }
 
 foreach ty = [F16RT, F16X2RT, BF16RT, BF16X2RT] in {
   foreach relu = ["", "_relu"] in {

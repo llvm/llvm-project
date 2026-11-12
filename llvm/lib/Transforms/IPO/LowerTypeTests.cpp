@@ -84,6 +84,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -1395,6 +1396,13 @@ void LowerTypeTestsModule::importFunction(Function *F,
     // alias. Redirect all other users to the jump table entry.
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
+        // MemProf duplicate-clone aliases are created in the ThinLTO backend
+        // after the thin link has finalized the CFI jump table and !aliases in
+        // the merged module, and are only called directly. Leave them aliasing
+        // the local .cfi body (restored by ScopedSaveAliaseesAndUsed) rather
+        // than redirecting them to a non-existent jump table entry.
+        if (isMemProfClone(*A))
+          continue;
         std::string AliasName = A->getName().str() + ".cfi";
         Function *AliasDecl = Function::Create(
             F->getFunctionType(), GlobalValue::ExternalLinkage,
@@ -2056,6 +2064,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
+  SmallVector<GlobalValue *> UsedJtAliases;
+
   // Build aliases pointing to offsets into the jump table, and replace
   // references to the original functions with references to the aliases.
   for (unsigned I = 0; I != Functions.size(); ++I) {
@@ -2077,7 +2087,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
       if (IsExported)
         JtAlias->setVisibility(GlobalValue::HiddenVisibility);
       else
-        appendToUsed(M, {JtAlias});
+        UsedJtAliases.push_back(JtAlias);
     }
 
     if (IsExported) {
@@ -2114,6 +2124,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
         F->setVisibility(GlobalVariable::HiddenVisibility);
     }
   }
+
+  if (!UsedJtAliases.empty())
+    appendToUsed(M, UsedJtAliases);
 
   createJumpTable(JumpTableFn, Functions, JumpTableArch);
 }
