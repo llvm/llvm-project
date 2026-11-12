@@ -4,6 +4,10 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -disable-llvm-passes -fclangir -emit-llvm %s -o %t-cir-o1.ll
+// RUN: FileCheck --check-prefix=O1 --input-file=%t-cir-o1.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -disable-llvm-passes -emit-llvm %s -o %t-o1.ll
+// RUN: FileCheck --check-prefix=O1 --input-file=%t-o1.ll %s
 
 // The CIR emitted for annotations on record fields, parameters, and local
 // variables, and for __builtin_annotation. The LLVM IR of the first three is
@@ -36,6 +40,16 @@ void local(void) {
 // CIR:   %[[X:.*]] = cir.alloca "x" align(4) : !cir.ptr<!s32i>
 // CIR:   cir.var_annotation %[[X]] [#cir.annotation<"on_local", ["str", 7 : i32]>] : !cir.ptr<!s32i>
 // CIR:   cir.var_annotation %[[X]] [#cir.annotation<"second">] : !cir.ptr<!s32i>
+
+// At -O1, the annotations are inside the variable's lifetime, as in OG.
+// O1-LABEL: define {{.*}} void @local(
+// O1:      %[[X:.*]] = alloca i32
+// O1-NEXT: call void @llvm.lifetime.start.p0(ptr %[[X]])
+// O1-NEXT: call void @llvm.var.annotation.p0.p0(ptr %[[X]],
+// O1-NEXT: call void @llvm.var.annotation.p0.p0(ptr %[[X]],
+// O1:      store i32 1, ptr %[[X]]
+// O1:      call void @llvm.lifetime.end.p0(ptr %[[X]])
+// O1:      ret void
 
 // LLVM-DAG: [[FILE:@\.str[.0-9a-z]*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}annotate-local.c\00", section "llvm.metadata"
 // LLVM-DAG: [[BUILTIN:@\.str[.0-9a-z]*]] = private unnamed_addr constant [11 x i8] c"on_builtin\00", section "llvm.metadata"
