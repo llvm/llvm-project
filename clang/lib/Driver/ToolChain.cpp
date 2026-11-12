@@ -1325,15 +1325,13 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   // -fuse-ld=lld can be used with --ld-path= to inform clang that the binary
   // that --ld-path= points to is lld.
   if (const Arg *A = Args.getLastArg(options::OPT_ld_path_EQ)) {
-    std::string Path(A->getValue());
-    if (!Path.empty()) {
-      if (llvm::sys::path::parent_path(Path).empty())
-        Path = GetProgramPath(A->getValue());
-      if (llvm::sys::fs::can_execute(Path)) {
-        if (LinkerIsLLD)
-          *LinkerIsLLD = UseLinker == "lld";
-        return std::string(Path);
-      }
+    if (std::optional<std::string> Path =
+            tools::resolveLdPath(A->getValue(), [&](StringRef Name) {
+              return GetProgramPath(Name.str().c_str());
+            })) {
+      if (LinkerIsLLD)
+        *LinkerIsLLD = UseLinker == "lld";
+      return *Path;
     }
     getDriver().Diag(diag::err_drv_invalid_linker_name) << A->getAsString(Args);
     return GetProgramPath(getDefaultLinker());
