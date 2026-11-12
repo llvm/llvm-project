@@ -75,12 +75,17 @@ void renderFunctionSummary(raw_ostream &OS,
 void renderFunctions(
     raw_ostream &OS,
     const iterator_range<coverage::FunctionRecordIterator> &Functions) {
+  // A function can have no regular counted region (e.g. only branch regions,
+  // see findMainViewFileID); it has no start line to report, so skip it.
   for (const auto &F : Functions) {
+    if (F.CountedRegions.empty())
+      continue;
     auto StartLine = F.CountedRegions.front().LineStart;
     OS << "FN:" << StartLine << ',' << F.Name << '\n';
   }
   for (const auto &F : Functions)
-    OS << "FNDA:" << F.ExecutionCount << ',' << F.Name << '\n';
+    if (!F.CountedRegions.empty())
+      OS << "FNDA:" << F.ExecutionCount << ',' << F.Name << '\n';
 }
 
 void renderLineExecutionCounts(raw_ostream &OS,
