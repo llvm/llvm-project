@@ -621,14 +621,14 @@ int main(int Argc, char const *Argv[]) {
   if (!BinOrErr)
     error(createFileError(Opts.InputFileName, BinOrErr.takeError()));
 
+  if (!(*BinOrErr)->isELF())
+    error(createFileError(Opts.InputFileName,
+                          createError("unsupported input file")));
+
   Expected<FilePermissionsApplier> PermsApplierOrErr =
       FilePermissionsApplier::create(Opts.InputFileName);
   if (!PermsApplierOrErr)
     error(createFileError(Opts.InputFileName, PermsApplierOrErr.takeError()));
-
-  if (!(*BinOrErr)->isObject())
-    error(createFileError(Opts.InputFileName,
-                          createError("unsupported input file")));
 
   if (Error Err =
           applyCLOptions(Opts, *static_cast<ObjectFile *>((*BinOrErr).get())))
