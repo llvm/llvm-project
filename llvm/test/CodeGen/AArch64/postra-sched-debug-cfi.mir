@@ -30,7 +30,6 @@
 ...
 ---
 name:            pseudo_probe
-tracksRegLiveness: true
 noVRegs:         true
 body:             |
   bb.0:
@@ -54,7 +53,6 @@ body:             |
 ...
 ---
 name:            f
-tracksRegLiveness: true
 noVRegs:         true
 body:             |
   bb.0:

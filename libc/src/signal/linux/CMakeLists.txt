@@ -153,6 +153,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sigwait
+  SRCS
+    sigwait.cpp
+  HDRS
+    ../sigwait.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.siginfo_t
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigtimedwait
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   sigwaitinfo
   SRCS
     sigwaitinfo.cpp

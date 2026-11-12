@@ -986,10 +986,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   /// Mode.
   AnyValue callMaskedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
                                         const AnyValue &Mask, AnyValue Data,
-                                        MaskedAddrMode Mode) {
-    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store ||
-                         CB.getIntrinsicID() == Intrinsic::masked_scatter ||
-                         CB.getIntrinsicID() == Intrinsic::masked_compressstore;
+                                        MaskedAddrMode Mode, bool IsStore) {
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
                        ->getScalarType();
@@ -1041,6 +1038,39 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     }
 
     return IsStore ? AnyValue() : Data;
+  }
+
+  /// Implements llvm.vp.load and llvm.vp.store as the corresponding masked
+  /// intrinsic. Lanes at or past \p EVL are disabled even if their \p Mask lane
+  /// is poison, and without an align attribute the base pointer must have the
+  /// ABI alignment of the vector type.
+  AnyValue callVPLoadStoreIntrinsic(CallBase &CB, AnyValue Ptr,
+                                    const AnyValue &Mask, const AnyValue &EVL,
+                                    AnyValue Data, bool IsStore) {
+    StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
+    if (EVL.isPoison()) {
+      reportImmediateUB() << IntrinsicName
+                          << " with poison explicit vector length.";
+      return AnyValue();
+    }
+    std::vector<AnyValue> EnabledMask(Mask.asAggregate());
+    const APInt &EVLInt = EVL.asInteger();
+    if (EVLInt.ugt(EnabledMask.size())) {
+      reportImmediateUB() << IntrinsicName << " with explicit vector length "
+                          << EVLInt << " greater than the number of elements "
+                          << EnabledMask.size() << '.';
+      return AnyValue();
+    }
+    for (uint64_t I = EVLInt.getZExtValue(); I != EnabledMask.size(); ++I)
+      EnabledMask[I] = AnyValue::boolean(false);
+
+    if (!CB.getParamAlign(IsStore ? 1 : 0)) {
+      Type *VecTy = IsStore ? CB.getArgOperand(0)->getType() : CB.getType();
+      applyAlignAttr(Ptr, DL.getABITypeAlign(VecTy));
+    }
+    return callMaskedLoadStoreIntrinsic(CB, Ptr, std::move(EnabledMask),
+                                        std::move(Data),
+                                        MaskedAddrMode::Consecutive, IsStore);
   }
 
   /// Implements llvm.matrix.column.major.store. Column C of \p Data is stored
@@ -2014,22 +2044,35 @@ public:
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::masked_load:
       return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
-                                          MaskedAddrMode::Consecutive);
+                                          MaskedAddrMode::Consecutive,
+                                          /*IsStore=*/false);
     case Intrinsic::masked_store:
       return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
-                                          MaskedAddrMode::Consecutive);
+                                          MaskedAddrMode::Consecutive,
+                                          /*IsStore=*/true);
     case Intrinsic::masked_gather:
       return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
-                                          MaskedAddrMode::PerLane);
+                                          MaskedAddrMode::PerLane,
+                                          /*IsStore=*/false);
     case Intrinsic::masked_scatter:
       return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
-                                          MaskedAddrMode::PerLane);
+                                          MaskedAddrMode::PerLane,
+                                          /*IsStore=*/true);
     case Intrinsic::masked_expandload:
       return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
-                                          MaskedAddrMode::Compressed);
+                                          MaskedAddrMode::Compressed,
+                                          /*IsStore=*/false);
     case Intrinsic::masked_compressstore:
       return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
-                                          MaskedAddrMode::Compressed);
+                                          MaskedAddrMode::Compressed,
+                                          /*IsStore=*/true);
+    case Intrinsic::vp_load:
+      return callVPLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                      AnyValue::getPoisonValue(Ctx, RetTy),
+                                      /*IsStore=*/false);
+    case Intrinsic::vp_store:
+      return callVPLoadStoreIntrinsic(CB, Args[1], Args[2], Args[3], Args[0],
+                                      /*IsStore=*/true);
     case Intrinsic::matrix_transpose: {
       const auto &Vec = Args[0].asAggregate();
       const unsigned Rows =

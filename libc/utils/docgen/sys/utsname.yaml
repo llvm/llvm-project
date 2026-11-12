@@ -1,3 +1,7 @@
+posix: posix-2024
+types:
+  struct utsname:
+    in-latest-posix: ''
 functions:
   uname:
     in-latest-posix: ''

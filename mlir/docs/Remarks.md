@@ -272,6 +272,69 @@ if (engine->isRemarkEnabled(remark::RemarkKind::RemarkPassed, "Vectorizer"))
 
 ***
 
+## Searching and Linking Remarks
+
+History is opt-in. When enabled, the engine records the ID, name, category,
+subcategory, function, kind, and location of every emitted remark, and
+`findRemarks(query)` returns the matching IDs in ID order. Under `Final`,
+pending candidates are searchable as well. They may be replaced before emission;
+once replaced, they no longer match.
+
+`RemarkQuery` matches exact values: `category()` the base category, `at()` the
+complete location, wrappers included. Unset fields match anything; an empty
+string matches an empty field.
+
+```c++
+auto *engine = context.getRemarkEngine();
+if (!engine)
+  return;
+engine->enableHistory();
+auto analysisOpts = remark::RemarkOpts::name("VectorSizeInference")
+                        .category("Vectorizer")
+                        .function("kernel");
+remark::analysis(loc, analysisOpts)
+    << remark::reason("Unable to infer vector sizes");
+
+auto query = remark::RemarkQuery::named("VectorSizeInference")
+                 .category("Vectorizer")
+                 .function("kernel")
+                 .kind(remark::RemarkKind::RemarkAnalysis)
+                 .at(loc);
+remark::missed(loc, remark::RemarkOpts::name("Vectorization")
+                       .category("Vectorizer")
+                       .function("kernel"))
+    << remark::relatedTo(query);
+```
+
+`relatedTo(query)` links the remark to every match at the time of the `<<`,
+each once. With no match, or with history disabled, it adds nothing. Under
+`Final`, a link whose target is replaced in the same finalization batch is
+dropped, also when the replacement comes from another function or is the linking
+remark itself. A match indicates a relationship, not causality, and the IR may
+have changed since.
+
+Each query scans all pending and emitted remarks, and a broad query in a loop
+produces many links; a known ID links without a query through
+`RemarkOpts::relatedTo(id)`. Each link is serialized as its own `RelatedTo`
+argument.
+
+Reports and queries may run concurrently. Under `Final`, they must finish before
+`finalize()` starts and may resume after it returns; its streamer callbacks must
+not report or query remarks. Under `All`, streamers run on the reporting threads.
+With parallel passes, cross-function results depend on timing; scope queries
+with `function()` or `at()`.
+
+`clearHistory()` discards the recorded metadata; `enableHistory(false)` also
+stops recording and makes queries return nothing. Neither touches pending
+remarks or existing links.
+
+Pending IDs describe the current candidates. If a consumer is reported only
+after its target's batch has drained, Final no longer knows whether that target
+was replaced. Callers carrying IDs across batches must ensure those targets
+were emitted.
+
+***
+
 ## Enabling Remarks
 
 ### Option 1: LLVM Remark Streamer (YAML or Bitstream)

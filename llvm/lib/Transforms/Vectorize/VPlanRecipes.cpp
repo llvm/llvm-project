@@ -1614,6 +1614,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
                                           Ctx.CostKind);
   }
+  case VPInstruction::NumActiveLanes: {
+    Type *ElementTy = getOperand(0)->getScalarType();
+    auto *MaskTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getExtendedReductionCost(
+        Instruction::Add, /*IsUnsigned=*/true, getScalarType(), MaskTy,
+        /*FMF=*/{}, Ctx.CostKind);
+  }
   case VPInstruction::BranchOnCount: {
     // If TC <= VF then this is just a branch.
     // FIXME: Removing the branch happens in simplifyBranchConditionForVFAndUF
@@ -4219,6 +4226,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return computeCallCost(CalledFn, ResultTy, drop_end(operands()),
                            isSingleScalar(), VF, Ctx);
   }
+  case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::FAdd:
@@ -4235,6 +4243,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Xor:
   case Instruction::ICmp:
   case Instruction::FCmp:
+  case Instruction::Freeze:
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
@@ -4285,8 +4294,13 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
     const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.PSE, Ctx.L);
-    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
-      break;
+    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV)) {
+      // Don't fall back to the legacy cost model for single-scalar accesses.
+      // PtrSCEV won't be used.
+      if (!isSingleScalar())
+        break;
+      PtrSCEV = nullptr;
+    }
 
     Type *ValTy = (IsLoad ? this : getOperand(0))->getScalarType();
     Type *ScalarPtrTy = PtrOp->getScalarType();
@@ -4346,6 +4360,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     }
     return Cost;
   }
+  case Instruction::BitCast:
   case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::FPToUI:
