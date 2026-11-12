@@ -3876,7 +3876,7 @@ declare void @llvm.nvvm.tensormap.replace.alloc.class.p3(ptr addrspace(3) %addr,
 
 The '`@llvm.nvvm.tensormap.replace.alloc.class.*`' intrinsics set the tensor
 allocation class of the tensor-map object to the class specified by
-`%alloc_class` without modifying any of its fields.
+`%alloc_class`.
 
 ##### Semantics:
 

@@ -7354,11 +7354,11 @@ class TensormapReplaceInst_3<string state_space, string field_name,
 
 defvar TensormapAllocClasses = ["alloc_small", "alloc_large", "alloc_same"];
 
-class TensormapReplaceGlobalAddressInst<string state_space, string qualifier,
-  int alloc_class, NVPTXAddressSpace as> :
+class TensormapReplaceGlobalAddressInst<string state_space,
+  string alloc_class_str, int alloc_class, NVPTXAddressSpace as> :
   BasicNVPTXInst<(outs),
     (ins ADDR:$addr, I64RT.RegOrImm:$val),
-    "tensormap.replace.tile.global_address" # qualifier # "." # state_space
+    "tensormap.replace.tile.global_address" # alloc_class_str # "." # state_space
       # ".b1024.b64",
     [(IntrinsicInAS<int_nvvm_tensormap_replace_global_address, as>
         addr:$addr, i64:$val, (i32 alloc_class))]>;
@@ -7412,15 +7412,15 @@ foreach ss = ["GLOBAL", "SHARED_CTA"] in {
 
   let Predicates = [hasTensormapAllocClassSupport] in {
     foreach alloc_class = [0, 1, 2] in {
-      defvar name = TensormapAllocClasses[alloc_class];
-      def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # !toupper(name) # _ # ss :
-        TensormapReplaceGlobalAddressInst<ss_ptx, "." # name, alloc_class, as>;
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceGlobalAddressInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
     }
 
     foreach alloc_class = [0, 1] in {
-      defvar name = TensormapAllocClasses[alloc_class];
-      def TENSORMAP_REPLACE_TILE_ # !toupper(name) # _ # ss :
-        TensormapReplaceAllocClassInst<ss_ptx, "." # name, alloc_class, as>;
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceAllocClassInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
     }
   }
 } // state_space
