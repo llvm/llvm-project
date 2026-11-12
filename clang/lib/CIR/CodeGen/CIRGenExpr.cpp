@@ -1046,7 +1046,9 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
   assert(!cir::MissingFeatures::sanitizers());
 
   mlir::Type fnTy = funcOp.getFunctionType();
-  mlir::Type ptrTy = cir::PointerType::get(fnTy);
+  mlir::ptr::MemorySpaceAttrInterface fnAddrSpace =
+      cgf.cgm.getTypes().getPointerAddressSpace(fd->getType());
+  mlir::Type ptrTy = cir::PointerType::get(fnTy, fnAddrSpace);
   mlir::Value addr;
 
   // On the HIP host, a reference to a __global__ kernel must resolve to the
@@ -1070,7 +1072,7 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
     fnTy = cgf.convertType(fd->getType());
-    ptrTy = cir::PointerType::get(fnTy);
+    ptrTy = cir::PointerType::get(fnTy, fnAddrSpace);
 
     addr = cir::CastOp::create(cgf.getBuilder(), addr.getLoc(), ptrTy,
                                cir::CastKind::bitcast, addr);
@@ -1566,11 +1568,11 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    OverflowBehavior overflowBehavior = getLangOpts().PointerOverflowDefined
-                                            ? OverflowBehavior::None
-                                            : OverflowBehavior::NoSignedWrap;
+    cir::OverflowFlags overflowFlags = getLangOpts().PointerOverflowDefined
+                                           ? cir::OverflowFlags::None
+                                           : cir::OverflowFlags::NoSignedWrap;
     idx = builder.createMul(cgm.getLoc(e->getExprLoc()), idx, numElements,
-                            overflowBehavior);
+                            overflowFlags);
 
     addr = emitArraySubscriptPtr(*this, cgm.getLoc(e->getBeginLoc()),
                                  cgm.getLoc(e->getEndLoc()), addr, e->getType(),

@@ -39,7 +39,6 @@
 ---
 name:            main
 alignment:       16
-tracksRegLiveness: true
 hasWinCFI:       false
 noPhis:          true
 fixedStack:

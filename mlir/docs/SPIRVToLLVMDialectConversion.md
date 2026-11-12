@@ -442,11 +442,13 @@ SPIR-V Dialect op | LLVM Dialect op
 This section describes the conversion patterns for SPIR-V dialect operations
 that concern memory.
 
-#### `spirv.AccessChain`
+#### `spirv.AccessChain` and `spirv.InBoundsAccessChain`
 
 `spirv.AccessChain` is mapped to `llvm.getelementptr` op. In order to create a
 valid LLVM op, we also add a 0 index to the `spirv.AccessChain`'s indices list in
-order to go through the pointer.
+order to go through the pointer. `spirv.InBoundsAccessChain` is lowered the same
+way and additionally sets the `inbounds` flag on the resulting
+`llvm.getelementptr`.
 
 ```mlir
 // Access the 1st element of the array

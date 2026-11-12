@@ -47,6 +47,27 @@ using namespace llvm;
 using namespace LegalizeActions;
 using namespace MIPatternMatch;
 
+/// Choose an insertion point for a conversion of an incoming PHI value.
+/// Values available before an invoke must be converted before it, so the
+/// conversion also executes on the unwind edge. An invoke result is defined
+/// after G_INVOKE_REGION_START and is only available on the normal edge.
+static MachineBasicBlock::iterator
+getPHIIncomingInsertPoint(MachineBasicBlock &MBB, Register Reg,
+                          const MachineRegisterInfo &MRI) {
+  auto InsertPt = MBB.getFirstTerminatorForward();
+  // Only invoke regions need the extra definition-order check.
+  if (InsertPt == MBB.end() ||
+      InsertPt->getOpcode() != TargetOpcode::G_INVOKE_REGION_START)
+    return InsertPt;
+
+  MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (Def->getParent() == &MBB)
+    for (auto I = InsertPt, E = MBB.end(); I != E; ++I)
+      if (&*I == Def)
+        return std::next(I);
+  return InsertPt;
+}
+
 /// Try to break down \p OrigTy into \p NarrowTy sized pieces.
 ///
 /// Returns the number of \p NarrowTy elements needed to reconstruct \p OrigTy,
@@ -1629,6 +1650,21 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_BITCAST: {
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    if (SrcTy.isVector() || DstTy.isVector())
+      return UnableToLegalize;
+
+    auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, MI.getOperand(1));
+    unsigned NumParts = Unmerge->getNumOperands() - 1;
+    SmallVector<Register> Parts(NumParts);
+    for (unsigned I = 0; I < NumParts; ++I)
+      Parts[I] = Unmerge.getReg(I);
+    MIRBuilder.buildMergeValues(MI.getOperand(0), Parts);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
@@ -1856,7 +1892,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     Observer.changingInstr(MI);
     for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
       MachineBasicBlock &OpMBB = *MI.getOperand(i + 1).getMBB();
-      MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminatorForward());
+      MIRBuilder.setInsertPt(OpMBB, getPHIIncomingInsertPoint(
+                                        OpMBB, MI.getOperand(i).getReg(), MRI));
       extractParts(MI.getOperand(i).getReg(), NarrowTy, NumParts,
                    SrcRegs[i / 2], MIRBuilder, MRI);
     }
@@ -3378,7 +3415,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
     for (unsigned I = 1; I < MI.getNumOperands(); I += 2) {
       MachineBasicBlock &OpMBB = *MI.getOperand(I + 1).getMBB();
-      MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminatorForward());
+      MIRBuilder.setInsertPt(OpMBB, getPHIIncomingInsertPoint(
+                                        OpMBB, MI.getOperand(I).getReg(), MRI));
       widenScalarSrc(MI, WideTy, I, TargetOpcode::G_ANYEXT);
     }
 
@@ -5449,7 +5487,8 @@ LegalizerHelper::fewerElementsVectorPhi(GenericMachineInstr &MI,
   for (unsigned UseIdx = NumDefs, UseNo = 0; UseIdx < MI.getNumOperands();
        UseIdx += 2, ++UseNo) {
     MachineBasicBlock &OpMBB = *MI.getOperand(UseIdx + 1).getMBB();
-    MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminatorForward());
+    MIRBuilder.setInsertPt(
+        OpMBB, getPHIIncomingInsertPoint(OpMBB, MI.getReg(UseIdx), MRI));
     extractVectorParts(MI.getReg(UseIdx), NumElts, InputOpsPieces[UseNo],
                        MIRBuilder, MRI);
   }
@@ -6923,7 +6962,8 @@ LegalizerHelper::moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
   Observer.changingInstr(MI);
   for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
     MachineBasicBlock &OpMBB = *MI.getOperand(I + 1).getMBB();
-    MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminator());
+    MIRBuilder.setInsertPt(OpMBB, getPHIIncomingInsertPoint(
+                                      OpMBB, MI.getOperand(I).getReg(), MRI));
     moreElementsVectorSrc(MI, MoreTy, I);
   }
 

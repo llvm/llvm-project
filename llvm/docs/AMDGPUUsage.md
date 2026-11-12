@@ -13144,6 +13144,15 @@ For GFX12:
   The MALL cache is fully coherent with GPU memory and has no impact on system
   coherence. All agents (GPU and CPU) access GPU memory through the MALL cache.
 
+- The wait instructions below must be added before any ``SCOPE_SYS`` store in
+  order for the store to remain in order with previous memory operations.
+
+  - `s_wait_loadcnt 0x0`
+  - `s_wait_storecnt 0x0`
+  - `s_wait_kmcnt 0x0`
+  - `s_wait_samplecnt 0x0`
+  - `s_wait_bvhcnt 0x0`
+
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
 address space and global address space for program scope `const` variables.
@@ -13354,10 +13363,27 @@ the instruction in the code sequence that references the table.
     - wavefront
     - workgroup
     - agent
-    - system
   - - global
     - generic
   - 1. buffer/global/flat_store
+
+    > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
+* - store atomic
+  - monotonic
+  - - system
+  - - global
+    - generic
+  - 1. `s_wait_loadcnt 0x0`\
+       `s_wait_storecnt 0x0`\
+       `s_wait_kmcnt 0x0`\
+       `s_wait_samplecnt 0x0`\
+       `s_wait_bvhcnt 0x0`
+
+       - The waits can be independently moved as long as the
+         counter they wait on is known to be zero before issuing
+         the following store instruction.
+
+    2. buffer/global/flat_store
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 * - store atomic
@@ -13725,10 +13751,22 @@ the instruction in the code sequence that references the table.
     - system
   - - global
     - generic
-  - 1. `global_wb scope:SCOPE_SYS`
+  - 1. `s_wait_loadcnt 0x0`\
+       `s_wait_storecnt 0x0`\
+       `s_wait_kmcnt 0x0`\
+       `s_wait_samplecnt 0x0`\
+       `s_wait_bvhcnt 0x0`
 
        - If agent scope, omit.
-    2. `s_wait_bvhcnt 0x0`\
+       - The waits can be independently moved as long as the
+         counter they wait on is known to be zero before issuing
+         the following store instruction.
+
+    2. `global_wb scope:SCOPE_SYS`
+
+       - If agent scope, omit.
+
+    3. `s_wait_bvhcnt 0x0`\
        `s_wait_samplecnt 0x0`\
        `s_wait_storecnt 0x0`\
        `s_wait_loadcnt 0x0`\
@@ -13740,9 +13778,8 @@ the instruction in the code sequence that references the table.
     > - `s_wait_storecnt 0x0` must happen after `global_wb` if present, or any preceding global/generic store/store atomic/ atomicrmw-no-return-value.
     > - `s_wait_dscnt 0x0` must happen after any preceding local/generic load/store/load atomic/store atomic/atomicrmw.
     > - Must happen before the following store.
-    > - Ensures that all memory operations have completed before performing the store that is being released.
 
-    3. buffer/global/flat_store
+    4. buffer/global/flat_store
 
     > - Apply {ref}`amdgpu-amdhsa-memory-model-code-sequences-gfx12-scopes-table`.
 * - atomicrmw

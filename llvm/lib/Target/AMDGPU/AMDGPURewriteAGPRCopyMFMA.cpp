@@ -664,6 +664,9 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 }
 
 bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
+  assert(RegClassInfo.hasCurrentReservedRegs() &&
+         "RegisterClassInfo misses a change to the reserved registers");
+
   // This only applies on subtargets that have a configurable AGPR vs. VGPR
   // allocation.
   if (!ST.hasGFX90AInsts())

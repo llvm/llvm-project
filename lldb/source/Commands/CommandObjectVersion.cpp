@@ -10,7 +10,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Version/Version.h"
+#include "lldb/Target/Language.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace lldb;
@@ -63,7 +63,8 @@ static void dump(const StructuredData::Dictionary &config, Stream &s) {
 }
 
 void CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
-  result.AppendMessageWithFormatv("{0}", lldb_private::GetVersion());
+  result.AppendMessageWithFormatv("{0}",
+                                  Language::GetVersionWithLanguageInfo());
 
   if (m_options.verbose)
     dump(*Debugger::GetBuildConfiguration(), result.GetOutputStream());

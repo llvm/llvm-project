@@ -8,6 +8,7 @@
 
 #include "LTO.h"
 #include "Config.h"
+#include "Driver.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -58,7 +59,7 @@ static lto::Config createConfig(Ctx &ctx) {
   c.LibraryOptions = &ctx.arg.libraryOptions;
 
   // LLD supports the new relocations and address-significance tables.
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options = getTargetOptions(ctx.arg.libraryOptions);
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.arg.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
@@ -168,6 +169,12 @@ static lto::Config createConfig(Ctx &ctx) {
   if (ctx.arg.ltoEmitAsm) {
     c.CGFileType = CodeGenFileType::AssemblyFile;
     c.Options.MCOptions.AsmVerbose = true;
+  }
+
+  if (ctx.arg.thinLTOIndexOnly) {
+    c.PostRegularLTOLinkHook = [&ctx]() {
+      markBuffersAsDontNeed(ctx, /*skipLinkedOutput=*/true);
+    };
   }
 
   if (!ctx.arg.saveTempsArgs.empty())

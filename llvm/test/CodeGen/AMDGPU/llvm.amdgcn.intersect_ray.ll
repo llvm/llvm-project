@@ -706,7 +706,6 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v4, 4.0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, s0, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v2, s0, s2, v2
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
@@ -742,11 +741,10 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s1, 1.0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    flat_load_b32 v9, v[0:1]
 ; GFX11-GISEL-NEXT:    flat_load_b32 v10, v[2:3]
@@ -807,7 +805,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, 1.0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
@@ -954,7 +952,6 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX11-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s0, s0, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v2, s0, s2, v2
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
@@ -1141,7 +1138,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX11-SDAG-NEXT:    v_bfrev_b32_e32 v10, 4.0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s4, s6, v0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s7, 0, s4
 ; GFX11-SDAG-NEXT:    flat_load_b32 v11, v[0:1]
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0x40c00000
@@ -1176,7 +1172,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_lshlrev_b32 v2, 2, v0
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX11-GISEL-NEXT:    s_mov_b32 s6, 2.0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, s6
@@ -1203,7 +1199,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX12-SDAG-NEXT:    v_bfrev_b32_e32 v10, 4.0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, s4, s6, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s7, 0, s4
 ; GFX12-SDAG-NEXT:    flat_load_b32 v11, v[0:1]
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0x40c00000
@@ -1238,7 +1233,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_lshlrev_b32 v2, 2, v0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, 2.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -1384,7 +1379,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v5, 2.0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_add_co_u32 v0, s4, s6, v0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s7, 0, s4
 ; GFX11-SDAG-NEXT:    flat_load_b32 v8, v[0:1]
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0x46004200
@@ -1410,7 +1404,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v5, 2.0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, s4, s6, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s7, 0, s4
 ; GFX12-SDAG-NEXT:    flat_load_b32 v8, v[0:1]
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0x46004200
