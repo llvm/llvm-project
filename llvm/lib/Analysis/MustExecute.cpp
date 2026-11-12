@@ -770,12 +770,8 @@ MustBeExecutedContextExplorer::getForwardContext(const BasicBlock *BB) {
   auto &Context = ForwardContextMap[BB];
   if (!Context) {
     Context = std::make_unique<BlockContext>();
-    Context->Contains.resize(BB->getParent()->getMaxBlockNumber());
-    for (const BasicBlock *CurBB = getForwardNextBlock(BB); CurBB;) {
-      if (Context->contains(CurBB))
-        break;
-      Context->Blocks.push_back(CurBB);
-      Context->Contains.set(CurBB->getNumber());
+    for (const BasicBlock *CurBB = getForwardNextBlock(BB);
+         CurBB && Context->insert(CurBB);) {
       Context->LastStop = getForwardStop(&CurBB->front());
       CurBB = Context->LastStop ? nullptr : getForwardNextBlock(CurBB);
     }
@@ -788,13 +784,9 @@ MustBeExecutedContextExplorer::getBackwardContext(const BasicBlock *BB) {
   auto &Context = BackwardContextMap[BB];
   if (!Context) {
     Context = std::make_unique<BlockContext>();
-    Context->Contains.resize(BB->getParent()->getMaxBlockNumber());
-    for (const BasicBlock *CurBB = getBackwardNextBlock(BB);
-         CurBB && !Context->contains(CurBB);
-         CurBB = getBackwardNextBlock(CurBB)) {
-      Context->Blocks.push_back(CurBB);
-      Context->Contains.set(CurBB->getNumber());
-    }
+    const BasicBlock *CurBB = getBackwardNextBlock(BB);
+    while (CurBB && Context->insert(CurBB))
+      CurBB = getBackwardNextBlock(CurBB);
   }
   return *Context;
 }

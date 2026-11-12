@@ -26,12 +26,13 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include <climits>
 
 namespace llvm {
 
@@ -539,13 +540,45 @@ private:
   /// that a forward context ends at LastStop in its last block, if set.
   struct BlockContext {
     SmallVector<const BasicBlock *, 8> Blocks;
-    /// The blocks by their number, to look them up quickly.
+    /// The blocks by their number, to look them up quickly. To keep contexts
+    /// of few blocks small in functions with many blocks, this is only used
+    /// once it is not larger than Blocks, and BlockSet is used until then.
     BitVector Contains;
+    /// The block number epoch of the function when Contains was built.
+    unsigned BlockNumberEpoch = 0;
+    SmallPtrSet<const BasicBlock *, 8> BlockSet;
     const Instruction *LastStop = nullptr;
 
     bool contains(const BasicBlock *BB) const {
+      if (Contains.empty())
+        return BlockSet.contains(BB);
+      assert(BlockNumberEpoch == BB->getParent()->getBlockNumberEpoch() &&
+             "must-be-executed context used with outdated block numbers");
       unsigned Number = BB->getNumber();
       return Number < Contains.size() && Contains.test(Number);
+    }
+
+    /// Add \p BB to the context. Return false if it is already in it.
+    bool insert(const BasicBlock *BB) {
+      if (!Contains.empty()) {
+        if (contains(BB))
+          return false;
+        Contains.set(BB->getNumber());
+        Blocks.push_back(BB);
+        return true;
+      }
+      if (!BlockSet.insert(BB).second)
+        return false;
+      Blocks.push_back(BB);
+      unsigned MaxNumber = BB->getParent()->getMaxBlockNumber();
+      if (Blocks.size() * sizeof(const BasicBlock *) * CHAR_BIT < MaxNumber)
+        return true;
+      BlockNumberEpoch = BB->getParent()->getBlockNumberEpoch();
+      Contains.resize(MaxNumber);
+      for (const BasicBlock *Block : Blocks)
+        Contains.set(Block->getNumber());
+      BlockSet = {};
+      return true;
     }
   };
 
