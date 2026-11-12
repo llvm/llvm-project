@@ -536,7 +536,6 @@ However for values of NaN, the results are undefined.
 }];
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Discards the current pixel if the specified value is less than zero.

@@ -85,6 +85,7 @@ class SDDbgValue;
 class SDDbgOperand;
 class SDDbgLabel;
 class SelectionDAG;
+struct SelectionDAGOptions;
 class SelectionDAGTargetInfo;
 class TargetLibraryInfo;
 class TargetLowering;
@@ -230,6 +231,7 @@ class SelectionDAG {
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
   const LibcallLoweringInfo *Libcalls = nullptr;
+  const SelectionDAGOptions *DAGOpts = nullptr;
 
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
@@ -470,9 +472,6 @@ public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
 
-  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
-  LLVM_ABI static unsigned getHasPredecessorMaxSteps();
-
   LLVM_ABI explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;
@@ -508,6 +507,9 @@ public:
 
   LLVM_ABI bool hasSwiftErrorArg() const;
 
+  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
+  LLVM_ABI unsigned getHasPredecessorMaxSteps() const;
+
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
@@ -526,9 +528,7 @@ public:
   /// available, otherwise return nullptr.
   const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
-  cl::LibraryOptionsContext &getLibraryOptions() const {
-    return Context->getLibraryOptions();
-  }
+  const SelectionDAGOptions &getSelectionDAGOptions() const { return *DAGOpts; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
 
@@ -2562,14 +2562,24 @@ public:
   /// 'Bytes' bytes from a location that is 'Dist' units away from the
   /// location that the 'Base' load is loading from.
   LLVM_ABI bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
-                                               unsigned Bytes, int Dist) const;
+                                               TypeSize Bytes, int Dist) const;
+  bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
+                                      unsigned Bytes, int Dist) const {
+    return areNonVolatileConsecutiveLoads(LD, Base, TypeSize::getFixed(Bytes),
+                                          Dist);
+  }
 
   /// Return true if stores are next to each other and can be merged. Check that
   /// both are nonvolatile and if \p ST is storing \p Bytes bytes to a location
   /// that is \p Dist units away from the location that \p Base is storing to.
   LLVM_ABI bool areNonVolatileConsecutiveStores(StoreSDNode *ST,
                                                 StoreSDNode *Base,
-                                                unsigned Bytes, int Dist) const;
+                                                TypeSize Bytes, int Dist) const;
+  bool areNonVolatileConsecutiveStores(StoreSDNode *ST, StoreSDNode *Base,
+                                       unsigned Bytes, int Dist) const {
+    return areNonVolatileConsecutiveStores(ST, Base, TypeSize::getFixed(Bytes),
+                                           Dist);
+  }
 
   /// Infer alignment of a load / store address. Return std::nullopt if it
   /// cannot be inferred.

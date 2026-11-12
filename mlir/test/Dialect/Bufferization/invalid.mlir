@@ -9,6 +9,15 @@ func.func @alloc_tensor_missing_dims(%arg0: index)
 
 // -----
 
+func.func @alloc_tensor_unranked_dims(%arg0: index)
+{
+  // expected-error @+1 {{takes dynamic sizes and a size hint only for a ranked tensor result}}
+  %0 = bufferization.alloc_tensor(%arg0) : tensor<*xf32>
+  return
+}
+
+// -----
+
 // expected-note @+1 {{prior use here}}
 func.func @alloc_tensor_type_mismatch(%t: tensor<?xf32>) {
   // expected-error @+1{{expects different type than prior uses: 'tensor<5xf32>' vs 'tensor<?xf32>'}}
@@ -193,5 +202,14 @@ func.func @invalid_type_to_tensor(%b: memref<1x2x3x4xf16>) {
   // expected-error @below{{element types do not match}}
   %t2 = bufferization.to_tensor %b
     : memref<1x2x3x4xf16> to tensor<1x2x3x4xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_unshaped_buffer(%t: tensor<4xf32>) {
+  // expected-error @below{{'bufferization.to_buffer' op failed to verify that specified tensor and buffer types match}}
+  // expected-error @below{{expected a shaped buffer type}}
+  %b = bufferization.to_buffer %t : tensor<4xf32> to !test.test_unshaped<f32>
   return
 }

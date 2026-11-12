@@ -340,14 +340,15 @@ std::size_t Constant<Type<TypeCategory::Character>>::CopyFrom(
   }
 }
 
-// Constant<SomeDerived> specialization
-Constant<SomeDerived>::Constant(const StructureConstructor &x)
+// Constant<Type<TypeCategory::Derived>> specialization
+Constant<Type<TypeCategory::Derived>>::Constant(const StructureConstructor &x)
     : Base{/*kind=*/0, x.values(), Result{x.derivedTypeSpec()}} {}
 
-Constant<SomeDerived>::Constant(StructureConstructor &&x)
+Constant<Type<TypeCategory::Derived>>::Constant(StructureConstructor &&x)
     : Base{/*kind=*/0, std::move(x.values()), Result{x.derivedTypeSpec()}} {}
 
-Constant<SomeDerived>::Constant(const semantics::DerivedTypeSpec &spec,
+Constant<Type<TypeCategory::Derived>>::Constant(
+    const semantics::DerivedTypeSpec &spec,
     std::vector<StructureConstructorValues> &&x, ConstantSubscripts &&s)
     : Base{/*kind=*/0, std::move(x), std::move(s), Result{spec}} {}
 
@@ -360,13 +361,14 @@ static std::vector<StructureConstructorValues> AcquireValues(
   return result;
 }
 
-Constant<SomeDerived>::Constant(const semantics::DerivedTypeSpec &spec,
+Constant<Type<TypeCategory::Derived>>::Constant(
+    const semantics::DerivedTypeSpec &spec,
     std::vector<StructureConstructor> &&x, ConstantSubscripts &&shape)
     : Base{/*kind=*/0, AcquireValues(std::move(x)), std::move(shape),
           Result{spec}} {}
 
 std::optional<StructureConstructor>
-Constant<SomeDerived>::GetScalarValue() const {
+Constant<Type<TypeCategory::Derived>>::GetScalarValue() const {
   if (Rank() == 0) {
     return StructureConstructor{result().derivedTypeSpec(), values_.at(0)};
   } else {
@@ -374,25 +376,25 @@ Constant<SomeDerived>::GetScalarValue() const {
   }
 }
 
-StructureConstructor Constant<SomeDerived>::At(
+StructureConstructor Constant<Type<TypeCategory::Derived>>::At(
     const ConstantSubscripts &index) const {
   return {result().derivedTypeSpec(), values_.at(SubscriptsToOffset(index))};
 }
 
-bool Constant<SomeDerived>::operator==(
-    const Constant<SomeDerived> &that) const {
+bool Constant<Type<TypeCategory::Derived>>::operator==(
+    const Constant<Type<TypeCategory::Derived>> &that) const {
   return result().derivedTypeSpec() == that.result().derivedTypeSpec() &&
       shape() == that.shape() && values_ == that.values_;
 }
 
-auto Constant<SomeDerived>::Reshape(ConstantSubscripts &&dims) const
-    -> Constant {
+auto Constant<Type<TypeCategory::Derived>>::Reshape(
+    ConstantSubscripts &&dims) const -> Constant {
   return {result().derivedTypeSpec(), Base::Reshape(dims), std::move(dims)};
 }
 
-std::size_t Constant<SomeDerived>::CopyFrom(const Constant<SomeDerived> &source,
-    std::size_t count, ConstantSubscripts &resultSubscripts,
-    const std::vector<int> *dimOrder) {
+std::size_t Constant<Type<TypeCategory::Derived>>::CopyFrom(
+    const Constant<Type<TypeCategory::Derived>> &source, std::size_t count,
+    ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder) {
   return Base::CopyFrom(source, count, resultSubscripts, dimOrder);
 }
 

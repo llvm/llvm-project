@@ -1766,7 +1766,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[DST]], i64 3
-; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP0]], i64 -1
+; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -2
 ; VEC-NEXT:    store <2 x i16> splat (i16 1), ptr [[TMP2]], align 2
 ; VEC-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VEC:       [[MIDDLE_BLOCK]]:
@@ -1799,7 +1799,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[DST]], i64 3
-; TAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[TMP0]], i64 -1
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -2
 ; TAILFOLD-NEXT:    store <2 x i16> splat (i16 1), ptr [[TMP1]], align 2
 ; TAILFOLD-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; TAILFOLD:       [[MIDDLE_BLOCK]]:

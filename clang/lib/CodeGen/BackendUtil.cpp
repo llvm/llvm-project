@@ -432,7 +432,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.TLSSize = CodeGenOpts.TLSSize;
   Options.EnableTLSDESC = CodeGenOpts.EnableTLSDESC;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
-  Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
   Options.StackUsageFile = CodeGenOpts.StackUsageFile;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
@@ -486,6 +485,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.Crel = CodeGenOpts.Crel;
   Options.MCOptions.RelocSectionSym = CodeGenOpts.getRelocSectionSym();
   Options.MCOptions.ImplicitMapSyms = CodeGenOpts.ImplicitMapSyms;
+  Options.MCOptions.MachORelocatableDwarf = CodeGenOpts.MachORelocatableDwarf;
   Options.MCOptions.X86RelaxRelocations = CodeGenOpts.X86RelaxRelocations;
   Options.MCOptions.CompressDebugSections =
       CodeGenOpts.getCompressDebugSections();

@@ -429,6 +429,48 @@ struct TrigonometricOpPattern final : OpConversionPattern<ComplexOp> {
     return success();
   }
 };
+
+/// Lowers complex.exp/expm1 following the identities
+/// exp(x + iy) = exp(x) * cos(y) + i * exp(x) * sin(y)
+/// expm1(x + iy) = exp(x) * cos(y) - 1 + i * exp(x) * sin(y)
+template <bool IsExpm1, typename ExpOp, typename SinOp, typename CosOp,
+          typename ComplexOp =
+              std::conditional_t<IsExpm1, complex::Expm1Op, complex::ExpOp>>
+struct ExpOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value expRe = ExpOp::create(rewriter, loc, re);
+    Value sinIm = SinOp::create(rewriter, loc, im);
+    Value cosIm = CosOp::create(rewriter, loc, im);
+    Value resultRe = spirv::FMulOp::create(rewriter, loc, expRe, cosIm);
+    if (IsExpm1) {
+      Value one = createFPConstant(rewriter, loc, re.getType(), 1.0);
+      resultRe = spirv::FSubOp::create(rewriter, loc, resultRe, one);
+    }
+    Value resultIm = spirv::FMulOp::create(rewriter, loc, expRe, sinIm);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -463,6 +505,13 @@ void mlir::populateComplexToSPIRVPatterns(
            TrigonometricOpPattern<SinCos::Cos, spirv::GLSinOp, spirv::GLCosOp,
                                   spirv::GLSinhOp, spirv::GLCoshOp>,
            TrigonometricOpPattern<SinCos::Cos, spirv::CLSinOp, spirv::CLCosOp,
-                                  spirv::CLSinhOp, spirv::CLCoshOp>>(
-          typeConverter, context);
+                                  spirv::CLSinhOp, spirv::CLCoshOp>,
+           ExpOpPattern</*IsExpm1=*/false, spirv::GLExpOp, spirv::GLSinOp,
+                        spirv::GLCosOp>,
+           ExpOpPattern</*IsExpm1=*/false, spirv::CLExpOp, spirv::CLSinOp,
+                        spirv::CLCosOp>,
+           ExpOpPattern</*IsExpm1=*/true, spirv::GLExpOp, spirv::GLSinOp,
+                        spirv::GLCosOp>,
+           ExpOpPattern</*IsExpm1=*/true, spirv::CLExpOp, spirv::CLSinOp,
+                        spirv::CLCosOp>>(typeConverter, context);
 }
