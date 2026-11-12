@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFEXPRESSION_H
 #define LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFEXPRESSION_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -71,6 +72,15 @@ public:
       Dwarf5
     };
 
+    /// Categories of errors encountered while decoding an operation.
+    /// These are bit flags because an operation may have more than one
+    /// applicable error category.
+    enum class ErrorKind : uint8_t {
+      None = 0x0,
+      OperandDecode = 0x1,
+      UnknownOperation = 0x2,
+    };
+
     /// Description of the encoding of one expression Op.
     struct Description {
       DwarfVersion Version;     ///< Dwarf version where the Op was introduced.
@@ -89,7 +99,7 @@ public:
 
     uint8_t Opcode; ///< The Op Opcode, DW_OP_<something>.
     Description Desc;
-    bool Error = false;
+    ErrorKind Errors = ErrorKind::None;
     uint64_t EndOffset;
     SmallVector<uint64_t> Operands;
     SmallVector<uint64_t> OperandEndOffsets;
@@ -108,10 +118,18 @@ public:
       return OperandEndOffsets[Idx];
     }
     uint64_t getEndOffset() const { return EndOffset; }
-    bool isError() const { return Error; }
+    bool isError() const { return Errors != ErrorKind::None; }
+    bool hasError(ErrorKind Kind) const {
+      return (llvm::to_underlying(Errors) & llvm::to_underlying(Kind)) != 0;
+    }
 
   private:
-    LLVM_ABI bool extract(DataExtractor Data, uint8_t AddressSize,
+    void addError(ErrorKind Kind) {
+      Errors = static_cast<ErrorKind>(llvm::to_underlying(Errors) |
+                                      llvm::to_underlying(Kind));
+    }
+
+    LLVM_ABI void extract(DataExtractor Data, uint8_t AddressSize,
                           uint64_t Offset,
                           std::optional<dwarf::DwarfFormat> Format);
   };
@@ -126,9 +144,7 @@ public:
     Operation Op;
     iterator(const DWARFExpression *Expr, uint64_t Offset)
         : Expr(Expr), Offset(Offset) {
-      Op.Error =
-          Offset >= Expr->Data.getData().size() ||
-          !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
+      Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
     }
 
   public:
@@ -137,9 +153,7 @@ public:
 
     iterator &operator++() {
       Offset = Op.isError() ? Expr->Data.getData().size() : Op.EndOffset;
-      Op.Error =
-          Offset >= Expr->Data.getData().size() ||
-          !Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
+      Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
       return *this;
     }
 

@@ -290,6 +290,87 @@ TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_MissingSelector) {
   EXPECT_EQ(OS.str(), "<decoding error> e9 0d");
 }
 
+TEST(LEB128Operands, OversizedGenericConstants) {
+  constexpr uint8_t Opcodes[] = {DW_OP_constu, DW_OP_consts};
+  for (uint8_t Opcode : Opcodes) {
+    const uint8_t Enc[] = {Opcode,
+                           // Positive 2^64 + 5 as either ULEB128 or SLEB128.
+                           0x85, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+                           0x02, DW_OP_stack_value};
+    DataExtractor DE(Enc, true);
+    DWARFExpression Expr(DE, 8);
+
+    auto It = Expr.begin();
+    ASSERT_FALSE(It->isError());
+    EXPECT_FALSE(
+        It->hasError(DWARFExpression::Operation::ErrorKind::OperandDecode));
+    EXPECT_FALSE(
+        It->hasError(DWARFExpression::Operation::ErrorKind::UnknownOperation));
+    EXPECT_EQ(It->getRawOperand(0), 5u);
+    EXPECT_EQ(It->getEndOffset(), 11u);
+    ++It;
+    ASSERT_FALSE(It->isError());
+    EXPECT_EQ(It->getCode(), DW_OP_stack_value);
+  }
+}
+
+TEST(LEB128Operands, OversizedNonGenericOperand) {
+  const uint8_t Enc[] = {DW_OP_plus_uconst,
+                         0x80,
+                         0x80,
+                         0x80,
+                         0x80,
+                         0x80,
+                         0x80,
+                         0x80,
+                         0x80,
+                         0x80,
+                         0x02,
+                         DW_OP_stack_value};
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  auto It = Expr.begin();
+  EXPECT_TRUE(It->isError());
+  EXPECT_TRUE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::OperandDecode));
+  EXPECT_FALSE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::UnknownOperation));
+  ++It;
+  EXPECT_EQ(It, Expr.end());
+}
+
+TEST(LEB128Operands, ErrorKindsResetAndCombine) {
+  const uint8_t UnknownOpcode[] = {0xff};
+  DWARFExpression UnknownExpr(DataExtractor(UnknownOpcode, true), 8);
+  auto It = UnknownExpr.begin();
+  EXPECT_TRUE(It->isError());
+  EXPECT_FALSE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::OperandDecode));
+  EXPECT_TRUE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::UnknownOperation));
+  ++It;
+  EXPECT_EQ(It, UnknownExpr.end());
+  EXPECT_FALSE(It->isError());
+
+  const uint8_t TruncatedNVIDIAMux[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux,
+                                        0xa5};
+  DWARFExpression MuxExpr(DataExtractor(TruncatedNVIDIAMux, true), 8);
+  It = MuxExpr.begin();
+  EXPECT_TRUE(It->isError());
+  EXPECT_TRUE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::OperandDecode));
+  EXPECT_TRUE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::UnknownOperation));
+}
+
+TEST_F(DWARFExpressionCompactPrinterTest,
+       OversizedNonGenericOperandFailsCompactPrinting) {
+  TestExprPrinterFailure(
+      {DW_OP_breg0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02},
+      "<decoding error>");
+}
+
 // NVPTX packs virtual register names into DWARF register numbers, so compact
 // printing without a callback must recover the name and return true.
 TEST(NVPTXPackedRegister, Compact_DW_OP_regx_NoMRI) {
