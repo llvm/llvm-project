@@ -102,3 +102,75 @@ void no_exit() { Obj arr[2] = {Obj{'a'}, Obj{'b'}}; }
 // LLVM-LABEL: define dso_local void @_Z7no_exitv(
 // LLVM-NOT:     store i8 1
 // LLVM:         ret void
+
+// The initializer list of an array new-expression is guarded in the same way.
+
+Obj *new_early_return(bool c) {
+  return new Obj[2]{Obj{'a'}, ({
+                      if (c)
+                        return nullptr;
+                      Obj{'b'};
+                    })};
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z16new_early_returnb(
+// CIR:         %[[END:.*]] = cir.alloca "arrayinit.endOfInit"
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive"
+// CIR:         %[[BEGIN:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!void> -> !cir.ptr<!rec_Obj>
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:    cir.store %[[TRUE]], %[[ACTIVE]]
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR-NEXT:      cir.store {{.*}} %[[BEGIN]], %[[END]]
+// CIR:           cir.call @_ZN3ObjC1Ec(%[[BEGIN]],
+// CIR:           %[[SECOND:.*]] = cir.ptr_stride %[[BEGIN]]
+// CIR-NEXT:      cir.store {{.*}} %[[SECOND]], %[[END]]
+// CIR:           cir.if
+// CIR:             cir.return
+// CIR:           cir.call @_ZN3ObjC1Ec(%[[SECOND]],
+// CIR:           %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR-NEXT:      cir.yield
+// CIR-NOEH-NEXT: } cleanup normal {
+// CIR-EH-NEXT:   } cleanup all {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        %[[CUR_END:.*]] = cir.load {{.*}} %[[END]]
+// CIR-NEXT:        %[[NOT_EMPTY:.*]] = cir.cmp ne %[[CUR_END]], %[[BEGIN]]
+// CIR-NEXT:        cir.if %[[NOT_EMPTY]] {
+// CIR:               cir.do {
+// CIR:                 cir.call @_ZN3ObjD1Ev(
+
+// LLVM-LABEL: define dso_local noundef ptr @_Z16new_early_returnb(
+// LLVM:         store i8 1, ptr %[[ACTIVE:[0-9]+]]
+// LLVM:         call void @_ZN3ObjC1Ec(ptr {{.*}}, i8 noundef signext 97)
+// LLVM:         br i1 %{{.*}}, label %[[RETURN:[0-9]+]], label %{{.*}}
+// LLVM:       [[RETURN]]:
+// LLVM-NEXT:    store ptr null, ptr %{{.*}}
+// LLVM-NEXT:    store i32 1, ptr %[[SLOT:[0-9]+]]
+// LLVM-NEXT:    br label %[[CLEANUP:[0-9]+]]
+// LLVM:         call void @_ZN3ObjC1Ec(ptr {{.*}}, i8 noundef signext 98)
+// LLVM:         store i8 0, ptr %[[ACTIVE]]
+// LLVM-NEXT:    store i32 0, ptr %[[SLOT]]
+// LLVM-NEXT:    br label %[[CLEANUP]]
+// LLVM:       [[CLEANUP]]:
+// LLVM-NEXT:    %[[FLAG:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVM-NEXT:    %[[IS_ACTIVE:.*]] = trunc i8 %[[FLAG]] to i1
+// LLVM-NEXT:    br i1 %[[IS_ACTIVE]], label %{{.*}}, label %{{.*}}
+// LLVM:         call void @_ZN3ObjD1Ev(
+
+// OGCG-LABEL: define dso_local noundef ptr @_Z16new_early_returnb(
+// OGCG:       if.then:
+// OGCG:         load ptr, ptr %array.init.end
+// OGCG:       arraydestroy.body:
+// OGCG:         call void @_ZN3ObjD1Ev(
+
+// As for a local array, the cleanup and the end of the initialized part are
+// dropped without an early exit and without exceptions.
+
+Obj *new_no_exit() { return new Obj[2]{Obj{'a'}, Obj{'b'}}; }
+
+// CIR-LABEL: cir.func {{.*}} @_Z11new_no_exitv(
+// CIR-NOEH-NOT: arrayinit.endOfInit
+// CIR:           cir.call @_ZN3ObjC1Ec(
+// CIR:           cir.call @_ZN3ObjC1Ec(
+// CIR:         cir.return
