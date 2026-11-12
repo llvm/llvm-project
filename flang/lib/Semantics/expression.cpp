@@ -3448,9 +3448,9 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
       tried.erase(tried.begin() + triedBefore, tried.end());
     }
     // Apply the language's non-elemental preference before distance ranking
-    // (F2023 15.5.6p2). Collect all matches so an early tie cannot hide a
-    // later, better match or make the result depend on specific declaration
-    // order.
+    // (F2023 15.5.5.2 and 15.5.6p2). Collect all matches so an early tie cannot
+    // hide a later, better match or make the result depend on specific
+    // declaration order.
     const auto &matches{
         nonElementalMatches.empty() ? elementalMatches : nonElementalMatches};
     bool hasPass{false}, hasNopass{false};
@@ -3481,8 +3481,8 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
       }
     }
     if (ambiguous) {
-      // 16.9.144(6): a bare NULL() is not allowed as an actual argument to a
-      // generic procedure if the specific procedure cannot be unambiguously
+      // F2023 16.9.155p6: a bare NULL() is not allowed as an actual argument to
+      // a generic procedure if the specific procedure cannot be unambiguously
       // distinguished. Underspecified external procedure actual arguments can
       // also leave several specifics equally eligible.
       return {nullptr, true /* due to ambiguity */, std::move(tried)};
