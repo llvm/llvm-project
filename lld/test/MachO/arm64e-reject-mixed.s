@@ -48,8 +48,7 @@
 # WARN-X1-ARM64:  warning: {{.*}}arm64e-x1.o has architecture arm64e.x1 which is incompatible with target architecture arm64
 # WARN-X1-ARM64E: warning: {{.*}}arm64e-x1.o has architecture arm64e.x1 which is incompatible with target architecture arm64e
 
-## Dylibs and bitcode are checked too. Like ld-prime, an arm64 link takes an
-## arm64e dylib.
+## Dylibs and bitcode are checked too, but an arm64 link takes an arm64e dylib.
 # RUN: %lld -arch arm64 -platform_version macos 13.0 13.0 -dylib %t/arm64.o \
 # RUN:   -o %t/libarm64.dylib
 # RUN: %lld -arch arm64e -platform_version macos 13.0 13.0 -dylib %t/arm64e.o \

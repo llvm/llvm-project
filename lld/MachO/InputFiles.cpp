@@ -228,13 +228,11 @@ static bool isCompatibleObject(uint32_t cpuType, uint32_t cpuSubtype) {
   return !isArm64e || hasCompatiblePtrAuthABI(cpuSubtype);
 }
 
-// ld-prime is laxer with dylibs and bundle loaders than with objects: an arm64
-// link takes any arm64e dylib, and an arm64e link takes dylibs with userland
-// pointer authentication ABI version 0 or 1, as macOS executables are marked,
-// and arm64e.x1 dylibs with version 0.
+// A dylib's code isn't linked into the output, so only its ABI has to match.
 static bool isCompatibleDylib(uint32_t cpuType, uint32_t cpuSubtype) {
   if (cpuType != getCPUTypeFromArchitecture(config->arch()).first)
     return false;
+  // arm64 processes use the arm64e system libraries.
   if (config->arch() != AK_arm64e)
     return true;
   if (!CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype) ||
@@ -243,6 +241,7 @@ static bool isCompatibleDylib(uint32_t cpuType, uint32_t cpuSubtype) {
   unsigned version = CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype);
   switch (cpuSubtype & ~CPU_SUBTYPE_MASK) {
   case CPU_SUBTYPE_ARM64E:
+    // macOS executables, which can be bundle loaders, are marked version 1.
     return version <= 1;
   case CPU_SUBTYPE_ARM64E_X1:
     return version == 0;
@@ -251,8 +250,6 @@ static bool isCompatibleDylib(uint32_t cpuType, uint32_t cpuSubtype) {
   }
 }
 
-// Like ld-prime, ignore an input for another architecture with a warning, or
-// reject it with -arch_errors_fatal.
 static void reportIncompatibleArch(const InputFile *file, uint32_t cpuType,
                                    uint32_t cpuSubtype) {
   bool isArm64e = cpuType == CPU_TYPE_ARM64 &&
@@ -2598,10 +2595,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                                                utostr(offsetInArchive)));
   obj = check(lto::InputFile::create(mbref));
 
-  // Like ld-prime, ignore bitcode for another architecture. Check it as the
-  // object that LTO will produce, which for arm64e has userland pointer
-  // authentication ABI version 0. Bitcode whose triple has no Mach-O CPU type
-  // isn't checked.
+  // LTO compiles bitcode into the output, so check it like an object. The
+  // triple has no pointer authentication ABI version, so assume 0.
   Triple triple(obj->getTargetTriple());
   std::optional<uint32_t> cpuType =
       expectedToOptional(MachO::getCPUType(triple));
