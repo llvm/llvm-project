@@ -11,3 +11,18 @@
 # RUN: not llvm-ar tv %t_mal_globalsym64.a 2>&1 | FileCheck %s -DFILE=%t_mal_globalsym64.a --check-prefixes=GLOB64OFFSET
 
 # GLOB64OFFSET: llvm-ar{{.*}}: error: unable to load '[[FILE]]': truncated or malformed archive (global symbol table offset of 64-bit members"1i28" is not a number)
+
+## Test a global symbol table offset that only passes the bounds check because
+## adding the member header size to it wraps around.
+
+# RUN: echo    "<bigaf>" >  %t_wrap_globalsym.a
+# RUN: echo -n "0                   184467440737095516150                   0                   0                   0                   " >> %t_wrap_globalsym.a
+# RUN: not llvm-ar tv %t_wrap_globalsym.a 2>&1 | FileCheck %s -DFILE=%t_wrap_globalsym.a --check-prefixes=GLOBWRAP
+
+# GLOBWRAP: llvm-ar{{.*}}: error: unable to load '[[FILE]]': truncated or malformed archive (32-bit global symbol table header at offset 0xffffffffffffffff and size 0x72 goes past the end of file)
+
+# RUN: echo    "<bigaf>" >  %t_wrap_globalsym64.a
+# RUN: echo -n "0                   0                   184467440737095516150                   0                   0                   " >> %t_wrap_globalsym64.a
+# RUN: not llvm-ar tv %t_wrap_globalsym64.a 2>&1 | FileCheck %s -DFILE=%t_wrap_globalsym64.a --check-prefixes=GLOB64WRAP
+
+# GLOB64WRAP: llvm-ar{{.*}}: error: unable to load '[[FILE]]': truncated or malformed archive (64-bit global symbol table header at offset 0xffffffffffffffff and size 0x72 goes past the end of file)
