@@ -413,6 +413,13 @@ public:
     return false;
   }
 
+  /// Query if the process has a system shared cache.
+  ///
+  /// GetSharedCacheInformation() may be unable to provide all of the
+  /// shared cache details even when one is in use; this distinguishes that
+  /// case from a process that has no shared cache.
+  virtual bool SharedCacheInUse() { return false; }
+
   /// Return whether the dynamic loader is fully initialized and it's safe to
   /// call its APIs.
   ///
