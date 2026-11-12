@@ -6301,8 +6301,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
   if (Desc.getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS) {
     const MachineOperand &SrcOp = MI.getOperand(1);
-    if (!SrcOp.isReg() || SrcOp.getReg().isVirtual()) {
-      ErrInfo = "pseudo expects only physical SGPRs";
+    if (!SrcOp.isReg() ||
+        (SrcOp.getReg().isPhysical() && !RI.isSGPRReg(MRI, SrcOp.getReg()))) {
+      ErrInfo = "pseudo expects an SGPR source";
       return false;
     }
   }
