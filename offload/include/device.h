@@ -186,9 +186,9 @@ struct DeviceTy {
                   int32_t Kind = TARGET_ALLOC_DEFAULT);
 
   /// Deallocates memory which \p TgtPtrBegin points at and returns
-  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. p Kind dictates what
-  /// allocator should be used (host, shared, device).
-  int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
+  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. The kind of the
+  /// allocation is resolved by the runtime from the pointer.
+  int32_t deleteData(void *TgtPtrBegin);
 
   /// Allocate \p Size bytes of \p Type memory in the device's context, which,
   /// unlike allocData, caches the allocation for reuse. \p Type must be
