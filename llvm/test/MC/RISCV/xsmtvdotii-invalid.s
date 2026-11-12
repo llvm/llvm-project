@@ -3,7 +3,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ERROR %s
 
 smt.vmadot v3, v2, v0, i4
-// CHECK-ERROR: :[[@LINE-1]]:12: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:12: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vmadot v2, v2, v0, i4
 // CHECK-ERROR: :[[@LINE-1]]:12: error: the destination vector register group cannot overlap the source vector register group{{$}}
@@ -18,10 +18,10 @@ smt.vmadot v2, v4, v0, fp16
 // CHECK-ERROR: :[[@LINE-1]]:24: error: SpacemiT's Integer Matrix only supports [i4|i8] mode{{$}}
 
 smt.vmadot1 v3, v2, v4, i8
-// CHECK-ERROR: :[[@LINE-1]]:13: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:13: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vmadot1 v0, v3, v4, i8
-// CHECK-ERROR: :[[@LINE-1]]:17: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:17: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vmadot1 v2, v2, v4, i8
 // CHECK-ERROR: :[[@LINE-1]]:13: error: the destination vector register group cannot overlap the source vector register group{{$}}
@@ -36,10 +36,10 @@ smt.vmadot1 v0, v2, v4, fp16
 // CHECK-ERROR: :[[@LINE-1]]:25: error: SpacemiT's Integer Matrix only supports [i4|i8] mode{{$}}
 
 smt.vmadot.sp v3, v2, v8, v0, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:15: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:15: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vmadot.sp v2, v3, v8, v0, 3, i4
-// CHECK-ERROR: :[[@LINE-1]]:19: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:19: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vmadot.sp v2, v2, v8, v0, 3, i4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
@@ -84,7 +84,7 @@ smt.vmadot.hp v2, v4, v8, v0, 8, i4
 // CHECK-ERROR: :[[@LINE-1]]:31: error: immediate must be an integer in the range [0, 7]{{$}}
 
 smt.vfwmadot v3, v4, v2
-// CHECK-ERROR: :[[@LINE-1]]:14: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:14: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vfwmadot v4, v4, v2
 // CHECK-ERROR: :[[@LINE-1]]:14: error: the destination vector register group cannot overlap the source vector register group{{$}}
@@ -102,10 +102,10 @@ smt.vfwmadot v4, v2, v3, i8
 // CHECK-ERROR: :[[@LINE-1]]:26: error: unexpected extra operand for instruction{{$}}
 
 smt.vfwmadot1 v3, v2, v4
-// CHECK-ERROR: :[[@LINE-1]]:15: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:15: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vfwmadot1 v2, v3, v4
-// CHECK-ERROR: :[[@LINE-1]]:19: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:19: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vfwmadot1 v2, v2, v4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
@@ -114,7 +114,7 @@ smt.vfwmadot1 v4, v2, v4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
 smt.vfwmadot1 v2, v3, v4
-// CHECK-ERROR: :[[@LINE-1]]:19: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:19: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vfwmadot1 v2, v4, v3
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
@@ -159,7 +159,7 @@ smt.vnspack4.vv v1, v3, v5, 4
 // CHECK-ERROR: :[[@LINE-1]]:29: error: immediate must be an integer in the range [0, 3]{{$}}
 
 smt.vpack.vv v3, v2, v4, 1
-// CHECK-ERROR: :[[@LINE-1]]:14: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:14: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vpack.vv v2, v2, v4, 1
 // CHECK-ERROR: :[[@LINE-1]]:14: error: the destination vector register group cannot overlap the source vector register group{{$}}
@@ -174,7 +174,7 @@ smt.vpack.vv v0, v2, v4, 4
 // CHECK-ERROR: :[[@LINE-1]]:26: error: immediate must be an integer in the range [0, 3]{{$}}
 
 smt.vupack.vv v3, v2, v4, 1
-// CHECK-ERROR: :[[@LINE-1]]:15: error: invalid operand for instruction{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:15: error: register must be a vector register with an even-numbered index{{$}}
 
 smt.vupack.vv v2, v2, v4, 1
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
