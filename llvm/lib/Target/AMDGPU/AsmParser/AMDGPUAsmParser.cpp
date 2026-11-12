@@ -1533,7 +1533,7 @@ public:
   ParseStatus parseFlatOffset(OperandVector &Operands);
   ParseStatus parseR128A16(OperandVector &Operands);
   ParseStatus parseBLGP(OperandVector &Operands);
-  bool tryParseFmt(const char *Pref, int64_t MaxVal, int64_t &Val);
+  ParseStatus tryParseFmt(const char *Pref, int64_t MaxVal, int64_t &Fmt);
   bool matchDfmtNfmt(int64_t &Dfmt, int64_t &Nfmt, StringRef FormatStr,
                      SMLoc Loc);
 
@@ -7745,24 +7745,20 @@ ParseStatus AMDGPUAsmParser::parseStringOrIntWithPrefix(
 // MTBUF format
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUAsmParser::tryParseFmt(const char *Pref, int64_t MaxVal,
-                                  int64_t &Fmt) {
+ParseStatus AMDGPUAsmParser::tryParseFmt(const char *Pref, int64_t MaxVal,
+                                         int64_t &Fmt) {
   int64_t Val;
   SMLoc Loc = getLoc();
 
-  auto Res = parseIntWithPrefix(Pref, Val);
-  if (Res.isFailure())
-    return false;
-  if (Res.isNoMatch())
-    return true;
+  ParseStatus Res = parseIntWithPrefix(Pref, Val);
+  if (!Res.isSuccess())
+    return Res;
 
-  if (Val < 0 || Val > MaxVal) {
-    Error(Loc, Twine("out of range ", StringRef(Pref)));
-    return false;
-  }
+  if (Val < 0 || Val > MaxVal)
+    return Error(Loc, Twine("out of range ", StringRef(Pref)));
 
   Fmt = Val;
-  return true;
+  return ParseStatus::Success;
 }
 
 ParseStatus AMDGPUAsmParser::tryParseIndexKey(OperandVector &Operands,
@@ -7854,48 +7850,41 @@ ParseStatus AMDGPUAsmParser::parseMatrixBScaleFmt(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::parseDfmtNfmt(int64_t &Format) {
   using namespace llvm::AMDGPU::MTBUFFormat;
 
-  int64_t Dfmt = DFMT_UNDEF;
-  int64_t Nfmt = NFMT_UNDEF;
+  int64_t Dfmt = DFMT_DEFAULT;
+  int64_t Nfmt = NFMT_DEFAULT;
 
-  // dfmt and nfmt can appear in either order, and each is optional.
-  for (int I = 0; I < 2; ++I) {
-    if (Dfmt == DFMT_UNDEF && !tryParseFmt("dfmt", DFMT_MAX, Dfmt))
-      return ParseStatus::Failure;
+  auto TryAfterComma = [&](const char *Pref, int64_t MaxVal,
+                           int64_t &Fmt) -> ParseStatus {
+    if (isId(Pref) && peekToken().is(AsmToken::Colon))
+      return Error(getLoc(), "expected a comma");
+    AsmToken NextTokens[2];
+    peekTokens(NextTokens);
+    if (!isToken(AsmToken::Comma) || !isId(NextTokens[0], Pref) ||
+        !NextTokens[1].is(AsmToken::Colon))
+      return ParseStatus::Success;
+    lex();
+    return tryParseFmt(Pref, MaxVal, Fmt);
+  };
 
-    if (Nfmt == NFMT_UNDEF && !tryParseFmt("nfmt", NFMT_MAX, Nfmt))
-      return ParseStatus::Failure;
-
-    // Skip optional comma between dfmt/nfmt
-    // but guard against 2 commas following each other.
-    if ((Dfmt == DFMT_UNDEF) != (Nfmt == NFMT_UNDEF) &&
-        !peekToken().is(AsmToken::Comma)) {
-      trySkipToken(AsmToken::Comma);
-    }
+  // dfmt and nfmt can appear in either order, and each is optional. If both
+  // are present, they are separated by a comma.
+  ParseStatus Res = tryParseFmt("dfmt", DFMT_MAX, Dfmt);
+  if (Res.isSuccess()) {
+    Res = TryAfterComma("nfmt", NFMT_MAX, Nfmt);
+  } else if (Res.isNoMatch()) {
+    Res = tryParseFmt("nfmt", NFMT_MAX, Nfmt);
+    if (Res.isSuccess())
+      Res = TryAfterComma("dfmt", DFMT_MAX, Dfmt);
   }
-
-  if (Dfmt == DFMT_UNDEF && Nfmt == NFMT_UNDEF)
-    return ParseStatus::NoMatch;
-
-  Dfmt = (Dfmt == DFMT_UNDEF) ? DFMT_DEFAULT : Dfmt;
-  Nfmt = (Nfmt == NFMT_UNDEF) ? NFMT_DEFAULT : Nfmt;
+  if (!Res.isSuccess())
+    return Res;
 
   Format = encodeDfmtNfmt(Dfmt, Nfmt);
   return ParseStatus::Success;
 }
 
 ParseStatus AMDGPUAsmParser::parseUfmt(int64_t &Format) {
-  using namespace llvm::AMDGPU::MTBUFFormat;
-
-  int64_t Fmt = UFMT_UNDEF;
-
-  if (!tryParseFmt("format", UFMT_MAX, Fmt))
-    return ParseStatus::Failure;
-
-  if (Fmt == UFMT_UNDEF)
-    return ParseStatus::NoMatch;
-
-  Format = Fmt;
-  return ParseStatus::Success;
+  return tryParseFmt("format", MTBUFFormat::UFMT_MAX, Format);
 }
 
 bool AMDGPUAsmParser::matchDfmtNfmt(int64_t &Dfmt, int64_t &Nfmt,

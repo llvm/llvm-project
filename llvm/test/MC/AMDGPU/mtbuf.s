@@ -77,15 +77,15 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1, nfmt:0, ttmp1
 // SICI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], ttmp1 ; encoding: [0x00,0x00,0x0f,0xe8,0x00,0x01,0x1d,0x71]
 // VI:   tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], ttmp1 ; encoding: [0x00,0x80,0x0b,0xe8,0x00,0x01,0x1d,0x71]
 
-// Check that comma separators are optional
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:15 nfmt:7 ttmp1
+// Check that the commas before and after the format are optional
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:15, nfmt:7 ttmp1
 // SICI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], ttmp1 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_FLOAT] ; encoding: [0x00,0x00,0xff,0xeb,0x00,0x01,0x1d,0x71]
 // VI:   tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], ttmp1 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_FLOAT] ; encoding: [0x00,0x80,0xfb,0xeb,0x00,0x01,0x1d,0x71]
 
 dfmt=15
 nfmt=7
 // Check expressions with dfmt
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:-1+dfmt+1 nfmt:nfmt ttmp1
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:-1+dfmt+1, nfmt:nfmt ttmp1
 // SICI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], ttmp1 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_FLOAT] ; encoding: [0x00,0x00,0xff,0xeb,0x00,0x01,0x1d,0x71]
 // VI:   tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], ttmp1 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_FLOAT] ; encoding: [0x00,0x80,0xfb,0xeb,0x00,0x01,0x1d,0x71]
 
@@ -93,47 +93,53 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:-1+dfmt+1 nfmt:nfmt ttmp1
 // Negative tests for legacy dfmt/nfmt syntax.
 //===----------------------------------------------------------------------===//
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:-1 nfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:-1, nfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range dfmt
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:16 nfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:16, nfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range dfmt
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:-1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1, nfmt:-1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range nfmt
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:8 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1, nfmt:8 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range nfmt
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7]
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],, dfmt:1 nfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],, dfmt:1, nfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1,, nfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:1,, s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1, nfmt:1,, s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 dfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1, dfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] nfmt:1 nfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] nfmt:1, nfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:1 dfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1, nfmt:1, dfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] nfmt:1 dfmt:1 nfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] nfmt:1, dfmt:1, nfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1: nfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1:, nfmt:1 s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:1: s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1, nfmt:1: s0
 // GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
+
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 nfmt:1, s0
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma
+
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], nfmt:1 dfmt:1, s0
+// GCN-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a comma
 
 //===----------------------------------------------------------------------===//
 // Tests for symbolic MTBUF format
