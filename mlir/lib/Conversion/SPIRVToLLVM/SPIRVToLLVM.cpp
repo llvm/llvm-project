@@ -538,6 +538,25 @@ public:
   }
 };
 
+/// Converts SPIR-V ConstantOp with a null value to llvm.mlir.zero.
+class ConstantNullPattern : public SPIRVToLLVMConversion<spirv::ConstantOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::ConstantOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::ConstantOp constOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isa<spirv::NullAttr>(constOp.getValue()))
+      return failure();
+
+    Type dstType = getTypeConverter()->convertType(constOp.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(constOp, "type conversion failed");
+    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(constOp, dstType);
+    return success();
+  }
+};
+
 class BitFieldSExtractPattern
     : public SPIRVToLLVMConversion<spirv::BitFieldSExtractOp> {
 public:
@@ -2500,7 +2519,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::ULessThanOp, LLVM::ICmpPredicate::ult>,
 
       // Constant op
-      ConstantScalarAndVectorPattern,
+      ConstantNullPattern, ConstantScalarAndVectorPattern,
 
       // Control Flow ops
       BranchConversionPattern, BranchConditionalConversionPattern,

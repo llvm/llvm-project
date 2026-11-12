@@ -67,3 +67,14 @@ spirv.func @constant_with_discardable_attr() "None" {
   %0 = "spirv.Constant"() <{value = 42 : i32}> {test.marker = "keep"} : () -> i32
   spirv.Return
 }
+
+// CHECK-LABEL: @null_constant
+spirv.func @null_constant() "None" {
+  // CHECK: llvm.mlir.zero : !llvm.ptr
+  %0 = spirv.Constant #spirv.null : !spirv.ptr<f32, Function>
+  // CHECK: llvm.mlir.zero : !llvm.array<4 x i32>
+  %1 = spirv.Constant #spirv.null : !spirv.array<4 x i32>
+  // CHECK: llvm.mlir.zero : !llvm.struct<packed (i32, ptr)>
+  %2 = spirv.Constant #spirv.null : !spirv.struct<(i32, !spirv.ptr<f32, Function>)>
+  spirv.Return
+}
