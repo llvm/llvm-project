@@ -330,7 +330,7 @@ static ompd_rc_t ompd_get_nthreads(
      this ICV cannot be represented by an integer type. In this case,
      ompd_rc_incomplete is returned. The tool can check the return value and
      can choose to invoke ompd_get_icv_string_from_scope() if needed. */
-  if (current_nesting_level < used - 1) {
+  if (current_nesting_level + 1 < used) {
     return ompd_rc_incomplete;
   }
   return ompd_rc_ok;
@@ -868,7 +868,7 @@ ompd_get_proc_bind(ompd_task_handle_t *task_handle, /* IN: OpenMP task handle */
      this ICV cannot be represented by an integer type. In this case,
      ompd_rc_incomplete is returned. The tool can check the return value and
      can choose to invoke ompd_get_icv_string_from_scope() if needed. */
-  if (current_nesting_level < used - 1) {
+  if (current_nesting_level + 1 < used) {
     return ompd_rc_incomplete;
   }
   return ompd_rc_ok;

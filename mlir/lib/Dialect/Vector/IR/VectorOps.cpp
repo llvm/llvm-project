@@ -38,6 +38,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -8228,6 +8229,12 @@ LogicalResult MaskOp::verify() {
   if (getMask().getType() != expectedMaskType)
     return emitOpError("expects a ")
            << expectedMaskType << " mask for the maskable operation";
+
+  auto transferOp =
+      dyn_cast<VectorTransferOpInterface>(maskableOp.getOperation());
+  if (transferOp && transferOp.getMask())
+    return emitOpError(
+        "doesn't expect a mask operand for the masked transfer operation");
 
   // Passthru checks.
   Value passthru = getPassthru();

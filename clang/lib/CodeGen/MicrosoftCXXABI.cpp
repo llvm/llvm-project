@@ -497,8 +497,16 @@ public:
 
   friend struct MSRTTIBuilder;
 
-  bool isImageRelative() const {
+  bool isRTTIImageRelative() const {
     return CGM.getTarget().getPointerWidth(LangAS::Default) == 64;
+  }
+
+  // The throw information (ThrowInfo, CatchableTypeArray and CatchableType) is
+  // image-relative on every target but 32-bit x86. On 32-bit Arm the RTTI is
+  // not.
+  bool isThrowInfoImageRelative() const {
+    const llvm::Triple &T = CGM.getTarget().getTriple();
+    return isRTTIImageRelative() || T.isARM() || T.isThumb();
   }
 
   // 5 routines for constructing the llvm types for MS RTTI structs.
@@ -519,7 +527,7 @@ public:
   }
 
   llvm::Type *getImageRelativeType(llvm::Type *PtrType) {
-    if (!isImageRelative())
+    if (!isRTTIImageRelative())
       return PtrType;
     return CGM.IntTy;
   }
@@ -564,7 +572,7 @@ public:
         getImageRelativeType(CGM.VoidTy),
     };
     llvm::ArrayRef<llvm::Type *> FieldTypesRef(FieldTypes);
-    if (!isImageRelative())
+    if (!isRTTIImageRelative())
       FieldTypesRef = FieldTypesRef.drop_back();
     CompleteObjectLocatorType =
         llvm::StructType::create(FieldTypesRef, "rtti.CompleteObjectLocator");
@@ -585,12 +593,24 @@ public:
   }
 
   llvm::Constant *getImageRelativeConstant(llvm::Constant *PtrVal) {
-    if (!isImageRelative())
+    if (!isRTTIImageRelative())
       return PtrVal;
+    return getImageRelativeOffset(PtrVal);
+  }
 
-    if (PtrVal->isNullValue())
-      return llvm::Constant::getNullValue(CGM.IntTy);
+  llvm::Type *getThrowInfoRelativeType(llvm::Type *PtrType) {
+    if (!isThrowInfoImageRelative())
+      return PtrType;
+    return CGM.IntTy;
+  }
 
+  llvm::Constant *getThrowInfoRelativeConstant(llvm::Constant *PtrVal) {
+    if (!isThrowInfoImageRelative())
+      return PtrVal;
+    return getImageRelativeOffset(PtrVal);
+  }
+
+  llvm::Constant *getImageRelativeOffset(llvm::Constant *PtrVal) {
     llvm::Constant *ImageBaseAsInt =
         llvm::ConstantExpr::getPtrToInt(getImageBase(), CGM.IntPtrTy);
     llvm::Constant *PtrValAsInt =
@@ -598,6 +618,9 @@ public:
     llvm::Constant *Diff =
         llvm::ConstantExpr::getSub(PtrValAsInt, ImageBaseAsInt,
                                    /*HasNUW=*/true, /*HasNSW=*/true);
+    // On a 32-bit target the difference already has the field's width.
+    if (Diff->getType() == CGM.IntTy)
+      return Diff;
     return llvm::ConstantExpr::getTrunc(Diff, CGM.IntTy);
   }
 
@@ -738,13 +761,13 @@ public:
     if (CatchableTypeType)
       return CatchableTypeType;
     llvm::Type *FieldTypes[] = {
-        CGM.IntTy,                           // Flags
-        getImageRelativeType(CGM.Int8PtrTy), // TypeDescriptor
-        CGM.IntTy,                           // NonVirtualAdjustment
-        CGM.IntTy,                           // OffsetToVBPtr
-        CGM.IntTy,                           // VBTableIndex
-        CGM.IntTy,                           // Size
-        getImageRelativeType(CGM.Int8PtrTy)  // CopyCtor
+        CGM.IntTy,                               // Flags
+        getThrowInfoRelativeType(CGM.Int8PtrTy), // TypeDescriptor
+        CGM.IntTy,                               // NonVirtualAdjustment
+        CGM.IntTy,                               // OffsetToVBPtr
+        CGM.IntTy,                               // VBTableIndex
+        CGM.IntTy,                               // Size
+        getThrowInfoRelativeType(CGM.Int8PtrTy)  // CopyCtor
     };
     CatchableTypeType = llvm::StructType::create(
         CGM.getLLVMContext(), FieldTypes, "eh.CatchableType");
@@ -759,7 +782,7 @@ public:
 
     llvm::SmallString<23> CTATypeName("eh.CatchableTypeArray.");
     CTATypeName += llvm::utostr(NumEntries);
-    llvm::Type *CTType = getImageRelativeType(CGM.DefaultPtrTy);
+    llvm::Type *CTType = getThrowInfoRelativeType(CGM.DefaultPtrTy);
     llvm::Type *FieldTypes[] = {
         CGM.IntTy,                               // NumEntries
         llvm::ArrayType::get(CTType, NumEntries) // CatchableTypes
@@ -773,10 +796,10 @@ public:
     if (ThrowInfoType)
       return ThrowInfoType;
     llvm::Type *FieldTypes[] = {
-        CGM.IntTy,                           // Flags
-        getImageRelativeType(CGM.Int8PtrTy), // CleanupFn
-        getImageRelativeType(CGM.Int8PtrTy), // ForwardCompat
-        getImageRelativeType(CGM.Int8PtrTy)  // CatchableTypeArray
+        CGM.IntTy,                               // Flags
+        getThrowInfoRelativeType(CGM.Int8PtrTy), // CleanupFn
+        getThrowInfoRelativeType(CGM.Int8PtrTy), // ForwardCompat
+        getThrowInfoRelativeType(CGM.Int8PtrTy)  // CatchableTypeArray
     };
     ThrowInfoType = llvm::StructType::create(CGM.getLLVMContext(), FieldTypes,
                                              "eh.ThrowInfo");
@@ -3966,7 +3989,7 @@ MSRTTIBuilder::getCompleteObjectLocator(const VPtrInfo &Info) {
 
   // Initialize the CompleteObjectLocator.
   llvm::Constant *Fields[] = {
-      llvm::ConstantInt::get(CGM.IntTy, ABI.isImageRelative()),
+      llvm::ConstantInt::get(CGM.IntTy, ABI.isRTTIImageRelative()),
       llvm::ConstantInt::get(CGM.IntTy, OffsetToTop),
       llvm::ConstantInt::get(CGM.IntTy, VFPtrOffset),
       ABI.getImageRelativeConstant(
@@ -3975,7 +3998,7 @@ MSRTTIBuilder::getCompleteObjectLocator(const VPtrInfo &Info) {
       ABI.getImageRelativeConstant(COL),
   };
   llvm::ArrayRef<llvm::Constant *> FieldsRef(Fields);
-  if (!ABI.isImageRelative())
+  if (!ABI.isRTTIImageRelative())
     FieldsRef = FieldsRef.drop_back();
   COL->setInitializer(llvm::ConstantStruct::get(Type, FieldsRef));
   if (COL->isWeakForLinker())
@@ -4277,11 +4300,11 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
                                               VBPtrOffset, VBIndex, Out);
   }
   if (llvm::GlobalVariable *GV = CGM.getModule().getNamedGlobal(MangledName))
-    return getImageRelativeConstant(GV);
+    return getThrowInfoRelativeConstant(GV);
 
   // The TypeDescriptor is used by the runtime to determine if a catch handler
   // is appropriate for the exception object.
-  llvm::Constant *TD = getImageRelativeConstant(getAddrOfRTTIDescriptor(T));
+  llvm::Constant *TD = getThrowInfoRelativeConstant(getAddrOfRTTIDescriptor(T));
 
   // The runtime is responsible for calling the copy constructor if the
   // exception is caught by value.
@@ -4291,10 +4314,11 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
       CopyCtor = getAddrOfCXXCtorClosure(CD, Ctor_CopyingClosure);
     else
       CopyCtor = CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
+    CopyCtor = getThrowInfoRelativeConstant(CopyCtor);
   } else {
-    CopyCtor = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+    CopyCtor =
+        llvm::Constant::getNullValue(getThrowInfoRelativeType(CGM.Int8PtrTy));
   }
-  CopyCtor = getImageRelativeConstant(CopyCtor);
 
   bool IsScalar = !RD;
   bool HasVirtualBases = false;
@@ -4335,7 +4359,7 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
   GV->setSection(".xdata");
   if (GV->isWeakForLinker())
     GV->setComdat(CGM.getModule().getOrInsertComdat(GV->getName()));
-  return getImageRelativeConstant(GV);
+  return getThrowInfoRelativeConstant(GV);
 }
 
 llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
@@ -4431,7 +4455,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
     CatchableTypes.insert(getCatchableType(getContext().VoidPtrTy));
 
   uint32_t NumEntries = CatchableTypes.size();
-  llvm::Type *CTType = getImageRelativeType(CGM.DefaultPtrTy);
+  llvm::Type *CTType = getThrowInfoRelativeType(CGM.DefaultPtrTy);
   llvm::ArrayType *AT = llvm::ArrayType::get(CTType, NumEntries);
   llvm::StructType *CTAType = getCatchableTypeArrayType(NumEntries);
   llvm::Constant *Fields[] = {
@@ -4495,19 +4519,21 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
 
   // The cleanup-function (a destructor) must be called when the exception
   // object's lifetime ends.
-  llvm::Constant *CleanupFn = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+  llvm::Constant *CleanupFn =
+      llvm::Constant::getNullValue(getThrowInfoRelativeType(CGM.Int8PtrTy));
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
     if (CXXDestructorDecl *DtorD = RD->getDestructor())
       if (!DtorD->isTrivial())
-        CleanupFn = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
+        CleanupFn = getThrowInfoRelativeConstant(
+            CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete)));
   // This is unused as far as we can tell, initialize it to null.
   llvm::Constant *ForwardCompat =
-      getImageRelativeConstant(llvm::Constant::getNullValue(CGM.Int8PtrTy));
-  llvm::Constant *PointerToCatchableTypes = getImageRelativeConstant(CTA);
+      llvm::Constant::getNullValue(getThrowInfoRelativeType(CGM.Int8PtrTy));
+  llvm::Constant *PointerToCatchableTypes = getThrowInfoRelativeConstant(CTA);
   llvm::StructType *TIType = getThrowInfoType();
   llvm::Constant *Fields[] = {
       llvm::ConstantInt::get(CGM.IntTy, Flags), // Flags
-      getImageRelativeConstant(CleanupFn),      // CleanupFn
+      CleanupFn,                                // CleanupFn
       ForwardCompat,                            // ForwardCompat
       PointerToCatchableTypes                   // CatchableTypeArray
   };

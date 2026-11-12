@@ -17545,25 +17545,26 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
          DAG.ComputeMaxSignificantBits(N00) <= ExtVTBits) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)))
       return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N00);
-  }
 
-  // fold (sext_in_reg (aext (extract_subvector (aext x)))) ->
-  //      (sext (extract_subvector (sext x)))
-  // if x is small enough, since the any extensions and the subvector extract
-  // keep the low bits of the lanes.
-  if (N0.getOpcode() == ISD::ANY_EXTEND &&
-      N0.getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      N0.getOperand(0).getOperand(0).getOpcode() == ISD::ANY_EXTEND) {
-    SDValue Extract = N0.getOperand(0);
-    EVT InnerVT = Extract.getOperand(0).getValueType();
-    SDValue X = Extract.getOperand(0).getOperand(0);
-    if (DAG.ComputeMaxSignificantBits(X) <= ExtVTBits &&
-        (!LegalOperations || (TLI.isOperationLegal(ISD::SIGN_EXTEND, InnerVT) &&
-                              TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)))) {
-      SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, InnerVT, X);
-      Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, Extract.getValueType(), Ext,
-                        Extract.getOperand(1));
-      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Ext);
+    // fold (sext_in_reg (sext (extract_subvector (aext x)))) ->
+    //      (sext (extract_subvector (sext x)))
+    // fold (sext_in_reg (aext (extract_subvector (aext x)))) ->
+    //      (sext (extract_subvector (sext x)))
+    // if x is small enough, since the extensions and the subvector extract
+    // keep the low bits of the lanes.
+    if (N00.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N00.getOperand(0).getOpcode() == ISD::ANY_EXTEND) {
+      EVT InnerVT = N00.getOperand(0).getValueType();
+      SDValue X = N00.getOperand(0).getOperand(0);
+      if ((!LegalOperations ||
+           (TLI.isOperationLegal(ISD::SIGN_EXTEND, InnerVT) &&
+            TLI.isOperationLegal(ISD::SIGN_EXTEND, VT))) &&
+          DAG.ComputeMaxSignificantBits(X) <= ExtVTBits) {
+        SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, InnerVT, X);
+        Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, N00.getValueType(), Ext,
+                          N00.getOperand(1));
+        return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Ext);
+      }
     }
   }
 
@@ -21792,7 +21793,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   if (isa<ConstantSDNode>(Offset))
     for (SDUse &Use : BasePtr->uses()) {
       // Skip the use that is Ptr and uses of other results from BasePtr's
@@ -21953,7 +21954,7 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
     return false;
 
   SmallPtrSet<const SDNode *, 32> Visited;
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   for (SDNode *User : BasePtr->users()) {
     if (User == Ptr.getNode())
       continue;
@@ -22000,7 +22001,7 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   // 2) Op must be independent of N, i.e. Op is neither a predecessor
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
   for (SDUse &U : Ptr->uses()) {
     if (U.getResNo() != Ptr.getResNo())
       continue;
@@ -31637,6 +31638,9 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   unsigned BinOpc = N1.getOpcode();
   if (!TLI.isBinOp(BinOpc) || (N2.getOpcode() != BinOpc) ||
       (N1.getResNo() != N2.getResNo()))
+    return SDValue();
+
+  if (N1->getNumOperands() != 2 || N2->getNumOperands() != 2)
     return SDValue();
 
   // The use checks are intentionally on SDNode because we may be dealing

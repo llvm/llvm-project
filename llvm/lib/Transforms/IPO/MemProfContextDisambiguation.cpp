@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements support for context disambiguation of allocation
-// calls for profile guided heap optimization. Specifically, it uses Memprof
-// profiles which indicate context specific allocation behavior (currently
-// distinguishing cold vs hot memory allocations). Cloning is performed to
-// expose the cold allocation call contexts, and the allocation calls are
-// subsequently annotated with an attribute for later transformation.
+// calls for profile-guided memory optimization (MemPGO). Specifically, it uses
+// MemProf profiles which indicate context specific allocation behavior
+// (currently distinguishing cold vs hot memory allocations). Cloning is
+// performed to expose the cold allocation call contexts, and the allocation
+// calls are subsequently annotated with an attribute for later transformation.
 //
 // The transformations can be performed either directly on IR (regular LTO), or
 // on a ThinLTO index (and later applied to the IR during the ThinLTO backend).

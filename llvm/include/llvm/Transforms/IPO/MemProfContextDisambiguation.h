@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements support for context disambiguation of allocation calls for profile
-// guided heap optimization using memprof metadata. See implementation file for
-// details.
+// Implements support for context disambiguation of allocation calls for
+// profile-guided memory optimization (MemPGO) using memprof metadata. See
+// implementation file for details.
 //
 //===----------------------------------------------------------------------===//
 

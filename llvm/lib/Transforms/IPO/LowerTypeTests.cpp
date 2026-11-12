@@ -2056,6 +2056,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
+  SmallVector<GlobalValue *> UsedJtAliases;
+
   // Build aliases pointing to offsets into the jump table, and replace
   // references to the original functions with references to the aliases.
   for (unsigned I = 0; I != Functions.size(); ++I) {
@@ -2077,7 +2079,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
       if (IsExported)
         JtAlias->setVisibility(GlobalValue::HiddenVisibility);
       else
-        appendToUsed(M, {JtAlias});
+        UsedJtAliases.push_back(JtAlias);
     }
 
     if (IsExported) {
@@ -2114,6 +2116,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
         F->setVisibility(GlobalVariable::HiddenVisibility);
     }
   }
+
+  if (!UsedJtAliases.empty())
+    appendToUsed(M, UsedJtAliases);
 
   createJumpTable(JumpTableFn, Functions, JumpTableArch);
 }

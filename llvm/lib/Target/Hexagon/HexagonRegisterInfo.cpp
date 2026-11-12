@@ -277,6 +277,14 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Add the offset from the instruction.
   int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
 
+  if (BP == Hexagon::VSP) {
+    auto &MRI = MF.getRegInfo();
+    Register VSPCopy = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_tfrcrr), VSPCopy)
+        .addReg(BP);
+    BP = VSPCopy;
+  }
+
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
     case Hexagon::PS_fia:
@@ -466,6 +474,9 @@ Register HexagonRegisterInfo::getStackRegister() const {
   return Hexagon::R29;
 }
 
+Register HexagonRegisterInfo::getVTCMStackRegister() const {
+  return Hexagon::VSP;
+}
 
 unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       const TargetRegisterClass &RC, unsigned GenIdx) const {
