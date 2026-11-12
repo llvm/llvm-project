@@ -8,7 +8,7 @@
 //
 // Dynamic local memory, i.e. an unsized external Workgroup array such as
 // CUDA's `extern __shared__ T Buf[]`, has a size only known at launch. OpenCL
-// and Level Zero runtimes are unable to specify size of such array and instead
+// and Level Zero runtimes cannot specify the size of such an array and instead
 // they rely on `ptr addrspace(3)` kernel arguments to provide such memory.
 //
 // This pass appends a `ptr addrspace(3)` parameter to every kernel of a module
