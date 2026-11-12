@@ -108,7 +108,10 @@ nm_output = subprocess.run(
 # Populate symbol map
 symbols = {}
 for symline in nm_output.splitlines():
-    symval, _, symname = symline.split(maxsplit=2)
+    fields = symline.split(maxsplit=2)
+    if len(fields) < 3:
+        continue
+    symval, _, symname = fields
     if symname in symbols and args.no_redefine:
         continue
     symbols[symname] = symval
