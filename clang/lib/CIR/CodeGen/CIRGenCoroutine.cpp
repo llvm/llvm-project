@@ -872,7 +872,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
                   rv.isScalar() ? rv.getValue() : rv.getComplexValue();
               tmpResumeRValAddr = cgf.emitAlloca(
                   "__coawait_resume_rval", value.getType(), loc,
-                  CharUnits::One(),
+                  cgf.getContext().getTypeAlignInChars(s.getType()),
                   builder.getBestAllocaInsertPoint(scopeParentBlock));
               // Store the rvalue so we can reload it before the promise call.
               builder.CIRBaseBuilderTy::createStore(loc, value,
