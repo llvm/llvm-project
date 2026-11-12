@@ -1297,19 +1297,14 @@ Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
-  auto *Image = Program->Image;
+  if (auto Err = Device.unloadBinary(Program->Image))
+    return Err;
 
-  // Unregister the image first: unloading frees it, and deinit must not run
-  // its destructors a second time if something below fails. A failed unload
-  // therefore leaks the image instead of retrying it at deinit.
   auto &LoadedImages = Device.LoadedImages;
-  auto It = std::find(LoadedImages.begin(), LoadedImages.end(), Image);
-  if (It != LoadedImages.end())
-    LoadedImages.erase(It);
+  LoadedImages.erase(
+      std::find(LoadedImages.begin(), LoadedImages.end(), Program->Image));
 
-  Error Result = Device.callGlobalDestructors(Device.Plugin, *Image);
-  Result = joinErrors(std::move(Result), Device.unloadBinary(Image));
-  return joinErrors(std::move(Result), olDestroy(Program));
+  return olDestroy(Program);
 }
 
 Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
