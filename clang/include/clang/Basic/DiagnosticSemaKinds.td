@@ -11175,6 +11175,11 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       InGroup<LifetimeSafetyInapplicableLifetimebound>,
       DefaultIgnore;
 
+def warn_lifetime_safety_inapplicable_lifetimebound_return
+    : Warning<"'lifetimebound' attribute may not apply to return type %0">,
+      InGroup<LifetimeSafetyInapplicableLifetimeboundReturn>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_used_by_destructor
     : Note<"later used by the destructor of %0 at scope exit">;
