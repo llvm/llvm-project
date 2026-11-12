@@ -109,10 +109,12 @@ extern "C" {
     // team state properly.
     synchronize::threadsAligned(atomic::acq_rel);
 
-    state::ParallelTeamSize.assert_eq(PTeamSize, ident,
-                                      /*ForceTeamState=*/true);
-    icv::ActiveLevel.assert_eq(1u, ident, /*ForceTeamState=*/true);
-    icv::Level.assert_eq(1u, ident, /*ForceTeamState=*/true);
+    if (mapping::isInitialThreadInLevel0(/*IsSPMD=*/true)) {
+      state::ParallelTeamSize.assert_eq(PTeamSize, ident,
+                                        /*ForceTeamState=*/true);
+      icv::ActiveLevel.assert_eq(1u, ident, /*ForceTeamState=*/true);
+      icv::Level.assert_eq(1u, ident, /*ForceTeamState=*/true);
+    }
 
     // Ensure we synchronize before we run user code to avoid invalidating the
     // assumptions above.
@@ -130,9 +132,11 @@ extern "C" {
   // __kmpc_target_deinit may not hold.
   synchronize::threadsAligned(atomic::acq_rel);
 
-  state::ParallelTeamSize.assert_eq(1u, ident, /*ForceTeamState=*/true);
-  icv::ActiveLevel.assert_eq(0u, ident, /*ForceTeamState=*/true);
-  icv::Level.assert_eq(0u, ident, /*ForceTeamState=*/true);
+  if (mapping::isInitialThreadInLevel0(/*IsSPMD=*/true)) {
+    state::ParallelTeamSize.assert_eq(1u, ident, /*ForceTeamState=*/true);
+    icv::ActiveLevel.assert_eq(0u, ident, /*ForceTeamState=*/true);
+    icv::Level.assert_eq(0u, ident, /*ForceTeamState=*/true);
+  }
 
   // Ensure we synchronize to create an aligned region around the assumptions.
   synchronize::threadsAligned(atomic::relaxed);
