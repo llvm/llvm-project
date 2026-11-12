@@ -582,7 +582,7 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     }
     own_buf = false;
   }
-  bufmode = buffer_mode;
+  bufmode = static_cast<int8_t>(buffer_mode);
   adjust_buf();
   return 0;
 }

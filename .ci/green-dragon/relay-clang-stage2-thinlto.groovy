@@ -1,6 +1,7 @@
 branchName = 'main'
 
 properties([
+    buildDiscarder(logRotator(numToKeepStr: '20')),
     disableConcurrentBuilds()
 ])
 

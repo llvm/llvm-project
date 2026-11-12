@@ -352,13 +352,14 @@ mlir::Block *ConvertFIRToLLVMPattern::getBlockForAllocaInsert(
 // the program and allocation address space will be the default of 0 and no
 // cast will be emitted.
 mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
-    mlir::Location loc, mlir::Type llvmObjectTy, unsigned alignment,
+    mlir::Type llvmObjectTy, unsigned alignment,
     mlir::ConversionPatternRewriter &rewriter) const {
   auto thisPt = rewriter.saveInsertionPoint();
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
   mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp, parentRegion);
   rewriter.setInsertionPointToStart(insertBlock);
+  mlir::Location loc = insertBlock->getParentOp()->getLoc();
   auto size = genI32Constant(loc, rewriter, 1);
   unsigned allocaAs = getAllocaAddressSpace(rewriter);
   unsigned programAs = getProgramAddressSpace(rewriter);

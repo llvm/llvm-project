@@ -683,7 +683,8 @@ void LTOCodeGenerator::parseCodeGenDebugOptions() {
     std::vector<const char *> CodegenArgv(1, "libLLVMLTO");
     for (std::string &Arg : CodegenOptions)
       CodegenArgv.push_back(Arg.c_str());
-    cl::parseCommandLineOptions(Context.getLibraryOptions(), CodegenArgv);
+    cl::parseCommandLineOptions(Context.getLibraryOptions(),
+                                codegen::getToolOptions(), CodegenArgv);
   }
 }
 

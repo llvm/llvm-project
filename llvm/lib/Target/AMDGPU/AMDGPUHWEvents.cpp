@@ -120,7 +120,11 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
            SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()));
     HWEvents E = HWEvents::NONE;
     if (TII.mayAccessVMEMThroughFlat(Inst)) {
-      if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
+      // The VGLOBAL tensor ops are the only VMEM FLAT instructions that do
+      // not increment xcnt.
+      if (ST.hasWaitXcnt() && ST.isXNACKEnabled() &&
+          Inst.getOpcode() != AMDGPU::TENSOR_SAVE &&
+          Inst.getOpcode() != AMDGPU::TENSOR_STOP)
         E |= HWEvents::VMEM_GROUP;
       E |= getSimplifiedVMEMEventsFor(Inst, TII);
     }
