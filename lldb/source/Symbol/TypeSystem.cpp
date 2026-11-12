@@ -94,10 +94,13 @@ CompilerType TypeSystem::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
   return CompilerType();
 }
 
-CompilerType
+llvm::Expected<CompilerType>
 TypeSystem::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
-                                    uint32_t address_space) {
-  return CompilerType();
+                                    lldb::addr_space_t address_space) {
+  return llvm::createStringError(
+      std::errc::invalid_argument,
+      "TypeSystem %s does not support address space modifiers",
+      GetPluginName().str().c_str());
 }
 
 CompilerType

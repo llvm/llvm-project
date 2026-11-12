@@ -206,7 +206,9 @@ public:
 
   bool HasPointerAuthQualifier() const;
 
-  std::optional<uint32_t> GetTargetAddressSpace() const;
+  /// The target address space ID of this type (matching
+  /// AddressSpaceInfo::space_id), if it is not the default one.
+  std::optional<lldb::addr_space_t> GetTargetAddressSpace() const;
 
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
@@ -403,9 +405,12 @@ public:
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
 
   /// Return a new CompilerType that qualifies this type with the given target
-  /// address space if this type is valid and the type system supports target
-  /// address spaces.
-  CompilerType AddAddressSpaceModifier(uint32_t address_space) const;
+  /// address space ID (matching AddressSpaceInfo::space_id) if this type is
+  /// valid and the type system supports target address spaces. Passing
+  /// LLDB_DEFAULT_ADDRESS_SPACE_ID removes any existing target address space
+  /// qualifier.
+  llvm::Expected<CompilerType>
+  AddAddressSpaceModifier(lldb::addr_space_t address_space) const;
   /// \}
 
   /// Exploring the type.

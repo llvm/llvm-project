@@ -82,15 +82,13 @@ class TypePayloadClang {
   /// bit 31 ...... IsCompleteObjCClass.
   /// \endverbatim
   /// For ptrauth types, we store the PointerAuthQualifier as an opaque value.
-  /// For pointer types, we store the address space class of the pointee.
+  /// For pointer types, we store the DWARF address class of the pointee.
   Type::Payload m_payload = 0;
 
 public:
   TypePayloadClang() = default;
   explicit TypePayloadClang(OptionalClangModuleID owning_module,
                             bool is_complete_objc_class = false);
-  explicit TypePayloadClang(clang::LangAS address_space)
-      : m_payload(static_cast<uint32_t>(address_space)) {}
   explicit TypePayloadClang(uint32_t opaque_payload) : m_payload(opaque_payload) {}
   operator Type::Payload() { return m_payload; }
 
@@ -728,7 +726,7 @@ public:
 
   bool HasPointerAuthQualifier(lldb::opaque_compiler_type_t type) override;
 
-  std::optional<uint32_t>
+  std::optional<lldb::addr_space_t>
   GetTargetAddressSpace(lldb::opaque_compiler_type_t type) const override;
 
   bool CanPassInRegisters(const CompilerType &type) override;
@@ -811,8 +809,9 @@ public:
   CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                   uint32_t payload) override;
 
-  CompilerType AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
-                                       uint32_t address_space) override;
+  llvm::Expected<CompilerType>
+  AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                          lldb::addr_space_t address_space) override;
 
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 

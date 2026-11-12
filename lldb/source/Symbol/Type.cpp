@@ -597,6 +597,19 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
   Type *encoding_type = nullptr;
   if (!m_compiler_type.IsValid()) {
     encoding_type = GetEncodingType();
+    auto make_pointer_type = [this](CompilerType pointee_type) {
+      if (m_payload != LLDB_DEFAULT_ADDRESS_SPACE_ID) {
+        if (llvm::Expected<CompilerType> qualified_or_err =
+                pointee_type.AddAddressSpaceModifier(m_payload)) {
+          pointee_type = *qualified_or_err;
+        } else {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), qualified_or_err.takeError(),
+                         "Unable to add address space modifier: {0}");
+        }
+      }
+      return pointee_type.GetPointerType();
+    };
+
     if (encoding_type) {
       switch (m_encoding_uid_type) {
       case eEncodingIsUID: {
@@ -637,9 +650,8 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         break;
 
       case eEncodingIsPointerUID:
-        m_compiler_type = encoding_type->GetForwardCompilerType()
-                              .AddAddressSpaceModifier(m_payload)
-                              .GetPointerType();
+        m_compiler_type =
+            make_pointer_type(encoding_type->GetForwardCompilerType());
         break;
 
       case eEncodingIsLValueReferenceUID:
@@ -702,9 +714,7 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
           break;
 
         case eEncodingIsPointerUID:
-          m_compiler_type =
-              void_compiler_type.AddAddressSpaceModifier(m_payload)
-                  .GetPointerType();
+          m_compiler_type = make_pointer_type(void_compiler_type);
           break;
 
         case eEncodingIsLValueReferenceUID:
