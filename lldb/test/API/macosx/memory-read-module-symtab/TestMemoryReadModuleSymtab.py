@@ -106,6 +106,13 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         # First attach:  Create the DataFileCache for the MemoryModule.
         target, process = self.attach_to_process(pid)
         self.confirm_datafilecache_dir_contents(cache_dir)
+        exe_module = target.FindModule(lldb.SBFileSpec("a.out"))
+        self.assertTrue(exe_module.IsValid())
+        self.assertTrue(
+            exe_module.GetSymtabState() & lldb.eSymtabStateParsedFromObjectFile
+        )
+        # Drop our reference so MemoryPressureDetected() can free the module.
+        del exe_module
         process.Detach()
 
         # Delete the target, flush the Module we've created, so
@@ -128,6 +135,7 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         exe_filespec = lldb.SBFileSpec("a.out")
         exe_module = target.FindModule(exe_filespec)
         print(exe_module)
+        self.assertTrue(exe_module.GetSymtabState() & lldb.eSymtabStateLoadedFromCache)
         exe_linkedit = exe_module.FindSection("__LINKEDIT")
         print(exe_linkedit)
         self.assertTrue(exe_linkedit.IsValid())

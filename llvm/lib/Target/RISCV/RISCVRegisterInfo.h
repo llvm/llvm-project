@@ -15,6 +15,7 @@
 
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
+#include <bitset>
 
 #define GET_REGINFO_HEADER
 #include "RISCVGenRegisterInfo.inc"
@@ -63,7 +64,9 @@ static inline unsigned getNF(uint8_t TSFlags) {
 
 struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
-  RISCVRegisterInfo(unsigned HwMode);
+  /// \p UserReservedXRegs is the set of X registers reserved by the reserve-xN
+  /// features, indexed by N.
+  RISCVRegisterInfo(unsigned HwMode, const std::bitset<32> &UserReservedXRegs);
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
@@ -87,6 +90,12 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+
+  /// Returns true if \p Reg is, or overlaps, a register reserved by the
+  /// reserve-xN features, e.g. X10_W, X10_H or a GPRPair containing X10.
+  bool isRegisterReservedByUser(MCRegister Reg) const {
+    return UserReservedRegs.test(Reg.id());
+  }
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
 
@@ -184,6 +193,10 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
            RISCV::FPR64RegClass.contains(Reg) ||
            RISCV::FPR128RegClass.contains(Reg);
   }
+
+private:
+  // The registers reserved by the reserve-xN features and all their aliases.
+  BitVector UserReservedRegs;
 };
 } // namespace llvm
 

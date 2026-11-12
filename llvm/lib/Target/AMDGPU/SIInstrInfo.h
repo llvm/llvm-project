@@ -38,6 +38,10 @@ class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
+namespace AMDGPU {
+enum class AsyncStages : uint32_t;
+} // namespace AMDGPU
+
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
 
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
@@ -495,6 +499,15 @@ public:
   static std::optional<int64_t> extractSubregFromImm(int64_t ImmVal,
                                                      unsigned SubRegIndex);
 
+  /// Return the target flags for a global address operand reading subregister
+  /// \p SubRegIndex of a 64-bit global address with \p TargetFlags.
+  /// e.g. %addr = S_MOV_B64 target-flags(amdgpu-abs64) @gv
+  ///      USE %addr.sub1
+  /// This will return amdgpu-abs32-hi
+  static std::optional<unsigned>
+  extractSubregFromGlobalAddressFlags(unsigned TargetFlags,
+                                      unsigned SubRegIndex);
+
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
@@ -875,6 +888,24 @@ public:
            Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   }
 
+  bool isNonAsyncLdsDmaWrite(const MachineInstr &MI) const {
+    return mayWriteLDSThroughDMA(MI) && !isAsync(MI);
+  }
+
+  /// \returns true if \p MI creates an async operation.
+  bool isAsync(const MachineInstr &MI) const {
+    if (!isLDSDMA(MI))
+      return false;
+    if (usesASYNC_CNT(MI) || usesTENSOR_CNT(MI))
+      return true;
+    const MachineOperand *Async = getNamedOperand(MI, AMDGPU::OpName::IsAsync);
+    return Async && (Async->getImm());
+  }
+
+  /// \returns the asyncmark stage that the async operation initiated by \p MI
+  /// belongs to, or no stage if \p MI does not initiate an async operation.
+  AMDGPU::AsyncStages getAsyncStage(const MachineInstr &MI) const;
+
   static bool isSBarrierSCCWrite(unsigned Opcode) {
     return Opcode == AMDGPU::S_BARRIER_LEAVE ||
            Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
@@ -1056,6 +1087,12 @@ public:
   bool isXDLWMMA(const MachineInstr &MI) const;
 
   bool isXDL(const MachineInstr &MI) const;
+
+  /// On gfx1250, an XDL instruction whose destination spans at least eight
+  /// VGPRs decrements VA_VDST only after every earlier-issued VALU instruction,
+  /// of any type, has decremented it. Nothing is implied about the order
+  /// relative to instructions issued after it.
+  bool isVAVDSTOrderedXDL(const MachineInstr &MI) const;
 
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
 

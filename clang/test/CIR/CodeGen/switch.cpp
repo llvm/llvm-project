@@ -48,16 +48,12 @@ void sw1(int a) {
 // LLVM: [[CASE1]]:
 // LLVM:   br label %[[EXIT]]
 // LLVM: [[CASE2]]:
-// LLVM:   br label %[[BB14:.*]]
-// LLVM: [[BB14]]:
 // LLVM:   %[[B2:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:   %[[INC2:.*]] = add nsw i32 %[[B2]], 1
 // LLVM:   store i32 %[[INC2]], ptr %[[B_ADDR]], align 4
 // LLVM:   store i32 100, ptr %[[YOLO:.*]], align 4
 // LLVM:   br label %[[EXIT]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[DEFAULT:.*]]
-// LLVM: [[DEFAULT]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3sw1i
@@ -122,8 +118,6 @@ void sw2(int a) {
 // LLVM:   store i32 %[[YOLO_PLUS_FOMO]], ptr %[[YOLO_ADDR]], align 4
 // LLVM:   br label %[[EXIT]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3sw2i
@@ -168,10 +162,6 @@ void sw3(int a) {
 // LLVM:   switch i32 %[[A_VAL]], label %[[DEFAULT:.*]] [
 // LLVM:   ]
 // LLVM: [[DEFAULT]]:
-// LLVM:   br label %[[EXIT:.*]]
-// LLVM: [[EXIT:.*]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3sw3i
@@ -227,8 +217,6 @@ int sw4(int a) {
 // LLVM-DAG:     i32 42, label %[[CASE42:.*]]
 // LLVM:   ]
 // LLVM: [[CASE42]]:
-// LLVM:   br label %[[CASE42_BODY:.*]]
-// LLVM: [[CASE42_BODY]]:
 // LLVM:   store i32 3, ptr %[[RET_ADDR]], align 4
 // LLVM:   %[[RET3:.*]] = load i32, ptr %[[RET_ADDR]], align 4
 // LLVM:   ret i32 %[[RET3]]
@@ -284,8 +272,6 @@ void sw5(int a) {
 // LLVM: [[CASE1]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3sw5i
@@ -347,28 +333,18 @@ void sw6(int a) {
 // LLVM-DAG:     i32 5, label %[[CASE5:.*]]
 // LLVM:   ]
 // LLVM: [[CASE0]]:
-// LLVM:   br label %[[CASE0_CONT:.*]]
-// LLVM: [[CASE0_CONT]]:
 // LLVM:   br label %[[CASE1]]
 // LLVM: [[CASE1]]:
-// LLVM:   br label %[[CASE1_CONT:.*]]
-// LLVM: [[CASE1_CONT]]:
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[CASE3]]:
-// LLVM:   br label %[[CASE3_CONT:.*]]
-// LLVM: [[CASE3_CONT]]:
 // LLVM:   br label %[[CASE4]]
 // LLVM: [[CASE4]]:
-// LLVM:   br label %[[CASE4_CONT:.*]]
-// LLVM: [[CASE4_CONT]]:
 // LLVM:   br label %[[CASE5]]
 // LLVM: [[CASE5]]:
 // LLVM:   br label %[[EXIT]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3sw6i
@@ -441,30 +417,18 @@ void sw7(int a) {
 // LLVM-DAG:     i32 5, label %[[CASE5:.*]]
 // LLVM:   ]
 // LLVM: [[CASE0]]:
-// LLVM:   br label %[[CASE0_CONT:.*]]
-// LLVM: [[CASE0_CONT]]:
 // LLVM:   br label %[[CASE1]]
 // LLVM: [[CASE1]]:
-// LLVM:   br label %[[CASE1_CONT:.*]]
-// LLVM: [[CASE1_CONT]]:
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
-// LLVM:   br label %[[CASE2_CONT:.*]]
-// LLVM: [[CASE2_CONT]]:
 // LLVM:   br label %[[CASE3]]
 // LLVM: [[CASE3]]:
-// LLVM:   br label %[[CASE3_CONT:.*]]
-// LLVM: [[CASE3_CONT]]:
 // LLVM:   br label %[[CASE4]]
 // LLVM: [[CASE4]]:
-// LLVM:   br label %[[CASE4_CONT:.*]]
-// LLVM: [[CASE4_CONT]]:
 // LLVM:   br label %[[CASE5]]
 // LLVM: [[CASE5]]:
 // LLVM:   br label %[[EXIT]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3sw7i
@@ -518,14 +482,10 @@ void sw8(int a) {
 // LLVM: [[CASE3]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[CASE4]]:
-// LLVM:   br label %[[CASE4_CONT:.*]]
-// LLVM: [[CASE4_CONT]]:
 // LLVM:   br label %[[DEFAULT]]
 // LLVM: [[DEFAULT]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
-// LLVM:    br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3sw8i
@@ -576,14 +536,10 @@ void sw9(int a) {
 // LLVM: [[CASE3]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[DEFAULT]]:
-// LLVM:   br label %[[DEFAULT_CONT:.*]]
-// LLVM: [[DEFAULT_CONT]]:
 // LLVM:   br label %[[CASE4]]
 // LLVM: [[CASE4]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3sw9i
@@ -639,18 +595,12 @@ void sw10(int a) {
 // LLVM: [[CASE_3]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[CASE_4]]:
-// LLVM:   br label %[[CASE4_CONT:.*]]
-// LLVM: [[CASE4_CONT]]:
 // LLVM:   br label %[[DEFAULT]]
 // LLVM: [[DEFAULT]]:
-// LLVM:   br label %[[DEFAULT_CONT:.*]]
-// LLVM: [[DEFAULT_CONT]]:
 // LLVM:   br label %[[CASE_5]]
 // LLVM: [[CASE_5]]:
 // LLVM:   br label %[[EXIT]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z4sw10i
@@ -719,26 +669,16 @@ void sw11(int a) {
 // LLVM: [[CASE_3]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[CASE_4]]:
-// LLVM:   br label %[[CASE4_CONT:.*]]
-// LLVM: [[CASE4_CONT]]:
 // LLVM:   br label %[[CASE_5]]
 // LLVM: [[CASE_5]]:
-// LLVM:   br label %[[CASE5_CONT:.*]]
-// LLVM: [[CASE5_CONT]]:
 // LLVM:   br label %[[DEFAULT]]
 // LLVM: [[DEFAULT]]:
-// LLVM:   br label %[[DEFAULT_CONT:.*]]
-// LLVM: [[DEFAULT_CONT]]:
 // LLVM:   br label %[[CASE_6]]
 // LLVM: [[CASE_6]]:
-// LLVM:   br label %[[CASE6_CONT:.*]]
-// LLVM: [[CASE6_CONT]]:
 // LLVM:   br label %[[CASE_7]]
 // LLVM: [[CASE_7]]:
 // LLVM:   br label %[[EXIT]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z4sw11i
@@ -790,8 +730,6 @@ void sw12(int a) {
 // LLVM: [[UNREACHABLE:.*]]:
 // LLVM:   br label %[[EXIT:.*]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z4sw12i
@@ -837,8 +775,6 @@ void sw13(int a, int b) {
 // LLVM-DAG:     i32 1, label %[[CASE_A_1:.*]]
 // LLVM:   ]
 // LLVM: [[CASE_A_1]]:
-// LLVM:   br label %[[LOAD_B:.*]]
-// LLVM: [[LOAD_B]]:
 // LLVM:   %[[B_VAL:.*]] = load i32, ptr %[[B_ADDR:.*]], align 4
 // LLVM:   br label %[[INNER_SWITCH:.*]]
 // LLVM: [[INNER_SWITCH]]:
@@ -848,14 +784,8 @@ void sw13(int a, int b) {
 // LLVM: [[CASE_B_2]]:
 // LLVM:   br label %[[INNER_EXIT]]
 // LLVM: [[INNER_EXIT]]:
-// LLVM:   br label %[[INNER_EXIT_CONT:.*]]
-// LLVM: [[INNER_EXIT_CONT]]:
-// LLVM:   br label %[[MERGE:.*]]
-// LLVM: [[MERGE]]:
 // LLVM:   br label %[[OUTER_EXIT]]
 // LLVM: [[OUTER_EXIT]]:
-// LLVM:   br label %[[EXIT:.*]]
-// LLVM: [[EXIT]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z4sw13ii
@@ -919,24 +849,16 @@ void sw14(int x) {
 // LLVM-DAG:     i32 7, label %[[CASE7:.*]]
 // LLVM:   ]
 // LLVM: [[CASE1]]:
-// LLVM:   br label %[[AFTER1:.*]]
-// LLVM: [[AFTER1]]:
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
-// LLVM:   br label %[[AFTER2:.*]]
-// LLVM: [[AFTER2]]:
 // LLVM:   br label %[[CASE3_TO_6]]
 // LLVM: [[CASE3_TO_6]]:
-// LLVM:   br label %[[AFTER3_6:.*]]
-// LLVM: [[AFTER3_6]]:
 // LLVM:   br label %[[CASE7]]
 // LLVM: [[CASE7]]:
 // LLVM:   br label %[[EXIT1:.*]]
 // LLVM: [[DEFAULT]]:
 // LLVM:   br label %[[EXIT1]]
 // LLVM: [[EXIT1]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z4sw14i
@@ -1002,8 +924,6 @@ void sw15(int x) {
 // LLVM-DAG:     i32 3, label %[[CASE3:.*]]
 // LLVM:   ]
 // LLVM: [[CASE1]]:
-// LLVM:   br label %[[CASE1_CONT:.*]]
-// LLVM: [[CASE1_CONT]]:
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
 // LLVM:   store i32 0, ptr %[[Y_ADDR:.*]], align 4
@@ -1015,8 +935,6 @@ void sw15(int x) {
 // LLVM: [[DEFAULT]]:
 // LLVM:   br label %[[EXIT]]
 // LLVM: [[EXIT]]:
-// LLVM:   br label %[[RET:.*]]
-// LLVM: [[RET]]:
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z4sw15i
@@ -1112,8 +1030,6 @@ int nested_switch(int a) {
 // LLVM:   %[[RET1:.*]] = load i32, ptr %[[RES_ADDR]], align 4
 // LLVM:   ret i32 %[[RET1]]
 // LLVM: [[CASE2]]:
-// LLVM:   br label %[[CASE2_BODY:.*]]
-// LLVM: [[CASE2_BODY]]:
 // LLVM:   %[[B2:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:   %[[B3:.*]] = add nsw i32 %[[B2]], 1
 // LLVM:   store i32 %[[B3]], ptr %[[B_ADDR]], align 4

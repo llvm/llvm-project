@@ -8,12 +8,15 @@
 # ===----------------------------------------------------------------------===##
 """Unit tests for docgen and header implementation status evaluation."""
 
+from contextlib import redirect_stderr, redirect_stdout
+import io
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).parent))
+from docgen import check_api, cppreference_url, posix_url, print_header_status_md
 from header import Header, _is_stub_file
 
 
@@ -42,6 +45,8 @@ class DocgenTest(unittest.TestCase):
     def test_implements_fn(self):
         self.assertTrue(Header("stdio.h").implements_fn("printf"))
         self.assertTrue(Header("netinet/in.h").implements_fn("htonl"))
+        self.assertTrue(Header("math.h").implements_fn("acospif"))
+        self.assertFalse(Header("math.h").implements_fn("tgamma"))
         self.assertFalse(Header("stdio.h").implements_fn("sqrt"))
         self.assertFalse(Header("math.h").implements_fn("printf"))
 
@@ -66,11 +71,271 @@ class DocgenTest(unittest.TestCase):
 
     def test_implements_macro(self):
         self.assertTrue(Header("assert.h").implements_macro("assert"))
+        self.assertTrue(Header("math.h").implements_macro("isnan"))
+        self.assertFalse(Header("math.h").implements_macro("isgreater"))
         self.assertFalse(Header("sys/syscall.h").macro_file_exists())
         self.assertTrue(Header("sys/syscall.h").implements_macro("SYS_read"))
         self.assertTrue(Header("errno.h").implements_macro("errno"))
         self.assertTrue(Header("unistd.h").implements_macro("SEEK_SET"))
         self.assertTrue(Header("float.h").implements_macro("NAN"))
+
+    def test_implements_type(self):
+        self.assertTrue(Header("stdio.h").implements_type("FILE"))
+        self.assertTrue(Header("time.h").implements_type("struct tm"))
+        self.assertTrue(Header("setjmp.h").implements_type("sigjmp_buf"))
+        self.assertFalse(Header("wctype.h").implements_type("wctrans_t"))
+        self.assertFalse(Header("monetary.h").implements_type("size_t"))
+
+    def test_implements_object(self):
+        self.assertTrue(Header("stdio.h").implements_object("stdin"))
+        self.assertTrue(Header("time.h").implements_object("tzname"))
+        self.assertTrue(Header("unistd.h").implements_object("optarg"))
+        self.assertFalse(Header("time.h").implements_object("getdate_err"))
+        self.assertFalse(Header("errno.h").implements_object("errno"))
+
+    def test_md_output_generation(self):
+        hdr = Header("stdio.h")
+        api = {
+            "c-reference-root": "io",
+            "types": {
+                "FILE": {
+                    "c-definition": "7.23.1",
+                    "c-reference": "io/FILE",
+                    "in-latest-posix": None,
+                }
+            },
+            "objects": {
+                "stdin": {
+                    "c-definition": "7.23.1",
+                    "c-reference": "io/std_streams",
+                    "in-latest-posix": None,
+                }
+            },
+            "macros": {"EOF": {"c-definition": "7.23.1", "in-latest-posix": None}},
+            "functions": {
+                "printf": {
+                    "c-definition": "7.23.6.3",
+                    "c-reference": "io/fprintf",
+                    "in-latest-posix": None,
+                },
+                "printf_s": {
+                    "c-definition": "K.3.5.3.3",
+                    "c-reference": "io/fprintf",
+                },
+                "missing_fn": {"c-definition": "7.23.6.99"},
+                "gnu_fn": {"c-definition": "TODO: glibc extension"},
+            },
+        }
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(hdr, api)
+        out = buf.getvalue()
+        lines = {line.strip() for line in out.splitlines()}
+        self.assertIn("# stdio.h", out)
+        self.assertIn("## Types", out)
+        self.assertIn("## Global Variables", out)
+        self.assertIn("## Macros", out)
+        self.assertIn("## Functions", out)
+        self.assertIn('<table class="hc-table">', out)
+        self.assertTrue(
+            any(
+                'id="type-FILE"' in l
+                and 'title="Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io/FILE"' in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="object-stdin"' in l
+                and 'title="Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io/std_streams"' in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="macro-EOF"' in l
+                and 'title="Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io"' in l
+                and "basedefs/stdio.h.html" in l
+                and '<span aria-hidden="true">&#8599;</span>' in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="function-printf"' in l
+                and 'title="Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io/fprintf"' in l
+                and "functions/printf.html" in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="function-printf_s"' in l
+                and 'href="https://en.cppreference.com/w/c/io/fprintf"' in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="function-missing_fn"' in l
+                and 'title="Not Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io/missing_fn"' in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="function-gnu_fn"' in l
+                and '<span class="hc-sec-badge">TODO: glibc extension</span>' in l
+                for l in lines
+            )
+        )
+
+    def test_external_urls(self):
+        cases = [
+            (
+                "stdio.h",
+                "fopen",
+                "function",
+                "functions",
+                "https://en.cppreference.com/w/c/io/fopen",
+            ),
+            (
+                "stdio.h",
+                "printf",
+                "function",
+                "functions",
+                "https://en.cppreference.com/w/c/io/fprintf",
+            ),
+            (
+                "stdio.h",
+                "SEEK_SET",
+                "macro",
+                "macros",
+                "https://en.cppreference.com/w/c/io/fseek",
+            ),
+            (
+                "stdlib.h",
+                "malloc",
+                "function",
+                "functions",
+                "https://en.cppreference.com/w/c/memory/malloc",
+            ),
+            (
+                "stdlib.h",
+                "strfromd128",
+                "function",
+                "functions",
+                "https://en.cppreference.com/w/c/string/byte/strfromf",
+            ),
+            (
+                "stdbit.h",
+                "stdc_bit_ceil_ui",
+                "function",
+                "functions",
+                "https://en.cppreference.com/w/c/numeric/bit/stdc_bit_ceil",
+            ),
+            (
+                "time.h",
+                "clock",
+                "function",
+                "functions",
+                "https://en.cppreference.com/w/c/chrono/clock",
+            ),
+            ("unistd.h", "fork", "function", "functions", ""),
+        ]
+        for hname, sym, kind, sec, expected in cases:
+            hdr = Header(hname)
+            item = (hdr.api.get(sec) or {}).get(sym, {})
+            with self.subTest(header=hname, symbol=sym):
+                self.assertEqual(cppreference_url(hdr, sym, kind, item), expected)
+        with redirect_stderr(io.StringIO()):
+            for yf in sorted(Path(__file__).parent.rglob("*.yaml")):
+                rel = yf.relative_to(Path(__file__).parent).with_suffix(".h").as_posix()
+                hdr = Header(rel)
+                check_api(hdr, hdr.api)
+        self.assertEqual(
+            posix_url(
+                Header("sys/stat.h"), "chmod", "function", {"in-latest-posix": None}
+            ),
+            "https://pubs.opengroup.org/onlinepubs/9799919799/functions/chmod.html",
+        )
+        self.assertEqual(
+            posix_url(
+                Header("sys/stat.h"), "S_IRUSR", "macro", {"in-latest-posix": None}
+            ),
+            "https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_stat.h.html",
+        )
+        self.assertEqual(
+            posix_url(
+                Header("strings.h"), "bcmp", "function", {"removed-in-posix-2008": None}
+            ),
+            "https://pubs.opengroup.org/onlinepubs/007904875/functions/bcmp.html",
+        )
+        self.assertEqual(
+            posix_url(
+                Header("sys/time.h"),
+                "gettimeofday",
+                "function",
+                {"removed-in-posix-2024": None},
+            ),
+            "https://pubs.opengroup.org/onlinepubs/"
+            "9699919799.2018edition/functions/gettimeofday.html",
+        )
+        self.assertEqual(posix_url(Header("stdio.h"), "printf", "function", {}), "")
+
+    def test_families_md(self):
+        math_hdr = Header("math.h")
+        ev = math_hdr.evaluate_family("atan2", math_hdr.api["families"]["atan2"])
+        self.assertTrue(ev["implemented"])
+        self.assertTrue(ev["variants"]["float"]["implemented"])
+        self.assertEqual(ev["variants"]["double"]["accuracy"], "1 ULP")
+        self.assertFalse(ev["variants"]["double_double"]["implemented"])
+
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(math_hdr, math_hdr.api)
+        math_out = buf.getvalue()
+        self.assertIn("{doc}`../math/index`", math_out)
+        self.assertIn("## Basic Operations", math_out)
+        self.assertIn("## Higher Math Functions", math_out)
+        self.assertNotIn("## GPU Conformance", math_out)
+        self.assertIn('title="atan2: Implemented (1 ULP)">1 ULP</span>', math_out)
+        self.assertIn('title="log_bf16: Implemented"', math_out)
+        self.assertIn(
+            'class="hc-status-na" title="Not applicable">N/A</span>', math_out
+        )
+        self.assertIn("F.10.1.4", math_out)
+
+        cmplx_hdr = Header("complex.h")
+        cbuf = io.StringIO()
+        with redirect_stdout(cbuf):
+            print_header_status_md(cmplx_hdr, cmplx_hdr.api)
+        cmplx_out = cbuf.getvalue()
+        self.assertIn("## Function Families", cmplx_out)
+        self.assertIn('title="carg: Implemented (1 ULP)">1 ULP</span>', cmplx_out)
+        self.assertIn("G.6.2.1", cmplx_out)
+
+        fx_hdr = Header("stdfix.h")
+        fbuf = io.StringIO()
+        with redirect_stdout(fbuf):
+            print_header_status_md(fx_hdr, fx_hdr.api)
+        fx_out = fbuf.getvalue()
+        self.assertIn("{doc}`../math/stdfix`", fx_out)
+        self.assertIn("## Fixed-point Arithmetics", fx_out)
+        self.assertIn("## Higher Math Functions", fx_out)
+        self.assertIn("## Conversion Functions", fx_out)
+        self.assertIn('title="uhrbits: Implemented"', fx_out)
+        self.assertIn('title="exphk: Implemented"', fx_out)
+        self.assertIn('title="strtofxr: Not Implemented"', fx_out)
+
+        srch_hdr = Header("search.h")
+        self.assertTrue(srch_hdr.implements_type("ACTION"))
+        self.assertTrue(srch_hdr.implements_fn("hcreate"))
 
 
 if __name__ == "__main__":

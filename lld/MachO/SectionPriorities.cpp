@@ -257,15 +257,17 @@ void macho::PriorityBuilder::SymbolPriorityEntry::setPriority(
 
 int macho::PriorityBuilder::SymbolPriorityEntry::getPriority(
     const InputFile *f) const {
-  if (!f)
+  if (!f || objectFiles.empty())
     return anyObjectFile;
   // We don't use toString(InputFile *) here because it returns the full path
   // for object files, and we only want the basename.
   StringRef basename = path::filename(f->getName());
+  SmallString<128> buf;
   StringRef filename =
       f->archiveName.empty()
           ? basename
-          : saver().save(path::filename(f->archiveName) + "(" + basename + ")");
+          : (path::filename(f->archiveName) + "(" + basename + ")")
+                .toStringRef(buf);
   return std::min(objectFiles.lookup(filename), anyObjectFile);
 }
 

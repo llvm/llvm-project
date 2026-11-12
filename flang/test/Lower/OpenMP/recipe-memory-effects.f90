@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 
 ! Each clause has its own bounded-recipe-effects assumption, which requires
-! all variables in that clause to be non-derived and non-allocatable.
+! all variables in that clause to be non-derived, non-allocatable and non-pointer.
 module recipe_memory_effects
   implicit none
   type :: record
@@ -421,5 +421,83 @@ contains
       !$omp single
       !$omp end single copyprivate(/intrinsic_copy_block/)
     !$omp end parallel
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtaskgroup_no_reduction(
+  ! CHECK: omp.taskgroup {
+  ! CHECK: } <task_reduction_assume_bounded_recipe_effects>
+  ! CHECK: return
+  subroutine taskgroup_no_reduction()
+    !$omp taskgroup
+    !$omp end taskgroup
+  end subroutine
+
+  ! All intrinsic scalar reduction variables have bounded recipes.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtaskgroup_intrinsic_reduction(
+  ! CHECK: omp.taskgroup task_reduction(
+  ! CHECK: } <task_reduction_assume_bounded_recipe_effects>
+  ! CHECK: return
+  subroutine taskgroup_intrinsic_reduction(x, y)
+    integer :: x
+    real :: y
+    !$omp taskgroup task_reduction(+:x,y)
+      x = x + 1
+      y = y + 1.0
+    !$omp end taskgroup
+  end subroutine
+
+  ! One allocatable excludes the entire task_reduction clause.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtaskgroup_allocatable_reduction(
+  ! CHECK: omp.taskgroup task_reduction(
+  ! CHECK-NOT: task_reduction_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine taskgroup_allocatable_reduction(x, a)
+    integer :: x
+    real, allocatable :: a
+    !$omp taskgroup task_reduction(+:x,a)
+      x = x + 1
+      a = a + 1.0
+    !$omp end taskgroup
+  end subroutine
+
+  ! Pointer reductions can access storage reached through the pointer.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtaskgroup_pointer_reduction(
+  ! CHECK: omp.taskgroup task_reduction(
+  ! CHECK-NOT: task_reduction_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine taskgroup_pointer_reduction(p)
+    real, pointer :: p
+    !$omp taskgroup task_reduction(+:p)
+      p = p + 1.0
+    !$omp end taskgroup
+  end subroutine
+
+  ! Boxed arrays access pointees and therefore violate the attribute contract.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtaskgroup_assumed_shape_reduction(
+  ! CHECK: omp.taskgroup task_reduction(
+  ! CHECK-NOT: task_reduction_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine taskgroup_assumed_shape_reduction(a)
+    real :: a(:)
+    !$omp taskgroup task_reduction(+:a)
+      a = a + 1.0
+    !$omp end taskgroup
+  end subroutine
+
+  ! A derived reduction excludes the entire task_reduction clause.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtaskgroup_derived_reduction(
+  ! CHECK: omp.taskgroup task_reduction(
+  ! CHECK-NOT: task_reduction_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine taskgroup_derived_reduction(x, z)
+    integer :: x
+    type(record) :: z
+    !$omp declare reduction(+ : record : &
+    !$omp & omp_out%value = omp_out%value + omp_in%value) &
+    !$omp & initializer(omp_priv%value = 0)
+    !$omp taskgroup task_reduction(+:x,z)
+      x = x + 1
+      z%value = z%value + 1
+    !$omp end taskgroup
   end subroutine
 end module

@@ -269,13 +269,14 @@ ScriptedFrame::GetInScopeVariableList(bool get_file_globals,
 
 void ScriptedFrame::PopulateVariableListFromInterface(
     bool include_synthetic_vars) {
+  m_variable_list_sp = std::make_shared<VariableList>();
+
   // Fetch values from the interface.
   ValueObjectListSP value_list_sp = GetInterface()->GetVariables();
   if (!value_list_sp)
     return;
 
   // Convert what we can into a variable.
-  m_variable_list_sp = std::make_shared<VariableList>();
 
   for (uint32_t i = 0, e = value_list_sp->GetSize(); i < e; ++i) {
     ValueObjectSP v = value_list_sp->GetValueObjectAtIndex(i);
