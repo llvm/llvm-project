@@ -83,3 +83,4 @@ body:             |
     %fcmp:_(<4 x i16>) = G_FCMP floatpred(oeq), %lhs(<4 x f16>), %rhs
     $d0 = COPY %fcmp(<4 x i16>)
     RET_ReallyLR implicit $d0
+...

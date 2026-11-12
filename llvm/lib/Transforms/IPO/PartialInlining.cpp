@@ -22,7 +22,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -282,7 +281,6 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   DominatorTree DT(F);
   CycleInfo CI;
   CI.compute(F);
-  LoopInfo LI(DT);
   BranchProbabilityInfo BPI(F, CI);
   std::unique_ptr<BlockFrequencyInfo> ScopedBFI;
   BlockFrequencyInfo *BFI;

@@ -19,7 +19,6 @@
 # CHECK-LABEL: name: test_sxtw_copy
 # CHECK: %2:intregs = COPY %0
 name: test_sxtw_copy
-tracksRegLiveness: true
 registers:
   - { id: 0, class: intregs }
   - { id: 1, class: doubleregs }
@@ -40,7 +39,6 @@ body: |
 # CHECK-LABEL: name: test_combine_copy
 # CHECK: %2:intregs = COPY %0
 name: test_combine_copy
-tracksRegLiveness: true
 registers:
   - { id: 0, class: intregs }
   - { id: 1, class: doubleregs }
@@ -61,7 +59,6 @@ body: |
 # CHECK-LABEL: name: test_lsr_copy
 # CHECK: %2:intregs = COPY %0.isub_hi
 name: test_lsr_copy
-tracksRegLiveness: true
 registers:
   - { id: 0, class: doubleregs }
   - { id: 1, class: doubleregs }

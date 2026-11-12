@@ -932,6 +932,41 @@ exit:
   ret i32 %r
 }
 
+; The stores to %q are hoisted into entry past the store to %out in left, which
+; does not alias %q. The load in right must still see the store to %p in right,
+; so it must not be merged with the load in left and hoisted.
+define void @hoistLoadAfterHoistedStore(i1 %c, ptr noalias %p, ptr noalias %q, ptr noalias %out) {
+; CHECK-LABEL: @hoistLoadAfterHoistedStore(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[L]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       right:
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[R]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %l = load i32, ptr %p, align 4
+  store i32 %l, ptr %out, align 4
+  store i32 1, ptr %q, align 4
+  ret void
+
+right:
+  store i32 1, ptr %p, align 4
+  store i32 1, ptr %q, align 4
+  %r = load i32, ptr %p, align 4
+  store i32 %r, ptr %out, align 4
+  ret void
+}
+
 ; The hoisted mul replaces the extractvalue of smul.with.overflow, whose result
 ; wraps on overflow, so the nsw flag on the mul must be dropped.
 define i32 @hoist_mul_with_overflow(i1 %c, i32 %x) {

@@ -30,7 +30,6 @@
 ---
 name:            sub_v16i8_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -58,7 +57,6 @@ body:             |
 ---
 name:            sub_v8i16_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -86,7 +84,6 @@ body:             |
 ---
 name:            sub_v4i32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -114,7 +111,6 @@ body:             |
 ---
 name:            sub_v2i64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -142,7 +138,6 @@ body:             |
 ---
 name:            sub_v16i8_builtin_imm
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -166,7 +161,6 @@ body:             |
 ---
 name:            sub_v8i16_builtin_imm
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -190,7 +184,6 @@ body:             |
 ---
 name:            sub_v4i32_builtin_imm
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -214,7 +207,6 @@ body:             |
 ---
 name:            sub_v2i64_builtin_imm
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5

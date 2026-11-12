@@ -42,7 +42,6 @@ private:
 
   DenseMap<MachineInstr *, MachineInstr *> SaveExecVCmpMapping;
   SmallVector<std::pair<MachineInstr *, MachineInstr *>, 1> OrXors;
-  SmallVector<MachineOperand *, 1> KillFlagCandidates;
 
   Register isCopyFromExec(const MachineInstr &MI) const;
   Register isCopyToExec(const MachineInstr &MI) const;
@@ -59,8 +58,6 @@ private:
   MachineInstr *findInstrBackwards(
       MachineInstr &Origin, std::function<bool(MachineInstr *)> Pred,
       ArrayRef<MCRegister> NonModifiableRegs,
-      MachineInstr *Terminator = nullptr,
-      SmallVectorImpl<MachineOperand *> *KillFlagCandidates = nullptr,
       unsigned MaxInstructions = 20) const;
   bool optimizeExecSequence();
   bool blocksAndN2Sink(const MachineInstr &MI, Register Dst) const;
@@ -367,9 +364,7 @@ static bool isLiveOut(const MachineBasicBlock &MBB, unsigned Reg) {
 // registers given in NonModifiableRegs is modified by the current instruction.
 MachineInstr *SIOptimizeExecMasking::findInstrBackwards(
     MachineInstr &Origin, std::function<bool(MachineInstr *)> Pred,
-    ArrayRef<MCRegister> NonModifiableRegs, MachineInstr *Terminator,
-    SmallVectorImpl<MachineOperand *> *KillFlagCandidates,
-    unsigned MaxInstructions) const {
+    ArrayRef<MCRegister> NonModifiableRegs, unsigned MaxInstructions) const {
   MachineBasicBlock::reverse_iterator A = Origin.getReverseIterator(),
                                       E = Origin.getParent()->rend();
   unsigned CurrentIteration = 0;
@@ -384,21 +379,6 @@ MachineInstr *SIOptimizeExecMasking::findInstrBackwards(
     for (MCRegister Reg : NonModifiableRegs) {
       if (A->modifiesRegister(Reg, TRI))
         return nullptr;
-
-      // Check for kills that appear after the terminator instruction, that
-      // would not be detected by clearKillFlags, since they will cause the
-      // register to be dead at a later place, causing the verifier to fail.
-      // We use the candidates to clear the kill flags later.
-      if (Terminator && KillFlagCandidates && A != Terminator &&
-          A->killsRegister(Reg, TRI)) {
-        for (MachineOperand &MO : A->operands()) {
-          if (MO.isReg() && MO.isKill()) {
-            Register Candidate = MO.getReg();
-            if (Candidate != Reg && TRI->regsOverlap(Candidate, Reg))
-              KillFlagCandidates->push_back(&MO);
-          }
-        }
-      }
     }
 
     ++CurrentIteration;
@@ -703,6 +683,19 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
   MachineOperand *Src0 = TII->getNamedOperand(VCmp, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(VCmp, AMDGPU::OpName::src1);
 
+  // Kills of the sources between the v_cmp and the saveexec are no longer
+  // valid once the compare is moved to the saveexec.
+  for (MachineInstr &MI :
+       make_range(std::next(VCmp.getIterator()), SaveExecInstr.getIterator())) {
+    for (MachineOperand &MO : MI.all_uses()) {
+      if (MO.isKill() &&
+          any_of(std::array{Src0, Src1}, [&](const MachineOperand *Src) {
+            return Src->isReg() && TRI->regsOverlap(MO.getReg(), Src->getReg());
+          }))
+        MO.setIsKill(false);
+    }
+  }
+
   Register MoveDest = SaveExecInstr.getOperand(0).getReg();
 
   MachineBasicBlock::instr_iterator InsertPosIt = SaveExecInstr.getIterator();
@@ -734,15 +727,6 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
 
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::op_sel);
-
-  // The kill flags may no longer be correct.
-  if (Src0->isReg())
-    MRI->clearKillFlags(Src0->getReg());
-  if (Src1->isReg())
-    MRI->clearKillFlags(Src1->getReg());
-
-  for (MachineOperand *MO : KillFlagCandidates)
-    MO->setIsKill(false);
 
   SaveExecInstr.eraseFromParent();
   VCmp.eraseFromParent();
@@ -832,12 +816,10 @@ void SIOptimizeExecMasking::tryRecordVCmpxAndSaveexecSequence(
     NonDefRegs.push_back(Src1->getReg());
 
   if (!findInstrBackwards(
-          MI, [&](MachineInstr *Check) { return Check == VCmp; }, NonDefRegs,
-          VCmp, &KillFlagCandidates))
+          MI, [&](MachineInstr *Check) { return Check == VCmp; }, NonDefRegs))
     return;
 
-  if (VCmp)
-    SaveExecVCmpMapping[&MI] = VCmp;
+  SaveExecVCmpMapping[&MI] = VCmp;
 }
 
 // Record occurences of
@@ -912,7 +894,6 @@ bool SIOptimizeExecMasking::run() {
 
   OrXors.clear();
   SaveExecVCmpMapping.clear();
-  KillFlagCandidates.clear();
   static unsigned SearchWindow = 10;
   for (MachineBasicBlock &MBB : *MF) {
     unsigned SearchCount = 0;

@@ -61,6 +61,7 @@ include "HexagonScheduleV55.td"
 
 include "HexagonIICScalar.td"
 include "HexagonIICHVX.td"
+include "HexagonIICHLX.td"
 include "HexagonScheduleV60.td"
 
 include "HexagonScheduleV62.td"

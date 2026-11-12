@@ -17,7 +17,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 1, class: tile }
   - { id: 2, class: tile }
@@ -144,3 +143,4 @@ body:             |
     %24:gr16 = MOV16ri 16
     %3:tile = PTILEZEROV %24, %23
     JMP_1 %bb.2
+...
