@@ -230,8 +230,9 @@ symbols: []
 ## 'OmitBBEntries' is set, and that the output round-trips.
 
 # RUN: yaml2obj --docnum=5 %s -o %t5
-# RUN: obj2yaml %t5 | FileCheck %s --check-prefix=OMIT
-# RUN: obj2yaml %t5 | yaml2obj -o %t5.rt
+# RUN: obj2yaml %t5 -o %t5.out
+# RUN: FileCheck %s --input-file %t5.out --check-prefix=OMIT
+# RUN: yaml2obj %t5.out -o %t5.rt
 # RUN: cmp %t5 %t5.rt
 
 # OMIT:      Entries:
