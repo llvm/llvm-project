@@ -1177,6 +1177,10 @@ int main(int argc, char **argv) {
       return std::make_unique<CachedFileStream>(std::move(S));
     };
 
+    // Cache the parallel codegen partitions (-j > 1) if a cache was requested.
+    if (!ThinLTOCacheDir.empty())
+      CodeGen.setCacheDir(ThinLTOCacheDir);
+
     if (!CodeGen.compileOptimized(AddStream, Parallelism))
       // Diagnostic messages should have been printed by the handler.
       error("error compiling the code");

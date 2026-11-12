@@ -40,6 +40,8 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
+#include "llvm/Support/CachePruning.h"
+#include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -653,10 +655,50 @@ bool LTOCodeGenerator::compileOptimized(AddStreamFn AddStream,
   ModuleSummaryIndex CombinedIndex(false);
 
   Config.CodeGenOnly = true;
-  Error Err = backend(Config, AddStream, ParallelismLevel, *MergedModule,
-                      CombinedIndex, /*BitcodeLibFuncs=*/{});
+
+  // If a cache directory was configured, build a
+  // FileCache to cache the codegen partitions produced when ParallelismLevel
+  // > 1.
+  FileCache PartitionsFC;
+  if (!CacheOptions.Path.empty()) {
+    // The cache hands back objects (both on hits and on misses) as buffers.
+    // Forward them to the caller's AddStream so they are delivered like
+    // uncached partitions.
+    AddBufferFn ForwardToStream =
+        [&AddStream](unsigned Task, const Twine &ModuleName,
+                     std::unique_ptr<MemoryBuffer> MB) {
+          Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
+              AddStream(Task, ModuleName);
+          if (Error Err = StreamOrErr.takeError())
+            report_fatal_error(std::move(Err));
+          std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+          *Stream->OS << MB->getBuffer();
+          if (Error Err = Stream->commit())
+            report_fatal_error(std::move(Err));
+        };
+
+    Expected<FileCache> FCOrErr = localCache(
+        "LTO", "lto-partition", CacheOptions.Path, std::move(ForwardToStream));
+    if (!FCOrErr) {
+      emitError(toString(FCOrErr.takeError()));
+      return false;
+    }
+    PartitionsFC = std::move(*FCOrErr);
+  }
+
+  Error Err = backend(Config, AddStream, PartitionsFC, ParallelismLevel,
+                      *MergedModule, CombinedIndex, /*BitcodeLibFuncs=*/{});
   assert(!Err && "unexpected code-generation failure");
   (void)Err;
+
+  if (!CacheOptions.Path.empty()) {
+    Expected<bool> PrunedOrErr =
+        pruneCache(CacheOptions.Path, CacheOptions.Policy);
+    if (!PrunedOrErr) {
+      emitError(toString(PrunedOrErr.takeError()));
+      return false;
+    }
+  }
 
   // If statistics were requested, save them to the specified file or
   // print them out after codegen.
