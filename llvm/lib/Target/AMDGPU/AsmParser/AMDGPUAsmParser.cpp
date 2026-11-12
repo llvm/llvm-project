@@ -9455,7 +9455,8 @@ bool AMDGPUOperand::isSMRDLiteralOffset() const {
 }
 
 bool AMDGPUOperand::isPrefetchSdata() const {
-  // Accept immediates (u8) or prefetch cachelines expressions.
+  // Accept immediates or prefetch cachelines expressions.
+  // Immediate range is checked later by validator.
   if (isExpr()) {
     if (Expr->getKind() == MCExpr::Target) {
       const AMDGPUMCExpr *AExpr = static_cast<const AMDGPUMCExpr *>(Expr);
@@ -9463,7 +9464,7 @@ bool AMDGPUOperand::isPrefetchSdata() const {
         return true;
     }
   }
-  return isImmLiteral() && isUInt<8>(getImm());
+  return isImmLiteral();
 }
 
 //===----------------------------------------------------------------------===//
