@@ -3561,6 +3561,18 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
         // we want to flag it so the def isn't deleted.
         MachineInstr *DefMI = getDefMIPostRA(Reg, MI, SeenIntermediateUse);
         if (DefMI) {
+          // A debug instruction does not keep a load-immediate alive. Check
+          // again without debug instructions so the immediate can still be
+          // folded into MI and its dead definition removed.
+          if (SeenIntermediateUse &&
+              (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8))
+            SeenIntermediateUse = any_of(
+                make_range(std::next(DefMI->getIterator()), MI.getIterator()),
+                [&](const MachineInstr &Between) {
+                  return !Between.isDebugInstr() &&
+                         Between.readsRegister(Reg, &RI);
+                });
+
           // Is this register defined by some form of add-immediate (including
           // load-immediate) within this basic block?
           switch (DefMI->getOpcode()) {

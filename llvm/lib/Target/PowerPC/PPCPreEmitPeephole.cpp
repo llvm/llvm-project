@@ -20,9 +20,11 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -89,6 +91,33 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
   case PPC::DFSTOREf32:
   case PPC::DFSTOREf64:
     return true;
+  }
+}
+
+static void salvageDebugUsesOfErasedLI(MachineInstr &DefMI, MachineInstr &UseMI,
+                                       const TargetRegisterInfo &TRI) {
+  assert((DefMI.getOpcode() == PPC::LI || DefMI.getOpcode() == PPC::LI8) &&
+         DefMI.getOperand(1).isImm() && "Expected load-immediate");
+  Register Reg = DefMI.getOperand(0).getReg();
+  int64_t Imm = SignExtend64<16>(DefMI.getOperand(1).getImm());
+
+  for (MachineInstr &MI : make_early_inc_range(
+           make_range(std::next(DefMI.getIterator()), UseMI.getIterator()))) {
+    if (MI.isDebugPHI()) {
+      if (MI.readsRegister(Reg, &TRI))
+        MI.eraseFromParent();
+      continue;
+    }
+    if (!MI.isDebugValue() || !MI.readsRegister(Reg, &TRI))
+      continue;
+    if (MI.getDebugExpression()->isEntryValue())
+      continue;
+
+    if (MI.isNonListDebugValue() && !MI.isIndirectDebugValue() &&
+        MI.getDebugOperand(0).isReg() && MI.getDebugOperand(0).getReg() == Reg)
+      MI.getDebugOperand(0).ChangeToImmediate(Imm);
+    else
+      MI.setDebugValueUndef();
   }
 }
 
@@ -497,6 +526,9 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
             LLVM_DEBUG(dbgs() << "Converted instruction to imm form: ");
             LLVM_DEBUG(MI.dump());
             if (DefMIToErase) {
+              if (DefMIToErase->getOpcode() == PPC::LI ||
+                  DefMIToErase->getOpcode() == PPC::LI8)
+                salvageDebugUsesOfErasedLI(*DefMIToErase, MI, *TRI);
               InstrsToErase.push_back(DefMIToErase);
             }
           }
