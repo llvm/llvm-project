@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/FPUtil/cast.h"
 #include "src/math/cbrtf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -15,27 +16,33 @@ using LlvmLibcCbrtf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcCbrtf16Test, SpecialNumbers) {
+  using LIBC_NAMESPACE::fputil::cast;
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cbrtf16(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::cbrtf16(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, LIBC_NAMESPACE::cbrtf16(neg_inf));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::cbrtf16(zero));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::cbrtf16(neg_zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(0x1.0p+0f16, LIBC_NAMESPACE::cbrtf16(0x1.0p+0f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(-0x1.0p+0f16,
-                            LIBC_NAMESPACE::cbrtf16(-0x1.0p+0f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(0x1.0p+1f16, LIBC_NAMESPACE::cbrtf16(0x1.0p+3f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(-0x1.0p+1f16,
-                            LIBC_NAMESPACE::cbrtf16(-0x1.0p+3f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(0x1.8p+1f16, LIBC_NAMESPACE::cbrtf16(0x1.bp+4f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(-0x1.8p+1f16,
-                            LIBC_NAMESPACE::cbrtf16(-0x1.bp+4f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(0x1.4p+2f16, LIBC_NAMESPACE::cbrtf16(0x1.f4p+6f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(-0x1.4p+2f16,
-                            LIBC_NAMESPACE::cbrtf16(-0x1.f4p+6f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(0x1.4p+5f16,
-                            LIBC_NAMESPACE::cbrtf16(0x1.f4p+15f16));
-  EXPECT_FP_EQ_ALL_ROUNDING(-0x1.4p+5f16,
-                            LIBC_NAMESPACE::cbrtf16(-0x1.f4p+15f16));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(1.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(1.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(-1.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(-1.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(2.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(8.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(-2.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(-8.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(3.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(27.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(-3.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(-27.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(5.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(125.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(-5.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(-125.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(cast<float16>(40.0f),
+                            LIBC_NAMESPACE::cbrtf16(cast<float16>(0x1.f4p15f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(
+      cast<float16>(-40.0f),
+      LIBC_NAMESPACE::cbrtf16(cast<float16>(-0x1.f4p15f)));
 }
 
 TEST_F(LlvmLibcCbrtf16Test, SignalingNaNValue) {

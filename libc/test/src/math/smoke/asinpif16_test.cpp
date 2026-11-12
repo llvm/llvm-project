@@ -7,18 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/math/asinpif16.h"
 #include "test/UnitTest/FPMatcher.h"
 
 using LlvmLibcAsinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
+  using LIBC_NAMESPACE::fputil::cast;
   // zero
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::asinpif16(zero));
 
   // +/-1
-  EXPECT_FP_EQ(0x1.0p-1f16, LIBC_NAMESPACE::asinpif16(0x1.0p+0f16));
-  EXPECT_FP_EQ(-0x1.0p-1f16, LIBC_NAMESPACE::asinpif16(-0x1.0p+0f16));
+  EXPECT_FP_EQ(cast<float16>(0.5f),
+               LIBC_NAMESPACE::asinpif16(cast<float16>(1.0f)));
+  EXPECT_FP_EQ(cast<float16>(-0.5f),
+               LIBC_NAMESPACE::asinpif16(cast<float16>(-1.0f)));
 
   // NaN inputs
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::asinpif16(aNaN));
@@ -36,18 +40,19 @@ TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcAsinpif16Test, OutOfRange) {
+  using LIBC_NAMESPACE::fputil::cast;
   // Test values > 1
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(1.5f16));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(cast<float16>(1.5f)));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(2.0f16));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(cast<float16>(2.0f)));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test values < -1
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(-1.5f16));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(cast<float16>(-1.5f)));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(-2.0f16));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinpif16(cast<float16>(-2.0f)));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test maximum normal value (should be > 1 for float16)
@@ -56,9 +61,12 @@ TEST_F(LlvmLibcAsinpif16Test, OutOfRange) {
 }
 
 TEST_F(LlvmLibcAsinpif16Test, SymmetryProperty) {
+  using LIBC_NAMESPACE::fputil::cast;
   // Test that asinpi(-x) = -asinpi(x)
-  constexpr float16 TEST_VALS[] = {0.1f16, 0.25f16, 0.5f16, 0.75f16,
-                                   0.9f16, 0.99f16, 1.0f16};
+  constexpr float16 TEST_VALS[] = {cast<float16>(0.1f), cast<float16>(0.25f),
+                                   cast<float16>(0.5f), cast<float16>(0.75f),
+                                   cast<float16>(0.9f), cast<float16>(0.99f),
+                                   cast<float16>(1.0f)};
 
   for (float16 x : TEST_VALS) {
     FPBits neg_x_bits(x);

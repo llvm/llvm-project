@@ -3306,6 +3306,7 @@ add_fp_unittest(
     atan2f16_test.cpp
   DEPENDS
     libc.src.math.atan2f16
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
 )
 
