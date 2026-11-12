@@ -64,7 +64,9 @@ namespace {
 /// Layouts requested by consumers are tracked separately from producer layouts
 /// written into the IR. Later visits overwrite earlier layout requests.
 ///
-/// A forward pass infers missing layouts where supported.
+/// A forward pass then sets the region result layouts from the terminator
+/// operands, updates the function signatures, and infers layouts still missing
+/// from operand layouts where supported.
 /// ResolveLayoutConflicts reconciles producer and consumer layouts.
 class LayoutPropagation final : public xegpu::BackwardLayoutVisitor {
 public:
@@ -1200,21 +1202,15 @@ void LayoutPropagation::visitTerminator(
   RegionBranchSuccessorMapping mapping;
   regionOp.getSuccessorOperandInputMapping(mapping,
                                            RegionBranchPoint(terminator));
-  for (const auto &[successorOperand, successorInputs] : mapping) {
-    // Prefer a layout requested for a successor block argument over one
-    // requested for a parent result. For scf.condition, the after region has
-    // not been visited, so only the parent's requested result layout is known.
-    xegpu::DistributeLayoutAttr layout;
-    for (Value input : successorInputs)
-      if (isa<BlockArgument>(input) && (layout = getRequestedLayout(input)))
-        break;
-    // Otherwise the region result's (an operand feeds at most one).
-    if (!layout)
-      for (Value input : successorInputs)
-        if (isa<OpResult>(input))
-          layout = getRequestedLayout(input);
-    recordRequestedLayout(successorOperand->get(), layout);
+  // As in layout recovery, each operand takes the layout requested for the
+  // value it feeds. For scf.condition, the after region has not been visited,
+  // so only the parent's requested result layout is known.
+  xegpu::propagateRegionResultsToYieldOperands(
+      terminator, [&](Value val) { return getRequestedLayout(val); });
+  for (OpOperand &operand : llvm::reverse(terminator->getOpOperands()))
+    recordRequestedLayout(operand.get(), xegpu::getTemporaryLayout(operand));
 
+  for (const auto &[successorOperand, successorInputs] : mapping) {
     // Layout lookup for scf.while's after arguments follows pass-through
     // before arguments to their tied init operands.
     auto loop = dyn_cast<LoopLikeOpInterface>(regionOp.getOperation());

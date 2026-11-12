@@ -258,7 +258,7 @@ gpu.module @test {
     // CHECK-SAME: layout_cd = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}>
     // CHECK-SAME: : vector<128x128xf16>, vector<128x128xf16>, vector<128x128xf32> -> vector<128x128xf32>
 
-    // CHECK-NEXT: scf.yield %{{.*}} : vector<128x128xf32>
+    // CHECK-NEXT: scf.yield {layout_operand_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>} %{{.*}} : vector<128x128xf32>
     // CHECK-NEXT: } {layout_operand_3 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>, layout_result_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}
     // CHECK: xegpu.store_nd %{{.*}} <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}>
 
@@ -458,7 +458,7 @@ gpu.module @test {
   // CHECK:       %[[REDUCE:.*]] = vector.multi_reduction <add>, %[[LOAD]], %[[ARG3]]
   // CHECK-SAME:    {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [1, 0]>, dims = [1]>} [1]
   // CHECK-SAME:    : vector<64x32xf16> to vector<64xf16>
-  // CHECK:       scf.yield %[[REDUCE]] : vector<64xf16>
+  // CHECK:       scf.yield {layout_operand_0 = #xegpu.slice<#xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], order = [0, 1]>, dims = [0]>} %[[REDUCE]] : vector<64xf16>
   // CHECK:       } {layout_operand_3 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [1, 0]>, dims = [1]>, layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [1, 0]>, dims = [1]>}
   // CHECK:       %[[BCAST:.*]] = vector.broadcast %[[FOR]] {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], order = [0, 1]>}
   // CHECK-SAME:    : vector<64xf16> to vector<32x64xf16>

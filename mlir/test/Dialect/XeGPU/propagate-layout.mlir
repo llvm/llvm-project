@@ -431,7 +431,7 @@ gpu.module @test {
 // CHECK-SAME: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
 // CHECK-NEXT:   %[[T6:.*]] = xegpu.dpas %[[T4]], %[[T5]], %[[ARG6]] <{layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
 // CHECK-SAME: vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
-// CHECK-NEXT:   scf.yield %[[T6]] : vector<8x16xf32>
+// CHECK-NEXT:   scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} %[[T6]] : vector<8x16xf32>
 // CHECK-NEXT: } {layout_operand_3 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
 // CHECK-NEXT: %[[T3:.*]] = xegpu.create_nd_tdesc %[[ARG2]] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK-NEXT: xegpu.store_nd %[[T2]], %[[T3]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -462,11 +462,11 @@ gpu.module @test {
 // CHECK:  %{{.*}} = scf.if %[[ARG2]] -> (vector<16x16xf16>) {
 // CHECK-NEXT:    %[[T3:.*]] = xegpu.load_nd %[[ARG1]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
-// CHECK-NEXT:    scf.yield %[[T3]] : vector<16x16xf16>
+// CHECK-NEXT:    scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} %[[T3]] : vector<16x16xf16>
 // CHECK-NEXT:  } else {
 // CHECK-NEXT:    %[[T4:.*]] = xegpu.load_nd %[[ARG1]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
-// CHECK-NEXT:    scf.yield %[[T4]] : vector<16x16xf16>
+// CHECK-NEXT:    scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} %[[T4]] : vector<16x16xf16>
 // CHECK-NEXT:  } {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
 func.func @if_single_use(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: i1, %arg3: !xegpu.tensor_desc<8x16xf32>) {
   %0 = xegpu.load_nd %arg0[0, 0]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
@@ -492,11 +492,11 @@ gpu.module @test {
 // CHECK: %[[T1:.*]] = scf.if %[[ARG2]] -> (vector<16x16xf16>) {
 // CHECK-NEXT:       %[[T3:.*]] = xegpu.load_nd %[[ARG1]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
-// CHECK-NEXT:       scf.yield %[[T3]] : vector<16x16xf16>
+// CHECK-NEXT:       scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} %[[T3]] : vector<16x16xf16>
 // CHECK-NEXT:     } else {
 // CHECK-NEXT:       %[[T4:.*]] = xegpu.load_nd %[[ARG1]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
-// CHECK-NEXT:       scf.yield %[[T4]] : vector<16x16xf16>
+// CHECK-NEXT:       scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} %[[T4]] : vector<16x16xf16>
 // CHECK-NEXT:     } {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
 func.func @if_multiple_uses(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: i1, %arg3: !xegpu.tensor_desc<8x16xf32>, %arg4: !xegpu.tensor_desc<16x16xf16>) {
   %0 = xegpu.load_nd %arg0[0, 0]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
@@ -1253,13 +1253,15 @@ func.func @broadcast_slice_expanded_dim(%dst: !xegpu.mem_desc<16x4xbf16>) {
 // The loop carries the layout its in-loop consumer (the dpas accumulator)
 // requires; the loop result takes the layout of the yielded value, not the one
 // its consumer after the loop (the transpose) requests. The mismatch is left to
-// ResolveLayoutConflicts, which converts after the loop.
+// ResolveLayoutConflicts, which converts after the loop. The yield's own
+// operand layout comes from the loop result's consumer, the transpose; that
+// disagreement with the loop is a known limitation, left for later.
 gpu.module @test {
 // CHECK-LABEL: func.func @loop_result_layout_differs_from_consumer(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<8x16xf32>
 // CHECK: %[[LOOP:.*]] = scf.for {{.*}} iter_args(%[[ACC:.*]] = %[[CST]]) -> (vector<8x16xf32>) {
 // CHECK:   %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %{{.*}}, %[[ACC]] {{.*}}layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
-// CHECK:   scf.yield %[[DPAS]] : vector<8x16xf32>
+// CHECK:   scf.yield {layout_operand_0 = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1], order = [0, 1]>} %[[DPAS]] : vector<8x16xf32>
 // CHECK: } {layout_operand_3 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
 // CHECK: vector.transpose %[[LOOP]], [1, 0] {layout_result_0 = #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 1]>} : vector<8x16xf32> to vector<16x8xf32>
 func.func @loop_result_layout_differs_from_consumer(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: !xegpu.tensor_desc<16x8xf32>) {

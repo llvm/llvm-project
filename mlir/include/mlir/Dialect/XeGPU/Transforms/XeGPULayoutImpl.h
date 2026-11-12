@@ -57,6 +57,14 @@ using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
                                          GetLayoutFnTy getLayoutOfValue);
 
+/// Propagate layouts to the operands of a region branch terminator: each
+/// operand gets, via `getLayoutOfValue`, the layout of the region argument it
+/// feeds, or else of the region result it feeds, recorded as the operand's
+/// temporary layout.
+void propagateRegionResultsToYieldOperands(
+    RegionBranchTerminatorOpInterface terminator,
+    GetLayoutFnTy getLayoutOfValue);
+
 /// Callbacks for walkBackward.
 class BackwardLayoutVisitor {
 public:
@@ -76,8 +84,9 @@ public:
 /// Region successors are visited before predecessors where possible. To
 /// break cycles, prefer a region that exits to the parent op; this visits
 /// scf.while's before region before its after region. Regions are not
-/// revisited. Only consumers across a loop back edge are visited after the
-/// producer of their value.
+/// revisited. The only consumers visited after the producer of their value
+/// are those across a loop back edge (scf.for's yield -> iter_args) and, for
+/// scf.while, the uses in its after region of what scf.condition passes on.
 void walkBackward(Operation *root, BackwardLayoutVisitor &visitor);
 
 /// Attach layout attributes to all vector-type operands of operations within
@@ -230,18 +239,12 @@ DistributeLayoutAttr inferResultLayoutFromSourceForNonAnchorOp(
 /// Note on the `consumerLayout` argument used by the consumer-driven setup* /
 /// complete* helpers below:
 ///
-/// Layout propagation is a backward dataflow analysis, so a producer learns its
-/// consumers' demands one at a time. The `consumerLayout` passed to these
-/// helpers is the *single* layout that the first consumer to reach the producer
-/// has requested (see `getConsumerLayoutAt`); these helpers do not pick among,
-/// or merge, multiple consumers, and they do not reason about cost (e.g. a
-/// consumer inside a loop vs. one outside). If a producer has several consumers
-/// with conflicting layout demands, only the first-arriving one shapes the
-/// producer's anchor layout here; any later, inconsistent consumer is left
-/// as-is and reconciled afterwards by the layout conflict resolution process
-/// (`ResolveLayoutConflicts`), which inserts a `convert_layout` op on that
-/// edge. So these helpers can always assume exactly one (possibly null)
-/// consumer layout to honor.
+/// Layout propagation visits a producer after its consumers, in one backward
+/// scan. The `consumerLayout` passed to these helpers is the layout requested
+/// by the nearest consumer, or null if none requests one. They do not pick
+/// among or merge several consumers' layouts; an inconsistent consumer is
+/// reconciled afterwards by `ResolveLayoutConflicts`, which inserts a
+/// `convert_layout` on that edge.
 
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.

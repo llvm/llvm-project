@@ -235,60 +235,30 @@ static void propagateResultsToRegularOperands(Operation *op) {
   }
 }
 
-// Propagate layout from region op results and sibling region block args
-// to yield/condition operands. For each successor of this terminator:
-// - Parent successor: propagate from parent op's result layouts (use points).
-// - Region successor: propagate from target region's block arg layouts (use
-//   points), e.g., scf.yield in "after/do" region propagates to "before/cond"
-//   block args.
-static void propagateRegionResultsToYieldOperands(
-    mlir::RegionBranchTerminatorOpInterface yieldOp) {
-  auto regionBranchOp =
-      dyn_cast<RegionBranchOpInterface>(yieldOp->getParentOp());
-  if (!regionBranchOp)
+void xegpu::propagateRegionResultsToYieldOperands(
+    RegionBranchTerminatorOpInterface terminator,
+    GetLayoutFnTy getLayoutOfValue) {
+  auto regionOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!regionOp)
     return;
-
-  SmallVector<RegionSuccessor> successors;
-  SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
-  yieldOp.getSuccessorRegions(operandAttrs, successors);
-
-  for (const RegionSuccessor &successor : successors) {
-    OperandRange succOps = yieldOp.getSuccessorOperands(successor);
-    if (succOps.empty())
+  RegionBranchSuccessorMapping mapping;
+  regionOp.getSuccessorOperandInputMapping(mapping,
+                                           RegionBranchPoint(terminator));
+  for (const auto &[successorOperand, successorInputs] : mapping) {
+    if (!isa<VectorType, xegpu::TensorDescType>(
+            successorOperand->get().getType()))
       continue;
-    unsigned beginIdx = succOps.getBeginOperandIndex();
-    ValueRange successorInputs = regionBranchOp.getSuccessorInputs(successor);
-    unsigned count = std::min<unsigned>(succOps.size(), successorInputs.size());
-
-    for (unsigned i = 0; i < count; ++i) {
-      xegpu::DistributeLayoutAttr layout;
-      if (successor.isOperation()) {
-        // For parent successor, get layout from external use points of the
-        // parent op's results.
-        auto regionResult = regionBranchOp->getResult(i);
-        layout = getLayoutFromUsePoints(regionResult);
-        if (layout) {
-          // set layout for the region op, like scf.loop
-          xegpu::setTemporaryLayout(regionResult, layout);
-          if (auto tdescTy =
-                  dyn_cast<xegpu::TensorDescType>(regionResult.getType());
-              tdescTy && !tdescTy.getLayoutAttr())
-            xegpu::setTensorDescLayout(regionResult, layout);
-        }
-      } else {
-        // For region successor, get layout from the target region's block
-        // arg use points (e.g., "before/cond" region args for scf.while
-        // "after/do" yield).
-        layout = getLayoutFromUsePoints(successorInputs[i]);
-      }
-      if (!layout)
-        continue;
-      auto operandType = succOps[i].getType();
-      if (isa<VectorType>(operandType) ||
-          dyn_cast<xegpu::TensorDescType>(operandType))
-        // recover layout for yield op operands
-        xegpu::setTemporaryLayout(yieldOp->getOpOperand(beginIdx + i), layout);
-    }
+    // Prefer the layout of a region argument, e.g. a loop's iter_arg.
+    xegpu::DistributeLayoutAttr layout;
+    for (auto arg : llvm::make_isa_range<BlockArgument>(successorInputs))
+      if ((layout = getLayoutOfValue(arg)))
+        break;
+    // Otherwise the region result's (an operand feeds at most one).
+    if (!layout)
+      for (Value input : successorInputs)
+        if (isa<OpResult>(input))
+          layout = getLayoutOfValue(input);
+    xegpu::setTemporaryLayout(*successorOperand, layout);
   }
 }
 
@@ -352,24 +322,30 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
 //      Then the result layouts are propagated to operands.
 //
 //    For region operations (e.g., loops):
-//       - When backward propagation reaches a region op, it sets the layout of
-//       the region op’s results according to use points like regular ops.
-//       - Then, the result layouts (such as a loop output) are propagated to
-//       their corresponding operands in the yield.
-//       - When backward propagation reaches the first operation inside the
-//       region, the pass examines the region op’s initialization list,
-//       propagating from region arguments to the corresponding initialization
-//       operands.
-//       - This ensures that layouts are consistently propagated
-//       across region boundaries while preserving a single well-defined use for
-//       each definition at the region-op level.
+//       - A terminator operand takes the layout of the region argument it
+//       feeds (from while op's cond region), or else of the region result
+//       (from their use points).
+//       - The region op, visited after its regions, sets its result layouts
+//       from their use points and its init operands from the region
+//       arguments.
 namespace {
 /// Recover temporary layouts through the shared backward walk.
 struct LayoutRecovery final : public xegpu::BackwardLayoutVisitor {
   void visitTerminator(RegionBranchTerminatorOpInterface terminator) override {
-    propagateRegionResultsToYieldOperands(terminator);
+    xegpu::propagateRegionResultsToYieldOperands(terminator,
+                                                 getLayoutFromUsePoints);
   }
   void visitRegionOp(RegionBranchOpInterface regionOp) override {
+    // The region results take the layout of their uses.
+    for (OpResult result : regionOp->getResults()) {
+      xegpu::DistributeLayoutAttr layout = getLayoutFromUsePoints(result);
+      if (!layout)
+        continue;
+      xegpu::setTemporaryLayout(result, layout);
+      if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(result.getType());
+          tdescTy && !tdescTy.getLayoutAttr())
+        xegpu::setTensorDescLayout(result, layout);
+    }
     (void)xegpu::propagateRegionArgsToInits(regionOp, getLayoutFromUsePoints);
   }
   void visitRegularOp(Operation *op) override {
