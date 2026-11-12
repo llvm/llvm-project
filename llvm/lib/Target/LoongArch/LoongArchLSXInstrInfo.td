@@ -2977,6 +2977,12 @@ def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v4i32:$vj, uimm2:$imm),
                                        (GRLenVT 31), (GRLenVT 0))),
           (VPICKVE2GR_WU v4i32:$vj, uimm2:$imm)>;
 
+// Vector extraction with sign extension and constant index.
+def : Pat<(GRLenVT (sext_inreg (vector_extract v16i8:$vj, uimm4:$imm), i8)),
+          (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;
+def : Pat<(GRLenVT (sext_inreg (vector_extract v8i16:$vj, uimm3:$imm), i16)),
+          (VPICKVE2GR_H v8i16:$vj, uimm3:$imm)>;
+
 // Vector extraction with constant index.
 def : Pat<(GRLenVT (vector_extract v16i8:$vj, uimm4:$imm)),
           (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;
