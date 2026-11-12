@@ -18,6 +18,7 @@ extern LLVM_ABI cl::opt<std::string> BBSectionsColdTextPrefix;
 
 class MachineFunction;
 class MachineBasicBlock;
+class TargetMachine;
 
 using MachineBasicBlockComparator =
     function_ref<bool(const MachineBasicBlock &, const MachineBasicBlock &)>;
@@ -36,6 +37,13 @@ LLVM_ABI void avoidZeroOffsetLandingPad(MachineFunction &MF);
 /// on top of PGO optimized binaries and hence this check works well in
 /// practice.
 LLVM_ABI bool hasInstrProfHashMismatch(MachineFunction &MF);
+
+/// Returns true if the -align-blocks-in-bbsections flag is enabled.
+LLVM_ABI bool shouldAlignBlocksInBBSections();
+
+/// Returns true if basic block alignment is deferred from
+/// `MachineBlockPlacement` to `BasicBlockSections` for `TM`.
+LLVM_ABI bool shouldAlignBlocksInBBSections(const TargetMachine &TM);
 
 } // end namespace llvm
 

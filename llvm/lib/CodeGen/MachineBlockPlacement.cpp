@@ -36,6 +36,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -3020,6 +3021,7 @@ void llvm::alignMachineBlocks(MachineFunction &MF, const MachineLoopInfo *MLI,
   if (Prof && MLI) {
     const BranchProbability ColdRatio(1, 5); // 20%
     for (MachineBasicBlock &BB : MF) {
+      // The entry block is aligned via the function alignment.
       if (&BB == &MF.front())
         continue;
 
@@ -3053,7 +3055,7 @@ void llvm::alignMachineBlocks(MachineFunction &MF, const MachineLoopInfo *MLI,
 
       // Use max of the TLIAlign and MDAlign
       const Align LoopAlign = std::max(TLIAlign, Align(MDAlign));
-      if (LoopAlign == 1)
+      if (LoopAlign <= BB.getAlignment())
         continue; // Don't care about loop alignment.
 
       // If the block is cold relative to the function entry don't waste space
@@ -3087,8 +3089,9 @@ void llvm::alignMachineBlocks(MachineFunction &MF, const MachineLoopInfo *MLI,
       };
 
       // Force alignment if all the predecessors are jumps. We already checked
-      // that the block isn't cold above.
-      if (!LayoutPred->isSuccessor(&BB)) {
+      // that the block isn't cold above. A block that begins a section never
+      // has a fall-through predecessor, as the linker may reorder sections.
+      if (BB.isBeginSection() || !LayoutPred->isSuccessor(&BB)) {
         BB.setAlignment(LoopAlign);
         DetermineMaxAlignmentPadding();
         continue;
@@ -3119,10 +3122,11 @@ void llvm::alignMachineBlocks(MachineFunction &MF, const MachineLoopInfo *MLI,
     }
   else if (AlignAllNonFallThruBlocks) {
     // Align all of the blocks that have no fall-through predecessors to a
-    // specific alignment.
+    // specific alignment. A block that begins a section never has a
+    // fall-through predecessor, as the linker may reorder sections.
     for (auto MBI = std::next(MF.begin()), MBE = MF.end(); MBI != MBE; ++MBI) {
       auto LayoutPred = std::prev(MBI);
-      if (!LayoutPred->isSuccessor(&*MBI)) {
+      if (MBI->isBeginSection() || !LayoutPred->isSuccessor(&*MBI)) {
         if (HasMaxBytesOverride)
           MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks),
                             MaxBytesForAlignmentOverride);
@@ -3153,6 +3157,8 @@ bool MBFIBlockAlignmentProfile::shouldOptForSize(
 }
 
 void MachineBlockPlacement::alignBlocks() {
+  if (shouldAlignBlocksInBBSections(F->getTarget()))
+    return;
   MBFIBlockAlignmentProfile Prof(*MBFI, *MBPI, PSI);
   alignMachineBlocks(*F, MLI, &Prof);
 }
