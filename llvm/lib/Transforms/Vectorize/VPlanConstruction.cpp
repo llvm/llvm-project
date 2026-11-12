@@ -2447,6 +2447,13 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
                                                   FindIVResult, Zero, ExitDL);
       VPValue *IterResult =
           MiddleBuilder.createSelect(IterCmp, FindIVResult, Zero, ExitDL);
+      VPValue *Mask = MiddleBuilder.createICmp(CmpInst::ICMP_EQ, IterBackedge,
+                                               IterResult, ExitDL);
+      VPValue *FirstActive = MiddleBuilder.createFirstActiveLane(Mask, ExitDL);
+      VPValue *NewFindLastResult = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractLane, {FirstActive, FindBackedge}, ExitDL);
+      FindResult->replaceAllUsesWith(NewFindLastResult);
+      FindResult->eraseFromParent();
 
       return false;
     }
