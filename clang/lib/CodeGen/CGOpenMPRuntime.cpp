@@ -11664,7 +11664,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   const ValueDecl *VD = cast<ValueDecl>(GD.getDecl());
   // Try to detect target regions in the function.
   if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
-    StringRef Name = CGM.getMangledName(GD);
+    StringRef Name = getTargetRegionParentName(FD);
     if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
       scanConstructorForTargetRegions(Ctor, Name);
     else

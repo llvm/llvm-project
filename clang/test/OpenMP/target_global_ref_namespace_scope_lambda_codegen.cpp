@@ -119,6 +119,19 @@ template <class T> struct Holder {
   };
 };
 
+struct AbstractBase {
+  AbstractBase() {
+// CHECK-DAG: define internal void @__omp_offloading_{{.*}}_ZN12AbstractBaseC1Ev_l[[#@LINE+2]](
+// DEVICE-DAG: define weak_odr protected void @__omp_offloading_{{.*}}_ZN12AbstractBaseC1Ev_l[[#@LINE+1]](
+#pragma omp target
+    ref = 42;
+  }
+  virtual void f() = 0;
+};
+struct Derived : AbstractBase {
+  void f() override {}
+};
+
 void use() {
   lambda();
   nested_lambda()();
@@ -130,6 +143,8 @@ void use() {
   LocalObject local_object;
   (void)local_object;
   Holder<int>::member(0);
+  Derived derived;
+  (void)derived;
   // Control: named after the enclosing function.
   static auto static_local_lambda = [](__SIZE_TYPE__ device) {
 // CHECK-DAG: define internal void @__omp_offloading_{{.*}}_Z3usev_l[[#@LINE+2]](
