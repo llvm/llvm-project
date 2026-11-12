@@ -34,6 +34,7 @@ private:
   MachineRegisterInfo &MRI;
 
   bool isAV64Imm(const MachineOperand &MO) const;
+  bool shouldPreferAGPR(Register Reg) const;
 
 public:
   AMDGPUPrepareAGPRAllocImpl(const GCNSubtarget &ST, MachineRegisterInfo &MRI)
@@ -85,6 +86,22 @@ bool AMDGPUPrepareAGPRAllocImpl::isAV64Imm(const MachineOperand &MO) const {
   return MO.isImm() && TII.isLegalAV64PseudoImm(MO.getImm());
 }
 
+bool AMDGPUPrepareAGPRAllocImpl::shouldPreferAGPR(Register Reg) const {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  if (!SIRegisterInfo::hasVGPRs(RC) || !SIRegisterInfo::hasAGPRs(RC))
+    return false;
+
+  for (const MachineOperand &Use : MRI.use_nodbg_operands(Reg)) {
+    const MachineInstr &UseMI = *Use.getParent();
+    const TargetRegisterClass *UseRC = UseMI.getRegClassConstraint(
+        Use.getOperandNo(), &TII, &TII.getRegisterInfo());
+    if (UseRC && !SIRegisterInfo::hasAGPRs(UseRC))
+      return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
   if (MRI.isReserved(AMDGPU::AGPR0))
     return false;
@@ -95,6 +112,19 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      if (MI.mayLoadOrStore()) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg())
+            continue;
+
+          Register Reg = MO.getReg();
+          if (Reg.isVirtual() && shouldPreferAGPR(Reg)) {
+            MRI.setRegAllocationHint(Reg, AMDGPURI::PreferAGPR, Register());
+            Changed = true;
+          }
+        }
+      }
+
       if ((MI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
            TII.isInlineConstant(MI, 1)) ||
           (MI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
