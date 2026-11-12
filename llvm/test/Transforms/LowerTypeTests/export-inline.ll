@@ -1,16 +1,16 @@
 ; REQUIRES: x86-registered-target
 
 ; RUN: opt -mtriple=i686-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t/out.summary %s | FileCheck --check-prefixes=CHECK,CHECK-X86-32 %s
-; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86,SUMMARY-X86-32 %s < %t/out.summary
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck --check-prefixes=CHECK,CHECK-X86-32 %s
+; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86,SUMMARY-X86-32 %s < %t
 
 ; RUN: opt -mtriple=x86_64-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t/out.summary %s | FileCheck --check-prefixes=CHECK,CHECK-64 %s
-; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86,SUMMARY-64 %s < %t/out.summary
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck --check-prefixes=CHECK,CHECK-64 %s
+; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86,SUMMARY-64 %s < %t
 
 ; RUN: opt -mtriple=aarch64-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t/out.summary %s | FileCheck --check-prefixes=CHECK,CHECK-64 %s
-; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-64,SUMMARY-ARM %s < %t/out.summary
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck --check-prefixes=CHECK,CHECK-64 %s
+; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-64,SUMMARY-ARM %s < %t
 
 @foo = constant [2048 x i8] zeroinitializer, !type !0, !type !1, !type !2, !type !3
 

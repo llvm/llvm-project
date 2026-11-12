@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t/out.summary %s | FileCheck %s
-; RUN: FileCheck --check-prefix=SUMMARY %s < %t/out.summary
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck %s
+; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
