@@ -41,6 +41,11 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
     )
 endif()
 
+if(CLANG_ENABLE_CIR AND ((MINGW OR CYGWIN) AND CLANG_BUILD_CLANG_DYLIB AND NOT BUILD_SHARED_LIBS))
+  get_property(save_clang_libs GLOBAL PROPERTY CLANG_STATIC_LIBS)
+  get_property(cir_clang_libs GLOBAL PROPERTY CLANG_CIR_STATIC_LIBS)
+  set_property(GLOBAL PROPERTY CLANG_STATIC_LIBS ${cir_clang_libs})
+endif()
 add_clang_library(clangFrontendTool
   ExecuteCompilerInvocation.cpp
 
@@ -51,6 +56,11 @@ add_clang_library(clangFrontendTool
   LINK_LIBS
   ${link_libs}
   )
+if(CLANG_ENABLE_CIR AND ((MINGW OR CYGWIN) AND CLANG_BUILD_CLANG_DYLIB AND NOT BUILD_SHARED_LIBS))
+  get_property(cir_clang_libs GLOBAL PROPERTY CLANG_STATIC_LIBS)
+  set_property(GLOBAL PROPERTY CLANG_STATIC_LIBS ${save_clang_libs})
+  set_property(GLOBAL PROPERTY CLANG_CIR_STATIC_LIBS ${cir_clang_libs})
+endif()
 
 if(CLANG_ENABLE_CIR)
   target_include_directories(clangFrontendTool PRIVATE ${LLVM_MAIN_SRC_DIR}/../mlir/include)
