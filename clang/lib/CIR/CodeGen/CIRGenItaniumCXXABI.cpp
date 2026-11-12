@@ -1656,29 +1656,25 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
   } else {
     assert(!cir::MissingFeatures::emitTypeMetadataCodeForVCall());
 
-    mlir::Value vfuncLoad;
     if (cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());
       cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
     } else {
-      auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
-          builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
-      vfuncLoad = builder.createAlignedLoad(loc, tyPtr, vtableSlotPtr,
-                                            cgf.getPointerAlign());
+      auto vfuncOp = cir::VTableGetVirtualFnOp::create(builder, loc, tyPtr,
+                                                       vtable, vtableIndex);
+
+      // Set invariant on the virtual function pointer load to indicate that
+      // function didn't change inside vtable.
+      // It's safe to add it without -fstrict-vtable-pointers, but it would not
+      // help in devirtualization because it will only matter if we will have 2
+      // the same virtual function loads from the same vtable load, which won't
+      // happen without enabled devirtualization with -fstrict-vtable-pointers.
+      if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+          cgm.getCodeGenOpts().StrictVTablePointers)
+        vfuncOp.setInvariant(true);
+
+      vfunc = vfuncOp;
     }
-
-    // Set invariant on the cir.load of virtual function pointer to indicate
-    // that function didn't change inside vtable.
-    // It's safe to add it without -fstrict-vtable-pointers, but it would not
-    // help in devirtualization because it will only matter if we will have 2
-    // the same virtual function loads from the same vtable load, which won't
-    // happen without enabled devirtualization with -fstrict-vtable-pointers.
-    if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        cgm.getCodeGenOpts().StrictVTablePointers)
-      if (auto loadOp = vfuncLoad.getDefiningOp<cir::LoadOp>())
-        loadOp.setInvariant(true);
-
-    vfunc = vfuncLoad;
   }
 
   CIRGenCallee callee(gd, vfunc.getDefiningOp());

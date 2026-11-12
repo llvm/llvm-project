@@ -5573,19 +5573,23 @@ mlir::LogicalResult CIRToLLVMVTableGetVPtrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMVTableGetVirtualFnAddrOpLowering::matchAndRewrite(
-    cir::VTableGetVirtualFnAddrOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
+    cir::VTableGetVirtualFnOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type targetType = getTypeConverter()->convertType(op.getType());
-  if (!targetType)
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
     return emitTypeConversionError(op, op.getType());
-  auto eltType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  llvm::SmallVector<mlir::LLVM::GEPArg> offsets =
-      llvm::SmallVector<mlir::LLVM::GEPArg>{
-          static_cast<int32_t>(op.getIndex())};
-  rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
-      op, targetType, eltType, adaptor.getVptr(), offsets,
+
+  // The entry is the function pointer itself: load it from its slot.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, ptrTy, adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{static_cast<int32_t>(op.getIndex())},
       mlir::LLVM::GEPNoWrapFlags::inbounds);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy),
+      /*isVolatile=*/false, /*isNonTemporal=*/false,
+      /*isInvariant=*/op.getInvariant(), /*isInvariantGroup=*/false);
   return mlir::success();
 }
 
