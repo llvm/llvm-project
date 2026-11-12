@@ -10,6 +10,7 @@
 # RUN: ld.lld -shared -T %t/linker.t %t/symbols.o %t/abs.o -o %t/symbols.so
 # RUN: llvm-objdump --no-show-raw-insn -d %t/symbols.so | \
 # RUN:   FileCheck --check-prefix=LIB %s
+# RUN: llvm-readelf -r %t/symbols.so | FileCheck --check-prefix=LIB-RELOC %s
 
 ## Symbol 'hidden_sym' is nonpreemptible, the relaxation should be applied.
 LIB:      adrp   x0
@@ -31,9 +32,17 @@ LIB-NEXT: ldr    x3
 LIB-NEXT: adrp   x4
 LIB-NEXT: ldr    x4
 
+## hidden_sym is relaxed and does not produce a dynamic relocation.
+LIB-RELOC:      Relocation section '.rela.dyn' at offset 0x{{[0-9a-f]+}} contains 3 entries:
+LIB-RELOC-NOT:  R_AARCH64_RELATIVE
+LIB-RELOC:      R_AARCH64_GLOB_DAT {{.*}} undefined_sym + 0
+LIB-RELOC-NEXT: R_AARCH64_GLOB_DAT {{.*}} global_sym + 0
+LIB-RELOC-NEXT: R_AARCH64_IRELATIVE
+
 # RUN: ld.lld -T %t/linker.t -z undefs %t/symbols.o %t/abs.o -o %t/symbols
 # RUN: llvm-objdump --no-show-raw-insn -d %t/symbols | \
 # RUN:   FileCheck --check-prefix=EXE %s
+# RUN: llvm-readelf -r %t/symbols | FileCheck --check-prefix=EXE-RELOC %s
 
 ## Symbol 'global_sym' is nonpreemptible, the relaxation should be applied.
 EXE:      adrp   x1
@@ -42,6 +51,12 @@ EXE-NEXT: add    x1
 ## Symbol 'abs_sym' is absolute, relaxations may be applied in -no-pie mode.
 EXE:      adrp   x4
 EXE-NEXT: add    x4
+
+## In the executable, relaxed symbols do not produce dynamic relocations.
+EXE-RELOC:      Relocation section '.rela.dyn' at offset 0x{{[0-9a-f]+}} contains 1 entries:
+EXE-RELOC-NOT:  R_AARCH64_GLOB_DAT
+EXE-RELOC-NOT:  R_AARCH64_RELATIVE
+EXE-RELOC:      R_AARCH64_IRELATIVE
 
 ## The linker script ensures that .rodata and .text are sufficiently (>1MB)
 ## far apart so that the adrp + ldr pair cannot be relaxed to adr + nop.

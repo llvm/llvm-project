@@ -146,8 +146,8 @@ bool lld::elf::needsGot(RelExpr expr) {
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr expr) {
   return oneof<R_PC, R_GOTREL, R_GOTPLTREL, RE_ARM_PCA, RE_MIPS_GOTREL,
-               RE_PPC64_CALL, RE_AARCH64_PAGE_PC, R_RELAX_GOT_PC,
-               RE_RISCV_PC_INDIRECT, RE_LOONGARCH_PAGE_PC,
+               RE_PPC64_CALL, RE_AARCH64_PAGE_PC, RE_AARCH64_RELAX_GOT_PAGE_PC,
+               R_RELAX_GOT_PC, RE_RISCV_PC_INDIRECT, RE_LOONGARCH_PAGE_PC,
                RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
