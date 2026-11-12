@@ -245,16 +245,11 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *NewRHS =
       Rewriter.expandCodeFor(InvariantRHS, IVOperand->getType(), PHTerm);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified comparison: " << *ICmp << '\n');
-  IRBuilder<> Builder(ICmp);
+  IRBuilder<> Builder(HoistInvariantCmps ? PHTerm : ICmp);
+  Builder.SetCurrentDebugLocation(HoistInvariantCmps ? DebugLoc::getDropped()
+                                                     : ICmp->getDebugLoc());
   Value *NewICmp = Builder.CreateICmp(InvariantPredicate, NewLHS, NewRHS, "",
                                       ICmp->hasSameSign());
-  // Hoist the now loop-invariant compare to the preheader, so the extra
-  // SimpleLoopUnswitch run after IndVars sees a loop-invariant condition.
-  if (auto *NewICmpI = dyn_cast<Instruction>(NewICmp);
-      NewICmpI && HoistInvariantCmps) {
-    NewICmpI->moveBefore(PHTerm->getIterator());
-    NewICmpI->updateLocationAfterHoist();
-  }
   NewICmp->takeName(ICmp);
   ICmp->replaceAllUsesWith(NewICmp);
   DeadInsts.emplace_back(ICmp);
