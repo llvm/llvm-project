@@ -227,9 +227,8 @@ bool ISD::isConstantSplatVectorAllZeros(SDValue V, bool BuildVectorOnly) {
     V = V.getOperand(0);
 
   SDValue V(const_cast<SDNode *>(N), 0);
-  if (!BuildVectorOnly && (isNullConstant(V) || isNullFPConstant(V))) {
+  if (!BuildVectorOnly && (isNullConstant(V) || isNullFPConstant(V)))
     return true;
-  }
 
   if (!BuildVectorOnly && V.getOpcode() == ISD::SPLAT_VECTOR) {
     APInt SplatVal;
