@@ -1677,7 +1677,7 @@ void DwarfCompileUnit::emitHeader(bool UseOffsets) {
 }
 
 bool DwarfCompileUnit::hasDwarfPubSections() const {
-  if (!DD->shouldEmitDwarfPubSections())
+  if (!DD->shouldEmitDwarfPubSections() || CUNode->isDebugDirectivesOnly())
     return false;
 
   switch (CUNode->getNameTableKind()) {
@@ -1691,7 +1691,6 @@ bool DwarfCompileUnit::hasDwarfPubSections() const {
     return false;
   case DICompileUnit::DebugNameTableKind::Default:
     return DD->tuneForGDB() && !includeMinimalInlineScopes() &&
-           !CUNode->isDebugDirectivesOnly() &&
            DD->getAccelTableKind() != AccelTableKind::Apple &&
            DD->getDwarfVersion() < 5;
   }

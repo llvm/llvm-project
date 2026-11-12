@@ -1310,6 +1310,8 @@ void DwarfDebug::beginModule(Module *M) {
   DebugLocs.setSym(Asm->createTempSymbol("loclists_table_base"));
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
+    if (CUNode->isDebugDirectivesOnly())
+      continue;
     if (CUNode->getImportedEntities().empty() &&
         CUNode->getEnumTypes().empty() && CUNode->getRetainedTypes().empty() &&
         CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
@@ -1515,6 +1517,8 @@ void DwarfDebug::endModule() {
   }
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
+    if (CUNode->isDebugDirectivesOnly())
+      continue;
     DwarfCompileUnit *CU = getDwarfCompileUnit(CUNode);
 
     // If the CU hasn't been emitted yet, it must be empty. Skip it.
@@ -1631,10 +1635,14 @@ void DwarfDebug::endModule() {
   // Emit info into the dwarf accelerator table sections.
   switch (getAccelTableKind()) {
   case AccelTableKind::Apple:
-    emitAccelNames();
-    emitAccelObjC();
-    emitAccelNamespaces();
-    emitAccelTypes();
+    if (llvm::any_of(M->debug_compile_units(), [](const DICompileUnit *CU) {
+          return !CU->isDebugDirectivesOnly();
+        })) {
+      emitAccelNames();
+      emitAccelObjC();
+      emitAccelNamespaces();
+      emitAccelTypes();
+    }
     break;
   case AccelTableKind::Dwarf:
     emitAccelDebugNames();
@@ -4008,6 +4016,8 @@ void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
 void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {
   for (const auto &P : CUMap) {
     auto &TheCU = *P.second;
+    if (TheCU.getCUNode()->isDebugDirectivesOnly())
+      continue;
     auto *SkCU = TheCU.getSkeleton();
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
     auto *CUNode = cast<DICompileUnit>(P.first);
