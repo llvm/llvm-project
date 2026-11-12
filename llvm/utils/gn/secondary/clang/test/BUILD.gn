@@ -165,6 +165,7 @@ group("test") {
     "//clang/tools/clang-repl",
     "//clang/tools/clang-scan-deps",
     "//clang/tools/clang-ssaf-analyzer",
+    "//clang/tools/clang-ssaf-conflict-merge",
     "//clang/tools/clang-ssaf-format",
     "//clang/tools/clang-ssaf-linker",
     "//clang/tools/clang-ssaf-src-edit-merge",

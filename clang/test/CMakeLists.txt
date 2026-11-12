@@ -105,6 +105,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-nvlink-wrapper
   clang-offload-bundler
   clang-ssaf-analyzer
+  clang-ssaf-conflict-merge
   clang-ssaf-format
   clang-ssaf-linker
   clang-ssaf-src-edit-merge
