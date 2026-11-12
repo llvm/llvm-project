@@ -79,6 +79,59 @@ bb:
   ret <2 x i64> %tmp8
 }
 
+define { i32, i32 } @match_shared_quotient(i32 noundef %x) {
+; CHECK-LABEL: @match_shared_quotient(
+; CHECK-NEXT:    [[Q:%.*]] = udiv i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[QB:%.*]] = mul i32 [[Q]], 12
+; CHECK-NEXT:    [[SUM:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[A:%.*]] = insertvalue { i32, i32 } poison, i32 [[QB]], 0
+; CHECK-NEXT:    [[B:%.*]] = insertvalue { i32, i32 } [[A]], i32 [[SUM]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[B]]
+;
+  %q = udiv i32 %x, 6
+  %r = urem i32 %x, 6
+  %qb = mul i32 %q, 12
+  %rb = shl i32 %r, 1
+  %sum = add i32 %qb, %rb
+  %a = insertvalue { i32, i32 } poison, i32 %qb, 0
+  %b = insertvalue { i32, i32 } %a, i32 %sum, 1
+  ret { i32, i32 } %b
+}
+
+define { i32, i32 } @match_shared_remainder(i32 noundef %x) {
+; CHECK-LABEL: @match_shared_remainder(
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[RB:%.*]] = shl nuw nsw i32 [[R]], 1
+; CHECK-NEXT:    [[SUM:%.*]] = shl i32 [[X]], 1
+; CHECK-NEXT:    [[A:%.*]] = insertvalue { i32, i32 } poison, i32 [[RB]], 0
+; CHECK-NEXT:    [[B:%.*]] = insertvalue { i32, i32 } [[A]], i32 [[SUM]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[B]]
+;
+  %q = udiv i32 %x, 6
+  %r = urem i32 %x, 6
+  %qb = mul i32 %q, 12
+  %rb = shl i32 %r, 1
+  %sum = add i32 %qb, %rb
+  %a = insertvalue { i32, i32 } poison, i32 %rb, 0
+  %b = insertvalue { i32, i32 } %a, i32 %sum, 1
+  ret { i32, i32 } %b
+}
+
+define i32 @match_masked_recombination(i32 noundef %x) {
+; CHECK-LABEL: @match_masked_recombination(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], 1536
+; CHECK-NEXT:    [[SUM:%.*]] = and i32 [[TMP1]], -2048
+; CHECK-NEXT:    ret i32 [[SUM]]
+;
+  %q = lshr i32 %x, 4
+  %r = and i32 %x, 15
+  %qb = mul i32 %q, 24576
+  %rb = mul i32 %r, 1536
+  %masked = and i32 %rb, 30720
+  %sum = add i32 %qb, %masked
+  ret i32 %sum
+}
+
 define i64 @not_match_inconsistent_signs(i64 %x) {
 ; CHECK-LABEL: @not_match_inconsistent_signs(
 ; CHECK-NEXT:    [[T:%.*]] = urem i64 [[X:%.*]], 299
@@ -245,8 +298,8 @@ define i32 @fold_add_udiv_urem_multiuse_mul(i32 noundef %val) {
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[DIV]], 4
 ; CHECK-NEXT:    call void @use(i32 [[SHL]])
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[SHL]], [[REM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[DIV]], 6
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[VAL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
@@ -437,4 +490,41 @@ define <2 x i32> @fold_add_udiv_urem_by_two_no_mul_commuted_vec(<2 x i32> nounde
   %and = and <2 x i32> %arg, splat (i32 1)
   %add = add <2 x i32> %and, %lshr
   ret <2 x i32> %add
+}
+define i32 @mask_drops_high_rb_bits(i32 noundef %x) {
+; CHECK-LABEL: @mask_drops_high_rb_bits(
+; CHECK-NEXT:    [[Q:%.*]] = lshr i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X]], 15
+; CHECK-NEXT:    [[QB:%.*]] = mul i32 [[Q]], 24576
+; CHECK-NEXT:    [[RB:%.*]] = mul nuw nsw i32 [[R]], 1536
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[RB]], 15360
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[QB]], [[MASKED]]
+; CHECK-NEXT:    ret i32 [[SUM]]
+;
+  %q = lshr i32 %x, 4
+  %r = and i32 %x, 15
+  %qb = mul i32 %q, 24576
+  %rb = mul i32 %r, 1536
+  %masked = and i32 %rb, 15360
+  %sum = add i32 %qb, %masked
+  ret i32 %sum
+}
+
+define i32 @qb_low_bits_set(i32 noundef %x) {
+; CHECK-LABEL: @qb_low_bits_set(
+; CHECK-NEXT:    [[Q:%.*]] = lshr i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X]], 15
+; CHECK-NEXT:    [[QB:%.*]] = mul i32 [[Q]], 48
+; CHECK-NEXT:    [[RB:%.*]] = mul nuw nsw i32 [[R]], 3
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[RB]], 32
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[QB]], [[MASKED]]
+; CHECK-NEXT:    ret i32 [[SUM]]
+;
+  %q = lshr i32 %x, 4
+  %r = and i32 %x, 15
+  %qb = mul i32 %q, 48
+  %rb = mul i32 %r, 3
+  %masked = and i32 %rb, 32
+  %sum = add i32 %qb, %masked
+  ret i32 %sum
 }
