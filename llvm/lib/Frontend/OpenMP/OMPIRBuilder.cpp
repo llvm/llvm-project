@@ -10730,7 +10730,8 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
                                    llvm::Value *BeginArg)>
         GenMapInfoCB,
     Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB,
-    bool PreserveMemberOfFlags, bool PropagatePresentToPointee) {
+    bool PreserveMemberOfFlags, bool PropagatePresentToPointeeStorage,
+    bool PropagatePresentToNonPointeeStorage) {
   SmallVector<Type *> Params;
   Params.emplace_back(Builder.getPtrTy());
   Params.emplace_back(Builder.getPtrTy());
@@ -10833,6 +10834,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     constexpr uint64_t AttachBit =
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    constexpr uint64_t PtrAndObjBit =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ);
 
     // Add MEMBER_OF (ShiftedPreviousSize) to group this sub-map with the
     // current array element (N = __tgt_mapper_num_components() at loop body
@@ -10991,33 +10995,40 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     //
     // ALWAYS/DELETE/CLOSE are propagated to every (non-ATTACH) entry.
     //
-    // PRESENT is propagated only to entries that have an attach ptr
-    // (HasAttachPtr): the pointee data, which occupies a different storage
-    // block than the struct being mapped and so is not covered by the
-    // present-check on the struct's own storage. A present modifier on the
-    // outer clause must still require that pointee to be present on the device.
+    // PRESENT propagation is controlled independently for entries describing
+    // pointee storage (HasAttachPtr) and entries describing non-pointee
+    // storage. This lets frontends select current Clang behavior (pointee only)
+    // or OpenMP 6.x behavior for mapper propagation (all eligible storage).
+    // PRESENT is not propagated to ATTACH or PTR_AND_OBJ entries.
     //
-    // This is gated on \p PropagatePresentToPointee (set by callers only for
-    // OpenMP >= 6.0). Before 6.0 the present modifier is treated as not
-    // applying to the pointee: the spec committee confirmed the divergence
-    // between the present "motion" modifier (to/from) and the present map-type
-    // modifier (map) was unintentional, to be fixed as an OpenMP 6.0 erratum,
-    // so for 5.2 present is ignored for the pointee for both map and to/from.
+    // Pointee storage is gated on \p PropagatePresentToPointeeStorage (set by
+    // caller only for OpenMP >= 6.0). Before 6.0 the present modifier is
+    // treated as not applying to the pointee: the spec committee confirmed the
+    // divergence between the present "motion" modifier (to/from) and the
+    // present map-type modifier (map) was unintentional, to be fixed as an
+    // OpenMP 6.0 erratum, so for 5.2 present is ignored for the pointee for
+    // both map and to/from.
     //
-    // TODO: PRESENT should also be propagated to the struct's own members
-    // (e.g. the s.x, s.y of map(present, mapper(id): s)) so that an absent
-    // member triggers the present-check. We cannot do that yet: while pointer
-    // members are mapped with PTR_AND_OBJ, a single combined entry allocates
-    // the whole struct (including the pointer's storage), so propagating
-    // PRESENT to it would wrongly require the pointer's pointee to be present.
-    // Enable member propagation once Clang stops emitting PTR_AND_OBJ and uses
-    // attach-style maps throughout.
+    // Non-pointee storage is gated on \p PropagatePresentToNonPointeeStorage:
+    // PRESENT is ten propagated to the struct's own members (e.g. the s.x,
+    // s.y of map(present, mapper(id): s)) so that an absent member triggers
+    // the present-check.
+    //
+    // Present cannot be mapped to members with PTR_AND_OBJ, a single combined
+    // entry allocates the whole struct (including the pointer's storage),
+    // so propagating PRESENT to it would wrongly require the pointer's
+    // pointee to be present.
     uint64_t ModifierBits =
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
             OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
             OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
-    if (PropagatePresentToPointee && Info->HasAttachPtr[I])
+    bool IsPresentEligibleStorage = !(RawType & (AttachBit | PtrAndObjBit));
+    bool PropagatePresent =
+        IsPresentEligibleStorage &&
+        (Info->HasAttachPtr[I] ? PropagatePresentToPointeeStorage
+                               : PropagatePresentToNonPointeeStorage);
+    if (PropagatePresent)
       ModifierBits |=
           static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
               OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);
