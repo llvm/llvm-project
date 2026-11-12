@@ -22,6 +22,7 @@
 #include <future>
 #include <limits>
 #include <optional>
+#include <thread>
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
@@ -125,6 +126,38 @@ TEST_F(GDBRemoteCommunicationClientTest, vCont_cC_notAFeature) {
   ASSERT_FALSE(client.GetVContSupported("S"));
   ASSERT_FALSE(client.GetVContSupported("a"));
   ASSERT_FALSE(client.GetVContSupported("A"));
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, LateReplyOnLastSyncRead) {
+  // The reply arrives after the client has timed out and used all but the last
+  // of the three reads it makes while waiting for the qC echo.
+  const std::chrono::seconds timeout(2);
+  client.SetPacketTimeout(timeout);
+  std::future<std::pair<PacketResult, std::string>> result =
+      std::async(std::launch::async, [&] {
+        StringExtractorGDBRemote response;
+        PacketResult r =
+            client.SendPacketAndWaitForResponse("vRun;61", response);
+        return std::make_pair(r, response.GetStringRef().str());
+      });
+
+  StringExtractorGDBRemote request;
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(request));
+  ASSERT_EQ("vRun;61", request.GetStringRef());
+  // The client sends qC when it times out, right before its first read.
+  PacketResult got;
+  do
+    got = server.GetPacket(request);
+  while (got == PacketResult::ErrorReplyTimeout);
+  ASSERT_EQ(PacketResult::Success, got);
+  ASSERT_EQ("qC", request.GetStringRef());
+  std::this_thread::sleep_for(timeout * 5 / 2);
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T05"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("QC1"));
+
+  std::pair<PacketResult, std::string> r = result.get();
+  EXPECT_EQ(PacketResult::Success, r.first);
+  EXPECT_EQ("T05", r.second);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, WriteRegister) {
