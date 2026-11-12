@@ -1503,7 +1503,7 @@ cc_library(
 
 cc_library(
     name = "testing",
-    testonly = 1,
+    testonly = True,
     srcs = glob([
         "lib/Testing/*.cpp",
     ]),
@@ -2533,7 +2533,7 @@ filegroup(
 
 cc_binary(
     name = "c-index-test",
-    testonly = 1,
+    testonly = True,
     srcs = [
         "tools/c-index-test/c-index-test.c",
         "tools/c-index-test/core_main.cpp",
@@ -2583,7 +2583,7 @@ cc_library(
 
 cc_binary(
     name = "apinotes-test",
-    testonly = 1,
+    testonly = True,
     srcs = ["tools/apinotes-test/APINotesTest.cpp"],
     stamp = 0,
     deps = [
@@ -2594,7 +2594,7 @@ cc_binary(
 
 cc_binary(
     name = "clang-import-test",
-    testonly = 1,
+    testonly = True,
     srcs = glob([
         "tools/clang-import-test/*.cpp",
     ]),
@@ -2682,19 +2682,19 @@ cc_binary(
 
 filegroup(
     name = "exploded_graph_rewriter",
-    testonly = 1,
+    testonly = True,
     data = ["utils/analyzer/exploded-graph-rewriter.py"],
 )
 
 filegroup(
     name = "module-deps-to-rsp",
-    testonly = 1,
+    testonly = True,
     data = ["utils/module-deps-to-rsp.py"],
 )
 
 filegroup(
     name = "hmaptool",
-    testonly = 1,
+    testonly = True,
     data = ["utils/hmaptool/hmaptool"],
 )
 

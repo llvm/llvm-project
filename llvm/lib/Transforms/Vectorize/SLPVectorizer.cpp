@@ -226,7 +226,6 @@ public:
         TTI(Tti), TLI(TLi), LI(Li), DT(Dt), AC(AC), DB(DB), DL(DL), ORE(ORE),
         CostKind(getSLPCostKind(Func)),
         Builder(Se->getModule(), TargetFolder(*DL)) {
-    Builder.disableGEPCanonicalization();
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
     // by a command-line option.

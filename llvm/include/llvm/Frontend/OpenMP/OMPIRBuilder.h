@@ -1555,18 +1555,14 @@ public:
   /// needing the CanonicalLoopInfo allows more efficient code generation by
   /// deferring the actual unrolling to the LoopUnrollPass using loop metadata.
   /// A loop-associated directive applied to the unrolled loop needs to know the
-  /// new trip count which means that if using a heuristically determined unroll
-  /// factor (\p Factor == 0), that factor must be computed immediately. We are
-  /// using the same logic as the LoopUnrollPass to derived the unroll factor,
-  /// but which assumes that some canonicalization has taken place (e.g.
-  /// Mem2Reg, LICM, GVN, Inlining, etc.). That is, the heuristic will perform
-  /// better when the unrolled loop's CanonicalLoopInfo is not needed.
+  /// new trip count, so if the CanonicalLoopInfo is requested with \p Factor ==
+  /// 0, omp::DefaultPartialUnrollFactor is used.
   ///
   /// \param DL          Debug location for instructions added by unrolling.
   /// \param Loop        The loop to unroll. The loop will be invalidated.
   /// \param Factor      The factor to unroll the loop by. A factor of 0
-  ///                    indicates that a heuristic should be used to determine
-  ///                    the unroll-factor.
+  ///                    leaves the choice of unroll-factor to the
+  ///                    implementation.
   /// \param UnrolledCLI If non-null, receives the CanonicalLoopInfo of the
   ///                    partially unrolled loop. Otherwise, uses loop metadata
   ///                    to defer unrolling to the LoopUnrollPass.
