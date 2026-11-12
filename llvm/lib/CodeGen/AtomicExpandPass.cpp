@@ -2295,8 +2295,8 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     return false;
   }
 
-  auto [FnType, Attr] =
-      LibcallLowering->getRuntimeLibcallsInfo().getFunctionTy(*M, LibcallImpl);
+  auto [FnType, Attr] = LibcallLowering->getRuntimeLibcallsInfo().getFunctionTy(
+      Ctx, M->getTargetTriple(), DL, LibcallImpl);
   assert(FnType && "missing signature for atomic libcall");
 
   // Build up the function call. There's two kinds. First, the sized

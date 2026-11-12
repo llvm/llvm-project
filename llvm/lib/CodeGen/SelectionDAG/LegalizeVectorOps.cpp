@@ -2263,8 +2263,8 @@ bool VectorLegalizer::tryExpandVecMathCall(
 
   const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
 
-  const Module &M = *DAG.getMachineFunction().getFunction().getParent();
-  auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(M, LCImpl);
+  auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(
+      Ctx, DAG.getSubtarget().getTargetTriple(), DAG.getDataLayout(), LCImpl);
 
   SDLoc DL(Node);
   TargetLowering::ArgListTy Args;

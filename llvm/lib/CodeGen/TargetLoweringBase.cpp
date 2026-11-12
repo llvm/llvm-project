@@ -719,6 +719,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
+                         TM.getTargetTriple().getDefaultWCharSize(),
                          TM.getTargetTriple().getDefaultFloatABI(),
                          TM.getTargetTriple().getDefaultLongDoubleFormat(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
@@ -2088,7 +2089,8 @@ Value *TargetLoweringBase::getDefaultSafeStackPointerLocation(
     return GV;
   }
 
-  Type *StackPtrTy = RTLCI.getVariableType(*M, UnsafeStackPtrImpl);
+  Type *StackPtrTy = RTLCI.getVariableType(
+      Ctx, M->getTargetTriple(), M->getDataLayout(), UnsafeStackPtrImpl);
   if (UnsafeStackPtr->getValueType() != StackPtrTy) {
     Ctx.emitError(
         formatv("{0} must have type {1}", UnsafeStackPtrVar, *StackPtrTy));
