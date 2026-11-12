@@ -18,6 +18,7 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_SCALARIZER_H
 #define LLVM_TRANSFORMS_SCALAR_SCALARIZER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 
@@ -46,6 +47,9 @@ struct ScalarizerPassOptions {
   /// This is disabled by default because having separate loads and stores makes
   /// it more likely that the -combiner-alias-analysis limits will be reached.
   bool ScalarizeLoadStore = false;
+
+  /// Only attempt to scalarize these opcodes; an empty list allows all opcodes.
+  SmallVector<unsigned, 4> ScalarizeOpcodes;
 };
 
 class ScalarizerPass : public OptionalPassInfoMixin<ScalarizerPass> {
