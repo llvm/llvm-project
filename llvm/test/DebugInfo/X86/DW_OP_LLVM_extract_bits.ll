@@ -81,16 +81,15 @@ entry:
   ret i32 0, !dbg !30
 }
 
-; DW_OP_deref_size has a one-byte operand, not a ULEB128 operand. Check the
-; encoding at the ULEB128 boundary and at the maximum one-byte value. These
-; oversized reads exercise the encoding only, not the generic type size limit.
+; Reads larger than the generic type need DW_OP_deref_type. Its size operand
+; is also one byte, including at the ULEB128 boundary and the maximum value.
 ; CHECK-LABEL: DW_TAG_subprogram
 ; CHECK: DW_AT_name ("test5")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_fbreg {{-?[0-9]+}}, DW_OP_deref_size 0x80, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_fbreg {{-?[0-9]+}}, DW_OP_deref_type 0x80 ({{.*}}) "DW_ATE_unsigned_1024", DW_OP_stack_value)
 ; CHECK: DW_AT_name ("x")
 ; CHECK: DW_TAG_variable
-; CHECK: DW_AT_location (DW_OP_fbreg {{-?[0-9]+}}, DW_OP_deref_size 0xff, DW_OP_stack_value)
+; CHECK: DW_AT_location (DW_OP_fbreg {{-?[0-9]+}}, DW_OP_deref_type 0xff ({{.*}}) "DW_ATE_unsigned_2040", DW_OP_stack_value)
 ; CHECK: DW_AT_name ("y")
 
 define i32 @test5() !dbg !35 {
