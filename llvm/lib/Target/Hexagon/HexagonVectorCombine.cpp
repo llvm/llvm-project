@@ -3961,6 +3961,13 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
   if (Gep0->getNumOperands() != 2 || Gep1->getNumOperands() != 2)
     return std::nullopt;
 
+  // Only indices already in the pointer's index type are subtracted. Other
+  // widths can assert (mixed types) or wrap (narrow types), so give up.
+  Type *IdxTy = DL.getIndexType(Gep0->getType());
+  if (Gep0->getOperand(1)->getType() != IdxTy ||
+      Gep1->getOperand(1)->getType() != IdxTy)
+    return std::nullopt;
+
   Value *Idx0 = Gep0->getOperand(1);
   Value *Idx1 = Gep1->getOperand(1);
 
