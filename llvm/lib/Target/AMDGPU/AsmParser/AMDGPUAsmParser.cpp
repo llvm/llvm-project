@@ -4683,7 +4683,7 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
 // GFX12+ SMEM prefetches and probes encode an immediate sdata in 5 bits.
 bool AMDGPUAsmParser::validateSMEMSData(const MCInst &Inst,
                                         const OperandVector &Operands) {
-  if (!isGFX12Plus() || !SIInstrFlags::isSMRD(MII, Inst))
+  if (!isGFX12Plus())
     return true;
 
   int OpNum =
