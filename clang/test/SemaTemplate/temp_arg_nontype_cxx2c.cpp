@@ -134,3 +134,17 @@ namespace error_on_type_instantiation {
   template void g<int>();
   // expected-note@-1 {{in instantiation of function template specialization}}
 }
+
+namespace GH145012 {
+  int x;
+
+  template<void* p>
+  void f() {
+    []<typename = void>() {
+      static_assert(p == &x);
+    }();
+  }
+
+  template void f<(void*)&x>();
+
+} // namespace GH145012
