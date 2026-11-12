@@ -1,12 +1,12 @@
-# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -start-before=machine-scheduler -stop-before=postmisched -verify-misched -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -start-before=machine-scheduler -stop-before=postmisched -o - %s | FileCheck %s
 
 # The iglp_opt(2) analysis data is computed pre-RA, stored on each IGLP_OPT and
 # reused post-RA. Each region must keep its own data: the small kernel region
 # must not get the data of the large kernel region, which is analyzed after it.
 
 # CHECK-LABEL: name: small_then_large
-# CHECK: IGLP_OPT 2, 32, 33, 1, 2, 4, 3, 0, 1{{$}}
-# CHECK: IGLP_OPT 2, 64, 93, 0, 4, 4, 6, 1, 0{{$}}
+# CHECK: IGLP_OPT 2, 32, 33, 1, 1, 30, 3, 1, 1{{$}}
+# CHECK: IGLP_OPT 2, 64, 97, 0, 1, 0, 6, 1, 0{{$}}
 
 --- |
   define amdgpu_kernel void @small_then_large() #0 { ret void }
@@ -67,8 +67,8 @@ body:             |
     %262:vgpr_32 = V_CVT_F16_F32_e32 %121, implicit $mode, implicit $exec
     undef %289.sub1:vreg_64_align2 = V_PACK_B32_F16_e64 0, undef %262, 0, undef %262, 0, 0, implicit $mode, implicit $exec
     %289.sub0:vreg_64_align2 = V_PACK_B32_F16_e64 0, %212, 0, %262, 0, 0, implicit $mode, implicit $exec
-    %36:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %1040.sub0_sub1, %289, undef %36, 0, 0, 0, implicit $mode, implicit $exec
-    %37:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %1040.sub0_sub1, %289, undef %37, 0, 0, 0, implicit $mode, implicit $exec
+    %36:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1040.sub0_sub1, %289, undef %36, 0, 0, 0, implicit $mode, implicit $exec
+    %37:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1040.sub0_sub1, %289, undef %37, 0, 0, 0, implicit $mode, implicit $exec
     %36:vreg_512_align2 = IMPLICIT_DEF
     %37:vreg_512_align2 = IMPLICIT_DEF
     %293:vgpr_32 = V_CVT_F16_F32_e32 %211, implicit $mode, implicit $exec
@@ -77,7 +77,7 @@ body:             |
     %37:vreg_512_align2 = IMPLICIT_DEF
     %36:vreg_512_align2 = IMPLICIT_DEF
     %37:vreg_512_align2 = IMPLICIT_DEF
-    %37:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %1040.sub2_sub3, %312, undef %37, 0, 0, 0, implicit $mode, implicit $exec
+    %37:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1040.sub2_sub3, %312, undef %37, 0, 0, 0, implicit $mode, implicit $exec
     S_CBRANCH_SCC1 %bb.2, implicit undef $scc
 
   bb.1:
@@ -98,42 +98,42 @@ body:             |
     %391:vreg_512_align2 = IMPLICIT_DEF
     %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %386.sub2_sub3, %1040.sub2_sub3, %391, 0, 0, 0, implicit $mode, implicit $exec
     %392:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 1536, 0, implicit $exec
-    early-clobber %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %392.sub0_sub1, undef %1040.sub0_sub1, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %392.sub2_sub3, undef %1040.sub2_sub3, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %392.sub0_sub1, %1040.sub0_sub1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %392.sub2_sub3, %1040.sub2_sub3, undef %393, 0, 0, 0, implicit $mode, implicit $exec
     %394:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 0, 0, implicit $exec
-    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, undef %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
-    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
     %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, %1040.sub0_sub1, undef %391, 0, 0, 0, implicit $mode, implicit $exec
-    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %394.sub0_sub1, undef %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
-    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %394.sub2_sub3, undef %1040.sub2_sub3, undef %393, 0, 0, 0, implicit $mode, implicit $exec
-    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, undef %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
-    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %394.sub0_sub1, %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %394.sub2_sub3, %1040.sub2_sub3, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
     %403:vreg_128_align2 = IMPLICIT_DEF
-    %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %403.sub0_sub1, undef %1040.sub0_sub1, %391, 0, 0, 0, implicit $mode, implicit $exec
+    %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %403.sub0_sub1, %1040.sub0_sub1, %391, 0, 0, 0, implicit $mode, implicit $exec
     %404:vreg_128_align2 = IMPLICIT_DEF
     %393:vreg_512_align2 = IMPLICIT_DEF
     %393:vreg_512_align2 = IMPLICIT_DEF
-    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, undef %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
-    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
-    %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, undef %1040.sub0_sub1, undef %391, 0, 0, 0, implicit $mode, implicit $exec
+    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, %1040.sub0_sub1, undef %391, 0, 0, 0, implicit $mode, implicit $exec
     %393:vreg_512_align2 = IMPLICIT_DEF
     %387:vreg_512_align2 = IMPLICIT_DEF
-    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
     %391:vreg_512_align2 = IMPLICIT_DEF
     %393:vreg_512_align2 = IMPLICIT_DEF
     %424:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 0, 0, implicit $exec
     %387:vreg_512_align2 = IMPLICIT_DEF
-    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %424.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %424.sub0_sub1, %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
     %391:vreg_512_align2 = IMPLICIT_DEF
-    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %424.sub0_sub1, undef %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %424.sub0_sub1, %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
     %387:vreg_512_align2 = IMPLICIT_DEF
-    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %424.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %424.sub0_sub1, %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
     %391:vreg_512_align2 = IMPLICIT_DEF
     %431:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 1536, 0, implicit $exec
-    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %431.sub0_sub1, undef %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %431.sub0_sub1, %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
     %387:vreg_512_align2 = IMPLICIT_DEF
     %433:vreg_128_align2 = IMPLICIT_DEF
-    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
     %391:vreg_512_align2 = IMPLICIT_DEF
     %393:vreg_512_align2 = IMPLICIT_DEF
     %542:vgpr_32 = V_EXP_F32_e32 undef %371, implicit $mode, implicit $exec

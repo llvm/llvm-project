@@ -327,7 +327,7 @@ define amdgpu_ps void @prefetch_data_sgpr_vgpr_offset_global(ptr addrspace(1) in
 ; SPREFETCH-SDAG:       ; %bb.0: ; %entry
 ; SPREFETCH-SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; SPREFETCH-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; SPREFETCH-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -339,7 +339,7 @@ define amdgpu_ps void @prefetch_data_sgpr_vgpr_offset_global(ptr addrspace(1) in
 ; SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; SPREFETCH-GISEL-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; SPREFETCH-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v1, v0
 ; SPREFETCH-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v2, v3, vcc_lo
 ; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -386,7 +386,7 @@ define amdgpu_ps void @prefetch_data_sgpr_vgpr_offset_flat(ptr inreg %ptr, i32 %
 ; SPREFETCH-SDAG:       ; %bb.0: ; %entry
 ; SPREFETCH-SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; SPREFETCH-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; SPREFETCH-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -398,7 +398,7 @@ define amdgpu_ps void @prefetch_data_sgpr_vgpr_offset_flat(ptr inreg %ptr, i32 %
 ; SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; SPREFETCH-GISEL-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; SPREFETCH-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v1, v0
 ; SPREFETCH-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v2, v3, vcc_lo
 ; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
@@ -943,10 +943,9 @@ define amdgpu_ps void @prefetch_data_vgpr_flat_offset(ptr %ptr) {
 ; SPREFETCH-GISEL-LABEL: prefetch_data_vgpr_flat_offset:
 ; SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; SPREFETCH-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x200
-; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; SPREFETCH-GISEL-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; SPREFETCH-GISEL-NEXT:    s_endpgm
@@ -989,10 +988,9 @@ define amdgpu_ps void @prefetch_data_vgpr_global_offset(ptr addrspace(1) %ptr) {
 ; SPREFETCH-GISEL-LABEL: prefetch_data_vgpr_global_offset:
 ; SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; SPREFETCH-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x200
-; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; SPREFETCH-GISEL-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; SPREFETCH-GISEL-NEXT:    s_endpgm
@@ -1029,7 +1027,7 @@ define amdgpu_ps void @prefetch_data_vgpr_global_saddr(ptr addrspace(1) inreg %p
 ; SPREFETCH-SDAG:       ; %bb.0: ; %entry
 ; SPREFETCH-SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; SPREFETCH-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; SPREFETCH-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1041,7 +1039,7 @@ define amdgpu_ps void @prefetch_data_vgpr_global_saddr(ptr addrspace(1) inreg %p
 ; SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; SPREFETCH-GISEL-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; SPREFETCH-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v1, v0
 ; SPREFETCH-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v2, v3, vcc_lo
 ; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1082,7 +1080,7 @@ define amdgpu_ps void @prefetch_data_vgpr_global_saddr_offset(ptr addrspace(1) i
 ; SPREFETCH-SDAG:       ; %bb.0: ; %entry
 ; SPREFETCH-SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; SPREFETCH-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; SPREFETCH-SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1094,7 +1092,7 @@ define amdgpu_ps void @prefetch_data_vgpr_global_saddr_offset(ptr addrspace(1) i
 ; SPREFETCH-GISEL:       ; %bb.0: ; %entry
 ; SPREFETCH-GISEL-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; SPREFETCH-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
-; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SPREFETCH-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v1, v0
 ; SPREFETCH-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v2, v3, vcc_lo
 ; SPREFETCH-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)

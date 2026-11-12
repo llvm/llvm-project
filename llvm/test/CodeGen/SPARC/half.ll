@@ -387,8 +387,8 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ; SPARC32-NEXT:    std %f0, [%i1+8]
 ; SPARC32-NEXT:    ldd [%fp+-24], %f0 ! 8-byte Folded Reload
 ; SPARC32-NEXT:    std %f0, [%i1]
-; SPARC32-NEXT:    ret
-; SPARC32-NEXT:    restore
+; SPARC32-NEXT:    jmp %i7+12
+; SPARC32-NEXT:    restore %g0, %i1, %o0
 ;
 ; SPARC64-LABEL: test_extend64_vec4:
 ; SPARC64:       ! %bb.0:

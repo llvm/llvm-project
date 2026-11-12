@@ -1,0 +1,8 @@
+macros:
+  UL_GETFSIZE:
+    removed-in-posix-2024: ''
+  UL_SETFSIZE:
+    removed-in-posix-2024: ''
+functions:
+  ulimit:
+    removed-in-posix-2024: ''
