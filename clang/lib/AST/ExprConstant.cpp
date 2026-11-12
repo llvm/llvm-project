@@ -1999,10 +1999,9 @@ void CallStackFrame::describe(raw_ostream &Out) const {
     Out << Comma;
     const APValue *V = nullptr;
 
-    if (ArgIndex < OriginalArgs.size() && !OriginalArgs[ArgIndex].isAbsent()) {
+    if (ArgIndex < OriginalArgs.size() && !OriginalArgs[ArgIndex].isAbsent())
       V = &OriginalArgs[ArgIndex];
-    }
-    ArgIndex++;
+    ++ArgIndex;
     if (V)
       V->printPretty(Out, Info.Ctx, Param->getType());
     else
