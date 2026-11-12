@@ -488,7 +488,8 @@ public:
   /// Report known values for frem. Valid for all rounding modes, since frem is
   /// always exact.
   LLVM_ABI static KnownFPClass frem(const KnownFPClass &LHS,
-                                    const KnownFPClass &RHS, DenormalMode Mode);
+                                    const KnownFPClass &RHS, DenormalMode Mode,
+                                    bool MayBeNSZ = true);
 
   /// Report known values for frem x, x. Valid for all rounding modes.
   LLVM_ABI static KnownFPClass frem_self(const KnownFPClass &Src,
@@ -542,26 +543,31 @@ public:
   LLVM_ABI static KnownFPClass tan(const KnownFPClass &Src);
 
   /// Report known values for sinh
-  LLVM_ABI static KnownFPClass sinh(const KnownFPClass &Src);
+  LLVM_ABI static KnownFPClass sinh(const KnownFPClass &Src, DenormalMode Mode,
+                                    bool MayBeNSZ = true);
 
   /// Report known values for cosh
   LLVM_ABI static KnownFPClass cosh(const KnownFPClass &Src);
 
   /// Report known values for tanh
-  LLVM_ABI static KnownFPClass tanh(const KnownFPClass &Src);
+  LLVM_ABI static KnownFPClass tanh(const KnownFPClass &Src, DenormalMode Mode,
+                                    bool MayBeNSZ = true);
 
   /// Report known values for asin
-  LLVM_ABI static KnownFPClass asin(const KnownFPClass &Src);
+  LLVM_ABI static KnownFPClass asin(const KnownFPClass &Src, DenormalMode Mode,
+                                    bool MayBeNSZ = true);
 
   /// Report known values for acos
   LLVM_ABI static KnownFPClass acos(const KnownFPClass &Src);
 
   /// Report known values for atan
-  LLVM_ABI static KnownFPClass atan(const KnownFPClass &Src);
+  LLVM_ABI static KnownFPClass atan(const KnownFPClass &Src, DenormalMode Mode,
+                                    bool MayBeNSZ = true);
 
   /// Report known values for atan2
-  LLVM_ABI static KnownFPClass
-  atan2(const KnownFPClass &LHS, const KnownFPClass &RHS, DenormalMode Mode);
+  LLVM_ABI static KnownFPClass atan2(const KnownFPClass &LHS,
+                                     const KnownFPClass &RHS, DenormalMode Mode,
+                                     bool MayBeNSZ = true);
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
@@ -684,11 +690,12 @@ public:
 
   /// Propagate known class for pow
   LLVM_ABI static KnownFPClass pow(const KnownFPClass &LHS,
-                                   const KnownFPClass &RHS);
+                                   const KnownFPClass &RHS, DenormalMode Mode,
+                                   bool MayBeNSZ = true);
 
   /// Propagate known class for powi
-  LLVM_ABI static KnownFPClass powi(const KnownFPClass &Src,
-                                    const KnownBits &N);
+  LLVM_ABI static KnownFPClass powi(const KnownFPClass &Src, const KnownBits &N,
+                                    DenormalMode Mode, bool MayBeNSZ = true);
 
   void resetAll() { *this = KnownFPClass(); }
 };

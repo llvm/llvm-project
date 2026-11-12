@@ -332,9 +332,9 @@ define <2 x float> @ret_pow_nonneg_nonan_v2f32(<2 x float> nofpclass(nan ninf nz
 }
 
 define float @ret_pow_nsz__qnan_pzero__norm(float nofpclass(snan inf nzero sub norm) %base, float nofpclass(nan inf zero sub) %exp) {
-; CHECK-LABEL: define nofpclass(snan ninf nzero nsub nnorm) float @ret_pow_nsz__qnan_pzero__norm(
+; CHECK-LABEL: define nofpclass(snan nsub nnorm) float @ret_pow_nsz__qnan_pzero__norm(
 ; CHECK-SAME: float nofpclass(snan inf nzero sub norm) [[BASE:%.*]], float nofpclass(nan inf zero sub) [[EXP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nsz nofpclass(snan ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(snan inf nzero sub norm) [[BASE]], float nofpclass(nan inf zero sub) [[EXP]]) #[[ATTR7]]
+; CHECK-NEXT:    [[POW:%.*]] = call nsz nofpclass(snan nsub nnorm) float @llvm.pow.f32(float nofpclass(snan inf nzero sub norm) [[BASE]], float nofpclass(nan inf zero sub) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call nsz float @llvm.pow.f32(float %base, float %exp)
@@ -352,9 +352,9 @@ define float @ret_pow_nsz__qnan_nzero__norm(float nofpclass(snan inf pzero sub n
 }
 
 define float @ret_pow_nsz__qnan_psub__norm__ieee_dynamic(float nofpclass(snan inf zero nsub norm) %base, float nofpclass(nan inf zero sub) %exp) denormal_fpenv(ieee|dynamic) {
-; CHECK-LABEL: define nofpclass(snan ninf nzero nsub nnorm) float @ret_pow_nsz__qnan_psub__norm__ieee_dynamic(
+; CHECK-LABEL: define nofpclass(snan nsub nnorm) float @ret_pow_nsz__qnan_psub__norm__ieee_dynamic(
 ; CHECK-SAME: float nofpclass(snan inf zero nsub norm) [[BASE:%.*]], float nofpclass(nan inf zero sub) [[EXP:%.*]]) #[[ATTR5:[0-9]+]] {
-; CHECK-NEXT:    [[POW:%.*]] = call nsz nofpclass(snan ninf nzero nsub nnorm) float @llvm.pow.f32(float nofpclass(snan inf zero nsub norm) [[BASE]], float nofpclass(nan inf zero sub) [[EXP]]) #[[ATTR7]]
+; CHECK-NEXT:    [[POW:%.*]] = call nsz nofpclass(snan nsub nnorm) float @llvm.pow.f32(float nofpclass(snan inf zero nsub norm) [[BASE]], float nofpclass(nan inf zero sub) [[EXP]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = call nsz float @llvm.pow.f32(float %base, float %exp)

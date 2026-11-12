@@ -700,9 +700,9 @@ define float @ret_powi_ninf_or_positive_nonnegative_exp_dynamic(float nofpclass(
 }
 
 define float @ret_powi_nsz__qnan_pzero__exp_any(float nofpclass(snan inf nzero sub norm) %base, i32 %exp) {
-; CHECK-LABEL: define nofpclass(snan ninf nzero nsub nnorm) float @ret_powi_nsz__qnan_pzero__exp_any
+; CHECK-LABEL: define nofpclass(snan nsub nnorm) float @ret_powi_nsz__qnan_pzero__exp_any
 ; CHECK-SAME: (float nofpclass(snan inf nzero sub norm) [[BASE:%.*]], i32 [[EXP:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[POWI:%.*]] = call nsz nofpclass(snan ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(snan inf nzero sub norm) [[BASE]], i32 [[EXP]]) #[[ATTR10]]
+; CHECK-NEXT:    [[POWI:%.*]] = call nsz nofpclass(snan nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(snan inf nzero sub norm) [[BASE]], i32 [[EXP]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[POWI]]
 ;
   %powi = call nsz float @llvm.powi.f32.i32(float %base, i32 %exp)
@@ -720,9 +720,9 @@ define float @ret_powi_nsz__qnan_nzero__exp_any(float nofpclass(snan inf pzero s
 }
 
 define float @ret_powi_nsz__qnan_psub__exp_any__ieee_dynamic(float nofpclass(snan inf zero nsub norm) %base, i32 %exp) #4 {
-; CHECK-LABEL: define nofpclass(snan ninf nzero nsub nnorm) float @ret_powi_nsz__qnan_psub__exp_any__ieee_dynamic
+; CHECK-LABEL: define nofpclass(snan nsub nnorm) float @ret_powi_nsz__qnan_psub__exp_any__ieee_dynamic
 ; CHECK-SAME: (float nofpclass(snan inf zero nsub norm) [[BASE:%.*]], i32 [[EXP:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    [[POWI:%.*]] = call nsz nofpclass(snan ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(snan inf zero nsub norm) [[BASE]], i32 [[EXP]]) #[[ATTR10]]
+; CHECK-NEXT:    [[POWI:%.*]] = call nsz nofpclass(snan nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(snan inf zero nsub norm) [[BASE]], i32 [[EXP]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[POWI]]
 ;
   %powi = call nsz float @llvm.powi.f32.i32(float %base, i32 %exp)

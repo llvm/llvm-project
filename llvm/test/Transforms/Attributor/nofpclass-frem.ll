@@ -1400,7 +1400,7 @@ define float @ret_frem_self_negnormal_negsubnormal_mode_ftpz_dapz(float noundef 
 }
 
 define float @ret_frem_nsz__qnan_pzero__qnan_norm(float nofpclass(snan inf nzero sub norm) %arg0, float nofpclass(snan inf zero sub) %arg1) {
-; CHECK-LABEL: define nofpclass(snan inf nzero sub norm) float @ret_frem_nsz__qnan_pzero__qnan_norm
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @ret_frem_nsz__qnan_pzero__qnan_norm
 ; CHECK-SAME: (float nofpclass(snan inf nzero sub norm) [[ARG0:%.*]], float nofpclass(snan inf zero sub) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem nsz float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -1410,7 +1410,7 @@ define float @ret_frem_nsz__qnan_pzero__qnan_norm(float nofpclass(snan inf nzero
 }
 
 define float @ret_frem_nsz__qnan_nzero__qnan_norm(float nofpclass(snan inf pzero sub norm) %arg0, float nofpclass(snan inf zero sub) %arg1) {
-; CHECK-LABEL: define nofpclass(snan inf pzero sub norm) float @ret_frem_nsz__qnan_nzero__qnan_norm
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @ret_frem_nsz__qnan_nzero__qnan_norm
 ; CHECK-SAME: (float nofpclass(snan inf pzero sub norm) [[ARG0:%.*]], float nofpclass(snan inf zero sub) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem nsz float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -1420,7 +1420,7 @@ define float @ret_frem_nsz__qnan_nzero__qnan_norm(float nofpclass(snan inf pzero
 }
 
 define float @ret_frem_nsz__qnan_psub__qnan_norm__ieee_dynamic(float nofpclass(snan inf zero nsub norm) %arg0, float nofpclass(snan inf zero sub) %arg1) #3 {
-; CHECK-LABEL: define nofpclass(snan inf nzero nsub nnorm) float @ret_frem_nsz__qnan_psub__qnan_norm__ieee_dynamic
+; CHECK-LABEL: define nofpclass(snan inf nsub nnorm) float @ret_frem_nsz__qnan_psub__qnan_norm__ieee_dynamic
 ; CHECK-SAME: (float nofpclass(snan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(snan inf zero sub) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem nsz float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -1430,7 +1430,7 @@ define float @ret_frem_nsz__qnan_psub__qnan_norm__ieee_dynamic(float nofpclass(s
 }
 
 define float @ret_frem_nsz__qnan_nsub__qnan_norm__ieee_daz(float nofpclass(snan inf zero psub norm) %arg0, float nofpclass(snan inf zero sub) %arg1) #1 {
-; CHECK-LABEL: define nofpclass(snan inf pzero psub pnorm) float @ret_frem_nsz__qnan_nsub__qnan_norm__ieee_daz
+; CHECK-LABEL: define nofpclass(snan inf psub pnorm) float @ret_frem_nsz__qnan_nsub__qnan_norm__ieee_daz
 ; CHECK-SAME: (float nofpclass(snan inf zero psub norm) [[ARG0:%.*]], float nofpclass(snan inf zero sub) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem nsz float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]

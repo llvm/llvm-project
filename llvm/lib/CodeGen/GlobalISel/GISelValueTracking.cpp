@@ -1594,7 +1594,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     computeKnownFPClass(X, DemandedElts, InterestedX, KnownX, Depth + 1);
     DenormalMode Mode =
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
-    Known = KnownFPClass::atan2(KnownY, KnownX, Mode);
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::atan2(KnownY, KnownX, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_FSINH: {
@@ -1602,7 +1603,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
                         Depth + 1);
-    Known = KnownFPClass::sinh(KnownSrc);
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::sinh(KnownSrc, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_FCOSH: {
@@ -1618,7 +1622,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
                         Depth + 1);
-    Known = KnownFPClass::tanh(KnownSrc);
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::tanh(KnownSrc, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_FASIN: {
@@ -1626,7 +1633,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
                         Depth + 1);
-    Known = KnownFPClass::asin(KnownSrc);
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::asin(KnownSrc, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_FACOS: {
@@ -1642,7 +1652,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass KnownSrc;
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
                         Depth + 1);
-    Known = KnownFPClass::atan(KnownSrc);
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::atan(KnownSrc, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_FTAN: {
@@ -1876,7 +1889,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass KnownRHS;
     computeKnownFPClass(MI.getOperand(2).getReg(), DemandedElts, InterestedRHS,
                         KnownRHS, Depth + 1);
-    Known = KnownFPClass::pow(KnownLHS, KnownRHS);
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::pow(KnownLHS, KnownRHS, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_FPOWI: {
@@ -1905,7 +1921,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
                           Depth + 1);
     }
 
-    Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits, Mode, HasNSZ);
     break;
   }
   case TargetOpcode::G_FLDEXP: {
@@ -2113,7 +2132,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       computeKnownFPClass(RHS, DemandedElts, InterestedRHS, KnownRHS,
                           Depth + 1);
 
-    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
+    const bool HasNSZ = MI.getFlag(MachineInstr::MIFlag::FmNsz);
+    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode, HasNSZ);
 
     break;
   }

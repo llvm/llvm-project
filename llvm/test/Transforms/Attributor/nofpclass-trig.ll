@@ -216,9 +216,9 @@ define float @ret_sinh_negsubnormal_mode_ftpz_dapz(float nofpclass(nan inf zero 
 }
 
 define float @ret_sinh_nsz__qnan_pzero(float nofpclass(snan inf nzero sub norm) %arg) {
-; CHECK-LABEL: define nofpclass(snan inf nzero sub norm) float @ret_sinh_nsz__qnan_pzero
+; CHECK-LABEL: define nofpclass(snan pinf psub pnorm) float @ret_sinh_nsz__qnan_pzero
 ; CHECK-SAME: (float nofpclass(snan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero sub norm) float @llvm.sinh.f32(float nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan pinf psub pnorm) float @llvm.sinh.f32(float nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.sinh.f32(float %arg)
@@ -236,9 +236,9 @@ define float @ret_sinh_nsz__qnan_nzero(float nofpclass(snan inf pzero sub norm) 
 }
 
 define float @ret_sinh_nsz__qnan_psub__ieee_dynamic(float nofpclass(snan inf zero nsub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(snan ninf nzero nsub nnorm) float @ret_sinh_nsz__qnan_psub__ieee_dynamic
+; CHECK-LABEL: define nofpclass(snan) float @ret_sinh_nsz__qnan_psub__ieee_dynamic
 ; CHECK-SAME: (float nofpclass(snan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan ninf nzero nsub nnorm) float @llvm.sinh.f32(float nofpclass(snan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan) float @llvm.sinh.f32(float nofpclass(snan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.sinh.f32(float %arg)
@@ -493,9 +493,9 @@ define float @ret_tanh_nonpos_mode_ftpz_dapz(float nofpclass(pinf pzero psub pno
 }
 
 define float @ret_tanh_nsz__qnan_pzero(float nofpclass(snan inf nzero sub norm) %arg) {
-; CHECK-LABEL: define nofpclass(snan inf nzero sub norm) float @ret_tanh_nsz__qnan_pzero
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @ret_tanh_nsz__qnan_pzero
 ; CHECK-SAME: (float nofpclass(snan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero sub norm) float @llvm.tanh.f32(float nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf sub norm) float @llvm.tanh.f32(float nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.tanh.f32(float %arg)
@@ -513,9 +513,9 @@ define float @ret_tanh_nsz__qnan_nzero(float nofpclass(snan inf pzero sub norm) 
 }
 
 define float @ret_tanh_nsz__qnan_psub__ieee_dynamic(float nofpclass(snan inf zero nsub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(snan inf nzero nsub nnorm) float @ret_tanh_nsz__qnan_psub__ieee_dynamic
+; CHECK-LABEL: define nofpclass(snan inf nsub nnorm) float @ret_tanh_nsz__qnan_psub__ieee_dynamic
 ; CHECK-SAME: (float nofpclass(snan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero nsub nnorm) float @llvm.tanh.f32(float nofpclass(snan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nsub nnorm) float @llvm.tanh.f32(float nofpclass(snan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.tanh.f32(float %arg)
@@ -665,9 +665,9 @@ define float @ret_asin_nonpos_ftpz_dapz(float nofpclass(psub pnorm) %arg) #1 {
 }
 
 define float @ret_asin_nsz__qnan_pzero(float nofpclass(snan inf nzero sub norm) %arg) {
-; CHECK-LABEL: define nofpclass(snan inf nzero sub norm) float @ret_asin_nsz__qnan_pzero
+; CHECK-LABEL: define nofpclass(snan inf psub pnorm) float @ret_asin_nsz__qnan_pzero
 ; CHECK-SAME: (float nofpclass(snan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero sub norm) float @llvm.asin.f32(float nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf psub pnorm) float @llvm.asin.f32(float nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.asin.f32(float %arg)
@@ -685,9 +685,9 @@ define float @ret_asin_nsz__qnan_nzero(float nofpclass(snan inf pzero sub norm) 
 }
 
 define float @ret_asin_nsz__qnan_psub__ieee_dynamic(float nofpclass(snan inf zero nsub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(snan inf nzero nsub nnorm) float @ret_asin_nsz__qnan_psub__ieee_dynamic
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_asin_nsz__qnan_psub__ieee_dynamic
 ; CHECK-SAME: (float nofpclass(snan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero nsub nnorm) float @llvm.asin.f32(float nofpclass(snan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf) float @llvm.asin.f32(float nofpclass(snan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.asin.f32(float %arg)
@@ -892,9 +892,9 @@ define float @ret_atan_negsubnormal_mode_ftpz_dapz(float nofpclass(nan inf zero 
 }
 
 define float @ret_atan_nsz__qnan_pzero(float nofpclass(snan inf nzero sub norm) %arg) {
-; CHECK-LABEL: define nofpclass(snan inf nzero sub norm) float @ret_atan_nsz__qnan_pzero
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @ret_atan_nsz__qnan_pzero
 ; CHECK-SAME: (float nofpclass(snan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero sub norm) float @llvm.atan.f32(float nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf sub norm) float @llvm.atan.f32(float nofpclass(snan inf nzero sub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.atan.f32(float %arg)
@@ -912,9 +912,9 @@ define float @ret_atan_nsz__qnan_nzero(float nofpclass(snan inf pzero sub norm) 
 }
 
 define float @ret_atan_nsz__qnan_psub__ieee_dynamic(float nofpclass(snan inf zero nsub norm) %arg) #2 {
-; CHECK-LABEL: define nofpclass(snan inf nzero nsub nnorm) float @ret_atan_nsz__qnan_psub__ieee_dynamic
+; CHECK-LABEL: define nofpclass(snan inf nsub nnorm) float @ret_atan_nsz__qnan_psub__ieee_dynamic
 ; CHECK-SAME: (float nofpclass(snan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero nsub nnorm) float @llvm.atan.f32(float nofpclass(snan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nsub nnorm) float @llvm.atan.f32(float nofpclass(snan inf zero nsub norm) [[ARG]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.atan.f32(float %arg)
