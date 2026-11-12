@@ -12,3 +12,4 @@ __void_t<> func() {}
 
 // CHECK: !DICompileUnit
 // CHECK-NOT: __void_t
+// CHECK: !{!"{{(__CLANG,)?(__)?}}clangast",

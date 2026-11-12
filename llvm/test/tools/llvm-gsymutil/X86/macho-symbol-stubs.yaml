@@ -37,6 +37,7 @@
 # DUMP:      FunctionInfo @ 0x{{[0-9a-f]+}}: [0x0000000100000594 - 0x00000001000005a0) "symbol stub for: puts"
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

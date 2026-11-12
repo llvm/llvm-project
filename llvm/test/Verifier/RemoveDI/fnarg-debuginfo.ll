@@ -1,4 +1,4 @@
-; RUN: llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 
 define void @foo() !dbg !2 {

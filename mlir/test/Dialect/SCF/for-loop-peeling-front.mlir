@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -scf-for-loop-peeling=peel-front=true -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -scf-for-loop-peeling="peel-front=true partial-as-if=true" -split-input-file | FileCheck %s -check-prefix=CHECK-IF
 
 //  CHECK-DAG: #[[MAP:.*]] = affine_map<(d0, d1)[s0] -> (4, d0 - d1)>
 //      CHECK: func @fully_static_bounds(
@@ -143,6 +144,25 @@ func.func @no_loop_results(%ub : index, %d : memref<i32>) {
 //      CHECK:     scf.yield %[[ADD2]]
 //      CHECK:   }
 //      CHECK:   return %[[RESULT]]
+
+// With partial-as-if, the first iteration is an scf.if that runs the body
+// with the lower bound as the induction variable.
+
+// CHECK-IF-LABEL: func @fully_dynamic_bounds(
+//  CHECK-IF-SAME:     %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index
+//       CHECK-IF:   %[[C0_I32:.*]] = arith.constant 0 : i32
+//       CHECK-IF:   %[[SPLIT:.*]] = arith.maxsi %[[LB]], %{{.*}} : index
+//       CHECK-IF:   %[[COND:.*]] = arith.cmpi slt, %[[LB]], %[[SPLIT]] : index
+//       CHECK-IF:   %[[FIRST:.*]] = scf.if %[[COND]] -> (i32) {
+//       CHECK-IF:     %[[MIN:.*]] = affine.min #{{.*}}(%[[UB]], %[[LB]])[%[[STEP]]]
+//       CHECK-IF:     %[[CAST:.*]] = arith.index_cast %[[MIN]] : index to i32
+//       CHECK-IF:     scf.yield %[[CAST]] : i32
+//       CHECK-IF:   } else {
+//       CHECK-IF:     scf.yield %[[C0_I32]]
+//       CHECK-IF:   }
+//       CHECK-IF:   %[[RESULT:.*]] = scf.for %{{.*}} = %[[SPLIT]] to %[[UB]]
+//  CHECK-IF-SAME:       step %[[STEP]] iter_args(%{{.*}} = %[[FIRST]]) -> (i32) {
+//       CHECK-IF:   return %[[RESULT]]
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
 func.func @fully_dynamic_bounds(%lb : index, %ub: index, %step: index) -> i32 {
   %c0 = arith.constant 0 : i32
@@ -166,6 +186,14 @@ func.func @fully_dynamic_bounds(%lb : index, %ub: index, %step: index) -> i32 {
 //      CHECK:   %[[FIRST:.*]] = scf.for unsigned %[[IV:.*]] = %[[LB]] to %[[SPLIT]]
 //      CHECK:   %[[RESULT:.*]] = scf.for unsigned %[[IV2:.*]] = %[[SPLIT]] to %[[UB]]
 //      CHECK:   return %[[RESULT]]
+
+// CHECK-IF-LABEL: func @fully_dynamic_bounds_unsigned(
+//  CHECK-IF-SAME:     %[[LB:.*]]: i32, %[[UB:.*]]: i32, %[[STEP:.*]]: i32
+//       CHECK-IF:   %[[SPLIT:.*]] = arith.maxui %[[LB]], %{{.*}} : i32
+//       CHECK-IF:   %[[COND:.*]] = arith.cmpi ult, %[[LB]], %[[SPLIT]] : i32
+//       CHECK-IF:   %[[FIRST:.*]] = scf.if %[[COND]] -> (i32) {
+//       CHECK-IF:   %[[RESULT:.*]] = scf.for unsigned %{{.*}} = %[[SPLIT]] to %[[UB]]
+//       CHECK-IF:   return %[[RESULT]]
 func.func @fully_dynamic_bounds_unsigned(%lb : i32, %ub: i32, %step: i32) -> i32 {
   %c0 = arith.constant 0 : i32
   %r = scf.for unsigned %iv = %lb to %ub step %step iter_args(%arg = %c0) -> (i32) : i32 {

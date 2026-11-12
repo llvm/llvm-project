@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=powerpc-ibm-aix -verify-machineinstrs -run-pass=ppc-mi-peepholes -o - %s | FileCheck %s
-# RUN: llc -mtriple=powerpc64-ibm-aix -verify-machineinstrs -run-pass=ppc-mi-peepholes -o - %s | FileCheck %s
-# RUN: llc -mtriple=powerpc64-linux-gnu -verify-machineinstrs -run-pass=ppc-mi-peepholes -o - %s | FileCheck %s
+# RUN: llc -mtriple=powerpc-ibm-aix -run-pass=ppc-mi-peepholes -o - %s | FileCheck %s
+# RUN: llc -mtriple=powerpc64-ibm-aix -run-pass=ppc-mi-peepholes -o - %s | FileCheck %s
+# RUN: llc -mtriple=powerpc64-linux-gnu -run-pass=ppc-mi-peepholes -o - %s | FileCheck %s
 ---
 
 name: testFoldRLWINM

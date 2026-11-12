@@ -46,7 +46,6 @@
 name: coalesce_test_0
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $arguments
@@ -84,7 +83,6 @@ body: |
 name: coalesce_test_1
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $arguments
@@ -128,7 +126,6 @@ body: |
 name: coalesce_test_2
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $arguments
@@ -166,7 +163,6 @@ body: |
 name: coalesce_test_3
 liveins:
   - { reg: '$arguments' }
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $arguments

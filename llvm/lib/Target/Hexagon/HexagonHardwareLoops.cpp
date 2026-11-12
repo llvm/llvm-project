@@ -1269,8 +1269,22 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
   }
 
   MachineBasicBlock *LastMBB = L->findLoopControlBlock();
-  // Don't generate hw loop if the loop has more than one exit.
-  if (!LastMBB) {
+  // Check actual CFG successors: analyzeBranch omits implicit fallthroughs.
+  // Only reject multi-exit loops whose selected exit reaches an unreachable
+  // sink, preserving valid multi-exit loops.
+  SmallVector<MachineBasicBlock *, 2> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  bool HasUnreachableExit = false;
+  if (LastMBB && ExitingBlocks.size() > 1) {
+    for (MachineBasicBlock *Succ : LastMBB->successors()) {
+      if (!L->contains(Succ) && !Succ->empty() && Succ->succ_empty() &&
+          !Succ->isReturnBlock()) {
+        HasUnreachableExit = true;
+        break;
+      }
+    }
+  }
+  if (!LastMBB || HasUnreachableExit) {
     MORE->emit([&]() {
       return MachineOptimizationRemarkMissed(DEBUG_TYPE, "MultipleExits",
                                              L->getStartLoc(), L->getHeader())

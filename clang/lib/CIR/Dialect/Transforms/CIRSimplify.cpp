@@ -33,6 +33,30 @@ namespace mlir {
 
 namespace {
 
+/// Dominance information that stays coherent while patterns rewrite the IR.
+/// DominanceInfo caches per region and never notices IR edits, so this doubles
+/// as the rewrite listener and drops a region's cached tree whenever its block
+/// list changes. Successor edits would need notifyOperationModified as well; no
+/// pattern here makes any.
+class RewriteDominanceInfo final : public RewriterBase::Listener {
+public:
+  DominanceInfo &getDominanceInfo() { return domInfo; }
+
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    domInfo.invalidate(block->getParent(), /*recursive=*/false);
+    if (previous)
+      domInfo.invalidate(previous, /*recursive=*/false);
+  }
+
+  void notifyBlockErased(Block *block) override {
+    domInfo.invalidate(block->getParent(), /*recursive=*/false);
+  }
+
+private:
+  DominanceInfo domInfo;
+};
+
 /// Find the `cir.store` operation that stores to the given alloca and dominates
 /// the given load operation. Dominance calculation is done through the given
 /// DominanceInfo object.
@@ -78,8 +102,9 @@ cir::StoreOp findDominatingInitOp(cir::AllocaOp alloca, cir::LoadOp load,
 ///   %1 = cir.load %0 : !cir.ptr<!s32i>
 ///
 /// All uses of the load above could be replaced with the SSA value `%init`.
-struct SimplifyConstantLoad : public OpRewritePattern<LoadOp> {
-  using OpRewritePattern<LoadOp>::OpRewritePattern;
+struct SimplifyConstantLoad final : public OpRewritePattern<LoadOp> {
+  SimplifyConstantLoad(MLIRContext *context, RewriteDominanceInfo &domInfo)
+      : OpRewritePattern(context), domInfo(domInfo) {}
 
   LogicalResult matchAndRewrite(LoadOp op,
                                 PatternRewriter &rewriter) const override {
@@ -91,7 +116,8 @@ struct SimplifyConstantLoad : public OpRewritePattern<LoadOp> {
     if (!allocaOp || !allocaOp.getConstant())
       return mlir::failure();
 
-    cir::StoreOp initStoreOp = findDominatingInitOp(allocaOp, op, domInfo);
+    cir::StoreOp initStoreOp =
+        findDominatingInitOp(allocaOp, op, domInfo.getDominanceInfo());
     if (!initStoreOp)
       return mlir::failure();
     if (initStoreOp.getIsVolatile() || initStoreOp.getMemOrder()) {
@@ -105,7 +131,7 @@ struct SimplifyConstantLoad : public OpRewritePattern<LoadOp> {
   }
 
 private:
-  mlir::DominanceInfo domInfo;
+  RewriteDominanceInfo &domInfo;
 };
 
 /// Simplify suitable ternary operations into select operations.
@@ -394,12 +420,10 @@ struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;
-
-private:
-  void runSimplifyConstantLoad();
 };
 
-void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
+void populateMergeCleanupPatterns(RewritePatternSet &patterns,
+                                  RewriteDominanceInfo &domInfo) {
   // clang-format off
   patterns.add<
     SimplifyTernary,
@@ -408,17 +432,20 @@ void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
     SimplifyVecSplat
   >(patterns.getContext());
   // clang-format on
+  patterns.add<SimplifyConstantLoad>(patterns.getContext(), domInfo);
 }
 
 void CIRSimplifyPass::runOnOperation() {
-  // Collect rewrite patterns.
+  // Collect rewrite patterns. SimplifyConstantLoad queries dominance, so the
+  // dominance info doubles as the driver's listener to stay coherent.
+  RewriteDominanceInfo domInfo;
   RewritePatternSet patterns(&getContext());
-  populateMergeCleanupPatterns(patterns);
+  populateMergeCleanupPatterns(patterns, domInfo);
 
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
-    if (isa<TernaryOp, SelectOp, SwitchOp, VecSplatOp>(op))
+    if (isa<TernaryOp, SelectOp, SwitchOp, VecSplatOp, LoadOp>(op))
       ops.push_back(op);
   });
 
@@ -426,28 +453,7 @@ void CIRSimplifyPass::runOnOperation() {
   // the common ancestor the driver would otherwise search for.
   GreedyRewriteConfig config;
   config.setScope(&getOperation()->getRegion(0));
-  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
-    signalPassFailure();
-
-  // SimplifyConstantLoad needs to query dominance information, which could be
-  // invalidated by other rewrite patterns. Thus we run it separately after
-  // other patterns have been applied.
-  runSimplifyConstantLoad();
-}
-
-void CIRSimplifyPass::runSimplifyConstantLoad() {
-  RewritePatternSet patterns(&getContext());
-  patterns.add<SimplifyConstantLoad>(patterns.getContext());
-
-  llvm::SmallVector<Operation *, 16> ops;
-  getOperation()->walk([&](Operation *op) {
-    if (isa<LoadOp>(op))
-      ops.push_back(op);
-  });
-  // Scope the rewrite to the body region, which encloses the common
-  // ancestor the driver would otherwise search for.
-  GreedyRewriteConfig config;
-  config.setScope(&getOperation()->getRegion(0));
+  config.setListener(&domInfo);
   if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
 }

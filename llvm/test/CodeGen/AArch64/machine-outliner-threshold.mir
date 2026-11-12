@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64--- -outliner-benefit-threshold=10 -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=THRESHOLD
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--- -outliner-benefit-threshold=10 -run-pass=machine-outliner %s -o - | FileCheck %s -check-prefix=THRESHOLD
 --- |
 
   define void @baz() #0 {
@@ -51,7 +51,6 @@
 # THRESHOLD-LABEL: bb.2:
 # THRESHOLD-NOT: BL @OUTLINED_FUNCTION
 name:            bar
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8
@@ -101,7 +100,6 @@ body:             |
 ...
 ---
 name:            baz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8

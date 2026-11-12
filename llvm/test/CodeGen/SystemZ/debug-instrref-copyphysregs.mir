@@ -14,6 +14,7 @@
 # we also need to make sure that these are the only substitutions
 # CHECK-NEXT: constants:       []
 name: foo
+tracksRegLiveness: false
 body:               |
   bb.0:
     liveins: $a1

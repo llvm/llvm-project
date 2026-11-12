@@ -22,7 +22,6 @@ namespace driver {
 
   class Compilation;
   class InputInfo;
-  class Job;
   class JobAction;
   class ToolChain;
 

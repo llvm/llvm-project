@@ -3,6 +3,7 @@
 
 ---
 name:            CTLSConst8AmbigousMaxSignbitNum
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; NOTE: Currently we do not estimate max sign bits in KnownBits,
@@ -25,6 +26,7 @@ body:             |
 
 ---
 name:            CTLSNoKnown8
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSNoKnown8
@@ -36,6 +38,7 @@ body:             |
 
 ---
 name:            CTLSNoKnown16
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSNoKnown16
@@ -47,6 +50,7 @@ body:             |
 
 ---
 name:            CTLSNoKnown32
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSNoKnown32
@@ -59,6 +63,7 @@ body:             |
 
 ---
 name:            CTLSHalfKnown8
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfKnown8
@@ -74,6 +79,7 @@ body:             |
 
 ---
 name:            CTLSHalfKnown16
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfKnown16
@@ -89,6 +95,7 @@ body:             |
 
 ---
 name:            CTLSHalfConst8Zero
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfConst8Zero
@@ -100,6 +107,7 @@ body:             |
 
 ---
 name:            CTLSHalfConst16Zero
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfConst16Zero
@@ -111,6 +119,7 @@ body:             |
 
 ---
 name:            VectorCTLSConst16Zero
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCTLSConst16Zero
@@ -124,6 +133,7 @@ body:             |
 
 ---
 name:            VectorCTLSNoneKnown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCTLSNoneKnown
@@ -143,6 +153,7 @@ body:             |
 
 ---
 name:            VectorCTLSHighBitKnown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCTLSHighBitKnown
@@ -166,6 +177,7 @@ body:             |
 
 ---
 name:            CTLSLargeEnough
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSLargeEnough
@@ -181,6 +193,7 @@ body:             |
 
 ---
 name:            CTLSTooSmallToTrigger
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSTooSmallToTrigger
@@ -196,6 +209,7 @@ body:             |
 
 ---
 name:            VectorCTLSDemandedElts
+tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @VectorCTLSDemandedElts

@@ -319,7 +319,7 @@ LLVM_ABI extern char &StackFrameLayoutAnalysisPassID;
 LLVM_ABI extern char &IfConverterID;
 
 LLVM_ABI FunctionPass *
-createIfConverter(std::function<bool(const MachineFunction &)> Ftor);
+createIfConverterLegacyPass(std::function<bool(const MachineFunction &)> Ftor);
 
 /// MachineBlockPlacement - This pass places basic blocks based on branch
 /// probabilities.
@@ -425,7 +425,7 @@ LLVM_ABI FunctionPass *createWinEHPass();
 /// createSjLjEHPreparePass - This pass adapts exception handling code to use
 /// the GCC-style builtin setjmp/longjmp (sjlj) to handling EH control flow.
 ///
-LLVM_ABI FunctionPass *createSjLjEHPreparePass(const TargetMachine *TM);
+LLVM_ABI FunctionPass *createSjLjEHPreparePass();
 
 /// createWasmEHPass - This pass adapts exception handling code to use
 /// WebAssembly's exception handling scheme.
@@ -543,6 +543,9 @@ LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
 LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
+
+/// Minimizes execution domain crossings for specific register classes.
+LLVM_ABI FunctionPass *createExecutionDomainFixLegacyPass();
 
 // This pass expands indirectbr instructions.
 LLVM_ABI FunctionPass *createIndirectBrExpandPass(CodeGenOptLevel OptLevel);

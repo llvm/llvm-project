@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRArithTransforms
   ExpandOps.cpp
   IntRangeOptimizations.cpp
   ReifyValueBounds.cpp
-  ShardingInterfaceImpl.cpp
   UnsignedWhenEquivalent.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -30,9 +29,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRIR
   MLIRLoopLikeInterface
   MLIRMemRefDialect
-  MLIRShardDialect
   MLIRPass
-  MLIRShardingInterface
   MLIRTensorDialect
   MLIRTransforms
   MLIRTransformUtils

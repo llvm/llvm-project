@@ -2524,35 +2524,7 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
                                   Expr2.get(), ConsumeParen());
     break;
   }
-  case tok::kw___builtin_astype: {
-    // The first argument is an expression to be converted, followed by a comma.
-    ExprResult Expr(ParseAssignmentExpression());
-    if (Expr.isInvalid()) {
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    if (ExpectAndConsume(tok::comma)) {
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    // Second argument is the type to bitcast to.
-    TypeResult DestTy = ParseTypeName();
-    if (DestTy.isInvalid())
-      return ExprError();
-
-    // Attempt to consume the r-paren.
-    if (Tok.isNot(tok::r_paren)) {
-      Diag(Tok, diag::err_expected) << tok::r_paren;
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    Res = Actions.ActOnAsTypeExpr(Expr.get(), DestTy.get(), StartLoc,
-                                  ConsumeParen());
-    break;
-  }
+  case tok::kw___builtin_astype:
   case tok::kw___builtin_convertvector: {
     // The first argument is an expression to be converted, followed by a comma.
     ExprResult Expr(ParseAssignmentExpression());
@@ -2578,8 +2550,12 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
-    Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
-                                         ConsumeParen());
+    if (T == tok::kw___builtin_astype)
+      Res = Actions.ActOnAsTypeExpr(Expr.get(), DestTy.get(), StartLoc,
+                                    ConsumeParen());
+    else
+      Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
+                                           ConsumeParen());
     break;
   }
   case tok::kw___builtin_COLUMN:

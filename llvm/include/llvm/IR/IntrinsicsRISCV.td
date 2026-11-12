@@ -2146,7 +2146,7 @@ class RVPBinaryIntrinsic
   def int_riscv_predsum  : RVPReductionIntrinsic;
   def int_riscv_predsumu : RVPReductionIntrinsic;
 
-  // Packed Merge
+  // Packed Merge. Operands are (rs1, rs2, rd).
   class RVPTernaryIntrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>,
@@ -2183,6 +2183,9 @@ class RVPBinaryIntrinsic
   def int_riscv_aaddu_u32 : RVPScalarBinaryIntrinsic;
   def int_riscv_asub_i32  : RVPScalarBinaryIntrinsic;
   def int_riscv_asubu_u32 : RVPScalarBinaryIntrinsic;
+
+  // Scalar Shift-Add. On RV64 this maps to pssh1sadd.w on the low words.
+  def int_riscv_ssh1sadd_i32 : RVPScalarBinaryIntrinsic;
 
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.
@@ -2232,42 +2235,22 @@ class RVPBinaryIntrinsic
   // operand's elements are half as wide, with twice the element count. For
   // the .b forms the third operand holds bytes, for the .w forms it holds
   // halfwords.
-  def int_riscv_pmhacc_b0
+  def int_riscv_pmhacc_half_0
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhacc_b1
+  def int_riscv_pmhacc_half_1
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhaccsu_b0
+  def int_riscv_pmhaccsu_half_0
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhaccsu_b1
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>, LLVMMatchType<0>,
-                               LLVMSubdivide2VectorType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhacc_h0
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>, LLVMMatchType<0>,
-                               LLVMSubdivide2VectorType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhacc_h1
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>, LLVMMatchType<0>,
-                               LLVMSubdivide2VectorType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhaccsu_h0
-      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                              [LLVMMatchType<0>, LLVMMatchType<0>,
-                               LLVMSubdivide2VectorType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmhaccsu_h1
+  def int_riscv_pmhaccsu_half_1
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
@@ -2280,14 +2263,10 @@ class RVPBinaryIntrinsic
                               [LLVMMatchType<0>,
                                LLVMSubdivide2VectorType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_pmulh_b0   : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulh_b1   : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulhsu_b0 : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulhsu_b1 : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulh_h0   : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulh_h1   : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulhsu_h0 : RVPMulHighPartsIntrinsic;
-  def int_riscv_pmulhsu_h1 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_half_0   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_half_1   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_half_0 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_half_1 : RVPMulHighPartsIntrinsic;
 
   // Packed "Q-format" Multiply with Widening Accumulate.
   class RVPQFormatWideningAccIntrinsic
@@ -2347,6 +2326,19 @@ class RVPBinaryIntrinsic
   def int_riscv_pm2wsuba   : RVPHorizontalMulAccIntrinsic;
   def int_riscv_pm2wsuba_x : RVPHorizontalMulAccIntrinsic;
   def int_riscv_pm2waddasu : RVPHorizontalMulAccIntrinsic;
+
+  // Packed Multiplication with Horizontal Addition and Accumulate.
+  def int_riscv_pm2adda    : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2adda_x  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2addau   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pmq2adda   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pmqr2adda  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2suba    : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2suba_x  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm2addasu  : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm4adda    : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm4addau   : RVPHorizontalMulAccIntrinsic;
+  def int_riscv_pm4addasu  : RVPHorizontalMulAccIntrinsic;
 
   // Packed Multiply Parts. The packed forms multiply the selected element of
   // every pair, so the operands are the result with each element split in two.

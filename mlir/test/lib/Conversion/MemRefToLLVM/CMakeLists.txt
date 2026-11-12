@@ -14,9 +14,3 @@ mlir_target_link_libraries(MLIRTestMemRefToLLVMWithTransforms PUBLIC
   MLIRMemRefTransforms
   MLIRPass
   )
-
-target_include_directories(MLIRTestMemRefToLLVMWithTransforms
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../Dialect/Test
-  ${CMAKE_CURRENT_BINARY_DIR}/../../Dialect/Test
-  )

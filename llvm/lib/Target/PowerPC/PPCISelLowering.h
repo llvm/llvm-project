@@ -356,6 +356,10 @@ namespace llvm {
 
     bool shouldInlineQuadwordAtomics() const;
 
+    ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
+      return ISD::ZERO_EXTEND;
+    }
+
     TargetLowering::AtomicExpansionKind
     shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
@@ -744,7 +748,6 @@ namespace llvm {
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;

@@ -136,6 +136,7 @@ public:
           static_cast<typename AsUnsigned::ReprT>(V));
     llvm_unreachable("Don't call countLeadingZeros() on negative values.");
   }
+  unsigned getActiveBits() const { return 8 - countLeadingZeros(); }
 
   static bool increment(Char A, Char *R) {
     return add(A, Char(ReprT(1)), A.bitWidth(), R);

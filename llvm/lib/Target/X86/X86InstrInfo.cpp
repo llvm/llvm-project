@@ -6474,11 +6474,13 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
                             get(X86::VEXTRACTF64X4Zmri), X86::sub_ymm);
   case X86::MOV32ri64: {
-    Register Reg = MIB.getReg(0);
-    Register Reg32 = RI.getSubReg(Reg, X86::sub_32bit);
+    MachineOperand &DefMO = MIB->getOperand(0);
+    Register Reg32 = RI.getSubReg(DefMO.getReg(), X86::sub_32bit);
     MI.setDesc(get(X86::MOV32ri));
-    MIB->getOperand(0).setReg(Reg32);
-    MIB.addReg(Reg, RegState::ImplicitDefine);
+    DefMO.setReg(Reg32);
+    DefMO.setIsDead(none_of(MI.all_defs(), [=](const MachineOperand &MO) {
+      return MO.getReg() == Reg32 && !MO.isDead();
+    }));
     return true;
   }
 
@@ -8831,9 +8833,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
   // TODO: Check if 32-byte or greater accesses are slow too?
   if (!MI.hasOneMemOperand() && RC == &X86::VR128RegClass &&
       Subtarget.isUnalignedMem16Slow())
-    // Without memoperands, loadRegFromAddr and storeRegToStackSlot will
-    // conservatively assume the address is unaligned. That's bad for
-    // performance.
+    // Without memoperands, storeRegToStackSlot will conservatively
+    // assume the address is unaligned. That's bad for performance.
     return false;
   SmallVector<MachineOperand, X86::AddrNumOperands> AddrOps;
   SmallVector<MachineOperand, 2> BeforeOps;

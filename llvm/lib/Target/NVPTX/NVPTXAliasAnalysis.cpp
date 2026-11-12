@@ -12,19 +12,14 @@
 #include "NVPTXAliasAnalysis.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "NVPTX-aa"
-
-static cl::opt<unsigned> TraverseAddressSpacesLimit(
-    "nvptx-traverse-address-aliasing-limit", cl::Hidden,
-    cl::desc("Depth limit for finding address space through traversal"),
-    cl::init(6));
 
 AnalysisKey NVPTXAA::Key;
 
@@ -46,6 +41,15 @@ ImmutablePass *llvm::createNVPTXExternalAAWrapperPass() {
 }
 
 NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {}
+
+NVPTXAAResult NVPTXAA::run(Function &F, AnalysisManager<Function> &AM) {
+  return NVPTXAAResult(getNVPTXOptions(F));
+}
+
+bool NVPTXAAWrapperPass::doInitialization(Module &M) {
+  Result = std::make_unique<NVPTXAAResult>(getNVPTXOptions(M));
+  return false;
+}
 
 void NVPTXAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -98,8 +102,10 @@ static AliasResult::Kind getAliasResult(unsigned AS1, unsigned AS2) {
 AliasResult NVPTXAAResult::alias(const MemoryLocation &Loc1,
                                  const MemoryLocation &Loc2, AAQueryInfo &AAQI,
                                  const Instruction *) {
-  unsigned AS1 = getAddressSpace(Loc1.Ptr, TraverseAddressSpacesLimit);
-  unsigned AS2 = getAddressSpace(Loc2.Ptr, TraverseAddressSpacesLimit);
+  unsigned AS1 =
+      getAddressSpace(Loc1.Ptr, CLOpts.traverse_address_aliasing_limit);
+  unsigned AS2 =
+      getAddressSpace(Loc2.Ptr, CLOpts.traverse_address_aliasing_limit);
 
   return getAliasResult(AS1, AS2);
 }
@@ -115,7 +121,8 @@ static bool isConstOrParam(unsigned AS) {
 ModRefInfo NVPTXAAResult::getModRefInfoMask(const MemoryLocation &Loc,
                                             AAQueryInfo &AAQI,
                                             bool IgnoreLocals) {
-  if (isConstOrParam(getAddressSpace(Loc.Ptr, TraverseAddressSpacesLimit)))
+  if (isConstOrParam(
+          getAddressSpace(Loc.Ptr, CLOpts.traverse_address_aliasing_limit)))
     return ModRefInfo::NoModRef;
 
   return ModRefInfo::ModRef;

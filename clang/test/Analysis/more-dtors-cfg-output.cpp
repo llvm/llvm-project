@@ -234,7 +234,7 @@ void const_auto_obj() {
 void has_default_arg(Foo foo = get_foo());
 void test_default_arg() {
   // FIXME: This emits a destructor but no constructor.  Search CFG.cpp for
-  // 'PR13385' for details.
+  // 'GH13757' for details.
   has_default_arg();
 }
 // CHECK: void test_default_arg()
@@ -249,7 +249,7 @@ struct DefaultArgInCtor {
 void default_ctor_with_default_arg() {
   // FIXME: Default arguments are mishandled in two ways:
   // - The constructor is not emitted at all (not specific to arrays; see fixme
-  //   in CFG.cpp that mentions PR13385).
+  //   in CFG.cpp that mentions GH13757).
   // - The destructor is emitted once, even though the default argument will be
   //   constructed and destructed once per array element.
   // Ideally, the CFG would expand array constructions into a loop that

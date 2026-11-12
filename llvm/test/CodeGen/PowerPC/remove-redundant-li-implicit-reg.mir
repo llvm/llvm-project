@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=powerpc64-unknown-unknown -stop-after ppc-pre-emit-peephole \
-# RUN:   %s -o - -verify-machineinstrs | FileCheck %s
+# RUN:   %s -o - | FileCheck %s
 
 ---
 name: testRedundantLiImplicitReg
