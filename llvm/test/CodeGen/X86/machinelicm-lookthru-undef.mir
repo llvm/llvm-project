@@ -5,7 +5,6 @@
 
 ---
 name: lookthru_undef
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: lookthru_undef
   ; CHECK: bb.0:

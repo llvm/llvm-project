@@ -30,7 +30,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 # CHECK-LABEL: name:            test_mul_vec256
 # CHECK: registers:
 # CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
@@ -53,7 +52,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 # CHECK-LABEL: name:            test_add_vec256
 # CHECK: registers:
 # CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
@@ -76,7 +74,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 # CHECK-LABEL: name:            test_sub_vec256
 # CHECK: registers:
 # CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }

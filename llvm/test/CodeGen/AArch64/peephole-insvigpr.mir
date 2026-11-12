@@ -413,7 +413,6 @@ body:             |
 ---
 name:            fadd
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr64, preferred-register: '' }
   - { id: 1, class: fpr64, preferred-register: '' }
@@ -462,7 +461,6 @@ body:             |
 ...
 ---
 name:            asm
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64common, preferred-register: '' }
   - { id: 1, class: fpr64, preferred-register: '' }
@@ -529,7 +527,6 @@ body:             |
 
 ---
 name:            insert_vec_from_gpr64_zero_high
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64common, preferred-register: '' }
   - { id: 1, class: gpr64common, preferred-register: '' }
