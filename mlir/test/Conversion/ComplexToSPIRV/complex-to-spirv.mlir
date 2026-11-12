@@ -221,6 +221,54 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
 
 // -----
 
+func.func @complex_tan(%arg: complex<f32>) -> complex<f32> {
+  %tan = complex.tan %arg : complex<f32>
+  return %tan : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_tan
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[TWO:.+]] = spirv.Constant 2.000000e+00 : f32
+//       CHECK:   %[[TWORE:.+]] = spirv.FMul %[[RE]], %[[TWO]] : f32
+//       CHECK:   %[[TWOIM:.+]] = spirv.FMul %[[IM]], %[[TWO]] : f32
+//       CHECK:   %[[RSIN:.+]] = spirv.GL.Sin %[[TWORE]] : f32
+//       CHECK:   %[[RCOS:.+]] = spirv.GL.Cos %[[TWORE]] : f32
+//       CHECK:   %[[ISIN:.+]] = spirv.GL.Sinh %[[TWOIM]] : f32
+//       CHECK:   %[[ICOS:.+]] = spirv.GL.Cosh %[[TWOIM]] : f32
+//       CHECK:   %[[DENOM:.+]] = spirv.FAdd %[[RCOS]], %[[ICOS]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FDiv %[[RSIN]], %[[DENOM]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FDiv %[[ISIN]], %[[DENOM]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_tanh(%arg: complex<f32>) -> complex<f32> {
+  %tanh = complex.tanh %arg : complex<f32>
+  return %tanh : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_tanh
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[TWO:.+]] = spirv.Constant 2.000000e+00 : f32
+//       CHECK:   %[[TWORE:.+]] = spirv.FMul %[[RE]], %[[TWO]] : f32
+//       CHECK:   %[[TWOIM:.+]] = spirv.FMul %[[IM]], %[[TWO]] : f32
+//       CHECK:   %[[SIN:.+]] = spirv.GL.Sin %[[TWOIM]] : f32
+//       CHECK:   %[[COS:.+]] = spirv.GL.Cos %[[TWOIM]] : f32
+//       CHECK:   %[[SINH:.+]] = spirv.GL.Sinh %[[TWORE]] : f32
+//       CHECK:   %[[COSH:.+]] = spirv.GL.Cosh %[[TWORE]] : f32
+//       CHECK:   %[[DENOM:.+]] = spirv.FAdd %[[COS]], %[[COSH]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FDiv %[[SIN]], %[[DENOM]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FDiv %[[SINH]], %[[DENOM]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
 } {
@@ -539,68 +587,23 @@ func.func @complex_rsqrt_opencl(%arg: complex<f32>) -> complex<f32> {
 //       CHECK:   spirv.CL.rsqrt
 //       CHECK:   spirv.CL.atan2
 
-}
-
-// -----
-
-func.func @complex_tan(%arg: complex<f32>) -> complex<f32> {
-  %tan = complex.tan %arg : complex<f32>
-  return %tan : complex<f32>
-}
-
-// CHECK-LABEL: func.func @complex_tan
-//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
-//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
-//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
-//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
-//       CHECK:   %[[TWO:.+]] = spirv.Constant 2.000000e+00 : f32
-//       CHECK:   %[[TWORE:.+]] = spirv.FMul %[[RE]], %[[TWO]] : f32
-//       CHECK:   %[[TWOIM:.+]] = spirv.FMul %[[IM]], %[[TWO]] : f32
-//       CHECK:   %[[RSIN:.+]] = spirv.GL.Sin %[[TWORE]] : f32
-//       CHECK:   %[[RCOS:.+]] = spirv.GL.Cos %[[TWORE]] : f32
-//       CHECK:   %[[ISIN:.+]] = spirv.GL.Sinh %[[TWOIM]] : f32
-//       CHECK:   %[[ICOS:.+]] = spirv.GL.Cosh %[[TWOIM]] : f32
-//       CHECK:   %[[DENOM:.+]] = spirv.FAdd %[[RCOS]], %[[ICOS]] : f32
-//       CHECK:   %[[RESRE:.+]] = spirv.FDiv %[[RSIN]], %[[DENOM]] : f32
-//       CHECK:   %[[RESIM:.+]] = spirv.FDiv %[[ISIN]], %[[DENOM]] : f32
-//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
-
-// -----
-
-func.func @complex_tanh(%arg: complex<f32>) -> complex<f32> {
-  %tanh = complex.tanh %arg : complex<f32>
-  return %tanh : complex<f32>
-}
-
-// CHECK-LABEL: func.func @complex_tanh
-//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
-//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
-//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
-//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
-//       CHECK:   %[[TWO:.+]] = spirv.Constant 2.000000e+00 : f32
-//       CHECK:   %[[TWORE:.+]] = spirv.FMul %[[RE]], %[[TWO]] : f32
-//       CHECK:   %[[TWOIM:.+]] = spirv.FMul %[[IM]], %[[TWO]] : f32
-//       CHECK:   %[[RSINH:.+]] = spirv.GL.Sinh %[[TWORE]] : f32
-//       CHECK:   %[[RCOSH:.+]] = spirv.GL.Cosh %[[TWORE]] : f32
-//       CHECK:   %[[ISIN:.+]] = spirv.GL.Sin %[[TWOIM]] : f32
-//       CHECK:   %[[ICOS:.+]] = spirv.GL.Cos %[[TWOIM]] : f32
-//       CHECK:   %[[DENOM:.+]] = spirv.FAdd %[[RCOSH]], %[[ICOS]] : f32
-//       CHECK:   %[[RESRE:.+]] = spirv.FDiv %[[RSINH]], %[[DENOM]] : f32
-//       CHECK:   %[[RESIM:.+]] = spirv.FDiv %[[ISIN]], %[[DENOM]] : f32
-//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
-
-// -----
-
-module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
-} {
-
 func.func @complex_tan_opencl(%arg: complex<f32>) -> complex<f32> {
   %tan = complex.tan %arg : complex<f32>
   return %tan : complex<f32>
 }
 
 // CHECK-LABEL: func.func @complex_tan_opencl
+//       CHECK:   spirv.CL.sin
+//       CHECK:   spirv.CL.cos
+//       CHECK:   spirv.CL.sinh
+//       CHECK:   spirv.CL.cosh
+
+func.func @complex_tanh_opencl(%arg: complex<f32>) -> complex<f32> {
+  %tanh = complex.tanh %arg : complex<f32>
+  return %tanh : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_tanh_opencl
 //       CHECK:   spirv.CL.sin
 //       CHECK:   spirv.CL.cos
 //       CHECK:   spirv.CL.sinh
