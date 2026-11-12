@@ -30,7 +30,7 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    [[T2_PRE2:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_LOOPEXIT_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[ADD_PTR_LCSSA:%.*]] = phi ptr [ [[ADD_PTR_LCSSA_UNR:%.*]], %[[FOR_BODY3_PROL_LOOPEXIT:.*]] ], [ [[ADD_PTR_1:%.*]], %[[FOR_INC_1:.*]] ]
+; CHECK-NEXT:    [[ADD_PTR_LCSSA:%.*]] = phi ptr [ [[ADD_PTR_LCSSA_UNR:%.*]], %[[FOR_BODY3_PROL:.*]] ], [ [[ADD_PTR_1:%.*]], %[[FOR_INC_1:.*]] ]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A_021:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[T2:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
@@ -53,10 +53,9 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    [[TOBOOL215:%.*]] = icmp eq i32 [[T2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL215]], label %[[FOR_COND_LOOPEXIT]], label %[[FOR_BODY3_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY3_PREHEADER]]:
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[T2]], 1
-; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label %[[FOR_BODY3_PROL_LOOPEXIT]], label %[[FOR_BODY3_PROL:.*]]
-; CHECK:       [[FOR_BODY3_PROL]]:
+; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = trunc i32 [[T2]] to i1
+; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label %[[FOR_BODY3_PROL_LOOPEXIT:.*]], label %[[FOR_BODY3_PROL]]
+; CHECK:       [[FOR_BODY3_PROL_LOOPEXIT]]:
 ; CHECK-NEXT:    [[DEC18_PROL:%.*]] = add nsw i32 [[T2]], -1
 ; CHECK-NEXT:    [[T3_PROL:%.*]] = load i8, ptr [[A_021]], align 1
 ; CHECK-NEXT:    [[CMP_PROL:%.*]] = icmp eq i8 [[T3_PROL]], 0
@@ -71,8 +70,8 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK:       [[FOR_INC_PROL]]:
 ; CHECK-NEXT:    [[INCDEC_PTR_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[A_021]], i64 1
 ; CHECK-NEXT:    [[ADD_PTR_PROL:%.*]] = getelementptr inbounds nuw i8, ptr [[R_022]], i64 6
-; CHECK-NEXT:    br label %[[FOR_BODY3_PROL_LOOPEXIT]]
-; CHECK:       [[FOR_BODY3_PROL_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[FOR_BODY3_PROL]]
+; CHECK:       [[FOR_BODY3_PROL]]:
 ; CHECK-NEXT:    [[ADD_PTR_LCSSA_UNR]] = phi ptr [ poison, %[[FOR_BODY3_PREHEADER]] ], [ [[ADD_PTR_PROL]], %[[FOR_INC_PROL]] ]
 ; CHECK-NEXT:    [[DEC18_IN_UNR:%.*]] = phi i32 [ [[T2]], %[[FOR_BODY3_PREHEADER]] ], [ [[DEC18_PROL]], %[[FOR_INC_PROL]] ]
 ; CHECK-NEXT:    [[R_117_UNR:%.*]] = phi ptr [ [[R_022]], %[[FOR_BODY3_PREHEADER]] ], [ [[ADD_PTR_PROL]], %[[FOR_INC_PROL]] ]
@@ -80,9 +79,9 @@ define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[T2]], 1
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[FOR_COND_LOOPEXIT_LOOPEXIT]], label %[[FOR_BODY3:.*]]
 ; CHECK:       [[FOR_BODY3]]:
-; CHECK-NEXT:    [[DEC18_IN:%.*]] = phi i32 [ [[DEC18_1:%.*]], %[[FOR_INC_1]] ], [ [[DEC18_IN_UNR]], %[[FOR_BODY3_PROL_LOOPEXIT]] ]
-; CHECK-NEXT:    [[R_117:%.*]] = phi ptr [ [[ADD_PTR_1]], %[[FOR_INC_1]] ], [ [[R_117_UNR]], %[[FOR_BODY3_PROL_LOOPEXIT]] ]
-; CHECK-NEXT:    [[A_116:%.*]] = phi ptr [ [[INCDEC_PTR_1:%.*]], %[[FOR_INC_1]] ], [ [[A_116_UNR]], %[[FOR_BODY3_PROL_LOOPEXIT]] ]
+; CHECK-NEXT:    [[DEC18_IN:%.*]] = phi i32 [ [[DEC18_1:%.*]], %[[FOR_INC_1]] ], [ [[DEC18_IN_UNR]], %[[FOR_BODY3_PROL]] ]
+; CHECK-NEXT:    [[R_117:%.*]] = phi ptr [ [[ADD_PTR_1]], %[[FOR_INC_1]] ], [ [[R_117_UNR]], %[[FOR_BODY3_PROL]] ]
+; CHECK-NEXT:    [[A_116:%.*]] = phi ptr [ [[INCDEC_PTR_1:%.*]], %[[FOR_INC_1]] ], [ [[A_116_UNR]], %[[FOR_BODY3_PROL]] ]
 ; CHECK-NEXT:    [[T3:%.*]] = load i8, ptr [[A_116]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[T3]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[FOR_INC:.*]]

@@ -152,11 +152,10 @@ define <2 x i32> @and_lshr_and_vec_v2(<2 x i32> %arg) {
 
 define <3 x i32> @and_lshr_and_vec_poison(<3 x i32> %arg) {
 ; CHECK-LABEL: @and_lshr_and_vec_poison(
-; CHECK-NEXT:    [[T:%.*]] = and <3 x i32> [[ARG:%.*]], <i32 1, i32 poison, i32 1>
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq <3 x i32> [[T]], <i32 0, i32 poison, i32 0>
+; CHECK-NEXT:    [[T1:%.*]] = trunc <3 x i32> [[ARG:%.*]] to <3 x i1>
 ; CHECK-NEXT:    [[T2:%.*]] = lshr <3 x i32> [[ARG]], <i32 1, i32 poison, i32 1>
 ; CHECK-NEXT:    [[T3:%.*]] = and <3 x i32> [[T2]], <i32 1, i32 poison, i32 1>
-; CHECK-NEXT:    [[T4:%.*]] = select <3 x i1> [[T1]], <3 x i32> [[T3]], <3 x i32> <i32 1, i32 poison, i32 1>
+; CHECK-NEXT:    [[T4:%.*]] = select <3 x i1> [[T1]], <3 x i32> <i32 1, i32 poison, i32 1>, <3 x i32> [[T3]]
 ; CHECK-NEXT:    ret <3 x i32> [[T4]]
 ;
   %t = and <3 x i32> %arg, <i32 1, i32 poison, i32 1>
@@ -377,11 +376,10 @@ define <3 x i32> @f_var1_vec_poison(<3 x i32> %arg, <3 x i32> %arg1) {
 
 define i32 @f_var2(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @f_var2(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T2:%.*]] = trunc i32 [[ARG:%.*]] to i1
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[ARG]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 1
-; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T2]], i32 [[T4]], i32 1
+; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T2]], i32 1, i32 [[T4]]
 ; CHECK-NEXT:    ret i32 [[T5]]
 ;
   %t = and i32 %arg, 1
@@ -394,11 +392,10 @@ define i32 @f_var2(i32 %arg, i32 %arg1) {
 
 define <2 x i32> @f_var2_splatvec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var2_splatvec(
-; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], splat (i32 1)
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T]], zeroinitializer
+; CHECK-NEXT:    [[T2:%.*]] = trunc <2 x i32> [[ARG:%.*]] to <2 x i1>
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[ARG]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T3]], splat (i32 1)
-; CHECK-NEXT:    [[T5:%.*]] = select <2 x i1> [[T2]], <2 x i32> [[T4]], <2 x i32> splat (i32 1)
+; CHECK-NEXT:    [[T5:%.*]] = select <2 x i1> [[T2]], <2 x i32> splat (i32 1), <2 x i32> [[T4]]
 ; CHECK-NEXT:    ret <2 x i32> [[T5]]
 ;
   %t = and <2 x i32> %arg, <i32 1, i32 1>
@@ -428,11 +425,10 @@ define <2 x i32> @f_var2_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 
 define <3 x i32> @f_var2_vec_poison(<3 x i32> %arg, <3 x i32> %arg1) {
 ; CHECK-LABEL: @f_var2_vec_poison(
-; CHECK-NEXT:    [[T:%.*]] = and <3 x i32> [[ARG:%.*]], <i32 1, i32 poison, i32 1>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <3 x i32> [[T]], <i32 0, i32 poison, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = trunc <3 x i32> [[ARG:%.*]] to <3 x i1>
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[ARG]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = and <3 x i32> [[T3]], <i32 1, i32 poison, i32 1>
-; CHECK-NEXT:    [[T5:%.*]] = select <3 x i1> [[T2]], <3 x i32> [[T4]], <3 x i32> <i32 1, i32 poison, i32 1>
+; CHECK-NEXT:    [[T5:%.*]] = select <3 x i1> [[T2]], <3 x i32> <i32 1, i32 poison, i32 1>, <3 x i32> [[T4]]
 ; CHECK-NEXT:    ret <3 x i32> [[T5]]
 ;
   %t = and <3 x i32> %arg, <i32 1, i32 poison, i32 1>
@@ -593,11 +589,10 @@ define i32 @lshr_oneuse_and_multiuse(i32 %arg) {
 
 define i32 @n0(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @n0(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T2:%.*]] = trunc i32 [[ARG:%.*]] to i1
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[ARG1:%.*]], 1
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 1
-; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T2]], i32 [[T4]], i32 1
+; CHECK-NEXT:    [[T5:%.*]] = select i1 [[T2]], i32 1, i32 [[T4]]
 ; CHECK-NEXT:    ret i32 [[T5]]
 ;
   %t = and i32 %arg, 1
@@ -627,11 +622,10 @@ define i32 @n1(i32 %arg, i32 %arg1) {
 
 define i32 @n2(i32 %arg) {
 ; CHECK-LABEL: @n2(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i1
 ; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[ARG]], 2
 ; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], 1
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i32 [[T3]], i32 0
+; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i32 0, i32 [[T3]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t = and i32 %arg, 1
@@ -661,11 +655,10 @@ define i32 @n3(i32 %arg) {
 
 define i32 @n4(i32 %arg) {
 ; CHECK-LABEL: @n4(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i1
 ; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[ARG]], 2
 ; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], 2
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i32 [[T3]], i32 1
+; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i32 1, i32 [[T3]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t = and i32 %arg, 1
@@ -693,11 +686,10 @@ define i32 @n5(i32 %arg) {
 
 define i32 @n6(i32 %arg) {
 ; CHECK-LABEL: @n6(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T1_NOT:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T1_NOT:%.*]] = trunc i32 [[ARG:%.*]] to i1
 ; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[ARG]], 2
 ; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], 1
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1_NOT]], i32 1, i32 [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1_NOT]], i32 [[T3]], i32 1
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t = and i32 %arg, 1
@@ -727,11 +719,10 @@ define i32 @n7(i32 %arg) {
 
 define i32 @n8(i32 %arg) {
 ; CHECK-LABEL: @n8(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T1_NOT:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[ARG:%.*]] to i1
 ; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[ARG]], 2
 ; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], 1
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1_NOT]], i32 1, i32 [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i32 [[T3]], i32 1
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t = and i32 %arg, 1
