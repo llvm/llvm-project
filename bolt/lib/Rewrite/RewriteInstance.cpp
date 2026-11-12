@@ -3497,19 +3497,18 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   // On AArch64 the lookup above uses MaxSize, so it can also match addresses
   // after the function's last byte (padding or unnamed code up to the next
   // symbol).
-  bool IsInPadding = false;
+  bool IsPastEnd = false;
   if (ReferencedBF && IsAArch64) {
-    const uint64_t End = ReferencedBF->getAddress() + ReferencedBF->getSize();
-    if (Address >= End && !ReferencedBF->isInConstantIsland(Address)) {
+    IsPastEnd = !ReferencedBF->containsAddress(Address) &&
+                !ReferencedBF->isInConstantIsland(Address);
+    if (IsPastEnd)
       ReferencedBF = nullptr;
-      IsInPadding = true;
-    }
   }
 
   if (!IsSectionRelocation) {
     if (BinaryFunction *BF =
             BC->getBinaryFunctionContainingAddress(SymbolAddress)) {
-      if (BF != ReferencedBF && !IsInPadding) {
+      if (BF != ReferencedBF && !IsPastEnd) {
         // It's possible we are referencing a function without referencing any
         // code, e.g. when taking a bitmask action on a function address.
         BC->errs()
