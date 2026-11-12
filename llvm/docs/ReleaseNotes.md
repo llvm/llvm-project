@@ -172,6 +172,11 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 
+* When a function is inlined, each inlined copy now gets its own clone of
+  the `!tbaa` and `!tbaa.struct` metadata that refers to a `distinct` TBAA
+  node, so accesses from different copies are in different type
+  hierarchies. TBAA metadata with uniqued roots is shared, as before.
+
 ### Changes to LLVM infrastructure
 
 * Removed `mc::RegisterMCTargetOptionsFlags`.

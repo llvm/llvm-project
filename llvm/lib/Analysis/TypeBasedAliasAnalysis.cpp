@@ -23,9 +23,10 @@
 //
 // The first field is an identity field. It can be any value, usually
 // an MDString, which uniquely identifies the type. The most important
-// name in the tree is the name of the root node. Two trees with
-// different root node names are entirely disjoint, even if they
-// have leaves with common names.
+// node in the tree is the root node. Two trees with different root
+// nodes are entirely disjoint, even if they have leaves with common
+// names. Uniqued roots with the same name are the same node, while a
+// distinct root is different from any other root with the same name.
 //
 // The second field identifies the type's parent node in the tree, or
 // is null or omitted for a root node. A type is considered to alias

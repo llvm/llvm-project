@@ -176,7 +176,8 @@ protected:
 public:
   /// Return metadata appropriate for a TBAA root node. Each returned
   /// node is distinct from all other metadata and will never be identified
-  /// (uniqued) with anything else.
+  /// (uniqued) with anything else. Each inlined copy of a function gets a
+  /// clone of a distinct TBAA root.
   MDNode *createAnonymousTBAARoot() {
     return createAnonymousAARoot();
   }
@@ -199,7 +200,7 @@ public:
 
   /// Return metadata appropriate for a TBAA root node with the given
   /// name.  This may be identified (uniqued) with other roots with the same
-  /// name.
+  /// name. Inlined copies of a function share a uniqued TBAA root.
   LLVM_ABI MDNode *createTBAARoot(StringRef Name);
 
   /// Return metadata appropriate for an alias scope domain node with
