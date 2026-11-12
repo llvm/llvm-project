@@ -686,6 +686,17 @@ private:
   void addCXXPredicate(RuleMatcher &M, const CodeExpansions &CE,
                        const CXXPattern &P, const PatternAlternatives &Alts);
 
+  /// Adds a predicate for each entry of the rule's LegalityChecks.
+  /// Returns false on error.
+  bool addLegalityCheckPredicates(RuleMatcher &M, const CodeExpansions &CE,
+                                  const PatternAlternatives &Alts);
+
+  /// If the rule sets CheckApplyLegality, adds a predicate checking that each
+  /// instruction built by its 'apply' patterns is legal.
+  /// Returns false on error.
+  bool addApplyLegalityPredicates(RuleMatcher &M, const CodeExpansions &CE,
+                                  const PatternAlternatives &Alts);
+
   bool hasOnlyCXXApplyPatterns() const;
   bool hasEraseRoot() const;
 
@@ -1099,6 +1110,110 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
   InstructionMatcher &IM = M.roots_front();
   IM.addPredicate<GenericInstructionPredicateMatcher>(
       ExpandedCode.getEnumNameWithPrefix(CXXPredPrefix));
+}
+
+bool CombineRuleBuilder::addApplyLegalityPredicates(
+    RuleMatcher &M, const CodeExpansions &CE, const PatternAlternatives &Alts) {
+  if (!RuleDef.getValueAsBit("CheckApplyLegality"))
+    return true;
+
+  for (auto &[Name, Pat] : ApplyPats) {
+    const auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat.get());
+    if (!CGP)
+      continue;
+
+    const CodeGenInstruction &CGI = CGP->getInst();
+    // Map each generic type index (typeN) to the first operand that uses it.
+    SmallVector<std::string, 4> TypeOps;
+    unsigned NumOps =
+        std::min<unsigned>(CGP->operands_size(), CGI.Operands.size());
+    for (unsigned K = 0; K < NumOps; ++K) {
+      StringRef OpTy = CGI.Operands[K].OperandType;
+      OpTy.consume_front("MCOI::");
+      unsigned TypeIdx;
+      if (!OpTy.consume_front("OPERAND_GENERIC_") ||
+          OpTy.getAsInteger(10, TypeIdx))
+        continue;
+      if (TypeIdx >= TypeOps.size())
+        TypeOps.resize(TypeIdx + 1);
+      if (!TypeOps[TypeIdx].empty())
+        continue;
+      const InstructionOperand &Op = CGP->getOperand(K);
+      // Use the first operand of this type defined by the 'match'; registers
+      // created by the 'apply' do not exist yet when the predicate runs.
+      if (!Op.isNamedOperand() || Op.hasImmValue() ||
+          !MatchOpTable.lookup(Op.getOperandName()).Found)
+        continue;
+      TypeOps[TypeIdx] =
+          ("MRI.getType(${" + Op.getOperandName() + "}.getReg())").str();
+    }
+    for (const auto &[Idx, Ty] : enumerate(TypeOps)) {
+      if (Ty.empty()) {
+        PrintError("CheckApplyLegality: type" + Twine(Idx) + " of '" +
+                   CGI.TheDef->getName() +
+                   "' must come from an operand defined in the 'match'");
+        return false;
+      }
+    }
+
+    std::string Code;
+    raw_string_ostream OS(Code);
+    OS << "return Helper.isLegalOrBeforeLegalizer({TargetOpcode::"
+       << CGI.TheDef->getName() << ", {" << join(TypeOps, ", ") << "}});";
+    addCXXPredicate(M, CE, CXXPattern(Code, Name), Alts);
+  }
+  return true;
+}
+
+bool CombineRuleBuilder::addLegalityCheckPredicates(
+    RuleMatcher &M, const CodeExpansions &CE, const PatternAlternatives &Alts) {
+  const ListInit *Checks = RuleDef.getValueAsListInit("LegalityChecks");
+  for (const Init *CI : Checks->getElements()) {
+    const auto *Check = dyn_cast<DagInit>(CI);
+    if (!Check) {
+      PrintError("LegalityChecks: each entry must be a dag");
+      return false;
+    }
+    const Record *Opc = Check->getOperatorAsDef(RuleDef.getLoc());
+    if (!Opc->isSubClassOf("Instruction")) {
+      PrintError("LegalityChecks: '" + Opc->getName() +
+                 "' is not an instruction");
+      return false;
+    }
+    SmallVector<std::string, 4> Types;
+    for (unsigned I = 0, E = Check->getNumArgs(); I < E; ++I) {
+      // Either $x, or (GIElementTypeOf $x).
+      StringRef OpName = Check->getArgNameStr(I);
+      bool IsElementType = false;
+      if (const auto *Sub = dyn_cast<DagInit>(Check->getArg(I))) {
+        if (Sub->getOperatorAsDef(RuleDef.getLoc())->getName() !=
+                "GIElementTypeOf" ||
+            Sub->getNumArgs() != 1) {
+          PrintError("LegalityChecks: type " + Twine(I) + " of '" +
+                     Opc->getName() + "' must be $x or (GIElementTypeOf $x)");
+          return false;
+        }
+        OpName = Sub->getArgNameStr(0);
+        IsElementType = true;
+      }
+      if (OpName.empty() || !MatchOpTable.lookup(OpName).Found) {
+        PrintError("LegalityChecks: type " + Twine(I) + " of '" +
+                   Opc->getName() +
+                   "' must use an operand defined in the 'match'");
+        return false;
+      }
+      std::string Ty = ("MRI.getType(${" + OpName + "}.getReg())").str();
+      if (IsElementType)
+        Ty += ".getElementType()";
+      Types.push_back(Ty);
+    }
+    std::string Code;
+    raw_string_ostream OS(Code);
+    OS << "return Helper.isLegalOrBeforeLegalizer({TargetOpcode::"
+       << Opc->getName() << ", {" << join(Types, ", ") << "}});";
+    addCXXPredicate(M, CE, CXXPattern(Code, "LegalityChecks"), Alts);
+  }
+  return true;
 }
 
 bool CombineRuleBuilder::hasOnlyCXXApplyPatterns() const {
@@ -1694,6 +1809,11 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     }
   }
 
+  if (!IsUsingCustomCXXAction && !addApplyLegalityPredicates(M, CE, Alts))
+    return false;
+  if (!addLegalityCheckPredicates(M, CE, Alts))
+    return false;
+
   return IsUsingCustomCXXAction ? emitCXXMatchApply(CE, M, CXXMatchers)
                                 : emitApplyPatterns(CE, M);
 }
@@ -1749,6 +1869,11 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
         llvm_unreachable("unknown pattern kind!");
       }
     }
+
+    if (!IsUsingCustomCXXAction && !addApplyLegalityPredicates(M, CE, Alts))
+      return false;
+    if (!addLegalityCheckPredicates(M, CE, Alts))
+      return false;
 
     const bool Res = IsUsingCustomCXXAction
                          ? emitCXXMatchApply(CE, M, CXXMatchers)
