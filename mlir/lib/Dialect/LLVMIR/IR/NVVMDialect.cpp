@@ -34,6 +34,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/Casting.h"
@@ -5980,11 +5981,20 @@ void mlir::NVVM::nvvmInferResultRanges(
     ArrayRef<::mlir::ConstantIntRanges> argRanges,
     SetIntRangeFn setResultRanges) {
   if (range) {
-    setResultRanges(result, {range->getLower(), range->getUpper(),
-                             range->getLower(), range->getUpper()});
-  } else {
-    setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
+    // ConstantRange uses a half-open interval of bit patterns, whereas
+    // ConstantIntRanges uses inclusive signed and unsigned bounds. Derive
+    // each interpretation separately to handle wrapping and sign boundaries.
+    llvm::ConstantRange valueRange(range->getLower(), range->getUpper());
+    if (!valueRange.isEmptySet()) {
+      setResultRanges(result,
+                      {valueRange.getUnsignedMin(), valueRange.getUnsignedMax(),
+                       valueRange.getSignedMin(), valueRange.getSignedMax()});
+      return;
+    }
   }
+  // ConstantIntRanges cannot represent an empty set. Conservatively fall back
+  // to the full range rather than deriving invalid inclusive bounds.
+  setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
 }
 
 /// Verify the range attribute satisfies LLVM ConstantRange constructor
