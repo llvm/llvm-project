@@ -374,6 +374,7 @@ public:
 // The actual implementation of the lazy analysis and update.
 class LazyValueInfoImpl {
   const bool PerPredRanges;
+  const unsigned MaxUsesToInspect;
 
   /// Cached results from previous queries
   LazyValueInfoCache TheCache;
@@ -521,6 +522,7 @@ public:
   LazyValueInfoImpl(Function *F, AssumptionCache *AC, const DataLayout &DL,
                     Function *GuardDecl)
       : PerPredRanges(getAnalysisOptions(*F).lvi_per_pred_ranges),
+        MaxUsesToInspect(getAnalysisOptions(*F).lvi_max_uses_to_inspect),
         TheCache(F, PerPredRanges), AC(AC), DL(DL), GuardDecl(GuardDecl) {}
 };
 } // namespace llvm
@@ -1888,8 +1890,6 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   // Check whether the only (possibly transitive) use of the value is in a
   // position where V can be constrained by a select or branch condition.
   const Use *CurrU = &U;
-  // TODO: Increase limit?
-  const unsigned MaxUsesToInspect = 3;
   for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
     std::optional<ValueLatticeElement> CondVal;
     auto *CurrI = cast<Instruction>(CurrU->getUser());
