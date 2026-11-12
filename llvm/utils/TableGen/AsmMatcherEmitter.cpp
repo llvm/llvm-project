@@ -2279,7 +2279,7 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
         // This is a new operand kind. Add a handler for it to the
         // converter driver.
-        CvtOS << "    case " << Name << ":\n";
+        CvtOS << "    case " << Name << ":" << (HasRegCoercion ? " {\n" : "\n");
         if (Op.Class->IsOptional) {
           // If optional operand is not present in actual instruction then we
           // should call its DefaultMethod before RenderMethod
@@ -2296,14 +2296,21 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         } else if (HasRegCoercion) {
           assert(OpInfo.MINumOperands == 1 && "Expected a single register");
           CoercedRegClasses.insert(RegClass);
-          CvtOS << "      Inst.addOperand(MCOperand::createReg(convertTo"
-                << Class << "(Operands[OpIdx]->getReg())));\n";
+          CvtOS
+              << "      MCRegister Reg = Operands[OpIdx]->getReg();\n"
+              << "      if (!get" << Target.getName() << "MCRegisterClass("
+              << Target.getRegBank().getRegClass(RegClass)->getQualifiedIdName()
+              << ").contains(Reg))\n"
+              << "        Reg = convertTo" << Class << "(Reg);\n"
+              << "      Inst.addOperand(MCOperand::createReg(Reg));\n";
         } else {
           CvtOS << "      static_cast<" << TargetOperandClass
                 << " &>(*Operands[OpIdx])." << Op.Class->RenderMethod
                 << "(Inst, " << OpInfo.MINumOperands << ");\n";
         }
         CvtOS << "      break;\n";
+        if (HasRegCoercion)
+          CvtOS << "    }\n";
 
         // Add a handler for the operand number lookup.
         OpOS << "    case " << Name << ":\n"
@@ -2517,7 +2524,7 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
          Info.RegConversions.lookup(RC))
       OS << "  case " << getQualifiedName(C.From) << ": return "
          << getQualifiedName(C.To) << ";\n";
-    OS << "  default: return Reg;\n"
+    OS << "  default: llvm_unreachable(\"unexpected register\");\n"
        << "  }\n"
        << "}\n\n";
   }

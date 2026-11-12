@@ -27,7 +27,10 @@ let Namespace = "Arch" in {
 }
 
 def GPR : RegisterClass<"Arch", [i32], 32, (add R0, R1)>;
-/// Matches the same registers as YGPR without converting them.
+/// Contains the exact same {R0_Y, R1_Y, R0, R1} register set that YGPR matches
+/// via CoerceFromRegClass, so TableGen deduplicates their match class to
+/// MCK_AnyGPR. This tests that InstAnyGPR still uses plain CVT_95_Reg while
+/// InstYGPR uses CVT_95_convertToYGPR.
 def AnyGPR : RegisterClass<"Arch", [i64], 64, (add R0_Y, R1_Y, R0, R1)>;
 def YGPR : RegisterClass<"Arch", [i64], 64, (add R0_Y, R1_Y)> {
   let CoerceFromRegClass = GPR;
@@ -70,7 +73,7 @@ def BadRC : RegisterClass<"Arch", [i64], 64, (add R0_Y, R0)> {
 // CHECK-NEXT:    switch (Reg.id()) {
 // CHECK-NEXT:    case Arch::V0: return Arch::V0M2;
 // CHECK-NEXT:    case Arch::V2: return Arch::V2M2;
-// CHECK-NEXT:    default: return Reg;
+// CHECK-NEXT:    default: llvm_unreachable("unexpected register");
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 
@@ -78,7 +81,7 @@ def BadRC : RegisterClass<"Arch", [i64], 64, (add R0_Y, R0)> {
 // CHECK-NEXT:    switch (Reg.id()) {
 // CHECK-NEXT:    case Arch::R0: return Arch::R0_Y;
 // CHECK-NEXT:    case Arch::R1: return Arch::R1_Y;
-// CHECK-NEXT:    default: return Reg;
+// CHECK-NEXT:    default: llvm_unreachable("unexpected register");
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 
@@ -86,12 +89,28 @@ def BadRC : RegisterClass<"Arch", [i64], 64, (add R0_Y, R0)> {
 // CHECK:       case CVT_95_Reg:
 // CHECK-NEXT:    static_cast<ArchOperand &>(*Operands[OpIdx]).addRegOperands(Inst, 1);
 // CHECK-NEXT:    break;
-// CHECK-NEXT:  case CVT_95_convertToVRM2:
-// CHECK-NEXT:    Inst.addOperand(MCOperand::createReg(convertToVRM2(Operands[OpIdx]->getReg())));
+// CHECK-NEXT:  case CVT_95_convertToVRM2: {
+// CHECK-NEXT:    MCRegister Reg = Operands[OpIdx]->getReg();
+// CHECK-NEXT:    if (!getArchMCRegisterClass(Arch::VRM2RegClassID).contains(Reg))
+// CHECK-NEXT:      Reg = convertToVRM2(Reg);
+// CHECK-NEXT:    Inst.addOperand(MCOperand::createReg(Reg));
 // CHECK-NEXT:    break;
-// CHECK-NEXT:  case CVT_95_convertToYGPR:
-// CHECK-NEXT:    Inst.addOperand(MCOperand::createReg(convertToYGPR(Operands[OpIdx]->getReg())));
+// CHECK-NEXT:  }
+// CHECK-NEXT:  case CVT_95_convertToYGPR: {
+// CHECK-NEXT:    MCRegister Reg = Operands[OpIdx]->getReg();
+// CHECK-NEXT:    if (!getArchMCRegisterClass(Arch::YGPRRegClassID).contains(Reg))
+// CHECK-NEXT:      Reg = convertToYGPR(Reg);
+// CHECK-NEXT:    Inst.addOperand(MCOperand::createReg(Reg));
 // CHECK-NEXT:    break;
+// CHECK-NEXT:  }
+
+/// Coerced YGPR and AnyGPR share MCK_AnyGPR because they match the same set of
+/// registers, whereas VRM2 gets its own MCK_VRM2 ({V0M2, V2M2, V0, V2}).
+// CHECK-LABEL: enum MatchClassKind {
+// CHECK:         MCK_GPR, // register class 'GPR'
+// CHECK-NEXT:    MCK_AnyGPR, // register class 'AnyGPR,YGPR'
+// CHECK-NEXT:    MCK_VR, // register class 'VR'
+// CHECK-NEXT:    MCK_VRM2, // register class 'VRM2'
 
 // CHECK-LABEL: MatchEntry MatchTable0[] = {
 // CHECK-NEXT:    /* anyinst */, Arch::InstAnyGPR, Convert__Reg1_0__Reg1_1, AMFBS_None, { MCK_AnyGPR, MCK_GPR },
