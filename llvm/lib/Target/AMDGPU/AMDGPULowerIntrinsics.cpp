@@ -74,8 +74,7 @@ template <class T> static void forEachCall(Function &Intrin, T Callback) {
 bool AMDGPULowerIntrinsicsImpl::run() {
   bool Changed = false;
   const bool HasMcastFullMaskBug =
-      AMDGPU::getFeatureBitset(
-          AMDGPU::getGPUKindFromSubArch(M.getTargetTriple().getSubArch()))
+      AMDGPU::getFeatureBitset(M.getTargetTriple().getSubArch())
           .test(AMDGPU::FEAT_MCAST_FULL_MASK_BUG);
 
   for (Function &F : M) {
