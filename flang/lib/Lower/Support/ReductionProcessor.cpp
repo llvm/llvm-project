@@ -423,9 +423,8 @@ mlir::Value ReductionProcessor::createScalarCombiner(
             builder, loc, type, op1, op2);
     break;
   case ReductionIdentifier::NEQV:
-    reductionOp =
-        createBitwiseOrLogicalOp<mlir::arith::XOrIOp, fir::LogicalNeqvOp>(
-            builder, loc, type, op1, op2);
+    reductionOp = createBitwiseOrLogicalOp<mlir::arith::XOrIOp, fir::NeqvOp>(
+        builder, loc, type, op1, op2);
     break;
   case ReductionIdentifier::EQV: {
     mlir::Value v1 = builder.createConvert(loc, type, op1);
