@@ -18530,16 +18530,28 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_mseq:
     case Intrinsic::riscv_mslt:
     case Intrinsic::riscv_msltu: {
-      // RV64 uses the packed .w instruction on the low word.
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
         return;
-      unsigned Opc = getRVPScalarOpcode(IntNo);
+      ISD::CondCode CC;
+      switch (IntNo) {
+      case Intrinsic::riscv_mseq:
+        CC = ISD::SETEQ;
+        break;
+      case Intrinsic::riscv_mslt:
+        CC = ISD::SETLT;
+        break;
+      case Intrinsic::riscv_msltu:
+        CC = ISD::SETULT;
+        break;
+      default:
+        llvm_unreachable("Unexpected comparison intrinsic");
+      }
       SDValue LHS =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
       SDValue RHS =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, LHS, RHS);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
+      SDValue Cmp = DAG.getSetCC(DL, MVT::v2i32, LHS, RHS, CC);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Cmp, 0));
       return;
     }
     case Intrinsic::riscv_aadd_i32:

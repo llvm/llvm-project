@@ -3353,11 +3353,6 @@ let append Predicates = [IsRV64] in {
 
   def : PatGpr<bitreverse, REV_RV64>;
 
-  // 32-bit comparison patterns
-  def : PatGprGpr<riscv_mseq,  PMSEQ_W>;
-  def : PatGprGpr<riscv_mslt,  PMSLT_W>;
-  def : PatGprGpr<riscv_msltu, PMSLTU_W>;
-
   // Packed narrowing clip pair.
   def : Pat<(v8i8 (riscv_pnclipp  (v4i16 GPR:$rs1), GPR:$rs2)),
             (PNCLIPP_B  GPR:$rs1, GPR:$rs2)>;
