@@ -329,6 +329,9 @@ Token Lexer::lexIdentifier(const char *tokStart) {
                          .Case("Value", Token::kw_Value)
                          .Case("ValueRange", Token::kw_ValueRange)
                          .Case("with", Token::kw_with)
+                 .Case("TypeConverter", Token::kw_TypeConverter)
+                 .Case("convert_type", Token::kw_convert_type)
+                 .Case("converted_operand", Token::kw_converted_operand)
                          .Case("_", Token::underscore)
                          .Default(Token::identifier);
   return Token(kind, str);
