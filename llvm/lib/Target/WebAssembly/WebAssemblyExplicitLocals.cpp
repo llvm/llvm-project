@@ -21,6 +21,8 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -28,6 +30,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -230,6 +233,76 @@ static void removeFakeUses(MachineFunction &MF) {
     MI->eraseFromParent();
 }
 
+static bool isLocal0Write(const MachineInstr &MI) {
+  return WebAssembly::isLocalSet(MI.getOpcode()) &&
+         MI.getOperand(0).getImm() == 0;
+}
+
+/// Await resume funclets replace the callee's async context in local 0 with
+/// their own, using the local.set that lowers llvm.swift.async.context.addr.
+/// Returns true if the swiftasync argument \p Reg, the callee's context, may be
+/// read after that, other than by debug values. Sets \p FirstWrite to the first
+/// write of local 0 if all of them are in the entry block.
+static bool isSwiftAsyncArgReadAfterWrite(MachineFunction &MF, Register Reg,
+                                          MachineInstr *&FirstWrite) {
+  MachineBasicBlock &Entry = MF.front();
+  SmallPtrSet<const MachineInstr *, 16> AfterWriteInEntry;
+  for (MachineInstr &MI : Entry) {
+    if (!FirstWrite && isLocal0Write(MI))
+      FirstWrite = &MI;
+    if (FirstWrite)
+      AfterWriteInEntry.insert(&MI);
+  }
+  for (MachineBasicBlock &MBB : drop_begin(MF))
+    if (any_of(MBB, isLocal0Write)) {
+      FirstWrite = nullptr;
+      return true;
+    }
+  if (!FirstWrite)
+    return false;
+
+  // The entry block runs before all the other blocks.
+  return any_of(MF.getRegInfo().use_nodbg_instructions(Reg),
+                [&](const MachineInstr &Use) {
+                  return Use.getParent() != &Entry ||
+                         AfterWriteInEntry.contains(&Use);
+                });
+}
+
+/// Ends the debug locations of the swiftasync argument \p Reg at \p Write,
+/// after which local 0 holds another value.
+static void endSwiftAsyncArgDebugValues(MachineFunction &MF, Register Reg,
+                                        MachineInstr &Write) {
+  SmallPtrSet<const MachineInstr *, 16> BeforeWrite;
+  MapVector<DebugVariable, MachineInstr *> LastDbgValues;
+  MachineBasicBlock::iterator WriteIt(Write);
+  for (MachineInstr &MI : make_range(MF.front().begin(), WriteIt)) {
+    BeforeWrite.insert(&MI);
+    if (MI.isDebugValue())
+      LastDbgValues[DebugVariable(MI.getDebugVariable(),
+                                  MI.getDebugExpression()->getFragmentInfo(),
+                                  MI.getDebugLoc()->getInlinedAt())] = &MI;
+  }
+
+  // Debug values after the write would describe the new value.
+  SmallSetVector<MachineInstr *, 4> LaterDbgValues;
+  for (MachineInstr &Use : MF.getRegInfo().use_instructions(Reg))
+    if (Use.isDebugValue() && !BeforeWrite.contains(&Use))
+      LaterDbgValues.insert(&Use);
+  for (MachineInstr *MI : LaterDbgValues)
+    MI->setDebugValueUndef();
+
+  // Debug values before the write stay live past it.
+  MachineBasicBlock::iterator InsertPt = std::next(WriteIt);
+  for (auto &[Var, MI] : LastDbgValues) {
+    if (!MI->hasDebugOperandForReg(Reg))
+      continue;
+    MachineInstr *Undef = MF.CloneMachineInstr(MI);
+    Undef->setDebugValueUndef();
+    Write.getParent()->insert(InsertPt, Undef);
+  }
+}
+
 static bool explicitLocals(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Make Locals Explicit **********\n"
                        "********** Function: "
@@ -250,12 +323,20 @@ static bool explicitLocals(MachineFunction &MF) {
   unsigned CurLocal = static_cast<unsigned>(MFI.getParams().size());
   CurLocal += static_cast<unsigned>(MFI.getLocals().size());
 
-  // ABI contract: the async context must always be available in local 0. If
-  // something else defines the register of the swiftasync argument too, for
-  // example a value that register coalescing merged with it, that register
-  // gets its own local.
+  // ABI contract: the async context must always be available in local 0. The
+  // register of the swiftasync argument gets its own local if something else
+  // defines it too, for example a value that register coalescing merged with
+  // it, or if it is read after an await resume funclet replaces local 0.
   Register SwiftAsyncReg = WebAssembly::getSwiftAsyncArgReg(MF);
-  bool CopySwiftAsyncArg = SwiftAsyncReg && !MRI.hasOneDef(SwiftAsyncReg);
+  bool CopySwiftAsyncArg = false;
+  if (SwiftAsyncReg) {
+    MachineInstr *FirstWrite = nullptr;
+    CopySwiftAsyncArg =
+        !MRI.hasOneDef(SwiftAsyncReg) ||
+        isSwiftAsyncArgReadAfterWrite(MF, SwiftAsyncReg, FirstWrite);
+    if (!CopySwiftAsyncArg && FirstWrite)
+      endSwiftAsyncArgDebugValues(MF, SwiftAsyncReg, *FirstWrite);
+  }
 
   // Handle ARGUMENTS first to ensure that they get the designated numbers.
   for (MachineBasicBlock::iterator I = MF.begin()->begin(),
