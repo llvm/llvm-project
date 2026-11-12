@@ -433,7 +433,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4(<16 x i32> %A, <16 x i32> 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6
+; GFX1250-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -445,7 +445,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4(<16 x i32> %A, <16 x i32> 
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6
+; GISEL-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
@@ -823,7 +823,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_fp6_bf6(<12 x i32> %A, <12
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31] matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31] matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[32:33], v[24:27], off
@@ -835,7 +835,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_fp6_bf6(<12 x i32> %A, <12
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31] matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31] matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:16
@@ -973,7 +973,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_bf6_bf6(<12 x i32> %A, <12
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31] matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31] matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[32:33], v[24:27], off
@@ -985,7 +985,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_bf6_bf6(<12 x i32> %A, <12
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31] matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31] matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[28:31], off offset:16
@@ -1123,7 +1123,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_fp4_bf6(<8 x i32> %A, <12 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:19], v[20:27] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:15], v[20:27] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[28:29], v[24:27], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[28:29], v[20:23], off
@@ -1135,7 +1135,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_fp4_bf6(<8 x i32> %A, <12 
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:19], v[20:27] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:15], v[20:27] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[28:29], v[20:23], off
 ; GISEL-NEXT:    global_store_b128 v[28:29], v[24:27], off offset:16
@@ -1183,7 +1183,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4(<16 x i32> %A, <16 x
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v41 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
+; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], v40, v41 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[42:43], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[42:43], v[32:35], off
@@ -1195,7 +1195,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4(<16 x i32> %A, <16 x
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v41 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], v40, v41 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[42:43], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[42:43], v[36:39], off offset:16
@@ -1213,7 +1213,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_ss(<16 x i32> %A, <1
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_reuse
+; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -1225,7 +1225,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_ss(<16 x i32> %A, <1
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_reuse
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
@@ -1243,9 +1243,9 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_si_scale(<16 x i32> 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b32_e32 v42, 0x64
+; GFX1250-NEXT:    v_mov_b32_e32 v28, 0x64
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, v42 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], s0, v28 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -1257,9 +1257,9 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_si_scale(<16 x i32> 
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_mov_b32_e32 v42, 0x64
+; GISEL-NEXT:    v_mov_b32_e32 v28, 0x64
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, v42 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], s0, v28 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
@@ -1637,7 +1637,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_fp6_bf6(<12 x i32> %
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31], v32, v33 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31], v32, v33 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1649,7 +1649,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_fp6_bf6(<12 x i32> %
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31], v32, v33 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31], v32, v33 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
@@ -1787,7 +1787,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_bf6_bf6(<12 x i32> %
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31], v32, v33 matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31], v32, v33 matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[34:35], v[24:27], off
@@ -1799,7 +1799,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_bf6_bf6(<12 x i32> %
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31], v32, v33 matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31], v32, v33 matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
@@ -1937,7 +1937,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_fp4_bf6(<8 x i32> %A
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:19], v[20:27], v28, v29 matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:15], v[20:27], v28, v29 matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[30:31], v[24:27], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[30:31], v[20:23], off
@@ -1949,7 +1949,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_fp4_bf6(<8 x i32> %A
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:19], v[20:27], v28, v29 matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:15], v[20:27], v28, v29 matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[20:23], off
 ; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off offset:16
@@ -1997,7 +1997,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4(<16 x i32> %A, <16
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v[40:41], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
+; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], v[40:41], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[44:45], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[44:45], v[32:35], off
@@ -2009,7 +2009,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4(<16 x i32> %A, <16
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v[40:41], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
+; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], v[40:41], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[44:45], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[44:45], v[36:39], off offset:16
@@ -2027,7 +2027,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_ss(<16 x i32> %A, 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], s[2:3] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
+; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], s[0:1], s[2:3] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -2039,7 +2039,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_ss(<16 x i32> %A, 
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], s[2:3] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
+; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], s[0:1], s[2:3] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
@@ -2057,9 +2057,9 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_si_scale(<16 x i32
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b64_e32 v[42:43], 0x64
+; GFX1250-NEXT:    v_mov_b64_e32 v[28:29], 0x64
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], s[0:1], v[28:29] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -2071,9 +2071,9 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_si_scale(<16 x i32
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_mov_b64_e32 v[42:43], 0x64
+; GISEL-NEXT:    v_mov_b64_e32 v[28:29], 0x64
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:27], v[32:39], s[0:1], v[28:29] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
@@ -2451,7 +2451,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_fp6_bf6(<12 x i32>
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31], v[32:33], v[34:35] matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31], v[32:33], v[34:35] matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[36:37], v[24:27], off
@@ -2463,7 +2463,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_fp6_bf6(<12 x i32>
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31], v[32:33], v[34:35] matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31], v[32:33], v[34:35] matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
@@ -2601,7 +2601,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_bf6_bf6(<12 x i32>
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31], v[32:33], v[34:35] matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31], v[32:33], v[34:35] matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[36:37], v[24:27], off
@@ -2613,7 +2613,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_bf6_bf6(<12 x i32>
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:23], v[24:31], v[32:33], v[34:35] matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[24:31], v[0:11], v[12:19], v[24:31], v[32:33], v[34:35] matrix_a_fmt:MATRIX_FMT_BF6 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
@@ -2751,7 +2751,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_fp4_bf6(<8 x i32> 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:19], v[20:27], v[28:29], v[30:31] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:15], v[20:27], v[28:29], v[30:31] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[32:33], v[20:23], off
@@ -2763,7 +2763,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_fp4_bf6(<8 x i32> 
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:19], v[20:27], v[28:29], v[30:31] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
+; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[20:27], v[0:7], v[8:15], v[20:27], v[28:29], v[30:31] matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[20:23], off
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off offset:16
