@@ -518,3 +518,52 @@
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias -gno-template-alias %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
 // TEMPLATE-ALIAS: "-gtemplate-alias"
 // NO-TEMPLATE-ALIAS-NOT: "-gtemplate-alias"
+
+//// Test linker --debug-names passed to ld.lld on ELF targets.
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-freebsd -g -gdwarf-5 %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=aarch64-linux-android29 -g -gdwarf-5 %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-haiku -g -gdwarf-5 %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-serenity -g %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fuse-ld=lld -B%S/Inputs/lld -g %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu --ld-path=%S/Inputs/lld/ld.lld -g %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=aarch64-none-elf -fuse-ld=lld -B%S/Inputs/lld -g %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-openbsd -fuse-ld=lld -B%S/Inputs/lld -g -gdwarf-5 %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -gno-pubnames -gpubnames %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gsplit-dwarf -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gsplit-dwarf -gpubnames %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -fdebug-types-section -fno-debug-types-section %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -fdebug-types-section -gpubnames %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gdwarf64 -gdwarf32 %s 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES
+//
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fuse-ld=ld -g %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-freebsd -g %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=aarch64-linux-android29 -g %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-haiku -g %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-freebsd -fuse-ld=bfd -B%S/Inputs/basic_freebsd_tree/usr/bin -g -gdwarf-5 %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-freebsd --ld-path=%S/Inputs/basic_freebsd_tree/usr/bin/ld.bfd -g -gdwarf-5 %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -g0 %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g1 %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -gline-tables-only %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -gline-directives-only %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gdwarf-4 %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -fdebug-default-version=4 %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-openbsd -fuse-ld=lld -B%S/Inputs/lld -g %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gno-pubnames %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gno-gnu-pubnames %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -ggnu-pubnames %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gsplit-dwarf=single %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -fdebug-types-section %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -gdwarf64 %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -r %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g -s %s 2>&1 | FileCheck %s --check-prefix=NO-LLD-DEBUG-NAMES
+//
+// RUN: %clang -### --target=x86_64-unknown-fuchsia -g %s -Wl,--no-debug-names 2>&1 | FileCheck %s --check-prefix=LLD-DEBUG-NAMES-OVERRIDE
+//
+// LLD-DEBUG-NAMES: "{{.*}}ld.lld{{(\.exe)?}}"
+// LLD-DEBUG-NAMES-SAME: "--debug-names"
+// NO-LLD-DEBUG-NAMES-NOT: "--debug-names"
+// LLD-DEBUG-NAMES-OVERRIDE: "{{.*}}ld.lld{{(\.exe)?}}"
+// LLD-DEBUG-NAMES-OVERRIDE-SAME: "--debug-names" "{{.*}}.o" "--no-debug-names"
