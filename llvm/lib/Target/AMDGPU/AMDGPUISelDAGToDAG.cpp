@@ -147,7 +147,7 @@ static SDValue emitRegSequence(llvm::SelectionDAG &CurDAG, unsigned DstRegClass,
                                ArrayRef<unsigned> SubRegClass,
                                const SDLoc &DL) {
   assert(Elts.size() == SubRegClass.size() && "array size mismatch");
-  unsigned NumElts = Elts.size();
+  size_t NumElts = Elts.size();
   SmallVector<SDValue, 17> Ops(2 * NumElts + 1);
   Ops[0] = (CurDAG.getTargetConstant(DstRegClass, DL, MVT::i32));
   for (unsigned i = 0; i < NumElts; ++i) {
@@ -465,12 +465,12 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
     return Subtarget->getRegisterInfo()->getRegClass(RegClass);
   }
   case AMDGPU::REG_SEQUENCE: {
-    unsigned RCID = N->getConstantOperandVal(0);
+    unsigned RCID = static_cast<unsigned>(N->getConstantOperandVal(0));
     const TargetRegisterClass *SuperRC =
         Subtarget->getRegisterInfo()->getRegClass(RCID);
 
     SDValue SubRegOp = N->getOperand(OpNo + 1);
-    unsigned SubRegIdx = SubRegOp->getAsZExtVal();
+    unsigned SubRegIdx = static_cast<unsigned>(SubRegOp->getAsZExtVal());
     return Subtarget->getRegisterInfo()->getSubClassWithSubReg(SuperRC,
                                                               SubRegIdx);
   }
@@ -565,7 +565,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
       CurDAG->isConstantValueOfAnyType(SDValue(N, 0))) {
     uint64_t C = 0;
     bool AllConst = true;
-    unsigned EltSize = EltVT.getSizeInBits();
+    uint64_t EltSize = EltVT.getSizeInBits();
     for (unsigned I = 0; I < NumVectorElts; ++I) {
       SDValue Op = N->getOperand(I);
       if (Op.isUndef()) {
@@ -599,7 +599,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
   unsigned NOps = N->getNumOperands();
-  unsigned EltSizeInRegs = EltVT.getSizeInBits() / 32;
+  uint64_t EltSizeInRegs = EltVT.getSizeInBits() / 32;
   assert(IsGCN || EltSizeInRegs == 1);
   for (unsigned i = 0; i < NOps; i++) {
     // XXX: Why is this here?
@@ -789,7 +789,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
     EVT EltTy = VT.getVectorElementType();
     assert(EltTy.bitsEq(MVT::i32) || EltTy.bitsEq(MVT::i64));
-    unsigned VecInBits = NumVectorElts * EltTy.getScalarSizeInBits();
+    unsigned VecInBits =
+        static_cast<unsigned>(NumVectorElts * EltTy.getScalarSizeInBits());
     const TargetRegisterClass *RegClass =
         N->isDivergent() ? TRI->getDefaultVectorSuperClassForBitWidth(VecInBits)
                          : SIRegisterInfo::getSGPRClassForBitWidth(VecInBits);
@@ -863,8 +864,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
 
     bool Signed = Opc == AMDGPUISD::BFE_I32;
 
-    uint32_t OffsetVal = Offset->getZExtValue();
-    uint32_t WidthVal = Width->getZExtValue();
+    uint32_t OffsetVal = static_cast<uint32_t>(Offset->getZExtValue());
+    uint32_t WidthVal = static_cast<uint32_t>(Width->getZExtValue());
 
     ReplaceNode(N, getBFE32(Signed, SDLoc(N), N->getOperand(0), OffsetVal,
                             WidthVal));
@@ -1356,7 +1357,7 @@ void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 }
 
-bool AMDGPUDAGToDAGISel::isDSOffsetLegal(SDValue Base, unsigned Offset) const {
+bool AMDGPUDAGToDAGISel::isDSOffsetLegal(SDValue Base, int64_t Offset) const {
   if (!isUInt<16>(Offset))
     return false;
 
@@ -1441,8 +1442,8 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
   return true;
 }
 
-bool AMDGPUDAGToDAGISel::isDSOffset2Legal(SDValue Base, unsigned Offset0,
-                                          unsigned Offset1,
+bool AMDGPUDAGToDAGISel::isDSOffset2Legal(SDValue Base, int64_t Offset0,
+                                          int64_t Offset1,
                                           unsigned Size) const {
   if (Offset0 % Size != 0 || Offset1 % Size != 0)
     return false;
@@ -1555,8 +1556,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
     ConstantSDNode *C1 = cast<ConstantSDNode>(N1);
-    unsigned OffsetValue0 = C1->getZExtValue();
-    unsigned OffsetValue1 = OffsetValue0 + Size;
+    int64_t OffsetValue0 = C1->getZExtValue();
+    int64_t OffsetValue1 = OffsetValue0 + Size;
 
     // (add n0, c0)
     if (isDSOffset2Legal(N0, OffsetValue0, OffsetValue1, Size)) {
@@ -1569,8 +1570,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
     // sub C, x -> add (sub 0, x), C
     if (const ConstantSDNode *C =
             dyn_cast<ConstantSDNode>(Addr.getOperand(0))) {
-      unsigned OffsetValue0 = C->getZExtValue();
-      unsigned OffsetValue1 = OffsetValue0 + Size;
+      int64_t OffsetValue0 = C->getZExtValue();
+      int64_t OffsetValue1 = OffsetValue0 + Size;
 
       if (isDSOffset2Legal(SDValue(), OffsetValue0, OffsetValue1, Size)) {
         SDLoc DL(Addr);
@@ -1606,8 +1607,8 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
       }
     }
   } else if (const ConstantSDNode *CAddr = dyn_cast<ConstantSDNode>(Addr)) {
-    unsigned OffsetValue0 = CAddr->getZExtValue();
-    unsigned OffsetValue1 = OffsetValue0 + Size;
+    int64_t OffsetValue0 = CAddr->getZExtValue();
+    int64_t OffsetValue1 = OffsetValue0 + Size;
 
     if (isDSOffset2Legal(SDValue(), OffsetValue0, OffsetValue1, Size)) {
       SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i32);
@@ -2820,8 +2821,8 @@ void AMDGPUDAGToDAGISel::SelectS_BFEFromShifts(SDNode *N) {
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
   if (B && C) {
-    uint32_t BVal = B->getZExtValue();
-    uint32_t CVal = C->getZExtValue();
+    uint32_t BVal = static_cast<uint32_t>(B->getZExtValue());
+    uint32_t CVal = static_cast<uint32_t>(C->getZExtValue());
 
     if (0 < BVal && BVal <= CVal && CVal < 32) {
       bool Signed = N->getOpcode() == ISD::SRA;
@@ -2844,8 +2845,8 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
       ConstantSDNode *Mask = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
       if (Shift && Mask) {
-        uint32_t ShiftVal = Shift->getZExtValue();
-        uint32_t MaskVal = Mask->getZExtValue();
+        uint32_t ShiftVal = static_cast<uint32_t>(Shift->getZExtValue());
+        uint32_t MaskVal = static_cast<uint32_t>(Mask->getZExtValue());
 
         if (isMask_32(MaskVal)) {
           uint32_t WidthVal = llvm::popcount(MaskVal);
@@ -2865,8 +2866,9 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
       ConstantSDNode *Mask = dyn_cast<ConstantSDNode>(And->getOperand(1));
 
       if (Shift && Mask) {
-        uint32_t ShiftVal = Shift->getZExtValue();
-        uint32_t MaskVal = Mask->getZExtValue() >> ShiftVal;
+        uint32_t ShiftVal = static_cast<uint32_t>(Shift->getZExtValue());
+        uint32_t MaskVal =
+            static_cast<uint32_t>(Mask->getZExtValue() >> ShiftVal);
 
         if (isMask_32(MaskVal)) {
           uint32_t WidthVal = llvm::popcount(MaskVal);
@@ -2897,9 +2899,10 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
     if (!Amt)
       break;
 
-    unsigned Width = cast<VTSDNode>(N->getOperand(1))->getVT().getSizeInBits();
+    unsigned Width = static_cast<unsigned>(
+        cast<VTSDNode>(N->getOperand(1))->getVT().getSizeInBits());
     ReplaceNode(N, getBFE32(true, SDLoc(N), Src.getOperand(0),
-                            Amt->getZExtValue(), Width));
+                            static_cast<uint32_t>(Amt->getZExtValue()), Width));
     return;
   }
   }
@@ -3194,7 +3197,7 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
 
   SDLoc SL(N);
   SDValue BaseOffset = N->getOperand(HasVSrc ? 3 : 2);
-  int ImmOffset = 0;
+  uint64_t ImmOffset = 0;
   MemIntrinsicSDNode *M = cast<MemIntrinsicSDNode>(N);
   MachineMemOperand *MMO = M->getMemOperand();
 
@@ -3333,7 +3336,7 @@ void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
-  unsigned IntrID = N->getConstantOperandVal(1);
+  unsigned IntrID = static_cast<unsigned>(N->getConstantOperandVal(1));
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume: {
@@ -3359,7 +3362,7 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
-  unsigned IntrID = N->getConstantOperandVal(0);
+  unsigned IntrID = static_cast<unsigned>(N->getConstantOperandVal(0));
   unsigned Opcode = AMDGPU::INSTRUCTION_LIST_END;
   SDNode *ConvGlueNode = N->getGluedNode();
   if (ConvGlueNode) {
@@ -3432,7 +3435,7 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
-  unsigned IntrID = N->getConstantOperandVal(1);
+  unsigned IntrID = static_cast<unsigned>(N->getConstantOperandVal(1));
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
   case Intrinsic::amdgcn_ds_gws_barrier:
@@ -3791,7 +3794,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
         Mods |= SISrcMods::OP_SEL_1;
     }
 
-    unsigned VecSize = Src.getValueSizeInBits();
+    unsigned VecSize = static_cast<unsigned>(Src.getValueSizeInBits());
     Lo = stripExtractLoElt(Lo);
     Hi = stripExtractLoElt(Hi);
 
@@ -3856,7 +3859,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     if (VecSize == 64 && Lo == Hi && isa<ConstantFPSDNode>(Lo)) {
       uint64_t Lit = cast<ConstantFPSDNode>(Lo)->getValueAPF()
                       .bitcastToAPInt().getZExtValue();
-      if (AMDGPU::isInlinableLiteral32(Lit, Subtarget->hasInv2PiInlineImm())) {
+      if (AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Lit),
+                                       Subtarget->hasInv2PiInlineImm())) {
         Src = CurDAG->getTargetConstant(Lit, SDLoc(In), MVT::i64);
         SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
         return true;
@@ -3945,7 +3949,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
   assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
 
   unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcVal = C->getZExtValue();
+  uint64_t SrcVal = C->getZExtValue();
   if (SrcVal == 1)
     Mods |= SISrcMods::OP_SEL_0;
 
@@ -4210,12 +4214,14 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
     if (SDValue Splat = BV->getSplatValue(&UndefElements))
       if (isInlineImmediate(Splat.getNode())) {
         if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat)) {
-          unsigned Imm = C->getAPIntValue().getSExtValue();
+          unsigned Imm =
+              static_cast<unsigned>(C->getAPIntValue().getSExtValue());
           Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
           return true;
         }
         if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Splat)) {
-          unsigned Imm = C->getValueAPF().bitcastToAPInt().getSExtValue();
+          unsigned Imm = static_cast<unsigned>(
+              C->getValueAPF().bitcastToAPInt().getSExtValue());
           Src = CurDAG->getTargetConstant(Imm, SDLoc(In), MVT::i32);
           return true;
         }
@@ -4289,7 +4295,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
 
 bool AMDGPUDAGToDAGISel::SelectSWMMACIndex8(SDValue In, SDValue &Src,
                                             SDValue &IndexKey) const {
-  unsigned Key = 0;
+  uint64_t Key = 0;
   Src = In;
 
   if (In.getOpcode() == ISD::SRL) {
@@ -4652,7 +4658,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     if (!getOperandBits(LHS, LHSBits) ||
         !getOperandBits(RHS, RHSBits)) {
       Src = std::move(Backup);
-      return std::make_pair(0, 0);
+      return std::make_pair(0, uint8_t(0));
     }
 
     // Recursion is naturally limited by the size of the operand vector.
@@ -4761,7 +4767,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     break;
   }
   default:
-    return std::make_pair(0, 0);
+    return std::make_pair(0, uint8_t(0));
   }
 
   uint8_t TTbl;
