@@ -227,6 +227,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.malloc_macros
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_mallinfo2
 )
 
 add_header_macro(
