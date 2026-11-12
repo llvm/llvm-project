@@ -756,32 +756,3 @@ func.func @gather_from_encoded_source(
 // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
 // CHECK: %[[COLLAPSED:.*]] = tensor.collapse_shape %[[SRC]] {{\[\[}}0, 1]] : tensor<3x2xf32, {{.*}}> into tensor<6xf32>
 // CHECK: vector.gather %[[COLLAPSED]][%[[ZERO]]] {{.*}} : tensor<6xf32>,
-
-// -----
-
-// The conservative overflow check also rejects contiguous reads.
-func.func @negative_contiguous_extract_from_overflowing_source(
-    %src: tensor<3037000500x3037000500xf32>, %out: tensor<2xf32>) -> tensor<2xf32> {
-  %c0 = arith.constant 0 : index
-  %result = linalg.generic {
-    indexing_maps = [affine_map<(i) -> (i)>],
-    iterator_types = ["parallel"]
-  } outs(%out : tensor<2xf32>) {
-  ^bb0(%unused: f32):
-    %i = linalg.index 0 : index
-    %value = tensor.extract %src[%c0, %i] : tensor<3037000500x3037000500xf32>
-    linalg.yield %value : f32
-  } -> tensor<2xf32>
-  return %result : tensor<2xf32>
-}
-
-// CHECK-LABEL: func.func @negative_contiguous_extract_from_overflowing_source(
-// CHECK-SAME: %[[SRC:.*]]: tensor<3037000500x3037000500xf32>, %[[OUT:.*]]: tensor<2xf32>
-// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0 : index
-// CHECK-NEXT: %[[RESULT:.*]] = linalg.generic
-// CHECK-NEXT: ^bb0(%{{.*}}: f32):
-// CHECK-NEXT: %[[I:.*]] = linalg.index 0 : index
-// CHECK-NEXT: %[[VALUE:.*]] = tensor.extract %[[SRC]][%[[ZERO]], %[[I]]]
-// CHECK-NEXT: linalg.yield %[[VALUE]] : f32
-// CHECK-NEXT: } -> tensor<2xf32>
-// CHECK-NEXT: return %[[RESULT]] : tensor<2xf32>

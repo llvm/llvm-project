@@ -868,8 +868,9 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
   if (extractOp.getIndices().size() != 1 && !vectorizeNDExtract)
     return failure();
 
-  // Gathers need a representable flattened extent. Reject static
-  // ND sources whose element count overflows without classifying the access.
+  // Gathers need a representable flattened extent. Conservatively reject static
+  // ND sources whose element count overflows, including contiguous and
+  // broadcast accesses, to avoid classifying the access here.
   RankedTensorType sourceType = extractOp.getTensor().getType();
   if (extractOp.getIndices().size() > 1 && sourceType.hasStaticShape() &&
       !ShapedType::tryGetNumElements(sourceType.getShape())) {
@@ -1512,6 +1513,9 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   SetVector<Value> valuesSet;
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
+
+  if (linalgOp.getNumDpsInits() == 0)
+    return failure();
 
   // 3. Turn all BBArgs into vector.transfer_read / load.
   Location loc = linalgOp.getLoc();
@@ -2295,11 +2299,6 @@ static LogicalResult vectorizeLinalgOpPrecondition(
         return llvm::is_contained(linalgOp.getShape(&operand), 0);
       }))
     return failure();
-  // Vectorized results are written to the inits.
-  if (linalgOp.getNumDpsInits() == 0) {
-    LDBG() << "precondition failed: no inits";
-    return failure();
-  }
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty() &&
       failed(vector::isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
