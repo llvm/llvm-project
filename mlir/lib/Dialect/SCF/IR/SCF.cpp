@@ -25,6 +25,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ParallelCombiningOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -1071,11 +1072,90 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
     return failure();
   }
 };
+
+/// Fold a strict, loop-invariant bound on the IV into the loop upper bound.
+/// Discarded suffix iterations must be pure and preserve loop-carried state.
+struct ForOpPrefixFolder : public OpRewritePattern<ForOp> {
+  using OpRewritePattern<ForOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForOp forOp,
+                                PatternRewriter &rewriter) const override {
+    auto ifOps = forOp.getBody()->getOps<IfOp>();
+    if (!llvm::hasSingleElement(ifOps))
+      return failure();
+    IfOp ifOp = *ifOps.begin();
+
+    auto cmp = ifOp.getCondition().getDefiningOp<arith::CmpIOp>();
+    if (!cmp)
+      return failure();
+    bool ivOnLhs = cmp.getLhs() == forOp.getInductionVar();
+    if (!ivOnLhs && cmp.getRhs() != forOp.getInductionVar())
+      return failure();
+    Value limit = ivOnLhs ? cmp.getRhs() : cmp.getLhs();
+    if (!forOp.isDefinedOutsideOfLoop(limit))
+      return failure();
+
+    bool isUnsigned = forOp.getUnsignedCmp();
+    auto less =
+        isUnsigned ? arith::CmpIPredicate::ult : arith::CmpIPredicate::slt;
+    auto prefixPredicate = ivOnLhs ? less
+                                   : (isUnsigned ? arith::CmpIPredicate::ugt
+                                                 : arith::CmpIPredicate::sgt);
+    auto predicate = cmp.getPredicate();
+    if (predicate != prefixPredicate &&
+        predicate != arith::invertPredicate(prefixPredicate))
+      return failure();
+    Block *active =
+        predicate == prefixPredicate ? ifOp.thenBlock() : ifOp.elseBlock();
+    Block *inactive =
+        predicate == prefixPredicate ? ifOp.elseBlock() : ifOp.thenBlock();
+    if (!active ||
+        (inactive && !llvm::all_of(inactive->without_terminator(),
+                                   [](Operation &op) { return isPure(&op); })))
+      return failure();
+
+    for (Operation &op : forOp.getBody()->without_terminator()) {
+      if (&op != ifOp.getOperation() && !isPure(&op))
+        return failure();
+    }
+
+    for (auto [arg, yielded] :
+         llvm::zip_equal(forOp.getRegionIterArgs(), forOp.getYieldedValues())) {
+      if (yielded == arg)
+        continue;
+      auto result = dyn_cast<OpResult>(yielded);
+      if (!result || result.getOwner() != ifOp || !inactive ||
+          inactive->getTerminator()->getOperand(result.getResultNumber()) !=
+              arg)
+        return failure();
+    }
+
+    rewriter.setInsertionPoint(forOp);
+    Location loc = forOp.getLoc();
+    Value ub = forOp.getUpperBound();
+    Value prefixUb =
+        isUnsigned ? rewriter.createOrFold<arith::MinUIOp>(loc, ub, limit)
+                   : rewriter.createOrFold<arith::MinSIOp>(loc, ub, limit);
+    // Preserve zero-trip behavior if the limit is poison.
+    Value enters = rewriter.createOrFold<arith::CmpIOp>(
+        loc, less, forOp.getLowerBound(), ub);
+    prefixUb =
+        rewriter.createOrFold<arith::SelectOp>(loc, enters, prefixUb, ub);
+    rewriter.modifyOpInPlace(forOp, [&] { forOp.setUpperBound(prefixUb); });
+
+    auto yield = cast<YieldOp>(active->getTerminator());
+    ValueRange values = yield.getOperands();
+    rewriter.inlineBlockBefore(active, ifOp);
+    rewriter.replaceOp(ifOp, values);
+    rewriter.eraseOp(yield);
+    return success();
+  }
+};
 } // namespace
 
 void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<ForOpTensorCastFolder>(context);
+  results.add<ForOpTensorCastFolder, ForOpPrefixFolder>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, ForOp::getOperationName());
   // Inline single-iteration loops before applying the generic region branch op

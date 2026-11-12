@@ -2910,3 +2910,380 @@ func.func @mixed_signedness_parallel_not_merged(
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @prefix_conditions(
+// CHECK-SAME: %[[DST:.*]]: memref<?xindex>, %[[LIMIT:.*]]: index)
+// CHECK: %[[C64:.*]] = arith.constant 64 : index
+// CHECK: %[[END:.*]] = arith.minsi %[[LIMIT]], %[[C64]] : index
+// CHECK: scf.for %[[I:.*]] = {{.*}} to %[[END]] step {{.*}} {
+// CHECK-NEXT: memref.store %[[I]], %[[DST]][%[[I]]]
+// CHECK-NEXT: }
+// CHECK: %[[END2:.*]] = arith.minsi %[[LIMIT]], %[[C64]] : index
+// CHECK: scf.for %[[J:.*]] = {{.*}} to %[[END2]] step {{.*}} {
+// CHECK-NEXT: memref.store %[[J]], %[[DST]][%[[J]]]
+// CHECK-NEXT: }
+// CHECK: %[[END3:.*]] = arith.minsi %[[LIMIT]], %[[C64]] : index
+// CHECK: scf.for %[[K:.*]] = {{.*}} to %[[END3]] step {{.*}} {
+// CHECK-NEXT: memref.store %[[K]], %[[DST]][%[[K]]]
+// CHECK-NEXT: }
+func.func @prefix_conditions(%dst: memref<?xindex>, %limit: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  scf.for %i = %c0 to %c64 step %c1 {
+    %p = arith.cmpi slt, %i, %limit : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  scf.for %i = %c0 to %c64 step %c1 {
+    %p = arith.cmpi sgt, %limit, %i : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  scf.for %i = %c0 to %c64 step %c1 {
+    %p = arith.cmpi sge, %i, %limit : index
+    scf.if %p {
+    } else {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  return
+}
+
+// -----
+
+// The original entry test shields a possibly poison limit on a zero-trip loop.
+// Keeping the lower bound and step preserves the iteration-point alignment.
+// CHECK-LABEL: func.func @prefix_dynamic_range(
+// CHECK-SAME: %[[DST:.*]]: memref<?xindex>, %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[LIMIT:.*]]: index)
+// CHECK: %[[MIN:.*]] = arith.minsi %[[UB]], %[[LIMIT]] : index
+// CHECK: %[[ENTER:.*]] = arith.cmpi slt, %[[LB]], %[[UB]] : index
+// CHECK: %[[END:.*]] = arith.select %[[ENTER]], %[[MIN]], %[[UB]] : index
+// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[END]] step %[[STEP]] {
+// CHECK-NEXT: memref.store %[[I]], %[[DST]][%[[I]]]
+// CHECK-NEXT: }
+func.func @prefix_dynamic_range(%dst: memref<?xindex>, %lb: index, %ub: index, %step: index, %limit: index) {
+  scf.for %i = %lb to %ub step %step {
+    %p = arith.cmpi slt, %i, %limit : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  return
+}
+
+// -----
+
+// Clipping the upper bound preserves iteration points 3 and 7 without aligning
+// the cutoff to the step.
+// CHECK-LABEL: func.func @prefix_non_unit_step(
+// CHECK-DAG: %[[LB:.*]] = arith.constant 3 : index
+// CHECK-DAG: %[[STEP:.*]] = arith.constant 4 : index
+// CHECK-DAG: %[[END:.*]] = arith.constant 10 : index
+// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[END]] step %[[STEP]] {
+// CHECK-NEXT: memref.store %[[I]], {{.*}}[%[[I]]]
+// CHECK-NEXT: }
+func.func @prefix_non_unit_step(%dst: memref<?xindex>) {
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c10 = arith.constant 10 : index
+  %c64 = arith.constant 64 : index
+  scf.for %i = %c3 to %c64 step %c4 {
+    %p = arith.cmpi slt, %i, %c10 : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @prefix_unsigned(
+// CHECK-SAME: %[[DST:.*]]: memref<?xi32>, %[[LIMIT:.*]]: i32)
+// CHECK: %[[C64:.*]] = arith.constant 64 : i32
+// CHECK: %[[END:.*]] = arith.minui %[[LIMIT]], %[[C64]] : i32
+// CHECK: scf.for unsigned %[[I:.*]] = {{.*}} to %[[END]] step {{.*}} : i32 {
+// CHECK-NEXT: %[[INDEX:.*]] = arith.index_cast %[[I]] : i32 to index
+// CHECK-NEXT: memref.store %[[I]], %[[DST]][%[[INDEX]]]
+// CHECK-NEXT: }
+func.func @prefix_unsigned(%dst: memref<?xi32>, %limit: i32) {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %c64 = arith.constant 64 : i32
+  scf.for unsigned %i = %c0 to %c64 step %c1 : i32 {
+    %p = arith.cmpi ult, %i, %limit : i32
+    scf.if %p {
+      %index = arith.index_cast %i : i32 to index
+      memref.store %i, %dst[%index] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @prefix_accumulator(
+// CHECK: %[[END:.*]] = arith.minsi
+// CHECK: %[[R:.*]] = scf.for {{.*}} to %[[END]] {{.*}} iter_args(%[[ACC:.*]] = {{.*}}) -> (index) {
+// CHECK-NEXT: %[[NEXT:.*]] = arith.addi %[[ACC]], {{.*}} : index
+// CHECK-NEXT: scf.yield %[[NEXT]] : index
+// CHECK-NEXT: }
+// CHECK: return %[[R]] : index
+func.func @prefix_accumulator(%limit: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %result = scf.for %i = %c0 to %c64 step %c1 iter_args(%acc = %c0) -> index {
+    %p = arith.cmpi slt, %i, %limit : index
+    %next = scf.if %p -> index {
+      %sum = arith.addi %acc, %i : index
+      scf.yield %sum : index
+    } else {
+      scf.yield %acc : index
+    }
+    scf.yield %next : index
+  }
+  return %result : index
+}
+
+// -----
+
+// A write in the discarded suffix must be preserved.
+// CHECK-LABEL: func.func @negative_suffix_effect(
+// CHECK: scf.for
+// CHECK: scf.if
+// CHECK: memref.store
+// CHECK: } else {
+// CHECK: memref.store
+func.func @negative_suffix_effect(%dst: memref<?xindex>, %limit: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  scf.for %i = %c0 to %c64 step %c1 {
+    %p = arith.cmpi slt, %i, %limit : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    } else {
+      memref.store %c0, %dst[%i] : memref<?xindex>
+    }
+  }
+  return
+}
+
+// -----
+
+// An unconditional write must execute in the suffix as well.
+// CHECK-LABEL: func.func @negative_unconditional_effect(
+// CHECK: scf.for
+// CHECK: memref.store
+// CHECK: scf.if
+func.func @negative_unconditional_effect(%dst: memref<?xindex>, %limit: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  scf.for %i = %c0 to %c64 step %c1 {
+    memref.store %c0, %dst[%i] : memref<?xindex>
+    %p = arith.cmpi slt, %i, %limit : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  return
+}
+
+// -----
+
+// The inactive branch changes the accumulator.
+// CHECK-LABEL: func.func @negative_suffix_state(
+// CHECK: scf.for
+// CHECK: scf.if
+// CHECK: } else {
+// CHECK: arith.addi
+func.func @negative_suffix_state(%limit: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %result = scf.for %i = %c0 to %c64 step %c1 iter_args(%acc = %c0) -> index {
+    %p = arith.cmpi slt, %i, %limit : index
+    %next = scf.if %p -> index {
+      %sum = arith.addi %acc, %i : index
+      scf.yield %sum : index
+    } else {
+      %sum = arith.addi %acc, %c1 : index
+      scf.yield %sum : index
+    }
+    scf.yield %next : index
+  }
+  return %result : index
+}
+
+// -----
+
+// A loop-carried threshold is not a loop-invariant cutoff.
+// CHECK-LABEL: func.func @negative_varying_limit(
+// CHECK: scf.for
+// CHECK: scf.if
+func.func @negative_varying_limit(%dst: memref<?xindex>, %limit: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %result = scf.for %i = %c0 to %c64 step %c1 iter_args(%bound = %limit) -> index {
+    %p = arith.cmpi slt, %i, %bound : index
+    %next = scf.if %p -> index {
+      memref.store %i, %dst[%i] : memref<?xindex>
+      %b = arith.addi %bound, %c1 : index
+      scf.yield %b : index
+    } else {
+      scf.yield %bound : index
+    }
+    scf.yield %next : index
+  }
+  return %result : index
+}
+
+// -----
+
+// Signed comparison cannot supply an unsigned loop's upper bound.
+// CHECK-LABEL: func.func @negative_signedness_mismatch(
+// CHECK: scf.for unsigned
+// CHECK: arith.cmpi slt
+// CHECK: scf.if
+func.func @negative_signedness_mismatch(%dst: memref<?xi32>, %limit: i32) {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %c64 = arith.constant 64 : i32
+  scf.for unsigned %i = %c0 to %c64 step %c1 : i32 {
+    %p = arith.cmpi slt, %i, %limit : i32
+    scf.if %p {
+      %index = arith.index_cast %i : i32 to index
+      memref.store %i, %dst[%index] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// Wrapping arithmetic and inclusive comparisons require additional reasoning.
+// CHECK-LABEL: func.func @negative_derived_and_inclusive_conditions(
+// CHECK: scf.for
+// CHECK: arith.addi
+// CHECK: scf.if
+// CHECK: scf.for
+// CHECK: arith.cmpi sle
+// CHECK: scf.if
+func.func @negative_derived_and_inclusive_conditions(%dst: memref<?xi32>, %limit: i32) {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : i32
+  %c64 = arith.constant 64 : i32
+  scf.for %i = %c0 to %c64 step %c1 : i32 {
+    %next = arith.addi %i, %c1 : i32
+    %p = arith.cmpi slt, %next, %limit : i32
+    scf.if %p {
+      %index = arith.index_cast %i : i32 to index
+      memref.store %i, %dst[%index] : memref<?xi32>
+    }
+  }
+  scf.for %i = %c0 to %c64 step %c1 : i32 {
+    %p = arith.cmpi sle, %i, %limit : i32
+    scf.if %p {
+      %index = arith.index_cast %i : i32 to index
+      memref.store %i, %dst[%index] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// A pure computation after the if can still change loop-carried state.
+// CHECK-LABEL: func.func @negative_unconditional_state(
+// CHECK: scf.for
+// CHECK: scf.if
+// CHECK: arith.addi
+// CHECK: scf.yield
+func.func @negative_unconditional_state(%limit: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %result = scf.for %i = %c0 to %c64 step %c1 iter_args(%acc = %c0) -> index {
+    %p = arith.cmpi slt, %i, %limit : index
+    %next = scf.if %p -> index {
+      %sum = arith.addi %acc, %i : index
+      scf.yield %sum : index
+    } else {
+      scf.yield %acc : index
+    }
+    %incremented = arith.addi %next, %c1 : index
+    scf.yield %incremented : index
+  }
+  return %result : index
+}
+
+// -----
+
+// A cutoff before the lower bound removes the loop; one beyond the upper
+// bound removes the conditional without extending the iteration space.
+// CHECK-LABEL: func.func @prefix_empty_and_full(
+// CHECK: %[[C64:.*]] = arith.constant 64 : index
+// CHECK-NOT: scf.for
+// CHECK: scf.for %[[I:.*]] = {{.*}} to %[[C64]] step {{.*}} {
+// CHECK-NEXT: memref.store %[[I]], {{.*}}[%[[I]]]
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+func.func @prefix_empty_and_full(%dst: memref<?xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %negative = arith.constant -1 : index
+  %c128 = arith.constant 128 : index
+  scf.for %i = %c0 to %c64 step %c1 {
+    %p = arith.cmpi slt, %i, %negative : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  scf.for %i = %c0 to %c64 step %c1 {
+    %p = arith.cmpi slt, %i, %c128 : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  return
+}
+
+// -----
+
+// If results need not have the same order as the loop-carried values.
+// An unchanged loop-carried value can also bypass the if entirely.
+// CHECK-LABEL: func.func @prefix_permuted_results(
+// CHECK-SAME: %[[LIMIT:.*]]: index, %[[B:.*]]: index, %[[STABLE:.*]]: index) -> (index, index, index)
+// CHECK: %[[END:.*]] = arith.minsi
+// CHECK: %[[R:.*]]:2 = scf.for %[[I:.*]] = {{.*}} to %[[END]] step {{.*}} iter_args(%[[A:.*]] = {{.*}}, %[[CUR_B:.*]] = %[[B]]) -> (index, index) {
+// CHECK-NEXT: %[[SUM:.*]] = arith.addi %[[A]], %[[I]] : index
+// CHECK-NEXT: %[[DIFF:.*]] = arith.subi %[[CUR_B]], %[[I]] : index
+// CHECK-NEXT: scf.yield %[[SUM]], %[[DIFF]] : index, index
+// CHECK-NEXT: }
+// CHECK: return %[[R]]#0, %[[R]]#1, %[[STABLE]] : index, index, index
+func.func @prefix_permuted_results(%limit: index, %b: index, %stable: index) -> (index, index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %result:3 = scf.for %i = %c0 to %c64 step %c1 iter_args(%a = %c0, %current_b = %b, %unchanged = %stable) -> (index, index, index) {
+    %p = arith.cmpi slt, %i, %limit : index
+    %reverse:2 = scf.if %p -> (index, index) {
+      %sum = arith.addi %a, %i : index
+      %diff = arith.subi %current_b, %i : index
+      scf.yield %diff, %sum : index, index
+    } else {
+      scf.yield %current_b, %a : index, index
+    }
+    scf.yield %reverse#1, %reverse#0, %unchanged : index, index, index
+  }
+  return %result#0, %result#1, %result#2 : index, index, index
+}
