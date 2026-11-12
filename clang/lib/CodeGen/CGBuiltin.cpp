@@ -5538,7 +5538,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     const CGFunctionInfo &FuncInfo =
         CGM.getTypes().arrangeBuiltinFunctionCall(E->getType(), Args);
     llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FuncInfo);
-    llvm::FunctionCallee Func = CGM.CreateRuntimeFunction(FTy, LibCallName);
+    // Like the other functions of the atomic library, it does not throw.
+    llvm::AttrBuilder FuncAttrs(getLLVMContext());
+    FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
+    FuncAttrs.addAttribute(llvm::Attribute::WillReturn);
+    llvm::FunctionCallee Func = CGM.CreateRuntimeFunction(
+        FTy, LibCallName,
+        llvm::AttributeList::get(
+            getLLVMContext(), llvm::AttributeList::FunctionIndex, FuncAttrs));
     return EmitCall(FuncInfo, CGCallee::forDirect(Func),
                     ReturnValueSlot(), Args);
   }
