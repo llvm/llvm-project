@@ -43,6 +43,7 @@
 #include "flang/Support/Fortran.h"
 #include "flang/Support/default-kinds.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
@@ -1303,6 +1304,9 @@ private:
     const Symbol *type{nullptr}; // derived type being defined
     bool isStructure{false}; // is a DEC STRUCTURE
   } derivedTypeInfo_;
+  // DEC STRUCTUREs whose definitions are currently being processed,
+  // outermost first.
+  llvm::SmallVector<const Symbol *, 4> structuresBeingDefined_;
   // In a ProcedureDeclarationStmt or ProcComponentDefStmt, this is
   // the interface name, if any.
   const parser::Name *interfaceName_{nullptr};
@@ -7331,15 +7335,37 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
 void DeclarationVisitor::Post(const parser::DeclarationTypeSpec::Record &rec) {
   const auto &typeName{rec.v};
   if (auto spec{ResolveDerivedType(typeName)}) {
+    if (!spec->typeSymbol().get<DerivedTypeDetails>().isDECStructure()) {
+      Say(typeName.source, "%s is not a known STRUCTURE"_err_en_US,
+          typeName.source);
+      return;
+    }
     spec->CookParameters(GetFoldingContext());
     spec->EvaluateParameters(context());
+    // A reference from within the STRUCTURE's own definition, including from
+    // a nested STRUCTURE (whose scope is not a child of the enclosing one), is
+    // recursive.
+    bool isRecursive{
+        llvm::is_contained(structuresBeingDefined_, &spec->typeSymbol())};
     if (const DeclTypeSpec *
         extant{currScope().FindInstantiatedDerivedType(
             *spec, DeclTypeSpec::TypeDerived)}) {
       SetDeclTypeSpec(*extant);
-    } else {
+    } else if (isRecursive) {
+      // Recursive use of a STRUCTURE in the definition of one of its own
+      // components is not supported.
       Say(typeName.source, "%s is not a known STRUCTURE"_err_en_US,
           typeName.source);
+    } else {
+      // The STRUCTURE was not yet instantiated in this scope (e.g. it was
+      // brought in via USE association).  Instantiate it now.
+      DeclTypeSpec &type{currScope().MakeDerivedType(
+          DeclTypeSpec::TypeDerived, std::move(*spec))};
+      DerivedTypeSpec &derived{type.derivedTypeSpec()};
+      auto restorer{
+          GetFoldingContext().messages().SetLocation(currStmtSource().value())};
+      derived.Instantiate(currScope());
+      SetDeclTypeSpec(type);
     }
   }
 }
@@ -8059,8 +8085,10 @@ bool DeclarationVisitor::Pre(const parser::StructureDef &def) {
   symbol.get<DerivedTypeDetails>().set_isDECStructure(true);
   derivedTypeInfo_.type = &symbol;
   PushScope(Scope::Kind::DerivedType, &symbol);
+  structuresBeingDefined_.push_back(&symbol);
   const auto &fields{std::get<std::list<parser::StructureField>>(def.t)};
   Walk(fields);
+  structuresBeingDefined_.pop_back();
   PopScope();
   // Complete the definition
   DerivedTypeSpec derivedTypeSpec{symbol.name(), symbol};
