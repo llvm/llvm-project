@@ -1439,6 +1439,101 @@ void RuntimeDyldELF::resolveRISCVRelocation(const SectionEntry &Section,
   }
 }
 
+// R_RISCV_CALL and R_RISCV_CALL_PLT describe a PC-relative call
+// encoded by an adjacent auipc+jalr pair. If the call target is in
+// the same section, its section-relative displacement can be checked
+// before final load addresses are known. If the displacement is
+// encodable by the auipc+jalr pair, we resolve the relocation directly
+// instead of creating a stub. Otherwise, return false so that the
+// caller creates a stub.
+bool RuntimeDyldELF::resolveRISCVShortBranch(
+    unsigned SectionID, relocation_iterator RelI,
+    const RelocationValueRef &Value) {
+  uint64_t TargetOffset;
+  unsigned TargetSectionID;
+  if (Value.SymbolName) {
+    auto Loc = GlobalSymbolTable.find(Value.SymbolName);
+
+    // Don't create direct branch for external symbols.
+    if (Loc == GlobalSymbolTable.end())
+      return false;
+
+    const auto &SymInfo = Loc->second;
+
+    TargetSectionID = SymInfo.getSectionID();
+    TargetOffset = SymInfo.getOffset();
+  } else {
+    TargetSectionID = Value.SectionID;
+    TargetOffset = 0;
+  }
+
+  // We don't actually know the load addresses at this point, so if the
+  // branch is cross-section, we don't know exactly how far away it is.
+  if (TargetSectionID != SectionID)
+    return false;
+
+  uint64_t SourceOffset = RelI->getOffset();
+
+  // The auipc+jalr pair used by R_RISCV_CALL/R_RISCV_CALL_PLT can only encode
+  // offsets in the range [-0x80000800, 0x7ffff7ff]. If the distance between the
+  // source and the target is out of this range, a stub is required.
+  int64_t Delta = TargetOffset + Value.Addend - SourceOffset;
+  if (!isInt<32>((uint64_t)Delta + 0x800))
+    return false;
+
+  RelocationEntry RE(SectionID, SourceOffset, RelI->getType(), Value.Addend);
+  if (Value.SymbolName)
+    addRelocationForSymbol(RE, Value.SymbolName);
+  else
+    addRelocationForSection(RE, Value.SectionID);
+
+  return true;
+}
+
+// Resolve the R_RISCV_CALL or R_RISCV_CALL_PLT relocation. Reuse an
+// existing stub when possible; otherwise, try direct same-section
+// resolution and create a stub if direct resolution is not possible.
+void RuntimeDyldELF::resolveRISCVBranch(unsigned SectionID,
+                                        const RelocationValueRef &Value,
+                                        relocation_iterator RelI,
+                                        StubMap &Stubs) {
+  LLVM_DEBUG(dbgs() << "\t\tThis is a RISC-V branch relocation.");
+  SectionEntry &Section = Sections[SectionID];
+
+  uint64_t Offset = RelI->getOffset();
+  unsigned RelType = RelI->getType();
+  // Look for an existing stub.
+  StubMap::const_iterator i = Stubs.find(Value);
+  if (i != Stubs.end()) {
+    resolveRelocation(Section, Offset,
+                      Section.getLoadAddressWithOffset(i->second), RelType, 0);
+    LLVM_DEBUG(dbgs() << " Stub function found\n");
+  } else if (!resolveRISCVShortBranch(SectionID, RelI, Value)) {
+    // Create a new stub function.
+    LLVM_DEBUG(dbgs() << " Create a new stub function\n");
+    Stubs[Value] = Section.getStubOffset();
+    uint8_t *StubTargetAddr = createStubFunction(
+        Section.getAddressWithOffset(Section.getStubOffset()));
+
+    // The stub's embedded 8-byte literal (at offset 16 within the stub,
+    // see createStubFunction) holds the absolute target address. Fill it
+    // in via the existing R_RISCV_64 relocation handling, deferred the same
+    // way as any other relocation so it still works for external symbols
+    // whose address isn't known yet at this point.
+    RelocationEntry RE(SectionID, StubTargetAddr - Section.getAddress() + 16,
+                       ELF::R_RISCV_64, Value.Addend);
+    if (Value.SymbolName)
+      addRelocationForSymbol(RE, Value.SymbolName);
+    else
+      addRelocationForSection(RE, Value.SectionID);
+
+    resolveRelocation(Section, Offset,
+                      Section.getLoadAddressWithOffset(Section.getStubOffset()),
+                      RelType, 0);
+    Section.advanceStubOffset(getMaxStubSize());
+  }
+}
+
 // The target location for the relocation is described by RE.SectionID and
 // RE.Offset.  RE.SectionID can be used to find the SectionEntry.  Each
 // SectionEntry has three members describing its location.
@@ -2376,7 +2471,14 @@ RuntimeDyldELF::processRelocationRef(
       RelocationEntry RE(SectionID, Offset, RelType, Addend);
       PendingRelocs.push_back({Value, RE});
     }
-    processSimpleRelocation(SectionID, Offset, RelType, Value);
+
+    if (Arch == Triple::riscv64 &&
+        (RelType == ELF::R_RISCV_CALL || RelType == ELF::R_RISCV_CALL_PLT) &&
+        MemMgr.allowStubAllocation()) {
+      resolveRISCVBranch(SectionID, Value, RelI, Stubs);
+    } else {
+      processSimpleRelocation(SectionID, Offset, RelType, Value);
+    }
   } else {
     if (Arch == Triple::x86) {
       Value.Addend += support::ulittle32_t::ref(
