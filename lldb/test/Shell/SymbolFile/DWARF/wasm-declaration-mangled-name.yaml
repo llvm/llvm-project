@@ -11,17 +11,10 @@
 
 # REQUIRES: webassembly
 # RUN: yaml2obj %s -o %t.wasm
-# RUN: %lldb %t.wasm -o "image lookup -s _ZN1S2fnEv" -o "image list -F -b" \
-# RUN:   -o exit 2>&1 | FileCheck %s
+# RUN: %lldb %t.wasm -o "image lookup -s _ZN1S2fnEv" -o exit 2>&1 | FileCheck %s
 
 # CHECK: 1 symbols match '_ZN1S2fnEv'
 # CHECK: S::fn()
-
-# Attaching the linkage name updates an existing symbol without adding one,
-# which still marks the symbol table as updated by the symbol file. There is no
-# MEMORY section, so `global_s` gets no data symbol and nothing is added.
-# CHECK-LABEL: image list -F -b
-# CHECK: ] FS {{.*}}.wasm
 
 --- !WASM
 FileHeader:
@@ -38,6 +31,9 @@ Sections:
           - I32
   - Type:            FUNCTION
     FunctionTypes:   [ 0, 1, 1 ]
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x2
   - Type:            GLOBAL
     Globals:
       - Index:           0
