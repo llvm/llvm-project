@@ -33,6 +33,7 @@ class DeclContext;
 class FunctionDecl;
 class VarDecl;
 class NamedDecl;
+class Stmt;
 class TranslationUnitDecl;
 
 namespace cross_tu {
@@ -152,6 +153,12 @@ public:
   llvm::Expected<const VarDecl *>
   getCrossTUDefinition(const VarDecl *VD, StringRef CrossTUDir,
                        StringRef IndexName, bool DisplayCTUProgress = false);
+
+  /// Import initializers of constants referenced by potentially evaluated
+  /// expressions in \p S, including dependencies of those initializers.
+  void importReferencedInitializers(const Stmt *S, StringRef CrossTUDir,
+                                    StringRef IndexName,
+                                    bool DisplayCTUProgress = false);
 
   /// This function loads a definition from an external AST file.
   ///
