@@ -1,4 +1,5 @@
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=i686-unknown-linux | FileCheck --check-prefix=CHECKGEN %s
+//RUN: %if cir-enabled %{ %clang_cc1 %s -fclangir -emit-llvm -o - -triple=i686-unknown-linux -Wno-inaccessible-base | FileCheck --check-prefix=CHECKGEN %s %}
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=thumbv7-apple-ios6.0 -target-abi apcs-gnu | FileCheck --check-prefix=CHECKARM %s
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=thumbv7-apple-ios5.0 -target-abi apcs-gnu | FileCheck --check-prefix=CHECKIOS5 %s
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=wasm32-unknown-unknown \
@@ -7,7 +8,9 @@
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=aarch64-unknown-fuchsia | FileCheck --check-prefix=CHECKFUCHSIA %s
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=i386-pc-win32 -fno-rtti | FileCheck --check-prefix=CHECKMS %s
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=i686-unknown-linux-gnu -fctor-dtor-return-this | FileCheck --check-prefix=CHECKI686RET %s
+//RUN: %if cir-enabled %{ %clang_cc1 %s -fclangir -emit-llvm -o - -triple=i686-unknown-linux-gnu -fctor-dtor-return-this -Wno-inaccessible-base | FileCheck --check-prefix=CHECKI686RET %s %}
 //RUN: %clang_cc1 %s -emit-llvm -o - -triple=aarch64-unknown-linux-gnu -fctor-dtor-return-this | FileCheck --check-prefix=CHECKAARCH64RET %s
+//RUN: %if cir-enabled %{ %clang_cc1 %s -fclangir -emit-llvm -o - -triple=aarch64-unknown-linux-gnu -fctor-dtor-return-this -Wno-inaccessible-base | FileCheck --check-prefix=CHECKAARCH64RET %s %}
 // FIXME: these tests crash on the bots when run with -triple=x86_64-pc-win32
 
 // Make sure we attach the 'returned' attribute to the 'this' parameter of
@@ -34,33 +37,33 @@ private:
 B::B(int *i) : i_(i) { }
 B::~B() { }
 
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1BC2EPi(ptr {{[^,]*}} %this, ptr noundef %i)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1BC1EPi(ptr {{[^,]*}} %this, ptr noundef %i)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1BD2Ev(ptr {{[^,]*}} %this)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1BD1Ev(ptr {{[^,]*}} %this)
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1BC2EPi(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1BC1EPi(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1BD2Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1BD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
 
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1BC2EPi(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1BC1EPi(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1BD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1BD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1BC2EPi(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1BC1EPi(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1BD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1BD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
 
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1BC2EPi(ptr {{[^,]*}} %this, ptr noundef %i)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1BC1EPi(ptr {{[^,]*}} %this, ptr noundef %i)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1BD2Ev(ptr {{[^,]*}} %this)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1BD1Ev(ptr {{[^,]*}} %this)
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1BC2EPi(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1BC1EPi(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1BD2Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1BD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
 
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1BC2EPi(ptr {{[^,]*}} %this, ptr noundef %i)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1BC1EPi(ptr {{[^,]*}} %this, ptr noundef %i)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1BD2Ev(ptr {{[^,]*}} %this)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1BD1Ev(ptr {{[^,]*}} %this)
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1BC2EPi(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1BC1EPi(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1BD2Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1BD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
 
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1BC2EPi(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1BC1EPi(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1BD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1BD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1BC2EPi(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1BC1EPi(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1BD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1BD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef ptr @"??0B@@QAE@PAH@Z"(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i)
-// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1B@@UAE@XZ"(ptr {{[^,]*}} %this)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef ptr @"??0B@@QAE@PAH@Z"(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1B@@UAE@XZ"(ptr {{[^,]*}} %{{[^,)]*}})
 
 class C : public A, public B {
 public:
@@ -73,50 +76,50 @@ private:
 C::C(int *i, char *c) : B(i), c_(c) { }
 C::~C() { }
 
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1CC2EPiPc(ptr {{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1CC1EPiPc(ptr {{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1CD2Ev(ptr {{[^,]*}} %this)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1CD1Ev(ptr {{[^,]*}} %this)
-// CHECKGEN-LABEL: define{{.*}} void @_ZThn8_N1CD1Ev(ptr noundef %this)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %this)
-// CHECKGEN-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(ptr noundef %this)
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1CC2EPiPc(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1CC1EPiPc(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1CD2Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1CD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZThn8_N1CD1Ev(ptr noundef %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(ptr noundef %{{[^,)]*}})
 
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1CC2EPiPc(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1CC1EPiPc(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1CD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1CD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKARM-LABEL: define{{.*}} ptr @_ZThn8_N1CD1Ev(ptr noundef %this)
-// CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZThn16_N1CD1Ev(ptr noundef %this)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %this)
-// CHECKARM-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(ptr noundef %this)
-// CHECKAARCH64RET-LABEL: define{{.*}} void @_ZThn16_N1CD0Ev(ptr noundef %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1CC2EPiPc(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1CC1EPiPc(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1CD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1CD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
+// CHECKARM-LABEL: define{{.*}} ptr @_ZThn8_N1CD1Ev(ptr noundef %{{[^,)]*}})
+// CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZThn16_N1CD1Ev(ptr noundef %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKARM-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(ptr noundef %{{[^,)]*}})
+// CHECKAARCH64RET-LABEL: define{{.*}} void @_ZThn16_N1CD0Ev(ptr noundef %{{[^,)]*}})
 
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1CC2EPiPc(ptr {{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1CC1EPiPc(ptr {{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1CD2Ev(ptr {{[^,]*}} %this)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1CD1Ev(ptr {{[^,]*}} %this)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZThn8_N1CD1Ev(ptr noundef %this)
-// CHECKI686RET-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %this)
-// CHECKI686RET-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(ptr noundef %this)
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1CC2EPiPc(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1CC1EPiPc(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1CD2Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1CD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZThn8_N1CD1Ev(ptr noundef %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(ptr noundef %{{[^,)]*}})
 
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1CC2EPiPc(ptr {{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1CC1EPiPc(ptr {{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1CD2Ev(ptr {{[^,]*}} %this)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1CD1Ev(ptr {{[^,]*}} %this)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZThn8_N1CD1Ev(ptr noundef %this)
-// CHECKIOS5-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %this)
-// CHECKIOS5-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(ptr noundef %this)
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1CC2EPiPc(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1CC1EPiPc(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1CD2Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1CD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZThn8_N1CD1Ev(ptr noundef %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(ptr noundef %{{[^,)]*}})
 
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1CC2EPiPc(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1CC1EPiPc(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1CD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1CD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZThn16_N1CD1Ev(ptr noundef %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} void @_ZThn16_N1CD0Ev(ptr noundef %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1CC2EPiPc(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1CC1EPiPc(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1CD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1CD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZThn16_N1CD1Ev(ptr noundef %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} void @_ZN1CD0Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} void @_ZThn16_N1CD0Ev(ptr noundef %{{[^,)]*}})
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef ptr @"??0C@@QAE@PAHPAD@Z"(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %i, ptr noundef %c)
-// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1C@@UAE@XZ"(ptr {{[^,]*}} %this)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef ptr @"??0C@@QAE@PAHPAD@Z"(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1C@@UAE@XZ"(ptr {{[^,]*}} %{{[^,)]*}})
 
 class D : public virtual A {
 public:
@@ -127,33 +130,33 @@ public:
 D::D() { }
 D::~D() { }
 
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1DC2Ev(ptr {{[^,]*}} %this, ptr noundef %vtt)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1DC1Ev(ptr {{[^,]*}} %this)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1DD2Ev(ptr {{[^,]*}} %this, ptr noundef %vtt)
-// CHECKGEN-LABEL: define{{.*}} void @_ZN1DD1Ev(ptr {{[^,]*}} %this)
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1DC2Ev(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1DC1Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1DD2Ev(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKGEN-LABEL: define{{.*}} void @_ZN1DD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
 
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1DC2Ev(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %vtt)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1DC1Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1DD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %vtt)
-// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1DD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1DC2Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1DC1Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1DD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} ptr @_ZN1DD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
 
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1DC2Ev(ptr {{[^,]*}} %this, ptr noundef %vtt)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1DC1Ev(ptr {{[^,]*}} %this)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1DD2Ev(ptr {{[^,]*}} %this, ptr noundef %vtt)
-// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1DD1Ev(ptr {{[^,]*}} %this)
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1DC2Ev(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1DC1Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1DD2Ev(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKI686RET-LABEL: define{{.*}} ptr @_ZN1DD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
 
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1DC2Ev(ptr {{[^,]*}} %this, ptr noundef %vtt)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1DC1Ev(ptr {{[^,]*}} %this)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1DD2Ev(ptr {{[^,]*}} %this, ptr noundef %vtt)
-// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1DD1Ev(ptr {{[^,]*}} %this)
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1DC2Ev(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1DC1Ev(ptr {{[^,]*}} %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1DD2Ev(ptr {{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKIOS5-LABEL: define{{.*}} ptr @_ZN1DD1Ev(ptr {{[^,]*}} %{{[^,)]*}})
 
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1DC2Ev(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %vtt)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1DC1Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1DD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %this, ptr noundef %vtt)
-// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1DD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1DC2Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1DC1Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1DD2Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECKFUCHSIA-LABEL: define{{.*}} ptr @_ZN1DD1Ev(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}})
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef ptr @"??0D@@QAE@XZ"(ptr {{[^,]*}} returned{{[^,]*}} %this, i32 noundef %is_most_derived)
-// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1D@@UAE@XZ"(ptr{{[^,]*}} %this)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef ptr @"??0D@@QAE@XZ"(ptr {{[^,]*}} returned{{[^,]*}} %{{[^,)]*}}, i32 noundef %{{[^,)]*}})
+// CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1D@@UAE@XZ"(ptr{{[^,]*}} %{{[^,)]*}})
 
 class E {
 public:
