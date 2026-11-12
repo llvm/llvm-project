@@ -2276,8 +2276,14 @@ bool RegBankLegalizeHelper::applyMappingDst(
       assert(RB == SgprRB);
       Register NewDst = MRI.createVirtualRegister(SgprRB_I32);
       Op.setReg(NewDst);
-      if (!MRI.use_empty(Reg))
-        B.buildTrunc(Reg, NewDst);
+      if (!MRI.use_empty(Reg)) {
+        LLT Ty = MRI.getType(Reg);
+        if (Ty.isFloatOrFloatVector()) {
+          B.buildBitcast(Reg, B.buildTrunc(Ty.changeToInteger(), NewDst));
+        } else {
+          B.buildTrunc(Reg, NewDst);
+        }
+      }
       break;
     }
     case Sgpr32ToVgprDst:
@@ -2509,7 +2515,14 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       // Note: this ext allows S1, and it is meant to be combined away.
       assert(Ty.getSizeInBits() == 1);
       assert(RB == SgprRB);
-      auto Aext = B.buildAnyExt(SgprRB_I32, Reg);
+      LLT Ty = MRI.getType(Reg);
+      MachineInstrBuilder Aext;
+      if (Ty.isFloatOrFloatVector()) {
+        Aext = B.buildAnyExt(SgprRB_I32,
+                             B.buildBitcast(Ty.changeToInteger(), Reg));
+      } else {
+        Aext = B.buildAnyExt(SgprRB_I32, Reg);
+      }
       // Zext SgprS1 is not legal, make AND with 1 instead. This instruction is
       // most of times meant to be combined away in AMDGPURegBankCombiner.
       auto Cst1 = B.buildConstant(SgprRB_I32, 1);
@@ -2534,7 +2547,14 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case Vgpr32AExt: {
       assert(Ty.getSizeInBits() < 32);
       assert(RB == VgprRB);
-      auto Aext = B.buildAnyExt(VgprRB_I32, Reg);
+      LLT Ty = MRI.getType(Reg);
+      MachineInstrBuilder Aext;
+      if (Ty.isFloatOrFloatVector()) {
+        Aext = B.buildAnyExt(VgprRB_I32,
+                             B.buildBitcast(Ty.changeToInteger(), Reg));
+      } else {
+        Aext = B.buildAnyExt(VgprRB_I32, Reg);
+      }
       Op.setReg(Aext.getReg(0));
       break;
     }
