@@ -3448,6 +3448,10 @@ def err_attribute_arm_za_builtin_no_za_state : Error<
   "builtin call is not valid when calling from a function without active ZA state">;
 def err_attribute_arm_zt0_builtin_no_zt0_state : Error<
   "builtin call is not valid when calling from a function without active ZT0 state">;
+def err_hlx_invalid_field : Error<
+  "aggregate objects with HLX types are not allowed">;
+def err_hlx_invalid_object : Error<
+  "global, static or variable sized objects with HLX types are not allowed">;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_sve_vector_in_non_streaming_function : Error<
@@ -7785,6 +7789,8 @@ def err_subscript_incomplete_or_sizeless_type : Error<
   "subscript of pointer to %select{incomplete|sizeless}0 type %1">;
 def err_subscript_svbool_t : Error<
   "subscript of svbool_t is not allowed">;
+def err_subscript_hlx : Error<
+  "subscript of HLX vector type is not allowed">;
 def err_dereference_incomplete_type : Error<
   "dereference of pointer to incomplete type %0">;
 def ext_gnu_subscript_void_type : Extension<
@@ -8018,6 +8024,8 @@ def ext_typecheck_indirection_through_void_pointer : ExtWarn<
   InGroup<VoidPointerDeref>;
 def err_typecheck_indirection_through_void_pointer_cpp
     : Error<"indirection not permitted on operand of type %0">;
+def err_typecheck_indirection_hlx_vectorpair_pointer
+    : Error<"indirection not permitted on HLX vector pair pointer %0">;
 def warn_indirection_through_null : Warning<
   "indirection of non-volatile null pointer will be deleted, not trap">,
   InGroup<NullDereference>;

@@ -98,6 +98,9 @@ function(lldb_record_dynamic_script_interpreter_exports target)
   set(extra_args)
   if(APPLE)
     list(APPEND extra_args --mach-o)
+    foreach(arch ${CMAKE_OSX_ARCHITECTURES})
+      list(APPEND extra_args --arch ${arch})
+    endforeach()
   endif()
 
   add_custom_command(

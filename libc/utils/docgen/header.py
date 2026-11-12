@@ -35,7 +35,8 @@ CLANG_FREESTANDING_HEADERS = {
 
 def _is_stub_file(path: Path) -> bool:
     text = path.read_text(encoding="utf-8")
-    if "todo" not in text.lower() and "unimplemented" not in text.lower():
+    has_todo = "todo" in text.lower() or "unimplemented" in text.lower()
+    if not has_todo and "math" not in path.parts:
         return False
 
     idx = text.find("LLVM_LIBC_FUNCTION")
@@ -59,12 +60,12 @@ def _is_stub_file(path: Path) -> bool:
     clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL).strip()
     stmts = [s.strip() for s in clean.split(";") if s.strip()]
     if len(stmts) == 0:
-        return True
+        return has_todo
     if len(stmts) > 2:
         return False
 
     for stmt in stmts:
-        if stmt.startswith(("libc_errno =", "return")):
+        if stmt.startswith(("libc_errno =", "return", "*signp = 0")):
             no_cast = re.sub(
                 r"(const_cast|reinterpret_cast|static_cast)\s*<[^>]+>", "", stmt
             )
@@ -222,8 +223,9 @@ class Header:
         if self.is_clang_provided():
             return True
 
+        macro_re = re.compile(rf"^\s*#\s*define\s+{re.escape(m_name)}\b", re.MULTILINE)
         for f in self.__get_macro_files():
-            if f"#define {m_name}" in f.read_text(encoding="utf-8"):
+            if macro_re.search(f.read_text(encoding="utf-8")):
                 return True
 
         if any(
@@ -237,9 +239,7 @@ class Header:
             return True
 
         def_file = self.libc_root / "include" / f"{self.name}.def"
-        if def_file.exists() and f"#define {m_name}" in def_file.read_text(
-            encoding="utf-8"
-        ):
+        if def_file.exists() and macro_re.search(def_file.read_text(encoding="utf-8")):
             return True
 
         return False
@@ -324,4 +324,35 @@ class Header:
         libc/include/llvm-libc-macros/sys-mman-macros.h
         """
         stem = self.stem.replace("/", "-")
-        return self.macros_dir.glob(f"**/{stem}-macros.h")
+        yield from self.macros_dir.glob(f"**/{stem}-macros.h")
+        def_file = self.libc_root / "include" / f"{self.name}.def"
+        if def_file.exists():
+            for rel in re.findall(
+                r'#include\s+"(?:.*/)?llvm-libc-macros/([^"]+)"',
+                def_file.read_text(encoding="utf-8"),
+            ):
+                macro_path = self.macros_dir / rel
+                if macro_path.exists():
+                    yield macro_path
+
+    def evaluate_family(self, fam_name: str, fam_data: Dict) -> Dict:
+        variants = fam_data.get("variants") or {}
+        accuracy = fam_data.get("accuracy") or {}
+        results = {}
+        implemented_count = 0
+        for prec, sym in variants.items():
+            impl = bool(sym) and self.implements_fn(sym)
+            if impl:
+                implemented_count += 1
+            results[prec] = {
+                "symbol": sym or "",
+                "implemented": impl,
+                "accuracy": accuracy.get(prec, ""),
+            }
+        return {
+            "name": fam_name,
+            "implemented": implemented_count > 0,
+            "variants": results,
+            "implemented_count": implemented_count,
+            "total_variants": len(variants),
+        }

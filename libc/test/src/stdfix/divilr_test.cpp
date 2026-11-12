@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DiviFxTest.h"
+#include "test/src/stdfix/DiviFxTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/stdfix/divilr.h"
 
 LIST_DIVIFX_TESTS(lr, long int, long fract, LIBC_NAMESPACE::divilr);

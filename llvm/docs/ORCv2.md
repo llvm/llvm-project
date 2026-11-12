@@ -791,9 +791,11 @@ pieces for making these calls:
   arguments. Dispatch failures and the callee's own errors are reported on a
   single channel: callees returning `void` or `Error` yield an `Error`, and
   callees returning `T` or `Expected<T>` yield an `Expected<T>`.
-* An **`sps::ProxySpec<ProxyT, CI>`** (`SPSProxySpec.h`) binds a proxy type to a
-  CI descriptor. Its `dispatch` function serializes the arguments using
-  `CI::SPSSig`, calls the wrapper, and deserializes the result.
+* An **`sps::ProxySpec<CI>`** (`SPSProxySpec.h`) implements proxy dispatch for
+  a CI descriptor. Its `dispatch` function serializes the arguments using
+  `CI::SPSSig`, calls the wrapper, and deserializes the result. It can be used
+  with any proxy whose argument and result types are serializable with that
+  signature.
 
 For example, given an executor-side wrapper named `my_add_wrapper`:
 
@@ -806,7 +808,7 @@ struct AddCI {
 
 // The controller-side handle, and its SPS binding.
 using AddProxy = Proxy<int32_t(int32_t, int32_t)>;
-using AddProxySpec = sps::ProxySpec<AddProxy, AddCI>;
+using AddProxySpec = sps::ProxySpec<AddCI>;
 ```
 
 Proxies are usually resolved with `lookupAndApply` (`LookupAndApply.h`) and

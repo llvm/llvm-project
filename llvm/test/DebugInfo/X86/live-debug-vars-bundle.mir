@@ -29,7 +29,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 debugInstrRef: true
 body:             |
   bb.0:

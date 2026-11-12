@@ -236,8 +236,12 @@ public:
   /// build them.
   ///
   /// \p Phase indicates the current ThinLTO phase.
+  ///
+  /// \p ImportSummary is the summary index of a ThinLTO backend compile, if
+  /// any. It is only meaningful in the ThinLTO post link phase.
   LLVM_ABI ModulePassManager buildModuleSimplificationPipeline(
-      OptimizationLevel Level, ThinOrFullLTOPhase Phase);
+      OptimizationLevel Level, ThinOrFullLTOPhase Phase,
+      const ModuleSummaryIndex *ImportSummary = nullptr);
 
   /// Construct the module pipeline that performs inlining as well as
   /// the inlining-driven cleanups.

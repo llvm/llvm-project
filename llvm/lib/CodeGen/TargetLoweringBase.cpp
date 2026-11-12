@@ -2185,12 +2185,8 @@ TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB,
   if (GuardLocalImpl != RTLIB::impl___guard_local)
     return nullptr;
 
-  Module &M = *IRB.getModule();
-  const DataLayout &DL = M.getDataLayout();
-  PointerType *PtrTy =
-      PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
-  GlobalVariable *G =
-      M.getOrInsertGlobal(getLibcallImplName(GuardLocalImpl), PtrTy);
+  GlobalValue *G = Libcalls.getRuntimeLibcallsInfo().getOrInsertImplGlobal(
+      *IRB.getModule(), GuardLocalImpl);
   G->setVisibility(GlobalValue::HiddenVisibility);
   return G;
 }
