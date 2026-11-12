@@ -1255,12 +1255,11 @@ void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
 }
 
 static void emitFreeze(const MachineInstr *MI, AsmPrinter &AP) {
-  std::string Str;
-  raw_string_ostream OS(Str);
-  OS << "freeze: "
-     << printReg(MI->getOperand(0).getReg(),
-                 AP.MF->getSubtarget().getRegisterInfo());
-  AP.OutStreamer->AddComment(Str);
+  AP.OutStreamer->getCommentOS()
+      << "freeze: "
+      << printReg(MI->getOperand(0).getReg(),
+                  AP.MF->getSubtarget().getRegisterInfo())
+      << '\n';
   AP.OutStreamer->addBlankLine();
 }
 
