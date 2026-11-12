@@ -58,6 +58,7 @@ class TestCase(lldbtest.TestBase):
         return problems
 
     @swiftTest
+    @skipIfAsan
     @skipIf(archs=["x86_64"], bugnumber="rdar://192462106")
     def test(self):
         """Test the values returned by Swift functions"""
