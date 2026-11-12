@@ -104,7 +104,6 @@ private:
   bool instrumentLoadOrStore(const InstructionInfo &II, const DataLayout &DL);
   bool instrumentAtomic(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(Instruction *I);
-  bool instrumentObjCSetProperty(CallBase *CB, const DataLayout &DL);
   void chooseInstructionsToInstrument(SmallVectorImpl<Instruction *> &Local,
                                       SmallVectorImpl<InstructionInfo> &All,
                                       const DataLayout &DL);
@@ -140,9 +139,6 @@ private:
   FunctionCallee TsanVptrUpdate;
   FunctionCallee TsanVptrLoad;
   FunctionCallee MemmoveFn, MemcpyFn, MemsetFn;
-  Function *ObjCSetPropertyNonAtomicFn = nullptr;
-  Function *ObjCSetPropertyNonAtomicCopyFn = nullptr;
-  Function *ObjCSetPropertyFn = nullptr;
 };
 
 void insertModuleCtor(Module &M) {
@@ -317,11 +313,6 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
       "__tsan_memset",
       TLI.getAttrList(&Ctx, {1}, /*Signed=*/true, /*Ret=*/false, Attr),
       IRB.getPtrTy(), IRB.getPtrTy(), IRB.getInt32Ty(), IntptrTy);
-
-  ObjCSetPropertyNonAtomicFn = M.getFunction("objc_setProperty_nonatomic");
-  ObjCSetPropertyNonAtomicCopyFn =
-      M.getFunction("objc_setProperty_nonatomic_copy");
-  ObjCSetPropertyFn = M.getFunction("objc_setProperty");
 }
 
 static bool isVtableAccess(Instruction *I) {
@@ -494,13 +485,9 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   SmallVector<Instruction*, 8> LocalLoadsAndStores;
   SmallVector<Instruction*, 8> AtomicAccesses;
   SmallVector<Instruction*, 8> MemIntrinCalls;
-  SmallVector<CallBase *, 8> ObjCSetPropertyCalls;
   bool Res = false;
   bool HasCalls = false;
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
-  const bool HasObjCSetProperty = ObjCSetPropertyNonAtomicFn ||
-                                  ObjCSetPropertyNonAtomicCopyFn ||
-                                  ObjCSetPropertyFn;
   const DataLayout &DL = F.getDataLayout();
 
   // Traverse all instructions, collect loads/stores/returns, check for calls.
@@ -518,14 +505,6 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
         if (isa<MemIntrinsic>(Inst))
           MemIntrinCalls.push_back(&Inst);
-        else if (HasObjCSetProperty) {
-          auto *CB = cast<CallBase>(&Inst);
-          Value *Callee = CB->getCalledOperand();
-          if (Callee == ObjCSetPropertyNonAtomicFn ||
-              Callee == ObjCSetPropertyNonAtomicCopyFn ||
-              Callee == ObjCSetPropertyFn)
-            ObjCSetPropertyCalls.push_back(CB);
-        }
         HasCalls = true;
         chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores,
                                        DL);
@@ -539,14 +518,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // (e.g. variables that do not escape, etc).
 
   // Instrument memory accesses only if we want to report bugs in the function.
-  if (Opts.tsan_instrument_memory_accesses && SanitizeFunction) {
+  if (Opts.tsan_instrument_memory_accesses && SanitizeFunction)
     for (const auto &II : AllLoadsAndStores) {
       Res |= instrumentLoadOrStore(II, DL);
     }
-    for (auto *CB : ObjCSetPropertyCalls) {
-      Res |= instrumentObjCSetProperty(CB, DL);
-    }
-  }
 
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
@@ -704,55 +679,6 @@ bool ThreadSanitizer::instrumentMemIntrinsic(Instruction *I) {
     I->eraseFromParent();
   }
   return false;
-}
-
-bool ThreadSanitizer::instrumentObjCSetProperty(CallBase *CB,
-                                                const DataLayout &DL) {
-  Value *Callee = CB->getCalledOperand();
-  Value *Self = nullptr;
-  Value *NewValue = nullptr;
-  Value *Offset = nullptr;
-  if (Callee == ObjCSetPropertyNonAtomicFn ||
-      Callee == ObjCSetPropertyNonAtomicCopyFn) {
-    // void objc_setProperty_nonatomic[_copy](id self, SEL _cmd, id newValue,
-    //                                        ptrdiff_t offset)
-    if (CB->arg_size() != 4)
-      return false;
-    Self = CB->getArgOperand(0);
-    NewValue = CB->getArgOperand(2);
-    Offset = CB->getArgOperand(3);
-  } else if (Callee == ObjCSetPropertyFn) {
-    // void objc_setProperty(id self, SEL _cmd, ptrdiff_t offset, id newValue,
-    //                       BOOL atomic, BOOL shouldCopy)
-    if (CB->arg_size() != 6)
-      return false;
-    auto *AtomicCI = dyn_cast<ConstantInt>(CB->getArgOperand(4));
-    if (!AtomicCI || !AtomicCI->isZero())
-      return false;
-    Self = CB->getArgOperand(0);
-    Offset = CB->getArgOperand(2);
-    NewValue = CB->getArgOperand(3);
-  } else {
-    return false;
-  }
-
-  if (!Self->getType()->isPointerTy() || !NewValue->getType()->isPointerTy() ||
-      !Offset->getType()->isIntegerTy())
-    return false;
-  if (!shouldInstrumentReadWriteFromAddress(CB->getModule(), Self))
-    return false;
-
-  InstrumentationIRBuilder IRB(CB);
-  Value *Addr = IRB.CreatePtrAdd(Self, Offset);
-  int Idx = getMemoryAccessFuncIndex(IRB.getPtrTy(), Addr, DL);
-  if (Idx < 0)
-    return false;
-
-  // First the old value at Addr is read, then the new value is stored there;
-  // TSan only needs to know about the write.
-  IRB.CreateCall(TsanWrite[Idx], Addr);
-  NumInstrumentedWrites++;
-  return true;
 }
 
 // Both llvm and ThreadSanitizer atomic operations are based on C++11/C1x

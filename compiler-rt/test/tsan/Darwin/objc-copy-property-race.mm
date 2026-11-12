@@ -8,8 +8,8 @@
 // RUN: %clangxx_tsan %s -o %t_O2 -O2 -fobjc-arc -framework Foundation
 // RUN: %deflake %run %t_O2 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
 #import "../test.h"
+#import <Foundation/Foundation.h>
 
 @interface CopyContainer : NSObject
 @property(nonatomic, copy) NSString *text;
@@ -43,6 +43,8 @@ int main() {
       dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
       NSLog(@"Atomic write completed.");
     }
+    // CHECK-NOT: WARNING: ThreadSanitizer
+    // CHECK: Atomic write completed.
 
     // 2. Write-vs-Write race on a (nonatomic, copy) property.
     {
@@ -58,6 +60,13 @@ int main() {
       });
       dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
     }
+    // CHECK: WARNING: ThreadSanitizer: data race
+    // CHECK:   Write of size 8 at {{0x[0-9a-f]+}} by thread T{{[0-9]+}}{{.*}}:
+    // CHECK:     #0 objc_setProperty_nonatomic_copy
+    // CHECK-NEXT:     #1 -[CopyContainer setText:]
+    // CHECK:   Previous write of size 8 at {{0x[0-9a-f]+}} by thread T{{[0-9]+}}{{.*}}:
+    // CHECK:     #0 objc_setProperty_nonatomic_copy
+    // CHECK-NEXT:     #1 -[CopyContainer setText:]
 
     // 3. Read-vs-Write race (getter vs setter) on a (nonatomic, copy) property.
     {
@@ -74,20 +83,12 @@ int main() {
       });
       dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
     }
+    // CHECK: WARNING: ThreadSanitizer: data race
+    // CHECK:   Read of size 8 at {{0x[0-9a-f]+}} by thread T{{[0-9]+}}{{.*}}:
+    // CHECK:     #0 -[CopyContainer readWriteText]
+    // CHECK:   Previous write of size 8 at {{0x[0-9a-f]+}} by thread T{{[0-9]+}}{{.*}}:
+    // CHECK:     #0 objc_setProperty_nonatomic_copy
+    // CHECK-NEXT:     #1 -[CopyContainer setReadWriteText:]
   }
   return 0;
 }
-
-// CHECK-NOT: setAtomicText:
-// CHECK: Atomic write completed.
-// CHECK: WARNING: ThreadSanitizer: data race
-// CHECK:   Write of size 8 at {{0x[0-9a-f]+}} by thread T{{[0-9]+}}:
-// CHECK:     #0 -[CopyContainer setText:]
-// CHECK:   Previous write of size 8 at {{0x[0-9a-f]+}} by thread T{{[0-9]+}}:
-// CHECK:     #0 -[CopyContainer setText:]
-
-// CHECK: WARNING: ThreadSanitizer: data race
-// CHECK:   Read of size 8 at {{0x[0-9a-f]+}} by thread T{{[0-9]+}}:
-// CHECK:     #0 -[CopyContainer readWriteText]
-// CHECK:   Previous write of size 8 at {{0x[0-9a-f]+}} by thread T{{[0-9]+}}:
-// CHECK:     #0 -[CopyContainer setReadWriteText:]
