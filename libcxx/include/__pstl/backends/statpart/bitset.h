@@ -11,6 +11,7 @@
 
 #include <__assert>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/unique_ptr.h>
 #include <__new/align_val_t.h>
 #include <__new/global_new_delete.h>

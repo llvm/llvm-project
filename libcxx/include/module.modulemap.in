@@ -2422,6 +2422,9 @@ module std {
         module bitset {
           header "__pstl/backends/statpart/bitset.h"
         }
+        module copy_if {
+          header "__pstl/backends/statpart/copy_if.h"
+        }
         module decoupled_lookback {
           header "__pstl/backends/statpart/decoupled_lookback.h"
         }
