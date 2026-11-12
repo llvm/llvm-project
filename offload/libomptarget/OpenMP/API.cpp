@@ -42,7 +42,6 @@ using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
 
-
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name);
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
@@ -545,6 +544,16 @@ EXTERN int omp_target_memcpy_async(void *Dst, const void *Src, size_t Length,
   return Rc;
 }
 
+// Returns the device for \p DeviceNum, or nullptr if it is the host.
+static DeviceTy *getDeviceOrHost(int DeviceNum) {
+  if (isInitialDevice(DeviceNum))
+    return nullptr;
+  auto DevOrErr = PM->getDevice(DeviceNum);
+  if (!DevOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DevOrErr.takeError()).c_str());
+  return &*DevOrErr;
+}
+
 EXTERN int
 omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
                        int NumDims, const size_t *Volume,
@@ -572,36 +581,39 @@ omp_target_memcpy_rect(void *Dst, const void *Src, size_t ElementSize,
     return OFFLOAD_FAIL;
   }
 
-  int Rc;
-  if (NumDims == 1) {
-    Rc = omp_target_memcpy(Dst, Src, ElementSize * Volume[0],
-                           ElementSize * DstOffsets[0],
-                           ElementSize * SrcOffsets[0], DstDevice, SrcDevice);
-  } else {
-    size_t DstSliceSize = ElementSize;
-    size_t SrcSliceSize = ElementSize;
-    for (int I = 1; I < NumDims; ++I) {
-      DstSliceSize *= DstDimensions[I];
-      SrcSliceSize *= SrcDimensions[I];
-    }
-
-    size_t DstOff = DstOffsets[0] * DstSliceSize;
-    size_t SrcOff = SrcOffsets[0] * SrcSliceSize;
-    for (size_t I = 0; I < Volume[0]; ++I) {
-      Rc = omp_target_memcpy_rect(
-          (char *)Dst + DstOff + DstSliceSize * I,
-          (char *)const_cast<void *>(Src) + SrcOff + SrcSliceSize * I,
-          ElementSize, NumDims - 1, Volume + 1, DstOffsets + 1, SrcOffsets + 1,
-          DstDimensions + 1, SrcDimensions + 1, DstDevice, SrcDevice);
-
-      if (Rc) {
-        ODBG(ODT_Interface)
-            << "Recursive call to " << __func__ << " returns unsuccessfully";
-        return Rc;
-      }
+  for (int I = 0; I < NumDims; ++I) {
+    if (!Volume[I]) {
+      ODBG(ODT_Interface) << "Call to " << __func__
+                          << " with zero volume, nothing to do";
+      return OFFLOAD_SUCCESS;
     }
   }
 
+  DeviceTy *DstDev = getDeviceOrHost(DstDevice);
+  DeviceTy *SrcDev = getDeviceOrHost(SrcDevice);
+
+  MemcpyRectTy Rect = {ElementSize, NumDims,       Volume,       DstOffsets,
+                       SrcOffsets,  DstDimensions, SrcDimensions};
+  llvm::Error Err = [&]() -> llvm::Error {
+    if (!DstDev && !SrcDev)
+      return forEachMemcpyRectRow(
+          Dst, Src, Rect,
+          [](void *DstAddr, const void *SrcAddr, size_t Length) {
+            memcpy(DstAddr, SrcAddr, Length);
+            return llvm::Error::success();
+          });
+    if (!SrcDev)
+      return DstDev->submitDataRect(Dst, Src, Rect, nullptr);
+    if (!DstDev)
+      return SrcDev->retrieveDataRect(Dst, Src, Rect, nullptr);
+    return SrcDev->dataExchangeRect(Src, *DstDev, Dst, Rect, nullptr);
+  }();
+
+  int Rc = OFFLOAD_SUCCESS;
+  if (Err) {
+    REPORT() << toString(std::move(Err));
+    Rc = OFFLOAD_FAIL;
+  }
   ODBG(ODT_Interface) << " returns " << Rc;
   return Rc;
 }

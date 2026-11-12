@@ -13,6 +13,7 @@
 #ifndef _OMPTARGET_DEVICE_H
 #define _OMPTARGET_DEVICE_H
 
+#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -32,6 +33,7 @@
 #include "OpenMP/Mapping.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -116,6 +118,22 @@ namespace llvm::omp::target::rr {
 struct RecordReplayTy;
 } // namespace llvm::omp::target::rr
 using RecordReplayTy = llvm::omp::target::rr::RecordReplayTy;
+
+/// A rectangular copy; per-dimension arrays are ordered slowest-varying first.
+struct MemcpyRectTy {
+  size_t ElementSize;
+  int NumDims;
+  const size_t *Volume;
+  const size_t *DstOffsets;
+  const size_t *SrcOffsets;
+  const size_t *DstDimensions;
+  const size_t *SrcDimensions;
+};
+
+/// Call \p CopyRow for each contiguous row of \p Rect.
+llvm::Error forEachMemcpyRectRow(
+    void *Dst, const void *Src, const MemcpyRectTy &Rect,
+    llvm::function_ref<llvm::Error(void *, const void *, size_t)> CopyRow);
 
 struct DeviceTy {
   int32_t DeviceID;
@@ -241,6 +259,17 @@ struct DeviceTy {
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
+
+  /// Rectangular versions of submitData, retrieveData and dataExchange. A null
+  /// \p AsyncInfo makes the copy synchronous.
+  llvm::Error submitDataRect(void *TgtPtr, const void *HstPtr,
+                             const MemcpyRectTy &Rect, AsyncInfoTy *AsyncInfo);
+  llvm::Error retrieveDataRect(void *HstPtr, const void *TgtPtr,
+                               const MemcpyRectTy &Rect,
+                               AsyncInfoTy *AsyncInfo);
+  llvm::Error dataExchangeRect(const void *SrcPtr, DeviceTy &DstDev,
+                               void *DstPtr, const MemcpyRectTy &Rect,
+                               AsyncInfoTy *AsyncInfo);
 
   /// Register (and, if \p LockMemory, page-lock) the host buffer \p HstPtr
   /// with \p Size bytes, returning the device-accessible pointer.
@@ -372,6 +401,25 @@ struct DeviceTy {
   }
 
 private:
+  /// This device is the destination of HostToDevice and the source otherwise.
+  enum class CopyDirTy { HostToDevice, DeviceToHost, DeviceToDevice };
+
+  /// Single liboffload 2D/3D copy; \p PeerDev is the destination of a
+  /// DeviceToDevice copy. Returns false if another path is needed.
+  llvm::Expected<bool> dataMemcpy3D(CopyDirTy Dir, void *DstPtr,
+                                    const ol_memcpy3d_layout_t &DstLayout,
+                                    const void *SrcPtr,
+                                    const ol_memcpy3d_layout_t &SrcLayout,
+                                    ol_dimensions_t Size, DeviceTy *PeerDev,
+                                    AsyncInfoTy *AsyncInfo);
+
+  /// Implementation of the rectangular copies; \p CopyRow copies one row.
+  llvm::Error dataMemcpyRect(
+      CopyDirTy Dir, void *Dst, const void *Src, const MemcpyRectTy &Rect,
+      DeviceTy *PeerDev, AsyncInfoTy *AsyncInfo,
+      llvm::function_ref<int32_t(void *, const void *, size_t, AsyncInfoTy &)>
+          CopyRow);
+
   /// Query the properties used to compute the launch geometry of a kernel.
   llvm::Error initGeometryProps();
 
@@ -424,6 +472,9 @@ private:
 
   /// Indicate whether failures when locking mapped buffers should be ignored.
   bool IgnoreLockMappedFailures = true;
+
+  /// Set once 2D/3D copies are found unsupported on this device.
+  std::atomic<bool> Memcpy3DUnsupported{false};
 };
 
 #endif
