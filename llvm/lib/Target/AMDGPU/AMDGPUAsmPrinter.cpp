@@ -565,8 +565,8 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
       unsigned MaxWaves = MFI.getMaxWavesPerEU();
       uint64_t TotalNumVgpr =
-          getTotalNumVGPRs(STM.hasGFX90AInsts(), static_cast<int32_t>(NumAgpr),
-                           static_cast<int32_t>(NumVgpr));
+          getTotalNumVGPRs(STM.hasGFX90AInsts(), static_cast<uint32_t>(NumAgpr),
+                           static_cast<uint32_t>(NumVgpr));
       uint64_t NumVGPRsForWavesPerEU =
           std::max({TotalNumVgpr, (uint64_t)1,
                     (uint64_t)STM.getMinNumVGPRs(

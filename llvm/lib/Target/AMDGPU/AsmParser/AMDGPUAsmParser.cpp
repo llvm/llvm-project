@@ -1063,8 +1063,9 @@ class KernelScopeInfo {
       if (Ctx) {
         MCSymbol *const Sym =
             Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
-                                         VgprIndexUnusedMin);
+        int totalVGPR =
+            getTotalNumVGPRs(isGFX90A(*MSTI), std::max(AgprIndexUnusedMin, 0),
+                             VgprIndexUnusedMin);
         Sym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
@@ -1085,8 +1086,9 @@ class KernelScopeInfo {
         // Also update vgpr_count (dependent on agpr_count for gfx908/gfx90a)
         MCSymbol *const vSym =
             Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
-                                         VgprIndexUnusedMin);
+        int totalVGPR =
+            getTotalNumVGPRs(isGFX90A(*MSTI), std::max(AgprIndexUnusedMin, 0),
+                             VgprIndexUnusedMin);
         vSym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
