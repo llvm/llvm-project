@@ -16,6 +16,7 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-linux-openhos
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-managarm
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-netbsd
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-nintendo
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-openbsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-win32-gnu
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-win32-msvc
