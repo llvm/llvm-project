@@ -1188,11 +1188,15 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
 
 bool AArch64FrameLowering::requiresSaveVG(const MachineFunction &MF) const {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (!AFI->needsDwarfUnwindInfo(MF) || !AFI->hasStreamingModeChanges())
+  if (!AFI->hasStreamingModeChanges())
+    return false;
+  auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (MF.needsWinCFI())
+    return true;
+  if (!AFI->needsDwarfUnwindInfo(MF))
     return false;
   // For Darwin platforms we don't save VG for non-SVE functions, even if SME
   // is enabled with streaming mode changes.
-  auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (ST.isTargetDarwin())
     return ST.hasSVE();
   return true;
@@ -2163,45 +2167,181 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       break;
     }
 
-    Register X0Scratch;
-    llvm::scope_exit RestoreX0([&] {
-      if (X0Scratch.isValid())
+    Register X0Scratch, X1Scratch;
+    llvm::scope_exit RestoreX0X1([&] {
+      if (X0Scratch.isValid()) {
         BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X0)
             .addReg(X0Scratch)
             .setMIFlag(MachineInstr::FrameSetup);
+        if (NeedsWinCFI)
+          BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
+              .setMIFlag(MachineInstr::FrameSetup);
+      }
+      if (X1Scratch.isValid()) {
+        BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X1)
+            .addReg(X1Scratch)
+            .setMIFlag(MachineInstr::FrameSetup);
+        if (NeedsWinCFI)
+          BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
+              .setMIFlag(MachineInstr::FrameSetup);
+      }
     });
 
     if (Reg1 == AArch64::VG) {
-      // Find an available register to store value of VG to.
-      Reg1 = findScratchNonCalleeSaveRegister(&MBB, true);
-      assert(Reg1.isValid());
-      if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
-        BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
-            .addImm(31)
-            .addImm(1)
-            .setMIFlag(MachineInstr::FrameSetup);
-      } else {
-        const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-        if (any_of(MBB.liveins(),
-                   [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
-                     return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
-                         AArch64::X0, LiveIn.PhysReg);
+      Register SMReg;
+      if (NeedsWinCFI) {
+        // If we don't have both SME and SVE, we'll need to emit a call to
+        // get the information to spill.
+        bool NeedCall = !Subtarget.hasSVE() || !Subtarget.hasSME();
+        // __arm_get_current_vg preserves X1-X15; __arm_sme_state preserves
+        // x2-x15. If we're making those calls, use a scratch that won't be
+        // clobbered.
+        LivePhysRegs LiveRegs(*TRI);
+        getLiveRegsForEntryMBB(LiveRegs, MBB);
+        auto FindCallPreservedScratch = [&]() -> Register {
+          static const unsigned short CallAvailableRegs[] = {
+              AArch64::X2,  AArch64::X3,  AArch64::X4,  AArch64::X5,
+              AArch64::X6,  AArch64::X7,  AArch64::X8,  AArch64::X9,
+              AArch64::X10, AArch64::X11, AArch64::X12, AArch64::X13,
+              AArch64::X14, AArch64::X15};
+          for (unsigned Reg : NeedCall
+                                  ? iterator_range(CallAvailableRegs)
+                                  : iterator_range(AArch64::GPR64RegClass)) {
+            if (LiveRegs.available(MRI, Reg)) {
+              LiveRegs.addReg(Reg);
+              return Register(Reg);
+            }
+          }
+
+          reportFatalInternalError(
+              "Unable to find scratch register for save_vg_sm");
+        };
+
+        // Both calls clobber x0
+        if (NeedCall &&
+            any_of(MBB.liveins(),
+                   [&](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
+                     return TRI->isSuperOrSubRegisterEq(AArch64::X0,
+                                                        LiveIn.PhysReg);
                    })) {
-          X0Scratch = Reg1;
+          X0Scratch = FindCallPreservedScratch();
           BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), X0Scratch)
               .addReg(AArch64::X0)
               .setMIFlag(MachineInstr::FrameSetup);
+          BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
+              .setMIFlag(MachineInstr::FrameSetup);
+        }
+        // __arm_sme_state also clobbers x1
+        if (!Subtarget.hasSME() &&
+            any_of(MBB.liveins(),
+                   [&](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
+                     return TRI->isSuperOrSubRegisterEq(AArch64::X1,
+                                                        LiveIn.PhysReg);
+                   })) {
+          X1Scratch = FindCallPreservedScratch();
+          BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), X1Scratch)
+              .addReg(AArch64::X1)
+              .setMIFlag(MachineInstr::FrameSetup);
+          BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
+              .setMIFlag(MachineInstr::FrameSetup);
         }
 
-        RTLIB::Libcall LC = RTLIB::SMEABI_GET_CURRENT_VG;
-        const uint32_t *RegMask =
-            TRI->getCallPreservedMask(MF, TLI.getLibcallCallingConv(LC));
-        BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
-            .addExternalSymbol(TLI.getLibcallName(LC))
-            .addRegMask(RegMask)
-            .addReg(AArch64::X0, RegState::ImplicitDefine)
+        auto EmitSEHNop = [&] {
+          BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
+              .setMIFlag(MachineInstr::FrameSetup);
+        };
+        if (Subtarget.hasSME()) {
+          SMReg = FindCallPreservedScratch();
+
+          BuildMI(MBB, MI, DL, TII.get(AArch64::MRS), SMReg)
+              .addImm(AArch64SysReg::SVCR)
+              .addReg(AArch64::VG, RegState::Implicit)
+              .setMIFlag(MachineInstr::FrameSetup);
+          EmitSEHNop();
+        } else {
+          RTLIB::Libcall StateLC = RTLIB::SMEABI_SME_STATE;
+          const uint32_t *StateRegMask = TRI->getCallPreservedMask(
+              MF, TLI.getLibcallCallingConv(StateLC));
+          BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
+              .addExternalSymbol(TLI.getLibcallName(StateLC))
+              .addReg(AArch64::X0, RegState::ImplicitDefine)
+              .addRegMask(StateRegMask)
+              .setMIFlag(MachineInstr::FrameSetup);
+          EmitSEHNop();
+
+          if (Subtarget.hasSVE()) {
+            // If we're not making another call, keep the value in x0.
+            SMReg = AArch64::X0;
+          } else {
+            // If we are making another call, copy to x1, which we know
+            // is available and won't be clobbered.
+            SMReg = AArch64::X1;
+            BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), SMReg)
+                .addReg(AArch64::X0)
+                .setMIFlag(MachineInstr::FrameSetup);
+            EmitSEHNop();
+          }
+        }
+
+        if (Subtarget.hasSVE()) {
+          Reg1 = FindCallPreservedScratch();
+          BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
+              .addImm(31)
+              .addImm(1)
+              .setMIFlag(MachineInstr::FrameSetup);
+          EmitSEHNop();
+        } else {
+          RTLIB::Libcall VGLC = RTLIB::SMEABI_GET_CURRENT_VG;
+          const uint32_t *VGRegMask =
+              TRI->getCallPreservedMask(MF, TLI.getLibcallCallingConv(VGLC));
+          BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
+              .addExternalSymbol(TLI.getLibcallName(VGLC))
+              .addReg(AArch64::X0, RegState::ImplicitDefine)
+              .addRegMask(VGRegMask)
+              .setMIFlag(MachineInstr::FrameSetup);
+          EmitSEHNop();
+          Reg1 = AArch64::X0;
+        }
+
+        BuildMI(MBB, MI, DL, TII.get(AArch64::BFMXri), Reg1)
+            .addReg(Reg1)
+            .addReg(SMReg)
+            .addImm(1)
+            .addImm(0)
             .setMIFlag(MachineInstr::FrameSetup);
-        Reg1 = AArch64::X0;
+        EmitSEHNop();
+      } else {
+        // Find an available register to store value of VG to.
+        Reg1 = findScratchNonCalleeSaveRegister(&MBB, true);
+        assert(Reg1.isValid());
+        if (Subtarget.hasSVE()) {
+          BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
+              .addImm(31)
+              .addImm(1)
+              .setMIFlag(MachineInstr::FrameSetup);
+        } else {
+          const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+          if (any_of(MBB.liveins(),
+                     [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
+                       return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
+                           AArch64::X0, LiveIn.PhysReg);
+                     })) {
+            X0Scratch = Reg1;
+            BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), X0Scratch)
+                .addReg(AArch64::X0)
+                .setMIFlag(MachineInstr::FrameSetup);
+          }
+  
+          RTLIB::Libcall LC = RTLIB::SMEABI_GET_CURRENT_VG;
+          const uint32_t *RegMask =
+              TRI->getCallPreservedMask(MF, TLI.getLibcallCallingConv(LC));
+          BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
+              .addExternalSymbol(TLI.getLibcallName(LC))
+              .addRegMask(RegMask)
+              .addReg(AArch64::X0, RegState::ImplicitDefine)
+              .setMIFlag(MachineInstr::FrameSetup);
+          Reg1 = AArch64::X0;
+        }
       }
     }
 
@@ -2270,8 +2410,15 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           .addImm(RGI.Offset) // [sp, #offset*vscale],
                               // where factor*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
-      if (NeedsWinCFI)
-        insertSEH(MIB, TII, MachineInstr::FrameSetup);
+      if (NeedsWinCFI) {
+        if (RGI.Type == RegGroupInfo::VG) {
+          BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_SaveVGSM))
+              .addImm(RGI.Offset * 8)
+              .setMIFlag(MachineInstr::FrameSetup);
+        } else {
+          insertSEH(MIB, TII, MachineInstr::FrameSetup);
+        }
+      }
     }
 
     // Handle the StackIDs.
@@ -2807,8 +2954,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (requiresSaveVG(MF))
     CSStackSize += 8;
 
-  // If we must call __arm_get_current_vg in the prologue preserve the LR.
-  if (requiresSaveVG(MF) && !Subtarget.hasSVE())
+  // If we must call __arm_get_current_vg or __arm_sme_state in the prologue,
+  // preserve the LR.
+  if (requiresSaveVG(MF) &&
+      (!Subtarget.hasSVE() || (MF.needsWinCFI() && !Subtarget.hasSME())))
     SavedRegs.set(AArch64::LR);
 
   // The frame record needs to be created by saving the appropriate registers
@@ -3046,9 +3195,6 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   if (IsWindows)
     std::reverse(CSI.begin(), CSI.end());
 
-  if (CSI.empty())
-    return true; // Early exit if no callee saved registers are modified!
-
   // Now that we know which registers need to be saved and restored, allocate
   // stack slots for them.
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -3064,6 +3210,9 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     else
       CSI.push_back(VGInfo);
   }
+
+  if (CSI.empty())
+    return true; // Early exit if no callee saved registers are modified!
 
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   if (!IsWindows && enableMultiVectorSpillFill(Subtarget, MF))

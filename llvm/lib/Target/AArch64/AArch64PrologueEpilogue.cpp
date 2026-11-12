@@ -12,6 +12,7 @@
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
@@ -29,22 +30,32 @@ static bool matchLibcall(const TargetLowering &TLI, const MachineOperand &MO,
          StringRef(TLI.getLibcallName(LC)) == MO.getSymbolName();
 }
 
-bool AArch64PrologueEpilogueCommon::requiresGetVGCall() const {
+bool AArch64PrologueEpilogueCommon::requiresVGSMCall() const {
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   return AFI->hasStreamingModeChanges() &&
-         !MF.getSubtarget<AArch64Subtarget>().hasSVE();
+         (!ST.hasSVE() || (MF.needsWinCFI() && !ST.hasSME()));
 }
 
 bool AArch64PrologueEpilogueCommon::isVGInstruction(
     MachineBasicBlock::iterator MBBI, const TargetLowering &TLI) const {
   unsigned Opc = MBBI->getOpcode();
-  if (Opc == AArch64::CNTD_XPiI)
+  if (MF.needsWinCFI() && Opc == AArch64::SEH_Nop)
     return true;
 
-  if (!requiresGetVGCall())
+  if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::BFMXri)
+    return true;
+
+  if (Opc == AArch64::MRS &&
+      MBBI->getOperand(1).getImm() == AArch64SysReg::SVCR)
+    return true;
+
+  if (!requiresVGSMCall())
     return false;
 
   if (Opc == AArch64::BL)
-    return matchLibcall(TLI, MBBI->getOperand(0), RTLIB::SMEABI_GET_CURRENT_VG);
+    return matchLibcall(TLI, MBBI->getOperand(0),
+                        RTLIB::SMEABI_GET_CURRENT_VG) ||
+           matchLibcall(TLI, MBBI->getOperand(0), RTLIB::SMEABI_SME_STATE);
 
   return Opc == TargetOpcode::COPY;
 }
@@ -256,6 +267,7 @@ static void fixupSEHOpcode(MachineBasicBlock::iterator MBBI,
   case AArch64::SEH_SaveAnyRegQX:
   case AArch64::SEH_SaveAnyRegQP:
   case AArch64::SEH_SaveAnyRegQPX:
+  case AArch64::SEH_SaveVGSM:
     ImmOpnd = &MBBI->getOperand(ImmIdx);
     break;
   }
@@ -469,11 +481,13 @@ void AArch64PrologueEmitter::collectBlockLiveins() {
     LiveRegs.removeReg(AArch64::FP);
     LiveRegs.removeReg(AArch64::LR);
 
-    // X0 will be clobbered by a call to __arm_get_current_vg in the prologue.
-    // This is necessary to spill VG if required where SVE is unavailable, but
-    // X0 is preserved around this call.
-    if (requiresGetVGCall())
+    // X0 will be clobbered by the SME ABI support routine calls in the
+    // prologue. This is necessary to spill VG if required where SVE is
+    // unavailable, but X0 is preserved around these calls.
+    if (requiresVGSMCall()) {
       LiveRegs.removeReg(AArch64::X0);
+      LiveRegs.removeReg(AArch64::X1);
+    }
   }
 }
 

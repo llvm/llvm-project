@@ -6179,6 +6179,7 @@ let isPseudo = 1 in {
   def SEH_AllocZ : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveZReg : Pseudo<(outs), (ins i32imm:$reg, i32imm:$offs), []>, Sched<[]>;
   def SEH_SavePReg : Pseudo<(outs), (ins i32imm:$reg, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveVGSM : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
 }
 
 // Pseudo instructions for Windows EH

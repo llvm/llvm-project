@@ -83,6 +83,7 @@ enum UnwindOpcodes {
   UOP_AllocZ,
   UOP_SaveZReg,
   UOP_SavePReg,
+  UOP_SaveVGSM,
 
   // The following set of unwind opcodes is for ARM.  They are documented at
   // https://docs.microsoft.com/en-us/cpp/build/arm-exception-handling

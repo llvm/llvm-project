@@ -891,6 +891,8 @@ bool Decoder::opcode_e7(const uint8_t *OC, unsigned &Offset, unsigned Length,
   }
 
   if ((OC[Offset + 2] & 0xC0) == 0xC0) {
+    if ((OC[Offset + 1] & 0x9F) == 0x10)
+      return opcode_save_vg_sm(OC, Offset, Length, Prologue);
     if ((OC[Offset + 1] & 0x10) == 0)
       return opcode_save_zreg(OC, Offset, Length, Prologue);
     return opcode_save_preg(OC, Offset, Length, Prologue);
@@ -996,6 +998,23 @@ bool Decoder::opcode_save_preg(const uint8_t *OC, unsigned &Offset,
       "0x%02x%02x%02x            ; %s p%u, [sp, #%u, mul vl]\n", OC[Offset],
       OC[Offset + 1], OC[Offset + 2],
       static_cast<const char *>(Prologue ? "str" : "ldr"), Reg, Off);
+  Offset += 3;
+  return false;
+}
+
+bool Decoder::opcode_save_vg_sm(const uint8_t *OC, unsigned &Offset,
+                                unsigned Length, bool Prologue) {
+  if (Prologue) {
+    uint32_t Off =
+        (((OC[Offset + 1] & 0x60) << 1) | (OC[Offset + 2] & 0x3F)) * 8;
+    SW.startLine() << format(
+        "0x%02x%02x%02x            ; str vg_sm_val, [sp, #%u]\n", OC[Offset],
+        OC[Offset + 1], OC[Offset + 2], Off);
+  } else {
+    SW.startLine() << format(
+        "0x%02x%02x%02x            ; Unexpected save_vg_sm in epilogue\n",
+        OC[Offset], OC[Offset + 1], OC[Offset + 2]);
+  }
   Offset += 3;
   return false;
 }
