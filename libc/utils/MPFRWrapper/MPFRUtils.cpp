@@ -451,8 +451,6 @@ template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<float128> &, float128, double, RoundingMode);
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<float128> &, double, double, RoundingMode);
-    Operation, const BinaryInput<float128> &, float128, double, RoundingMode,
-    MatchResultListener *);
 #endif
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<bfloat16> &, bfloat16, double, RoundingMode);
