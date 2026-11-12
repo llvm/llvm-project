@@ -165,3 +165,35 @@ define <2 x i8> @prove_exact_with_high_mask_vec(<2 x i8> %x, <2 x i8> %y) {
   %d = sdiv <2 x i8> %a, <i8 8, i8 4>
   ret <2 x i8> %d
 }
+
+define i32 @odd_minus_one_div_by_two(i32 noundef %n) {
+; CHECK-LABEL: @odd_minus_one_div_by_two(
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[N:%.*]] to i1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[DIV_BY_TWO:%.*]] = lshr i32 [[N]], 1
+; CHECK-NEXT:    ret i32 [[DIV_BY_TWO]]
+;
+  %a = and i32 %n, 1
+  %cmp = icmp ne i32 %a, 0
+  tail call void @llvm.assume(i1 %cmp)
+  %minus_one = add i32 %n, -1
+  %div_by_two = lshr exact i32 %minus_one, 1
+  ret i32 %div_by_two
+}
+
+define i32 @even_minus_one_div_by_two(i32 noundef %n) {
+; CHECK-LABEL: @even_minus_one_div_by_two(
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[N:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[MINUS_ONE:%.*]] = add i32 [[N]], -2
+; CHECK-NEXT:    [[DIV_BY_TWO:%.*]] = lshr exact i32 [[MINUS_ONE]], 1
+; CHECK-NEXT:    ret i32 [[DIV_BY_TWO]]
+;
+  %a = and i32 %n, 1
+  %cmp = icmp ne i32 %a, 1
+  tail call void @llvm.assume(i1 %cmp)
+  %minus_one = add i32 %n, -1
+  %div_by_two = lshr i32 %minus_one, 1
+  ret i32 %div_by_two
+}
