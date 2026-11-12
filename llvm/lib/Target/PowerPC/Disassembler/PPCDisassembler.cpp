@@ -312,6 +312,13 @@ static DecodeStatus decodeDispRIX16Operand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeDispPSQOperand(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address,
+                                         const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createImm(SignExtend64<12>(Imm)));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeDispSPE8Operand(MCInst &Inst, uint64_t Imm,
                                           int64_t Address,
                                           const MCDisassembler *Decoder) {
@@ -399,6 +406,12 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   if (STI.hasFeature(PPC::FeatureSPE)) {
     DecodeStatus result =
         decodeInstruction(DecoderTableSPE32, MI, Inst, Address, this, STI);
+    if (result != MCDisassembler::Fail)
+      return result;
+  }
+  if (STI.hasFeature(PPC::FeaturePairedSingles)) {
+    DecodeStatus result = decodeInstruction(DecoderTablePairedSingles32, MI,
+                                            Inst, Address, this, STI);
     if (result != MCDisassembler::Fail)
       return result;
   }

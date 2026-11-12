@@ -44,6 +44,9 @@ def : Processor<"620", G3Itineraries, [Directive620,
 def : Processor<"750", G4Itineraries, [Directive750,
                                        FeatureFRES, FeatureFRSQRTE,
                                        FeatureMFTB]>;
+def : Processor<"750cl", G4Itineraries, [Directive750,
+                                         FeatureFRES, FeatureFRSQRTE,
+                                         FeatureMFTB, FeaturePairedSingles]>;
 def : Processor<"g3", G3Itineraries, [Directive750,
                                       FeatureFRES, FeatureFRSQRTE,
                                       FeatureMFTB]>;
