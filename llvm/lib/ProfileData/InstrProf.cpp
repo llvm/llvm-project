@@ -617,7 +617,7 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // ".__uniq." suffix is used to differentiate internal linkage functions in
   // different modules and should be kept. This is the only suffix with the
   // pattern ".xxx" which is kept before matching, other suffixes ".llvm." and
-  // ".part" will be stripped.
+  // ".part." will be stripped.
   //
   // Leverage the common canonicalization logic from FunctionSamples. Instead of
   // removing all suffixes except ".__uniq.", explicitly specify the ones to be
@@ -628,7 +628,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // and its post-split clones (foo.resume, foo.cleanup) are all canonicalized
   // to "foo" otherwise, which can make the symtab lookup return unexpected
   // result.
-  const SmallVector<StringRef> SuffixesToRemove{".llvm.", ".part."};
+  const SmallVector<StringRef> SuffixesToRemove{FunctionSamples::LLVMSuffix,
+                                                FunctionSamples::PartSuffix};
   return FunctionSamples::getCanonicalFnName(PGOName, SuffixesToRemove);
 }
 

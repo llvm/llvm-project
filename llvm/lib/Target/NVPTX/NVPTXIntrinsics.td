@@ -1810,10 +1810,26 @@ foreach op = ["expect_tx", "complete_tx"] in {
     foreach space = ["space_cta", "space_cluster"] in {
       defvar intr = !cast<Intrinsic>(MBAR_UTIL<op, scope, space>.intr_name);
       defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      defvar asm_str = MBAR_UTIL<op, scope, space, "relaxed">.asm_str;
+
+      // The shared::cluster form additionally carries a 32-bit CTA mask.
+      defvar is_mc_space = !eq(space, "space_cluster");
+
       def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
-                           MBAR_UTIL<op, scope, space, "relaxed">.asm_str,
-                           [(intr addr:$addr, i32:$tx_count)]>,
+                           asm_str,
+                           !if(is_mc_space,
+                               [(intr addr:$addr, i32:$tx_count, (i32 srcvalue), 0)],
+                               [(intr addr:$addr, i32:$tx_count)])>,
                            Requires<[PTX80, SM90]>;
+
+      if is_mc_space then {
+        def mbar_ # suffix # "_MC" : NVPTXInst<(outs),
+                              (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                              !subst(".b64", ".multicast::cluster::32b.b64", asm_str)
+                                # " [$addr], $tx_count, $mc;",
+                              [(intr addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                              Requires<[hasRubinFamilySupport]>;
+      }
     } // space
   } // scope
 } // op
@@ -1842,8 +1858,14 @@ multiclass MBAR_ARR_INTR<string op, string scope, string sem,
   def _CLUSTER : NVPTXInst<(outs),
                  (ins ADDR:$addr, B32:$tx_count),
                  asm_cluster # " _, [$addr], $tx_count;",
-                 [(intr_cluster addr:$addr, i32:$tx_count)]>,
+                 [(intr_cluster addr:$addr, i32:$tx_count, (i32 srcvalue), 0)]>,
                  Requires<pred>;
+  def _CLUSTER_MC : NVPTXInst<(outs),
+                    (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                    !subst(".b64", ".multicast::cluster::32b.b64", asm_cluster)
+                      # " _, [$addr], $tx_count, $mc;",
+                    [(intr_cluster addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                    Requires<[hasRubinFamilySupport]>;
 }
 foreach op = ["arrive", "arrive.expect_tx",
               "arrive_drop", "arrive_drop.expect_tx"] in {
