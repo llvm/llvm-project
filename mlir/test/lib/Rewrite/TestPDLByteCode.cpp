@@ -117,6 +117,10 @@ static void customRewriter(PatternRewriter &rewriter, Operation *root,
   rewriter.eraseOp(root);
 }
 
+static StringAttr identityStringAttr(PatternRewriter &, StringAttr attr) {
+  return attr;
+}
+
 namespace {
 struct TestPDLByteCodePass
     : public PassWrapper<TestPDLByteCodePass, OperationPass<ModuleOp>> {
@@ -182,6 +186,7 @@ struct TestPDLByteCodePass
     pdlPattern.registerRewriteFunction("type_creator", customCreateType);
     pdlPattern.registerRewriteFunction("str_creator", customCreateStrAttr);
     pdlPattern.registerRewriteFunction("rewriter", customRewriter);
+    pdlPattern.registerRewriteFunction("identity_str_attr", identityStringAttr);
     patternList.add(std::move(pdlPattern));
 
     // Invoke the pattern driver with the provided patterns.
