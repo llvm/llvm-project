@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestAttributes.h"
 #include "TestDialect.h"
 #include "mlir/Parser/Parser.h"
 

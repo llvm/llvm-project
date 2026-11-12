@@ -15,7 +15,7 @@ include "mlir/Interfaces/SideEffectInterfaceBase.td"
 // A set of type interfaces used to test interface inheritance.
 def TestBaseTypeInterfacePrintTypeA : TypeInterface<"TestBaseTypeInterfacePrintTypeA"> {
   let cppNamespace = "::test";
-  let cppIncludes = ["TestTypes.h"];
+  let cppIncludes = ["TestTypesCore.h"];
   let methods = [
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeA", (ins "::mlir::Location":$loc), [{
@@ -27,7 +27,7 @@ def TestBaseTypeInterfacePrintTypeA : TypeInterface<"TestBaseTypeInterfacePrintT
 def TestBaseTypeInterfacePrintTypeB
   : TypeInterface<"TestBaseTypeInterfacePrintTypeB", [TestBaseTypeInterfacePrintTypeA]> {
   let cppNamespace = "::test";
-  let cppIncludes = ["TestTypes.h"];
+  let cppIncludes = ["TestTypesCore.h"];
   let methods = [
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeB", (ins "::mlir::Location":$loc),
@@ -42,7 +42,7 @@ def TestBaseTypeInterfacePrintTypeB
 def TestTypeInterface
   : TypeInterface<"TestTypeInterface", [TestBaseTypeInterfacePrintTypeB]> {
   let cppNamespace = "::test";
-  let cppIncludes = ["TestTypes.h"];
+  let cppIncludes = ["TestTypesCore.h"];
   let methods = [
     InterfaceMethod<"Prints the type name.",
       "void", "printTypeC", (ins "::mlir::Location":$loc)
@@ -83,7 +83,7 @@ def TestTypeInterface
 
 def TestExternalTypeInterface : TypeInterface<"TestExternalTypeInterface"> {
   let cppNamespace = "::mlir";
-  let cppIncludes = ["TestTypes.h"];
+  let cppIncludes = ["TestTypesCore.h"];
   let methods = [
     InterfaceMethod<"Returns the bitwidth of the type plus 'arg'.",
       "unsigned", "getBitwidthPlusArg", (ins "unsigned":$arg)>,
@@ -113,7 +113,7 @@ def TestExternalTypeInterface : TypeInterface<"TestExternalTypeInterface"> {
 def TestExternalFallbackTypeInterface
     : TypeInterface<"TestExternalFallbackTypeInterface"> {
   let cppNamespace = "::mlir";
-  let cppIncludes = ["TestTypes.h"];
+  let cppIncludes = ["TestTypesCore.h"];
   let methods = [
     InterfaceMethod<"Returns the bitwidth of the given integer type.",
       "unsigned", "getBitwidth", (ins), "", "return $_type.getWidth();">,
@@ -122,7 +122,7 @@ def TestExternalFallbackTypeInterface
 
 def TestExternalAttrInterface : AttrInterface<"TestExternalAttrInterface"> {
   let cppNamespace = "::mlir";
-  let cppIncludes = ["TestAttributes.h"];
+  let cppIncludes = ["TestAttributesCore.h"];
   let methods = [
     InterfaceMethod<"Gets the dialect pointer.", "const ::mlir::Dialect *",
       "getDialectPtr">,
@@ -182,7 +182,7 @@ def TestOptionallyImplementedOpInterface
 def TestOptionallyImplementedAttrInterface
     : AttrInterface<"TestOptionallyImplementedAttrInterface"> {
   let cppNamespace = "::mlir";
-  let cppIncludes = ["TestAttributes.h"];
+  let cppIncludes = ["TestAttributesCore.h"];
 
   let methods = [
     InterfaceMethod<"", "bool", "getImplementsInterface", (ins)>,
@@ -196,7 +196,7 @@ def TestOptionallyImplementedAttrInterface
 def TestOptionallyImplementedTypeInterface
     : TypeInterface<"TestOptionallyImplementedTypeInterface"> {
   let cppNamespace = "::mlir";
-  let cppIncludes = ["TestTypes.h"];
+  let cppIncludes = ["TestTypesCore.h"];
 
   let methods = [
     InterfaceMethod<"", "bool", "getImplementsInterface", (ins)>,
@@ -210,7 +210,7 @@ def TestOptionallyImplementedTypeInterface
 // Dummy type interface "A" that requires type interface "B" to be complete.
 def TestCyclicTypeInterfaceA : TypeInterface<"TestCyclicTypeInterfaceA"> {
   let cppNamespace = "::mlir";
-  let cppIncludes = ["TestTypes.h"];
+  let cppIncludes = ["TestTypesCore.h"];
   let methods = [
     InterfaceMethod<"",
       "::mlir::FailureOr<::mlir::TestCyclicTypeInterfaceB>",
@@ -225,7 +225,7 @@ def TestCyclicTypeInterfaceA : TypeInterface<"TestCyclicTypeInterfaceA"> {
 // Dummy type interface "B" that requires type interface "A" to be complete.
 def TestCyclicTypeInterfaceB : TypeInterface<"TestCyclicTypeInterfaceB"> {
   let cppNamespace = "::mlir";
-  let cppIncludes = ["TestTypes.h"];
+  let cppIncludes = ["TestTypesCore.h"];
   let methods = [
     InterfaceMethod<"",
       "::mlir::FailureOr<::mlir::TestCyclicTypeInterfaceA>",

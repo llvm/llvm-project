@@ -1,18 +1,13 @@
-//===- TestTypes.h - MLIR Test Dialect Types --------------------*- C++ -*-===//
+//===- TestAttributesCore.h - Test attributes in `Core` ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains types defined by the TestDialect for testing various
-// features of MLIR.
-//
-//===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TESTATTRIBUTES_H
-#define MLIR_TESTATTRIBUTES_H
+#ifndef MLIR_TEST_DIALECT_TEST_TESTATTRIBUTESCORE_H
+#define MLIR_TEST_DIALECT_TEST_TESTATTRIBUTESCORE_H
 
 #include <tuple>
 
@@ -48,6 +43,6 @@ using TestDialectResourceBlobHandle =
 } // namespace test
 
 #define GET_ATTRDEF_CLASSES
-#include "TestAttrDefs.h.inc"
+#include "TestAttributesCore.h.inc"
 
-#endif // MLIR_TESTATTRIBUTES_H
+#endif // MLIR_TEST_DIALECT_TEST_TESTATTRIBUTESCORE_H

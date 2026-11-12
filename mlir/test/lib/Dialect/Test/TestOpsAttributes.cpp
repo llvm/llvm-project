@@ -8,6 +8,10 @@
 
 #include "TestOpsAttributes.h"
 #include "TestFormatUtils.h"
+// The definitions of `Attributes` ops use the type interfaces of `Core`.
+#include "TestTypesCore.h"
+// The generated op definitions parse prop-dicts with `FieldParser`.
+#include "mlir/IR/DialectImplementation.h"
 
 using namespace mlir;
 using namespace test;

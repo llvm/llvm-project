@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestOpsPatterns.h"
+// The definitions of `Patterns` ops use the types in `Core`.
+#include "TestTypesCore.h"
 
 using namespace mlir;
 using namespace test;

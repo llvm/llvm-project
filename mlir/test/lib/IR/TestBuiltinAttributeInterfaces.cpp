@@ -8,14 +8,12 @@
 
 #include <utility>
 
-#include "TestAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
-using namespace test;
 
 // Helper to print one scalar value, force int8_t to print as integer instead of
 // char.

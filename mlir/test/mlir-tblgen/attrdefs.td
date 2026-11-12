@@ -19,11 +19,11 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::CompoundAAttr,
 // DEF: ::test::SingleParameterAttr
 
-// DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(
+// DEF-LABEL: ::mlir::OptionalParseResult generatedTestDialectAttributeParser(
 // DEF-SAME: ::mlir::AsmParser &parser,
 // DEF-SAME: ::llvm::StringRef *mnemonic, ::mlir::Type type,
 // DEF-SAME: ::mlir::Attribute &value) {
-// DEF: return ::mlir::AsmParser::KeywordSwitch<::mlir::OptionalParseResult>(parser)
+// DEF: return ::mlir::AsmParser::KeywordSwitch<::mlir::OptionalParseResult>(parser, mnemonic)
 // DEF: .Case(::test::IndexAttr::getMnemonic()
 // DEF-NEXT:   value = ::test::IndexAttr::parse(parser, type);
 // DEF-NEXT:   return ::mlir::success(!!value);
@@ -34,6 +34,17 @@ include "mlir/IR/OpBase.td"
 // DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
 // DEF-NEXT:   return std::nullopt;
+// DEF: ::llvm::LogicalResult generatedTestDialectAttributePrinter(
+
+// Without partitions, the dispatch functions are also available under their
+// former names.
+// DEF: /// Kept for compatibility, use `generatedTestDialectAttributeParser` and `generatedTestDialectAttributePrinter` instead.
+// DEF-NEXT: {{\[\[}}maybe_unused{{\]\]}} static ::mlir::OptionalParseResult generatedAttributeParser(::mlir::AsmParser &parser, ::llvm::StringRef *mnemonic, ::mlir::Type type, ::mlir::Attribute &value) {
+// DEF-NEXT:   return ::test::generatedTestDialectAttributeParser(parser, mnemonic, type, value);
+// DEF-NEXT: }
+// DEF: {{\[\[}}maybe_unused{{\]\]}} static ::llvm::LogicalResult generatedAttributePrinter(::mlir::Attribute def, ::mlir::AsmPrinter &printer) {
+// DEF-NEXT:   return ::test::generatedTestDialectAttributePrinter(def, printer);
+// DEF-NEXT: }
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
