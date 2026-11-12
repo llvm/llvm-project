@@ -327,8 +327,10 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
-  if (isLFI())
+  if (isLFI()) {
     ReserveXRegister.set(25, 29);
+    ReserveLRForRA = true;
+  }
 
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
   InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
