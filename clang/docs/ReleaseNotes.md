@@ -48,6 +48,12 @@ The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
 Clang will stop accepting non-ascii whitespaces as token separators
 in a future version of Clang.
 
+- Atomic arithmetic, `__sync_*`, `__atomic_test_and_set` and `__atomic_clear`
+  on a `__ptrauth`-qualified object, and `++`, `--` and compound assignment on
+  an `_Atomic` one, are now errors. An operand passed by address, such as the
+  `expected` of a compare-exchange, must now point to the object's
+  `__ptrauth`-qualified type.
+
 ### C++ Specific Potentially Breaking Changes
 
 - The `[[carries_dependency]]` attribute is no longer recognized, in any language
@@ -167,6 +173,10 @@ features cannot lower the translation-unit ABI level;
   a deleted template constructor which should be returned in a register.
   This affects the ABI of `std::strong_ordering` in some versions of the
   Microsoft STL. (#GH237188)
+
+- Code built with an older Clang reads and writes the raw bits of a
+  `__ptrauth`-qualified object through the atomic builtins, so it disagrees
+  with this release about the same object.
 
 ### AST Dumping Potentially Breaking Changes
 
