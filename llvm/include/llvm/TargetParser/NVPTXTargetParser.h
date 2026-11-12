@@ -23,9 +23,11 @@ enum GPUKind : uint8_t {
   GK_##KIND,
 #include "llvm/TargetParser/NVPTXTargetParser.def"
 
-  // Alias for the last GPUKind. Keep in sync with the final .def row.
-  // FIXME: Should be generated once the GPU list moves to TableGen.
-  GK_LAST = GK_SM_121f,
+  // Count the rows in NVPTXTargetParser.def by adding +1 for each entry to init
+  // GK_LAST as the final valid value without having to manually update it.
+  GK_LAST = GK_NONE
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX) +1
+#include "llvm/TargetParser/NVPTXTargetParser.def"
 };
 
 /// Suffix class of an NVPTX architecture name. Enumerator spellings match the

@@ -88,6 +88,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should not be defined before c++20"
 #  endif
@@ -189,7 +193,7 @@
 #  endif
 
 #  ifdef __cpp_lib_constexpr_atomic
-#    error "__cpp_lib_constexpr_atomic should not be defined before c++20"
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_bitset
@@ -328,12 +332,20 @@
 #    error "__cpp_lib_coroutine should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_debugging
 #    error "__cpp_lib_debugging should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_define_static
+#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_destroying_delete
@@ -350,6 +362,10 @@
 
 #  ifdef __cpp_lib_erase_if
 #    error "__cpp_lib_erase_if should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_exchange_function
@@ -748,6 +764,10 @@
 #    error "__cpp_lib_null_iterators should not be defined before c++14"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_optional
 #    error "__cpp_lib_optional should not be defined before c++17"
 #  endif
@@ -762,6 +782,10 @@
 
 #  ifdef __cpp_lib_parallel_algorithm
 #    error "__cpp_lib_parallel_algorithm should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_philox_engine
@@ -797,7 +821,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_input
-#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -805,7 +829,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_cache_latest
-#    error "__cpp_lib_ranges_cache_latest should not be defined before c++23"
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -894,6 +918,10 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_reflection
+#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_remove_cvref
@@ -1034,6 +1062,10 @@
 
 #  ifdef __cpp_lib_syncbuf
 #    error "__cpp_lib_syncbuf should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_text_encoding
@@ -1202,6 +1234,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should not be defined before c++20"
 #  endif
@@ -1309,7 +1345,7 @@
 #  endif
 
 #  ifdef __cpp_lib_constexpr_atomic
-#    error "__cpp_lib_constexpr_atomic should not be defined before c++20"
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_bitset
@@ -1448,12 +1484,20 @@
 #    error "__cpp_lib_coroutine should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_debugging
 #    error "__cpp_lib_debugging should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_define_static
+#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_destroying_delete
@@ -1470,6 +1514,10 @@
 
 #  ifdef __cpp_lib_erase_if
 #    error "__cpp_lib_erase_if should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -1898,6 +1946,10 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++14"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_optional
 #    error "__cpp_lib_optional should not be defined before c++17"
 #  endif
@@ -1912,6 +1964,10 @@
 
 #  ifdef __cpp_lib_parallel_algorithm
 #    error "__cpp_lib_parallel_algorithm should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_philox_engine
@@ -1956,7 +2012,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_input
-#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -1964,7 +2020,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_cache_latest
-#    error "__cpp_lib_ranges_cache_latest should not be defined before c++23"
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -2053,6 +2109,10 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_reflection
+#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_remove_cvref
@@ -2211,6 +2271,10 @@
 
 #  ifdef __cpp_lib_syncbuf
 #    error "__cpp_lib_syncbuf should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_text_encoding
@@ -2415,6 +2479,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should not be defined before c++20"
 #  endif
@@ -2537,7 +2605,7 @@
 #  endif
 
 #  ifdef __cpp_lib_constexpr_atomic
-#    error "__cpp_lib_constexpr_atomic should not be defined before c++20"
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_bitset
@@ -2676,12 +2744,20 @@
 #    error "__cpp_lib_coroutine should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_debugging
 #    error "__cpp_lib_debugging should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_define_static
+#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_destroying_delete
@@ -2701,6 +2777,10 @@
 
 #  ifdef __cpp_lib_erase_if
 #    error "__cpp_lib_erase_if should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -3213,6 +3293,10 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++17"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++17"
 #  endif
@@ -3239,6 +3323,10 @@
 #    ifdef __cpp_lib_parallel_algorithm
 #      error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_philox_engine
@@ -3283,7 +3371,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_input
-#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -3291,7 +3379,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_cache_latest
-#    error "__cpp_lib_ranges_cache_latest should not be defined before c++23"
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -3383,6 +3471,10 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_reflection
+#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_remove_cvref
@@ -3571,6 +3663,10 @@
 
 #  ifdef __cpp_lib_syncbuf
 #    error "__cpp_lib_syncbuf should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_text_encoding
@@ -3811,6 +3907,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++20"
 #  endif
@@ -3992,17 +4092,8 @@
 #    error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++20"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_constexpr_atomic
-#      error "__cpp_lib_constexpr_atomic should be defined in c++20"
-#    endif
-#    if __cpp_lib_constexpr_atomic != 202411L
-#      error "__cpp_lib_constexpr_atomic should have the value 202411L in c++20"
-#    endif
-#  else
-#    ifdef __cpp_lib_constexpr_atomic
-#      error "__cpp_lib_constexpr_atomic should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_bitset
@@ -4177,12 +4268,20 @@
 #    error "__cpp_lib_coroutine should have the value 201902L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_debugging
 #    error "__cpp_lib_debugging should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_define_static
+#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
@@ -4217,6 +4316,10 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -4804,6 +4907,10 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++20"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++20"
 #  endif
@@ -4830,6 +4937,10 @@
 #    ifdef __cpp_lib_parallel_algorithm
 #      error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_philox_engine
@@ -4886,7 +4997,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_input
-#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -4894,7 +5005,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_cache_latest
-#    error "__cpp_lib_ranges_cache_latest should not be defined before c++23"
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -4986,6 +5097,10 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_reflection
+#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_remove_cvref
@@ -5213,6 +5328,10 @@
 #    ifdef __cpp_lib_syncbuf
 #      error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_text_encoding
@@ -5483,6 +5602,10 @@
 #    error "__cpp_lib_atomic_min_max should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_atomic_reductions
+#    error "__cpp_lib_atomic_reductions should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_atomic_ref
 #    error "__cpp_lib_atomic_ref should be defined in c++23"
 #  endif
@@ -5670,17 +5793,8 @@
 #    error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_constexpr_atomic
-#      error "__cpp_lib_constexpr_atomic should be defined in c++23"
-#    endif
-#    if __cpp_lib_constexpr_atomic != 202411L
-#      error "__cpp_lib_constexpr_atomic should have the value 202411L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_constexpr_atomic
-#      error "__cpp_lib_constexpr_atomic should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_bitset
@@ -5876,12 +5990,20 @@
 #    error "__cpp_lib_coroutine should have the value 201902L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_counting_scope
+#    error "__cpp_lib_counting_scope should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_debugging
 #    error "__cpp_lib_debugging should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_define_static
+#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
@@ -5916,6 +6038,10 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_exception_ptr_cast
+#    error "__cpp_lib_exception_ptr_cast should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -6560,6 +6686,10 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++23"
 #  endif
 
+#  ifdef __cpp_lib_observable_checkpoint
+#    error "__cpp_lib_observable_checkpoint should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++23"
 #  endif
@@ -6589,6 +6719,10 @@
 #    ifdef __cpp_lib_parallel_algorithm
 #      error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_parallel_scheduler
+#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_philox_engine
@@ -6662,17 +6796,8 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_as_input
-#      error "__cpp_lib_ranges_as_input should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_as_input != 202502L
-#      error "__cpp_lib_ranges_as_input should have the value 202502L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_as_input
-#      error "__cpp_lib_ranges_as_input should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_as_rvalue
@@ -6682,17 +6807,8 @@
 #    error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_cache_latest
-#      error "__cpp_lib_ranges_cache_latest should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_cache_latest != 202411L
-#      error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_cache_latest
-#      error "__cpp_lib_ranges_cache_latest should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifdef __cpp_lib_ranges_cache_latest
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -6847,6 +6963,10 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_reflection
+#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_remove_cvref
@@ -7101,6 +7221,10 @@
 #    ifdef __cpp_lib_syncbuf
 #      error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_task
+#    error "__cpp_lib_task should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_text_encoding
@@ -7399,6 +7523,19 @@
 #  endif
 #  if __cpp_lib_atomic_min_max != 202403L
 #    error "__cpp_lib_atomic_min_max should have the value 202403L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_atomic_reductions
+#      error "__cpp_lib_atomic_reductions should be defined in c++26"
+#    endif
+#    if __cpp_lib_atomic_reductions != 202506L
+#      error "__cpp_lib_atomic_reductions should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_atomic_reductions
+#      error "__cpp_lib_atomic_reductions should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_atomic_ref
@@ -7911,6 +8048,19 @@
 #    error "__cpp_lib_coroutine should have the value 201902L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_counting_scope
+#      error "__cpp_lib_counting_scope should be defined in c++26"
+#    endif
+#    if __cpp_lib_counting_scope != 202506L
+#      error "__cpp_lib_counting_scope should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_counting_scope
+#      error "__cpp_lib_counting_scope should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING
 #    ifndef __cpp_lib_debugging
 #      error "__cpp_lib_debugging should be defined in c++26"
@@ -7934,6 +8084,19 @@
 #  else
 #    ifdef __cpp_lib_default_template_type_for_algorithm_values
 #      error "__cpp_lib_default_template_type_for_algorithm_values should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_define_static
+#      error "__cpp_lib_define_static should be defined in c++26"
+#    endif
+#    if __cpp_lib_define_static != 202506L
+#      error "__cpp_lib_define_static should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_define_static
+#      error "__cpp_lib_define_static should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -7969,6 +8132,19 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_exception_ptr_cast
+#      error "__cpp_lib_exception_ptr_cast should be defined in c++26"
+#    endif
+#    if __cpp_lib_exception_ptr_cast != 202506L
+#      error "__cpp_lib_exception_ptr_cast should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_exception_ptr_cast
+#      error "__cpp_lib_exception_ptr_cast should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -8952,6 +9128,19 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should be defined in c++26"
+#    endif
+#    if __cpp_lib_observable_checkpoint != 202506L
+#      error "__cpp_lib_observable_checkpoint should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++26"
 #  endif
@@ -8989,6 +9178,19 @@
 #  else
 #    ifdef __cpp_lib_parallel_algorithm
 #      error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_parallel_scheduler
+#      error "__cpp_lib_parallel_scheduler should be defined in c++26"
+#    endif
+#    if __cpp_lib_parallel_scheduler != 202506L
+#      error "__cpp_lib_parallel_scheduler should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_parallel_scheduler
+#      error "__cpp_lib_parallel_scheduler should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -9298,6 +9500,19 @@
 #    error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_reflection
+#      error "__cpp_lib_reflection should be defined in c++26"
+#    endif
+#    if __cpp_lib_reflection != 202506L
+#      error "__cpp_lib_reflection should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_reflection
+#      error "__cpp_lib_reflection should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_remove_cvref
 #    error "__cpp_lib_remove_cvref should be defined in c++26"
 #  endif
@@ -9423,8 +9638,8 @@
 #    ifndef __cpp_lib_simd
 #      error "__cpp_lib_simd should be defined in c++26"
 #    endif
-#    if __cpp_lib_simd != 202606L
-#      error "__cpp_lib_simd should have the value 202606L in c++26"
+#    if __cpp_lib_simd != 202411L
+#      error "__cpp_lib_simd should have the value 202411L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_simd
@@ -9444,8 +9659,8 @@
 #    ifndef __cpp_lib_simd_permutations
 #      error "__cpp_lib_simd_permutations should be defined in c++26"
 #    endif
-#    if __cpp_lib_simd_permutations != 202606L
-#      error "__cpp_lib_simd_permutations should have the value 202606L in c++26"
+#    if __cpp_lib_simd_permutations != 202506L
+#      error "__cpp_lib_simd_permutations should have the value 202506L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_simd_permutations
@@ -9600,6 +9815,19 @@
 #  else
 #    ifdef __cpp_lib_syncbuf
 #      error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_task
+#      error "__cpp_lib_task should be defined in c++26"
+#    endif
+#    if __cpp_lib_task != 202506L
+#      error "__cpp_lib_task should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_task
+#      error "__cpp_lib_task should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -9920,6 +10148,19 @@
 #  endif
 #  if __cpp_lib_atomic_min_max != 202403L
 #    error "__cpp_lib_atomic_min_max should have the value 202403L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_atomic_reductions
+#      error "__cpp_lib_atomic_reductions should be defined in c++29"
+#    endif
+#    if __cpp_lib_atomic_reductions != 202506L
+#      error "__cpp_lib_atomic_reductions should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_atomic_reductions
+#      error "__cpp_lib_atomic_reductions should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_atomic_ref
@@ -10432,6 +10673,19 @@
 #    error "__cpp_lib_coroutine should have the value 201902L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_counting_scope
+#      error "__cpp_lib_counting_scope should be defined in c++29"
+#    endif
+#    if __cpp_lib_counting_scope != 202506L
+#      error "__cpp_lib_counting_scope should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_counting_scope
+#      error "__cpp_lib_counting_scope should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING
 #    ifndef __cpp_lib_debugging
 #      error "__cpp_lib_debugging should be defined in c++29"
@@ -10455,6 +10709,19 @@
 #  else
 #    ifdef __cpp_lib_default_template_type_for_algorithm_values
 #      error "__cpp_lib_default_template_type_for_algorithm_values should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_define_static
+#      error "__cpp_lib_define_static should be defined in c++29"
+#    endif
+#    if __cpp_lib_define_static != 202506L
+#      error "__cpp_lib_define_static should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_define_static
+#      error "__cpp_lib_define_static should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -10490,6 +10757,19 @@
 #  endif
 #  if __cpp_lib_erase_if != 202002L
 #    error "__cpp_lib_erase_if should have the value 202002L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_exception_ptr_cast
+#      error "__cpp_lib_exception_ptr_cast should be defined in c++29"
+#    endif
+#    if __cpp_lib_exception_ptr_cast != 202506L
+#      error "__cpp_lib_exception_ptr_cast should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_exception_ptr_cast
+#      error "__cpp_lib_exception_ptr_cast should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_exchange_function
@@ -11491,6 +11771,19 @@
 #    error "__cpp_lib_null_iterators should have the value 201304L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should be defined in c++29"
+#    endif
+#    if __cpp_lib_observable_checkpoint != 202506L
+#      error "__cpp_lib_observable_checkpoint should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_observable_checkpoint
+#      error "__cpp_lib_observable_checkpoint should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++29"
 #  endif
@@ -11528,6 +11821,19 @@
 #  else
 #    ifdef __cpp_lib_parallel_algorithm
 #      error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_parallel_scheduler
+#      error "__cpp_lib_parallel_scheduler should be defined in c++29"
+#    endif
+#    if __cpp_lib_parallel_scheduler != 202506L
+#      error "__cpp_lib_parallel_scheduler should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_parallel_scheduler
+#      error "__cpp_lib_parallel_scheduler should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -11846,6 +12152,19 @@
 #    error "__cpp_lib_reference_wrapper should have the value 202403L in c++29"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_reflection
+#      error "__cpp_lib_reflection should be defined in c++29"
+#    endif
+#    if __cpp_lib_reflection != 202506L
+#      error "__cpp_lib_reflection should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_reflection
+#      error "__cpp_lib_reflection should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_remove_cvref
 #    error "__cpp_lib_remove_cvref should be defined in c++29"
 #  endif
@@ -11971,8 +12290,8 @@
 #    ifndef __cpp_lib_simd
 #      error "__cpp_lib_simd should be defined in c++29"
 #    endif
-#    if __cpp_lib_simd != 202606L
-#      error "__cpp_lib_simd should have the value 202606L in c++29"
+#    if __cpp_lib_simd != 202411L
+#      error "__cpp_lib_simd should have the value 202411L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_simd
@@ -12010,8 +12329,8 @@
 #    ifndef __cpp_lib_simd_permutations
 #      error "__cpp_lib_simd_permutations should be defined in c++29"
 #    endif
-#    if __cpp_lib_simd_permutations != 202606L
-#      error "__cpp_lib_simd_permutations should have the value 202606L in c++29"
+#    if __cpp_lib_simd_permutations != 202506L
+#      error "__cpp_lib_simd_permutations should have the value 202506L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_simd_permutations
@@ -12166,6 +12485,19 @@
 #  else
 #    ifdef __cpp_lib_syncbuf
 #      error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_task
+#      error "__cpp_lib_task should be defined in c++29"
+#    endif
+#    if __cpp_lib_task != 202506L
+#      error "__cpp_lib_task should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_task
+#      error "__cpp_lib_task should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 

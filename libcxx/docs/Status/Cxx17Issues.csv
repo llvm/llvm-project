@@ -181,7 +181,7 @@
 "[LWG2728](https://wg21.link/LWG2728)","status(p).permissions() and symlink_status(p).permissions() are not specified","2016-06 (Oulu)","{{Complete}}","","[#103430](https://github.com/llvm/llvm-project/issues/103430)",""
 "","","","","","",""
 "[LWG2062](https://wg21.link/LWG2062)","Effect contradictions w/o no-throw guarantee of std::function swaps","2016-11 (Issaquah)","{{Complete}}","","[#103431](https://github.com/llvm/llvm-project/issues/103431)",""
-"[LWG2166](https://wg21.link/LWG2166)","Heap property underspecified?","2016-11 (Issaquah)","","","[#99969](https://github.com/llvm/llvm-project/issues/99969)",""
+"[LWG2166](https://wg21.link/LWG2166)","Heap property underspecified?","2016-11 (Issaquah)","{{NothingToDo}}","","[#99969](https://github.com/llvm/llvm-project/issues/99969)",""
 "[LWG2221](https://wg21.link/LWG2221)","No formatted output operator for nullptr","2016-11 (Issaquah)","{{Complete}}","","[#103432](https://github.com/llvm/llvm-project/issues/103432)",""
 "[LWG2223](https://wg21.link/LWG2223)","shrink_to_fit effect on iterator validity","2016-11 (Issaquah)","{{Complete}}","","[#103433](https://github.com/llvm/llvm-project/issues/103433)",""
 "[LWG2261](https://wg21.link/LWG2261)","Are containers required to use their 'pointer' type internally?","2016-11 (Issaquah)","","","[#99970](https://github.com/llvm/llvm-project/issues/99970)",""

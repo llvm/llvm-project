@@ -861,23 +861,23 @@ define double @fcvtms_dd_round_simd(double %a) {
 define double @fcvtmu_ds_round_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtmu_ds_round_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    fcvtmu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtmu_ds_round_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu d0, s0
+; CHECK-NEXT:    fcvtzu d0, s0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: fcvtmu_ds_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    fcvtmu d0, s0
+; CHECK-SME-NEXT:    fcvtzu d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_ds_round_simd:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    fcvtmu d0, s0
+; CHECK-SVE-NEXT:    fcvtzu d0, s0
 ; CHECK-SVE-NEXT:    ret
   %r = call float @llvm.floor.f32(float %a)
   %i = fptoui float %r to i64
@@ -888,23 +888,23 @@ define double @fcvtmu_ds_round_simd(float %a) {
 define float @fcvtmu_sd_round_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtmu_sd_round_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    fcvtmu w8, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtzu w8, d0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtmu_sd_round_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu s0, d0
+; CHECK-NEXT:    fcvtzu s0, d0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: fcvtmu_sd_round_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    fcvtmu s0, d0
+; CHECK-SME-NEXT:    fcvtzu s0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_sd_round_simd:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    fcvtmu s0, d0
+; CHECK-SVE-NEXT:    fcvtzu s0, d0
 ; CHECK-SVE-NEXT:    ret
   %r = call double @llvm.floor.f64(double %a)
   %i = fptoui double %r to i32
@@ -2511,23 +2511,23 @@ define double @fcvtms_dd_simd(double %a) {
 define float @fcvtmu_sh_simd(half %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtmu_sh_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    fcvtmu w8, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtzu w8, h0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtmu_sh_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu s0, h0
+; CHECK-NEXT:    fcvtzu s0, h0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: fcvtmu_sh_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    fcvtmu s0, h0
+; CHECK-SME-NEXT:    fcvtzu s0, h0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_sh_simd:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    fcvtmu s0, h0
+; CHECK-SVE-NEXT:    fcvtzu s0, h0
 ; CHECK-SVE-NEXT:    ret
   %r = call half @llvm.floor.f16(half %a)
   %i = call i32 @llvm.fptoui.sat.i32.f16(half %r)
@@ -2538,23 +2538,23 @@ define float @fcvtmu_sh_simd(half %a) {
 define double @fcvtmu_dh_simd(half %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtmu_dh_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    fcvtmu x8, h0
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, h0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtmu_dh_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu d0, h0
+; CHECK-NEXT:    fcvtzu d0, h0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: fcvtmu_dh_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    fcvtmu d0, h0
+; CHECK-SME-NEXT:    fcvtzu d0, h0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_dh_simd:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    fcvtmu d0, h0
+; CHECK-SVE-NEXT:    fcvtzu d0, h0
 ; CHECK-SVE-NEXT:    ret
   %r = call half @llvm.floor.f16(half %a)
   %i = call i64 @llvm.fptoui.sat.i64.f16(half %r)
@@ -2565,23 +2565,23 @@ define double @fcvtmu_dh_simd(half %a) {
 define double @fcvtmu_ds_simd(float %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtmu_ds_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    fcvtmu x8, s0
+; CHECK-NOFPRCVT-NEXT:    fcvtzu x8, s0
 ; CHECK-NOFPRCVT-NEXT:    fmov d0, x8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtmu_ds_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu d0, s0
+; CHECK-NEXT:    fcvtzu d0, s0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: fcvtmu_ds_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    fcvtmu d0, s0
+; CHECK-SME-NEXT:    fcvtzu d0, s0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_ds_simd:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    fcvtmu d0, s0
+; CHECK-SVE-NEXT:    fcvtzu d0, s0
 ; CHECK-SVE-NEXT:    ret
   %r = call float @llvm.floor.f32(float %a)
   %i = call i64 @llvm.fptoui.sat.i64.f32(float %r)
@@ -2592,23 +2592,23 @@ define double @fcvtmu_ds_simd(float %a) {
 define float @fcvtmu_sd_simd(double %a) {
 ; CHECK-NOFPRCVT-LABEL: fcvtmu_sd_simd:
 ; CHECK-NOFPRCVT:       // %bb.0:
-; CHECK-NOFPRCVT-NEXT:    fcvtmu w8, d0
+; CHECK-NOFPRCVT-NEXT:    fcvtzu w8, d0
 ; CHECK-NOFPRCVT-NEXT:    fmov s0, w8
 ; CHECK-NOFPRCVT-NEXT:    ret
 ;
 ; CHECK-LABEL: fcvtmu_sd_simd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu s0, d0
+; CHECK-NEXT:    fcvtzu s0, d0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-SME-LABEL: fcvtmu_sd_simd:
 ; CHECK-SME:       // %bb.0:
-; CHECK-SME-NEXT:    fcvtmu s0, d0
+; CHECK-SME-NEXT:    fcvtzu s0, d0
 ; CHECK-SME-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: fcvtmu_sd_simd:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    fcvtmu s0, d0
+; CHECK-SVE-NEXT:    fcvtzu s0, d0
 ; CHECK-SVE-NEXT:    ret
   %r = call double @llvm.floor.f64(double %a)
   %i = call i32 @llvm.fptoui.sat.i32.f64(double %r)

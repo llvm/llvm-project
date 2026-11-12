@@ -14,6 +14,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
@@ -1249,9 +1250,16 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return LValue();
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
-  case Expr::ConstantExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ConstantExpr");
-    return LValue();
+  case Expr::ConstantExprClass: {
+    const ConstantExpr *ce = cast<ConstantExpr>(e);
+    if (mlir::Attribute result =
+            ConstantEmitter(*this).tryEmitConstantExpr(ce)) {
+      mlir::Value val = builder.getConstant(
+          getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      return makeNaturalAlignPointeeAddrLValue(val, ce->getType());
+    }
+    return emitLValue(ce->getSubExpr());
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
@@ -1620,7 +1628,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   if (numVLAElements)
     numElements =
         builder.createMul(numVLAElements.getLoc(), numVLAElements, numElements,
-                          cir::OverflowBehavior::NoUnsignedWrap);
+                          cir::OverflowFlags::NoUnsignedWrap);
 
   return numElements;
 }
@@ -1676,7 +1684,7 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
 
       numElements =
           builder.createMul(numElements.getLoc(), numElements, vlaSize,
-                            cir::OverflowBehavior::NoUnsignedWrap);
+                            cir::OverflowFlags::NoUnsignedWrap);
     }
   } while ((type = getContext().getAsVariableArrayType(elementType)));
 

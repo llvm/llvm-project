@@ -118,12 +118,6 @@ struct InlineDescriptor {
 
   const Descriptor *Desc;
 
-  InlineDescriptor(const Descriptor *D)
-      : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
-        IsBase(false), IsActive(false), IsFieldMutable(false),
-        IsArrayElement(false), IsVolatile(false), LifeState(Lifetime::Started),
-        Desc(D) {}
-
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
 };

@@ -266,7 +266,7 @@ def : Processor<"gr740", LEON4Itineraries,
                  FeaturePWRPSR]>;
 
 // LEON 5 generic
-def : ProcessorModel<"leon5", NoSchedModel,
+def : ProcessorModel<"leon5", LEON5Model,
                      [FeatureLeon, LeonCASA, LeonCycleCounter, FeaturePWRPSR]>;
 
 //===----------------------------------------------------------------------===//
