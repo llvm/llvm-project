@@ -877,3 +877,191 @@ define i64 @lshr_i64_mask62_knownzero_multiuse(i64 %x, i64 %y) nounwind {
   call void @use64(i64 %m)
   ret i64 %s
 }
+
+; Rotates by a variable amount use ROL/ROR with CL, which already take the
+; unmasked amount. RORX only has an immediate count.
+define i64 @rotr_i64_mask_multiuse(i64 %x, i64 %amt) nounwind {
+; X86-LABEL: rotr_i64_mask_multiuse:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl %ebx, %ecx
+; X86-NEXT:    andl $63, %ecx
+; X86-NEXT:    testb $32, %bl
+; X86-NEXT:    je .LBB15_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    jmp .LBB15_3
+; X86-NEXT:  .LBB15_1:
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:  .LBB15_3:
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    shrdl %cl, %esi, %edi
+; X86-NEXT:    shrdl %cl, %eax, %esi
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    calll use64@PLT
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
+;
+; X64-LABEL: rotr_i64_mask_multiuse:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movl %ecx, %edi
+; X64-NEXT:    andl $63, %edi
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    rorq %cl, %rbx
+; X64-NEXT:    callq use64@PLT
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; BMI2-LABEL: rotr_i64_mask_multiuse:
+; BMI2:       # %bb.0:
+; BMI2-NEXT:    pushq %rbx
+; BMI2-NEXT:    movq %rsi, %rcx
+; BMI2-NEXT:    movq %rdi, %rbx
+; BMI2-NEXT:    movl %ecx, %edi
+; BMI2-NEXT:    andl $63, %edi
+; BMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; BMI2-NEXT:    rorq %cl, %rbx
+; BMI2-NEXT:    callq use64@PLT
+; BMI2-NEXT:    movq %rbx, %rax
+; BMI2-NEXT:    popq %rbx
+; BMI2-NEXT:    retq
+  %m = and i64 %amt, 63
+  %r = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %m)
+  call void @use64(i64 %m)
+  ret i64 %r
+}
+
+define i64 @rotl_i64_mask_multiuse(i64 %x, i64 %amt) nounwind {
+; X86-LABEL: rotl_i64_mask_multiuse:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl %ebx, %ecx
+; X86-NEXT:    andl $63, %ecx
+; X86-NEXT:    testb $32, %bl
+; X86-NEXT:    jne .LBB16_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    jmp .LBB16_3
+; X86-NEXT:  .LBB16_1:
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:  .LBB16_3:
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    shldl %cl, %esi, %edi
+; X86-NEXT:    shldl %cl, %eax, %esi
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    calll use64@PLT
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
+;
+; X64-LABEL: rotl_i64_mask_multiuse:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movl %ecx, %edi
+; X64-NEXT:    andl $63, %edi
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    rolq %cl, %rbx
+; X64-NEXT:    callq use64@PLT
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; BMI2-LABEL: rotl_i64_mask_multiuse:
+; BMI2:       # %bb.0:
+; BMI2-NEXT:    pushq %rbx
+; BMI2-NEXT:    movq %rsi, %rcx
+; BMI2-NEXT:    movq %rdi, %rbx
+; BMI2-NEXT:    movl %ecx, %edi
+; BMI2-NEXT:    andl $63, %edi
+; BMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; BMI2-NEXT:    rolq %cl, %rbx
+; BMI2-NEXT:    callq use64@PLT
+; BMI2-NEXT:    movq %rbx, %rax
+; BMI2-NEXT:    popq %rbx
+; BMI2-NEXT:    retq
+  %m = and i64 %amt, 63
+  %r = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %m)
+  call void @use64(i64 %m)
+  ret i64 %r
+}
+
+define i32 @rotr_i32_trunc_i64_mask_multiuse(i32 %x, i64 %amt) nounwind {
+; X86-LABEL: rotr_i32_trunc_i64_mask_multiuse:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    andl $31, %eax
+; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    rorl %cl, %esi
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll use64@PLT
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: rotr_i32_trunc_i64_mask_multiuse:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    movl %edi, %ebx
+; X64-NEXT:    movl %ecx, %edi
+; X64-NEXT:    andl $31, %edi
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    rorl %cl, %ebx
+; X64-NEXT:    callq use64@PLT
+; X64-NEXT:    movl %ebx, %eax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; BMI2-LABEL: rotr_i32_trunc_i64_mask_multiuse:
+; BMI2:       # %bb.0:
+; BMI2-NEXT:    pushq %rbx
+; BMI2-NEXT:    movq %rsi, %rcx
+; BMI2-NEXT:    movl %edi, %ebx
+; BMI2-NEXT:    movl %ecx, %edi
+; BMI2-NEXT:    andl $31, %edi
+; BMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; BMI2-NEXT:    rorl %cl, %ebx
+; BMI2-NEXT:    callq use64@PLT
+; BMI2-NEXT:    movl %ebx, %eax
+; BMI2-NEXT:    popq %rbx
+; BMI2-NEXT:    retq
+  %m = and i64 %amt, 31
+  %t = trunc i64 %m to i32
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %t)
+  call void @use64(i64 %m)
+  ret i32 %r
+}
