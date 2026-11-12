@@ -8,6 +8,7 @@
 
 #include "JITLinkTestUtils.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -58,18 +59,24 @@ static const char BlockContentBytes[] = {
 ArrayRef<char> BlockContent(BlockContentBytes);
 
 void lookupResolveEverythingToNull(
-    const llvm::jitlink::JITLinkContext::LookupMap &Symbols,
+    llvm::jitlink::JITLinkContext::LookupMap Symbols,
     std::unique_ptr<llvm::jitlink::JITLinkAsyncLookupContinuation> LC) {
   llvm::orc::ExecutorAddr Null;
   llvm::jitlink::AsyncLookupResult Result;
-  for (auto &KV : Symbols)
-    Result[KV.first] = {Null, llvm::JITSymbolFlags::Exported};
+  // The continuation may destroy the symbol string pool: move names out
+  // of Symbols and into Result below so that Symbols holds no references
+  // into the pool when the continuation runs.
+  for (auto &[Name, _] : Symbols)
+    Result[std::move(Name)] = {Null, llvm::JITSymbolFlags::Exported};
   LC->run(std::move(Result));
 }
 
 void lookupErrorOut(
-    const llvm::jitlink::JITLinkContext::LookupMap &Symbols,
+    llvm::jitlink::JITLinkContext::LookupMap Symbols,
     std::unique_ptr<llvm::jitlink::JITLinkAsyncLookupContinuation> LC) {
+  // The continuation may destroy the symbol string pool: release our
+  // references first.
+  Symbols.clear();
   LC->run(llvm::make_error<llvm::StringError>("Lookup failed",
                                               llvm::inconvertibleErrorCode()));
 }
@@ -112,4 +119,33 @@ TEST(JITLinkMocks, SmokeTest) {
   link_MachO_x86_64(std::move(G), std::move(Ctx));
 
   EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+}
+
+TEST(JITLinkMocks, FailedLookupWithGraphOwnedPool) {
+  // The graph holds the only reference to its SymbolStringPool, so the pool is
+  // destroyed along with the graph when the link fails inside lookup. Check
+  // that no SymbolStringPtrs outlive the pool.
+  auto G = std::make_unique<LinkGraph>(
+      "foo", std::make_shared<orc::SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
+      getGenericEdgeKindName);
+
+  auto &Sec =
+      G->createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+  auto &B = G->createContentBlock(Sec, BlockContent.slice(0, 8),
+                                  orc::ExecutorAddr(0x1000), 8, 0);
+  G->addDefinedSymbol(B, 0, "S", 8, Linkage::Strong, Scope::Default, false,
+                      false);
+  // Keep the external live so that it reaches lookup.
+  auto &E = G->addExternalSymbol("E", 0, false);
+  B.addEdge(x86_64::Pointer64, 0, E, 0);
+
+  Error Err = Error::success();
+  auto Ctx = makeMockContext(
+      JoinErrorsInto(Err), defaultMemMgrSetup,
+      [](MockJITLinkContext &Ctx) { Ctx.Lookup = lookupErrorOut; });
+
+  link_MachO_x86_64(std::move(G), std::move(Ctx));
+
+  EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage("Lookup failed"));
 }
