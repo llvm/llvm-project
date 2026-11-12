@@ -165,6 +165,16 @@ err:
 
 attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-indirect-calls" }
 
+;; __cfi_<fn> has the same visibility as <fn>.
+; ASM:       .globl __cfi_f10
+; ASM-NEXT:  .hidden __cfi_f10
+; ASM-NEXT:  .type __cfi_f10,@function
+; ASM-LABEL: __cfi_f10:
+define hidden void @f10() !kcfi_type !1 {
+; ASM-LABEL: {{^}}f10:
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 4, !"kcfi", i32 1}
 !1 = !{i32 12345678}
