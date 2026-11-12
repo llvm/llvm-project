@@ -6792,6 +6792,102 @@ the `int` parameter is the one that represents the error.
 }];
 }
 
+def ProfilesEnforceDocs : Documentation {
+  let Category = DocCatDecl;
+  let Heading = "profiles::enforce";
+  let Content = [{
+**Experimental.** Requires `-fexperimental-cxx-profiles`.
+
+`[[profiles::enforce(profile)]]` requests that the rules of the named C++
+profile (P3589) are enforced. It may appear on an empty-declaration that
+precedes every other declaration of the translation unit, in which case the
+profile is enforced for the whole translation unit, or on a module
+declaration, in which case the profile is enforced from the module declaration
+onwards, in every implementation unit of the module, and is advertised to
+importers (see `profiles::require`).
+
+```c++
+[[profiles::enforce(std::casting)]];
+#include <vector>
+
+float f(int *p) {
+  return *reinterpret_cast<float *>(p); // error: std::casting forbids
+                                        // reinterpret_cast
+}
+```
+
+Violations of an enforced profile are diagnosed as errors in the
+`-Wcxx-profile-<profile>-<rule>` diagnostic groups. Code in system headers is
+not checked. Unknown profile names are diagnosed with `-Wunknown-cxx-profiles`
+and enforce nothing. Profiles can also be enforced with
+`-fcxx-profiles=<profile>,...`.
+  }];
+}
+
+def ProfilesSuppressDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "profiles::suppress";
+  let Content = [{
+**Experimental.** Requires `-fexperimental-cxx-profiles`.
+
+`[[profiles::suppress(profile [, rule: name] [, justification: "text"])]]`
+appertains to a declaration or a statement and suppresses the rules of the
+named profile (or only the named rule) within the tokens of that declaration or
+statement.
+
+```c++
+[[profiles::enforce(std::casting)]];
+
+unsigned bits(float f) {
+  [[profiles::suppress(std::casting, rule: reinterpret_cast,
+                       justification: "inspecting the representation")]]
+  return *reinterpret_cast<unsigned *>(&f);
+}
+```
+
+  }];
+}
+
+def ProfilesRequireDocs : Documentation {
+  let Category = DocCatDecl;
+  let Heading = "profiles::require";
+  let Content = [{
+**Experimental.** Requires `-fexperimental-cxx-profiles`.
+
+`[[profiles::require(profile)]]` may only appear on a module import
+declaration. The import is ill-formed unless the imported module enforces the
+profile on its module declaration. It does not enforce the profile in the
+importing translation unit.
+
+```c++
+import Utilities [[profiles::require(std::casting)]];
+```
+
+  }];
+}
+
+def ProfilesExemptDocs : Documentation {
+  let Category = DocCatDecl;
+  let Heading = "profiles::exempt";
+  let Content = [{
+**Experimental.** Requires `-fexperimental-cxx-profiles`.
+
+`[[profiles::exempt(profile, angle_header: "name")]]` or
+`[[profiles::exempt(profile, quote_header: "name")]]` exempts code in the
+named header, and in every header it includes, from the rules of the profile.
+The header is identified by matching the trailing components of its path
+against `name`. An optional `justification: "text"` argument documents the
+reason.
+
+```c++
+[[profiles::enforce(std::casting)]];
+[[profiles::exempt(std::casting, quote_header: "legacy/ffi.h")]];
+#include "legacy/ffi.h"
+```
+
+  }];
+}
+
 def SuppressDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{

@@ -17,6 +17,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
+#include "clang/Sema/SemaCXXProfiles.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -476,6 +477,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   ImportState = ModuleImportState::ImportAllowed;
 
   getASTContext().setCurrentNamedModule(Mod);
+
+  CXXProfiles().ActOnModuleDecl(Mod, Interface, ModuleLoc);
 
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible

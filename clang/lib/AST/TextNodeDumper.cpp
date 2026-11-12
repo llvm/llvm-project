@@ -1651,6 +1651,18 @@ void TextNodeDumper::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node) {
   VisitCallExpr(Node);
 }
 
+/// Print how a C++ C-style or functional cast was interpreted, unless it is a
+/// plain static_cast (the common case).
+static void dumpCStyleCastInterpretation(raw_ostream &OS,
+                                         const ExplicitCastExpr *Node) {
+  CStyleCastInterpretationKind Kind = Node->getCStyleCastInterpretationKind();
+  if (Kind == CStyleCastInterpretationKind::Unknown ||
+      Kind == CStyleCastInterpretationKind::StaticCast)
+    return;
+  OS << " interpreted_as_"
+     << ExplicitCastExpr::getCStyleCastInterpretationKindName(Kind);
+}
+
 void TextNodeDumper::VisitCastExpr(const CastExpr *Node) {
   OS << " <";
   {
@@ -1659,6 +1671,8 @@ void TextNodeDumper::VisitCastExpr(const CastExpr *Node) {
   }
   dumpBasePath(OS, Node);
   OS << ">";
+  if (const auto *CStyle = dyn_cast<CStyleCastExpr>(Node))
+    dumpCStyleCastInterpretation(OS, CStyle);
   if (Node->hasStoredFPFeatures())
     printFPOptions(Node->getFPFeatures());
 }
@@ -1864,6 +1878,7 @@ void TextNodeDumper::VisitCXXFunctionalCastExpr(
     const CXXFunctionalCastExpr *Node) {
   OS << " functional cast to " << Node->getTypeAsWritten().getAsString() << " <"
      << Node->getCastKindName() << ">";
+  dumpCStyleCastInterpretation(OS, Node);
   if (Node->hasStoredFPFeatures())
     printFPOptions(Node->getFPFeatures());
 }

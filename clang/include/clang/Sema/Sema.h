@@ -164,6 +164,7 @@ class SemaAVR;
 class SemaBPF;
 class SemaCodeCompletion;
 class SemaCUDA;
+class SemaCXXProfiles;
 class SemaDirectX;
 class SemaHLSL;
 class SemaHexagon;
@@ -1512,6 +1513,11 @@ public:
     return *CUDAPtr;
   }
 
+  SemaCXXProfiles &CXXProfiles() {
+    assert(CXXProfilesPtr);
+    return *CXXProfilesPtr;
+  }
+
   SemaDirectX &DirectX() {
     assert(DirectXPtr);
     return *DirectXPtr;
@@ -1655,6 +1661,7 @@ private:
   std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
+  std::unique_ptr<SemaCXXProfiles> CXXProfilesPtr;
   std::unique_ptr<SemaDirectX> DirectXPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaHexagon> HexagonPtr;

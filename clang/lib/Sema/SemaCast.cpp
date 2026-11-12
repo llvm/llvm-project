@@ -25,6 +25,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCXXProfiles.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -132,6 +133,12 @@ namespace {
     OpRangeType OpRange;
     SourceRange DestRange;
 
+    /// For a C++ C-style or functional cast, the named cast it was
+    /// interpreted as ([expr.cast]p4), not yet taking into account whether a
+    /// const_cast follows it.
+    CStyleCastInterpretationKind CStyleInterpretation =
+        CStyleCastInterpretationKind::Unknown;
+
     // Top-level semantics-checking routines.
     void CheckConstCast();
     void CheckReinterpretCast();
@@ -151,9 +158,16 @@ namespace {
         ICE->setIsPartOfExplicitCast(true);
     }
 
+    /// Record how a C-style or functional cast was resolved on \p E, and
+    /// check \p E against the enforced C++ profiles.
+    void finishExplicitCast(ExplicitCastExpr *E);
+
     /// Complete an apparently-successful cast operation that yields
     /// the given expression.
     ExprResult complete(CastExpr *castExpr) {
+      if (auto *ExplicitCast = dyn_cast<ExplicitCastExpr>(castExpr))
+        finishExplicitCast(ExplicitCast);
+
       // If this is an unbridged cast, wrap the result in an implicit
       // cast that yields the unbridged-cast placeholder type.
       if (IsARCUnbridgedCast) {
@@ -2864,6 +2878,8 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   // In plain language, this means trying a const_cast ...
   // Note that for address space we check compatibility after const_cast.
   unsigned msg = diag::err_bad_cxx_cast_generic;
+  CStyleCastInterpretationKind Interpretation =
+      CStyleCastInterpretationKind::ConstCast;
   TryCastResult tcr = TryConstCast(Self, SrcExpr, DestType,
                                    /*CStyle*/ true, msg);
   if (SrcExpr.isInvalid())
@@ -2872,6 +2888,7 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     Kind = CK_NoOp;
 
   if (tcr == TC_NotApplicable) {
+    Interpretation = CStyleCastInterpretationKind::Unknown;
     tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg,
                               Kind);
     if (SrcExpr.isInvalid())
@@ -2880,6 +2897,7 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     if (tcr == TC_NotApplicable) {
       // ... or if that is not possible, a static_cast, ignoring const and
       // addr space, ...
+      Interpretation = CStyleCastInterpretationKind::StaticCast;
       tcr = TryStaticCast(Self, SrcExpr, DestType, CCK, OpRange, msg, Kind,
                           BasePath, ListInitialization);
       if (SrcExpr.isInvalid())
@@ -2887,6 +2905,7 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
 
       if (tcr == TC_NotApplicable) {
         // ... and finally a reinterpret_cast, ignoring const and addr space.
+        Interpretation = CStyleCastInterpretationKind::ReinterpretCast;
         tcr = TryReinterpretCast(Self, SrcExpr, DestType, /*CStyle*/ true,
                                  OpRange, msg, Kind);
         if (SrcExpr.isInvalid())
@@ -2894,6 +2913,8 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
       }
     }
   }
+  if (isValidCast(tcr))
+    CStyleInterpretation = Interpretation;
 
   if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
       isValidCast(tcr))
@@ -3487,6 +3508,70 @@ static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
   else
     Self.Diag(SrcExpr.get()->getBeginLoc(), diag::warn_cast_qual)
         << TheOffendingSrcType << TheOffendingDestType << qualifiers;
+}
+
+/// Returns the qualifiers that the explicit cast \p E casts away
+/// ([expr.const.cast]), or std::nullopt if it does not cast away constness.
+static std::optional<Qualifiers>
+getCastAwayQualifiers(Sema &Self, const ExplicitCastExpr *E) {
+  QualType DestType = E->getTypeAsWritten();
+  QualType SrcType = E->getSubExprAsWritten()->getType();
+  if (SrcType->isDependentType() || DestType->isDependentType())
+    return std::nullopt;
+  if (DestType->isReferenceType()) {
+    // A reference cast casts away constness if the corresponding pointer
+    // cast does ([expr.const.cast]p8).
+    SrcType = Self.Context.getPointerType(SrcType.getNonReferenceType());
+    DestType = Self.Context.getPointerType(DestType->getPointeeType());
+  } else if (SrcType->isArrayType()) {
+    SrcType = Self.Context.getArrayDecayedType(SrcType);
+  } else if (SrcType->isFunctionType()) {
+    SrcType = Self.Context.getPointerType(SrcType);
+  }
+
+  auto IsPointerLike = [](QualType T) {
+    return T->isAnyPointerType() || T->isMemberPointerType() ||
+           T->isBlockPointerType();
+  };
+  if (!IsPointerLike(SrcType) || !IsPointerLike(DestType))
+    return std::nullopt;
+
+  Qualifiers CastAwayQualifiers;
+  if (CastsAwayConstness(Self, SrcType, DestType, /*CheckCVR=*/true,
+                         /*CheckObjCLifetime=*/false,
+                         /*TheOffendingSrcType=*/nullptr,
+                         /*TheOffendingDestType=*/nullptr,
+                         &CastAwayQualifiers) ==
+      CastAwayConstnessKind::CACK_None)
+    return std::nullopt;
+  return CastAwayQualifiers;
+}
+
+void CastOperation::finishExplicitCast(ExplicitCastExpr *E) {
+  const LangOptions &LangOpts = Self.getLangOpts();
+  if (!LangOpts.CPlusPlus || E->isTypeDependent() ||
+      E->getCastKind() == CK_Dependent)
+    return;
+  bool IsCStyle = isa<CStyleCastExpr, CXXFunctionalCastExpr>(E);
+  if (!IsCStyle && !LangOpts.CXXProfiles)
+    return;
+
+  std::optional<Qualifiers> CastAwayQualifiers = getCastAwayQualifiers(Self, E);
+  if (IsCStyle) {
+    // A static_cast or reinterpret_cast cannot cast away constness, so a
+    // C-style cast interpreted as one that does is that cast followed by a
+    // const_cast.
+    CStyleCastInterpretationKind Kind = CStyleInterpretation;
+    if (CastAwayQualifiers) {
+      if (Kind == CStyleCastInterpretationKind::StaticCast)
+        Kind = CStyleCastInterpretationKind::StaticThenConstCast;
+      else if (Kind == CStyleCastInterpretationKind::ReinterpretCast)
+        Kind = CStyleCastInterpretationKind::ReinterpretThenConstCast;
+    }
+    E->setCStyleCastInterpretationKind(Kind);
+  }
+  if (LangOpts.CXXProfiles)
+    Self.CXXProfiles().checkExplicitCast(E, CastAwayQualifiers);
 }
 
 ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,

@@ -2040,6 +2040,29 @@ def UnsafeBufferUsageInStringView : DiagGroup<"unsafe-buffer-usage-in-string-vie
 def UnsafeBufferUsageMainArgv : DiagGroup<"unsafe-buffer-usage-main-argv">;
 def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView, UnsafeBufferUsageMainArgv]>;
 
+// C++ profiles (P3589). Each rule of each profile has its own group, so that
+// rules can be suppressed individually; the rule diagnostics are only emitted
+// when the profile is enforced.
+def CXXProfileStdCastingReinterpretCast
+    : DiagGroup<"cxx-profile-std-casting-reinterpret-cast">;
+def CXXProfileStdCastingReinterpretCastChar
+    : DiagGroup<"cxx-profile-std-casting-reinterpret-cast-char">;
+def CXXProfileStdCastingConstCast
+    : DiagGroup<"cxx-profile-std-casting-const-cast">;
+def CXXProfileStdCastingStaticDowncast
+    : DiagGroup<"cxx-profile-std-casting-static-downcast">;
+def CXXProfileStdCastingStaticCastVoid
+    : DiagGroup<"cxx-profile-std-casting-static-cast-void">;
+def CXXProfileStdCasting
+    : DiagGroup<"cxx-profile-std-casting",
+                [CXXProfileStdCastingReinterpretCast,
+                 CXXProfileStdCastingReinterpretCastChar,
+                 CXXProfileStdCastingConstCast,
+                 CXXProfileStdCastingStaticDowncast,
+                 CXXProfileStdCastingStaticCastVoid]>;
+def CXXProfile : DiagGroup<"cxx-profile", [CXXProfileStdCasting]>;
+def UnknownCXXProfiles : DiagGroup<"unknown-cxx-profiles">;
+
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
 

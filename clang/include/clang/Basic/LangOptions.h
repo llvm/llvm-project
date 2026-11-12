@@ -590,6 +590,14 @@ public:
 
   std::vector<std::string> OverflowPatternExclusionValues;
 
+  /// The C++ profiles (P3589) enforced for the whole translation unit by
+  /// -fcxx-profiles=.
+  std::vector<std::string> CXXProfilesEnforced;
+
+  /// The C++ profiles (P3589) whose rules are checked, but diagnosed as
+  /// warnings rather than errors, by -fcxx-profiles-preview=.
+  std::vector<std::string> CXXProfilesPreview;
+
   /// The seed used by the randomize structure layout feature.
   std::string RandstructSeed;
 

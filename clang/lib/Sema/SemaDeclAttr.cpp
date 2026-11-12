@@ -48,6 +48,7 @@
 #include "clang/Sema/SemaAVR.h"
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCXXProfiles.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
@@ -8210,6 +8211,18 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Suppress:
     handleSuppressAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ProfilesEnforce:
+    S.CXXProfiles().handleEnforceAttr(D, AL);
+    break;
+  case ParsedAttr::AT_ProfilesSuppress:
+    S.CXXProfiles().handleSuppressAttr(D, AL);
+    break;
+  case ParsedAttr::AT_ProfilesExempt:
+    S.CXXProfiles().handleExemptAttr(D, AL);
+    break;
+  case ParsedAttr::AT_ProfilesRequire:
+    S.CXXProfiles().handleMisplacedRequireAttr(AL);
     break;
   case ParsedAttr::AT_Owner:
   case ParsedAttr::AT_Pointer:

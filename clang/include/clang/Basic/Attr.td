@@ -443,6 +443,7 @@ def SYCLHost : LangOpt<"SYCLIsHost">;
 def SYCLDevice : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
+def CXXProfiles : LangOpt<"CXXProfiles">;
 def OpenCL : LangOpt<"OpenCL">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
@@ -3605,6 +3606,57 @@ def Suppress : DeclOrStmtAttr {
     ObjCImplementation, Namespace, Empty
   ], ErrorDiag, "variables, functions, structs, interfaces, and namespaces">;
   let Documentation = [SuppressDocs];
+}
+
+// C++ Profiles (P3589). The arguments of these attributes follow the
+// profile-designator grammar of P3589 and are parsed by
+// Parser::ParseCXXProfilesAttributeArgs.
+def ProfilesEnforce : Attr {
+  let Spellings = [CXX11<"profiles", "enforce">];
+  let Args = [VariadicStringArgument<"Designators">];
+  let Subjects = SubjectList<[Empty], ErrorDiag, "empty declarations">;
+  let LangOpts = [CXXProfiles];
+  let HasCustomParsing = 1;
+  let PragmaAttributeSupport = 0;
+  let Documentation = [ProfilesEnforceDocs];
+}
+
+def ProfilesSuppress : DeclOrStmtAttr {
+  let Spellings = [CXX11<"profiles", "suppress">];
+  let Args = [StringArgument<"ProfileName">, StringArgument<"Rule", /*opt=*/1>,
+              StringArgument<"Justification", /*opt=*/1>];
+  let Subjects = SubjectList<[
+    Stmt, Var, Field, ObjCProperty, Function, ObjCMethod, Record, ObjCInterface,
+    ObjCImplementation, Namespace
+  ], ErrorDiag, "variables, functions, classes, namespaces, and statements">;
+  let LangOpts = [CXXProfiles];
+  let HasCustomParsing = 1;
+  let PragmaAttributeSupport = 0;
+  let Documentation = [ProfilesSuppressDocs];
+}
+
+def ProfilesRequire : Attr {
+  let Spellings = [CXX11<"profiles", "require">];
+  let Args = [VariadicStringArgument<"Designators">];
+  let LangOpts = [CXXProfiles];
+  let HasCustomParsing = 1;
+  let PragmaAttributeSupport = 0;
+  // Only valid on a module-import-declaration, where it is checked by the
+  // parser; it is never attached to the AST.
+  let ASTNode = 0;
+  let Documentation = [ProfilesRequireDocs];
+}
+
+def ProfilesExempt : Attr {
+  let Spellings = [CXX11<"profiles", "exempt">];
+  let Args = [StringArgument<"ProfileName">, StringArgument<"Header">,
+              BoolArgument<"Angled">,
+              StringArgument<"Justification", /*opt=*/1>];
+  let Subjects = SubjectList<[Empty], ErrorDiag, "empty declarations">;
+  let LangOpts = [CXXProfiles];
+  let HasCustomParsing = 1;
+  let PragmaAttributeSupport = 0;
+  let Documentation = [ProfilesExemptDocs];
 }
 
 def SysVABI : DeclOrTypeAttr {

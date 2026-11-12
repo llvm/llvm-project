@@ -1020,6 +1020,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SUBMODULE_INITIALIZERS);
   RECORD(SUBMODULE_EXPORT_AS);
   RECORD(SUBMODULE_CHILD);
+  RECORD(SUBMODULE_CXX_PROFILE);
 
   // Comments Block.
   BLOCK(COMMENTS_BLOCK);
@@ -3120,6 +3121,12 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));   // Child name
   unsigned ChildAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_CXX_PROFILE));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // OnModuleDecl
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));     // Designator
+  unsigned CXXProfileAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
   SmallVector<uint64_t> SubmoduleOffsets;
   uint64_t SubmoduleOffsetBase = Stream.GetCurrentBitNo();
 
@@ -3295,6 +3302,18 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
           AddDeclRef(D, Inits);
       if (!Inits.empty())
         Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
+    }
+
+    // Emit the C++ profiles enforced by the module unit.
+    for (const auto &Designator : Mod->CXXProfilesUnitEnforced) {
+      RecordData::value_type Record[] = {SUBMODULE_CXX_PROFILE,
+                                         /*OnModuleDecl=*/0};
+      Stream.EmitRecordWithBlob(CXXProfileAbbrev, Record, Designator);
+    }
+    for (const auto &Designator : Mod->CXXProfilesModuleEnforced) {
+      RecordData::value_type Record[] = {SUBMODULE_CXX_PROFILE,
+                                         /*OnModuleDecl=*/1};
+      Stream.EmitRecordWithBlob(CXXProfileAbbrev, Record, Designator);
     }
 
     // Emit the name of the re-exported module, if any.

@@ -25,6 +25,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCXXProfiles.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Path.h"
@@ -2413,9 +2414,17 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
   }
 
-  // We don't support any module attributes yet; just parse them and diagnose.
+  // The only attribute supported on a module declaration is
+  // [[profiles::enforce]]; parse the others and diagnose them.
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
+  SmallVector<ParsedAttr *, 1> ProfileAttrs;
+  if (getLangOpts().CXXProfiles)
+    for (ParsedAttr &AL : Attrs)
+      if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce)
+        ProfileAttrs.push_back(&AL);
+  for (ParsedAttr *AL : ProfileAttrs)
+    Attrs.remove(AL);
   ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_module_attr,
                           diag::err_keyword_not_module_attr,
                           /*DiagnoseEmptyAttrs=*/false,
@@ -2425,9 +2434,12 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                            tok::getKeywordSpelling(tok::kw_module)))
     SkipUntil(tok::semi);
 
-  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
-                                 ImportState,
-                                 Introducer.hasSeenNoTrivialPPDirective());
+  DeclGroupPtrTy Result = Actions.ActOnModuleDecl(
+      StartLoc, ModuleLoc, MDK, Path, Partition, ImportState,
+      Introducer.hasSeenNoTrivialPPDirective());
+  for (ParsedAttr *AL : ProfileAttrs)
+    Actions.CXXProfiles().ActOnModuleDeclEnforceAttr(*AL);
+  return Result;
 }
 
 Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
@@ -2473,7 +2485,15 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
-  // We don't support any module import attributes yet.
+  // The only attribute supported on a module import declaration is
+  // [[profiles::require]]; it is checked once the module has been imported.
+  SmallVector<ParsedAttr *, 1> ProfileAttrs;
+  if (getLangOpts().CXXProfiles)
+    for (ParsedAttr &AL : Attrs)
+      if (AL.getKind() == ParsedAttr::AT_ProfilesRequire)
+        ProfileAttrs.push_back(&AL);
+  for (ParsedAttr *AL : ProfileAttrs)
+    Attrs.remove(AL);
   ProhibitCXX11Attributes(Attrs, diag::err_attribute_not_import_attr,
                           diag::err_keyword_not_import_attr,
                           /*DiagnoseEmptyAttrs=*/false,
@@ -2567,6 +2587,10 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
                                        IsPartition);
   if (Import.isInvalid())
     return nullptr;
+
+  if (auto *ImportD = dyn_cast_or_null<ImportDecl>(Import.get()))
+    for (ParsedAttr *AL : ProfileAttrs)
+      Actions.CXXProfiles().ActOnModuleImportRequireAttr(ImportD, *AL);
 
   // Using '@import' in framework headers requires modules to be enabled so that
   // the header is parseable. Emit a warning to make the user aware.

@@ -180,6 +180,13 @@ features cannot lower the translation-unit ABI level;
   shortest decimal form that round-trips to the same value. For example,
   `3.14` printed as `3.1400000000000001` before and prints as `3.14` now.
 
+- The AST dump of a C-style or functional-style cast in C++ now shows how the
+  cast was interpreted under [expr.cast]p4, unless it is a plain `static_cast`:
+  `interpreted_as_const_cast`, `interpreted_as_static_cast_then_const_cast`,
+  `interpreted_as_reinterpret_cast` or
+  `interpreted_as_reinterpret_cast_then_const_cast`. The JSON dump has a
+  corresponding `interpretedAs` attribute.
+
 ### Clang Frontend Potentially Breaking Changes
 
 - Templight support has been removed.
@@ -376,6 +383,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   times.
 
 ### New Compiler Flags
+
+- Experimental support for C++ profiles (P3589) is available behind the
+  `-cc1` option `-fexperimental-cxx-profiles`. It implements the
+  `[[profiles::enforce]]`, `[[profiles::suppress]]`, `[[profiles::require]]`
+  and `[[profiles::exempt]]` attributes, the `-fcxx-profiles=` and
+  `-fcxx-profiles-preview=` options, and the `std::casting` profile. See
+  {doc}`CXXProfiles`.
 
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
   built module out of date when a header is added to a directory it enumerated,

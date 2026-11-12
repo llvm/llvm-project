@@ -1,0 +1,42 @@
+//===--- CXXProfiles.def - C++ profiles registry ----------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the C++ profiles (P3589) known to Clang and their rules.
+// Users of this file define CXX_PROFILE and/or CXX_PROFILE_RULE before
+// including it.
+//
+//===----------------------------------------------------------------------===//
+
+// CXX_PROFILE(ID, NAME)
+//   ID   - the enumerator name in clang::CXXProfileID.
+//   NAME - the profile name as written in a profile designator.
+#ifndef CXX_PROFILE
+#define CXX_PROFILE(ID, NAME)
+#endif
+
+// CXX_PROFILE_RULE(PROFILE, ID, NAME)
+//   PROFILE - the ID of the profile the rule belongs to.
+//   ID      - the enumerator name in clang::CXXProfileRuleID.
+//   NAME    - the rule name as written in a 'rule:' argument of
+//             [[profiles::suppress]].
+#ifndef CXX_PROFILE_RULE
+#define CXX_PROFILE_RULE(PROFILE, ID, NAME)
+#endif
+
+// std::casting: no unverifiable casts (P3984R0 section 4; the rules follow
+// P3081R2 section 4, Type.1-Type.4).
+CXX_PROFILE(StdCasting, "std::casting")
+CXX_PROFILE_RULE(StdCasting, StdCastingReinterpretCast, "reinterpret_cast")
+CXX_PROFILE_RULE(StdCasting, StdCastingReinterpretCastChar,
+                 "reinterpret_cast_char")
+CXX_PROFILE_RULE(StdCasting, StdCastingConstCast, "const_cast")
+CXX_PROFILE_RULE(StdCasting, StdCastingStaticDowncast, "static_downcast")
+CXX_PROFILE_RULE(StdCasting, StdCastingStaticCastVoid, "static_cast_void")
+
+#undef CXX_PROFILE
+#undef CXX_PROFILE_RULE

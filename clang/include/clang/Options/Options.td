@@ -2126,6 +2126,26 @@ defm bounds_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
 
+defm experimental_cxx_profiles : BoolFOption<
+  "experimental-cxx-profiles",
+  LangOpts<"CXXProfiles">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [CC1Option],
+          " experimental support for C++ profiles (P3589)">>,
+  ShouldParseIf<cplusplus.KeyPath>;
+def fcxx_profiles_EQ : CommaJoined<["-"], "fcxx-profiles=">,
+  Visibility<[CC1Option]>, MetaVarName<"<profile>,...">,
+  HelpText<"Enforce the given C++ profiles for the whole translation unit "
+           "(requires -fexperimental-cxx-profiles)">,
+  MarshallingInfoStringVector<LangOpts<"CXXProfilesEnforced">>;
+def fcxx_profiles_preview_EQ : CommaJoined<["-"], "fcxx-profiles-preview=">,
+  Visibility<[CC1Option]>, MetaVarName<"<profile>,...">,
+  HelpText<"Check the rules of the given C++ profiles for the whole "
+           "translation unit, diagnosing violations as warnings (requires "
+           "-fexperimental-cxx-profiles)">,
+  MarshallingInfoStringVector<LangOpts<"CXXProfilesPreview">>;
+
 defm debug_run_lifetime_safety : BoolFOption<
   "debug-run-lifetime-safety",
   LangOpts<"DebugRunLifetimeSafety">, DefaultFalse,

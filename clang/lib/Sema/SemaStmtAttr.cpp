@@ -16,6 +16,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCXXProfiles.h"
 #include <optional>
 
 using namespace clang;
@@ -794,6 +795,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
     return handleSuppressAttr(S, St, A, Range);
+  case ParsedAttr::AT_ProfilesSuppress:
+    return S.CXXProfiles().handleSuppressStmtAttr(St, A);
   case ParsedAttr::AT_NoMerge:
     return handleNoMergeAttr(S, St, A, Range);
   case ParsedAttr::AT_NoInline:

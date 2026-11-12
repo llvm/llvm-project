@@ -891,6 +891,10 @@ enum SubmoduleRecordTypes {
   /// Specifies a direct submodule by name and ID, enabling on-demand
   /// deserialization of children without loading the entire submodule block.
   SUBMODULE_CHILD = 19,
+
+  /// Specifies a C++ profile designator enforced by a C++20 named module
+  /// unit, either for the whole unit or on its module declaration.
+  SUBMODULE_CXX_PROFILE = 20,
 };
 
 /// Record types used within a comments block.

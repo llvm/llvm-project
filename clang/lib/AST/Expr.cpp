@@ -1992,6 +1992,25 @@ const char *CastExpr::getCastKindName(CastKind CK) {
   llvm_unreachable("Unhandled cast kind!");
 }
 
+const char *ExplicitCastExpr::getCStyleCastInterpretationKindName(
+    CStyleCastInterpretationKind Kind) {
+  switch (Kind) {
+  case CStyleCastInterpretationKind::Unknown:
+    return "unknown";
+  case CStyleCastInterpretationKind::ConstCast:
+    return "const_cast";
+  case CStyleCastInterpretationKind::StaticCast:
+    return "static_cast";
+  case CStyleCastInterpretationKind::StaticThenConstCast:
+    return "static_cast_then_const_cast";
+  case CStyleCastInterpretationKind::ReinterpretCast:
+    return "reinterpret_cast";
+  case CStyleCastInterpretationKind::ReinterpretThenConstCast:
+    return "reinterpret_cast_then_const_cast";
+  }
+  llvm_unreachable("unhandled C-style cast interpretation");
+}
+
 namespace {
 // Skip over implicit nodes produced as part of semantic analysis.
 // Designed for use with IgnoreExprNodes.

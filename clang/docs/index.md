@@ -23,6 +23,7 @@ ClangStaticAnalyzer
 ThreadSafetyAnalysis
 LifetimeSafety
 SafeBuffers
+CXXProfiles
 ScalableStaticAnalysis/index
 DataFlowAnalysisIntro
 FunctionEffectAnalysis
@@ -119,6 +120,7 @@ LLVMExceptionHandlingCodeGen
 * {doc}`ThreadSafetyAnalysis`
 * {doc}`LifetimeSafety`
 * {doc}`SafeBuffers`
+* {doc}`CXXProfiles`
 * {doc}`ScalableStaticAnalysis/index`
 * {doc}`DataFlowAnalysisIntro`
 * {doc}`FunctionEffectAnalysis`

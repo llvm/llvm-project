@@ -3738,6 +3738,24 @@ public:
   }
 };
 
+/// How a C-style or functional cast in C++ is interpreted: the first of the
+/// interpretations listed in [expr.cast]p4 that applies.
+enum class CStyleCastInterpretationKind {
+  /// Not a C++ C-style or functional cast, or a cast that was not resolved
+  /// (e.g. a dependent cast).
+  Unknown,
+  /// A const_cast.
+  ConstCast,
+  /// A static_cast.
+  StaticCast,
+  /// A static_cast followed by a const_cast.
+  StaticThenConstCast,
+  /// A reinterpret_cast.
+  ReinterpretCast,
+  /// A reinterpret_cast followed by a const_cast.
+  ReinterpretThenConstCast,
+};
+
 /// CastExpr - Base class for type casts, including both implicit
 /// casts (ImplicitCastExpr) and explicit casts that have some
 /// representation in the source code (ExplicitCastExpr's derived
@@ -3760,6 +3778,8 @@ protected:
       : Expr(SC, ty, VK, OK_Ordinary), Op(op) {
     CastExprBits.Kind = kind;
     CastExprBits.PartOfExplicitCast = false;
+    CastExprBits.CStyleInterpretationKind =
+        llvm::to_underlying(CStyleCastInterpretationKind::Unknown);
     CastExprBits.BasePathSize = BasePathSize;
     assert((CastExprBits.BasePathSize == BasePathSize) &&
            "BasePathSize overflow!");
@@ -3772,6 +3792,8 @@ protected:
            bool HasFPFeatures)
       : Expr(SC, Empty) {
     CastExprBits.PartOfExplicitCast = false;
+    CastExprBits.CStyleInterpretationKind =
+        llvm::to_underlying(CStyleCastInterpretationKind::Unknown);
     CastExprBits.BasePathSize = BasePathSize;
     CastExprBits.HasFPFeatures = HasFPFeatures;
     assert((CastExprBits.BasePathSize == BasePathSize) &&
@@ -4022,6 +4044,24 @@ public:
   /// getTypeAsWritten - Returns the type that this expression is
   /// casting to, as written in the source code.
   QualType getTypeAsWritten() const { return TInfo->getType(); }
+
+  /// For a C++ C-style or functional cast, returns how the cast was
+  /// interpreted according to [expr.cast]p4. Returns
+  /// CStyleCastInterpretationKind::Unknown for other casts and for casts that
+  /// were not resolved (e.g. dependent casts).
+  CStyleCastInterpretationKind getCStyleCastInterpretationKind() const {
+    return static_cast<CStyleCastInterpretationKind>(
+        CastExprBits.CStyleInterpretationKind);
+  }
+
+  void setCStyleCastInterpretationKind(CStyleCastInterpretationKind Kind) {
+    CastExprBits.CStyleInterpretationKind = llvm::to_underlying(Kind);
+  }
+
+  /// Returns the spelling of the named cast (or sequence of named casts)
+  /// that \p Kind stands for, e.g. "static_cast_then_const_cast".
+  static const char *
+  getCStyleCastInterpretationKindName(CStyleCastInterpretationKind Kind);
 
   static bool classof(const Stmt *T) {
      return T->getStmtClass() >= firstExplicitCastExprConstant &&

@@ -6623,6 +6623,8 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       // Clear out data that will be replaced by what is in the module file.
       CurrentModule->LinkLibraries.clear();
       CurrentModule->ConfigMacros.clear();
+      CurrentModule->CXXProfilesUnitEnforced.clear();
+      CurrentModule->CXXProfilesModuleEnforced.clear();
       CurrentModule->UnresolvedConflicts.clear();
       CurrentModule->Conflicts.clear();
 
@@ -6765,6 +6767,13 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       CurrentModule->addSubmodule(Blob, this, GlobalID);
       break;
     }
+
+    case SUBMODULE_CXX_PROFILE:
+      if (Record[0])
+        CurrentModule->CXXProfilesModuleEnforced.push_back(Blob.str());
+      else
+        CurrentModule->CXXProfilesUnitEnforced.push_back(Blob.str());
+      break;
     }
   }
 }

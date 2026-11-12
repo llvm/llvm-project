@@ -3055,6 +3055,49 @@ private:
   void ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
                                 CachedTokens &OpenMPTokens);
 
+  /// Parse the arguments of a C++ profiles attribute (P3589), i.e. an
+  /// attribute in the 'profiles' attribute namespace.
+  ///
+  /// \verbatim
+  ///   profiles-attribute-argument-clause:
+  ///     '(' profile-designator-list ')'          [enforce, require]
+  ///     '(' profile-name named-argument-list ')' [suppress, exempt]
+  ///
+  ///   profile-designator:
+  ///     profile-name
+  ///     profile-name '(' profile-argument-list ')'
+  ///
+  ///   profile-name:
+  ///     identifier
+  ///     profile-name '::' identifier
+  ///
+  ///   named-argument-list:
+  ///     <empty>
+  ///     named-argument-list ',' identifier ':' non-comma-balanced-token
+  /// \endverbatim
+  ///
+  /// Profile designators and token values are recorded as identifier
+  /// arguments holding their spelling; string literal values are recorded as
+  /// expression arguments.
+  void ParseCXXProfilesAttributeArgs(IdentifierInfo *AttrName,
+                                     SourceLocation AttrNameLoc,
+                                     ParsedAttributes &Attrs,
+                                     SourceLocation *EndLoc,
+                                     IdentifierInfo *ScopeName,
+                                     SourceLocation ScopeLoc,
+                                     ParsedAttr::Form Form);
+
+  /// Parse a profile designator (or, if \p AllowArguments is false, a
+  /// profile name) and append its canonical spelling to \p Spelling.
+  /// \returns true on error.
+  bool ParseCXXProfileDesignator(std::string &Spelling, SourceLocation &Loc,
+                                 bool AllowArguments);
+
+  /// Parse a balanced token (a single token other than a comma or closing
+  /// bracket, or a bracketed token sequence) and append its spelling to
+  /// \p Spelling. \returns true on error.
+  bool ParseCXXProfileBalancedToken(std::string &Spelling);
+
   /// Parse a C++11 or C23 attribute-specifier.
   ///
   /// \verbatim

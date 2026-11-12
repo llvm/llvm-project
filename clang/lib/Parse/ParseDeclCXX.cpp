@@ -4507,6 +4507,154 @@ bool Parser::ParseCXXAssumeAttributeArg(
   return false;
 }
 
+/// Append the spelling of \p Tok to \p Spelling, separating tokens with a
+/// single space except after an opening bracket and before a bracket, a comma
+/// or a colon.
+static void appendCXXProfileTokenSpelling(std::string &Spelling,
+                                          const Token &Tok,
+                                          const Preprocessor &PP) {
+  if (!Spelling.empty() &&
+      !Tok.isOneOf(tok::l_paren, tok::l_square, tok::r_paren, tok::r_square,
+                   tok::r_brace, tok::comma, tok::colon)) {
+    char Last = Spelling.back();
+    if (Last != '(' && Last != '[' && Last != '{')
+      Spelling += ' ';
+  }
+  Spelling += PP.getSpelling(Tok);
+}
+
+bool Parser::ParseCXXProfileBalancedToken(std::string &Spelling) {
+  if (Tok.isOneOf(tok::l_paren, tok::l_square, tok::l_brace)) {
+    tok::TokenKind Open = Tok.getKind();
+    tok::TokenKind Close = Open == tok::l_paren    ? tok::r_paren
+                           : Open == tok::l_square ? tok::r_square
+                                                   : tok::r_brace;
+    appendCXXProfileTokenSpelling(Spelling, Tok, PP);
+    ConsumeAnyToken();
+    while (Tok.isNot(Close)) {
+      if (Tok.is(tok::comma)) {
+        appendCXXProfileTokenSpelling(Spelling, Tok, PP);
+        ConsumeToken();
+        continue;
+      }
+      if (ParseCXXProfileBalancedToken(Spelling))
+        return true;
+    }
+    appendCXXProfileTokenSpelling(Spelling, Tok, PP);
+    ConsumeAnyToken();
+    return false;
+  }
+
+  if (Tok.isOneOf(tok::eof, tok::comma, tok::r_paren, tok::r_square,
+                  tok::r_brace) ||
+      Tok.isAnnotation()) {
+    Diag(Tok, diag::err_cxx_profiles_invalid_argument_token);
+    return true;
+  }
+  appendCXXProfileTokenSpelling(Spelling, Tok, PP);
+  ConsumeAnyToken();
+  return false;
+}
+
+bool Parser::ParseCXXProfileDesignator(std::string &Spelling,
+                                       SourceLocation &Loc,
+                                       bool AllowArguments) {
+  if (Tok.isNot(tok::identifier)) {
+    Diag(Tok, diag::err_cxx_profiles_expected_profile_name);
+    return true;
+  }
+  Loc = Tok.getLocation();
+  Spelling += Tok.getIdentifierInfo()->getName();
+  ConsumeToken();
+  while (Tok.is(tok::coloncolon)) {
+    ConsumeToken();
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok, diag::err_cxx_profiles_expected_profile_name);
+      return true;
+    }
+    Spelling += "::";
+    Spelling += Tok.getIdentifierInfo()->getName();
+    ConsumeToken();
+  }
+
+  if (!AllowArguments || Tok.isNot(tok::l_paren))
+    return false;
+
+  // profile-argument-list. The arguments are not interpreted here; two
+  // designators are the same if their token sequences are the same, so record
+  // a canonical spelling of the tokens.
+  return ParseCXXProfileBalancedToken(Spelling);
+}
+
+void Parser::ParseCXXProfilesAttributeArgs(
+    IdentifierInfo *AttrName, SourceLocation AttrNameLoc,
+    ParsedAttributes &Attrs, SourceLocation *EndLoc, IdentifierInfo *ScopeName,
+    SourceLocation ScopeLoc, ParsedAttr::Form Form) {
+  assert(Tok.is(tok::l_paren) && "expected the attribute argument clause");
+  BalancedDelimiterTracker Parens(*this, tok::l_paren);
+  Parens.consumeOpen();
+
+  auto MakeIdentifierArg = [&](SourceLocation Loc, StringRef Spelling) {
+    return new (Actions.Context)
+        IdentifierLoc(Loc, PP.getIdentifierInfo(Spelling));
+  };
+  auto Fail = [&] {
+    Parens.skipToEnd();
+    if (EndLoc)
+      *EndLoc = Parens.getCloseLocation();
+  };
+
+  ArgsVector Args;
+  if (AttrName->isStr("enforce") || AttrName->isStr("require")) {
+    do {
+      std::string Designator;
+      SourceLocation Loc;
+      if (ParseCXXProfileDesignator(Designator, Loc, /*AllowArguments=*/true))
+        return Fail();
+      Args.push_back(MakeIdentifierArg(Loc, Designator));
+    } while (TryConsumeToken(tok::comma));
+  } else {
+    std::string Name;
+    SourceLocation Loc;
+    if (ParseCXXProfileDesignator(Name, Loc, /*AllowArguments=*/false))
+      return Fail();
+    Args.push_back(MakeIdentifierArg(Loc, Name));
+
+    while (TryConsumeToken(tok::comma)) {
+      if (Tok.isNot(tok::identifier) || !NextToken().is(tok::colon)) {
+        Diag(Tok, diag::err_cxx_profiles_expected_named_argument) << AttrName;
+        return Fail();
+      }
+      Args.push_back(ParseIdentifierLoc());
+      ConsumeToken(); // ':'
+
+      if (isTokenStringLiteral()) {
+        ExprResult Value = ParseUnevaluatedStringLiteralExpression();
+        if (Value.isInvalid())
+          return Fail();
+        Args.push_back(Value.get());
+        continue;
+      }
+
+      SourceLocation ValueLoc = Tok.getLocation();
+      std::string Value;
+      if (ParseCXXProfileBalancedToken(Value))
+        return Fail();
+      Args.push_back(MakeIdentifierArg(ValueLoc, Value));
+    }
+  }
+
+  if (Parens.consumeClose())
+    return;
+  if (EndLoc)
+    *EndLoc = Parens.getCloseLocation();
+
+  SourceLocation AttrLoc = ScopeLoc.isValid() ? ScopeLoc : AttrNameLoc;
+  Attrs.addNew(AttrName, SourceRange(AttrLoc, Parens.getCloseLocation()),
+               AttributeScopeInfo(ScopeName, ScopeLoc), Args.data(),
+               Args.size(), Form);
+}
+
 bool Parser::ParseCXX11AttributeArgs(
     IdentifierInfo *AttrName, SourceLocation AttrNameLoc,
     ParsedAttributes &Attrs, SourceLocation *EndLoc, IdentifierInfo *ScopeName,
@@ -4576,6 +4724,13 @@ bool Parser::ParseCXX11AttributeArgs(
 
     // We claim that an attribute was parsed and added so that one is not
     // created for us by the caller.
+    return true;
+  }
+
+  // C++ profiles attributes (P3589) have their own argument grammar.
+  if (ScopeName && ScopeName->isStr("profiles")) {
+    ParseCXXProfilesAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc,
+                                  ScopeName, ScopeLoc, Form);
     return true;
   }
 

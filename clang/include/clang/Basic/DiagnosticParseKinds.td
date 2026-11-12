@@ -1660,6 +1660,12 @@ def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_keyword_not_module_attr : Error<
   "%0 cannot be applied to a module">;
+def err_cxx_profiles_expected_profile_name : Error<
+  "expected a profile name">;
+def err_cxx_profiles_expected_named_argument : Error<
+  "expected 'name: value' argument in %0 attribute">;
+def err_cxx_profiles_invalid_argument_token : Error<
+  "invalid token in profile argument">;
 def err_attribute_not_import_attr : Error<
   "%0 attribute cannot be applied to a module import">;
 def err_keyword_not_import_attr : Error<

@@ -525,6 +525,8 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
+LANGOPT(CXXProfiles, 1, 0, Benign, "experimental C++ profiles (P3589)")
+
 LANGOPT(DebugRunLifetimeSafety, 1, 0, Benign, "Run lifetime safety analysis for C++. Does not enable warnings.")
 
 LANGOPT(EnableLifetimeSafetyInC, 1, 1, Benign, "Lifetime safety analysis for C")

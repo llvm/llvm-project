@@ -1237,6 +1237,8 @@ void ASTStmtReader::VisitImplicitCastExpr(ImplicitCastExpr *E) {
 
 void ASTStmtReader::VisitExplicitCastExpr(ExplicitCastExpr *E) {
   VisitCastExpr(E);
+  E->setCStyleCastInterpretationKind(static_cast<CStyleCastInterpretationKind>(
+      CurrentUnpackingBits->getNextBits(/*Width=*/3)));
   E->setTypeInfoAsWritten(readTypeSourceInfo());
 }
 

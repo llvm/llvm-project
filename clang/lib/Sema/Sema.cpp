@@ -46,6 +46,7 @@
 #include "clang/Sema/SemaAVR.h"
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaCXXProfiles.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaDirectX.h"
@@ -291,6 +292,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
+      CXXProfilesPtr(std::make_unique<SemaCXXProfiles>(*this)),
       DirectXPtr(std::make_unique<SemaDirectX>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       HexagonPtr(std::make_unique<SemaHexagon>(*this)),
@@ -395,6 +397,8 @@ void Sema::Initialize() {
   // This needs to happen after ExternalSemaSource::InitializeSema(this) or we
   // will not be able to merge any duplicate __va_list_tag decls correctly.
   VAListTagName = PP.getIdentifierInfo("__va_list_tag");
+
+  CXXProfiles().ActOnStartOfTranslationUnit();
 
   if (!TUScope)
     return;
@@ -1352,6 +1356,8 @@ void Sema::ActOnEndOfTranslationUnit() {
                        return ShouldRemoveFromUnused(this, DD);
                      }),
       UnusedFileScopedDecls.end());
+
+  CXXProfiles().ActOnEndOfTranslationUnit();
 
   if (TUKind == TU_Prefix) {
     // Translation unit prefixes don't need any of the checking below.
@@ -2640,6 +2646,13 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP, Decl *D,
   } else
     for (const auto &PUD : Scope->PossiblyUnreachableDiags)
       Diag(PUD.Loc, PUD.PD);
+
+  // C++ profile violations are reported once the outermost function is
+  // complete, so that suppressions on enclosing statements are known. A
+  // lambda or block outside any function is part of an enclosing declaration
+  // (e.g. a variable initializer) that is not complete yet.
+  if (FunctionScopes.empty() && Scope->isPlainFunction())
+    CXXProfiles().flushPendingViolations();
 
   return Scope;
 }

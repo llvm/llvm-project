@@ -13006,6 +13006,76 @@ def err_invalid_type_for_program_scope_var : Error<
   "the %0 type cannot be used to declare a program scope variable">;
 }
 
+let CategoryName = "C++ Profiles Issue" in {
+// Framework diagnostics.
+def err_cxx_profiles_attr_requires_profile : Error<
+  "%0 attribute requires %select{at least one profile designator|"
+  "a profile name}1">;
+def err_cxx_profiles_enforce_not_at_tu_scope : Error<
+  "%0 attribute must appear at translation unit scope">;
+def err_cxx_profiles_enforce_after_decl : Error<
+  "%0 attribute must precede every declaration in the translation unit">;
+def note_cxx_profiles_first_decl : Note<"first declaration is here">;
+def err_cxx_profiles_enforce_mismatch : Error<
+  "profile '%0' is already enforced with designator '%1'">;
+def note_cxx_profiles_previous_enforce : Note<
+  "profile '%0' was enforced here">;
+def note_cxx_profiles_enforced_on_command_line : Note<
+  "profile '%0' was enforced on the command line">;
+def warn_cxx_profiles_unknown_profile : Warning<
+  "unknown profile '%0'%select{; it will not be enforced|}1">,
+  InGroup<UnknownCXXProfiles>;
+def warn_cxx_profiles_unknown_rule : Warning<
+  "unknown rule '%0' of profile '%1'; the suppression has no effect">,
+  InGroup<UnknownCXXProfiles>;
+def warn_cxx_profiles_unknown_argument : Warning<
+  "unknown argument '%0' in %1 attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def err_cxx_profiles_require_not_on_import : Error<
+  "%0 attribute may only appear on a module import declaration">;
+def err_cxx_profiles_require_not_enforced : Error<
+  "module '%0' does not enforce profile '%1'">;
+def err_cxx_profiles_require_not_named_module : Error<
+  "%0 attribute requires a C++20 named module or header unit">;
+def err_cxx_profiles_exempt_requires_header : Error<
+  "%0 attribute requires an 'angle_header' or 'quote_header' argument">;
+def err_cxx_profiles_argument_requires_string : Error<
+  "argument '%0' of %1 attribute must be a string literal">;
+def err_cxx_profiles_not_enabled : Error<
+  "'-fcxx-profiles%select{|-preview}0=' requires "
+  "'-fexperimental-cxx-profiles'">;
+
+// std::casting
+def warn_cxx_profile_casting_reinterpret_cast : Warning<
+  "%0 forbids %select{reinterpret_cast|a C-style cast that performs a "
+  "reinterpret_cast|a functional-style cast that performs a reinterpret_cast}1 "
+  "from %2 to %3">,
+  InGroup<CXXProfileStdCastingReinterpretCast>, DefaultError;
+def warn_cxx_profile_casting_reinterpret_cast_char : Warning<
+  "%0 forbids %select{reinterpret_cast|a C-style cast that performs a "
+  "reinterpret_cast|a functional-style cast that performs a reinterpret_cast}1 "
+  "from %2 to %3">,
+  InGroup<CXXProfileStdCastingReinterpretCastChar>, DefaultError;
+def warn_cxx_profile_casting_const_cast : Warning<
+  "%0 forbids %select{const_cast|a C-style cast|a functional-style cast}1 that "
+  "casts away constness from %2 to %3">,
+  InGroup<CXXProfileStdCastingConstCast>, DefaultError;
+def warn_cxx_profile_casting_static_downcast : Warning<
+  "%0 forbids %select{static_cast|a C-style cast|a functional-style cast}1 "
+  "from base class %2 to derived class %3">,
+  InGroup<CXXProfileStdCastingStaticDowncast>, DefaultError;
+def warn_cxx_profile_casting_static_cast_void : Warning<
+  "%0 forbids %select{static_cast|a C-style cast|a functional-style cast}1 "
+  "from %2 to %3">,
+  InGroup<CXXProfileStdCastingStaticCastVoid>, DefaultError;
+def note_cxx_profile_casting_use_dynamic_cast : Note<
+  "use 'dynamic_cast' to perform a checked conversion">;
+def note_cxx_profile_casting_use_bit_cast : Note<
+  "use 'std::bit_cast' to reinterpret the object representation">;
+def note_cxx_profile_casting_named_cast : Note<
+  "use '%0' to make the conversion explicit">;
+} // end of C++ Profiles category
+
 let CategoryName = "Modules Issue" in {
 def err_module_decl_in_module_map_module : Error<
   "'module' declaration found while building module from module map">;

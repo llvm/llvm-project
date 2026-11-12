@@ -730,6 +730,17 @@ public:
   /// (intentionally) change how this module is built.
   std::vector<std::string> ConfigMacros;
 
+  /// The C++ profile designators (P3589) enforced for the whole module unit,
+  /// by an enforce attribute that precedes every declaration or by
+  /// -fcxx-profiles=. Only meaningful for C++20 named modules.
+  std::vector<std::string> CXXProfilesUnitEnforced;
+
+  /// The C++ profile designators (P3589) enforced on the module declaration.
+  /// They are enforced in the module purview and in the implementation units
+  /// of the module, and are advertised to importers. Only meaningful for C++20
+  /// named modules.
+  std::vector<std::string> CXXProfilesModuleEnforced;
+
   /// An unresolved conflict with another module.
   struct UnresolvedConflict {
     /// The (unresolved) module id.

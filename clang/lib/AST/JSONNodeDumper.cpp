@@ -1511,6 +1511,16 @@ void JSONNodeDumper::VisitCastExpr(const CastExpr *CE) {
   // from the inner[] array.
   if (const NamedDecl *ND = CE->getConversionFunction())
     JOS.attribute("conversionFunc", createBareDeclRef(ND));
+  if (isa<CStyleCastExpr, CXXFunctionalCastExpr>(CE)) {
+    // Only print the interpretation when the cast is not a plain static_cast.
+    CStyleCastInterpretationKind Kind =
+        cast<ExplicitCastExpr>(CE)->getCStyleCastInterpretationKind();
+    if (Kind != CStyleCastInterpretationKind::Unknown &&
+        Kind != CStyleCastInterpretationKind::StaticCast)
+      JOS.attribute(
+          "interpretedAs",
+          ExplicitCastExpr::getCStyleCastInterpretationKindName(Kind));
+  }
 }
 
 void JSONNodeDumper::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
