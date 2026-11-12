@@ -1064,6 +1064,14 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!changedArgument)
     return false;
 
+  // The intrinsic now performs the assignment that was previously performed
+  // by the copy. Replace its old assignment link, which described the
+  // temporary source, with the copy's link for the new destination. Ordinary
+  // calls cannot carry DIAssignID metadata.
+  if (isa<IntrinsicInst>(C))
+    C->setMetadata(LLVMContext::MD_DIAssignID,
+                   cpyStore->getMetadata(LLVMContext::MD_DIAssignID));
+
   // If the destination wasn't sufficiently aligned then increase its alignment.
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
