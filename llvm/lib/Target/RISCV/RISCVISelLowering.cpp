@@ -24414,13 +24414,74 @@ static bool matchSelectAddSub(SDValue TrueVal, SDValue FalseVal, bool &SwapCC) {
           (TrueVal.getOperand(1) == A && TrueVal.getOperand(0) == B));
 }
 
-static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
-                                     const RISCVSubtarget &Subtarget) {
+// Return the VL defining a non-wrapping stepvector < splat(VL) prefix.
+static SDValue getScalablePrefixVL(SDValue Mask, SelectionDAG &DAG,
+                                   const RISCVSubtarget &Subtarget) {
+  if (Mask.getOpcode() != ISD::SETCC)
+    return SDValue();
+  auto CC = cast<CondCodeSDNode>(Mask.getOperand(2))->get();
+  if (CC != ISD::SETULT && CC != ISD::SETLT)
+    return SDValue();
+  SDValue Step = Mask.getOperand(0);
+  if (Step.getOpcode() != ISD::STEP_VECTOR ||
+      !isOneConstant(Step.getOperand(0)))
+    return SDValue();
+  SDValue VL = DAG.getSplatValue(Mask.getOperand(1));
+  if (!VL)
+    return SDValue();
+  unsigned BoundaryBits = VL.getScalarValueSizeInBits();
+  while (VL.getOpcode() == ISD::TRUNCATE ||
+         VL.getOpcode() == ISD::ZERO_EXTEND ||
+         VL.getOpcode() == ISD::AssertZext) {
+    VL = VL.getOperand(0);
+    BoundaryBits =
+        std::min<unsigned>(BoundaryBits, VL.getScalarValueSizeInBits());
+  }
+  if (VL.getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      VL.getConstantOperandVal(0) != Intrinsic::experimental_get_vector_length)
+    return SDValue();
+  unsigned MinElts = Step.getValueType().getVectorMinNumElements();
+  // The scalable vectorization factor must describe the stepvector's lanes.
+  if (VL.getConstantOperandVal(2) != MinElts ||
+      !isOneConstant(VL.getOperand(3)))
+    return SDValue();
+  uint64_t MaxElts =
+      uint64_t(MinElts) * Subtarget.getRealMaxVLen() / RISCV::RVVBitsPerBlock;
+  uint64_t MaxVL = std::min(
+      MaxElts, DAG.computeKnownBits(VL).getMaxValue().getLimitedValue());
+  // The returned VL cannot exceed the requested count.
+  MaxVL = std::min(
+      MaxVL,
+      DAG.computeKnownBits(VL.getOperand(1)).getMaxValue().getLimitedValue());
+  // Indices must not wrap even beyond VL, where the select keeps its false
+  // operand. The comparison boundary must also represent VL without truncation.
+  unsigned IndexBits = Step.getScalarValueSizeInBits();
+  if (CC == ISD::SETLT)
+    --IndexBits;
+  if (!isUIntN(IndexBits, MaxElts - 1) || !isUIntN(IndexBits, MaxVL) ||
+      !isUIntN(BoundaryBits, MaxVL))
+    return SDValue();
+  return VL;
+}
+
+static SDValue
+performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
+                      const RISCVSubtarget &Subtarget,
+                      const TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue CC = N->getOperand(0);
   SDValue TrueVal = N->getOperand(1);
   SDValue FalseVal = N->getOperand(2);
+
+  if (VT.isScalableVector() && DCI.isBeforeLegalize() &&
+      Subtarget.hasVInstructions())
+    if (SDValue VL = getScalablePrefixVL(CC, DAG, Subtarget)) {
+      VL = DAG.getZExtOrTrunc(VL, DL, Subtarget.getXLenVT());
+      return DAG.getNode(ISD::VP_MERGE, DL, VT,
+                         DAG.getAllOnesConstant(DL, CC.getValueType()), TrueVal,
+                         FalseVal, VL);
+    }
 
   // Convert (vselect CC, true, false) to (vselect InvertCC, false, true) when
   // false has one use and true has multiple use.
@@ -26101,7 +26162,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT:
     return performSELECTCombine(N, DAG, Subtarget);
   case ISD::VSELECT:
-    return performVSELECTCombine(N, DAG, Subtarget);
+    return performVSELECTCombine(N, DAG, Subtarget, DCI);
   case RISCVISD::CZERO_EQZ:
   case RISCVISD::CZERO_NEZ: {
     SDValue Val = N->getOperand(0);
