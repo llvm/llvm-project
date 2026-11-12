@@ -83,6 +83,17 @@ entry:
   ret i64 %tmp5
 }
 
+define i64 @zext_i1_i64(i1 zeroext %a) nounwind ssp {
+; CHECK-LABEL: zext_i1_i64:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ret
+entry:
+  %conv = zext i1 %a to i64
+  ret i64 %conv;
+}
+
 define i32 @zext_i1_i32(i1 zeroext %a) nounwind ssp {
 ; CHECK-LABEL: zext_i1_i32:
 ; CHECK:       ; %bb.0: ; %entry
@@ -92,14 +103,24 @@ entry:
   ret i32 %conv;
 }
 
-define i64 @zext_i1_i64(i1 zeroext %a) nounwind ssp {
-; CHECK-LABEL: zext_i1_i64:
+define i16 @zext_i1_i16(i1 zeroext %a) nounwind ssp {
+; CHECK-LABEL: zext_i1_i16:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
+; CHECK-NEXT:    and w0, w0, #0x1
 ; CHECK-NEXT:    ret
 entry:
-  %conv = zext i1 %a to i64
-  ret i64 %conv;
+  %conv = zext i1 %a to i16
+  ret i16 %conv;
+}
+
+define i8 @zext_i1_i8(i1 zeroext %a) nounwind ssp {
+; CHECK-LABEL: zext_i1_i8:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    and w0, w0, #0x1
+; CHECK-NEXT:    ret
+entry:
+  %conv = zext i1 %a to i8
+  ret i8 %conv;
 }
 
 define i64 @sext_(i8 signext %a, i16 signext %b, i32 %c, i64 %d) nounwind ssp {
@@ -141,29 +162,17 @@ entry:
   ret i64 %tmp5
 }
 
-; Test sext i8 to i64
-
-define zeroext i64 @sext_i8_i64(i8 zeroext %in) {
-; CHECK-LABEL: sext_i8_i64:
-; CHECK:       ; %bb.0:
+define i64 @sext_i1_i64(i1 signext %a) nounwind ssp {
+; CHECK-LABEL: sext_i1_i64:
+; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    sxtb x0, w8
+; CHECK-NEXT:    sbfx x0, x8, #0, #1
 ; CHECK-NEXT:    ret
-  %big = sext i8 %in to i64
-  ret i64 %big
+entry:
+  %conv = sext i1 %a to i64
+  ret i64 %conv
 }
 
-define zeroext i64 @sext_i16_i64(i16 zeroext %in) {
-; CHECK-LABEL: sext_i16_i64:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    sxth x0, w8
-; CHECK-NEXT:    ret
-  %big = sext i16 %in to i64
-  ret i64 %big
-}
-
-; Test sext i1 to i32
 define i32 @sext_i1_i32(i1 signext %a) nounwind ssp {
 ; CHECK-LABEL: sext_i1_i32:
 ; CHECK:       ; %bb.0: ; %entry
@@ -173,7 +182,6 @@ entry:
   ret i32 %conv
 }
 
-; Test sext i1 to i16
 define signext i16 @sext_i1_i16(i1 %a) nounwind ssp {
 ; CHECK-LABEL: sext_i1_i16:
 ; CHECK:       ; %bb.0: ; %entry
@@ -185,7 +193,6 @@ entry:
   ret i16 %conv
 }
 
-; Test sext i1 to i8
 define signext i8 @sext_i1_i8(i1 %a) nounwind ssp {
 ; CHECK-LABEL: sext_i1_i8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -195,6 +202,134 @@ define signext i8 @sext_i1_i8(i1 %a) nounwind ssp {
 entry:
   %conv = sext i1 %a to i8
   ret i8 %conv
+}
+
+; Test zero extending zeroext parameter
+
+define i64 @zext_i8_zext_i64(i8 zeroext %in) {
+; CHECK-LABEL: zext_i8_zext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #8
+; CHECK-NEXT:    ret
+  %big = zext i8 %in to i64
+  ret i64 %big
+}
+
+define i64 @zext_i16_zext_i64(i16 zeroext %in) {
+; CHECK-LABEL: zext_i16_zext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #16
+; CHECK-NEXT:    ret
+  %big = zext i16 %in to i64
+  ret i64 %big
+}
+
+define i64 @zext_i32_zext_i64(i32 zeroext %in) {
+; CHECK-LABEL: zext_i32_zext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #32
+; CHECK-NEXT:    ret
+  %big = zext i32 %in to i64
+  ret i64 %big
+}
+
+; Test zero extending signext parameter
+
+define i64 @sext_i8_zext_i64(i8 signext %in) {
+; CHECK-LABEL: sext_i8_zext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #8
+; CHECK-NEXT:    ret
+  %big = zext i8 %in to i64
+  ret i64 %big
+}
+
+define i64 @sext_i16_zext_i64(i16 signext %in) {
+; CHECK-LABEL: sext_i16_zext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #16
+; CHECK-NEXT:    ret
+  %big = zext i16 %in to i64
+  ret i64 %big
+}
+
+define i64 @sext_i32_zext_i64(i32 signext %in) {
+; CHECK-LABEL: sext_i32_zext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ubfx x0, x8, #0, #32
+; CHECK-NEXT:    ret
+  %big = zext i32 %in to i64
+  ret i64 %big
+}
+
+; Test sign extending zeroext parameter
+
+define i64 @zext_i8_sext_i64(i8 zeroext %in) {
+; CHECK-LABEL: zext_i8_sext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxtb x0, w8
+; CHECK-NEXT:    ret
+  %big = sext i8 %in to i64
+  ret i64 %big
+}
+
+define i64 @zext_i16_sext_i64(i16 zeroext %in) {
+; CHECK-LABEL: zext_i16_sext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxth x0, w8
+; CHECK-NEXT:    ret
+  %big = sext i16 %in to i64
+  ret i64 %big
+}
+
+define i64 @zext_i32_sext_i64(i32 zeroext %in) {
+; CHECK-LABEL: zext_i32_sext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxtw x0, w8
+; CHECK-NEXT:    ret
+  %big = sext i32 %in to i64
+  ret i64 %big
+}
+
+; Test sign extending signext parameter
+
+define i64 @sext_i8_sext_i64(i8 signext %in) {
+; CHECK-LABEL: sext_i8_sext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxtb x0, w8
+; CHECK-NEXT:    ret
+  %big = sext i8 %in to i64
+  ret i64 %big
+}
+
+define i64 @sext_i16_sext_i64(i16 signext %in) {
+; CHECK-LABEL: sext_i16_sext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxth x0, w8
+; CHECK-NEXT:    ret
+  %big = sext i16 %in to i64
+  ret i64 %big
+}
+
+define i64 @sext_i32_sext_i64(i32 signext %in) {
+; CHECK-LABEL: sext_i32_sext_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    sxtw x0, w8
+; CHECK-NEXT:    ret
+  %big = sext i32 %in to i64
+  ret i64 %big
 }
 
 ; Test fpext
@@ -488,23 +623,6 @@ define void @stack_trunc() nounwind {
   ret void
 }
 
-define zeroext i64 @zext_i8_i64(i8 zeroext %in) {
-; CHECK-LABEL: zext_i8_i64:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
-; CHECK-NEXT:    ret
-  %big = zext i8 %in to i64
-  ret i64 %big
-}
-define zeroext i64 @zext_i16_i64(i16 zeroext %in) {
-; CHECK-LABEL: zext_i16_i64:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
-; CHECK-NEXT:    ret
-  %big = zext i16 %in to i64
-  ret i64 %big
-}
-
 define float @bitcast_i32_to_float(i32 %a) {
 ; CHECK-LABEL: bitcast_i32_to_float:
 ; CHECK:       ; %bb.0:
@@ -540,4 +658,3 @@ define i64 @bitcast_double_to_i64(double %a) {
   %1 = bitcast double %a to i64
   ret i64 %1
 }
-
