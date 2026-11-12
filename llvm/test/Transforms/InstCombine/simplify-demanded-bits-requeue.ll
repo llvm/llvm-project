@@ -3,10 +3,10 @@
 
 declare void @use(i64)
 
-define i64 @requeue_after_multi_use_simplify_multi_use_root(i64 %x, i64 %v) "instcombine-no-verify-fixpoint" {
+define i64 @requeue_after_multi_use_simplify_multi_use_root(i64 %x, i64 %v) {
 ; CHECK-LABEL: define i64 @requeue_after_multi_use_simplify_multi_use_root(
-; CHECK-SAME: i64 [[X:%.*]], i64 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[A:%.*]] = and i64 [[X]], -3
+; CHECK-SAME: i64 [[X:%.*]], i64 [[V:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = and i64 [[X]], -4
 ; CHECK-NEXT:    [[INNER:%.*]] = or i64 [[A]], [[V]]
 ; CHECK-NEXT:    [[OUTER:%.*]] = or i64 [[INNER]], 1
 ; CHECK-NEXT:    call void @use(i64 [[OUTER]])
@@ -25,11 +25,10 @@ define i64 @requeue_after_multi_use_simplify_multi_use_root(i64 %x, i64 %v) "ins
 
 declare void @use.i32(i32)
 
-define <2 x i32> @requeue_after_multi_use_simplify_vector(<4 x i32> %v, i32 %x, <4 x i32> %w) "instcombine-no-verify-fixpoint" {
+define <2 x i32> @requeue_after_multi_use_simplify_vector(<4 x i32> %v, i32 %x, <4 x i32> %w) {
 ; CHECK-LABEL: define <2 x i32> @requeue_after_multi_use_simplify_vector(
-; CHECK-SAME: <4 x i32> [[V:%.*]], i32 [[X:%.*]], <4 x i32> [[W:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = insertelement <4 x i32> [[V]], i32 [[X]], i64 0
-; CHECK-NEXT:    [[C1:%.*]] = mul <4 x i32> [[A]], [[W]]
+; CHECK-SAME: <4 x i32> [[V:%.*]], i32 [[X:%.*]], <4 x i32> [[W:%.*]]) {
+; CHECK-NEXT:    [[C1:%.*]] = mul <4 x i32> [[V]], [[W]]
 ; CHECK-NEXT:    [[C2:%.*]] = mul <4 x i32> [[C1]], [[W]]
 ; CHECK-NEXT:    [[C3:%.*]] = mul <4 x i32> [[C2]], [[W]]
 ; CHECK-NEXT:    [[C4:%.*]] = mul <4 x i32> [[C3]], [[W]]

@@ -78,7 +78,12 @@ public:
                    const InstCombineCLOptions &CLOpts)
       : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
                      RPOT),
-        CLOpts(CLOpts) {}
+        CLOpts(CLOpts) {
+    // Deepest single-use operand demanded bits/elts simplification can reach.
+    SingleUseWalkLimit = std::max({MaxAnalysisRecursionDepth,
+                                   CLOpts.simplify_vector_elts_depth, 1u}) -
+                         1;
+  }
 
   ~InstCombinerImpl() override = default;
 
@@ -517,7 +522,7 @@ public:
     DC.removeValue(&I);
     I.eraseFromParent();
     for (Value *Op : Ops)
-      Worklist.handleUseCountDecrement(Op);
+      Worklist.handleUseCountDecrement(Op, SingleUseWalkLimit);
     MadeIRChange = true;
     return nullptr; // Don't do anything with FI
   }
