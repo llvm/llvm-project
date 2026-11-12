@@ -9,13 +9,14 @@
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 
-#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/RecordProxy.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/COFF.h"
@@ -67,6 +68,21 @@ struct RegisterObjectSections {
   using SPSSig = void(SPSExecutorAddr, SPSCOFFObjectSectionsMap, bool);
 };
 } // namespace llvm::orc::coff_sps_ci
+
+// Specs for the call-controller handlers that the COFF platform runtime calls.
+namespace llvm::orc::coff_sps_handlers {
+struct LookupSymbol : sps::HandlerSpec<SPSExpected<SPSExecutorAddr>(
+                          SPSExecutorAddr, SPSString)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_coff_symbol_lookup_tag");
+};
+struct PushInitializers
+    : sps::HandlerSpec<SPSExpected<SPSCOFFJITDylibDepInfoMap>(
+          SPSExecutorAddr)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_coff_push_initializers_tag");
+};
+} // namespace llvm::orc::coff_sps_handlers
 
 namespace {
 
@@ -654,20 +670,12 @@ void COFFPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 }
 
 Error COFFPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
-  using LookupSymbolSPSSig =
-      SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
-
-  using PushInitializersSPSSig =
-      SPSExpected<SPSCOFFJITDylibDepInfoMap>(SPSExecutorAddr);
-
   return ES.registerCallControllerHandlers(
       PlatformJD,
-      bindCallControllerHandlerSPS<LookupSymbolSPSSig>(
-          SymbolNameSpec::c("__orc_rt_coff_symbol_lookup_tag"), this,
-          &COFFPlatform::rt_lookupSymbol),
-      bindCallControllerHandlerSPS<PushInitializersSPSSig>(
-          SymbolNameSpec::c("__orc_rt_coff_push_initializers_tag"), this,
-          &COFFPlatform::rt_pushInitializers));
+      bindCallControllerHandler<coff_sps_handlers::LookupSymbol>(
+          this, &COFFPlatform::rt_lookupSymbol),
+      bindCallControllerHandler<coff_sps_handlers::PushInitializers>(
+          this, &COFFPlatform::rt_pushInitializers));
 }
 
 Error COFFPlatform::runBootstrapInitializers(JDBootstrapState &BState) {
@@ -736,15 +744,13 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
   using sps::ProxySpec;
 
   PlatformBootstrapProxy PlatformBootstrap(
-      ProxySpec<PlatformBootstrapProxy,
-                coff_sps_ci::PlatformBootstrap>::dispatch,
+      ProxySpec<coff_sps_ci::PlatformBootstrap>::dispatch,
       orc_rt_coff_platform_bootstrap);
   RegisterJITDylibProxy RegisterJITDylib(
-      ProxySpec<RegisterJITDylibProxy, coff_sps_ci::RegisterJITDylib>::dispatch,
+      ProxySpec<coff_sps_ci::RegisterJITDylib>::dispatch,
       orc_rt_coff_register_jitdylib);
   RegisterObjectSectionsProxy RegisterObjectSections(
-      ProxySpec<RegisterObjectSectionsProxy,
-                coff_sps_ci::RegisterObjectSections>::dispatch,
+      ProxySpec<coff_sps_ci::RegisterObjectSections>::dispatch,
       orc_rt_coff_register_object_sections);
 
   // Call bootstrap functions

@@ -198,6 +198,10 @@ public:
   /// Sets LLVM TBAA metadata for memory operations that have TBAA attributes.
   void setTBAAMetadata(AliasAnalysisOpInterface op, llvm::Instruction *inst);
 
+  /// Sets LLVM tbaa.struct metadata on an aggregate copy, describing which
+  /// fields of the aggregate the copy touches.
+  void setTBAAStructMetadata(ArrayAttr fields, llvm::Instruction *inst);
+
   /// Sets LLVM dereferenceable metadata for operations that have
   /// dereferenceable attributes.
   void setDereferenceableMetadata(DereferenceableOpInterface op,

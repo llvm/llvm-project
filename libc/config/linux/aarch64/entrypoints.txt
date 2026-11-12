@@ -1428,6 +1428,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigpending
     libc.src.signal.sigprocmask
     libc.src.signal.sigsuspend
+    libc.src.signal.sigtimedwait
+    libc.src.signal.sigwait
+    libc.src.signal.sigwaitinfo
 
     # spawn.h entrypoints
     libc.src.spawn.posix_spawn
@@ -1496,6 +1499,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
+    libc.src.time.clock_nanosleep
     libc.src.time.nanosleep
     libc.src.time.time
     libc.src.time.timespec_get

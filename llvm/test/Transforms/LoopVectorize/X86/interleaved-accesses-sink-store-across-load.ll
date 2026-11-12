@@ -23,9 +23,9 @@ define void @avoid_sinking_store_across_load(ptr %arr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x i32> [[WIDE_VEC]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <4 x i64> [[VEC_IND2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], <4 x i64> [[VEC_IND2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <4 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], <4 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x ptr> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[STRIDED_VEC]], splat (i32 25)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP7]], <4 x ptr> align 4 [[TMP6]], <4 x i1> splat (i1 true))

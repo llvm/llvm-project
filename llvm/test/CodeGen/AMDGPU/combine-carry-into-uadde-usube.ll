@@ -139,7 +139,6 @@ define amdgpu_ps void @v_add_of_usubo_carry(i32 %a, i32 %b, i32 %x, ptr addrspac
 ; GFX12-LABEL: v_add_of_usubo_carry:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v2, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
@@ -162,7 +161,6 @@ define amdgpu_ps void @v_sub_of_uaddo_carry(i32 %a, i32 %b, i32 %x, ptr addrspac
 ; GFX12-LABEL: v_sub_of_uaddo_carry:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v0, null, 0, v2, vcc_lo
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
@@ -197,10 +195,9 @@ define amdgpu_ps void @v_uaddo_carry_multi_use(i32 %a, i32 %b, ptr addrspace(1) 
 ; GFX12-SDAG-LABEL: v_uaddo_carry_multi_use:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v0, vcc_lo
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX12-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -208,10 +205,9 @@ define amdgpu_ps void @v_uaddo_carry_multi_use(i32 %a, i32 %b, ptr addrspace(1) 
 ; GFX12-GISEL-LABEL: v_uaddo_carry_multi_use:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, s0, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX12-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX12-GISEL-NEXT:    s_endpgm
