@@ -24,22 +24,24 @@
 // RUN:   | FileCheck %s --check-prefix=LINK --implicit-check-not=/usr/bin/ld
 // LINK: "{{.*}}clang{{(.exe)?}}" {{.*}}--target=spirv64-unknown-unknown {{.*}}sycl-spirv64-unknown-unknown-generic{{.*}}.o --sycl-link{{$}}
 
-// A value of a host linker option is not taken as an input.
+// 'now' in '-z now' and 'out.map' in '-Map out.map' are values of host linker
+// options, not missing inputs.
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o -z now \
 // RUN:   -Map out.map -o dev.o 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LINK --implicit-check-not=/usr/bin/ld
 
-// Archive device code is only extracted for device targets that other inputs
-// have. Here no other input has device code, so --whole-archive is needed.
+// Device code in a static library is only extracted for device targets that
+// the other inputs have. No other input has device code here, so
+// --whole-archive is needed.
 // RUN: rm -f %t.sycl.a && llvm-ar rcs %t.sycl.a %t.sycl.o
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld --whole-archive %t.sycl.a \
 // RUN:   --no-whole-archive -o dev.o 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LINK --implicit-check-not=/usr/bin/ld
 
-// With --wrapper-verbose and --save-temps, the wrapping is still done
-// in-process, because llvm-offload-wrapper cannot embed finalized images.
+// With --wrapper-verbose and --save-temps, llvm-offload-wrapper is still not
+// used, because it cannot mark images as finalized.
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --wrapper-verbose --save-temps --sycl-device-link \
 // RUN:   --linker-path=/usr/bin/ld %t.sycl.o -o dev.o 2>&1 \
@@ -47,7 +49,7 @@
 // RUN:   --implicit-check-not=/usr/bin/ld --implicit-check-not=llvm-offload-wrapper
 
 //===----------------------------------------------------------------------===//
-// The output.
+// The output file.
 //===----------------------------------------------------------------------===//
 
 // The output registers the device image with the SYCL runtime. The image is in
@@ -62,7 +64,8 @@
 // SECTIONS: Name: .sycl_fatbin
 // SECTIONS-NOT: Name: .llvm.offloading
 
-// So a later wrapped host link does not link the image again.
+// Because the image is finalized, a later host link through
+// clang-linker-wrapper does not link it again.
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.dev.o -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=RELINK --implicit-check-not=--sycl-link
@@ -86,7 +89,8 @@
 // RUN:   %t.sycl.o -o dev.o 2>&1 | FileCheck %s --check-prefix=FATBIN
 // FATBIN: error: --sycl-device-link cannot be used with --emit-fatbin-only
 
-// Device code of another offload kind, also through --override-image.
+// OpenMP device code is an error, both in an input and given with
+// --override-image.
 // RUN: llvm-offload-binary -o %t.openmp.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.openmp.o \
@@ -100,8 +104,8 @@
 // RUN:   | FileCheck %s --check-prefix=NOT-SYCL
 // NOT-SYCL: error: --sycl-device-link requires SYCL device code, got 'openmp'
 
-// No host linker runs, so a missing input is reported here: a plain input, one
-// inside --whole-archive, and one after '--'.
+// No host linker runs, so clang-linker-wrapper reports missing inputs: a plain
+// input, one inside --whole-archive, and one after '--'.
 // RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o %t.missing.o \
 // RUN:   -o dev.o 2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
@@ -119,8 +123,9 @@
 // the LIB environment variable.
 //===----------------------------------------------------------------------===//
 
-// link.exe options are not reported as missing inputs. The -o after
-// '/OUT:C:/dir/a.exe' names the output, because the last output option wins.
+// link.exe options such as /nologo and /LIBPATH:C:\dir are not reported as
+// missing inputs. The -o names the output, because it comes after /OUT: and
+// the last output option wins.
 // RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
 // RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o /nologo \
 // RUN:   /IGNORE:4078 '/LIBPATH:C:\dir' /OUT:C:/dir/a.exe -o %t.dev.obj
