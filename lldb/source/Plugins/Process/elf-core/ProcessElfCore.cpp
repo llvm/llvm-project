@@ -1113,11 +1113,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       m_nt_file_entries.clear();
       lldb::offset_t offset = 0;
       const uint64_t count = note.data.GetAddress(&offset);
-      m_nt_file_page_size = note.data.GetAddress(&offset);
-
       const lldb::addr_t page_size =
           note.data.GetAddress(&offset); // Skip page size
-
       for (uint64_t i = 0; i < count; ++i) {
         NT_FILE_Entry entry;
         entry.start = note.data.GetAddress(&offset);
@@ -1189,11 +1186,11 @@ ProcessElfCore::FindNTFileAddressForFileOffset(lldb::addr_t elf_header_addr,
     if (entry.path != path || entry.start < elf_header_addr ||
         entry.end <= entry.start)
       continue;
-    const lldb::addr_t entry_file_offset = entry.file_ofs * m_nt_file_page_size;
-    if (file_offset < entry_file_offset ||
-        file_offset - entry_file_offset >= entry.end - entry.start)
+    if (file_offset < entry.original_file_offset ||
+        file_offset - entry.original_file_offset >= entry.end - entry.start)
       continue;
-    const lldb::addr_t addr = entry.start + (file_offset - entry_file_offset);
+    const lldb::addr_t addr =
+        entry.start + (file_offset - entry.original_file_offset);
     if (!result || addr < *result)
       result = addr;
   }

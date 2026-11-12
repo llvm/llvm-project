@@ -154,8 +154,6 @@ private:
 
   // NT_FILE entries found from the NOTE segment
   std::vector<NT_FILE_Entry> m_nt_file_entries;
-  // The unit of NT_FILE_Entry::file_ofs.
-  uint64_t m_nt_file_page_size = 0;
 
   // Map from file path to UUID for quick lookup
   std::unordered_map<std::string, lldb_private::UUID> m_uuids;
