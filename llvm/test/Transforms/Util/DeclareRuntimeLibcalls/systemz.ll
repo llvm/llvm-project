@@ -479,6 +479,7 @@
 ; LINUX-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; LINUX-NEXT: declare ptr @wmemset(ptr, i32 signext, i64)
 ; LINUX-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1065,6 +1066,7 @@
 ; ZOS-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; ZOS-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; ZOS-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; ZOS-NEXT: declare ptr @wmemset(ptr, i32 zeroext, i64)
 ; ZOS-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; ZOS-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; ZOS-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

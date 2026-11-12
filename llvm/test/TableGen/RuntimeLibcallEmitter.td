@@ -176,6 +176,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  V16I32,
 // CHECK-NEXT:  Variable,
 // CHECK-NEXT:  Void,
+// CHECK-NEXT:  WChar,
 // CHECK-NEXT:  X86FP80,
 // CHECK-NEXT:};
 // CHECK-EMPTY:

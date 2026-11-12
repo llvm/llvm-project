@@ -743,6 +743,7 @@ def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
+def WMEMSET : RuntimeLibcall<Ptr, [Ptr, WChar, SizeT]>;
 class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
@@ -1730,6 +1731,7 @@ defset list<RuntimeLibcallImpl> LibcCoreImpls = {
 def memcpy : RuntimeLibcallImpl<MEMCPY>;
 def memmove : RuntimeLibcallImpl<MEMMOVE>;
 def memset : RuntimeLibcallImpl<MEMSET>;
+def wmemset : RuntimeLibcallImpl<WMEMSET>;
 
 def __memcpy_chk : RuntimeLibcallImpl<MEMCPY_CHK>;
 def __memmove_chk : RuntimeLibcallImpl<MEMMOVE_CHK>;

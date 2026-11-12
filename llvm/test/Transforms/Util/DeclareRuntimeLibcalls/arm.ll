@@ -473,6 +473,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc float @tgammaf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc ptr @wmemset(ptr, i32, i32)
 ; SJLJ-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; SJLJ-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -949,6 +950,7 @@
 ; DWARF-NEXT: declare arm_aapcscc float @tgammaf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc ptr @wmemset(ptr, i32, i32)
 ; DWARF-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; DWARF-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; DWARF-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

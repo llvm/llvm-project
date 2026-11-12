@@ -415,6 +415,7 @@
 ; M68K-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare ptr @wmemset(ptr, i32, i32)
 ; M68K-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; M68K-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; M68K-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

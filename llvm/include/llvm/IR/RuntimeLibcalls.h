@@ -205,6 +205,11 @@ public:
                                                    bool &ShouldZExtBoolReturn,
                                                    const Triple &T);
 
+  /// Returns the extension attribute needed for a wchar_t parameter of a
+  /// libcall. May be zeroext, signext, or none.
+  LLVM_ABI static Attribute::AttrKind
+  getExtAttrForWCharParam(const Triple &T, unsigned WCharWidth);
+
   /// Get the C-type function signature of the Libcall if provided,
   /// and convert it to IR FunctionType and Attributes.
   /// If the C-type function signature is not provided, return nullptr.

@@ -452,6 +452,7 @@
 ; MIPS32-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; MIPS32-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; MIPS32-NEXT: declare ptr @wmemset(ptr, i32 signext, i32 signext)
 ; MIPS32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MIPS32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MIPS32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -937,6 +938,7 @@
 ; MIPS64-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; MIPS64-NEXT: declare ptr @wmemset(ptr, i32 signext, i64)
 ; MIPS64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MIPS64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MIPS64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
