@@ -93,14 +93,13 @@ cir::PointerType getIndirectPtrTy(mlir::Type pointee,
 ///   1. The classification is Direct with a non-null coercedType.
 ///   2. canFlatten is set.
 ///   3. The coercedType is a struct (not a union).
-///   4. The struct has more than one field (single-field structs are already
-///      scalar; flattening them produces no benefit and classic CodeGen skips
-///      them for the same reason).
+///   4. The struct has at least one field.  A struct of one field is passed as
+///      that field.
 cir::RecordType getFlattenedCoercedType(const ArgClassification &ac) {
   if (ac.kind != ArgKind::Direct || !ac.coercedType || !ac.canFlatten)
     return {};
   auto recTy = dyn_cast<cir::RecordType>(ac.coercedType);
-  if (!recTy || !recTy.isStruct() || recTy.getNumElements() <= 1)
+  if (!recTy || !recTy.isStruct() || recTy.getMembers().empty())
     return {};
   return recTy;
 }
@@ -134,8 +133,6 @@ buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
     case ArgKind::Direct:
       // Direct with canFlatten and a struct coerced type: push one wire type
       // per field of the coerced struct rather than the struct itself.
-      // Single-field coerced structs fall through to the non-flatten path —
-      // the struct is already scalar-sized and flattening adds no value.
       if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
         llvm::append_range(newArgTypes, flatTy.getMembers());
       } else {
@@ -1258,7 +1255,6 @@ insertArgCoercion(mlir::FunctionOpInterface funcOp,
       // slot sized and aligned for both the coerced struct and the original
       // argument type, which the body then reads.
       unsigned numFields = flatTy.getNumElements();
-      assert(numFields >= 2 && "getFlattenedCoercedType guarantees >1 fields");
       Type origTy = blockArg.getType();
       Location loc = funcOp.getLoc();
 

@@ -917,6 +917,14 @@ public:
                std::forward<Operands>(op)..., fastmath)
         .getResult();
   }
+
+  /// Converts \p src to \p dstTy, saturating at its bounds. The signedness of
+  /// \p dstTy selects between fptosi.sat and fptoui.sat.
+  mlir::Value createFPToIntSat(mlir::Location loc, mlir::Value src,
+                               cir::IntType dstTy) {
+    return emitIntrinsicCallOp(
+        loc, dstTy.isSigned() ? "fptosi.sat" : "fptoui.sat", dstTy, src);
+  }
 };
 
 } // namespace clang::CIRGen
