@@ -93,6 +93,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
   initializeARMAsmPrinterPass(Registry);
+  initializeARMAvoidTrailingCallPass(Registry);
   initializeARMLoadStoreOptLegacyPass(Registry);
   initializeARMPreAllocLoadStoreOptLegacyPass(Registry);
   initializeARMParallelDSPPass(Registry);
@@ -558,6 +559,10 @@ void ARMPassConfig::addPreEmitPass2() {
   // Inserts BTIs at the start of functions and indirectly-called basic blocks,
   // so passes cannot add to the start of basic blocks once this has run.
   addPass(createARMBranchTargetsPass());
+  // Inserts traps after calls that end a function or funclet, so it has to
+  // come before ARMConstantIslands.
+  if (TM->getTargetTriple().isOSWindows())
+    addPass(createARMAvoidTrailingCallPass());
   // Inserts Constant Islands. Block sizes cannot be increased after this point,
   // as this may push the branch ranges and load offsets of accessing constant
   // pools out of range..
