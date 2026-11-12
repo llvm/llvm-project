@@ -1219,6 +1219,14 @@
 // CHECK-AUBSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-AUBSAN-PS5: -lSceAddressSanitizer_nosubmission_stub_weak
 
+// RUN: not %clang -fsanitize=realtime -### %s 2>&1 \
+// RUN:     --target=x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | %{filecheck} --check-prefix=CHECK-RTSAN-PS5
+// CHECK-RTSAN-PS5: --dependent-lib=libSceRealtimeSanitizer_nosubmission_stub_weak.a
+// CHECK-RTSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-RTSAN-PS5: -lSceRealtimeSanitizer_nosubmission_stub_weak
+
 // RUN: not %clang -fsanitize=address,undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-scei-ps4 -fuse-ld=ld \
 // RUN:     -shared \
