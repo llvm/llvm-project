@@ -1059,6 +1059,105 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
        make_isa_range<VPWidenInductionRecipe>(HeaderVPBB->phis())) {
     if (WideIV.getNoWrapPredicates().empty())
       continue;
+
+    // If the induction has redundant casts (trunc-sext pattern identified by
+    // createAddRecFromPHIWithCasts), the wrap predicates may be unnecessary.
+    // The wider-type induction may diverge from the scalar PHI after
+    // narrow-type overflow, but if all uses narrow the value back, truncation
+    // produces correct results regardless.
+    const InductionDescriptor &IndDesc = WideIV.getInductionDescriptor();
+    bool CanDrop = !IndDesc.getCastInsts().empty();
+
+    // Get the narrow width (e.g. 8 for i8) that the wrap predicates protect.
+    // Each predicate is a SCEVWrapPredicate on the narrow AddRec built from the
+    // cast chain, e.g. {0,+,2}_i8. Bail out on other predicate kinds or if the
+    // widths differ.
+    unsigned NarrowBits = 0;
+    for (const SCEVPredicate *P : WideIV.getNoWrapPredicates()) {
+      if (!CanDrop)
+        break;
+      auto *WP = dyn_cast<SCEVWrapPredicate>(P);
+      if (!WP) {
+        CanDrop = false;
+        break;
+      }
+      unsigned Bits = WP->getExpr()->getType()->getScalarSizeInBits();
+      if (NarrowBits && Bits != NarrowBits) {
+        CanDrop = false;
+        break;
+      }
+      NarrowBits = Bits;
+    }
+    LLVM_DEBUG(if (CanDrop) dbgs() << "LV: Narrow width for wrap predicates: "
+                                   << NarrowBits << "\n");
+
+    // Uses of the PHI (WideIV): besides ExitingIVValue recipes that only feed
+    // resume values in the scalar preheader, the only user must be the first
+    // cast of the chain. The scalar loop re-applies the cast chain to the
+    // resume value, so it is correct even after narrow-type wrap. Any other
+    // user (e.g. a store or a live-out extract) would see the diverged wide
+    // value.
+    auto IsResumeOnlyExitingIV = [&](VPUser *U) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      return VPI && VPI->getOpcode() == VPInstruction::ExitingIVValue &&
+             all_of(VPI->users(), [&](VPUser *ResumeU) {
+               return cast<VPRecipeBase>(ResumeU)->getParent() ==
+                      Plan.getScalarPreheader();
+             });
+    };
+    VPUser *ChainUser = nullptr;
+    if (CanDrop) {
+      SmallVector<VPUser *> PhiUsers;
+      for (VPUser *U : WideIV.users())
+        if (!IsResumeOnlyExitingIV(U))
+          PhiUsers.push_back(U);
+      CanDrop = PhiUsers.size() == 1;
+      if (CanDrop)
+        ChainUser = PhiUsers.front();
+    }
+
+    // Walk the cast chain from the PHI. Each cast must have exactly one user:
+    // the next cast, or the induction increment for the last cast.
+    VPValue *ChainVal = &WideIV;
+    for (Instruction *IRCast : reverse(IndDesc.getCastInsts())) {
+      if (!CanDrop)
+        break;
+      auto *CastR = dyn_cast_or_null<VPSingleDefRecipe>(ChainUser);
+      if (!CastR || CastR->getUnderlyingValue() != IRCast) {
+        CanDrop = false;
+        break;
+      }
+      ChainVal = CastR;
+      ChainUser = ChainVal->getSingleUser();
+    }
+    VPSingleDefRecipe *IncR = nullptr;
+    if (CanDrop) {
+      IncR = dyn_cast_or_null<VPSingleDefRecipe>(ChainUser);
+      Value *BinOp = IndDesc.getInductionBinOp();
+      CanDrop = IncR && BinOp && IncR->getUnderlyingValue() == BinOp;
+    }
+
+    // Uses of the increment: every user must be a trunc of it to at most the
+    // narrow width. Only the low NarrowBits bits of the wide increment are
+    // guaranteed to match the scalar loop after narrow-type wrap.
+    if (CanDrop) {
+      for (VPUser *U : IncR->users()) {
+        auto *TruncR = dyn_cast<VPSingleDefRecipe>(U);
+        if (!TruncR || !match(TruncR, m_Trunc(m_Specific(IncR))) ||
+            TruncR->getScalarType()->getScalarSizeInBits() > NarrowBits) {
+          CanDrop = false;
+          break;
+        }
+      }
+    }
+
+    if (CanDrop) {
+      LLVM_DEBUG(dbgs() << "LV: Dropping SCEV wrap predicate for induction "
+                           "with redundant casts (all uses truncate): "
+                        << WideIV << "\n");
+      continue;
+    }
+
     PredicatedIVs.insert(&WideIV);
     for (const auto *P : WideIV.getNoWrapPredicates())
       PSE.addPredicate(*P);
