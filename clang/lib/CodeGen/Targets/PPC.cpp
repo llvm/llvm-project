@@ -593,8 +593,11 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     Address OverflowArea =
         Address(Builder.CreateLoad(OverflowAreaAddr, "argp.cur"), CGF.Int8Ty,
                 OverflowAreaAlign);
-    // Round up address of argument to alignment
-    CharUnits Align = CGF.getContext().getTypeAlignInChars(Ty);
+    // Round up address of argument to alignment. An aggregate is passed as a
+    // pointer to a copy of it, which needs only the alignment of a pointer,
+    // whatever the alignment of the aggregate.
+    CharUnits Align = isIndirect ? CGF.getPointerAlign()
+                                 : CGF.getContext().getTypeAlignInChars(Ty);
     if (Align > OverflowAreaAlign) {
       llvm::Value *Ptr = OverflowArea.emitRawPointer(CGF);
       OverflowArea = Address(emitRoundPointerUpToAlignment(CGF, Ptr, Align),
