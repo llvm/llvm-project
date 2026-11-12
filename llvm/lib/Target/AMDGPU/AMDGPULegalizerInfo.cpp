@@ -7708,6 +7708,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     if (Ty.isFloatOrFloatVector()) {
       // TODO: need to figure out whether the ResultRegs[0] is always integer
       B.buildBitcast(DstReg, B.buildTrunc(Ty.changeToInteger(), ResultRegs[0]));
+      return true;
     }
     B.buildTrunc(DstReg, ResultRegs[0]);
     return true;
