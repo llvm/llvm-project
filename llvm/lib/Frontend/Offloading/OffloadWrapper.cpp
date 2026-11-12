@@ -196,27 +196,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
                             ".llvm_offloading.descriptor" + Suffix);
 }
 
-/// Names of the runtime registration entry points for OpenMP and OpenACC.
-struct OmpAccFuncNames {
-  StringRef RegFuncName;
-  StringRef UnregFuncName;
-
-  explicit OmpAccFuncNames(OffloadKind Kind) {
-    if (Kind == OFK_OpenMP) {
-      RegFuncName = "__tgt_register_lib";
-      UnregFuncName = "__tgt_unregister_lib";
-    } else if (Kind == OFK_OpenACC) {
-      RegFuncName = "__tgt_acc_register_lib";
-      UnregFuncName = "__tgt_acc_unregister_lib";
-    } else {
-      llvm_unreachable("Unexpected Kind - only OpenMP or OpenACC allowed");
-    }
-  }
-};
-
 Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
-                                   StringRef Suffix, OffloadKind Kind) {
-  OmpAccFuncNames Names(Kind);
+                                   StringRef Suffix, StringRef UnregFuncName) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func =
@@ -224,11 +205,10 @@ Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
                        ".llvm_offloading.descriptor_unreg" + Suffix, &M);
   Func->setSection(getStartupSection(M.getTargetTriple()));
 
-  // Get the unreg function declaration.
+  // Get the unregister function declaration.
   auto *UnRegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
                                         /*isVarArg*/ false);
-  FunctionCallee UnRegFuncC =
-      M.getOrInsertFunction(Names.UnregFuncName, UnRegFuncTy);
+  FunctionCallee UnRegFuncC = M.getOrInsertFunction(UnregFuncName, UnRegFuncTy);
 
   // Construct function body
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
@@ -239,24 +219,25 @@ Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
 }
 
 void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
-                            StringRef Suffix, OffloadKind Kind) {
-  OmpAccFuncNames Names(Kind);
+                            StringRef Suffix, StringRef RegFuncName,
+                            StringRef UnregFuncName) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
                                 ".llvm_offloading.descriptor_reg" + Suffix, &M);
   Func->setSection(getStartupSection(M.getTargetTriple()));
 
-  // Get the reg function declaration.
+  // Get the register function declaration.
   auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
                                       /*isVarArg*/ false);
-  FunctionCallee RegFuncC = M.getOrInsertFunction(Names.RegFuncName, RegFuncTy);
+  FunctionCallee RegFuncC = M.getOrInsertFunction(RegFuncName, RegFuncTy);
 
   auto *AtExitTy = FunctionType::get(
       Type::getInt32Ty(C), PointerType::getUnqual(C), /*isVarArg=*/false);
   FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
 
-  Function *UnregFunc = createUnregisterFunction(M, BinDesc, Suffix, Kind);
+  Function *UnregFunc =
+      createUnregisterFunction(M, BinDesc, Suffix, UnregFuncName);
 
   // Construct function body
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
@@ -732,19 +713,37 @@ private:
 
 } // namespace
 
-Error offloading::wrapOmpAccBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
-                                     EntryArrayTy EntryArray,
-                                     llvm::StringRef Suffix, bool Relocatable,
-                                     OffloadKind Kind) {
-  assert((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
-         "Only OpenMP or OpenACC allowed.");
+/// Wraps the images and registers them with the runtime through the given
+/// registration entry points. Shared by the OpenMP and OpenACC wrappers, which
+/// differ only in the names of those entry points.
+static Error wrapOmpAccBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
+                                offloading::EntryArrayTy EntryArray,
+                                StringRef Suffix, bool Relocatable,
+                                StringRef RegFuncName,
+                                StringRef UnregFuncName) {
   GlobalVariable *Desc =
       createBinDesc(M, Images, EntryArray, Suffix, Relocatable);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
-  createRegisterFunction(M, Desc, Suffix, Kind);
+  createRegisterFunction(M, Desc, Suffix, RegFuncName, UnregFuncName);
   return Error::success();
+}
+
+Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
+                                     EntryArrayTy EntryArray,
+                                     llvm::StringRef Suffix, bool Relocatable) {
+  return wrapOmpAccBinaries(M, Images, EntryArray, Suffix, Relocatable,
+                            "__tgt_register_lib", "__tgt_unregister_lib");
+}
+
+Error offloading::wrapOpenACCBinaries(Module &M,
+                                      ArrayRef<ArrayRef<char>> Images,
+                                      EntryArrayTy EntryArray,
+                                      bool Relocatable) {
+  return wrapOmpAccBinaries(M, Images, EntryArray, /*Suffix=*/"", Relocatable,
+                            "__tgt_acc_register_lib",
+                            "__tgt_acc_unregister_lib");
 }
 
 Error offloading::wrapCudaBinary(Module &M, ArrayRef<char> Image,

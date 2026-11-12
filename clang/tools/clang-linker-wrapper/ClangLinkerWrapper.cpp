@@ -806,10 +806,15 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
 
   switch (Kind) {
   case OFK_OpenMP:
-  case OFK_OpenACC:
-    if (Error Err = offloading::wrapOmpAccBinaries(
+    if (Error Err = offloading::wrapOpenMPBinaries(
             M, BuffersToWrap, offloading::getOffloadEntryArray(M),
-            /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable), Kind))
+            /*Suffix=*/"", /*Relocatable=*/Args.hasArg(OPT_relocatable)))
+      return std::move(Err);
+    break;
+  case OFK_OpenACC:
+    if (Error Err = offloading::wrapOpenACCBinaries(
+            M, BuffersToWrap, offloading::getOffloadEntryArray(M),
+            /*Relocatable=*/Args.hasArg(OPT_relocatable)))
       return std::move(Err);
     break;
   case OFK_Cuda:
