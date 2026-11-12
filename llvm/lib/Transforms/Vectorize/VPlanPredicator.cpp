@@ -419,8 +419,21 @@ void VPPredicator::run() {
       createBlockInMask(VPBB);
 
     VPValue *BlockMask = getBlockInMask(VPBB);
-    // Mask all VPInstructions in the block.
-    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
+    // Lower MaskedCond to logical-and(block-in-mask, x).
+    for (VPInstruction &VPI :
+         make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+      if (VPI.getOpcode() == VPInstruction::MaskedCond) {
+        VPValue *Cond = VPI.getOperand(0);
+        if (BlockMask) {
+          Builder.setInsertPoint(&VPI);
+          Cond = Builder.createLogicalAnd(BlockMask, Cond, VPI.getDebugLoc());
+        }
+        VPI.replaceAllUsesWith(Cond);
+        VPI.eraseFromParent();
+        continue;
+      }
+
+      // Mask all VPInstructions in the block.
       if (BlockMask)
         VPI.addMask(BlockMask);
 
