@@ -12525,6 +12525,8 @@ static unsigned getRVPScalarOpcode(unsigned IntNo) {
     return ISD::AVGSUBFLOORS;
   case Intrinsic::riscv_asubu_u32:
     return ISD::AVGSUBFLOORU;
+  case Intrinsic::riscv_ssh1sadd_i32:
+    return RISCVISD::SSH1SADD;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
   case Intrinsic::riscv_mulhru_u32:
@@ -13512,6 +13514,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_aaddu_u32:
   case Intrinsic::riscv_asub_i32:
   case Intrinsic::riscv_asubu_u32:
+  case Intrinsic::riscv_ssh1sadd_i32:
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
@@ -18600,6 +18603,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_aaddu_u32:
     case Intrinsic::riscv_asub_i32:
     case Intrinsic::riscv_asubu_u32:
+    case Intrinsic::riscv_ssh1sadd_i32:
     case Intrinsic::riscv_mulhr_i32:
     case Intrinsic::riscv_mulhru_u32:
     case Intrinsic::riscv_mulhsu_i32:
@@ -18612,9 +18616,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_mhraccu_u32:
     case Intrinsic::riscv_mhaccsu_i32:
     case Intrinsic::riscv_mhraccsu_i32: {
-      // RV64 has no scalar averaging, mulh, mulq or mhacc instructions; reuse
-      // the packed .w family on the low words, whose element 0 is the scalar
-      // result.
+      // RV64 has no scalar averaging, shift-add, mulh, mulq or mhacc
+      // instructions; reuse the packed .w family on the low words, whose
+      // element 0 is the scalar result.
       assert(Subtarget.is64Bit() && N->getValueType(0) == MVT::i32 &&
              "Unexpected subtarget or result type");
       unsigned Opc = getRVPScalarOpcode(IntNo);

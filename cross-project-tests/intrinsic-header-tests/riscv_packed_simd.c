@@ -6599,3 +6599,10 @@ int32x2_t test_pslidedownx_i32x2(int32x2_t rd, int32x2_t rs1, unsigned rs2) {
 uint32x2_t test_pslidedownx_u32x2(uint32x2_t rd, uint32x2_t rs1, unsigned rs2) {
   return __riscv_pslidedownx_u32x2(rd, rs1, rs2);
 }
+
+// CHECK-LABEL: test_ssh1sadd_i32:
+// RV32:        ssh1sadd{{[[:space:]]}}
+// RV64:        pssh1sadd.w{{[[:space:]]}}
+int32_t test_ssh1sadd_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_ssh1sadd_i32(rs1, rs2);
+}

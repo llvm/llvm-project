@@ -1700,6 +1700,11 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_asubu_u32;
     break;
 
+  // Scalar Shift-Add
+  case RISCV::BI__builtin_riscv_ssh1sadd_i32:
+    ID = Intrinsic::riscv_ssh1sadd_i32;
+    break;
+
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulhr_i32:
   case RISCV::BI__builtin_riscv_mulhru_u32:
