@@ -1,20 +1,20 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file -canonicalize -cse -verify-diagnostics | FileCheck %s
 
-// TODO: Process selected consumers before shared producers to avoid leaving
-// both a full producer and tiled producer computations after fusion.
+// The numerator is used by both the reduction and the final division. Fusing
+// it before the reduction used to leave the full numerator outside the loop
+// in addition to computing its tiles inside the loop. CSE cannot merge those
+// differently shaped computations.
 // CHECK-LABEL: func.func @softmax_producer_first
-// CHECK: %[[FULL:.+]] = linalg.generic {{.*}}iterator_types = ["parallel", "parallel"]}
-// CHECK: math.exp
+// CHECK-NOT: math.exp
 // CHECK: scf.forall
 // CHECK: %[[EXP:.+]] = linalg.generic
 // CHECK: math.exp
-// CHECK: %[[SLICE:.+]] = tensor.extract_slice %[[FULL]]
 // CHECK: %[[SUM:.+]] = linalg.generic
-// CHECK-SAME: ins(%[[SLICE]] : tensor<1x128xf32>)
+// CHECK-SAME: ins(%[[EXP]] : tensor<1x128xf32>)
 // CHECK: linalg.generic
 // CHECK-SAME: ins(%[[EXP]], %[[SUM]] : tensor<1x128xf32>, tensor<1xf32>)
+// CHECK-NOT: math.exp
 // CHECK: return
-
 module attributes {transform.with_named_sequence} {
   func.func @softmax_producer_first(%input: tensor<8x128xf32>, %output: tensor<8x128xf32>)
       -> tensor<8x128xf32> {
@@ -87,18 +87,16 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// TODO: Fuse the skip-edge producer after its selected consumers.
-// Repeated handles must still be deduplicated.
+// The same ordering applies to an ordinary producer chain with a skip edge.
+// Repeated producer handles must still be deduplicated.
 // CHECK-LABEL: func.func @skip_connection
-// CHECK: %[[FULL:.+]] = linalg.elementwise <exp>
+// CHECK-NOT: linalg.elementwise
 // CHECK: scf.forall
 // CHECK: %[[EXP:.+]] = linalg.elementwise <exp>
-// CHECK: %[[SLICE:.+]] = tensor.extract_slice %[[FULL]]
-// CHECK: %[[ABS:.+]] = linalg.elementwise <abs> {producer} ins(%[[SLICE]]
+// CHECK: %[[ABS:.+]] = linalg.elementwise <abs> {producer} ins(%[[EXP]]
 // CHECK: %[[NEG:.+]] = linalg.elementwise <negf> {producer} ins(%[[ABS]]
 // CHECK: linalg.elementwise <add> {consumer} ins(%[[EXP]], %[[NEG]]
 // CHECK: return
-
 module attributes {transform.with_named_sequence} {
   func.func @skip_connection(%input: tensor<16xf32>, %output: tensor<16xf32>)
       -> tensor<16xf32> {
@@ -130,20 +128,18 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Preserve an externally used result of a multi-output producer.
-// TODO: Share the tiled first result with the selected consumer.
+// An independently used result of a multi-output producer must be preserved.
+// Its first result can still be shared by the selected consumer and the tile.
 // CHECK-LABEL: func.func @multi_output_with_external_use
-// CHECK: %[[FULL:.+]]:2 = linalg.generic
+// CHECK: %[[PRODUCER:.+]]:2 = linalg.generic
 // CHECK: math.exp
 // CHECK: arith.mulf
 // CHECK: %[[RESULT:.+]] = scf.forall
 // CHECK: %[[EXP:.+]]:2 = linalg.generic
 // CHECK: math.exp
-// CHECK: %[[SLICE:.+]] = tensor.extract_slice %[[FULL]]#0
-// CHECK: %[[ABS:.+]] = linalg.elementwise <abs> {producer} ins(%[[SLICE]]
+// CHECK: %[[ABS:.+]] = linalg.elementwise <abs> {producer} ins(%[[EXP]]#0
 // CHECK: linalg.elementwise <add> {consumer} ins(%[[EXP]]#0, %[[ABS]]
-// CHECK: return %[[RESULT]], %[[FULL]]#1
-
+// CHECK: return %[[RESULT]], %[[PRODUCER]]#1
 module attributes {transform.with_named_sequence} {
   func.func @multi_output_with_external_use(
       %input: tensor<16xf32>, %output: tensor<16xf32>, %side: tensor<16xf32>)
@@ -183,20 +179,20 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Different tile domains must remain distinct.
-// TODO: Fuse both requested producer tiles instead of leaving the full producer.
+// A sequential container can request different tiles of a shared producer.
+// Ordering must expose both uses without treating the distinct tiles as equal.
 // CHECK-LABEL: func.func @different_tiles_in_for
 // CHECK-SAME: %[[INPUT:.+]]: tensor<16xf32>
-// CHECK: %[[FULL:.+]] = linalg.elementwise <exp>
+// CHECK-NOT: linalg.elementwise
 // CHECK: scf.for %[[I:[a-zA-Z0-9_]+]] =
 // CHECK: %[[J:.+]] = arith.addi %[[I]], %{{.+}} : index
 // CHECK: %[[X0:.+]] = tensor.extract_slice %[[INPUT]][%[[I]]] [1] [1]
 // CHECK: %[[E0:.+]] = linalg.elementwise <exp> {producer} ins(%[[X0]]
-// CHECK: %[[X1:.+]] = tensor.extract_slice %[[FULL]][%[[J]]] [1] [1]
-// CHECK: %[[ABS:.+]] = linalg.elementwise <abs> {producer} ins(%[[X1]]
+// CHECK: %[[X1:.+]] = tensor.extract_slice %[[INPUT]][%[[J]]] [1] [1]
+// CHECK: %[[E1:.+]] = linalg.elementwise <exp> {producer} ins(%[[X1]]
+// CHECK: %[[ABS:.+]] = linalg.elementwise <abs> {producer} ins(%[[E1]]
 // CHECK: linalg.elementwise <add> ins(%[[E0]], %[[ABS]]
 // CHECK: return
-
 module attributes {transform.with_named_sequence} {
   func.func @different_tiles_in_for(%input: tensor<16xf32>, %output: tensor<8xf32>)
       -> tensor<8xf32> {
@@ -231,6 +227,41 @@ module attributes {transform.with_named_sequence} {
     %fused, %new_container = transform.structured.fuse_into_containing_op
         %producers into %container : (!transform.any_op, !transform.any_op)
         -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// A top-level payload operation has no parent region. Diagnose it instead of
+// trying to find a common ancestor region with another selected producer.
+module attributes {transform.with_named_sequence} {
+  // NO-CHECK-LABEL-ON-EXPECTED-ERROR
+  func.func @top_level_producer(%output: tensor<4xf32>) -> tensor<4xf32> {
+    %zero = arith.constant 0.0 : f32
+    %fill = linalg.fill ins(%zero : f32) outs(%output : tensor<4xf32>)
+        -> tensor<4xf32>
+    // expected-note @below {{containing op}}
+    %result = scf.forall (%i) in (4) shared_outs(%out = %output) -> (tensor<4xf32>) {
+      %slice = tensor.extract_slice %fill[%i] [1] [1]
+          : tensor<4xf32> to tensor<1xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %slice into %out[%i] [1] [1]
+            : tensor<1xf32> into tensor<4xf32>
+      }
+    }
+    return %result : tensor<4xf32>
+  }
+
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %fill = transform.structured.match ops{["linalg.fill"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %container = transform.structured.match ops{["scf.forall"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %producers = transform.merge_handles %root, %fill : !transform.any_op
+    // expected-error @below {{cannot fuse a top-level operation}}
+    %fused, %new_container = transform.structured.fuse_into_containing_op %producers into %container
+        : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
