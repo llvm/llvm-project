@@ -84,16 +84,16 @@ CompUnitSP SymbolFileJSON::ParseCompileUnitAtIndex(uint32_t idx) { return {}; }
 void SymbolFileJSON::GetTypes(SymbolContextScope *sc_scope, TypeClass type_mask,
                               lldb_private::TypeList &type_list) {}
 
-void SymbolFileJSON::AddSymbols(Symtab &symtab) {
+bool SymbolFileJSON::AddSymbols(Symtab &symtab) {
   if (!m_objfile_sp)
-    return;
+    return false;
 
   Symtab *json_symtab = m_objfile_sp->GetSymtab();
   if (!json_symtab)
-    return;
+    return false;
 
   if (&symtab == json_symtab)
-    return;
+    return false;
 
   // Merge the two symbol tables.
   const size_t num_new_symbols = json_symtab->GetNumSymbols();
@@ -102,4 +102,5 @@ void SymbolFileJSON::AddSymbols(Symtab &symtab) {
     symtab.AddSymbol(*s);
   }
   symtab.Finalize();
+  return num_new_symbols > 0;
 }

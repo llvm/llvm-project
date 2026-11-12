@@ -56,8 +56,8 @@ BuildDemangledCodeSymbolIndex(Symtab &symtab) {
   return index;
 }
 
-void SymbolFileWasm::AddSymbols(Symtab &symtab) {
-  SymbolFileDWARF::AddSymbols(symtab);
+bool SymbolFileWasm::AddSymbols(Symtab &symtab) {
+  bool changed = SymbolFileDWARF::AddSymbols(symtab);
 
   // The Wasm "name" section names functions but not data, so data symbols are
   // absent from the symbol table. Recover them from the DWARF. A subprogram's
@@ -188,8 +188,7 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
   for (const Symbol &symbol : data_symbols)
     symtab.AddSymbol(symbol);
 
-  if (updated_symbols)
-    symtab.SetSymbolFileAddedSymbols();
+  return changed || updated_symbols || !data_symbols.empty();
 }
 
 lldb::offset_t

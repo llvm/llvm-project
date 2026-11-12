@@ -98,7 +98,7 @@ public:
                 lldb::TypeClass type_mask,
                 lldb_private::TypeList &type_list) override;
 
-  void AddSymbols(Symtab &symtab) override;
+  bool AddSymbols(Symtab &symtab) override;
 
 private:
   lldb::addr_t GetBaseFileAddress();

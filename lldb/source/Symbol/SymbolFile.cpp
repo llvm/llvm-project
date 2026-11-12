@@ -177,8 +177,11 @@ Symtab *SymbolFileCommon::GetSymtab(bool can_create) {
     // Then add our symbols to it.
     if (m_symtab) {
       const size_t num_symbols = m_symtab->GetNumSymbols();
-      AddSymbols(*m_symtab);
-      if (m_symtab->GetNumSymbols() > num_symbols)
+      const bool changed = AddSymbols(*m_symtab);
+      const bool added = m_symtab->GetNumSymbols() > num_symbols;
+      assert((changed || !added) &&
+             "AddSymbols added symbols but reported no change");
+      if (changed || added)
         m_symtab->SetSymbolFileAddedSymbols();
     }
   }

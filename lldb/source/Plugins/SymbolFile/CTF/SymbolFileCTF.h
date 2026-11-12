@@ -99,7 +99,7 @@ public:
                                 lldb::SymbolContextItem resolve_scope,
                                 lldb_private::SymbolContext &sc) override;
 
-  void AddSymbols(Symtab &symtab) override;
+  bool AddSymbols(Symtab &symtab) override;
 
   void GetTypes(lldb_private::SymbolContextScope *sc_scope,
                 lldb::TypeClass type_mask,
