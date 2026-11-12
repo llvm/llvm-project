@@ -1,0 +1,44 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# Built before the run, so the output directory holds nothing under its id.
+# RUN: %clang -c -o %t/third_party/vendor.o %t/third_party/vendor.c
+# RUN: ar rcs %t/third_party/libvendor.a %t/third_party/vendor.o
+
+# RUN: cd %t
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/out -- make \
+# RUN:   | FileCheck %s --check-prefix=STDOUT
+
+# STDOUT: summaries: 2
+# STDOUT: link-unit: {{[^ ]*}}/build/prg
+
+# RUN: not ls %t/out/failure-logs
+
+# RUN: cat %t/out/build-graph%t/build/prg.buildstep.json \
+# RUN:   | FileCheck %s --check-prefix=UNIT
+# UNIT-NOT: libvendor.a
+# UNIT: build/main.o
+# UNIT-NOT: libvendor.a
+
+#--- Makefile
+CC = clang
+all: build/prg
+build/main.o: src/main.c
+	$(CC) -c -o $@ $<
+build/prg: build/main.o
+	$(CC) -o $@ build/main.o third_party/libvendor.a
+
+#--- third_party/vendor.c
+int vendor(int *p) { return p[0]; }
+
+#--- src/main.c
+int vendor(int *p);
+int main(void) {
+  int values[2] = {1, 2};
+  return vendor(values);
+}

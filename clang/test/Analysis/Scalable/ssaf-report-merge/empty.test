@@ -1,0 +1,16 @@
+// Reports without results merge into a report without results, and add
+// nothing to a report that has some.
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: clang-ssaf-report-merge %S/Inputs/empty.sarif \
+// RUN:   %S/Inputs/empty.sarif -o %t/empty.sarif
+// RUN: FileCheck %s --input-file=%t/empty.sarif
+// CHECK: "artifacts": [],
+// CHECK: "results": [],
+// CHECK: "rules": [],
+
+// RUN: clang-ssaf-report-merge %S/Inputs/tu-a.sarif \
+// RUN:   -o %t/a.sarif
+// RUN: clang-ssaf-report-merge %S/Inputs/empty.sarif \
+// RUN:   %S/Inputs/tu-a.sarif -o %t/empty-a.sarif
+// RUN: diff %t/a.sarif %t/empty-a.sarif

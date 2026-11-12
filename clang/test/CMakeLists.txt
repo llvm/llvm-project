@@ -105,13 +105,22 @@ list(APPEND CLANG_TEST_DEPS
   clang-nvlink-wrapper
   clang-offload-bundler
   clang-ssaf-analyzer
+  clang-ssaf-conflict-merge
   clang-ssaf-format
   clang-ssaf-linker
+  clang-ssaf-report-merge
   clang-ssaf-src-edit-merge
   clang-sycl-linker
   diagtool
   hmaptool
   )
+
+if(NOT WIN32)
+  list(APPEND CLANG_TEST_DEPS
+    clang-ssaf-driver
+    clang-ssaf-orchestrator-make
+    )
+endif()
 
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
