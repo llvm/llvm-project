@@ -27,6 +27,18 @@ add_header_library(
 )
 
 add_header_library(
+  geteuid
+  HDRS
+    geteuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   getgid
   HDRS
     getgid.h
