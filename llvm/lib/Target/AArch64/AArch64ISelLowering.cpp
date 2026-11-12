@@ -20675,6 +20675,101 @@ bool AArch64TargetLowering::isDesirableToCommuteXorWithShift(
   return false;
 }
 
+/// Return true if all users of N are ADDs used by loads/stores of suitable
+/// type that can fold a left shift of ShAmt into the addressing mode.
+/// If OnlySVE is set, only scalable accesses (and prefetches) are considered.
+static bool canFoldLeftShiftIntoUsers(const SDNode *N, unsigned ShAmt,
+                                      const AArch64Subtarget &Subtarget,
+                                      bool OnlySVE = false) {
+  if (!ShAmt || ShAmt > 4 || N->getValueType(0) != MVT::i64)
+    return false;
+
+  // isWorthFoldingAddr only folds multiuse shifts for these amounts.
+  // TODO: Also allow sharing when optimising for size?
+  bool CanShare = ShAmt <= 3 && !(ShAmt == 1 && Subtarget.hasAddrLSLSlow14());
+
+  for (const SDNode *Add : N->users()) {
+    if (Add->getOpcode() != ISD::ADD)
+      return false;
+
+    // If the node is only used by a one-use ADD, it almost always folds.
+    // TODO: The exceptions are if the ADD has an immediate operand or another
+    // suitable shifted/extended operand, but currently this isn't considered.
+    bool NotShared = N->hasOneUse() && Add->hasOneUse();
+
+    for (SDUse &Use : Add->uses()) {
+      SDNode *User = Use.getUser();
+      switch (User->getOpcode()) {
+      default:
+        return false;
+      case AArch64ISD::PREFETCH:
+        if (Use.getOperandNo() != 2 || ShAmt != 3)
+          return false;
+        continue;
+      case ISD::PREFETCH:
+        if (Use.getOperandNo() != 1 || ShAmt != 3)
+          return false;
+        continue;
+      case ISD::ATOMIC_LOAD:
+        if (Use.getOperandNo() != 1 ||
+            isStrongerThanMonotonic(
+                cast<MemSDNode>(User)->getSuccessOrdering()))
+          return false;
+        break;
+      case ISD::LOAD:
+        if (Use.getOperandNo() != 1 || cast<LoadSDNode>(User)->isIndexed())
+          return false;
+        break;
+      case ISD::MLOAD:
+        if (Use.getOperandNo() != 1 ||
+            cast<MaskedLoadSDNode>(User)->isIndexed())
+          return false;
+        break;
+      case ISD::ATOMIC_STORE:
+        if (Use.getOperandNo() != 2 ||
+            isStrongerThanMonotonic(
+                cast<MemSDNode>(User)->getSuccessOrdering()))
+          return false;
+        break;
+      case ISD::STORE:
+        if (Use.getOperandNo() != 2 || cast<StoreSDNode>(User)->isIndexed())
+          return false;
+        break;
+      case ISD::MSTORE:
+        if (Use.getOperandNo() != 2 ||
+            cast<MaskedStoreSDNode>(User)->isIndexed())
+          return false;
+        break;
+      }
+
+      EVT MemVT = cast<MemSDNode>(User)->getMemoryVT();
+
+      // Suitable scalable loads/stores always fold, regardless of use count.
+      if (MemVT.isScalableVector()) {
+        if (MemVT.getScalarSizeInBits() == 8ULL << ShAmt)
+          continue;
+
+        return false;
+      }
+
+      // When allowing non-SVE folds, the shift only folds if it's one-use or if
+      // isWorthFolding* gates allow multiple uses.
+      if (!OnlySVE && (NotShared || CanShare) &&
+          MemVT.getFixedSizeInBits() == 8ULL << ShAmt)
+        continue;
+
+      // TODO: In many cases, even if ADD+LSL doesn't fold into the addressing
+      // mode, the left shift can fold into the ADD. If N has multiple uses, it
+      // can be worth keeping the left shift so we may select it later (see
+      // AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd). Folding multi-use
+      // shifts into ADDs usually needs +alu-lsl-fast (isWorthFoldingALU).
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
     const SDNode *N) const {
   assert(((N->getOpcode() == ISD::SHL &&
@@ -20694,25 +20789,18 @@ bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
     return (!C1 || !C2 || C1->getZExtValue() >= C2->getZExtValue());
   }
 
-  // We do not need to fold when this shifting used in specific load case:
-  // (ldr x, (add x, (shl (srl x, c1) 2)))
-  if (N->getOpcode() == ISD::SHL && N->hasOneUse()) {
-    if (auto C2 = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
-      unsigned ShlAmt = C2->getZExtValue();
-      if (auto ShouldADD = *N->user_begin();
-          ShouldADD->getOpcode() == ISD::ADD && ShouldADD->hasOneUse()) {
-        if (auto Load = dyn_cast<LoadSDNode>(*ShouldADD->user_begin())) {
-          EVT MemVT = Load->getMemoryVT();
-
-          if (Load->getValueType(0).isScalableVector())
-            return (8ULL << ShlAmt) != MemVT.getScalarSizeInBits();
-
-          if (isIndexedLoadLegal(ISD::PRE_INC, MemVT))
-            return (8ULL << ShlAmt) != MemVT.getFixedSizeInBits();
-        }
-      }
-    }
-  }
+  // Keep the shift pair when a left shift can fold into its users. Future code
+  // will use this hook to convert masked shifts into shift pairs, undoing
+  // InstCombine/DAGCombine canonicalisations. When this happens, this hook will
+  // also be used by performSHLCombine to avoid loops.
+  // With equal (constant) shift amounts the shift pair is an AND, which
+  // fixed-size accesses can take as an unscaled register offset. SVE only has
+  // unscaled offsets for byte elements.
+  bool EqualShifts = N->getOperand(1) == N->getOperand(0).getOperand(1);
+  if (N->getOpcode() == ISD::SHL && VT == MVT::i64)
+    if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+      return !canFoldLeftShiftIntoUsers(N, C->getZExtValue(), *Subtarget,
+                                        /*OnlySVE=*/EqualShifts);
 
   return true;
 }
