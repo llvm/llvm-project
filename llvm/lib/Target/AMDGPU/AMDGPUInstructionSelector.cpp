@@ -3078,8 +3078,7 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
     const MachineRegisterInfo &MRI, SmallVectorImpl<GEPInfo> &AddrInfo) const {
 
   unsigned OpNo = Load.getOpcode() == AMDGPU::G_PREFETCH ? 0 : 1;
-  const MachineInstr *PtrMI =
-      MRI.getUniqueVRegDef(Load.getOperand(OpNo).getReg());
+  const MachineInstr *PtrMI = MRI.getVRegDef(Load.getOperand(OpNo).getReg());
 
   assert(PtrMI);
 
@@ -3090,7 +3089,7 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
 
   for (unsigned i = 1; i != 3; ++i) {
     const MachineOperand &GEPOp = PtrMI->getOperand(i);
-    const MachineInstr *OpDef = MRI.getUniqueVRegDef(GEPOp.getReg());
+    const MachineInstr *OpDef = MRI.getVRegDef(GEPOp.getReg());
     assert(OpDef);
     if (i == 2 && isConstant(*OpDef)) {
       // TODO: Could handle constant base + variable offset, but a combine
@@ -3170,7 +3169,7 @@ static bool isVCmpResult(Register Reg, MachineRegisterInfo &MRI) {
   if (Reg.isPhysical())
     return false;
 
-  MachineInstr &MI = *MRI.getUniqueVRegDef(Reg);
+  MachineInstr &MI = *MRI.getVRegDef(Reg);
   const unsigned Opcode = MI.getOpcode();
 
   if (Opcode == AMDGPU::COPY)
