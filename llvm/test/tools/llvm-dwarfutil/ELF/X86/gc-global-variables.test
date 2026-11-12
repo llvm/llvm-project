@@ -1,5 +1,4 @@
 ## Live variables in allocated non-executable sections must survive GC.
-## FIXME: GC currently drops all these variables, including the live ones.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-dwarfdump --debug-info %t | FileCheck %s --check-prefix=INPUT
@@ -11,8 +10,11 @@
 # RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s --check-prefix=GC
 # RUN: llvm-dwarfutil --tombstone=exec %t %t.out
 # RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s --check-prefix=GC
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
 # RUN: llvm-dwarfutil --no-garbage-collection %t %t.out
 # RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s --check-prefix=INPUT
+
+# VERIFY: No errors.
 
 # INPUT: DW_AT_name ("data")
 # INPUT: DW_AT_name ("bss")
@@ -21,10 +23,20 @@
 # INPUT: DW_AT_name ("nonalloc")
 
 # GC: DW_TAG_compile_unit
+# GC: DW_TAG_variable
+# GC: DW_AT_name ("data")
+# GC: DW_AT_location (DW_OP_addr 0x2000)
+# GC: DW_TAG_variable
+# GC: DW_AT_name ("bss")
+# GC: DW_AT_location (DW_OP_addr 0x3000)
+# GC: DW_TAG_variable
+# GC: DW_AT_name ("rodata")
+# GC: DW_AT_location (DW_OP_addr 0x4000)
 # GC-NOT: DW_TAG_variable
 # GC: DW_TAG_subprogram
 # GC: DW_AT_name ("main")
 # GC-NOT: DW_TAG_variable
+# GC-NOT: DW_TAG_subprogram
 
 --- !ELF
 FileHeader:
@@ -122,6 +134,12 @@ DWARF:
             - CStr: main
             - Value: 0x1000
             - Value: 0x10
+        ## A function address in .data must still be rejected.
+        - AbbrCode: 3
+          Values:
+            - CStr: not_code
+            - Value: 0x2000
+            - Value: 4
         - AbbrCode: 0
   debug_addr:
     - Version: 5

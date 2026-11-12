@@ -1,0 +1,153 @@
+## Conservatively retain TLS locations, including zero, offsets outside
+## sections, and values resembling tombstones.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-dwarfutil %t %t.out 2> %t.err
+# RUN: count 0 < %t.err
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --tombstone=bfd %t %t.out 2> %t.err
+# RUN: count 0 < %t.err
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --tombstone=exec %t %t.out 2> %t.err
+# RUN: count 0 < %t.err
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --tombstone=maxpc %t %t.out 2> %t.err
+# RUN: count 0 < %t.err
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --linker=parallel %t %t.out 2> %t.err
+# RUN: count 0 < %t.err
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --linker=parallel --tombstone=bfd %t %t.out 2> %t.err
+# RUN: count 0 < %t.err
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --linker=parallel --tombstone=exec %t %t.out 2> %t.err
+# RUN: count 0 < %t.err
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfutil --linker=parallel --tombstone=maxpc %t %t.out 2> %t.err
+# RUN: count 0 < %t.err
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.out | FileCheck %s --check-prefix=VERIFY
+
+# VERIFY: No errors.
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("const2u_zero")
+# CHECK: DW_AT_location (DW_OP_const2u {{.*}}, DW_OP_form_tls_address)
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("const4u_offset")
+# CHECK: DW_AT_location (DW_OP_const4u {{.*}}, DW_OP_form_tls_address)
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("const8u_max")
+# CHECK: DW_AT_location (DW_OP_const8u {{.*}}, DW_OP_form_tls_address)
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("const2s_zero")
+# CHECK: DW_AT_location (DW_OP_const2s {{.*}}, DW_OP_GNU_push_tls_address)
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("const4s_negative")
+# CHECK: DW_AT_location (DW_OP_const4s {{.*}}, DW_OP_GNU_push_tls_address)
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("const8s_offset")
+# CHECK: DW_AT_location (DW_OP_const8s {{.*}}, DW_OP_GNU_push_tls_address)
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("constx_zero")
+# CHECK: DW_AT_location (DW_OP_const8u {{.*}}, DW_OP_form_tls_address)
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("constx_offset")
+# CHECK: DW_AT_location (DW_OP_const8u {{.*}}, DW_OP_GNU_push_tls_address)
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name ("constx_max")
+# CHECK: DW_AT_location (DW_OP_const8u {{.*}}, DW_OP_form_tls_address)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0x2000
+    Size: 4
+  - Name: .bss
+    Type: SHT_NOBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0x3000
+    Size: 4
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Tag: DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_addr_base
+              Form: DW_FORM_sec_offset
+        - Tag: DW_TAG_variable
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form: DW_FORM_string
+            - Attribute: DW_AT_location
+              Form: DW_FORM_exprloc
+  debug_info:
+    - Version: 5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: tls.c
+            - Value: 8
+        - AbbrCode: 2
+          Values:
+            - CStr: const2u_zero
+            - BlockData: [ 0xa, 0x0, 0x0, 0x9b ]
+        - AbbrCode: 2
+          Values:
+            - CStr: const4u_offset
+            - BlockData: [ 0xc, 0x20, 0x0, 0x0, 0x0, 0x9b ]
+        - AbbrCode: 2
+          Values:
+            - CStr: const8u_max
+            - BlockData: [ 0xe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x9b ]
+        - AbbrCode: 2
+          Values:
+            - CStr: const2s_zero
+            - BlockData: [ 0xb, 0x0, 0x0, 0xe0 ]
+        - AbbrCode: 2
+          Values:
+            - CStr: const4s_negative
+            - BlockData: [ 0xd, 0xf0, 0xff, 0xff, 0xff, 0xe0 ]
+        - AbbrCode: 2
+          Values:
+            - CStr: const8s_offset
+            - BlockData: [ 0xf, 0x20, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xe0 ]
+        - AbbrCode: 2
+          Values:
+            - CStr: constx_zero
+            - BlockData: [ 0xa2, 0x0, 0x9b ]
+        - AbbrCode: 2
+          Values:
+            - CStr: constx_offset
+            - BlockData: [ 0xa2, 0x1, 0xe0 ]
+        - AbbrCode: 2
+          Values:
+            - CStr: constx_max
+            - BlockData: [ 0xa2, 0x2, 0x9b ]
+        - AbbrCode: 0
+  debug_addr:
+    - Version: 5
+      AddressSize: 8
+      Entries:
+        - Address: 0
+        - Address: 0x20
+        - Address: 0xffffffffffffffff

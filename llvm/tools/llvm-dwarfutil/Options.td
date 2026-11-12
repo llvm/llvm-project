@@ -68,7 +68,7 @@ def tombstone: Separate<["--", "-"], "tombstone">,
   HelpText<"Tombstone value used as a marker of invalid address(default: universal)\n"
   "    =bfd - Zero for all addresses and [1,1] for DWARF v4 (or less) address ranges and exec\n"
   "    =maxpc - Minus 1 for all addresses and minus 2 for DWARF v4 (or less) address ranges\n"
-  "    =exec - Match with address ranges of executable sections\n"
+  "    =exec - Match functions to executable sections and variables to allocated sections\n"
   "    =universal - Both: bfd and maxpc"
   >;
 def: Joined<["--", "-"], "tombstone=">, Alias<tombstone>;
