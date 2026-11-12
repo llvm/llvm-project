@@ -640,7 +640,7 @@ private:
         return mlirGen(*ret);
       if (auto *print = dyn_cast<PrintExprAST>(expr.get())) {
         if (mlir::failed(mlirGen(*print)))
-          return mlir::success();
+          return mlir::failure();
         continue;
       }
 
