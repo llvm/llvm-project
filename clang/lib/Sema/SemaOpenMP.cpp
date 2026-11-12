@@ -1350,9 +1350,9 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   const auto *FD = dyn_cast<FieldDecl>(D);
   DSAVarData DVar;
   if (Iter == end()) {
-    // A binding has the storage of the variable it decomposes.
+    // A tuple-like binding has the storage of the variable it decomposes.
     const VarDecl *StorageVD = VD;
-    if (const auto *BD = dyn_cast<BindingDecl>(D))
+    if (const auto *BD = dyn_cast<BindingDecl>(D); BD && BD->getHoldingVar())
       StorageVD = BD->getDecomposedDecl();
     // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
     // in a region but not in construct]
