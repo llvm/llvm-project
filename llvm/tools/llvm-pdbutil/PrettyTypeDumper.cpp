@@ -16,7 +16,6 @@
 #include "llvm-pdbutil.h"
 
 #include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
-#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeArray.h"

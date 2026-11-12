@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxBitsTest.h"
+#include "test/src/stdfix/FxBitsTest.h"
+
 #include "src/stdfix/kbits.h"
 
 LIST_FXBITS_TEST(k, accum, int_k_t, LIBC_NAMESPACE::kbits);

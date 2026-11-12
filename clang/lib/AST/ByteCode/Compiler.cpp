@@ -5474,8 +5474,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclOrExpr Src, PrimType Ty,
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, IsConst, Src.isExpr(),
                                      /*IsMutable=*/false, IsVolatile);
-  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
-  Scope::Local Local = this->createLocal(D);
+  Scope::Local Local = this->createLocal(D, this->VariablesAreConstexprUnknown);
   if (auto *VD = Src.asValueDecl())
     Locals.insert({VD, Local});
   VarScope->addForScopeKind(Local, SC);
@@ -5505,9 +5504,8 @@ UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclOrExpr Src, QualType Ty,
       /*IsMutable=*/false, /*IsVolatile=*/Ty.isVolatileQualified(), Init);
   if (!D)
     return std::nullopt;
-  D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
 
-  Scope::Local Local = this->createLocal(D);
+  Scope::Local Local = this->createLocal(D, this->VariablesAreConstexprUnknown);
   if (Key)
     Locals.insert({Key, Local});
   VarScope->addForScopeKind(Local, SC);
@@ -6278,7 +6276,9 @@ bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
   if (P.getGlobal(VD))
     return true;
 
-  UnsignedOrNone GlobalIndex = P.createGlobal(VD, /*Init=*/nullptr);
+  UnsignedOrNone GlobalIndex =
+      P.createGlobal(VD, /*Init=*/nullptr, /*IsConstexprUnknown=*/false,
+                     /*CanBeExtern=*/false);
   if (!GlobalIndex) {
     llvm_unreachable("Why didn't that work?");
   }

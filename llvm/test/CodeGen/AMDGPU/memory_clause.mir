@@ -156,7 +156,7 @@ body:             |
     %1:vreg_64 = IMPLICIT_DEF
     %2:vreg_64 = IMPLICIT_DEF
     %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
-    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 killed %1, 16, 0, implicit $exec
+    %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 16, 0, implicit $exec
     GLOBAL_STORE_DWORDX4 %2, %3, 0, 0, implicit $exec
     GLOBAL_STORE_DWORDX4 %2, %4, 16, 0, implicit $exec
 ...

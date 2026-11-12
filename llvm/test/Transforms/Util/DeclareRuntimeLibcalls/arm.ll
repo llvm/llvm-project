@@ -5,71 +5,74 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-linux-gnueabi -exception-model=sjlj < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=SJLJ %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-linux-gnueabi -exception-model=dwarf < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=DWARF %s
 
-; SJLJ: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
+; SJLJ: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; SJLJ-NEXT: @__stack_chk_guard = external global ptr
+; SJLJ-NEXT: declare arm_aapcscc i32 @_Unwind_SjLj_RaiseException(ptr)
+; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Resume(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Unregister(ptr)
-; SJLJ-NEXT: declare arm_aapcscc double @__adddf3(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @__addsf3(float, float)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_d2f(double)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_d2h(...)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_d2iz(double)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_d2lz(double)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_d2uiz(double)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_d2ulz(double)
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_dadd(double, double)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_dcmpeq(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_dcmpge(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_dcmpgt(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_dcmple(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_dcmplt(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_dcmpun(...)
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_ddiv(double, double)
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_dmul(double, double)
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_dsub(double, double)
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_f2d(float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_f2iz(float)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_f2lz(float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_f2uiz(float)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_f2ulz(float)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_fadd(float, float)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_fcmpeq(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_fcmpge(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_fcmpgt(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_fcmple(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_fcmplt(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__aeabi_fcmpun(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_fdiv(float, float)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_fmul(float, float)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_fsub(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_i2d(i32)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_i2f(i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_idiv(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_idivmod(i32 signext, i32 signext) [[DIVMOD_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_l2d(i64)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_l2f(i64)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_lasr(i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_ldivmod(i64 signext, i64 signext) [[DIVMOD_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_llsl(i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_llsr(i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_lmul(i64, i64)
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_ui2d(i32)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_ui2f(i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_uidiv(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_uidivmod(i32 zeroext, i32 zeroext) [[DIVMOD_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_ul2d(i64)
-; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_ul2f(i64)
-; SJLJ-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_uldivmod(i64 zeroext, i64 zeroext) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc double @__adddf3(double, double) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc float @__addsf3(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_d2f(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__aeabi_d2h(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_d2iz(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_d2lz(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_d2uiz(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_d2ulz(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_dadd(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_dcmpeq(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_dcmpge(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_dcmpgt(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_dcmple(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_dcmplt(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_dcmpun(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_ddiv(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_dmul(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_dsub(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_f2d(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_f2iz(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_f2lz(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_f2uiz(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_f2ulz(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_fadd(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_fcmpeq(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_fcmpge(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_fcmpgt(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_fcmple(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_fcmplt(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_fcmpun(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_fdiv(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_fmul(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_fsub(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_i2d(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_i2f(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_idiv(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_idivmod(i32, i32) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_l2d(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_l2f(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_lasr(i64, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_ldivmod(i64, i64) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_llsl(i64, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_llsr(i64, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_lmul(i64, i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_ui2d(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_ui2f(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_uidiv(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_uidivmod(i32, i32) [[DIVMOD_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc double @__aeabi_ul2d(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__aeabi_ul2f(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_uldivmod(i64, i64) [[DIVMOD_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_uread4(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_uread8(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__aeabi_uwrite4(i32, ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__aeabi_uwrite8(i64, ptr)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__ashldi3(i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc signext i16 @__ashlhi3(i16 signext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__ashlsi3(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__ashrdi3(i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc signext i16 @__ashrhi3(i16 signext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__ashrsi3(i32, i32)
+; SJLJ-NEXT: declare arm_aapcscc i64 @__ashldi3(i64, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc signext i16 @__ashlhi3(i16 signext, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ashlsi3(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__ashrdi3(i64, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc signext i16 @__ashrhi3(i16 signext, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ashrsi3(i32, i32) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32, ptr, ptr, ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32, i32)
@@ -125,92 +128,95 @@
 ; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_4(ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_8(ptr, i64, i32)
 ; SJLJ-NEXT: declare arm_aapcscc void @__clear_cache(ptr, ptr)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__clzdi2(i64)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__clzsi2(i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__clzti2(i128)
+; SJLJ-NEXT: declare arm_aapcscc i32 @__clzdi2(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__clzsi2(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__clzti2(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzdi2(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzsi2(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzti2(i128) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @__cxa_end_cleanup()
-; SJLJ-NEXT: declare arm_aapcscc double @__divdf3(double, double)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64)
-; SJLJ-NEXT: declare arm_aapcscc signext i16 @__divhi3(i16 signext, i16 signext)
-; SJLJ-NEXT: declare arm_aapcscc signext i8 @__divqi3(i8 signext, i8 signext)
-; SJLJ-NEXT: declare arm_aapcscc float @__divsf3(float, float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__divsi3(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__divtf3(fp128, fp128)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__divti3(i128, i128)
-; SJLJ-NEXT: declare arm_aapcscc void @__eqdf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__eqsf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__eqtf2(...)
-; SJLJ-NEXT: declare arm_aapcscc double @__exp2_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__exp2f_finite(float)
-; SJLJ-NEXT: declare arm_aapcscc double @__exp_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__expf_finite(float)
-; SJLJ-NEXT: declare arm_aapcscc void @__extendbfsf2(...)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__extenddftf2(double)
-; SJLJ-NEXT: declare arm_aapcscc void @__extendhfdf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__extendhftf2(...)
-; SJLJ-NEXT: declare arm_aapcscc double @__extendsfdf2(float)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__extendsftf2(float)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__fixdfdi(double)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__fixdfsi(double)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__fixdfti(double)
-; SJLJ-NEXT: declare arm_aapcscc void @__fixhfdi(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__fixhfsi(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__fixhfti(...)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__fixsfdi(float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__fixsfsi(float)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__fixsfti(float)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__fixtfdi(fp128)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__fixtfsi(fp128)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__fixtfti(fp128)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__fixunsdfdi(double)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__fixunsdfsi(double)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__fixunsdfti(double)
-; SJLJ-NEXT: declare arm_aapcscc void @__fixunshfdi(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__fixunshfsi(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__fixunshfti(...)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__fixunssfdi(float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__fixunssfsi(float)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__fixunssfti(float)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__fixunstfdi(fp128)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__fixunstfsi(fp128)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__fixunstfti(fp128)
-; SJLJ-NEXT: declare arm_aapcscc void @__floatdibf(...)
-; SJLJ-NEXT: declare arm_aapcscc double @__floatdidf(i64)
-; SJLJ-NEXT: declare arm_aapcscc void @__floatdihf(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__floatdisf(i64)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatditf(i64)
-; SJLJ-NEXT: declare arm_aapcscc double @__floatsidf(i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__floatsihf(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__floatsisf(i32)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatsitf(i32)
-; SJLJ-NEXT: declare arm_aapcscc double @__floattidf(i128)
-; SJLJ-NEXT: declare arm_aapcscc void @__floattihf(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__floattisf(i128)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__floattitf(i128)
-; SJLJ-NEXT: declare arm_aapcscc void @__floatundibf(...)
-; SJLJ-NEXT: declare arm_aapcscc double @__floatundidf(i64)
-; SJLJ-NEXT: declare arm_aapcscc void @__floatundihf(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__floatundisf(i64)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatunditf(i64)
-; SJLJ-NEXT: declare arm_aapcscc double @__floatunsidf(i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__floatunsihf(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__floatunsisf(i32)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatunsitf(i32)
-; SJLJ-NEXT: declare arm_aapcscc double @__floatuntidf(i128)
-; SJLJ-NEXT: declare arm_aapcscc void @__floatuntihf(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__floatuntisf(i128)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatuntitf(i128)
-; SJLJ-NEXT: declare arm_aapcscc void @__gedf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__gesf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__getf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__gnu_f2h_ieee(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__gnu_h2f_ieee(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__gtdf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__gtsf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__gttf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__ledf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__lesf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__letf2(...)
+; SJLJ-NEXT: declare arm_aapcscc double @__divdf3(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc signext i16 @__divhi3(i16 signext, i16 signext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc signext i8 @__divqi3(i8 signext, i8 signext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__divsf3(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__divsi3(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__divtf3(fp128, fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__divti3(i128, i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__eqdf2(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__eqsf2(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__eqtf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__exp_finite(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__expf_finite(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__extendbfsf2(bfloat) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__extenddftf2(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__extendhfdf2(half) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__extendhftf2(half) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__extendsfdf2(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__extendsftf2(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__fixdfdi(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__fixdfsi(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__fixdfti(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__fixhfdi(half) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__fixhfsi(half) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__fixhfti(half) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__fixsfdi(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__fixsfsi(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__fixsfti(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__fixtfdi(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__fixtfsi(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__fixtfti(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__fixunsdfdi(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__fixunsdfsi(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__fixunsdfti(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__fixunshfdi(half) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__fixunshfsi(half) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__fixunshfti(half) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__fixunssfdi(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__fixunssfsi(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__fixunssfti(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__fixunstfdi(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__fixunstfsi(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__fixunstfti(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc bfloat @__floatdibf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__floatdidf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__floatdihf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__floatdisf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatditf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__floatsidf(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__floatsihf(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__floatsisf(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatsitf(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__floattidf(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__floattihf(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__floattisf(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__floattitf(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc bfloat @__floatundibf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__floatundidf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__floatundihf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__floatundisf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatunditf(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__floatunsidf(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__floatunsihf(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__floatunsisf(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatunsitf(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__floatuntidf(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__floatuntihf(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__floatuntisf(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__floatuntitf(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__gedf2(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__gesf2(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__getf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__gnu_f2h_ieee(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__gnu_h2f_ieee(i16 zeroext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__gtdf2(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__gtsf2(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__gttf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ledf2(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__lesf2(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__letf2(fp128, fp128) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_deoptimize(...)
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i32)
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i32)
@@ -227,53 +233,51 @@
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @__log10_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__log10f_finite(float)
-; SJLJ-NEXT: declare arm_aapcscc double @__log2_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__log2f_finite(float)
-; SJLJ-NEXT: declare arm_aapcscc double @__log_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__logf_finite(float)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__lshrdi3(i64, i32)
-; SJLJ-NEXT: declare arm_aapcscc signext i16 @__lshrhi3(i16 signext, i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__lshrsi3(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__ltdf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__ltsf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__lttf2(...)
+; SJLJ-NEXT: declare arm_aapcscc double @__log10_finite(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__log10f_finite(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__log2_finite(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__log2f_finite(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__log_finite(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__logf_finite(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__lshrdi3(i64, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc signext i16 @__lshrhi3(i16 signext, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__lshrsi3(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ltdf2(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ltsf2(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__lttf2(fp128, fp128) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc ptr @__memcpy_chk(ptr, ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc ptr @__memmove_chk(ptr, ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc ptr @__memset_chk(ptr, i32, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__moddi3(i64, i64)
-; SJLJ-NEXT: declare arm_aapcscc signext i16 @__modhi3(i16 signext, i16 signext)
-; SJLJ-NEXT: declare arm_aapcscc signext i8 @__modqi3(i8 signext, i8 signext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__modsi3(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__modti3(i128, i128)
-; SJLJ-NEXT: declare arm_aapcscc double @__muldf3(double, double)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__muldi3(i64, i64)
-; SJLJ-NEXT: declare arm_aapcscc signext i16 @__mulhi3(i16 signext, i16 signext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__mulosi4(i32, i32, ptr)
-; SJLJ-NEXT: declare arm_aapcscc signext i8 @__mulqi3(i8 signext, i8 signext)
-; SJLJ-NEXT: declare arm_aapcscc float @__mulsf3(float, float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__mulsi3(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__multf3(fp128, fp128)
-; SJLJ-NEXT: declare arm_aapcscc void @__nedf2(...)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__negdi2(i64)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__negsi2(i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__nesf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__netf2(...)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountdi2(i64)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountsi2(i32)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountti2(i128)
-; SJLJ-NEXT: declare arm_aapcscc double @__pow_finite(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @__powf_finite(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
-; SJLJ-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__safestack_unsafe_stack_ptr(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_fail()
-; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_guard(...)
-; SJLJ-NEXT: declare arm_aapcscc double @__subdf3(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @__subsf3(float, float)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128)
+; SJLJ-NEXT: declare arm_aapcscc i64 @__moddi3(i64, i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc signext i16 @__modhi3(i16 signext, i16 signext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc signext i8 @__modqi3(i8 signext, i8 signext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__modsi3(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__modti3(i128, i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__muldf3(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__muldi3(i64, i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc signext i16 @__mulhi3(i16 signext, i16 signext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc signext i8 @__mulqi3(i8 signext, i8 signext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__mulsf3(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__mulsi3(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__multf3(fp128, fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__nedf2(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__negdi2(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__negsi2(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__nesf2(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__netf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountdi2(i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountsi2(i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountti2(i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__powidf2(double, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__powisf2(float, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc double @__subdf3(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__subsf3(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_add_16(ptr, i128)
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -334,210 +338,217 @@
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; SJLJ-NEXT: declare arm_aapcscc void @__truncdfbf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__truncdfhf2(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__truncdfsf2(double)
-; SJLJ-NEXT: declare arm_aapcscc void @__truncsfbf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__trunctfbf2(...)
-; SJLJ-NEXT: declare arm_aapcscc double @__trunctfdf2(fp128)
-; SJLJ-NEXT: declare arm_aapcscc void @__trunctfhf2(...)
-; SJLJ-NEXT: declare arm_aapcscc float @__trunctfsf2(fp128)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__udivdi3(i64, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__udivsi3(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__udivti3(i128, i128)
-; SJLJ-NEXT: declare arm_aapcscc i64 @__umoddi3(i64, i64)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; SJLJ-NEXT: declare arm_aapcscc i32 @__umodsi3(i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc i128 @__umodti3(i128, i128)
-; SJLJ-NEXT: declare arm_aapcscc void @__unorddf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__unordsf2(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__unordtf2(...)
-; SJLJ-NEXT: declare arm_aapcscc double @acos(double)
-; SJLJ-NEXT: declare arm_aapcscc float @acosf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @asin(double)
-; SJLJ-NEXT: declare arm_aapcscc float @asinf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @atan(double)
-; SJLJ-NEXT: declare arm_aapcscc double @atan2(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @atan2f(float, float)
-; SJLJ-NEXT: declare arm_aapcscc float @atanf(float)
+; SJLJ-NEXT: declare arm_aapcscc bfloat @__truncdfbf2(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__truncdfhf2(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__truncdfsf2(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc bfloat @__truncsfbf2(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc bfloat @__trunctfbf2(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__trunctfdf2(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc half @__trunctfhf2(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__trunctfsf2(fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__udivdi3(i64, i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__udivsi3(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__udivti3(i128, i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @__umoddi3(i64, i64) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__umodsi3(i32, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i128 @__umodti3(i128, i128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__unorddf2(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__unordsf2(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @__unordtf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @acos(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @acosf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @asin(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @asinf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @atan(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @atan2(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @atan2f(float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @atanf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @cabs(...)
 ; SJLJ-NEXT: declare arm_aapcscc void @cabsf(...)
 ; SJLJ-NEXT: declare arm_aapcscc noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @cbrt(double)
-; SJLJ-NEXT: declare arm_aapcscc float @cbrtf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @ceil(double)
-; SJLJ-NEXT: declare arm_aapcscc float @ceilf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @copysign(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @copysignf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @cos(double)
-; SJLJ-NEXT: declare arm_aapcscc float @cosf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @cosh(double)
-; SJLJ-NEXT: declare arm_aapcscc float @coshf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @exp(double)
-; SJLJ-NEXT: declare arm_aapcscc double @exp10(double)
-; SJLJ-NEXT: declare arm_aapcscc float @exp10f(float)
-; SJLJ-NEXT: declare arm_aapcscc double @exp2(double)
-; SJLJ-NEXT: declare arm_aapcscc float @exp2f(float)
-; SJLJ-NEXT: declare arm_aapcscc float @expf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @fdim(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fdimf(float, float)
+; SJLJ-NEXT: declare arm_aapcscc double @cbrt(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @cbrtf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @ceil(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @ceilf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @copysign(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @copysignf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @cos(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @cosf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @cosh(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @coshf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @exp(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @exp10(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @exp10f(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @exp2(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @exp2f(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @expf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fdim(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fdimf(float, float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @fegetenv(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @fegetmode(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @fesetenv(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @fesetmode(ptr)
-; SJLJ-NEXT: declare arm_aapcscc double @floor(double)
-; SJLJ-NEXT: declare arm_aapcscc float @floorf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @fma(double, double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fmaf(float, float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fmax(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fmaxf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fmaximum(double, double)
-; SJLJ-NEXT: declare arm_aapcscc double @fmaximum_num(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fmaximum_numf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc float @fmaximumf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fmin(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fminf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fminimum(double, double)
-; SJLJ-NEXT: declare arm_aapcscc double @fminimum_num(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fminimum_numf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc float @fminimumf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fmod(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fmodf(float, float)
+; SJLJ-NEXT: declare arm_aapcscc double @floor(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @floorf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fma(double, double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmax(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmaxf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmaximum(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmaximum_num(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmaximum_numf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmaximumf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmin(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fminf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fminimum(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fminimum_num(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fminimum_numf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fminimumf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmod(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmodf(float, float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @frexp(double, ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @frexpf(float, ptr)
-; SJLJ-NEXT: declare arm_aapcscc double @ldexp(double, i32)
-; SJLJ-NEXT: declare arm_aapcscc float @ldexpf(float, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @llrint(double)
-; SJLJ-NEXT: declare arm_aapcscc i64 @llrintf(float)
-; SJLJ-NEXT: declare arm_aapcscc i64 @llround(double)
-; SJLJ-NEXT: declare arm_aapcscc i64 @llroundf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @log(double)
-; SJLJ-NEXT: declare arm_aapcscc double @log10(double)
-; SJLJ-NEXT: declare arm_aapcscc float @log10f(float)
-; SJLJ-NEXT: declare arm_aapcscc double @log2(double)
-; SJLJ-NEXT: declare arm_aapcscc float @log2f(float)
-; SJLJ-NEXT: declare arm_aapcscc float @logf(float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @lrint(double)
-; SJLJ-NEXT: declare arm_aapcscc i32 @lrintf(float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @lround(double)
-; SJLJ-NEXT: declare arm_aapcscc i32 @lroundf(float)
+; SJLJ-NEXT: declare arm_aapcscc double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @ldexp(double, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @ldexpf(float, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @llrint(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @llrintf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @llround(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @llroundf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @log(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @log10(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @log10f(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @log2(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @log2f(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @logf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @lrint(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @lrintf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @lround(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @lroundf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memcpy(ptr, ptr, i32)
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memmove(ptr, ptr, i32)
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memset(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @modf(double, ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @modff(float, ptr)
-; SJLJ-NEXT: declare arm_aapcscc double @nan(ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @nanf(ptr)
-; SJLJ-NEXT: declare arm_aapcscc double @nearbyint(double)
-; SJLJ-NEXT: declare arm_aapcscc float @nearbyintf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @nexttoward(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @nexttowardf(float, double)
-; SJLJ-NEXT: declare arm_aapcscc double @pow(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @powf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @remainder(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @remainderf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @remquo(double, double, ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @remquof(float, float, ptr)
-; SJLJ-NEXT: declare arm_aapcscc double @rint(double)
-; SJLJ-NEXT: declare arm_aapcscc float @rintf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @round(double)
-; SJLJ-NEXT: declare arm_aapcscc double @roundeven(double)
-; SJLJ-NEXT: declare arm_aapcscc float @roundevenf(float)
-; SJLJ-NEXT: declare arm_aapcscc float @roundf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @scalbln(double, i32)
-; SJLJ-NEXT: declare arm_aapcscc float @scalblnf(float, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @scalbn(double, i32)
-; SJLJ-NEXT: declare arm_aapcscc float @scalbnf(float, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @sin(double)
-; SJLJ-NEXT: declare arm_aapcscc void @sincos(double, ptr, ptr)
-; SJLJ-NEXT: declare arm_aapcscc void @sincosf(float, ptr, ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @sinf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @sinh(double)
-; SJLJ-NEXT: declare arm_aapcscc float @sinhf(float)
+; SJLJ-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @nearbyint(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @nearbyintf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @nexttoward(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @nexttowardf(float, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @pow(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @powf(float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @remainder(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @remainderf(float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @rint(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @rintf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @round(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @roundeven(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @roundevenf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @roundf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @scalbln(double, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @scalblnf(float, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @scalbn(double, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @scalbnf(float, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @sin(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @sinf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @sinh(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @sinhf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @tan(double)
-; SJLJ-NEXT: declare arm_aapcscc float @tanf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @tanh(double)
-; SJLJ-NEXT: declare arm_aapcscc float @tanhf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @tgamma(double)
-; SJLJ-NEXT: declare arm_aapcscc float @tgammaf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @trunc(double)
-; SJLJ-NEXT: declare arm_aapcscc float @truncf(float)
+; SJLJ-NEXT: declare arm_aapcscc double @tan(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @tanf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @tanh(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @tanhf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @tgamma(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @tgammaf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; SJLJ-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; SJLJ-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; SJLJ-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; SJLJ-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
-; DWARF: declare arm_aapcscc void @_Unwind_Resume(ptr)
-; DWARF-NEXT: declare arm_aapcscc double @__adddf3(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @__addsf3(float, float)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_d2f(double)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_d2h(...)
-; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_d2iz(double)
-; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_d2lz(double)
-; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_d2uiz(double)
-; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_d2ulz(double)
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_dadd(double, double)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_dcmpeq(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_dcmpge(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_dcmpgt(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_dcmple(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_dcmplt(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_dcmpun(...)
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_ddiv(double, double)
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_dmul(double, double)
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_dsub(double, double)
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_f2d(float)
-; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_f2iz(float)
-; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_f2lz(float)
-; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_f2uiz(float)
-; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_f2ulz(float)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_fadd(float, float)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_fcmpeq(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_fcmpge(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_fcmpgt(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_fcmple(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_fcmplt(...)
-; DWARF-NEXT: declare arm_aapcscc void @__aeabi_fcmpun(...)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_fdiv(float, float)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_fmul(float, float)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_fsub(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_i2d(i32)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_i2f(i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_idiv(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_idivmod(i32 signext, i32 signext) [[DIVMOD_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_l2d(i64)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_l2f(i64)
-; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_lasr(i64, i32)
-; DWARF-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_ldivmod(i64 signext, i64 signext) [[DIVMOD_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_llsl(i64, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_llsr(i64, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_lmul(i64, i64)
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_ui2d(i32)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_ui2f(i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_uidiv(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_uidivmod(i32 zeroext, i32 zeroext) [[DIVMOD_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @__aeabi_ul2d(i64)
-; DWARF-NEXT: declare arm_aapcscc float @__aeabi_ul2f(i64)
-; DWARF-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_uldivmod(i64 zeroext, i64 zeroext) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; DWARF-NEXT: @__stack_chk_guard = external global ptr
+; DWARF-NEXT: declare arm_aapcscc i32 @_Unwind_RaiseException(ptr)
+; DWARF-NEXT: declare arm_aapcscc void @_Unwind_Resume(ptr)
+; DWARF-NEXT: declare arm_aapcscc double @__adddf3(double, double) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc float @__addsf3(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_d2f(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__aeabi_d2h(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_d2iz(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_d2lz(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_d2uiz(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_d2ulz(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_dadd(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_dcmpeq(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_dcmpge(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_dcmpgt(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_dcmple(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_dcmplt(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_dcmpun(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_ddiv(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_dmul(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_dsub(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_f2d(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_f2iz(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_f2lz(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_f2uiz(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_f2ulz(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_fadd(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_fcmpeq(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_fcmpge(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_fcmpgt(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_fcmple(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_fcmplt(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_fcmpun(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_fdiv(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_fmul(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_fsub(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_i2d(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_i2f(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_idiv(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_idivmod(i32, i32) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_l2d(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_l2f(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_lasr(i64, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_ldivmod(i64, i64) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_llsl(i64, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_llsr(i64, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_lmul(i64, i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_ui2d(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_ui2f(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_uidiv(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc inreg { i32, i32 } @__aeabi_uidivmod(i32, i32) [[DIVMOD_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc double @__aeabi_ul2d(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__aeabi_ul2f(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc inreg { i64, i64 } @__aeabi_uldivmod(i64, i64) [[DIVMOD_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_uread4(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_uread8(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__aeabi_uwrite4(i32, ptr)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__aeabi_uwrite8(i64, ptr)
-; DWARF-NEXT: declare arm_aapcscc i64 @__ashldi3(i64, i32)
-; DWARF-NEXT: declare arm_aapcscc signext i16 @__ashlhi3(i16 signext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__ashlsi3(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__ashrdi3(i64, i32)
-; DWARF-NEXT: declare arm_aapcscc signext i16 @__ashrhi3(i16 signext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__ashrsi3(i32, i32)
+; DWARF-NEXT: declare arm_aapcscc i64 @__ashldi3(i64, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc signext i16 @__ashlhi3(i16 signext, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__ashlsi3(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__ashrdi3(i64, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc signext i16 @__ashrhi3(i16 signext, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__ashrsi3(i32, i32) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32, ptr, ptr, ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, i128, i32, i32)
@@ -593,92 +604,95 @@
 ; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_4(ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_8(ptr, i64, i32)
 ; DWARF-NEXT: declare arm_aapcscc void @__clear_cache(ptr, ptr)
-; DWARF-NEXT: declare arm_aapcscc i32 @__clzdi2(i64)
-; DWARF-NEXT: declare arm_aapcscc i32 @__clzsi2(i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__clzti2(i128)
+; DWARF-NEXT: declare arm_aapcscc i32 @__clzdi2(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__clzsi2(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__clzti2(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzdi2(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzsi2(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzti2(i128) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @__cxa_end_cleanup()
-; DWARF-NEXT: declare arm_aapcscc double @__divdf3(double, double)
-; DWARF-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64)
-; DWARF-NEXT: declare arm_aapcscc signext i16 @__divhi3(i16 signext, i16 signext)
-; DWARF-NEXT: declare arm_aapcscc signext i8 @__divqi3(i8 signext, i8 signext)
-; DWARF-NEXT: declare arm_aapcscc float @__divsf3(float, float)
-; DWARF-NEXT: declare arm_aapcscc i32 @__divsi3(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__divtf3(fp128, fp128)
-; DWARF-NEXT: declare arm_aapcscc i128 @__divti3(i128, i128)
-; DWARF-NEXT: declare arm_aapcscc void @__eqdf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__eqsf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__eqtf2(...)
-; DWARF-NEXT: declare arm_aapcscc double @__exp2_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__exp2f_finite(float)
-; DWARF-NEXT: declare arm_aapcscc double @__exp_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__expf_finite(float)
-; DWARF-NEXT: declare arm_aapcscc void @__extendbfsf2(...)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__extenddftf2(double)
-; DWARF-NEXT: declare arm_aapcscc void @__extendhfdf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__extendhftf2(...)
-; DWARF-NEXT: declare arm_aapcscc double @__extendsfdf2(float)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__extendsftf2(float)
-; DWARF-NEXT: declare arm_aapcscc i64 @__fixdfdi(double)
-; DWARF-NEXT: declare arm_aapcscc i32 @__fixdfsi(double)
-; DWARF-NEXT: declare arm_aapcscc i128 @__fixdfti(double)
-; DWARF-NEXT: declare arm_aapcscc void @__fixhfdi(...)
-; DWARF-NEXT: declare arm_aapcscc void @__fixhfsi(...)
-; DWARF-NEXT: declare arm_aapcscc void @__fixhfti(...)
-; DWARF-NEXT: declare arm_aapcscc i64 @__fixsfdi(float)
-; DWARF-NEXT: declare arm_aapcscc i32 @__fixsfsi(float)
-; DWARF-NEXT: declare arm_aapcscc i128 @__fixsfti(float)
-; DWARF-NEXT: declare arm_aapcscc i64 @__fixtfdi(fp128)
-; DWARF-NEXT: declare arm_aapcscc i32 @__fixtfsi(fp128)
-; DWARF-NEXT: declare arm_aapcscc i128 @__fixtfti(fp128)
-; DWARF-NEXT: declare arm_aapcscc i64 @__fixunsdfdi(double)
-; DWARF-NEXT: declare arm_aapcscc i32 @__fixunsdfsi(double)
-; DWARF-NEXT: declare arm_aapcscc i128 @__fixunsdfti(double)
-; DWARF-NEXT: declare arm_aapcscc void @__fixunshfdi(...)
-; DWARF-NEXT: declare arm_aapcscc void @__fixunshfsi(...)
-; DWARF-NEXT: declare arm_aapcscc void @__fixunshfti(...)
-; DWARF-NEXT: declare arm_aapcscc i64 @__fixunssfdi(float)
-; DWARF-NEXT: declare arm_aapcscc i32 @__fixunssfsi(float)
-; DWARF-NEXT: declare arm_aapcscc i128 @__fixunssfti(float)
-; DWARF-NEXT: declare arm_aapcscc i64 @__fixunstfdi(fp128)
-; DWARF-NEXT: declare arm_aapcscc i32 @__fixunstfsi(fp128)
-; DWARF-NEXT: declare arm_aapcscc i128 @__fixunstfti(fp128)
-; DWARF-NEXT: declare arm_aapcscc void @__floatdibf(...)
-; DWARF-NEXT: declare arm_aapcscc double @__floatdidf(i64)
-; DWARF-NEXT: declare arm_aapcscc void @__floatdihf(...)
-; DWARF-NEXT: declare arm_aapcscc float @__floatdisf(i64)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__floatditf(i64)
-; DWARF-NEXT: declare arm_aapcscc double @__floatsidf(i32)
-; DWARF-NEXT: declare arm_aapcscc void @__floatsihf(...)
-; DWARF-NEXT: declare arm_aapcscc float @__floatsisf(i32)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__floatsitf(i32)
-; DWARF-NEXT: declare arm_aapcscc double @__floattidf(i128)
-; DWARF-NEXT: declare arm_aapcscc void @__floattihf(...)
-; DWARF-NEXT: declare arm_aapcscc float @__floattisf(i128)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__floattitf(i128)
-; DWARF-NEXT: declare arm_aapcscc void @__floatundibf(...)
-; DWARF-NEXT: declare arm_aapcscc double @__floatundidf(i64)
-; DWARF-NEXT: declare arm_aapcscc void @__floatundihf(...)
-; DWARF-NEXT: declare arm_aapcscc float @__floatundisf(i64)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__floatunditf(i64)
-; DWARF-NEXT: declare arm_aapcscc double @__floatunsidf(i32)
-; DWARF-NEXT: declare arm_aapcscc void @__floatunsihf(...)
-; DWARF-NEXT: declare arm_aapcscc float @__floatunsisf(i32)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__floatunsitf(i32)
-; DWARF-NEXT: declare arm_aapcscc double @__floatuntidf(i128)
-; DWARF-NEXT: declare arm_aapcscc void @__floatuntihf(...)
-; DWARF-NEXT: declare arm_aapcscc float @__floatuntisf(i128)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__floatuntitf(i128)
-; DWARF-NEXT: declare arm_aapcscc void @__gedf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__gesf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__getf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__gnu_f2h_ieee(...)
-; DWARF-NEXT: declare arm_aapcscc void @__gnu_h2f_ieee(...)
-; DWARF-NEXT: declare arm_aapcscc void @__gtdf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__gtsf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__gttf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__ledf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__lesf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__letf2(...)
+; DWARF-NEXT: declare arm_aapcscc double @__divdf3(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc signext i16 @__divhi3(i16 signext, i16 signext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc signext i8 @__divqi3(i8 signext, i8 signext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__divsf3(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__divsi3(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__divtf3(fp128, fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__divti3(i128, i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__eqdf2(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__eqsf2(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__eqtf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__exp_finite(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__expf_finite(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__extendbfsf2(bfloat) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__extenddftf2(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__extendhfdf2(half) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__extendhftf2(half) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__extendsfdf2(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__extendsftf2(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__fixdfdi(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__fixdfsi(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__fixdfti(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__fixhfdi(half) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__fixhfsi(half) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__fixhfti(half) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__fixsfdi(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__fixsfsi(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__fixsfti(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__fixtfdi(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__fixtfsi(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__fixtfti(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__fixunsdfdi(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__fixunsdfsi(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__fixunsdfti(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__fixunshfdi(half) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__fixunshfsi(half) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__fixunshfti(half) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__fixunssfdi(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__fixunssfsi(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__fixunssfti(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__fixunstfdi(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__fixunstfsi(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__fixunstfti(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc bfloat @__floatdibf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__floatdidf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__floatdihf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__floatdisf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__floatditf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__floatsidf(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__floatsihf(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__floatsisf(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__floatsitf(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__floattidf(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__floattihf(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__floattisf(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__floattitf(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc bfloat @__floatundibf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__floatundidf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__floatundihf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__floatundisf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__floatunditf(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__floatunsidf(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__floatunsihf(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__floatunsisf(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__floatunsitf(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__floatuntidf(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__floatuntihf(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__floatuntisf(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__floatuntitf(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__gedf2(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__gesf2(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__getf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__gnu_f2h_ieee(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__gnu_h2f_ieee(i16 zeroext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__gtdf2(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__gtsf2(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__gttf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__ledf2(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__lesf2(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__letf2(fp128, fp128) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_deoptimize(...)
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i32)
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i32)
@@ -695,53 +709,51 @@
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc double @__log10_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__log10f_finite(float)
-; DWARF-NEXT: declare arm_aapcscc double @__log2_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__log2f_finite(float)
-; DWARF-NEXT: declare arm_aapcscc double @__log_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__logf_finite(float)
-; DWARF-NEXT: declare arm_aapcscc i64 @__lshrdi3(i64, i32)
-; DWARF-NEXT: declare arm_aapcscc signext i16 @__lshrhi3(i16 signext, i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__lshrsi3(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__ltdf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__ltsf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__lttf2(...)
+; DWARF-NEXT: declare arm_aapcscc double @__log10_finite(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__log10f_finite(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__log2_finite(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__log2f_finite(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__log_finite(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__logf_finite(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__lshrdi3(i64, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc signext i16 @__lshrhi3(i16 signext, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__lshrsi3(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__ltdf2(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__ltsf2(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__lttf2(fp128, fp128) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc ptr @__memcpy_chk(ptr, ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc ptr @__memmove_chk(ptr, ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc ptr @__memset_chk(ptr, i32, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @__moddi3(i64, i64)
-; DWARF-NEXT: declare arm_aapcscc signext i16 @__modhi3(i16 signext, i16 signext)
-; DWARF-NEXT: declare arm_aapcscc signext i8 @__modqi3(i8 signext, i8 signext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__modsi3(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__modti3(i128, i128)
-; DWARF-NEXT: declare arm_aapcscc double @__muldf3(double, double)
-; DWARF-NEXT: declare arm_aapcscc i64 @__muldi3(i64, i64)
-; DWARF-NEXT: declare arm_aapcscc signext i16 @__mulhi3(i16 signext, i16 signext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__mulosi4(i32, i32, ptr)
-; DWARF-NEXT: declare arm_aapcscc signext i8 @__mulqi3(i8 signext, i8 signext)
-; DWARF-NEXT: declare arm_aapcscc float @__mulsf3(float, float)
-; DWARF-NEXT: declare arm_aapcscc i32 @__mulsi3(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__multf3(fp128, fp128)
-; DWARF-NEXT: declare arm_aapcscc void @__nedf2(...)
-; DWARF-NEXT: declare arm_aapcscc i64 @__negdi2(i64)
-; DWARF-NEXT: declare arm_aapcscc i32 @__negsi2(i32)
-; DWARF-NEXT: declare arm_aapcscc void @__nesf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__netf2(...)
-; DWARF-NEXT: declare arm_aapcscc i32 @__popcountdi2(i64)
-; DWARF-NEXT: declare arm_aapcscc i32 @__popcountsi2(i32)
-; DWARF-NEXT: declare arm_aapcscc i32 @__popcountti2(i128)
-; DWARF-NEXT: declare arm_aapcscc double @__pow_finite(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @__powf_finite(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
-; DWARF-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__safestack_unsafe_stack_ptr(...)
-; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_fail()
-; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_guard(...)
-; DWARF-NEXT: declare arm_aapcscc double @__subdf3(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @__subsf3(float, float)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128)
+; DWARF-NEXT: declare arm_aapcscc i64 @__moddi3(i64, i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc signext i16 @__modhi3(i16 signext, i16 signext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc signext i8 @__modqi3(i8 signext, i8 signext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__modsi3(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__modti3(i128, i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__muldf3(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__muldi3(i64, i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc signext i16 @__mulhi3(i16 signext, i16 signext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc signext i8 @__mulqi3(i8 signext, i8 signext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__mulsf3(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__mulsi3(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__multf3(fp128, fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__nedf2(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__negdi2(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__negsi2(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__nesf2(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__netf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__popcountdi2(i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__popcountsi2(i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__popcountti2(i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__powidf2(double, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__powisf2(float, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc double @__subdf3(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__subsf3(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; DWARF-NEXT: declare arm_aapcscc i128 @__sync_fetch_and_add_16(ptr, i128)
 ; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -802,143 +814,147 @@
 ; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; DWARF-NEXT: declare arm_aapcscc void @__truncdfbf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__truncdfhf2(...)
-; DWARF-NEXT: declare arm_aapcscc float @__truncdfsf2(double)
-; DWARF-NEXT: declare arm_aapcscc void @__truncsfbf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__trunctfbf2(...)
-; DWARF-NEXT: declare arm_aapcscc double @__trunctfdf2(fp128)
-; DWARF-NEXT: declare arm_aapcscc void @__trunctfhf2(...)
-; DWARF-NEXT: declare arm_aapcscc float @__trunctfsf2(fp128)
-; DWARF-NEXT: declare arm_aapcscc i64 @__udivdi3(i64, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__udivsi3(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__udivti3(i128, i128)
-; DWARF-NEXT: declare arm_aapcscc i64 @__umoddi3(i64, i64)
-; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; DWARF-NEXT: declare arm_aapcscc i32 @__umodsi3(i32, i32)
-; DWARF-NEXT: declare arm_aapcscc i128 @__umodti3(i128, i128)
-; DWARF-NEXT: declare arm_aapcscc void @__unorddf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__unordsf2(...)
-; DWARF-NEXT: declare arm_aapcscc void @__unordtf2(...)
-; DWARF-NEXT: declare arm_aapcscc double @acos(double)
-; DWARF-NEXT: declare arm_aapcscc float @acosf(float)
-; DWARF-NEXT: declare arm_aapcscc double @asin(double)
-; DWARF-NEXT: declare arm_aapcscc float @asinf(float)
-; DWARF-NEXT: declare arm_aapcscc double @atan(double)
-; DWARF-NEXT: declare arm_aapcscc double @atan2(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @atan2f(float, float)
-; DWARF-NEXT: declare arm_aapcscc float @atanf(float)
+; DWARF-NEXT: declare arm_aapcscc bfloat @__truncdfbf2(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__truncdfhf2(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__truncdfsf2(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc bfloat @__truncsfbf2(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc bfloat @__trunctfbf2(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__trunctfdf2(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc half @__trunctfhf2(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__trunctfsf2(fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__udivdi3(i64, i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__udivsi3(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__udivti3(i128, i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @__umoddi3(i64, i64) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__umodsi3(i32, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i128 @__umodti3(i128, i128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__unorddf2(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__unordsf2(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @__unordtf2(fp128, fp128) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @acos(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @acosf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @asin(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @asinf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @atan(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @atan2(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @atan2f(float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @atanf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @cabs(...)
 ; DWARF-NEXT: declare arm_aapcscc void @cabsf(...)
 ; DWARF-NEXT: declare arm_aapcscc noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @cbrt(double)
-; DWARF-NEXT: declare arm_aapcscc float @cbrtf(float)
-; DWARF-NEXT: declare arm_aapcscc double @ceil(double)
-; DWARF-NEXT: declare arm_aapcscc float @ceilf(float)
-; DWARF-NEXT: declare arm_aapcscc double @copysign(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @copysignf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @cos(double)
-; DWARF-NEXT: declare arm_aapcscc float @cosf(float)
-; DWARF-NEXT: declare arm_aapcscc double @cosh(double)
-; DWARF-NEXT: declare arm_aapcscc float @coshf(float)
-; DWARF-NEXT: declare arm_aapcscc double @exp(double)
-; DWARF-NEXT: declare arm_aapcscc double @exp10(double)
-; DWARF-NEXT: declare arm_aapcscc float @exp10f(float)
-; DWARF-NEXT: declare arm_aapcscc double @exp2(double)
-; DWARF-NEXT: declare arm_aapcscc float @exp2f(float)
-; DWARF-NEXT: declare arm_aapcscc float @expf(float)
-; DWARF-NEXT: declare arm_aapcscc double @fdim(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fdimf(float, float)
+; DWARF-NEXT: declare arm_aapcscc double @cbrt(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @cbrtf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @ceil(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @ceilf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @copysign(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @copysignf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @cos(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @cosf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @cosh(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @coshf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @exp(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @exp10(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @exp10f(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @exp2(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @exp2f(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @expf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fdim(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fdimf(float, float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @fegetenv(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @fegetmode(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @fesetenv(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @fesetmode(ptr)
-; DWARF-NEXT: declare arm_aapcscc double @floor(double)
-; DWARF-NEXT: declare arm_aapcscc float @floorf(float)
-; DWARF-NEXT: declare arm_aapcscc double @fma(double, double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fmaf(float, float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fmax(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fmaxf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fmaximum(double, double)
-; DWARF-NEXT: declare arm_aapcscc double @fmaximum_num(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fmaximum_numf(float, float)
-; DWARF-NEXT: declare arm_aapcscc float @fmaximumf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fmin(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fminf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fminimum(double, double)
-; DWARF-NEXT: declare arm_aapcscc double @fminimum_num(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fminimum_numf(float, float)
-; DWARF-NEXT: declare arm_aapcscc float @fminimumf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fmod(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fmodf(float, float)
+; DWARF-NEXT: declare arm_aapcscc double @floor(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @floorf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fma(double, double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmax(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmaxf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmaximum(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmaximum_num(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmaximum_numf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmaximumf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmin(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fminf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fminimum(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fminimum_num(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fminimum_numf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fminimumf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmod(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmodf(float, float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @frexp(double, ptr)
-; DWARF-NEXT: declare arm_aapcscc float @frexpf(float, ptr)
-; DWARF-NEXT: declare arm_aapcscc double @ldexp(double, i32)
-; DWARF-NEXT: declare arm_aapcscc float @ldexpf(float, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @llrint(double)
-; DWARF-NEXT: declare arm_aapcscc i64 @llrintf(float)
-; DWARF-NEXT: declare arm_aapcscc i64 @llround(double)
-; DWARF-NEXT: declare arm_aapcscc i64 @llroundf(float)
-; DWARF-NEXT: declare arm_aapcscc double @log(double)
-; DWARF-NEXT: declare arm_aapcscc double @log10(double)
-; DWARF-NEXT: declare arm_aapcscc float @log10f(float)
-; DWARF-NEXT: declare arm_aapcscc double @log2(double)
-; DWARF-NEXT: declare arm_aapcscc float @log2f(float)
-; DWARF-NEXT: declare arm_aapcscc float @logf(float)
-; DWARF-NEXT: declare arm_aapcscc i32 @lrint(double)
-; DWARF-NEXT: declare arm_aapcscc i32 @lrintf(float)
-; DWARF-NEXT: declare arm_aapcscc i32 @lround(double)
-; DWARF-NEXT: declare arm_aapcscc i32 @lroundf(float)
+; DWARF-NEXT: declare arm_aapcscc double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @ldexp(double, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @ldexpf(float, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @llrint(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @llrintf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @llround(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @llroundf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @log(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @log10(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @log10f(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @log2(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @log2f(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @logf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @lrint(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @lrintf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @lround(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @lroundf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc ptr @memcpy(ptr, ptr, i32)
 ; DWARF-NEXT: declare arm_aapcscc ptr @memmove(ptr, ptr, i32)
 ; DWARF-NEXT: declare arm_aapcscc ptr @memset(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc double @modf(double, ptr)
-; DWARF-NEXT: declare arm_aapcscc float @modff(float, ptr)
-; DWARF-NEXT: declare arm_aapcscc double @nan(ptr)
-; DWARF-NEXT: declare arm_aapcscc float @nanf(ptr)
-; DWARF-NEXT: declare arm_aapcscc double @nearbyint(double)
-; DWARF-NEXT: declare arm_aapcscc float @nearbyintf(float)
-; DWARF-NEXT: declare arm_aapcscc double @nexttoward(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @nexttowardf(float, double)
-; DWARF-NEXT: declare arm_aapcscc double @pow(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @powf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @remainder(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @remainderf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @remquo(double, double, ptr)
-; DWARF-NEXT: declare arm_aapcscc float @remquof(float, float, ptr)
-; DWARF-NEXT: declare arm_aapcscc double @rint(double)
-; DWARF-NEXT: declare arm_aapcscc float @rintf(float)
-; DWARF-NEXT: declare arm_aapcscc double @round(double)
-; DWARF-NEXT: declare arm_aapcscc double @roundeven(double)
-; DWARF-NEXT: declare arm_aapcscc float @roundevenf(float)
-; DWARF-NEXT: declare arm_aapcscc float @roundf(float)
-; DWARF-NEXT: declare arm_aapcscc double @scalbln(double, i32)
-; DWARF-NEXT: declare arm_aapcscc float @scalblnf(float, i32)
-; DWARF-NEXT: declare arm_aapcscc double @scalbn(double, i32)
-; DWARF-NEXT: declare arm_aapcscc float @scalbnf(float, i32)
-; DWARF-NEXT: declare arm_aapcscc double @sin(double)
-; DWARF-NEXT: declare arm_aapcscc void @sincos(double, ptr, ptr)
-; DWARF-NEXT: declare arm_aapcscc void @sincosf(float, ptr, ptr)
-; DWARF-NEXT: declare arm_aapcscc float @sinf(float)
-; DWARF-NEXT: declare arm_aapcscc double @sinh(double)
-; DWARF-NEXT: declare arm_aapcscc float @sinhf(float)
+; DWARF-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @nearbyint(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @nearbyintf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @nexttoward(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @nexttowardf(float, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @pow(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @powf(float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @remainder(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @remainderf(float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @rint(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @rintf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @round(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @roundeven(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @roundevenf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @roundf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @scalbln(double, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @scalblnf(float, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @scalbn(double, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @scalbnf(float, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @sin(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @sinf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @sinh(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @sinhf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @tan(double)
-; DWARF-NEXT: declare arm_aapcscc float @tanf(float)
-; DWARF-NEXT: declare arm_aapcscc double @tanh(double)
-; DWARF-NEXT: declare arm_aapcscc float @tanhf(float)
-; DWARF-NEXT: declare arm_aapcscc double @tgamma(double)
-; DWARF-NEXT: declare arm_aapcscc float @tgammaf(float)
-; DWARF-NEXT: declare arm_aapcscc double @trunc(double)
-; DWARF-NEXT: declare arm_aapcscc float @truncf(float)
+; DWARF-NEXT: declare arm_aapcscc double @tan(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @tanf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @tanh(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @tanhf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @tgamma(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @tgammaf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; DWARF-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; DWARF-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
+; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; DWARF-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; DWARF-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

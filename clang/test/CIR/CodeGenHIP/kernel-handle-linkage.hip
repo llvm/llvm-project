@@ -81,7 +81,7 @@ void launch(int *p) {
 static __global__ void fwd_kernel(int *p) {}
 
 // CIR-DAG: cir.global constant external @_Z10ext_kernelPi = #cir.global_view<@_Z25__device_stub__ext_kernelPi>
-// CIR-DAG: cir.global hidden constant external @_Z13hidden_kernelPi = #cir.global_view<@_Z28__device_stub__hidden_kernelPi>
+// CIR-DAG: cir.global hidden constant external dso_local @_Z13hidden_kernelPi = #cir.global_view<@_Z28__device_stub__hidden_kernelPi>
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL11static_tmplIiEvPT_ = #cir.global_view<@_ZL26__device_stub__static_tmplIiEvPT_>
 // CIR-DAG: cir.global constant linkonce_odr comdat @_Z4tmplIiEvPT_ = #cir.global_view<@_Z19__device_stub__tmplIiEvPT_>
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL13static_kernelPi = #cir.global_view<@_ZL28__device_stub__static_kernelPi>
@@ -89,7 +89,7 @@ static __global__ void fwd_kernel(int *p) {}
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL10fwd_kernelPi = #cir.global_view<@_ZL25__device_stub__fwd_kernelPi>
 // CIR-DAG: cir.global constant weak_odr comdat @_Z4instIfEvPT_ = #cir.global_view<@_Z19__device_stub__instIfEvPT_>
 // CIR-DAG: cir.global constant external @_Z9decl_onlyIiEvPT_ = #cir.global_view<@_Z24__device_stub__decl_onlyIiEvPT_>
-// CIR-DAG: cir.global "private" hidden constant external @_Z17hidden_ext_kernelPi :
+// CIR-DAG: cir.global "private" hidden constant external dso_local @_Z17hidden_ext_kernelPi :
 // CIR-DAG: cir.global "private" constant external @_Z15ext_decl_kernelPi :
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL20static_hidden_kernelPi = #cir.global_view<@_ZL35__device_stub__static_hidden_kernelPi>
 

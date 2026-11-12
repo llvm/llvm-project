@@ -15,11 +15,11 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-  cir.func private @take_s(!rec_S)
-  cir.func private @take_sf(!rec_SF)
-  cir.func private @take_smem(!rec_SMem)
+  cir.func private @take_s(!rec_S) requires_call_conv_lowering
+  cir.func private @take_sf(!rec_SF) requires_call_conv_lowering
+  cir.func private @take_smem(!rec_SMem) requires_call_conv_lowering
 
-  cir.func @direct_volatile(%arg0: !cir.ptr<!rec_S>) {
+  cir.func @direct_volatile(%arg0: !cir.ptr<!rec_S>) requires_call_conv_lowering {
     %0 = cir.load volatile align(4) %arg0 : !cir.ptr<!rec_S>, !rec_S
     cir.call @take_s(%0) : (!rec_S) -> ()
     cir.return
@@ -40,7 +40,7 @@ module attributes {
   // LLVM-NEXT:    call void @take_s(i64 %[[VAL]])
 
   // An alloca is copied too, never read in place.
-  cir.func @local_direct_volatile() {
+  cir.func @local_direct_volatile() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
     %1 = cir.load volatile %0 : !cir.ptr<!rec_S>, !rec_S
     cir.call @take_s(%1) : (!rec_S) -> ()
@@ -61,7 +61,7 @@ module attributes {
   // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 4 %[[S]], i64 8, i1 true)
   // LLVM-NEXT:    %[[VAL:.*]] = load i64, ptr %[[SLOT]], align 8
 
-  cir.func @flattened_volatile(%arg0: !cir.ptr<!rec_SF>) {
+  cir.func @flattened_volatile(%arg0: !cir.ptr<!rec_SF>) requires_call_conv_lowering {
     %0 = cir.load volatile align(8) %arg0 : !cir.ptr<!rec_SF>, !rec_SF
     cir.call @take_sf(%0) : (!rec_SF) -> ()
     cir.return
@@ -82,7 +82,7 @@ module attributes {
   // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 8 %0, i64 16, i1 true)
 
   // The flattened read of a volatile load is copied even from an alloca.
-  cir.func @local_flattened_volatile() {
+  cir.func @local_flattened_volatile() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
     %1 = cir.load volatile %0 : !cir.ptr<!rec_SF>, !rec_SF
     cir.call @take_sf(%1) : (!rec_SF) -> ()
@@ -101,7 +101,7 @@ module attributes {
   // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 8 %[[S]], i64 16, i1 true)
 
   // A byval parameter's volatile spill is a volatile copy.
-  cir.func @byval_volatile_spill(%arg0: !rec_SMem) {
+  cir.func @byval_volatile_spill(%arg0: !rec_SMem) requires_call_conv_lowering {
     %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SMem>
     cir.store volatile %arg0, %0 : !rec_SMem, !cir.ptr<!rec_SMem>
     cir.return
@@ -116,7 +116,7 @@ module attributes {
   // LLVM-NEXT:    %[[S:.*]] = alloca %struct.SMem, align 8
   // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[S]], ptr align 8 %0, i64 24, i1 true)
 
-  cir.func @byval_volatile(%arg0: !cir.ptr<!rec_SMem>) {
+  cir.func @byval_volatile(%arg0: !cir.ptr<!rec_SMem>) requires_call_conv_lowering {
     %0 = cir.load volatile align(8) %arg0 : !cir.ptr<!rec_SMem>, !rec_SMem
     cir.call @take_smem(%0) : (!rec_SMem) -> ()
     cir.return
@@ -133,7 +133,7 @@ module attributes {
   // LLVM-NEXT:    call void @take_smem(ptr noundef byval(%struct.SMem) align 8 %[[SLOT]])
 
   // A volatile load is not forwarded, even from an alloca nothing writes.
-  cir.func @local_byval_volatile() {
+  cir.func @local_byval_volatile() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SMem>
     %1 = cir.load volatile %0 : !cir.ptr<!rec_SMem>, !rec_SMem
     cir.call @take_smem(%1) : (!rec_SMem) -> ()
@@ -152,7 +152,7 @@ module attributes {
   // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 8 %[[S]], i64 24, i1 true)
   // LLVM-NEXT:    call void @take_smem(ptr noundef byval(%struct.SMem) align 8 %[[SLOT]])
 
-  cir.func @return_volatile(%arg0: !cir.ptr<!rec_S>) -> !rec_S {
+  cir.func @return_volatile(%arg0: !cir.ptr<!rec_S>) -> !rec_S requires_call_conv_lowering {
     %0 = cir.load volatile align(4) %arg0 : !cir.ptr<!rec_S>, !rec_S
     cir.return %0 : !rec_S
   }

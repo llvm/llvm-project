@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:lit_test.bzl", "lit_expand_template")
 load("//llvm:targets.bzl", "llvm_targets")
@@ -9,8 +10,37 @@ load("//llvm:targets.bzl", "llvm_targets")
 licenses(["notice"])
 
 # use_clang() and use_lld() only look in LLDB_LIT_TOOLS_DIR and the LLVM tools
-# directory before falling back to PATH. Put clang and the lld drivers in one
-# directory so the tests use the ones built here.
+# directory before falling back to PATH, and build.py needs clang++ there too or
+# it falls back to the host gcc. Put clang and the lld drivers in one directory
+# so the tests use the ones built here.
+#
+# clang looks for its builtin headers relative to its own resolved path in
+# bazel-out, but bazel stages them in clang/staging, so the clang drivers are
+# scripts that pass -resource-dir. Both paths are relative to this script's
+# location in the runfiles tree. exec -a keeps the name the tests used, which
+# selects clang's driver mode.
+[
+    write_file(
+        name = "lit_tools/" + name,
+        testonly = True,
+        out = "lit_tools/" + name,
+        content = [
+            "#!/bin/bash",
+            "root=\"$(dirname \"$0\")/../../../..\"",
+            "case \"$1\" in",
+            "-cc1*) exec -a \"$0\" \"$root/clang/clang\" \"$@\" ;;",
+            "esac",
+            "exec -a \"$0\" \"$root/clang/clang\" -resource-dir \"$root/clang/staging\" \"$@\"",
+        ],
+        is_executable = True,
+    )
+    for name in [
+        "clang",
+        "clang++",
+        "clang-cl",
+    ]
+]
+
 [
     binary_alias(
         name = "lit_tools/" + name,
@@ -18,7 +48,6 @@ licenses(["notice"])
         binary = binary,
     )
     for name, binary in [
-        ("clang", "//clang"),
         ("ld.lld", "//lld:ld.lld"),
         ("ld64.lld", "//lld:ld64.lld"),
         ("lld-link", "//lld:lld-link"),
@@ -59,13 +88,13 @@ lit_expand_template(
         "@LLDB_HAS_LIBCXX@": "0",
         "@LLDB_IS_64_BITS@": "1",
         "@LLDB_LAUNCHER@": "",
+        "@LLDB_TEST_EXTRA_TSAN_OPTIONS@": "",
         "@LLDB_TEST_OBJC_GNUSTEP_DIR@": "",
         "@LLDB_TEST_PLATFORM_URL@": "",
         "@LLDB_TEST_PLATFORM_WORKING_DIR@": "",
         "@LLDB_TEST_SHELL_DISABLE_REMOTE@": "1",
         "@LLDB_TEST_SYSROOT@": "",
         "@LLDB_TEST_USE_LLDB_SERVER@": "0",
-        "@LLDB_TOOL_LLDB_SERVER_BUILD@": "0",
         "@LLDB_USE_SYSTEM_DEBUGSERVER@": "0",
         "@LLVM_ENABLE_DIA_SDK@": "0",
         "@LLVM_HOST_TRIPLE@": "x86_64-unknown-linux-gnu",
@@ -75,6 +104,11 @@ lit_expand_template(
         "@Python3_EXECUTABLE@": "python3",
         "@Python3_ROOT_DIR@": "",
     } | select({
+        # Like CMake, which builds lldb-server on Linux and uses debugserver on
+        # macOS.
+        "@platforms//os:linux": {"@LLDB_TOOL_LLDB_SERVER_BUILD@": "1"},
+        "//conditions:default": {"@LLDB_TOOL_LLDB_SERVER_BUILD@": "0"},
+    }) | select({
         "//third-party:llvm_lzma_enabled": {"@LLVM_ENABLE_LZMA@": "1"},
         "//conditions:default": {"@LLVM_ENABLE_LZMA@": "0"},
     }) | select({
@@ -90,17 +124,26 @@ filegroup(
     data = glob(["helper/*.py"]) + [
         "lit.cfg.py",
         "lit.site.cfg.py",
+        "lit-lldb-init.in",
         ":lit_tools/clang",
+        ":lit_tools/clang++",
+        ":lit_tools/clang-cl",
         ":lit_tools/ld.lld",
         ":lit_tools/ld64.lld",
         ":lit_tools/lld-link",
         ":lit_tools/wasm-ld",
+        "//clang",
+        "//clang:builtin_headers_gen",
         "//lldb",
+        "//lldb:lldb-dap",
+        "//lldb:lldb-mcp",
         "//lldb:lldb-test",
         "//lldb:test/lldbflakes.py",
         "//llvm:FileCheck",
         "//llvm:count",
+        "//llvm:llc",
         "//llvm:llvm-config",
+        "//llvm:llvm-dwarfdump",
         "//llvm:llvm-mc",
         "//llvm:llvm-objcopy",
         "//llvm:llvm-objdump",
@@ -111,6 +154,9 @@ filegroup(
         "//llvm:obj2yaml",
         "//llvm:split-file",
         "//llvm:yaml2obj",
-    ],
+    ] + select({
+        "@platforms//os:linux": ["//lldb:lldb-server"],
+        "//conditions:default": [],
+    }),
     visibility = ["//lldb/test/Shell:__subpackages__"],
 )

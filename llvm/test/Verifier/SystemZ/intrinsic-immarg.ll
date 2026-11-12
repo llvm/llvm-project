@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 declare <2 x double> @llvm.s390.vfidb(<2 x double>, i32, i32)
 define void @test_vfidb(<2 x double> %arg0, i32 %arg1, i32 %arg2) {

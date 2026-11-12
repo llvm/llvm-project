@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/BlockExtractor.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Transforms/IPO.h"
@@ -30,27 +30,21 @@ using namespace llvm;
 
 STATISTIC(NumExtracted, "Number of basic blocks extracted");
 
-static cl::opt<std::string> BlockExtractorFile(
-    "extract-blocks-file", cl::value_desc("filename"),
-    cl::desc("A file containing list of basic blocks to extract"), cl::Hidden);
-
-static cl::opt<bool>
-    BlockExtractorEraseFuncs("extract-blocks-erase-funcs",
-                             cl::desc("Erase the existing functions"),
-                             cl::Hidden);
 namespace {
 class BlockExtractor {
 public:
-  BlockExtractor(bool EraseFunctions) : EraseFunctions(EraseFunctions) {}
+  BlockExtractor(const IPOOptions &Opts, bool EraseFunctions)
+      : Opts(Opts), EraseFunctions(EraseFunctions) {}
   bool runOnModule(Module &M);
   void
   init(const std::vector<std::vector<BasicBlock *>> &GroupsOfBlocksToExtract) {
     GroupsOfBlocks = GroupsOfBlocksToExtract;
-    if (!BlockExtractorFile.empty())
+    if (!Opts.extract_blocks_file.empty())
       loadFile();
   }
 
 private:
+  const IPOOptions &Opts;
   std::vector<std::vector<BasicBlock *>> GroupsOfBlocks;
   bool EraseFunctions;
   /// Map a function name to groups of blocks.
@@ -65,7 +59,7 @@ private:
 
 /// Gets all of the blocks specified in the input file.
 void BlockExtractor::loadFile() {
-  auto ErrOrBuf = MemoryBuffer::getFile(BlockExtractorFile);
+  auto ErrOrBuf = MemoryBuffer::getFile(Opts.extract_blocks_file);
   if (ErrOrBuf.getError())
     report_fatal_error("BlockExtractor couldn't load the file.");
   // Read the file.
@@ -181,7 +175,7 @@ bool BlockExtractor::runOnModule(Module &M) {
   }
 
   // Erase the functions.
-  if (EraseFunctions || BlockExtractorEraseFuncs) {
+  if (EraseFunctions || Opts.extract_blocks_erase_funcs) {
     for (Function *F : Functions) {
       LLVM_DEBUG(dbgs() << "BlockExtractor: Trying to delete " << F->getName()
                         << "\n");
@@ -204,7 +198,7 @@ BlockExtractorPass::BlockExtractorPass(
 
 PreservedAnalyses BlockExtractorPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  BlockExtractor BE(EraseFunctions);
+  BlockExtractor BE(getIPOOptions(M), EraseFunctions);
   BE.init(GroupsOfBlocks);
   return BE.runOnModule(M) ? PreservedAnalyses::none()
                            : PreservedAnalyses::all();

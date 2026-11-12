@@ -487,24 +487,23 @@ createScalarizedIntrinsicCall(llvm::IRBuilderBase &builder,
   return createIntrinsicCall(builder, IID, retType, operands);
 }
 
-void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
-                                     Value res, NVVM::FPRoundingMode rndMode,
-                                     NVVM::SaturationMode satMode, bool isFTZ,
-                                     LLVM::ModuleTranslation &mt,
-                                     llvm::IRBuilderBase &builder) {
+// Lowers a binary FP arithmetic op to the intrinsic selected from `ids`, which
+// is indexed by [ftz][sat].
+static void lowerFloatBinaryOpToLLVMIR(const llvm::Intrinsic::ID (&ids)[2][2],
+                                       llvm::Value *argLHS, llvm::Value *argRHS,
+                                       Value res, NVVM::FPRoundingMode rndMode,
+                                       NVVM::SaturationMode satMode, bool isFTZ,
+                                       LLVM::ModuleTranslation &mt,
+                                       llvm::IRBuilderBase &builder) {
   llvm::Type *opTypeLLVM = argLHS->getType();
   bool isSat = satMode != NVVM::SaturationMode::NONE;
 
-  static constexpr llvm::Intrinsic::ID addIDs[2][2] = {
-      {llvm::Intrinsic::nvvm_fadd, llvm::Intrinsic::nvvm_fadd_sat},
-      {llvm::Intrinsic::nvvm_fadd_ftz, llvm::Intrinsic::nvvm_fadd_ftz_sat}};
-
-  llvm::Intrinsic::ID id = addIDs[isFTZ][isSat];
+  llvm::Intrinsic::ID id = ids[isFTZ][isSat];
   llvm::Value *rnd = builder.getInt32(
       static_cast<int>(getLLVMRoundingModeForFPArith(rndMode)));
 
-  // For f64 vector addition, and f32 vector addition with saturation,
-  // we need to scalarize the intrinsic call.
+  // For f64 vectors, and f32 vectors with saturation, we need to scalarize
+  // the intrinsic call.
   llvm::Type *scalarTypeLLVM = opTypeLLVM->getScalarType();
   if (opTypeLLVM->isVectorTy() && (scalarTypeLLVM->isDoubleTy() ||
                                    (isSat && scalarTypeLLVM->isFloatTy()))) {
@@ -516,6 +515,30 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
 
   mt.mapValue(
       res, createIntrinsicCall(builder, id, opTypeLLVM, {argLHS, argRHS, rnd}));
+}
+
+void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
+                                     Value res, NVVM::FPRoundingMode rndMode,
+                                     NVVM::SaturationMode satMode, bool isFTZ,
+                                     LLVM::ModuleTranslation &mt,
+                                     llvm::IRBuilderBase &builder) {
+  static constexpr llvm::Intrinsic::ID addIDs[2][2] = {
+      {llvm::Intrinsic::nvvm_fadd, llvm::Intrinsic::nvvm_fadd_sat},
+      {llvm::Intrinsic::nvvm_fadd_ftz, llvm::Intrinsic::nvvm_fadd_ftz_sat}};
+  lowerFloatBinaryOpToLLVMIR(addIDs, argLHS, argRHS, res, rndMode, satMode,
+                             isFTZ, mt, builder);
+}
+
+void NVVM::MulFOp::lowerMulFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
+                                     Value res, NVVM::FPRoundingMode rndMode,
+                                     NVVM::SaturationMode satMode, bool isFTZ,
+                                     LLVM::ModuleTranslation &mt,
+                                     llvm::IRBuilderBase &builder) {
+  static constexpr llvm::Intrinsic::ID mulIDs[2][2] = {
+      {llvm::Intrinsic::nvvm_fmul, llvm::Intrinsic::nvvm_fmul_sat},
+      {llvm::Intrinsic::nvvm_fmul_ftz, llvm::Intrinsic::nvvm_fmul_ftz_sat}};
+  lowerFloatBinaryOpToLLVMIR(mulIDs, argLHS, argRHS, res, rndMode, satMode,
+                             isFTZ, mt, builder);
 }
 
 void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,

@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s
 
-// CHECK-DAG: @[[FUNC2_ARR:.*]] = private constant [2 x i32] [i32 5, i32 0]
-// CHECK-DAG: @[[FUNC3_ARR:.*]] = private constant [2 x i32] [i32 5, i32 6]
-// CHECK-DAG: @[[FUNC4_ARR:.*]] = private constant [2 x [1 x i32]] {{.*}}[1 x i32] [i32 5], [1 x i32] [i32 6]{{.*}}
-// CHECK-DAG: @[[FUNC5_ARR:.*]] = private constant [2 x [1 x i32]] {{.*}}[1 x i32] [i32 5], [1 x i32] zeroinitializer{{.*}}
-// CHECK-DAG: @[[FUNC7_ARR:.*]] = private constant [1 x ptr] zeroinitializer
+// CHECK-DAG: @[[FUNC2_ARR:.*]] = private unnamed_addr constant [2 x i32] [i32 5, i32 0]
+// CHECK-DAG: @[[FUNC3_ARR:.*]] = private unnamed_addr constant [2 x i32] [i32 5, i32 6]
+// CHECK-DAG: @[[FUNC4_ARR:.*]] = private unnamed_addr constant [2 x [1 x i32]] {{.*}}[1 x i32] [i32 5], [1 x i32] [i32 6]{{.*}}
+// CHECK-DAG: @[[FUNC5_ARR:.*]] = private unnamed_addr constant [2 x [1 x i32]] {{.*}}[1 x i32] [i32 5], [1 x i32] zeroinitializer{{.*}}
+// CHECK-DAG: @[[FUNC7_ARR:.*]] = private unnamed_addr constant [1 x ptr] zeroinitializer
 
 int a[10];
 // CHECK: @a = global [10 x i32] zeroinitializer

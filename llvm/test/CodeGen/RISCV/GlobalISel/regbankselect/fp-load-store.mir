@@ -9,7 +9,6 @@
 ---
 name:            fp_store_fp_def_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_f, $f11_f
@@ -34,7 +33,6 @@ body:             |
 ---
 name:            fp_store_fp_def_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_d, $f11_d
@@ -59,7 +57,6 @@ body:             |
 ---
 name:            fp_store_no_def_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_d
@@ -80,7 +77,6 @@ body:             |
 ---
 name:            fp_load_fp_use_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_f
@@ -105,7 +101,6 @@ body:             |
 ---
 name:            fp_load_fp_use_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_d
@@ -130,7 +125,6 @@ body:             |
 ---
 name:            fp_load_no_use_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_d
@@ -153,7 +147,6 @@ body:             |
 ---
 name:            fp_store_fp_def_f16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_h, $f11_h
@@ -178,7 +171,6 @@ body:             |
 ---
 name:            fp_load_fp_use_f16
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10, $f10_h

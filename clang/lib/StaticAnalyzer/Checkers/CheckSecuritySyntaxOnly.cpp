@@ -544,10 +544,9 @@ void WalkAST::checkCall_getpw(const CallExpr *CE, const FunctionDecl *FD) {
   PathDiagnosticLocation CELoc =
     PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
   BR.EmitBasicReport(AC->getDecl(), filter.checkName_getpw,
-                     "Potential buffer overflow in call to 'getpw'",
-                     "Security",
+                     "Potential buffer overflow in call to 'getpw'", "Security",
                      "The getpw() function is dangerous as it may overflow the "
-                     "provided buffer. It is obsoleted by getpwuid().",
+                     "provided buffer; it is obsoleted by getpwuid()",
                      CELoc, CE->getCallee()->getSourceRange());
 }
 
@@ -588,7 +587,7 @@ void WalkAST::checkCall_mktemp(const CallExpr *CE, const FunctionDecl *FD) {
                      "Potential insecure temporary file in call 'mktemp'",
                      "Security",
                      "Call to function 'mktemp' is insecure as it always "
-                     "creates or uses insecure temporary file.  Use 'mkstemp' "
+                     "creates or uses insecure temporary file; use 'mkstemp' "
                      "instead",
                      CELoc, CE->getCallee()->getSourceRange());
 }
@@ -708,9 +707,9 @@ void WalkAST::checkCall_strcpy(const CallExpr *CE, const FunctionDecl *FD) {
                      "call 'strcpy'",
                      "Security",
                      "Call to function 'strcpy' is insecure as it does not "
-                     "provide bounding of the memory buffer. Replace "
+                     "provide bounding of the memory buffer; replace "
                      "unbounded copy functions with analogous functions that "
-                     "support length arguments such as 'strlcpy'. CWE-119.",
+                     "support length arguments such as 'strlcpy'; CWE-119",
                      CELoc, CE->getCallee()->getSourceRange());
 }
 
@@ -736,9 +735,9 @@ void WalkAST::checkCall_strcat(const CallExpr *CE, const FunctionDecl *FD) {
                      "call 'strcat'",
                      "Security",
                      "Call to function 'strcat' is insecure as it does not "
-                     "provide bounding of the memory buffer. Replace "
+                     "provide bounding of the memory buffer; replace "
                      "unbounded copy functions with analogous functions that "
-                     "support length arguments such as 'strlcat'. CWE-119.",
+                     "support length arguments such as 'strlcat'; CWE-119",
                      CELoc, CE->getCallee()->getSourceRange());
 }
 
@@ -812,7 +811,7 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
   }
 
   Out2 << "security checks introduced "
-          "in the C11 standard. Replace with analogous functions that "
+          "in the C11 standard; replace with analogous functions that "
           "support length arguments or provides boundary checks such as '"
        << Name << "_s' in case of C11";
 
@@ -892,8 +891,8 @@ void WalkAST::checkCall_rand(const CallExpr *CE, const FunctionDecl *FD) {
   SmallString<256> buf2;
   llvm::raw_svector_ostream os2(buf2);
   os2 << "Function '" << *FD
-      << "' is obsolete because it implements a poor random number generator."
-      << "  Use 'arc4random' instead";
+      << "' is obsolete because it implements a poor random number generator;"
+      << " use 'arc4random' instead";
 
   PathDiagnosticLocation CELoc =
     PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
@@ -922,8 +921,9 @@ void WalkAST::checkCall_random(const CallExpr *CE, const FunctionDecl *FD) {
                      "'random' is not a secure random number generator",
                      "Security",
                      "The 'random' function produces a sequence of values that "
-                     "an adversary may be able to predict.  Use 'arc4random' "
-                     "instead", CELoc, CE->getCallee()->getSourceRange());
+                     "an adversary may be able to predict; use 'arc4random' "
+                     "instead",
+                     CELoc, CE->getCallee()->getSourceRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -943,8 +943,8 @@ void WalkAST::checkCall_vfork(const CallExpr *CE, const FunctionDecl *FD) {
                      "call 'vfork'",
                      "Security",
                      "Call to function 'vfork' is insecure as it can lead to "
-                     "denial of service situations in the parent process. "
-                     "Replace calls to vfork with calls to the safer "
+                     "denial of service situations in the parent process; "
+                     "replace calls to vfork with calls to the safer "
                      "'posix_spawn' function",
                      CELoc, CE->getCallee()->getSourceRange());
 }
@@ -994,8 +994,8 @@ void WalkAST::checkMsg_decodeValueOfObjCType(const ObjCMessageExpr *ME) {
       AC->getDecl(), filter.checkName_decodeValueOfObjCType,
       "Potential buffer overflow in '-decodeValueOfObjCType:at:'", "Security",
       "Deprecated method '-decodeValueOfObjCType:at:' is insecure "
-      "as it can lead to potential buffer overflows. Use the safer "
-      "'-decodeValueOfObjCType:at:size:' method.",
+      "as it can lead to potential buffer overflows; use the safer "
+      "'-decodeValueOfObjCType:at:size:' method",
       MELoc, ME->getSourceRange());
 }
 
@@ -1064,7 +1064,7 @@ void WalkAST::checkUncheckedReturnValue(CallExpr *CE) {
   SmallString<256> buf2;
   llvm::raw_svector_ostream os2(buf2);
   os2 << "The return value from the call to '" << *FD
-      << "' is not checked.  If an error occurs in '" << *FD
+      << "' is not checked; if an error occurs in '" << *FD
       << "', the following code may execute with unexpected privileges";
 
   PathDiagnosticLocation CELoc =

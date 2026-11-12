@@ -19,6 +19,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -31,7 +32,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -62,11 +62,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "spirv-emit-intrinsics"
-
-static cl::opt<bool>
-    SpirvEmitOpNames("spirv-emit-op-names",
-                     cl::desc("Emit OpName for all instructions"),
-                     cl::init(false));
 
 namespace llvm::SPIRV {
 #define GET_BuiltinGroup_DECL
@@ -152,7 +147,7 @@ public:
     propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
   }
 
-  using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
+  using FunctionSetType = decltype(GlobalIsUsedByFun)::mapped_type;
   const FunctionSetType &
   getTransitiveUserFunctions(const GlobalVariable &GV) const {
     auto It = GlobalIsUsedByFun.find(&GV);
@@ -197,7 +192,7 @@ class SPIRVEmitIntrinsicsImpl
   SmallPtrSet<Value *, 0> Named;
 
   // map of function declarations to <pointer arg index => element type>
-  DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
+  MapVector<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
 
   // a register of Instructions that don't have a complete type definition
   bool CanTodoType = true;
@@ -227,6 +222,10 @@ class SPIRVEmitIntrinsicsImpl
   // a register of Instructions that were visited by deduceOperandElementType()
   // to validate operand types with an instruction
   SmallPtrSet<Instruction *, 0> TypeValidated;
+  // Type-validated PHIs and selects whose element type changed since, to be
+  // revalidated by the outermost deduceOperandElementType() call.
+  SmallVector<Instruction *> RetypedToRevalidate;
+  bool RevalidatingRetyped = false;
 
   // well known result types of builtins
   enum WellKnownTypes { Event };
@@ -501,14 +500,15 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
                        false);
 }
 
-static void emitAssignName(Instruction *I, IRBuilder<> &B) {
+static void emitAssignName(const SPIRVOptions &CLOpts, Instruction *I,
+                           IRBuilder<> &B) {
   if (!I->hasName() || I->getType()->isAggregateType() ||
       expectIgnoredInIRTranslation(I))
     return;
 
   // We want to be conservative when adding the names because they can interfere
   // with later optimizations.
-  bool KeepName = SpirvEmitOpNames;
+  bool KeepName = CLOpts.emit_op_names;
   if (!KeepName) {
     if (isa<AllocaInst>(I)) {
       KeepName = true;
@@ -552,7 +552,7 @@ void SPIRVEmitIntrinsicsImpl::replaceAllUsesWithAndErase(IRBuilder<> &B,
   if (!Name.empty()) {
     Dest->setName(Name);
     if (Named.insert(Dest).second)
-      emitAssignName(Dest, B);
+      emitAssignName(TM.getCLOpts(), Dest, B);
   }
 }
 
@@ -1621,6 +1621,13 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
         DenseSet<std::pair<Value *, Value *>> VisitedSubst{
             std::make_pair(I, Op)};
         propagateElemTypeRec(Op, KnownElemTy, PrevElemTy, VisitedSubst);
+        // A PHI or select validated its operands against its previous element
+        // type. Null constants have no use list and are not revisited by
+        // postprocessing, so validate the operands against the new type.
+        if (auto *OpI = dyn_cast<Instruction>(Op);
+            OpI && (isa<PHINode>(OpI) || isa<SelectInst>(OpI)) &&
+            TypeValidated.contains(OpI))
+          RetypedToRevalidate.push_back(OpI);
       }
     } else {
       eraseTodoType(Op);
@@ -1633,6 +1640,16 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
     }
   }
   TypeValidated.insert(I);
+
+  // Revalidating one PHI can retype the next one in a chain. Use a worklist
+  // rather than recursion, as such chains can be long.
+  if (RevalidatingRetyped)
+    return;
+  RevalidatingRetyped = true;
+  while (!RetypedToRevalidate.empty())
+    deduceOperandElementType(RetypedToRevalidate.pop_back_val(), nullptr,
+                             nullptr, IsPostprocessing);
+  RevalidatingRetyped = false;
 }
 
 void SPIRVEmitIntrinsicsImpl::replaceMemInstrUses(Instruction *Old,
@@ -1680,6 +1697,8 @@ void SPIRVEmitIntrinsicsImpl::replaceMemInstrUses(Instruction *Old,
     }
   }
   New->copyMetadata(*Old);
+  GR->removeAssignPtrTypeInstr(Old); // Old's address could be re-used.
+  TypeValidated.erase(Old);
   Old->eraseFromParent();
 }
 
@@ -3163,7 +3182,7 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
   }
-  if (spirvPreserveAuxData(I->getModule()->getTargetTriple()) &&
+  if (spirvPreserveAuxData(TM.getCLOpts(), I->getModule()->getTargetTriple()) &&
       isa<AtomicRMWInst>(I)) {
     LLVMContext &Ctx = B.getContext();
     auto *AuxMD = ConstantAsMetadata::get(ConstantInt::get(
@@ -3189,7 +3208,7 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
 
 static SPIRV::FPFastMathDefaultInfoVector &getOrCreateFPFastMathDefaultInfoVec(
     const Module &M,
-    DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+    MapVector<Function *, SPIRV::FPFastMathDefaultInfoVector>
         &FPFastMathDefaultInfoMap,
     Function *F) {
   auto it = FPFastMathDefaultInfoMap.find(F);
@@ -3263,7 +3282,7 @@ void SPIRVEmitIntrinsicsImpl::insertConstantsForFPFastMathDefault(Module &M) {
   // type. The first element is the smallest bit width, and the last element
   // is the largest bit width, therefore, we will have {half, float, double}
   // in the order of their bit widths.
-  DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
+  MapVector<Function *, SPIRV::FPFastMathDefaultInfoVector>
       FPFastMathDefaultInfoMap;
 
   for (unsigned i = 0; i < Node->getNumOperands(); i++) {
@@ -3436,7 +3455,7 @@ void SPIRVEmitIntrinsicsImpl::processInstrAfterVisit(Instruction *I,
       I->setOperand(OpNo, NewOp);
   }
   if (Named.insert(I).second)
-    emitAssignName(I, B);
+    emitAssignName(TM.getCLOpts(), I, B);
 }
 
 Type *SPIRVEmitIntrinsicsImpl::deduceFunParamElementType(Function *F,
