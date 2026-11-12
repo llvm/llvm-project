@@ -225,8 +225,8 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
   }
 
   Module &M = *F.getParent();
-  auto [FTy, RewindAttrs] = Libcalls.getRuntimeLibcallsInfo().getFunctionTy(
-      Ctx, TargetTriple, M.getDataLayout(), RewindImpl);
+  auto [FTy, RewindAttrs] =
+      Libcalls.getRuntimeLibcallsInfo().getFunctionTy(M, RewindImpl);
   assert(FTy && "missing signature for rewind libcall");
 
   FunctionCallee RewindFunction = M.getOrInsertFunction(

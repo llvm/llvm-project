@@ -240,9 +240,12 @@ static Type *getInt128Type(LLVMContext &Ctx, const Triple &TT) {
   return Type::getInt128Ty(Ctx);
 }
 
-static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
-                             const Triple &TT, const DataLayout &DL,
+static Type *convertToIRType(FuncArgTypeID ID, const Module &M,
                              LongDoubleFormat LdblFormat) {
+  LLVMContext &Ctx = M.getContext();
+  const Triple &TT = M.getTargetTriple();
+  const DataLayout &DL = M.getDataLayout();
+
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
   case Void:
@@ -350,7 +353,7 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
 
   SmallVector<Type *, 2> EltTys;
   for (FuncArgTypeID EltID : EltIDs)
-    EltTys.push_back(convertToIRType(EltID, Ctx, TT, DL, LdblFormat));
+    EltTys.push_back(convertToIRType(EltID, M, LdblFormat));
   return StructType::get(Ctx, EltTys);
 }
 
@@ -385,7 +388,8 @@ static std::optional<bool> isSignedIntArgType(FuncArgTypeID ID) {
 }
 
 static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
-                                         const Triple &TT, bool IsReturn) {
+                                         const Module &M, bool IsReturn) {
+  const Triple &TT = M.getTargetTriple();
   if (ID == Bool)
     return shouldZExtBool(TT) ? Attribute::ZExt : Attribute::None;
 
@@ -411,8 +415,10 @@ static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
 
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getDefaultFunctionTy(
-    LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
-    RTLIB::LibcallImpl LibcallImpl) const {
+    const Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+
   const FuncArgTypeID *ProtoTypes =
       &SignatureTable[SignatureOffset[LibcallImpl]];
 
@@ -421,10 +427,10 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     return {};
 
   FuncArgTypeID LastID = ProtoTypes[0];
-  Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, LongDoubleFmt);
+  Type *RetTy = convertToIRType(LastID, M, LongDoubleFmt);
   AttributeSet RetAttrs;
   if (Attribute::AttrKind AK =
-          getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
+          getIntExtAttr(LastID, RetTy, M, /*IsReturn=*/true))
     RetAttrs = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
   if (isInRegStruct(LastID))
     RetAttrs = RetAttrs.addAttribute(Ctx, Attribute::InReg);
@@ -450,12 +456,12 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     else
       LastID = TyID;
 
-    Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, LongDoubleFmt);
+    Type *ArgTy = convertToIRType(TyID, M, LongDoubleFmt);
     ArgTys.push_back(ArgTy);
 
     AttributeSet ArgAttrSet;
     if (Attribute::AttrKind AK =
-            getIntExtAttr(TyID, ArgTy, TT, /*IsReturn=*/false))
+            getIntExtAttr(TyID, ArgTy, M, /*IsReturn=*/false))
       ArgAttrSet = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
     ArgAttrs.push_back(ArgAttrSet);
   }
@@ -466,8 +472,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
            "attributes for nonexistent argument");
     AttributeSet StaticAttrs = getLibcallArgAttributeSet(Ctx, Static.AttrSetID);
     if (Static.PointeeType != NoFuncArgType) {
-      Type *PointeeTy =
-          convertToIRType(Static.PointeeType, Ctx, TT, DL, LongDoubleFmt);
+      Type *PointeeTy = convertToIRType(Static.PointeeType, M, LongDoubleFmt);
       Type *AlignTy =
           Static.AlignToElement ? PointeeTy->getScalarType() : PointeeTy;
       SmallVector<Attribute, 2> PointeeAttrs = {
@@ -491,14 +496,13 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
 }
 
 Type *
-RuntimeLibcallsInfo::getVariableType(LLVMContext &Ctx, const Triple &TT,
-                                     const DataLayout &DL,
+RuntimeLibcallsInfo::getVariableType(const Module &M,
                                      RTLIB::LibcallImpl LibcallImpl) const {
   const FuncArgTypeID *ProtoTypes =
       &SignatureTable[SignatureOffset[LibcallImpl]];
   if (ProtoTypes[0] != Variable && ProtoTypes[0] != ThreadLocalVariable)
     return nullptr;
-  return convertToIRType(ProtoTypes[1], Ctx, TT, DL, LongDoubleFmt);
+  return convertToIRType(ProtoTypes[1], M, LongDoubleFmt);
 }
 
 FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
@@ -506,8 +510,7 @@ FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
   assert(!isVariable(LibcallImpl) && "not a function declaration");
 
   const DataLayout &DL = M.getDataLayout();
-  auto [FuncTy, FuncAttrs] =
-      getFunctionTy(M.getContext(), M.getTargetTriple(), DL, LibcallImpl);
+  auto [FuncTy, FuncAttrs] = getFunctionTy(M, LibcallImpl);
 
   // TODO: Every libcall should have a known signature.
   if (!FuncTy) {
@@ -534,8 +537,7 @@ GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(
   if (GlobalValue *GV = M.getNamedValue(Name))
     return GV;
 
-  Type *VarTy = getVariableType(M.getContext(), M.getTargetTriple(),
-                                M.getDataLayout(), LibcallImpl);
+  Type *VarTy = getVariableType(M, LibcallImpl);
   return new GlobalVariable(
       M, VarTy, /*isConstant=*/false, GlobalValue::ExternalLinkage, nullptr,
       Name, nullptr,
@@ -544,9 +546,12 @@ GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(
 }
 
 std::pair<FunctionType *, AttributeList>
-RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
-                                   const DataLayout &DL,
+RuntimeLibcallsInfo::getFunctionTy(const Module &M,
                                    RTLIB::LibcallImpl LibcallImpl) const {
+  LLVMContext &Ctx = M.getContext();
+  const Triple &TT = M.getTargetTriple();
+  const DataLayout &DL = M.getDataLayout();
+
   switch (LibcallImpl) {
   // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
@@ -594,5 +599,5 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     break;
   }
 
-  return getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
+  return getDefaultFunctionTy(M, LibcallImpl);
 }

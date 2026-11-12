@@ -288,8 +288,7 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
     F->setDoesNotThrow();
 
   auto [UnwindGetWasmLPadContextType, UnwindGetWasmLPadContextAttrs] =
-      RTLCI->getFunctionTy(Ctx, M.getTargetTriple(), M.getDataLayout(),
-                           GetWasmLPadContextImpl);
+      RTLCI->getFunctionTy(M, GetWasmLPadContextImpl);
   assert(UnwindGetWasmLPadContextType &&
          "missing signature for _Unwind_GetWasmLPadContext");
 

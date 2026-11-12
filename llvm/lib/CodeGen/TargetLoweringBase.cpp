@@ -2088,8 +2088,7 @@ Value *TargetLoweringBase::getDefaultSafeStackPointerLocation(
     return GV;
   }
 
-  Type *StackPtrTy = RTLCI.getVariableType(
-      Ctx, M->getTargetTriple(), M->getDataLayout(), UnsafeStackPtrImpl);
+  Type *StackPtrTy = RTLCI.getVariableType(*M, UnsafeStackPtrImpl);
   if (UnsafeStackPtr->getValueType() != StackPtrTy) {
     Ctx.emitError(
         formatv("{0} must have type {1}", UnsafeStackPtrVar, *StackPtrTy));
