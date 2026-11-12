@@ -29,4 +29,12 @@ void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP synthesized 'firstprivate' clause from construct decomposition}}
 #pragma omp target
   { i = 1; }
+
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: Lowering for the default clause with kind 'private' not yet implemented.}}
+#pragma omp parallel default(private)
+  {}
+
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: Lowering for the default clause with kind 'firstprivate' not yet implemented.}}
+#pragma omp parallel default(firstprivate)
+  {}
 }
