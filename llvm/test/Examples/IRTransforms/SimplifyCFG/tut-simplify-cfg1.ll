@@ -2,10 +2,13 @@
 ; RUN: opt %loadexampleirtransforms -passes=tut-simplifycfg -plugin-arg=SimplifyCFG,v1 -S < %s | FileCheck %s
 ; RUN: opt %loadexampleirtransforms -passes=tut-simplifycfg -plugin-arg=SimplifyCFG,v2 -S < %s | FileCheck %s
 ; RUN: opt %loadexampleirtransforms -passes=tut-simplifycfg -plugin-arg=SimplifyCFG,v3 -S < %s | FileCheck %s
+;; Without -plugin-arg, the plugin is invoked with no arguments.
+; RUN: opt %loadexampleirtransforms -passes=tut-simplifycfg -S < %s | FileCheck %s
 ;; An empty argument reaches the plugin.
 ; RUN: not opt %loadexampleirtransforms -passes=tut-simplifycfg -plugin-arg=SimplifyCFG, -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ERR
+;; Multiple arguments cause an error.
 ; RUN: not opt %loadexampleirtransforms -passes=tut-simplifycfg -plugin-arg=SimplifyCFG,v1 -plugin-arg=SimplifyCFG,v2 -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ERR
-; ERR: SimplifyCFG: expected one argument, v1, v2 or v3
+; ERR: SimplifyCFG: expected a single argument: v1, v2 or v3
 
 define i32 @simp1() {
 ; CHECK-LABEL: @simp1(

@@ -85,6 +85,10 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Analysis Pass */);
 
 static Error parseArguments(ArrayRef<const char *> Args) {
+  // Parsing without arguments would rename the program and re-check the
+  // host's required options. Keep the cl::opt values unchanged.
+  if (Args.empty())
+    return Error::success();
   SmallVector<const char *, 0> Argv = {"Bye"};
   append_range(Argv, Args);
   std::string Msg;

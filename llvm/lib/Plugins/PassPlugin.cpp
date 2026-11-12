@@ -72,11 +72,14 @@ Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
     PluginArgs[It->second].push_back(Rest.data());
   }
   for (auto [Info, PArgs] : zip_equal(Infos, PluginArgs)) {
-    if (PArgs.empty())
+    if (!Info.ParseArguments) {
+      if (!PArgs.empty())
+        return createStringError("pass plugin '" + Twine(Info.PluginName) +
+                                 "' does not accept arguments");
       continue;
-    if (!Info.ParseArguments)
-      return createStringError("pass plugin '" + Twine(Info.PluginName) +
-                               "' does not accept arguments");
+    }
+    // Invoke even without arguments, so that state from a previous
+    // compilation in the same process can be reset
     if (Error E = Info.ParseArguments(PArgs))
       return E;
   }
