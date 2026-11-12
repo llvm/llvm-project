@@ -168,19 +168,18 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
 
 void cloneOrMapRegionOutsiders(fir::FirOpBuilder &firOpBuilder,
     mlir::omp::TargetOp targetOp, RegionOutsiderHandling handling) {
-  const bool canEmitMaps =
-      handling == RegionOutsiderHandling::CloneOrMapEntryBlockUses;
-  const bool rewriteWholeRegion =
-      handling == RegionOutsiderHandling::CloneWholeRegionUsesOnly;
   mlir::Region &region = targetOp.getRegion();
   mlir::Block *entryBlock = &region.getBlocks().front();
 
-  auto replace = [canEmitMaps, rewriteWholeRegion, entryBlock, &region](
-                     mlir::OpOperand &use) {
-    if (canEmitMaps)
+  auto replace = [handling, entryBlock, &region](mlir::OpOperand &use) {
+    switch (handling) {
+    case RegionOutsiderHandling::CloneOrMap:
       return use.getOwner()->getBlock() == entryBlock;
-    if (rewriteWholeRegion)
+      break;
+    case RegionOutsiderHandling::CloneOnly:
       return region.findAncestorOpInRegion(*use.getOwner()) != nullptr;
+      break;
+    }
     llvm_unreachable("unknown target region outsider repair mode");
   };
 
@@ -204,7 +203,7 @@ void cloneOrMapRegionOutsiders(fir::FirOpBuilder &firOpBuilder,
 
         valOp->getResults().replaceUsesWithIf(clonedOp->getResults(), replace);
         valOp->replaceUsesWithIf(clonedOp, replace);
-      } else if (canEmitMaps) {
+      } else if (handling == RegionOutsiderHandling::CloneOrMap) {
         mlir::Value mappedTemp = mapTemporaryValue(firOpBuilder, targetOp, val,
             /*name=*/{});
         madeProgress = true;
@@ -214,9 +213,12 @@ void cloneOrMapRegionOutsiders(fir::FirOpBuilder &firOpBuilder,
     valuesDefinedAbove.clear();
     mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
 
-    assert((canEmitMaps || valuesDefinedAbove.empty() || madeProgress) &&
-        "failed to clone all values used in the target region but defined "
-        "above it");
+    if (handling != RegionOutsiderHandling::CloneOrMap &&
+        !valuesDefinedAbove.empty() && !madeProgress) {
+      llvm_unreachable(
+          "failed to clone all values used in the target region but defined "
+          "above it");
+    }
   }
 }
 

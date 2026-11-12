@@ -71,10 +71,10 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
 enum class RegionOutsiderHandling {
   /// Try to clone memory-effect-free producers used by the target entry block,
   /// and map remaining values through target map entries.
-  CloneOrMapEntryBlockUses,
+  CloneOrMap,
   /// Try to clone memory-effect-free producers used anywhere in the target
   /// region. Do not create new maps; fail if an outsider cannot be cloned.
-  CloneWholeRegionUsesOnly,
+  CloneOnly,
 };
 
 /// For values used inside a target region but defined outside, either clone
@@ -87,8 +87,7 @@ enum class RegionOutsiderHandling {
 /// and which uses should be rewritten.
 void cloneOrMapRegionOutsiders(fir::FirOpBuilder &firOpBuilder,
     mlir::omp::TargetOp targetOp,
-    RegionOutsiderHandling handling =
-        RegionOutsiderHandling::CloneOrMapEntryBlockUses);
+    RegionOutsiderHandling handling = RegionOutsiderHandling::CloneOrMap);
 
 using RecordMemberMapperMangler =
     std::function<void(std::string &mapperId, llvm::StringRef memberName)>;

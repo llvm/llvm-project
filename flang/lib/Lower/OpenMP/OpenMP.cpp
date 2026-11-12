@@ -2255,10 +2255,7 @@ static void genBodyOfTargetOp(
   // Materialize region-local copies for the private list items of inner leaf
   // constructs (e.g. distribute) of a combined/composite target directive,
   // with the intent of replacing a host to device data-mapping (map info
-  // emission). Teams already performs this materialization itself as it opts
-  // out of the regular delayed privatization path for the moment, but there
-  // are plans to change this in the future. When this occurs, we must adjust
-  // this.
+  // emission).
   // TODO: When teams undergoes its delayed privatization update we will need
   // to remove this edge case handling and let it proceed like all of the other
   // cases.
@@ -2297,7 +2294,7 @@ static void genBodyOfTargetOp(
   // introducing new maps after the target operation has already been created.
   if (!targetNestedPrivateInfo.syms.empty())
     cloneOrMapRegionOutsiders(firOpBuilder, targetOp,
-                              RegionOutsiderHandling::CloneWholeRegionUsesOnly);
+                              RegionOutsiderHandling::CloneOnly);
 
   dsp.processStep2(targetOp, /*isLoop=*/false);
 }
@@ -4533,11 +4530,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       return;
 
     // Skip mapping of symbols that appear in private clauses of composite
-    // directive leaf nodes. For example, in
-    // `target teams distribute private(s)`, "s" does not need a map because all
-    // user-level uses are privatized and do not require a data transfer in most
-    // cases. Assumed-shape arrays are an exception because their shape is
-    // needed to create the private copy.
+    // directive leaf nodes.
     if (llvm::any_of(
             targetNestedPrivateInfo.syms, [&](const semantics::Symbol *s) {
               return s == &sym || s->GetUltimate() == sym.GetUltimate();
