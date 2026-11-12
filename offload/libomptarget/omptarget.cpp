@@ -198,10 +198,8 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  if (DeviceOrErr->deleteData(DevicePtr, Kind) == OFFLOAD_FAIL)
-    FATAL_MESSAGE(DeviceNum, "%s",
-                  "Failed to deallocate device ptr. Set "
-                  "OFFLOAD_TRACK_ALLOCATION_TRACES=1 to track allocations.");
+  if (DeviceOrErr->deleteData(DevicePtr) == OFFLOAD_FAIL)
+    FATAL_MESSAGE(DeviceNum, "%s", "Failed to deallocate device ptr.");
 
   ODBG(ODT_Interface) << "omp_target_free deallocated device ptr";
 }
