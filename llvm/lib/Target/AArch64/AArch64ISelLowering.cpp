@@ -33375,6 +33375,8 @@ static void ReplaceMGATHERResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
 
   SDLoc DL(N);
   MaskedGatherSDNode *MGT = cast<MaskedGatherSDNode>(N);
+  assert(MGT->getExtensionType() == ISD::NON_EXTLOAD &&
+         "Unexpected masked gather/scatter extension");
   EVT MemVT = MGT->getMemoryVT();
   EVT NewVT = VT.changeVectorElementTypeToInteger();
   EVT NewMemVT = MemVT.changeVectorElementTypeToInteger();
