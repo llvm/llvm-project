@@ -250,7 +250,7 @@ public:
              GOFF::ESDNameSpaceId NameSpace, const GOFF::LDAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_LabelDefinition), NameSpace(NameSpace) {
-    SymbolFlags.setRenameable(Attr.IsRenamable);
+    SymbolFlags.setRenameable(Attr.IsRenameable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
@@ -263,7 +263,7 @@ public:
              const GOFF::PRAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
-    SymbolFlags.setRenameable(Attr.IsRenamable);
+    SymbolFlags.setRenameable(Attr.IsRenameable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
@@ -295,6 +295,7 @@ public:
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_ExternalReference),
         NameSpace(GOFF::ESD_NS_NormalName) {
+    SymbolFlags.setRenameable(Attr.IsRenameable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
@@ -406,7 +407,7 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
   MCSectionGOFF &Section = static_cast<MCSectionGOFF &>(Symbol.getSection());
   GOFFSymbol LD(Symbol.getExternalName(), Symbol.getIndex(),
                 Section.getOrdinal(), Section.getEDAttributes().NameSpace,
-                GOFF::LDAttr{false, Symbol.getCodeData(),
+                GOFF::LDAttr{Symbol.isRenameable(), Symbol.getCodeData(),
                              Symbol.getBindingStrength(), Symbol.getLinkage(),
                              GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
   if (Symbol.getADA())
@@ -420,14 +421,15 @@ void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
     MCSectionGOFF *ED = Symbol.getADA()->getParent();
     GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
                   ED->getEDAttributes(), ED->getEDAlignment(),
-                  GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
+                  GOFF::PRAttr{Symbol.isRenameable(), Symbol.getCodeData(),
                                Symbol.getBindingStrength(), Symbol.getLinkage(),
                                Symbol.getBindingScope(), 0});
     writeSymbol(PR);
   } else {
     GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
                   RootSD->getOrdinal(),
-                  GOFF::ERAttr{Symbol.isIndirect(), Symbol.getCodeData(),
+                  GOFF::ERAttr{Symbol.isRenameable(), Symbol.isIndirect(),
+                               Symbol.getCodeData(),
                                Symbol.getBindingStrength(), Symbol.getLinkage(),
                                GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
     writeSymbol(ER);

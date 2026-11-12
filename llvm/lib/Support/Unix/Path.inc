@@ -1225,34 +1225,45 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   if (!RealPath)
     return std::error_code();
   RealPath->clear();
-#if defined(F_GETPATH)
-  // When F_GETPATH is availble, it is the quickest way to get
-  // the real path name.
-  char Buffer[PATH_MAX];
-  if (::fcntl(ResultFD, F_GETPATH, Buffer) != -1)
-    RealPath->append(Buffer, Buffer + strlen(Buffer));
-#else
-  char Buffer[PATH_MAX];
-#if defined(TRY_PROC_SELF_FD)
-  if (hasProcSelfFD()) {
-    char ProcPath[64];
-    snprintf(ProcPath, sizeof(ProcPath), "/proc/self/fd/%d", ResultFD);
-    ssize_t CharCount = ::readlink(ProcPath, Buffer, sizeof(Buffer));
-    if (CharCount > 0)
-      RealPath->append(Buffer, Buffer + CharCount);
-  } else {
-#endif
+  // Fast path: ask for the real file path via handle.
+  if (getRealPathFromHandle(ResultFD, *RealPath) == errc::not_supported) {
+    // Slow path: ask for the real file path via name.
     SmallString<128> Storage;
     StringRef P = Name.toNullTerminatedStringRef(Storage);
-
-    // Use ::realpath to get the real path name
+    char Buffer[PATH_MAX];
     if (::realpath(P.begin(), Buffer) != nullptr)
       RealPath->append(Buffer, Buffer + strlen(Buffer));
-#if defined(TRY_PROC_SELF_FD)
   }
-#endif
-#endif
   return std::error_code();
+}
+
+std::error_code getRealPathFromHandle(file_t Handle,
+                                      SmallVectorImpl<char> &RealPath) {
+#if defined(F_GETPATH)
+  char Buffer[PATH_MAX];
+  // When F_GETPATH is available, it is the quickest way to get
+  // the real path name.
+  if (::fcntl(Handle.get(), F_GETPATH, Buffer) != -1) {
+    RealPath.append(Buffer, Buffer + strlen(Buffer));
+    return std::error_code();
+  }
+  return std::error_code(errno, std::generic_category());
+#elif defined(TRY_PROC_SELF_FD)
+  char Buffer[PATH_MAX];
+  if (hasProcSelfFD()) {
+    char ProcPath[64];
+    snprintf(ProcPath, sizeof(ProcPath), "/proc/self/fd/%d", Handle.get());
+    ssize_t CharCount = ::readlink(ProcPath, Buffer, sizeof(Buffer));
+    if (CharCount > 0) {
+      RealPath.append(Buffer, Buffer + CharCount);
+      return std::error_code();
+    }
+    return std::error_code(errno, std::generic_category());
+  }
+  return make_error_code(errc::not_supported);
+#else
+  return make_error_code(errc::not_supported);
+#endif
 }
 
 Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,

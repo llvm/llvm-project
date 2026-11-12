@@ -226,47 +226,77 @@ class TypeSuffix<string S, FuncArgType Ty> {
   FuncArgType Type = Ty;
 }
 
+class ErrnoMathLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ErrnoMemWriteOnly;
+}
+
+class PureLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = NoMemory;
+}
+
 // Integer
 foreach IntTy = [TypeSuffix<"I16", Int16>, TypeSuffix<"I32", Int32>,
                  TypeSuffix<"I64", Int64>, TypeSuffix<"I128", Int128>] in {
-  def SHL_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, Int]>;
-  def SRL_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, Int]>;
-  def SRA_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, Int]>;
+  def SHL_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, Int]>;
+  def SRL_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, Int]>;
+  def SRA_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, Int]>;
 }
 
 foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
                  TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
-  def MUL_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
-  def SDIV_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
-  def SREM_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+  def MUL_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+  def SDIV_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+  def SREM_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
 }
 
 foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
                  TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
-  def UDIV_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
-  def UREM_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+  def UDIV_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
+  def UREM_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
 }
+
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+defvar ReadPtrAttrs = [ReadOnly, CapturesNone];
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def MULO_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, Int];
+  }
 }
 
 foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
                  TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def SDIVREM_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
+  }
 }
 
 foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
                  TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
   def UDIVREM_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
+  }
 }
 
 foreach IntTy = [Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64] in {
@@ -281,17 +311,20 @@ class DivRemPairImpl<RuntimeLibcall P, string Name = NAME>
   defvar IntTy = P.ReturnType;
   let ReturnType = !cast<FuncArgType>(!cast<string>(IntTy) # "Pair");
   let ArgumentTypes = [IntTy, IntTy];
+  let Memory = NoMemory;
+  let ParamAttrs = [];
+  let ParamPointeeTypes = [];
 }
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
-  def NEG_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type]>;
+  def NEG_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type]>;
 }
 
 foreach IntTy = [TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
-  def CTLZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
-  def CTTZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
-  def CTPOP_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
+  def CTLZ_#IntTy.Suffix : PureLibcall<Int, [IntTy.Type]>;
+  def CTTZ_#IntTy.Suffix : PureLibcall<Int, [IntTy.Type]>;
+  def CTPOP_#IntTy.Suffix : PureLibcall<Int, [IntTy.Type]>;
 }
 
 def F32 : TypeSuffix<"F32", Flt>;
@@ -300,72 +333,66 @@ def F80 : TypeSuffix<"F80", X86FP80>;
 def F128 : TypeSuffix<"F128", FP128>;
 def PPCF128 : TypeSuffix<"PPCF128", PPCFP128>;
 
-defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
+  def ADD_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FAST_ADD_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
-foreach FPTy = [F32, F64] in {
-  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]> {
-    let FnAttrs = MathFnAttrs;
-    let Memory = ErrnoMemWriteOnly;
+  def SUB_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FAST_SUB_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+
+  def MUL_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FAST_MUL_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+
+  def DIV_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FAST_DIV_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+
+  def REM_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMA_#FPTy.Suffix
+      : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, FPTy.Type]>;
+  def POWI_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, Int]>;
+
+  def SQRT_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]> {
     let RetAttrs = [NoFPClassAttr<"fcNegInf | fcNegSubnormal | fcNegNormal">];
   }
-}
+  def FAST_SQRT_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
 
-foreach FPTy = [F80, F128, PPCF128] in
-  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-
-foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
-  def ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FAST_ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-
-  def SUB_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FAST_SUB_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-
-  def MUL_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FAST_MUL_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-
-  def DIV_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FAST_DIV_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-
-  def REM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMA_#FPTy.Suffix
-      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, FPTy.Type]>;
-  def POWI_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
-
-  def FAST_SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-
-  def CBRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG10_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP10_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def SIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def COS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def TAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def SINH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def COSH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def TANH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ASIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ACOS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ATAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ATAN2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def CBRT_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG2_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG2_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG10_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG10_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP2_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP2_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP10_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP10_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def SIN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def COS_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def TAN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def SINH_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def COSH_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def TANH_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def ASIN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def ACOS_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN2_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgOrErrnoMemWriteOnly;
     let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
   }
   def REMQUO_#FPTy.Suffix
       : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgOrErrnoMemWriteOnly;
     let ParamAttrs = [[], [], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, NoneType, Int];
   }
-  def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FDIM_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
 }
@@ -375,47 +402,58 @@ foreach FPTy = [ "F32", "F64" ] in {
 }
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
-  def POW_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def POW_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def CEIL_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def TRUNC_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def RINT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def NEARBYINT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ROUND_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ROUNDEVEN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def FLOOR_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def COPYSIGN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMAX_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMINIMUM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMAXIMUM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def POW_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def POW_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def CEIL_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def TRUNC_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def RINT_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def NEARBYINT_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def ROUND_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def ROUNDEVEN_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def FLOOR_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def COPYSIGN_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMIN_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMAX_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMINIMUM_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMAXIMUM_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FMINIMUM_NUM_#FPTy.Suffix
-      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+      : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FMAXIMUM_NUM_#FPTy.Suffix
-      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def LROUND_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
-  def LLROUND_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
-  def LRINT_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
-  def LLRINT_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
-  def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
+      : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def LROUND_#FPTy.Suffix : ErrnoMathLibcall<Long, [FPTy.Type]>;
+  def LLROUND_#FPTy.Suffix : ErrnoMathLibcall<LLong, [FPTy.Type]>;
+  def LRINT_#FPTy.Suffix : ErrnoMathLibcall<Long, [FPTy.Type]>;
+  def LLRINT_#FPTy.Suffix : ErrnoMathLibcall<LLong, [FPTy.Type]>;
+  def LDEXP_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, Int]>;
   def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
     let ParamAttrs = [[], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, Int];
   }
   def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgOrErrnoMemWriteOnly;
     let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
   }
   def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
     let ParamAttrs = [[], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, FPTy.Type];
   }
-  def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]>;
-  def NEXTTOWARD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
-  def REMAINDER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def SCALBLN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Long]>;
-  def SCALBN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
-  def TGAMMA_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemReadOnly;
+    let RetAttrs = [NoFPClassAttr<"~fcQNan">];
+    let ParamAttrs = [ReadPtrAttrs];
+  }
+  def NEXTTOWARD_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
+  def REMAINDER_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def SCALBLN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, Long]>;
+  def SCALBN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, Int]>;
+  def TGAMMA_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
 }
 
 // Floating-point libcall families. Each generates the backend selector
@@ -558,110 +596,110 @@ def FESETENV : RuntimeLibcall<Int, [Ptr]>;
 def FEGETMODE : RuntimeLibcall<Int, [Ptr]>;
 def FESETMODE : RuntimeLibcall<Int, [Ptr]>;
 
-def FPEXT_BF16_F32 : RuntimeLibcall<Flt, [BFloat]>;
-def FPEXT_F32_PPCF128 : RuntimeLibcall<PPCFP128, [Flt]>;
-def FPEXT_F64_PPCF128 : RuntimeLibcall<PPCFP128, [Dbl]>;
-def FPEXT_F80_F128 : RuntimeLibcall<FP128, [X86FP80]>;
-def FPEXT_F64_F128 : RuntimeLibcall<FP128, [Dbl]>;
-def FPEXT_F32_F128 : RuntimeLibcall<FP128, [Flt]>;
-def FPEXT_F16_F128 : RuntimeLibcall<FP128, [Half]>;
-def FPEXT_F16_F80 : RuntimeLibcall<X86FP80, [Half]>;
-def FPEXT_F32_F64 : RuntimeLibcall<Dbl, [Flt]>;
-def FPEXT_F16_F64 : RuntimeLibcall<Dbl, [Half]>;
-def FPEXT_F16_F32 : RuntimeLibcall<Flt, [Half]>;
-def FPROUND_F32_F16 : RuntimeLibcall<Half, [Flt]>;
-def FPROUND_F64_F16 : RuntimeLibcall<Half, [Dbl]>;
-def FPROUND_F80_F16 : RuntimeLibcall<Half, [X86FP80]>;
-def FPROUND_F128_F16 : RuntimeLibcall<Half, [FP128]>;
-def FPROUND_PPCF128_F16 : RuntimeLibcall<Half, [PPCFP128]>;
-def FPROUND_F32_BF16 : RuntimeLibcall<BFloat, [Flt]>;
-def FPROUND_F64_BF16 : RuntimeLibcall<BFloat, [Dbl]>;
-def FPROUND_F80_BF16 : RuntimeLibcall<BFloat, [X86FP80]>;
-def FPROUND_F128_BF16 : RuntimeLibcall<BFloat, [FP128]>;
-def FPROUND_F64_F32 : RuntimeLibcall<Flt, [Dbl]>;
-def FPROUND_F80_F32 : RuntimeLibcall<Flt, [X86FP80]>;
-def FPROUND_F128_F32 : RuntimeLibcall<Flt, [FP128]>;
-def FPROUND_PPCF128_F32 : RuntimeLibcall<Flt, [PPCFP128]>;
-def FPROUND_F80_F64 : RuntimeLibcall<Dbl, [X86FP80]>;
-def FPROUND_F128_F64 : RuntimeLibcall<Dbl, [FP128]>;
-def FPROUND_PPCF128_F64 : RuntimeLibcall<Dbl, [PPCFP128]>;
-def FPROUND_F128_F80 : RuntimeLibcall<X86FP80, [FP128]>;
-def FPTOSINT_F16_I32 : RuntimeLibcall<Int32, [Half]>;
-def FPTOSINT_F16_I64 : RuntimeLibcall<Int64, [Half]>;
-def FPTOSINT_F16_I128 : RuntimeLibcall<Int128, [Half]>;
-def FPTOSINT_F32_I32 : RuntimeLibcall<Int32, [Flt]>;
-def FPTOSINT_F32_I64 : RuntimeLibcall<Int64, [Flt]>;
-def FPTOSINT_F32_I128 : RuntimeLibcall<Int128, [Flt]>;
-def FPTOSINT_F64_I32 : RuntimeLibcall<Int32, [Dbl]>;
-def FPTOSINT_F64_I64 : RuntimeLibcall<Int64, [Dbl]>;
-def FPTOSINT_F64_I128 : RuntimeLibcall<Int128, [Dbl]>;
-def FPTOSINT_F80_I32 : RuntimeLibcall<Int32, [X86FP80]>;
-def FPTOSINT_F80_I64 : RuntimeLibcall<Int64, [X86FP80]>;
-def FPTOSINT_F80_I128 : RuntimeLibcall<Int128, [X86FP80]>;
-def FPTOSINT_F128_I32 : RuntimeLibcall<Int32, [FP128]>;
-def FPTOSINT_F128_I64 : RuntimeLibcall<Int64, [FP128]>;
-def FPTOSINT_F128_I128 : RuntimeLibcall<Int128, [FP128]>;
-def FPTOSINT_PPCF128_I32 : RuntimeLibcall<Int32, [PPCFP128]>;
-def FPTOSINT_PPCF128_I64 : RuntimeLibcall<Int64, [PPCFP128]>;
-def FPTOSINT_PPCF128_I128 : RuntimeLibcall<Int128, [PPCFP128]>;
-def FPTOUINT_F16_I32 : RuntimeLibcall<UInt32, [Half]>;
-def FPTOUINT_F16_I64 : RuntimeLibcall<UInt64, [Half]>;
-def FPTOUINT_F16_I128 : RuntimeLibcall<UInt128, [Half]>;
-def FPTOUINT_F32_I32 : RuntimeLibcall<UInt32, [Flt]>;
-def FPTOUINT_F32_I64 : RuntimeLibcall<UInt64, [Flt]>;
-def FPTOUINT_F32_I128 : RuntimeLibcall<UInt128, [Flt]>;
-def FPTOUINT_F64_I32 : RuntimeLibcall<UInt32, [Dbl]>;
-def FPTOUINT_F64_I64 : RuntimeLibcall<UInt64, [Dbl]>;
-def FPTOUINT_F64_I128 : RuntimeLibcall<UInt128, [Dbl]>;
-def FPTOUINT_F80_I32 : RuntimeLibcall<UInt32, [X86FP80]>;
-def FPTOUINT_F80_I64 : RuntimeLibcall<UInt64, [X86FP80]>;
-def FPTOUINT_F80_I128 : RuntimeLibcall<UInt128, [X86FP80]>;
-def FPTOUINT_F128_I32 : RuntimeLibcall<UInt32, [FP128]>;
-def FPTOUINT_F128_I64 : RuntimeLibcall<UInt64, [FP128]>;
-def FPTOUINT_F128_I128 : RuntimeLibcall<UInt128, [FP128]>;
-def FPTOUINT_PPCF128_I32 : RuntimeLibcall<UInt32, [PPCFP128]>;
-def FPTOUINT_PPCF128_I64 : RuntimeLibcall<UInt64, [PPCFP128]>;
-def FPTOUINT_PPCF128_I128 : RuntimeLibcall<UInt128, [PPCFP128]>;
-def SINTTOFP_I32_F16 : RuntimeLibcall<Half, [Int32]>;
-def SINTTOFP_I32_F32 : RuntimeLibcall<Flt, [Int32]>;
-def SINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [Int32]>;
-def SINTTOFP_I32_F80 : RuntimeLibcall<X86FP80, [Int32]>;
-def SINTTOFP_I32_F128 : RuntimeLibcall<FP128, [Int32]>;
-def SINTTOFP_I32_PPCF128 : RuntimeLibcall<PPCFP128, [Int32]>;
-def SINTTOFP_I64_BF16 : RuntimeLibcall<BFloat, [Int64]>;
-def SINTTOFP_I64_F16 : RuntimeLibcall<Half, [Int64]>;
-def SINTTOFP_I64_F32 : RuntimeLibcall<Flt, [Int64]>;
-def SINTTOFP_I64_F64 : RuntimeLibcall<Dbl, [Int64]>;
-def SINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [Int64]>;
-def SINTTOFP_I64_F128 : RuntimeLibcall<FP128, [Int64]>;
-def SINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [Int64]>;
-def SINTTOFP_I128_F16 : RuntimeLibcall<Half, [Int128]>;
-def SINTTOFP_I128_F32 : RuntimeLibcall<Flt, [Int128]>;
-def SINTTOFP_I128_F64 : RuntimeLibcall<Dbl, [Int128]>;
-def SINTTOFP_I128_F80 : RuntimeLibcall<X86FP80, [Int128]>;
-def SINTTOFP_I128_F128 : RuntimeLibcall<FP128, [Int128]>;
-def SINTTOFP_I128_PPCF128 : RuntimeLibcall<PPCFP128, [Int128]>;
-def UINTTOFP_I32_F16 : RuntimeLibcall<Half, [UInt32]>;
-def UINTTOFP_I32_F32 : RuntimeLibcall<Flt, [UInt32]>;
-def UINTTOFP_I32_F64 : RuntimeLibcall<Dbl, [UInt32]>;
-def UINTTOFP_I32_F80 : RuntimeLibcall<X86FP80, [UInt32]>;
-def UINTTOFP_I32_F128 : RuntimeLibcall<FP128, [UInt32]>;
-def UINTTOFP_I32_PPCF128 : RuntimeLibcall<PPCFP128, [UInt32]>;
-def UINTTOFP_I64_BF16 : RuntimeLibcall<BFloat, [UInt64]>;
-def UINTTOFP_I64_F16 : RuntimeLibcall<Half, [UInt64]>;
-def UINTTOFP_I64_F32 : RuntimeLibcall<Flt, [UInt64]>;
-def UINTTOFP_I64_F64 : RuntimeLibcall<Dbl, [UInt64]>;
-def UINTTOFP_I64_F80 : RuntimeLibcall<X86FP80, [UInt64]>;
-def UINTTOFP_I64_F128 : RuntimeLibcall<FP128, [UInt64]>;
-def UINTTOFP_I64_PPCF128 : RuntimeLibcall<PPCFP128, [UInt64]>;
-def UINTTOFP_I128_F16 : RuntimeLibcall<Half, [UInt128]>;
-def UINTTOFP_I128_F32 : RuntimeLibcall<Flt, [UInt128]>;
-def UINTTOFP_I128_F64 : RuntimeLibcall<Dbl, [UInt128]>;
-def UINTTOFP_I128_F80 : RuntimeLibcall<X86FP80, [UInt128]>;
-def UINTTOFP_I128_F128 : RuntimeLibcall<FP128, [UInt128]>;
-def UINTTOFP_I128_PPCF128 : RuntimeLibcall<PPCFP128, [UInt128]>;
-def CONVERT_F128_PPCF128 : RuntimeLibcall<PPCFP128, [FP128]>;
-def CONVERT_PPCF128_F128 : RuntimeLibcall<FP128, [PPCFP128]>;
+def FPEXT_BF16_F32 : PureLibcall<Flt, [BFloat]>;
+def FPEXT_F32_PPCF128 : PureLibcall<PPCFP128, [Flt]>;
+def FPEXT_F64_PPCF128 : PureLibcall<PPCFP128, [Dbl]>;
+def FPEXT_F80_F128 : PureLibcall<FP128, [X86FP80]>;
+def FPEXT_F64_F128 : PureLibcall<FP128, [Dbl]>;
+def FPEXT_F32_F128 : PureLibcall<FP128, [Flt]>;
+def FPEXT_F16_F128 : PureLibcall<FP128, [Half]>;
+def FPEXT_F16_F80 : PureLibcall<X86FP80, [Half]>;
+def FPEXT_F32_F64 : PureLibcall<Dbl, [Flt]>;
+def FPEXT_F16_F64 : PureLibcall<Dbl, [Half]>;
+def FPEXT_F16_F32 : PureLibcall<Flt, [Half]>;
+def FPROUND_F32_F16 : PureLibcall<Half, [Flt]>;
+def FPROUND_F64_F16 : PureLibcall<Half, [Dbl]>;
+def FPROUND_F80_F16 : PureLibcall<Half, [X86FP80]>;
+def FPROUND_F128_F16 : PureLibcall<Half, [FP128]>;
+def FPROUND_PPCF128_F16 : PureLibcall<Half, [PPCFP128]>;
+def FPROUND_F32_BF16 : PureLibcall<BFloat, [Flt]>;
+def FPROUND_F64_BF16 : PureLibcall<BFloat, [Dbl]>;
+def FPROUND_F80_BF16 : PureLibcall<BFloat, [X86FP80]>;
+def FPROUND_F128_BF16 : PureLibcall<BFloat, [FP128]>;
+def FPROUND_F64_F32 : PureLibcall<Flt, [Dbl]>;
+def FPROUND_F80_F32 : PureLibcall<Flt, [X86FP80]>;
+def FPROUND_F128_F32 : PureLibcall<Flt, [FP128]>;
+def FPROUND_PPCF128_F32 : PureLibcall<Flt, [PPCFP128]>;
+def FPROUND_F80_F64 : PureLibcall<Dbl, [X86FP80]>;
+def FPROUND_F128_F64 : PureLibcall<Dbl, [FP128]>;
+def FPROUND_PPCF128_F64 : PureLibcall<Dbl, [PPCFP128]>;
+def FPROUND_F128_F80 : PureLibcall<X86FP80, [FP128]>;
+def FPTOSINT_F16_I32 : PureLibcall<Int32, [Half]>;
+def FPTOSINT_F16_I64 : PureLibcall<Int64, [Half]>;
+def FPTOSINT_F16_I128 : PureLibcall<Int128, [Half]>;
+def FPTOSINT_F32_I32 : PureLibcall<Int32, [Flt]>;
+def FPTOSINT_F32_I64 : PureLibcall<Int64, [Flt]>;
+def FPTOSINT_F32_I128 : PureLibcall<Int128, [Flt]>;
+def FPTOSINT_F64_I32 : PureLibcall<Int32, [Dbl]>;
+def FPTOSINT_F64_I64 : PureLibcall<Int64, [Dbl]>;
+def FPTOSINT_F64_I128 : PureLibcall<Int128, [Dbl]>;
+def FPTOSINT_F80_I32 : PureLibcall<Int32, [X86FP80]>;
+def FPTOSINT_F80_I64 : PureLibcall<Int64, [X86FP80]>;
+def FPTOSINT_F80_I128 : PureLibcall<Int128, [X86FP80]>;
+def FPTOSINT_F128_I32 : PureLibcall<Int32, [FP128]>;
+def FPTOSINT_F128_I64 : PureLibcall<Int64, [FP128]>;
+def FPTOSINT_F128_I128 : PureLibcall<Int128, [FP128]>;
+def FPTOSINT_PPCF128_I32 : PureLibcall<Int32, [PPCFP128]>;
+def FPTOSINT_PPCF128_I64 : PureLibcall<Int64, [PPCFP128]>;
+def FPTOSINT_PPCF128_I128 : PureLibcall<Int128, [PPCFP128]>;
+def FPTOUINT_F16_I32 : PureLibcall<UInt32, [Half]>;
+def FPTOUINT_F16_I64 : PureLibcall<UInt64, [Half]>;
+def FPTOUINT_F16_I128 : PureLibcall<UInt128, [Half]>;
+def FPTOUINT_F32_I32 : PureLibcall<UInt32, [Flt]>;
+def FPTOUINT_F32_I64 : PureLibcall<UInt64, [Flt]>;
+def FPTOUINT_F32_I128 : PureLibcall<UInt128, [Flt]>;
+def FPTOUINT_F64_I32 : PureLibcall<UInt32, [Dbl]>;
+def FPTOUINT_F64_I64 : PureLibcall<UInt64, [Dbl]>;
+def FPTOUINT_F64_I128 : PureLibcall<UInt128, [Dbl]>;
+def FPTOUINT_F80_I32 : PureLibcall<UInt32, [X86FP80]>;
+def FPTOUINT_F80_I64 : PureLibcall<UInt64, [X86FP80]>;
+def FPTOUINT_F80_I128 : PureLibcall<UInt128, [X86FP80]>;
+def FPTOUINT_F128_I32 : PureLibcall<UInt32, [FP128]>;
+def FPTOUINT_F128_I64 : PureLibcall<UInt64, [FP128]>;
+def FPTOUINT_F128_I128 : PureLibcall<UInt128, [FP128]>;
+def FPTOUINT_PPCF128_I32 : PureLibcall<UInt32, [PPCFP128]>;
+def FPTOUINT_PPCF128_I64 : PureLibcall<UInt64, [PPCFP128]>;
+def FPTOUINT_PPCF128_I128 : PureLibcall<UInt128, [PPCFP128]>;
+def SINTTOFP_I32_F16 : PureLibcall<Half, [Int32]>;
+def SINTTOFP_I32_F32 : PureLibcall<Flt, [Int32]>;
+def SINTTOFP_I32_F64 : PureLibcall<Dbl, [Int32]>;
+def SINTTOFP_I32_F80 : PureLibcall<X86FP80, [Int32]>;
+def SINTTOFP_I32_F128 : PureLibcall<FP128, [Int32]>;
+def SINTTOFP_I32_PPCF128 : PureLibcall<PPCFP128, [Int32]>;
+def SINTTOFP_I64_BF16 : PureLibcall<BFloat, [Int64]>;
+def SINTTOFP_I64_F16 : PureLibcall<Half, [Int64]>;
+def SINTTOFP_I64_F32 : PureLibcall<Flt, [Int64]>;
+def SINTTOFP_I64_F64 : PureLibcall<Dbl, [Int64]>;
+def SINTTOFP_I64_F80 : PureLibcall<X86FP80, [Int64]>;
+def SINTTOFP_I64_F128 : PureLibcall<FP128, [Int64]>;
+def SINTTOFP_I64_PPCF128 : PureLibcall<PPCFP128, [Int64]>;
+def SINTTOFP_I128_F16 : PureLibcall<Half, [Int128]>;
+def SINTTOFP_I128_F32 : PureLibcall<Flt, [Int128]>;
+def SINTTOFP_I128_F64 : PureLibcall<Dbl, [Int128]>;
+def SINTTOFP_I128_F80 : PureLibcall<X86FP80, [Int128]>;
+def SINTTOFP_I128_F128 : PureLibcall<FP128, [Int128]>;
+def SINTTOFP_I128_PPCF128 : PureLibcall<PPCFP128, [Int128]>;
+def UINTTOFP_I32_F16 : PureLibcall<Half, [UInt32]>;
+def UINTTOFP_I32_F32 : PureLibcall<Flt, [UInt32]>;
+def UINTTOFP_I32_F64 : PureLibcall<Dbl, [UInt32]>;
+def UINTTOFP_I32_F80 : PureLibcall<X86FP80, [UInt32]>;
+def UINTTOFP_I32_F128 : PureLibcall<FP128, [UInt32]>;
+def UINTTOFP_I32_PPCF128 : PureLibcall<PPCFP128, [UInt32]>;
+def UINTTOFP_I64_BF16 : PureLibcall<BFloat, [UInt64]>;
+def UINTTOFP_I64_F16 : PureLibcall<Half, [UInt64]>;
+def UINTTOFP_I64_F32 : PureLibcall<Flt, [UInt64]>;
+def UINTTOFP_I64_F64 : PureLibcall<Dbl, [UInt64]>;
+def UINTTOFP_I64_F80 : PureLibcall<X86FP80, [UInt64]>;
+def UINTTOFP_I64_F128 : PureLibcall<FP128, [UInt64]>;
+def UINTTOFP_I64_PPCF128 : PureLibcall<PPCFP128, [UInt64]>;
+def UINTTOFP_I128_F16 : PureLibcall<Half, [UInt128]>;
+def UINTTOFP_I128_F32 : PureLibcall<Flt, [UInt128]>;
+def UINTTOFP_I128_F64 : PureLibcall<Dbl, [UInt128]>;
+def UINTTOFP_I128_F80 : PureLibcall<X86FP80, [UInt128]>;
+def UINTTOFP_I128_F128 : PureLibcall<FP128, [UInt128]>;
+def UINTTOFP_I128_PPCF128 : PureLibcall<PPCFP128, [UInt128]>;
+def CONVERT_F128_PPCF128 : PureLibcall<PPCFP128, [FP128]>;
+def CONVERT_PPCF128_F128 : PureLibcall<FP128, [PPCFP128]>;
 
 // Comparisons.
 //
@@ -674,58 +712,78 @@ foreach FPTy = [F32, F64, F128, PPCF128] in {
   defvar Ty = FPTy.Type;
   defvar CmpTy = !if(!eq(FPTy, PPCF128), Int, CmpResult);
 
-  def OEQ_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
-  def UNE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
-  def OGE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
-  def OLT_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
-  def OLE_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
-  def OGT_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
-  def UO_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def OEQ_#FPTy.Suffix : PureLibcall<Int, [Ty, Ty]>;
+  def UNE_#FPTy.Suffix : PureLibcall<Int, [Ty, Ty]>;
+  def OGE_#FPTy.Suffix : PureLibcall<Int, [Ty, Ty]>;
+  def OLT_#FPTy.Suffix : PureLibcall<Int, [Ty, Ty]>;
+  def OLE_#FPTy.Suffix : PureLibcall<Int, [Ty, Ty]>;
+  def OGT_#FPTy.Suffix : PureLibcall<Int, [Ty, Ty]>;
+  def UO_#FPTy.Suffix : PureLibcall<CmpTy, [Ty, Ty]>;
 
-  def FCMP3_PRED_OEQ_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
-  def FCMP3_PRED_UNE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
-  def FCMP3_PRED_OGE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
-  def FCMP3_PRED_OLT_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
-  def FCMP3_PRED_OLE_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
-  def FCMP3_PRED_OGT_#FPTy.Suffix : RuntimeLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OEQ_#FPTy.Suffix : PureLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_UNE_#FPTy.Suffix : PureLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OGE_#FPTy.Suffix : PureLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OLT_#FPTy.Suffix : PureLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OLE_#FPTy.Suffix : PureLibcall<CmpTy, [Ty, Ty]>;
+  def FCMP3_PRED_OGT_#FPTy.Suffix : PureLibcall<CmpTy, [Ty, Ty]>;
 
-  def FCMP3_#FPTy.Suffix : RuntimeLibcall<Int, [Ty, Ty]>;
+  def FCMP3_#FPTy.Suffix : PureLibcall<Int, [Ty, Ty]>;
 }
 
 // Memory
-def MEMCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
+class MemCmpLibcall : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [ReadPtrAttrs, ReadPtrAttrs];
+}
+
+def MEMCMP : MemCmpLibcall;
 def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
-def MallocFamily : AllocFamilyAttr<"malloc">;
-
-def MALLOC : RuntimeLibcall<Ptr, [SizeT]> {
+class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
-                 AllocSizeAttr<0>, MallocFamily];
+                 AllocSizeAttr<0>, AllocFamilyAttr<family>];
+  let Memory = InaccessibleOrErrnoMem;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef]];
 }
 
-def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
+class CallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
-                 AllocKindAttr<"AllocFnKind::Alloc">, AllocSizeAttr<0, "1">,
-                 MallocFamily];
+                 AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Zeroed">,
+                 AllocSizeAttr<0, "1">, AllocFamilyAttr<family>];
+  let Memory = InaccessibleOrErrnoMem;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef], [NoUndef]];
 }
 
-def FREE : RuntimeLibcall<Void, [Ptr]> {
+class FreeLibcall<string family> : RuntimeLibcall<Void, [Ptr]> {
   let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Free">,
-                 MallocFamily];
+                 AllocFamilyAttr<family>];
+  let Memory = InaccessibleOrArgMem;
   let ParamAttrs = [[AllocatedPointer, NoUndef, CapturesNone]];
 }
 
-def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]>;
-def STRLEN : RuntimeLibcall<SizeT, [Ptr]>;
+def MALLOC : MallocLibcall<"malloc">;
+def CALLOC : CallocLibcall<"malloc">;
+def FREE : FreeLibcall<"malloc">;
+
+def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[WriteOnly, CapturesNone]];
+}
+
+def STRLEN : RuntimeLibcall<SizeT, [Ptr]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [ReadPtrAttrs];
+}
 
 // Element-wise unordered-atomic memory of different sizes
 foreach MemSize = [1, 2, 4, 8, 16] in {
@@ -864,7 +922,7 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []> {
   let FnAttrs = [NoReturn, NoUnwind, NoFree];
 }
-def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]> {
+def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr]> {
   let FnAttrs = [NoReturn, NoUnwind, NoFree];
 }
 
@@ -994,8 +1052,13 @@ def ATOF : RuntimeLibcall<Dbl, [Ptr]>;
 def ATOI : RuntimeLibcall<Int, [Ptr]>;
 def ATOL : RuntimeLibcall<Long, [Ptr]>;
 def ATOLL : RuntimeLibcall<LLong, [Ptr]>;
-def BCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
-def BCOPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def BCMP : MemCmpLibcall;
+def BCOPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [ReadPtrAttrs, [WriteOnly, CapturesNone]];
+}
+
 def CHMOD : RuntimeLibcall<Int, [Ptr, IntX]>;
 def CHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]>;
 def CLEARERR : RuntimeLibcall<Void, [Ptr]>;
@@ -1225,9 +1288,9 @@ def UNSETENV : RuntimeLibcall<Int, [Ptr]>;
 def UTIME : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def UTIMES : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def VALLOC : RuntimeLibcall<Ptr, [SizeT]>;
-def VEC_CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
-def VEC_FREE : RuntimeLibcall<Void, [Ptr]>;
-def VEC_MALLOC : RuntimeLibcall<Ptr, [SizeT]>;
+def VEC_CALLOC : CallocLibcall<"vec_malloc">;
+def VEC_FREE : FreeLibcall<"vec_malloc">;
+def VEC_MALLOC : MallocLibcall<"vec_malloc">;
 def VEC_REALLOC : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
 def VFPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def VFSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
