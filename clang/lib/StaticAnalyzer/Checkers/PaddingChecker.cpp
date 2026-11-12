@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -44,6 +45,12 @@ public:
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : DynamicRecursiveASTVisitor {
       const PaddingChecker *Checker;
+      // Padding depends on declarations, not on the path to a shared
+      // initializer subtree. Still traverse every distinct statement.
+      llvm::SmallPtrSet<const Stmt *, 32> TraversedStmts;
+      bool dataTraverseStmtPre(Stmt *S) override {
+        return TraversedStmts.insert(S).second;
+      }
       explicit LocalVisitor(const PaddingChecker *Checker) : Checker(Checker) {
         ShouldVisitTemplateInstantiations = true;
         ShouldVisitImplicitCode = true;
