@@ -1194,6 +1194,19 @@ bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
   if (!AllowROR && ShType == AArch64_AM::ROR)
     return false;
 
+  // Don't match if the SRA/SRL can be folded with an SHL to form a SBFM/UBFM.
+  if (N.getOpcode() == ISD::SRA || N.getOpcode() == ISD::SRL) {
+    EVT VT = N.getValueType();
+    SDValue Inner = N.getOperand(0);
+    uint64_t ShrImm = 0;
+    uint64_t ShlImm = 0;
+    if (isIntImmediate(N.getOperand(1), ShrImm) && ShrImm > 0 &&
+        ShrImm < VT.getSizeInBits() &&
+        isOpcWithIntImmediate(Inner.getNode(), ISD::SHL, ShlImm) &&
+        ShlImm < VT.getSizeInBits() && Inner.hasOneUse())
+      return false;
+  }
+
   if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
     unsigned BitSize = N.getValueSizeInBits();
     unsigned Val = RHS->getZExtValue() & (BitSize - 1);
