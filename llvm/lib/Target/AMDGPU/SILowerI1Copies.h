@@ -97,10 +97,6 @@ public:
   }
 
   bool isLaneMaskReg(Register Reg) const {
-    // GISel generic s1 is virtual but has no register class yet.
-    // Physical VCC/EXEC are lane masks and must not use VRegInfo.
-    if (Reg.isVirtual() && !MRI->getRegClassOrNull(Reg))
-      return false;
     return TII->getRegisterInfo().isSGPRReg(*MRI, Reg) &&
            TII->getRegisterInfo().getRegSizeInBits(Reg, *MRI) ==
                ST->getWavefrontSize();
