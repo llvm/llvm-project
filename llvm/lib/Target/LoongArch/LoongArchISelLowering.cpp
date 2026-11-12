@@ -8673,6 +8673,25 @@ static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = isNOT(N0, DAG))
     return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
 
+  // VANDN(bitcast(shl(splat(1), y)), x)
+  //   -> bitcast(VANDN(shl(splat(1), y), bitcast(x)))
+  // Perform the VANDN in the element type of the shift so that it can be
+  // selected as [x]vbitclr.{b/h/w/d}.
+  if (N0.getOpcode() == ISD::BITCAST && N0.hasOneUse()) {
+    SDValue Shl = N0.getOperand(0);
+    EVT ShlVT = Shl.getValueType();
+    APInt SplatVal;
+    if (Shl.getOpcode() == ISD::SHL && ShlVT.isVector() && ShlVT.isInteger() &&
+        ShlVT != VT && ShlVT.getSizeInBits() == VT.getSizeInBits() &&
+        DAG.getTargetLoweringInfo().isTypeLegal(ShlVT) &&
+        ISD::isConstantSplatVector(Shl.getOperand(0).getNode(), SplatVal) &&
+        SplatVal.isOne()) {
+      SDValue V = DAG.getNode(LoongArchISD::VANDN, DL, ShlVT, Shl,
+                              DAG.getBitcast(ShlVT, N1));
+      return DAG.getBitcast(VT, V);
+    }
+  }
+
   // Folds for better commutativity:
   if (N1->hasOneUse()) {
     // VANDN(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).

@@ -41,18 +41,19 @@ struct CreatePThreadKey {
 };
 } // namespace llvm::orc::elfnix_sps_ci
 
-// Descriptors for the call-controller handlers that the ELFNix platform
+// Specs for the call-controller handlers that the ELFNix platform
 // runtime calls.
 namespace llvm::orc::elfnix_sps_handlers {
-struct RecordInitializers {
+struct RecordInitializers
+    : sps::HandlerSpec<SPSExpected<SPSELFNixJITDylibDepInfoMap>(
+          SPSExecutorAddr)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_elfnix_push_initializers_tag");
-  using SPSSig = SPSExpected<SPSELFNixJITDylibDepInfoMap>(SPSExecutorAddr);
 };
-struct LookupSymbol {
+struct LookupSymbol : sps::HandlerSpec<SPSExpected<SPSExecutorAddr>(
+                          SPSExecutorAddr, SPSString)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_elfnix_symbol_lookup_tag");
-  using SPSSig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
 };
 } // namespace llvm::orc::elfnix_sps_handlers
 
@@ -496,11 +497,9 @@ ELFNixPlatform::ELFNixPlatform(
 Error ELFNixPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
   return ES.registerCallControllerHandlers(
       PlatformJD,
-      bindCallControllerHandler<
-          sps::HandlerSpec<elfnix_sps_handlers::RecordInitializers>>(
+      bindCallControllerHandler<elfnix_sps_handlers::RecordInitializers>(
           this, &ELFNixPlatform::rt_recordInitializers),
-      bindCallControllerHandler<
-          sps::HandlerSpec<elfnix_sps_handlers::LookupSymbol>>(
+      bindCallControllerHandler<elfnix_sps_handlers::LookupSymbol>(
           this, &ELFNixPlatform::rt_lookupSymbol));
 }
 
@@ -770,8 +769,7 @@ Expected<uint64_t> ELFNixPlatform::createPThreadKey() {
 
   using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
   CreatePThreadKeyProxy CreateKey(
-      sps::ProxySpec<CreatePThreadKeyProxy,
-                     elfnix_sps_ci::CreatePThreadKey>::dispatch,
+      sps::ProxySpec<elfnix_sps_ci::CreatePThreadKey>::dispatch,
       CreatePThreadKey.Addr);
   return CreateKey(ES);
 }

@@ -248,7 +248,10 @@ intersphinx_mapping = {}
 # Enable this if you want TODOs to show up in the generated documentation.
 todo_include_todos = True
 
-redirects = {"math/index": "../headers/math/index.html"}
+redirects = {
+    "headers/math/index": "../math.html",
+    "headers/math/log": "../../math/log.html",
+}
 
 
 def _configure_generated_header_links(app, pagename, templatename, context, doctree):

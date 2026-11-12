@@ -716,7 +716,6 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
 [[maybe_unused]] void CodeGenPrepare::verifyBFIUpdates(Function &F) {
-  DominatorTree NewDT(F);
   CycleInfo NewCI;
   NewCI.compute(F);
   BranchProbabilityInfo NewBPI(F, NewCI, TLInfo);
