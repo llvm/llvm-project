@@ -836,18 +836,63 @@ class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
-let SubtargetPredicate = HasCvtFP8ByteSel in {
-  foreach Index = [0, -1] in {
-    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
-                                  V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
-    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
-                                  V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
-  }
+class Cvt_PK_F32_F8_Pat_True16<SDPatternOperator node,
+    VOP1_Pseudo inst_e32> : GCNPat<
+    (v2f32 (node i32:$src, 0)),
+    (inst_e32 (i16 (EXTRACT_SUBREG VS_32:$src, lo16)))
+> {
+  let GISelShouldIgnore = 1;
 }
 
+class Cvt_PK_F32_F8_Pat_True16_Imm<SDPatternOperator node,
+    VOP1_Pseudo inst_e32> : GCNPat<
+    (v2f32 (node (i32 timm:$src), 0)),
+    (inst_e32 (f16 (as_i16timm $src)))
+> {
+  let GISelShouldIgnore = 1;
+}
+
+class Cvt_PK_F32_F8_Conv_Pat_True16<SDPatternOperator node,
+    VOP1_Pseudo inst_e32> : GCNPat<
+    (v2f32 (node i32:$src)),
+    (inst_e32 (i16 (EXTRACT_SUBREG VS_32:$src, lo16)))
+>;
+
 let SubtargetPredicate = HasCvtFP8ByteSel in {
+  def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, -1,
+                                V_CVT_PK_F32_FP8_fake16_e32,
+                                V_CVT_PK_F32_FP8_fake16_e64>;
+  def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, -1,
+                                V_CVT_PK_F32_BF8_fake16_e32,
+                                V_CVT_PK_F32_BF8_fake16_e64>;
+}
+
+let SubtargetPredicate = HasCvtFP8ByteSel,
+    True16Predicate = UseFakeTrue16Insts in {
+  def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, 0,
+                                V_CVT_PK_F32_FP8_fake16_e32,
+                                V_CVT_PK_F32_FP8_fake16_e64>;
+  def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, 0,
+                                V_CVT_PK_F32_BF8_fake16_e32,
+                                V_CVT_PK_F32_BF8_fake16_e64>;
   def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_fp8, V_CVT_PK_F32_FP8_fake16_e32>;
   def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_bf8, V_CVT_PK_F32_BF8_fake16_e32>;
+}
+
+let SubtargetPredicate = HasCvtFP8ByteSel,
+    True16Predicate = UseRealTrue16Insts in {
+  def : Cvt_PK_F32_F8_Pat_True16<int_amdgcn_cvt_pk_f32_fp8,
+                                 V_CVT_PK_F32_FP8_t16_e32>;
+  def : Cvt_PK_F32_F8_Pat_True16<int_amdgcn_cvt_pk_f32_bf8,
+                                 V_CVT_PK_F32_BF8_t16_e32>;
+  def : Cvt_PK_F32_F8_Pat_True16_Imm<int_amdgcn_cvt_pk_f32_fp8,
+                                     V_CVT_PK_F32_FP8_t16_e32>;
+  def : Cvt_PK_F32_F8_Pat_True16_Imm<int_amdgcn_cvt_pk_f32_bf8,
+                                     V_CVT_PK_F32_BF8_t16_e32>;
+  def : Cvt_PK_F32_F8_Conv_Pat_True16<AMDGPUcvt_pk_f32_fp8,
+                                      V_CVT_PK_F32_FP8_t16_e32>;
+  def : Cvt_PK_F32_F8_Conv_Pat_True16<AMDGPUcvt_pk_f32_bf8,
+                                      V_CVT_PK_F32_BF8_t16_e32>;
 }
 
 // FIXME-TRUE16: True16 versions of these instructions are untested.

@@ -5,13 +5,16 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.50 < %s | FileCheck -check-prefixes=GFX9X,GFX950,GFX950-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.70 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-GISEL %s
-; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-GISEL,GFX1170-GISEL-FAKE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16,GFX12-TRUE16-IMM %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16,GFX12-TRUE16-IMM %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -check-prefix=GFX12-GISEL-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL,GFX1250-GISEL-FAKE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | llvm-mc -triple=amdgpu12.00 -mattr=+real-true16 -filetype=null
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | llvm-mc -triple=amdgpu12.00 -mattr=+real-true16 -filetype=null
 
 declare float @llvm.amdgcn.cvt.f32.bf8(i32, i32)
 declare float @llvm.amdgcn.cvt.f32.fp8(i32, i32)
@@ -21,6 +24,20 @@ declare i32 @llvm.amdgcn.cvt.pk.bf8.f32(float, float, i32, i1)
 declare i32 @llvm.amdgcn.cvt.pk.fp8.f32(float, float, i32, i1)
 declare i32 @llvm.amdgcn.cvt.sr.bf8.f32(float, i32, i32, i32)
 declare i32 @llvm.amdgcn.cvt.sr.fp8.f32(float, i32, i32, i32)
+
+define <2 x float> @test_cvt_pk_f32_bf8_word0_imm() {
+; GFX12-TRUE16-IMM-LABEL: test_cvt_pk_f32_bf8_word0_imm:
+; GFX12-TRUE16-IMM:       v_cvt_pk_f32_bf8_e32 v[0:1], 0x5678
+  %ret = tail call <2 x float> @llvm.amdgcn.cvt.pk.f32.bf8(i32 305419896, i1 false)
+  ret <2 x float> %ret
+}
+
+define <2 x float> @test_cvt_pk_f32_fp8_word0_imm() {
+; GFX12-TRUE16-IMM-LABEL: test_cvt_pk_f32_fp8_word0_imm:
+; GFX12-TRUE16-IMM:       v_cvt_pk_f32_fp8_e32 v[0:1], 0x5678
+  %ret = tail call <2 x float> @llvm.amdgcn.cvt.pk.f32.fp8(i32 305419896, i1 false)
+  ret <2 x float> %ret
+}
 
 define float @test_cvt_f32_bf8_byte0(i32 %a) {
 ; GFX942-LABEL: test_cvt_f32_bf8_byte0:
@@ -299,6 +316,9 @@ define float @test_cvt_f32_fp8_byte3(i32 %a) {
 }
 
 define <2 x float> @test_cvt_pk_f32_bf8_word0(i32 %a) {
+; GFX12-GISEL-FAKE16-LABEL: test_cvt_pk_f32_bf8_word0:
+; GFX12-GISEL-FAKE16:       v_cvt_pk_f32_bf8_e32 v[0:1], v0{{$}}
+;
 ; GFX9X-LABEL: test_cvt_pk_f32_bf8_word0:
 ; GFX9X:       ; %bb.0:
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -308,7 +328,9 @@ define <2 x float> @test_cvt_pk_f32_bf8_word0(i32 %a) {
 ; GFX1170-LABEL: test_cvt_pk_f32_bf8_word0:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0.l
+; GFX1170-FAKE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
+; GFX1170-GISEL-FAKE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_pk_f32_bf8_word0:
@@ -318,14 +340,18 @@ define <2 x float> @test_cvt_pk_f32_bf8_word0(i32 %a) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
+; GFX12-TRUE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0.l
+; GFX12-FAKE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
+; GFX12-GISEL-TRUE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: test_cvt_pk_f32_bf8_word0:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0.l
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f32_bf8_e32 v[0:1], v0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ret = tail call <2 x float> @llvm.amdgcn.cvt.pk.f32.bf8(i32 %a, i1 false)
   ret <2 x float> %ret
@@ -365,6 +391,9 @@ define <2 x float> @test_cvt_pk_f32_bf8_word1(i32 %a) {
 }
 
 define <2 x float> @test_cvt_pk_f32_fp8_word0(i32 %a) {
+; GFX12-GISEL-FAKE16-LABEL: test_cvt_pk_f32_fp8_word0:
+; GFX12-GISEL-FAKE16:       v_cvt_pk_f32_fp8_e32 v[0:1], v0{{$}}
+;
 ; GFX9X-LABEL: test_cvt_pk_f32_fp8_word0:
 ; GFX9X:       ; %bb.0:
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -374,7 +403,9 @@ define <2 x float> @test_cvt_pk_f32_fp8_word0(i32 %a) {
 ; GFX1170-LABEL: test_cvt_pk_f32_fp8_word0:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0.l
+; GFX1170-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1170-GISEL-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_cvt_pk_f32_fp8_word0:
@@ -384,14 +415,18 @@ define <2 x float> @test_cvt_pk_f32_fp8_word0(i32 %a) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX12-TRUE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0.l
+; GFX12-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX12-GISEL-TRUE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: test_cvt_pk_f32_fp8_word0:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0.l
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ret = tail call <2 x float> @llvm.amdgcn.cvt.pk.f32.fp8(i32 %a, i1 false)
   ret <2 x float> %ret
@@ -1274,6 +1309,9 @@ define <2 x float> @test_sext_cvt_pk_f32_bf8_word1(i16 %a) {
 }
 
 define <2 x float> @test_sext_cvt_pk_f32_fp8_word0(i16 %a) {
+; GFX12-GISEL-FAKE16-LABEL: test_sext_cvt_pk_f32_fp8_word0:
+; GFX12-GISEL-FAKE16:       v_cvt_pk_f32_fp8_e32 v[0:1], v0{{$}}
+;
 ; GFX9X-LABEL: test_sext_cvt_pk_f32_fp8_word0:
 ; GFX9X:       ; %bb.0:
 ; GFX9X-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1286,7 +1324,9 @@ define <2 x float> @test_sext_cvt_pk_f32_fp8_word0(i16 %a) {
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0.l
+; GFX1170-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1170-GISEL-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_sext_cvt_pk_f32_fp8_word0:
@@ -1298,7 +1338,9 @@ define <2 x float> @test_sext_cvt_pk_f32_fp8_word0(i16 %a) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX12-TRUE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0.l
+; GFX12-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX12-GISEL-TRUE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0.l
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: test_sext_cvt_pk_f32_fp8_word0:
@@ -1307,7 +1349,9 @@ define <2 x float> @test_sext_cvt_pk_f32_fp8_word0(i16 %a) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0.l
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
+; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f32_fp8_e32 v[0:1], v0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %a.sext = sext i16 %a to i32
   %ret = tail call <2 x float> @llvm.amdgcn.cvt.pk.f32.fp8(i32 %a.sext, i1 false)
