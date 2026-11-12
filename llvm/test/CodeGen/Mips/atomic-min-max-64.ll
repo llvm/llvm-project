@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=mips64el-elf -O0 -mcpu=mips64r2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS
 ; RUN: llc -mtriple=mips64-elf -O0 -mcpu=mips64r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSR6
 ; RUN: llc -mtriple=mips64el-elf -O0 -mcpu=mips64r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPSR6
+; RUN: llc -mtriple=mips64-elf -O0 -mcpu=mips3 -relocation-model=pic -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS3
 
 define i64 @test_max(ptr nocapture %ptr, i64 signext %val) {
 ; MIPS-LABEL: test_max:
@@ -37,6 +38,29 @@ define i64 @test_max(ptr nocapture %ptr, i64 signext %val) {
 ; MIPSR6-NEXT:  # %bb.2: # %entry
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: test_max:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    sync
+; MIPS3-NEXT:  .LBB0_1: # %entry
+; MIPS3-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS3-NEXT:    lld $2, 0($4)
+; MIPS3-NEXT:    slt $3, $2, $5
+; MIPS3-NEXT:    move $1, $5
+; MIPS3-NEXT:    bnez $3, .LBB0_3
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:  # %bb.2: # %entry
+; MIPS3-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; MIPS3-NEXT:    move $1, $2
+; MIPS3-NEXT:  .LBB0_3: # %entry
+; MIPS3-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; MIPS3-NEXT:    scd $1, 0($4)
+; MIPS3-NEXT:    beqz $1, .LBB0_1
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:  # %bb.4: # %entry
+; MIPS3-NEXT:    sync
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    nop
 entry:
   %0 = atomicrmw max ptr %ptr, i64 %val seq_cst
   ret i64 %0
@@ -75,6 +99,29 @@ define i64 @test_min(ptr nocapture %ptr, i64 signext %val) {
 ; MIPSR6-NEXT:  # %bb.2: # %entry
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: test_min:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    sync
+; MIPS3-NEXT:  .LBB1_1: # %entry
+; MIPS3-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS3-NEXT:    lld $2, 0($4)
+; MIPS3-NEXT:    slt $3, $2, $5
+; MIPS3-NEXT:    move $1, $2
+; MIPS3-NEXT:    bnez $3, .LBB1_3
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:  # %bb.2: # %entry
+; MIPS3-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; MIPS3-NEXT:    move $1, $5
+; MIPS3-NEXT:  .LBB1_3: # %entry
+; MIPS3-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; MIPS3-NEXT:    scd $1, 0($4)
+; MIPS3-NEXT:    beqz $1, .LBB1_1
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:  # %bb.4: # %entry
+; MIPS3-NEXT:    sync
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    nop
 entry:
   %0 = atomicrmw min ptr %ptr, i64 %val seq_cst
   ret i64 %0
@@ -113,6 +160,29 @@ define i64 @test_umax(ptr nocapture %ptr, i64 zeroext %val) {
 ; MIPSR6-NEXT:  # %bb.2: # %entry
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: test_umax:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    sync
+; MIPS3-NEXT:  .LBB2_1: # %entry
+; MIPS3-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS3-NEXT:    lld $2, 0($4)
+; MIPS3-NEXT:    sltu $3, $2, $5
+; MIPS3-NEXT:    move $1, $5
+; MIPS3-NEXT:    bnez $3, .LBB2_3
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:  # %bb.2: # %entry
+; MIPS3-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; MIPS3-NEXT:    move $1, $2
+; MIPS3-NEXT:  .LBB2_3: # %entry
+; MIPS3-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; MIPS3-NEXT:    scd $1, 0($4)
+; MIPS3-NEXT:    beqz $1, .LBB2_1
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:  # %bb.4: # %entry
+; MIPS3-NEXT:    sync
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    nop
 entry:
   %0 = atomicrmw umax ptr %ptr, i64 %val seq_cst
   ret i64 %0
@@ -151,6 +221,29 @@ define i64 @test_umin(ptr nocapture %ptr, i64 zeroext %val) {
 ; MIPSR6-NEXT:  # %bb.2: # %entry
 ; MIPSR6-NEXT:    sync
 ; MIPSR6-NEXT:    jrc $ra
+;
+; MIPS3-LABEL: test_umin:
+; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    sync
+; MIPS3-NEXT:  .LBB3_1: # %entry
+; MIPS3-NEXT:    # =>This Inner Loop Header: Depth=1
+; MIPS3-NEXT:    lld $2, 0($4)
+; MIPS3-NEXT:    sltu $3, $2, $5
+; MIPS3-NEXT:    move $1, $2
+; MIPS3-NEXT:    bnez $3, .LBB3_3
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:  # %bb.2: # %entry
+; MIPS3-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; MIPS3-NEXT:    move $1, $5
+; MIPS3-NEXT:  .LBB3_3: # %entry
+; MIPS3-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; MIPS3-NEXT:    scd $1, 0($4)
+; MIPS3-NEXT:    beqz $1, .LBB3_1
+; MIPS3-NEXT:    nop
+; MIPS3-NEXT:  # %bb.4: # %entry
+; MIPS3-NEXT:    sync
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    nop
 entry:
   %0 = atomicrmw umin ptr %ptr, i64 %val seq_cst
   ret i64 %0
