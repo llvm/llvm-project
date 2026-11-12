@@ -1728,6 +1728,17 @@ void LazyCallGraph::addSplitRefRecursiveFunctions(
     }
   }
 
+  // The new functions need not reference each other directly (for example,
+  // the splitter may have already pruned unreachable code from them), but
+  // they are treated as mutually ref-recursive. Link them with a cycle of
+  // (possibly spurious) ref edges so that they form a valid RefSCC.
+  for (auto [I, NewFunction] : enumerate(NewFunctions)) {
+    Node &NewN = get(*NewFunction);
+    Node &NextN = get(*NewFunctions[(I + 1) % NewFunctions.size()]);
+    if (&NextN != &NewN && !NewN->lookup(NextN))
+      NewN->insertEdgeInternal(NextN, Edge::Kind::Ref);
+  }
+
   RefSCC *NewRC;
   if (ExistsRefToOriginalRefSCC) {
     // If there is any edge from any new function to any function in the
@@ -1771,8 +1782,9 @@ void LazyCallGraph::addSplitRefRecursiveFunctions(
       if (F1 == F2)
         continue;
       Node &N2 = get(*F2);
-      assert(!N1->lookup(N2)->isCall() &&
-             "Edges between new functions must be ref edges");
+      if (Edge *E = N1->lookup(N2))
+        assert(!E->isCall() &&
+               "Edges between new functions must be ref edges");
     }
   }
 #endif
