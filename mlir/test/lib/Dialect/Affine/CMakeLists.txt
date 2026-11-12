@@ -24,6 +24,7 @@ add_mlir_library(MLIRAffineTransformsTestPasses
   MLIRTestDialect
   )
 mlir_target_link_libraries(MLIRAffineTransformsTestPasses PUBLIC
+  MLIRAnalysisBase
   MLIRArithTransforms
   MLIRAffineAnalysis
   MLIRAffineTransforms

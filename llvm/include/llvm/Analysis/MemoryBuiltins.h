@@ -354,9 +354,7 @@ class ObjectSizeOffsetEvaluator
   SizeOffsetValue compute_(Value *V);
 
 public:
-  LLVM_ABI ObjectSizeOffsetEvaluator(const DataLayout &DL,
-                                     const TargetLibraryInfo *TLI,
-                                     LLVMContext &Context,
+  LLVM_ABI ObjectSizeOffsetEvaluator(Module &M, const TargetLibraryInfo *TLI,
                                      ObjectSizeOpts EvalOpts = {});
 
   static SizeOffsetValue unknown() { return SizeOffsetValue(); }

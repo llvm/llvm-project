@@ -308,3 +308,18 @@ func.func @test_simple_int(%input: !hlfir.expr<?xi32>) -> i32 {
 // CHECK-LABEL: func.func @test_simple_int(
 // CHECK: fir.do_loop{{.*}}unordered
 // CHECK: arith.maxsi %{{.*}}, %{{.*}} : i32
+
+// The INTEGER(16) identity must not be truncated to 64 bits.
+func.func @test_i128_mask(%input: !hlfir.expr<?xi128>, %mask: !hlfir.expr<?x!fir.logical<4>>) -> i128 {
+  %0 = hlfir.maxval %input mask %mask : (!hlfir.expr<?xi128>, !hlfir.expr<?x!fir.logical<4>>) -> i128
+  return %0 : i128
+}
+// CHECK-LABEL: func.func @test_i128_mask(
+// CHECK: arith.constant -170141183460469231731687303715884105728 : i128
+
+func.func @test_i128_var_nomask(%input: !fir.box<!fir.array<?xi128>>) -> i128 {
+  %0 = hlfir.maxval %input : (!fir.box<!fir.array<?xi128>>) -> i128
+  return %0 : i128
+}
+// CHECK-LABEL: func.func @test_i128_var_nomask(
+// CHECK: arith.constant -170141183460469231731687303715884105728 : i128

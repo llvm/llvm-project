@@ -146,6 +146,26 @@ int Macros() {
   // CHECK-MESSAGES: [[@LINE-2]]:37: warning: 'find' called with a string literal
 }
 
+#define TOKEN_SEPARATING_CHARACTER "_"
+// CHECK-FIXES: #define TOKEN_SEPARATING_CHARACTER "_"
+
+void foo() {
+  std::string a;
+  a += TOKEN_SEPARATING_CHARACTER;
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: 'operator+=' called with a
+  // CHECK-FIXES: a += TOKEN_SEPARATING_CHARACTER;
+}
+
+#define SEP "_"
+// CHECK-FIXES: #define SEP "_"
+
+void ConcatenatedMacro() {
+  std::string s;
+  s += "" SEP "";
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: 'operator+=' called with a
+  // CHECK-FIXES: s += "" SEP "";
+}
+
 void SubstitutedTemplateType() {
   Wrapper<std::string>().value.find("a");
   // CHECK-MESSAGES: [[@LINE-1]]:37: warning: 'find' called with a string literal

@@ -103,7 +103,8 @@ public:
       TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
       result.corank_ = GetCorank(x);
       if (type->category() == TypeCategory::Character) {
-        if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
+        if (const auto *chExpr{
+                UnwrapExpr<Expr<Type<TypeCategory::Character>>>(x)}) {
           if (auto length{chExpr->LEN()}) {
             result.set_LEN(std::move(*length));
           }
@@ -118,30 +119,9 @@ public:
   }
 
   // Specialization for character designators
-  template <int KIND>
   static std::optional<TypeAndShape> Characterize(
-      const Designator<Type<TypeCategory::Character, KIND>> &x,
-      FoldingContext &context, bool invariantOnly = true) {
-    const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)};
-    if (symbol && !symbol->owner().IsDerivedType()) { // Whole variable
-      if (auto result{Characterize(*symbol, context, invariantOnly)}) {
-        return result;
-      }
-    }
-    if (auto type{x.GetType()}) {
-      TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
-      if (type->category() == TypeCategory::Character) {
-        if (auto length{x.LEN()}) {
-          result.set_LEN(std::move(*length));
-        }
-      }
-      if (symbol) { // component
-        result.AcquireAttrs(*symbol);
-      }
-      return std::move(result.Rewrite(context));
-    }
-    return std::nullopt;
-  }
+      const Designator<Type<TypeCategory::Character>> &,
+      FoldingContext &context, bool invariantOnly = true);
 
   template <typename A>
   static std::optional<TypeAndShape> Characterize(const std::optional<A> &x,

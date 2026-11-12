@@ -118,6 +118,9 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
+  // AMDGPU describes a pointer's address space with its own attribute rather
+  // than DW_AT_address_class.
+  TypeAddressSpaceAttribute = dwarf::DW_AT_LLVM_address_space;
   GetResourceUsage = [this](MachineFunction &MF)
       -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
     if (auto *ResourceUsageW =
@@ -157,7 +160,7 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
-  getTargetStreamer()->EmitDirectiveAMDGCNTarget();
+  getTargetStreamer()->emitDirectiveAMDGCNTargetOnce();
 
   if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
@@ -408,15 +411,20 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TT.getOS() == Triple::AMDHSA) {
+    const AMDGPUOptions &CLOpts =
+        static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts();
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV4>(CLOpts);
       break;
     case AMDGPU::AMDHSA_COV5:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV5>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV5>(CLOpts);
       break;
     case AMDGPU::AMDHSA_COV6:
-      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
+      HSAMetadataStream =
+          std::make_unique<HSAMD::MetadataStreamerMsgPackV6>(CLOpts);
       break;
     default:
       reportFatalUsageError("unsupported code object version");
@@ -1221,16 +1229,17 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
   }
 
   // Apply xnack/sramecc settings from module flags.
+  const auto &GCNTM = static_cast<const GCNTargetMachine &>(TM);
   if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureXNACKOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
-        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
+        GCNTM.getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
     if (Setting != AMDGPU::TargetIDSetting::Any)
       TSTargetID->setXnackSetting(Setting);
   }
 
   if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSRAMECCOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
-        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
+        GCNTM.getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
     if (Setting != AMDGPU::TargetIDSetting::Any)
       TSTargetID->setSramEccSetting(Setting);
   }
@@ -1545,7 +1554,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT, Ctx);
 
   ProgInfo.Occupancy = createOccupancy(
-      STM.computeOccupancy(F, ProgInfo.LDSSize).second,
+      STM.getOccupancyWithWorkGroupSizes(MF).second,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
       MFI->getDynamicVGPRBlockSize(), STM, Ctx);
 

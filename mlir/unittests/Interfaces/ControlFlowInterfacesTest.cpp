@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -132,12 +133,49 @@ struct SequentialRegionsOp
       SequentialRegionsOp>::getSuccessorRegions;
 };
 
+/// Two attributes define the region graph of this op. `entries` lists the
+/// regions that the op enters. `successors[i]` lists the regions that each
+/// terminator of region i branches to. Every terminator can also branch back to
+/// the op.
+struct RegionGraphOp
+    : public Op<RegionGraphOp, RegionBranchOpInterface::Trait> {
+  using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
+
+  static StringRef getOperationName() { return "cftest.region_graph_op"; }
+
+  void getSuccessorRegions(RegionBranchPoint point,
+                           SmallVectorImpl<RegionSuccessor> &regions) {
+    Operation *op = getOperation();
+    DenseI64ArrayAttr targets;
+    if (point.isParent()) {
+      targets = cast<DenseI64ArrayAttr>(op->getAttr("entries"));
+    } else {
+      // Branching back to the op adds no edge between regions. It only lets
+      // every region exit.
+      regions.push_back(RegionSuccessor(op));
+      Region *from = point.getTerminatorPredecessorOrNull()->getParentRegion();
+      targets = cast<DenseI64ArrayAttr>(
+          cast<ArrayAttr>(op->getAttr("successors"))[from->getRegionNumber()]);
+    }
+    for (int64_t target : targets.asArrayRef())
+      regions.push_back(RegionSuccessor(&op->getRegion(target)));
+  }
+
+  ValueRange getSuccessorInputs(RegionSuccessor successor) {
+    return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                   : ValueRange();
+  }
+
+  using RegionBranchOpInterface::Trait<RegionGraphOp>::getSuccessorRegions;
+};
+
 /// A dialect putting all the above together.
 struct CFTestDialect : Dialect {
   explicit CFTestDialect(MLIRContext *ctx)
       : Dialect(getDialectNamespace(), ctx, TypeID::get<CFTestDialect>()) {
     addOperations<DummyOp, MutuallyExclusiveRegionsOp, LoopRegionsOp,
-                  DoubleLoopRegionsOp, SequentialRegionsOp>();
+                  DoubleLoopRegionsOp, SequentialRegionsOp, RegionGraphOp>();
   }
   static StringRef getDialectNamespace() { return "cftest"; }
 };
@@ -283,4 +321,94 @@ TEST(RegionBranchOpInterface, NotRecursiveRegions) {
 
   EXPECT_EQ(getEnclosingRepetitiveRegion(op1), nullptr);
   EXPECT_EQ(getEnclosingRepetitiveRegion(op2), nullptr);
+}
+
+/// Builds `cftest.region_graph_op` ops and keeps them alive for the test.
+class RegionGraphTest : public ::testing::Test {
+protected:
+  RegionGraphTest() : builder(&ctx) {
+    ctx.loadDialect<CFTestDialect>();
+    module = ModuleOp::create(builder.getUnknownLoc());
+    builder.setInsertionPointToEnd(module->getBody());
+  }
+
+  /// Create a `cftest.region_graph_op` with one region per entry of
+  /// `successors`. Each region has one block, whose terminator branches to the
+  /// regions listed for it.
+  RegionBranchOpInterface
+  createRegionGraphOp(ArrayRef<int64_t> entries,
+                      ArrayRef<SmallVector<int64_t>> successors) {
+    OperationState state(builder.getUnknownLoc(),
+                         RegionGraphOp::getOperationName());
+    SmallVector<Attribute> successorAttrs = llvm::map_to_vector(
+        successors, [&](ArrayRef<int64_t> regions) -> Attribute {
+          return builder.getDenseI64ArrayAttr(regions);
+        });
+    state.addAttribute("entries", builder.getDenseI64ArrayAttr(entries));
+    state.addAttribute("successors", builder.getArrayAttr(successorAttrs));
+    for (size_t i = 0, e = successors.size(); i < e; ++i)
+      state.addRegion();
+    Operation *op = builder.create(state);
+    for (Region &region : op->getRegions())
+      addTerminatedBlock(region);
+    return cast<RegionBranchOpInterface>(op);
+  }
+
+  /// Append a block to `region` that holds only a region branch terminator.
+  void addTerminatedBlock(Region &region) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.createBlock(&region);
+    builder.create(
+        OperationState(builder.getUnknownLoc(), DummyOp::getOperationName()));
+  }
+
+  MLIRContext ctx;
+  OpBuilder builder;
+  OwningOpRef<ModuleOp> module;
+};
+
+TEST_F(RegionGraphTest, MultipleBranchesToSameRegionIsNotALoop) {
+  RegionBranchOpInterface op =
+      createRegionGraphOp(/*entries=*/{0}, /*successors=*/{{1}, {}});
+  // Give region 0 a second terminator. Both terminators branch to region 1.
+  addTerminatedBlock(op->getRegion(0));
+  EXPECT_FALSE(op.isRepetitiveRegion(0));
+  EXPECT_FALSE(op.isRepetitiveRegion(1));
+  EXPECT_FALSE(op.hasLoop());
+}
+
+TEST_F(RegionGraphTest, DiamondIsNotALoop) {
+  RegionBranchOpInterface op = createRegionGraphOp(
+      /*entries=*/{0}, /*successors=*/{{1, 2}, {3}, {3}, {}});
+  EXPECT_FALSE(op.hasLoop());
+}
+
+TEST_F(RegionGraphTest, LoopAfterEntryRegion) {
+  RegionBranchOpInterface op =
+      createRegionGraphOp(/*entries=*/{0}, /*successors=*/{{1}, {1}});
+  EXPECT_FALSE(op.isRepetitiveRegion(0));
+  EXPECT_TRUE(op.isRepetitiveRegion(1));
+  EXPECT_TRUE(op.hasLoop());
+}
+
+TEST_F(RegionGraphTest, LoopThroughEntryRegion) {
+  RegionBranchOpInterface op =
+      createRegionGraphOp(/*entries=*/{0}, /*successors=*/{{1}, {0}});
+  EXPECT_TRUE(op.hasLoop());
+}
+
+TEST_F(RegionGraphTest, UnreachableLoopIsIgnored) {
+  RegionBranchOpInterface op =
+      createRegionGraphOp(/*entries=*/{0}, /*successors=*/{{1}, {}, {2}});
+  EXPECT_TRUE(op.isRepetitiveRegion(2));
+  EXPECT_FALSE(op.hasLoop());
+}
+
+TEST_F(RegionGraphTest, OverlappingEntriesAreNotALoop) {
+  // Region 1 is an entry region and is also reachable from entry region 0.
+  // The search must not depend on the order of the entry regions.
+  EXPECT_FALSE(createRegionGraphOp(/*entries=*/{0, 1}, /*successors=*/{{1}, {}})
+                   .hasLoop());
+  EXPECT_FALSE(createRegionGraphOp(/*entries=*/{1, 0}, /*successors=*/{{1}, {}})
+                   .hasLoop());
 }

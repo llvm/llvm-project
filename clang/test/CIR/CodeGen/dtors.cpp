@@ -319,8 +319,8 @@ int test_temp_in_condition(G &obj) {
 }
 
 // CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {{.*}} {
-// CIR:   %[[OBJ:.*]] = cir.alloca "obj" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_G>>
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[OBJ:.*]] = cir.alloca "obj" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_G>>
 // CIR:   cir.store %[[ARG0]], %[[OBJ]]
 // CIR:   cir.scope {
 // CIR:     %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_G>
@@ -358,11 +358,11 @@ int test_temp_in_condition(G &obj) {
 // CIR:   cir.return %[[RETVAL]]
 
 // LLVM: define {{.*}} i32 @_Z22test_temp_in_conditionR1G(ptr {{.*}} %[[ARG0:.*]])
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32
+// LLVM:   %[[OBJ:.*]] = alloca ptr
 // LLVM:   %[[REF_TMP0:.*]] = alloca %struct.G
 // LLVM:   %[[REF_TMP1:.*]] = alloca %struct.G
 // LLVM:   %[[TMP_RESULT:.*]] = alloca i8
-// LLVM:   %[[OBJ:.*]] = alloca ptr
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32
 // LLVM:   store ptr %[[ARG0]], ptr %[[OBJ]]
 // LLVM:   br label %[[SCOPE_BEGIN:.*]]
 // LLVM: [[SCOPE_BEGIN]]:
@@ -379,15 +379,9 @@ int test_temp_in_condition(G &obj) {
 // LLVM:   br label %[[CLEAN_SCOPE_TWO_CLEANUP:.*]]
 // LLVM: [[CLEAN_SCOPE_TWO_CLEANUP]]:
 // LLVM:   call void @_ZN1GD1Ev(ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   br label %[[EXIT_CLEAN_SCOPE_TWO:.*]]
-// LLVM: [[EXIT_CLEAN_SCOPE_TWO]]:
-// LLVM:   br label %[[CLEAN_SCOPE_ONE_CONTINUE:.*]]
-// LLVM: [[CLEAN_SCOPE_ONE_CONTINUE]]:
 // LLVM:   br label %[[CLEAN_SCOPE_ONE_CLEANUP:.*]]
 // LLVM: [[CLEAN_SCOPE_ONE_CLEANUP]]:
 // LLVM:   call void @_ZN1GD1Ev(ptr {{.*}} %[[REF_TMP0]])
-// LLVM:   br label %[[EXIT_CLEAN_SCOPE_ONE:.*]]
-// LLVM: [[EXIT_CLEAN_SCOPE_ONE]]:
 // LLVM:   br label %[[SCOPE_CONTINUE:.*]]
 // LLVM: [[SCOPE_CONTINUE]]:
 // LLVM:   %[[LOAD_RESULT:.*]] = load i8, ptr %[[TMP_RESULT]]
@@ -398,8 +392,6 @@ int test_temp_in_condition(G &obj) {
 // LLVM:   %[[RETVAL:.*]] = load i32, ptr %[[RET_ADDR]]
 // LLVM:   ret i32 %[[RETVAL]]
 // LLVM: [[FALSE_BLOCK]]:
-// LLVM:   br label %[[EXIT_SCOPE:.*]]
-// LLVM: [[EXIT_SCOPE]]:
 // LLVM:   store i32 0, ptr %[[RET_ADDR]]
 // LLVM:   %[[RETVAL:.*]] = load i32, ptr %[[RET_ADDR]]
 // LLVM:   ret i32 %[[RETVAL]]

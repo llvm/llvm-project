@@ -48,6 +48,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -79,7 +80,6 @@ namespace acc {
 #define DEBUG_TYPE "acc-recipe-materialization"
 
 namespace {
-
 using namespace mlir;
 
 static void setLocation(Region &region, Location loc) {
@@ -89,6 +89,20 @@ static void setLocation(Region &region, Location loc) {
   // of the location of the recipe operations to the location of the op that is
   // being materialized.
   region.walk([&](Operation *op) { op->setLoc(loc); });
+}
+
+// Complex multiplication mixes the real and imaginary parts, so a reduction
+// of that operator cannot be lowered as two independent component reductions.
+// Keep unwrapping pointer-like types so a reference to a reference still
+// reports the element type.
+static bool isComplexReductionType(Type type) {
+  while (auto ptrTy = dyn_cast<acc::PointerLikeType>(type)) {
+    Type elementType = ptrTy.getElementType();
+    if (!elementType || elementType == type)
+      return false;
+    type = elementType;
+  }
+  return isa<ComplexType>(type);
 }
 
 static void saveVarName(StringRef name, Value dst) {
@@ -173,6 +187,12 @@ class ACCRecipeMaterialization
 public:
   using acc::impl::ACCRecipeMaterializationBase<
       ACCRecipeMaterialization>::ACCRecipeMaterializationBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCRecipeMaterializationBase<
+        ACCRecipeMaterialization>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
   void runOnOperation() override;
 
 private:
@@ -356,6 +376,12 @@ LogicalResult ACCRecipeMaterialization::materialize(
       cloneDestroy(loc, recipe, block, std::prev(block->end()), destroyArgs);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
+    if (recipe.getReductionOperator() == acc::ReductionOperator::AccMul &&
+        isComplexReductionType(recipe.getType())) {
+      (void)accSupport.emitNYI(loc, "reduction: complex multiply reduction");
+      return failure();
+    }
+
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,
                                         bool hasResult) {
       src->cloneInto(dest, mapping);
@@ -643,5 +669,4 @@ void ACCRecipeMaterialization::runOnOperation() {
       removeRecipe(recipe, moduleOp, usedSymbols);
   });
 }
-
 } // namespace

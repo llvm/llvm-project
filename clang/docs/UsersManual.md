@@ -1138,11 +1138,14 @@ x86_64-pc-linux-gnu.cfg
 
 It is not an error if either of these files is not found.
 
-The configuration file consists of command-line options specified on one or
-more lines. Lines composed of whitespace characters only are ignored as well as
-lines in which the first non-blank character is `#`. Long options may be split
-between several lines by a trailing backslash. Here is an example of a
-configuration file:
+The configuration file consists of command-line options specified on one or more
+lines. Lines composed of whitespace characters only are ignored as well as lines
+in which the first non-blank character is `#`. A `#` elsewhere on a line also
+starts a comment that runs to the end of the line, as long as it begins a new
+word (i.e. is preceded by whitespace) and is not inside a quoted string. Long
+options may be split between several lines by a trailing backslash.
+
+Here is an example of a configuration file:
 
 ```
 # Several options on line
@@ -1154,6 +1157,8 @@ include/c++/5.4.0
 
 # other config files may be included
 @linux.options
+
+-Wall # trailing comments are supported
 ```
 
 Files included by `@file` directives in configuration files are resolved
@@ -5606,7 +5611,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   -fmacro-backtrace-limit=<value>
 >                           Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit)
 >   -fmemory-profile-use=<pathname>
->                           Use memory profile for profile-guided memory optimization
+>                           Use memory profile for profile-guided memory optimization (MemPGO)
 >   -fmerge-all-constants   Allow merging of constants
 >   -fmodule-file=[<name>=]<file>
 >                           Specify the mapping of module name to precompiled module file, or load a module file if name is omitted.

@@ -3,6 +3,7 @@
 # REQUIRES: asserts
 ---
 name:            bitmask_overlap1
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: bitmask_overlap1
@@ -22,6 +23,7 @@ body:             |
 ...
 ---
 name:            bitmask_overlap2
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: bitmask_overlap2
@@ -41,6 +43,7 @@ body:             |
 ...
 ---
 name:            bitmask_overlap3
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: bitmask_overlap3
@@ -60,6 +63,7 @@ body:             |
 ...
 ---
 name:            bitmask_overlap4
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: bitmask_overlap4
@@ -79,6 +83,7 @@ body:             |
 ...
 ---
 name:            bitmask_no_overlap
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: bitmask_no_overlap
@@ -96,6 +101,7 @@ body:             |
 ...
 ---
 name:            bitmask_overlap_extrause
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: bitmask_overlap_extrause

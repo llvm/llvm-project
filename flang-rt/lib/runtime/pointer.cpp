@@ -143,8 +143,8 @@ RT_API_ATTRS void *AllocateValidatedPointerPayload(
   constexpr std::size_t align{sizeof(std::uintptr_t)};
   byteSize = ((byteSize + align - 1) / align) * align;
   std::size_t total{byteSize + sizeof(std::uintptr_t)};
-  AllocFct alloc{allocatorRegistry.GetAllocator(allocatorIdx)};
-  void *p{alloc(total, alignment, /*asyncObject=*/nullptr)};
+  void *p{allocatorRegistry.Allocate(
+      allocatorIdx, total, alignment, /*asyncObject=*/nullptr)};
   if (p && allocatorIdx == 0) {
     // Fill the footer word with the XOR of the ones' complement of
     // the base address, which is a value that would be highly unlikely

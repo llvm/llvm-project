@@ -8,6 +8,8 @@
 
 #include <detail/queue_impl.hpp>
 
+#include <sycl/__impl/properties/queue_properties.hpp>
+
 #include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
@@ -54,9 +56,27 @@ private:
 QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &Context,
                      DeviceImpl &Device, const async_handler &AsyncHandler,
                      const property_list &PropList, PrivateTag)
-    : MIsInOrder(false), MAsyncHandler(AsyncHandler), MPropList(PropList),
-      MDevice(Device), MContext(Context) {
+    : MIsInOrder(PropList.has_property<property::queue::in_order>()),
+      MAsyncHandler(AsyncHandler), MPropList(PropList), MDevice(Device),
+      MContext(Context) {
   assert(MContext && "Context impl ptr can't be nullptr");
+
+  checkPropertyList<queue>(PropList);
+  // TODO: add passing in-order queue flag to liboffload and though backend.
+
+  if (PropList.has_property<property::queue::enable_profiling>()) {
+    if (!MDevice.has(aspect::queue_profiling))
+      throw sycl::exception(
+          createSyclObjFromImpl<context>(*MContext),
+          make_error_code(errc::feature_not_supported),
+          "The device associated with this queue does not support profiling.");
+
+    // TODO: Remove this once the queue captures profiling information and
+    // event::get_profiling_info can report it.
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          make_error_code(errc::feature_not_supported),
+                          "Queue profiling is not implemented yet.");
+  }
 
   ol_result_t Err = callNoCheck(olCreateQueue, MContext->getOLHandleRef(),
                                 MDevice.getOLHandle(), &MOffloadQueue);
@@ -129,6 +149,7 @@ void QueueImpl::setKernelLaunchParams(
     std::vector<EventImplPtr> &&Events,
     const ol_kernel_launch_size_args_t &Range) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(Events, *MContext);
   MCurrentSubmitInfo.DepEvents = std::move(Events);
   MCurrentSubmitInfo.Range = Range;
@@ -190,6 +211,7 @@ EventImplPtr QueueImpl::memcpy(void *Dest, const void *Src,
                                std::size_t NumBytes,
                                const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
   if (NumBytes == 0)
     return submitWait(DepEvents);
@@ -213,6 +235,7 @@ EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
                              const std::vector<EventImplPtr> &DepEvents) {
   assert(PatternSize > 0 && "Pattern size has to be greater than zero");
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
   if (Count == 0)
     return submitWait(DepEvents);
@@ -231,9 +254,10 @@ EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
   return createEvent();
 }
 
-EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
+EventImplPtr QueueImpl::prefetch(const void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(DepEvents, *MContext);
 
   if (NumBytes == 0)

@@ -14,10 +14,10 @@
 
 using namespace llvm;
 
-void
-PPC64LinuxTargetObjectFile::
-Initialize(MCContext &Ctx, const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void PPC64LinuxTargetObjectFile::initialize(MCContext &Ctx,
+                                            const TargetMachine &TM,
+                                            const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 }
 
 MCSection *PPC64LinuxTargetObjectFile::SelectSectionForGlobal(

@@ -55,7 +55,7 @@ static LLVMErrorRef runPasses(Module *Mod, Function *Fun, const char *Passes,
   bool VerifyEach = PassOpts->VerifyEach;
 
   PassInstrumentationCallbacks PIC;
-  PassBuilder PB(Machine, PassOpts->PTO, std::nullopt, &PIC);
+  PassBuilder PB(Mod->getContext(), Machine, PassOpts->PTO, std::nullopt, &PIC);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;

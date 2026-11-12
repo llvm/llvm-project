@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 //
 #include "X86.h"
+#include "X86TargetMachine.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -59,10 +60,6 @@ static bool isV256I32Ty(Type *Ty) {
   return false;
 }
 #endif
-
-static cl::opt<bool>
-    X86ScalarizeAMX("enable-x86-scalar-amx", cl::init(false), cl::Hidden,
-                    cl::desc("X86: enable AMX scalarizition."));
 
 namespace {
 class X86LowerAMXIntrinsics {
@@ -549,6 +546,7 @@ bool X86LowerAMXIntrinsics::lowerTileLoadStore(Instruction *TileLoadStore) {
   BasicBlock *End =
       SplitBlock(InsertI->getParent(), InsertI, &DTU, LI, nullptr, "continue");
   IRBuilder<> Builder(TileLoadStore);
+  Builder.disableGEPCanonicalization();
   Value *ResVec = createTileLoadStoreLoops<IsTileLoad>(
       Start, End, Builder, M, NDWord, Ptr, StrideDWord,
       IsTileLoad ? nullptr : Tile);
@@ -649,8 +647,11 @@ bool X86LowerAMXIntrinsics::visit() {
 
 namespace {
 bool shouldRunLowerAMXIntrinsics(const Function &F, const TargetMachine *TM) {
-  return X86ScalarizeAMX && (F.hasFnAttribute(Attribute::OptimizeNone) ||
-                             TM->getOptLevel() == CodeGenOptLevel::None);
+  const X86Options &CLOpts =
+      static_cast<const X86TargetMachine *>(TM)->getCLOpts();
+  return CLOpts.enable_x86_scalar_amx &&
+         (F.hasFnAttribute(Attribute::OptimizeNone) ||
+          TM->getOptLevel() == CodeGenOptLevel::None);
 }
 
 bool runLowerAMXIntrinsics(Function &F, DominatorTree *DT, LoopInfo *LI) {

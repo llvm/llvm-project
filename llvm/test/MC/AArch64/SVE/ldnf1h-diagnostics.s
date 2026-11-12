@@ -4,32 +4,32 @@
 // Immediate out of lower bound [-8, 7].
 
 ldnf1h z21.h, p4/z, [x17, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ldnf1h z21.h, p4/z, [x17, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnf1h z10.h, p5/z, [x16, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ldnf1h z10.h, p5/z, [x16, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnf1h z30.s, p6/z, [x25, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ldnf1h z30.s, p6/z, [x25, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnf1h z29.s, p5/z, [x15, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ldnf1h z29.s, p5/z, [x15, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnf1h z28.d, p2/z, [x28, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ldnf1h z28.d, p2/z, [x28, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldnf1h z27.d, p1/z, [x26, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: ldnf1h z27.d, p1/z, [x26, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

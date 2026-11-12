@@ -9,14 +9,16 @@
 ; CHECK: %[[#]] = OpFunction
 define void @copy_aliased() {
 entry:
-; CHECK: OpCopyMemory %[[#]] %[[#]] Aligned|AliasScopeINTELMask 4 %[[#List]]
+; CHECK: OpCopyMemory %[[#]] %[[#]] Aligned|AliasScopeINTELMask 4 %[[#List]]{{$}}
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 @dst, ptr addrspace(1) align 4 @src, i64 20, i1 false), !alias.scope !1
+; CHECK: OpCopyMemory %[[#]] %[[#]] Volatile|Aligned|AliasScopeINTELMask 8 %[[#List]] Volatile|Aligned|AliasScopeINTELMask 4 %[[#List]]{{$}}
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 8 @dst, ptr addrspace(1) align 4 @src, i64 20, i1 true), !alias.scope !1
   ret void
 }
 
 %struct.T = type <{ float, float, float, float, float }>
 @src = external dso_local addrspace(1) global %struct.T, align 4
-@dst = external dso_local addrspace(1) global %struct.T, align 4
+@dst = external dso_local addrspace(1) global %struct.T, align 8
 
 declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1), ptr addrspace(1), i64, i1)
 

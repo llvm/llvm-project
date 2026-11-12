@@ -206,9 +206,8 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   assert(R->isSimple());
   BasicBlock *EnteringBB = S.getEnteringBlock();
   assert(EnteringBB);
-  PollyIRBuilder Builder(EnteringBB->getContext(), ConstantFolder(),
-                         IRInserter(Annotator));
-  Builder.SetInsertPoint(EnteringBB->getTerminator()->getIterator());
+  PollyIRBuilder Builder(EnteringBB->getTerminator()->getIterator(),
+                         ConstantFolder(), IRInserter(Annotator));
 
   // Only build the run-time condition and parameters _after_ having
   // introduced the conditional branch. This is important as the conditional

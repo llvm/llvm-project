@@ -2,6 +2,7 @@
 #RUN: not llvm-objdump -d %t1.dylib 2>&1 | FileCheck %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

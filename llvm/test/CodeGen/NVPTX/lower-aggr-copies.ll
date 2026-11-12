@@ -124,8 +124,7 @@ entry:
 ; IR-NEXT:    store i8 [[VAL]], ptr [[STOREPTR]]
 
 ; PTX-LABEL:  .visible .func (.param .b64 func_retval0) memset_caller(
-; PTX:        ld.param.b32 %r[[C:[0-9]+]]
-; PTX:        cvt.u16.u32  %rs[[REG:[0-9]+]], %r[[C]];
+; PTX:        ld.param.b8 %rs[[REG:[0-9]+]], [memset_caller_param_1];
 ; PTX:        $L__BB[[LABEL:[_0-9]+]]:
 ; PTX:        st.b8 [%rd{{[0-9]+}}], %rs[[REG]]
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1

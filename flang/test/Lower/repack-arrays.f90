@@ -64,7 +64,7 @@ subroutine test3(x)
 end subroutine test3
 
 ! ALL-LABEL:   func.func @_QPtest4(
-! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_inout>}) {
 subroutine test4(x)
   real, intent(inout) :: x(:)
 ! ALL:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_0]]
@@ -82,7 +82,7 @@ subroutine test4(x)
 end subroutine test4
 
 ! ALL-LABEL:   func.func @_QPtest5(
-! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>}) {
 subroutine test5(x)
   real, intent(in) :: x(:)
 ! ALL:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_0]]
@@ -99,7 +99,7 @@ subroutine test5(x)
 end subroutine test5
 
 ! ALL-LABEL:   func.func @_QPtest6(
-! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+! ALL-SAME:                        %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
 subroutine test6(x)
   real, intent(out) :: x(:)
 ! ALL:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_0]]

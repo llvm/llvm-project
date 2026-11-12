@@ -38,6 +38,8 @@ define i32 @extract_last_active_v4i32(<4 x i32> %a, <4 x i1> %c) {
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.select
+; CHECK-NEXT:    i32.const 3
+; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i32.shl
 ; CHECK-NEXT:    i32.or
@@ -93,6 +95,8 @@ define i32 @extract_last_active_v4i32_no_default(<4 x i32> %a, <4 x i1> %c) {
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.select
+; CHECK-NEXT:    i32.const 3
+; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 2
 ; CHECK-NEXT:    i32.shl
 ; CHECK-NEXT:    i32.or

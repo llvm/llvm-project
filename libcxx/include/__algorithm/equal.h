@@ -40,7 +40,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Cp, bool _IsConst1, bool _IsConst2>
-[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal_unaligned(__bit_iterator<_Cp, _IsConst1> __first1,
                   __bit_iterator<_Cp, _IsConst1> __last1,
                   __bit_iterator<_Cp, _IsConst2> __first2) {
@@ -118,7 +118,7 @@ __equal_unaligned(__bit_iterator<_Cp, _IsConst1> __first1,
 }
 
 template <class _Cp, bool _IsConst1, bool _IsConst2>
-[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal_aligned(__bit_iterator<_Cp, _IsConst1> __first1,
                 __bit_iterator<_Cp, _IsConst1> __last1,
                 __bit_iterator<_Cp, _IsConst2> __first2) {
@@ -167,7 +167,7 @@ template <class _Cp,
           __enable_if_t<__is_identity<_Proj1>::value && __is_identity<_Proj2>::value &&
                             __desugars_to_v<__equal_tag, _BinaryPredicate, bool, bool>,
                         int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
     __bit_iterator<_Cp, _IsConst1> __first1,
     __bit_iterator<_Cp, _IsConst1> __last1,
     __bit_iterator<_Cp, _IsConst2> __first2,
@@ -188,13 +188,13 @@ template <class _Tp,
                             __desugars_to_v<__equal_tag, _BinaryPredicate, _Tp, _Up> && !is_volatile<_Tp>::value &&
                             !is_volatile<_Up>::value && __is_trivially_equality_comparable_v<_Tp, _Up>,
                         int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal_iter_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _BinaryPredicate&, _Proj1&, _Proj2&) {
   return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
 }
 
 template <class _InIter1, class _Sent1, class _InIter2, class _Pred, class _Proj1, class _Proj2>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
     _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
 #ifndef _LIBCPP_CXX03_LANG
   if constexpr (__has_random_access_iterator_category<_InIter1>::value &&
@@ -246,7 +246,7 @@ template <class _InIter1, class _Sent1, class _InIter2, class _Pred, class _Proj
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate __pred) {
   __identity __proj;
   return std::__equal_iter_impl(
@@ -254,7 +254,7 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 }
 
 template <class _InputIterator1, class _InputIterator2>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2) {
   return std::equal(__first1, __last1, __first2, __equal_to());
 }
@@ -269,7 +269,7 @@ template <bool __known_equal_length,
           class _Pred,
           class _Proj1,
           class _Proj2>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_impl(
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_impl(
     _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __comp, _Proj1& __proj1, _Proj2& __proj2) {
   if constexpr (__known_equal_length) {
     return std::__equal_iter_impl(
@@ -286,7 +286,7 @@ template <bool __known_equal_length,
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1,
       _InputIterator1 __last1,
       _InputIterator2 __first2,
@@ -311,7 +311,7 @@ equal(_InputIterator1 __first1,
 }
 
 template <class _InputIterator1, class _InputIterator2>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
   return std::equal(__first1, __last1, __first2, __last2, __equal_to());
 }

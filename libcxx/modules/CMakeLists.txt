@@ -37,6 +37,7 @@ set(LIBCXX_MODULE_STD_SOURCES
   std/cuchar.inc
   std/cwchar.inc
   std/cwctype.inc
+  std/debugging.inc
   std/deque.inc
   std/exception.inc
   std/execution.inc

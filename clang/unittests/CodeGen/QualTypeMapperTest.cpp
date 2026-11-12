@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Tests that QualTypeMapper maps the AArch64 SVE types onto the expected
-/// LLVM ABI type representations.
+/// Tests that QualTypeMapper maps Clang types onto the expected LLVM ABI type
+/// representations.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -50,6 +50,12 @@ protected:
   /// map to a tuple.
   const llvm::abi::TupleType *mapToTuple(QualType QT) {
     return dyn_cast<llvm::abi::TupleType>(Mapper.convertType(QT));
+  }
+
+  /// Maps \p QT and returns it as an ABI opaque 8-bit float type, or null if
+  /// it did not map to one.
+  const llvm::abi::OpaqueFloat8Type *mapToOpaqueFloat8(QualType QT) {
+    return dyn_cast<llvm::abi::OpaqueFloat8Type>(Mapper.convertType(QT));
   }
 
   /// Returns the underlying type of the file-scope typedef named \p Name.
@@ -216,6 +222,20 @@ TEST_F(QualTypeMapperSVETest, RepresentativeTypes) {
   EXPECT_EQ(SVBool->getSizeInBits(), llvm::TypeSize::getScalable(16));
 }
 
+// The __mfp8 scalar is an opaque 8-bit float, distinct from both an
+// integer and a one-element vector.
+TEST_F(QualTypeMapperSVETest, MFloat8ScalarIsOpaqueFloat8) {
+  const llvm::abi::OpaqueFloat8Type *MFP8 =
+      mapToOpaqueFloat8(context().MFloat8Ty);
+  ASSERT_NE(MFP8, nullptr);
+  EXPECT_TRUE(MFP8->isOpaqueFloat8());
+  EXPECT_FALSE(MFP8->isFloat());
+  EXPECT_FALSE(MFP8->isInteger());
+  EXPECT_FALSE(MFP8->isVector());
+  EXPECT_EQ(MFP8->getSizeInBits(), llvm::TypeSize::getFixed(8));
+  EXPECT_EQ(MFP8->getAlignment(), llvm::Align(1));
+}
+
 // __mfp8 has no floating-point semantics, so mfloat8 vectors use an 8-bit
 // integer element. That makes svmfloat8_t share a representation with
 // svuint8_t, which is also how the two are represented in LLVM IR.
@@ -290,6 +310,83 @@ TEST_F(QualTypeMapperSVETest, PlainVectorIsGeneric) {
   EXPECT_FALSE(Int32x4->isScalable());
   EXPECT_EQ(Int32x4->getNumElements(), llvm::ElementCount::getFixed(4));
   EXPECT_EQ(Int32x4->getSizeInBits(), llvm::TypeSize::getFixed(128));
+}
+
+/// Parses a translation unit for x86-64 that declares one variable of each
+/// type under test, and exposes a QualTypeMapper over its ASTContext.
+class QualTypeMapperX86Test : public ::testing::Test {
+protected:
+  QualTypeMapperX86Test()
+      : AST(makeInputs()), Mapper(AST.context(), DL, Alloc) {}
+
+  ASTContext &context() { return AST.context(); }
+
+  /// Returns the type of the file-scope variable named \p Name.
+  QualType lookupVar(StringRef Name) {
+    for (Decl *D : context().getTranslationUnitDecl()->decls())
+      if (const auto *VD = dyn_cast<VarDecl>(D))
+        if (VD->getName() == Name)
+          return VD->getType();
+    ADD_FAILURE() << "no variable named " << Name;
+    return QualType();
+  }
+
+  const llvm::abi::Type *map(QualType QT) { return Mapper.convertType(QT); }
+
+private:
+  static TestInputs makeInputs() {
+    TestInputs Inputs(R"c(
+typedef float af __attribute__((aligned(8)));
+typedef _BitInt(17) abi17 __attribute__((aligned(8)));
+struct S3 { char c[3]; };
+_Bool v_bool;
+unsigned _BitInt(3) v_ubi3;
+_BitInt(17) v_bi17;
+_BitInt(33) v_bi33;
+_BitInt(65) v_bi65;
+_BitInt(129) v_bi129;
+long double v_ld;
+_Complex long double v_cld;
+_Complex float v_cf;
+__float128 v_f128;
+_Float16 v_f16;
+_Bool __attribute__((ext_vector_type(12))) v_bv12;
+unsigned _BitInt(1) __attribute__((ext_vector_type(4))) v_ub1x4;
+unsigned _BitInt(4) __attribute__((ext_vector_type(3))) v_ub4x3;
+long double __attribute__((ext_vector_type(3))) v_ldx3;
+float __attribute__((ext_vector_type(3))) v_fx3;
+char __attribute__((ext_vector_type(3))) v_cx3;
+af v_af;
+abi17 v_abi17;
+_Atomic struct S3 v_atomic_s3;
+int *v_ptr;
+struct { _BitInt(17) a[3]; } v_struct;
+_Bool v_bool_arr[5];
+)c");
+    Inputs.Language = TestLanguage::Lang_C99;
+    Inputs.ExtraArgs = {"-triple", "x86_64-unknown-linux-gnu"};
+    return Inputs;
+  }
+
+  TestAST AST;
+  llvm::DataLayout DL;
+  llvm::BumpPtrAllocator Alloc;
+  CodeGen::QualTypeMapper Mapper;
+};
+
+// Every mapped type has the ABI size that the ASTContext gives its source type,
+// including bool, _BitInt, x87 and vector padding and aligned typedefs.
+TEST_F(QualTypeMapperX86Test, ABISizeIsTypeSize) {
+  for (StringRef Name :
+       {"v_bool",  "v_ubi3",      "v_bi17", "v_bi33",   "v_bi65",    "v_bi129",
+        "v_ld",    "v_cld",       "v_cf",   "v_f128",   "v_f16",     "v_bv12",
+        "v_ub1x4", "v_ub4x3",     "v_ldx3", "v_fx3",    "v_cx3",     "v_af",
+        "v_abi17", "v_atomic_s3", "v_ptr",  "v_struct", "v_bool_arr"}) {
+    SCOPED_TRACE(Name);
+    QualType QT = lookupVar(Name);
+    ASSERT_FALSE(QT.isNull());
+    EXPECT_EQ(map(QT)->getABISizeInBits(), context().getTypeSize(QT));
+  }
 }
 
 } // namespace

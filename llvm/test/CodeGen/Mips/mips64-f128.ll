@@ -1989,11 +1989,10 @@ define fp128 @libcall2_copysignl() {
 entry:
   %0 = load fp128, ptr @gld0, align 16
   %1 = load fp128, ptr @gld1, align 16
-  %call = tail call fp128 @copysignl(fp128 %0, fp128 %1) nounwind readnone
+  %call = tail call fp128 @llvm.copysign.f128(fp128 %0, fp128 %1)
   ret fp128 %call
 }
 
-declare fp128 @copysignl(fp128, fp128) #1
 
 define fp128 @libcall2_powl() {
 ; C_CC_FMT-LABEL: libcall2_powl:
@@ -2780,22 +2779,21 @@ entry:
 define fp128 @select_LD(i32 signext %a, i64, fp128 %b, fp128 %c) {
 ; C_CC_FMT-LABEL: select_LD:
 ; C_CC_FMT:       # %bb.0: # %entry
-; C_CC_FMT-NEXT:    movn $8, $6, $4
-; C_CC_FMT-NEXT:    movn $9, $7, $4
 ; C_CC_FMT-NEXT:    move $2, $8
+; C_CC_FMT-NEXT:    movn $2, $6, $4
+; C_CC_FMT-NEXT:    movn $9, $7, $4
 ; C_CC_FMT-NEXT:    move $4, $9
 ; C_CC_FMT-NEXT:    jr $ra
 ; C_CC_FMT-NEXT:    nop
 ;
 ; CMP_CC_FMT-LABEL: select_LD:
 ; CMP_CC_FMT:       # %bb.0: # %entry
-; CMP_CC_FMT-NEXT:    sll $1, $4, 0
-; CMP_CC_FMT-NEXT:    seleqz $2, $8, $1
-; CMP_CC_FMT-NEXT:    selnez $3, $6, $1
-; CMP_CC_FMT-NEXT:    or $2, $3, $2
-; CMP_CC_FMT-NEXT:    seleqz $3, $9, $1
-; CMP_CC_FMT-NEXT:    selnez $1, $7, $1
-; CMP_CC_FMT-NEXT:    or $4, $1, $3
+; CMP_CC_FMT-NEXT:    seleqz $1, $8, $4
+; CMP_CC_FMT-NEXT:    selnez $2, $6, $4
+; CMP_CC_FMT-NEXT:    or $2, $2, $1
+; CMP_CC_FMT-NEXT:    seleqz $1, $9, $4
+; CMP_CC_FMT-NEXT:    selnez $3, $7, $4
+; CMP_CC_FMT-NEXT:    or $4, $3, $1
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %tobool = icmp ne i32 %a, 0

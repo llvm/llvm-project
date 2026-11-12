@@ -1,4 +1,4 @@
-add_custom_target(libc-strings-tests)
+add_libc_testsuite(libc-strings-tests)
 
 add_libc_test(
   bcopy_test

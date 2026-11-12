@@ -174,7 +174,7 @@ private:
 
 CopyProf::CopyProf(Module &M) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   IntPtrTy = IRB.getIntPtrTy(M.getDataLayout());
   Type *PtrTy = IRB.getPtrTy();
   Type *VoidTy = IRB.getVoidTy();
@@ -242,9 +242,7 @@ void CopyProf::insertCallback(Function &F, size_t ObjSize, unsigned NumArgs,
   };
 
   InsertCallback(
-      F,
-      InstrumentationIRBuilder{&F.getEntryBlock(),
-                               F.getEntryBlock().getFirstNonPHIOrDbgOrAlloca()},
+      F, InstrumentationIRBuilder{F.getEntryBlock().getFirstNonPHIOrAlloca()},
       EntryCallback);
   for (BasicBlock &BB : F) {
     Instruction *Term = BB.getTerminator();
@@ -255,7 +253,7 @@ void CopyProf::insertCallback(Function &F, size_t ObjSize, unsigned NumArgs,
 
 CopyProfStores::CopyProfStores(Module &M) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   IntPtrTy = IRB.getIntPtrTy(M.getDataLayout());
   Type *PtrTy = IRB.getPtrTy();
   Type *VoidTy = IRB.getVoidTy();
@@ -271,7 +269,7 @@ bool CopyProfStores::instrumentFunction(Function &F) {
   // intrinsics, AtomicRMW, and AtomicCmpXchg).
   // TODO: Skip stores to alloca if only made of fundamental types, arrays
   // thereof and (possibly) class types that are trivial and aggregate.
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   SmallVector<StoreInst *, 16> ToInstrument;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {

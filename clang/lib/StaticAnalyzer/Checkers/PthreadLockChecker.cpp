@@ -561,7 +561,7 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
   if (!LS.isEmpty()) {
     if (WarnOnLockOrderReversal && LS.getHead() != lockR) {
       reportBug(C, BT_lor, MtxExpr, lockR, CheckKind,
-                "This was not the most recently acquired lock. Possible lock "
+                "This was not the most recently acquired lock; possible lock "
                 "order reversal",
                 LS.getHead());
       return;
@@ -694,7 +694,7 @@ void PthreadLockChecker::reportBug(CheckerContext &C,
                                    const MemRegion *MtxRegion,
                                    CheckerKind CheckKind, StringRef Desc,
                                    const MemRegion *ExtraInteresting) const {
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
   initBugType(CheckKind);

@@ -101,8 +101,12 @@ ASSERT_SAME_TYPE(wchar_t*,           decltype(wmemcpy(ws, L"", s)));
 ASSERT_SAME_TYPE(wchar_t*,           decltype(wmemmove(ws, L"", s)));
 ASSERT_SAME_TYPE(wchar_t*,           decltype(wmemset(ws, L' ', s)));
 ASSERT_SAME_TYPE(size_t,             decltype(wcsftime(ws, s, L"", tm)));
+TEST_DIAGNOSTIC_PUSH
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
 ASSERT_SAME_TYPE(wint_t,             decltype(btowc(0)));
 ASSERT_SAME_TYPE(int,                decltype(wctob(w)));
+TEST_DIAGNOSTIC_POP
 ASSERT_SAME_TYPE(int,                decltype(mbsinit(&mb)));
 ASSERT_SAME_TYPE(size_t,             decltype(mbrlen("", s, &mb)));
 ASSERT_SAME_TYPE(size_t,             decltype(mbrtowc(ws, "", s, &mb)));

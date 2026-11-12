@@ -617,6 +617,12 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 // Addressing modes.
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
+// Like AddrRegImm, but only matches a register, or a register plus a
+// simm12 offset. Does not match a FrameIndex or global address, so it is
+// suitable for operands like the target of an indirect branch where those
+// aren't valid.
+def BrindRegImm : ComplexPattern<iPTR, 2, "SelectBrindRegImm">;
+
 class AddrRegRegScale<int N>
     : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<"#N#">">;
 class AddrRegZextRegScale<int N>
@@ -1622,6 +1628,10 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
+def GIBrindRegImm :
+  GIComplexOperandMatcher<s32, "selectBrindRegImm">,
+  GIComplexPatternEquiv<BrindRegImm>;
+
 /// Stack probing
 
 let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
@@ -1862,12 +1872,10 @@ def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo_optional:$imm12),
                                          simm12_lo_optional:$imm12)>;
 }
 
-def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
-def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12_lo:$imm12)),
+def : Pat<(riscv_sw_guarded_brind (BrindRegImm (iPTR GPRX7:$rs1), simm12_lo:$imm12)),
           (PseudoBRINDX7 GPRX7:$rs1, simm12_lo:$imm12)>;
 
-def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRIND GPRJALRNonX7:$rs1, 0)>;
-def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
+def : Pat<(brind (BrindRegImm (iPTR GPRJALRNonX7:$rs1), simm12_lo:$imm12)),
           (PseudoBRIND GPRJALRNonX7:$rs1, simm12_lo:$imm12)>;
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
@@ -1949,18 +1957,21 @@ def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_glue)]>,
 // the callee's lpad accepts the incoming branch (lpad rejects X6 but accepts X7).
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2],
     Size = 8 in {
-let isCodeGenOnly = 0 in
+// Annoyingly we have to clobber X6 and X7 because the assembler may use Zicfilp
+// to decide which register to use.
+let isCodeGenOnly = 0, Defs = [X6, X7] in
 def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                         "tail", "$dst">,
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 // PseudoTAILReg is the asm form of "tail address, register" where the
 // register specifies the temp for AUIPC+JALR expansion.
 let isCodeGenOnly = 0, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def PseudoTAILReg : Pseudo<(outs), (ins tail_call_symbol:$dst, GPR:$rs), [],
+def PseudoTAILReg : Pseudo<(outs GPR:$rs), (ins tail_call_symbol:$dst), [],
                             "tail", "$dst, $rs">,
                     Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 // PseudoTAILX7 is CodeGenOnly; used when cf-protection-branch is active.
 // Lowered to PseudoTAILReg with X7 in RISCVAsmPrinter.
+let Defs = [X7] in
 def PseudoTAILX7 : Pseudo<(outs), (ins call_symbol:$dst), []>,
                    Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 }

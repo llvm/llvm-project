@@ -1742,7 +1742,7 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half>
 ; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v4, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX1100-TRUE16-NEXT:    v_bfe_u32 v0, v3, 0, 16
-; GISEL-GFX1100-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff0000, v4, v0
+; GISEL-GFX1100-TRUE16-NEXT:    v_and_or_b32 v0, v4, 0xffff0000, v0
 ; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_v2f32_clamp_postcvt_lo:
@@ -1755,7 +1755,7 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half>
 ; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v4, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX1100-FAKE16-NEXT:    v_bfe_u32 v0, v3, 0, 16
-; GISEL-GFX1100-FAKE16-NEXT:    v_and_or_b32 v0, 0xffff0000, v4, v0
+; GISEL-GFX1100-FAKE16-NEXT:    v_and_or_b32 v0, v4, 0xffff0000, v0
 ; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_v2f32_clamp_postcvt_lo:
@@ -1930,7 +1930,7 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half>
 ; GISEL-GFX1100-TRUE16-NEXT:    v_bfe_u32 v3, v3, 0, 16
 ; GISEL-GFX1100-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v3
 ; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_and_or_b32 v0, 0xffff, v4, v0
+; GISEL-GFX1100-TRUE16-NEXT:    v_and_or_b32 v0, v4, 0xffff, v0
 ; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_v2f32_clamp_postcvt_hi:
@@ -1943,7 +1943,7 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half>
 ; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mixhi_f16 v4, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GISEL-GFX1100-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX1100-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v3
-; GISEL-GFX1100-FAKE16-NEXT:    v_and_or_b32 v0, 0xffff, v4, v0
+; GISEL-GFX1100-FAKE16-NEXT:    v_and_or_b32 v0, v4, 0xffff, v0
 ; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_v2f32_clamp_postcvt_hi:

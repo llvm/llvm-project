@@ -83,10 +83,8 @@ func.func @loop_peel_first_iter_op() {
   // CHECK: %[[C41:.+]] = arith.constant 41
   // CHECK: %[[C5:.+]] = arith.constant 5
   // CHECK: %[[C5_0:.+]] = arith.constant 5
-  // CHECK: scf.for %{{.+}} = %[[C0]] to %[[C5_0]] step %[[C5]]
-  // CHECK:   arith.addi
-  // CHECK: scf.for %{{.+}} = %[[C5_0]] to %[[C41]] step %[[C5]]
-  // CHECK:   arith.addi
+  // CHECK: scf.for %{{.+}} = %{{.+}} to %[[SPLIT:.+]] step %[[STEP:.+]]
+  // CHECK: scf.for %{{.+}} = %[[SPLIT]] to %{{.+}} step %[[STEP]]
   %0 = arith.constant 0 : index
   %1 = arith.constant 41 : index
   %2 = arith.constant 5 : index
@@ -101,6 +99,68 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.op<"scf.for">
     %main_loop, %remainder = transform.loop.peel %1 peel_front = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @loop_peel_partial_as_if_op
+//  CHECK-SAME:   %[[UB:.+]]: index
+func.func @loop_peel_partial_as_if_op(%ub: index) {
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[C5:.+]] = arith.constant 5
+  // CHECK: scf.for %{{.+}} = %[[C0]] to %[[SPLIT:.+]] step %[[C5]]
+  // CHECK:   arith.addi
+  // CHECK: %[[COND:.+]] = arith.cmpi slt, %[[SPLIT]], %[[UB]]
+  // CHECK: scf.if %[[COND]]
+  // CHECK:   arith.addi %[[SPLIT]], %[[SPLIT]]
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 5 : index
+  // expected-remark @below {{main loop}}
+  // expected-remark @below {{remainder if}}
+  scf.for %i = %0 to %ub step %1 {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.op<"scf.for">
+    %main_loop, %remainder = transform.loop.peel %1 partial_as_if = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.if">)
+    transform.debug.emit_remark_at %main_loop, "main loop" : !transform.op<"scf.for">
+    transform.debug.emit_remark_at %remainder, "remainder if" : !transform.op<"scf.if">
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @loop_peel_first_iter_partial_as_if_op
+//  CHECK-SAME:   %[[UB:.+]]: index
+func.func @loop_peel_first_iter_partial_as_if_op(%ub: index) {
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[SPLIT:.+]] = arith.maxsi
+  // CHECK: %[[COND:.+]] = arith.cmpi slt, %[[C0]], %[[SPLIT]]
+  // CHECK: scf.if %[[COND]]
+  // CHECK:   arith.addi %[[C0]], %[[C0]]
+  // CHECK: scf.for %{{.+}} = %[[SPLIT]] to %[[UB]]
+  // CHECK:   arith.addi
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 5 : index
+  scf.for %i = %0 to %ub step %1 {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.op<"scf.for">
+    %main_loop, %first = transform.loop.peel %1 peel_front = true partial_as_if = true : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.if">)
     transform.yield
   }
 }

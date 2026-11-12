@@ -37,3 +37,63 @@ func.func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+// -----
+
+func.func @for_constant_operand(%n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %ub = affine.min affine_map<(d0)[s0] -> (d0, s0)>(%n)[%c8]
+  scf.for %i = %c0 to %ub step %c1 {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @for_constant_operand(
+// CHECK-SAME:    [[N:%.*]]: index)
+// CHECK:         [[C8:%.*]] = arith.constant 8 : index
+// CHECK:         [[MIN:%.*]] = affine.min #{{.*}}([[N]]){{\[}}[[C8]]]
+// CHECK:         [[SPECIALIZED_C8:%.*]] = arith.constant 8 : index
+// CHECK:         [[PRED:%.*]] = arith.cmpi eq, [[MIN]], [[SPECIALIZED_C8]]
+// CHECK:         scf.if [[PRED]] {
+// CHECK:           scf.for {{%.*}} = {{%.*}} to [[SPECIALIZED_C8]] step {{%.*}} {
+// CHECK:           }
+// CHECK:         } else {
+// CHECK:           scf.for {{%.*}} = {{%.*}} to [[MIN]] step {{%.*}} {
+// CHECK:           }
+// CHECK:         }
+
+// -----
+
+// see https://github.com/llvm/llvm-project/issues/235552
+// CHECK-LABEL: func @specialize_with_iter_args
+// CHECK-SAME:    (%[[N:.*]]: index) -> index {
+func.func @specialize_with_iter_args(%n: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %ub = affine.min affine_map<(d0) -> (d0, 4)>(%n)
+  %result = scf.for %iv = %c0 to %ub step %c1
+      iter_args(%acc = %c0) -> (index) {
+    scf.yield %acc : index
+  }
+  return %result : index
+}
+
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       %[[UB:.*]] = affine.min #{{.*}}(%[[N]])
+// CHECK:       %[[C4:.*]] = arith.constant 4 : index
+// CHECK:       %[[COND:.*]] = arith.cmpi eq, %[[UB]], %[[C4]] : index
+// CHECK:       %[[RES:.*]] = scf.if %[[COND]] -> (index) {
+// CHECK:         %[[THEN:.*]] = scf.for %{{.*}} = %[[C0]] to %[[C4]] step %[[C1]] iter_args(%[[ACC1:.*]] = %[[C0]]) -> (index) {
+// CHECK:           scf.yield %[[ACC1]] : index
+// CHECK:         }
+// CHECK:         scf.yield %[[THEN]] : index
+// CHECK:       } else {
+// CHECK:         %[[ELSE:.*]] = scf.for %{{.*}} = %[[C0]] to %[[UB]] step %[[C1]] iter_args(%[[ACC2:.*]] = %[[C0]]) -> (index) {
+// CHECK:           scf.yield %[[ACC2]] : index
+// CHECK:         }
+// CHECK:         scf.yield %[[ELSE]] : index
+// CHECK:       }
+// CHECK:       return %[[RES]] : index

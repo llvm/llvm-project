@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
+  ; RUN: llc -run-pass=live-debug-values -o - %s | FileCheck %s
   ; Created from:
   ; void sink(int a);
   ; void __attribute((always_inline)) f(int a) { sink(a); }
@@ -127,7 +127,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:         
   - { reg: '$edi' }
 calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx', 
@@ -171,7 +170,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:         
   - { reg: '$edi' }
 calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx', 

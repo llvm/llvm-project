@@ -4,7 +4,7 @@
 
 #------------------------------------------------------------------------------
 # CollapseMOVEM pass finds sequences of MOVEM instructions and collapse them
-# into a single instruciton with merged masks. This only works with stack data
+# into a single instruction with merged masks. This only works with stack data.
 #------------------------------------------------------------------------------
 
 --- # CollapseMOVEM_RM

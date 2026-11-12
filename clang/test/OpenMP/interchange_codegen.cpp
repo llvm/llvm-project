@@ -229,49 +229,64 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK1:       for.cond:
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
-// CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_8]], align 4
+// CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK1-NEXT:    [[ADD14:%.*]] = add i32 [[TMP17]], 1
-// CHECK1-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP16]], [[ADD14]]
-// CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END24:%.*]]
+// CHECK1-NEXT:    [[CMP:%.*]] = icmp ne i32 [[ADD14]], 0
+// CHECK1-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// CHECK1:       land.lhs.true:
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_8]], align 4
+// CHECK1-NEXT:    [[ADD15:%.*]] = add i32 [[TMP18]], 1
+// CHECK1-NEXT:    [[CMP16:%.*]] = icmp ne i32 [[ADD15]], 0
+// CHECK1-NEXT:    br i1 [[CMP16]], label [[COND_TRUE:%.*]], label [[COND_FALSE]]
+// CHECK1:       cond.true:
+// CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_8]], align 4
+// CHECK1-NEXT:    [[ADD17:%.*]] = add i32 [[TMP19]], 1
+// CHECK1-NEXT:    br label [[COND_END:%.*]]
+// CHECK1:       cond.false:
+// CHECK1-NEXT:    br label [[COND_END]]
+// CHECK1:       cond.end:
+// CHECK1-NEXT:    [[COND:%.*]] = phi i32 [ [[ADD17]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
+// CHECK1-NEXT:    [[CMP18:%.*]] = icmp ult i32 [[TMP16]], [[COND]]
+// CHECK1-NEXT:    br i1 [[CMP18]], label [[FOR_BODY:%.*]], label [[FOR_END28:%.*]]
 // CHECK1:       for.body:
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
-// CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
-// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
-// CHECK1-NEXT:    [[MUL:%.*]] = mul i32 [[TMP19]], [[TMP20]]
-// CHECK1-NEXT:    [[ADD15:%.*]] = add i32 [[TMP18]], [[MUL]]
-// CHECK1-NEXT:    store i32 [[ADD15]], ptr [[J]], align 4
+// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
+// CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
+// CHECK1-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
+// CHECK1-NEXT:    [[MUL:%.*]] = mul i32 [[TMP21]], [[TMP22]]
+// CHECK1-NEXT:    [[ADD19:%.*]] = add i32 [[TMP20]], [[MUL]]
+// CHECK1-NEXT:    store i32 [[ADD19]], ptr [[J]], align 4
 // CHECK1-NEXT:    store i32 0, ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK1-NEXT:    br label [[FOR_COND16:%.*]]
-// CHECK1:       for.cond16:
-// CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK1-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
-// CHECK1-NEXT:    [[ADD17:%.*]] = add i32 [[TMP22]], 1
-// CHECK1-NEXT:    [[CMP18:%.*]] = icmp ult i32 [[TMP21]], [[ADD17]]
-// CHECK1-NEXT:    br i1 [[CMP18]], label [[FOR_BODY19:%.*]], label [[FOR_END:%.*]]
-// CHECK1:       for.body19:
-// CHECK1-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK1-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK1-NEXT:    [[MUL20:%.*]] = mul i32 [[TMP24]], [[TMP25]]
-// CHECK1-NEXT:    [[ADD21:%.*]] = add i32 [[TMP23]], [[MUL20]]
-// CHECK1-NEXT:    store i32 [[ADD21]], ptr [[I]], align 4
-// CHECK1-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I]], align 4
-// CHECK1-NEXT:    [[TMP27:%.*]] = load i32, ptr [[J]], align 4
-// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP26]], i32 noundef [[TMP27]])
+// CHECK1-NEXT:    br label [[FOR_COND20:%.*]]
+// CHECK1:       for.cond20:
+// CHECK1-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
+// CHECK1-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
+// CHECK1-NEXT:    [[ADD21:%.*]] = add i32 [[TMP24]], 1
+// CHECK1-NEXT:    [[CMP22:%.*]] = icmp ult i32 [[TMP23]], [[ADD21]]
+// CHECK1-NEXT:    br i1 [[CMP22]], label [[FOR_BODY23:%.*]], label [[FOR_END:%.*]]
+// CHECK1:       for.body23:
+// CHECK1-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
+// CHECK1-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
+// CHECK1-NEXT:    [[MUL24:%.*]] = mul i32 [[TMP26]], [[TMP27]]
+// CHECK1-NEXT:    [[ADD25:%.*]] = add i32 [[TMP25]], [[MUL24]]
+// CHECK1-NEXT:    store i32 [[ADD25]], ptr [[I]], align 4
+// CHECK1-NEXT:    [[TMP28:%.*]] = load i32, ptr [[I]], align 4
+// CHECK1-NEXT:    [[TMP29:%.*]] = load i32, ptr [[J]], align 4
+// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP28]], i32 noundef [[TMP29]])
 // CHECK1-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK1:       for.inc:
-// CHECK1-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK1-NEXT:    [[INC:%.*]] = add i32 [[TMP28]], 1
+// CHECK1-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
+// CHECK1-NEXT:    [[INC:%.*]] = add i32 [[TMP30]], 1
 // CHECK1-NEXT:    store i32 [[INC]], ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK1-NEXT:    br label [[FOR_COND16]], !llvm.loop [[LOOP4:![0-9]+]]
+// CHECK1-NEXT:    br label [[FOR_COND20]], !llvm.loop [[LOOP4:![0-9]+]]
 // CHECK1:       for.end:
-// CHECK1-NEXT:    br label [[FOR_INC22:%.*]]
-// CHECK1:       for.inc22:
-// CHECK1-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
-// CHECK1-NEXT:    [[INC23:%.*]] = add i32 [[TMP29]], 1
-// CHECK1-NEXT:    store i32 [[INC23]], ptr [[DOTPERMUTED_0_IV_J]], align 4
+// CHECK1-NEXT:    br label [[FOR_INC26:%.*]]
+// CHECK1:       for.inc26:
+// CHECK1-NEXT:    [[TMP31:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
+// CHECK1-NEXT:    [[INC27:%.*]] = add i32 [[TMP31]], 1
+// CHECK1-NEXT:    store i32 [[INC27]], ptr [[DOTPERMUTED_0_IV_J]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
-// CHECK1:       for.end24:
+// CHECK1:       for.end28:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1906,48 +1921,58 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK1:       for.cond:
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
-// CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP6]], 21
-// CHECK1-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END15:%.*]]
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_4]], align 8
+// CHECK1-NEXT:    [[ADD6:%.*]] = add nsw i64 [[TMP7]], 1
+// CHECK1-NEXT:    [[CMP:%.*]] = icmp ne i64 [[ADD6]], 0
+// CHECK1-NEXT:    br i1 [[CMP]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
+// CHECK1:       land.rhs:
+// CHECK1-NEXT:    br label [[LAND_END]]
+// CHECK1:       land.end:
+// CHECK1-NEXT:    [[TMP8:%.*]] = phi i1 [ false, [[FOR_COND]] ], [ true, [[LAND_RHS]] ]
+// CHECK1-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP8]] to i64
+// CHECK1-NEXT:    [[COND:%.*]] = select i1 [[TMP8]], i32 21, i32 0
+// CHECK1-NEXT:    [[CMP7:%.*]] = icmp slt i32 [[TMP6]], [[COND]]
+// CHECK1-NEXT:    br i1 [[CMP7]], label [[FOR_BODY:%.*]], label [[FOR_END17:%.*]]
 // CHECK1:       for.body:
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
-// CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP7]], 2
-// CHECK1-NEXT:    [[ADD6:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK1-NEXT:    store i32 [[ADD6]], ptr [[I]], align 4
+// CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
+// CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP10]], 2
+// CHECK1-NEXT:    [[ADD8:%.*]] = add nsw i32 0, [[MUL]]
+// CHECK1-NEXT:    store i32 [[ADD8]], ptr [[I]], align 4
 // CHECK1-NEXT:    store i64 0, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK1-NEXT:    br label [[FOR_COND7:%.*]]
-// CHECK1:       for.cond7:
-// CHECK1-NEXT:    [[TMP8:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_4]], align 8
-// CHECK1-NEXT:    [[ADD8:%.*]] = add nsw i64 [[TMP9]], 1
-// CHECK1-NEXT:    [[CMP9:%.*]] = icmp slt i64 [[TMP8]], [[ADD8]]
-// CHECK1-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END:%.*]]
-// CHECK1:       for.body10:
-// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK1-NEXT:    br label [[FOR_COND9:%.*]]
+// CHECK1:       for.cond9:
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK1-NEXT:    [[MUL11:%.*]] = mul nsw i64 [[TMP11]], 1
-// CHECK1-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds double, ptr [[TMP10]], i64 [[MUL11]]
-// CHECK1-NEXT:    store ptr [[ADD_PTR12]], ptr [[__BEGIN2]], align 8
-// CHECK1-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[__BEGIN2]], align 8
-// CHECK1-NEXT:    store ptr [[TMP12]], ptr [[V]], align 8
-// CHECK1-NEXT:    [[TMP13:%.*]] = load double, ptr [[C]], align 8
-// CHECK1-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[V]], align 8, !nonnull [[META12]], !align [[META13]]
-// CHECK1-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP14]], align 8
-// CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[I]], align 4
-// CHECK1-NEXT:    call void (...) @body(double noundef [[TMP13]], double noundef [[TMP15]], i32 noundef [[TMP16]])
+// CHECK1-NEXT:    [[TMP12:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_4]], align 8
+// CHECK1-NEXT:    [[ADD10:%.*]] = add nsw i64 [[TMP12]], 1
+// CHECK1-NEXT:    [[CMP11:%.*]] = icmp slt i64 [[TMP11]], [[ADD10]]
+// CHECK1-NEXT:    br i1 [[CMP11]], label [[FOR_BODY12:%.*]], label [[FOR_END:%.*]]
+// CHECK1:       for.body12:
+// CHECK1-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK1-NEXT:    [[TMP14:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
+// CHECK1-NEXT:    [[MUL13:%.*]] = mul nsw i64 [[TMP14]], 1
+// CHECK1-NEXT:    [[ADD_PTR14:%.*]] = getelementptr inbounds double, ptr [[TMP13]], i64 [[MUL13]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR14]], ptr [[__BEGIN2]], align 8
+// CHECK1-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[__BEGIN2]], align 8
+// CHECK1-NEXT:    store ptr [[TMP15]], ptr [[V]], align 8
+// CHECK1-NEXT:    [[TMP16:%.*]] = load double, ptr [[C]], align 8
+// CHECK1-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[V]], align 8, !nonnull [[META12]], !align [[META13]]
+// CHECK1-NEXT:    [[TMP18:%.*]] = load double, ptr [[TMP17]], align 8
+// CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[I]], align 4
+// CHECK1-NEXT:    call void (...) @body(double noundef [[TMP16]], double noundef [[TMP18]], i32 noundef [[TMP19]])
 // CHECK1-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK1:       for.inc:
-// CHECK1-NEXT:    [[TMP17:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK1-NEXT:    [[INC:%.*]] = add nsw i64 [[TMP17]], 1
+// CHECK1-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
+// CHECK1-NEXT:    [[INC:%.*]] = add nsw i64 [[TMP20]], 1
 // CHECK1-NEXT:    store i64 [[INC]], ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK1-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP14:![0-9]+]]
+// CHECK1-NEXT:    br label [[FOR_COND9]], !llvm.loop [[LOOP14:![0-9]+]]
 // CHECK1:       for.end:
-// CHECK1-NEXT:    br label [[FOR_INC13:%.*]]
-// CHECK1:       for.inc13:
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
-// CHECK1-NEXT:    [[INC14:%.*]] = add nsw i32 [[TMP18]], 1
-// CHECK1-NEXT:    store i32 [[INC14]], ptr [[DOTPERMUTED_0_IV_I]], align 4
+// CHECK1-NEXT:    br label [[FOR_INC15:%.*]]
+// CHECK1:       for.inc15:
+// CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
+// CHECK1-NEXT:    [[INC16:%.*]] = add nsw i32 [[TMP21]], 1
+// CHECK1-NEXT:    store i32 [[INC16]], ptr [[DOTPERMUTED_0_IV_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP15:![0-9]+]]
-// CHECK1:       for.end15:
+// CHECK1:       for.end17:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1976,8 +2001,8 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_14:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_15:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTCAPTURE_EXPR_24:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[DOTCAPTURE_EXPR_26:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[DOTCAPTURE_EXPR_28:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[DOTCAPTURE_EXPR_29:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[DOTCAPTURE_EXPR_31:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPERMUTED_0_IV___BEGIN4:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTPERMUTED_1_IV___BEGIN3:%.*]] = alloca i64, align 8
@@ -1986,10 +2011,10 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[I37:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[DOTPERMUTED_0_IV___BEGIN438:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[DOTPERMUTED_1_IV___BEGIN339:%.*]] = alloca i64, align 8
-// CHECK1-NEXT:    [[J40:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[I42:%.*]] = alloca i32, align 4
+// CHECK1-NEXT:    [[DOTPERMUTED_0_IV___BEGIN443:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[DOTPERMUTED_1_IV___BEGIN344:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[J45:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[BB:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[AA:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
@@ -2043,328 +2068,343 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    [[DIV22:%.*]] = sdiv i64 [[ADD21]], 1
 // CHECK1-NEXT:    [[SUB23:%.*]] = sub nsw i64 [[DIV22]], 1
 // CHECK1-NEXT:    store i64 [[SUB23]], ptr [[DOTCAPTURE_EXPR_15]], align 8
-// CHECK1-NEXT:    [[TMP13:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_15]], align 8
+// CHECK1-NEXT:    [[TMP13:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_7]], align 8
 // CHECK1-NEXT:    [[ADD25:%.*]] = add nsw i64 [[TMP13]], 1
-// CHECK1-NEXT:    store i64 [[ADD25]], ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[TMP14:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_7]], align 8
-// CHECK1-NEXT:    [[ADD27:%.*]] = add nsw i64 [[TMP14]], 1
-// CHECK1-NEXT:    store i64 [[ADD27]], ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[TMP15:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB29:%.*]] = sub nsw i64 [[TMP15]], 0
-// CHECK1-NEXT:    [[DIV30:%.*]] = sdiv i64 [[SUB29]], 1
-// CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i64 128, [[DIV30]]
-// CHECK1-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB31:%.*]] = sub nsw i64 [[TMP16]], 0
-// CHECK1-NEXT:    [[DIV32:%.*]] = sdiv i64 [[SUB31]], 1
-// CHECK1-NEXT:    [[MUL33:%.*]] = mul nsw i64 [[MUL]], [[DIV32]]
-// CHECK1-NEXT:    [[MUL34:%.*]] = mul nsw i64 [[MUL33]], 128
-// CHECK1-NEXT:    [[SUB35:%.*]] = sub nsw i64 [[MUL34]], 1
-// CHECK1-NEXT:    store i64 [[SUB35]], ptr [[DOTCAPTURE_EXPR_28]], align 8
+// CHECK1-NEXT:    [[CMP:%.*]] = icmp ne i64 [[ADD25]], 0
+// CHECK1-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// CHECK1:       land.lhs.true:
+// CHECK1-NEXT:    [[TMP14:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_15]], align 8
+// CHECK1-NEXT:    [[ADD26:%.*]] = add nsw i64 [[TMP14]], 1
+// CHECK1-NEXT:    [[CMP27:%.*]] = icmp ne i64 [[ADD26]], 0
+// CHECK1-NEXT:    br i1 [[CMP27]], label [[COND_TRUE:%.*]], label [[COND_FALSE]]
+// CHECK1:       cond.true:
+// CHECK1-NEXT:    [[TMP15:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_15]], align 8
+// CHECK1-NEXT:    [[ADD28:%.*]] = add nsw i64 [[TMP15]], 1
+// CHECK1-NEXT:    br label [[COND_END:%.*]]
+// CHECK1:       cond.false:
+// CHECK1-NEXT:    br label [[COND_END]]
+// CHECK1:       cond.end:
+// CHECK1-NEXT:    [[COND:%.*]] = phi i64 [ [[ADD28]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
+// CHECK1-NEXT:    store i64 [[COND]], ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK1-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_7]], align 8
+// CHECK1-NEXT:    [[ADD30:%.*]] = add nsw i64 [[TMP16]], 1
+// CHECK1-NEXT:    store i64 [[ADD30]], ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[TMP17:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK1-NEXT:    [[SUB32:%.*]] = sub nsw i64 [[TMP17]], 0
+// CHECK1-NEXT:    [[DIV33:%.*]] = sdiv i64 [[SUB32]], 1
+// CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i64 128, [[DIV33]]
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB34:%.*]] = sub nsw i64 [[TMP18]], 0
+// CHECK1-NEXT:    [[DIV35:%.*]] = sdiv i64 [[SUB34]], 1
+// CHECK1-NEXT:    [[MUL36:%.*]] = mul nsw i64 [[MUL]], [[DIV35]]
+// CHECK1-NEXT:    [[MUL37:%.*]] = mul nsw i64 [[MUL36]], 128
+// CHECK1-NEXT:    [[SUB38:%.*]] = sub nsw i64 [[MUL37]], 1
+// CHECK1-NEXT:    store i64 [[SUB38]], ptr [[DOTCAPTURE_EXPR_31]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK1-NEXT:    store i64 0, ptr [[DOTPERMUTED_0_IV___BEGIN4]], align 8
 // CHECK1-NEXT:    store i64 0, ptr [[DOTPERMUTED_1_IV___BEGIN3]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[J]], align 4
-// CHECK1-NEXT:    [[TMP17:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i64 0, [[TMP17]]
-// CHECK1-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
-// CHECK1:       land.lhs.true:
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[CMP36:%.*]] = icmp slt i64 0, [[TMP18]]
-// CHECK1-NEXT:    br i1 [[CMP36]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END]]
+// CHECK1-NEXT:    [[TMP19:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK1-NEXT:    [[CMP39:%.*]] = icmp slt i64 0, [[TMP19]]
+// CHECK1-NEXT:    br i1 [[CMP39]], label [[LAND_LHS_TRUE40:%.*]], label [[OMP_PRECOND_END:%.*]]
+// CHECK1:       land.lhs.true40:
+// CHECK1-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[CMP41:%.*]] = icmp slt i64 0, [[TMP20]]
+// CHECK1-NEXT:    br i1 [[CMP41]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.then:
 // CHECK1-NEXT:    store i64 0, ptr [[DOTOMP_LB]], align 8
-// CHECK1-NEXT:    [[TMP19:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_28]], align 8
-// CHECK1-NEXT:    store i64 [[TMP19]], ptr [[DOTOMP_UB]], align 8
+// CHECK1-NEXT:    [[TMP21:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_31]], align 8
+// CHECK1-NEXT:    store i64 [[TMP21]], ptr [[DOTOMP_UB]], align 8
 // CHECK1-NEXT:    store i64 1, ptr [[DOTOMP_STRIDE]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    call void @__kmpc_for_static_init_8(ptr @[[GLOB1]], i32 [[TMP0]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i64 1, i64 1)
-// CHECK1-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
-// CHECK1-NEXT:    [[TMP21:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_28]], align 8
-// CHECK1-NEXT:    [[CMP41:%.*]] = icmp sgt i64 [[TMP20]], [[TMP21]]
-// CHECK1-NEXT:    br i1 [[CMP41]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-// CHECK1:       cond.true:
-// CHECK1-NEXT:    [[TMP22:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_28]], align 8
-// CHECK1-NEXT:    br label [[COND_END:%.*]]
-// CHECK1:       cond.false:
-// CHECK1-NEXT:    [[TMP23:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
-// CHECK1-NEXT:    br label [[COND_END]]
-// CHECK1:       cond.end:
-// CHECK1-NEXT:    [[COND:%.*]] = phi i64 [ [[TMP22]], [[COND_TRUE]] ], [ [[TMP23]], [[COND_FALSE]] ]
-// CHECK1-NEXT:    store i64 [[COND]], ptr [[DOTOMP_UB]], align 8
-// CHECK1-NEXT:    [[TMP24:%.*]] = load i64, ptr [[DOTOMP_LB]], align 8
-// CHECK1-NEXT:    store i64 [[TMP24]], ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP22:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
+// CHECK1-NEXT:    [[TMP23:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_31]], align 8
+// CHECK1-NEXT:    [[CMP46:%.*]] = icmp sgt i64 [[TMP22]], [[TMP23]]
+// CHECK1-NEXT:    br i1 [[CMP46]], label [[COND_TRUE47:%.*]], label [[COND_FALSE48:%.*]]
+// CHECK1:       cond.true47:
+// CHECK1-NEXT:    [[TMP24:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_31]], align 8
+// CHECK1-NEXT:    br label [[COND_END49:%.*]]
+// CHECK1:       cond.false48:
+// CHECK1-NEXT:    [[TMP25:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
+// CHECK1-NEXT:    br label [[COND_END49]]
+// CHECK1:       cond.end49:
+// CHECK1-NEXT:    [[COND50:%.*]] = phi i64 [ [[TMP24]], [[COND_TRUE47]] ], [ [[TMP25]], [[COND_FALSE48]] ]
+// CHECK1-NEXT:    store i64 [[COND50]], ptr [[DOTOMP_UB]], align 8
+// CHECK1-NEXT:    [[TMP26:%.*]] = load i64, ptr [[DOTOMP_LB]], align 8
+// CHECK1-NEXT:    store i64 [[TMP26]], ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK1:       omp.inner.for.cond:
-// CHECK1-NEXT:    [[TMP25:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP26:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
-// CHECK1-NEXT:    [[CMP42:%.*]] = icmp sle i64 [[TMP25]], [[TMP26]]
-// CHECK1-NEXT:    br i1 [[CMP42]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
-// CHECK1:       omp.inner.for.body:
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP28:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB43:%.*]] = sub nsw i64 [[TMP28]], 0
-// CHECK1-NEXT:    [[DIV44:%.*]] = sdiv i64 [[SUB43]], 1
-// CHECK1-NEXT:    [[MUL45:%.*]] = mul nsw i64 1, [[DIV44]]
-// CHECK1-NEXT:    [[TMP29:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB46:%.*]] = sub nsw i64 [[TMP29]], 0
-// CHECK1-NEXT:    [[DIV47:%.*]] = sdiv i64 [[SUB46]], 1
-// CHECK1-NEXT:    [[MUL48:%.*]] = mul nsw i64 [[MUL45]], [[DIV47]]
-// CHECK1-NEXT:    [[MUL49:%.*]] = mul nsw i64 [[MUL48]], 128
-// CHECK1-NEXT:    [[DIV50:%.*]] = sdiv i64 [[TMP27]], [[MUL49]]
-// CHECK1-NEXT:    [[MUL51:%.*]] = mul nsw i64 [[DIV50]], 1
-// CHECK1-NEXT:    [[ADD52:%.*]] = add nsw i64 0, [[MUL51]]
-// CHECK1-NEXT:    [[CONV:%.*]] = trunc i64 [[ADD52]] to i32
-// CHECK1-NEXT:    store i32 [[CONV]], ptr [[I37]], align 4
-// CHECK1-NEXT:    [[TMP30:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP31:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP32:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB53:%.*]] = sub nsw i64 [[TMP32]], 0
-// CHECK1-NEXT:    [[DIV54:%.*]] = sdiv i64 [[SUB53]], 1
-// CHECK1-NEXT:    [[MUL55:%.*]] = mul nsw i64 1, [[DIV54]]
-// CHECK1-NEXT:    [[TMP33:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB56:%.*]] = sub nsw i64 [[TMP33]], 0
-// CHECK1-NEXT:    [[DIV57:%.*]] = sdiv i64 [[SUB56]], 1
-// CHECK1-NEXT:    [[MUL58:%.*]] = mul nsw i64 [[MUL55]], [[DIV57]]
-// CHECK1-NEXT:    [[MUL59:%.*]] = mul nsw i64 [[MUL58]], 128
-// CHECK1-NEXT:    [[DIV60:%.*]] = sdiv i64 [[TMP31]], [[MUL59]]
+// CHECK1-NEXT:    [[TMP28:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
+// CHECK1-NEXT:    [[CMP51:%.*]] = icmp sle i64 [[TMP27]], [[TMP28]]
+// CHECK1-NEXT:    br i1 [[CMP51]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// CHECK1:       omp.inner.for.body:
+// CHECK1-NEXT:    [[TMP29:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP30:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK1-NEXT:    [[SUB52:%.*]] = sub nsw i64 [[TMP30]], 0
+// CHECK1-NEXT:    [[DIV53:%.*]] = sdiv i64 [[SUB52]], 1
+// CHECK1-NEXT:    [[MUL54:%.*]] = mul nsw i64 1, [[DIV53]]
+// CHECK1-NEXT:    [[TMP31:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB55:%.*]] = sub nsw i64 [[TMP31]], 0
+// CHECK1-NEXT:    [[DIV56:%.*]] = sdiv i64 [[SUB55]], 1
+// CHECK1-NEXT:    [[MUL57:%.*]] = mul nsw i64 [[MUL54]], [[DIV56]]
+// CHECK1-NEXT:    [[MUL58:%.*]] = mul nsw i64 [[MUL57]], 128
+// CHECK1-NEXT:    [[DIV59:%.*]] = sdiv i64 [[TMP29]], [[MUL58]]
+// CHECK1-NEXT:    [[MUL60:%.*]] = mul nsw i64 [[DIV59]], 1
+// CHECK1-NEXT:    [[ADD61:%.*]] = add nsw i64 0, [[MUL60]]
+// CHECK1-NEXT:    [[CONV:%.*]] = trunc i64 [[ADD61]] to i32
+// CHECK1-NEXT:    store i32 [[CONV]], ptr [[I42]], align 4
+// CHECK1-NEXT:    [[TMP32:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP33:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP34:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB61:%.*]] = sub nsw i64 [[TMP34]], 0
-// CHECK1-NEXT:    [[DIV62:%.*]] = sdiv i64 [[SUB61]], 1
-// CHECK1-NEXT:    [[MUL63:%.*]] = mul nsw i64 1, [[DIV62]]
-// CHECK1-NEXT:    [[TMP35:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB64:%.*]] = sub nsw i64 [[TMP35]], 0
-// CHECK1-NEXT:    [[DIV65:%.*]] = sdiv i64 [[SUB64]], 1
-// CHECK1-NEXT:    [[MUL66:%.*]] = mul nsw i64 [[MUL63]], [[DIV65]]
-// CHECK1-NEXT:    [[MUL67:%.*]] = mul nsw i64 [[MUL66]], 128
-// CHECK1-NEXT:    [[MUL68:%.*]] = mul nsw i64 [[DIV60]], [[MUL67]]
-// CHECK1-NEXT:    [[SUB69:%.*]] = sub nsw i64 [[TMP30]], [[MUL68]]
-// CHECK1-NEXT:    [[TMP36:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
+// CHECK1-NEXT:    [[SUB62:%.*]] = sub nsw i64 [[TMP34]], 0
+// CHECK1-NEXT:    [[DIV63:%.*]] = sdiv i64 [[SUB62]], 1
+// CHECK1-NEXT:    [[MUL64:%.*]] = mul nsw i64 1, [[DIV63]]
+// CHECK1-NEXT:    [[TMP35:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB65:%.*]] = sub nsw i64 [[TMP35]], 0
+// CHECK1-NEXT:    [[DIV66:%.*]] = sdiv i64 [[SUB65]], 1
+// CHECK1-NEXT:    [[MUL67:%.*]] = mul nsw i64 [[MUL64]], [[DIV66]]
+// CHECK1-NEXT:    [[MUL68:%.*]] = mul nsw i64 [[MUL67]], 128
+// CHECK1-NEXT:    [[DIV69:%.*]] = sdiv i64 [[TMP33]], [[MUL68]]
+// CHECK1-NEXT:    [[TMP36:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
 // CHECK1-NEXT:    [[SUB70:%.*]] = sub nsw i64 [[TMP36]], 0
 // CHECK1-NEXT:    [[DIV71:%.*]] = sdiv i64 [[SUB70]], 1
 // CHECK1-NEXT:    [[MUL72:%.*]] = mul nsw i64 1, [[DIV71]]
-// CHECK1-NEXT:    [[MUL73:%.*]] = mul nsw i64 [[MUL72]], 128
-// CHECK1-NEXT:    [[DIV74:%.*]] = sdiv i64 [[SUB69]], [[MUL73]]
-// CHECK1-NEXT:    [[MUL75:%.*]] = mul nsw i64 [[DIV74]], 1
-// CHECK1-NEXT:    [[ADD76:%.*]] = add nsw i64 0, [[MUL75]]
-// CHECK1-NEXT:    store i64 [[ADD76]], ptr [[DOTPERMUTED_0_IV___BEGIN438]], align 8
-// CHECK1-NEXT:    [[TMP37:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP38:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP39:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB77:%.*]] = sub nsw i64 [[TMP39]], 0
-// CHECK1-NEXT:    [[DIV78:%.*]] = sdiv i64 [[SUB77]], 1
-// CHECK1-NEXT:    [[MUL79:%.*]] = mul nsw i64 1, [[DIV78]]
-// CHECK1-NEXT:    [[TMP40:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB80:%.*]] = sub nsw i64 [[TMP40]], 0
-// CHECK1-NEXT:    [[DIV81:%.*]] = sdiv i64 [[SUB80]], 1
-// CHECK1-NEXT:    [[MUL82:%.*]] = mul nsw i64 [[MUL79]], [[DIV81]]
-// CHECK1-NEXT:    [[MUL83:%.*]] = mul nsw i64 [[MUL82]], 128
-// CHECK1-NEXT:    [[DIV84:%.*]] = sdiv i64 [[TMP38]], [[MUL83]]
+// CHECK1-NEXT:    [[TMP37:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB73:%.*]] = sub nsw i64 [[TMP37]], 0
+// CHECK1-NEXT:    [[DIV74:%.*]] = sdiv i64 [[SUB73]], 1
+// CHECK1-NEXT:    [[MUL75:%.*]] = mul nsw i64 [[MUL72]], [[DIV74]]
+// CHECK1-NEXT:    [[MUL76:%.*]] = mul nsw i64 [[MUL75]], 128
+// CHECK1-NEXT:    [[MUL77:%.*]] = mul nsw i64 [[DIV69]], [[MUL76]]
+// CHECK1-NEXT:    [[SUB78:%.*]] = sub nsw i64 [[TMP32]], [[MUL77]]
+// CHECK1-NEXT:    [[TMP38:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB79:%.*]] = sub nsw i64 [[TMP38]], 0
+// CHECK1-NEXT:    [[DIV80:%.*]] = sdiv i64 [[SUB79]], 1
+// CHECK1-NEXT:    [[MUL81:%.*]] = mul nsw i64 1, [[DIV80]]
+// CHECK1-NEXT:    [[MUL82:%.*]] = mul nsw i64 [[MUL81]], 128
+// CHECK1-NEXT:    [[DIV83:%.*]] = sdiv i64 [[SUB78]], [[MUL82]]
+// CHECK1-NEXT:    [[MUL84:%.*]] = mul nsw i64 [[DIV83]], 1
+// CHECK1-NEXT:    [[ADD85:%.*]] = add nsw i64 0, [[MUL84]]
+// CHECK1-NEXT:    store i64 [[ADD85]], ptr [[DOTPERMUTED_0_IV___BEGIN443]], align 8
+// CHECK1-NEXT:    [[TMP39:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP40:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP41:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB85:%.*]] = sub nsw i64 [[TMP41]], 0
-// CHECK1-NEXT:    [[DIV86:%.*]] = sdiv i64 [[SUB85]], 1
-// CHECK1-NEXT:    [[MUL87:%.*]] = mul nsw i64 1, [[DIV86]]
-// CHECK1-NEXT:    [[TMP42:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB88:%.*]] = sub nsw i64 [[TMP42]], 0
-// CHECK1-NEXT:    [[DIV89:%.*]] = sdiv i64 [[SUB88]], 1
-// CHECK1-NEXT:    [[MUL90:%.*]] = mul nsw i64 [[MUL87]], [[DIV89]]
-// CHECK1-NEXT:    [[MUL91:%.*]] = mul nsw i64 [[MUL90]], 128
-// CHECK1-NEXT:    [[MUL92:%.*]] = mul nsw i64 [[DIV84]], [[MUL91]]
-// CHECK1-NEXT:    [[SUB93:%.*]] = sub nsw i64 [[TMP37]], [[MUL92]]
-// CHECK1-NEXT:    [[TMP43:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP44:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP45:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB94:%.*]] = sub nsw i64 [[TMP45]], 0
+// CHECK1-NEXT:    [[SUB86:%.*]] = sub nsw i64 [[TMP41]], 0
+// CHECK1-NEXT:    [[DIV87:%.*]] = sdiv i64 [[SUB86]], 1
+// CHECK1-NEXT:    [[MUL88:%.*]] = mul nsw i64 1, [[DIV87]]
+// CHECK1-NEXT:    [[TMP42:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB89:%.*]] = sub nsw i64 [[TMP42]], 0
+// CHECK1-NEXT:    [[DIV90:%.*]] = sdiv i64 [[SUB89]], 1
+// CHECK1-NEXT:    [[MUL91:%.*]] = mul nsw i64 [[MUL88]], [[DIV90]]
+// CHECK1-NEXT:    [[MUL92:%.*]] = mul nsw i64 [[MUL91]], 128
+// CHECK1-NEXT:    [[DIV93:%.*]] = sdiv i64 [[TMP40]], [[MUL92]]
+// CHECK1-NEXT:    [[TMP43:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK1-NEXT:    [[SUB94:%.*]] = sub nsw i64 [[TMP43]], 0
 // CHECK1-NEXT:    [[DIV95:%.*]] = sdiv i64 [[SUB94]], 1
 // CHECK1-NEXT:    [[MUL96:%.*]] = mul nsw i64 1, [[DIV95]]
-// CHECK1-NEXT:    [[TMP46:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB97:%.*]] = sub nsw i64 [[TMP46]], 0
+// CHECK1-NEXT:    [[TMP44:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB97:%.*]] = sub nsw i64 [[TMP44]], 0
 // CHECK1-NEXT:    [[DIV98:%.*]] = sdiv i64 [[SUB97]], 1
 // CHECK1-NEXT:    [[MUL99:%.*]] = mul nsw i64 [[MUL96]], [[DIV98]]
 // CHECK1-NEXT:    [[MUL100:%.*]] = mul nsw i64 [[MUL99]], 128
-// CHECK1-NEXT:    [[DIV101:%.*]] = sdiv i64 [[TMP44]], [[MUL100]]
+// CHECK1-NEXT:    [[MUL101:%.*]] = mul nsw i64 [[DIV93]], [[MUL100]]
+// CHECK1-NEXT:    [[SUB102:%.*]] = sub nsw i64 [[TMP39]], [[MUL101]]
+// CHECK1-NEXT:    [[TMP45:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP46:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP47:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB102:%.*]] = sub nsw i64 [[TMP47]], 0
-// CHECK1-NEXT:    [[DIV103:%.*]] = sdiv i64 [[SUB102]], 1
-// CHECK1-NEXT:    [[MUL104:%.*]] = mul nsw i64 1, [[DIV103]]
-// CHECK1-NEXT:    [[TMP48:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB105:%.*]] = sub nsw i64 [[TMP48]], 0
-// CHECK1-NEXT:    [[DIV106:%.*]] = sdiv i64 [[SUB105]], 1
-// CHECK1-NEXT:    [[MUL107:%.*]] = mul nsw i64 [[MUL104]], [[DIV106]]
-// CHECK1-NEXT:    [[MUL108:%.*]] = mul nsw i64 [[MUL107]], 128
-// CHECK1-NEXT:    [[MUL109:%.*]] = mul nsw i64 [[DIV101]], [[MUL108]]
-// CHECK1-NEXT:    [[SUB110:%.*]] = sub nsw i64 [[TMP43]], [[MUL109]]
-// CHECK1-NEXT:    [[TMP49:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
+// CHECK1-NEXT:    [[SUB103:%.*]] = sub nsw i64 [[TMP47]], 0
+// CHECK1-NEXT:    [[DIV104:%.*]] = sdiv i64 [[SUB103]], 1
+// CHECK1-NEXT:    [[MUL105:%.*]] = mul nsw i64 1, [[DIV104]]
+// CHECK1-NEXT:    [[TMP48:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB106:%.*]] = sub nsw i64 [[TMP48]], 0
+// CHECK1-NEXT:    [[DIV107:%.*]] = sdiv i64 [[SUB106]], 1
+// CHECK1-NEXT:    [[MUL108:%.*]] = mul nsw i64 [[MUL105]], [[DIV107]]
+// CHECK1-NEXT:    [[MUL109:%.*]] = mul nsw i64 [[MUL108]], 128
+// CHECK1-NEXT:    [[DIV110:%.*]] = sdiv i64 [[TMP46]], [[MUL109]]
+// CHECK1-NEXT:    [[TMP49:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
 // CHECK1-NEXT:    [[SUB111:%.*]] = sub nsw i64 [[TMP49]], 0
 // CHECK1-NEXT:    [[DIV112:%.*]] = sdiv i64 [[SUB111]], 1
 // CHECK1-NEXT:    [[MUL113:%.*]] = mul nsw i64 1, [[DIV112]]
-// CHECK1-NEXT:    [[MUL114:%.*]] = mul nsw i64 [[MUL113]], 128
-// CHECK1-NEXT:    [[DIV115:%.*]] = sdiv i64 [[SUB110]], [[MUL114]]
-// CHECK1-NEXT:    [[TMP50:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB116:%.*]] = sub nsw i64 [[TMP50]], 0
-// CHECK1-NEXT:    [[DIV117:%.*]] = sdiv i64 [[SUB116]], 1
-// CHECK1-NEXT:    [[MUL118:%.*]] = mul nsw i64 1, [[DIV117]]
-// CHECK1-NEXT:    [[MUL119:%.*]] = mul nsw i64 [[MUL118]], 128
-// CHECK1-NEXT:    [[MUL120:%.*]] = mul nsw i64 [[DIV115]], [[MUL119]]
-// CHECK1-NEXT:    [[SUB121:%.*]] = sub nsw i64 [[SUB93]], [[MUL120]]
-// CHECK1-NEXT:    [[DIV122:%.*]] = sdiv i64 [[SUB121]], 128
-// CHECK1-NEXT:    [[MUL123:%.*]] = mul nsw i64 [[DIV122]], 1
-// CHECK1-NEXT:    [[ADD124:%.*]] = add nsw i64 0, [[MUL123]]
-// CHECK1-NEXT:    store i64 [[ADD124]], ptr [[DOTPERMUTED_1_IV___BEGIN339]], align 8
-// CHECK1-NEXT:    [[TMP51:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP52:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP53:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB125:%.*]] = sub nsw i64 [[TMP53]], 0
+// CHECK1-NEXT:    [[TMP50:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB114:%.*]] = sub nsw i64 [[TMP50]], 0
+// CHECK1-NEXT:    [[DIV115:%.*]] = sdiv i64 [[SUB114]], 1
+// CHECK1-NEXT:    [[MUL116:%.*]] = mul nsw i64 [[MUL113]], [[DIV115]]
+// CHECK1-NEXT:    [[MUL117:%.*]] = mul nsw i64 [[MUL116]], 128
+// CHECK1-NEXT:    [[MUL118:%.*]] = mul nsw i64 [[DIV110]], [[MUL117]]
+// CHECK1-NEXT:    [[SUB119:%.*]] = sub nsw i64 [[TMP45]], [[MUL118]]
+// CHECK1-NEXT:    [[TMP51:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB120:%.*]] = sub nsw i64 [[TMP51]], 0
+// CHECK1-NEXT:    [[DIV121:%.*]] = sdiv i64 [[SUB120]], 1
+// CHECK1-NEXT:    [[MUL122:%.*]] = mul nsw i64 1, [[DIV121]]
+// CHECK1-NEXT:    [[MUL123:%.*]] = mul nsw i64 [[MUL122]], 128
+// CHECK1-NEXT:    [[DIV124:%.*]] = sdiv i64 [[SUB119]], [[MUL123]]
+// CHECK1-NEXT:    [[TMP52:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB125:%.*]] = sub nsw i64 [[TMP52]], 0
 // CHECK1-NEXT:    [[DIV126:%.*]] = sdiv i64 [[SUB125]], 1
 // CHECK1-NEXT:    [[MUL127:%.*]] = mul nsw i64 1, [[DIV126]]
-// CHECK1-NEXT:    [[TMP54:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB128:%.*]] = sub nsw i64 [[TMP54]], 0
-// CHECK1-NEXT:    [[DIV129:%.*]] = sdiv i64 [[SUB128]], 1
-// CHECK1-NEXT:    [[MUL130:%.*]] = mul nsw i64 [[MUL127]], [[DIV129]]
-// CHECK1-NEXT:    [[MUL131:%.*]] = mul nsw i64 [[MUL130]], 128
-// CHECK1-NEXT:    [[DIV132:%.*]] = sdiv i64 [[TMP52]], [[MUL131]]
+// CHECK1-NEXT:    [[MUL128:%.*]] = mul nsw i64 [[MUL127]], 128
+// CHECK1-NEXT:    [[MUL129:%.*]] = mul nsw i64 [[DIV124]], [[MUL128]]
+// CHECK1-NEXT:    [[SUB130:%.*]] = sub nsw i64 [[SUB102]], [[MUL129]]
+// CHECK1-NEXT:    [[DIV131:%.*]] = sdiv i64 [[SUB130]], 128
+// CHECK1-NEXT:    [[MUL132:%.*]] = mul nsw i64 [[DIV131]], 1
+// CHECK1-NEXT:    [[ADD133:%.*]] = add nsw i64 0, [[MUL132]]
+// CHECK1-NEXT:    store i64 [[ADD133]], ptr [[DOTPERMUTED_1_IV___BEGIN344]], align 8
+// CHECK1-NEXT:    [[TMP53:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP54:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP55:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB133:%.*]] = sub nsw i64 [[TMP55]], 0
-// CHECK1-NEXT:    [[DIV134:%.*]] = sdiv i64 [[SUB133]], 1
-// CHECK1-NEXT:    [[MUL135:%.*]] = mul nsw i64 1, [[DIV134]]
-// CHECK1-NEXT:    [[TMP56:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB136:%.*]] = sub nsw i64 [[TMP56]], 0
-// CHECK1-NEXT:    [[DIV137:%.*]] = sdiv i64 [[SUB136]], 1
-// CHECK1-NEXT:    [[MUL138:%.*]] = mul nsw i64 [[MUL135]], [[DIV137]]
-// CHECK1-NEXT:    [[MUL139:%.*]] = mul nsw i64 [[MUL138]], 128
-// CHECK1-NEXT:    [[MUL140:%.*]] = mul nsw i64 [[DIV132]], [[MUL139]]
-// CHECK1-NEXT:    [[SUB141:%.*]] = sub nsw i64 [[TMP51]], [[MUL140]]
-// CHECK1-NEXT:    [[TMP57:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP58:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP59:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB142:%.*]] = sub nsw i64 [[TMP59]], 0
+// CHECK1-NEXT:    [[SUB134:%.*]] = sub nsw i64 [[TMP55]], 0
+// CHECK1-NEXT:    [[DIV135:%.*]] = sdiv i64 [[SUB134]], 1
+// CHECK1-NEXT:    [[MUL136:%.*]] = mul nsw i64 1, [[DIV135]]
+// CHECK1-NEXT:    [[TMP56:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB137:%.*]] = sub nsw i64 [[TMP56]], 0
+// CHECK1-NEXT:    [[DIV138:%.*]] = sdiv i64 [[SUB137]], 1
+// CHECK1-NEXT:    [[MUL139:%.*]] = mul nsw i64 [[MUL136]], [[DIV138]]
+// CHECK1-NEXT:    [[MUL140:%.*]] = mul nsw i64 [[MUL139]], 128
+// CHECK1-NEXT:    [[DIV141:%.*]] = sdiv i64 [[TMP54]], [[MUL140]]
+// CHECK1-NEXT:    [[TMP57:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK1-NEXT:    [[SUB142:%.*]] = sub nsw i64 [[TMP57]], 0
 // CHECK1-NEXT:    [[DIV143:%.*]] = sdiv i64 [[SUB142]], 1
 // CHECK1-NEXT:    [[MUL144:%.*]] = mul nsw i64 1, [[DIV143]]
-// CHECK1-NEXT:    [[TMP60:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB145:%.*]] = sub nsw i64 [[TMP60]], 0
+// CHECK1-NEXT:    [[TMP58:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB145:%.*]] = sub nsw i64 [[TMP58]], 0
 // CHECK1-NEXT:    [[DIV146:%.*]] = sdiv i64 [[SUB145]], 1
 // CHECK1-NEXT:    [[MUL147:%.*]] = mul nsw i64 [[MUL144]], [[DIV146]]
 // CHECK1-NEXT:    [[MUL148:%.*]] = mul nsw i64 [[MUL147]], 128
-// CHECK1-NEXT:    [[DIV149:%.*]] = sdiv i64 [[TMP58]], [[MUL148]]
+// CHECK1-NEXT:    [[MUL149:%.*]] = mul nsw i64 [[DIV141]], [[MUL148]]
+// CHECK1-NEXT:    [[SUB150:%.*]] = sub nsw i64 [[TMP53]], [[MUL149]]
+// CHECK1-NEXT:    [[TMP59:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP60:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP61:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB150:%.*]] = sub nsw i64 [[TMP61]], 0
-// CHECK1-NEXT:    [[DIV151:%.*]] = sdiv i64 [[SUB150]], 1
-// CHECK1-NEXT:    [[MUL152:%.*]] = mul nsw i64 1, [[DIV151]]
-// CHECK1-NEXT:    [[TMP62:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB153:%.*]] = sub nsw i64 [[TMP62]], 0
-// CHECK1-NEXT:    [[DIV154:%.*]] = sdiv i64 [[SUB153]], 1
-// CHECK1-NEXT:    [[MUL155:%.*]] = mul nsw i64 [[MUL152]], [[DIV154]]
-// CHECK1-NEXT:    [[MUL156:%.*]] = mul nsw i64 [[MUL155]], 128
-// CHECK1-NEXT:    [[MUL157:%.*]] = mul nsw i64 [[DIV149]], [[MUL156]]
-// CHECK1-NEXT:    [[SUB158:%.*]] = sub nsw i64 [[TMP57]], [[MUL157]]
-// CHECK1-NEXT:    [[TMP63:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
+// CHECK1-NEXT:    [[SUB151:%.*]] = sub nsw i64 [[TMP61]], 0
+// CHECK1-NEXT:    [[DIV152:%.*]] = sdiv i64 [[SUB151]], 1
+// CHECK1-NEXT:    [[MUL153:%.*]] = mul nsw i64 1, [[DIV152]]
+// CHECK1-NEXT:    [[TMP62:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB154:%.*]] = sub nsw i64 [[TMP62]], 0
+// CHECK1-NEXT:    [[DIV155:%.*]] = sdiv i64 [[SUB154]], 1
+// CHECK1-NEXT:    [[MUL156:%.*]] = mul nsw i64 [[MUL153]], [[DIV155]]
+// CHECK1-NEXT:    [[MUL157:%.*]] = mul nsw i64 [[MUL156]], 128
+// CHECK1-NEXT:    [[DIV158:%.*]] = sdiv i64 [[TMP60]], [[MUL157]]
+// CHECK1-NEXT:    [[TMP63:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
 // CHECK1-NEXT:    [[SUB159:%.*]] = sub nsw i64 [[TMP63]], 0
 // CHECK1-NEXT:    [[DIV160:%.*]] = sdiv i64 [[SUB159]], 1
 // CHECK1-NEXT:    [[MUL161:%.*]] = mul nsw i64 1, [[DIV160]]
-// CHECK1-NEXT:    [[MUL162:%.*]] = mul nsw i64 [[MUL161]], 128
-// CHECK1-NEXT:    [[DIV163:%.*]] = sdiv i64 [[SUB158]], [[MUL162]]
-// CHECK1-NEXT:    [[TMP64:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB164:%.*]] = sub nsw i64 [[TMP64]], 0
-// CHECK1-NEXT:    [[DIV165:%.*]] = sdiv i64 [[SUB164]], 1
-// CHECK1-NEXT:    [[MUL166:%.*]] = mul nsw i64 1, [[DIV165]]
-// CHECK1-NEXT:    [[MUL167:%.*]] = mul nsw i64 [[MUL166]], 128
-// CHECK1-NEXT:    [[MUL168:%.*]] = mul nsw i64 [[DIV163]], [[MUL167]]
-// CHECK1-NEXT:    [[SUB169:%.*]] = sub nsw i64 [[SUB141]], [[MUL168]]
-// CHECK1-NEXT:    [[TMP65:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP66:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP67:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB170:%.*]] = sub nsw i64 [[TMP67]], 0
-// CHECK1-NEXT:    [[DIV171:%.*]] = sdiv i64 [[SUB170]], 1
-// CHECK1-NEXT:    [[MUL172:%.*]] = mul nsw i64 1, [[DIV171]]
-// CHECK1-NEXT:    [[TMP68:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB173:%.*]] = sub nsw i64 [[TMP68]], 0
+// CHECK1-NEXT:    [[TMP64:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB162:%.*]] = sub nsw i64 [[TMP64]], 0
+// CHECK1-NEXT:    [[DIV163:%.*]] = sdiv i64 [[SUB162]], 1
+// CHECK1-NEXT:    [[MUL164:%.*]] = mul nsw i64 [[MUL161]], [[DIV163]]
+// CHECK1-NEXT:    [[MUL165:%.*]] = mul nsw i64 [[MUL164]], 128
+// CHECK1-NEXT:    [[MUL166:%.*]] = mul nsw i64 [[DIV158]], [[MUL165]]
+// CHECK1-NEXT:    [[SUB167:%.*]] = sub nsw i64 [[TMP59]], [[MUL166]]
+// CHECK1-NEXT:    [[TMP65:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB168:%.*]] = sub nsw i64 [[TMP65]], 0
+// CHECK1-NEXT:    [[DIV169:%.*]] = sdiv i64 [[SUB168]], 1
+// CHECK1-NEXT:    [[MUL170:%.*]] = mul nsw i64 1, [[DIV169]]
+// CHECK1-NEXT:    [[MUL171:%.*]] = mul nsw i64 [[MUL170]], 128
+// CHECK1-NEXT:    [[DIV172:%.*]] = sdiv i64 [[SUB167]], [[MUL171]]
+// CHECK1-NEXT:    [[TMP66:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB173:%.*]] = sub nsw i64 [[TMP66]], 0
 // CHECK1-NEXT:    [[DIV174:%.*]] = sdiv i64 [[SUB173]], 1
-// CHECK1-NEXT:    [[MUL175:%.*]] = mul nsw i64 [[MUL172]], [[DIV174]]
+// CHECK1-NEXT:    [[MUL175:%.*]] = mul nsw i64 1, [[DIV174]]
 // CHECK1-NEXT:    [[MUL176:%.*]] = mul nsw i64 [[MUL175]], 128
-// CHECK1-NEXT:    [[DIV177:%.*]] = sdiv i64 [[TMP66]], [[MUL176]]
+// CHECK1-NEXT:    [[MUL177:%.*]] = mul nsw i64 [[DIV172]], [[MUL176]]
+// CHECK1-NEXT:    [[SUB178:%.*]] = sub nsw i64 [[SUB150]], [[MUL177]]
+// CHECK1-NEXT:    [[TMP67:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP68:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP69:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB178:%.*]] = sub nsw i64 [[TMP69]], 0
-// CHECK1-NEXT:    [[DIV179:%.*]] = sdiv i64 [[SUB178]], 1
-// CHECK1-NEXT:    [[MUL180:%.*]] = mul nsw i64 1, [[DIV179]]
-// CHECK1-NEXT:    [[TMP70:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB181:%.*]] = sub nsw i64 [[TMP70]], 0
-// CHECK1-NEXT:    [[DIV182:%.*]] = sdiv i64 [[SUB181]], 1
-// CHECK1-NEXT:    [[MUL183:%.*]] = mul nsw i64 [[MUL180]], [[DIV182]]
-// CHECK1-NEXT:    [[MUL184:%.*]] = mul nsw i64 [[MUL183]], 128
-// CHECK1-NEXT:    [[MUL185:%.*]] = mul nsw i64 [[DIV177]], [[MUL184]]
-// CHECK1-NEXT:    [[SUB186:%.*]] = sub nsw i64 [[TMP65]], [[MUL185]]
-// CHECK1-NEXT:    [[TMP71:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP72:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[TMP73:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB187:%.*]] = sub nsw i64 [[TMP73]], 0
+// CHECK1-NEXT:    [[SUB179:%.*]] = sub nsw i64 [[TMP69]], 0
+// CHECK1-NEXT:    [[DIV180:%.*]] = sdiv i64 [[SUB179]], 1
+// CHECK1-NEXT:    [[MUL181:%.*]] = mul nsw i64 1, [[DIV180]]
+// CHECK1-NEXT:    [[TMP70:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB182:%.*]] = sub nsw i64 [[TMP70]], 0
+// CHECK1-NEXT:    [[DIV183:%.*]] = sdiv i64 [[SUB182]], 1
+// CHECK1-NEXT:    [[MUL184:%.*]] = mul nsw i64 [[MUL181]], [[DIV183]]
+// CHECK1-NEXT:    [[MUL185:%.*]] = mul nsw i64 [[MUL184]], 128
+// CHECK1-NEXT:    [[DIV186:%.*]] = sdiv i64 [[TMP68]], [[MUL185]]
+// CHECK1-NEXT:    [[TMP71:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK1-NEXT:    [[SUB187:%.*]] = sub nsw i64 [[TMP71]], 0
 // CHECK1-NEXT:    [[DIV188:%.*]] = sdiv i64 [[SUB187]], 1
 // CHECK1-NEXT:    [[MUL189:%.*]] = mul nsw i64 1, [[DIV188]]
-// CHECK1-NEXT:    [[TMP74:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB190:%.*]] = sub nsw i64 [[TMP74]], 0
+// CHECK1-NEXT:    [[TMP72:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB190:%.*]] = sub nsw i64 [[TMP72]], 0
 // CHECK1-NEXT:    [[DIV191:%.*]] = sdiv i64 [[SUB190]], 1
 // CHECK1-NEXT:    [[MUL192:%.*]] = mul nsw i64 [[MUL189]], [[DIV191]]
 // CHECK1-NEXT:    [[MUL193:%.*]] = mul nsw i64 [[MUL192]], 128
-// CHECK1-NEXT:    [[DIV194:%.*]] = sdiv i64 [[TMP72]], [[MUL193]]
+// CHECK1-NEXT:    [[MUL194:%.*]] = mul nsw i64 [[DIV186]], [[MUL193]]
+// CHECK1-NEXT:    [[SUB195:%.*]] = sub nsw i64 [[TMP67]], [[MUL194]]
+// CHECK1-NEXT:    [[TMP73:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP74:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    [[TMP75:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK1-NEXT:    [[SUB195:%.*]] = sub nsw i64 [[TMP75]], 0
-// CHECK1-NEXT:    [[DIV196:%.*]] = sdiv i64 [[SUB195]], 1
-// CHECK1-NEXT:    [[MUL197:%.*]] = mul nsw i64 1, [[DIV196]]
-// CHECK1-NEXT:    [[TMP76:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB198:%.*]] = sub nsw i64 [[TMP76]], 0
-// CHECK1-NEXT:    [[DIV199:%.*]] = sdiv i64 [[SUB198]], 1
-// CHECK1-NEXT:    [[MUL200:%.*]] = mul nsw i64 [[MUL197]], [[DIV199]]
-// CHECK1-NEXT:    [[MUL201:%.*]] = mul nsw i64 [[MUL200]], 128
-// CHECK1-NEXT:    [[MUL202:%.*]] = mul nsw i64 [[DIV194]], [[MUL201]]
-// CHECK1-NEXT:    [[SUB203:%.*]] = sub nsw i64 [[TMP71]], [[MUL202]]
-// CHECK1-NEXT:    [[TMP77:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
+// CHECK1-NEXT:    [[SUB196:%.*]] = sub nsw i64 [[TMP75]], 0
+// CHECK1-NEXT:    [[DIV197:%.*]] = sdiv i64 [[SUB196]], 1
+// CHECK1-NEXT:    [[MUL198:%.*]] = mul nsw i64 1, [[DIV197]]
+// CHECK1-NEXT:    [[TMP76:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB199:%.*]] = sub nsw i64 [[TMP76]], 0
+// CHECK1-NEXT:    [[DIV200:%.*]] = sdiv i64 [[SUB199]], 1
+// CHECK1-NEXT:    [[MUL201:%.*]] = mul nsw i64 [[MUL198]], [[DIV200]]
+// CHECK1-NEXT:    [[MUL202:%.*]] = mul nsw i64 [[MUL201]], 128
+// CHECK1-NEXT:    [[DIV203:%.*]] = sdiv i64 [[TMP74]], [[MUL202]]
+// CHECK1-NEXT:    [[TMP77:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
 // CHECK1-NEXT:    [[SUB204:%.*]] = sub nsw i64 [[TMP77]], 0
 // CHECK1-NEXT:    [[DIV205:%.*]] = sdiv i64 [[SUB204]], 1
 // CHECK1-NEXT:    [[MUL206:%.*]] = mul nsw i64 1, [[DIV205]]
-// CHECK1-NEXT:    [[MUL207:%.*]] = mul nsw i64 [[MUL206]], 128
-// CHECK1-NEXT:    [[DIV208:%.*]] = sdiv i64 [[SUB203]], [[MUL207]]
-// CHECK1-NEXT:    [[TMP78:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK1-NEXT:    [[SUB209:%.*]] = sub nsw i64 [[TMP78]], 0
-// CHECK1-NEXT:    [[DIV210:%.*]] = sdiv i64 [[SUB209]], 1
-// CHECK1-NEXT:    [[MUL211:%.*]] = mul nsw i64 1, [[DIV210]]
-// CHECK1-NEXT:    [[MUL212:%.*]] = mul nsw i64 [[MUL211]], 128
-// CHECK1-NEXT:    [[MUL213:%.*]] = mul nsw i64 [[DIV208]], [[MUL212]]
-// CHECK1-NEXT:    [[SUB214:%.*]] = sub nsw i64 [[SUB186]], [[MUL213]]
-// CHECK1-NEXT:    [[DIV215:%.*]] = sdiv i64 [[SUB214]], 128
-// CHECK1-NEXT:    [[MUL216:%.*]] = mul nsw i64 [[DIV215]], 128
-// CHECK1-NEXT:    [[SUB217:%.*]] = sub nsw i64 [[SUB169]], [[MUL216]]
-// CHECK1-NEXT:    [[MUL218:%.*]] = mul nsw i64 [[SUB217]], 1
-// CHECK1-NEXT:    [[ADD219:%.*]] = add nsw i64 0, [[MUL218]]
-// CHECK1-NEXT:    [[CONV220:%.*]] = trunc i64 [[ADD219]] to i32
-// CHECK1-NEXT:    store i32 [[CONV220]], ptr [[J40]], align 4
-// CHECK1-NEXT:    [[TMP79:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_12]], align 8
-// CHECK1-NEXT:    [[TMP80:%.*]] = load i64, ptr [[DOTPERMUTED_0_IV___BEGIN438]], align 8
-// CHECK1-NEXT:    [[MUL221:%.*]] = mul nsw i64 [[TMP80]], 1
-// CHECK1-NEXT:    [[ADD_PTR222:%.*]] = getelementptr inbounds double, ptr [[TMP79]], i64 [[MUL221]]
-// CHECK1-NEXT:    store ptr [[ADD_PTR222]], ptr [[__BEGIN4]], align 8
-// CHECK1-NEXT:    [[TMP81:%.*]] = load ptr, ptr [[__BEGIN4]], align 8
-// CHECK1-NEXT:    store ptr [[TMP81]], ptr [[BB]], align 8
-// CHECK1-NEXT:    [[TMP82:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK1-NEXT:    [[TMP83:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN339]], align 8
-// CHECK1-NEXT:    [[MUL223:%.*]] = mul nsw i64 [[TMP83]], 1
-// CHECK1-NEXT:    [[ADD_PTR224:%.*]] = getelementptr inbounds double, ptr [[TMP82]], i64 [[MUL223]]
-// CHECK1-NEXT:    store ptr [[ADD_PTR224]], ptr [[__BEGIN3]], align 8
-// CHECK1-NEXT:    [[TMP84:%.*]] = load ptr, ptr [[__BEGIN3]], align 8
-// CHECK1-NEXT:    [[TMP85:%.*]] = load double, ptr [[TMP84]], align 8
-// CHECK1-NEXT:    store double [[TMP85]], ptr [[AA]], align 8
-// CHECK1-NEXT:    [[TMP86:%.*]] = load i32, ptr [[I37]], align 4
-// CHECK1-NEXT:    [[TMP87:%.*]] = load double, ptr [[C]], align 8
-// CHECK1-NEXT:    [[TMP88:%.*]] = load double, ptr [[AA]], align 8
-// CHECK1-NEXT:    [[TMP89:%.*]] = load double, ptr [[D]], align 8
-// CHECK1-NEXT:    [[TMP90:%.*]] = load ptr, ptr [[BB]], align 8, !nonnull [[META12]], !align [[META13]]
-// CHECK1-NEXT:    [[TMP91:%.*]] = load double, ptr [[TMP90]], align 8
-// CHECK1-NEXT:    [[TMP92:%.*]] = load i32, ptr [[J40]], align 4
-// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP86]], double noundef [[TMP87]], double noundef [[TMP88]], double noundef [[TMP89]], double noundef [[TMP91]], i32 noundef [[TMP92]])
+// CHECK1-NEXT:    [[TMP78:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB207:%.*]] = sub nsw i64 [[TMP78]], 0
+// CHECK1-NEXT:    [[DIV208:%.*]] = sdiv i64 [[SUB207]], 1
+// CHECK1-NEXT:    [[MUL209:%.*]] = mul nsw i64 [[MUL206]], [[DIV208]]
+// CHECK1-NEXT:    [[MUL210:%.*]] = mul nsw i64 [[MUL209]], 128
+// CHECK1-NEXT:    [[MUL211:%.*]] = mul nsw i64 [[DIV203]], [[MUL210]]
+// CHECK1-NEXT:    [[SUB212:%.*]] = sub nsw i64 [[TMP73]], [[MUL211]]
+// CHECK1-NEXT:    [[TMP79:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB213:%.*]] = sub nsw i64 [[TMP79]], 0
+// CHECK1-NEXT:    [[DIV214:%.*]] = sdiv i64 [[SUB213]], 1
+// CHECK1-NEXT:    [[MUL215:%.*]] = mul nsw i64 1, [[DIV214]]
+// CHECK1-NEXT:    [[MUL216:%.*]] = mul nsw i64 [[MUL215]], 128
+// CHECK1-NEXT:    [[DIV217:%.*]] = sdiv i64 [[SUB212]], [[MUL216]]
+// CHECK1-NEXT:    [[TMP80:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK1-NEXT:    [[SUB218:%.*]] = sub nsw i64 [[TMP80]], 0
+// CHECK1-NEXT:    [[DIV219:%.*]] = sdiv i64 [[SUB218]], 1
+// CHECK1-NEXT:    [[MUL220:%.*]] = mul nsw i64 1, [[DIV219]]
+// CHECK1-NEXT:    [[MUL221:%.*]] = mul nsw i64 [[MUL220]], 128
+// CHECK1-NEXT:    [[MUL222:%.*]] = mul nsw i64 [[DIV217]], [[MUL221]]
+// CHECK1-NEXT:    [[SUB223:%.*]] = sub nsw i64 [[SUB195]], [[MUL222]]
+// CHECK1-NEXT:    [[DIV224:%.*]] = sdiv i64 [[SUB223]], 128
+// CHECK1-NEXT:    [[MUL225:%.*]] = mul nsw i64 [[DIV224]], 128
+// CHECK1-NEXT:    [[SUB226:%.*]] = sub nsw i64 [[SUB178]], [[MUL225]]
+// CHECK1-NEXT:    [[MUL227:%.*]] = mul nsw i64 [[SUB226]], 1
+// CHECK1-NEXT:    [[ADD228:%.*]] = add nsw i64 0, [[MUL227]]
+// CHECK1-NEXT:    [[CONV229:%.*]] = trunc i64 [[ADD228]] to i32
+// CHECK1-NEXT:    store i32 [[CONV229]], ptr [[J45]], align 4
+// CHECK1-NEXT:    [[TMP81:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_12]], align 8
+// CHECK1-NEXT:    [[TMP82:%.*]] = load i64, ptr [[DOTPERMUTED_0_IV___BEGIN443]], align 8
+// CHECK1-NEXT:    [[MUL230:%.*]] = mul nsw i64 [[TMP82]], 1
+// CHECK1-NEXT:    [[ADD_PTR231:%.*]] = getelementptr inbounds double, ptr [[TMP81]], i64 [[MUL230]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR231]], ptr [[__BEGIN4]], align 8
+// CHECK1-NEXT:    [[TMP83:%.*]] = load ptr, ptr [[__BEGIN4]], align 8
+// CHECK1-NEXT:    store ptr [[TMP83]], ptr [[BB]], align 8
+// CHECK1-NEXT:    [[TMP84:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK1-NEXT:    [[TMP85:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN344]], align 8
+// CHECK1-NEXT:    [[MUL232:%.*]] = mul nsw i64 [[TMP85]], 1
+// CHECK1-NEXT:    [[ADD_PTR233:%.*]] = getelementptr inbounds double, ptr [[TMP84]], i64 [[MUL232]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR233]], ptr [[__BEGIN3]], align 8
+// CHECK1-NEXT:    [[TMP86:%.*]] = load ptr, ptr [[__BEGIN3]], align 8
+// CHECK1-NEXT:    [[TMP87:%.*]] = load double, ptr [[TMP86]], align 8
+// CHECK1-NEXT:    store double [[TMP87]], ptr [[AA]], align 8
+// CHECK1-NEXT:    [[TMP88:%.*]] = load i32, ptr [[I42]], align 4
+// CHECK1-NEXT:    [[TMP89:%.*]] = load double, ptr [[C]], align 8
+// CHECK1-NEXT:    [[TMP90:%.*]] = load double, ptr [[AA]], align 8
+// CHECK1-NEXT:    [[TMP91:%.*]] = load double, ptr [[D]], align 8
+// CHECK1-NEXT:    [[TMP92:%.*]] = load ptr, ptr [[BB]], align 8, !nonnull [[META12]], !align [[META13]]
+// CHECK1-NEXT:    [[TMP93:%.*]] = load double, ptr [[TMP92]], align 8
+// CHECK1-NEXT:    [[TMP94:%.*]] = load i32, ptr [[J45]], align 4
+// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP88]], double noundef [[TMP89]], double noundef [[TMP90]], double noundef [[TMP91]], double noundef [[TMP93]], i32 noundef [[TMP94]])
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
-// CHECK1-NEXT:    [[TMP93:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[ADD225:%.*]] = add nsw i64 [[TMP93]], 1
-// CHECK1-NEXT:    store i64 [[ADD225]], ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP95:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[ADD234:%.*]] = add nsw i64 [[TMP95]], 1
+// CHECK1-NEXT:    store i64 [[ADD234]], ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -2439,8 +2479,8 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_14:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_15:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTCAPTURE_EXPR_24:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[DOTCAPTURE_EXPR_26:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[DOTCAPTURE_EXPR_28:%.*]] = alloca i64, align 8
+// CHECK2-NEXT:    [[DOTCAPTURE_EXPR_29:%.*]] = alloca i64, align 8
+// CHECK2-NEXT:    [[DOTCAPTURE_EXPR_31:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPERMUTED_0_IV___BEGIN4:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTPERMUTED_1_IV___BEGIN3:%.*]] = alloca i64, align 8
@@ -2449,10 +2489,10 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    [[DOTOMP_UB:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i64, align 8
 // CHECK2-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[I37:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[DOTPERMUTED_0_IV___BEGIN438:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[DOTPERMUTED_1_IV___BEGIN339:%.*]] = alloca i64, align 8
-// CHECK2-NEXT:    [[J40:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[I42:%.*]] = alloca i32, align 4
+// CHECK2-NEXT:    [[DOTPERMUTED_0_IV___BEGIN443:%.*]] = alloca i64, align 8
+// CHECK2-NEXT:    [[DOTPERMUTED_1_IV___BEGIN344:%.*]] = alloca i64, align 8
+// CHECK2-NEXT:    [[J45:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[BB:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    [[AA:%.*]] = alloca double, align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
@@ -2506,328 +2546,343 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    [[DIV22:%.*]] = sdiv i64 [[ADD21]], 1
 // CHECK2-NEXT:    [[SUB23:%.*]] = sub nsw i64 [[DIV22]], 1
 // CHECK2-NEXT:    store i64 [[SUB23]], ptr [[DOTCAPTURE_EXPR_15]], align 8
-// CHECK2-NEXT:    [[TMP13:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_15]], align 8
+// CHECK2-NEXT:    [[TMP13:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_7]], align 8
 // CHECK2-NEXT:    [[ADD25:%.*]] = add nsw i64 [[TMP13]], 1
-// CHECK2-NEXT:    store i64 [[ADD25]], ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[TMP14:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_7]], align 8
-// CHECK2-NEXT:    [[ADD27:%.*]] = add nsw i64 [[TMP14]], 1
-// CHECK2-NEXT:    store i64 [[ADD27]], ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[TMP15:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB29:%.*]] = sub nsw i64 [[TMP15]], 0
-// CHECK2-NEXT:    [[DIV30:%.*]] = sdiv i64 [[SUB29]], 1
-// CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i64 128, [[DIV30]]
-// CHECK2-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB31:%.*]] = sub nsw i64 [[TMP16]], 0
-// CHECK2-NEXT:    [[DIV32:%.*]] = sdiv i64 [[SUB31]], 1
-// CHECK2-NEXT:    [[MUL33:%.*]] = mul nsw i64 [[MUL]], [[DIV32]]
-// CHECK2-NEXT:    [[MUL34:%.*]] = mul nsw i64 [[MUL33]], 128
-// CHECK2-NEXT:    [[SUB35:%.*]] = sub nsw i64 [[MUL34]], 1
-// CHECK2-NEXT:    store i64 [[SUB35]], ptr [[DOTCAPTURE_EXPR_28]], align 8
+// CHECK2-NEXT:    [[CMP:%.*]] = icmp ne i64 [[ADD25]], 0
+// CHECK2-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// CHECK2:       land.lhs.true:
+// CHECK2-NEXT:    [[TMP14:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_15]], align 8
+// CHECK2-NEXT:    [[ADD26:%.*]] = add nsw i64 [[TMP14]], 1
+// CHECK2-NEXT:    [[CMP27:%.*]] = icmp ne i64 [[ADD26]], 0
+// CHECK2-NEXT:    br i1 [[CMP27]], label [[COND_TRUE:%.*]], label [[COND_FALSE]]
+// CHECK2:       cond.true:
+// CHECK2-NEXT:    [[TMP15:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_15]], align 8
+// CHECK2-NEXT:    [[ADD28:%.*]] = add nsw i64 [[TMP15]], 1
+// CHECK2-NEXT:    br label [[COND_END:%.*]]
+// CHECK2:       cond.false:
+// CHECK2-NEXT:    br label [[COND_END]]
+// CHECK2:       cond.end:
+// CHECK2-NEXT:    [[COND:%.*]] = phi i64 [ [[ADD28]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
+// CHECK2-NEXT:    store i64 [[COND]], ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK2-NEXT:    [[TMP16:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_7]], align 8
+// CHECK2-NEXT:    [[ADD30:%.*]] = add nsw i64 [[TMP16]], 1
+// CHECK2-NEXT:    store i64 [[ADD30]], ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[TMP17:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK2-NEXT:    [[SUB32:%.*]] = sub nsw i64 [[TMP17]], 0
+// CHECK2-NEXT:    [[DIV33:%.*]] = sdiv i64 [[SUB32]], 1
+// CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i64 128, [[DIV33]]
+// CHECK2-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB34:%.*]] = sub nsw i64 [[TMP18]], 0
+// CHECK2-NEXT:    [[DIV35:%.*]] = sdiv i64 [[SUB34]], 1
+// CHECK2-NEXT:    [[MUL36:%.*]] = mul nsw i64 [[MUL]], [[DIV35]]
+// CHECK2-NEXT:    [[MUL37:%.*]] = mul nsw i64 [[MUL36]], 128
+// CHECK2-NEXT:    [[SUB38:%.*]] = sub nsw i64 [[MUL37]], 1
+// CHECK2-NEXT:    store i64 [[SUB38]], ptr [[DOTCAPTURE_EXPR_31]], align 8
 // CHECK2-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK2-NEXT:    store i64 0, ptr [[DOTPERMUTED_0_IV___BEGIN4]], align 8
 // CHECK2-NEXT:    store i64 0, ptr [[DOTPERMUTED_1_IV___BEGIN3]], align 8
 // CHECK2-NEXT:    store i32 0, ptr [[J]], align 4
-// CHECK2-NEXT:    [[TMP17:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i64 0, [[TMP17]]
-// CHECK2-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[OMP_PRECOND_END:%.*]]
-// CHECK2:       land.lhs.true:
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[CMP36:%.*]] = icmp slt i64 0, [[TMP18]]
-// CHECK2-NEXT:    br i1 [[CMP36]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END]]
+// CHECK2-NEXT:    [[TMP19:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK2-NEXT:    [[CMP39:%.*]] = icmp slt i64 0, [[TMP19]]
+// CHECK2-NEXT:    br i1 [[CMP39]], label [[LAND_LHS_TRUE40:%.*]], label [[OMP_PRECOND_END:%.*]]
+// CHECK2:       land.lhs.true40:
+// CHECK2-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[CMP41:%.*]] = icmp slt i64 0, [[TMP20]]
+// CHECK2-NEXT:    br i1 [[CMP41]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.then:
 // CHECK2-NEXT:    store i64 0, ptr [[DOTOMP_LB]], align 8
-// CHECK2-NEXT:    [[TMP19:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_28]], align 8
-// CHECK2-NEXT:    store i64 [[TMP19]], ptr [[DOTOMP_UB]], align 8
+// CHECK2-NEXT:    [[TMP21:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_31]], align 8
+// CHECK2-NEXT:    store i64 [[TMP21]], ptr [[DOTOMP_UB]], align 8
 // CHECK2-NEXT:    store i64 1, ptr [[DOTOMP_STRIDE]], align 8
 // CHECK2-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK2-NEXT:    call void @__kmpc_for_static_init_8(ptr @[[GLOB1:[0-9]+]], i32 [[TMP0]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i64 1, i64 1)
-// CHECK2-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
-// CHECK2-NEXT:    [[TMP21:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_28]], align 8
-// CHECK2-NEXT:    [[CMP41:%.*]] = icmp sgt i64 [[TMP20]], [[TMP21]]
-// CHECK2-NEXT:    br i1 [[CMP41]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-// CHECK2:       cond.true:
-// CHECK2-NEXT:    [[TMP22:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_28]], align 8
-// CHECK2-NEXT:    br label [[COND_END:%.*]]
-// CHECK2:       cond.false:
-// CHECK2-NEXT:    [[TMP23:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
-// CHECK2-NEXT:    br label [[COND_END]]
-// CHECK2:       cond.end:
-// CHECK2-NEXT:    [[COND:%.*]] = phi i64 [ [[TMP22]], [[COND_TRUE]] ], [ [[TMP23]], [[COND_FALSE]] ]
-// CHECK2-NEXT:    store i64 [[COND]], ptr [[DOTOMP_UB]], align 8
-// CHECK2-NEXT:    [[TMP24:%.*]] = load i64, ptr [[DOTOMP_LB]], align 8
-// CHECK2-NEXT:    store i64 [[TMP24]], ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP22:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
+// CHECK2-NEXT:    [[TMP23:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_31]], align 8
+// CHECK2-NEXT:    [[CMP46:%.*]] = icmp sgt i64 [[TMP22]], [[TMP23]]
+// CHECK2-NEXT:    br i1 [[CMP46]], label [[COND_TRUE47:%.*]], label [[COND_FALSE48:%.*]]
+// CHECK2:       cond.true47:
+// CHECK2-NEXT:    [[TMP24:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_31]], align 8
+// CHECK2-NEXT:    br label [[COND_END49:%.*]]
+// CHECK2:       cond.false48:
+// CHECK2-NEXT:    [[TMP25:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
+// CHECK2-NEXT:    br label [[COND_END49]]
+// CHECK2:       cond.end49:
+// CHECK2-NEXT:    [[COND50:%.*]] = phi i64 [ [[TMP24]], [[COND_TRUE47]] ], [ [[TMP25]], [[COND_FALSE48]] ]
+// CHECK2-NEXT:    store i64 [[COND50]], ptr [[DOTOMP_UB]], align 8
+// CHECK2-NEXT:    [[TMP26:%.*]] = load i64, ptr [[DOTOMP_LB]], align 8
+// CHECK2-NEXT:    store i64 [[TMP26]], ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK2:       omp.inner.for.cond:
-// CHECK2-NEXT:    [[TMP25:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP26:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
-// CHECK2-NEXT:    [[CMP42:%.*]] = icmp sle i64 [[TMP25]], [[TMP26]]
-// CHECK2-NEXT:    br i1 [[CMP42]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
-// CHECK2:       omp.inner.for.body:
 // CHECK2-NEXT:    [[TMP27:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP28:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB43:%.*]] = sub nsw i64 [[TMP28]], 0
-// CHECK2-NEXT:    [[DIV44:%.*]] = sdiv i64 [[SUB43]], 1
-// CHECK2-NEXT:    [[MUL45:%.*]] = mul nsw i64 1, [[DIV44]]
-// CHECK2-NEXT:    [[TMP29:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB46:%.*]] = sub nsw i64 [[TMP29]], 0
-// CHECK2-NEXT:    [[DIV47:%.*]] = sdiv i64 [[SUB46]], 1
-// CHECK2-NEXT:    [[MUL48:%.*]] = mul nsw i64 [[MUL45]], [[DIV47]]
-// CHECK2-NEXT:    [[MUL49:%.*]] = mul nsw i64 [[MUL48]], 128
-// CHECK2-NEXT:    [[DIV50:%.*]] = sdiv i64 [[TMP27]], [[MUL49]]
-// CHECK2-NEXT:    [[MUL51:%.*]] = mul nsw i64 [[DIV50]], 1
-// CHECK2-NEXT:    [[ADD52:%.*]] = add nsw i64 0, [[MUL51]]
-// CHECK2-NEXT:    [[CONV:%.*]] = trunc i64 [[ADD52]] to i32
-// CHECK2-NEXT:    store i32 [[CONV]], ptr [[I37]], align 4
-// CHECK2-NEXT:    [[TMP30:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP31:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP32:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB53:%.*]] = sub nsw i64 [[TMP32]], 0
-// CHECK2-NEXT:    [[DIV54:%.*]] = sdiv i64 [[SUB53]], 1
-// CHECK2-NEXT:    [[MUL55:%.*]] = mul nsw i64 1, [[DIV54]]
-// CHECK2-NEXT:    [[TMP33:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB56:%.*]] = sub nsw i64 [[TMP33]], 0
-// CHECK2-NEXT:    [[DIV57:%.*]] = sdiv i64 [[SUB56]], 1
-// CHECK2-NEXT:    [[MUL58:%.*]] = mul nsw i64 [[MUL55]], [[DIV57]]
-// CHECK2-NEXT:    [[MUL59:%.*]] = mul nsw i64 [[MUL58]], 128
-// CHECK2-NEXT:    [[DIV60:%.*]] = sdiv i64 [[TMP31]], [[MUL59]]
+// CHECK2-NEXT:    [[TMP28:%.*]] = load i64, ptr [[DOTOMP_UB]], align 8
+// CHECK2-NEXT:    [[CMP51:%.*]] = icmp sle i64 [[TMP27]], [[TMP28]]
+// CHECK2-NEXT:    br i1 [[CMP51]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// CHECK2:       omp.inner.for.body:
+// CHECK2-NEXT:    [[TMP29:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP30:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK2-NEXT:    [[SUB52:%.*]] = sub nsw i64 [[TMP30]], 0
+// CHECK2-NEXT:    [[DIV53:%.*]] = sdiv i64 [[SUB52]], 1
+// CHECK2-NEXT:    [[MUL54:%.*]] = mul nsw i64 1, [[DIV53]]
+// CHECK2-NEXT:    [[TMP31:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB55:%.*]] = sub nsw i64 [[TMP31]], 0
+// CHECK2-NEXT:    [[DIV56:%.*]] = sdiv i64 [[SUB55]], 1
+// CHECK2-NEXT:    [[MUL57:%.*]] = mul nsw i64 [[MUL54]], [[DIV56]]
+// CHECK2-NEXT:    [[MUL58:%.*]] = mul nsw i64 [[MUL57]], 128
+// CHECK2-NEXT:    [[DIV59:%.*]] = sdiv i64 [[TMP29]], [[MUL58]]
+// CHECK2-NEXT:    [[MUL60:%.*]] = mul nsw i64 [[DIV59]], 1
+// CHECK2-NEXT:    [[ADD61:%.*]] = add nsw i64 0, [[MUL60]]
+// CHECK2-NEXT:    [[CONV:%.*]] = trunc i64 [[ADD61]] to i32
+// CHECK2-NEXT:    store i32 [[CONV]], ptr [[I42]], align 4
+// CHECK2-NEXT:    [[TMP32:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP33:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP34:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB61:%.*]] = sub nsw i64 [[TMP34]], 0
-// CHECK2-NEXT:    [[DIV62:%.*]] = sdiv i64 [[SUB61]], 1
-// CHECK2-NEXT:    [[MUL63:%.*]] = mul nsw i64 1, [[DIV62]]
-// CHECK2-NEXT:    [[TMP35:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB64:%.*]] = sub nsw i64 [[TMP35]], 0
-// CHECK2-NEXT:    [[DIV65:%.*]] = sdiv i64 [[SUB64]], 1
-// CHECK2-NEXT:    [[MUL66:%.*]] = mul nsw i64 [[MUL63]], [[DIV65]]
-// CHECK2-NEXT:    [[MUL67:%.*]] = mul nsw i64 [[MUL66]], 128
-// CHECK2-NEXT:    [[MUL68:%.*]] = mul nsw i64 [[DIV60]], [[MUL67]]
-// CHECK2-NEXT:    [[SUB69:%.*]] = sub nsw i64 [[TMP30]], [[MUL68]]
-// CHECK2-NEXT:    [[TMP36:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
+// CHECK2-NEXT:    [[SUB62:%.*]] = sub nsw i64 [[TMP34]], 0
+// CHECK2-NEXT:    [[DIV63:%.*]] = sdiv i64 [[SUB62]], 1
+// CHECK2-NEXT:    [[MUL64:%.*]] = mul nsw i64 1, [[DIV63]]
+// CHECK2-NEXT:    [[TMP35:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB65:%.*]] = sub nsw i64 [[TMP35]], 0
+// CHECK2-NEXT:    [[DIV66:%.*]] = sdiv i64 [[SUB65]], 1
+// CHECK2-NEXT:    [[MUL67:%.*]] = mul nsw i64 [[MUL64]], [[DIV66]]
+// CHECK2-NEXT:    [[MUL68:%.*]] = mul nsw i64 [[MUL67]], 128
+// CHECK2-NEXT:    [[DIV69:%.*]] = sdiv i64 [[TMP33]], [[MUL68]]
+// CHECK2-NEXT:    [[TMP36:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
 // CHECK2-NEXT:    [[SUB70:%.*]] = sub nsw i64 [[TMP36]], 0
 // CHECK2-NEXT:    [[DIV71:%.*]] = sdiv i64 [[SUB70]], 1
 // CHECK2-NEXT:    [[MUL72:%.*]] = mul nsw i64 1, [[DIV71]]
-// CHECK2-NEXT:    [[MUL73:%.*]] = mul nsw i64 [[MUL72]], 128
-// CHECK2-NEXT:    [[DIV74:%.*]] = sdiv i64 [[SUB69]], [[MUL73]]
-// CHECK2-NEXT:    [[MUL75:%.*]] = mul nsw i64 [[DIV74]], 1
-// CHECK2-NEXT:    [[ADD76:%.*]] = add nsw i64 0, [[MUL75]]
-// CHECK2-NEXT:    store i64 [[ADD76]], ptr [[DOTPERMUTED_0_IV___BEGIN438]], align 8
-// CHECK2-NEXT:    [[TMP37:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP38:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP39:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB77:%.*]] = sub nsw i64 [[TMP39]], 0
-// CHECK2-NEXT:    [[DIV78:%.*]] = sdiv i64 [[SUB77]], 1
-// CHECK2-NEXT:    [[MUL79:%.*]] = mul nsw i64 1, [[DIV78]]
-// CHECK2-NEXT:    [[TMP40:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB80:%.*]] = sub nsw i64 [[TMP40]], 0
-// CHECK2-NEXT:    [[DIV81:%.*]] = sdiv i64 [[SUB80]], 1
-// CHECK2-NEXT:    [[MUL82:%.*]] = mul nsw i64 [[MUL79]], [[DIV81]]
-// CHECK2-NEXT:    [[MUL83:%.*]] = mul nsw i64 [[MUL82]], 128
-// CHECK2-NEXT:    [[DIV84:%.*]] = sdiv i64 [[TMP38]], [[MUL83]]
+// CHECK2-NEXT:    [[TMP37:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB73:%.*]] = sub nsw i64 [[TMP37]], 0
+// CHECK2-NEXT:    [[DIV74:%.*]] = sdiv i64 [[SUB73]], 1
+// CHECK2-NEXT:    [[MUL75:%.*]] = mul nsw i64 [[MUL72]], [[DIV74]]
+// CHECK2-NEXT:    [[MUL76:%.*]] = mul nsw i64 [[MUL75]], 128
+// CHECK2-NEXT:    [[MUL77:%.*]] = mul nsw i64 [[DIV69]], [[MUL76]]
+// CHECK2-NEXT:    [[SUB78:%.*]] = sub nsw i64 [[TMP32]], [[MUL77]]
+// CHECK2-NEXT:    [[TMP38:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB79:%.*]] = sub nsw i64 [[TMP38]], 0
+// CHECK2-NEXT:    [[DIV80:%.*]] = sdiv i64 [[SUB79]], 1
+// CHECK2-NEXT:    [[MUL81:%.*]] = mul nsw i64 1, [[DIV80]]
+// CHECK2-NEXT:    [[MUL82:%.*]] = mul nsw i64 [[MUL81]], 128
+// CHECK2-NEXT:    [[DIV83:%.*]] = sdiv i64 [[SUB78]], [[MUL82]]
+// CHECK2-NEXT:    [[MUL84:%.*]] = mul nsw i64 [[DIV83]], 1
+// CHECK2-NEXT:    [[ADD85:%.*]] = add nsw i64 0, [[MUL84]]
+// CHECK2-NEXT:    store i64 [[ADD85]], ptr [[DOTPERMUTED_0_IV___BEGIN443]], align 8
+// CHECK2-NEXT:    [[TMP39:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP40:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP41:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB85:%.*]] = sub nsw i64 [[TMP41]], 0
-// CHECK2-NEXT:    [[DIV86:%.*]] = sdiv i64 [[SUB85]], 1
-// CHECK2-NEXT:    [[MUL87:%.*]] = mul nsw i64 1, [[DIV86]]
-// CHECK2-NEXT:    [[TMP42:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB88:%.*]] = sub nsw i64 [[TMP42]], 0
-// CHECK2-NEXT:    [[DIV89:%.*]] = sdiv i64 [[SUB88]], 1
-// CHECK2-NEXT:    [[MUL90:%.*]] = mul nsw i64 [[MUL87]], [[DIV89]]
-// CHECK2-NEXT:    [[MUL91:%.*]] = mul nsw i64 [[MUL90]], 128
-// CHECK2-NEXT:    [[MUL92:%.*]] = mul nsw i64 [[DIV84]], [[MUL91]]
-// CHECK2-NEXT:    [[SUB93:%.*]] = sub nsw i64 [[TMP37]], [[MUL92]]
-// CHECK2-NEXT:    [[TMP43:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP44:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP45:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB94:%.*]] = sub nsw i64 [[TMP45]], 0
+// CHECK2-NEXT:    [[SUB86:%.*]] = sub nsw i64 [[TMP41]], 0
+// CHECK2-NEXT:    [[DIV87:%.*]] = sdiv i64 [[SUB86]], 1
+// CHECK2-NEXT:    [[MUL88:%.*]] = mul nsw i64 1, [[DIV87]]
+// CHECK2-NEXT:    [[TMP42:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB89:%.*]] = sub nsw i64 [[TMP42]], 0
+// CHECK2-NEXT:    [[DIV90:%.*]] = sdiv i64 [[SUB89]], 1
+// CHECK2-NEXT:    [[MUL91:%.*]] = mul nsw i64 [[MUL88]], [[DIV90]]
+// CHECK2-NEXT:    [[MUL92:%.*]] = mul nsw i64 [[MUL91]], 128
+// CHECK2-NEXT:    [[DIV93:%.*]] = sdiv i64 [[TMP40]], [[MUL92]]
+// CHECK2-NEXT:    [[TMP43:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK2-NEXT:    [[SUB94:%.*]] = sub nsw i64 [[TMP43]], 0
 // CHECK2-NEXT:    [[DIV95:%.*]] = sdiv i64 [[SUB94]], 1
 // CHECK2-NEXT:    [[MUL96:%.*]] = mul nsw i64 1, [[DIV95]]
-// CHECK2-NEXT:    [[TMP46:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB97:%.*]] = sub nsw i64 [[TMP46]], 0
+// CHECK2-NEXT:    [[TMP44:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB97:%.*]] = sub nsw i64 [[TMP44]], 0
 // CHECK2-NEXT:    [[DIV98:%.*]] = sdiv i64 [[SUB97]], 1
 // CHECK2-NEXT:    [[MUL99:%.*]] = mul nsw i64 [[MUL96]], [[DIV98]]
 // CHECK2-NEXT:    [[MUL100:%.*]] = mul nsw i64 [[MUL99]], 128
-// CHECK2-NEXT:    [[DIV101:%.*]] = sdiv i64 [[TMP44]], [[MUL100]]
+// CHECK2-NEXT:    [[MUL101:%.*]] = mul nsw i64 [[DIV93]], [[MUL100]]
+// CHECK2-NEXT:    [[SUB102:%.*]] = sub nsw i64 [[TMP39]], [[MUL101]]
+// CHECK2-NEXT:    [[TMP45:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP46:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP47:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB102:%.*]] = sub nsw i64 [[TMP47]], 0
-// CHECK2-NEXT:    [[DIV103:%.*]] = sdiv i64 [[SUB102]], 1
-// CHECK2-NEXT:    [[MUL104:%.*]] = mul nsw i64 1, [[DIV103]]
-// CHECK2-NEXT:    [[TMP48:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB105:%.*]] = sub nsw i64 [[TMP48]], 0
-// CHECK2-NEXT:    [[DIV106:%.*]] = sdiv i64 [[SUB105]], 1
-// CHECK2-NEXT:    [[MUL107:%.*]] = mul nsw i64 [[MUL104]], [[DIV106]]
-// CHECK2-NEXT:    [[MUL108:%.*]] = mul nsw i64 [[MUL107]], 128
-// CHECK2-NEXT:    [[MUL109:%.*]] = mul nsw i64 [[DIV101]], [[MUL108]]
-// CHECK2-NEXT:    [[SUB110:%.*]] = sub nsw i64 [[TMP43]], [[MUL109]]
-// CHECK2-NEXT:    [[TMP49:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
+// CHECK2-NEXT:    [[SUB103:%.*]] = sub nsw i64 [[TMP47]], 0
+// CHECK2-NEXT:    [[DIV104:%.*]] = sdiv i64 [[SUB103]], 1
+// CHECK2-NEXT:    [[MUL105:%.*]] = mul nsw i64 1, [[DIV104]]
+// CHECK2-NEXT:    [[TMP48:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB106:%.*]] = sub nsw i64 [[TMP48]], 0
+// CHECK2-NEXT:    [[DIV107:%.*]] = sdiv i64 [[SUB106]], 1
+// CHECK2-NEXT:    [[MUL108:%.*]] = mul nsw i64 [[MUL105]], [[DIV107]]
+// CHECK2-NEXT:    [[MUL109:%.*]] = mul nsw i64 [[MUL108]], 128
+// CHECK2-NEXT:    [[DIV110:%.*]] = sdiv i64 [[TMP46]], [[MUL109]]
+// CHECK2-NEXT:    [[TMP49:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
 // CHECK2-NEXT:    [[SUB111:%.*]] = sub nsw i64 [[TMP49]], 0
 // CHECK2-NEXT:    [[DIV112:%.*]] = sdiv i64 [[SUB111]], 1
 // CHECK2-NEXT:    [[MUL113:%.*]] = mul nsw i64 1, [[DIV112]]
-// CHECK2-NEXT:    [[MUL114:%.*]] = mul nsw i64 [[MUL113]], 128
-// CHECK2-NEXT:    [[DIV115:%.*]] = sdiv i64 [[SUB110]], [[MUL114]]
-// CHECK2-NEXT:    [[TMP50:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB116:%.*]] = sub nsw i64 [[TMP50]], 0
-// CHECK2-NEXT:    [[DIV117:%.*]] = sdiv i64 [[SUB116]], 1
-// CHECK2-NEXT:    [[MUL118:%.*]] = mul nsw i64 1, [[DIV117]]
-// CHECK2-NEXT:    [[MUL119:%.*]] = mul nsw i64 [[MUL118]], 128
-// CHECK2-NEXT:    [[MUL120:%.*]] = mul nsw i64 [[DIV115]], [[MUL119]]
-// CHECK2-NEXT:    [[SUB121:%.*]] = sub nsw i64 [[SUB93]], [[MUL120]]
-// CHECK2-NEXT:    [[DIV122:%.*]] = sdiv i64 [[SUB121]], 128
-// CHECK2-NEXT:    [[MUL123:%.*]] = mul nsw i64 [[DIV122]], 1
-// CHECK2-NEXT:    [[ADD124:%.*]] = add nsw i64 0, [[MUL123]]
-// CHECK2-NEXT:    store i64 [[ADD124]], ptr [[DOTPERMUTED_1_IV___BEGIN339]], align 8
-// CHECK2-NEXT:    [[TMP51:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP52:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP53:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB125:%.*]] = sub nsw i64 [[TMP53]], 0
+// CHECK2-NEXT:    [[TMP50:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB114:%.*]] = sub nsw i64 [[TMP50]], 0
+// CHECK2-NEXT:    [[DIV115:%.*]] = sdiv i64 [[SUB114]], 1
+// CHECK2-NEXT:    [[MUL116:%.*]] = mul nsw i64 [[MUL113]], [[DIV115]]
+// CHECK2-NEXT:    [[MUL117:%.*]] = mul nsw i64 [[MUL116]], 128
+// CHECK2-NEXT:    [[MUL118:%.*]] = mul nsw i64 [[DIV110]], [[MUL117]]
+// CHECK2-NEXT:    [[SUB119:%.*]] = sub nsw i64 [[TMP45]], [[MUL118]]
+// CHECK2-NEXT:    [[TMP51:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB120:%.*]] = sub nsw i64 [[TMP51]], 0
+// CHECK2-NEXT:    [[DIV121:%.*]] = sdiv i64 [[SUB120]], 1
+// CHECK2-NEXT:    [[MUL122:%.*]] = mul nsw i64 1, [[DIV121]]
+// CHECK2-NEXT:    [[MUL123:%.*]] = mul nsw i64 [[MUL122]], 128
+// CHECK2-NEXT:    [[DIV124:%.*]] = sdiv i64 [[SUB119]], [[MUL123]]
+// CHECK2-NEXT:    [[TMP52:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB125:%.*]] = sub nsw i64 [[TMP52]], 0
 // CHECK2-NEXT:    [[DIV126:%.*]] = sdiv i64 [[SUB125]], 1
 // CHECK2-NEXT:    [[MUL127:%.*]] = mul nsw i64 1, [[DIV126]]
-// CHECK2-NEXT:    [[TMP54:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB128:%.*]] = sub nsw i64 [[TMP54]], 0
-// CHECK2-NEXT:    [[DIV129:%.*]] = sdiv i64 [[SUB128]], 1
-// CHECK2-NEXT:    [[MUL130:%.*]] = mul nsw i64 [[MUL127]], [[DIV129]]
-// CHECK2-NEXT:    [[MUL131:%.*]] = mul nsw i64 [[MUL130]], 128
-// CHECK2-NEXT:    [[DIV132:%.*]] = sdiv i64 [[TMP52]], [[MUL131]]
+// CHECK2-NEXT:    [[MUL128:%.*]] = mul nsw i64 [[MUL127]], 128
+// CHECK2-NEXT:    [[MUL129:%.*]] = mul nsw i64 [[DIV124]], [[MUL128]]
+// CHECK2-NEXT:    [[SUB130:%.*]] = sub nsw i64 [[SUB102]], [[MUL129]]
+// CHECK2-NEXT:    [[DIV131:%.*]] = sdiv i64 [[SUB130]], 128
+// CHECK2-NEXT:    [[MUL132:%.*]] = mul nsw i64 [[DIV131]], 1
+// CHECK2-NEXT:    [[ADD133:%.*]] = add nsw i64 0, [[MUL132]]
+// CHECK2-NEXT:    store i64 [[ADD133]], ptr [[DOTPERMUTED_1_IV___BEGIN344]], align 8
+// CHECK2-NEXT:    [[TMP53:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP54:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP55:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB133:%.*]] = sub nsw i64 [[TMP55]], 0
-// CHECK2-NEXT:    [[DIV134:%.*]] = sdiv i64 [[SUB133]], 1
-// CHECK2-NEXT:    [[MUL135:%.*]] = mul nsw i64 1, [[DIV134]]
-// CHECK2-NEXT:    [[TMP56:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB136:%.*]] = sub nsw i64 [[TMP56]], 0
-// CHECK2-NEXT:    [[DIV137:%.*]] = sdiv i64 [[SUB136]], 1
-// CHECK2-NEXT:    [[MUL138:%.*]] = mul nsw i64 [[MUL135]], [[DIV137]]
-// CHECK2-NEXT:    [[MUL139:%.*]] = mul nsw i64 [[MUL138]], 128
-// CHECK2-NEXT:    [[MUL140:%.*]] = mul nsw i64 [[DIV132]], [[MUL139]]
-// CHECK2-NEXT:    [[SUB141:%.*]] = sub nsw i64 [[TMP51]], [[MUL140]]
-// CHECK2-NEXT:    [[TMP57:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP58:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP59:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB142:%.*]] = sub nsw i64 [[TMP59]], 0
+// CHECK2-NEXT:    [[SUB134:%.*]] = sub nsw i64 [[TMP55]], 0
+// CHECK2-NEXT:    [[DIV135:%.*]] = sdiv i64 [[SUB134]], 1
+// CHECK2-NEXT:    [[MUL136:%.*]] = mul nsw i64 1, [[DIV135]]
+// CHECK2-NEXT:    [[TMP56:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB137:%.*]] = sub nsw i64 [[TMP56]], 0
+// CHECK2-NEXT:    [[DIV138:%.*]] = sdiv i64 [[SUB137]], 1
+// CHECK2-NEXT:    [[MUL139:%.*]] = mul nsw i64 [[MUL136]], [[DIV138]]
+// CHECK2-NEXT:    [[MUL140:%.*]] = mul nsw i64 [[MUL139]], 128
+// CHECK2-NEXT:    [[DIV141:%.*]] = sdiv i64 [[TMP54]], [[MUL140]]
+// CHECK2-NEXT:    [[TMP57:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK2-NEXT:    [[SUB142:%.*]] = sub nsw i64 [[TMP57]], 0
 // CHECK2-NEXT:    [[DIV143:%.*]] = sdiv i64 [[SUB142]], 1
 // CHECK2-NEXT:    [[MUL144:%.*]] = mul nsw i64 1, [[DIV143]]
-// CHECK2-NEXT:    [[TMP60:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB145:%.*]] = sub nsw i64 [[TMP60]], 0
+// CHECK2-NEXT:    [[TMP58:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB145:%.*]] = sub nsw i64 [[TMP58]], 0
 // CHECK2-NEXT:    [[DIV146:%.*]] = sdiv i64 [[SUB145]], 1
 // CHECK2-NEXT:    [[MUL147:%.*]] = mul nsw i64 [[MUL144]], [[DIV146]]
 // CHECK2-NEXT:    [[MUL148:%.*]] = mul nsw i64 [[MUL147]], 128
-// CHECK2-NEXT:    [[DIV149:%.*]] = sdiv i64 [[TMP58]], [[MUL148]]
+// CHECK2-NEXT:    [[MUL149:%.*]] = mul nsw i64 [[DIV141]], [[MUL148]]
+// CHECK2-NEXT:    [[SUB150:%.*]] = sub nsw i64 [[TMP53]], [[MUL149]]
+// CHECK2-NEXT:    [[TMP59:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP60:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP61:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB150:%.*]] = sub nsw i64 [[TMP61]], 0
-// CHECK2-NEXT:    [[DIV151:%.*]] = sdiv i64 [[SUB150]], 1
-// CHECK2-NEXT:    [[MUL152:%.*]] = mul nsw i64 1, [[DIV151]]
-// CHECK2-NEXT:    [[TMP62:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB153:%.*]] = sub nsw i64 [[TMP62]], 0
-// CHECK2-NEXT:    [[DIV154:%.*]] = sdiv i64 [[SUB153]], 1
-// CHECK2-NEXT:    [[MUL155:%.*]] = mul nsw i64 [[MUL152]], [[DIV154]]
-// CHECK2-NEXT:    [[MUL156:%.*]] = mul nsw i64 [[MUL155]], 128
-// CHECK2-NEXT:    [[MUL157:%.*]] = mul nsw i64 [[DIV149]], [[MUL156]]
-// CHECK2-NEXT:    [[SUB158:%.*]] = sub nsw i64 [[TMP57]], [[MUL157]]
-// CHECK2-NEXT:    [[TMP63:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
+// CHECK2-NEXT:    [[SUB151:%.*]] = sub nsw i64 [[TMP61]], 0
+// CHECK2-NEXT:    [[DIV152:%.*]] = sdiv i64 [[SUB151]], 1
+// CHECK2-NEXT:    [[MUL153:%.*]] = mul nsw i64 1, [[DIV152]]
+// CHECK2-NEXT:    [[TMP62:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB154:%.*]] = sub nsw i64 [[TMP62]], 0
+// CHECK2-NEXT:    [[DIV155:%.*]] = sdiv i64 [[SUB154]], 1
+// CHECK2-NEXT:    [[MUL156:%.*]] = mul nsw i64 [[MUL153]], [[DIV155]]
+// CHECK2-NEXT:    [[MUL157:%.*]] = mul nsw i64 [[MUL156]], 128
+// CHECK2-NEXT:    [[DIV158:%.*]] = sdiv i64 [[TMP60]], [[MUL157]]
+// CHECK2-NEXT:    [[TMP63:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
 // CHECK2-NEXT:    [[SUB159:%.*]] = sub nsw i64 [[TMP63]], 0
 // CHECK2-NEXT:    [[DIV160:%.*]] = sdiv i64 [[SUB159]], 1
 // CHECK2-NEXT:    [[MUL161:%.*]] = mul nsw i64 1, [[DIV160]]
-// CHECK2-NEXT:    [[MUL162:%.*]] = mul nsw i64 [[MUL161]], 128
-// CHECK2-NEXT:    [[DIV163:%.*]] = sdiv i64 [[SUB158]], [[MUL162]]
-// CHECK2-NEXT:    [[TMP64:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB164:%.*]] = sub nsw i64 [[TMP64]], 0
-// CHECK2-NEXT:    [[DIV165:%.*]] = sdiv i64 [[SUB164]], 1
-// CHECK2-NEXT:    [[MUL166:%.*]] = mul nsw i64 1, [[DIV165]]
-// CHECK2-NEXT:    [[MUL167:%.*]] = mul nsw i64 [[MUL166]], 128
-// CHECK2-NEXT:    [[MUL168:%.*]] = mul nsw i64 [[DIV163]], [[MUL167]]
-// CHECK2-NEXT:    [[SUB169:%.*]] = sub nsw i64 [[SUB141]], [[MUL168]]
-// CHECK2-NEXT:    [[TMP65:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP66:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP67:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB170:%.*]] = sub nsw i64 [[TMP67]], 0
-// CHECK2-NEXT:    [[DIV171:%.*]] = sdiv i64 [[SUB170]], 1
-// CHECK2-NEXT:    [[MUL172:%.*]] = mul nsw i64 1, [[DIV171]]
-// CHECK2-NEXT:    [[TMP68:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB173:%.*]] = sub nsw i64 [[TMP68]], 0
+// CHECK2-NEXT:    [[TMP64:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB162:%.*]] = sub nsw i64 [[TMP64]], 0
+// CHECK2-NEXT:    [[DIV163:%.*]] = sdiv i64 [[SUB162]], 1
+// CHECK2-NEXT:    [[MUL164:%.*]] = mul nsw i64 [[MUL161]], [[DIV163]]
+// CHECK2-NEXT:    [[MUL165:%.*]] = mul nsw i64 [[MUL164]], 128
+// CHECK2-NEXT:    [[MUL166:%.*]] = mul nsw i64 [[DIV158]], [[MUL165]]
+// CHECK2-NEXT:    [[SUB167:%.*]] = sub nsw i64 [[TMP59]], [[MUL166]]
+// CHECK2-NEXT:    [[TMP65:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB168:%.*]] = sub nsw i64 [[TMP65]], 0
+// CHECK2-NEXT:    [[DIV169:%.*]] = sdiv i64 [[SUB168]], 1
+// CHECK2-NEXT:    [[MUL170:%.*]] = mul nsw i64 1, [[DIV169]]
+// CHECK2-NEXT:    [[MUL171:%.*]] = mul nsw i64 [[MUL170]], 128
+// CHECK2-NEXT:    [[DIV172:%.*]] = sdiv i64 [[SUB167]], [[MUL171]]
+// CHECK2-NEXT:    [[TMP66:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB173:%.*]] = sub nsw i64 [[TMP66]], 0
 // CHECK2-NEXT:    [[DIV174:%.*]] = sdiv i64 [[SUB173]], 1
-// CHECK2-NEXT:    [[MUL175:%.*]] = mul nsw i64 [[MUL172]], [[DIV174]]
+// CHECK2-NEXT:    [[MUL175:%.*]] = mul nsw i64 1, [[DIV174]]
 // CHECK2-NEXT:    [[MUL176:%.*]] = mul nsw i64 [[MUL175]], 128
-// CHECK2-NEXT:    [[DIV177:%.*]] = sdiv i64 [[TMP66]], [[MUL176]]
+// CHECK2-NEXT:    [[MUL177:%.*]] = mul nsw i64 [[DIV172]], [[MUL176]]
+// CHECK2-NEXT:    [[SUB178:%.*]] = sub nsw i64 [[SUB150]], [[MUL177]]
+// CHECK2-NEXT:    [[TMP67:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP68:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP69:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB178:%.*]] = sub nsw i64 [[TMP69]], 0
-// CHECK2-NEXT:    [[DIV179:%.*]] = sdiv i64 [[SUB178]], 1
-// CHECK2-NEXT:    [[MUL180:%.*]] = mul nsw i64 1, [[DIV179]]
-// CHECK2-NEXT:    [[TMP70:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB181:%.*]] = sub nsw i64 [[TMP70]], 0
-// CHECK2-NEXT:    [[DIV182:%.*]] = sdiv i64 [[SUB181]], 1
-// CHECK2-NEXT:    [[MUL183:%.*]] = mul nsw i64 [[MUL180]], [[DIV182]]
-// CHECK2-NEXT:    [[MUL184:%.*]] = mul nsw i64 [[MUL183]], 128
-// CHECK2-NEXT:    [[MUL185:%.*]] = mul nsw i64 [[DIV177]], [[MUL184]]
-// CHECK2-NEXT:    [[SUB186:%.*]] = sub nsw i64 [[TMP65]], [[MUL185]]
-// CHECK2-NEXT:    [[TMP71:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP72:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[TMP73:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB187:%.*]] = sub nsw i64 [[TMP73]], 0
+// CHECK2-NEXT:    [[SUB179:%.*]] = sub nsw i64 [[TMP69]], 0
+// CHECK2-NEXT:    [[DIV180:%.*]] = sdiv i64 [[SUB179]], 1
+// CHECK2-NEXT:    [[MUL181:%.*]] = mul nsw i64 1, [[DIV180]]
+// CHECK2-NEXT:    [[TMP70:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB182:%.*]] = sub nsw i64 [[TMP70]], 0
+// CHECK2-NEXT:    [[DIV183:%.*]] = sdiv i64 [[SUB182]], 1
+// CHECK2-NEXT:    [[MUL184:%.*]] = mul nsw i64 [[MUL181]], [[DIV183]]
+// CHECK2-NEXT:    [[MUL185:%.*]] = mul nsw i64 [[MUL184]], 128
+// CHECK2-NEXT:    [[DIV186:%.*]] = sdiv i64 [[TMP68]], [[MUL185]]
+// CHECK2-NEXT:    [[TMP71:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
+// CHECK2-NEXT:    [[SUB187:%.*]] = sub nsw i64 [[TMP71]], 0
 // CHECK2-NEXT:    [[DIV188:%.*]] = sdiv i64 [[SUB187]], 1
 // CHECK2-NEXT:    [[MUL189:%.*]] = mul nsw i64 1, [[DIV188]]
-// CHECK2-NEXT:    [[TMP74:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB190:%.*]] = sub nsw i64 [[TMP74]], 0
+// CHECK2-NEXT:    [[TMP72:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB190:%.*]] = sub nsw i64 [[TMP72]], 0
 // CHECK2-NEXT:    [[DIV191:%.*]] = sdiv i64 [[SUB190]], 1
 // CHECK2-NEXT:    [[MUL192:%.*]] = mul nsw i64 [[MUL189]], [[DIV191]]
 // CHECK2-NEXT:    [[MUL193:%.*]] = mul nsw i64 [[MUL192]], 128
-// CHECK2-NEXT:    [[DIV194:%.*]] = sdiv i64 [[TMP72]], [[MUL193]]
+// CHECK2-NEXT:    [[MUL194:%.*]] = mul nsw i64 [[DIV186]], [[MUL193]]
+// CHECK2-NEXT:    [[SUB195:%.*]] = sub nsw i64 [[TMP67]], [[MUL194]]
+// CHECK2-NEXT:    [[TMP73:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP74:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    [[TMP75:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
-// CHECK2-NEXT:    [[SUB195:%.*]] = sub nsw i64 [[TMP75]], 0
-// CHECK2-NEXT:    [[DIV196:%.*]] = sdiv i64 [[SUB195]], 1
-// CHECK2-NEXT:    [[MUL197:%.*]] = mul nsw i64 1, [[DIV196]]
-// CHECK2-NEXT:    [[TMP76:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB198:%.*]] = sub nsw i64 [[TMP76]], 0
-// CHECK2-NEXT:    [[DIV199:%.*]] = sdiv i64 [[SUB198]], 1
-// CHECK2-NEXT:    [[MUL200:%.*]] = mul nsw i64 [[MUL197]], [[DIV199]]
-// CHECK2-NEXT:    [[MUL201:%.*]] = mul nsw i64 [[MUL200]], 128
-// CHECK2-NEXT:    [[MUL202:%.*]] = mul nsw i64 [[DIV194]], [[MUL201]]
-// CHECK2-NEXT:    [[SUB203:%.*]] = sub nsw i64 [[TMP71]], [[MUL202]]
-// CHECK2-NEXT:    [[TMP77:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
+// CHECK2-NEXT:    [[SUB196:%.*]] = sub nsw i64 [[TMP75]], 0
+// CHECK2-NEXT:    [[DIV197:%.*]] = sdiv i64 [[SUB196]], 1
+// CHECK2-NEXT:    [[MUL198:%.*]] = mul nsw i64 1, [[DIV197]]
+// CHECK2-NEXT:    [[TMP76:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB199:%.*]] = sub nsw i64 [[TMP76]], 0
+// CHECK2-NEXT:    [[DIV200:%.*]] = sdiv i64 [[SUB199]], 1
+// CHECK2-NEXT:    [[MUL201:%.*]] = mul nsw i64 [[MUL198]], [[DIV200]]
+// CHECK2-NEXT:    [[MUL202:%.*]] = mul nsw i64 [[MUL201]], 128
+// CHECK2-NEXT:    [[DIV203:%.*]] = sdiv i64 [[TMP74]], [[MUL202]]
+// CHECK2-NEXT:    [[TMP77:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_24]], align 8
 // CHECK2-NEXT:    [[SUB204:%.*]] = sub nsw i64 [[TMP77]], 0
 // CHECK2-NEXT:    [[DIV205:%.*]] = sdiv i64 [[SUB204]], 1
 // CHECK2-NEXT:    [[MUL206:%.*]] = mul nsw i64 1, [[DIV205]]
-// CHECK2-NEXT:    [[MUL207:%.*]] = mul nsw i64 [[MUL206]], 128
-// CHECK2-NEXT:    [[DIV208:%.*]] = sdiv i64 [[SUB203]], [[MUL207]]
-// CHECK2-NEXT:    [[TMP78:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_26]], align 8
-// CHECK2-NEXT:    [[SUB209:%.*]] = sub nsw i64 [[TMP78]], 0
-// CHECK2-NEXT:    [[DIV210:%.*]] = sdiv i64 [[SUB209]], 1
-// CHECK2-NEXT:    [[MUL211:%.*]] = mul nsw i64 1, [[DIV210]]
-// CHECK2-NEXT:    [[MUL212:%.*]] = mul nsw i64 [[MUL211]], 128
-// CHECK2-NEXT:    [[MUL213:%.*]] = mul nsw i64 [[DIV208]], [[MUL212]]
-// CHECK2-NEXT:    [[SUB214:%.*]] = sub nsw i64 [[SUB186]], [[MUL213]]
-// CHECK2-NEXT:    [[DIV215:%.*]] = sdiv i64 [[SUB214]], 128
-// CHECK2-NEXT:    [[MUL216:%.*]] = mul nsw i64 [[DIV215]], 128
-// CHECK2-NEXT:    [[SUB217:%.*]] = sub nsw i64 [[SUB169]], [[MUL216]]
-// CHECK2-NEXT:    [[MUL218:%.*]] = mul nsw i64 [[SUB217]], 1
-// CHECK2-NEXT:    [[ADD219:%.*]] = add nsw i64 0, [[MUL218]]
-// CHECK2-NEXT:    [[CONV220:%.*]] = trunc i64 [[ADD219]] to i32
-// CHECK2-NEXT:    store i32 [[CONV220]], ptr [[J40]], align 4
-// CHECK2-NEXT:    [[TMP79:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_12]], align 8
-// CHECK2-NEXT:    [[TMP80:%.*]] = load i64, ptr [[DOTPERMUTED_0_IV___BEGIN438]], align 8
-// CHECK2-NEXT:    [[MUL221:%.*]] = mul nsw i64 [[TMP80]], 1
-// CHECK2-NEXT:    [[ADD_PTR222:%.*]] = getelementptr inbounds double, ptr [[TMP79]], i64 [[MUL221]]
-// CHECK2-NEXT:    store ptr [[ADD_PTR222]], ptr [[__BEGIN4]], align 8
-// CHECK2-NEXT:    [[TMP81:%.*]] = load ptr, ptr [[__BEGIN4]], align 8
-// CHECK2-NEXT:    store ptr [[TMP81]], ptr [[BB]], align 8
-// CHECK2-NEXT:    [[TMP82:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK2-NEXT:    [[TMP83:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN339]], align 8
-// CHECK2-NEXT:    [[MUL223:%.*]] = mul nsw i64 [[TMP83]], 1
-// CHECK2-NEXT:    [[ADD_PTR224:%.*]] = getelementptr inbounds double, ptr [[TMP82]], i64 [[MUL223]]
-// CHECK2-NEXT:    store ptr [[ADD_PTR224]], ptr [[__BEGIN3]], align 8
-// CHECK2-NEXT:    [[TMP84:%.*]] = load ptr, ptr [[__BEGIN3]], align 8
-// CHECK2-NEXT:    [[TMP85:%.*]] = load double, ptr [[TMP84]], align 8
-// CHECK2-NEXT:    store double [[TMP85]], ptr [[AA]], align 8
-// CHECK2-NEXT:    [[TMP86:%.*]] = load i32, ptr [[I37]], align 4
-// CHECK2-NEXT:    [[TMP87:%.*]] = load double, ptr [[C]], align 8
-// CHECK2-NEXT:    [[TMP88:%.*]] = load double, ptr [[AA]], align 8
-// CHECK2-NEXT:    [[TMP89:%.*]] = load double, ptr [[D]], align 8
-// CHECK2-NEXT:    [[TMP90:%.*]] = load ptr, ptr [[BB]], align 8, !nonnull [[META4]], !align [[META5]]
-// CHECK2-NEXT:    [[TMP91:%.*]] = load double, ptr [[TMP90]], align 8
-// CHECK2-NEXT:    [[TMP92:%.*]] = load i32, ptr [[J40]], align 4
-// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP86]], double noundef [[TMP87]], double noundef [[TMP88]], double noundef [[TMP89]], double noundef [[TMP91]], i32 noundef [[TMP92]])
+// CHECK2-NEXT:    [[TMP78:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB207:%.*]] = sub nsw i64 [[TMP78]], 0
+// CHECK2-NEXT:    [[DIV208:%.*]] = sdiv i64 [[SUB207]], 1
+// CHECK2-NEXT:    [[MUL209:%.*]] = mul nsw i64 [[MUL206]], [[DIV208]]
+// CHECK2-NEXT:    [[MUL210:%.*]] = mul nsw i64 [[MUL209]], 128
+// CHECK2-NEXT:    [[MUL211:%.*]] = mul nsw i64 [[DIV203]], [[MUL210]]
+// CHECK2-NEXT:    [[SUB212:%.*]] = sub nsw i64 [[TMP73]], [[MUL211]]
+// CHECK2-NEXT:    [[TMP79:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB213:%.*]] = sub nsw i64 [[TMP79]], 0
+// CHECK2-NEXT:    [[DIV214:%.*]] = sdiv i64 [[SUB213]], 1
+// CHECK2-NEXT:    [[MUL215:%.*]] = mul nsw i64 1, [[DIV214]]
+// CHECK2-NEXT:    [[MUL216:%.*]] = mul nsw i64 [[MUL215]], 128
+// CHECK2-NEXT:    [[DIV217:%.*]] = sdiv i64 [[SUB212]], [[MUL216]]
+// CHECK2-NEXT:    [[TMP80:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_29]], align 8
+// CHECK2-NEXT:    [[SUB218:%.*]] = sub nsw i64 [[TMP80]], 0
+// CHECK2-NEXT:    [[DIV219:%.*]] = sdiv i64 [[SUB218]], 1
+// CHECK2-NEXT:    [[MUL220:%.*]] = mul nsw i64 1, [[DIV219]]
+// CHECK2-NEXT:    [[MUL221:%.*]] = mul nsw i64 [[MUL220]], 128
+// CHECK2-NEXT:    [[MUL222:%.*]] = mul nsw i64 [[DIV217]], [[MUL221]]
+// CHECK2-NEXT:    [[SUB223:%.*]] = sub nsw i64 [[SUB195]], [[MUL222]]
+// CHECK2-NEXT:    [[DIV224:%.*]] = sdiv i64 [[SUB223]], 128
+// CHECK2-NEXT:    [[MUL225:%.*]] = mul nsw i64 [[DIV224]], 128
+// CHECK2-NEXT:    [[SUB226:%.*]] = sub nsw i64 [[SUB178]], [[MUL225]]
+// CHECK2-NEXT:    [[MUL227:%.*]] = mul nsw i64 [[SUB226]], 1
+// CHECK2-NEXT:    [[ADD228:%.*]] = add nsw i64 0, [[MUL227]]
+// CHECK2-NEXT:    [[CONV229:%.*]] = trunc i64 [[ADD228]] to i32
+// CHECK2-NEXT:    store i32 [[CONV229]], ptr [[J45]], align 4
+// CHECK2-NEXT:    [[TMP81:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_12]], align 8
+// CHECK2-NEXT:    [[TMP82:%.*]] = load i64, ptr [[DOTPERMUTED_0_IV___BEGIN443]], align 8
+// CHECK2-NEXT:    [[MUL230:%.*]] = mul nsw i64 [[TMP82]], 1
+// CHECK2-NEXT:    [[ADD_PTR231:%.*]] = getelementptr inbounds double, ptr [[TMP81]], i64 [[MUL230]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR231]], ptr [[__BEGIN4]], align 8
+// CHECK2-NEXT:    [[TMP83:%.*]] = load ptr, ptr [[__BEGIN4]], align 8
+// CHECK2-NEXT:    store ptr [[TMP83]], ptr [[BB]], align 8
+// CHECK2-NEXT:    [[TMP84:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK2-NEXT:    [[TMP85:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN344]], align 8
+// CHECK2-NEXT:    [[MUL232:%.*]] = mul nsw i64 [[TMP85]], 1
+// CHECK2-NEXT:    [[ADD_PTR233:%.*]] = getelementptr inbounds double, ptr [[TMP84]], i64 [[MUL232]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR233]], ptr [[__BEGIN3]], align 8
+// CHECK2-NEXT:    [[TMP86:%.*]] = load ptr, ptr [[__BEGIN3]], align 8
+// CHECK2-NEXT:    [[TMP87:%.*]] = load double, ptr [[TMP86]], align 8
+// CHECK2-NEXT:    store double [[TMP87]], ptr [[AA]], align 8
+// CHECK2-NEXT:    [[TMP88:%.*]] = load i32, ptr [[I42]], align 4
+// CHECK2-NEXT:    [[TMP89:%.*]] = load double, ptr [[C]], align 8
+// CHECK2-NEXT:    [[TMP90:%.*]] = load double, ptr [[AA]], align 8
+// CHECK2-NEXT:    [[TMP91:%.*]] = load double, ptr [[D]], align 8
+// CHECK2-NEXT:    [[TMP92:%.*]] = load ptr, ptr [[BB]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK2-NEXT:    [[TMP93:%.*]] = load double, ptr [[TMP92]], align 8
+// CHECK2-NEXT:    [[TMP94:%.*]] = load i32, ptr [[J45]], align 4
+// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP88]], double noundef [[TMP89]], double noundef [[TMP90]], double noundef [[TMP91]], double noundef [[TMP93]], i32 noundef [[TMP94]])
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
-// CHECK2-NEXT:    [[TMP93:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[ADD225:%.*]] = add nsw i64 [[TMP93]], 1
-// CHECK2-NEXT:    store i64 [[ADD225]], ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP95:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[ADD234:%.*]] = add nsw i64 [[TMP95]], 1
+// CHECK2-NEXT:    store i64 [[ADD234]], ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -2906,49 +2961,64 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK2:       for.cond:
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
-// CHECK2-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_8]], align 4
+// CHECK2-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
 // CHECK2-NEXT:    [[ADD14:%.*]] = add i32 [[TMP17]], 1
-// CHECK2-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP16]], [[ADD14]]
-// CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END24:%.*]]
+// CHECK2-NEXT:    [[CMP:%.*]] = icmp ne i32 [[ADD14]], 0
+// CHECK2-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// CHECK2:       land.lhs.true:
+// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_8]], align 4
+// CHECK2-NEXT:    [[ADD15:%.*]] = add i32 [[TMP18]], 1
+// CHECK2-NEXT:    [[CMP16:%.*]] = icmp ne i32 [[ADD15]], 0
+// CHECK2-NEXT:    br i1 [[CMP16]], label [[COND_TRUE:%.*]], label [[COND_FALSE]]
+// CHECK2:       cond.true:
+// CHECK2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_8]], align 4
+// CHECK2-NEXT:    [[ADD17:%.*]] = add i32 [[TMP19]], 1
+// CHECK2-NEXT:    br label [[COND_END:%.*]]
+// CHECK2:       cond.false:
+// CHECK2-NEXT:    br label [[COND_END]]
+// CHECK2:       cond.end:
+// CHECK2-NEXT:    [[COND:%.*]] = phi i32 [ [[ADD17]], [[COND_TRUE]] ], [ 0, [[COND_FALSE]] ]
+// CHECK2-NEXT:    [[CMP18:%.*]] = icmp ult i32 [[TMP16]], [[COND]]
+// CHECK2-NEXT:    br i1 [[CMP18]], label [[FOR_BODY:%.*]], label [[FOR_END28:%.*]]
 // CHECK2:       for.body:
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
-// CHECK2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
-// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
-// CHECK2-NEXT:    [[MUL:%.*]] = mul i32 [[TMP19]], [[TMP20]]
-// CHECK2-NEXT:    [[ADD15:%.*]] = add i32 [[TMP18]], [[MUL]]
-// CHECK2-NEXT:    store i32 [[ADD15]], ptr [[J]], align 4
+// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_5]], align 4
+// CHECK2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
+// CHECK2-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTNEW_STEP7]], align 4
+// CHECK2-NEXT:    [[MUL:%.*]] = mul i32 [[TMP21]], [[TMP22]]
+// CHECK2-NEXT:    [[ADD19:%.*]] = add i32 [[TMP20]], [[MUL]]
+// CHECK2-NEXT:    store i32 [[ADD19]], ptr [[J]], align 4
 // CHECK2-NEXT:    store i32 0, ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK2-NEXT:    br label [[FOR_COND16:%.*]]
-// CHECK2:       for.cond16:
-// CHECK2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK2-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
-// CHECK2-NEXT:    [[ADD17:%.*]] = add i32 [[TMP22]], 1
-// CHECK2-NEXT:    [[CMP18:%.*]] = icmp ult i32 [[TMP21]], [[ADD17]]
-// CHECK2-NEXT:    br i1 [[CMP18]], label [[FOR_BODY19:%.*]], label [[FOR_END:%.*]]
-// CHECK2:       for.body19:
-// CHECK2-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK2-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK2-NEXT:    [[MUL20:%.*]] = mul i32 [[TMP24]], [[TMP25]]
-// CHECK2-NEXT:    [[ADD21:%.*]] = add i32 [[TMP23]], [[MUL20]]
-// CHECK2-NEXT:    store i32 [[ADD21]], ptr [[I]], align 4
-// CHECK2-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I]], align 4
-// CHECK2-NEXT:    [[TMP27:%.*]] = load i32, ptr [[J]], align 4
-// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP26]], i32 noundef [[TMP27]])
+// CHECK2-NEXT:    br label [[FOR_COND20:%.*]]
+// CHECK2:       for.cond20:
+// CHECK2-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
+// CHECK2-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
+// CHECK2-NEXT:    [[ADD21:%.*]] = add i32 [[TMP24]], 1
+// CHECK2-NEXT:    [[CMP22:%.*]] = icmp ult i32 [[TMP23]], [[ADD21]]
+// CHECK2-NEXT:    br i1 [[CMP22]], label [[FOR_BODY23:%.*]], label [[FOR_END:%.*]]
+// CHECK2:       for.body23:
+// CHECK2-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
+// CHECK2-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
+// CHECK2-NEXT:    [[MUL24:%.*]] = mul i32 [[TMP26]], [[TMP27]]
+// CHECK2-NEXT:    [[ADD25:%.*]] = add i32 [[TMP25]], [[MUL24]]
+// CHECK2-NEXT:    store i32 [[ADD25]], ptr [[I]], align 4
+// CHECK2-NEXT:    [[TMP28:%.*]] = load i32, ptr [[I]], align 4
+// CHECK2-NEXT:    [[TMP29:%.*]] = load i32, ptr [[J]], align 4
+// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP28]], i32 noundef [[TMP29]])
 // CHECK2-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK2:       for.inc:
-// CHECK2-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK2-NEXT:    [[INC:%.*]] = add i32 [[TMP28]], 1
+// CHECK2-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTPERMUTED_1_IV_I]], align 4
+// CHECK2-NEXT:    [[INC:%.*]] = add i32 [[TMP30]], 1
 // CHECK2-NEXT:    store i32 [[INC]], ptr [[DOTPERMUTED_1_IV_I]], align 4
-// CHECK2-NEXT:    br label [[FOR_COND16]], !llvm.loop [[LOOP6:![0-9]+]]
+// CHECK2-NEXT:    br label [[FOR_COND20]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK2:       for.end:
-// CHECK2-NEXT:    br label [[FOR_INC22:%.*]]
-// CHECK2:       for.inc22:
-// CHECK2-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
-// CHECK2-NEXT:    [[INC23:%.*]] = add i32 [[TMP29]], 1
-// CHECK2-NEXT:    store i32 [[INC23]], ptr [[DOTPERMUTED_0_IV_J]], align 4
+// CHECK2-NEXT:    br label [[FOR_INC26:%.*]]
+// CHECK2:       for.inc26:
+// CHECK2-NEXT:    [[TMP31:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_J]], align 4
+// CHECK2-NEXT:    [[INC27:%.*]] = add i32 [[TMP31]], 1
+// CHECK2-NEXT:    store i32 [[INC27]], ptr [[DOTPERMUTED_0_IV_J]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
-// CHECK2:       for.end24:
+// CHECK2:       for.end28:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -3503,48 +3573,58 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK2:       for.cond:
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
-// CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP6]], 21
-// CHECK2-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END15:%.*]]
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_4]], align 8
+// CHECK2-NEXT:    [[ADD6:%.*]] = add nsw i64 [[TMP7]], 1
+// CHECK2-NEXT:    [[CMP:%.*]] = icmp ne i64 [[ADD6]], 0
+// CHECK2-NEXT:    br i1 [[CMP]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
+// CHECK2:       land.rhs:
+// CHECK2-NEXT:    br label [[LAND_END]]
+// CHECK2:       land.end:
+// CHECK2-NEXT:    [[TMP8:%.*]] = phi i1 [ false, [[FOR_COND]] ], [ true, [[LAND_RHS]] ]
+// CHECK2-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP8]] to i64
+// CHECK2-NEXT:    [[COND:%.*]] = select i1 [[TMP8]], i32 21, i32 0
+// CHECK2-NEXT:    [[CMP7:%.*]] = icmp slt i32 [[TMP6]], [[COND]]
+// CHECK2-NEXT:    br i1 [[CMP7]], label [[FOR_BODY:%.*]], label [[FOR_END17:%.*]]
 // CHECK2:       for.body:
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
-// CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP7]], 2
-// CHECK2-NEXT:    [[ADD6:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK2-NEXT:    store i32 [[ADD6]], ptr [[I]], align 4
+// CHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
+// CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP10]], 2
+// CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i32 0, [[MUL]]
+// CHECK2-NEXT:    store i32 [[ADD8]], ptr [[I]], align 4
 // CHECK2-NEXT:    store i64 0, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK2-NEXT:    br label [[FOR_COND7:%.*]]
-// CHECK2:       for.cond7:
-// CHECK2-NEXT:    [[TMP8:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_4]], align 8
-// CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i64 [[TMP9]], 1
-// CHECK2-NEXT:    [[CMP9:%.*]] = icmp slt i64 [[TMP8]], [[ADD8]]
-// CHECK2-NEXT:    br i1 [[CMP9]], label [[FOR_BODY10:%.*]], label [[FOR_END:%.*]]
-// CHECK2:       for.body10:
-// CHECK2-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK2-NEXT:    br label [[FOR_COND9:%.*]]
+// CHECK2:       for.cond9:
 // CHECK2-NEXT:    [[TMP11:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK2-NEXT:    [[MUL11:%.*]] = mul nsw i64 [[TMP11]], 1
-// CHECK2-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds double, ptr [[TMP10]], i64 [[MUL11]]
-// CHECK2-NEXT:    store ptr [[ADD_PTR12]], ptr [[__BEGIN2]], align 8
-// CHECK2-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[__BEGIN2]], align 8
-// CHECK2-NEXT:    store ptr [[TMP12]], ptr [[V]], align 8
-// CHECK2-NEXT:    [[TMP13:%.*]] = load double, ptr [[C]], align 8
-// CHECK2-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[V]], align 8, !nonnull [[META4]], !align [[META5]]
-// CHECK2-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP14]], align 8
-// CHECK2-NEXT:    [[TMP16:%.*]] = load i32, ptr [[I]], align 4
-// CHECK2-NEXT:    call void (...) @body(double noundef [[TMP13]], double noundef [[TMP15]], i32 noundef [[TMP16]])
+// CHECK2-NEXT:    [[TMP12:%.*]] = load i64, ptr [[DOTCAPTURE_EXPR_4]], align 8
+// CHECK2-NEXT:    [[ADD10:%.*]] = add nsw i64 [[TMP12]], 1
+// CHECK2-NEXT:    [[CMP11:%.*]] = icmp slt i64 [[TMP11]], [[ADD10]]
+// CHECK2-NEXT:    br i1 [[CMP11]], label [[FOR_BODY12:%.*]], label [[FOR_END:%.*]]
+// CHECK2:       for.body12:
+// CHECK2-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK2-NEXT:    [[TMP14:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
+// CHECK2-NEXT:    [[MUL13:%.*]] = mul nsw i64 [[TMP14]], 1
+// CHECK2-NEXT:    [[ADD_PTR14:%.*]] = getelementptr inbounds double, ptr [[TMP13]], i64 [[MUL13]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR14]], ptr [[__BEGIN2]], align 8
+// CHECK2-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[__BEGIN2]], align 8
+// CHECK2-NEXT:    store ptr [[TMP15]], ptr [[V]], align 8
+// CHECK2-NEXT:    [[TMP16:%.*]] = load double, ptr [[C]], align 8
+// CHECK2-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[V]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK2-NEXT:    [[TMP18:%.*]] = load double, ptr [[TMP17]], align 8
+// CHECK2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[I]], align 4
+// CHECK2-NEXT:    call void (...) @body(double noundef [[TMP16]], double noundef [[TMP18]], i32 noundef [[TMP19]])
 // CHECK2-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK2:       for.inc:
-// CHECK2-NEXT:    [[TMP17:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK2-NEXT:    [[INC:%.*]] = add nsw i64 [[TMP17]], 1
+// CHECK2-NEXT:    [[TMP20:%.*]] = load i64, ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
+// CHECK2-NEXT:    [[INC:%.*]] = add nsw i64 [[TMP20]], 1
 // CHECK2-NEXT:    store i64 [[INC]], ptr [[DOTPERMUTED_1_IV___BEGIN2]], align 8
-// CHECK2-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP14:![0-9]+]]
+// CHECK2-NEXT:    br label [[FOR_COND9]], !llvm.loop [[LOOP14:![0-9]+]]
 // CHECK2:       for.end:
-// CHECK2-NEXT:    br label [[FOR_INC13:%.*]]
-// CHECK2:       for.inc13:
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
-// CHECK2-NEXT:    [[INC14:%.*]] = add nsw i32 [[TMP18]], 1
-// CHECK2-NEXT:    store i32 [[INC14]], ptr [[DOTPERMUTED_0_IV_I]], align 4
+// CHECK2-NEXT:    br label [[FOR_INC15:%.*]]
+// CHECK2:       for.inc15:
+// CHECK2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTPERMUTED_0_IV_I]], align 4
+// CHECK2-NEXT:    [[INC16:%.*]] = add nsw i32 [[TMP21]], 1
+// CHECK2-NEXT:    store i32 [[INC16]], ptr [[DOTPERMUTED_0_IV_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP15:![0-9]+]]
-// CHECK2:       for.end15:
+// CHECK2:       for.end17:
 // CHECK2-NEXT:    ret void
 //
 //

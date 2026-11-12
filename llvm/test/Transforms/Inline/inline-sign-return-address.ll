@@ -21,6 +21,10 @@ define internal void @foo_bkey() #4 {
   ret void
 }
 
+define internal void @foo_harden() #5 {
+  ret void
+}
+
 define dso_local void @bar_all() #0 {
 ; CHECK-LABEL: bar_all
 ; CHECK-NOT:     call void @foo_all()
@@ -28,11 +32,13 @@ define dso_local void @bar_all() #0 {
 ; CHECK-NEXT:    call void @foo_none()
 ; CHECK-NEXT:    call void @foo_lr()
 ; CHECK-NEXT:    call void @foo_bkey()
+; CHECK-NEXT:    call void @foo_harden()
   call void @foo_all()
   call void @foo_nonleaf()
   call void @foo_none()
   call void @foo_lr()
   call void @foo_bkey()
+  call void @foo_harden()
   ret void
 }
 
@@ -43,11 +49,13 @@ define dso_local void @bar_nonleaf() #1 {
 ; CHECK-NEXT:    call void @foo_none()
 ; CHECK-NEXT:    call void @foo_lr()
 ; CHECK-NEXT:    call void @foo_bkey()
+; CHECK-NEXT:    call void @foo_harden()
   call void @foo_all()
   call void @foo_nonleaf()
   call void @foo_none()
   call void @foo_lr()
   call void @foo_bkey()
+  call void @foo_harden()
   ret void
 }
 
@@ -58,11 +66,13 @@ define dso_local void @bar_none()  {
 ; CHECK-NOT:     call void @foo_none()
 ; CHECK-NEXT:    call void @foo_lr()
 ; CHECK-NEXT:    call void @foo_bkey()
+; CHECK-NEXT:    call void @foo_harden()
   call void @foo_all()
   call void @foo_nonleaf()
   call void @foo_none()
   call void @foo_lr()
   call void @foo_bkey()
+  call void @foo_harden()
   ret void
 }
 
@@ -73,11 +83,13 @@ define dso_local void @bar_lr() #3 {
 ; CHECK-NEXT:    call void @foo_none()
 ; CHECK-NOT:     call void @foo_lr()
 ; CHECK-NEXT:    call void @foo_bkey()
+; CHECK-NEXT:    call void @foo_harden()
   call void @foo_all()
   call void @foo_nonleaf()
   call void @foo_none()
   call void @foo_lr()
   call void @foo_bkey()
+  call void @foo_harden()
   ret void
 }
 
@@ -88,11 +100,30 @@ define dso_local void @bar_bkey() #4 {
 ; CHECK-NEXT:    call void @foo_none()
 ; CHECK-NEXT:    call void @foo_lr()
 ; CHECK-NOT:     call void @foo_bkey()
+; CHECK-NEXT:    call void @foo_harden()
   call void @foo_all()
   call void @foo_nonleaf()
   call void @foo_none()
   call void @foo_lr()
   call void @foo_bkey()
+  call void @foo_harden()
+  ret void
+}
+
+define dso_local void @bar_harden() #5 {
+; CHECK-LABEL: bar_harden
+; CHECK-NEXT:    call void @foo_all()
+; CHECK-NEXT:    call void @foo_nonleaf()
+; CHECK-NEXT:    call void @foo_none()
+; CHECK-NEXT:    call void @foo_lr()
+; CHECK-NEXT:    call void @foo_bkey()
+; CHECK-NOT:     call void @foo_harden()
+  call void @foo_all()
+  call void @foo_nonleaf()
+  call void @foo_none()
+  call void @foo_lr()
+  call void @foo_bkey()
+  call void @foo_harden()
   ret void
 }
 
@@ -101,3 +132,4 @@ attributes #0 = { "sign-return-address"="all" }
 attributes #1 = { "sign-return-address"="non-leaf" }
 attributes #3 = { "branch-protection-pauth-lr" "sign-return-address"="non-leaf" }
 attributes #4 = { "branch-protection-pauth-lr" "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" }
+attributes #5 = { "sign-return-address"="all" "sign-return-address-harden"="load-return-address"}

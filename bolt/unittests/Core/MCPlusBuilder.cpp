@@ -82,7 +82,6 @@ protected:
 
   void initializeBolt() {
     const Triple TheTriple = GetParam();
-    Relocation::Arch = TheTriple.getArch();
     // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
     // feature set for +relax, while other targets reject a non-null one.
     SubtargetFeatures Features;

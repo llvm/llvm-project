@@ -22,8 +22,6 @@ declare i32 @llvm.vp.reduce.or.v256i32(i32, <256 x i32>, <256 x i1>, i32)
 define fastcc i32 @vp_reduce_or_v256i32(i32 %s, <256 x i32> %v, <256 x i1> %m, i32 %n) {
 ; CHECK-LABEL: vp_reduce_or_v256i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s2, %s0, (32)0
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 killed $sx2
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    # kill: def $sw1 killed $sw1 killed $sx1
 ; CHECK-NEXT:    lvl %s1

@@ -12,7 +12,6 @@ class TestDAP_launch_disableSTDIO(DAPTestCaseBase):
     Tests the default launch of a simple program with STDIO disabled.
     """
 
-    @skipIfWindows
     def test(self):
         program = self.getBuildArtifact("a.out")
         session = self.build_and_create_session()

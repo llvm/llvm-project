@@ -9,10 +9,8 @@
 #ifndef MLIR_DIALECT_SCF_TRANSFORMOPS_SCFTRANSFORMOPS_H
 #define MLIR_DIALECT_SCF_TRANSFORMOPS_SCFTRANSFORMOPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 
 namespace mlir {

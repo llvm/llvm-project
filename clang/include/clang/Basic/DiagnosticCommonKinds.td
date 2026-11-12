@@ -97,8 +97,11 @@ def err_invalid_storage_class_in_func_decl : Error<
   "invalid storage class specifier in function declarator">;
 def err_expected_namespace_name : Error<"expected namespace name">;
 def err_default_special_members : Error<
-  "only special member functions %select{|and comparison operators }0"
-  "may be defaulted">;
+  "only special member functions"
+  "%enum_select<DefaultableFunctionKinds>{%Default{}|"
+  "%Cxx20{ and comparison operators}|"
+  "%Cxx29{, comparison operators, and postfix increment and "
+  "decrement operators}}0 may be defaulted">;
 def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;
@@ -473,12 +476,8 @@ def err_opencl_extension_and_feature_differs : Error<
 def err_opencl_feature_requires : Error<
   "feature %0 requires support of %1 feature">;
 
-def warn_throw_not_valid_on_target : Warning<
+def warn_exceptions_not_valid_on_target : Warning<
   "target '%0' does not support exception handling;"
-  " 'throw' is assumed to be never reached">,
-  InGroup<OpenMPTargetException>;
-def warn_try_not_valid_on_target : Warning<
-  "target '%0' does not support exception handling;"
-  " 'catch' block is ignored">,
+  " %select{'throw' is assumed to be never reached|'catch' block is ignored}1">,
   InGroup<OpenMPTargetException>;
 }

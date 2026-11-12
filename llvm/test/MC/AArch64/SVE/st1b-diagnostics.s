@@ -4,42 +4,42 @@
 // Immediate out of upper bound [-8, 7].
 
 st1b z10.b, p4, [x8, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1b z10.b, p4, [x8, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1b z18.b, p4, [x24, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1b z18.b, p4, [x24, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1b z11.h, p0, [x23, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1b z11.h, p0, [x23, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1b z24.h, p3, [x1, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1b z24.h, p3, [x1, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1b z6.s, p5, [x23, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1b z6.s, p5, [x23, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1b z16.s, p6, [x14, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1b z16.s, p6, [x14, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1b z26.d, p2, [x7, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1b z26.d, p2, [x7, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1b z27.d, p1, [x12, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1b z27.d, p1, [x12, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

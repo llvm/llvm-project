@@ -979,7 +979,7 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   lldb_private::telemetry::ScopedDispatcher<
       lldb_private::telemetry::DebuggerInfo>
       helper([](lldb_private::telemetry::DebuggerInfo *entry) {
-        entry->lldb_version = lldb_private::GetVersion();
+        entry->lldb_version = Language::GetVersionWithLanguageInfo();
       });
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
   helper.SetDebugger(debugger_sp.get());
@@ -1078,8 +1078,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_error_stream_sp(std::make_shared<LockableStreamFile>(
           stderr, NativeFile::Unowned, m_output_mutex)),
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
-      m_terminal_state(), m_target_list(*this), m_platform_list(),
-      m_listener_sp(Listener::MakeListener("lldb.Debugger")),
+      m_terminal_state(), m_target_list(*this), m_target_group_list(*this),
+      m_platform_list(), m_listener_sp(Listener::MakeListener("lldb.Debugger")),
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(
           std::make_unique<CommandInterpreter>(*this, false)),
@@ -1201,6 +1201,7 @@ void Debugger::Clear() {
         target_sp->Destroy();
       }
     }
+    m_target_group_list.Clear();
     m_broadcaster_manager_sp->Clear();
 
     // Close the input file _before_ we close the input read communications
@@ -1319,20 +1320,16 @@ void Debugger::RedrawStatusline(
     std::optional<ExecutionContextRef> exe_ctx_ref) {
   std::lock_guard<std::mutex> guard(m_statusline_mutex);
 
+  const bool flush = m_flush_statusline.exchange(false);
   if (!m_statusline)
     return;
 
+  if (flush)
+    m_statusline->ClearExecutionContext();
   m_statusline->Redraw(exe_ctx_ref);
 }
 
-void Debugger::FlushStatusLine() {
-  std::lock_guard<std::mutex> guard(m_statusline_mutex);
-
-  if (!m_statusline)
-    return;
-
-  m_statusline->ClearExecutionContext();
-}
+void Debugger::FlushStatusLine() { m_flush_statusline = true; }
 
 ExecutionContext
 Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {
@@ -1658,6 +1655,14 @@ lldb::DebuggerSP Debugger::GetDebuggerAtIndex(size_t index) {
   return nullptr;
 }
 
+Debugger::DebuggerIterable Debugger::Debuggers() {
+  static const DebuggerList g_empty_debugger_list;
+  std::unique_lock<std::mutex> lock(GetDebuggerListMutex());
+  const DebuggerList &debugger_list =
+      g_debugger_list_ptr ? *g_debugger_list_ptr : g_empty_debugger_list;
+  return DebuggerIterable(debugger_list, std::move(lock));
+}
+
 DebuggerSP Debugger::FindDebuggerWithID(lldb::user_id_t id) {
   std::lock_guard<std::mutex> guard(GetDebuggerListMutex());
   if (!g_debugger_list_ptr)
@@ -1720,6 +1725,8 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
 void Debugger::AssertCallback(llvm::StringRef message,
                               llvm::StringRef backtrace,
                               llvm::StringRef prompt) {
+  // Don't use Language::GetVersionWithLanguageInfo() here: an assertion can
+  // fail while Language::FindPlugin() holds its lock to create a plugin.
   Debugger::ReportError(llvm::formatv("{0}\n{1}{2}\n{3}", message, backtrace,
                                       GetVersion(), prompt)
                             .str());

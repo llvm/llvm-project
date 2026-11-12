@@ -99,6 +99,7 @@ define void @test_mm_stream_si64(ptr%a0, i64 %a1) {
 ; CHECK-LABEL: test_mm_stream_si64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movntiq %rsi, (%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store i64 %a1, ptr %a0, align 1, !nontemporal !0
   ret void

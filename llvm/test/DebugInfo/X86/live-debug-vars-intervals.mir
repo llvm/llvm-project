@@ -13,7 +13,7 @@
 #   escape(&x);
 # }
 
-# RUN: llc %s -start-before=machine-scheduler -stop-after=virtregrewriter -o - -experimental-debug-variable-locations=false \
+# RUN: llc %s -start-before=machine-scheduler -stop-after=virt-reg-rewriter -o - -experimental-debug-variable-locations=false \
 # RUN:     | FileCheck %s --implicit-check-not=DBG_VALUE
 
 # Verify that DBG_VALUEs with same { Variable, Fragment } but different DIExpressions
@@ -98,7 +98,6 @@
 ...
 ---
 name:            f1
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:
@@ -128,7 +127,6 @@ body:             |
 ...
 ---
 name:            f2
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:

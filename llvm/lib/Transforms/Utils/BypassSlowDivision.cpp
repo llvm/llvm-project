@@ -29,6 +29,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -289,7 +290,7 @@ QuotRemWithBB FastDivInsertionTask::createSlowBB(BasicBlock *SuccessorBB) {
   QuotRemWithBB DivRemPair;
   DivRemPair.BB = BasicBlock::Create(MainBB->getParent()->getContext(), "",
                                      MainBB->getParent(), SuccessorBB);
-  IRBuilder<> Builder(DivRemPair.BB, DivRemPair.BB->begin());
+  IRBuilder<> Builder(DivRemPair.BB->begin());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
   Value *Dividend = SlowDivOrRem->getOperand(0);
@@ -313,7 +314,7 @@ QuotRemWithBB FastDivInsertionTask::createFastBB(BasicBlock *SuccessorBB) {
   QuotRemWithBB DivRemPair;
   DivRemPair.BB = BasicBlock::Create(MainBB->getParent()->getContext(), "",
                                      MainBB->getParent(), SuccessorBB);
-  IRBuilder<> Builder(DivRemPair.BB, DivRemPair.BB->begin());
+  IRBuilder<> Builder(DivRemPair.BB->begin());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
   Value *Dividend = SlowDivOrRem->getOperand(0);
@@ -339,7 +340,7 @@ QuotRemWithBB FastDivInsertionTask::createFastBB(BasicBlock *SuccessorBB) {
 QuotRemPair FastDivInsertionTask::createDivRemPhiNodes(QuotRemWithBB &LHS,
                                                        QuotRemWithBB &RHS,
                                                        BasicBlock *PhiBB) {
-  IRBuilder<> Builder(PhiBB, PhiBB->begin());
+  IRBuilder<> Builder(PhiBB->begin());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
   PHINode *QuoPhi = Builder.CreatePHI(getSlowType(), 2);
   QuoPhi->addIncoming(LHS.Quotient, LHS.BB);
@@ -356,7 +357,7 @@ QuotRemPair FastDivInsertionTask::createDivRemPhiNodes(QuotRemWithBB &LHS,
 /// doesn't need a runtime check.
 Value *FastDivInsertionTask::insertOperandRuntimeCheck(Value *Op1, Value *Op2) {
   assert((Op1 || Op2) && "Nothing to check");
-  IRBuilder<> Builder(MainBB, MainBB->end());
+  IRBuilder<> Builder(MainBB->end());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
   Value *OrV;
@@ -411,7 +412,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   }
 
   if (isa<ConstantInt>(Divisor)) {
-    // If the divisor is not a constant, DAGCombiner will convert it to a
+    // If the divisor is a constant, DAGCombiner will convert it to a
     // multiplication by a magic constant.  It isn't clear if it is worth
     // introducing control flow to get a narrower multiply.
     return std::nullopt;
@@ -426,7 +427,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
         isa<ConstantInt>(BCI->getOperand(0)))
       return std::nullopt;
 
-  IRBuilder<> Builder(MainBB, MainBB->end());
+  IRBuilder<> Builder(MainBB->end());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
 
   if (DividendShort && !isSignedOp()) {
@@ -450,7 +451,8 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     QuotRemWithBB Fast = createFastBB(SuccessorBB);
     QuotRemPair Result = createDivRemPhiNodes(Fast, Long, SuccessorBB);
     Value *CmpV = Builder.CreateICmpUGE(Dividend, Divisor);
-    Builder.CreateCondBr(CmpV, Fast.BB, SuccessorBB);
+    CondBrInst *CB = Builder.CreateCondBr(CmpV, Fast.BB, SuccessorBB);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*CB, DEBUG_TYPE);
 
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, MainBB, Fast.BB},
@@ -473,7 +475,8 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   QuotRemPair Result = createDivRemPhiNodes(Fast, Slow, SuccessorBB);
   Value *CmpV = insertOperandRuntimeCheck(DividendShort ? nullptr : Dividend,
                                           DivisorShort ? nullptr : Divisor);
-  Builder.CreateCondBr(CmpV, Fast.BB, Slow.BB);
+  CondBrInst *CB = Builder.CreateCondBr(CmpV, Fast.BB, Slow.BB);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CB, DEBUG_TYPE);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, MainBB, Fast.BB},
                        {DominatorTree::Insert, MainBB, Slow.BB},

@@ -1,7 +1,4 @@
 // REQUIRES: x86
-// This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
-// XFAIL: main-run-twice
-
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 // RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s
 
@@ -31,4 +28,5 @@
         .long 0x0
         .long 0x0
 
-// CHECK: error: {{.*}}:(.eh_frame): invalid CIE reference
+// CHECK:      error: corrupted .eh_frame: invalid CIE reference
+// CHECK-NEXT: >>> defined in {{.*}}:(.eh_frame+0x18)

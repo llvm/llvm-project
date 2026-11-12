@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
@@ -23,7 +24,6 @@
 #include "llvm/IR/PassManagerImpl.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -40,11 +40,6 @@ STATISTIC(LargestCGSCC, "Number of functions in the largest SCC");
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
 namespace llvm {
-static cl::opt<bool> AbortOnMaxDevirtIterationsReached(
-    "abort-on-max-devirt-iterations-reached",
-    cl::desc("Abort when the max iterations for devirtualization CGSCC repeat "
-             "pass is reached"));
-
 AnalysisKey ShouldNotRunFunctionPassesAnalysis::Key;
 
 // Explicit instantiations for the core proxy templates.
@@ -389,12 +384,11 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
                     SmallMapVector<Value *, WeakTrackingVH, 16> &CallHandles) {
     assert(CallHandles.empty() && "Must start with a clear set of handles.");
 
-    SmallDenseMap<Function *, CallCount> CallCounts;
+    SmallDenseMap<LazyCallGraph::Node *, CallCount> CallCounts;
     CallCount CountLocal = {0, 0};
     for (LazyCallGraph::Node &N : C) {
       CallCount &Count =
-          CallCounts.insert(std::make_pair(&N.getFunction(), CountLocal))
-              .first->second;
+          CallCounts.insert(std::make_pair(&N, CountLocal)).first->second;
       for (Instruction &I : instructions(N.getFunction()))
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           if (CB->getCalledFunction()) {
@@ -467,7 +461,7 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
     // manner of transformations such as DCE and other things, but seems to
     // work well in practice.
     if (!Devirt)
-      // Iterate over the keys in NewCallCounts, if Function also exists in
+      // Iterate over the keys in NewCallCounts, if the node also exists in
       // CallCounts, make the check below.
       for (auto &Pair : NewCallCounts) {
         auto &CallCountNew = Pair.second;
@@ -488,7 +482,8 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
 
     // Otherwise, if we've already hit our max, we're done.
     if (Iteration >= MaxIterations) {
-      if (AbortOnMaxDevirtIterationsReached)
+      if (getAnalysisOptions(C->begin()->getFunction())
+              .abort_on_max_devirt_iterations_reached)
         report_fatal_error("Max devirtualization iterations reached");
       LLVM_DEBUG(
           dbgs() << "Found another devirtualization after hitting the max "
