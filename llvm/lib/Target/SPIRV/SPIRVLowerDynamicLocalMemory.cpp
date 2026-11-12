@@ -93,7 +93,7 @@ Function *appendKernelParam(Function &F, Type *ParamTy) {
   return NewF;
 }
 
-void updateMemoryEffectsInChain(Function *F, MemoryEffects NewEffects) {
+void updateMemoryEffects(Function *F, MemoryEffects NewEffects) {
   SmallVector<Function *> Worklist;
   SmallPtrSet<Function *, 16> Visited;
   Worklist.push_back(F);
@@ -181,8 +181,7 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
       // would reference SLM pointer might have ModeRefInfo::NoModRef, but
       // adding the load requires change it to at least ModRefInfo::Ref
       Function *F = I->getFunction();
-      updateMemoryEffectsInChain(F,
-                                 MemoryEffects::otherMemOnly(ModRefInfo::Ref));
+      updateMemoryEffects(F, MemoryEffects::otherMemOnly(ModRefInfo::Ref));
     }
     GV->eraseFromParent();
   }
