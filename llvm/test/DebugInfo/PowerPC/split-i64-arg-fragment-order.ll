@@ -1,5 +1,5 @@
-; RUN: llc -O1 -mtriple=powerpc-unknown-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
-; RUN: llc -O1 -mtriple=powerpcle-unknown-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple=powerpc-unknown-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple=powerpcle-unknown-linux-gnu -stop-after=finalize-isel %s -o - | FileCheck %s
 
 ; Fragment offsets count from the variable's lowest-addressed byte. PPC32
 ; passes that half of an i64 in r3 (the high word on big-endian, the low
