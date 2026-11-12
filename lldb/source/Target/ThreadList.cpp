@@ -513,6 +513,8 @@ bool ThreadList::WillResume(RunDirection &direction) {
   // recreated fresh by SetupToStepOverBreakpointIfNeeded below, and the
   // batching logic will recompute deferred state from scratch.
   m_threads_stepping_over_bp.clear();
+  // Breakpoints whose re-enable we suppressed by discarding a deferred plan.
+  llvm::DenseSet<lldb::addr_t> suppressed_reenable_addrs;
   for (const auto &thread_sp : m_threads) {
     ThreadPlan *plan = thread_sp->GetCurrentPlan();
     if (plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
@@ -526,6 +528,11 @@ bool ThreadList::WillResume(RunDirection &direction) {
         // may still be disabled from the previous batch, and we don't want
         // to toggle it. The new plans will handle re-enable correctly.
         bp_plan->SetReenabledBreakpointSite();
+        suppressed_reenable_addrs.insert(bp_plan->GetBreakpointLoadAddress());
+        // The thread may have completed the step without the stop reporting
+        // it (e.g. its trace exception arrived late). Let the plan notice
+        // that it is done before discarding it.
+        bp_plan->MischiefManaged();
         thread_sp->DiscardPlan();
       }
     }
@@ -690,6 +697,31 @@ bool ThreadList::WillResume(RunDirection &direction) {
       if (!batched_step_threads.empty())
         thread_to_run = batched_step_threads[0];
     }
+  }
+
+  // A discarded deferred plan may not get a replacement: its thread might have
+  // already completed the step (e.g. the trace exception for it wasn't part of
+  // the last stop), so it is no longer at the breakpoint. If no thread is
+  // going to step over the breakpoint anymore, nobody else will re-enable it,
+  // so do it here.
+  for (lldb::addr_t bp_addr : suppressed_reenable_addrs) {
+    bool still_stepping_over = llvm::any_of(m_threads, [&](const ThreadSP &t) {
+      ThreadPlan *plan = t->GetCurrentPlan();
+      return plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint &&
+             static_cast<ThreadPlanStepOverBreakpoint *>(plan)
+                     ->GetBreakpointLoadAddress() == bp_addr;
+    });
+    if (still_stepping_over)
+      continue;
+    LLDB_LOGF(GetLog(LLDBLog::Step),
+              "ThreadList::%s: No thread is stepping over breakpoint at "
+              "0x%" PRIx64 " anymore, re-enabling breakpoint",
+              __FUNCTION__, bp_addr);
+    if (BreakpointSiteSP bp_site_sp =
+            m_process.GetBreakpointSiteList().FindByAddress(bp_addr))
+      llvm::consumeError(m_process.ExecuteBreakpointSiteAction(
+          *bp_site_sp, Process::BreakpointAction::Enable,
+          /*forbid_delay=*/false));
   }
 
   if (thread_to_run != nullptr) {
