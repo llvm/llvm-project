@@ -14,6 +14,8 @@
 #include <__algorithm/copy.h>
 #include <__algorithm/in_out_result.h>
 #include <__config>
+#include <__functional/identity.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 
@@ -26,15 +28,29 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Comp, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
+template <class _Comp,
+          class _InIter1,
+          class _Sent1,
+          class _InIter2,
+          class _Sent2,
+          class _OutIter,
+          class _Proj1,
+          class _Proj2>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<__remove_cvref_t<_InIter1>, __remove_cvref_t<_OutIter> > __set_difference(
-    _InIter1&& __first1, _Sent1&& __last1, _InIter2&& __first2, _Sent2&& __last2, _OutIter&& __result, _Comp&& __comp) {
+    _InIter1&& __first1,
+    _Sent1&& __last1,
+    _InIter2&& __first2,
+    _Sent2&& __last2,
+    _OutIter&& __result,
+    _Comp&& __comp,
+    _Proj1&& __proj1,
+    _Proj2&& __proj2) {
   while (__first1 != __last1 && __first2 != __last2) {
-    if (__comp(*__first1, *__first2)) {
+    if (std::__invoke(__comp, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2))) {
       *__result = *__first1;
       ++__first1;
       ++__result;
-    } else if (__comp(*__first2, *__first1)) {
+    } else if (std::__invoke(__comp, std::__invoke(__proj2, *__first2), std::__invoke(__proj1, *__first1))) {
       ++__first2;
     } else {
       ++__first1;
@@ -52,7 +68,8 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_difference(
     _InputIterator2 __last2,
     _OutputIterator __result,
     _Compare __comp) {
-  return std::__set_difference<__comp_ref_type<_Compare> >(__first1, __last1, __first2, __last2, __result, __comp)
+  return std::__set_difference<__comp_ref_type<_Compare> >(
+             __first1, __last1, __first2, __last2, __result, __comp, __identity(), __identity())
       .__out_;
 }
 
@@ -63,7 +80,8 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_difference(
     _InputIterator2 __first2,
     _InputIterator2 __last2,
     _OutputIterator __result) {
-  return std::__set_difference(__first1, __last1, __first2, __last2, __result, __less<>()).__out_;
+  return std::__set_difference(__first1, __last1, __first2, __last2, __result, __less<>(), __identity(), __identity())
+      .__out_;
 }
 
 _LIBCPP_END_NAMESPACE_STD
