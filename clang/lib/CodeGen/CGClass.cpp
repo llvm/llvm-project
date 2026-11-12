@@ -2922,21 +2922,28 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       !CGM.HasHiddenLTOVisibility(RD))
     return;
 
-  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
-
-  std::string TypeName = RD->getQualifiedNameAsString();
+  auto [M, _] = SanitizerInfoFromCFICheckKind(TCK);
   if (getContext().getNoSanitizeList().containsType(
-          SanitizerMask::bitPosToMask(M), TypeName))
+          SanitizerMask::bitPosToMask(M), RD->getQualifiedNameAsString()))
     return;
-
-  EmitSanitizerStatReport(SSK);
 
   CanQualType T = CGM.getContext().getCanonicalTagType(RD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
-
   llvm::Value *TypeTest = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, TypeId});
+
+  EmitVTableCheck(TCK, T, MD, VTable, TypeTest, Loc,
+                  CGM.getCodeGenOpts().SanitizeCfiCrossDso);
+}
+
+void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
+                                      llvm::Metadata *MD, llvm::Value *VTable,
+                                      llvm::Value *TypeTest, SourceLocation Loc,
+                                      bool UseCrossDsoSlowPath) {
+  assert(IsSanitizerScope);
+  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
+  EmitSanitizerStatReport(SSK);
 
   llvm::Constant *StaticData[] = {
       llvm::ConstantInt::get(Int8Ty, TCK),
@@ -2944,8 +2951,9 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       EmitCheckTypeDescriptor(T),
   };
 
-  auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
-  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
+  llvm::ConstantInt *CrossDsoTypeId =
+      UseCrossDsoSlowPath ? CGM.CreateCrossDsoCfiTypeId(MD) : nullptr;
+  if (CrossDsoTypeId) {
     EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, StaticData);
     return;
   }

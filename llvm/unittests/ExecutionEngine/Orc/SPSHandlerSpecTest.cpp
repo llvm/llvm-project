@@ -26,12 +26,9 @@ using namespace llvm::orc::shared;
 
 namespace {
 
-struct AddDescriptor {
+struct AddSpec : sps::HandlerSpec<int32_t(int32_t, int32_t)> {
   static constexpr SymbolNameSpec Name = SymbolNameSpec::verbatim("add_tag");
-  using SPSSig = int32_t(int32_t, int32_t);
 };
-
-using AddSpec = sps::HandlerSpec<AddDescriptor>;
 
 void addHandler(unique_function<void(int32_t)> SendResult, int32_t X,
                 int32_t Y) {
@@ -60,7 +57,7 @@ protected:
   Expected<int32_t> callAdd(ExecutorAddr TagAddr, int32_t X, int32_t Y) {
     std::promise<MSVCPExpected<int32_t>> P;
     auto F = P.get_future();
-    WrapperFunction<AddDescriptor::SPSSig>::callAsync(
+    WrapperFunction<AddSpec::SPSSig>::callAsync(
         [&](auto SendResult, const char *ArgData, size_t ArgSize) {
           ES.runCallControllerHandler(
               std::move(SendResult), TagAddr,

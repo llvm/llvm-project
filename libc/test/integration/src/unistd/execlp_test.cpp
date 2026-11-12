@@ -130,6 +130,59 @@ void fork_and_execlp_signal_exit() {
   ASSERT_TRUE(WTERMSIG(status) == SIGUSR1);
 }
 
+void fork_and_execlp_shebangless_script() {
+  pid_t pid = LIBC_NAMESPACE::fork();
+  if (pid == 0) {
+    ASSERT_EQ(LIBC_NAMESPACE::setenv("PATH", "testdata", 1), 0);
+    const char *file = "shebangless.sh";
+    LIBC_NAMESPACE::execlp(file, "shebangless.sh",
+                           static_cast<char *>(nullptr));
+    LIBC_NAMESPACE::_exit(errno);
+  }
+  ASSERT_TRUE(pid > 0);
+  int status;
+  pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
+  ASSERT_TRUE(cpid > 0);
+  ASSERT_EQ(cpid, pid);
+  ASSERT_TRUE(WIFEXITED(status));
+  ASSERT_EQ(WEXITSTATUS(status), 42);
+}
+
+void fork_and_execlp_shebangless_slash_path() {
+  pid_t pid = LIBC_NAMESPACE::fork();
+  if (pid == 0) {
+    const char *path = "testdata/shebangless.sh";
+    LIBC_NAMESPACE::execlp(path, "shebangless.sh",
+                           static_cast<char *>(nullptr));
+    LIBC_NAMESPACE::_exit(errno);
+  }
+  ASSERT_TRUE(pid > 0);
+  int status;
+  pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
+  ASSERT_TRUE(cpid > 0);
+  ASSERT_EQ(cpid, pid);
+  ASSERT_TRUE(WIFEXITED(status));
+  ASSERT_EQ(WEXITSTATUS(status), 42);
+}
+
+void fork_and_execlp_shebangless_script_with_args() {
+  pid_t pid = LIBC_NAMESPACE::fork();
+  if (pid == 0) {
+    ASSERT_EQ(LIBC_NAMESPACE::setenv("PATH", "testdata", 1), 0);
+    const char *file = "shebangless.sh";
+    LIBC_NAMESPACE::execlp(file, "shebangless.sh", "17",
+                           static_cast<char *>(nullptr));
+    LIBC_NAMESPACE::_exit(errno);
+  }
+  ASSERT_TRUE(pid > 0);
+  int status;
+  pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
+  ASSERT_TRUE(cpid > 0);
+  ASSERT_EQ(cpid, pid);
+  ASSERT_TRUE(WIFEXITED(status));
+  ASSERT_EQ(WEXITSTATUS(status), 17);
+}
+
 TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
           [[maybe_unused]] char **envp) {
   fork_and_execlp_slash_path();
@@ -139,5 +192,8 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
   execlp_nonexistent_file();
   execlp_reports_eacces();
   fork_and_execlp_signal_exit();
+  fork_and_execlp_shebangless_script();
+  fork_and_execlp_shebangless_slash_path();
+  fork_and_execlp_shebangless_script_with_args();
   return 0;
 }

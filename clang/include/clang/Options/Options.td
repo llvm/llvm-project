@@ -7318,6 +7318,12 @@ def mno_hexagon_hvx : Flag<["-"], "mno-hvx">,
 def mhexagon_hvx_length_EQ : Joined<["-"], "mhvx-length=">,
   Group<m_hexagon_Features_HVX_Group>, HelpText<"Set Hexagon Vector Length">,
   Values<"64B,128B">;
+def mhexagon_hmx : Flag<["-"], "mhmx">,
+  Group<m_hexagon_Features_Group>,
+  HelpText<"Enable Hexagon Matrix eXtensions (HMX)">;
+def mno_hexagon_hmx : Flag<["-"], "mno-hmx">,
+  Group<m_hexagon_Features_Group>,
+  HelpText<"Disable Hexagon Matrix eXtensions (HMX)">;
 def mhexagon_hvx_qfloat : Flag<["-"], "mhvx-qfloat">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon HVX QFloat instructions">;
@@ -10237,6 +10243,16 @@ def fhlsl_spv_preserve_interface
                "dead-code elimination of variables with Location or BuiltIn "
                "decorations.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvPreserveInterface">>;
+
+def fhlsl_spv_support_nonzero_base_instance
+    : Flag<["-"], "fvk-support-nonzero-base-instance">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Follow Vulkan spec to use gl_BaseInstance as the first "
+               "vertex instance, which makes SV_InstanceID = gl_InstanceIndex "
+               "- gl_BaseInstance (without this option, SV_InstanceID = "
+               "gl_InstanceIndex).">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvSupportNonzeroBaseInstance">>;
 
 def fexperimental_logical_pointer
     : Flag<["-"], "fexperimental-logical-pointer">,
