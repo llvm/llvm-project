@@ -61,7 +61,7 @@ By default the following function return types are checked:
 ```
 
 ```{option} AllowCastToVoid
-Controls whether casting return values to `void` is permitted. Default is `false`.
+Controls whether casting return values to `void` is permitted. Default is `true`.
 ```
 
 {doc}`cert-err33-c <../cert/err33-c>` is an alias of this check that checks a
