@@ -2253,8 +2253,13 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
     // Trying to retrieve the corank of a variable if this is a coarray
     unsigned corank = 0;
     if (const Fortran::lower::SomeExpr *expr =
-            callContext.procRef.UnwrapArgExpr(arg.index()))
+            callContext.procRef.UnwrapArgExpr(arg.index())) {
       corank = getCorank(*expr);
+      if (callContext.getProcedureName() == "event_query" && expr &&
+          Fortran::evaluate::ExtractCoarrayRef(*expr))
+        // The only argument that can be coindexed is COUNT.
+        TODO(loc, "coarray: EVENT_QUERY with coindexed COUNT.");
+    }
 
     if (!arg.value()) {
       operands.emplace_back(fir::getAbsentIntrinsicArgument());

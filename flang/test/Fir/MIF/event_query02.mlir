@@ -411,7 +411,8 @@ func.func @_QPquery_class_allocatable() {
 // CHECK: return
 // CHECK: }
 
-// CHECK-LABEL: func.func @_QPquery_allocatable_array
+// CHECK-LABEL: func.func @_QPquery_allocatable_array(
+// CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32>
 // CHECK: %[[VAL_0:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 // CHECK: %[[VAL_1:.*]] = fir.alloca i64
 // CHECK: %[[VAL_2:.*]] = fir.alloca i64

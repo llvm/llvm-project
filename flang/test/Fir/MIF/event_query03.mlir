@@ -1,6 +1,6 @@
 // RUN: fir-opt --cse --canonicalize %s | FileCheck %s
 
-// STAT-less mif.event_query ops must be neither merged, hoisted nor erased
+// STAT-less mif.event_query ops must be neither merged nor erased
 
 !event_ty = !fir.type<_QM__fortran_builtinsT__builtin_event_type{_QM__fortran_builtinsT__builtin_event_type.__m1:i64,_QM__fortran_builtinsT__builtin_event_type.__m2:i64,_QM__fortran_builtinsT__builtin_event_type.__m3:i64,_QM__fortran_builtinsT__builtin_event_type.__m4:i64,_QM__fortran_builtinsT__builtin_event_type.__m5:i64,_QM__fortran_builtinsT__builtin_event_type.__m6:i64,_QM__fortran_builtinsT__builtin_event_type.__m7:i64,_QM__fortran_builtinsT__builtin_event_type.__m8:i64}>
 

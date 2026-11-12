@@ -103,3 +103,25 @@ end subroutine
 ! COARRAY: fir.store %[[VAL_33]] to %[[VAL_4]]#0 : !fir.ref<i64>
 ! COARRAY: return
 ! COARRAY: }
+
+subroutine query_optional_stat(count, stat)
+  use iso_fortran_env, only: event_type
+  type(event_type), save :: ev[*]
+  integer :: count
+  integer(2), optional :: stat
+  call event_query(ev, count, stat)
+end subroutine
+
+! COARRAY-LABEL: @_QPquery_optional_stat(
+! COARRAY-SAME: %[[ARG_0:.*]]: !fir.ref<i32> {fir.bindc_name = "count"}, %[[ARG_1:.*]]: !fir.ref<i16> {fir.bindc_name = "stat", fir.optional}) {
+! COARRAY: %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
+! COARRAY: %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG_0]] dummy_scope %[[VAL_0]] arg 1 uniq_name("_QFquery_optional_statEcount") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! COARRAY: %[[VAL_2:.*]] = fir.address_of(@_QFquery_optional_statEev) : !fir.ref<!fir.box<!fir.heap<[[EVT:!fir.type<_QM__fortran_builtinsT__builtin_event_type\{.*\}>]]>, corank:1>>
+! COARRAY: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] uniq_name("_QFquery_optional_statEev") : (!fir.ref<!fir.box<!fir.heap<[[EVT]]>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<[[EVT]]>, corank:1>>, !fir.ref<!fir.box<!fir.heap<[[EVT]]>, corank:1>>)
+! COARRAY: %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG_1]] dummy_scope %[[VAL_0]] arg 2 uniq_name("_QFquery_optional_statEstat") fortran_attrs<optional> : (!fir.ref<i16>, !fir.dscope) -> (!fir.ref<i16>, !fir.ref<i16>)
+! COARRAY: %[[VAL_5:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<[[EVT]]>, corank:1>>
+! COARRAY: %[[VAL_6:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.heap<[[EVT]]>, corank:1>) -> !fir.heap<[[EVT]]>
+! COARRAY: %[[VAL_7:.*]] = mif.event_query %[[VAL_6]] stat %[[VAL_4]]#0 : (!fir.heap<[[EVT]]>, !fir.ref<i16>) -> i32
+! COARRAY: fir.store %[[VAL_7]] to %[[VAL_1]]#0 : !fir.ref<i32>
+! COARRAY: return
+! COARRAY: }
