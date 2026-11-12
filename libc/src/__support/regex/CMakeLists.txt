@@ -69,6 +69,7 @@ add_object_library(
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.ctype_utils
     libc.src.__support.error_or
+    libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )

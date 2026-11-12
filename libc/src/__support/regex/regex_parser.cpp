@@ -23,6 +23,7 @@
 #include "src/__support/checked_ptr.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_charclass.h"
@@ -168,9 +169,8 @@ ErrorOr<ExprId> parse_bracket_expr(cpp::string_view &rem, int cflags,
 constexpr size_t MAX_GROUP_DEPTH = 128;
 
 // Parses a decimal repetition bound in [0, RE_DUP_MAX] from the prefix of spec.
-cpp::optional<uint16_t> consume_bound(cpp::string_view &spec) {
-  if (spec.empty() || !internal::isdigit(spec.front()))
-    return cpp::nullopt;
+constexpr cpp::optional<uint16_t> consume_bound(cpp::string_view &spec) {
+  LIBC_ASSERT(!spec.empty() && internal::isdigit(spec.front()));
   uint32_t val = 0;
   do {
     val = val * 10 + static_cast<uint32_t>(spec.front() - '0');
@@ -184,7 +184,7 @@ cpp::optional<uint16_t> consume_bound(cpp::string_view &spec) {
 // Parses a trailing '{m}', '{m,}', or '{m,n}' interval quantifier after '{' has
 // been matched with a leading digit.
 ErrorOr<ExprId> parse_repeat_bounds(cpp::string_view &rem, ExprId atom,
-                                    ExprPool &pool) {
+                                    ExprPool &pool, ExprId &prefix_atom) {
   rem.remove_prefix(1);
   // Scan for '}' before parsing bounds so unclosed "a{1,x" reports REG_EBRACE.
   size_t close_pos = rem.find_first_of('}');
@@ -202,19 +202,28 @@ ErrorOr<ExprId> parse_repeat_bounds(cpp::string_view &rem, ExprId atom,
     spec.remove_prefix(1);
     if (spec.empty()) {
       max_val = REPEAT_INF;
-    } else {
+    } else if (internal::isdigit(spec.front())) {
       cpp::optional<uint16_t> max_opt = consume_bound(spec);
       if (!max_opt.has_value() || !spec.empty() || min_val > *max_opt)
         return Error(REG_BADBR);
       max_val = *max_opt;
+    } else {
+      return Error(REG_BADBR);
     }
   } else if (!spec.empty()) {
     return Error(REG_BADBR);
   }
 
   uint16_t bound = (max_val == REPEAT_INF) ? min_val : max_val;
-  if (bound > 1 && pool.get(atom).rep_expansion > MAX_REPEAT_EXPANSION / bound)
+  if (static_cast<uint32_t>(bound) * pool.get(atom).rep_expansion >
+      MAX_REPEAT_EXPANSION)
     return Error(REG_ESPACE);
+  if (min_val == 1 && max_val == REPEAT_INF) {
+    ErrorOr<ExprId> star = pool.make_star(atom);
+    if (star.has_value())
+      prefix_atom = atom;
+    return star;
+  }
   return pool.make_repeat(atom, min_val, max_val);
 }
 
@@ -336,8 +345,9 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     return pool.make_star(*atom);
   }
   // Push r and Star(r) separately rather than Repeat(r, 1, REPEAT_INF) so
-  // right-to-left folding builds r . (r* . rest) once and regexec peels off
-  // long Concat spines without re-associating r on each repetition.
+  // right-to-left folding links r and r* directly into the enclosing Concat
+  // spine without an extra intermediate Concat(r, r*) node when r is itself a
+  // Concat (e.g. (ab)+c folds into a . (b . ((ab)* . c))).
   if (rem.starts_with('+')) {
     rem.remove_prefix(1);
     ErrorOr<ExprId> star = pool.make_star(*atom);
@@ -350,7 +360,7 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     return pool.make_alt(EMPTY_STR_ID, *atom);
   }
   if (rem.size() >= 2 && rem[0] == '{' && internal::isdigit(rem[1]))
-    return parse_repeat_bounds(rem, *atom, pool);
+    return parse_repeat_bounds(rem, *atom, pool, prefix_atom);
   return atom;
 }
 

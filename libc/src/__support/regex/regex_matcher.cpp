@@ -44,7 +44,7 @@ uint8_t ctx_at(cpp::string_view input, size_t pos, int cflags, int eflags) {
 
 bool nullable(ExprId id, uint8_t anchor_ctx, const ExprPool &pool) {
   const Expr &e = pool.get(id);
-  if (e.nullable || !e.has_anchors)
+  if (e.nullable || !e.has_anchors || anchor_ctx == 0)
     return e.nullable;
   switch (e.kind) {
   case ExprKind::Anchor:
@@ -57,9 +57,14 @@ bool nullable(ExprId id, uint8_t anchor_ctx, const ExprPool &pool) {
            nullable(e.bin.right, anchor_ctx, pool);
   case ExprKind::Repeat:
     return nullable(e.rep.body, anchor_ctx, pool);
-  default:
-    return e.nullable;
+  case ExprKind::EmptySet:
+  case ExprKind::EmptyStr:
+  case ExprKind::Literal:
+  case ExprKind::ByteSet:
+  case ExprKind::Star:
+    break;
   }
+  __builtin_unreachable();
 }
 
 ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool,
@@ -118,7 +123,7 @@ ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool,
     if (!d_body.has_value() || *d_body == EMPTY_SET_ID)
       return d_body;
     uint16_t next_min =
-        (e.rep.min > 0 && !nullable(e.rep.body, ctx_before, pool))
+        (e.rep.min > 1 && !nullable(e.rep.body, ctx_before, pool))
             ? static_cast<uint16_t>(e.rep.min - 1)
             : static_cast<uint16_t>(0);
     uint16_t next_max = (e.rep.max == REPEAT_INF)

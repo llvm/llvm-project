@@ -265,7 +265,7 @@ namespace {
 // Multiplies a subexpression's repeat expansion factor by an enclosing repeat
 // bound, saturating at MAX_REPEAT_EXPANSION + 1 so nested bounds checks never
 // overflow uint16_t.
-uint16_t scale_exp(uint16_t base, uint16_t factor) {
+constexpr uint16_t scale_exp(uint16_t base, uint16_t factor) {
   if (factor <= 1)
     return base;
   uint32_t prod = static_cast<uint32_t>(base) * static_cast<uint32_t>(factor);
@@ -283,7 +283,7 @@ ErrorOr<ExprId> ExprPool::make_star(ExprId body) {
     return empty_str();
   // (R*)* = R* and (R{m,n})* = R* iff m <= 1 (since R^1 is in R{m,n} iff
   // m <= 1, whereas (a{2,3})* excludes "a").
-  const Expr be = get(body);
+  const Expr &be = get(body);
   if (be.kind == ExprKind::Star)
     return body;
   if (be.kind == ExprKind::Repeat && be.rep.min <= 1)
@@ -305,15 +305,14 @@ ErrorOr<ExprId> ExprPool::make_repeat(ExprId body, uint16_t min, uint16_t max) {
     return body;
   if (min == 0 && max == REPEAT_INF)
     return make_star(body);
-  const Expr be = get(body);
+  const Expr &be = get(body);
   if (be.kind == ExprKind::Star)
     return body;
   if (be.kind == ExprKind::Repeat && be.rep.min == 1 &&
-      be.rep.max == REPEAT_INF && min == 1 && max == REPEAT_INF)
-    return body;
+      be.rep.max == REPEAT_INF)
+    return make_repeat(be.rep.body, min, REPEAT_INF);
   uint16_t factor = (max == REPEAT_INF) ? min : max;
-  return intern(Expr::make_repeat(body, min, max, (min == 0) || be.nullable,
-                                  be.has_anchors,
+  return intern(Expr::make_repeat(body, min, max, be.nullable, be.has_anchors,
                                   scale_exp(be.rep_expansion, factor)));
 }
 
@@ -330,14 +329,14 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
   if (r == EMPTY_STR_ID)
     return l;
   // (A · B) · C = A · (B · C) (Right-associative canonical form)
-  const Expr le = get(l);
+  const Expr &le = get(l);
   if (le.kind == ExprKind::Concat) {
     ErrorOr<ExprId> tail = make_concat(le.bin.right, r);
     if (!tail.has_value())
       return tail;
     return make_concat(le.bin.left, *tail);
   }
-  const Expr re = get(r);
+  const Expr &re = get(r);
   return intern(Expr::make_concat(
       l, r, le.nullable && re.nullable, le.has_anchors || re.has_anchors,
       le.has_repeat || re.has_repeat,
@@ -350,8 +349,8 @@ namespace {
 // when their repetition intervals overlap or are adjacent.  Returns
 // INVALID_EXPR_ID when the pair cannot be coalesced.
 ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
-  const Expr ae = pool.get(a);
-  const Expr be = pool.get(b);
+  const Expr &ae = pool.get(a);
+  const Expr &be = pool.get(b);
   if (!ae.has_repeat && !be.has_repeat)
     return INVALID_EXPR_ID;
   if (ae.kind == ExprKind::Concat && be.kind == ExprKind::Concat) {
@@ -386,9 +385,26 @@ ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
       return left;
     return pool.make_concat(*left, a);
   }
+  if (ae.kind == ExprKind::Concat && ae.bin.left == b) {
+    ErrorOr<ExprId> right =
+        coalesce_repeat_pair(ae.bin.right, EMPTY_STR_ID, pool);
+    if (!right.has_value() || *right == INVALID_EXPR_ID)
+      return right;
+    return pool.make_concat(b, *right);
+  }
+  if (be.kind == ExprKind::Concat && be.bin.left == a) {
+    ErrorOr<ExprId> right =
+        coalesce_repeat_pair(EMPTY_STR_ID, be.bin.right, pool);
+    if (!right.has_value() || *right == INVALID_EXPR_ID)
+      return right;
+    return pool.make_concat(a, *right);
+  }
   if (ae.kind != ExprKind::Repeat && be.kind != ExprKind::Repeat)
     return INVALID_EXPR_ID;
-  ExprId body = (ae.kind == ExprKind::Repeat) ? ae.rep.body : be.rep.body;
+  ExprId body = (ae.kind == ExprKind::Repeat &&
+                 !(be.kind == ExprKind::Repeat && be.rep.body == a))
+                    ? ae.rep.body
+                    : be.rep.body;
   struct RepeatInterval {
     uint16_t min;
     uint16_t max;
@@ -426,8 +442,8 @@ ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
 // `spine`, returning INVALID_EXPR_ID if no branch coalesces.
 ErrorOr<ExprId> coalesce_item_into_spine(ExprId item, ExprId spine,
                                          ExprPool &pool) {
-  const Expr item_e = pool.get(item);
-  const Expr spine_e = pool.get(spine);
+  const Expr &item_e = pool.get(item);
+  const Expr &spine_e = pool.get(spine);
   if (!item_e.has_repeat && !spine_e.has_repeat)
     return INVALID_EXPR_ID;
   if (spine_e.kind != ExprKind::Alt)
@@ -459,8 +475,8 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   if (l == r)
     return l;
 
-  const Expr le = get(l);
-  const Expr re = get(r);
+  const Expr &le = get(l);
+  const Expr &re = get(r);
   if (le.kind != ExprKind::Alt && re.kind != ExprKind::Alt) {
     ErrorOr<ExprId> coalesced = coalesce_repeat_pair(l, r, *this);
     if (!coalesced.has_value() || *coalesced != INVALID_EXPR_ID)
@@ -482,12 +498,6 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
       ErrorOr<ExprId> c = coalesce_item_into_spine(r, l, *this);
       if (!c.has_value() || *c != INVALID_EXPR_ID)
         return c;
-    } else {
-      ErrorOr<ExprId> c = coalesce_item_into_spine(le.bin.left, r, *this);
-      if (!c.has_value())
-        return c;
-      if (*c != INVALID_EXPR_ID)
-        return make_alt(le.bin.right, *c);
     }
   }
 
@@ -510,13 +520,19 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   }
   if (!rest.has_value())
     return rest;
-  // Tail coalescing may produce an already-interned ExprId <= head; re-merge
-  // when needed to preserve ascending ExprId order along the Alt spine.
-  const Expr re_rest = get(*rest);
+  // When merging two Alt spines, `head` (or a newly coalesced interval in
+  // `*rest`) may now coalesce across the two spines or out-of-order ExprIds.
+  const Expr &he = get(head);
+  const Expr &re_rest = get(*rest);
+  if (le.kind == ExprKind::Alt && re.kind == ExprKind::Alt &&
+      (he.has_repeat || re_rest.has_repeat)) {
+    ErrorOr<ExprId> c = coalesce_item_into_spine(head, *rest, *this);
+    if (!c.has_value() || *c != INVALID_EXPR_ID)
+      return c;
+  }
   ExprId rest_head = (re_rest.kind == ExprKind::Alt) ? re_rest.bin.left : *rest;
   if (head >= rest_head)
     return make_alt(head, *rest);
-  const Expr he = get(head);
   return intern(
       Expr::make_alt(head, *rest, he.nullable || re_rest.nullable,
                      he.has_anchors || re_rest.has_anchors,

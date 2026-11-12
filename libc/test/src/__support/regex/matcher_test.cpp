@@ -542,10 +542,13 @@ TEST(LlvmLibcRegexMatcherTest, PlusAndQuestionDesugaringAndStabilization) {
   // Alt(EmptyStr, r), interning to identical ExprId handles without orphaned
   // Concat spines.
   ErrorOr<ExprId> plus_a = parse_ere("a+", REG_EXTENDED, pool);
+  ErrorOr<ExprId> repeat_1_inf_a = parse_ere("a{1,}", REG_EXTENDED, pool);
   ErrorOr<ExprId> concat_star_a = parse_ere("aa*", REG_EXTENDED, pool);
   ASSERT_TRUE(plus_a.has_value());
+  ASSERT_TRUE(repeat_1_inf_a.has_value());
   ASSERT_TRUE(concat_star_a.has_value());
   EXPECT_EQ(*plus_a, *concat_star_a);
+  EXPECT_EQ(*repeat_1_inf_a, *concat_star_a);
 
   ErrorOr<ExprId> qmark_a = parse_ere("a?", REG_EXTENDED, pool);
   ErrorOr<ExprId> alt_empty_a = parse_ere("()|a", REG_EXTENDED, pool);
@@ -639,9 +642,15 @@ TEST(LlvmLibcRegexMatcherTest, RepeatStabilizationAndRfc2822Grammar) {
       parse_ere("(ab?){255}b", REG_EXTENDED, prefix_pool);
   ErrorOr<ExprId> inter_255 =
       parse_ere("x?.{255}a|.{255}b", REG_EXTENDED, prefix_pool);
+  ErrorOr<ExprId> bridged_alt =
+      parse_ere("^(a{1,2}|a{5,6}|a{3,4})$", REG_EXTENDED, prefix_pool);
+  ErrorOr<ExprId> shared_prefix_alt =
+      parse_ere("^(ab{1,3}|a)$", REG_EXTENDED, prefix_pool);
   ASSERT_TRUE(plus_255.has_value());
   ASSERT_TRUE(opt_255b.has_value());
   ASSERT_TRUE(inter_255.has_value());
+  ASSERT_TRUE(bridged_alt.has_value());
+  ASSERT_TRUE(shared_prefix_alt.has_value());
   EXPECT_EQ(match(prefix_pool, *plus_255, string_view(buf256, 255)),
             MatchResult::Match);
   buf256[255] = 'b';
@@ -649,6 +658,12 @@ TEST(LlvmLibcRegexMatcherTest, RepeatStabilizationAndRfc2822Grammar) {
             MatchResult::Match);
   EXPECT_EQ(match(prefix_pool, *inter_255, string_view(buf256, 256)),
             MatchResult::Match);
+  EXPECT_EQ(match(prefix_pool, *bridged_alt, "aaa"), MatchResult::Match);
+  EXPECT_EQ(match(prefix_pool, *bridged_alt, "aaaaaaa"), MatchResult::NoMatch);
+  EXPECT_EQ(match(prefix_pool, *shared_prefix_alt, "a"), MatchResult::Match);
+  EXPECT_EQ(match(prefix_pool, *shared_prefix_alt, "abbb"), MatchResult::Match);
+  EXPECT_EQ(match(prefix_pool, *shared_prefix_alt, "abbbb"),
+            MatchResult::NoMatch);
 
   ExprPool dag_exp_pool;
   ErrorOr<ExprId> deep_plus_rep = parse_ere(
@@ -706,16 +721,16 @@ TEST(LlvmLibcRegexMatcherTest, RepeatStabilizationAndRfc2822Grammar) {
   ASSERT_TRUE(addr_spec.has_value());
   EXPECT_LE(rfc_pool.allocated_bytes(), size_t(32768));
 
-  const string_view good_addrs[] = {"user.name+tag@example.com",
-                                    R"("quoted..user"@[192.168.1.1])",
-                                    "(comment) alice@sub.domain.org (ok)",
-                                    "(\r\n folded comment )alice@example.com",
-                                    "Alice Smith <alice@example.com>"};
-  for (string_view addr : good_addrs)
+  static constexpr string_view GOOD_ADDRS[] = {
+      "user.name+tag@example.com", R"("quoted..user"@[192.168.1.1])",
+      "(comment) alice@sub.domain.org (ok)",
+      "(\r\n folded comment )alice@example.com",
+      "Alice Smith <alice@example.com>"};
+  for (string_view addr : GOOD_ADDRS)
     EXPECT_EQ(match(rfc_pool, *addr_spec, addr), MatchResult::Match);
-  const string_view bad_addrs[] = {"user..name@example.com", "@example.com",
-                                   "user@", "user@.example.com",
-                                   "user@example..com"};
-  for (string_view addr : bad_addrs)
+  static constexpr string_view BAD_ADDRS[] = {
+      "user..name@example.com", "@example.com", "user@", "user@.example.com",
+      "user@example..com"};
+  for (string_view addr : BAD_ADDRS)
     EXPECT_EQ(match(rfc_pool, *addr_spec, addr), MatchResult::NoMatch);
 }
