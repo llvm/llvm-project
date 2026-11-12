@@ -10682,31 +10682,65 @@ adjustSPAddSubImm(const MachineInstr &MI, int64_t Delta) {
   return Enc;
 }
 
-namespace {
-struct BlockCFIInfo {
-  bool LRHasDefaultRuleOnEntry : 1;
-  bool LRHasDefaultRuleOnExit : 1;
-  bool CFAUsesSPOnEntry : 1;
-  bool CFAUsesSPOnExit : 1;
-  bool UnhandledCFIOnEntry : 1;
-  bool UnhandledCFIOnExit : 1;
+template <typename R>
+static void updateCFIInfo(const MachineFunction &MF, R &&InstrRange,
+                          unsigned DwarfLR, unsigned DwarfSP,
+                          bool &UnhandledCFI, bool &LRHasDefaultRule,
+                          bool &CFAUsesSP) {
+  const auto IsCFIInstruction = [](const MachineInstr &MI) {
+    return MI.isCFIInstruction();
+  };
 
-  BlockCFIInfo()
-      : LRHasDefaultRuleOnEntry(false), LRHasDefaultRuleOnExit(false),
-        CFAUsesSPOnEntry(false), CFAUsesSPOnExit(false),
-        UnhandledCFIOnEntry(false), UnhandledCFIOnExit(false) {}
-};
-} // namespace
+  for (const MachineInstr &MI :
+       make_filter_range(InstrRange, IsCFIInstruction)) {
+    const MCCFIInstruction &CFI =
+        MF.getFrameInstructions()[MI.getOperand(0).getCFIIndex()];
+    switch (CFI.getOperation()) {
+    default:
+      UnhandledCFI = true;
+      break;
 
-// Populates C.Flags with information on how to emit CFI instructions around the
-// outlined function call. We do this by looking at the existing CFI
-// instructions in the function to determine two things:
-// 1. Does LR have a CFI rule associated with it? If no, then we'll have to add
-//    CFI instructions around the outlined call to describe the saved location
-//    of LR.
-// 2. Is the CFA defined using SP? If yes, then we'll have to adjust the CFA
-//    offset when LR is saved to the stack.
-//
+    // The default rule for LR is same_value, so handle it the same way as
+    // restore.
+    case MCCFIInstruction::OpSameValue:
+    case MCCFIInstruction::OpRestore:
+      if (CFI.getRegister() == DwarfLR) {
+        LRHasDefaultRule = true;
+      }
+      break;
+
+    case MCCFIInstruction::OpOffset:
+    case MCCFIInstruction::OpRelOffset:
+    case MCCFIInstruction::OpUndefined:
+    case MCCFIInstruction::OpValOffset:
+      if (CFI.getRegister() == DwarfLR) {
+        LRHasDefaultRule = false;
+      }
+      break;
+
+    case MCCFIInstruction::OpRegister:
+      if (CFI.getRegister() == DwarfLR) {
+        // '.cfi_register w30, w30' is equivalent to the default rule for x30,
+        // so treat it as that.
+        LRHasDefaultRule = CFI.getRegister2() == DwarfLR;
+      }
+      break;
+
+    case MCCFIInstruction::OpDefCfaRegister:
+    case MCCFIInstruction::OpDefCfa:
+      CFAUsesSP = CFI.getRegister() == DwarfSP;
+      break;
+
+    case MCCFIInstruction::OpDefCfaOffset:
+    case MCCFIInstruction::OpAdjustCfaOffset:
+    case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpNegateRAStateWithPC:
+    case MCCFIInstruction::OpLLVMSetRAState:
+      break;
+    }
+  }
+}
+
 // When iterating through the function's basic blocks, we make the same
 // assumptions as the cfi-fixup pass, which are the following:
 // * For any two CFI instructions of the function prologue one dominates and is
@@ -10722,121 +10756,93 @@ struct BlockCFIInfo {
 //
 // With these assumptions, we can do a single reverse post-order traversal of
 // the basic blocks, and determine the necessary properties both on block entry
-// and block exit. Once we reach the candidate's basic block, we can process
-// instructions up to the candidate's first instruction, set the necessary
-// flags, and exit.
-static void populateCandidateCFIInfo(outliner::Candidate &C,
-                                     const TargetRegisterInfo &TRI) {
-  MachineFunction &MF = *C.getMF();
-  // We only need this information if async unwind info is needed.
-  if (!MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF)) {
-    return;
-  }
-
+// and block exit, which is then propagated to the successor blocks.
+static SmallVector<AArch64FunctionInfo::OutlinerBasicBlockInfo>
+calculateFunctionCFIInfo(const MachineFunction &MF,
+                         const TargetRegisterInfo &TRI) {
   const unsigned DwarfLR = TRI.getDwarfRegNum(AArch64::LR, true);
   const unsigned DwarfSP = TRI.getDwarfRegNum(AArch64::SP, true);
 
-  SmallVector<BlockCFIInfo, 32> BlockInfos(MF.getNumBlockIDs());
+  using BasicBlockInfo = AArch64FunctionInfo::OutlinerBasicBlockInfo;
+  SmallVector<BasicBlockInfo> BlockInfos(MF.getNumBlockIDs());
   // Set up initial CFI rules for the entry block.
   BlockInfos[0].CFAUsesSPOnEntry = true;
   BlockInfos[0].LRHasDefaultRuleOnEntry = true;
 
-  const auto IsCFIInstruction = [](const MachineInstr &MI) {
-    return MI.isCFIInstruction();
-  };
-
   ReversePostOrderTraversal<const MachineBasicBlock *> RPOT(&*MF.begin());
   for (const MachineBasicBlock *MBB : RPOT) {
-    BlockCFIInfo &Info = BlockInfos[MBB->getNumber()];
+    BasicBlockInfo &Info = BlockInfos[MBB->getNumber()];
     if (Info.UnhandledCFIOnEntry) {
-      Info.UnhandledCFIOnExit = true;
       continue;
     }
 
     bool LRHasDefaultRule = Info.LRHasDefaultRuleOnEntry;
     bool CFAUsesSP = Info.CFAUsesSPOnEntry;
     bool UnhandledCFI = Info.UnhandledCFIOnEntry;
-
-    auto Begin = MBB->begin();
-    auto End = MBB->end();
-    // If we're in the candidate's basic block, then only process instructions
-    // up to the outlined region.
-    if (MBB == C.getMBB()) {
-      End = C.begin();
-    }
-    for (const MachineInstr &MI :
-         make_filter_range(make_range(Begin, End), IsCFIInstruction)) {
-      const MCCFIInstruction &CFI =
-          MF.getFrameInstructions()[MI.getOperand(0).getCFIIndex()];
-      switch (CFI.getOperation()) {
-      default:
-        UnhandledCFI = true;
-        break;
-
-      // The default rule for LR is same_value, so handle it the same way as
-      // restore.
-      case MCCFIInstruction::OpSameValue:
-      case MCCFIInstruction::OpRestore:
-        if (CFI.getRegister() == DwarfLR) {
-          LRHasDefaultRule = true;
-        }
-        break;
-
-      case MCCFIInstruction::OpOffset:
-      case MCCFIInstruction::OpRelOffset:
-      case MCCFIInstruction::OpUndefined:
-      case MCCFIInstruction::OpValOffset:
-        if (CFI.getRegister() == DwarfLR) {
-          LRHasDefaultRule = false;
-        }
-        break;
-
-      case MCCFIInstruction::OpRegister:
-        if (CFI.getRegister() == DwarfLR) {
-          // '.cfi_register w30, w30' is equivalent to the default rule for x30,
-          // so treat it as that.
-          LRHasDefaultRule = CFI.getRegister2() == DwarfLR;
-        }
-        break;
-
-      case MCCFIInstruction::OpDefCfaRegister:
-      case MCCFIInstruction::OpDefCfa:
-        CFAUsesSP = CFI.getRegister() == DwarfSP;
-        break;
-
-      case MCCFIInstruction::OpDefCfaOffset:
-      case MCCFIInstruction::OpAdjustCfaOffset:
-      case MCCFIInstruction::OpNegateRAState:
-      case MCCFIInstruction::OpNegateRAStateWithPC:
-      case MCCFIInstruction::OpLLVMSetRAState:
-        break;
-      }
-    }
-
-    // When we've processed the candidate's basic block, we are done.
-    if (MBB == C.getMBB()) {
-      if (LRHasDefaultRule) {
-        C.Flags |= MachineOutlinerMBBFlags::LRHasDefaultRule;
-      }
-      if (CFAUsesSP) {
-        C.Flags |= MachineOutlinerMBBFlags::CFAUsesSP;
-      }
-      if (UnhandledCFI) {
-        C.Flags |= MachineOutlinerMBBFlags::UnhandledCFIState;
-      }
-      return;
-    }
-
-    Info.LRHasDefaultRuleOnExit = LRHasDefaultRule;
-    Info.CFAUsesSPOnExit = CFAUsesSP;
-    Info.UnhandledCFIOnExit = UnhandledCFI;
+    updateCFIInfo(MF, *MBB, DwarfLR, DwarfSP, UnhandledCFI, LRHasDefaultRule,
+                  CFAUsesSP);
 
     for (MachineBasicBlock *Succ : MBB->successors()) {
-      BlockCFIInfo &SuccInfo = BlockInfos[Succ->getNumber()];
-      SuccInfo.LRHasDefaultRuleOnEntry = Info.LRHasDefaultRuleOnExit;
-      SuccInfo.CFAUsesSPOnEntry = Info.CFAUsesSPOnExit;
-      SuccInfo.UnhandledCFIOnEntry |= Info.UnhandledCFIOnExit;
+      BasicBlockInfo &SuccInfo = BlockInfos[Succ->getNumber()];
+      SuccInfo.LRHasDefaultRuleOnEntry = LRHasDefaultRule;
+      SuccInfo.CFAUsesSPOnEntry = CFAUsesSP;
+      SuccInfo.UnhandledCFIOnEntry |= UnhandledCFI;
     }
+  }
+
+  return BlockInfos;
+}
+
+// Populates C.Flags with information on how to emit CFI instructions around the
+// outlined function call. We do this by looking at the existing CFI
+// instructions in the function to determine two things:
+// 1. Does LR have a CFI rule associated with it? If no, then we'll have to add
+//    CFI instructions around the outlined call to describe the saved location
+//    of LR.
+// 2. Is the CFA defined using SP? If yes, then we'll have to adjust the CFA
+//    offset when LR is saved to the stack.
+//
+// calculateFunctionCFIInfo calculates these two things for the entry of each
+// basic block, which is then cached in the function's associated
+// AArch64FunctionInfo. Then, for each candidate inside the function, we only
+// need to look at the CFI instructions in the candidate's basic block to
+// determine how the outlined call should be created.
+static void setCandidateCFIFlags(outliner::Candidate &C,
+                                 const TargetRegisterInfo &TRI) {
+  MachineFunction &MF = *C.getMF();
+  AArch64FunctionInfo &MFI = *MF.getInfo<AArch64FunctionInfo>();
+  if (!MFI.needsAsyncDwarfUnwindInfo(MF)) {
+    return;
+  }
+
+  if (MFI.getOutlinerBasicBlockInfos().empty()) {
+    MFI.setOutlinerBasicBlockInfos(calculateFunctionCFIInfo(MF, TRI));
+  }
+
+  using BasicBlockInfo = AArch64FunctionInfo::OutlinerBasicBlockInfo;
+  ArrayRef<const BasicBlockInfo> Infos = MFI.getOutlinerBasicBlockInfos();
+  assert(Infos.size() == MF.getNumBlockIDs() &&
+         "Unexpected number of blocks in machine function!");
+
+  const unsigned DwarfLR = TRI.getDwarfRegNum(AArch64::LR, true);
+  const unsigned DwarfSP = TRI.getDwarfRegNum(AArch64::SP, true);
+
+  MachineBasicBlock &MBB = *C.getMBB();
+  BasicBlockInfo Info = Infos[MBB.getNumber()];
+  bool LRHasDefaultRule = Info.LRHasDefaultRuleOnEntry;
+  bool CFAUsesSP = Info.CFAUsesSPOnEntry;
+  bool UnhandledCFI = Info.UnhandledCFIOnEntry;
+  updateCFIInfo(MF, make_range(MBB.begin(), C.begin()), DwarfLR, DwarfSP,
+                UnhandledCFI, LRHasDefaultRule, CFAUsesSP);
+
+  if (LRHasDefaultRule) {
+    C.Flags |= MachineOutlinerMBBFlags::LRHasDefaultRule;
+  }
+  if (CFAUsesSP) {
+    C.Flags |= MachineOutlinerMBBFlags::CFAUsesSP;
+  }
+  if (UnhandledCFI) {
+    C.Flags |= MachineOutlinerMBBFlags::UnhandledCFIState;
   }
 }
 
@@ -11247,7 +11253,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     }
 
     for (outliner::Candidate &C : RepeatedSequenceLocs) {
-      populateCandidateCFIInfo(C, TRI);
+      setCandidateCFIFlags(C, TRI);
     }
 
     // Filter out candidates where we don't know what CFI instructions to emit

@@ -336,6 +336,25 @@ public:
   void setLocalStackSize(uint64_t Size) { LocalStackSize = Size; }
   uint64_t getLocalStackSize() const { return LocalStackSize; }
 
+  // Information used by the machine outliner to determine what CFI instructions
+  // to emit around outlined function calls.
+  struct OutlinerBasicBlockInfo {
+    bool LRHasDefaultRuleOnEntry : 1;
+    bool CFAUsesSPOnEntry : 1;
+    bool UnhandledCFIOnEntry : 1;
+
+    OutlinerBasicBlockInfo()
+        : LRHasDefaultRuleOnEntry(false), CFAUsesSPOnEntry(false),
+          UnhandledCFIOnEntry(false) {}
+  };
+
+  void setOutlinerBasicBlockInfos(SmallVector<OutlinerBasicBlockInfo> Infos) {
+    OutlinerBasicBlockInfos = std::move(Infos);
+  }
+  ArrayRef<const OutlinerBasicBlockInfo> getOutlinerBasicBlockInfos() const {
+    return OutlinerBasicBlockInfos;
+  }
+
   void setOutliningStyle(const std::string &Style) { OutliningStyle = Style; }
   std::optional<std::string> getOutliningStyle() const {
     return OutliningStyle;
@@ -636,6 +655,9 @@ private:
   SetOfInstructions LOHRelated;
 
   SmallVector<std::pair<unsigned, MCSymbol *>, 2> JumpTableEntryInfo;
+
+  /// Cached result for the analysis done during machine outlining.
+  SmallVector<OutlinerBasicBlockInfo> OutlinerBasicBlockInfos;
 };
 
 namespace yaml {
