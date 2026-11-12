@@ -1,0 +1,109 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --symbols %t.pdb | FileCheck --check-prefix=YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --module-syms %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=PDB2YAML %s
+
+# YAML2PDB:         Mod 0000 | `C:\Users\johannes\AppData\Local\Temp\main-7524b3.obj`: 
+# YAML2PDB-NEXT:         4 | S_OBJNAME [size = 64] sig=0, `C:\Users\johannes\AppData\Local\Temp\main-7524b3.obj`
+# YAML2PDB-NEXT:        68 | S_COMPILE3 [size = 32]
+# YAML2PDB-NEXT:             machine = intel x86-x64, Ver = clang, language = c++
+# YAML2PDB-NEXT:             frontend = 22.1.4.0, backend = 22014.0.0.0
+# YAML2PDB-NEXT:             flags = no dbg info | hot patchable
+# YAML2PDB-NEXT:    Mod 0001 | `* Linker *`: 
+# YAML2PDB-NEXT:         4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
+# YAML2PDB-NEXT:        24 | S_COMPILE3 [size = 40]
+# YAML2PDB-NEXT:             machine = intel x86-x64, Ver = LLVM Linker, language = link
+# YAML2PDB-NEXT:             frontend = 0.0.0.0, backend = 14.10.25019.0
+# YAML2PDB-NEXT:             flags = none
+
+
+# PDB2YAML:                - Kind:            S_COMPILE3
+# PDB2YAML-NEXT:             Compile3Sym:
+# PDB2YAML-NEXT:               Flags:           [ NoDbgInfo, HotPatch ]
+# PDB2YAML-NEXT:               Language:        Cpp
+# PDB2YAML-NEXT:               Machine:         X64
+# PDB2YAML-NEXT:               FrontendMajor:   22
+# PDB2YAML-NEXT:               FrontendMinor:   1
+# PDB2YAML-NEXT:               FrontendBuild:   4
+# PDB2YAML-NEXT:               FrontendQFE:     0
+# PDB2YAML-NEXT:               BackendMajor:    22014
+# PDB2YAML-NEXT:               BackendMinor:    0
+# PDB2YAML-NEXT:               BackendBuild:    0
+# PDB2YAML-NEXT:               BackendQFE:      0
+# PDB2YAML-NEXT:               Version:         clang
+
+# PDB2YAML:                - Kind:            S_COMPILE3
+# PDB2YAML-NEXT:             Compile3Sym:
+# PDB2YAML-NEXT:               Flags:           [  ]
+# PDB2YAML-NEXT:               Language:        Link
+# PDB2YAML-NEXT:               Machine:         X64
+# PDB2YAML-NEXT:               FrontendMajor:   0
+# PDB2YAML-NEXT:               FrontendMinor:   0
+# PDB2YAML-NEXT:               FrontendBuild:   0
+# PDB2YAML-NEXT:               FrontendQFE:     0
+# PDB2YAML-NEXT:               BackendMajor:    14
+# PDB2YAML-NEXT:               BackendMinor:    10
+# PDB2YAML-NEXT:               BackendBuild:    25019
+# PDB2YAML-NEXT:               BackendQFE:      0
+# PDB2YAML-NEXT:               Version:         LLVM Linker
+
+---
+DbiStream:
+  VerHeader:       V70
+  Age:             1
+  BuildNumber:     36363
+  PdbDllVersion:   0
+  PdbDllRbld:      0
+  Flags:           0
+  MachineType:     Amd64
+  Modules:
+    - Module:          'C:\Users\johannes\AppData\Local\Temp\main-7524b3.obj'
+      ObjFile:         'C:\Users\johannes\AppData\Local\Temp\main-7524b3.obj'
+      SourceFiles:
+        - 'F:\Dev\dummy\lldb-repro\main.cpp'
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      'C:\Users\johannes\AppData\Local\Temp\main-7524b3.obj'
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [ NoDbgInfo, HotPatch ]
+              Language:        Cpp
+              Machine:         X64
+              FrontendMajor:   22
+              FrontendMinor:   1
+              FrontendBuild:   4
+              FrontendQFE:     0
+              BackendMajor:    22014
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         clang
+    - Module:          '* Linker *'
+      ObjFile:         ''
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      '* Linker *'
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Language:        Link
+              Machine:         X64
+              FrontendMajor:   0
+              FrontendMinor:   0
+              FrontendBuild:   0
+              FrontendQFE:     0
+              BackendMajor:    14
+              BackendMinor:    10
+              BackendBuild:    25019
+              BackendQFE:      0
+              Version:         LLVM Linker
+...

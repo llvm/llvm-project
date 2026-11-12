@@ -57,7 +57,7 @@ define amdgpu_ps float @add_max_u32_sss(i32 inreg %a, i32 inreg %b, i32 inreg %c
 ; SDAG-NEXT:    s_not_b32 s3, s1
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_min_u32 s0, s0, s3
-; SDAG-NEXT:    s_add_co_u32 s0, s0, s1
+; SDAG-NEXT:    s_add_co_i32 s0, s0, s1
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_max_u32 s0, s0, s2
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s0
@@ -290,7 +290,7 @@ define amdgpu_ps float @add_max_v2u16_slv(<2 x i16> inreg %a, <2 x i16> %b) {
 ; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_pk_add_max_u16 v0, 0x640064, s0, v0
+; GCN-NEXT:    v_pk_add_max_u16 v0, s0, 0x640064, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %add = call <2 x i16> @llvm.uadd.sat.i32(<2 x i16> %a, <2 x i16> <i16 100, i16 100>)
   %max = call <2 x i16> @llvm.umax.v216(<2 x i16> %add, <2 x i16> %b)

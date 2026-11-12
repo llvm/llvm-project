@@ -31,6 +31,6 @@ end module
 ! CHECK-NEXT:      %[[CONSTANT_0:.*]] = arith.constant 0 : index
 ! CHECK-NEXT:      %[[COORDINATE_OF_0:.*]] = fir.coordinate_of %[[ADDRESS_OF_0]], %[[CONSTANT_0]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK-NEXT:      %[[CONVERT_0:.*]] = fir.convert %[[COORDINATE_OF_0]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! CHECK-NEXT:      %[[DECLARE_0:.*]]:2 = hlfir.declare %[[CONVERT_0]] storage(%[[ADDRESS_OF_0]][0]) {uniq_name = "_QMtest_host_module_instantiationEb"} : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
+! CHECK-NEXT:      %[[DECLARE_0:.*]]:2 = hlfir.declare %[[CONVERT_0]] storage(%[[ADDRESS_OF_0]][0]) uniq_name("_QMtest_host_module_instantiationEb") : (!fir.ptr<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ptr<i32>, !fir.ptr<i32>)
 ! CHECK-NOT:       hlfir.declare
 ! CHECK:           return

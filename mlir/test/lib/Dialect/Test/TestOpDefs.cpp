@@ -14,6 +14,7 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace test;
@@ -56,6 +57,15 @@ void OverriddenSymbolVisibilityOp::setVisibility(
 SuccessorOperands TestBranchOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
   return SuccessorOperands(getTargetOperandsMutable());
+}
+
+LogicalResult TestBranchOp::fold(FoldAdaptor adaptor,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  if (!getFoldToLast())
+    return failure();
+  (*this)->setSuccessor(&(*this)->getParentRegion()->back(), 0);
+  removeFoldToLastAttr();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -984,6 +994,32 @@ void TestWithBoundsRegionOp::inferResultRanges(
   setResultRanges(arg, {getUmin(), getUmax(), getSmin(), getSmax()});
 }
 
+void TestWithBoundsRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.emplace_back(getOperation());
+}
+
+ValueRange
+TestWithBoundsRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isOperation())
+    return getResults().take_front(1);
+  return getBody().getArguments().take_front(1);
+}
+
+OperandRange
+TestWithBoundsRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getOperands().take_front(1);
+}
+
+void TestWithBoundsRegionBranchOp::inferResultRanges(
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
+  setResultRanges(getInferredResult(), argRanges[1]);
+  setResultRanges(getBody().getArgument(1), argRanges[1]);
+}
+
 //===----------------------------------------------------------------------===//
 // TestIncrementOp
 //===----------------------------------------------------------------------===//
@@ -1320,6 +1356,126 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
   inferredReturnTypes.push_back(IntegerType::get(
       context, adaptor.getLhs() + adaptor.getProperties().rhs));
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SegmentedRegionBranchOp / SegmentedRegionBranchTerminatorOp
+//===----------------------------------------------------------------------===//
+
+void SegmentedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+void SegmentedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getFirstRegion());
+  regions.emplace_back(&getSecondRegion());
+  if (!point.isParent())
+    regions.emplace_back(getOperation());
+}
+
+ValueRange
+SegmentedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isOperation())
+    return {};
+  return successor.getSuccessor()->front().getArguments();
+}
+
+OperandRange
+SegmentedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return successor.getSuccessor() == &getFirstRegion() ? getFirst()
+                                                       : getSecond();
+}
+
+MutableOperandRange
+SegmentedRegionBranchTerminatorOp::getMutableSuccessorOperands(
+    RegionSuccessor successor) {
+  if (successor.isOperation())
+    return MutableOperandRange(getOperation(), getNumOperands(), 0);
+  auto parent = cast<SegmentedRegionBranchOp>((*this)->getParentOp());
+  return successor.getSuccessor() == &parent.getFirstRegion()
+             ? getFirstMutable()
+             : getSecondMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// IsolatedRegionBranchOp
+//===----------------------------------------------------------------------===//
+
+void IsolatedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.emplace_back(getOperation());
+    return;
+  }
+  for (Region &region : getBranches())
+    regions.emplace_back(&region);
+}
+
+ValueRange
+IsolatedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation()
+             ? ValueRange(getOutputs())
+             : ValueRange(successor.getSuccessor()->getArguments());
+}
+
+OperandRange
+IsolatedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return getInputs();
+}
+
+void IsolatedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+MutableOperandRange
+IsolatedRegionYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  return getValuesMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TypeChangingRegionBranchOp
+//===----------------------------------------------------------------------===//
+
+void TypeChangingRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.emplace_back(getOperation());
+    return;
+  }
+  for (Region &region : getBranches())
+    regions.emplace_back(&region);
+}
+
+ValueRange
+TypeChangingRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation()
+             ? ValueRange(getOutputs())
+             : ValueRange(successor.getSuccessor()->getArguments());
+}
+
+OperandRange TypeChangingRegionBranchOp::getEntrySuccessorOperands(
+    RegionSuccessor successor) {
+  return getInputs();
+}
+
+bool TypeChangingRegionBranchOp::areTypesCompatible(Type lhs, Type rhs) {
+  return true;
+}
+
+void TypeChangingRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+MutableOperandRange
+TypeChangingYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  return getValuesMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1698,7 +1854,6 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
     const auto *version =
         reinterpret_cast<const TestDialectVersion *>(*maybeVersion);
     if ((version->major_ < 2)) {
-      llvm::outs() << "downgrading op properties...\n";
       return;
     }
   }
@@ -1739,6 +1894,10 @@ void TestOpWithVersionedProperties::writeToMlirBytecode(
     mlir::DialectBytecodeWriter &writer,
     const test::VersionedProperties &prop) {
   writer.writeVarInt(prop.value1);
+  auto version = writer.getDialectVersion<test::TestDialect>();
+  if (succeeded(version) &&
+      static_cast<const TestDialectVersion *>(*version)->major_ < 2)
+    return;
   writer.writeVarInt(prop.value2);
 }
 
@@ -1757,7 +1916,7 @@ llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
 
 Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
                                            OpBuilder &builder) {
-  return TestOpConstant::create(builder, getLoc(), slot.elemType,
+  return TestOpConstant::create(builder, getLoc(), slot.valueType,
                                 builder.getI32IntegerAttr(42));
 }
 
@@ -1912,10 +2071,10 @@ Value TestTransparentCastAlias::projectSlotValueToAliasValue(
     OpOperand & /*aliasedSlotPointerOperand*/,
     const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
     Value slotValue, OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
+  if (slotValue.getType() == aliasSlot.valueType)
     return slotValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -1923,10 +2082,10 @@ Value TestTransparentCastAlias::projectAliasValueToSlotValue(
     OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
     const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
+  if (aliasValue.getType() == parentSlot.valueType)
     return aliasValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType, aliasValue)
+                                            parentSlot.valueType, aliasValue)
       .getResult(0);
 }
 
@@ -1968,10 +2127,10 @@ Value TestTransparentDualAlias::projectSlotValueToAliasValue(
     OpOperand & /*aliasedSlotPointerOperand*/,
     const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
     Value slotValue, OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
+  if (slotValue.getType() == aliasSlot.valueType)
     return slotValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -1979,10 +2138,10 @@ Value TestTransparentDualAlias::projectAliasValueToSlotValue(
     OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
     const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
+  if (aliasValue.getType() == parentSlot.valueType)
     return aliasValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType, aliasValue)
+                                            parentSlot.valueType, aliasValue)
       .getResult(0);
 }
 
@@ -2019,7 +2178,7 @@ Value TestPartialAlias::projectSlotValueToAliasValue(
     Value slotValue, OpBuilder &builder) {
   // Sub-value extraction: 1-input cast.
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -2030,9 +2189,73 @@ Value TestPartialAlias::projectAliasValueToSlotValue(
   // Sub-value insertion into the current reaching definition: emit a 2-input
   // cast taking both the new alias value and the existing parent value.
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType,
+                                            parentSlot.valueType,
                                             ValueRange{aliasValue, reachingDef})
       .getResult(0);
+}
+
+//===----------------------------------------------------------------------===//
+// TestOwningAccess
+//===----------------------------------------------------------------------===//
+
+/// Returns the memory operation wrapped by `op`, if it is the only operation
+/// before the terminator.
+static PromotableMemOpInterface getOwnedAccess(TestOwningAccess op) {
+  Block &body = op.getBody().front();
+  if (body.getOperations().size() != 2)
+    return {};
+  return dyn_cast<PromotableMemOpInterface>(body.front());
+}
+
+bool TestOwningAccess::ownsWrappedBlockingUses() {
+  return !getDisown() && getOwnedAccess(*this);
+}
+
+bool TestOwningAccess::loadsFrom(const MemorySlot &slot) {
+  PromotableMemOpInterface access = getOwnedAccess(*this);
+  return access && access.loadsFrom(slot);
+}
+
+bool TestOwningAccess::storesTo(const MemorySlot &slot) {
+  PromotableMemOpInterface access = getOwnedAccess(*this);
+  return access && access.storesTo(slot);
+}
+
+Value TestOwningAccess::getStored(const MemorySlot &slot, OpBuilder &builder,
+                                  Value reachingDef,
+                                  const DataLayout &dataLayout) {
+  return getOwnedAccess(*this).getStored(slot, builder, reachingDef,
+                                         dataLayout);
+}
+
+bool TestOwningAccess::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (getDecline())
+    return false;
+  PromotableMemOpInterface access = getOwnedAccess(*this);
+  if (!access)
+    return false;
+  // The wrapped access can only remove its own uses.
+  for (OpOperand *use : blockingUses)
+    if (use->getOwner() != access)
+      return false;
+  return access.canUsesBeRemoved(slot, blockingUses, newBlockingUses,
+                                 dataLayout);
+}
+
+DeletionKind TestOwningAccess::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  getOwnedAccess(*this).removeBlockingUses(slot, blockingUses, builder,
+                                           reachingDefinition, dataLayout);
+  // The wrapped load's result has been replaced with the reaching definition.
+  // Replace the wrapper's results with the updated yield operands.
+  getOperation()->replaceAllUsesWith(
+      getBody().front().getTerminator()->getOperands());
+  return DeletionKind::Delete;
 }
 
 //===----------------------------------------------------------------------===//

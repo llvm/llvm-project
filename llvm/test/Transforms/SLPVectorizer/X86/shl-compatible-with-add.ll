@@ -17,7 +17,9 @@ define void @intrapred_luma(ptr %0, i16 %1, i32 %conv593) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[ADD636]], i64 3
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i32> <i32 1, i32 poison, i32 0, i32 1>, <4 x i32> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[TMP13:%.*]] = freeze <4 x i32> [[TMP17]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP18]], <4 x i32> [[TMP13]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>, i32 [[CONV593]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]

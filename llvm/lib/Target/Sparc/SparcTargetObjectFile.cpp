@@ -15,9 +15,10 @@
 
 using namespace llvm;
 
-void SparcELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                          const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void SparcELFTargetObjectFile::initialize(MCContext &Ctx,
+                                          const TargetMachine &TM,
+                                          const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 }
 
 const MCExpr *SparcELFTargetObjectFile::getTTypeGlobalReference(

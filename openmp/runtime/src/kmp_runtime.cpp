@@ -13,6 +13,7 @@
 #include "kmp.h"
 #include "kmp_affinity.h"
 #include "kmp_atomic.h"
+#include "kmp_device_env.h"
 #include "kmp_environment.h"
 #include "kmp_error.h"
 #include "kmp_i18n.h"
@@ -57,19 +58,6 @@ static char *ProfileTraceFile = nullptr;
 #include <fcntl.h>
 #define SHM_SIZE 1024
 #endif
-
-#if defined(KMP_GOMP_COMPAT)
-char const __kmp_version_alt_comp[] =
-    KMP_VERSION_PREFIX "alternative compiler support: yes";
-#endif /* defined(KMP_GOMP_COMPAT) */
-
-char const __kmp_version_omp_api[] =
-    KMP_VERSION_PREFIX "API version: 5.0 (201611)";
-
-#ifdef KMP_DEBUG
-char const __kmp_version_lock[] =
-    KMP_VERSION_PREFIX "lock type: run time selectable";
-#endif /* KMP_DEBUG */
 
 #define KMP_MIN(x, y) ((x) < (y) ? (x) : (y))
 
@@ -8343,6 +8331,8 @@ void __kmp_cleanup(void) {
     KMP_INTERNAL_FREE(__kmp_affinity_format);
     __kmp_affinity_format = NULL;
   }
+
+  __kmp_device_env_reset();
 
   __kmp_i18n_catclose();
 

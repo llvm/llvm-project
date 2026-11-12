@@ -186,6 +186,7 @@ protected:
 
 public:
   friend class ASTDeclMerger;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class IncrementalParser;

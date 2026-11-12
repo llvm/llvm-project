@@ -44,6 +44,7 @@ int omp_get_dynamic(void);
 ///
 ///{
 void omp_set_num_threads(int);
+void kmp_set_num_threads_8(int64_t);
 int omp_get_max_threads(void);
 ///}
 
@@ -217,6 +218,9 @@ uint32_t __kmpc_get_hardware_num_threads_in_block();
 /// External interface to get the warp size.
 uint32_t __kmpc_get_warp_size();
 
+/// External interface to get how many of a block's threads a team can use.
+uint32_t __kmpc_get_max_team_threads(int32_t IsSPMD);
+
 /// Kernel
 ///
 ///{
@@ -357,6 +361,10 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
 int32_t __kmpc_cancellationpoint(IdentTy *Loc, int32_t TId, int32_t CancelVal);
 
 int32_t __kmpc_cancel(IdentTy *Loc, int32_t TId, int32_t CancelVal);
+
+/// Report a user-directed error. \p Severity matches kmp_severity_t: 1 is a
+/// warning and execution continues, 2 is fatal and execution aborts.
+void __kmpc_error(IdentTy *Loc, int32_t Severity, const char *Message);
 ///}
 
 /// Shuffle

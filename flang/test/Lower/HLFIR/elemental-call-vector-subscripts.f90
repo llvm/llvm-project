@@ -14,9 +14,9 @@ subroutine test()
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFtestEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "x", uniq_name = "_QFtestEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) uniq_name("_QFtestEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QQro.3xi8.0) : !fir.ref<!fir.array<3xi64>>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
@@ -46,9 +46,9 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPtest_value() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFtest_valueEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "x", uniq_name = "_QFtest_valueEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFtest_valueEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) uniq_name("_QFtest_valueEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QQro.3xi8.0) : !fir.ref<!fir.array<3xi64>>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>

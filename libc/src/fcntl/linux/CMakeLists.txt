@@ -12,6 +12,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fallocate
+  SRCS
+    fallocate.cpp
+  HDRS
+    ../fallocate.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
+    libc.hdr.types.off_t
+)
+
+add_entrypoint_object(
   fcntl
   SRCS
     fcntl.cpp
@@ -44,8 +56,12 @@ add_entrypoint_object(
   HDRS
     ../openat.h
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.hdr.types.mode_t
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.openat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -59,4 +75,32 @@ add_entrypoint_object(
     libc.hdr.types.off_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.posix_fadvise
     libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  posix_fadvise64
+  SRCS
+    posix_fadvise64.cpp
+  HDRS
+    ../posix_fadvise64.h
+  DEPENDS
+    libc.hdr.types.off64_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.posix_fadvise
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  posix_fallocate
+  SRCS
+    posix_fallocate.cpp
+  HDRS
+    ../posix_fallocate.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )

@@ -322,12 +322,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     for (auto aVec : adaptor.getLhs()) {
       for (auto bVec : adaptor.getRhs()) {
 
-        llvm::SmallVector<Value> operands({aVec, bVec});
         Value tmpC;
-        if (op.getAcc()) {
+        if (op.getAcc())
           tmpC = adaptor.getAcc()[i++];
-          operands.push_back(tmpC);
-        }
 
         ArrayRef<int64_t> aVecShape =
             cast<VectorType>(aVec.getType()).getShape();
@@ -339,7 +336,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         resShape.push_back(aVecShape[aVecShape.size() - 2]);
         resShape.push_back(bVecShape[bVecShape.size() - 1]);
         VectorType resTy = VectorType::get(resShape, resultTy.getElementType());
-        auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
+        auto newDpasOp = xegpu::DpasOp::create(
+            rewriter, loc, resTy, aVec, bVec, tmpC,
+            /*layout_a=*/nullptr, /*layout_b=*/nullptr, /*layout_cd=*/nullptr);
         newDpasOp.setLayoutCdAttr(layoutCd.dropSgLayoutAndData());
         newDpasOp.setLayoutAAttr(layoutA.dropSgLayoutAndData());
         newDpasOp.setLayoutBAttr(layoutB.dropSgLayoutAndData());
@@ -829,14 +828,12 @@ struct WgToSgLoadGatherOp : public OpConversionPattern<xegpu::LoadGatherOp> {
     }
 
     SmallVector<Value> newLoadOps;
-    auto chunkSizeAttr =
-        rewriter.getI64IntegerAttr(op.getChunkSize().value_or(1));
     VectorType newTy = VectorType::get(sgShape, resultType.getElementType());
     for (auto [offsets, mask] :
          llvm::zip(adaptor.getOffsets(), adaptor.getMask())) {
       auto newLayout = layout.dropSgLayoutAndData();
       auto newLoadOp = xegpu::LoadGatherOp::create(
-          rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
+          rewriter, loc, newTy, op.getSource(), offsets, mask,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(), newLayout,
           /*contiguity=*/nullptr);
       newLoadOps.push_back(newLoadOp);
@@ -876,16 +873,12 @@ struct WgToSgStoreScatterOp
                                          "offsets have not been distributed");
     }
 
-    auto chunkSizeOpt = op.getChunkSize();
-    int64_t chunkSize = chunkSizeOpt ? static_cast<int64_t>(*chunkSizeOpt) : 1;
-    auto chunkSizeAttr = rewriter.getI64IntegerAttr(chunkSize);
     for (auto [val, offs, mask] : llvm::zip(
              adaptor.getValue(), adaptor.getOffsets(), adaptor.getMask())) {
-      xegpu::StoreScatterOp::create(rewriter, loc, val, op.getDest(), offs,
-                                    mask, chunkSizeAttr, op.getL1HintAttr(),
-                                    op.getL2HintAttr(), op.getL3HintAttr(),
-                                    layout.dropSgLayoutAndData(),
-                                    /*contiguity=*/nullptr);
+      xegpu::StoreScatterOp::create(
+          rewriter, loc, val, op.getDest(), offs, mask, op.getL1HintAttr(),
+          op.getL2HintAttr(), op.getL3HintAttr(), layout.dropSgLayoutAndData(),
+          /*contiguity=*/nullptr);
     }
     rewriter.eraseOp(op);
     return success();
@@ -1136,11 +1129,11 @@ struct WgToSgMultiDimReductionOp
     for (auto sgSrc : sgSrcs) {
       // Create neutral accumulator for local reduction
       Value neutralLocalAcc = xegpu::createReductionNeutralValue(
-          rewriter, loc, sgDstType, op.getKind());
+          rewriter, loc, sgDstType, op.getKind(), op.getFastmathAttr());
       // Local reduction with neutral accumulator
       auto localReduce = vector::MultiDimReductionOp::create(
           rewriter, loc, sgDstType, op.getKind(), sgSrc, neutralLocalAcc,
-          reductionDims);
+          reductionDims, op.getFastmath());
       localReductions.push_back(localReduce.getResult());
     }
 
@@ -1161,7 +1154,8 @@ struct WgToSgMultiDimReductionOp
       SmallVector<Value> results;
       for (auto localResult : localReductions) {
         auto finalResult = vector::makeArithReduction(
-            rewriter, loc, op.getKind(), localResult, adaptor.getAcc()[0]);
+            rewriter, loc, op.getKind(), localResult, adaptor.getAcc()[0],
+            op.getFastmathAttr());
         results.push_back(finalResult);
       }
       rewriter.replaceOpWithMultiple(op, {results});
@@ -1250,17 +1244,17 @@ struct WgToSgMultiDimReductionOp
     // Step 5: Perform final reduction with neutral accumulator and add the
     // original accumulator at the end
     Value neutralFinalAcc = xegpu::createReductionNeutralValue(
-        rewriter, loc, sgDstType, op.getKind());
+        rewriter, loc, sgDstType, op.getKind(), op.getFastmathAttr());
 
     SmallVector<Value> finalResults;
     for (size_t i = 0; i < slmLoadData.size(); ++i) {
       auto loaded = slmLoadData[i];
       auto finalReduce = vector::MultiDimReductionOp::create(
           rewriter, loc, sgDstType, op.getKind(), loaded, neutralFinalAcc,
-          reductionDims);
+          reductionDims, op.getFastmath());
       finalResults.push_back(vector::makeArithReduction(
           rewriter, loc, op.getKind(), finalReduce.getResult(),
-          adaptor.getAcc()[i]));
+          adaptor.getAcc()[i], op.getFastmathAttr()));
     }
     rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();
@@ -1472,8 +1466,8 @@ struct WgToSgVectorDeinterleaveOp
     for (auto src : adaptor.getSource()) {
       auto newDeinterleave =
           vector::DeinterleaveOp::create(rewriter, op.getLoc(), src);
-      newRes1Ops.push_back(newDeinterleave.getRes1());
-      newRes2Ops.push_back(newDeinterleave.getRes2());
+      newRes1Ops.push_back(newDeinterleave.getResultEven());
+      newRes2Ops.push_back(newDeinterleave.getResultOdd());
     }
 
     SmallVector<SmallVector<Value>> results = {newRes1Ops, newRes2Ops};

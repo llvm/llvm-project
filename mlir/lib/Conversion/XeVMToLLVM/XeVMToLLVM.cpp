@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/TypeSwitch.h"
@@ -350,11 +351,7 @@ buildCacheControlPayloads(ArrayRef<Attribute> attrs) {
   SmallVector<std::string> payloads;
   llvm::StringMap<bool> seen;
 
-  for (Attribute a : attrs) {
-    auto arr = dyn_cast<ArrayAttr>(a);
-    if (!arr)
-      continue;
-
+  for (auto arr : llvm::make_isa_range<ArrayAttr>(attrs)) {
     auto vals = arr.getValue();
     assert(vals.size() == 3 &&
            "Expected exactly 3 integer values (Token, CacheLevel, "
@@ -594,7 +591,7 @@ static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
 }
 
 class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(xevm::MMAOp op, xevm::MMAOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -699,7 +696,7 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
 };
 
 class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(PrefetchOp op, PrefetchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -737,7 +734,7 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
 };
 
 class MemfenceToOCLPattern : public OpConversionPattern<MemfenceOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(MemfenceOp op, MemfenceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1205,7 +1202,7 @@ static Value takeLeadingElements(ConversionPatternRewriter &rewriter,
 //
 
 class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(TruncfOp op, TruncfOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1353,69 +1350,54 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
       return success();
     }
 
-    // Handle the case where dst type is fp8.
-    // The fp8 conversions come as one builtin per vector length, so the length
-    // is simply appended to the builtin name.
-    std::string lenSuffix = std::to_string(numElements);
-    // BF16 type needs some preprocessing before conversion,
-    // First extended to F32 and then truncated to F16.
-    if (srcEtype == TruncfSrcElemTypes::BF16) {
-      // Step 1: Extend to F32
-      // Use floatN __builtin_IB_bftof_N(shortN)
+    // Handle the case where dst type is fp8, via the SPV_INTEL_fp_conversions
+    // wrappers in IGC's BiFModule:
+    //   charN __builtin_spirv_Convert{FP16,BF16}To{E5M2,E4M3}EXT(halfN/shortN)
+    //
+    // These replace the __builtin_IB_* names used before, two of which did not
+    // exist: IGC spells E4M3 as `e4m3` in the conversion builtins, not `hf8`.
+    // createDeviceFunctionCall emits names unmangled, so the missing symbol
+    // linked silently and the call returned undef. The wrappers are
+    // `overloadable`, so mangle() takes the length from the argument type and a
+    // mismatch fails to link instead. The bf16 forms take the bits as shortN
+    // and route through f32 and f16 internally, replacing the explicit
+    // bftof/convert_half round trip.
+    //
+    // `src_etype` is what says how to read the source, so the bf16 bitcast is
+    // driven by it, and is only the step the wrapper's shortN signature needs.
+    // An operand whose element type disagrees with `src_etype` is a case
+    // `TruncfOp::verify` accepts today but should not: mangle() has no bf16
+    // case, so it reaches the unreachable in getTypeMangling. That verifier
+    // rule belongs with the op, not here.
+    bool srcIsBF16 = srcEtype == TruncfSrcElemTypes::BF16;
+    if (srcIsBF16)
       src = LLVM::BitcastOp::create(
-          rewriter, op.getLoc(),
+          rewriter, loc,
           VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type()), src);
-      std::string fnName = "__builtin_IB_bftof_" + lenSuffix;
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Type resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
-      src = createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args,
-                                     {}, funcAttrs, op.getOperation())
-                ->getResult(0);
-      // Step 2: Truncf to F16
-      // Use halfN convert_halfN(floatN)
-      std::string truncFnName = "convert_half" + lenSuffix;
-      SmallVector<Type> truncArgTypes{src.getType()};
-      SmallVector<Value> truncArgs{src};
-      truncFnName = mangle(truncFnName, truncArgTypes);
-      resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
-      src =
-          createDeviceFunctionCall(rewriter, truncFnName, resTy, truncArgTypes,
-                                   truncArgs, {}, funcAttrs, op.getOperation())
-              ->getResult(0);
-    }
+    StringRef convertName;
     if (dstEtype == TruncfDstElemTypes::BF8) { // Float8E5M2Type
-      // Use charN __builtin_IB_hftobf8_N(halfN)
-      std::string fnName = "__builtin_IB_hftobf8_" + lenSuffix;
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Value result =
-          createDeviceFunctionCall(rewriter, fnName, dstTy, argTypes, args, {},
-                                   funcAttrs, op.getOperation())
-              ->getResult(0);
-
-      rewriter.replaceOp(op, result);
+      convertName = srcIsBF16 ? "__builtin_spirv_ConvertBF16ToE5M2EXT"
+                              : "__builtin_spirv_ConvertFP16ToE5M2EXT";
     } else if (dstEtype == TruncfDstElemTypes::F8) { // Float8E4M3FNType
-      // Use charN __builtin_IB_hftohf8_N(halfN)
-      std::string fnName = "__builtin_IB_hftohf8_" + lenSuffix;
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Value result =
-          createDeviceFunctionCall(rewriter, fnName, dstTy, argTypes, args, {},
-                                   funcAttrs, op.getOperation())
-              ->getResult(0);
-
-      rewriter.replaceOp(op, result);
+      convertName = srcIsBF16 ? "__builtin_spirv_ConvertBF16ToE4M3EXT"
+                              : "__builtin_spirv_ConvertFP16ToE4M3EXT";
     } else {
       return rewriter.notifyMatchFailure(
           op, "Unsupported src, dst element type pair.");
     }
+    SmallVector<Type> argTypes{src.getType()};
+    SmallVector<Value> args{src};
+    Value result = createDeviceFunctionCall(
+                       rewriter, mangle(convertName, argTypes), dstTy, argTypes,
+                       args, {}, funcAttrs, op.getOperation())
+                       ->getResult(0);
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
 
 class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(ExtfOp op, ExtfOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1510,61 +1492,40 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
     if (!vecSrcTy || vecSrcTy.getNumElements() != numElements)
       return rewriter.notifyMatchFailure(
           op, "fp8 src and dst must have the same number of elements");
-    std::string lenSuffix = std::to_string(numElements);
 
-    // Step 1: Extend fp8 (bf8/hf8) to F16.
-    //   bf8 -> half: halfN __builtin_IB_bf8tohf_N(charN)
-    //   hf8 -> half: halfN __builtin_IB_hf8tohf_N(charN)
-    std::string fnName = (srcEtype == ExtfSrcElemTypes::BF8)
-                             ? "__builtin_IB_bf8tohf_"
-                             : "__builtin_IB_hf8tohf_";
-    fnName += lenSuffix;
-    Type f16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
+    // The matching wrappers, for the reasons given in the truncf lowering:
+    //   halfN/shortN __builtin_spirv_Convert{E5M2,E4M3}To{FP16,BF16}EXT(charN)
+    //
+    // `__builtin_IB_hf8tohf_N`, used before, never existed either. A bf16
+    // destination returns the bits as shortN, replacing the
+    // convert_float/ftobf round trip.
+    bool dstIsBF16 = dstEtype == ExtfDstElemTypes::BF16;
+    StringRef convertName;
+    if (srcEtype == ExtfSrcElemTypes::BF8) { // Float8E5M2Type
+      convertName = dstIsBF16 ? "__builtin_spirv_ConvertE5M2ToBF16EXT"
+                              : "__builtin_spirv_ConvertE5M2ToFP16EXT";
+    } else { // Float8E4M3FNType
+      convertName = dstIsBF16 ? "__builtin_spirv_ConvertE4M3ToBF16EXT"
+                              : "__builtin_spirv_ConvertE4M3ToFP16EXT";
+    }
+    Type resElemTy = dstIsBF16 ? cast<Type>(rewriter.getI16Type())
+                               : cast<Type>(rewriter.getF16Type());
+    Type resTy = VectorType::get(vecSrcTy.getShape(), resElemTy);
     SmallVector<Type> argTypes{src.getType()};
     SmallVector<Value> args{src};
-    Value result =
-        createDeviceFunctionCall(rewriter, fnName, f16Ty, argTypes, args, {},
-                                 funcAttrs, op.getOperation())
-            ->getResult(0);
-
-    // When the destination is F16, we are done.
-    if (dstEtype == ExtfDstElemTypes::F16) {
-      rewriter.replaceOp(op, result);
-      return success();
-    }
-
-    // BF16 destination needs some postprocessing.
-    // First extend F16 to F32 and then truncate to BF16.
-    // Step 2: Extend to F32.
-    // Use floatN convert_floatN(halfN)
-    std::string convFnName = "convert_float" + lenSuffix;
-    SmallVector<Type> convArgTypes{result.getType()};
-    SmallVector<Value> convArgs{result};
-    convFnName = mangle(convFnName, convArgTypes);
-    Type f32Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
-    result =
-        createDeviceFunctionCall(rewriter, convFnName, f32Ty, convArgTypes,
-                                 convArgs, {}, funcAttrs, op.getOperation())
-            ->getResult(0);
-    // Step 3: Truncate F32 to BF16.
-    // Use shortN __builtin_IB_ftobf_N(floatN)
-    std::string ftobfFnName = "__builtin_IB_ftobf_" + lenSuffix;
-    SmallVector<Type> ftobfArgTypes{result.getType()};
-    SmallVector<Value> ftobfArgs{result};
-    Type i16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type());
-    result =
-        createDeviceFunctionCall(rewriter, ftobfFnName, i16Ty, ftobfArgTypes,
-                                 ftobfArgs, {}, funcAttrs, op.getOperation())
-            ->getResult(0);
-    // The builtin returns the bf16 bits as i16, bitcast to the bf16 dst type.
-    result = LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, result);
-    rewriter.replaceOp(op, result);
+    Value result = createDeviceFunctionCall(
+                       rewriter, mangle(convertName, argTypes), resTy, argTypes,
+                       args, {}, funcAttrs, op.getOperation())
+                       ->getResult(0);
+    // The bf16 wrapper returns the bits as i16, so cast to the bf16 result
+    // type. An f16 result needs nothing: the wrapper returns it.
+    rewriter.replaceOp(op, castIfNeeded(rewriter, loc, vecDstTy, result));
     return success();
   }
 };
 
 class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(MMAMxOp op, MMAMxOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1663,7 +1624,7 @@ class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
 // holding floating point data bitcasts it to a same-width integer beforehand.
 class BitcastShuffleToGenISAPattern
     : public OpConversionPattern<BitcastShuffleOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(BitcastShuffleOp op, BitcastShuffleOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1685,7 +1646,7 @@ class BitcastShuffleToGenISAPattern
 };
 
 class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(LLVM::AllocaOp op, LLVM::AllocaOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -1767,6 +1728,19 @@ static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
   return true;
 }
 
+// Clones `op` with new operands and result types, preserving its attributes
+// and properties (e.g. an `icmp` predicate or fastmath flags). Same idiom used
+// by the Vector dialect's unroll patterns.
+static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
+                                              Location loc, Operation *op,
+                                              ArrayRef<Value> operands,
+                                              ArrayRef<Type> resultTypes) {
+  OperationState state(loc, op->getName().getStringRef(), operands, resultTypes,
+                       op->getRawDictionaryAttrs().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
+  return rewriter.create(state);
+}
+
 // Input vector of a shuffle vector op extracting a contiguous slice is an
 // illegal vector in SPIRV kernel if the vector size is > 16 elements.
 // To legalize this case, keep applying the following transformations until no
@@ -1775,6 +1749,10 @@ static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
 //       start with fpext, fptrunc and bitcast for now.
 //   2. merge with another shuffle vector op
 //   3. merge with load as a smaller load
+//   4. hoist past n-ary element-wise operations (e.g. fdiv, select, icmp) by
+//      slicing every same-length vector operand with the same mask and cloning
+//      the op at the narrow width. Only done when the source is wider than 16
+//      elements.
 class HandleVectorExtractPattern
     : public OpRewritePattern<LLVM::ShuffleVectorOp> {
   using OpRewritePattern<LLVM::ShuffleVectorOp>::OpRewritePattern;
@@ -1830,6 +1808,11 @@ class HandleVectorExtractPattern
           return failure();
         }
         auto maskScale = srcResSize / srcInputSize;
+        // Storage for the rescaled mask. `mask` is an ArrayRef that gets
+        // rebound to this buffer below, so it has to outlive the `if` that
+        // fills it - otherwise the uses after the `if` read a destroyed
+        // SmallVector.
+        SmallVector<int32_t> newMask;
         if (maskScale != 1) {
           // The slice has to start at, and cover, whole source elements to be
           // expressible in terms of the bitcast source.
@@ -1837,7 +1820,6 @@ class HandleVectorExtractPattern
             return failure();
           }
           // Create a new mask that maps to the source vector
-          SmallVector<int32_t> newMask;
           int32_t newMaskSize = maskSize / maskScale;
           int32_t maskStart = mask[0] / maskScale;
           for (int32_t i = 0; i < newMaskSize; ++i) {
@@ -1895,6 +1877,35 @@ class HandleVectorExtractPattern
           auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, loadPtr);
           rewriter.replaceOp(op, newLoad);
         }
+      } else if (isMemoryEffectFree(srcOp) && srcOp->getNumResults() == 1 &&
+                 srcOp->getNumOperands() >= 1 &&
+                 // Only to legalize. A source of 16 or fewer elements is
+                 // already legal, and splitting it would put a narrow copy of
+                 // the op next to every slice user.
+                 cast<VectorType>(src.getType()).getNumElements() > 16 &&
+                 llvm::all_of(srcOp->getOperands(), [&](Value operand) {
+                   auto operandTy = dyn_cast<VectorType>(operand.getType());
+                   auto srcTy = cast<VectorType>(src.getType());
+                   return operandTy && operandTy.getRank() == 1 &&
+                          operandTy.getNumElements() == srcTy.getNumElements();
+                 })) {
+        // 4. Hoist past an n-ary element-wise op: slice each same-length vector
+        //    operand with the same contiguous mask and clone the op narrow.
+        //    The freshly created operand shuffles keep the greedy driver going,
+        //    hoisting them further up (or merging via case 2 / into loads via
+        //    case 3) until they reach operands that are already legal width.
+        SmallVector<Value> newOperands;
+        newOperands.reserve(srcOp->getNumOperands());
+        for (Value operand : srcOp->getOperands()) {
+          auto operandTy = cast<VectorType>(operand.getType());
+          auto sliceTy =
+              VectorType::get(mask.size(), operandTy.getElementType());
+          newOperands.push_back(LLVM::ShuffleVectorOp::create(
+              rewriter, loc, sliceTy, operand, operand, mask));
+        }
+        Operation *newOp =
+            cloneOpWithOperandsAndTypes(rewriter, loc, srcOp, newOperands, ty);
+        rewriter.replaceOp(op, newOp->getResult(0));
       } else {
         return failure();
       }

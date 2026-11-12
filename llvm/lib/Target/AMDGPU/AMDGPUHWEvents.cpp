@@ -59,7 +59,6 @@ static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
 HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
                                     const SIInstrInfo &TII) {
   switch (Inst.getOpcode()) {
-  // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
   case AMDGPU::GLOBAL_INV:
   case AMDGPU::BUFFER_INV:
     return HWEvents::VMEM_INV_ACCESS; // tracked using loadcnt/vmcnt, but
@@ -117,13 +116,15 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (TII.isFLAT(Inst)) {
-    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()))
-      return getSimplifiedVMEMEventsFor(Inst, TII);
-
-    assert(Inst.mayLoadOrStore());
+    assert(Inst.mayLoadOrStore() ||
+           SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()));
     HWEvents E = HWEvents::NONE;
     if (TII.mayAccessVMEMThroughFlat(Inst)) {
-      if (ST.hasWaitXcnt())
+      // The VGLOBAL tensor ops are the only VMEM FLAT instructions that do
+      // not increment xcnt.
+      if (ST.hasWaitXcnt() && ST.isXNACKEnabled() &&
+          Inst.getOpcode() != AMDGPU::TENSOR_SAVE &&
+          Inst.getOpcode() != AMDGPU::TENSOR_STOP)
         E |= HWEvents::VMEM_GROUP;
       E |= getSimplifiedVMEMEventsFor(Inst, TII);
     }
@@ -147,7 +148,7 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
     // BUFFER_INV increments VM_CNT. BUFFER_WBL2 also needs tracking because an
     // S_WAITCNT vmcnt(0) must follow it to ensure the writeback has completed.
     HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
-    if (ST.hasWaitXcnt())
+    if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
       E |= HWEvents::VMEM_GROUP;
     if (ST.vmemWriteNeedsExpWaitcnt() &&
         (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst)))
@@ -157,7 +158,7 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (TII.isSMRD(Inst)) {
-    if (ST.hasWaitXcnt())
+    if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
       return HWEvents::SMEM_GROUP | HWEvents::SMEM_ACCESS;
     return HWEvents::SMEM_ACCESS;
   }
@@ -167,7 +168,7 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (SIInstrInfo::isEXP(Inst)) {
-    unsigned Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
+    int64_t Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
       return HWEvents::EXP_PARAM_ACCESS;
     if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)

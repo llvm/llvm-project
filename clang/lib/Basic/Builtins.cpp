@@ -96,11 +96,13 @@ std::string Builtin::Context::getName(unsigned ID) const {
   return I.getName(Shard);
 }
 
-std::string Builtin::Context::getQuotedName(unsigned ID) const {
+SmallString<64> Builtin::Context::getQuotedName(unsigned ID) const {
   const auto &[Shard, I] = getShardAndInfo(ID);
-  return (Twine("'") + Shard.NamePrefix + (*Shard.Strings)[I.Offsets.Name] +
-          "'")
-      .str();
+  SmallString<64> Result("'");
+  Result += Shard.NamePrefix;
+  Result += (*Shard.Strings)[I.Offsets.Name];
+  Result += '\'';
+  return Result;
 }
 
 const char *Builtin::Context::getTypeString(unsigned ID) const {
@@ -210,6 +212,9 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
     return false;
   /* C2y unsupported */
   if (!LangOpts.C2y && BuiltinInfo.Langs == C2Y_LANG)
+    return false;
+  /* Reflection unsupported */
+  if (!LangOpts.Reflection && (BuiltinInfo.Langs & REFLECTION_LANG))
     return false;
   return true;
 }

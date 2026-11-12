@@ -17,26 +17,22 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-insert-read-write-csr"
 #define RISCV_INSERT_READ_WRITE_CSR_NAME "RISC-V Insert Read/Write CSR Pass"
 
-static cl::opt<bool>
-    DisableFRMInsertOpt("riscv-disable-frm-insert-opt", cl::init(false),
-                        cl::Hidden,
-                        cl::desc("Disable optimized frm insertion."));
-
 namespace {
 
-class RISCVInsertReadWriteCSR : public MachineFunctionPass {
-  const TargetInstrInfo *TII;
-
+class RISCVInsertReadWriteCSRLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVInsertReadWriteCSR() : MachineFunctionPass(ID) {}
+  RISCVInsertReadWriteCSRLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -48,21 +44,18 @@ public:
   StringRef getPassName() const override {
     return RISCV_INSERT_READ_WRITE_CSR_NAME;
   }
-
-private:
-  bool emitWriteRoundingMode(MachineBasicBlock &MBB);
-  bool emitWriteRoundingModeOpt(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
 
-char RISCVInsertReadWriteCSR::ID = 0;
+char RISCVInsertReadWriteCSRLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVInsertReadWriteCSR, DEBUG_TYPE,
+INITIALIZE_PASS(RISCVInsertReadWriteCSRLegacy, DEBUG_TYPE,
                 RISCV_INSERT_READ_WRITE_CSR_NAME, false, false)
 
 // TODO: Use more accurate rounding mode at the start of MBB.
-bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
+static bool emitWriteRoundingModeOpt(MachineBasicBlock &MBB,
+                                     const TargetInstrInfo *TII) {
   bool Changed = false;
   MachineInstr *LastFRMChanger = nullptr;
   unsigned CurrentRM = RISCVFPRndMode::DYN;
@@ -140,7 +133,8 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
 
 // This function also swaps frm and restores it when encountering an RVV
 // floating point instruction with a static rounding mode.
-bool RISCVInsertReadWriteCSR::emitWriteRoundingMode(MachineBasicBlock &MBB) {
+static bool emitWriteRoundingMode(MachineBasicBlock &MBB,
+                                  const TargetInstrInfo *TII) {
   bool Changed = false;
   for (MachineInstr &MI : MBB) {
     int FRMIdx = RISCVII::getFRMOpNum(MI.getDesc());
@@ -172,26 +166,39 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingMode(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool RISCVInsertReadWriteCSR::runOnMachineFunction(MachineFunction &MF) {
+static bool insertReadWriteCSROnMachineFunction(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
     return false;
 
-  TII = ST.getInstrInfo();
+  const TargetInstrInfo *TII = ST.getInstrInfo();
 
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    if (DisableFRMInsertOpt)
-      Changed |= emitWriteRoundingMode(MBB);
+    if (!ST.getCLOpts().frm_insert_opt)
+      Changed |= emitWriteRoundingMode(MBB, TII);
     else
-      Changed |= emitWriteRoundingModeOpt(MBB);
+      Changed |= emitWriteRoundingModeOpt(MBB, TII);
   }
 
   return Changed;
 }
 
-FunctionPass *llvm::createRISCVInsertReadWriteCSRPass() {
-  return new RISCVInsertReadWriteCSR();
+FunctionPass *llvm::createRISCVInsertReadWriteCSRLegacyPass() {
+  return new RISCVInsertReadWriteCSRLegacy();
+}
+
+bool RISCVInsertReadWriteCSRLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return insertReadWriteCSROnMachineFunction(MF);
+}
+
+PreservedAnalyses
+RISCVInsertReadWriteCSRPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  return insertReadWriteCSROnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

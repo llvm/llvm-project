@@ -247,7 +247,7 @@ define double @fdiv_ninf_nan_op0(double %x) {
 ; CHECK-LABEL: @fdiv_ninf_nan_op0(
 ; CHECK-NEXT:    ret double -qnan
 ;
-  %r = fdiv ninf double 0xfff8000000000000, %x
+  %r = fdiv ninf double -qnan, %x
   ret double %r
 }
 
@@ -255,7 +255,7 @@ define double @fadd_ninf_nan_op1(double %x) {
 ; CHECK-LABEL: @fadd_ninf_nan_op1(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fadd ninf double %x, 0x7ff8000000000000
+  %r = fadd ninf double %x, +qnan
   ret double %r
 }
 
@@ -331,7 +331,7 @@ define float @sqrt_nnan_nan() {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float +qnan)
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = call nnan float @llvm.sqrt(float 0x7ff8000000000000)
+  %sqrt = call nnan float @llvm.sqrt(float +qnan)
   ret float %sqrt
 }
 

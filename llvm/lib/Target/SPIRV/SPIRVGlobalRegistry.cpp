@@ -266,6 +266,7 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
   auto oldInsertPoint = MIRBuilder.getInsertPt();
+  assert(oldInsertPoint.isValid() && "Builder must have insertion point set!");
   MachineBasicBlock *OldMBB = &MIRBuilder.getMBB();
   MachineBasicBlock *NewMBB = &*MIRBuilder.getMF().begin();
 
@@ -360,8 +361,9 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorIdEXT(
     uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder) {
-  assert((NumElems < 2 || NumElems > 16 ||
-          (NumElems != 3 && NumElems != 4 && NumElems != 8)) &&
+  assert(NumElems != 2 && NumElems != 3 && NumElems != 4 &&
+         (!MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>().isKernel() ||
+          (NumElems != 8 && NumElems != 16)) &&
          "SPIR-V OpTypeVectorIdExt should only be used for extended vectors");
   return getOpTypeVectorImpl(NumElems, ElemType, MIRBuilder, true);
 }
@@ -1259,7 +1261,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       AccQual, ExplicitLayoutRequired, EmitIR);
     unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
     const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
-    if (isLongVectorEXT(Ty) &&
+    if (isLongVectorEXT(Ty, STI.isKernel()) &&
         STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
       return getOpTypeVectorIdEXT(NumElts, El, MIRBuilder);
     return getOpTypeVector(NumElts, El, MIRBuilder);
@@ -1346,6 +1348,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
   SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
 
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
+      SpirvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
       findMI(Ty, false, &MIRBuilder.getMF()) || isSpecialOpaqueType(Ty))
     return SpirvType;
 
@@ -2200,6 +2203,7 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
   case SPIRV::OpTypeFloat:
     return &SPIRV::fIDRegClass;
   case SPIRV::OpTypePointer:
+  case SPIRV::OpTypeUntypedPointerKHR:
     return &SPIRV::pIDRegClass;
   case SPIRV::OpTypeVector:
   case SPIRV::OpTypeVectorIdEXT: {
@@ -2207,7 +2211,7 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
     unsigned ElemOpcode = ElemType ? ElemType->getOpcode() : 0;
     if (ElemOpcode == SPIRV::OpTypeFloat)
       return &SPIRV::vfIDRegClass;
-    if (ElemOpcode == SPIRV::OpTypePointer)
+    if (ElemType && ElemType.isPointer())
       return &SPIRV::vpIDRegClass;
     return &SPIRV::viIDRegClass;
   }
@@ -2265,7 +2269,9 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
     MachineIRBuilder &MIRBuilder, const MDNode *AliasingListMD) {
   if (AliasingListMD->getNumOperands() == 0)
     return nullptr;
-  if (auto L = AliasInstMDMap.find(AliasingListMD); L != AliasInstMDMap.end())
+  const MachineFunction *MF = &MIRBuilder.getMF();
+  if (auto L = AliasInstMDMap.find({MF, AliasingListMD});
+      L != AliasInstMDMap.end())
     return L->second;
 
   SmallVector<MachineInstr *> ScopeList;
@@ -2278,7 +2284,7 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
       if (!DomainMD)
         return nullptr;
       auto *Domain = [&] {
-        auto D = AliasInstMDMap.find(DomainMD);
+        auto D = AliasInstMDMap.find({MF, DomainMD});
         if (D != AliasInstMDMap.end())
           return D->second;
         const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
@@ -2286,9 +2292,10 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
             MIRBuilder.buildInstr(SPIRV::OpAliasDomainDeclINTEL).addDef(Ret);
         return MIB.getInstr();
       }();
-      AliasInstMDMap.insert(std::make_pair(DomainMD, Domain));
+      AliasInstMDMap.insert(
+          std::make_pair(std::make_pair(MF, DomainMD), Domain));
       auto *Scope = [&] {
-        auto S = AliasInstMDMap.find(ScopeMD);
+        auto S = AliasInstMDMap.find({MF, ScopeMD});
         if (S != AliasInstMDMap.end())
           return S->second;
         const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
@@ -2297,7 +2304,7 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
                        .addUse(Domain->getOperand(0).getReg());
         return MIB.getInstr();
       }();
-      AliasInstMDMap.insert(std::make_pair(ScopeMD, Scope));
+      AliasInstMDMap.insert(std::make_pair(std::make_pair(MF, ScopeMD), Scope));
       ScopeList.push_back(Scope);
     }
   }
@@ -2308,7 +2315,8 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
   for (auto *Scope : ScopeList)
     MIB.addUse(Scope->getOperand(0).getReg());
   auto List = MIB.getInstr();
-  AliasInstMDMap.insert(std::make_pair(AliasingListMD, List));
+  AliasInstMDMap.insert(
+      std::make_pair(std::make_pair(MF, AliasingListMD), List));
   return List;
 }
 

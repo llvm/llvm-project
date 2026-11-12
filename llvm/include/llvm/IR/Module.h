@@ -1062,7 +1062,14 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+
   /// @}
+  /// @name Utility functions for querying the size of wchar_t
+  /// @{
+
+  /// Returns the size of the wchar_t type from the "wchar_size" module flag,
+  /// or the triple default when the flag is absent.
+  unsigned getWCharSize() const;
 
   /// @}
   /// @name Utility functions for querying the long double format
@@ -1083,6 +1090,39 @@ public:
   /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
   /// the ABI implied by the target triple when the flag is absent.
   FloatABI::ABIType getFloatABI() const;
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the thread model
+  /// @{
+
+  /// Returns the thread model recorded by the "thread-model" module flag, or
+  /// the model implied by the target triple when the flag is absent.
+  ThreadModel getThreadModel() const;
+
+  /// Set the thread model.
+  void setThreadModel(ThreadModel Model);
+
+  /// @name Utility function for querying the exception model
+  /// @{
+
+  /// Returns the exception model recorded by the "exception-model" module flag,
+  /// or the target's default exception model (from the target triple) when the
+  /// flag is absent. Never returns ExceptionHandling::Default.
+  ExceptionHandling getExceptionModel() const;
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the debugger tuning
+  /// @{
+
+  /// Returns the debugger tuning recorded by the "debugger-tuning" module flag,
+  /// or the target's default debugger tuning (from the target triple) when the
+  /// flag is absent. Never returns DebuggerKind::Default.
+  DebuggerKind getDebuggerTuning() const;
+
+  /// Set the debugger tuning.
+  void setDebuggerTuning(DebuggerKind Tuning);
   /// @}
 
   /// @}

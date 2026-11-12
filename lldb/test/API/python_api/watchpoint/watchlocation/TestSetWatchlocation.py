@@ -22,29 +22,13 @@ class SetWatchlocationAPITestCase(TestBase):
         # This is for verifying that watch location works.
         self.violating_func = "do_bad_thing_with_location"
 
-    @skipIfWindows  # This test is flaky on Windows
     def test_watch_location(self):
         """Exercise SBValue.WatchPointee() API to set a watchpoint."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c.
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line, only_one_thread=False
         )
 
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        # We should be stopped due to the breakpoint.  Get frame #0.
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         value = frame0.FindValue("g_char_ptr", lldb.eValueTypeVariableGlobal)

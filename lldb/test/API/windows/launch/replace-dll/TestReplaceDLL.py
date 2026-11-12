@@ -47,7 +47,9 @@ class ReplaceDllTestCase(TestBase):
 
         module = next((m for m in target.modules if "foo" in m.file.basename), None)
         self.assertIsNotNone(module)
-        self.assertEqual(module.file.fullpath, foo)
+        # lldb reports the canonical path, which differs from the build
+        # artifact path when the build tree is reached through a subst drive.
+        self.assertEqual(os.path.realpath(module.file.fullpath), os.path.realpath(foo))
 
         target.RemoveModule(module)
         del module

@@ -453,9 +453,9 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 
 public:
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor(BufferFatPtrToIntTypeMap *TypeMap,
-                                           const DataLayout &DL,
-                                           LLVMContext &Ctx)
-      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)), DL(DL) {}
+                                           Module &M)
+      : TypeMap(TypeMap), IRB(M, InstSimplifyFolder(M.getDataLayout())),
+        DL(M.getDataLayout()) {}
   bool processFunction(Function &F, const TargetTransformInfo *TTI,
                        ScalarEvolution *SE);
 
@@ -475,9 +475,9 @@ public:
 Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::applyOffset(Value *Ptr,
                                                              uint64_t Off) {
   // The InstSimplifyFolder gives back `Ptr` itself when `Off` is 0.
-  return IRB.CreatePtrAdd(
-      Ptr, ConstantInt::get(DL.getIndexType(Ptr->getType()), Off),
-      Ptr->getName() + ".off." + Twine(Off), GEPNoWrapFlags::noUnsignedWrap());
+  return IRB.CreatePtrAddWithUnsignedOffset(
+      Ptr, Off, Ptr->getName() + ".off." + Twine(Off),
+      GEPNoWrapFlags::noUnsignedWrap());
 }
 
 void StoreFatPtrsAsIntsAndExpandMemcpyVisitor::forEachAggLeaf(
@@ -753,32 +753,6 @@ class LegalizeBufferContentTypesVisitor
 
   /// Break up the loads of a struct into the loads of its components
 
-  /// Return the maximum allowed load/store width for the given type and
-  /// alignment combination based on subtarget flags.
-  /// 1. If unaligned accesses are not enabled, then any load/store that is less
-  /// than word-aligned has to be handled one byte or ushort at a time.
-  /// 2. If relaxed OOB mode is not set, we must ensure that the in-bounds
-  /// part of a partially out of bounds read/write is performed correctly. This
-  /// means that any load that isn't naturally aligned has to be split into
-  /// parts that are naturally aligned, so that, after bitcasting, we don't have
-  /// unaligned loads that could discard valid data.
-  ///
-  /// For example, if we're loading a <8 x i8>, that's actually a load of a <2 x
-  /// i32>, and if we load from an align(2) address, that address might be 2
-  /// bytes from the end of the buffer. The hardware will, when performing the
-  /// <2 x i32> load, mask off the entire first word, causing the two in-bounds
-  /// bytes to be masked off. However,if we know the offset can't be too close
-  /// to the number of records in the buffer (if known), we can skip this
-  /// expansion.
-  ///
-  /// Unlike the complete disablement of unaligned accesses from point 1,
-  /// this does not apply to unaligned scalars, but will apply to cases like
-  /// `load <2 x i32>, align 4` since the left elemenvt might be out of bounds.
-  /// Note that if the we know that the base offset is known to be
-  /// less than `uint32_max - byte_size(Ty)`, we can skip these alignment
-  /// checks.
-  uint64_t maxIntrinsicWidth(Type *Ty, Align A, OobProperties OobProps);
-
   /// Convert a vector or scalar type that can't be operated on by buffer
   /// intrinsics to one that would be legal through bitcasts and/or truncation.
   /// Uses the wider of i32, i16, or i8 where possible, clamping to the maximum
@@ -832,9 +806,9 @@ class LegalizeBufferContentTypesVisitor
   bool visitAddrSpaceCastInst(AddrSpaceCastInst &ASCI);
 
 public:
-  LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx,
-                                    const TargetMachine *TM)
-      : IRB(Ctx, InstSimplifyFolder(DL)), DL(DL), TM(TM) {}
+  LegalizeBufferContentTypesVisitor(Module &M, const TargetMachine *TM)
+      : IRB(M, InstSimplifyFolder(M.getDataLayout())), DL(M.getDataLayout()),
+        TM(TM) {}
   bool processFunction(Function &F, ScalarEvolution *SE);
 };
 } // namespace
@@ -948,48 +922,6 @@ LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
       SE->isKnownNonPositive(BoundsDiff))
     Result.NoPartialOOB = true;
   return Result;
-}
-
-uint64_t
-LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T, Align A,
-                                                     OobProperties OobProps) {
-  Align Result(16);
-  if (!ST->hasUnalignedBufferAccessEnabled() && A < Align(4))
-    Result = A;
-  auto *VT = dyn_cast<VectorType>(T);
-  if (!ST->hasRelaxedBufferOOBMode() && VT) {
-    TypeSize ElemBits = DL.getTypeSizeInBits(VT->getElementType());
-    if (ElemBits.isKnownMultipleOf(32)) {
-      // Word-sized operations are bounds-checked per word. So, the only case we
-      // have to worry about is stores that start out of bounds and then go in,
-      // and those can only become in-bounds on a multiple of their alignment.
-      // Therefore, we can use the declared alignment of the operation as the
-      // maximum width, rounding up to 4.
-      if (!OobProps.NoWrapFromMax)
-        Result = std::min(Result, std::max(A, Align(4)));
-    } else if ((ElemBits.isKnownMultipleOf(8) ||
-                isPowerOf2_64(ElemBits.getKnownMinValue()))) {
-      // To ensure correct behavior for sub-word types, we must always scalarize
-      // unaligned loads of sub-word types. For example, if you load
-      // a <4 x i8> from offset 7 in an 8-byte buffer, expecting the vector
-      // to be padded out with 0s after that last byte, you'll get all 0s
-      // instead. To prevent this behavior when not requested, de-vectorize such
-      // loads.
-      //
-      // If we knew that the value that triggers bounds checks was a multiple of
-      // 4 along with the access being word-aligned, we could avoid the
-      // scalarization here, as the bitcast wouldn't change any check behavior,
-      // but we don't currently try to analyze this.
-      //
-      // Strict OOB checking isn't supported if the size of each element is a
-      // non-power-of-2 value less than 8, since there's no feasible way to
-      // apply such a strict bounds check.
-      if (!OobProps.NoPartialOOB)
-        Result =
-            commonAlignment(Result, divideCeil(ElemBits.getKnownMinValue(), 8));
-    }
-  }
-  return Result.value() * 8;
 }
 
 Type *LegalizeBufferContentTypesVisitor::legalNonAggregateForMemOp(
@@ -1211,7 +1143,9 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
   Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
   OobProperties OobProps =
       analyzeOobProperties(OrigLI.getPointerOperand(), PartType, AggByteOff);
-  uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
+  uint64_t MaxWidth = ST->getMaxBufferIntrinsicWidth(
+      DL, ArrayAsVecType, PartAlign, OobProps.NoWrapFromMax,
+      OobProps.NoPartialOOB);
   Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
 
   SmallVector<VecSlice> Slices;
@@ -1305,9 +1239,10 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     for (auto [I, ElemTy, Offset] :
          llvm::enumerate(ST->elements(), Layout->getMemberOffsets())) {
       AggIdxs.push_back(I);
-      Changed |= std::get<0>(visitStoreImpl(OrigSI, ElemTy, AggIdxs,
-                                            AggByteOff + Offset.getFixedValue(),
-                                            Name + "." + Twine(I)));
+      Changed |= visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                                AggByteOff + Offset.getFixedValue(),
+                                Name + "." + Twine(I))
+                     .first;
       AggIdxs.pop_back();
     }
     return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1321,9 +1256,11 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
-        Changed |= std::get<0>(visitStoreImpl(
-            OrigSI, ElemTy, AggIdxs,
-            AggByteOff + I * ElemAllocSize.getFixedValue(), Name + Twine(I)));
+        Changed |=
+            visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                           AggByteOff + I * ElemAllocSize.getFixedValue(),
+                           Name + Twine(I))
+                .first;
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);
@@ -1345,7 +1282,9 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   Align PartAlign = commonAlignment(OrigSI.getAlign(), AggByteOff);
   OobProperties OobProps =
       analyzeOobProperties(OrigSI.getPointerOperand(), PartType, AggByteOff);
-  uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
+  uint64_t MaxWidth = ST->getMaxBufferIntrinsicWidth(
+      DL, ArrayAsVecType, PartAlign, OobProps.NoWrapFromMax,
+      OobProps.NoPartialOOB);
   Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
   if (LegalType != ArrayAsVecType) {
     NewData = makeLegalNonAggregate(NewData, LegalType, Name);
@@ -1603,9 +1542,8 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
                           bool IsVolatile, SyncScope::ID SSID);
 
 public:
-  SplitPtrStructs(const DataLayout &DL, LLVMContext &Ctx,
-                  const TargetMachine *TM)
-      : TM(TM), IRB(Ctx, InstSimplifyFolder(DL)) {}
+  SplitPtrStructs(Module &M, const TargetMachine *TM)
+      : TM(TM), IRB(M, InstSimplifyFolder(M.getDataLayout())) {}
 
   void processFunction(Function &F);
 
@@ -1760,7 +1698,7 @@ void SplitPtrStructs::processConditionals() {
           // Handle the case where previous loops already looked through
           // an addrspacecast.
           if (isSplitFatPtr(RootVal->getType()))
-            MaybeRsrc = std::get<0>(getPtrParts(RootVal));
+            MaybeRsrc = getPtrParts(RootVal).first;
           else
             MaybeRsrc = RootVal;
         }
@@ -1779,7 +1717,7 @@ void SplitPtrStructs::processConditionals() {
         auto *RsrcPHI = IRB.CreatePHI(RsrcTy, PHI->getNumIncomingValues());
         RsrcPHI->takeName(Rsrc);
         for (auto [V, BB] : llvm::zip(PHI->incoming_values(), PHI->blocks())) {
-          Value *VRsrc = std::get<0>(getPtrParts(V));
+          Value *VRsrc = getPtrParts(V).first;
           RsrcPHI->addIncoming(VRsrc, BB);
         }
         copyMetadata(RsrcPHI, PHI);
@@ -1791,7 +1729,7 @@ void SplitPtrStructs::processConditionals() {
       NewOff->takeName(Off);
       for (auto [V, BB] : llvm::zip(PHI->incoming_values(), PHI->blocks())) {
         assert(OffParts.count(V) && "An offset part had to be created by now");
-        Value *VOff = std::get<1>(getPtrParts(V));
+        Value *VOff = getPtrParts(V).second;
         NewOff->addIncoming(VOff, BB);
       }
       copyMetadata(NewOff, PHI);
@@ -2468,7 +2406,6 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
@@ -2553,8 +2490,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     I.replaceAllUsesWith(NewRsrc);
     return {nullptr, nullptr};
   }
-  case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group: {
+  case Intrinsic::launder_invariant_group: {
     Value *Ptr = I.getArgOperand(0);
     if (!isSplitFatPtr(Ptr->getType()))
       return {nullptr, nullptr};
@@ -2589,6 +2525,36 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     I.replaceAllUsesWith(NewLoad);
     return {nullptr, nullptr};
   }
+  case Intrinsic::prefetch: {
+    Value *Ptr = I.getArgOperand(0);
+    if (!isSplitFatPtr(Ptr->getType()))
+      return {nullptr, nullptr};
+    // s_buffer_prefetch_data only takes an immediate offset, so only a data
+    // prefetch at a constant offset can use it. Drop the others: a prefetch is
+    // only a hint.
+    if (ST->hasSafeSmemPrefetch() &&
+        cast<ConstantInt>(I.getArgOperand(3))->isOne()) {
+      IRB.SetInsertPoint(&I);
+      auto [Rsrc, Off] = getPtrParts(Ptr);
+      auto *ConstOff = dyn_cast<ConstantInt>(Off);
+      if (ConstOff && AMDGPU::isLegalSMRDEncodedSignedOffset(
+                          *ST, ConstOff->getZExtValue(), /*IsBuffer=*/true)) {
+        Value *NewPrefetch =
+            IRB.CreateIntrinsic(Intrinsic::amdgcn_s_buffer_prefetch_data, {},
+                                {Rsrc, ConstOff, IRB.getInt32(0)});
+        copyMetadata(NewPrefetch, &I);
+      }
+    }
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
+  }
+  case Intrinsic::amdgcn_s_prefetch_data:
+  case Intrinsic::amdgcn_s_prefetch_inst:
+    if (!isSplitFatPtr(I.getArgOperand(0)->getType()))
+      return {nullptr, nullptr};
+    // Instruction selection drops these for every other non-global pointer.
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
   }
   return {nullptr, nullptr};
 }
@@ -2791,10 +2757,8 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
         /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
   }
 
-  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, DL,
-                                                         M.getContext());
-  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(
-      DL, M.getContext(), &TM);
+  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, M);
+  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(M, &TM);
   for (Function &F : M.functions()) {
     bool InterfaceChange = hasFatPointerInterface(F, &StructTM);
     bool BodyChanges = containsBufferFatPointers(F, &StructTM);
@@ -2839,7 +2803,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
   IntTM.clear();
   CloneMap.clear();
 
-  SplitPtrStructs Splitter(DL, M.getContext(), &TM);
+  SplitPtrStructs Splitter(M, &TM);
   for (Function *F : NeedsPostProcess)
     Splitter.processFunction(*F);
   for (Function *F : Intrinsics) {

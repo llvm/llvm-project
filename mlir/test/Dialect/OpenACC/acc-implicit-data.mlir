@@ -2,6 +2,31 @@
 
 // -----
 
+// acc.kernel_environment is not a compute construct. Host-side preparation in
+// its body and operands captured by a nested acc.compute_region must not cause
+// implicit mappings.
+func.func @test_kernel_environment_is_not_compute_construct(
+    %arg: memref<f32>) {
+  acc.kernel_environment {
+    %host = memref.load %arg[] : memref<f32>
+    acc.compute_region ins(%deviceArg = %arg) : (memref<f32>) {
+      %device = memref.load %deviceArg[] : memref<f32>
+      acc.yield
+    } <{origin = "acc.parallel"}>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_kernel_environment_is_not_compute_construct
+// CHECK-SAME: %[[ARG:.*]]: memref<f32>
+// CHECK-NOT: acc.copyin
+// CHECK-NOT: acc.firstprivate
+// CHECK: acc.kernel_environment {
+// CHECK: memref.load %[[ARG]][]
+// CHECK: acc.compute_region ins(%{{.*}} = %[[ARG]]) : (memref<f32>)
+
+// -----
+
 // Test scalar in serial construct - should generate firstprivate
 func.func @test_scalar_in_serial() {
   %alloc = memref.alloca() : memref<i64>
@@ -256,7 +281,7 @@ func.func @test_device_global_in_parallel() {
 }
 
 // CHECK-LABEL: func.func @test_device_global_in_parallel
-// CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) implicit(true) name("") -> memref<10xf32, #gpu.address_space<global>>
+// CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) implicit(true) name("device_global") -> memref<10xf32, #gpu.address_space<global>>
 // CHECK-NOT: acc.copyin
 // CHECK-NOT: acc.copyout
 

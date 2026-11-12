@@ -3,6 +3,7 @@
 
 ---
 name:            Scalable
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Scalable
@@ -13,6 +14,7 @@ body:             |
 ...
 ---
 name:            Scalable_trunc
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Scalable_trunc
@@ -23,6 +25,7 @@ body:             |
 ...
 ---
 name:            Scalable_signbits
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Scalable_signbits

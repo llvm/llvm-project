@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -26,6 +27,16 @@
 using namespace mlir;
 using namespace mlir::acc;
 
+template <typename OpTy>
+static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), builder.getContext()),
+      properties);
+  return OpTy::create(builder, loc, TypeRange{}, ValueRange{}, properties,
+                      /*discardableAttributes=*/{});
+}
+
 //===----------------------------------------------------------------------===//
 // Test Fixture
 //===----------------------------------------------------------------------===//
@@ -33,6 +44,9 @@ using namespace mlir::acc;
 class OpenACCUtilsLoopTest : public ::testing::Test {
 protected:
   OpenACCUtilsLoopTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<acc::OpenACCDialect, affine::AffineDialect,
                         arith::ArithDialect, memref::MemRefDialect,
                         func::FuncDialect, scf::SCFDialect,
@@ -405,6 +419,53 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNegativeStep) {
   EXPECT_TRUE(module->verify().succeeded());
 }
 
+TEST_F(OpenACCUtilsLoopTest, ConvertMultiBlockLoopToSCFFor) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+
+  // Two-block body that uses the induction variable.
+  {
+    OpBuilder::InsertionGuard guard(b);
+    Region &region = loopOp.getRegion();
+    Block *entry = &region.front();
+    Block *tail = b.createBlock(&region, region.end());
+    entry->getTerminator()->erase();
+    b.setInsertionPointToEnd(entry);
+    cf::BranchOp::create(b, loc, tail);
+    b.setInsertionPointToEnd(tail);
+    Value iv = entry->getArgument(0);
+    arith::AddIOp::create(b, loc, iv, iv);
+    acc::YieldOp::create(b, loc);
+  }
+
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+  EXPECT_EQ(forOp.getRegion().getBlocks().size(), 1u);
+
+  SmallVector<scf::ExecuteRegionOp> exeRegions;
+  for (scf::ExecuteRegionOp exe :
+       forOp.getBody()->getOps<scf::ExecuteRegionOp>())
+    exeRegions.push_back(exe);
+  ASSERT_EQ(exeRegions.size(), 1u);
+  EXPECT_EQ(exeRegions.front().getRegion().getBlocks().size(), 2u);
+
+  // The IV use is denormalized, so the body add does not use the scf.for IV.
+  arith::AddIOp bodyAdd;
+  exeRegions.front().getRegion().walk([&](arith::AddIOp op) { bodyAdd = op; });
+  ASSERT_TRUE(bodyAdd);
+  EXPECT_NE(bodyAdd.getLhs(), forOp.getInductionVar());
+  EXPECT_NE(bodyAdd.getRhs(), forOp.getInductionVar());
+
+  EXPECT_TRUE(module->verify().succeeded());
+}
+
 //===----------------------------------------------------------------------===//
 // convertACCLoopToSCFParallel Tests
 //===----------------------------------------------------------------------===//
@@ -635,7 +696,7 @@ TEST_F(OpenACCUtilsLoopTest,
   // only to own the region, then build entry -> then/else -> exit with
   // acc.yield.
   OwningOpRef<acc::ParallelOp> parallelOp =
-      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+      createEmptyOp<acc::ParallelOp>(b, loc);
   Region &region = parallelOp->getRegion();
   Block *entry = b.createBlock(&region, region.begin());
   Block *thenBlock = b.createBlock(&region, region.end());
@@ -700,7 +761,7 @@ TEST_F(OpenACCUtilsLoopTest,
   auto [module, funcOp] = createModuleWithFunc();
 
   OwningOpRef<acc::ParallelOp> parallelOp =
-      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+      createEmptyOp<acc::ParallelOp>(b, loc);
   Region &region = parallelOp->getRegion();
   // Block order as in all.mlir: ^bb0 entry, ^bb1 header, ^bb2 exit, ^bb3 body
   Block *entry = b.createBlock(&region, region.begin());

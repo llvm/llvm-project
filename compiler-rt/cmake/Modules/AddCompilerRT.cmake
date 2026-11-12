@@ -72,9 +72,10 @@ endfunction()
 #                                  CFLAGS <compile flags>
 #                                  DEFS <compile definitions>
 #                                  DEPS <dependencies>
+#                                  LINK_LIBS <linked libraries>
 #                                  ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_object_libraries name)
-  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;ADDITIONAL_HEADERS"
+  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;LINK_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
   if(APPLE)
@@ -107,6 +108,9 @@ function(add_compiler_rt_object_libraries name)
     add_library(${libname} OBJECT ${LIB_SOURCES})
     if(LIB_DEPS)
       add_dependencies(${libname} ${LIB_DEPS})
+    endif()
+    if(LIB_LINK_LIBS)
+      target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
     endif()
 
     # Strip out -msse3 if this isn't macOS.
@@ -345,13 +349,9 @@ function(add_compiler_rt_runtime name type)
   endif()
 
   foreach(libname ${libnames})
-    # If you are using a multi-configuration generator we don't generate
-    # per-library install rules, so we fall back to the parent target COMPONENT
-    if(CMAKE_CONFIGURATION_TYPES AND LIB_PARENT_TARGET)
-      set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
-    else()
-      set(COMPONENT_OPTION COMPONENT ${libname})
-    endif()
+    get_compiler_rt_install_component(${libname} "${LIB_PARENT_TARGET}"
+                                      component)
+    set(COMPONENT_OPTION COMPONENT ${component})
 
     if(type STREQUAL "SHARED")
       list(APPEND LIB_DEFS COMPILER_RT_SHARED_LIB)
@@ -612,7 +612,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   add_dependencies(${test_suite} T${test_name})
 endfunction()
 
-macro(add_compiler_rt_script name)
+macro(add_compiler_rt_script name component)
   set(dst ${COMPILER_RT_EXEC_OUTPUT_DIR}/${name})
   set(src ${CMAKE_CURRENT_SOURCE_DIR}/${name})
   add_custom_command(OUTPUT ${dst}
@@ -620,9 +620,11 @@ macro(add_compiler_rt_script name)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
     COMMENT "Copying ${name}...")
   add_custom_target(${name} DEPENDS ${dst})
+  add_dependencies(${component} ${name})
   install(FILES ${dst}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR})
+    DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR}
+    COMPONENT ${component})
 endmacro(add_compiler_rt_script src name)
 
 

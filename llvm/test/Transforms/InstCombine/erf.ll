@@ -132,7 +132,7 @@ define float @erff_nan() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan)
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @erff(float 0x7FF8000000000000)
+  %r = call float @erff(float +qnan)
   ret float %r
 }
 
@@ -141,7 +141,7 @@ define double @erf_nan() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +qnan)
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @erf(double 0x7FF8000000000000)
+  %r = call double @erf(double +qnan)
   ret double %r
 }
 
@@ -150,7 +150,7 @@ define float @erff_nan_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @erff(float 0x7FF8000000000000) readnone
+  %r = call float @erff(float +qnan) readnone
   ret float %r
 }
 
@@ -159,7 +159,7 @@ define double @erf_nan_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +qnan) #[[ATTR2]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @erf(double 0x7FF8000000000000) readnone
+  %r = call double @erf(double +qnan) readnone
   ret double %r
 }
 
@@ -207,7 +207,7 @@ define float @erff_nan_strictfp() strictfp {
 ; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @erff(float 0x7FF8000000000000) strictfp
+  %r = call float @erff(float +qnan) strictfp
   ret float %r
 }
 
@@ -217,7 +217,7 @@ define double @erf_nan_strictfp() strictfp {
 ; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +qnan) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @erf(double 0x7FF8000000000000) strictfp
+  %r = call double @erf(double +qnan) strictfp
   ret double %r
 }
 

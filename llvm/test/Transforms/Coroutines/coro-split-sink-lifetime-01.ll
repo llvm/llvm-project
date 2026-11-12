@@ -96,7 +96,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @a.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 16
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TESTVAL]])
 ; CHECK-NEXT:    ret void
 ;
@@ -119,7 +119,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #4
 ; CHECK-NEXT:    br label %[[COROSAVE:.*]]
 ; CHECK:       [[COROSAVE]]:
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 20
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    br label %[[COROSUSPEND:.*]]
 ; CHECK:       [[COROSUSPEND]]:
 ; CHECK-NEXT:    br label %[[RESUME_0_LANDING:.*]]

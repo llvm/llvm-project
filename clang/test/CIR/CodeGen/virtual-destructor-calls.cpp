@@ -27,9 +27,8 @@ struct B : A {
 B::~B() { }
 
 // Aliases are inserted before the function definitions in LLVM IR
-// FIXME: These should have unnamed_addr set.
-// LLVM: @_ZN1BD1Ev = alias void (ptr), ptr @_ZN1BD2Ev
-// LLVM: @_ZN1CD1Ev = alias void (ptr), ptr @_ZN1CD2Ev
+// LLVM: @_ZN1BD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BD2Ev
+// LLVM: @_ZN1CD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1CD2Ev
 
 // OGCG: @_ZN1BD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BD2Ev
 // OGCG: @_ZN1CD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1CD2Ev
@@ -79,7 +78,7 @@ C::~C() { }
 // Base (D2) dtor for C: calls B's base dtor.
 
 // CIR: cir.func{{.*}} @_ZN1CD2Ev
-// CIR:   %[[B:.*]] = cir.base_class_addr %[[THIS:.*]] : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
+// CIR:   %[[B:.*]] = cir.base_class_addr nonnull %[[THIS:.*]] [0] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_B>
 // CIR:   cir.call @_ZN1BD2Ev(%[[B]])
 
 // LLVM: define{{.*}} void @_ZN1CD2Ev

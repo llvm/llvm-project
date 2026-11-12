@@ -52,7 +52,6 @@ ReorderAlgorithm("reorder-data-algo",
     clEnumValN(REORDER_FUNCS,
       "funcs",
       "sort hot data by hot function usage and count")),
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>

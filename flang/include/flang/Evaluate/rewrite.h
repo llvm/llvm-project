@@ -126,7 +126,8 @@ private:
 
   template <typename D, size_t... Is>
   D MutateOp(D &&op, std::index_sequence<Is...>) const {
-    return D(Mutate(std::move(op.template operand<Is>()))...);
+    const int kind{op.kind()};
+    return D(kind, Mutate(std::move(op.template operand<Is>()))...);
   }
 
   template <typename T, size_t... Is>
@@ -135,17 +136,17 @@ private:
         op.ordering, Mutate(std::move(op.template operand<Is>()))...);
   }
 
-  template <int K, size_t... Is>
-  ComplexComponent<K> MutateOp(
-      ComplexComponent<K> &&op, std::index_sequence<Is...>) const {
-    return ComplexComponent<K>(
+  template <size_t... Is>
+  ComplexComponent MutateOp(
+      ComplexComponent &&op, std::index_sequence<Is...>) const {
+    return ComplexComponent(
         op.isImaginaryPart, Mutate(std::move(op.template operand<Is>()))...);
   }
 
-  template <int K, size_t... Is>
-  LogicalOperation<K> MutateOp(
-      LogicalOperation<K> &&op, std::index_sequence<Is...>) const {
-    return LogicalOperation<K>(
+  template <size_t... Is>
+  LogicalOperation MutateOp(
+      LogicalOperation &&op, std::index_sequence<Is...>) const {
+    return LogicalOperation(
         op.logicalOperator, Mutate(std::move(op.template operand<Is>()))...);
   }
 

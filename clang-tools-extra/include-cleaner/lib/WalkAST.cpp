@@ -622,6 +622,34 @@ public:
     }
     return true;
   }
+
+  void reportObjCLiteralMethod(SourceLocation Loc, ObjCMethodDecl *Method) {
+    if (!Method)
+      return;
+    report(Loc, Method->getClassInterface());
+  }
+
+  bool VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
+    // Handles NSNumber literals and NSValue literals.
+    reportObjCLiteralMethod(E->getBeginLoc(), E->getBoxingMethod());
+    return true;
+  }
+
+  bool VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
+    reportObjCLiteralMethod(E->getBeginLoc(), E->getArrayWithObjectsMethod());
+    return true;
+  }
+
+  bool VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
+    reportObjCLiteralMethod(E->getBeginLoc(), E->getDictWithObjectsMethod());
+    return true;
+  }
+
+  bool VisitObjCStringLiteral(ObjCStringLiteral *E) {
+    report(E->getBeginLoc(),
+           E->getType()->getAs<ObjCObjectPointerType>()->getInterfaceDecl());
+    return true;
+  }
 };
 
 } // namespace

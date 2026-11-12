@@ -6,7 +6,7 @@
 ! CHECK-SAME:  %[[K_ARG:.*]]: !fir.ref<i32> {fir.bindc_name = "k"}) -> i32 {
 function ishftc_test(i, j, k)
 ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ARG]]
-! CHECK-DAG: %[[result:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFishftc_testEishftc_test"}
+! CHECK-DAG: %[[result:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFishftc_testEishftc_test")
 ! CHECK-DAG: %[[J:.*]]:2 = hlfir.declare %[[J_ARG]]
 ! CHECK-DAG: %[[K:.*]]:2 = hlfir.declare %[[K_ARG]]
 ! CHECK-DAG: %[[i:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
@@ -60,7 +60,7 @@ end
     print *, ishftc(i, shift, size)
     ! CHECK:  %[[I:.*]]:2 = hlfir.declare %[[VAL_0]]
     ! CHECK:  %[[SHIFT:.*]]:2 = hlfir.declare %[[VAL_1]]
-    ! CHECK:  %[[SIZE:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {fortran_attrs = #fir.var_attrs<optional>
+    ! CHECK:  %[[SIZE:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {{.*}}fortran_attrs<optional>
     ! CHECK:  %[[I_VAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
     ! CHECK:  %[[SHIFT_VAL:.*]] = fir.load %[[SHIFT]]#0 : !fir.ref<i32>
     ! CHECK:  %[[IS_PRESENT:.*]] = fir.is_present %[[SIZE]]#0 : (!fir.ref<i32>) -> i1
@@ -88,7 +88,7 @@ end
     integer :: i(:), shift(:)
   ! CHECK:  %[[I:.*]]:2 = hlfir.declare %[[VAL_0]]
   ! CHECK:  %[[SHIFT:.*]]:2 = hlfir.declare %[[VAL_1]]
-  ! CHECK:  %[[SIZE:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {fortran_attrs = #fir.var_attrs<optional>
+  ! CHECK:  %[[SIZE:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {{.*}}fortran_attrs<optional>
   ! CHECK:  %[[IS_PRESENT:.*]] = fir.is_present %[[SIZE]]#0 : (!fir.ref<i32>) -> i1
   ! CHECK:  %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
   ! CHECK:  ^bb0(%[[IDX:.*]]: index):
@@ -117,7 +117,7 @@ end
     integer :: i(:), shift(:)
   ! CHECK:  %[[I:.*]]:2 = hlfir.declare %[[VAL_0]]
   ! CHECK:  %[[SHIFT:.*]]:2 = hlfir.declare %[[VAL_1]]
-  ! CHECK:  %[[SIZE:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {fortran_attrs = #fir.var_attrs<optional>
+  ! CHECK:  %[[SIZE:.*]]:2 = hlfir.declare %[[VAL_2]] {{.*}} {{.*}}fortran_attrs<optional>
   ! CHECK:  %[[IS_PRESENT:.*]] = fir.is_present %[[SIZE]]#0 : (!fir.box<!fir.array<?xi32>>) -> i1
   ! CHECK:  %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
   ! CHECK:  ^bb0(%[[IDX:.*]]: index):

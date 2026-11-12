@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_DEBUGGER_H
 #define LLDB_CORE_DEBUGGER_H
 
+#include <atomic>
 #include <cstdint>
 
 #include <memory>
@@ -29,11 +30,14 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
@@ -100,6 +104,7 @@ class Debugger : public std::enable_shared_from_this<Debugger>,
                  public Properties {
 public:
   using DebuggerList = std::vector<lldb::DebuggerSP>;
+  using DebuggerIterable = LockingAdaptedIterable<std::mutex, DebuggerList>;
 
   static llvm::StringRef GetStaticBroadcasterClass();
 
@@ -134,6 +139,9 @@ public:
   static size_t GetNumDebuggers();
 
   static lldb::DebuggerSP GetDebuggerAtIndex(size_t index);
+
+  /// Get locking iterator for debuggers.
+  static DebuggerIterable Debuggers();
 
   static bool FormatDisassemblerAddress(const FormatEntity::Entry *format,
                                         const SymbolContext *sc,
@@ -218,6 +226,8 @@ public:
   /// \return
   ///     A global shared target list.
   TargetList &GetTargetList() { return m_target_list; }
+
+  TargetGroupList &GetTargetGroupList() { return m_target_group_list; }
 
   PlatformList &GetPlatformList() { return m_platform_list; }
 
@@ -344,6 +354,18 @@ public:
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
 
+  llvm::StringRef GetLabelAnsiPrefix() const;
+
+  llvm::StringRef GetLabelAnsiSuffix() const;
+
+  llvm::StringRef GetTitleAnsiPrefix() const;
+
+  llvm::StringRef GetTitleAnsiSuffix() const;
+
+  llvm::StringRef GetDividerAnsiPrefix() const;
+
+  llvm::StringRef GetDividerAnsiSuffix() const;
+
   llvm::StringRef GetDisabledAnsiPrefix() const;
 
   llvm::StringRef GetDisabledAnsiSuffix() const;
@@ -406,6 +428,10 @@ public:
 
   const std::string &GetInstanceName() const { return m_instance_name; }
 
+  /// The pool for strings handed out through the SB API that belong to this
+  /// debugger.
+  StringPoolRef GetStringPool() const { return m_string_pool; }
+
   bool GetShowInlineDiagnostics() const;
 
   bool SetShowInlineDiagnostics(bool);
@@ -462,7 +488,9 @@ public:
   /// output is an escape-code-capable terminal.
   bool StatuslineSupported();
 
-  /// Flush cached state (e.g. stale execution context in the statusline).
+  /// Discard the statusline's cached frame at its next redraw. This function
+  /// is thread-safe and takes no lock, so callers may hold the target API
+  /// mutex.
   void FlushStatusLine();
 
   /// This is the correct way to query the state of Interruption.
@@ -774,6 +802,7 @@ protected:
 
   TerminalState m_terminal_state;
   TargetList m_target_list;
+  TargetGroupList m_target_group_list;
 
   PlatformList m_platform_list;
   lldb::ListenerSP m_listener_sp;
@@ -798,10 +827,13 @@ protected:
   /// Mutex protecting the m_statusline member.
   std::mutex m_statusline_mutex;
   std::optional<Statusline> m_statusline;
+  /// Raised by FlushStatusLine to request a flush at the next redraw.
+  std::atomic<bool> m_flush_statusline = false;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;
   const std::string m_instance_name;
+  StringPoolRef m_string_pool;
   static LoadPluginCallbackType g_load_plugin_callback;
   typedef std::vector<llvm::sys::DynamicLibrary> LoadedPluginsList;
   LoadedPluginsList m_loaded_plugins;

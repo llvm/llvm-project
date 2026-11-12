@@ -9,15 +9,8 @@
 #ifndef MLIR_DIALECT_MATH_IR_MATH_H_
 #define MLIR_DIALECT_MATH_IR_MATH_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 //===----------------------------------------------------------------------===//
 // Math Dialect

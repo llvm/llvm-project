@@ -198,15 +198,21 @@ struct StylizedInstanceT {
 };
 
 template <typename I, typename E> //
+struct IntrinsicOperatorT {
+  ENUM(Operator, Power, Multiply, Divide, Add, Subtract, Concat, LT, LE, EQ, NE,
+       GE, GT, NOT, AND, OR, EQV, NEQV, Min, Max);
+  using WrapperTrait = std::true_type;
+  Operator v;
+};
+
+template <typename I, typename E> //
 struct DefinedOperatorT {
   struct DefinedOpName {
     using WrapperTrait = std::true_type;
     ObjectT<I, E> v;
   };
-  ENUM(IntrinsicOperator, Power, Multiply, Divide, Add, Subtract, Concat, LT,
-       LE, EQ, NE, GE, GT, NOT, AND, OR, EQV, NEQV, Min, Max);
   using UnionTrait = std::true_type;
-  std::variant<DefinedOpName, IntrinsicOperator> u;
+  std::variant<DefinedOpName, IntrinsicOperatorT<I, E>> u;
 };
 
 // V5.2: [3.2.6] `iterator` modifier
@@ -255,7 +261,7 @@ template <typename I, typename E> //
 struct LoopIterationT {
   struct Distance {
     using TupleTrait = std::true_type;
-    std::tuple<DefinedOperatorT<I, E>, E> t;
+    std::tuple<IntrinsicOperatorT<I, E>, E> t;
   };
   using TupleTrait = std::true_type;
   std::tuple<ObjectT<I, E>, OPT(Distance)> t;
@@ -1125,6 +1131,12 @@ struct ReductionT {
   std::tuple<OPT(ReductionModifier), ReductionIdentifiers, List> t;
 };
 
+// TR15:285
+template <typename T, typename I, typename E> //
+struct ReductionKindT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [15.8.1] `memory-order` clauses
 template <typename T, typename I, typename E> //
 struct RelaxedT {
@@ -1204,6 +1216,12 @@ struct SharedT {
   using List = ObjectListT<I, E>;
   using WrapperTrait = std::true_type;
   List v;
+};
+
+// TR15:408-409
+template <typename T, typename I, typename E> //
+struct ShiftT {
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [15.10.3] `parallelization-level` clauses
@@ -1414,8 +1432,9 @@ using IncompleteClausesT =
                  GraphResetT<T, I, E>, InductionT<T, I, E>, InductorT<T, I, E>,
                  InitCompleteT<T, I, E>, InteropT<T, I, E>, LocalT<T, I, E>,
                  MatchT<T, I, E>, MemscopeT<T, I, E>, OtherwiseT<T, I, E>,
-                 ReplayableT<T, I, E>, SafesyncT<T, I, E>,
-                 TransparentT<T, I, E>, WhenT<T, I, E>>;
+                 ReductionKindT<T, I, E>, ReplayableT<T, I, E>,
+                 SafesyncT<T, I, E>, ShiftT<T, I, E>, TransparentT<T, I, E>,
+                 WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using TupleClausesT =

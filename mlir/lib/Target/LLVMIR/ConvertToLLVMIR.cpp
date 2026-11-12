@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
@@ -23,6 +23,7 @@ using namespace mlir;
 
 namespace mlir {
 void registerToLLVMIRTranslation() {
+  registerOpenMPTranslationCLOptions();
   TranslateFromMLIRRegistration registration(
       "mlir-to-llvmir", "Translate MLIR to LLVMIR",
       [](Operation *op, raw_ostream &output) {

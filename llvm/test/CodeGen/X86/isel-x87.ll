@@ -12,7 +12,7 @@ define x86_fp80 @f0(x86_fp80 noundef %a) nounwind {
 ; GISEL_X86-NEXT:    pushl %ebp
 ; GISEL_X86-NEXT:    movl %esp, %ebp
 ; GISEL_X86-NEXT:    andl $-16, %esp
-; GISEL_X86-NEXT:    subl $48, %esp
+; GISEL_X86-NEXT:    subl $32, %esp
 ; GISEL_X86-NEXT:    fldt 8(%ebp)
 ; GISEL_X86-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
 ; GISEL_X86-NEXT:    fxch %st(1)
@@ -30,7 +30,7 @@ define x86_fp80 @f0(x86_fp80 noundef %a) nounwind {
 ; SDAG_X86-NEXT:    pushl %ebp
 ; SDAG_X86-NEXT:    movl %esp, %ebp
 ; SDAG_X86-NEXT:    andl $-16, %esp
-; SDAG_X86-NEXT:    subl $48, %esp
+; SDAG_X86-NEXT:    subl $32, %esp
 ; SDAG_X86-NEXT:    fldt 8(%ebp)
 ; SDAG_X86-NEXT:    fld %st(0)
 ; SDAG_X86-NEXT:    fstpt {{[0-9]+}}(%esp)

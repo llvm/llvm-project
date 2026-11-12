@@ -16,9 +16,9 @@
 # RUN:   | FileCheck --check-prefix ERROR %s
 # RUN: llvm-dwarfdump -a %t1.out | FileCheck %s
 
-# ERROR: error: Cann't parse input DWARF. Recursive dependence.
+# ERROR: error: cannot parse input DWARF: recursive dependence
 # ERROR: while processing CU1
-# ERROR: error: Cann't resolve DIE reference
+# ERROR: error: cannot resolve DIE reference
 # ERROR: while processing CU2
 
 # CHECK: file format Mach-O 64-bit x86-64
@@ -42,6 +42,7 @@
 # CHECK-NOT: Compile Unit:
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

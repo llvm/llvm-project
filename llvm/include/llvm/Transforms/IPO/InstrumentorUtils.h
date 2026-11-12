@@ -38,10 +38,12 @@ struct InstrumentorIRBuilderTy {
   /// Construct an IR builder for the module \p M.
   InstrumentorIRBuilderTy(Module &M)
       : M(M), Ctx(M.getContext()),
-        IRB(Ctx, ConstantFolder(),
+        IRB(M, ConstantFolder(),
             // Save the inserted instructions in a structure.
             IRBuilderCallbackInserter(
-                [&](Instruction *I) { NewInsts[I] = Epoch; })) {}
+                [&](Instruction *I) { NewInsts[I] = Epoch; })) {
+    IRB.disableGEPCanonicalization();
+  }
 
   /// Destroy the IR builder and remove all erasable instructions cached during
   /// the process of instrumenting.
@@ -60,15 +62,13 @@ struct InstrumentorIRBuilderTy {
   }
 
   /// Get a temporary alloca to communicate (large) values with the runtime.
-  AllocaInst *getAlloca(Function *Fn, Type *Ty, bool MatchType = false) {
+  AllocaInst *getAlloca(Function *Fn, Type *Ty) {
     const DataLayout &DL = Fn->getDataLayout();
     auto *&AllocaList = AllocaMap[{Fn, DL.getTypeAllocSize(Ty)}];
     if (!AllocaList)
       AllocaList = new AllocaListTy;
     AllocaInst *AI = nullptr;
     for (auto *&ListAI : *AllocaList) {
-      if (MatchType && ListAI->getAllocatedType() != Ty)
-        continue;
       AI = ListAI;
       ListAI = *AllocaList->rbegin();
       break;

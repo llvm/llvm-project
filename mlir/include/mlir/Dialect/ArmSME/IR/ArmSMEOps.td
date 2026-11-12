@@ -38,6 +38,7 @@ def ArmSMETileType : I32EnumAttr<"ArmSMETileType", "Arm SME tile type",
 }
 
 def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
+  let cppNamespace = "::mlir::arm_sme";
   let description = [{
     An interface for operations that use Arm SME tiles. These operations need to
     be assigned a tile ID, an i32 attribute, which specifies which virtual tile
@@ -63,7 +64,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
         if (!tileId)
           return;
         ::mlir::Operation* op = this->getOperation();
-        op->setAttr("tile_id", tileId);
+        op->setDiscardableAttr("tile_id", tileId);
       }]
     >,
     InterfaceMethod<
@@ -77,7 +78,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       /*methodBody=*/[{}],
       /*defaultImpl=*/ [{
         ::mlir::Operation* op = this->getOperation();
-        return op->getAttrOfType<mlir::IntegerAttr>("tile_id");
+        return op->getDiscardableAttrOfType<mlir::IntegerAttr>("tile_id");
       }]
     >,
     InterfaceMethod<

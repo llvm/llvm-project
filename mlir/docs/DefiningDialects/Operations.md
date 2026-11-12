@@ -540,16 +540,20 @@ the same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
 
 For operations with non-empty properties, the aggregate builder that takes a
-mixed `attributes` array partitions the array using the operation's statically
-known inherent-attribute and property names. It converts that subset into
-`Properties` and places only the remaining discardable attributes in
-`OperationState::attributes`. Defaults and result-type inference therefore
-observe the populated properties before the operation is created. Operations
-with empty properties retain the ordinary aggregate attribute builder.
+mixed `attributes` array is deprecated. Use the overload that takes a typed
+`Properties` structure and a separate `discardableAttributes` array instead.
+The deprecated overload remains available for compatibility: it partitions the
+mixed array using the operation's statically known inherent-attribute and
+property names, converts that subset into `Properties`, and places only the
+remaining discardable attributes in `OperationState::attributes`. Defaults and
+result-type inference therefore observe the populated properties before the
+operation is created. Operations with empty properties retain the ordinary
+aggregate attribute builder without a deprecation.
 
 This applies to all aggregate builder variants, including builders with
 explicit or inferred result types and builders that derive result types from
-operands or the first attribute.
+operands or the first attribute. The overload taking `Properties` and
+`discardableAttributes` is not deprecated.
 
 The third and fourth forms are good for use in manually written code, given that
 they provide better guarantee via signatures.
@@ -755,15 +759,12 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation.
-    -   Any inherent attributes that are not used elsewhere in the format are
-        printed as part of the attribute dictionary unless a `prop-dict` is
-        present.
-    -   Discardable attributes are always part of the `attr-dict`.
-    -   For dialects that set `useStrictPropertiesInAssemblyFormat`,
-        `attr-dict` only carries discardable attributes for property-backed
-        operations. Inherent attributes must be bound directly in the format or
-        covered by `prop-dict`.
+    -   Represents the attribute dictionary of the operation. Under the
+        default strict format rules, it contains only discardable attributes.
+        Inherent attributes must be bound directly in the format or covered by
+        `prop-dict`. The deprecated `useStrictPropertiesInAssemblyFormat = 0`
+        setting temporarily allows inherent attributes to mix with discardable
+        attributes in `attr-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -868,7 +869,9 @@ The available directives are as follows:
         `qualified($kind)` prints the complete attribute `#vector.kind<minf>`.
     -   Bit enums must define a zero-valued case so every valid bitmask has a
         symbolic spelling. An unquoted comma-separated bit enum cannot be
-        followed by a comma literal because the two uses would be ambiguous.
+        followed by a comma literal, and a space-separated bit enum cannot be
+        followed by a literal that spells one of its cases, because the two
+        uses would be ambiguous.
 
 #### Literals
 
@@ -1138,9 +1141,8 @@ to:
     directives.
 1.  Unless all non-attribute properties appear in the format, the `prop-dict`
     directive must be present.
-1.  For dialects that set `useStrictPropertiesInAssemblyFormat`, every inherent
-    attribute and property must either appear in the format or be covered by the
-    `prop-dict` directive.
+1.  Every inherent attribute and property must either appear in the format or
+    be covered by the `prop-dict` directive.
 1.  The `attr-dict` directive must always be present.
 1.  Must not contain overlapping information; e.g. multiple instances of
     'attr-dict', types, operands, etc.
@@ -1369,6 +1371,100 @@ cc_library(
     srcs = glob(["MyDialect/*.cpp"]) + [":MyDialectOpSrcs"]
 )
 ```
+
+#### Logical Sharding with Op Partitions
+
+Sharding by index splits the ops arbitrarily: which shard an op ends up in
+depends on the number of shards and on the names of all other ops. As an
+alternative, a dialect can shard its ops "logically" by grouping them into
+named *op partitions*, such as arithmetic, memory or control flow ops. Each
+partition is generated into its own declaration and definition files, but all
+ops are still registered in one dialect.
+
+Partitions are `Partition` records with a name, which must be a C++
+identifier. Every op sets its `partition`, typically in a base class or with a
+`let` around a group of ops:
+
+```tablegen
+def MyDialect_ArithPartition : Partition<"Arith">;
+def MyDialect_MemoryPartition : Partition<"Memory">;
+
+class MyDialect_Op<string mnemonic, list<Trait> traits = []>
+    : Op<MyDialect, mnemonic, traits> {
+  // Ops are in partition `Arith`, unless they set another partition.
+  let partition = MyDialect_ArithPartition;
+}
+
+def AddOp : MyDialect_Op<"add"> { ... }
+def MulOp : MyDialect_Op<"mul"> { ... }
+
+let partition = MyDialect_MemoryPartition in {
+def LoadOp : MyDialect_Op<"load"> { ... }
+def StoreOp : MyDialect_Op<"store"> { ... }
+}
+```
+
+Passing `-op-partition=<partition>` with a partition name to `-gen-op-decls` and
+`-gen-op-defs` generates only the ops of that partition. Every generated op must
+then be in a partition, and the specified partition must have ops. Without
+`-op-partition`, `partition` is ignored, so ops can be assigned to partitions
+before their files are generated by partition.
+
+The partitions of a dialect are the partitions of its ops. With
+`-op-partition`, `-gen-op-decls` declares a registration hook
+`register<DialectClass>Operations<Partition>` for every partition of the
+dialect, and `register<DialectClass>Operations`, which calls the hooks of all
+partitions. `-gen-op-defs` defines the hook of the specified partition, and the
+first partition by name also defines `register<DialectClass>Operations`, which
+the dialect calls to register its ops:
+
+```c++
+void MyDialect::initialize() {
+  registerMyDialectOperations(this);
+}
+```
+
+Since every `.td` file generated by partition defines this hook, a dialect can
+generate the ops of only one `.td` file by partition. A partition for which no
+definitions are compiled results in a link error for its hook.
+
+In CMake, generate and include the files of each partition:
+
+```cmake
+set(LLVM_TARGET_DEFINITIONS MyDialectOps.td)
+foreach(partition Arith Memory)
+  mlir_tablegen(MyDialect${partition}Ops.h.inc -gen-op-decls -op-partition=${partition})
+  mlir_tablegen(MyDialect${partition}Ops.cpp.inc -gen-op-defs -op-partition=${partition})
+endforeach()
+```
+
+Since the generated declarations of a partition forward declare the ops of all
+other partitions, each partition can get its own header, so that users only
+include the declarations of the ops they use:
+
+```c++
+// MyDialectArithOps.h
+#include "MyDialectBase.h" // The dialect, its attributes and types.
+
+#define GET_OP_CLASSES
+#include "MyDialectArithOps.h.inc"
+
+// MyDialect.h, for users that want all ops.
+#include "MyDialectArithOps.h"
+#include "MyDialectMemoryOps.h"
+
+// MyDialectArithOps.cpp, a natural home for the C++ implementations of the
+// arithmetic ops as well.
+#include "MyDialectArithOps.h"
+#include "OpUtils.h"
+
+#define GET_OP_CLASSES
+#include "MyDialectArithOps.cpp.inc"
+```
+
+As with index sharding, utilities shared by the generated op definitions must
+be declared in a header shared by the compilation units. `-op-partition` cannot
+be combined with `-op-shard-count`.
 
 ## Constraints
 
@@ -1675,6 +1771,12 @@ def MyBitEnum: I32BitEnum<"MyBitEnum", "An example bit enum",
 }
 ```
 
+The `separator` is `"|"`, `","`, or a space `" "`. Spaces around `|` or `,`,
+e.g. `" | "`, are printed but optional when parsing. With a space separator, the
+cases are printed as a sequence of keywords, e.g. `Bit1 Bit2`, and parsed until
+the next token is not a case keyword. Only `BitEnum` supports a space separator;
+the legacy `BitEnumAttr` requires `|` or `,`.
+
 We can have:
 
 ```c++
@@ -1824,6 +1926,9 @@ property struct and for the operation's verifier to check that the enum's value
 is a valid value for the enum.
 
 The basic wrapper is `EnumProp`, which simply takes an `EnumInfo`.
+`DefaultValuedEnumProp` takes an `EnumInfo` and one of its cases, which
+becomes the property's default value and is elided from `prop-dict` and from
+an optional group anchored on the property.
 
 A less ambiguous syntax, namely putting a mnemonic and `<>`s surrounding
 the enum is generated with `NamedEnumProp`, which takes a `*EnumInfo`

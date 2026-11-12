@@ -682,9 +682,14 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+unsigned Module::getWCharSize() const {
+  if (auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("wchar_size")))
+    return cast<ConstantInt>(Val->getValue())->getZExtValue();
+  return getTargetTriple().getDefaultWCharSize();
+}
+
 LongDoubleFormat Module::getLongDoubleFormat() const {
-  if (auto *Val =
-          dyn_cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
     if (std::optional<LongDoubleFormat> Format =
             parseLongDoubleFormat(Val->getString()))
       return *Format;
@@ -699,11 +704,46 @@ void Module::setLongDoubleFormat(LongDoubleFormat Format) {
 }
 
 FloatABI::ABIType Module::getFloatABI() const {
-  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("float-abi")))
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("float-abi")))
     return *FloatABI::parseABIType(Val->getString());
   // Without an explicit flag, fall back to the ABI implied by the target
   // triple.
   return getTargetTriple().getDefaultFloatABI();
+}
+
+ThreadModel Module::getThreadModel() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("thread-model")))
+    return *parseThreadModel(Val->getString());
+  return getTargetTriple().getDefaultThreadModel();
+}
+
+void Module::setThreadModel(ThreadModel Model) {
+  addModuleFlag(ModFlagBehavior::Error, "thread-model",
+                MDString::get(getContext(), getThreadModelName(Model)));
+}
+
+ExceptionHandling Module::getExceptionModel() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("exception-model")))
+    return *parseExceptionModel(Val->getString());
+  return getTargetTriple().getDefaultExceptionHandling();
+}
+
+DebuggerKind Module::getDebuggerTuning() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("debugger-tuning"))) {
+    if (std::optional<DebuggerKind> Tuning =
+            parseDebuggerTuning(Val->getString()))
+      return *Tuning;
+  }
+
+  return getTargetTriple().getDefaultDebuggerTuning();
+}
+
+void Module::setDebuggerTuning(DebuggerKind Tuning) {
+  assert(Tuning != DebuggerKind::Default &&
+         "removing existing flag not handled");
+
+  addModuleFlag(ModFlagBehavior::Warning, "debugger-tuning",
+                MDString::get(getContext(), getDebuggerTuningName(Tuning)));
 }
 
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
@@ -985,8 +1025,7 @@ void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
 
 StringRef Module::getTargetABIFromMD() {
   StringRef TargetABI;
-  if (auto *TargetABIMD =
-          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
+  if (auto *TargetABIMD = cast_or_null<MDString>(getModuleFlag("target-abi")))
     TargetABI = TargetABIMD->getString();
   return TargetABI;
 }

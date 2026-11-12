@@ -46,6 +46,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -171,6 +172,8 @@ struct AssemblerInvocation {
   unsigned Crel : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned ImplicitMapsyms : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned MachORelocatableDwarf : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned X86RelaxRelocations : 1;
@@ -224,6 +227,7 @@ public:
     EmitCompactUnwindNonCanonical = false;
     Crel = false;
     ImplicitMapsyms = 0;
+    MachORelocatableDwarf = 0;
     X86RelaxRelocations = 0;
     X86Sse2Avx = 0;
   }
@@ -397,6 +401,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
       Args.hasArg(OPT_femit_compact_unwind_non_canonical);
   Opts.EmitSFrameUnwind = Args.hasArg(OPT_gsframe);
   Opts.Crel = Args.hasArg(OPT_crel);
+  Opts.MachORelocatableDwarf = Args.hasArg(OPT_grelocatable_dwarf);
   Opts.RelocSectionSym = RelocSectionSymType::All;
   if (auto *A = Args.getLastArg(OPT_reloc_section_sym))
     Opts.RelocSectionSym = StringSwitch<RelocSectionSymType>(A->getValue())
@@ -430,9 +435,10 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
   return Out;
 }
 
-static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
-                                 DiagnosticsEngine &Diags,
-                                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+static bool
+executeAssemblerImpl(const cl::LibraryOptionsContext &LibraryOptions,
+                     AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
+                     IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
@@ -464,6 +470,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   assert(MRI && "Unable to create target register info!");
 
   MCTargetOptions MCOptions;
+  MCOptions.LibraryOptions = &LibraryOptions;
   MCOptions.MCRelaxAll = Opts.RelaxAll;
   MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
   MCOptions.EmitCompactUnwindNonCanonical = Opts.EmitCompactUnwindNonCanonical;
@@ -472,6 +479,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.Crel = Opts.Crel;
   MCOptions.RelocSectionSym = Opts.RelocSectionSym;
   MCOptions.ImplicitMapSyms = Opts.ImplicitMapsyms;
+  MCOptions.MachORelocatableDwarf = Opts.MachORelocatableDwarf;
   MCOptions.X86RelaxRelocations = Opts.X86RelaxRelocations;
   MCOptions.X86Sse2Avx = Opts.X86Sse2Avx;
   MCOptions.MCNoExecStack = Opts.NoExecStack;
@@ -650,10 +658,11 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   return Failed;
 }
 
-static bool ExecuteAssembler(AssemblerInvocation &Opts,
+static bool executeAssembler(const cl::LibraryOptionsContext &LibraryOptions,
+                             AssemblerInvocation &Opts,
                              DiagnosticsEngine &Diags,
                              IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  bool Failed = ExecuteAssemblerImpl(Opts, Diags, VFS);
+  bool Failed = executeAssemblerImpl(LibraryOptions, Opts, Diags, VFS);
 
   // Delete output file if there were errors.
   if (Failed) {
@@ -724,6 +733,7 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Honor -mllvm.
   //
   // FIXME: Remove this, one day.
+  cl::LibraryOptionsContext LibraryOptions;
   if (!Asm.LLVMArgs.empty()) {
     unsigned NumArgs = Asm.LLVMArgs.size();
     auto Args = std::make_unique<const char*[]>(NumArgs + 2);
@@ -731,12 +741,15 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
-                                      /*Errs=*/nullptr, /*VFS=*/VFS.get());
+    cl::parseCommandLineOptions(LibraryOptions,
+                                ArrayRef(Args.get(), NumArgs + 1),
+                                /*Overview=*/"", /*Errs=*/nullptr,
+                                /*VFS=*/VFS.get());
   }
 
   // Execute the invocation, unless there were parsing errors.
-  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags, VFS);
+  bool Failed = Diags.hasErrorOccurred() ||
+                executeAssembler(LibraryOptions, Asm, Diags, VFS);
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.

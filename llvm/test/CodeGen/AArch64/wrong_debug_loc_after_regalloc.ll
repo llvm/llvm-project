@@ -1,4 +1,4 @@
-; RUN: llc -O3 -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -print-after virtregrewriter < %s >%t 2>&1 && FileCheck <%t %s 
+; RUN: llc -O3 -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -print-after virt-reg-rewriter < %s >%t 2>&1 && FileCheck <%t %s
 
 ; This test checks that DBG_VALUE instruction placed correctly.
 ; Specifically: if Register Allocator inserts additional instructions

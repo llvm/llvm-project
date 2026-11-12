@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -emit-pch -std=c++1z -o %t.2.ast %S/Inputs/class-template-partial-spec2.cpp
 // RUN: %clang_cc1 -std=c++1z -ast-merge %t.1.ast -ast-merge %t.2.ast -fsyntax-only %s 2>&1 | FileCheck %s
 
+// RUN: %clang_cc1 -emit-pch -std=c++1z -o %t.1.ast %S/Inputs/class-template-partial-spec1.cpp -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -emit-pch -std=c++1z -o %t.2.ast %S/Inputs/class-template-partial-spec2.cpp -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -ast-merge %t.1.ast -ast-merge %t.2.ast -fsyntax-only %s 2>&1 -fexperimental-new-constant-interpreter | FileCheck %s
+
 static_assert(sizeof(**SingleSource.member) == sizeof(**SingleDest.member));
 static_assert(sizeof(SecondDoubleSource.member) == sizeof(SecondDoubleDest.member));
 static_assert(NumberSource.val == 42);

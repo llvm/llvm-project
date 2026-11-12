@@ -15,15 +15,25 @@
 
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 #include <deque>
 #include <optional>
 #include <string>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
+
+ORC_RT_C_DEFINE_CONTROLLER_HANDLER_TAG(
+    orc_rt_tag_test_inProcessControllerAccessTest);
 
 namespace {
+
+static orc_rt_ControllerHandlerTag *testHandlerTag() {
+  return &orc_rt_tag_test_inProcessControllerAccessTest;
+}
 
 // A minimal stand-in for llvm::orc::InProcessEPC. Registers itself on the
 // Connection during OnConnect, exposes hooks for tests to drive cross-calls
@@ -33,7 +43,7 @@ public:
   using Connection = InProcessControllerAccess::Connection;
 
   using OnCallJITDispatchFn =
-      move_only_function<void(uint64_t CallId, orc_rt_ControllerHandlerTag T,
+      move_only_function<void(uint64_t CallId, orc_rt_ControllerHandlerTag *T,
                               WrapperFunctionBuffer ArgBytes)>;
   using OnReturnWrapperResultFn = move_only_function<void(
       uint64_t CallId, WrapperFunctionBuffer ResultBytes)>;
@@ -84,7 +94,7 @@ public:
 
 private:
   static void callJITDispatchEntry(void *IPEPC, uint64_t CallId,
-                                   orc_rt_ControllerHandlerTag T,
+                                   orc_rt_ControllerHandlerTag *T,
                                    orc_rt_WrapperFunctionBuffer ArgBytes) {
     auto *Self = static_cast<MockIPEPC *>(IPEPC);
     WrapperFunctionBuffer Buf(ArgBytes);
@@ -168,7 +178,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
   cantFail(std::move(Reported)); // force checked state
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error E) { Reported = std::move(E); });
+            [&](Session &, Error E) noexcept { Reported = std::move(E); });
 
   S.attach<InProcessControllerAccess>(
       BootstrapInfo(S),
@@ -178,10 +188,8 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
         return make_error<StringError>("fake connect failure");
       });
 
-  if (Reported)
-    EXPECT_EQ(toString(std::move(Reported)), "fake connect failure");
-  else
-    ADD_FAILURE() << "Expected OnConnect error to be reported";
+  EXPECT_THAT_ERROR(std::move(Reported),
+                    FailedWithMessage("fake connect failure"));
 
   // A subsequent call to the controller should now fail with "no controller
   // attached" (i.e. the Session detached on the OnConnect error).
@@ -191,8 +199,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
         if (const char *Msg = R.getOutOfBandError())
           CallErr = Msg;
       },
-      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
-      WrapperFunctionBuffer::copyFrom("x", 1));
+      testHandlerTag(), WrapperFunctionBuffer::copyFrom("x", 1));
 
   ASSERT_TRUE(CallErr);
   EXPECT_EQ(*CallErr, "no controller attached");
@@ -219,8 +226,7 @@ TEST(InProcessControllerAccessTest, CallControllerSuccess) {
             << "Unexpected out-of-band error: " << R.getOutOfBandError();
         Result = std::string(R.data(), R.size());
       },
-      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
-      WrapperFunctionBuffer::copyFrom("hello", 5));
+      testHandlerTag(), WrapperFunctionBuffer::copyFrom("hello", 5));
 
   ASSERT_TRUE(Result);
   EXPECT_EQ(*Result, "hello");
@@ -247,8 +253,7 @@ TEST(InProcessControllerAccessTest, CallControllerOutOfBandError) {
         if (const char *Msg = R.getOutOfBandError())
           ErrMsg = Msg;
       },
-      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
-      WrapperFunctionBuffer::copyFrom("payload", 7));
+      testHandlerTag(), WrapperFunctionBuffer::copyFrom("payload", 7));
 
   ASSERT_TRUE(ErrMsg);
   EXPECT_EQ(*ErrMsg, "simulated failure");
@@ -273,8 +278,7 @@ TEST(InProcessControllerAccessTest, DisconnectDrainsPendingCalls) {
         if (const char *Msg = R.getOutOfBandError())
           ErrMsg = Msg;
       },
-      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
-      WrapperFunctionBuffer::copyFrom("payload", 7));
+      testHandlerTag(), WrapperFunctionBuffer::copyFrom("payload", 7));
 
   ASSERT_FALSE(ErrMsg) << "OnComplete fired prematurely";
 
@@ -331,7 +335,9 @@ TEST(InProcessControllerAccessTest, BootstrapValuesExposeSubtargetFeatures) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   std::optional<std::string> Features;
   std::unique_ptr<MockIPEPC> Mock;
-  attachWithMock(S, Mock, cantFail(BootstrapInfo::CreateDefault(S)),
+  auto BI = BootstrapInfo::CreateDefault(S);
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
+  attachWithMock(S, Mock, std::move(*BI),
                  [&](InProcessControllerAccess::BootstrapInfoAccess *BIA) {
                    const char *Name = nullptr;
                    const char *Bytes = nullptr;

@@ -301,7 +301,8 @@ Status ProcessElfCore::DoLoadCore() {
         }
       }
       if (exe_module_sp)
-        GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+        GetTarget().RebuildModuleListWithExecutable(exe_module_sp,
+                                                    eLoadDependentsNo);
     }
   }
   return error;
@@ -654,7 +655,10 @@ void ProcessElfCore::Initialize() {
 }
 
 lldb::addr_t ProcessElfCore::GetImageInfoAddress() {
-  ObjectFile *obj_file = GetTarget().GetExecutableModule()->GetObjectFile();
+  lldb::ModuleSP executable_sp = GetTarget().GetExecutableModule();
+  if (!executable_sp)
+    return LLDB_INVALID_ADDRESS;
+  ObjectFile *obj_file = executable_sp->GetObjectFile();
   Address addr = obj_file->GetImageInfoAddress(&GetTarget());
 
   if (addr.IsValid())
@@ -1116,12 +1120,13 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       m_nt_file_entries.clear();
       lldb::offset_t offset = 0;
       const uint64_t count = note.data.GetAddress(&offset);
-      note.data.GetAddress(&offset); // Skip page size
+      const lldb::addr_t page_size =
+          note.data.GetAddress(&offset); // Skip page size
       for (uint64_t i = 0; i < count; ++i) {
         NT_FILE_Entry entry;
         entry.start = note.data.GetAddress(&offset);
         entry.end = note.data.GetAddress(&offset);
-        entry.file_ofs = note.data.GetAddress(&offset);
+        entry.original_file_offset = note.data.GetAddress(&offset) * page_size;
         m_nt_file_entries.push_back(entry);
       }
       for (uint64_t i = 0; i < count; ++i) {

@@ -573,16 +573,14 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 
     Defining a unary linalg.elementwise with default indexing-map:
     ```mlir
-    %exp = linalg.elementwise
-        kind=#linalg.elementwise_kind<exp>
+    %exp = linalg.elementwise <exp>
         ins(%x : tensor<4x16x8xf32>)
         outs(%y: tensor<4x16x8xf32>) -> tensor<4x16x8xf32>
     ```
 
     Defining a binary linalg.elementwise with user-defined indexing-map:
     ```mlir
-    %add = linalg.elementwise
-        kind=#linalg.elementwise_kind<add>
+    %add = linalg.elementwise <add>
         indexing_maps = [#transpose, #broadcast, #identity]
         ins(%exp, %arg1 : tensor<4x16x8xf32>, tensor<4x16xf32>)
         outs(%arg2: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
@@ -610,11 +608,21 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
       }]>,
 
      OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$outputs,
-          "ElementwiseKindAttr":$kind,
-          "ArrayAttr":$indexingMaps,
+          "ElementwiseKind":$kind,
+          CArg<"ArrayAttr", "{}">:$indexingMaps,
           CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
-        $_state.addAttribute("kind", kind);
+        assert((unsigned)kind <= getMaxEnumValForElementwiseKind() &&
+               "expected a valid elementwise kind attribute");
+        ElementwiseKindAttr kindAttr = ElementwiseKindAttr::get($_builder.getContext(), kind);
+        $_state.addAttribute("kind", kindAttr);
+        if (!indexingMaps) {
+          auto affineMaps = ElementwiseOp::getDefaultIndexingMaps(
+                            inputs.size() + outputs.size(),
+                            llvm::cast<ShapedType>(outputs[0].getType()).getRank(),
+                            $_builder.getContext());
+          indexingMaps = $_builder.getAffineMapArrayAttr(affineMaps);
+        }
         $_state.addAttribute("indexing_maps", indexingMaps);
         buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
                           attributes, ElementwiseOp::getRegionBuilder());
@@ -832,6 +840,11 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     dimensions in the set `dims` (with `I`, `J`, and `K` treated as _sets_ of
     dim identifiers).
 
+    Currently, this operation supports multiplication followed by summation,
+    with the corresponding type-specific operations (`int`, `float`, `bool`, `complex`).
+    Support for other combinations can be added in the future if required
+    by concrete use cases and can be lowered to appropriate lower-level operations.
+
     The iteration space consists of all dimensions in `I`, `J` and `H`, i.e. the
     domain of each of the `affine_map`s. Like for einsums, the iteration type of
     each dim is inferred and is either:
@@ -874,9 +887,6 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
     Numeric casting is performed on the operands to the inner multiplication,
     promoting/truncating them to the same data type as the accumulator/output.
-
-    TODO: Allow control over the combining/accumulating op and possibly the
-          multiplication op.
   }];
 
   let arguments = (ins
@@ -1243,6 +1253,9 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
 
     The iteration type of each dim is inferred.
 
+    Currently, this operation supports multiplication followed by summation,
+    with the corresponding type-specific operations.
+
     The input operands `A`, `B`, and `C` follow the standard contraction semantics
     together with broadcasting and transposition rules.
     See `linalg.contract` for further details.
@@ -1302,9 +1315,6 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
     ```
 
     Numeric casting promotes inputs and scales to the accumulator/output type.
-
-    TODO: Allow control over the combining/accumulating op and possibly the
-          multiplication op.
   }];
 
   let arguments = (ins

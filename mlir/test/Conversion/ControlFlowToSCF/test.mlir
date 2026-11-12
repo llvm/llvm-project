@@ -317,8 +317,7 @@ func.func @infinite_loop(%arg: f32) -> f32 {
 // CHECK-NEXT:   %[[CALL:.*]] = func.call @bar(%[[ARG1]])
 // CHECK-NEXT:   %[[TRUNC:.*]] = arith.trunci %[[C1]]
 // CHECK-NEXT:   scf.condition(%[[TRUNC]]) %[[CALL]]
-// CHECK: %[[POISON:.*]] = ub.poison
-// CHECK: return %[[POISON]]
+// CHECK: ub.unreachable
 
 // -----
 
@@ -375,6 +374,49 @@ func.func @conditional_infinite_loop(%arg: f32, %cond: i1) -> f32 {
 
 // -----
 
+// An unreachable terminator in the input IR is merged into the exit block of
+// another return-like operation, allowing all control flow to be lifted.
+
+func.func @unreachable_merged_into_return(%cond: i1) {
+  cf.cond_br %cond, ^bb1, ^bb2
+
+^bb1:
+  ub.unreachable
+
+^bb2:
+  return
+}
+
+// CHECK-LABEL: @unreachable_merged_into_return
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]:
+// CHECK:      scf.if %[[ARG0]]
+// CHECK-NOT:  cf.{{(switch|(cond_)?br)}}
+// CHECK:      return
+// CHECK-NOT:  ub.unreachable
+
+// -----
+
+// If a region only exits through unreachable terminators, they are combined
+// into a single exit block and the control flow is lifted regardless.
+
+func.func @only_unreachable_exits(%cond: i1) {
+  cf.cond_br %cond, ^bb1, ^bb2
+
+^bb1:
+  ub.unreachable
+
+^bb2:
+  ub.unreachable
+}
+
+// CHECK-LABEL: @only_unreachable_exits
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]:
+// CHECK:      scf.if %[[ARG0]]
+// CHECK-NOT:  cf.{{(switch|(cond_)?br)}}
+// CHECK:      ub.unreachable
+
+// -----
+
 // Different return-like terminators lead one control flow op remaining in the top level region.
 // Each of the blocks the control flow op leads to are transformed into regions nevertheless.
 
@@ -423,7 +465,9 @@ func.func @mixing_return_like(%cond: i1, %cond2: i1, %cond3: i1) {
 // cf.switch here only has some successors with different return-like ops.
 // This test makes sure that if there are at least two successors branching to
 // the same region, that this region gets properly turned to structured control
-// flow.
+// flow. The statically unreachable exit of the infinite loop is merged into
+// the exit block of "test.returnLike", allowing the entire function to be
+// lifted to structured control flow.
 
 func.func @some_successors_with_different_return(%flag: i32) -> i32 {
   %0 = arith.constant 5 : i32
@@ -456,19 +500,16 @@ func.func @some_successors_with_different_return(%flag: i32) -> i32 {
 // CHECK-NEXT:   scf.yield %[[C6]], %[[C1]]
 // CHECK:      default
 // CHECK-NEXT:   scf.yield %[[POISON]], %[[C0]]
-// CHECK:      cf.switch %[[INDEX_SWITCH]]#1
-// CHECK-NEXT: default: ^[[BB2:[[:alnum:]]+]]
-// CHECK-SAME: %[[INDEX_SWITCH]]#0
-// CHECK-NEXT: 0: ^[[BB1:[[:alnum:]]+]]
-// CHECK-NEXT: ]
-
-// CHECK: ^[[BB2]]{{.*}}:
-// CHECK: scf.while
-// CHECK-NOT: cf.{{(switch|(cond_)?br)}}
-// CHECK: return
-
-// CHECK: ^[[BB1]]:
-// CHECK-NEXT: "test.returnLike"
+// CHECK:      %[[INDEX_CAST2:.*]] = arith.index_castui %[[INDEX_SWITCH]]#1
+// CHECK-NEXT: scf.index_switch %[[INDEX_CAST2]]
+// CHECK:      case 0
+// CHECK-NEXT:   scf.yield
+// CHECK:      default
+// CHECK-NEXT:   scf.while
+// CHECK-SAME:     %[[INDEX_SWITCH]]#0
+// CHECK-NOT:    cf.{{(switch|(cond_)?br)}}
+// CHECK:        scf.condition
+// CHECK:        "test.returnLike"
 
 // -----
 

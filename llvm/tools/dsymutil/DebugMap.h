@@ -50,27 +50,29 @@ namespace dsymutil {
 class DebugMapObject;
 class DebugMapObjectFilter;
 
-class DebugMapFilter {
-  using ObjectContainer = std::vector<std::unique_ptr<DebugMapObjectFilter>>;
+template <typename T> class DebugMapFilterBase {
+  using ObjectContainer = std::vector<std::unique_ptr<T>>;
 
 public:
-  virtual ~DebugMapFilter() = default;
-  using const_iterator = ObjectContainer::const_iterator;
-
-  iterator_range<const_iterator> objects() const {
-    return make_range(begin(), end());
-  }
+  using const_iterator = typename ObjectContainer::const_iterator;
 
   const_iterator begin() const { return Objects.begin(); }
 
   const_iterator end() const { return Objects.end(); }
 
+  iterator_range<const_iterator> objects() const {
+    return make_range(begin(), end());
+  }
+
 protected:
-  std::vector<std::unique_ptr<DebugMapObjectFilter>> Objects;
+  ObjectContainer Objects;
+};
+
+class DebugMapFilter : public DebugMapFilterBase<DebugMapObjectFilter> {
+public:
+  virtual ~DebugMapFilter() = default;
 
 private:
-  friend class DebugMap;
-
   /// For YAML IO support.
   ///@{
   friend yaml::MappingTraits<std::unique_ptr<DebugMapFilter>>;
@@ -108,18 +110,10 @@ public:
 ///             DIE.discardSubtree();
 ///     }
 /// }
-class DebugMap : public DebugMapFilter {
+class DebugMap : public DebugMapFilterBase<DebugMapObject> {
   Triple BinaryTriple;
   std::string BinaryPath;
   std::vector<uint8_t> BinaryUUID;
-  using ObjectContainer = std::vector<std::unique_ptr<DebugMapObject>>;
-
-  ObjectContainer &getObjects() {
-    return reinterpret_cast<ObjectContainer &>(Objects);
-  }
-  const ObjectContainer &getObjects() const {
-    return reinterpret_cast<const ObjectContainer &>(Objects);
-  }
 
   /// For YAML IO support.
   ///@{
@@ -132,16 +126,6 @@ class DebugMap : public DebugMapFilter {
 public:
   DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
            ArrayRef<uint8_t> BinaryUUID = ArrayRef<uint8_t>());
-
-  using const_iterator = ObjectContainer::const_iterator;
-
-  iterator_range<const_iterator> objects() const {
-    return make_range(begin(), end());
-  }
-
-  const_iterator begin() const { return getObjects().begin(); }
-
-  const_iterator end() const { return getObjects().end(); }
 
   unsigned getNumberOfObjects() const { return Objects.size(); }
 

@@ -767,7 +767,6 @@ define i32 @postinc_sub(i32 %k)  {
 ; TAILFOLD-NEXT:    [[N_RND_UP:%.*]] = add i32 [[K]], 1
 ; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 1
 ; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
-; TAILFOLD-NEXT:    [[TMP0:%.*]] = sub i32 [[K]], [[K]]
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -777,7 +776,7 @@ define i32 @postinc_sub(i32 %k)  {
 ; TAILFOLD:       [[MIDDLE_BLOCK]]:
 ; TAILFOLD-NEXT:    br label %[[FOR_END:.*]]
 ; TAILFOLD:       [[FOR_END]]:
-; TAILFOLD-NEXT:    ret i32 [[TMP0]]
+; TAILFOLD-NEXT:    ret i32 0
 ;
 entry:
   br label %for.body
@@ -1767,7 +1766,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[DST]], i64 3
-; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP0]], i64 -1
+; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -2
 ; VEC-NEXT:    store <2 x i16> splat (i16 1), ptr [[TMP2]], align 2
 ; VEC-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VEC:       [[MIDDLE_BLOCK]]:
@@ -1800,7 +1799,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[DST]], i64 3
-; TAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[TMP0]], i64 -1
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -2
 ; TAILFOLD-NEXT:    store <2 x i16> splat (i16 1), ptr [[TMP1]], align 2
 ; TAILFOLD-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; TAILFOLD:       [[MIDDLE_BLOCK]]:

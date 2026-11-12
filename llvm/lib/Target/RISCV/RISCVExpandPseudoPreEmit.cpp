@@ -481,13 +481,9 @@ bool RISCVExpandPseudoPreEmitImpl::expandMV_FPR32INX(
 bool RISCVExpandPseudoPreEmitImpl::expandRV32ZdinxStore(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
-  const TargetRegisterInfo *TRI = STI->getRegisterInfo();
-  Register Lo =
-      TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
-  Register Hi =
-      TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
-  if (Hi == RISCV::DUMMY_REG_PAIR_WITH_X0)
-    Hi = RISCV::X0;
+  const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
+  auto [Lo, Hi] =
+      TRI->getGPRPairSubRegs(MBBI->getOperand(0).getReg().asMCReg());
 
   auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
                    .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
@@ -530,12 +526,9 @@ bool RISCVExpandPseudoPreEmitImpl::expandRV32ZdinxStore(
 bool RISCVExpandPseudoPreEmitImpl::expandRV32ZdinxLoad(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
-  const TargetRegisterInfo *TRI = STI->getRegisterInfo();
-  Register Lo =
-      TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
-  Register Hi =
-      TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
-  assert(Hi != RISCV::DUMMY_REG_PAIR_WITH_X0 && "Cannot write to X0_Pair");
+  const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
+  auto [Lo, Hi] =
+      TRI->getGPRPairSubRegs(MBBI->getOperand(0).getReg().asMCReg());
 
   MachineInstrBuilder MIBLo, MIBHi;
 
@@ -594,8 +587,7 @@ bool RISCVExpandPseudoPreEmitImpl::expandPseudoReadVLENBViaVSETVLIX0(
   unsigned VTypeImm = RISCVVType::encodeVTYPE(
       VLMUL, /*SEW=*/8, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoVSETVLIX0))
-      .addReg(Dst, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoVSETVLIX0), Dst)
       .addReg(RISCV::X0, RegState::Kill)
       .addImm(VTypeImm);
 

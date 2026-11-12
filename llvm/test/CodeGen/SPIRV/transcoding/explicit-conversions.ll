@@ -1,6 +1,10 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+;; The folded same-type conversions below must not leave a decoration behind.
+; CHECK-SPIRV-COUNT-3: OpDecorate {{.*}} FPRoundingMode
+; CHECK-SPIRV-NOT: FPRoundingMode
+
 ; CHECK-SPIRV: OpSatConvertSToU
 
 ;; kernel void testSToU(global int2 *a, global uchar2 *res) {
@@ -116,3 +120,97 @@ entry:
 }
 
 declare spir_func <3 x i32> @_Z17convert_uint3_rtpDv3_f(<3 x float> noundef) local_unnamed_addr
+
+; CHECK-SPIRV: OpFunction {{.*}} ; -- Begin function testSToUSameWidth
+; CHECK-SPIRV-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: %[[#Res:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: %[[#Ld:]] = OpLoad %[[#]] %[[#A]]
+; CHECK-SPIRV-NEXT: OpStore %[[#Res]] %[[#Ld]]
+; CHECK-SPIRV-NEXT: OpReturn
+; CHECK-SPIRV-NEXT: OpFunctionEnd
+
+;; kernel void testSToUSameWidth(global int *a, global uint *res) {
+;;   res[0] = convert_uint(*a);
+;; }
+
+define dso_local spir_kernel void @testSToUSameWidth(ptr addrspace(1) nocapture noundef readonly %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
+entry:
+  %0 = load i32, ptr addrspace(1) %a, align 4
+  %call = call spir_func i32 @_Z12convert_uinti(i32 noundef %0)
+  store i32 %call, ptr addrspace(1) %res, align 4
+  ret void
+}
+
+declare spir_func i32 @_Z12convert_uinti(i32 noundef) local_unnamed_addr
+
+; CHECK-SPIRV: OpFunction {{.*}} ; -- Begin function testUToSSameWidth
+; CHECK-SPIRV-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: %[[#Res:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: %[[#Ld:]] = OpLoad %[[#]] %[[#A]]
+; CHECK-SPIRV-NEXT: OpStore %[[#Res]] %[[#Ld]]
+; CHECK-SPIRV-NEXT: OpReturn
+; CHECK-SPIRV-NEXT: OpFunctionEnd
+
+;; kernel void testUToSSameWidth(global uint *a, global int *res) {
+;;   res[0] = convert_int(*a);
+;; }
+
+define dso_local spir_kernel void @testUToSSameWidth(ptr addrspace(1) nocapture noundef readonly %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
+entry:
+  %0 = load i32, ptr addrspace(1) %a, align 4
+  %call = call spir_func i32 @_Z11convert_intj(i32 noundef %0)
+  store i32 %call, ptr addrspace(1) %res, align 4
+  ret void
+}
+
+declare spir_func i32 @_Z11convert_intj(i32 noundef) local_unnamed_addr
+
+; CHECK-SPIRV: OpFunction {{.*}} ; -- Begin function testFToFSameWidth
+; CHECK-SPIRV-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: %[[#Res:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: %[[#Ld:]] = OpLoad %[[#]] %[[#A]]
+; CHECK-SPIRV-NEXT: OpStore %[[#Res]] %[[#Ld]]
+; CHECK-SPIRV-NEXT: OpReturn
+; CHECK-SPIRV-NEXT: OpFunctionEnd
+
+;; kernel void testFToFSameWidth(global float4 *a, global float4 *res) {
+;;   res[0] = convert_float4_rtz(*a);
+;; }
+
+define dso_local spir_kernel void @testFToFSameWidth(ptr addrspace(1) nocapture noundef readonly %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
+entry:
+  %0 = load <4 x float>, ptr addrspace(1) %a, align 16
+  %call = call spir_func <4 x float> @_Z18convert_float4_rtzDv4_f(<4 x float> noundef %0)
+  store <4 x float> %call, ptr addrspace(1) %res, align 16
+  ret void
+}
+
+declare spir_func <4 x float> @_Z18convert_float4_rtzDv4_f(<4 x float> noundef) local_unnamed_addr
+
+;; Saturating conversions are valid at equal width and must not be folded.
+; CHECK-SPIRV: OpFunction {{.*}} ; -- Begin function testSToUSatSameWidth
+; CHECK-SPIRV-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: %[[#Res:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: %[[#Ld:]] = OpLoad %[[#]] %[[#A]]
+; CHECK-SPIRV-NEXT: %[[#Cvt:]] = OpSatConvertSToU %[[#]] %[[#Ld]]
+; CHECK-SPIRV-NEXT: OpStore %[[#Res]] %[[#Cvt]]
+; CHECK-SPIRV-NEXT: OpReturn
+; CHECK-SPIRV-NEXT: OpFunctionEnd
+
+;; kernel void testSToUSatSameWidth(global char *a, global uchar *res) {
+;;   res[0] = convert_uchar_sat(*a);
+;; }
+
+define dso_local spir_kernel void @testSToUSatSameWidth(ptr addrspace(1) nocapture noundef readonly %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
+entry:
+  %0 = load i8, ptr addrspace(1) %a, align 1
+  %call = call spir_func i8 @_Z17convert_uchar_satc(i8 noundef %0)
+  store i8 %call, ptr addrspace(1) %res, align 1
+  ret void
+}
+
+declare spir_func i8 @_Z17convert_uchar_satc(i8 noundef) local_unnamed_addr

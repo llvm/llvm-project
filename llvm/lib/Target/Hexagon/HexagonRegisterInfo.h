@@ -69,15 +69,13 @@ public:
   Register getFrameRegister(const MachineFunction &MF) const override;
   Register getFrameRegister() const;
   Register getStackRegister() const;
+  Register getVTCMStackRegister() const;
 
   unsigned getHexagonSubRegIndex(const TargetRegisterClass &RC,
         unsigned GenIdx) const;
 
   const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF,
         const TargetRegisterClass *RC) const;
-
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns true if the given reserved physical register is live across
   /// function calls/returns.

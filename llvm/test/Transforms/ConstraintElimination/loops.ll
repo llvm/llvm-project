@@ -66,7 +66,7 @@ define i32 @loop_header_dom(i32 %y, i1 %c) {
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    [[X_NEXT]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[X_NEXT]] = add nuw nsw i32 [[X]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i32 [[Y:%.*]], 10
@@ -323,7 +323,7 @@ define void @loop_header_dom_and(i32 %y, i1 %c) {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i32 [[Y]], 100
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[X_NEXT]] = add i32 [[X]], 1
+; CHECK-NEXT:    [[X_NEXT]] = add nuw nsw i32 [[X]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp ugt i32 [[Y]], 10

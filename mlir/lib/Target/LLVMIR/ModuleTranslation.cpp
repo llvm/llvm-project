@@ -36,7 +36,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/TargetFolder.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -803,9 +802,11 @@ ModuleTranslation::ModuleTranslation(Operation *module,
 }
 
 ModuleTranslation::~ModuleTranslation() {
-  if (ompBuilder && !ompBuilder->isFinalized())
-    ompBuilder->finalize();
+  // Destroy extensions while the rest of the translation state is still alive.
+  extensions.clear();
 }
+
+ModuleTranslation::Extension::~Extension() = default;
 
 void ModuleTranslation::forgetMapping(Region &region) {
   SmallVector<Region *> toProcess;
@@ -905,8 +906,8 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
   for (Block &bb : llvm::drop_begin(region)) {
     llvm::BasicBlock *llvmBB = state.lookupBlock(&bb);
     auto phis = llvmBB->phis();
-    auto numArguments = bb.getNumArguments();
-    assert(numArguments == std::distance(phis.begin(), phis.end()));
+    unsigned numArguments = bb.getNumArguments();
+    assert(numArguments == llvm::range_size(phis));
     for (auto [index, phiNode] : llvm::enumerate(phis)) {
       for (auto *pred : bb.getPredecessors()) {
         // Find the LLVM IR block that contains the converted terminator
@@ -1017,7 +1018,7 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   }
   for (unsigned overloadedOperandIdx : overloadedOperands)
     overloadedTypes.push_back(args[overloadedOperandIdx]->getType());
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Module *module = builder.getModule();
   llvm::Function *llvmIntr = llvm::Intrinsic::getOrInsertDeclaration(
       module, intrinsic, overloadedTypes);
 
@@ -1249,7 +1250,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
 
     if (std::optional<mlir::SymbolRefAttr> comdat = op.getComdat()) {
       auto selectorOp = cast<ComdatSelectorOp>(
-          SymbolTable::lookupNearestSymbolFrom(op, *comdat));
+          symbolTable().lookupNearestSymbolFrom(op, *comdat));
       var->setComdat(comdatMapping.lookup(selectorOp));
     }
 
@@ -1386,8 +1387,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<llvm::TargetFolder> builder(
-          llvmModule->getContext(),
-          llvm::TargetFolder(llvmModule->getDataLayout()));
+          *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
 
       [[maybe_unused]] int numConstantsHit = 0;
       [[maybe_unused]] int numConstantsErased = 0;
@@ -1478,8 +1478,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     if ((ctorOp && ctorOp.getCtors().empty()) ||
         (dtorOp && dtorOp.getDtors().empty())) {
       llvm::IRBuilder<llvm::TargetFolder> builder(
-          llvmModule->getContext(),
-          llvm::TargetFolder(llvmModule->getDataLayout()));
+          *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
       llvm::Type *eltTy = llvm::StructType::get(
           builder.getInt32Ty(), builder.getPtrTy(), builder.getPtrTy());
       llvm::ArrayType *at = llvm::ArrayType::get(eltTy, 0);
@@ -1522,8 +1521,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
     Block &initializer = op.getInitializerBlock();
     llvm::IRBuilder<llvm::TargetFolder> builder(
-        llvmModule->getContext(),
-        llvm::TargetFolder(llvmModule->getDataLayout()));
+        *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
 
     for (mlir::Operation &op : initializer.without_terminator()) {
       if (failed(convertOperation(op, builder)))
@@ -1574,10 +1572,11 @@ static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
 static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
                                                  ArrayRef<int32_t> values) {
   SmallVector<llvm::Metadata *> mdValues;
-  llvm::transform(
-      values, std::back_inserter(mdValues), [&context](int32_t value) {
-        return convertIntegerToMetadata(context, llvm::APInt(32, value));
-      });
+  llvm::transform(values, std::back_inserter(mdValues),
+                  [&context](int32_t value) {
+                    return convertIntegerToMetadata(
+                        context, llvm::APInt(32, value, /*isSigned=*/true));
+                  });
   return llvm::MDNode::get(context, mdValues);
 }
 
@@ -1700,7 +1699,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Check the personality and set it.
   if (func.getPersonality()) {
-    llvm::Type *ty = llvm::PointerType::getUnqual(llvmFunc->getContext());
+    llvm::Type *ty = llvm::PointerType::get(
+        llvmContext, llvmModule->getDataLayout().getProgramAddressSpace());
     if (llvm::Constant *pfunc = getLLVMConstant(ty, func.getPersonalityAttr(),
                                                 func.getLoc(), *this))
       llvmFunc->setPersonalityFn(pfunc);
@@ -1742,6 +1742,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (func.getUseSampleProfile())
     llvmFunc->addFnAttr("use-sample-profile");
 
+  if (auto disableTailCalls = func.getDisableTailCalls())
+    llvmFunc->addFnAttr("disable-tail-calls",
+                        llvm::toStringRef(*disableTailCalls));
+
+  if (auto sampleProfileSuffixElisionPolicy =
+          func.getSampleProfileSuffixElisionPolicy())
+    llvmFunc->addFnAttr("sample-profile-suffix-elision-policy",
+                        *sampleProfileSuffixElisionPolicy);
+
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
@@ -1771,8 +1780,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // converted before uses.
   auto blocks = getBlocksSortedByDominance(func.getBody());
   for (Block *bb : blocks) {
-    CapturingIRBuilder builder(llvmContext,
+    CapturingIRBuilder builder(*llvmModule,
                                llvm::TargetFolder(llvmModule->getDataLayout()));
+    builder.disableGEPCanonicalization();
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
                                 /*recordInsertions=*/true)))
       return failure();
@@ -2133,13 +2143,8 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
       llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
       if (!imports.empty())
         importGUIDs.insert(imports.begin(), imports.end());
-      llvm::MDBuilder metadataBuilder(llvmFunc->getContext());
-      llvmFunc->setMetadata(
-          llvm::LLVMContext::MD_prof,
-          metadataBuilder.createFunctionEntryCount(
-              entryCount.getEntryCount(),
-              entryCount.getCountType() == ProfileCountType::Synthetic,
-              imports.empty() ? nullptr : &importGUIDs));
+      llvmFunc->setEntryCount(entryCount.getEntryCount(),
+                              imports.empty() ? nullptr : &importGUIDs);
     }
 
     // Convert result attributes.
@@ -2178,7 +2183,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     // Convert the comdat attribute.
     if (std::optional<mlir::SymbolRefAttr> comdat = function.getComdat()) {
       auto selectorOp = cast<ComdatSelectorOp>(
-          SymbolTable::lookupNearestSymbolFrom(function, *comdat));
+          symbolTable().lookupNearestSymbolFrom(function, *comdat));
       llvmFunc->setComdat(comdatMapping.lookup(selectorOp));
     }
 
@@ -2329,9 +2334,11 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);
   if (insertedDomain) {
-    llvm::SmallVector<llvm::Metadata *, 2> operands;
+    llvm::SmallVector<llvm::Metadata *, 3> operands;
     // Placeholder for potential self-reference.
     operands.push_back(dummy.get());
+    operands.push_back(
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::getFalse(ctx)));
     if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
       operands.push_back(llvm::MDString::get(ctx, description));
     domainIt->second = llvm::MDNode::get(ctx, operands);
@@ -2410,6 +2417,25 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
 
   llvm::MDNode *node = getTBAANode(cast<TBAATagAttr>(tagRefs[0]));
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
+}
+
+void ModuleTranslation::setTBAAStructMetadata(ArrayAttr fields,
+                                              llvm::Instruction *inst) {
+  if (!fields || fields.empty())
+    return;
+
+  // The node is a flat list of (offset, size, tag) triples, not a list of
+  // per-field nodes.
+  SmallVector<llvm::MDBuilder::TBAAStructField> structFields;
+  structFields.reserve(fields.size());
+  for (Attribute field : fields) {
+    auto fieldAttr = cast<TBAAStructFieldAttr>(field);
+    structFields.emplace_back(fieldAttr.getOffset(), fieldAttr.getSize(),
+                              getTBAANode(fieldAttr.getTag()));
+  }
+  inst->setMetadata(
+      llvm::LLVMContext::MD_tbaa_struct,
+      llvm::MDBuilder(getLLVMContext()).createTBAAStructNode(structFields));
 }
 
 void ModuleTranslation::setDereferenceableMetadata(
@@ -2500,6 +2526,16 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
       walker.walk(attr);
   });
 
+  // The tags inside a `tbaa_struct` are reachable from nowhere else, so without
+  // this walk they never get an MDNode and the exported node has null tags.
+  auto walkStructFields = [&](ArrayAttr fields) {
+    if (fields)
+      walker.walk(fields);
+  };
+  mlirModule->walk([&](TBAAStructOpInterface tbaaStructOp) {
+    walkStructFields(tbaaStructOp.getTBAAStructOrNull());
+  });
+
   return success();
 }
 
@@ -2581,30 +2617,14 @@ SmallVector<llvm::Value *> ModuleTranslation::lookupValues(ValueRange values) {
   return remapped;
 }
 
-llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
-  if (!ompBuilder) {
-    ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
+void ModuleTranslation::remapAllValuesWith(llvm::Value *oldValue,
+                                           llvm::Value *newValue) {
+  if (oldValue == newValue)
+    return;
 
-    // Flags represented as top-level OpenMP dialect attributes are set in
-    // `OpenMPDialectLLVMIRTranslationInterface::amendOperation()`. Here we set
-    // the default configuration.
-    llvm::OpenMPIRBuilderConfig config(
-        /* IsTargetDevice = */ false, /* IsGPU = */ false,
-        /* OpenMPOffloadMandatory = */ false,
-        /* HasRequiresReverseOffload = */ false,
-        /* HasRequiresUnifiedAddress = */ false,
-        /* HasRequiresUnifiedSharedMemory = */ false,
-        /* HasRequiresDynamicAllocators = */ false);
-    unsigned int defaultAS =
-        llvmModule->getDataLayout().getProgramAddressSpace();
-    config.setDefaultTargetAS(defaultAS);
-    config.setRuntimeCC(llvmModule->getTargetTriple().isSPIRV()
-                            ? llvm::CallingConv::SPIR_FUNC
-                            : llvm::CallingConv::C);
-    ompBuilder->setConfig(std::move(config));
-    ompBuilder->initialize();
-  }
-  return ompBuilder.get();
+  for (auto &entry : valueMapping)
+    if (entry.second == oldValue)
+      entry.second = newValue;
 }
 
 llvm::vfs::FileSystem &ModuleTranslation::getFileSystem() {
@@ -2719,7 +2739,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
 
   ModuleTranslation translator(module, std::move(llvmModule), fs);
   llvm::IRBuilder<llvm::TargetFolder> llvmBuilder(
-      llvmContext,
+      *translator.getLLVMModule(),
       llvm::TargetFolder(translator.getLLVMModule()->getDataLayout()));
 
   // Convert module before functions and operations inside, so dialect
@@ -2776,9 +2796,12 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // beforehand.
   translator.debugTranslation->addModuleFlagsIfNotPresent();
 
-  // Call the OpenMP IR Builder callbacks prior to verifying the module
-  if (auto *ompBuilder = translator.getOpenMPBuilder())
-    ompBuilder->finalize();
+  // Let dialect translations complete their pending work (e.g. OpenMP region
+  // outlining) prior to verifying the module. Index-based iteration tolerates
+  // extensions created during finalization.
+  for (size_t i = 0; i < translator.extensions.size(); ++i)
+    if (failed(translator.extensions.begin()[i].second->finalize()))
+      return nullptr;
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

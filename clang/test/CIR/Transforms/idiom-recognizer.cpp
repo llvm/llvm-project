@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fclangir -emit-cir -mmlir --mlir-print-ir-after-all -clangir-enable-idiom-recognizer %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR
+// RUN: %clang_cc1 -fclangir -emit-cir -triple x86_64-linux-gnu -mmlir --mlir-print-ir-after-all -clangir-enable-idiom-recognizer %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR
 // CIR: IR Dump After IdiomRecognizer: cir-idiom-recognizer
 
 // The implicit-check-not on the RAISED run makes any surviving std::find call
@@ -43,7 +43,7 @@ char *test_find(char *first, char *last, const char &value) {
 // FINAL: %[[LAST:.*]] = cir.load{{.*}} %[[LAST_ADDR]] :
 // FINAL: %[[VALUE:.*]] = cir.load{{.*}} %[[VALUE_ADDR]] :
 // FINAL: cir.call @_ZSt4findIPccET_S1_S1_RKT0_(%[[FIRST]], %[[LAST]], %[[VALUE]])
-// FINAL-SAME: nothrow side_effect(pure)
+// FINAL-SAME: nothrow nounwind willreturn {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>}
 // FINAL-SAME: {llvm.noundef}
 // FINAL-SAME: -> (!cir.ptr<!s8i> {llvm.noundef})
 // FINAL-NOT: cir.call @_ZSt4find

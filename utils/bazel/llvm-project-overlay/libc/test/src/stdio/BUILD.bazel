@@ -37,6 +37,7 @@ libc_test(
     name = "snprintf_test",
     srcs = ["snprintf_test.cpp"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:snprintf",
     ],
 )
@@ -56,7 +57,15 @@ libc_test(
         "//libc:__support_cpp_limits",
         "//libc:__support_macros_properties_architectures",
         "//libc:fprintf",
-    ],
+    ] + select({
+        "//libc:full_build": [
+            "//libc:fclose",
+            "//libc:ferror",
+            "//libc:fopen",
+            "//libc:fread",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 libc_test(
@@ -97,7 +106,15 @@ libc_test(
     srcs = ["vfprintf_test.cpp"],
     deps = [
         "//libc:vfprintf",
-    ],
+    ] + select({
+        "//libc:full_build": [
+            "//libc:fclose",
+            "//libc:ferror",
+            "//libc:fopen",
+            "//libc:fread",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 libc_test(
@@ -132,7 +149,16 @@ libc_test(
         "//libc:__support_cpp_string_view",
         "//libc:fscanf",
         "//libc:hdr_stdio_macros",
-    ],
+    ] + select({
+        "//libc:full_build": [
+            "//libc:fclose",
+            "//libc:feof",
+            "//libc:ferror",
+            "//libc:fopen",
+            "//libc:fwrite",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 libc_test(
@@ -149,5 +175,13 @@ libc_test(
     deps = [
         "//libc:__support_cpp_string_view",
         "//libc:vfscanf",
-    ],
+    ] + select({
+        "//libc:full_build": [
+            "//libc:fclose",
+            "//libc:ferror",
+            "//libc:fopen",
+            "//libc:fwrite",
+        ],
+        "//conditions:default": [],
+    }),
 )

@@ -1,4 +1,4 @@
-; REQUIRES: system-windows
+; REQUIRES: system-windows, target-x86_64
 ; RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
 ; RUN: lldb-test symbols %t.exe | FileCheck %s
 

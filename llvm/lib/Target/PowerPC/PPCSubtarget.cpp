@@ -26,7 +26,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
 
@@ -38,11 +37,6 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
 
-static cl::opt<bool>
-    EnableMachinePipeliner("ppc-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for PPC"),
-                           cl::init(false), cl::Hidden);
-
 PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                             StringRef TuneCPU,
                                                             StringRef FS) {
@@ -52,8 +46,10 @@ PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
 }
 
 PPCSubtarget::PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                           StringRef FS, const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TM(TM),
+                           StringRef FS, StringRef ABIName,
+                           const PPCTargetMachine &TM)
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS),
+      TargetABI(PPCTargetMachine::computeABI(TT, ABIName)), TM(TM),
       FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<PPCSelectionDAGInfo>();
@@ -152,7 +148,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
 
 bool PPCSubtarget::enableMachinePipeliner() const {
-  return getSchedModel().hasInstrSchedModel() && EnableMachinePipeliner;
+  return getSchedModel().hasInstrSchedModel();
 }
 
 bool PPCSubtarget::useDFAforSMS() const { return false; }
@@ -247,7 +243,7 @@ CodeModel::Model PPCSubtarget::getCodeModel(const TargetMachine &TM,
   return ModuleModel;
 }
 
-bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }
+bool PPCSubtarget::isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
 
 bool PPCSubtarget::isUsingPCRelativeCalls() const {
   return isPPC64() && hasPCRelativeMemops() && isELFv2ABI() &&

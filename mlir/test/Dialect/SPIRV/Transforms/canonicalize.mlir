@@ -521,6 +521,18 @@ func.func @smulextended_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
   return %0 : !spirv.struct<(i32, i32)>
 }
 
+// CHECK-LABEL: @smulextended_x_1
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @smulextended_x_1(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[ARG]], %[[C0]]
+  %c0 = spirv.Constant 1 : i32
+  %0 = spirv.SMulExtended %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
+  return %0 : !spirv.struct<(i32, i32)>
+}
+
 // CHECK-LABEL: @const_fold_scalar_smulextended
 func.func @const_fold_scalar_smulextended() -> (!spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>) {
   %c5 = spirv.Constant 5 : i32

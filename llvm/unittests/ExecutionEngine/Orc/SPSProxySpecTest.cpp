@@ -113,6 +113,25 @@ TEST(SPSProxySpecTest, CallMainAsyncViaCallOperator) {
   cantFail(ES.endSession());
 }
 
+// Exercises dispatch for a Proxy other than CallMainProxy: the spec depends
+// only on the wire signature, so any Proxy whose arguments are serializable
+// with it can use the spec.
+TEST(SPSProxySpecTest, CallMainSpecWithOtherProxyType) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  using VectorArgsCallMainProxy =
+      Proxy<int64_t(ExecutorAddr, std::vector<std::string>)>;
+  VectorArgsCallMainProxy CallMain(sps::CallMainProxySpec::dispatch,
+                                   ExecutorAddr::fromPtr(callMainWrapper));
+
+  Expected<int64_t> R =
+      CallMain(ES, ExecutorAddr::fromPtr(testMain), {"hello", "world"});
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 2 + 5); // argc == 2, strlen("hello") == 5.
+
+  cantFail(ES.endSession());
+}
+
 // Target for CallVoidVoidProxy: records that it ran via a counter (there is no
 // return value to observe).
 static int VoidVoidCallCount = 0;
@@ -253,11 +272,12 @@ static CWrapperFunctionBuffer errorFnWrapper(const char *ArgData,
 }
 
 struct ErrorFnCI {
-  static constexpr char Name[] = "test_sps_error_fn";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::verbatim("test_sps_error_fn");
   using SPSSig = SPSError(bool);
 };
 using ErrorFnProxy = Proxy<Error(bool)>;
-using ErrorFnProxySpec = sps::ProxySpec<ErrorFnProxy, ErrorFnCI>;
+using ErrorFnProxySpec = sps::ProxySpec<ErrorFnCI>;
 
 // Exercises the Error -> Error mapping across the SPS boundary, including a
 // failure reported by the executor-side function itself.
@@ -289,11 +309,12 @@ static CWrapperFunctionBuffer expectedFnWrapper(const char *ArgData,
 }
 
 struct ExpectedFnCI {
-  static constexpr char Name[] = "test_sps_expected_fn";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::verbatim("test_sps_expected_fn");
   using SPSSig = SPSExpected<int32_t>(int32_t);
 };
 using ExpectedFnProxy = Proxy<Expected<int32_t>(int32_t)>;
-using ExpectedFnProxySpec = sps::ProxySpec<ExpectedFnProxy, ExpectedFnCI>;
+using ExpectedFnProxySpec = sps::ProxySpec<ExpectedFnCI>;
 
 // Exercises the Expected<T> -> Expected<T> (flattening) mapping across the SPS
 // boundary, for both the value and the executor-reported-error cases.

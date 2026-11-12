@@ -19,6 +19,8 @@
 
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 
 namespace llvm::orc {
 
@@ -28,11 +30,12 @@ namespace llvm::orc {
 template <typename FnT>
 LookupPrepareFn
 recordProxy(Proxy<FnT> *P, typename Proxy<FnT>::DispatchFn Dispatch,
-            StringRef Name,
+            SymbolNameSpec Name,
             SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
-  return [P, Dispatch, Name, LF](SymbolLookupSet &LS,
-                                 ExecutionSession &ES) -> LookupApplyFn {
-    auto N = ES.intern(Name);
+  return [P, Dispatch, Name, LF](SymbolLookupSet &LS, ExecutionSession &ES,
+                                 const Mangler &Mangle) -> LookupApplyFn {
+    auto N = Mangle.withMangledNameDo([&](StringRef M) { return ES.intern(M); },
+                                      Name);
     LS.add(N, LF);
     return [P, Dispatch, N = std::move(N)](const SymbolMap &M) {
       auto Sym = M.lookup(N);
@@ -52,7 +55,8 @@ recordProxy(Proxy<FnT> *P, typename Proxy<FnT>::DispatchFn Dispatch,
             SymbolStringPtr Name,
             SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
   return [P, Dispatch, Name = std::move(Name),
-          LF](SymbolLookupSet &LS, ExecutionSession &ES) -> LookupApplyFn {
+          LF](SymbolLookupSet &LS, ExecutionSession &ES,
+              const Mangler &) -> LookupApplyFn {
     LS.add(Name, LF);
     return [P, Dispatch, Name](const SymbolMap &M) {
       auto Sym = M.lookup(Name);
@@ -75,9 +79,9 @@ recordProxy(Proxy<FnT> *P,
 /// spec's default controller-interface name.
 template <typename ProxySpecT, typename FnT>
 LookupPrepareFn
-recordProxy(Proxy<FnT> *P, StringRef Name,
+recordProxy(Proxy<FnT> *P, SymbolNameSpec Name,
             SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
-  return recordProxy(P, ProxySpecT::dispatch, Name, LF);
+  return recordProxy(P, ProxySpecT::dispatch, std::move(Name), LF);
 }
 
 /// Builds P from the given spec, but resolves it under the given,

@@ -2,6 +2,7 @@
 # RUN: llc -O0 -mtriple=aarch64-- -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_urem_64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_urem_64
@@ -19,6 +20,7 @@ body:             |
 ...
 ---
 name:            test_srem_32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_srem_32
@@ -40,6 +42,7 @@ body:             |
 ...
 ---
 name:            test_srem_8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_srem_8
@@ -66,6 +69,7 @@ body:             |
 ...
 ---
 name:            test_srem_1
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_srem_1
@@ -91,6 +95,7 @@ body:             |
 
 ---
 name:            test_urem_1
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_urem_1
@@ -117,6 +122,7 @@ body:             |
 
 ---
 name:            test_frem
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_frem
@@ -125,7 +131,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $d0 = COPY [[COPY]](f64)
     ; CHECK-NEXT: $d1 = COPY [[COPY1]](f64)
-    ; CHECK-NEXT: BL &fmod, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
+    ; CHECK-NEXT: BL &fmod, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f64) = COPY $d0
     ; CHECK-NEXT: $x0 = COPY [[COPY2]](f64)
@@ -134,7 +140,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[COPY3]](f32)
     ; CHECK-NEXT: $s1 = COPY [[COPY4]](f32)
-    ; CHECK-NEXT: BL &fmodf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &fmodf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: $w0 = COPY [[COPY5]](f32)
@@ -150,6 +156,7 @@ body:             |
 ...
 ---
 name:            test_srem_v2s32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_srem_v2s32
@@ -171,6 +178,7 @@ body:             |
 ...
 ---
 name:            test_srem_v4s32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_srem_v4s32
@@ -194,6 +202,7 @@ body:             |
 ...
 ---
 name:            test_srem_v2s64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_srem_v2s64
@@ -215,6 +224,7 @@ body:             |
 ...
 ---
 name:            test_srem_v4s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_srem_v4s16

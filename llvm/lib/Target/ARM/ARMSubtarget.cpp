@@ -602,7 +602,6 @@ void ARMSubtarget::getCSRAllocationOrderMask(const MachineFunction &MF,
 
 ARMSubtarget::PushPopSplitVariation
 ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
@@ -613,8 +612,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // If R7 is the frame pointer, we must split at R7 to ensure that the
   // previous frame pointer (R7) and return address (LR) are adjacent on the
   // stack, to form a valid frame record.
-  if (getFramePointerReg() == ARM::R7 &&
-      MF.getTarget().Options.FramePointerIsReserved(MF))
+  if (getFramePointerReg() == ARM::R7 && MF.framePointerIsReserved())
     return SplitR7;
 
   // Returns SplitR11WindowsSEH when the stack pointer needs to be
@@ -622,8 +620,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // This stack unwinding cannot be expressed with SEH unwind opcodes when done
   // with a single push, making it necessary to split the push into r4-r10, and
   // another containing r11+lr.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
-      F.needsUnwindTableEntry() &&
+  if (MF.needsWinCFI() &&
       (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
     return SplitR11WindowsSEH;
 
@@ -631,8 +628,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // and LR to be adjacent on the stack, and branch signing is enabled,
   // requiring R12 to be on the stack.
   if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
-      getFramePointerReg() == ARM::R11 &&
-      MF.getTarget().Options.FramePointerIsReserved(MF))
+      getFramePointerReg() == ARM::R11 && MF.framePointerIsReserved())
     return SplitR11AAPCSSignRA;
   return NoSplit;
 }

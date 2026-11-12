@@ -4,7 +4,7 @@
 # RUN:    | FileCheck %s --check-prefix=DOESCOALESCE
 # RUN: llc %s -o - -mtriple=x86_64-unknown-unknown \
 # RUN:    -experimental-debug-variable-locations \
-# RUN:    -run-pass=phi-node-elimination,register-coalescer,livedebugvars,greedy,virtregrewriter \
+# RUN:    -run-pass=phi-node-elimination,register-coalescer,livedebugvars,greedy,virt-reg-rewriter \
 # RUN:    | FileCheck %s --check-prefix=CHECK
 #
 # Test that a PHI with a debug instruction number attached survives register
@@ -115,8 +115,8 @@ body:             |
   
     %5:gr64 = COPY $rsi
     %3:gr64 = COPY $rdi
-    %4:gr64 = COPY killed %3
-    %6:gr64 = COPY killed %5
+    %4:gr64 = COPY %3
+    %6:gr64 = COPY %5
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     $rdi = COPY %4, debug-location !13
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, debug-location !13
@@ -150,7 +150,7 @@ body:             |
     %2:gr64 = PHI %9, %bb.0, %10, %bb.1, debug-instr-number 1, debug-location !13
   ; CHECK:              DBG_PHI $r14, 1
     DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !13
-    %2:gr64 = ADD64rr killed %2, %6, implicit-def $eflags, debug-location !13
+    %2:gr64 = ADD64rr %2, %6, implicit-def $eflags, debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     $rdi = COPY %2, debug-location !13
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, debug-location !13

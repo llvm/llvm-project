@@ -152,6 +152,17 @@ enum RunMode { eOnlyThisThread, eAllThreads, eOnlyDuringStepping };
 /// Execution directions
 enum RunDirection { eRunForward, eRunReverse };
 
+// Thread Step Types
+enum StepType {
+  eStepTypeNone = 0,
+  eStepTypeTrace,     ///< Single step one instruction.
+  eStepTypeTraceOver, ///< Single step one instruction, stepping over.
+  eStepTypeInto,      ///< Single step into a specified context.
+  eStepTypeOver,      ///< Single step over a specified context.
+  eStepTypeOut,       ///< Single step out a specified context.
+  eStepTypeScripted   ///< A step type implemented by the script interpreter.
+};
+
 /// Byte ordering definitions.
 enum ByteOrder {
   eByteOrderInvalid = 0,
@@ -187,7 +198,7 @@ enum Format {
   /// Floating point complex type
   eFormatComplex,
   eFormatComplexFloat = eFormatComplex,
-  /// NULL terminated C strings
+  /// Null-terminated C strings
   eFormatCString,
   eFormatDecimal,
   eFormatEnum,
@@ -316,6 +327,10 @@ enum StopReason {
   // Indicates that execution stopped because the debugger backend relies
   // on recorded data and we reached the end of that data.
   eStopReasonHistoryBoundary,
+  /// Indicates that execution stopped so a dynamic-loader plugin can update
+  /// the loaded libraries. The process automatically continues unless
+  /// target.process.stop-on-sharedlibrary-events is true.
+  eStopReasonDynamicLoader,
 };
 
 /// Command Return Status Types.
@@ -701,6 +716,7 @@ enum CommandArgumentType {
   eArgTypeAliasOptions,
   eArgTypeArchitecture,
   eArgTypeBoolean,
+  eArgTypeBreakpointConditionMode,
   eArgTypeBreakpointID,
   eArgTypeBreakpointIDRange,
   eArgTypeBreakpointName,
@@ -1619,6 +1635,38 @@ FLAGS_ENUM(BreakpointResolverType){
 constexpr unsigned BreakpointResolverAllResolversMask =
     eResolverFileAndLine | eResolverAddress | eResolverName |
     eResolverFileRegex | eResolverPython | eResolverException;
+
+/// Describes the state of a module's symbol table.
+FLAGS_ENUM(SymtabState){
+    /// No state has been recorded, possibly because the symbol table hasn't
+    /// been created yet.
+    eSymtabStateNone = 0u,
+    /// Symbols were decoded from a DataFileCache serialization.
+    eSymtabStateLoadedFromCache = (1u << 0),
+    /// Symbols were parsed from the ObjectFile.
+    eSymtabStateParsedFromObjectFile = (1u << 1),
+    /// Symbols were encoded and saved to the DataFileCache.
+    eSymtabStateSavedToCache = (1u << 2),
+    /// A SymbolFile added symbols to, or updated symbols in, the ObjectFile's
+    /// symbols.
+    eSymtabStateSymbolFileAddedSymbols = (1u << 3),
+};
+LLDB_MARK_AS_BITMASK_ENUM(SymtabState)
+
+/// Modes for evaluating breakpoint conditions.
+enum BreakpointConditionMode {
+  /// Use Data Inspection Language (DIL) to evaluate the condition.
+  eBreakpointConditionModeDIL,
+  /// Use UserExpression to evaluate the condition.
+  eBreakpointConditionModeExpr,
+  /// Use DIL to evaluate the condition, and if it fails,
+  /// fall back to UserExpression.
+  eBreakpointConditionModeDWIM,
+  /// Use the mode specified by the `target.breakpoints-condition-mode` setting.
+  /// This value is only used as the default breakpoint condition behavior and
+  /// cannot be set explicitly in settings or breakpoint command options.
+  eBreakpointConditionModeDefault
+};
 
 } // namespace lldb
 

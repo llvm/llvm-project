@@ -84,7 +84,8 @@ use omp_lib
   end do
   !$omp end target
 
-  !ERROR: ALLOCATE clause is not allowed on TARGET DATA directive
+  !ERROR: ALLOCATE clause is not allowed on TARGET DATA directive in OpenMP v5.2, try -fopenmp-version=60 [-Wopenmp-future]
+  !ERROR: The ALLOCATE clause requires that 'b' must be listed in a private data-sharing attribute clause on the same directive
   !$omp target data map(from: b) allocate(b)
   do i = 1, N
      z = 2
@@ -217,7 +218,8 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
   !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
@@ -226,7 +228,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
   !$omp do ordered(1-1) linear(a)
@@ -285,6 +287,7 @@ use omp_lib
   !$omp section
   c = 1
   d = 2
+  !ERROR: NUM_THREADS clause is not allowed on SECTIONS directive
   !ERROR: NUM_THREADS clause is not allowed on an end-directive
   !$omp end sections num_threads(4)
 
@@ -322,9 +325,15 @@ use omp_lib
   !ERROR: Unmatched END SECTIONS directive
   !$omp end sections
 
+  !ERROR: This compound directive does not allow NOWAIT clause
   !$omp parallel sections
-  !ERROR: NOWAIT clause is not allowed on PARALLEL SECTIONS directive
   !$omp end parallel sections nowait
+
+  !ERROR: This compound directive does not allow NOWAIT clause
+  !$omp teams distribute parallel do
+  do i = 1, N
+  end do
+  !$omp end teams distribute parallel do nowait
 
 ! 2.7.3 single-clause -> private-clause |
 !                        firstprivate-clause
@@ -334,7 +343,7 @@ use omp_lib
   !$omp parallel
   b = 1
   !ERROR: LASTPRIVATE clause is not allowed on SINGLE directive
-  !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
+  !ERROR: NOWAIT and COPYPRIVATE clauses are mutually exclusive
   !$omp single private(a) lastprivate(c) nowait
   a = 3.14
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
@@ -420,7 +429,7 @@ use omp_lib
 !                         simd-clause
 
   !$omp parallel
-  !ERROR: No ORDERED clause with a parameter can be specified on the DO SIMD directive
+  !ERROR: ORDERED clause with an argument is not allowed on a compound directive with SIMD as a constituent
   !ERROR: NOGROUP clause is not allowed on DO SIMD directive
   !$omp do simd ordered(2) NOGROUP nowait
   do i = 1, N
@@ -469,7 +478,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: GRAINSIZE and NUM_TASKS clauses are mutually exclusive and may not appear on the same TASKLOOP directive
+  !ERROR: NUM_TASKS and GRAINSIZE clauses are mutually exclusive
   !$omp taskloop num_tasks(3) grainsize(2)
   do i = 1,N
      a = 3.14
@@ -504,9 +513,11 @@ use omp_lib
   !$omp taskyield
   !$omp barrier
   !$omp taskwait
+  !ERROR: A DEPEND clause on a TASKWAIT construct must not have MUTEXINOUTSET as dependence type
+  !$omp taskwait depend(mutexinoutset: x)
   !ERROR: 'task-dependence-type' modifier is required
   !ERROR: The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the TASKWAIT construct
-  !WARNING: 'dependence-type' modifier is no longer supported in OpenMP v5.2 on DEPEND clause
+  !WARNING: 'dependence-type' modifier is no longer allowed on DEPEND clause since OpenMP v5.2 [-Wopenmp-deprecated]
   !$omp taskwait depend(source)
   ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
@@ -520,12 +531,12 @@ use omp_lib
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush acquire
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
-  !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
+  !ERROR: If a 'memory-order' clause is specified, list items must not be specified on the FLUSH directive
   !$omp flush release (c)
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush seq_cst
   !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
-  !ERROR: RELAXED clause is not allowed on FLUSH directive
+  !ERROR: 'memory-order' cannot be RELAXED on FLUSH directive
   !$omp flush relaxed
 
 ! 2.13.2 critical Construct
@@ -581,7 +592,7 @@ use omp_lib
   !ERROR: Misplaced OpenMP end-directive
   !$omp end taskloop
 
-  !ERROR: GRAINSIZE and NUM_TASKS clauses are mutually exclusive and may not appear on the same TASKLOOP SIMD directive
+  !ERROR: NUM_TASKS and GRAINSIZE clauses are mutually exclusive
   !$omp taskloop simd num_tasks(3) grainsize(2)
   do i = 1,N
      a = 3.14
@@ -597,5 +608,22 @@ use omp_lib
 
   !$omp target enter data map(alloc:A) device(0)
   !$omp target exit data map(delete:A) device(0)
+
+! parallel-masked-taskloop
+  z = 0
+  !ERROR: This compound directive does not allow IN_REDUCTION clause
+  !$omp parallel masked taskloop reduction(+: z) in_reduction(+: z)
+  do i = 1, 10
+    z = z + 1
+  end do
+  !$omp end parallel masked taskloop
+
+  a = 0.0
+  !ERROR: This compound directive does not allow IN_REDUCTION clause
+  !$omp parallel masked taskloop simd reduction(+: a) in_reduction(+: a)
+  do i = 1, N
+    a = a + 3.0
+  end do
+  !$omp end parallel masked taskloop simd
 
 end program
