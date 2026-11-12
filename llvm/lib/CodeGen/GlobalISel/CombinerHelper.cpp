@@ -8942,6 +8942,27 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     }
     return Changed;
   }
+  case TargetOpcode::G_ZEXT: {
+    Register Src = DefMI->getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(Src);
+    // The zero-extended bits are not demanded, so an anyext is sufficient.
+    if (Demanded.getActiveBits() > SrcTy.getScalarSizeInBits() ||
+        !(isPreLegalize() || !LI ||
+          isLegal({TargetOpcode::G_ANYEXT, {OpTy, SrcTy}})))
+      return GiveUp();
+    if (DoRewrite) {
+      MachineBasicBlock &SaveMBB = Builder.getMBB();
+      MachineBasicBlock::iterator SavePt = Builder.getInsertPt();
+      DebugLoc SaveDL = Builder.getDL();
+      Builder.setInstrAndDebugLoc(*DefMI);
+      auto AnyExt = Builder.buildAnyExt(OpTy, Src);
+      Builder.setInsertPt(SaveMBB, SavePt);
+      Builder.setDebugLoc(SaveDL);
+      Known = VT->getKnownBits(Src).anyext(BW);
+      Rewrite(AnyExt.getReg(0));
+    }
+    return true;
+  }
   default:
     return GiveUp();
   }

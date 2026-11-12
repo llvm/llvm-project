@@ -217,6 +217,66 @@ define i32 @v_and_i32(i32 %num, i32 %den) {
   ret i32 %result
 }
 
+define amdgpu_ps i32 @v_and_i32_zext_fptoui_f16_masked_or(half %x, i32 %y) {
+; GFX7-LABEL: v_and_i32_zext_fptoui_f16_masked_or:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_and_i32_zext_fptoui_f16_masked_or:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_cvt_u16_f16_e32 v0, v0
+; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: v_and_i32_zext_fptoui_f16_masked_or:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_cvt_u16_f16_e32 v0, v0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0xff
+; GFX9-NEXT:    v_and_or_b32 v0, v0, v2, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_and_i32_zext_fptoui_f16_masked_or:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_cvt_u16_f16_e32 v0, v0
+; GFX10-NEXT:    v_and_or_b32 v0, v0, 0xff, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-TRUE16-LABEL: v_and_i32_zext_fptoui_f16_masked_or:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_cvt_u16_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    v_and_or_b32 v0, v0, 0xff, v1
+; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11-FAKE16-LABEL: v_and_i32_zext_fptoui_f16_masked_or:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_cvt_u16_f16_e32 v0, v0
+; GFX11-FAKE16-NEXT:    v_and_or_b32 v0, v0, 0xff, v1
+; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: v_and_i32_zext_fptoui_f16_masked_or:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_cvt_u16_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_and_or_b32 v0, v0, 0xff, v1
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    ; return to shader part epilog
+  %conv = fptoui half %x to i16
+  %zext = zext i16 %conv to i32
+  %mask = and i32 %zext, 255
+  %result = or i32 %mask, %y
+  ret i32 %result
+}
+
 define amdgpu_ps <2 x i32> @s_and_v2i32(<2 x i32> inreg %num, <2 x i32> inreg %den) {
 ; GCN-LABEL: s_and_v2i32:
 ; GCN:       ; %bb.0:
@@ -533,53 +593,59 @@ define amdgpu_ps void @s_and_u64_zext_with_vregs(ptr addrspace(1) %out, ptr addr
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[0:1], 0
-; GFX7-NEXT:    buffer_load_dword v2, v[2:3], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v4, v[2:3], s[0:3], 0 addr64
+; GFX7-NEXT:    v_mov_b32_e32 v2, 0x50
 ; GFX7-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_and_b32_e32 v2, 0x50, v2
+; GFX7-NEXT:    v_and_b32_e32 v2, 0x50, v4
 ; GFX7-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_and_u64_zext_with_vregs:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    flat_load_dword v2, v[2:3]
+; GFX8-NEXT:    flat_load_dword v4, v[2:3]
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0x50
 ; GFX8-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_and_b32_e32 v2, 0x50, v2
+; GFX8-NEXT:    v_and_b32_e32 v2, 0x50, v4
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: s_and_u64_zext_with_vregs:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    global_load_dword v2, v[2:3], off
+; GFX9-NEXT:    global_load_dword v4, v[2:3], off
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x50
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v2, 0x50, v2
+; GFX9-NEXT:    v_and_b32_e32 v2, 0x50, v4
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: s_and_u64_zext_with_vregs:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    global_load_dword v2, v[2:3], off
+; GFX10-NEXT:    global_load_dword v4, v[2:3], off
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0x50
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v2, 0x50, v2
+; GFX10-NEXT:    v_and_b32_e32 v2, 0x50, v4
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_and_u64_zext_with_vregs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    global_load_b32 v2, v[2:3], off
+; GFX11-NEXT:    global_load_b32 v4, v[2:3], off
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0x50 :: v_dual_mov_b32 v3, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_and_b32 v2, 0x50, v2
+; GFX11-NEXT:    v_and_b32_e32 v2, 0x50, v4
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: s_and_u64_zext_with_vregs:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_load_b32 v2, v[2:3], off
+; GFX12-NEXT:    global_load_b32 v4, v[2:3], off
+; GFX12-NEXT:    v_dual_mov_b32 v2, 0x50 :: v_dual_mov_b32 v3, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_and_b32 v2, 0x50, v2
+; GFX12-NEXT:    v_and_b32_e32 v2, 0x50, v4
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX12-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -593,7 +659,6 @@ define amdgpu_kernel void @s_and_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX7-LABEL: s_and_u64_zext_with_sregs:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX7-NEXT:    s_mov_b32 s5, 0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GFX7-NEXT:    s_mov_b32 s2, -1
@@ -611,7 +676,6 @@ define amdgpu_kernel void @s_and_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    s_load_dword s2, s[2:3], 0x0
-; GFX8-NEXT:    s_mov_b32 s3, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_and_b64 s[2:3], s[2:3], 0x50
@@ -626,7 +690,6 @@ define amdgpu_kernel void @s_and_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_load_dword s2, s[2:3], 0x0
-; GFX9-NEXT:    s_mov_b32 s3, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], 0x50
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -640,7 +703,6 @@ define amdgpu_kernel void @s_and_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_load_dword s2, s[2:3], 0x0
-; GFX10-NEXT:    s_mov_b32 s3, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_and_b64 s[2:3], s[2:3], 0x50
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -654,7 +716,6 @@ define amdgpu_kernel void @s_and_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
-; GFX11-NEXT:    s_mov_b32 s3, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_and_b64 s[2:3], s[2:3], 0x50
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
@@ -667,7 +728,6 @@ define amdgpu_kernel void @s_and_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b32 s2, s[2:3], 0x0
-; GFX12-NEXT:    s_mov_b32 s3, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_and_b64 s[2:3], s[2:3], 0x50
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1134,6 +1194,3 @@ define <2 x i256> @v_and_v2i256(<2 x i256> %a, <2 x i256> %b) {
   ret <2 x i256> %and
 }
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX11-FAKE16: {{.*}}
-; GFX11-TRUE16: {{.*}}

@@ -2136,7 +2136,6 @@ define amdgpu_ps i32 @s_usubsat_v2i16(<2 x i16> inreg %lhs, <2 x i16> inreg %rhs
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX8-NEXT:    v_sub_u16_e64 v0, s2, v0 clamp
 ; GFX8-NEXT:    v_readfirstlane_b32 s1, v0
-; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX8-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX8-NEXT:    s_or_b32 s0, s0, s1
@@ -2356,14 +2355,12 @@ define amdgpu_ps <2 x i32> @s_usubsat_v4i16(<4 x i16> inreg %lhs, <4 x i16> inre
 ; GFX8-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s7
 ; GFX8-NEXT:    v_sub_u16_e64 v0, s5, v0 clamp
-; GFX8-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX8-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX8-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX8-NEXT:    s_or_b32 s0, s0, s2
-; GFX8-NEXT:    s_and_b32 s2, 0xffff, s3
 ; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX8-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX8-NEXT:    s_lshl_b32 s2, s3, 16
 ; GFX8-NEXT:    s_or_b32 s1, s1, s2
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -2539,22 +2536,19 @@ define amdgpu_ps <3 x i32> @s_usubsat_v6i16(<6 x i16> inreg %lhs, <6 x i16> inre
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX8-NEXT:    s_lshr_b32 s11, s5, 16
 ; GFX8-NEXT:    v_sub_u16_e64 v0, s2, v0 clamp
-; GFX8-NEXT:    s_and_b32 s3, 0xffff, s3
 ; GFX8-NEXT:    s_lshr_b32 s8, s2, 16
 ; GFX8-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s11
+; GFX8-NEXT:    v_sub_u16_e64 v0, s8, v0 clamp
 ; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX8-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX8-NEXT:    v_sub_u16_e64 v0, s8, v0 clamp
-; GFX8-NEXT:    s_or_b32 s0, s0, s3
-; GFX8-NEXT:    s_and_b32 s3, 0xffff, s4
 ; GFX8-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX8-NEXT:    s_or_b32 s0, s0, s3
 ; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX8-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX8-NEXT:    s_lshl_b32 s3, s4, 16
 ; GFX8-NEXT:    s_or_b32 s1, s1, s3
-; GFX8-NEXT:    s_and_b32 s3, 0xffff, s5
 ; GFX8-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX8-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX8-NEXT:    s_lshl_b32 s3, s5, 16
 ; GFX8-NEXT:    s_or_b32 s2, s2, s3
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -2758,30 +2752,26 @@ define amdgpu_ps <4 x i32> @s_usubsat_v8i16(<8 x i16> inreg %lhs, <8 x i16> inre
 ; GFX8-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s14
 ; GFX8-NEXT:    v_sub_u16_e64 v0, s10, v0 clamp
-; GFX8-NEXT:    s_and_b32 s4, 0xffff, s4
 ; GFX8-NEXT:    v_readfirstlane_b32 s6, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s7
-; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
 ; GFX8-NEXT:    s_lshr_b32 s15, s7, 16
 ; GFX8-NEXT:    v_sub_u16_e64 v0, s3, v0 clamp
-; GFX8-NEXT:    s_or_b32 s0, s0, s4
-; GFX8-NEXT:    s_and_b32 s4, 0xffff, s5
 ; GFX8-NEXT:    s_lshr_b32 s11, s3, 16
 ; GFX8-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s15
-; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
 ; GFX8-NEXT:    v_sub_u16_e64 v0, s11, v0 clamp
-; GFX8-NEXT:    s_or_b32 s1, s1, s4
-; GFX8-NEXT:    s_and_b32 s4, 0xffff, s6
+; GFX8-NEXT:    s_or_b32 s0, s0, s4
+; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX8-NEXT:    s_lshl_b32 s4, s5, 16
 ; GFX8-NEXT:    v_readfirstlane_b32 s7, v0
+; GFX8-NEXT:    s_or_b32 s1, s1, s4
 ; GFX8-NEXT:    s_and_b32 s2, 0xffff, s2
-; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX8-NEXT:    s_lshl_b32 s4, s6, 16
 ; GFX8-NEXT:    s_or_b32 s2, s2, s4
-; GFX8-NEXT:    s_and_b32 s4, 0xffff, s7
 ; GFX8-NEXT:    s_and_b32 s3, 0xffff, s3
-; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX8-NEXT:    s_lshl_b32 s4, s7, 16
 ; GFX8-NEXT:    s_or_b32 s3, s3, s4
 ; GFX8-NEXT:    ; return to shader part epilog
 ;

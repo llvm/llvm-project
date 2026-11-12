@@ -11,6 +11,20 @@ define amdgpu_ps void @load_P0_B16_D16(<2 x i16> %vec, ptr addrspace(0) %ptra, p
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P0_B16_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_short_d16 v0, v[1:2]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P0_B16_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_b16 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(0) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 0
   store <2 x i16> %res, ptr addrspace(0) %out
@@ -24,6 +38,20 @@ define amdgpu_ps void @load_P0_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(0) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P0_B16_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_short_d16_hi v0, v[1:2]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P0_B16_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_hi_b16 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(0) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 1
   store <2 x i16> %res, ptr addrspace(0) %out
@@ -37,6 +65,20 @@ define amdgpu_ps void @sextload_P0_i8_D16(<2 x i16> %vec, ptr addrspace(0) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P0_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_sbyte_d16 v0, v[1:2]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P0_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_i8 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(0) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -51,6 +93,20 @@ define amdgpu_ps void @sextload_P0_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(0) %p
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P0_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_sbyte_d16_hi v0, v[1:2]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P0_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_hi_i8 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(0) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -65,6 +121,20 @@ define amdgpu_ps void @sextload_P0_i8_D16_Hi_unmasked(<2 x i16> %vec, ptr %ptra,
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P0_i8_D16_Hi_unmasked:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_sbyte_d16_hi v0, v[1:2]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P0_i8_D16_Hi_unmasked:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_hi_i8 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr %ptra
   %extended = sext i8 %a to i32
   %shifted = shl i32 %extended, 16
@@ -124,6 +194,20 @@ define amdgpu_ps void @zextload_P0_i8_D16(<2 x i16> %vec, ptr addrspace(0) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P0_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_ubyte_d16 v0, v[1:2]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P0_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_u8 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(0) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -138,6 +222,20 @@ define amdgpu_ps void @zextload_P0_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(0) %p
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P0_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_ubyte_d16_hi v0, v[1:2]
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P0_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_hi_u8 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(0) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -152,6 +250,20 @@ define amdgpu_ps void @load_P1_B16_D16(<2 x i16> %vec, ptr addrspace(1) %ptra, p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P1_B16_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_short_d16 v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P1_B16_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_b16 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(1) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 0
   store <2 x i16> %res, ptr addrspace(1) %out
@@ -165,6 +277,20 @@ define amdgpu_ps void @load_P1_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(1) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P1_B16_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_short_d16_hi v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P1_B16_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_b16 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(1) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 1
   store <2 x i16> %res, ptr addrspace(1) %out
@@ -178,6 +304,20 @@ define amdgpu_ps void @sextload_P1_i8_D16(<2 x i16> %vec, ptr addrspace(1) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P1_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_sbyte_d16 v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P1_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_i8 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -192,6 +332,20 @@ define amdgpu_ps void @sextload_P1_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(1) %p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P1_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_sbyte_d16_hi v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P1_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_i8 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -206,6 +360,20 @@ define amdgpu_ps void @zextload_P1_i8_D16(<2 x i16> %vec, ptr addrspace(1) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P1_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_ubyte_d16 v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P1_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_u8 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -220,6 +388,20 @@ define amdgpu_ps void @zextload_P1_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(1) %p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P1_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_ubyte_d16_hi v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P1_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_u8 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -234,6 +416,20 @@ define amdgpu_ps void @load_P3_B16_D16(<2 x i16> %vec, ptr addrspace(3) %ptra, p
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    ds_store_b32 v2, v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P3_B16_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ds_read_u16_d16 v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    ds_write_b32 v2, v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P3_B16_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ds_load_u16_d16 v0, v1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b32 v2, v0
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(3) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 0
   store <2 x i16> %res, ptr addrspace(3) %out
@@ -247,6 +443,20 @@ define amdgpu_ps void @load_P3_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(3) %ptra
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    ds_store_b32 v2, v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P3_B16_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ds_read_u16_d16_hi v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    ds_write_b32 v2, v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P3_B16_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ds_load_u16_d16_hi v0, v1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b32 v2, v0
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(3) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 1
   store <2 x i16> %res, ptr addrspace(3) %out
@@ -260,6 +470,20 @@ define amdgpu_ps void @sextload_P3_i8_D16(<2 x i16> %vec, ptr addrspace(3) %ptra
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    ds_store_b32 v2, v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P3_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ds_read_i8_d16 v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    ds_write_b32 v2, v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P3_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ds_load_i8_d16 v0, v1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b32 v2, v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(3) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -274,6 +498,20 @@ define amdgpu_ps void @sextload_P3_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(3) %p
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    ds_store_b32 v2, v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P3_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ds_read_i8_d16_hi v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    ds_write_b32 v2, v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P3_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ds_load_i8_d16_hi v0, v1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b32 v2, v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(3) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -288,6 +526,20 @@ define amdgpu_ps void @zextload_P3_i8_D16(<2 x i16> %vec, ptr addrspace(3) %ptra
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    ds_store_b32 v2, v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P3_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ds_read_u8_d16 v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    ds_write_b32 v2, v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P3_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ds_load_u8_d16 v0, v1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b32 v2, v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(3) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -302,6 +554,20 @@ define amdgpu_ps void @zextload_P3_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(3) %p
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    ds_store_b32 v2, v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P3_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    ds_read_u8_d16_hi v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    ds_write_b32 v2, v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P3_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ds_load_u8_d16_hi v0, v1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b32 v2, v0
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(3) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -316,6 +582,20 @@ define amdgpu_ps void @load_P4_B16_D16(<2 x i16> %vec, ptr addrspace(4) %ptra, p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P4_B16_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_short_d16 v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P4_B16_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_b16 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 0
   store <2 x i16> %res, ptr addrspace(1) %out
@@ -329,6 +609,20 @@ define amdgpu_ps void @load_P4_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(4) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P4_B16_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_short_d16_hi v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P4_B16_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_b16 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 1
   store <2 x i16> %res, ptr addrspace(1) %out
@@ -342,6 +636,20 @@ define amdgpu_ps void @sextload_P4_i8_D16(<2 x i16> %vec, ptr addrspace(4) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P4_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_sbyte_d16 v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P4_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_i8 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -356,6 +664,20 @@ define amdgpu_ps void @sextload_P4_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(4) %p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P4_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_sbyte_d16_hi v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P4_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_i8 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -370,6 +692,20 @@ define amdgpu_ps void @zextload_P4_i8_D16(<2 x i16> %vec, ptr addrspace(4) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P4_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_ubyte_d16 v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P4_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_u8 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -384,6 +720,20 @@ define amdgpu_ps void @zextload_P4_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(4) %p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P4_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_ubyte_d16_hi v0, v[1:2], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P4_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    global_load_d16_hi_u8 v0, v[1:2], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -398,6 +748,27 @@ define amdgpu_ps void @load_P5_B16_D16(<2 x i16> %vec, ptr addrspace(5) %ptra, p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    scratch_store_b32 v2, v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P5_B16_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s4, s0
+; GFX9-NEXT:    s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; GFX9-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    s_mov_b32 s3, 0xe00000
+; GFX9-NEXT:    s_add_u32 s0, s0, s4
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    buffer_load_short_d16 v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P5_B16_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    scratch_load_d16_b16 v0, v1, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b32 v2, v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(5) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 0
   store <2 x i16> %res, ptr addrspace(5) %out
@@ -411,6 +782,27 @@ define amdgpu_ps void @load_P5_B16_D16_Hi(<2 x i16> %vec, ptr addrspace(5) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    scratch_store_b32 v2, v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: load_P5_B16_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s4, s0
+; GFX9-NEXT:    s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; GFX9-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    s_mov_b32 s3, 0xe00000
+; GFX9-NEXT:    s_add_u32 s0, s0, s4
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    buffer_load_short_d16_hi v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: load_P5_B16_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    scratch_load_d16_hi_b16 v0, v1, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b32 v2, v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(5) %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 1
   store <2 x i16> %res, ptr addrspace(5) %out
@@ -424,6 +816,27 @@ define amdgpu_ps void @sextload_P5_i8_D16(<2 x i16> %vec, ptr addrspace(5) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    scratch_store_b32 v2, v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P5_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s4, s0
+; GFX9-NEXT:    s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; GFX9-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    s_mov_b32 s3, 0xe00000
+; GFX9-NEXT:    s_add_u32 s0, s0, s4
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    buffer_load_sbyte_d16 v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P5_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    scratch_load_d16_i8 v0, v1, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b32 v2, v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(5) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -438,6 +851,27 @@ define amdgpu_ps void @sextload_P5_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(5) %p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    scratch_store_b32 v2, v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sextload_P5_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s4, s0
+; GFX9-NEXT:    s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; GFX9-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    s_mov_b32 s3, 0xe00000
+; GFX9-NEXT:    s_add_u32 s0, s0, s4
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    buffer_load_sbyte_d16_hi v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: sextload_P5_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    scratch_load_d16_hi_i8 v0, v1, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b32 v2, v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(5) %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -452,6 +886,27 @@ define amdgpu_ps void @zextload_P5_i8_D16(<2 x i16> %vec, ptr addrspace(5) %ptra
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    scratch_store_b32 v2, v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P5_i8_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s4, s0
+; GFX9-NEXT:    s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; GFX9-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    s_mov_b32 s3, 0xe00000
+; GFX9-NEXT:    s_add_u32 s0, s0, s4
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    buffer_load_ubyte_d16 v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P5_i8_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    scratch_load_d16_u8 v0, v1, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b32 v2, v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(5) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 0
@@ -466,6 +921,27 @@ define amdgpu_ps void @zextload_P5_i8_D16_Hi(<2 x i16> %vec, ptr addrspace(5) %p
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    scratch_store_b32 v2, v0, off
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: zextload_P5_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s4, s0
+; GFX9-NEXT:    s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; GFX9-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
+; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    s_mov_b32 s3, 0xe00000
+; GFX9-NEXT:    s_add_u32 s0, s0, s4
+; GFX9-NEXT:    s_addc_u32 s1, s1, 0
+; GFX9-NEXT:    buffer_load_ubyte_d16_hi v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 offen
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: zextload_P5_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    scratch_load_d16_hi_u8 v0, v1, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b32 v2, v0, off
+; GFX11-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(5) %ptra
   %a16 = zext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1
@@ -480,6 +956,20 @@ define amdgpu_ps void @volatile_load_P0_B16_D16(<2 x i16> %vec, ptr %ptra, ptr %
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: volatile_load_P0_B16_D16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_short_d16 v0, v[1:2] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: volatile_load_P0_B16_D16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_b16 v0, v[1:2] glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load volatile i16, ptr %ptra
   %res = insertelement <2 x i16> %vec, i16 %a, i32 0
   store <2 x i16> %res, ptr %out
@@ -503,6 +993,26 @@ define amdgpu_ps void @volatile_sextload_P0_i8_D16_Hi(<2 x i16> %vec, ptr %ptra,
 ; GFX12-FAKE16-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
 ; GFX12-FAKE16-NEXT:    flat_store_b32 v[3:4], v0
 ; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: volatile_sextload_P0_i8_D16_Hi:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    flat_load_d16_hi_i8 v0, v[1:2] scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    flat_store_b32 v[3:4], v0
+; GFX12-NEXT:    s_endpgm
+;
+; GFX9-LABEL: volatile_sextload_P0_i8_D16_Hi:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    flat_load_sbyte_d16_hi v0, v[1:2] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_store_dword v[3:4], v0
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: volatile_sextload_P0_i8_D16_Hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    flat_load_d16_hi_i8 v0, v[1:2] glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    flat_store_b32 v[3:4], v0
+; GFX11-NEXT:    s_endpgm
   %a = load volatile i8, ptr %ptra
   %a16 = sext i8 %a to i16
   %res = insertelement <2 x i16> %vec, i16 %a16, i32 1

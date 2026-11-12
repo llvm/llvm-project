@@ -97,3 +97,80 @@ body: |
     %res:_(i64) = G_AND %shift, %mask
     $vgpr0_vgpr1 = COPY %res
 ...
+
+---
+name: zext_to_anyext_i32_i16
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: zext_to_anyext_i32_i16
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %t:_(i16) = G_TRUNC %x(i32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT %t(i16)
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %res:_(i32) = G_AND [[ANYEXT]], %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %res(i32)
+    %x:_(i32) = COPY $vgpr0
+    %t:_(i16) = G_TRUNC %x
+    %ext:_(i32) = G_ZEXT %t
+    %mask:_(i32) = G_CONSTANT i32 255
+    %res:_(i32) = G_AND %ext, %mask
+    $vgpr0 = COPY %res
+...
+
+---
+name: zext_high_bits_demanded_i32_i16
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: zext_high_bits_demanded_i32_i16
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %t:_(i16) = G_TRUNC %x(i32)
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %t(i16)
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 131071
+    ; CHECK-NEXT: %res:_(i32) = G_AND %ext, %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %res(i32)
+    %x:_(i32) = COPY $vgpr0
+    %t:_(i16) = G_TRUNC %x
+    %ext:_(i32) = G_ZEXT %t
+    %mask:_(i32) = G_CONSTANT i32 131071
+    %res:_(i32) = G_AND %ext, %mask
+    $vgpr0 = COPY %res
+...
+
+---
+name: zext_multi_use_i32_i16
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: zext_multi_use_i32_i16
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %t:_(i16) = G_TRUNC %x(i32)
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %t(i16)
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %res:_(i32) = G_AND %ext, %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %res(i32)
+    ; CHECK-NEXT: $vgpr1 = COPY %ext(i32)
+    %x:_(i32) = COPY $vgpr0
+    %t:_(i16) = G_TRUNC %x
+    %ext:_(i32) = G_ZEXT %t
+    %mask:_(i32) = G_CONSTANT i32 255
+    %res:_(i32) = G_AND %ext, %mask
+    $vgpr0 = COPY %res
+    $vgpr1 = COPY %ext
+...

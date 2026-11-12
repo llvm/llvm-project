@@ -25,9 +25,9 @@ define void @matrix_mul_unsigned(i32 %N, ptr nocapture %C, ptr nocapture readonl
 ; CHECK-GI-LABEL: matrix_mul_unsigned:
 ; CHECK-GI:       // %bb.0: // %vector.header
 ; CHECK-GI-NEXT:    and w8, w3, #0xffff
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    dup v0.4h, w8
-; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    and x8, x8, #0xfffffff8
+; CHECK-GI-NEXT:    and x8, x0, #0xfffffff8
 ; CHECK-GI-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    add x9, x2, w0, uxtw #1
@@ -193,9 +193,9 @@ define void @matrix_mul_double_shuffle(i32 %N, ptr nocapture %C, ptr nocapture r
 ; CHECK-GI-LABEL: matrix_mul_double_shuffle:
 ; CHECK-GI:       // %bb.0: // %vector.header
 ; CHECK-GI-NEXT:    and w8, w3, #0xffff
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    dup v0.4s, w8
-; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    and x8, x8, #0xfffffff8
+; CHECK-GI-NEXT:    and x8, x0, #0xfffffff8
 ; CHECK-GI-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldrh w9, [x2], #16
@@ -1345,9 +1345,9 @@ define void @matrix_mul_unsigned_and(i32 %N, ptr nocapture %C, ptr nocapture rea
 ; CHECK-GI-LABEL: matrix_mul_unsigned_and:
 ; CHECK-GI:       // %bb.0: // %vector.header
 ; CHECK-GI-NEXT:    and w8, w3, #0xffff
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    dup v0.4h, w8
-; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    and x8, x8, #0xfffffff8
+; CHECK-GI-NEXT:    and x8, x0, #0xfffffff8
 ; CHECK-GI-NEXT:  .LBB11_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    add x9, x2, w0, uxtw #1
@@ -1432,9 +1432,9 @@ define void @matrix_mul_unsigned_and_double(i32 %N, ptr nocapture %C, ptr nocapt
 ; CHECK-GI-LABEL: matrix_mul_unsigned_and_double:
 ; CHECK-GI:       // %bb.0: // %vector.header
 ; CHECK-GI-NEXT:    and w8, w3, #0xffff
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    dup v0.4h, w8
-; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    and x8, x8, #0xfffffff0
+; CHECK-GI-NEXT:    and x8, x0, #0xfffffff0
 ; CHECK-GI-NEXT:  .LBB12_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    add x9, x2, w0, uxtw #1
@@ -1524,9 +1524,9 @@ define void @matrix_mul_signed_and(i32 %N, ptr nocapture %C, ptr nocapture reado
 ; CHECK-GI-LABEL: matrix_mul_signed_and:
 ; CHECK-GI:       // %bb.0: // %vector.header
 ; CHECK-GI-NEXT:    and w8, w3, #0xffff
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    dup v0.4s, w8
-; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    and x8, x8, #0xfffffff8
+; CHECK-GI-NEXT:    and x8, x0, #0xfffffff8
 ; CHECK-GI-NEXT:  .LBB13_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    add x9, x2, w0, uxtw #1
@@ -1618,9 +1618,9 @@ define void @matrix_mul_signed_and_double(i32 %N, ptr nocapture %C, ptr nocaptur
 ; CHECK-GI-LABEL: matrix_mul_signed_and_double:
 ; CHECK-GI:       // %bb.0: // %vector.header
 ; CHECK-GI-NEXT:    and w8, w3, #0xffff
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-GI-NEXT:    dup v0.4s, w8
-; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    and x8, x8, #0xfffffff0
+; CHECK-GI-NEXT:    and x8, x0, #0xfffffff0
 ; CHECK-GI-NEXT:  .LBB14_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    add x9, x2, w0, uxtw #1

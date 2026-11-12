@@ -3141,7 +3141,6 @@ define i40 @load_i40(ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    s_lshl_b32 s7, s7, 8
 ; GISEL-NEXT:    s_or_b32 s4, s4, s5
 ; GISEL-NEXT:    s_or_b32 s5, s6, s7
-; GISEL-NEXT:    s_and_b32 s5, 0xffff, s5
 ; GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
 ; GISEL-NEXT:    s_lshl_b32 s5, s5, 16
 ; GISEL-NEXT:    s_or_b32 s4, s4, s5

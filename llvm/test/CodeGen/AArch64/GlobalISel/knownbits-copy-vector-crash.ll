@@ -15,9 +15,8 @@ define <4 x i32> @test(<8 x i16> %in, i1 %continue) {
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov w9, w10
-; CHECK-NEXT:    mov w10, w10
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    and x10, x10, #0x7
+; CHECK-NEXT:    and x10, x9, #0x7
 ; CHECK-NEXT:    lsl x10, x10, #1
 ; CHECK-NEXT:    ldrb w10, [x8, x10]
 ; CHECK-NEXT:    cmp w10, #0
