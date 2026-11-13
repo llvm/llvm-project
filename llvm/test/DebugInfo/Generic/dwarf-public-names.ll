@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -debugger-tune=gdb -filetype=obj -o %t.o < %s
+; RUN: %llc_dwarf -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump -debug-pubnames %t.o | FileCheck %s
 ; ModuleID = 'dwarf-public-names.cpp'
 ;
@@ -93,7 +93,7 @@ attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!20}
-!llvm.module.flags = !{!22}
+!llvm.module.flags = !{!22, !39}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "static_member_variable", linkageName: "_ZN1C22static_member_variableE", scope: !2, file: !3, line: 7, type: !6, isLocal: false, isDefinition: true, declaration: !5)
@@ -118,6 +118,7 @@ attributes #1 = { nounwind readnone }
 !20 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.3", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !11, retainedTypes: !11, globals: !21, imports: !11) ; previously: invalid DW_TAG_base_type
 !21 = !{!0, !15, !17}
 !22 = !{i32 1, !"Debug Info Version", i32 3}
+!39 = !{i32 2, !"debugger-tuning", !"gdb"}
 !23 = distinct !DISubprogram(name: "member_function", linkageName: "_ZN1C15member_functionEv", scope: null, file: !3, line: 9, type: !8, isLocal: false, isDefinition: true, scopeLine: 9, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !20, declaration: !7, retainedNodes: !11)
 !24 = !DILocalVariable(name: "this", arg: 1, scope: !23, file: !3, line: 9, type: !25, flags: DIFlagArtificial | DIFlagObjectPointer)
 !25 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !2, size: 64, align: 64)

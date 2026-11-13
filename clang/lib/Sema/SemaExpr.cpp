@@ -58,6 +58,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -5553,6 +5554,10 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                          << LHSExp->getSourceRange()
                          << RHSExp->getSourceRange());
       ResultType = BTy->getSveEltType(Context);
+    } else if (Hexagon().isHLXVectorType(LHSTy)) {
+      // There is no HLX vector element extract.
+      return ExprError(Diag(LLoc, diag::err_subscript_hlx)
+                       << LHSExp->getSourceRange() << RHSExp->getSourceRange());
     } else {
       const VectorType *VTy = LHSTy->getAs<VectorType>();
       ResultType = VTy->getElementType();
@@ -15589,6 +15594,12 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
       S.Diag(OpLoc, diag::ext_typecheck_indirection_through_void_pointer)
           << OpTy << Op->getSourceRange();
   }
+
+  // HLX has no vector pair loads or stores.
+  if (S.Hexagon().isHLXVectorType(Result) &&
+      S.Context.getTypeSizeInChars(Result).getQuantity() == 4096)
+    S.Diag(OpLoc, diag::err_typecheck_indirection_hlx_vectorpair_pointer)
+        << OpTy << Op->getSourceRange();
 
   // Dereferences are usually l-values...
   VK = VK_LValue;

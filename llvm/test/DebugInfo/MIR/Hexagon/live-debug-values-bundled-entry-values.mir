@@ -78,7 +78,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     DBG_VALUE $r0, $noreg, !16, !DIExpression(), debug-location !17
@@ -105,7 +104,6 @@ body:             |
 
 ---
 name:            bar
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 body:             |

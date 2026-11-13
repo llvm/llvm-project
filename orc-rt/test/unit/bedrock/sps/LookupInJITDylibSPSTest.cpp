@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/sps/LookupInJITDylibSPS.h"
+#include "orc-rt/support/sps/SPSJITDylibLookupFlags.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
@@ -35,18 +36,19 @@ namespace {
 // kept in sync with the tag definition in LookupInJITDylibSPS.cpp.
 extern "C" orc_rt_ControllerHandlerTag orc_rt_tag_sps_lookupInJITDylib;
 
-using LookupJITDylibSPSSig =
-    SPSExpected<SPSSymbolLookupResult>(SPSExecutorAddr, SPSSymbolLookupSet);
+using LookupJITDylibSPSSig = SPSExpected<SPSSymbolLookupResult>(
+    SPSExecutorAddr, SPSJITDylibLookupFlags, SPSSymbolLookupSet);
 
 // Controller-side state for a single lookup. Tests pass its address as the
 // JITDylib key, which lets the (capture-less) handler reach it.
 struct ControllerState {
   bool Called = false;
+  std::optional<JITDylibLookupFlags> ReceivedJDLookupFlags;
   SymbolLookupSet Received;
   SymbolLookupResult ToReturn;
 };
 
-// Records the lookup set and returns ControllerState::ToReturn.
+// Records the lookup flags and set, and returns ControllerState::ToReturn.
 static void recordingLookup(orc_rt_SessionRef S,
                             orc_rt_WrapperFunctionBuffer ArgBytes,
                             orc_rt_WrapperFunctionReturn Return,
@@ -54,9 +56,11 @@ static void recordingLookup(orc_rt_SessionRef S,
   SPSWrapperFunction<LookupJITDylibSPSSig>::handle(
       S, ArgBytes, Return, CallId,
       [](move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
-         void *Key, const SymbolLookupSet &LS) {
+         void *Key, JITDylibLookupFlags JDLookupFlags,
+         const SymbolLookupSet &LS) {
         auto &CS = *static_cast<ControllerState *>(Key);
         CS.Called = true;
+        CS.ReceivedJDLookupFlags = JDLookupFlags;
         CS.Received = LS;
         OnComplete(std::move(CS.ToReturn));
       });
@@ -71,7 +75,8 @@ static void lookupFailure(orc_rt_SessionRef S,
   SPSWrapperFunction<LookupJITDylibSPSSig>::handle(
       S, ArgBytes, Return, CallId,
       [](move_only_function<void(Expected<SymbolLookupResult>)> OnComplete,
-         void *Key, const SymbolLookupSet &LS) {
+         void *Key, JITDylibLookupFlags JDLookupFlags,
+         const SymbolLookupSet &LS) {
         OnComplete(make_error<StringError>("lookup failed"));
       });
 }
@@ -92,6 +97,7 @@ static void transportFailure(orc_rt_SessionRef S,
 // JITDylib key.
 static Expected<SymbolLookupResult> runLookup(orc_rt_WrapperFunction Handler,
                                               ControllerState &CS,
+                                              JITDylibLookupFlags JDLookupFlags,
                                               const SymbolLookupSet &LS) {
   Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
   DirectControllerAccess::HandlerMap HM;
@@ -100,13 +106,14 @@ static Expected<SymbolLookupResult> runLookup(orc_rt_WrapperFunction Handler,
            BootstrapInfo(S));
 
   std::future<Expected<SymbolLookupResult>> ResultF;
-  sps::lookupInJITDylib(waitFor(ResultF), S, &CS, LS);
+  sps::lookupInJITDylib(waitFor(ResultF), S, &CS, JDLookupFlags, LS);
   return ResultF.get();
 }
 
 TEST(LookupInJITDylibSPSTest, EmptyLookup) {
   ControllerState CS;
-  auto Result = runLookup(recordingLookup, CS, {});
+  auto Result =
+      runLookup(recordingLookup, CS, JITDylibLookupFlags::MatchAllSymbols, {});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   EXPECT_TRUE(CS.Called);
   EXPECT_TRUE(CS.Received.empty());
@@ -114,18 +121,31 @@ TEST(LookupInJITDylibSPSTest, EmptyLookup) {
 }
 
 TEST(LookupInJITDylibSPSTest, ArgumentsRoundTrip) {
-  // Names, order, and both flag values must reach the controller intact.
+  // Names, order, and both SymbolLookupFlags values must reach the controller
+  // intact.
   SymbolLookupSet LS{{"foo", SymbolLookupFlags::RequiredSymbol},
                      {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}};
   ControllerState CS;
   CS.ToReturn.resize(LS.size());
 
-  auto Result = runLookup(recordingLookup, CS, LS);
+  auto Result =
+      runLookup(recordingLookup, CS, JITDylibLookupFlags::MatchAllSymbols, LS);
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_TRUE(CS.Called);
   ASSERT_EQ(CS.Received.size(), LS.size());
   for (size_t I = 0; I != LS.size(); ++I)
     EXPECT_EQ(CS.Received[I], LS[I]) << "at index " << I;
+}
+
+TEST(LookupInJITDylibSPSTest, JITDylibLookupFlagsRoundTrip) {
+  // Both JITDylibLookupFlags values must reach the controller intact.
+  for (auto JDLookupFlags : {JITDylibLookupFlags::MatchExportedSymbolsOnly,
+                             JITDylibLookupFlags::MatchAllSymbols}) {
+    ControllerState CS;
+    auto Result = runLookup(recordingLookup, CS, JDLookupFlags, {});
+    ASSERT_THAT_EXPECTED(Result, Succeeded());
+    EXPECT_EQ(CS.ReceivedJDLookupFlags, JDLookupFlags);
+  }
 }
 
 TEST(LookupInJITDylibSPSTest, ResultsRoundTrip) {
@@ -141,7 +161,8 @@ TEST(LookupInJITDylibSPSTest, ResultsRoundTrip) {
   CS.ToReturn.push_back(std::nullopt);
   CS.ToReturn.push_back(std::optional<const void *>(nullptr));
 
-  auto Result = runLookup(recordingLookup, CS, LS);
+  auto Result =
+      runLookup(recordingLookup, CS, JITDylibLookupFlags::MatchAllSymbols, LS);
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_EQ(Result->size(), 3U);
   EXPECT_EQ((*Result)[0], std::optional<const void *>(&X));
@@ -158,7 +179,7 @@ TEST(LookupInJITDylibSPSTest, ResultSizeMismatchFails) {
   CS.ToReturn.resize(1);
 
   EXPECT_THAT_EXPECTED(
-      runLookup(recordingLookup, CS, LS),
+      runLookup(recordingLookup, CS, JITDylibLookupFlags::MatchAllSymbols, LS),
       FailedWithMessage(
           "lookupInJITDylib: expected 2 results from controller, got 1"));
 }
@@ -167,6 +188,7 @@ TEST(LookupInJITDylibSPSTest, LookupErrorPropagates) {
   // An error from the controller's lookup is reported to the caller.
   ControllerState CS;
   EXPECT_THAT_EXPECTED(runLookup(lookupFailure, CS,
+                                 JITDylibLookupFlags::MatchAllSymbols,
                                  {{"foo", SymbolLookupFlags::RequiredSymbol}}),
                        FailedWithMessage("lookup failed"));
 }
@@ -175,6 +197,7 @@ TEST(LookupInJITDylibSPSTest, TransportErrorPropagates) {
   // A failure to call the controller is reported to the caller.
   ControllerState CS;
   EXPECT_THAT_EXPECTED(runLookup(transportFailure, CS,
+                                 JITDylibLookupFlags::MatchAllSymbols,
                                  {{"foo", SymbolLookupFlags::RequiredSymbol}}),
                        FailedWithMessage("transport failed"));
 }

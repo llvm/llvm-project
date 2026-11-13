@@ -327,6 +327,8 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    // The builtin include directory does not include any multilib path, as the
+    // builtin include files come from clang's build, not a runtimes build.
     SmallString<128> Dir(getDriver().ResourceDir);
     llvm::sys::path::append(Dir, "include");
     addSystemInclude(DriverArgs, CC1Args, Dir.str());

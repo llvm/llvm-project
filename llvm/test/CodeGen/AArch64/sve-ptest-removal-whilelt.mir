@@ -5,7 +5,6 @@
 ---
 name:            whilelt_b8_s32
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -47,7 +46,6 @@ body:             |
 ---
 name:            whilelt_b8_s64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -89,7 +87,6 @@ body:             |
 ---
 name:            whilelt_b16_s32
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -133,7 +130,6 @@ body:             |
 ---
 name:            whilelt_b16_s64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -177,7 +173,6 @@ body:             |
 ---
 name:            whilelt_b32_s32
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -221,7 +216,6 @@ body:             |
 ---
 name:            whilelt_b32_s64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -265,7 +259,6 @@ body:             |
 ---
 name:            whilelt_b64_s32
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -309,7 +302,6 @@ body:             |
 ---
 name:            whilelt_b64_s64
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -357,7 +349,6 @@ body:             |
 ---
 name:            whilelt_b64_s32_keep_ptest_not_all_active
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -404,7 +395,6 @@ body:             |
 ---
 name:            whilelt_b64_s32_keep_ptest_of_bytes
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -451,7 +441,6 @@ body:             |
 ---
 name:            whilelt_b64_s32_keep_ptest_of_halfs
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }
@@ -498,7 +487,6 @@ body:             |
 ---
 name:            whilelt_b64_s32_keep_ptest_of_words
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32 }
   - { id: 1, class: gpr32 }

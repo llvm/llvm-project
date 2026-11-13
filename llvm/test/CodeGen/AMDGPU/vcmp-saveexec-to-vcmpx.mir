@@ -88,3 +88,4 @@ body: |
     $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
     $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
     $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+...

@@ -271,8 +271,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       GR->assignSPIRVTypeToVReg(SpirvTy, VRegs[i][0], MIRBuilder.getMF());
       ArgTypeVRegs.push_back(SpirvTy);
 
-      if (Arg.hasName())
-        buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
+      StringRef ArgName = Arg.getName();
+      if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+        if (MDString *MDName = getOCLKernelArgName(F, i))
+          ArgName = MDName->getString();
+      buildOpName(VRegs[i][0], ArgName, MIRBuilder);
       if (isPointerTyOrWrapper(Arg.getType()) && !ST->isShader()) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
         if (DerefBytes != 0 && ST->isAtLeastSPIRVVer(VersionTuple(1, 1)))
@@ -621,6 +624,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .isValid()) {
     // insert a no-op
     MIRBuilder.buildTrap();
+    Info.LoweredTailCall = true; // Do not emit an ill-formed G_ASSERT_ALIGN.
     return true;
   }
 

@@ -71,6 +71,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  daddf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    daddf128_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.daddf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   daddl_test
   NEED_MPFR
   SUITE
@@ -1867,6 +1882,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  modff128_test
+  SUITE
+    libc-math-tests
+  SRCS
+    modff128_test.cpp
+  HDRS
+    ModfTest.h
+  DEPENDS
+    libc.src.math.modff128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_fp_unittest(
   fdimf_test
   SUITE
     libc-math-tests
@@ -2209,6 +2239,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  remquof128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    remquof128_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.src.math.remquof128
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   hypotf_test
   NEED_MPFR
   SUITE
@@ -2456,6 +2503,19 @@ add_fp_unittest(
     logf16_test.cpp
   DEPENDS
     libc.src.math.logf16
+)
+
+add_fp_unittest(
+  log10p1bf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    log10p1bf16_test.cpp
+  DEPENDS
+    libc.src.math.log10p1bf16
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(

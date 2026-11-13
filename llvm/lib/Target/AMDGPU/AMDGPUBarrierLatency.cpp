@@ -24,16 +24,9 @@
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/AtomicScope.h"
 
 using namespace llvm;
-
-static cl::opt<unsigned> BarrierSignalWaitLatencyOpt(
-    "amdgpu-barrier-signal-wait-latency",
-    cl::desc("Synthetic latency between S_BARRIER_SIGNAL and S_BARRIER_WAIT "
-             "to encourage scheduling independent work between them"),
-    cl::init(16), cl::Hidden);
 
 namespace {
 
@@ -98,7 +91,9 @@ void setLatencyForEdge(SDep &PredDep, SUnit &SU, unsigned Latency) {
 void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
   const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
   constexpr unsigned FenceLatency = 2000;
-  const unsigned BarrierSignalWaitLatency = BarrierSignalWaitLatencyOpt;
+  const unsigned BarrierSignalWaitLatency = DAG->MF.getSubtarget<GCNSubtarget>()
+                                                .getCLOpts()
+                                                .barrier_signal_wait_latency;
   SmallVector<SUnit *, 8> RegionTDM;
   SmallVector<SUnit *, 8> RegionAsync;
   const TargetSchedModel *SchedModel = DAG->getSchedModel();

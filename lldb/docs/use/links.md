@@ -5,6 +5,7 @@ listed on this page is not an endorsement.
 
 ## Blog Posts
 
+- [Extending LLDB to Debug Applications That Span CPUs and GPUs (2026)](https://engineering.fb.com/2026/11/09/developer-tools/extending-lldb-to-debug-applications-that-span-cpus-and-gpus/)
 - [Dancing in the Debugger — A Waltz with LLDB (2014)](https://www.objc.io/issues/19-debugging/lldb-debugging/)
 
 ## Videos

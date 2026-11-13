@@ -141,11 +141,11 @@ define void @f(ptr noalias %p, ptr noalias %q, ptr noalias %dst, i64 %stride) {
 ; VF2UF2-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = shufflevector <4 x i32> [[WIDE_VEC2]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
 ; VF2UF2-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x i32> [[WIDE_VEC2]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
 ; VF2UF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr [[Q]], i64 [[INDEX]]
-; VF2UF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 2
+; VF2UF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 8
 ; VF2UF2-NEXT:    store <2 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP5]], align 4
 ; VF2UF2-NEXT:    store <2 x i32> [[WIDE_MASKED_GATHER3]], ptr [[TMP6]], align 4
 ; VF2UF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[INDEX]]
-; VF2UF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 2
+; VF2UF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i64 8
 ; VF2UF2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP7]], align 4
 ; VF2UF2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP8]], align 4
 ; VF2UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

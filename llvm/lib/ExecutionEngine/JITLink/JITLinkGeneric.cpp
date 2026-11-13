@@ -119,7 +119,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
     return abandonAllocAndBailOut(std::move(Self), LR.takeError());
 
   // Assign addresses to external addressables.
-  applyLookupResult(*LR);
+  applyLookupResult(std::move(*LR));
 
   LLVM_DEBUG({
     dbgs() << "Link graph before pre-fixup passes:\n";

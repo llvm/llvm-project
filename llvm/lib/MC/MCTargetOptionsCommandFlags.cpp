@@ -23,8 +23,11 @@ using namespace llvm;
 #define OPTIONS_STRUCT_DEFS
 #include "MCToolOptions.inc"
 
-llvm::mc::RegisterMCToolOptions::RegisterMCToolOptions() {
-  static opt::RegisterLibraryOptions<MCToolOptions> Registration;
+ArrayRef<const cl::LibraryOptions *> llvm::mc::getToolOptions() {
+  static constexpr opt::LibraryOptionsParser Parser(
+      std::in_place_type<MCToolOptions>);
+  static constexpr const cl::LibraryOptions *Libraries[] = {&Parser};
+  return Libraries;
 }
 
 StringRef llvm::mc::getABIName(const cl::LibraryOptionsContext &C) {
@@ -49,6 +52,7 @@ llvm::mc::getMCTargetOptions(const cl::LibraryOptionsContext &C) {
   Options.MCSaveTempLabels = Opts.save_temp_labels;
   Options.Crel = Opts.crel;
   Options.ImplicitMapSyms = Opts.implicit_mapsyms;
+  Options.MachORelocatableDwarf = Opts.macho_relocatable_dwarf;
   Options.X86RelaxRelocations = Opts.x86_relax_relocations;
   Options.X86Sse2Avx = Opts.x86_sse2avx;
   Options.DisableIntegratedAS = Opts.no_integrated_as;
