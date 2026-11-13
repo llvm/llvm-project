@@ -2,6 +2,7 @@
 ; RUN: llubi --verbose --vscale=2 < %s 2>&1 | FileCheck %s
 
 @a = global [8 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7]
+@b = global [4 x i32] [i32 0, i32 1, i32 2, i32 3], align 8
 
 define void @main() {
   %load_all = call <4 x i32> @llvm.experimental.vp.strided.load(ptr @a, i64 8, <4 x i1> splat (i1 true), i32 4)
@@ -14,10 +15,23 @@ define void @main() {
   %load_reverse_i32 = call <4 x i32> @llvm.experimental.vp.strided.load(ptr %end, i32 -8, <4 x i1> splat (i1 true), i32 4)
   %load_splat = call <4 x i32> @llvm.experimental.vp.strided.load(ptr %end, i64 0, <4 x i1> splat (i1 true), i32 4)
 
+  ; The offsets wrap in the index type, so lane 2 is back at @a.
+  %load_wrap = call <4 x i32> @llvm.experimental.vp.strided.load(ptr @a, i64 -9223372036854775808, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 4)
+
   ; Lanes at or past %evl are disabled even if their mask lane is poison, so
   ; their addresses may be out of bounds.
   %load_tail = call <4 x i32> @llvm.experimental.vp.strided.load(ptr %end, i64 4, <4 x i1> <i1 true, i1 poison, i1 poison, i1 poison>, i32 1)
   %load_none = call <4 x i32> @llvm.experimental.vp.strided.load(ptr poison, i64 poison, <4 x i1> splat (i1 true), i32 0)
+
+  ; Lane 0 is the base pointer even if the stride is poison.
+  %load_poison_stride = call <4 x i32> @llvm.experimental.vp.strided.load(ptr @a, i64 poison, <4 x i1> splat (i1 true), i32 1)
+
+  ; Without an align attribute only the base pointer needs the ABI alignment of
+  ; i32, so the other lanes may be misaligned.
+  %load_misaligned = call <4 x i32> @llvm.experimental.vp.strided.load(ptr @a, i64 2, <4 x i1> splat (i1 true), i32 2)
+
+  ; An align attribute only applies to the base pointer, not the other lanes.
+  %load_align = call <4 x i32> @llvm.experimental.vp.strided.load(ptr align 8 @b, i64 4, <4 x i1> splat (i1 true), i32 4)
 
   %load_scalable = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load(ptr @a, i64 4, <vscale x 2 x i1> splat (i1 true), i32 3)
   ret void
@@ -30,8 +44,12 @@ define void @main() {
 ; CHECK-NEXT:   %load_reverse = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr %end, i64 -4, <4 x i1> splat (i1 true), i32 4) => { i32 7, i32 6, i32 5, i32 4 }
 ; CHECK-NEXT:   %load_reverse_i32 = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i32(ptr %end, i32 -8, <4 x i1> splat (i1 true), i32 4) => { i32 7, i32 5, i32 3, i32 1 }
 ; CHECK-NEXT:   %load_splat = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr %end, i64 0, <4 x i1> splat (i1 true), i32 4) => { i32 7, i32 7, i32 7, i32 7 }
+; CHECK-NEXT:   %load_wrap = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr @a, i64 -9223372036854775808, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 4) => { i32 0, poison, i32 0, poison }
 ; CHECK-NEXT:   %load_tail = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr %end, i64 4, <4 x i1> <i1 true, i1 poison, i1 poison, i1 poison>, i32 1) => { i32 7, poison, poison, poison }
 ; CHECK-NEXT:   %load_none = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr poison, i64 poison, <4 x i1> splat (i1 true), i32 0) => { poison, poison, poison, poison }
+; CHECK-NEXT:   %load_poison_stride = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr @a, i64 poison, <4 x i1> splat (i1 true), i32 1) => { i32 0, poison, poison, poison }
+; CHECK-NEXT:   %load_misaligned = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr @a, i64 2, <4 x i1> splat (i1 true), i32 2) => { i32 0, i32 65536, poison, poison }
+; CHECK-NEXT:   %load_align = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 8 @b, i64 4, <4 x i1> splat (i1 true), i32 4) => { i32 0, i32 1, i32 2, i32 3 }
 ; CHECK-NEXT:   %load_scalable = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr @a, i64 4, <vscale x 2 x i1> splat (i1 true), i32 3) => { i32 0, i32 1, i32 2, poison }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
