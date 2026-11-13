@@ -9669,7 +9669,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           Opc = RISCVISD::PSRA;
           break;
         case ISD::SSHLSAT:
-          Opc = RISCVISD::PSSHA;
+          Opc = RISCVISD::SSHA;
           break;
         }
         return DAG.getNode(Opc, SDLoc(Op), Op.getValueType(), Op.getOperand(0),
@@ -12452,13 +12452,13 @@ static unsigned getRVPShiftOpcode(Intrinsic::ID IntNo) {
   case Intrinsic::riscv_psra:
     return RISCVISD::PSRA;
   case Intrinsic::riscv_pssha:
-    return RISCVISD::PSSHA;
+    return RISCVISD::SSHA;
   case Intrinsic::riscv_psshar:
-    return RISCVISD::PSSHAR;
+    return RISCVISD::SSHAR;
   case Intrinsic::riscv_psshl:
-    return RISCVISD::PSSHL;
+    return RISCVISD::SSHL;
   case Intrinsic::riscv_psshlr:
-    return RISCVISD::PSSHLR;
+    return RISCVISD::SSHLR;
   case Intrinsic::riscv_sha_i64:
     return RISCVISD::SHA;
   case Intrinsic::riscv_shar_i64:
@@ -12536,13 +12536,13 @@ static unsigned getRVPScalarOpcode(unsigned IntNo) {
   case Intrinsic::riscv_ssh1sadd_i32:
     return RISCVISD::SSH1SADD;
   case Intrinsic::riscv_ssha_i32:
-    return RISCVISD::PSSHA;
+    return RISCVISD::SSHA;
   case Intrinsic::riscv_sshar_i32:
-    return RISCVISD::PSSHAR;
+    return RISCVISD::SSHAR;
   case Intrinsic::riscv_sshl_u32:
-    return RISCVISD::PSSHL;
+    return RISCVISD::SSHL;
   case Intrinsic::riscv_sshlr_u32:
-    return RISCVISD::PSSHLR;
+    return RISCVISD::SSHLR;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
   case Intrinsic::riscv_mulhru_u32:
@@ -18774,7 +18774,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Opc = RISCVISD::PSRA;
         break;
       case Intrinsic::riscv_pnsrar:
-        Opc = RISCVISD::PSSHAR;
+        Opc = RISCVISD::SSHAR;
         ShAmt = DAG.getNode(ISD::AND, DL, XLenVT, ShAmt,
                             DAG.getConstant(31, DL, XLenVT));
         ShAmt = DAG.getNegative(ShAmt, DL, XLenVT);
@@ -18817,7 +18817,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
 
       unsigned ShiftOpc = IsRounding
-                              ? (IsSigned ? RISCVISD::PSSHAR : RISCVISD::PSSHLR)
+                              ? (IsSigned ? RISCVISD::SSHAR : RISCVISD::SSHLR)
                               : (IsSigned ? RISCVISD::PSRA : RISCVISD::PSRL);
       SDValue Shifted = DAG.getNode(ShiftOpc, DL, SrcVT, Src, ShAmt);
       MVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;

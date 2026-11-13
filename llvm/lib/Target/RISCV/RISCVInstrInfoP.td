@@ -2107,18 +2107,22 @@ def riscv_pm2addasu  : RVSDNode<"PM2ADDASU", SDT_RISCVHorizontalMulAcc>;
 def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulqr : RVSDNode<"MULQR", SDTIntBinOp, [SDNPCommutative]>;
 
-// Shift amount is a scalar. The shifted value is a packed vector, or a scalar
-// for the 32-bit scalar saturating shifts.
-def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisInt<0>,
+def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisVT<2, XLenVT>]>;
 def riscv_psll : RVSDNode<"PSLL", SDT_RISCVPackedShift>;
 def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
 def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
-def riscv_pssha : RVSDNode<"PSSHA", SDT_RISCVPackedShift>;
-def riscv_psshar : RVSDNode<"PSSHAR", SDT_RISCVPackedShift>;
-def riscv_psshl : RVSDNode<"PSSHL", SDT_RISCVPackedShift>;
-def riscv_psshlr : RVSDNode<"PSSHLR", SDT_RISCVPackedShift>;
+
+// The shifted value is a scalar (ssha/sshar/sshl/sshlr) or a packed vector
+// (pssha/psshar/psshl/psshlr). The shift amount is always a scalar.
+def SDT_RISCVSaturatingShift : SDTypeProfile<1, 2, [SDTCisInt<0>,
+                                                    SDTCisSameAs<0, 1>,
+                                                    SDTCisVT<2, XLenVT>]>;
+def riscv_ssha  : RVSDNode<"SSHA",  SDT_RISCVSaturatingShift>;
+def riscv_sshar : RVSDNode<"SSHAR", SDT_RISCVSaturatingShift>;
+def riscv_sshl  : RVSDNode<"SSHL",  SDT_RISCVSaturatingShift>;
+def riscv_sshlr : RVSDNode<"SSHLR", SDT_RISCVSaturatingShift>;
 
 // Non-saturating 64-bit shifts. The shift amount is a signed value taken from
 // the low 8 bits of rs2.
@@ -2279,10 +2283,10 @@ class PatPSh1AddPair<RVInst Inst, ValueType vt>
     : Pat<(vt (add (riscv_psll (vt GPRPair:$rs1), (XLenVT 1)), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
-// Vector sshlsat is custom-lowered to riscv_pssha before isel; saddsat(a, a)
+// Vector sshlsat is custom-lowered to riscv_ssha before isel; saddsat(a, a)
 // is an equivalent shape via the signed sshlsat(a, 1) identity.
 def saturating_shl1 : PatFrags<(ops node:$a),
-                               [(riscv_pssha node:$a, (XLenVT 1)),
+                               [(riscv_ssha node:$a, (XLenVT 1)),
                                 (saddsat node:$a, node:$a)]>;
 
 class PatPSSh1SAdd<RVInst Inst, ValueType vt>
@@ -2444,14 +2448,14 @@ let Predicates = [HasStdExtP] in {
   def : PatGprImm<riscv_psra, PSRAI_H, uimm4, XLenVecI16VT>;
 
   // 16-bit saturating shift patterns
-  def : PatGprImm<riscv_pssha, PSSLAI_H, uimm4, XLenVecI16VT>;
-  def : PatGprImm<riscv_psshar, PSSLAI_H, uimm4, XLenVecI16VT>;
-  def : PatGprImm<riscv_pssha, PSRAI_H, uimm4_neg, XLenVecI16VT>;
-  def : PatGprImm<riscv_psshar, PSRARI_H, uimm4_neg, XLenVecI16VT>;
-  def : PatGprShift<riscv_pssha, PSSHA_HS, XLenVecI16VT>;
-  def : PatGprShift<riscv_psshar, PSSHAR_HS, XLenVecI16VT>;
-  def : PatGprShift<riscv_psshl, PSSHL_HS, XLenVecI16VT>;
-  def : PatGprShift<riscv_psshlr, PSSHLR_HS, XLenVecI16VT>;
+  def : PatGprImm<riscv_ssha, PSSLAI_H, uimm4, XLenVecI16VT>;
+  def : PatGprImm<riscv_sshar, PSSLAI_H, uimm4, XLenVecI16VT>;
+  def : PatGprImm<riscv_ssha, PSRAI_H, uimm4_neg, XLenVecI16VT>;
+  def : PatGprImm<riscv_sshar, PSRARI_H, uimm4_neg, XLenVecI16VT>;
+  def : PatGprShift<riscv_ssha, PSSHA_HS, XLenVecI16VT>;
+  def : PatGprShift<riscv_sshar, PSSHAR_HS, XLenVecI16VT>;
+  def : PatGprShift<riscv_sshl, PSSHL_HS, XLenVecI16VT>;
+  def : PatGprShift<riscv_sshlr, PSSHLR_HS, XLenVecI16VT>;
 
   // 16-bit packed saturation patterns
   def : PatGprImm<riscv_sati, PSATI_H, sati_width4, XLenVecI16VT>;
@@ -2622,14 +2626,14 @@ let append Predicates = [IsRV32] in {
   // No SSLLI
 
   // 32-bit saturating and rounding shift patterns
-  def : PatGprImm<riscv_pssha, SSLAI, uimm5>;
-  def : PatGprImm<riscv_psshar, SSLAI, uimm5>;
-  def : PatGprImm<riscv_pssha, SRAI, uimm5_neg>;
-  def : PatGprImm<riscv_psshar, SRARI_RV32, uimm5_neg>;
-  def : PatGprShiftMask<riscv_pssha, SSHA, shiftMask256>;
-  def : PatGprShiftMask<riscv_psshar, SSHAR, shiftMask256>;
-  def : PatGprShiftMask<riscv_psshl, SSHL, shiftMask256>;
-  def : PatGprShiftMask<riscv_psshlr, SSHLR, shiftMask256>;
+  def : PatGprImm<riscv_ssha, SSLAI, uimm5>;
+  def : PatGprImm<riscv_sshar, SSLAI, uimm5>;
+  def : PatGprImm<riscv_ssha, SRAI, uimm5_neg>;
+  def : PatGprImm<riscv_sshar, SRARI_RV32, uimm5_neg>;
+  def : PatGprShiftMask<riscv_ssha, SSHA, shiftMask256>;
+  def : PatGprShiftMask<riscv_sshar, SSHAR, shiftMask256>;
+  def : PatGprShiftMask<riscv_sshl, SSHL, shiftMask256>;
+  def : PatGprShiftMask<riscv_sshlr, SSHLR, shiftMask256>;
 
   def : Pat<(XLenVT (saddsat (sshlsat GPR:$rs1, (XLenVT 1)), GPR:$rs2)),
             (SSH1SADD GPR:$rs1, GPR:$rs2)>;
@@ -3146,28 +3150,28 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairImm<riscv_psra, PSRAI_DW, uimm5, v2i32>;
 
   // 16-bit saturating shift patterns
-  def : PatGprPairImm<riscv_pssha, PSSLAI_DH, uimm4, v4i16>;
-  def : PatGprPairImm<riscv_psshar, PSSLAI_DH, uimm4, v4i16>;
-  def : PatGprPairImm<riscv_pssha, PSRAI_DH, uimm4_neg, v4i16>;
-  def : PatGprPairImm<riscv_psshar, PSRARI_DH, uimm4_neg, v4i16>;
-  def : PatGprPairShift<riscv_pssha, PSSHA_DHS, v4i16>;
-  def : PatGprPairShift<riscv_psshar, PSSHAR_DHS, v4i16>;
-  def : PatGprPairShift<riscv_psshl, PSSHL_DHS, v4i16>;
-  def : PatGprPairShift<riscv_psshlr, PSSHLR_DHS, v4i16>;
+  def : PatGprPairImm<riscv_ssha, PSSLAI_DH, uimm4, v4i16>;
+  def : PatGprPairImm<riscv_sshar, PSSLAI_DH, uimm4, v4i16>;
+  def : PatGprPairImm<riscv_ssha, PSRAI_DH, uimm4_neg, v4i16>;
+  def : PatGprPairImm<riscv_sshar, PSRARI_DH, uimm4_neg, v4i16>;
+  def : PatGprPairShift<riscv_ssha, PSSHA_DHS, v4i16>;
+  def : PatGprPairShift<riscv_sshar, PSSHAR_DHS, v4i16>;
+  def : PatGprPairShift<riscv_sshl, PSSHL_DHS, v4i16>;
+  def : PatGprPairShift<riscv_sshlr, PSSHLR_DHS, v4i16>;
 
   // 16-bit packed saturation patterns
   def : PatGprPairImm<riscv_sati, PSATI_DH, sati_width4, v4i16>;
   def : PatGprPairImm<riscv_usati, PUSATI_DH, usati_width4, v4i16>;
 
   // 32-bit saturating shift patterns
-  def : PatGprPairImm<riscv_pssha, PSSLAI_DW, uimm5, v2i32>;
-  def : PatGprPairImm<riscv_psshar, PSSLAI_DW, uimm5, v2i32>;
-  def : PatGprPairImm<riscv_pssha, PSRAI_DW, uimm5_neg, v2i32>;
-  def : PatGprPairImm<riscv_psshar, PSRARI_DW, uimm5_neg, v2i32>;
-  def : PatGprPairShift<riscv_pssha, PSSHA_DWS, v2i32>;
-  def : PatGprPairShift<riscv_psshar, PSSHAR_DWS, v2i32>;
-  def : PatGprPairShift<riscv_psshl, PSSHL_DWS, v2i32>;
-  def : PatGprPairShift<riscv_psshlr, PSSHLR_DWS, v2i32>;
+  def : PatGprPairImm<riscv_ssha, PSSLAI_DW, uimm5, v2i32>;
+  def : PatGprPairImm<riscv_sshar, PSSLAI_DW, uimm5, v2i32>;
+  def : PatGprPairImm<riscv_ssha, PSRAI_DW, uimm5_neg, v2i32>;
+  def : PatGprPairImm<riscv_sshar, PSRARI_DW, uimm5_neg, v2i32>;
+  def : PatGprPairShift<riscv_ssha, PSSHA_DWS, v2i32>;
+  def : PatGprPairShift<riscv_sshar, PSSHAR_DWS, v2i32>;
+  def : PatGprPairShift<riscv_sshl, PSSHL_DWS, v2i32>;
+  def : PatGprPairShift<riscv_sshlr, PSSHLR_DWS, v2i32>;
 
   // 32-bit packed saturation patterns
   def : PatGprPairImm<riscv_sati, PSATI_DW, sati_width5, v2i32>;
@@ -3723,14 +3727,14 @@ let append Predicates = [IsRV64] in {
   def : PatGprImm<riscv_psra, PSRAI_W, uimm5, v2i32>;
 
   // 32-bit saturating shift patterns
-  def : PatGprImm<riscv_pssha, PSSLAI_W, uimm5, v2i32>;
-  def : PatGprImm<riscv_psshar, PSSLAI_W, uimm5, v2i32>;
-  def : PatGprImm<riscv_pssha, PSRAI_W, uimm5_neg, v2i32>;
-  def : PatGprImm<riscv_psshar, PSRARI_W, uimm5_neg, v2i32>;
-  def : PatGprShiftMask<riscv_pssha, PSSHA_WS, shiftMask256, v2i32>;
-  def : PatGprShiftMask<riscv_psshar, PSSHAR_WS, shiftMask256, v2i32>;
-  def : PatGprShiftMask<riscv_psshl, PSSHL_WS, shiftMask256, v2i32>;
-  def : PatGprShiftMask<riscv_psshlr, PSSHLR_WS, shiftMask256, v2i32>;
+  def : PatGprImm<riscv_ssha, PSSLAI_W, uimm5, v2i32>;
+  def : PatGprImm<riscv_sshar, PSSLAI_W, uimm5, v2i32>;
+  def : PatGprImm<riscv_ssha, PSRAI_W, uimm5_neg, v2i32>;
+  def : PatGprImm<riscv_sshar, PSRARI_W, uimm5_neg, v2i32>;
+  def : PatGprShiftMask<riscv_ssha, PSSHA_WS, shiftMask256, v2i32>;
+  def : PatGprShiftMask<riscv_sshar, PSSHAR_WS, shiftMask256, v2i32>;
+  def : PatGprShiftMask<riscv_sshl, PSSHL_WS, shiftMask256, v2i32>;
+  def : PatGprShiftMask<riscv_sshlr, PSSHLR_WS, shiftMask256, v2i32>;
 
   // 64-bit shift patterns
   def : PatGprImm<riscv_sha, SLLI, uimm6>;
