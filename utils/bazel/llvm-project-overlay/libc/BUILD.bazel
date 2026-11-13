@@ -2117,37 +2117,6 @@ alias(
 )
 
 libc_support_library(
-    name = "__support_stringutil_StringUtil",
-    srcs = glob(["src/__support/StringUtil/tables/**/*.h"]) + [
-        "src/__support/StringUtil/error_to_string.cpp",
-        "src/__support/StringUtil/message_mapper.h",
-        "src/__support/StringUtil/platform_errors.h",
-        "src/__support/StringUtil/platform_signals.h",
-        "src/__support/StringUtil/signal_to_string.cpp",
-    ],
-    hdrs = [
-        "src/__support/StringUtil/error_to_string.h",
-        "src/__support/StringUtil/signal_to_string.h",
-    ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_integer_to_string",
-        ":hdr_errno_macros",
-        ":hdr_signal_macros",
-        "//libc/src/__support/CPP:array",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/CPP:span",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/CPP:stringstream",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
     name = "__support_threads_cleanup_stack",
     hdrs = ["src/__support/threads/cleanup_stack.h"],
     full_build_only = True,
@@ -8195,7 +8164,7 @@ libc_function(
     hdrs = ["src/string/strsignal.h"],
     deps = [
         ":__support_common",
-        ":__support_stringutil_StringUtil",
+        "//libc/src/__support/StringUtil",
         "//libc/src/__support/macros:config",
     ],
 )
