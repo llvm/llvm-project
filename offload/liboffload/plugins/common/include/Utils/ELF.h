@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
-#define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
+#ifndef OFFLOAD_PLUGIN_COMMON_UTILS_ELF_H
+#define OFFLOAD_PLUGIN_COMMON_UTILS_ELF_H
 
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -44,4 +44,4 @@ getSymbol(const llvm::object::ObjectFile &ELFObj, llvm::StringRef Name);
 } // namespace elf
 } // namespace utils
 
-#endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
+#endif // OFFLOAD_PLUGIN_COMMON_UTILS_ELF_H

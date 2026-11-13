@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RPC_H
-#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RPC_H
+#ifndef OFFLOAD_PLUGIN_COMMON_RPC_H
+#define OFFLOAD_PLUGIN_COMMON_RPC_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -27,7 +27,7 @@
 #include <mutex>
 #include <thread>
 
-namespace llvm::omp::target {
+namespace llvm::offload {
 namespace plugin {
 struct GenericPluginTy;
 struct GenericDeviceTy;
@@ -169,6 +169,6 @@ public:
   std::unique_ptr<ServerThread> Thread;
 };
 
-} // namespace llvm::omp::target
+} // namespace llvm::offload
 
-#endif
+#endif // OFFLOAD_PLUGIN_COMMON_RPC_H

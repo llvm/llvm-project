@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OFFLOAD_PLUGINS_NEXTGEN_COMMON_INCLUDE_GENERICPROFILER_H
-#define OFFLOAD_PLUGINS_NEXTGEN_COMMON_INCLUDE_GENERICPROFILER_H
+#ifndef OFFLOAD_PLUGIN_COMMON_GENERICPROFILER_H
+#define OFFLOAD_PLUGIN_COMMON_GENERICPROFILER_H
 
 #include <cassert>
 #include <cstdint>
@@ -25,8 +25,7 @@
 struct __tgt_async_info;
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 struct GenericDeviceTy;
@@ -190,8 +189,7 @@ private:
 /// profiling logic never has to test for a null pointer.
 GenericProfilerTy &getNoOpProfiler();
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
-#endif // OFFLOAD_PLUGINS_NEXTGEN_COMMON_INCLUDE_GENERICPROFILER_H
+#endif // OFFLOAD_PLUGIN_COMMON_GENERICPROFILER_H

@@ -42,8 +42,7 @@ using namespace llvm::offload::debug;
 using namespace error;
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 /// Forward declarations for all specialized data structures.
@@ -279,7 +278,7 @@ private:
 struct CUDADeviceTy : public GenericDeviceTy {
   // Create a CUDA device with a device id and the default CUDA grid values.
   CUDADeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices)
-      : GenericDeviceTy(Plugin, DeviceId, NumDevices, NVPTXGridValues),
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, llvm::omp::NVPTXGridValues),
         CUDAStreamManager(*this), CUDAEventManager(*this) {}
 
   ~CUDADeviceTy() {}
@@ -1963,12 +1962,11 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
 }
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 extern "C" {
-llvm::omp::target::plugin::GenericPluginTy *createPlugin_cuda() {
-  return new llvm::omp::target::plugin::CUDAPluginTy();
+llvm::offload::plugin::GenericPluginTy *createPlugin_cuda() {
+  return new llvm::offload::plugin::CUDAPluginTy();
 }
 }

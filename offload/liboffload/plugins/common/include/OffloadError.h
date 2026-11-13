@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_OFFLOAD_ERROR_H
-#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_OFFLOAD_ERROR_H
+#ifndef OFFLOAD_PLUGIN_COMMON_OFFLOADERROR_H
+#define OFFLOAD_PLUGIN_COMMON_OFFLOADERROR_H
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -98,4 +98,4 @@ inline llvm::Error consumeErrorIfCode(llvm::Error Err, error::ErrorCode Code) {
 }
 } // namespace error
 
-#endif
+#endif // OFFLOAD_PLUGIN_COMMON_OFFLOADERROR_H

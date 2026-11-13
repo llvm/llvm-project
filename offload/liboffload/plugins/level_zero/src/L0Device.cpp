@@ -22,7 +22,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 // clang-format off
 /// Mapping from device arch to GPU runtime's device identifiers.
@@ -894,4 +894,4 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   return CleanupBufferAndErr(std::move(Err));
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

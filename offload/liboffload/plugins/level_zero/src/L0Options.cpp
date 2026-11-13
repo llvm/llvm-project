@@ -14,7 +14,7 @@
 
 #include "Shared/APITypes.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 /// Read environment variables.
 void L0OptionsTy::processEnvironmentVars() {
@@ -166,4 +166,4 @@ void L0OptionsTy::processEnvironmentVars() {
   }
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

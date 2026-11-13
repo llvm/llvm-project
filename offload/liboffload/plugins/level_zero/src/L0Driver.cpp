@@ -14,7 +14,7 @@
 #include "L0Context.h"
 #include "L0Plugin.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 /// Compose a driver version string from the packed value reported by
 /// zeDriverGetProperties. Used when zeIntelGetDriverVersionString is missing.
@@ -147,4 +147,4 @@ Error L0DriverTy::deinit() {
   return Plugin::success();
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

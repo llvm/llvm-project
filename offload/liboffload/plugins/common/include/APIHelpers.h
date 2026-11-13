@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_APIHELPERS_H
-#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_APIHELPERS_H
+#ifndef OFFLOAD_PLUGIN_COMMON_APIHELPERS_H
+#define OFFLOAD_PLUGIN_COMMON_APIHELPERS_H
 
 #include "DLWrap.h"
 
@@ -55,4 +55,4 @@ template <auto Fn> bool canCall() {
 
 } // namespace api_helper
 
-#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_APIHELPERS_H
+#endif // OFFLOAD_PLUGIN_COMMON_APIHELPERS_H

@@ -40,8 +40,7 @@
 using namespace llvm::offload::debug;
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 /// Forward declarations for all specialized data structures.
@@ -439,7 +438,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
 private:
   /// Grid values for Generic ELF64 plugins.
-  static constexpr GV GenELF64GridValues = {
+  static constexpr llvm::omp::GV GenELF64GridValues = {
       1, // GV_Slot_Size
       1, // GV_Warp_Size
       1, // GV_Max_Teams
@@ -613,12 +612,11 @@ template <typename... ArgsTy>
 }
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 extern "C" {
-llvm::omp::target::plugin::GenericPluginTy *createPlugin_host() {
-  return new llvm::omp::target::plugin::GenELF64PluginTy();
+llvm::offload::plugin::GenericPluginTy *createPlugin_host() {
+  return new llvm::offload::plugin::GenELF64PluginTy();
 }
 }

@@ -21,7 +21,7 @@
 #include "L0Trace.h"
 #include "PluginInterface.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 class L0QueueTy;
 
@@ -133,6 +133,6 @@ public:
   Error releaseEventObject(L0EventTy *EventObj);
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0EVENT_H

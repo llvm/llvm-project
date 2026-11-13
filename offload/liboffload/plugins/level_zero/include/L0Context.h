@@ -17,7 +17,7 @@
 #include "L0Queue.h"
 #include "PluginInterface.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 class L0DeviceTy;
 
@@ -87,6 +87,6 @@ private:
   std::unique_ptr<MemAllocatorTy> HostAllocator;
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CONTEXT_H
