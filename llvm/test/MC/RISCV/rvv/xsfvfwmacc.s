@@ -5,12 +5,10 @@
 # RUN:        | llvm-objdump -d --mattr=+v,+xsfvfwmaccqqq - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-sf.vfwmacc.4x4x4 v8, v4, v20
+sf.vfwmacc.4x4x4 v8, v4, v20 # expected-error {{instruction requires the following: 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))}}
 # CHECK-INST: sf.vfwmacc.4x4x4 v8, v4, v20
 # CHECK-ENCODING: [0x5b,0x14,0x42,0xf3]
-# expected-error@-3 {{instruction requires the following: 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))}}
 
-sf.vfwmacc.4x4x4 v0, v4, v20
+sf.vfwmacc.4x4x4 v0, v4, v20 # expected-error {{instruction requires the following: 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))}}
 # CHECK-INST: sf.vfwmacc.4x4x4 v0, v4, v20
 # CHECK-ENCODING: [0x5b,0x10,0x42,0xf3]
-# expected-error@-3 {{instruction requires the following: 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))}}

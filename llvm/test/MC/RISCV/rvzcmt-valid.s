@@ -20,10 +20,8 @@
 
 # CHECK-ASM-AND-OBJ: cm.jt 1
 # CHECK-ASM: encoding: [0x06,0xa0]
-# expected-error@+1 {{instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction)}}
-cm.jt 1
+cm.jt 1 # expected-error {{instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction)}}
 
 # CHECK-ASM-AND-OBJ: cm.jalt 32
 # CHECK-ASM: encoding: [0x82,0xa0]
-# expected-error@+1 {{instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction)}}
-cm.jalt 32
+cm.jalt 32 # expected-error {{instruction requires the following: 'Zcmt' (table jump instructions for code-size reduction)}}

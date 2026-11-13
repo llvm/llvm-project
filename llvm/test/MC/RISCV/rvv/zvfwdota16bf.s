@@ -5,17 +5,14 @@
 # RUN:        | llvm-objdump -d --mattr=+v --mattr=+experimental-zvfwdota16bf --no-print-imm-hex  - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-vsetvli a2, a0, e16alt, m1, ta, ma
+vsetvli a2, a0, e16alt, m1, ta, ma # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vsetvli a2, a0, e16alt, m1, ta, ma
 # CHECK-ENCODING: [0x57,0x76,0x85,0x1c]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vfwdota.vv v10, v9, v8
+vfwdota.vv v10, v9, v8 # expected-error {{instruction requires the following: 'Zvfwdota16bf' (BF16 Dot-Product)}}
 # CHECK-INST: vfwdota.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x15,0x94,0x92]
-# expected-error@-3 {{instruction requires the following: 'Zvfwdota16bf' (BF16 Dot-Product)}}
 
-vfwdota.vv v10, v9, v8, v0.t
+vfwdota.vv v10, v9, v8, v0.t # expected-error {{instruction requires the following: 'Zvfwdota16bf' (BF16 Dot-Product)}}
 # CHECK-INST: vfwdota.vv v10, v9, v8, v0.t
 # CHECK-ENCODING: [0x77,0x15,0x94,0x90]
-# expected-error@-3 {{instruction requires the following: 'Zvfwdota16bf' (BF16 Dot-Product)}}

@@ -8,14 +8,10 @@
 
 
 # CHECK-DIS: b872 <unknown>
-# expected-error@+1:16 {{invalid register}}
-cm.push {ra,s0-s2}, -16
+cm.push {ra,s0-s2}, -16 # expected-error:16 {{invalid register}}
 # CHECK-DIS: be72 <unknown>
-# expected-error@+1:18 {{invalid register}}
-cm.popret {ra,s0-s2}, 16
+cm.popret {ra,s0-s2}, 16 # expected-error:18 {{invalid register}}
 # CHECK-DIS: ba72 <unknown>
-# expected-error@+1:20 {{invalid register}}
-cm.pop {x1, x8-x9, x18}, 16
+cm.pop {x1, x8-x9, x18}, 16 # expected-error:20 {{invalid register}}
 # CHECK-DIS: ba72 <unknown>
-# expected-error@+1:16 {{invalid register}}
-cm.pop {ra, s0-s2}, 16
+cm.pop {ra, s0-s2}, 16 # expected-error:16 {{invalid register}}

@@ -7,56 +7,46 @@
 
 # Unscaled indexed loads.
 
-lxh a0, (a1), a2
+lxh a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxh a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x15,0xb6,0x90]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
-lxw a0, (a1), a2
+lxw a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxw a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x25,0xb6,0x90]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
-lxhu a0, (a1), a2
+lxhu a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxhu a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x55,0xb6,0x90]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
 # Scaled indexed loads.
 
-lxsb a0, (a1), a2
+lxsb a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxsb a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x05,0xb6,0xd0]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
-lxsh a0, (a1), a2
+lxsh a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxsh a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x15,0xb6,0xd0]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
-lxsw a0, (a1), a2
+lxsw a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxsw a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x25,0xb6,0xd0]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
-lxsbu a0, (a1), a2
+lxsbu a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxsbu a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x45,0xb6,0xd0]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
-lxshu a0, (a1), a2
+lxshu a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxshu a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x55,0xb6,0xd0]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
 # `lxb` and `lxbu` are assembler pseudoinstructions for `lxsb` and `lxsbu`.
 
-lxb a0, (a1), a2
+lxb a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxsb a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x05,0xb6,0xd0]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 
-lxbu a0, (a1), a2
+lxbu a0, (a1), a2 # expected-error {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}
 # CHECK-INST: lxsbu a0, (a1), a2
 # CHECK-ENCODING: [0x2f,0x45,0xb6,0xd0]
-# expected-error@-3 {{instruction requires the following: 'Zilx' (Indexed Integer Load Instructions)}}

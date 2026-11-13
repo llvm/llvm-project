@@ -43,7 +43,6 @@ csrrs t2, 0x316, zero
 # RV32-INST: csrrs t2, spmpenh, zero
 # RV32-ENC: encoding: [0xf3,0x23,0x30,0x19]
 # RV32-ALIAS: csrr t2, spmpenh
-# expected-error@+1 {{system register 'spmpenh' is RV32 only}}
-csrrs t1, spmpenh, zero
+csrrs t1, spmpenh, zero # expected-error {{system register 'spmpenh' is RV32 only}}
 csrrs t2, 0x193, zero
 .endif

@@ -11,10 +11,8 @@ vsetvli zero, zero, e16alt, m1, ta, ma
 
 # CHECK-INST: vfwbdota.vv v8, v16, v12, 8
 # CHECK-ENCODING: [0x77,0x14,0x16,0xb3]
-# expected-error@+1 {{instruction requires the following: 'Zvfwbdota16bf' (BF16 batched dot-product extension)}}
-vfwbdota.vv v8, v16, v12, 8
+vfwbdota.vv v8, v16, v12, 8 # expected-error {{instruction requires the following: 'Zvfwbdota16bf' (BF16 batched dot-product extension)}}
 
 # CHECK-INST: vfwbdota.vv v8, v16, v12, 16, v0.t
 # CHECK-ENCODING: [0x77,0x14,0x26,0xb1]
-# expected-error@+1 {{instruction requires the following: 'Zvfwbdota16bf' (BF16 batched dot-product extension)}}
-vfwbdota.vv v8, v16, v12, 16, v0.t
+vfwbdota.vv v8, v16, v12, 16, v0.t # expected-error {{instruction requires the following: 'Zvfwbdota16bf' (BF16 batched dot-product extension)}}

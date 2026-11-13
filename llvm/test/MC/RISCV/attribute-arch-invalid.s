@@ -5,5 +5,4 @@
 
 ## Version strings are required for experimental extensions
 
-.attribute arch, "rv32izicfilp"
-# expected-error@-1 {{invalid arch name 'rv32izicfilp', experimental extension requires explicit version number `zicfilp`}}
+.attribute arch, "rv32izicfilp" # expected-error {{invalid arch name 'rv32izicfilp', experimental extension requires explicit version number `zicfilp`}}

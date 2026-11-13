@@ -5,17 +5,14 @@
 # RUN:     | llvm-objdump -d --mattr=+zve32f - \
 # RUN:     | FileCheck %s --check-prefix=CHECK-INST
 
-vfmv.v.f v8, fa0
+vfmv.v.f v8, fa0 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfmv.v.f v8, fa0
 # CHECK-ENCODING: [0x57,0x54,0x05,0x5e]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfmv.f.s fa0, v4
+vfmv.f.s fa0, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfmv.f.s fa0, v4
 # CHECK-ENCODING: [0x57,0x15,0x40,0x42]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfmv.s.f v8, fa0
+vfmv.s.f v8, fa0 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfmv.s.f v8, fa0
 # CHECK-ENCODING: [0x57,0x54,0x05,0x42]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}

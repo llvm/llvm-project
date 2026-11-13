@@ -5,22 +5,18 @@
 # RUN:        | llvm-objdump -d --mattr=+v,+xsfvfnrclipxfqf - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-sf.vfnrclip.xu.f.qf v4, v8, fa2
+sf.vfnrclip.xu.f.qf v4, v8, fa2 # expected-error {{instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)}}
 # CHECK-INST: sf.vfnrclip.xu.f.qf v4, v8, fa2
 # CHECK-ENCODING: [0x5b,0x52,0x86,0x8a]
-# expected-error@-3 {{instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)}}
 
-sf.vfnrclip.xu.f.qf v4, v8, fa2, v0.t
+sf.vfnrclip.xu.f.qf v4, v8, fa2, v0.t # expected-error {{instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)}}
 # CHECK-INST: sf.vfnrclip.xu.f.qf v4, v8, fa2
 # CHECK-ENCODING: [0x5b,0x52,0x86,0x88]
-# expected-error@-3 {{instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)}}
 
-sf.vfnrclip.x.f.qf v4, v8, fa2
+sf.vfnrclip.x.f.qf v4, v8, fa2 # expected-error {{instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)}}
 # CHECK-INST: sf.vfnrclip.x.f.qf v4, v8, fa2
 # CHECK-ENCODING: [0x5b,0x52,0x86,0x8e]
-# expected-error@-3 {{instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)}}
 
-sf.vfnrclip.x.f.qf v4, v8, fa2, v0.t
+sf.vfnrclip.x.f.qf v4, v8, fa2, v0.t # expected-error {{instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)}}
 # CHECK-INST: sf.vfnrclip.x.f.qf v4, v8, fa2
 # CHECK-ENCODING: [0x5b,0x52,0x86,0x8c]
-# expected-error@-3 {{instruction requires the following: 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)}}

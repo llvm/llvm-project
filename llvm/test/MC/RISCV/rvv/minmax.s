@@ -5,82 +5,66 @@
 # RUN:        | llvm-objdump -d --mattr=+v - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-vminu.vv v8, v4, v20, v0.t
+vminu.vv v8, v4, v20, v0.t # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vminu.vv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x10]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vminu.vv v8, v4, v20
+vminu.vv v8, v4, v20 # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vminu.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x12]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vminu.vx v8, v4, a0, v0.t
+vminu.vx v8, v4, a0, v0.t # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vminu.vx v8, v4, a0, v0.t
 # CHECK-ENCODING: [0x57,0x44,0x45,0x10]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vminu.vx v8, v4, a0
+vminu.vx v8, v4, a0 # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vminu.vx v8, v4, a0
 # CHECK-ENCODING: [0x57,0x44,0x45,0x12]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmin.vv v8, v4, v20, v0.t
+vmin.vv v8, v4, v20, v0.t # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmin.vv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x14]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmin.vv v8, v4, v20
+vmin.vv v8, v4, v20 # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmin.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x16]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmin.vx v8, v4, a0, v0.t
+vmin.vx v8, v4, a0, v0.t # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmin.vx v8, v4, a0, v0.t
 # CHECK-ENCODING: [0x57,0x44,0x45,0x14]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmin.vx v8, v4, a0
+vmin.vx v8, v4, a0 # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmin.vx v8, v4, a0
 # CHECK-ENCODING: [0x57,0x44,0x45,0x16]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmaxu.vv v8, v4, v20, v0.t
+vmaxu.vv v8, v4, v20, v0.t # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmaxu.vv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x18]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmaxu.vv v8, v4, v20
+vmaxu.vv v8, v4, v20 # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmaxu.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x1a]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmaxu.vx v8, v4, a0, v0.t
+vmaxu.vx v8, v4, a0, v0.t # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmaxu.vx v8, v4, a0, v0.t
 # CHECK-ENCODING: [0x57,0x44,0x45,0x18]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmaxu.vx v8, v4, a0
+vmaxu.vx v8, v4, a0 # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmaxu.vx v8, v4, a0
 # CHECK-ENCODING: [0x57,0x44,0x45,0x1a]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmax.vv v8, v4, v20, v0.t
+vmax.vv v8, v4, v20, v0.t # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmax.vv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x1c]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmax.vv v8, v4, v20
+vmax.vv v8, v4, v20 # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmax.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x1e]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmax.vx v8, v4, a0, v0.t
+vmax.vx v8, v4, a0, v0.t # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmax.vx v8, v4, a0, v0.t
 # CHECK-ENCODING: [0x57,0x44,0x45,0x1c]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vmax.vx v8, v4, a0
+vmax.vx v8, v4, a0 # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vmax.vx v8, v4, a0
 # CHECK-ENCODING: [0x57,0x44,0x45,0x1e]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}

@@ -24,5 +24,4 @@
 
 # CHECK-INST: sctrclr
 # CHECK: encoding: [0x73,0x00,0x40,0x10]
-# expected-error@+1 {{instruction requires the following: 'Smctr' (Control Transfer Records Machine Level) or 'Ssctr' (Control Transfer Records Supervisor Level)}}
-sctrclr
+sctrclr # expected-error {{instruction requires the following: 'Smctr' (Control Transfer Records Machine Level) or 'Ssctr' (Control Transfer Records Supervisor Level)}}

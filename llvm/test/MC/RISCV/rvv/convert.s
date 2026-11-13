@@ -7,217 +7,174 @@
 # RUN:        | llvm-objdump -d --mattr=+v --mattr=+f - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-vfcvt.xu.f.v v8, v4, v0.t
+vfcvt.xu.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.xu.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x40,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.xu.f.v v8, v4
+vfcvt.xu.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.xu.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x40,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.x.f.v v8, v4, v0.t
+vfcvt.x.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.x.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x40,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.x.f.v v8, v4
+vfcvt.x.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.x.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x40,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.f.xu.v v8, v4, v0.t
+vfcvt.f.xu.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.f.xu.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x41,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.f.xu.v v8, v4
+vfcvt.f.xu.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.f.xu.v v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x41,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.f.x.v v8, v4, v0.t
+vfcvt.f.x.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.f.x.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x41,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.f.x.v v8, v4
+vfcvt.f.x.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.f.x.v v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x41,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.rtz.xu.f.v v8, v4, v0.t
+vfcvt.rtz.xu.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.rtz.xu.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x43,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.rtz.xu.f.v v8, v4
+vfcvt.rtz.xu.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.rtz.xu.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x43,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.rtz.x.f.v v8, v4, v0.t
+vfcvt.rtz.x.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.rtz.x.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x43,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfcvt.rtz.x.f.v v8, v4
+vfcvt.rtz.x.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfcvt.rtz.x.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x43,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.xu.f.v v8, v4, v0.t
+vfwcvt.xu.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.xu.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x44,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.xu.f.v v8, v4
+vfwcvt.xu.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.xu.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x44,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.x.f.v v8, v4, v0.t
+vfwcvt.x.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.x.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x44,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.x.f.v v8, v4
+vfwcvt.x.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.x.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x44,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.f.xu.v v8, v4, v0.t
+vfwcvt.f.xu.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.f.xu.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x45,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.f.xu.v v8, v4
+vfwcvt.f.xu.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.f.xu.v v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x45,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.f.x.v v8, v4, v0.t
+vfwcvt.f.x.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.f.x.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x45,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.f.x.v v8, v4
+vfwcvt.f.x.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.f.x.v v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x45,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.f.f.v v8, v4, v0.t
+vfwcvt.f.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.f.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x46,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.f.f.v v8, v4
+vfwcvt.f.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.f.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x46,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.rtz.xu.f.v v8, v4, v0.t
+vfwcvt.rtz.xu.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.rtz.xu.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x47,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.rtz.xu.f.v v8, v4
+vfwcvt.rtz.xu.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.rtz.xu.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x47,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.rtz.x.f.v v8, v4, v0.t
+vfwcvt.rtz.x.f.v v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.rtz.x.f.v v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x47,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwcvt.rtz.x.f.v v8, v4
+vfwcvt.rtz.x.f.v v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwcvt.rtz.x.f.v v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x47,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.xu.f.w v8, v4, v0.t
+vfncvt.xu.f.w v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.xu.f.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x48,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.xu.f.w v4, v4, v0.t
+vfncvt.xu.f.w v4, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.xu.f.w v4, v4, v0.t
 # CHECK-ENCODING: [0x57,0x12,0x48,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.xu.f.w v8, v4
+vfncvt.xu.f.w v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.xu.f.w v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x48,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.x.f.w v8, v4, v0.t
+vfncvt.x.f.w v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.x.f.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x48,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.x.f.w v8, v4
+vfncvt.x.f.w v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.x.f.w v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x48,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.f.xu.w v8, v4, v0.t
+vfncvt.f.xu.w v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.f.xu.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x49,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.f.xu.w v8, v4
+vfncvt.f.xu.w v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.f.xu.w v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x49,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.f.x.w v8, v4, v0.t
+vfncvt.f.x.w v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.f.x.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x49,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.f.x.w v8, v4
+vfncvt.f.x.w v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.f.x.w v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x49,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.f.f.w v8, v4, v0.t
+vfncvt.f.f.w v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.f.f.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.f.f.w v8, v4
+vfncvt.f.f.w v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.f.f.w v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.rod.f.f.w v8, v4, v0.t
+vfncvt.rod.f.f.w v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.rod.f.f.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x4a,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.rod.f.f.w v8, v4
+vfncvt.rod.f.f.w v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.rod.f.f.w v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x4a,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.rtz.xu.f.w v8, v4, v0.t
+vfncvt.rtz.xu.f.w v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.rtz.xu.f.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4b,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.rtz.xu.f.w v8, v4
+vfncvt.rtz.xu.f.w v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.rtz.xu.f.w v8, v4
 # CHECK-ENCODING: [0x57,0x14,0x4b,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.rtz.x.f.w v8, v4, v0.t
+vfncvt.rtz.x.f.w v8, v4, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.rtz.x.f.w v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x94,0x4b,0x48]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfncvt.rtz.x.f.w v8, v4
+vfncvt.rtz.x.f.w v8, v4 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfncvt.rtz.x.f.w v8, v4
 # CHECK-ENCODING: [0x57,0x94,0x4b,0x4a]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}

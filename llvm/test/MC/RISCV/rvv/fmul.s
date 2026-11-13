@@ -5,42 +5,34 @@
 # RUN:     | llvm-objdump -d --mattr=+zve32f - \
 # RUN:     | FileCheck %s --check-prefix=CHECK-INST
 
-vfmul.vv v8, v4, v20, v0.t
+vfmul.vv v8, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfmul.vv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x90]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfmul.vv v8, v4, v20
+vfmul.vv v8, v4, v20 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfmul.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x92]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfmul.vf v8, v4, fa0, v0.t
+vfmul.vf v8, v4, fa0, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfmul.vf v8, v4, fa0, v0.t
 # CHECK-ENCODING: [0x57,0x54,0x45,0x90]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfmul.vf v8, v4, fa0
+vfmul.vf v8, v4, fa0 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfmul.vf v8, v4, fa0
 # CHECK-ENCODING: [0x57,0x54,0x45,0x92]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwmul.vv v8, v4, v20, v0.t
+vfwmul.vv v8, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwmul.vv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xe0]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwmul.vv v8, v4, v20
+vfwmul.vv v8, v4, v20 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwmul.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xe2]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwmul.vf v8, v4, fa0, v0.t
+vfwmul.vf v8, v4, fa0, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwmul.vf v8, v4, fa0, v0.t
 # CHECK-ENCODING: [0x57,0x54,0x45,0xe0]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwmul.vf v8, v4, fa0
+vfwmul.vf v8, v4, fa0 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwmul.vf v8, v4, fa0
 # CHECK-ENCODING: [0x57,0x54,0x45,0xe2]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}

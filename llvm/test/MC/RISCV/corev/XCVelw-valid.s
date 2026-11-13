@@ -5,17 +5,14 @@
 # RUN:     | FileCheck --check-prefix=CHECK-INSTR %s
 # RUN: llvm-mc --verify -triple riscv32 %s
 
-cv.elw a0, 1024(a0)
+cv.elw a0, 1024(a0) # expected-error {{instruction requires the following: 'XCVelw' (CORE-V Event Load Word)}}
 # CHECK-INSTR: cv.elw a0, 1024(a0)
 # CHECK-ENCODING: [0x0b,0x35,0x05,0x40]
-# expected-error@-3 {{instruction requires the following: 'XCVelw' (CORE-V Event Load Word)}}
 
-cv.elw a1, 1(a1)
+cv.elw a1, 1(a1) # expected-error {{instruction requires the following: 'XCVelw' (CORE-V Event Load Word)}}
 # CHECK-INSTR: cv.elw a1, 1(a1)
 # CHECK-ENCODING: [0x8b,0xb5,0x15,0x00]
-# expected-error@-3 {{instruction requires the following: 'XCVelw' (CORE-V Event Load Word)}}
 
-cv.elw a2, -1024(a3)
+cv.elw a2, -1024(a3) # expected-error {{instruction requires the following: 'XCVelw' (CORE-V Event Load Word)}}
 # CHECK-INSTR: cv.elw  a2, -1024(a3)
 # CHECK-ENCODING: [0x0b,0xb6,0x06,0xc0]
-# expected-error@-3 {{instruction requires the following: 'XCVelw' (CORE-V Event Load Word)}}

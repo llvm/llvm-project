@@ -6,5 +6,4 @@
 # RUN: llvm-mc --verify -triple riscv32 -M no-aliases -show-encoding < %s
 # RUN: llvm-mc --verify -triple riscv64 -M no-aliases -show-encoding < %s
 
-# expected-error@+1 {{immediate must be an integer in the range [0, 1048575]}}
-lpad 1048576
+lpad 1048576 # expected-error {{immediate must be an integer in the range [0, 1048575]}}

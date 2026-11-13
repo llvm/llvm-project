@@ -9,21 +9,17 @@
 
 # CHECK-ASM-AND-OBJ: ld.aq t1, (a0)
 # CHECK-ASM: encoding: [0x2f,0x33,0x05,0x34]
-# expected-error@+1 {{instruction requires the following: 'Zalasr' (Load-Acquire and Store-Release Instructions)}}
-ld.aq t1, (a0)
+ld.aq t1, (a0) # expected-error {{instruction requires the following: 'Zalasr' (Load-Acquire and Store-Release Instructions)}}
 
 # CHECK-ASM-AND-OBJ: ld.aqrl t1, (a0)
 # CHECK-ASM: encoding: [0x2f,0x33,0x05,0x36]
-# expected-error@+1 {{instruction requires the following: 'Zalasr' (Load-Acquire and Store-Release Instructions)}}
-ld.aqrl t1, 0(a0)
+ld.aqrl t1, 0(a0) # expected-error {{instruction requires the following: 'Zalasr' (Load-Acquire and Store-Release Instructions)}}
 
 
 # CHECK-ASM-AND-OBJ: sd.rl t1, (a0)
 # CHECK-ASM: encoding: [0x2f,0x30,0x65,0x3a]
-# expected-error@+1 {{instruction requires the following: 'Zalasr' (Load-Acquire and Store-Release Instructions)}}
-sd.rl t1, 0(a0)
+sd.rl t1, 0(a0) # expected-error {{instruction requires the following: 'Zalasr' (Load-Acquire and Store-Release Instructions)}}
 
 # CHECK-ASM-AND-OBJ: sd.aqrl t1, (a0)
 # CHECK-ASM: encoding: [0x2f,0x30,0x65,0x3e]
-# expected-error@+1 {{instruction requires the following: 'Zalasr' (Load-Acquire and Store-Release Instructions)}}
-sd.aqrl t1, (a0)
+sd.aqrl t1, (a0) # expected-error {{instruction requires the following: 'Zalasr' (Load-Acquire and Store-Release Instructions)}}

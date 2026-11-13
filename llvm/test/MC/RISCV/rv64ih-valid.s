@@ -8,30 +8,24 @@
 
 # CHECK-INST: hlv.wu a0, (a1)
 # CHECK: encoding: [0x73,0xc5,0x15,0x68]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-hlv.wu   a0, (a1)
+hlv.wu   a0, (a1) # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 
 # CHECK-INST: hlv.wu a0, (a1)
 # CHECK: encoding: [0x73,0xc5,0x15,0x68]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-hlv.wu   a0, 0(a1)
+hlv.wu   a0, 0(a1) # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 
 # CHECK-INST: hlv.d a0, (a1)
 # CHECK: encoding: [0x73,0xc5,0x05,0x6c]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-hlv.d  a0, (a1)
+hlv.d  a0, (a1) # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 
 # CHECK-INST: hlv.d a0, (a1)
 # CHECK: encoding: [0x73,0xc5,0x05,0x6c]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-hlv.d  a0, 0(a1)
+hlv.d  a0, 0(a1) # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 
 # CHECK-INST: hsv.d a0, (a1)
 # CHECK: encoding: [0x73,0xc0,0xa5,0x6e]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-hsv.d   a0, (a1)
+hsv.d   a0, (a1) # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 
 # CHECK-INST: hsv.d a0, (a1)
 # CHECK: encoding: [0x73,0xc0,0xa5,0x6e]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-hsv.d   a0, 0(a1)
+hsv.d   a0, 0(a1) # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}

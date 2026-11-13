@@ -8,10 +8,8 @@
 
 # CHECK-ASM-AND-OBJ: fmvh.x.q a1, fs1
 # CHECK-ASM: encoding: [0xd3,0x85,0x14,0xe6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fmvh.x.q a1, fs1
+fmvh.x.q a1, fs1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fmvp.q.x fs1, a1, a2
 # CHECK-ASM: encoding: [0xd3,0x84,0xc5,0xb6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fmvp.q.x fs1, a1, a2
+fmvp.q.x fs1, a1, a2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}

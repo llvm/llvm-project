@@ -28,21 +28,15 @@ data1:
 .word %gotpcrel(extern+4), %gotpcrel(extern-5)
 
 .ifdef ERR
-# expected-error@+1:8 {{%pltpcrel can only be used in a .word directive}}
-.quad %pltpcrel(g)
+.quad %pltpcrel(g) # expected-error:8 {{%pltpcrel can only be used in a .word directive}}
 
-# expected-error@+1:8 {{expected relocatable expression}}
-.word %pltpcrel(g-.)
+.word %pltpcrel(g-.) # expected-error:8 {{expected relocatable expression}}
 
-# expected-error@+1:8 {{expected relocatable expression}}
-.word %pltpcrel(extern - und)
+.word %pltpcrel(extern - und) # expected-error:8 {{expected relocatable expression}}
 
-# expected-error@+1:8 {{%gotpcrel can only be used in a .word directive}}
-.quad %gotpcrel(g)
+.quad %gotpcrel(g) # expected-error:8 {{%gotpcrel can only be used in a .word directive}}
 
-# expected-error@+1:8 {{expected relocatable expression}}
-.word %gotpcrel(extern - .)
+.word %gotpcrel(extern - .) # expected-error:8 {{expected relocatable expression}}
 
-# expected-error@+1:8 {{expected relocatable expression}}
-.word %gotpcrel(extern - und)
+.word %gotpcrel(extern - und) # expected-error:8 {{expected relocatable expression}}
 .endif

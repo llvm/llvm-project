@@ -15,11 +15,9 @@
 # CHECK-OBJ: nds.vfwcvt.s.bf16 v8, v10
 # CHECK-ASM: nds.vfwcvt.s.bf16 v8, v10
 # CHECK-ASM: encoding: [0x5b,0x44,0xa0,0x00]
-# expected-error@+1 {{instruction requires the following: 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)}}
-nds.vfwcvt.s.bf16 v8, v10
+nds.vfwcvt.s.bf16 v8, v10 # expected-error {{instruction requires the following: 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)}}
 
 # CHECK-OBJ: nds.vfncvt.bf16.s v8, v10
 # CHECK-ASM: nds.vfncvt.bf16.s v8, v10
 # CHECK-ASM: encoding: [0x5b,0xc4,0xa0,0x00]
-# expected-error@+1 {{instruction requires the following: 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)}}
-nds.vfncvt.bf16.s v8, v10
+nds.vfncvt.bf16.s v8, v10 # expected-error {{instruction requires the following: 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)}}

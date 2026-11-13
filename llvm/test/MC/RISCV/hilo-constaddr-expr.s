@@ -12,13 +12,9 @@
 
 tmp1:
 tmp2:
-# expected-error@+1 {{expected relocatable expression}}
-  lui t0, %hi(tmp3-tmp1)
-# expected-error@+1 {{expected relocatable expression}}
-  lw ra, %lo(tmp3-tmp1)(t0)
+  lui t0, %hi(tmp3-tmp1) # expected-error {{expected relocatable expression}}
+  lw ra, %lo(tmp3-tmp1)(t0) # expected-error {{expected relocatable expression}}
 
 tmp3:
-# expected-error@+1 {{expected relocatable expression}}
-  lui t1, %hi(tmp2-tmp3)
-# expected-error@+1 {{expected relocatable expression}}
-  lw sp, %lo(tmp2-tmp3)(t1)
+  lui t1, %hi(tmp2-tmp3) # expected-error {{expected relocatable expression}}
+  lw sp, %lo(tmp2-tmp3)(t1) # expected-error {{expected relocatable expression}}

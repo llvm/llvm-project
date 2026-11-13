@@ -16,5 +16,4 @@
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point), 'Zfh' (Half-Precision Floating-Point) or 'Zvfh' (Vector Half-Precision Floating-Point)}}
-fli.h ft1, -1.0
+fli.h ft1, -1.0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point), 'Zfh' (Half-Precision Floating-Point) or 'Zvfh' (Vector Half-Precision Floating-Point)}}

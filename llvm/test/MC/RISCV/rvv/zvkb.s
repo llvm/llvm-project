@@ -5,47 +5,38 @@
 # RUN:        | llvm-objdump --no-print-imm-hex -d --mattr=+zve32x --mattr=+zvkb  - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-vandn.vv v10, v9, v8, v0.t
+vandn.vv v10, v9, v8, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vandn.vv v10, v9, v8, v0.t
 # CHECK-ENCODING: [0x57,0x05,0x94,0x04]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 
-vandn.vx v10, v9, a0, v0.t
+vandn.vx v10, v9, a0, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vandn.vx v10, v9, a0, v0.t
 # CHECK-ENCODING: [0x57,0x45,0x95,0x04]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 
-vbrev8.v v10, v9, v0.t
+vbrev8.v v10, v9, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vbrev8.v v10, v9, v0.t
 # CHECK-ENCODING: [0x57,0x25,0x94,0x48]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 
-vrev8.v v10, v9, v0.t
+vrev8.v v10, v9, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vrev8.v v10, v9, v0.t
 # CHECK-ENCODING: [0x57,0xa5,0x94,0x48]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 
-vrol.vv v10, v9, v8, v0.t
+vrol.vv v10, v9, v8, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vrol.vv v10, v9, v8, v0.t
 # CHECK-ENCODING: [0x57,0x05,0x94,0x54]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 
-vrol.vx v10, v9, a0, v0.t
+vrol.vx v10, v9, a0, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vrol.vx v10, v9, a0, v0.t
 # CHECK-ENCODING: [0x57,0x45,0x95,0x54]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 
-vror.vv v10, v9, v8, v0.t
+vror.vv v10, v9, v8, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vror.vv v10, v9, v8, v0.t
 # CHECK-ENCODING: [0x57,0x05,0x94,0x50]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 
-vror.vx v10, v9, a0, v0.t
+vror.vx v10, v9, a0, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vror.vx v10, v9, a0, v0.t
 # CHECK-ENCODING: [0x57,0x45,0x95,0x50]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 
-vror.vi v10, v9, 33, v0.t
+vror.vi v10, v9, 33, v0.t # expected-error {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}
 # CHECK-INST: vror.vi v10, v9, 33, v0.t
 # CHECK-ENCODING: [0x57,0xb5,0x90,0x54]
-# expected-error@-3 {{instruction requires the following: 'Zvkb' (Vector Bit-manipulation used in Cryptography)}}

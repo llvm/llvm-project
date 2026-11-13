@@ -8,31 +8,23 @@
 
 # CHECK-ASM-AND-OBJ: fcvt.l.h a0, ft0, dyn
 # CHECK-ASM: encoding: [0x53,0x75,0x20,0xc4]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-fcvt.l.h a0, ft0, dyn
+fcvt.l.h a0, ft0, dyn # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 # CHECK-ASM-AND-OBJ: fcvt.lu.h a1, ft1, dyn
 # CHECK-ASM: encoding: [0xd3,0xf5,0x30,0xc4]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-fcvt.lu.h a1, ft1, dyn
+fcvt.lu.h a1, ft1, dyn # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 # CHECK-ASM-AND-OBJ: fcvt.h.l ft2, a2, dyn
 # CHECK-ASM: encoding: [0x53,0x71,0x26,0xd4]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-fcvt.h.l ft2, a2, dyn
+fcvt.h.l ft2, a2, dyn # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 # CHECK-ASM-AND-OBJ: fcvt.h.lu ft3, a3, dyn
 # CHECK-ASM: encoding: [0xd3,0xf1,0x36,0xd4]
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-fcvt.h.lu ft3, a3, dyn
+fcvt.h.lu ft3, a3, dyn # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 
 # Rounding modes
 # CHECK-ASM-AND-OBJ: fcvt.l.h a4, ft4, rne
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-fcvt.l.h a4, ft4, rne
+fcvt.l.h a4, ft4, rne # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 # CHECK-ASM-AND-OBJ: fcvt.lu.h a5, ft5, rtz
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-fcvt.lu.h a5, ft5, rtz
+fcvt.lu.h a5, ft5, rtz # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 # CHECK-ASM-AND-OBJ: fcvt.h.l ft6, a6, rdn
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-fcvt.h.l ft6, a6, rdn
+fcvt.h.l ft6, a6, rdn # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}
 # CHECK-ASM-AND-OBJ: fcvt.h.lu ft7, a7, rup
-# expected-error@+1:1 {{instruction requires the following: RV64I Base Instruction Set}}
-fcvt.h.lu ft7, a7, rup
+fcvt.h.lu ft7, a7, rup # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}

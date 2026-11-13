@@ -15,35 +15,29 @@
 # CHECK-OBJ: nds.vd4dots.vv v8, v10, v12
 # CHECK-ASM: nds.vd4dots.vv v8, v10, v12
 # CHECK-ASM: encoding: [0x5b,0x44,0xc5,0x12]
-# expected-error@+1 {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
-nds.vd4dots.vv v8, v10, v12
+nds.vd4dots.vv v8, v10, v12 # expected-error {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
 
 # CHECK-OBJ: nds.vd4dots.vv v8, v10, v12, v0.t
 # CHECK-ASM: nds.vd4dots.vv v8, v10, v12, v0.t
 # CHECK-ASM: encoding: [0x5b,0x44,0xc5,0x10]
-# expected-error@+1 {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
-nds.vd4dots.vv v8, v10, v12, v0.t
+nds.vd4dots.vv v8, v10, v12, v0.t # expected-error {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
 
 # CHECK-OBJ: nds.vd4dotu.vv v8, v10, v12
 # CHECK-ASM: nds.vd4dotu.vv v8, v10, v12
 # CHECK-ASM: encoding: [0x5b,0x44,0xc5,0x1e]
-# expected-error@+1 {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
-nds.vd4dotu.vv v8, v10, v12
+nds.vd4dotu.vv v8, v10, v12 # expected-error {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
 
 # CHECK-OBJ: nds.vd4dotu.vv v8, v10, v12, v0.t
 # CHECK-ASM: nds.vd4dotu.vv v8, v10, v12, v0.t
 # CHECK-ASM: encoding: [0x5b,0x44,0xc5,0x1c]
-# expected-error@+1 {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
-nds.vd4dotu.vv v8, v10, v12, v0.t
+nds.vd4dotu.vv v8, v10, v12, v0.t # expected-error {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
 
 # CHECK-OBJ: nds.vd4dotsu.vv v8, v10, v12
 # CHECK-ASM: nds.vd4dotsu.vv v8, v10, v12
 # CHECK-ASM: encoding: [0x5b,0x44,0xc5,0x16]
-# expected-error@+1 {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
-nds.vd4dotsu.vv v8, v10, v12
+nds.vd4dotsu.vv v8, v10, v12 # expected-error {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
 
 # CHECK-OBJ: nds.vd4dotsu.vv v8, v10, v12, v0.t
 # CHECK-ASM: nds.vd4dotsu.vv v8, v10, v12, v0.t
 # CHECK-ASM: encoding: [0x5b,0x44,0xc5,0x14]
-# expected-error@+1 {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}
-nds.vd4dotsu.vv v8, v10, v12, v0.t
+nds.vd4dotsu.vv v8, v10, v12, v0.t # expected-error {{instruction requires the following: 'XAndesVDot' (Andes Vector Dot Product Extension)}}

@@ -13,20 +13,16 @@
 
 # CHECK-INST: vfwmaccbf16.vv v8, v20, v4, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xec]
-# expected-error@+1 {{instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add)}}
-vfwmaccbf16.vv v8, v20, v4, v0.t
+vfwmaccbf16.vv v8, v20, v4, v0.t # expected-error {{instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add)}}
 
 # CHECK-INST: vfwmaccbf16.vv v8, v20, v4
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xee]
-# expected-error@+1 {{instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add)}}
-vfwmaccbf16.vv v8, v20, v4
+vfwmaccbf16.vv v8, v20, v4 # expected-error {{instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add)}}
 
 # CHECK-INST: vfwmaccbf16.vf v8, fa0, v4, v0.t
 # CHECK-ENCODING: [0x57,0x54,0x45,0xec]
-# expected-error@+1 {{instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add)}}
-vfwmaccbf16.vf v8, fa0, v4, v0.t
+vfwmaccbf16.vf v8, fa0, v4, v0.t # expected-error {{instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add)}}
 
 # CHECK-INST: vfwmaccbf16.vf v8, fa0, v4
 # CHECK-ENCODING: [0x57,0x54,0x45,0xee]
-# expected-error@+1 {{instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add)}}
-vfwmaccbf16.vf v8, fa0, v4
+vfwmaccbf16.vf v8, fa0, v4 # expected-error {{instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add)}}

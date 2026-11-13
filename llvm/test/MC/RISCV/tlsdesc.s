@@ -40,15 +40,11 @@ start:                                  # @start
 
 ## Check invalid usage
 .ifdef ERR
-	auipc x1, %tlsdesc_call(foo)
-# expected-error@-1:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
-	auipc x1, %tlsdesc_call(1234)
-# expected-error@-1:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
-	auipc a0, %tlsdesc_hi(a+b)
-# expected-error@-1:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
+	auipc x1, %tlsdesc_call(foo) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
+	auipc x1, %tlsdesc_call(1234) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
+	auipc a0, %tlsdesc_hi(a+b) # expected-error:12 {{operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range}}
 
-	lw   a0, t0, %tlsdesc_load_lo(a_symbol)
-# expected-error@-1:15 {{unexpected extra operand for instruction}}
+	lw   a0, t0, %tlsdesc_load_lo(a_symbol) # expected-error:15 {{unexpected extra operand for instruction}}
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol)(a4)
 # err-rv32-error@-1:2 {{invalid instruction, any one of the following would fix this:}}
 # err-rv32-note@-2:15 {{unexpected extra operand for instruction}}
@@ -59,17 +55,13 @@ start:                                  # @start
 # err-rv64-note@-7:11 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
 # err-rv64-note@-8:2 {{instruction requires the following: RV32I Base Instruction Set}}
 
-	addi a0, t0, %tlsdesc_add_lo(a_symbol)(a4)
-# expected-error@-1:41 {{unexpected extra operand for instruction}}
-	addi a0, %tlsdesc_add_lo(a_symbol)
-# expected-error@-1:11 {{register must be a GPR}}
-	addi x1, %tlsdesc_load_lo(a_symbol)(a0)
-# expected-error@-1:11 {{register must be a GPR}}
+	addi a0, t0, %tlsdesc_add_lo(a_symbol)(a4) # expected-error:41 {{unexpected extra operand for instruction}}
+	addi a0, %tlsdesc_add_lo(a_symbol) # expected-error:11 {{register must be a GPR}}
+	addi x1, %tlsdesc_load_lo(a_symbol)(a0) # expected-error:11 {{register must be a GPR}}
 
 	jalr x5, 0(a1), %tlsdesc_hi(a_symbol)
 # expected-error@-1:2 {{invalid instruction, any one of the following would fix this:}}
 # expected-note@-2:18 {{unexpected extra operand for instruction}}
 # expected-note@-3:18 {{operand must be a symbol with %tlsdesc_call specifier}}
-	jalr x1, 0(a1), %tlsdesc_call(a_symbol)
-# expected-error@-1:13 {{the output operand must be t0/x5 when using %tlsdesc_call specifier}}
+	jalr x1, 0(a1), %tlsdesc_call(a_symbol) # expected-error:13 {{the output operand must be t0/x5 when using %tlsdesc_call specifier}}
 .endif

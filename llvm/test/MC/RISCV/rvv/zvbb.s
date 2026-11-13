@@ -5,37 +5,30 @@
 # RUN:        | llvm-objdump -d --mattr=+zve32x --mattr=+zvbb --no-print-imm-hex  - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-vbrev.v v10, v9, v0.t
+vbrev.v v10, v9, v0.t # expected-error {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 # CHECK-INST: vbrev.v v10, v9, v0.t
 # CHECK-ENCODING: [0x57,0x25,0x95,0x48]
-# expected-error@-3 {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 
-vclz.v v10, v9, v0.t
+vclz.v v10, v9, v0.t # expected-error {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 # CHECK-INST: vclz.v v10, v9, v0.t
 # CHECK-ENCODING: [0x57,0x25,0x96,0x48]
-# expected-error@-3 {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 
-vcpop.v v10, v9, v0.t
+vcpop.v v10, v9, v0.t # expected-error {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 # CHECK-INST: vcpop.v v10, v9, v0.t
 # CHECK-ENCODING: [0x57,0x25,0x97,0x48]
-# expected-error@-3 {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 
-vctz.v v10, v9, v0.t
+vctz.v v10, v9, v0.t # expected-error {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 # CHECK-INST: vctz.v v10, v9, v0.t
 # CHECK-ENCODING: [0x57,0xa5,0x96,0x48]
-# expected-error@-3 {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 
-vwsll.vv v10, v9, v8, v0.t
+vwsll.vv v10, v9, v8, v0.t # expected-error {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 # CHECK-INST: vwsll.vv v10, v9, v8, v0.t
 # CHECK-ENCODING: [0x57,0x05,0x94,0xd4]
-# expected-error@-3 {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 
-vwsll.vx v10, v9, a0, v0.t
+vwsll.vx v10, v9, a0, v0.t # expected-error {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 # CHECK-INST: vwsll.vx v10, v9, a0, v0.t
 # CHECK-ENCODING: [0x57,0x45,0x95,0xd4]
-# expected-error@-3 {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 
-vwsll.vi v10, v9, 29, v0.t
+vwsll.vi v10, v9, 29, v0.t # expected-error {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}
 # CHECK-INST: vwsll.vi v10, v9, 29, v0.t
 # CHECK-ENCODING: [0x57,0xb5,0x9e,0xd4]
-# expected-error@-3 {{instruction requires the following: 'Zvbb' (Vector basic bit-manipulation instructions)}}

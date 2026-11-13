@@ -37,6 +37,5 @@ def2:
 // expected-error@-1:12 {{expected symbol name}}
 
 .global fox
-.variant_cc fox bar
-// expected-error@-1:17 {{expected newline}}
+.variant_cc fox bar // expected-error:17 {{expected newline}}
 .endif

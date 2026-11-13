@@ -11,24 +11,21 @@
 
 label1:
 
-cv.beqimm t0, 0, 0
+cv.beqimm t0, 0, 0 # expected-error {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 # CHECK-INSTR: cv.beqimm t0, 0, 0
 # CHECK-OBJDUMP: cv.beqimm t0, 0x0, 0x0 <label1>
 # CHECK-ENCODING: [0x0b,0xe0,0x02,0x00]
-# expected-error@-4 {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 
-cv.beqimm a0, 5, 42
+cv.beqimm a0, 5, 42 # expected-error {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 # CHECK-INSTR: cv.beqimm a0, 5, 42
 # CHECK-OBJDUMP: cv.beqimm a0, 0x5, 0x2e <label2+0x22>
 # CHECK-ENCODING: [0x0b,0x65,0x55,0x02]
-# expected-error@-4 {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 
-cv.beqimm a0, -5, label1
+cv.beqimm a0, -5, label1 # expected-error {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 # CHECK-INSTR: cv.beqimm a0, -5, label1
 # CHECK-OBJDUMP: cv.beqimm a0, -0x5, 0x0 <label1>
 # CHECK-ENCODING: [0x0b'A',0x60'A',0xb5'A',0x01'A']
 # CHECK-ENCODING: fixup A - offset: 0, value: label1, kind: fixup_riscv_branch
-# expected-error@-5 {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 
 //===----------------------------------------------------------------------===//
 // cv.bneimm
@@ -36,21 +33,18 @@ cv.beqimm a0, -5, label1
 
 label2:
 
-cv.bneimm t0, 0, 0
+cv.bneimm t0, 0, 0 # expected-error {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 # CHECK-INSTR: cv.bneimm t0, 0, 0
 # CHECK-OBJDUMP: cv.bneimm t0, 0x0, 0xc <label2>
 # CHECK-ENCODING: [0x0b,0xf0,0x02,0x00]
-# expected-error@-4 {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 
-cv.bneimm a0, 5, 42
+cv.bneimm a0, 5, 42 # expected-error {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 # CHECK-INSTR: cv.bneimm a0, 5, 42
 # CHECK-OBJDUMP: cv.bneimm a0, 0x5, 0x3a <label2+0x2e>
 # CHECK-ENCODING: [0x0b,0x75,0x55,0x02]
-# expected-error@-4 {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 
-cv.bneimm a0, -5, label2
+cv.bneimm a0, -5, label2 # expected-error {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}
 # CHECK-INSTR: cv.bneimm a0, -5, label2
 # CHECK-OBJDUMP: cv.bneimm a0, -0x5, 0xc <label2>
 # CHECK-ENCODING: [0x0b'A',0x70'A',0xb5'A',0x01'A']
 # CHECK-ENCODING: fixup A - offset: 0, value: label2, kind: fixup_riscv_branch
-# expected-error@-5 {{instruction requires the following: 'XCVbi' (CORE-V Immediate Branching)}}

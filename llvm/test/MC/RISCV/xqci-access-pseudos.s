@@ -13,168 +13,168 @@
 ## RVI, Zca, and Zcb loads and stores, on RV32 only.
 
 lb a0, 0(a1), %qc.access(extern1)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:15 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: lb a0, 0(a1)
 # CHECK-ASM-SAME: , %qc.access(extern1)
 # CHECK-ENC-SAME: [0x03,0x85,0x05,0x00]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:15 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 lbu a0, 0(a1), %qc.access(extern1)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:16 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: lbu a0, 0(a1)
 # CHECK-ASM-SAME: , %qc.access(extern1)
 # CHECK-ENC-SAME: [0x03,0xc5,0x05,0x00]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:16 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 lh a2, 0(a3), %qc.access(extern2)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:15 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: lh a2, 0(a3)
 # CHECK-ASM-SAME: , %qc.access(extern2)
 # CHECK-ENC-SAME: [0x03,0x96,0x06,0x00]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:15 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 lhu a2, 0(a3), %qc.access(extern2)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:16 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: lhu a2, 0(a3)
 # CHECK-ASM-SAME: , %qc.access(extern2)
 # CHECK-ENC-SAME: [0x03,0xd6,0x06,0x00]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:16 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 lw a4, 0(a5), %qc.access(extern4)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:15 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: lw a4, 0(a5)
 # CHECK-ASM-SAME: , %qc.access(extern4)
 # CHECK-ENC-SAME: [0x03,0xa7,0x07,0x00]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:15 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 sb a0, 0(a1), %qc.access(extern1)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:15 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: sb a0, 0(a1)
 # CHECK-ASM-SAME: , %qc.access(extern1)
 # CHECK-ENC-SAME: [0x23,0x80,0xa5,0x00]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:15 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 sh a2, 0(a3), %qc.access(extern2)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:15 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: sh a2, 0(a3)
 # CHECK-ASM-SAME: , %qc.access(extern2)
 # CHECK-ENC-SAME: [0x23,0x90,0xc6,0x00]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:15 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 sw a4, 0(a5), %qc.access(extern4)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:15 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: sw a4, 0(a5)
 # CHECK-ASM-SAME: , %qc.access(extern4)
 # CHECK-ENC-SAME: [0x23,0xa0,0xe7,0x00]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:15 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 ## No c.lb
 
 c.lbu a0, 0(a1), %qc.access(extern1)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:18 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: c.lbu a0, 0(a1)
 # CHECK-ASM-SAME: , %qc.access(extern1)
 # CHECK-ENC-SAME: [0x88,0x81]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:18 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 c.lh a2, 0(a3), %qc.access(extern2)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:17 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: c.lh a2, 0(a3)
 # CHECK-ASM-SAME: , %qc.access(extern2)
 # CHECK-ENC-SAME: [0xd0,0x86]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:17 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 c.lhu a2, 0(a3), %qc.access(extern2)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:18 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: c.lhu a2, 0(a3)
 # CHECK-ASM-SAME: , %qc.access(extern2)
 # CHECK-ENC-SAME: [0x90,0x86]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:18 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 c.lw a4, 0(a5), %qc.access(extern4)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:17 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: c.lw a4, 0(a5)
 # CHECK-ASM-SAME: , %qc.access(extern4)
 # CHECK-ENC-SAME: [0x98,0x43]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:17 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 c.sb a0, 0(a1), %qc.access(extern1)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:17 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: c.sb a0, 0(a1)
 # CHECK-ASM-SAME: , %qc.access(extern1)
 # CHECK-ENC-SAME: [0x88,0x89]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:17 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 c.sh a2, 0(a3), %qc.access(extern2)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:17 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: c.sh a2, 0(a3)
 # CHECK-ASM-SAME: , %qc.access(extern2)
 # CHECK-ENC-SAME: [0x90,0x8e]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:17 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}
 
 c.sw a4, 0(a5), %qc.access(extern4)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:17 {{unexpected extra operand for instruction}}
+# expected-note@-3:1 {{instruction requires the following: RV32I Base Instruction Set}}
 # CHECK-INST: c.sw a4, 0(a5)
 # CHECK-ASM-SAME: , %qc.access(extern4)
 # CHECK-ENC-SAME: [0x98,0xc3]
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# expected-error@-7:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@-8:17 {{unexpected extra operand for instruction}}
-# expected-note@-9:1 {{instruction requires the following: RV32I Base Instruction Set}}

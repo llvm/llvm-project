@@ -5,7 +5,6 @@
 # RUN:        | llvm-objdump -d --mattr=+xsfvfexpa - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-sf.vfexpa.v v2, v5, v0.t
+sf.vfexpa.v v2, v5, v0.t # expected-error {{instruction requires the following: 'Xsfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction)}}
 # CHECK-INST: sf.vfexpa.v v2, v5, v0.t
 # CHECK-ENCODING: [0x57,0x11,0x53,0x4c]
-# expected-error@-3 {{instruction requires the following: 'Xsfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction)}}

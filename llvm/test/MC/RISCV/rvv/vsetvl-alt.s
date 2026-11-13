@@ -5,22 +5,18 @@
 # RUN:        | llvm-objdump -d --mattr=+zve32x --no-print-imm-hex - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-vsetvli a2, a0, e8alt, m1, ta, ma
+vsetvli a2, a0, e8alt, m1, ta, ma # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vsetvli a2, a0, e8alt, m1, ta, ma
 # CHECK-ENCODING: [0x57,0x76,0x05,0x1c]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vsetvli a2, a0, e16alt, m1, ta, ma
+vsetvli a2, a0, e16alt, m1, ta, ma # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vsetvli a2, a0, e16alt, m1, ta, ma
 # CHECK-ENCODING: [0x57,0x76,0x85,0x1c]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vsetivli a2, 0, e8alt, m1, ta, ma
+vsetivli a2, 0, e8alt, m1, ta, ma # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vsetivli a2, 0, e8alt, m1, ta, ma
 # CHECK-ENCODING: [0x57,0x76,0x00,0xdc]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 
-vsetivli a2, 0, e16alt, m1, ta, ma
+vsetivli a2, 0, e16alt, m1, ta, ma # expected-error {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vsetivli a2, 0, e16alt, m1, ta, ma
 # CHECK-ENCODING: [0x57,0x76,0x80,0xdc]
-# expected-error@-3 {{instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors)}}

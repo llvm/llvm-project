@@ -14,1507 +14,1206 @@
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, -1.000000e+00
+fli.s ft1, -1.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, -0x1p+0
+fli.s ft1, -0x1p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, min
 # CHECK-ASM: encoding: [0xd3,0x80,0x10,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, min
+fli.s ft1, min # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.52587890625e-05
 # CHECK-ASM: encoding: [0xd3,0x00,0x11,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 1.52587890625e-05
+fli.s ft1, 1.52587890625e-05 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.52587890625e-05
 # CHECK-ASM: encoding: [0xd3,0x00,0x11,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p-16
+fli.s ft1, 0x1p-16 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 3.0517578125e-05
 # CHECK-ASM: encoding: [0xd3,0x80,0x11,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 3.0517578125e-05
+fli.s ft1, 3.0517578125e-05 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 3.0517578125e-05
 # CHECK-ASM: encoding: [0xd3,0x80,0x11,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p-15
+fli.s ft1, 0x1p-15 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.00390625
 # CHECK-ASM: encoding: [0xd3,0x00,0x12,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 3.906250e-03
+fli.s ft1, 3.906250e-03 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.00390625
 # CHECK-ASM: encoding: [0xd3,0x00,0x12,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p-8
+fli.s ft1, 0x1p-8 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.0078125
 # CHECK-ASM: encoding: [0xd3,0x80,0x12,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 7.812500e-03
+fli.s ft1, 7.812500e-03 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.0078125
 # CHECK-ASM: encoding: [0xd3,0x80,0x12,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p-7
+fli.s ft1, 0x1p-7 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.0625
 # CHECK-ASM: encoding: [0xd3,0x00,0x13,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 6.250000e-02
+fli.s ft1, 6.250000e-02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.0625
 # CHECK-ASM: encoding: [0xd3,0x00,0x13,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p-4
+fli.s ft1, 0x1p-4 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.125
 # CHECK-ASM: encoding: [0xd3,0x80,0x13,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 1.250000e-01
+fli.s ft1, 1.250000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.125
 # CHECK-ASM: encoding: [0xd3,0x80,0x13,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p-3
+fli.s ft1, 0x1p-3 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.25
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 2.500000e-01
+fli.s ft1, 2.500000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.25
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p-2
+fli.s ft1, 0x1p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.3125
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 3.125000e-01
+fli.s ft1, 3.125000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.3125
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.4p-2
+fli.s ft1, 0x1.4p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.375
 # CHECK-ASM: encoding: [0xd3,0x00,0x15,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 3.750000e-01
+fli.s ft1, 3.750000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.375
 # CHECK-ASM: encoding: [0xd3,0x00,0x15,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.8p-2
+fli.s ft1, 0x1.8p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.4375
 # CHECK-ASM: encoding: [0xd3,0x80,0x15,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 4.375000e-01
+fli.s ft1, 4.375000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.4375
 # CHECK-ASM: encoding: [0xd3,0x80,0x15,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.cp-2
+fli.s ft1, 0x1.cp-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x16,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 5.000000e-01
+fli.s ft1, 5.000000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x16,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p-1
+fli.s ft1, 0x1p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.625
 # CHECK-ASM: encoding: [0xd3,0x80,0x16,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 6.250000e-01
+fli.s ft1, 6.250000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.625
 # CHECK-ASM: encoding: [0xd3,0x80,0x16,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.4p-1
+fli.s ft1, 0x1.4p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.75
 # CHECK-ASM: encoding: [0xd3,0x00,0x17,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 7.500000e-01
+fli.s ft1, 7.500000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.75
 # CHECK-ASM: encoding: [0xd3,0x00,0x17,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.8p-1
+fli.s ft1, 0x1.8p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.875
 # CHECK-ASM: encoding: [0xd3,0x80,0x17,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 8.750000e-01
+fli.s ft1, 8.750000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 0.875
 # CHECK-ASM: encoding: [0xd3,0x80,0x17,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.cp-1
+fli.s ft1, 0x1.cp-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 1.000000e+00
+fli.s ft1, 1.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+0
+fli.s ft1, 0x1p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.25
 # CHECK-ASM: encoding: [0xd3,0x80,0x18,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 1.250000e+00
+fli.s ft1, 1.250000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.25
 # CHECK-ASM: encoding: [0xd3,0x80,0x18,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.4p+0
+fli.s ft1, 0x1.4p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x19,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 1.500000e+00
+fli.s ft1, 1.500000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x19,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.8p+0
+fli.s ft1, 0x1.8p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.75
 # CHECK-ASM: encoding: [0xd3,0x80,0x19,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 1.750000e+00
+fli.s ft1, 1.750000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 1.75
 # CHECK-ASM: encoding: [0xd3,0x80,0x19,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.cp+0
+fli.s ft1, 0x1.cp+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 2.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1a,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 2.000000e+00
+fli.s ft1, 2.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 2.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1a,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+1
+fli.s ft1, 0x1p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 2.5
 # CHECK-ASM: encoding: [0xd3,0x80,0x1a,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 2.500000e+00
+fli.s ft1, 2.500000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 2.5
 # CHECK-ASM: encoding: [0xd3,0x80,0x1a,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.4p+1
+fli.s ft1, 0x1.4p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 3.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1b,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 3.000000e+00
+fli.s ft1, 3.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 3.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1b,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1.8p+1
+fli.s ft1, 0x1.8p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 4.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1b,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 4.000000e+00
+fli.s ft1, 4.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 4.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1b,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+2
+fli.s ft1, 0x1p+2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 8.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1c,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 8.000000e+00
+fli.s ft1, 8.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 8.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1c,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+3
+fli.s ft1, 0x1p+3 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 16.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1c,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 1.600000e+01
+fli.s ft1, 1.600000e+01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 16.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1c,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+4
+fli.s ft1, 0x1p+4 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 128.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1d,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 1.280000e+02
+fli.s ft1, 1.280000e+02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 128.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1d,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+7
+fli.s ft1, 0x1p+7 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 256.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1d,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 2.560000e+02
+fli.s ft1, 2.560000e+02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 256.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1d,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+8
+fli.s ft1, 0x1p+8 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 32768.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1e,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 3.276800e+04
+fli.s ft1, 3.276800e+04 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 32768.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1e,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+15
+fli.s ft1, 0x1p+15 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 65536.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 6.553600e+04
+fli.s ft1, 6.553600e+04 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, 65536.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, 0x1p+16
+fli.s ft1, 0x1p+16 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, inf
 # CHECK-ASM: encoding: [0xd3,0x00,0x1f,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, INF
+fli.s ft1, INF # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.s ft1, nan
 # CHECK-ASM: encoding: [0xd3,0x80,0x1f,0xf0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.s ft1, nan
+fli.s ft1, nan # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, -1.000000e+00
+fli.d ft1, -1.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, -0x1p+0
+fli.d ft1, -0x1p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, min
 # CHECK-ASM: encoding: [0xd3,0x80,0x10,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, min
+fli.d ft1, min # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.52587890625e-05
 # CHECK-ASM: encoding: [0xd3,0x00,0x11,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 1.52587890625e-05
+fli.d ft1, 1.52587890625e-05 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.52587890625e-05
 # CHECK-ASM: encoding: [0xd3,0x00,0x11,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p-16
+fli.d ft1, 0x1p-16 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 3.0517578125e-05
 # CHECK-ASM: encoding: [0xd3,0x80,0x11,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 3.0517578125e-05
+fli.d ft1, 3.0517578125e-05 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 3.0517578125e-05
 # CHECK-ASM: encoding: [0xd3,0x80,0x11,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p-15
+fli.d ft1, 0x1p-15 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.00390625
 # CHECK-ASM: encoding: [0xd3,0x00,0x12,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 3.906250e-03
+fli.d ft1, 3.906250e-03 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.00390625
 # CHECK-ASM: encoding: [0xd3,0x00,0x12,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p-8
+fli.d ft1, 0x1p-8 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.0078125
 # CHECK-ASM: encoding: [0xd3,0x80,0x12,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 7.812500e-03
+fli.d ft1, 7.812500e-03 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.0078125
 # CHECK-ASM: encoding: [0xd3,0x80,0x12,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p-7
+fli.d ft1, 0x1p-7 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.0625
 # CHECK-ASM: encoding: [0xd3,0x00,0x13,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 6.250000e-02
+fli.d ft1, 6.250000e-02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.0625
 # CHECK-ASM: encoding: [0xd3,0x00,0x13,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p-4
+fli.d ft1, 0x1p-4 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.125
 # CHECK-ASM: encoding: [0xd3,0x80,0x13,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 1.250000e-01
+fli.d ft1, 1.250000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.125
 # CHECK-ASM: encoding: [0xd3,0x80,0x13,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p-3
+fli.d ft1, 0x1p-3 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.25
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 2.500000e-01
+fli.d ft1, 2.500000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.25
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p-2
+fli.d ft1, 0x1p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.3125
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 3.125000e-01
+fli.d ft1, 3.125000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.3125
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.4p-2
+fli.d ft1, 0x1.4p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.375
 # CHECK-ASM: encoding: [0xd3,0x00,0x15,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 3.750000e-01
+fli.d ft1, 3.750000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.375
 # CHECK-ASM: encoding: [0xd3,0x00,0x15,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.8p-2
+fli.d ft1, 0x1.8p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.4375
 # CHECK-ASM: encoding: [0xd3,0x80,0x15,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 4.375000e-01
+fli.d ft1, 4.375000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.4375
 # CHECK-ASM: encoding: [0xd3,0x80,0x15,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.cp-2
+fli.d ft1, 0x1.cp-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x16,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 5.000000e-01
+fli.d ft1, 5.000000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x16,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p-1
+fli.d ft1, 0x1p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.625
 # CHECK-ASM: encoding: [0xd3,0x80,0x16,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 6.250000e-01
+fli.d ft1, 6.250000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.625
 # CHECK-ASM: encoding: [0xd3,0x80,0x16,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.4p-1
+fli.d ft1, 0x1.4p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.75
 # CHECK-ASM: encoding: [0xd3,0x00,0x17,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 7.500000e-01
+fli.d ft1, 7.500000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.75
 # CHECK-ASM: encoding: [0xd3,0x00,0x17,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.8p-1
+fli.d ft1, 0x1.8p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.875
 # CHECK-ASM: encoding: [0xd3,0x80,0x17,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 8.750000e-01
+fli.d ft1, 8.750000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 0.875
 # CHECK-ASM: encoding: [0xd3,0x80,0x17,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.cp-1
+fli.d ft1, 0x1.cp-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 1.000000e+00
+fli.d ft1, 1.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+0
+fli.d ft1, 0x1p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.25
 # CHECK-ASM: encoding: [0xd3,0x80,0x18,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 1.250000e+00
+fli.d ft1, 1.250000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.25
 # CHECK-ASM: encoding: [0xd3,0x80,0x18,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.4p+0
+fli.d ft1, 0x1.4p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x19,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 1.500000e+00
+fli.d ft1, 1.500000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x19,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.8p+0
+fli.d ft1, 0x1.8p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.75
 # CHECK-ASM: encoding: [0xd3,0x80,0x19,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 1.750000e+00
+fli.d ft1, 1.750000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 1.75
 # CHECK-ASM: encoding: [0xd3,0x80,0x19,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.cp+0
+fli.d ft1, 0x1.cp+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 2.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1a,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 2.000000e+00
+fli.d ft1, 2.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 2.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1a,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+1
+fli.d ft1, 0x1p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 2.5
 # CHECK-ASM: encoding: [0xd3,0x80,0x1a,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 2.500000e+00
+fli.d ft1, 2.500000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 2.5
 # CHECK-ASM: encoding: [0xd3,0x80,0x1a,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.4p+1
+fli.d ft1, 0x1.4p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 3.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1b,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 3.000000e+00
+fli.d ft1, 3.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 3.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1b,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1.8p+1
+fli.d ft1, 0x1.8p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 4.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1b,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 4.000000e+00
+fli.d ft1, 4.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 4.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1b,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+2
+fli.d ft1, 0x1p+2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 8.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1c,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 8.000000e+00
+fli.d ft1, 8.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 8.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1c,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+3
+fli.d ft1, 0x1p+3 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 16.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1c,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 1.600000e+01
+fli.d ft1, 1.600000e+01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 16.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1c,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+4
+fli.d ft1, 0x1p+4 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 128.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1d,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 1.280000e+02
+fli.d ft1, 1.280000e+02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 128.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1d,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+7
+fli.d ft1, 0x1p+7 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 256.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1d,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 2.560000e+02
+fli.d ft1, 2.560000e+02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 256.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1d,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+8
+fli.d ft1, 0x1p+8 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 32768.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1e,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 3.276800e+04
+fli.d ft1, 3.276800e+04 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 32768.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1e,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+15
+fli.d ft1, 0x1p+15 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 65536.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 6.553600e+04
+fli.d ft1, 6.553600e+04 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, 65536.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, 0x1p+16
+fli.d ft1, 0x1p+16 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, inf
 # CHECK-ASM: encoding: [0xd3,0x00,0x1f,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, INF
+fli.d ft1, INF # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.d ft1, nan
 # CHECK-ASM: encoding: [0xd3,0x80,0x1f,0xf2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.d ft1, nan
+fli.d ft1, nan # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, -1.000000e+00
+fli.h ft1, -1.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, -0x1p+0
+fli.h ft1, -0x1p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, min
 # CHECK-ASM: encoding: [0xd3,0x80,0x10,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, min
+fli.h ft1, min # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.52587890625e-05
 # CHECK-ASM: encoding: [0xd3,0x00,0x11,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 1.52587890625e-05
+fli.h ft1, 1.52587890625e-05 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.52587890625e-05
 # CHECK-ASM: encoding: [0xd3,0x00,0x11,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p-16
+fli.h ft1, 0x1p-16 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 3.0517578125e-05
 # CHECK-ASM: encoding: [0xd3,0x80,0x11,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 3.0517578125e-05
+fli.h ft1, 3.0517578125e-05 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 3.0517578125e-05
 # CHECK-ASM: encoding: [0xd3,0x80,0x11,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p-15
+fli.h ft1, 0x1p-15 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.00390625
 # CHECK-ASM: encoding: [0xd3,0x00,0x12,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 3.906250e-03
+fli.h ft1, 3.906250e-03 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.00390625
 # CHECK-ASM: encoding: [0xd3,0x00,0x12,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p-8
+fli.h ft1, 0x1p-8 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.0078125
 # CHECK-ASM: encoding: [0xd3,0x80,0x12,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 7.812500e-03
+fli.h ft1, 7.812500e-03 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.0078125
 # CHECK-ASM: encoding: [0xd3,0x80,0x12,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p-7
+fli.h ft1, 0x1p-7 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.0625
 # CHECK-ASM: encoding: [0xd3,0x00,0x13,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 6.250000e-02
+fli.h ft1, 6.250000e-02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.0625
 # CHECK-ASM: encoding: [0xd3,0x00,0x13,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p-4
+fli.h ft1, 0x1p-4 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.125
 # CHECK-ASM: encoding: [0xd3,0x80,0x13,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 1.250000e-01
+fli.h ft1, 1.250000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.125
 # CHECK-ASM: encoding: [0xd3,0x80,0x13,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p-3
+fli.h ft1, 0x1p-3 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.25
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 2.500000e-01
+fli.h ft1, 2.500000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.25
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p-2
+fli.h ft1, 0x1p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.3125
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 3.125000e-01
+fli.h ft1, 3.125000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.3125
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.4p-2
+fli.h ft1, 0x1.4p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.375
 # CHECK-ASM: encoding: [0xd3,0x00,0x15,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 3.750000e-01
+fli.h ft1, 3.750000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.375
 # CHECK-ASM: encoding: [0xd3,0x00,0x15,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.8p-2
+fli.h ft1, 0x1.8p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.4375
 # CHECK-ASM: encoding: [0xd3,0x80,0x15,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 4.375000e-01
+fli.h ft1, 4.375000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.4375
 # CHECK-ASM: encoding: [0xd3,0x80,0x15,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.cp-2
+fli.h ft1, 0x1.cp-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x16,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 5.000000e-01
+fli.h ft1, 5.000000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x16,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p-1
+fli.h ft1, 0x1p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.625
 # CHECK-ASM: encoding: [0xd3,0x80,0x16,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 6.250000e-01
+fli.h ft1, 6.250000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.625
 # CHECK-ASM: encoding: [0xd3,0x80,0x16,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.4p-1
+fli.h ft1, 0x1.4p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.75
 # CHECK-ASM: encoding: [0xd3,0x00,0x17,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 7.500000e-01
+fli.h ft1, 7.500000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.75
 # CHECK-ASM: encoding: [0xd3,0x00,0x17,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.8p-1
+fli.h ft1, 0x1.8p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.875
 # CHECK-ASM: encoding: [0xd3,0x80,0x17,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 8.750000e-01
+fli.h ft1, 8.750000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 0.875
 # CHECK-ASM: encoding: [0xd3,0x80,0x17,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.cp-1
+fli.h ft1, 0x1.cp-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 1.000000e+00
+fli.h ft1, 1.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+0
+fli.h ft1, 0x1p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.25
 # CHECK-ASM: encoding: [0xd3,0x80,0x18,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 1.250000e+00
+fli.h ft1, 1.250000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.25
 # CHECK-ASM: encoding: [0xd3,0x80,0x18,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.4p+0
+fli.h ft1, 0x1.4p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x19,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 1.500000e+00
+fli.h ft1, 1.500000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x19,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.8p+0
+fli.h ft1, 0x1.8p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.75
 # CHECK-ASM: encoding: [0xd3,0x80,0x19,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 1.750000e+00
+fli.h ft1, 1.750000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 1.75
 # CHECK-ASM: encoding: [0xd3,0x80,0x19,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.cp+0
+fli.h ft1, 0x1.cp+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 2.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1a,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 2.000000e+00
+fli.h ft1, 2.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 2.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1a,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+1
+fli.h ft1, 0x1p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 2.5
 # CHECK-ASM: encoding: [0xd3,0x80,0x1a,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 2.500000e+00
+fli.h ft1, 2.500000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 2.5
 # CHECK-ASM: encoding: [0xd3,0x80,0x1a,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.4p+1
+fli.h ft1, 0x1.4p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 3.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1b,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 3.000000e+00
+fli.h ft1, 3.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 3.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1b,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1.8p+1
+fli.h ft1, 0x1.8p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 4.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1b,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 4.000000e+00
+fli.h ft1, 4.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 4.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1b,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+2
+fli.h ft1, 0x1p+2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 8.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1c,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 8.000000e+00
+fli.h ft1, 8.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 8.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1c,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+3
+fli.h ft1, 0x1p+3 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 16.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1c,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 1.600000e+01
+fli.h ft1, 1.600000e+01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 16.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1c,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+4
+fli.h ft1, 0x1p+4 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 128.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1d,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 1.280000e+02
+fli.h ft1, 1.280000e+02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 128.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1d,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+7
+fli.h ft1, 0x1p+7 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 256.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1d,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 2.560000e+02
+fli.h ft1, 2.560000e+02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 256.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1d,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+8
+fli.h ft1, 0x1p+8 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 32768.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1e,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 3.276800e+04
+fli.h ft1, 3.276800e+04 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 32768.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1e,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+15
+fli.h ft1, 0x1p+15 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 65536.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 6.553600e+04
+fli.h ft1, 6.553600e+04 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, 65536.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, 0x1p+16
+fli.h ft1, 0x1p+16 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, inf
 # CHECK-ASM: encoding: [0xd3,0x00,0x1f,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, INF
+fli.h ft1, INF # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.h ft1, nan
 # CHECK-ASM: encoding: [0xd3,0x80,0x1f,0xf4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.h ft1, nan
+fli.h ft1, nan # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, -1.000000e+00
+fli.q ft1, -1.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, -1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x10,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, -0x1p+0
+fli.q ft1, -0x1p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, min
 # CHECK-ASM: encoding: [0xd3,0x80,0x10,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, min
+fli.q ft1, min # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.52587890625e-05
 # CHECK-ASM: encoding: [0xd3,0x00,0x11,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 1.52587890625e-05
+fli.q ft1, 1.52587890625e-05 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.52587890625e-05
 # CHECK-ASM: encoding: [0xd3,0x00,0x11,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p-16
+fli.q ft1, 0x1p-16 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 3.0517578125e-05
 # CHECK-ASM: encoding: [0xd3,0x80,0x11,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 3.0517578125e-05
+fli.q ft1, 3.0517578125e-05 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 3.0517578125e-05
 # CHECK-ASM: encoding: [0xd3,0x80,0x11,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p-15
+fli.q ft1, 0x1p-15 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.00390625
 # CHECK-ASM: encoding: [0xd3,0x00,0x12,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 3.906250e-03
+fli.q ft1, 3.906250e-03 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.00390625
 # CHECK-ASM: encoding: [0xd3,0x00,0x12,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p-8
+fli.q ft1, 0x1p-8 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.0078125
 # CHECK-ASM: encoding: [0xd3,0x80,0x12,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 7.812500e-03
+fli.q ft1, 7.812500e-03 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.0078125
 # CHECK-ASM: encoding: [0xd3,0x80,0x12,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p-7
+fli.q ft1, 0x1p-7 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.0625
 # CHECK-ASM: encoding: [0xd3,0x00,0x13,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 6.250000e-02
+fli.q ft1, 6.250000e-02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.0625
 # CHECK-ASM: encoding: [0xd3,0x00,0x13,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p-4
+fli.q ft1, 0x1p-4 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.125
 # CHECK-ASM: encoding: [0xd3,0x80,0x13,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 1.250000e-01
+fli.q ft1, 1.250000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.125
 # CHECK-ASM: encoding: [0xd3,0x80,0x13,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p-3
+fli.q ft1, 0x1p-3 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.25
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 2.500000e-01
+fli.q ft1, 2.500000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.25
 # CHECK-ASM: encoding: [0xd3,0x00,0x14,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p-2
+fli.q ft1, 0x1p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.3125
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 3.125000e-01
+fli.q ft1, 3.125000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.3125
 # CHECK-ASM: encoding: [0xd3,0x80,0x14,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.4p-2
+fli.q ft1, 0x1.4p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.375
 # CHECK-ASM: encoding: [0xd3,0x00,0x15,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 3.750000e-01
+fli.q ft1, 3.750000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.375
 # CHECK-ASM: encoding: [0xd3,0x00,0x15,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.8p-2
+fli.q ft1, 0x1.8p-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.4375
 # CHECK-ASM: encoding: [0xd3,0x80,0x15,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 4.375000e-01
+fli.q ft1, 4.375000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.4375
 # CHECK-ASM: encoding: [0xd3,0x80,0x15,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.cp-2
+fli.q ft1, 0x1.cp-2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x16,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 5.000000e-01
+fli.q ft1, 5.000000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x16,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p-1
+fli.q ft1, 0x1p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.625
 # CHECK-ASM: encoding: [0xd3,0x80,0x16,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 6.250000e-01
+fli.q ft1, 6.250000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.625
 # CHECK-ASM: encoding: [0xd3,0x80,0x16,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.4p-1
+fli.q ft1, 0x1.4p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.75
 # CHECK-ASM: encoding: [0xd3,0x00,0x17,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 7.500000e-01
+fli.q ft1, 7.500000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.75
 # CHECK-ASM: encoding: [0xd3,0x00,0x17,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.8p-1
+fli.q ft1, 0x1.8p-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.875
 # CHECK-ASM: encoding: [0xd3,0x80,0x17,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 8.750000e-01
+fli.q ft1, 8.750000e-01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 0.875
 # CHECK-ASM: encoding: [0xd3,0x80,0x17,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.cp-1
+fli.q ft1, 0x1.cp-1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 1.000000e+00
+fli.q ft1, 1.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x18,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+0
+fli.q ft1, 0x1p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.25
 # CHECK-ASM: encoding: [0xd3,0x80,0x18,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 1.250000e+00
+fli.q ft1, 1.250000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.25
 # CHECK-ASM: encoding: [0xd3,0x80,0x18,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.4p+0
+fli.q ft1, 0x1.4p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x19,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 1.500000e+00
+fli.q ft1, 1.500000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.5
 # CHECK-ASM: encoding: [0xd3,0x00,0x19,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.8p+0
+fli.q ft1, 0x1.8p+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.75
 # CHECK-ASM: encoding: [0xd3,0x80,0x19,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 1.750000e+00
+fli.q ft1, 1.750000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 1.75
 # CHECK-ASM: encoding: [0xd3,0x80,0x19,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.cp+0
+fli.q ft1, 0x1.cp+0 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 2.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1a,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 2.000000e+00
+fli.q ft1, 2.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 2.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1a,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+1
+fli.q ft1, 0x1p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 2.5
 # CHECK-ASM: encoding: [0xd3,0x80,0x1a,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 2.500000e+00
+fli.q ft1, 2.500000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 2.5
 # CHECK-ASM: encoding: [0xd3,0x80,0x1a,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.4p+1
+fli.q ft1, 0x1.4p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 3.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1b,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 3.000000e+00
+fli.q ft1, 3.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 3.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1b,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1.8p+1
+fli.q ft1, 0x1.8p+1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 4.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1b,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 4.000000e+00
+fli.q ft1, 4.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 4.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1b,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+2
+fli.q ft1, 0x1p+2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 8.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1c,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 8.000000e+00
+fli.q ft1, 8.000000e+00 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 8.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1c,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+3
+fli.q ft1, 0x1p+3 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 16.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1c,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 1.600000e+01
+fli.q ft1, 1.600000e+01 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 16.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1c,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+4
+fli.q ft1, 0x1p+4 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 128.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1d,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 1.280000e+02
+fli.q ft1, 1.280000e+02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 128.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1d,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+7
+fli.q ft1, 0x1p+7 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 256.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1d,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 2.560000e+02
+fli.q ft1, 2.560000e+02 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 256.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1d,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+8
+fli.q ft1, 0x1p+8 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 32768.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1e,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 3.276800e+04
+fli.q ft1, 3.276800e+04 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 32768.0
 # CHECK-ASM: encoding: [0xd3,0x00,0x1e,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+15
+fli.q ft1, 0x1p+15 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 65536.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 6.553600e+04
+fli.q ft1, 6.553600e+04 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, 65536.0
 # CHECK-ASM: encoding: [0xd3,0x80,0x1e,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, 0x1p+16
+fli.q ft1, 0x1p+16 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, inf
 # CHECK-ASM: encoding: [0xd3,0x00,0x1f,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, INF
+fli.q ft1, INF # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fli.q ft1, nan
 # CHECK-ASM: encoding: [0xd3,0x80,0x1f,0xf6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fli.q ft1, nan
+fli.q ft1, nan # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fminm.s fa0, fa1, fa2
 # CHECK-ASM: encoding: [0x53,0xa5,0xc5,0x28]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fminm.s fa0, fa1, fa2
+fminm.s fa0, fa1, fa2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fmaxm.s fs3, fs4, fs5
 # CHECK-ASM: encoding: [0xd3,0x39,0x5a,0x29]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fmaxm.s fs3, fs4, fs5
+fmaxm.s fs3, fs4, fs5 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fminm.d fa0, fa1, fa2
 # CHECK-ASM: encoding: [0x53,0xa5,0xc5,0x2a]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fminm.d fa0, fa1, fa2
+fminm.d fa0, fa1, fa2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fmaxm.d fs3, fs4, fs5
 # CHECK-ASM: encoding: [0xd3,0x39,0x5a,0x2b]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fmaxm.d fs3, fs4, fs5
+fmaxm.d fs3, fs4, fs5 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fminm.h fa0, fa1, fa2
 # CHECK-ASM: encoding: [0x53,0xa5,0xc5,0x2c]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fminm.h fa0, fa1, fa2
+fminm.h fa0, fa1, fa2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fmaxm.h fs3, fs4, fs5
 # CHECK-ASM: encoding: [0xd3,0x39,0x5a,0x2d]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fmaxm.h fs3, fs4, fs5
+fmaxm.h fs3, fs4, fs5 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fminm.q fa0, fa1, fa2
 # CHECK-ASM: encoding: [0x53,0xa5,0xc5,0x2e]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fminm.q fa0, fa1, fa2
+fminm.q fa0, fa1, fa2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fmaxm.q fs3, fs4, fs5
 # CHECK-ASM: encoding: [0xd3,0x39,0x5a,0x2f]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fmaxm.q fs3, fs4, fs5
+fmaxm.q fs3, fs4, fs5 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.s fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x49,0x40]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.s fs1, fs2
+fround.s fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.s fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x49,0x40]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.s fs1, fs2, dyn
+fround.s fs1, fs2, dyn # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.s fs1, fs2, rtz
 # CHECK-ASM: encoding: [0xd3,0x14,0x49,0x40]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.s fs1, fs2, rtz
+fround.s fs1, fs2, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.s fs1, fs2, rne
 # CHECK-ASM: encoding: [0xd3,0x04,0x49,0x40]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.s fs1, fs2, rne
+fround.s fs1, fs2, rne # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.s fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x59,0x40]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.s fs1, fs2
+froundnx.s fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.s fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x59,0x40]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.s fs1, fs2, dyn
+froundnx.s fs1, fs2, dyn # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.s fs1, fs2, rtz
 # CHECK-ASM: encoding: [0xd3,0x14,0x59,0x40]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.s fs1, fs2, rtz
+froundnx.s fs1, fs2, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.s fs1, fs2, rne
 # CHECK-ASM: encoding: [0xd3,0x04,0x59,0x40]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.s fs1, fs2, rne
+froundnx.s fs1, fs2, rne # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.d fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x49,0x42]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.d fs1, fs2
+fround.d fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.d fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x49,0x42]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.d fs1, fs2, dyn
+fround.d fs1, fs2, dyn # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.d fs1, fs2, rtz
 # CHECK-ASM: encoding: [0xd3,0x14,0x49,0x42]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.d fs1, fs2, rtz
+fround.d fs1, fs2, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.d fs1, fs2, rne
 # CHECK-ASM: encoding: [0xd3,0x04,0x49,0x42]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.d fs1, fs2, rne
+fround.d fs1, fs2, rne # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.d fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x59,0x42]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.d fs1, fs2
+froundnx.d fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.d fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x59,0x42]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.d fs1, fs2, dyn
+froundnx.d fs1, fs2, dyn # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.d fs1, fs2, rtz
 # CHECK-ASM: encoding: [0xd3,0x14,0x59,0x42]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.d fs1, fs2, rtz
+froundnx.d fs1, fs2, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.d fs1, fs2, rne
 # CHECK-ASM: encoding: [0xd3,0x04,0x59,0x42]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.d fs1, fs2, rne
+froundnx.d fs1, fs2, rne # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.h ft1, fa1, dyn
 # CHECK-ASM: encoding: [0xd3,0xf0,0x45,0x44]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.h ft1, fa1
+fround.h ft1, fa1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.h ft1, fa1, dyn
 # CHECK-ASM: encoding: [0xd3,0xf0,0x45,0x44]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.h ft1, fa1, dyn
+fround.h ft1, fa1, dyn # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.h ft1, fa1, rtz
 # CHECK-ASM: encoding: [0xd3,0x90,0x45,0x44]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.h ft1, fa1, rtz
+fround.h ft1, fa1, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.h fs1, fs2, rne
 # CHECK-ASM: encoding: [0xd3,0x04,0x49,0x44]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.h fs1, fs2, rne
+fround.h fs1, fs2, rne # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.h ft1, fa1, dyn
 # CHECK-ASM: encoding: [0xd3,0xf0,0x55,0x44]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.h ft1, fa1
+froundnx.h ft1, fa1 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.h ft1, fa1, dyn
 # CHECK-ASM: encoding: [0xd3,0xf0,0x55,0x44]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.h ft1, fa1, dyn
+froundnx.h ft1, fa1, dyn # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.h ft1, fa1, rtz
 # CHECK-ASM: encoding: [0xd3,0x90,0x55,0x44]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.h ft1, fa1, rtz
+froundnx.h ft1, fa1, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.h fs1, fs2, rne
 # CHECK-ASM: encoding: [0xd3,0x04,0x59,0x44]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.h fs1, fs2, rne
+froundnx.h fs1, fs2, rne # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.q fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x49,0x46]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.q fs1, fs2
+fround.q fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.q fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x49,0x46]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.q fs1, fs2, dyn
+fround.q fs1, fs2, dyn # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.q fs1, fs2, rtz
 # CHECK-ASM: encoding: [0xd3,0x14,0x49,0x46]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.q fs1, fs2, rtz
+fround.q fs1, fs2, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fround.q fs1, fs2, rne
 # CHECK-ASM: encoding: [0xd3,0x04,0x49,0x46]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fround.q fs1, fs2, rne
+fround.q fs1, fs2, rne # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.q fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x59,0x46]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.q fs1, fs2
+froundnx.q fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.q fs1, fs2, dyn
 # CHECK-ASM: encoding: [0xd3,0x74,0x59,0x46]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.q fs1, fs2, dyn
+froundnx.q fs1, fs2, dyn # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.q fs1, fs2, rtz
 # CHECK-ASM: encoding: [0xd3,0x14,0x59,0x46]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.q fs1, fs2, rtz
+froundnx.q fs1, fs2, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: froundnx.q fs1, fs2, rne
 # CHECK-ASM: encoding: [0xd3,0x04,0x59,0x46]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-froundnx.q fs1, fs2, rne
+froundnx.q fs1, fs2, rne # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fcvtmod.w.d a1, ft1, rtz
 # CHECK-ASM: encoding: [0xd3,0x95,0x80,0xc2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fcvtmod.w.d a1, ft1, rtz
+fcvtmod.w.d a1, ft1, rtz # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fltq.s a1, fs1, fs2
 # CHECK-ASM: encoding: [0xd3,0xd5,0x24,0xa1]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fltq.s a1, fs1, fs2
+fltq.s a1, fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fleq.s a1, ft1, ft2
 # CHECK-ASM: encoding: [0xd3,0xc5,0x20,0xa0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fleq.s a1, ft1, ft2
+fleq.s a1, ft1, ft2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fltq.s a1, fs2, fs1
 # CHECK-ASM: encoding: [0xd3,0x55,0x99,0xa0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fgtq.s a1, fs1, fs2
+fgtq.s a1, fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fleq.s a1, ft2, ft1
 # CHECK-ASM: encoding: [0xd3,0x45,0x11,0xa0]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fgeq.s a1, ft1, ft2
+fgeq.s a1, ft1, ft2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fltq.d a1, fs1, fs2
 # CHECK-ASM: encoding: [0xd3,0xd5,0x24,0xa3]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fltq.d a1, fs1, fs2
+fltq.d a1, fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fleq.d a1, ft1, ft2
 # CHECK-ASM: encoding: [0xd3,0xc5,0x20,0xa2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fleq.d a1, ft1, ft2
+fleq.d a1, ft1, ft2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fltq.d a1, fs2, fs1
 # CHECK-ASM: encoding: [0xd3,0x55,0x99,0xa2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fgtq.d a1, fs1, fs2
+fgtq.d a1, fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fleq.d a1, ft2, ft1
 # CHECK-ASM: encoding: [0xd3,0x45,0x11,0xa2]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fgeq.d a1, ft1, ft2
+fgeq.d a1, ft1, ft2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fltq.h a1, fs1, fs2
 # CHECK-ASM: encoding: [0xd3,0xd5,0x24,0xa5]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fltq.h a1, fs1, fs2
+fltq.h a1, fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fleq.h a1, ft1, ft2
 # CHECK-ASM: encoding: [0xd3,0xc5,0x20,0xa4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fleq.h a1, ft1, ft2
+fleq.h a1, ft1, ft2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fltq.h a1, fs2, fs1
 # CHECK-ASM: encoding: [0xd3,0x55,0x99,0xa4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fgtq.h a1, fs1, fs2
+fgtq.h a1, fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fleq.h a1, ft2, ft1
 # CHECK-ASM: encoding: [0xd3,0x45,0x11,0xa4]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fgeq.h a1, ft1, ft2
+fgeq.h a1, ft1, ft2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fltq.q a1, fs1, fs2
 # CHECK-ASM: encoding: [0xd3,0xd5,0x24,0xa7]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fltq.q a1, fs1, fs2
+fltq.q a1, fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fleq.q a1, ft1, ft2
 # CHECK-ASM: encoding: [0xd3,0xc5,0x20,0xa6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fleq.q a1, ft1, ft2
+fleq.q a1, ft1, ft2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fltq.q a1, fs2, fs1
 # CHECK-ASM: encoding: [0xd3,0x55,0x99,0xa6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fgtq.q a1, fs1, fs2
+fgtq.q a1, fs1, fs2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
 
 # CHECK-ASM-AND-OBJ: fleq.q a1, ft2, ft1
 # CHECK-ASM: encoding: [0xd3,0x45,0x11,0xa6]
-# expected-error@+1 {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}
-fgeq.q a1, ft1, ft2
+fgeq.q a1, ft1, ft2 # expected-error {{instruction requires the following: 'Zfa' (Additional Floating-Point)}}

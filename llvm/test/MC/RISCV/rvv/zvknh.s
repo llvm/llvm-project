@@ -10,17 +10,14 @@
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc --verify -triple=riscv32 -show-encoding %s
 
-vsha2ms.vv v10, v9, v8
+vsha2ms.vv v10, v9, v8 # expected-error {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}
 # CHECK-INST: vsha2ms.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xb6]
-# expected-error@-3 {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}
 
-vsha2ch.vv v10, v9, v8
+vsha2ch.vv v10, v9, v8 # expected-error {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}
 # CHECK-INST: vsha2ch.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xba]
-# expected-error@-3 {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}
 
-vsha2cl.vv v10, v9, v8
+vsha2cl.vv v10, v9, v8 # expected-error {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}
 # CHECK-INST: vsha2cl.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xbe]
-# expected-error@-3 {{instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only))}}

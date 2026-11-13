@@ -15,7 +15,6 @@
 # RUN:        | llvm-objdump -d --mattr=+xsfvfbfexp16e - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-sf.vfexp.v v2, v5, v0.t
+sf.vfexp.v v2, v5, v0.t # expected-error {{instruction requires the following: 'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)}}
 # CHECK-INST: sf.vfexp.v v2, v5, v0.t
 # CHECK-ENCODING: [0x57,0x91,0x53,0x4c]
-# expected-error@-3 {{instruction requires the following: 'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)}}

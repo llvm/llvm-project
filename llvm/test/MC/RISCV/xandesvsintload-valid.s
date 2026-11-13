@@ -15,23 +15,19 @@
 # CHECK-OBJ: nds.vln8.v v8, (a0)
 # CHECK-ASM: nds.vln8.v v8, (a0)
 # CHECK-ASM: encoding: [0x5b,0x44,0x25,0x06]
-# expected-error@+1 {{instruction requires the following: 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)}}
-nds.vln8.v v8, (a0)
+nds.vln8.v v8, (a0) # expected-error {{instruction requires the following: 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)}}
 
 # CHECK-OBJ: nds.vln8.v v8, (a0), v0.t
 # CHECK-ASM: nds.vln8.v v8, (a0), v0.t
 # CHECK-ASM: encoding: [0x5b,0x44,0x25,0x04]
-# expected-error@+1 {{instruction requires the following: 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)}}
-nds.vln8.v v8, (a0), v0.t
+nds.vln8.v v8, (a0), v0.t # expected-error {{instruction requires the following: 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)}}
 
 # CHECK-OBJ: nds.vlnu8.v v8, (a0)
 # CHECK-ASM: nds.vlnu8.v v8, (a0)
 # CHECK-ASM: encoding: [0x5b,0x44,0x35,0x06]
-# expected-error@+1 {{instruction requires the following: 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)}}
-nds.vlnu8.v v8, (a0)
+nds.vlnu8.v v8, (a0) # expected-error {{instruction requires the following: 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)}}
 
 # CHECK-OBJ: nds.vlnu8.v v8, (a0), v0.t
 # CHECK-ASM: nds.vlnu8.v v8, (a0), v0.t
 # CHECK-ASM: encoding: [0x5b,0x44,0x35,0x04]
-# expected-error@+1 {{instruction requires the following: 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)}}
-nds.vlnu8.v v8, (a0), v0.t
+nds.vlnu8.v v8, (a0), v0.t # expected-error {{instruction requires the following: 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)}}

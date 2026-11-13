@@ -13,112 +13,78 @@
 .option push
 .option exact
 # CHECK-DIS: 00001837 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x16, 1
+lui x16, 1 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 000028b7 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x17, 2
+lui x17, 2 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 00003937 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x18, 3
+lui x18, 3 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 000049b7 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x19, 4
+lui x19, 4 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 00005a37 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x20, 5
+lui x20, 5 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 00006ab7 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x21, 6
+lui x21, 6 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 00007b37 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x22, 7
+lui x22, 7 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 00008bb7 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x23, 8
+lui x23, 8 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 00009c37 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x24, 9
+lui x24, 9 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 0000acb7 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x25, 10
+lui x25, 10 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 0000bd37 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x26, 11
+lui x26, 11 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 0000cdb7 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x27, 12
+lui x27, 12 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 0000de37 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x28, 13
+lui x28, 13 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 0000eeb7 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x29, 14
+lui x29, 14 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 0000ff37 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x30, 15
+lui x30, 15 # expected-error:5 {{register must be a GPR}}
 # CHECK-DIS: 00010fb7 <unknown>
-# expected-error@+1:5 {{register must be a GPR}}
-lui x31, 16
+lui x31, 16 # expected-error:5 {{register must be a GPR}}
 
 # CHECK-DIS: 00011817 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc a6, 17
+auipc a6, 17 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00012897 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc a7, 18
+auipc a7, 18 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00013917 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s2, 19
+auipc s2, 19 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00014997 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s3, 20
+auipc s3, 20 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00015a17 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s4, 21
+auipc s4, 21 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00016a97 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s5, 22
+auipc s5, 22 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00017b17 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s6, 23
+auipc s6, 23 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00018b97 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s7, 24
+auipc s7, 24 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00019c17 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s8, 25
+auipc s8, 25 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 0001ac97 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s9, 26
+auipc s9, 26 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 0001bd17 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s10, 27
+auipc s10, 27 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 0001cd97 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc s11, 28
+auipc s11, 28 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 0001de17 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc t3, 29
+auipc t3, 29 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 0001ee97 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc t4, 30
+auipc t4, 30 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 0001ff17 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc t5, 31
+auipc t5, 31 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 00020f97 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-auipc t6, 32
+auipc t6, 32 # expected-error:7 {{register must be a GPR}}
 .option pop
 
 # CHECK-DIS: 0f81 <unknown>
-# expected-error@+3:1 {{invalid instruction, any one of the following would fix this:}}
-# expected-note@+2:8 {{register must be zero (x0)}}
-# expected-note@+1:8 {{register must be a GPR excluding zero (x0)}}
 c.addi x31, 0
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:8 {{register must be zero (x0)}}
+# expected-note@-3:8 {{register must be a GPR excluding zero (x0)}}
 # CHECK-DIS: 9846 <unknown>
-# expected-error@+1:7 {{register must be a GPR}}
-c.add x16, x17
+c.add x16, x17 # expected-error:7 {{register must be a GPR}}
 # CHECK-DIS: 8046 <unknown>
-# expected-error@+1:10 {{register must be a GPR excluding zero (x0)}}
-c.mv x0, x17
+c.mv x0, x17 # expected-error:10 {{register must be a GPR excluding zero (x0)}}

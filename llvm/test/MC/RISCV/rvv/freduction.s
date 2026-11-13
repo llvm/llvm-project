@@ -5,67 +5,54 @@
 # RUN:     | llvm-objdump -d --mattr=+zve32f -M no-aliases - \
 # RUN:     | FileCheck %s --check-prefix=CHECK-INST
 
-vfredosum.vs v8, v4, v20, v0.t
+vfredosum.vs v8, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredosum.vs v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x0c]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfredosum.vs v8, v4, v20
+vfredosum.vs v8, v4, v20 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredosum.vs v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x0e]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfredusum.vs v8, v4, v20, v0.t
+vfredusum.vs v8, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredusum.vs v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x04]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfredusum.vs v8, v4, v20
+vfredusum.vs v8, v4, v20 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredusum.vs v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x06]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfredmax.vs v8, v4, v20, v0.t
+vfredmax.vs v8, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredmax.vs v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x1c]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfredmax.vs v8, v4, v20
+vfredmax.vs v8, v4, v20 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredmax.vs v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x1e]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfredmin.vs v8, v4, v20, v0.t
+vfredmin.vs v8, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredmin.vs v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x14]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfredmin.vs v8, v4, v20
+vfredmin.vs v8, v4, v20 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredmin.vs v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x16]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwredosum.vs v8, v4, v20, v0.t
+vfwredosum.vs v8, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwredosum.vs v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xcc]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwredosum.vs v8, v4, v20
+vfwredosum.vs v8, v4, v20 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwredosum.vs v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xce]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwredusum.vs v8, v4, v20, v0.t
+vfwredusum.vs v8, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwredusum.vs v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xc4]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfwredusum.vs v8, v4, v20
+vfwredusum.vs v8, v4, v20 # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfwredusum.vs v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xc6]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 
-vfredosum.vs v0, v4, v20, v0.t
+vfredosum.vs v0, v4, v20, v0.t # expected-error-re {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}
 # CHECK-INST: vfredosum.vs v0, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x10,0x4a,0x0c]
-# expected-error-re@-3 {{instruction requires the following: 'V'{{.*}}'Zve32f' (Vector Extensions for Embedded Processors)}}

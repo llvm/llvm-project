@@ -7,8 +7,6 @@
 # With Zkne extension:
 # RUN: llvm-mc --verify -triple=riscv64 -mattr=+zkne < %s
 
-# expected-error@+1 {{immediate must be an integer in the range [0, 10]}}
-aes64ks1i a0, a1, 11
+aes64ks1i a0, a1, 11 # expected-error {{immediate must be an integer in the range [0, 10]}}
 
-# expected-error@+1 {{immediate must be an integer in the range [0, 10]}}
-aes64ks1i a0, a1, -1
+aes64ks1i a0, a1, -1 # expected-error {{immediate must be an integer in the range [0, 10]}}

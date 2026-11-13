@@ -5,52 +5,42 @@
 # RUN:        | llvm-objdump -d --mattr=+experimental-zvvfmm - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 
-vfmmacc.vv v8, v4, v20
+vfmmacc.vv v8, v4, v20 # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vfmmacc.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x42,0x53]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vfwmmacc.vv v8, v4, v20
+vfwmmacc.vv v8, v4, v20 # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vfwmmacc.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x42,0x57]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vfwmmacc.vv v8, v4, v20, v0.scale
+vfwmmacc.vv v8, v4, v20, v0.scale # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vfwmmacc.vv v8, v4, v20, v0.scale
 # CHECK-ENCODING: [0x57,0x14,0x42,0x55]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vfqmmacc.vv v8, v4, v20
+vfqmmacc.vv v8, v4, v20 # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vfqmmacc.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x42,0x5b]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vfqmmacc.vv v8, v4, v20, v0.scale
+vfqmmacc.vv v8, v4, v20, v0.scale # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vfqmmacc.vv v8, v4, v20, v0.scale
 # CHECK-ENCODING: [0x57,0x14,0x42,0x59]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vf8wmmacc.vv v8, v4, v20
+vf8wmmacc.vv v8, v4, v20 # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vf8wmmacc.vv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x42,0x5f]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vf8wmmacc.vv v8, v4, v20, v0.scale
+vf8wmmacc.vv v8, v4, v20, v0.scale # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vf8wmmacc.vv v8, v4, v20, v0.scale
 # CHECK-ENCODING: [0x57,0x14,0x42,0x5d]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vfwimmacc.vv v8, v4, v20, v0.scale
+vfwimmacc.vv v8, v4, v20, v0.scale # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vfwimmacc.vv v8, v4, v20, v0.scale
 # CHECK-ENCODING: [0x57,0x04,0x42,0xe5]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vfqimmacc.vv v8, v4, v20, v0.scale
+vfqimmacc.vv v8, v4, v20, v0.scale # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vfqimmacc.vv v8, v4, v20, v0.scale
 # CHECK-ENCODING: [0x57,0x04,0x42,0xe9]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 
-vf8wimmacc.vv v8, v4, v20, v0.scale
+vf8wimmacc.vv v8, v4, v20, v0.scale # expected-error {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
 # CHECK-INST: vf8wimmacc.vv v8, v4, v20, v0.scale
 # CHECK-ENCODING: [0x57,0x04,0x42,0xed]
-# expected-error@-3 {{instruction requires the following: 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)}}
