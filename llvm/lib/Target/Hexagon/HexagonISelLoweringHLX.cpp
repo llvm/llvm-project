@@ -235,7 +235,7 @@ SDValue HexagonTargetLowering::splitHlxPairArgLoad(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue BaseAddr,
     MVT PairTy, MachinePointerInfo PtrInfo) const {
   unsigned HlxVLen = Subtarget.getHLXVectorLength();
-  MVT SingleTy = PairTy.changeVectorElementType(MVT::i16);
+  MVT SingleTy = typeHlxSplit(PairTy).first;
   SDValue Base1 =
       DAG.getMemBasePlusOffset(BaseAddr, TypeSize::getFixed(HlxVLen), dl);
   MachineFunction &MF = DAG.getMachineFunction();
@@ -258,7 +258,7 @@ void HexagonTargetLowering::splitHlxPairArgStore(
     SDValue BaseAddr, MVT PairTy, MachinePointerInfo PtrInfo,
     SmallVectorImpl<SDValue> &MemOpChains) const {
   unsigned HlxVLen = Subtarget.getHLXVectorLength();
-  MVT SingleTy = PairTy.changeVectorElementType(MVT::i16);
+  MVT SingleTy = typeHlxSplit(PairTy).first;
   SDValue Base1 =
       DAG.getMemBasePlusOffset(BaseAddr, TypeSize::getFixed(HlxVLen), dl);
   SDValue Lo =
