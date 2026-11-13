@@ -24,6 +24,7 @@
 // CHECK: __ARM_FEATURE_FMA 1
 // CHECK: __ARM_FEATURE_IDIV 1
 // CHECK: __ARM_FEATURE_LDREX 0xF
+// CHECK-NOT: __ARM_FEATURE_LSCP
 // CHECK: __ARM_FEATURE_NUMERIC_MAXMIN 1
 // CHECK-NOT: __ARM_FEATURE_RCPC 1
 // CHECK-NOT: __ARM_FEATURE_RCPC 3
@@ -607,6 +608,11 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // CHECK-LSE: __ARM_FEATURE_ATOMICS 1
+
+// ================== Check Load and Store Consistency Pair instructions (LSCP)
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+lscp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSCP %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+lscp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSCP %s
+// CHECK-LSCP: __ARM_FEATURE_LSCP 1
 
 // ================== Check Armv8.8-A/Armv9.3-A memcpy and memset acceleration instructions (MOPS)
 // RUN: %clang -target aarch64-none-elf -march=armv8.7-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
