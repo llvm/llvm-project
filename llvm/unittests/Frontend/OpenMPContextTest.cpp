@@ -874,6 +874,13 @@ TEST_F(OpenMPContextTest, UserConditionInStrictSubset) {
   EXPECT_EQ(Best(F, E), 0);
   F.UserCondition = "b";
   EXPECT_EQ(Best(E, F), 0);
+
+  // A selector without a condition can be a strict subset of one with a
+  // runtime condition.
+  VariantMatchInfo G;
+  G.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  EXPECT_EQ(Best(G, B), 1);
+  EXPECT_EQ(Best(B, G), 0);
 }
 
 TEST_F(OpenMPContextTest, ISANamesInStrictSubset) {
