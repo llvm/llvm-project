@@ -4,6 +4,8 @@
 ; RUN: opt -passes=loop-vectorize -enable-interleave-to-reduce-stalls -force-target-max-vector-interleave=4 -force-target-load-latency=8 -S %s | FileCheck %s --check-prefixes=CHECK,CHECK-LATENCY8
 ; RUN: opt -passes=loop-vectorize -enable-interleave-to-reduce-stalls -force-target-max-vector-interleave=4 -mcpu=cortex-a510 -S %s | FileCheck %s --check-prefixes=CHECK,CHECK-A510
 ; RUN: opt -passes=loop-vectorize -enable-interleave-to-reduce-stalls -force-target-max-vector-interleave=4 -mcpu=cortex-a320 -S %s | FileCheck %s --check-prefixes=CHECK,CHECK-A320
+; RUN: opt -passes=loop-vectorize -enable-interleave-to-reduce-stalls -force-target-max-vector-interleave=4 -mcpu=cortex-a510 -scalable-vectorization=always -S %s | FileCheck %s --check-prefixes=CHECK,CHECK-A510-SVE
+; RUN: opt -passes=loop-vectorize -enable-interleave-to-reduce-stalls -force-target-max-vector-interleave=4 -mcpu=cortex-a320 -scalable-vectorization=always -S %s | FileCheck %s --check-prefixes=CHECK,CHECK-A320-SVE
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-none-elf"
 
@@ -15,6 +17,9 @@ target triple = "aarch64-unknown-none-elf"
 
 ; These test have a manual check-not section after the auto-generated part to
 ; make sure that we have no more loads than what we expect in the vector body.
+
+; FIXME: Non-SVE A320 interleaving choice here is wrong, as the schedling model
+; doesn't have latencies for scalar floating-point loads.
 
 define void @i16_add1(ptr noalias readonly %src, ptr noalias writeonly %dst, i16 %argval) {
 ; CHECK-LATENCY1-LABEL: define void @i16_add1(
@@ -45,6 +50,16 @@ define void @i16_add1(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A320:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP2:%.*]], align 2
 ; CHECK-A320:    [[WIDE_LOAD3:%.*]] = load <8 x i16>, ptr [[TMP3:%.*]], align 2
 ;
+; CHECK-A510-SVE-LABEL: define void @i16_add1(
+; CHECK-A510-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-A510-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP3:%.*]], align 2
+; CHECK-A510-SVE:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x i16>, ptr [[TMP4:%.*]], align 2
+;
+; CHECK-A320-SVE-LABEL: define void @i16_add1(
+; CHECK-A320-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-A320-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP3:%.*]], align 2
+; CHECK-A320-SVE:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x i16>, ptr [[TMP4:%.*]], align 2
+;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
 ; CHECK: br i1
@@ -67,8 +82,6 @@ exit:
   ret void
 }
 
-; FIXME: On a320 and a510 we should be interleaving by 2 here, but
-; latency of interleaved loads is not yet implemented.
 define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16 %argval) {
 ; CHECK-LATENCY1-LABEL: define void @i16_add2(
 ; CHECK-LATENCY1-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) {
@@ -88,10 +101,22 @@ define void @i16_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A510-LABEL: define void @i16_add2(
 ; CHECK-A510-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A510:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP1:%.*]], align 2
+; CHECK-A510:    [[WIDE_VEC2:%.*]] = load <16 x i16>, ptr [[TMP3:%.*]], align 2
 ;
 ; CHECK-A320-LABEL: define void @i16_add2(
 ; CHECK-A320-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A320:    [[WIDE_VEC:%.*]] = load <16 x i16>, ptr [[TMP1:%.*]], align 2
+; CHECK-A320:    [[WIDE_VEC2:%.*]] = load <16 x i16>, ptr [[TMP3:%.*]], align 2
+;
+; CHECK-A510-SVE-LABEL: define void @i16_add2(
+; CHECK-A510-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A510-SVE:    [[WIDE_VEC:%.*]] = load <vscale x 16 x i16>, ptr [[TMP7:%.*]], align 2
+; CHECK-A510-SVE:    [[WIDE_VEC1:%.*]] = load <vscale x 16 x i16>, ptr [[TMP8:%.*]], align 2
+;
+; CHECK-A320-SVE-LABEL: define void @i16_add2(
+; CHECK-A320-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A320-SVE:    [[WIDE_VEC:%.*]] = load <vscale x 16 x i16>, ptr [[TMP7:%.*]], align 2
+; CHECK-A320-SVE:    [[WIDE_VEC1:%.*]] = load <vscale x 16 x i16>, ptr [[TMP8:%.*]], align 2
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
@@ -120,8 +145,6 @@ exit:
   ret void
 }
 
-; FIXME: On a320 and a510 we should be interleaving by 2 here, but
-; latency of interleaved loads is not yet implemented.
 define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16 %argval) {
 ; CHECK-LATENCY1-LABEL: define void @i16_add4(
 ; CHECK-LATENCY1-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) {
@@ -139,10 +162,22 @@ define void @i16_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i16
 ; CHECK-A510-LABEL: define void @i16_add4(
 ; CHECK-A510-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A510:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP1:%.*]], align 2
+; CHECK-A510:    [[WIDE_VEC4:%.*]] = load <32 x i16>, ptr [[TMP3:%.*]], align 2
 ;
 ; CHECK-A320-LABEL: define void @i16_add4(
 ; CHECK-A320-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A320:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP1:%.*]], align 2
+; CHECK-A320:    [[WIDE_VEC4:%.*]] = load <32 x i16>, ptr [[TMP3:%.*]], align 2
+;
+; CHECK-A510-SVE-LABEL: define void @i16_add4(
+; CHECK-A510-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A510-SVE:    [[WIDE_VEC:%.*]] = load <vscale x 32 x i16>, ptr [[TMP7:%.*]], align 2
+; CHECK-A510-SVE:    [[WIDE_VEC1:%.*]] = load <vscale x 32 x i16>, ptr [[TMP8:%.*]], align 2
+;
+; CHECK-A320-SVE-LABEL: define void @i16_add4(
+; CHECK-A320-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i16 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A320-SVE:    [[WIDE_VEC:%.*]] = load <vscale x 32 x i16>, ptr [[TMP7:%.*]], align 2
+; CHECK-A320-SVE:    [[WIDE_VEC1:%.*]] = load <vscale x 32 x i16>, ptr [[TMP8:%.*]], align 2
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
@@ -210,6 +245,16 @@ define void @i32_add1(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-A320:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP2:%.*]], align 4
 ; CHECK-A320:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP3:%.*]], align 4
 ;
+; CHECK-A510-SVE-LABEL: define void @i32_add1(
+; CHECK-A510-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A510-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3:%.*]], align 4
+; CHECK-A510-SVE:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4:%.*]], align 4
+;
+; CHECK-A320-SVE-LABEL: define void @i32_add1(
+; CHECK-A320-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A320-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3:%.*]], align 4
+; CHECK-A320-SVE:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4:%.*]], align 4
+;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
 ; CHECK: br i1
@@ -232,8 +277,6 @@ exit:
   ret void
 }
 
-; FIXME: On a320 and a510 we should be interleaving by 2 here, but
-; latency of interleaved loads is not yet implemented.
 define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32 %argval) {
 ; CHECK-LATENCY1-LABEL: define void @i32_add2(
 ; CHECK-LATENCY1-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) {
@@ -253,10 +296,22 @@ define void @i32_add2(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-A510-LABEL: define void @i32_add2(
 ; CHECK-A510-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A510:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1:%.*]], align 4
+; CHECK-A510:    [[WIDE_VEC2:%.*]] = load <8 x i32>, ptr [[TMP3:%.*]], align 4
 ;
 ; CHECK-A320-LABEL: define void @i32_add2(
 ; CHECK-A320-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
 ; CHECK-A320:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1:%.*]], align 4
+; CHECK-A320:    [[WIDE_VEC2:%.*]] = load <8 x i32>, ptr [[TMP3:%.*]], align 4
+;
+; CHECK-A510-SVE-LABEL: define void @i32_add2(
+; CHECK-A510-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A510-SVE:    [[WIDE_VEC:%.*]] = load <vscale x 8 x i32>, ptr [[TMP7:%.*]], align 4
+; CHECK-A510-SVE:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x i32>, ptr [[TMP8:%.*]], align 4
+;
+; CHECK-A320-SVE-LABEL: define void @i32_add2(
+; CHECK-A320-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A320-SVE:    [[WIDE_VEC:%.*]] = load <vscale x 8 x i32>, ptr [[TMP7:%.*]], align 4
+; CHECK-A320-SVE:    [[WIDE_VEC1:%.*]] = load <vscale x 8 x i32>, ptr [[TMP8:%.*]], align 4
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
@@ -313,6 +368,16 @@ define void @i32_add4(ptr noalias readonly %src, ptr noalias writeonly %dst, i32
 ; CHECK-A320:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP5:%.*]], align 4
 ; CHECK-A320:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP6:%.*]], align 4
 ; CHECK-A320:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP7:%.*]], align 4
+;
+; CHECK-A510-SVE-LABEL: define void @i32_add4(
+; CHECK-A510-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A510-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7:%.*]], align 4
+; CHECK-A510-SVE:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8:%.*]], align 4
+;
+; CHECK-A320-SVE-LABEL: define void @i32_add4(
+; CHECK-A320-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A320-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7:%.*]], align 4
+; CHECK-A320-SVE:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8:%.*]], align 4
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
@@ -391,6 +456,20 @@ define void @replicate_region(ptr %p, i64 %n) #0 {
 ; CHECK-A320:    [[TMP15:%.*]] = load i32, ptr [[TMP14:%.*]], align 4
 ; CHECK-A320:    [[TMP20:%.*]] = load i32, ptr [[TMP19:%.*]], align 4
 ;
+; CHECK-A510-SVE-LABEL: define void @replicate_region(
+; CHECK-A510-SVE-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-A510-SVE:    [[TMP4:%.*]] = load i32, ptr [[TMP3:%.*]], align 4
+; CHECK-A510-SVE:    [[TMP9:%.*]] = load i32, ptr [[TMP8:%.*]], align 4
+; CHECK-A510-SVE:    [[TMP14:%.*]] = load i32, ptr [[TMP13:%.*]], align 4
+; CHECK-A510-SVE:    [[TMP19:%.*]] = load i32, ptr [[TMP18:%.*]], align 4
+;
+; CHECK-A320-SVE-LABEL: define void @replicate_region(
+; CHECK-A320-SVE-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-A320-SVE:    [[TMP4:%.*]] = load i32, ptr [[TMP3:%.*]], align 4
+; CHECK-A320-SVE:    [[TMP9:%.*]] = load i32, ptr [[TMP8:%.*]], align 4
+; CHECK-A320-SVE:    [[TMP14:%.*]] = load i32, ptr [[TMP13:%.*]], align 4
+; CHECK-A320-SVE:    [[TMP19:%.*]] = load i32, ptr [[TMP18:%.*]], align 4
+;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
 ; CHECK: br i1
@@ -445,6 +524,14 @@ define void @load_outside_replicate_region(ptr %p, i64 %n) #0 {
 ; CHECK-A320-LABEL: define void @load_outside_replicate_region(
 ; CHECK-A320-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-A320:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP3:%.*]], align 4
+;
+; CHECK-A510-SVE-LABEL: define void @load_outside_replicate_region(
+; CHECK-A510-SVE-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-A510-SVE:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0:%.*]], align 4
+;
+; CHECK-A320-SVE-LABEL: define void @load_outside_replicate_region(
+; CHECK-A320-SVE-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-A320-SVE:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0:%.*]], align 4
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
@@ -512,6 +599,14 @@ define void @i32_add4_scalar_vf(ptr noalias readonly %src, ptr noalias writeonly
 ; CHECK-A320:    [[TMP9:%.*]] = load i32, ptr [[TMP5:%.*]], align 4
 ; CHECK-A320:    [[TMP10:%.*]] = load i32, ptr [[TMP6:%.*]], align 4
 ;
+; CHECK-A510-SVE-LABEL: define void @i32_add4_scalar_vf(
+; CHECK-A510-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A510-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 1 x i32>, ptr [[TMP1:%.*]], align 4
+;
+; CHECK-A320-SVE-LABEL: define void @i32_add4_scalar_vf(
+; CHECK-A320-SVE-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A320-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 1 x i32>, ptr [[TMP1:%.*]], align 4
+;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
 ; CHECK: br i1
@@ -566,6 +661,16 @@ define void @large_loop(ptr %p, float %c0, float %c1, float %c2, float %c3, floa
 ; CHECK-A320:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP1:%.*]], align 4
 ; CHECK-A320:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP2:%.*]], align 4
 ; CHECK-A320:    [[WIDE_LOAD13:%.*]] = load <4 x float>, ptr [[TMP3:%.*]], align 4
+;
+; CHECK-A510-SVE-LABEL: define void @large_loop(
+; CHECK-A510-SVE-SAME: ptr [[P:%.*]], float [[C0:%.*]], float [[C1:%.*]], float [[C2:%.*]], float [[C3:%.*]], float [[C4:%.*]], float [[C5:%.*]]) #[[ATTR0]] {
+; CHECK-A510-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP3:%.*]], align 4
+; CHECK-A510-SVE:    [[WIDE_LOAD11:%.*]] = load <vscale x 4 x float>, ptr [[TMP4:%.*]], align 4
+;
+; CHECK-A320-SVE-LABEL: define void @large_loop(
+; CHECK-A320-SVE-SAME: ptr [[P:%.*]], float [[C0:%.*]], float [[C1:%.*]], float [[C2:%.*]], float [[C3:%.*]], float [[C4:%.*]], float [[C5:%.*]]) #[[ATTR0]] {
+; CHECK-A320-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP3:%.*]], align 4
+; CHECK-A320-SVE:    [[WIDE_LOAD11:%.*]] = load <vscale x 4 x float>, ptr [[TMP4:%.*]], align 4
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
@@ -629,6 +734,16 @@ define i32 @i32_reduction(ptr %p, i64 %n) {
 ; CHECK-A320:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP3:%.*]], align 4
 ; CHECK-A320:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP4:%.*]], align 4
 ; CHECK-A320:    [[WIDE_LOAD13:%.*]] = load <4 x i32>, ptr [[TMP13:%.*]], align 4
+;
+; CHECK-A510-SVE-LABEL: define i32 @i32_reduction(
+; CHECK-A510-SVE-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-A510-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3:%.*]], align 4
+; CHECK-A510-SVE:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4:%.*]], align 4
+;
+; CHECK-A320-SVE-LABEL: define i32 @i32_reduction(
+; CHECK-A320-SVE-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-A320-SVE:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3:%.*]], align 4
+; CHECK-A320-SVE:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4:%.*]], align 4
 ;
 ; UTC_ARGS: --disable
 ; CHECK-NOT: = load
