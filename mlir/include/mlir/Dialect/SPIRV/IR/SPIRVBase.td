@@ -341,6 +341,7 @@ def SPV_KHR_non_semantic_info                : I32EnumAttrCase<"SPV_KHR_non_sema
 def SPV_KHR_terminate_invocation             : I32EnumAttrCase<"SPV_KHR_terminate_invocation", 30>;
 def SPV_KHR_cooperative_matrix               : I32EnumAttrCase<"SPV_KHR_cooperative_matrix", 31>;
 def SPV_KHR_bfloat16                         : I32EnumAttrCase<"SPV_KHR_bfloat16", 32>;
+def SPV_KHR_untyped_pointers                 : I32EnumAttrCase<"SPV_KHR_untyped_pointers", 33>;
 
 def SPV_EXT_demote_to_helper_invocation  : I32EnumAttrCase<"SPV_EXT_demote_to_helper_invocation", 1000>;
 def SPV_EXT_descriptor_indexing          : I32EnumAttrCase<"SPV_EXT_descriptor_indexing", 1001>;
@@ -441,7 +442,7 @@ def SPIRV_ExtensionAttr :
       SPV_KHR_fragment_shader_barycentric, SPV_KHR_ray_cull_mask,
       SPV_KHR_uniform_group_instructions, SPV_KHR_subgroup_rotate,
       SPV_KHR_non_semantic_info, SPV_KHR_terminate_invocation,
-      SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16,
+      SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16, SPV_KHR_untyped_pointers,
       SPV_EXT_demote_to_helper_invocation, SPV_EXT_descriptor_indexing,
       SPV_EXT_fragment_fully_covered, SPV_EXT_fragment_invocation_density,
       SPV_EXT_fragment_shader_interlock, SPV_EXT_physical_storage_buffer,
@@ -595,6 +596,11 @@ def SPIRV_C_RoundingModeRTE                             : I32EnumAttrCase<"Round
 def SPIRV_C_RoundingModeRTZ                             : I32EnumAttrCase<"RoundingModeRTZ", 4468> {
   list<Availability> availability = [
     Extension<[SPV_KHR_float_controls]>
+  ];
+}
+def SPIRV_C_UntypedPointersKHR                          : I32EnumAttrCase<"UntypedPointersKHR", 4473> {
+  list<Availability> availability = [
+    Extension<[SPV_KHR_untyped_pointers]>
   ];
 }
 def SPIRV_C_ImageFootprintNV                            : I32EnumAttrCase<"ImageFootprintNV", 5282> {
@@ -1522,7 +1528,8 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_AtomicStorageOps, SPIRV_C_SampleMaskPostDepthCoverage,
       SPIRV_C_StorageBuffer8BitAccess, SPIRV_C_StoragePushConstant8,
       SPIRV_C_DenormPreserve, SPIRV_C_DenormFlushToZero, SPIRV_C_SignedZeroInfNanPreserve,
-      SPIRV_C_RoundingModeRTE, SPIRV_C_RoundingModeRTZ, SPIRV_C_ImageFootprintNV,
+      SPIRV_C_RoundingModeRTE, SPIRV_C_RoundingModeRTZ, SPIRV_C_UntypedPointersKHR,
+      SPIRV_C_ImageFootprintNV,
       SPIRV_C_FragmentBarycentricKHR, SPIRV_C_MeshShadingEXT, SPIRV_C_ComputeDerivativeGroupQuadsNV,
       SPIRV_C_GroupNonUniformPartitionedNV, SPIRV_C_VulkanMemoryModel,
       SPIRV_C_VulkanMemoryModelDeviceScope, SPIRV_C_ComputeDerivativeGroupLinearNV,
@@ -4333,6 +4340,7 @@ def SPIRV_IsSamplerType : CPred<"::llvm::isa<::mlir::spirv::SamplerType>($_self)
 def SPIRV_IsNamedBarrierType : CPred<"::llvm::isa<::mlir::spirv::NamedBarrierType>($_self)">;
 def SPIRV_IsStructType : CPred<"::llvm::isa<::mlir::spirv::StructType>($_self)">;
 def SPIRV_IsTensorArmType : CPred<"::llvm::isa<::mlir::spirv::TensorArmType>($_self)">;
+def SPIRV_IsUntypedPtrType : CPred<"::llvm::isa<::mlir::spirv::UntypedPointerType>($_self)">;
 
 // See https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_types
 // for the definition of the following types and type categories.
@@ -4390,6 +4398,8 @@ def SPIRV_AnyNamedBarrier : DialectType<SPIRV_Dialect, SPIRV_IsNamedBarrierType,
                                 "any SPIR-V named barrier type">;
 def SPIRV_AnyTensorArm : DialectType<SPIRV_Dialect, SPIRV_IsTensorArmType,
                                  "any SPIR-V tensorArm type">;
+def SPIRV_AnyUntypedPtr : DialectType<SPIRV_Dialect, SPIRV_IsUntypedPtrType,
+                                    "any SPIR-V untyped pointer type">;
 
 def SPIRV_Numerical : AnyTypeOf<[SPIRV_Integer, SPIRV_Float]>;
 def SPIRV_ExtendedNumerical : AnyTypeOf<[SPIRV_Integer, SPIRV_Float, SPIRV_BFloat16KHR, SPIRV_Float8E4M3EXT, SPIRV_Float8E5M2EXT]>;
@@ -4405,7 +4415,7 @@ def SPIRV_Type : AnyTypeOf<[
     SPIRV_AnyPtr, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
     SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnySampledImage,
     SPIRV_AnySampler, SPIRV_AnyImage, SPIRV_AnyTensorArm,
-    SPIRV_AnyFloatVector
+    SPIRV_AnyFloatVector, SPIRV_AnyUntypedPtr
   ]>;
 
 def SPIRV_SignedInt : SignedIntOfWidths<[8, 16, 32, 64]>;
@@ -4736,6 +4746,7 @@ def SPIRV_OC_OpGraphInputARM                  : I32EnumAttrCase<"OpGraphInputARM
 def SPIRV_OC_OpGraphSetOutputARM              : I32EnumAttrCase<"OpGraphSetOutputARM", 4185>;
 def SPIRV_OC_OpGraphEndARM                    : I32EnumAttrCase<"OpGraphEndARM", 4186>;
 def SPIRV_OC_OpTypeGraphARM                   : I32EnumAttrCase<"OpTypeGraphARM", 4190>;
+def SPIRV_OC_OpTypeUntypedPointerKHR          : I32EnumAttrCase<"OpTypeUntypedPointerKHR", 4417>;
 def SPIRV_OC_OpSubgroupBallotKHR              : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
 def SPIRV_OC_OpGroupNonUniformRotateKHR       : I32EnumAttrCase<"OpGroupNonUniformRotateKHR", 4431>;
 def SPIRV_OC_OpSDot                           : I32EnumAttrCase<"OpSDot", 4450>;
@@ -4877,7 +4888,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGraphEntryPointARM, SPIRV_OC_OpGraphARM,
       SPIRV_OC_OpGraphInputARM, SPIRV_OC_OpGraphSetOutputARM, SPIRV_OC_OpGraphEndARM,
       SPIRV_OC_OpTypeGraphARM, SPIRV_OC_OpGraphConstantARM,
-      SPIRV_OC_OpSubgroupBallotKHR,
+      SPIRV_OC_OpTypeUntypedPointerKHR, SPIRV_OC_OpSubgroupBallotKHR,
       SPIRV_OC_OpGroupNonUniformRotateKHR, SPIRV_OC_OpSDot, SPIRV_OC_OpUDot,
       SPIRV_OC_OpSUDot, SPIRV_OC_OpSDotAccSat, SPIRV_OC_OpUDotAccSat,
       SPIRV_OC_OpSUDotAccSat, SPIRV_OC_OpTypeCooperativeMatrixKHR,

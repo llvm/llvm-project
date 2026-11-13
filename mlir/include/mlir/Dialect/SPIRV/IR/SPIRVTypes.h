@@ -37,6 +37,7 @@ struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
 struct SampledImageTypeStorage;
 struct StructTypeStorage;
+struct UntypedPointerTypeStorage;
 
 } // namespace detail
 
@@ -184,6 +185,21 @@ public:
   static PointerType get(Type pointeeType, StorageClass storageClass);
 
   Type getPointeeType() const;
+
+  StorageClass getStorageClass() const;
+};
+
+// SPIR-V untyped pointer type (OpTypeUntypedPointerKHR)
+class UntypedPointerType
+    : public Type::TypeBase<UntypedPointerType, SPIRVType,
+                            detail::UntypedPointerTypeStorage> {
+public:
+  using Base::Base;
+
+  static constexpr StringLiteral name = "spirv.untyped_ptr";
+
+  static UntypedPointerType get(MLIRContext *context,
+                                StorageClass storageClass);
 
   StorageClass getStorageClass() const;
 };
