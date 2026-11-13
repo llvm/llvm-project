@@ -52,8 +52,9 @@ __attribute__((destructor(2))) void reset_preinitval() {
   preinitval = 0;
 }
 
+// Nothing refers to the entry, so LTO drops it unless it is marked as used.
 using PreInitFunc = void();
-__attribute__((section(".preinit_array"))) PreInitFunc *preinit_func_ptr =
+__attribute__((section(".preinit_array"), used)) PreInitFunc *preinit_func_ptr =
     &set_preinitval;
 
 TEST_MAIN() {
