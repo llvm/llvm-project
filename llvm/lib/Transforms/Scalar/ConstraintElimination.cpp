@@ -368,7 +368,7 @@ struct Decomposition {
   /// Returns std::nullopt if a coefficient overflows, i.e. the decomposition is
   /// invalid.
   [[nodiscard]] std::optional<Decomposition>
-  substitute(Value *Variable, Value *Replacement, ConstraintInfo &Info);
+  substitute(Value *Variable, Value *Replacement, ConstraintInfo &Info) const;
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value
@@ -635,9 +635,9 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   return true;
 }
 
-std::optional<Decomposition> Decomposition::substitute(Value *Variable,
-                                                       Value *Replacement,
-                                                       ConstraintInfo &Info) {
+std::optional<Decomposition>
+Decomposition::substitute(Value *Variable, Value *Replacement,
+                          ConstraintInfo &Info) const {
   Decomposition Result(Offset);
   int64_t Coefficient = 0;
   for (const DecompEntry &E : Vars) {
