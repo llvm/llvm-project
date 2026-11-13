@@ -17,6 +17,12 @@ def ValueBoundsOpInterface : OpInterface<"ValueBoundsOpInterface"> {
     results/block arguments to specify range bounds. These bounds are stored in
     a constraint set. The constraint set can then be queried to compute bounds
     in terms of other values that are stored in the constraint set.
+
+    Implementations can register conditional bounds with
+    `cstr.bound(value).when(conditions)`. These bounds are added only after the
+    framework proves every condition from the collected constraints. Models
+    should describe such implications instead of synchronously querying bounds
+    while populating the constraint set.
   }];
   let cppNamespace = "::mlir";
   let cppIncludes = ["mlir/Interfaces/ValueBoundsOpInterface.h"];

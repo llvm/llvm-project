@@ -1,6 +1,29 @@
 // RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds{reify-to-func-args}))' \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
+// Conditional bounds must propagate across both SCF and Arith models, even
+// when the sum discovers dependent values as pending siblings.
+func.func @conditional_bounds_across_models(%p: i1, %q: i1, %r: i1, %s: i1) {
+  %c0 = arith.constant 0 : index
+  %c119 = arith.constant 119 : index
+  %c357 = arith.constant 357 : index
+  %base = arith.select %p, %c0, %c119 : index
+  %a = arith.select %q, %c0, %base : index
+  %b = scf.if %r -> index {
+    scf.yield %c0 : index
+  } else {
+    scf.yield %a : index
+  }
+  %c = arith.select %s, %c0, %b : index
+  %bc = arith.addi %b, %c : index
+  %sum = arith.addi %a, %bc : index
+  // expected-remark @below {{true}}
+  "test.compare"(%sum, %c357) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @scf_for(
 //  CHECK-SAME:     %[[a:.*]]: index, %[[b:.*]]: index, %[[c:.*]]: index
 //       CHECK:   "test.some_use"(%[[a]], %[[b]])

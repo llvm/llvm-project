@@ -82,6 +82,9 @@ struct ValueBoundsOptions {
 /// class. Adding new operations is allowed.
 class ValueBoundsConstraintSet
     : public llvm::RTTIExtends<ValueBoundsConstraintSet, llvm::RTTIRoot> {
+public:
+  struct Condition;
+
 protected:
   /// Helper class that builds a bound for a shaped value dimension or
   /// index-typed value.
@@ -90,6 +93,19 @@ protected:
     /// Specify a dimension, assuming that the underlying value is a shaped
     /// value.
     BoundBuilder &operator[](int64_t dim);
+
+    /// Return a new builder whose bounds are added only if all conditions can
+    /// be proven. This builder is unchanged; the returned builder preserves its
+    /// value, dimension, and existing conditions. Chained calls combine their
+    /// conditions as a conjunction. Conditions are checked when the worklist
+    /// drains and reconsidered when another conditional bound fires. Unknown
+    /// conditions do not add any bounds. Proven-false conditions discard the
+    /// rule.
+    /// Multiple bounds on the returned builder share the same conjunction.
+    /// Alternatives can be registered with separate builders. Each rule fires
+    /// at most once. Registration eagerly discovers operands but does not run
+    /// model callbacks.
+    [[nodiscard]] BoundBuilder when(ArrayRef<Condition> conditions) const;
 
     // These overloaded operators add lower/upper/equality bounds.
     void operator<(AffineExpr expr);
@@ -114,6 +130,11 @@ protected:
         : cstr(cstr), value(value) {}
 
   private:
+    BoundBuilder(ValueBoundsConstraintSet &cstr, Value value,
+                 std::optional<int64_t> dim, unsigned conditionalBounds)
+        : cstr(cstr), value(value), dim(dim),
+          conditionalBounds(conditionalBounds) {}
+
     BoundBuilder(const BoundBuilder &) = delete;
     BoundBuilder &operator=(const BoundBuilder &) = delete;
     bool operator==(const BoundBuilder &) = delete;
@@ -122,6 +143,9 @@ protected:
     ValueBoundsConstraintSet &cstr;
     Value value;
     std::optional<int64_t> dim;
+    std::optional<unsigned> conditionalBounds;
+
+    void addBound(presburger::BoundType type, AffineExpr expr);
   };
 
 public:
@@ -252,10 +276,20 @@ public:
   /// Traverse the IR starting from the given value/dim and populate constraints
   /// as long as the stop condition holds. Also process all values/dims that are
   /// already on the worklist.
+  /// For bounds that depend on proving a relation, models should use
+  /// `bound(...).when(...)` instead of querying during constraint collection.
   void populateConstraints(Value value, std::optional<int64_t> dim);
 
   /// Comparison operator for `ValueBoundsConstraintSet::compare`.
   enum ComparisonOperator { LT, LE, EQ, GT, GE };
+
+  /// A relation to prove before adding conditional bounds. A condition is a
+  /// query of the accumulated constraints, not an additional assumption.
+  struct Condition {
+    Variable lhs;
+    ComparisonOperator cmp;
+    Variable rhs;
+  };
 
   /// Populate constraints for lhs/rhs (until the stop condition is met). Then,
   /// try to prove that, based on the current state of this constraint set
@@ -399,10 +433,26 @@ protected:
   /// column.
   int64_t populateConstraints(AffineMap map, ValueDimList mapOperands);
 
-  /// Iteratively process all elements on the worklist until an index-typed
-  /// value or shaped value meets `stopCondition`. Such values are not processed
-  /// any further.
+  /// Drain the ordinary worklist, then evaluate pending conditional bounds.
+  /// Repeat until no rule fires. Values meeting `stopCondition` are not
+  /// processed further. Nested calls drain only the ordinary worklist.
   void processWorklist();
+
+  /// Drain the ordinary worklist without evaluating conditional bounds.
+  void processWorklistImpl();
+
+  /// Check pending conditions without traversing IR. Apply satisfied rules and
+  /// discard disproven rules, returning whether any rule fired.
+  bool processConditionalBounds();
+
+  /// Materialize conditions once, optionally conjoining an existing rule.
+  unsigned addConditionalBounds(ArrayRef<Condition> conditions,
+                                std::optional<unsigned> parent = std::nullopt);
+
+  /// Record a conditional bound in the current dimension/symbol numbering.
+  void addConditionalBound(unsigned rule, Value value,
+                           std::optional<int64_t> dim,
+                           presburger::BoundType type, AffineExpr expr);
 
   /// Bound the given column in the underlying constraint set by the given
   /// expression.
@@ -466,6 +516,34 @@ protected:
   /// Inserting a SetDim shifts symbol columns, so a queued column index would
   /// go stale.
   std::queue<ValueDim> worklist;
+
+  struct ConditionalBound {
+    ValueDim valueDim;
+    presburger::BoundType type;
+    AffineExpr expr;
+  };
+  struct MaterializedCondition {
+    // Both expressions use dimension columns materialized at registration.
+    // Their positions stay fixed as dimensions and symbols are appended.
+    int64_t lhs;
+    ComparisonOperator cmp;
+    int64_t rhs;
+  };
+  struct ConditionalBounds {
+    SmallVector<MaterializedCondition, 1> conditions;
+    SmallVector<ConditionalBound, 2> bounds;
+    // Unknown rules remain pending; true/false rules have been retired.
+    std::optional<bool> satisfied;
+  };
+
+  /// Rule IDs remain stable even after a rule fires. Only pending rules are
+  /// scanned. Each rule fires at most once and no model callback is replayed.
+  SmallVector<ConditionalBounds, 0> conditionalBounds;
+  SmallVector<unsigned, 0> pendingConditionalBounds;
+
+  /// Nested population requests may drain the ordinary queue, but must not
+  /// evaluate rules while an outer model callback is still registering them.
+  bool processingWorklist = false;
 
   /// Constraint system of equalities and inequalities.
   FlatLinearConstraints cstr;
