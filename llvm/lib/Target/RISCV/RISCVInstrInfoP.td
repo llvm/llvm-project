@@ -1910,8 +1910,8 @@ def riscv_mulhsu_half_1 : RVSDNode<"MULHSU_HALF_1", SDT_RISCVMulHighHalf>;
 
 // Packed multiplication with widening horizontal addition.
 def SDT_RISCVPackedWideningHorizontalAdd
-    : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>, SDTCisVT<1, v2i16>,
-                           SDTCisSameAs<1, 2>]>;
+    : SDTypeProfile<2, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
+                           SDTCisVT<2, v2i16>, SDTCisSameAs<2, 3>]>;
 def riscv_pm2wadd
     : RVSDNode<"PM2WADD", SDT_RISCVPackedWideningHorizontalAdd>;
 def riscv_pm2waddu
@@ -1925,26 +1925,32 @@ def riscv_pm2wsub
 def riscv_pm2wsub_x
     : RVSDNode<"PM2WSUB_X", SDT_RISCVPackedWideningHorizontalAdd>;
 
-// Packed widening multiply-accumulate operations.
-def SDT_RISCVPackedWideningAcc
+// Packed Q-format widening multiply-accumulate operations.
+def SDT_RISCVPackedQWideningAcc
     : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisSameAs<0, 1>,
                            SDTCisVT<2, v2i16>, SDTCisSameAs<2, 3>]>;
 def riscv_pmqwacc_h
-    : RVSDNode<"PMQWACC_H", SDT_RISCVPackedWideningAcc>;
+    : RVSDNode<"PMQWACC_H", SDT_RISCVPackedQWideningAcc>;
 def riscv_pmqrwacc_h
-    : RVSDNode<"PMQRWACC_H", SDT_RISCVPackedWideningAcc>;
+    : RVSDNode<"PMQRWACC_H", SDT_RISCVPackedQWideningAcc>;
+
+// Packed multiplication with widening horizontal addition and accumulate.
+def SDT_RISCVPackedWideningHorizontalAddAcc
+    : SDTypeProfile<2, 4, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
+                           SDTCisSameAs<0, 2>, SDTCisSameAs<1, 3>,
+                           SDTCisVT<4, v2i16>, SDTCisSameAs<4, 5>]>;
 def riscv_pm2wadda
-    : RVSDNode<"PM2WADDA", SDT_RISCVPackedWideningAcc>;
+    : RVSDNode<"PM2WADDA", SDT_RISCVPackedWideningHorizontalAddAcc>;
 def riscv_pm2wadda_x
-    : RVSDNode<"PM2WADDA_X", SDT_RISCVPackedWideningAcc>;
+    : RVSDNode<"PM2WADDA_X", SDT_RISCVPackedWideningHorizontalAddAcc>;
 def riscv_pm2waddau
-    : RVSDNode<"PM2WADDAU", SDT_RISCVPackedWideningAcc>;
+    : RVSDNode<"PM2WADDAU", SDT_RISCVPackedWideningHorizontalAddAcc>;
 def riscv_pm2wsuba
-    : RVSDNode<"PM2WSUBA", SDT_RISCVPackedWideningAcc>;
+    : RVSDNode<"PM2WSUBA", SDT_RISCVPackedWideningHorizontalAddAcc>;
 def riscv_pm2wsuba_x
-    : RVSDNode<"PM2WSUBA_X", SDT_RISCVPackedWideningAcc>;
+    : RVSDNode<"PM2WSUBA_X", SDT_RISCVPackedWideningHorizontalAddAcc>;
 def riscv_pm2waddasu
-    : RVSDNode<"PM2WADDASU", SDT_RISCVPackedWideningAcc>;
+    : RVSDNode<"PM2WADDASU", SDT_RISCVPackedWideningHorizontalAddAcc>;
 
 def SDT_RISCVPM2Halfword
     : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>,
@@ -2862,41 +2868,6 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i32 (riscv_pmqrwacc_h (v2i32 GPRPair:$rd),
                                      (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (PMQRWACC_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
-
-  // Packed multiplication with widening horizontal addition patterns.
-  def : Pat<(v2i32 (riscv_pm2wadd (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WADD_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2waddu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WADDU_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2waddsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WADDSU_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2wadd_x (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WADD_HX GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2wsub (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WSUB_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2wsub_x (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WSUB_HX GPR:$rs1, GPR:$rs2)>;
-
-  // Packed multiplication with widening horizontal addition and accumulate
-  // patterns.
-  def : Pat<(v2i32 (riscv_pm2wadda (v2i32 GPRPair:$rd),
-                                   (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WADDA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2wadda_x (v2i32 GPRPair:$rd),
-                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WADDA_HX GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2waddau (v2i32 GPRPair:$rd),
-                                    (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WADDAU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2wsuba (v2i32 GPRPair:$rd),
-                                   (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WSUBA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2wsuba_x (v2i32 GPRPair:$rd),
-                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WSUBA_HX GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_pm2waddasu (v2i32 GPRPair:$rd),
-                                     (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PM2WADDASU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed widening multiply accumulate patterns.
   def : Pat<(v2i32 (riscv_pwmacc_h (v2i32 GPRPair:$rd),
