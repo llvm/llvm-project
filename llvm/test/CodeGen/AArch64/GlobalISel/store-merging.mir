@@ -893,18 +893,11 @@ body:             |
 ...
 ---
 name:            test_alias_middle_3xs32
-alignment:       4
-tracksRegLiveness: true
-liveins:
-  - { reg: '$x0' }
-frameInfo:
-  maxAlignment:    1
-machineFunctionInfo: {}
 # The load from addr2 means the store to addr2 can't be merged. The stores to
 # ptr and addr3 on either side of it aren't adjacent, so they can't be merged
 # either.
 body:             |
-  bb.1 (%ir-block.0):
+  bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_alias_middle_3xs32
     ; CHECK: liveins: $x0
@@ -941,18 +934,11 @@ body:             |
 ...
 ---
 name:            test_alias_middle_4xs32
-alignment:       4
-tracksRegLiveness: true
-liveins:
-  - { reg: '$x0' }
-frameInfo:
-  maxAlignment:    1
-machineFunctionInfo: {}
 # The load from addr2 means the store to addr2 can't be merged, which splits the
 # remaining stores into two runs. Only the stores to addr3 and addr4 are
 # adjacent and can be merged.
 body:             |
-  bb.1 (%ir-block.0):
+  bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_alias_middle_4xs32
     ; CHECK: liveins: $x0
