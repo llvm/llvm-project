@@ -4273,25 +4273,36 @@ def : GCNPat <
 }
 
 let True16Predicate = UseRealTrue16Insts in {
+foreach vecTy = [v2i16, v2f16] in {
+defvar Ty = vecTy.ElementType;
+
 def : GCNPat <
-  (v2f16 (scalar_to_vector f16:$src0)),
-  (lo16_to_vgpr32 $src0)
+  (vecTy (DivergentUnaryFrag<scalar_to_vector> (Ty VGPR_16:$src0))),
+  (lo16_to_vgpr32 VGPR_16:$src0)
+>;
+
+// A uniform 16-bit value lives in the low 16 bits of a 32-bit SGPR, so it
+// cannot be used as the lo16 operand of a VGPR_32 REG_SEQUENCE.
+def : GCNPat <
+  (vecTy (UniformUnaryFrag<scalar_to_vector> (Ty SReg_32:$src0))),
+  (COPY SReg_32:$src0)
+>;
+}
+
+foreach vecTy = [v4i16, v4f16] in {
+defvar Ty = vecTy.ElementType;
+
+def : GCNPat <
+  (vecTy (DivergentUnaryFrag<scalar_to_vector> (Ty VGPR_16:$src0))),
+  (REG_SEQUENCE VReg_64, VGPR_16:$src0, lo16, (Ty (IMPLICIT_DEF)), hi16,
+                         (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 def : GCNPat <
-  (v2i16 (scalar_to_vector i16:$src0)),
-  (lo16_to_vgpr32 $src0)
+  (vecTy (UniformUnaryFrag<scalar_to_vector> (Ty SReg_32:$src0))),
+  (REG_SEQUENCE SReg_64, SReg_32:$src0, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
-
-def : GCNPat <
-  (v4i16 (scalar_to_vector i16:$src0)),
-  (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
->;
-
-def : GCNPat <
-  (v4f16 (scalar_to_vector f16:$src0)),
-  (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
->;
+}
 
 def : GCNPat <
   (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_16:$src0))),
