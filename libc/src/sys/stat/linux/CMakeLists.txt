@@ -205,6 +205,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  statx
+  SRCS
+    statx.cpp
+  HDRS
+    ../statx.h
+  DEPENDS
+    libc.hdr.types.struct_statx
+    libc.src.__support.OSUtil.linux.syscall_wrappers.statx
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   umask
   SRCS
     umask.cpp

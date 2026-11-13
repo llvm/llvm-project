@@ -914,6 +914,7 @@ add_header_macro(
     .llvm-libc-types.blksize_t
     .llvm-libc-types.blkcnt_t
     .llvm-libc-types.struct_stat
+    .llvm-libc-types.struct_statx
 )
 
 add_header_macro(

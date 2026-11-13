@@ -242,6 +242,7 @@ add_header(
     .dev_t .ino_t .mode_t .nlink_t .uid_t .gid_t .off_t .struct_timespec
     .blksize_t .blkcnt_t
 )
+add_header(struct_statx HDR struct_statx.h)
 add_header(struct_tm HDR struct_tm.h)
 add_header(struct_passwd HDR struct_passwd.h DEPENDS .uid_t .gid_t)
 add_header(struct_group HDR struct_group.h DEPENDS .gid_t)
