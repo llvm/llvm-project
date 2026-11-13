@@ -365,16 +365,14 @@ PrologEpilogInserterPass::run(MachineFunction &MF,
   if (!PEIImpl(&ORE).run(MF))
     return PreservedAnalyses::all();
 
-  // Inline stack probes (e.g. X86 inlineStackProbe) may also split blocks.
-  if (MF.getNumBlockIDs() != NumBlockIDs)
-    return getMachineFunctionPassPreservedAnalyses();
-
   // Segmented-stack and HiPE prologues insert new basic blocks, so the CFG is
-  // not preserved for such functions.
+  // not preserved for such functions. Inline stack probes (e.g. X86
+  // inlineStackProbe) may also split blocks.
   // TODO: We should propagate this info directly once we are done with NewPM
   // transition.
   if (MF.shouldSplitStack() ||
-      MF.getFunction().getCallingConv() == CallingConv::HiPE)
+      MF.getFunction().getCallingConv() == CallingConv::HiPE ||
+      MF.getNumBlockIDs() != NumBlockIDs)
     return getMachineFunctionPassPreservedAnalyses();
 
   return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
