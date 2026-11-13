@@ -9,9 +9,24 @@
 #include "mlir/TableGen/Format.h"
 #include "gmock/gmock.h"
 
-using mlir::tblgen::FmtContext;
-using mlir::tblgen::tgfmt;
 using ::testing::StrEq;
+
+using namespace mlir::tblgen;
+
+static std::unique_ptr<FmtError>
+takeFormatError(llvm::Expected<std::string> result) {
+  EXPECT_FALSE(static_cast<bool>(result));
+  if (result)
+    return nullptr;
+  std::unique_ptr<FmtError> error;
+  llvm::handleAllErrors(
+      result.takeError(),
+      [&](std::unique_ptr<FmtError> e) { error = std::move(e); },
+      [&](const llvm::ErrorInfoBase &e) {
+        ADD_FAILURE() << "expected FmtError, got " << e.message();
+      });
+  return error;
+}
 
 TEST(FormatTest, EmptyFmtStr) {
   FmtContext ctx;
@@ -149,4 +164,213 @@ TEST(FormatTest, MixedFmtStr) {
   std::string result = std::string(tgfmt("$_builder.build($_self, {$0, $1})",
                                          &ctx.withSelf("sss"), "a", "b"));
   EXPECT_THAT(result, StrEq("bbb.build(sss, {a, b})"));
+}
+
+TEST(FormatTest, CheckedBuiltinRegistrationAndSnapshots) {
+  FmtContext ctx({{"z", ""},
+                  {"w", "w"},
+                  {"_self", "self"},
+                  {"a", "a"},
+                  {"_builder", "builder"}});
+  auto result = tgfmtChecked("$_builder($_self)$z", ctx);
+  ASSERT_TRUE(static_cast<bool>(result));
+  EXPECT_EQ(*result, "builder(self)");
+  ctx.withSelf("first").addSubst("_self", "second");
+  EXPECT_EQ(ctx.getSubstFor(FmtContext::PHKind::Self), "second");
+  ctx.withSelf("third");
+  EXPECT_EQ(ctx.getSubstFor("_self"), "third");
+  auto bindings = ctx.getBindings();
+  ASSERT_EQ(bindings.size(), 5u);
+  EXPECT_EQ(bindings[0].name, "_builder");
+  EXPECT_EQ(bindings[1].name, "_self");
+  EXPECT_EQ(bindings[2].name, "a");
+  EXPECT_EQ(bindings[3].name, "w");
+  EXPECT_EQ(bindings[4].name, "z");
+  EXPECT_EQ(bindings[4].replacement, "");
+  ctx.withSelf("fourth");
+  EXPECT_EQ(bindings[1].replacement, "third");
+  EXPECT_EQ(*result, "builder(self)");
+}
+
+TEST(FormatTest, CheckedErrorsOwnInvocationData) {
+  auto result = [] {
+    FmtContext ctx({{"_self", "self"}, {"empty", ""}});
+    std::string fmt = "$missing + $missing + $3";
+    return tgfmtChecked(fmt, ctx, "only");
+  }();
+  auto error = takeFormatError(std::move(result));
+  ASSERT_TRUE(error);
+  EXPECT_EQ(error->getTemplate(), "$missing + $missing + $3");
+  auto issues = error->getIssues();
+  ASSERT_EQ(issues.size(), 3u);
+  EXPECT_EQ(issues[0].kind, FmtIssueKind::MissingNamedBinding);
+  EXPECT_EQ(issues[0].placeholder, "$missing");
+  EXPECT_EQ(issues[0].offset, 0u);
+  EXPECT_EQ(issues[1].offset, 11u);
+  EXPECT_EQ(issues[2].offset, 22u);
+  EXPECT_EQ(issues[2].kind, FmtIssueKind::PositionalOutOfRange);
+  EXPECT_EQ(error->getNumPositionalArgs(), 1u);
+  ASSERT_EQ(error->getBindings().size(), 2u);
+  EXPECT_EQ(error->getBindings()[0].replacement, "self");
+  EXPECT_EQ(error->getBindings()[1].replacement, "");
+}
+
+TEST(FormatTest, CheckedDecimalAndRangeBoundaries) {
+  std::vector<std::string> values;
+  for (unsigned i = 0; i != 11; ++i)
+    values.push_back(std::to_string(i));
+  auto result = tgfmtvChecked("$00 $08 $010 $9...", FmtContext{}, values);
+  ASSERT_TRUE(static_cast<bool>(result));
+  EXPECT_EQ(*result, "0 8 10 9, 10");
+  EXPECT_EQ(tgfmtv("$08 $010 $10...", nullptr, values).str(), "8 10 10");
+  auto single = tgfmtvChecked("$10...", FmtContext{}, values);
+  ASSERT_TRUE(static_cast<bool>(single));
+  EXPECT_EQ(*single, "10");
+  auto error = takeFormatError(tgfmtChecked("$1...", FmtContext{}, "one"));
+  ASSERT_TRUE(error);
+  EXPECT_EQ(error->getIssues()[0].kind, FmtIssueKind::RangeStartOutOfRange);
+  auto emptyRange = takeFormatError(tgfmtChecked("$0...", FmtContext{}));
+  ASSERT_TRUE(emptyRange);
+  EXPECT_EQ(emptyRange->getIssues()[0].kind,
+            FmtIssueKind::RangeStartOutOfRange);
+}
+
+TEST(FormatTest, CheckedInvalidIndexAndLiteralSyntax) {
+  llvm::StringRef huge =
+      "$999999999999999999999999999999999999999999999999999...";
+  auto error = takeFormatError(tgfmtChecked(huge, FmtContext{}));
+  ASSERT_TRUE(error);
+  EXPECT_EQ(error->getIssues()[0].kind, FmtIssueKind::InvalidPositionalIndex);
+  EXPECT_EQ(error->getIssues()[0].placeholder, huge);
+  EXPECT_EQ(std::string(tgfmt(huge, nullptr)),
+            (huge + "<no-subst-found>").str());
+  auto result = tgfmtChecked("$$ $- $? foo$0bar $0..2 $", FmtContext{}, "x");
+  ASSERT_TRUE(static_cast<bool>(result));
+  EXPECT_EQ(*result, "$ $- $? fooxbar x..2 $");
+}
+
+TEST(FormatTest, CheckedInvalidIndexWithoutRange) {
+  llvm::StringRef huge = "$99999999999999999999999999999999999999999999999999";
+  auto error = takeFormatError(tgfmtChecked(huge, FmtContext{}));
+  ASSERT_TRUE(error);
+  ASSERT_EQ(error->getIssues().size(), 1u);
+  EXPECT_EQ(error->getIssues()[0].kind, FmtIssueKind::InvalidPositionalIndex);
+  EXPECT_EQ(error->getIssues()[0].placeholder, huge);
+  EXPECT_EQ(error->getIssues()[0].offset, 0u);
+}
+
+TEST(FormatTest, CheckedMissingBuiltinAndNullLegacyContext) {
+  auto missing = takeFormatError(tgfmtChecked("$_self", FmtContext{}));
+  ASSERT_TRUE(missing);
+  EXPECT_EQ(missing->getIssues()[0].kind, FmtIssueKind::MissingNamedBinding);
+  EXPECT_EQ(missing->getIssues()[0].placeholder, "$_self");
+  auto noContext = takeFormatError(tgfmt("$_self", nullptr).strChecked());
+  ASSERT_TRUE(noContext);
+  EXPECT_EQ(noContext->getIssues()[0].kind, FmtIssueKind::MissingNamedBinding);
+  EXPECT_TRUE(noContext->getBindings().empty());
+}
+
+TEST(FormatTest, ErrorLogIncludesFailureAndAvailability) {
+  auto result = tgfmtChecked("$_self $2", FmtContext{}, "only");
+  ASSERT_FALSE(static_cast<bool>(result));
+  std::string log = llvm::toString(addFmtOrigin(
+      result.takeError(), FmtOrigin::describe("predicate").withUse({}, "op")));
+  EXPECT_THAT(log, ::testing::HasSubstr("'$_self' at template byte offset 0"));
+  EXPECT_THAT(log, ::testing::HasSubstr("missing named binding"));
+  EXPECT_THAT(log, ::testing::HasSubstr("'$2' at template byte offset 7"));
+  EXPECT_THAT(log, ::testing::HasSubstr("positional argument out of range"));
+  EXPECT_THAT(log, ::testing::HasSubstr("template: $_self $2"));
+  EXPECT_THAT(log,
+              ::testing::HasSubstr("available named substitutions: (none)"));
+  EXPECT_THAT(log, ::testing::HasSubstr("positional arguments supplied: 1"));
+  EXPECT_THAT(log, ::testing::HasSubstr("while formatting predicate"));
+  EXPECT_THAT(log, ::testing::HasSubstr("while expanding op"));
+}
+
+struct CountFormatCalls {
+  unsigned *calls;
+  void format(llvm::raw_ostream &os, llvm::StringRef) const {
+    ++*calls;
+    os << "value";
+  }
+};
+
+TEST(FormatTest, CheckedValidationPrecedesRendering) {
+  unsigned calls = 0;
+  auto error = takeFormatError(
+      tgfmtChecked("$0 $missing $2", FmtContext{}, CountFormatCalls{&calls}));
+  ASSERT_TRUE(error);
+  EXPECT_EQ(calls, 0u);
+  EXPECT_EQ(error->getIssues().size(), 2u);
+  auto result = tgfmtChecked("$0 $0", FmtContext{}, CountFormatCalls{&calls});
+  ASSERT_TRUE(static_cast<bool>(result));
+  EXPECT_EQ(*result, "value value");
+  EXPECT_EQ(calls, 2u);
+}
+
+TEST(FormatTest, CheckedReplacementTextIsLiteral) {
+  FmtContext ctx({{"text", "$_missing<no-subst-found>"}});
+  auto result = tgfmtChecked("$text $0", ctx, "$_also_missing");
+  ASSERT_TRUE(static_cast<bool>(result));
+  EXPECT_EQ(*result, "$_missing<no-subst-found> $_also_missing");
+}
+
+TEST(FormatTest, OriginsAreOwnedAndKeepTypedErrors) {
+  const char source[] = "definition and use";
+  llvm::SMLoc loc = llvm::SMLoc::getFromPointer(source);
+  llvm::SmallVector<llvm::SMLoc> locations{loc};
+  std::string description = "predicate";
+  FmtOrigin origin =
+      FmtOrigin::at(locations, description).withUse(locations, "operation");
+  locations.clear();
+  description.clear();
+  auto result = tgfmtChecked("$unknown", FmtContext{});
+  ASSERT_FALSE(static_cast<bool>(result));
+  auto error = addFmtOrigin(result.takeError(), origin);
+  error = addFmtOrigin(std::move(error), FmtOrigin::describe("outer"));
+  unsigned formattedErrors = 0, otherErrors = 0;
+  error = llvm::joinErrors(std::move(error),
+                           llvm::createStringError("unrelated error"));
+  error = addFmtOrigin(std::move(error), FmtOrigin::describe("caller"));
+  llvm::handleAllErrors(
+      std::move(error),
+      [&](const FmtError &e) {
+        ++formattedErrors;
+        ASSERT_EQ(e.getOrigins().size(), 3u);
+        EXPECT_EQ(e.getOrigins()[0].getDefinition().description, "predicate");
+        EXPECT_EQ(e.getOrigins()[0].getDefinition().locations[0], loc);
+        EXPECT_EQ(e.getOrigins()[0].getUses()[0].description, "operation");
+        EXPECT_EQ(e.getOrigins()[1].getDefinition().description, "outer");
+        EXPECT_EQ(e.getOrigins()[2].getDefinition().description, "caller");
+      },
+      [&](const llvm::StringError &) { ++otherErrors; });
+  EXPECT_EQ(formattedErrors, 1u);
+  EXPECT_EQ(otherErrors, 1u);
+  llvm::cantFail(addFmtOrigin(llvm::Error::success(), origin));
+}
+
+TEST(FormatTest, BindingLogsEscapeAndSort) {
+  FmtContext ctx({{"z", "line\nbreak"}, {"_self", "a\"b\\c"}});
+  std::string log;
+  llvm::raw_string_ostream os(log);
+  ctx.printBindings(os);
+  EXPECT_EQ(log, "$_self = \"a\\\"b\\\\c\"\n$z = \"line\\nbreak\"\n");
+  auto error = takeFormatError(tgfmtChecked("$missing", ctx));
+  ASSERT_TRUE(error);
+  ctx.withSelf("changed");
+  std::string snapshotLog;
+  llvm::raw_string_ostream snapshotStream(snapshotLog);
+  error->printBindings(snapshotStream);
+  EXPECT_EQ(snapshotLog, log);
+}
+
+TEST(FormatTest, LegacyRemainsLazy) {
+  FmtContext ctx;
+  ctx.withSelf("before");
+  auto legacy = tgfmt("$_self", &ctx);
+  auto eager = tgfmtChecked("$_self", ctx);
+  ASSERT_TRUE(static_cast<bool>(eager));
+  ctx.withSelf("after");
+  EXPECT_EQ(legacy.str(), "after");
+  EXPECT_EQ(*eager, "before");
 }
