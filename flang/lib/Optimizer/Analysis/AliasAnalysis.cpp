@@ -787,8 +787,8 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   return result;
 }
 
-AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
-                                 mlir::Value rhs) {
+AliasResult AliasAnalysis::alias(const Source &lhsSrc, const Source &rhsSrc,
+                                 mlir::Value lhs, mlir::Value rhs) {
   // If both values trace back to the same root through zero-offset view
   // operations (e.g. embox without slice, declare, convert), they access
   // the same underlying memory. This check avoids the case where
@@ -1005,7 +1005,7 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     }
   }
 
-  Source *src1, *src2;
+  const Source *src1, *src2;
   mlir::Value *val1, *val2;
   if (lhsSrc.kind < rhsSrc.kind) {
     src1 = &lhsSrc;
@@ -1019,6 +1019,7 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     val2 = &lhs;
   }
 
+  std::optional<Source> hostAssocAsTarget;
   if (src1->kind == SourceKind::Argument &&
       src2->kind == SourceKind::HostAssoc) {
     // Treat the host entity as TARGET for the purpose of disambiguating
@@ -1036,7 +1037,9 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     // F18 15.5.2.13 (4) (b) allows 'x' and 'y' to address the same object.
     // 'y' has an explicit TARGET attribute, but 'x' has neither TARGET
     // nor POINTER.
-    src2->attributes.set(Attribute::Target);
+    hostAssocAsTarget = *src2;
+    hostAssocAsTarget->attributes.set(Attribute::Target);
+    src2 = &*hostAssocAsTarget;
   }
 
   // Two TARGET/POINTERs may alias.  The logic here focuses on data.  Handling
