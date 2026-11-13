@@ -820,6 +820,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wno-unsafe-buffer-usage-in-libc-call-string-examination` silences `strlen`
   while `memcpy` is still diagnosed. (#GH127849)
 
+- Added `-Wunsafe-buffer-usage-in-data-call` as a diagnostic group under
+  `-Wunsafe-buffer-usage` to control warnings on unsafe casts of pointers
+  returned by container `data()` calls, which were previously diagnosed directly
+  under `-Wunsafe-buffer-usage`.
+
 - Fixed the `no-` prefix being dropped when diagnosing an unknown
   `-Wno-error=` or `-Wno-fatal-errors=` warning option. Clang now preserves
   the no- prefix in the diagnostic and spelling suggestion.

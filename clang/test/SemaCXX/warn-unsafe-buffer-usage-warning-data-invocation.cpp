@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20  -Wno-all -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-container\
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-data-call \
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fblocks -include %s -verify %s
 
@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -std=c++11 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
 // RUN: %clang_cc1 -std=c++20 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
 // CHECK-NOT: [-Wunsafe-buffer-usage]
+// CHECK-NOT: [-Wunsafe-buffer-usage-in-data-call]
 
 #ifndef INCLUDED
 #define INCLUDED
@@ -39,7 +40,7 @@ namespace std{
    public:
 
    constexpr span<T> subspan(size_t offset, size_t count) const {
-     return span<T> (elements+offset, count); // expected-warning{{unsafe pointer arithmetic}}
+     return span<T> (elements+offset, count);
    }
 
    constexpr T* data() const noexcept {
@@ -217,5 +218,27 @@ void test_complete_type(std::span<long> S) {
   class CompleteClass {};
   union CompleteUnion {};
 }
+
+namespace test_flag {
+int *get_ptr();
+void f(std::span<int> span_ptr) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage" // turns off every unsafe-buffer warning
+  A *a1 = (A *)span_ptr.data(); // no-warning
+  get_ptr()[5];                 // no-warning
+#pragma clang diagnostic pop
+
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wunsafe-buffer-usage"
+  // Parent flag enables `-Wunsafe-buffer-usage-in-data-call`:
+  A *a2 = (A *)span_ptr.data(); // expected-warning{{unsafe invocation of 'data'}}
+
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage-in-data-call"
+  // Turn on all unsafe-buffer warnings except `-Wunsafe-buffer-usage-in-data-call`:
+  A *a3 = (A *)span_ptr.data(); // no-warning
+  get_ptr()[5];                 // expected-warning{{unsafe buffer access}}
+#pragma clang diagnostic pop
+}
+} // namespace test_flag
 
 #endif

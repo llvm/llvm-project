@@ -14104,7 +14104,7 @@ defvar UnsafeBufferVariableMsg =
 defvar UnsafeBufferOperationMsg =
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
   "unsafe buffer access|function introduces unsafe buffer manipulation|"
-  "unsafe invocation of %1|field %1 prone to unsafe buffer manipulation}0";
+  "field %1 prone to unsafe buffer manipulation}0";
 defvar UnsafeBufferLibcCallMsg = "function %0 is unsafe";
 def warn_unsafe_buffer_variable : Warning<UnsafeBufferVariableMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
@@ -14161,6 +14161,9 @@ def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access us
   InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 def warn_unsafe_buffer_usage_in_static_sized_array : Warning<"direct access on T[N] is unsafe due to the lack of bounds checking">,
   InGroup<UnsafeBufferUsageInStaticSizedArray>, DefaultIgnore;
+def warn_unsafe_buffer_usage_in_data_call : Warning<
+  "unsafe invocation of %0">,
+  InGroup<UnsafeBufferUsageInDataCall>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

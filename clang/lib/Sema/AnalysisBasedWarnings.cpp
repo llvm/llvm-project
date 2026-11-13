@@ -2570,41 +2570,6 @@ public:
         assert(!IsRelatedToDecl && "Not implemented yet!");
         auto *ME = cast<MemberExpr>(Operation);
         D = ME->getMemberDecl();
-        MsgParam = 5;
-      } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
-        QualType destType = ECE->getType();
-
-        if (!isa<PointerType>(destType))
-          return;
-        destType = destType.getTypePtr()->getPointeeType();
-
-        // If destination type is incomplete or dependent, it is unsafe to cast
-        // to anyway, no need to check its type:
-        if (!destType->isIncompleteType() && !destType->isDependentType()) {
-          const uint64_t dSize = Ctx.getTypeSize(destType);
-          QualType srcType = ECE->getSubExpr()->getType();
-
-          assert(srcType->isPointerType());
-
-          QualType srcPointeeType = srcType.getTypePtr()->getPointeeType();
-
-          // Check if source type is incomplete or dependent as well:
-          if (!srcPointeeType->isIncompleteType() &&
-              !srcPointeeType->isDependentType()) {
-            const uint64_t sSize = Ctx.getTypeSize(srcPointeeType);
-
-            if (sSize >= dSize)
-              return;
-          }
-        }
-        if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
-                ECE->getSubExpr()->IgnoreParens())) {
-          D = CE->getMethodDecl();
-        }
-
-        if (!D)
-          return;
-
         MsgParam = 4;
       }
       Loc = Operation->getBeginLoc();
@@ -2774,6 +2739,19 @@ public:
         << Node.getSourceRange();
   }
 
+  void handleUnsafeDataCall(const ExplicitCastExpr *Cast,
+                            ASTContext &Ctx) override {
+    const auto *CE =
+        dyn_cast<CXXMemberCallExpr>(Cast->getSubExpr()->IgnoreParens());
+    if (!CE)
+      return;
+    const CXXMethodDecl *D = CE->getMethodDecl();
+    if (!D)
+      return;
+    S.Diag(Cast->getBeginLoc(), diag::warn_unsafe_buffer_usage_in_data_call)
+        << D << Cast->getSourceRange();
+  }
+
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
     return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
   }
@@ -2797,6 +2775,10 @@ public:
       const SourceLocation &Loc) const override {
     return S.Diags.isIgnored(
         diag::warn_unsafe_buffer_usage_in_static_sized_array, Loc);
+  }
+
+  bool ignoreUnsafeBufferInDataCall(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_data_call, Loc);
   }
 
   // Returns the text representation of clang::unsafe_buffer_usage attribute.
@@ -3109,6 +3091,7 @@ static bool shouldRunUnsafeBufferUsageAnalysis(const Sema &S,
   return !Diags.isIgnored(diag::warn_unsafe_buffer_operation, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_variable, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc) ||
+         !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_data_call, Loc) ||
          (S.getLangOpts().CPlusPlus &&
           (llvm::any_of(
                UnsafeLibcCallDiagIDs,

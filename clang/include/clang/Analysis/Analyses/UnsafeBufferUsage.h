@@ -167,6 +167,11 @@ public:
                                                 bool IsRelatedToDecl,
                                                 ASTContext &Ctx) = 0;
 
+  /// Invoked when an unsafe cast of a pointer returned by a container's data()
+  /// method is found.
+  virtual void handleUnsafeDataCall(const ExplicitCastExpr *Cast,
+                                    ASTContext &Ctx) = 0;
+
 #ifndef NDEBUG
 public:
   bool areDebugNotesRequested() {
@@ -209,6 +214,11 @@ public:
   /// be reported at `Loc`
   virtual bool
   ignoreUnsafeBufferInStaticSizedArray(const SourceLocation &Loc) const = 0;
+
+  /// \return true iff unsafe casts on container data() calls should NOT be
+  /// reported at `Loc`; false otherwise.
+  virtual bool
+  ignoreUnsafeBufferInDataCall(const SourceLocation &Loc) const = 0;
 
   virtual std::string
   getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,
