@@ -4339,336 +4339,109 @@ libc_function(
 
 ############################## sys/socket targets ##############################
 
-libc_function(
+alias(
     name = "accept",
-    srcs = ["src/sys/socket/linux/accept.cpp"],
-    hdrs = ["src/sys/socket/accept.h"],
-    deps = [
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:accept",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:accept",
 )
 
-libc_function(
+alias(
     name = "accept4",
-    srcs = ["src/sys/socket/linux/accept4.cpp"],
-    hdrs = ["src/sys/socket/accept4.h"],
-    deps = [
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:accept4",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:accept4",
 )
 
-libc_function(
+alias(
     name = "bind",
-    srcs = ["src/sys/socket/linux/bind.cpp"],
-    hdrs = ["src/sys/socket/bind.h"],
-    deps = [
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:bind",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:bind",
 )
 
-libc_function(
+alias(
     name = "connect",
-    srcs = ["src/sys/socket/linux/connect.cpp"],
-    hdrs = ["src/sys/socket/connect.h"],
-    deps = [
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:connect",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:connect",
 )
 
-libc_function(
+alias(
     name = "getpeername",
-    srcs = ["src/sys/socket/linux/getpeername.cpp"],
-    hdrs = ["src/sys/socket/getpeername.h"],
-    deps = [
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getpeername",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:getpeername",
 )
 
-libc_function(
+alias(
     name = "getsockname",
-    srcs = ["src/sys/socket/linux/getsockname.cpp"],
-    hdrs = ["src/sys/socket/getsockname.h"],
-    deps = [
-        ":types_socklen_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getsockname",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:getsockname",
 )
 
-libc_function(
+alias(
     name = "getsockopt",
-    srcs = ["src/sys/socket/linux/getsockopt.cpp"],
-    hdrs = ["src/sys/socket/getsockopt.h"],
-    deps = [
-        ":types_socklen_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getsockopt",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:getsockopt",
 )
 
-libc_function(
+alias(
     name = "listen",
-    srcs = ["src/sys/socket/linux/listen.cpp"],
-    hdrs = ["src/sys/socket/listen.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:listen",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:listen",
 )
 
-libc_function(
+alias(
     name = "recv",
-    srcs = ["src/sys/socket/linux/recv.cpp"],
-    hdrs = ["src/sys/socket/recv.h"],
-    deps = [
-        ":types_size_t",
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:recvfrom",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:recv",
 )
 
-libc_function(
+alias(
     name = "recvfrom",
-    srcs = ["src/sys/socket/linux/recvfrom.cpp"],
-    hdrs = ["src/sys/socket/recvfrom.h"],
-    deps = [
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:recvfrom",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:recvfrom",
 )
 
-libc_function(
+alias(
     name = "recvmmsg",
-    srcs = ["src/sys/socket/linux/recvmmsg.cpp"],
-    hdrs = ["src/sys/socket/recvmmsg.h"],
-    deps = [
-        ":types_struct_mmsghdr",
-        ":types_struct_timespec",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:recvmmsg",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:recvmmsg",
 )
 
-libc_function(
+alias(
     name = "recvmsg",
-    srcs = ["src/sys/socket/linux/recvmsg.cpp"],
-    hdrs = ["src/sys/socket/recvmsg.h"],
-    deps = [
-        ":types_ssize_t",
-        ":types_struct_msghdr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:recvmsg",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:recvmsg",
 )
 
-libc_function(
+alias(
     name = "send",
-    srcs = ["src/sys/socket/linux/send.cpp"],
-    hdrs = ["src/sys/socket/send.h"],
-    deps = [
-        ":types_size_t",
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendto",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:send",
 )
 
-libc_function(
+alias(
     name = "sendmmsg",
-    srcs = ["src/sys/socket/linux/sendmmsg.cpp"],
-    hdrs = ["src/sys/socket/sendmmsg.h"],
-    deps = [
-        ":types_struct_mmsghdr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendmmsg",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:sendmmsg",
 )
 
-libc_function(
+alias(
     name = "sendmsg",
-    srcs = ["src/sys/socket/linux/sendmsg.cpp"],
-    hdrs = ["src/sys/socket/sendmsg.h"],
-    deps = [
-        ":types_ssize_t",
-        ":types_struct_msghdr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendmsg",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:sendmsg",
 )
 
-libc_function(
+alias(
     name = "sendto",
-    srcs = ["src/sys/socket/linux/sendto.cpp"],
-    hdrs = ["src/sys/socket/sendto.h"],
-    deps = [
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendto",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:sendto",
 )
 
-libc_function(
+alias(
     name = "setsockopt",
-    srcs = ["src/sys/socket/linux/setsockopt.cpp"],
-    hdrs = ["src/sys/socket/setsockopt.h"],
-    deps = [
-        ":types_socklen_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:setsockopt",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:setsockopt",
 )
 
-libc_function(
+alias(
     name = "shutdown",
-    srcs = ["src/sys/socket/linux/shutdown.cpp"],
-    hdrs = ["src/sys/socket/shutdown.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:shutdown",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:shutdown",
 )
 
-libc_function(
+alias(
     name = "sockatmark",
-    srcs = ["src/sys/socket/linux/sockatmark.cpp"],
-    hdrs = ["src/sys/socket/sockatmark.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:ioctl",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:sockatmark",
 )
 
-libc_function(
+alias(
     name = "socket",
-    srcs = ["src/sys/socket/linux/socket.cpp"],
-    hdrs = ["src/sys/socket/socket.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:socket",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket",
 )
 
-libc_function(
+alias(
     name = "socketpair",
-    srcs = ["src/sys/socket/linux/socketpair.cpp"],
-    hdrs = ["src/sys/socket/socketpair.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:socketpair",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/socket:socketpair",
 )
 
 ############################### sys/uio targets ################################

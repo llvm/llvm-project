@@ -36,12 +36,9 @@ libc_test(
     srcs = ["linux/bind_test.cpp"],
     deps = [
         ":socket_test_support",
-        "//libc:bind",
         "//libc:close",
-        "//libc:getsockname",
         "//libc:hdr_netinet_in_macros",
         "//libc:hdr_sys_socket_macros",
-        "//libc:socket",
         "//libc:types_sa_family_t",
         "//libc:types_struct_sockaddr_in",
         "//libc:types_struct_sockaddr_in6",
@@ -49,6 +46,9 @@ libc_test(
         "//libc/src/__support/CPP:scope",
         "//libc/src/arpa/inet:htonl",
         "//libc/src/stdio:remove",
+        "//libc/src/sys/socket",
+        "//libc/src/sys/socket:bind",
+        "//libc/src/sys/socket:getsockname",
     ],
 )
 
@@ -57,15 +57,9 @@ libc_test(
     srcs = ["linux/connect_accept_test.cpp"],
     deps = [
         ":socket_test_support",
-        "//libc:accept",
-        "//libc:accept4",
-        "//libc:bind",
         "//libc:close",
-        "//libc:connect",
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_sys_socket_macros",
-        "//libc:listen",
-        "//libc:socket",
         "//libc:types_sa_family_t",
         "//libc:types_size_t",
         "//libc:types_socklen_t",
@@ -73,6 +67,12 @@ libc_test(
         "//libc/src/__support/CPP:scope",
         "//libc/src/fcntl",
         "//libc/src/stdio:remove",
+        "//libc/src/sys/socket",
+        "//libc/src/sys/socket:accept",
+        "//libc/src/sys/socket:accept4",
+        "//libc/src/sys/socket:bind",
+        "//libc/src/sys/socket:connect",
+        "//libc/src/sys/socket:listen",
     ],
 )
 
@@ -81,14 +81,14 @@ libc_test(
     srcs = ["linux/listen_test.cpp"],
     deps = [
         ":socket_test_support",
-        "//libc:bind",
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
-        "//libc:listen",
-        "//libc:socket",
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
         "//libc/src/stdio:remove",
+        "//libc/src/sys/socket",
+        "//libc/src/sys/socket:bind",
+        "//libc/src/sys/socket:listen",
     ],
 )
 
@@ -98,10 +98,10 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
-        "//libc:recv",
-        "//libc:send",
-        "//libc:socketpair",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/sys/socket:recv",
+        "//libc/src/sys/socket:send",
+        "//libc/src/sys/socket:socketpair",
     ],
 )
 
@@ -110,18 +110,18 @@ libc_test(
     srcs = ["linux/sendmsg_recvmsg_test.cpp"],
     deps = [
         "//libc:close",
-        "//libc:getsockopt",
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_sys_socket_macros",
         "//libc:llvm_libc_macros_sys_socket_macros",
-        "//libc:recvmsg",
-        "//libc:sendmsg",
-        "//libc:socketpair",
         "//libc:types_struct_cmsghdr",
         "//libc/src/__support/CPP:scope",
         "//libc/src/fcntl",
         "//libc/src/string:memcpy",
         "//libc/src/string:memset",
+        "//libc/src/sys/socket:getsockopt",
+        "//libc/src/sys/socket:recvmsg",
+        "//libc/src/sys/socket:sendmsg",
+        "//libc/src/sys/socket:socketpair",
     ],
 )
 
@@ -131,14 +131,14 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
-        "//libc:recvmmsg",
-        "//libc:sendmmsg",
-        "//libc:socketpair",
         "//libc:types_struct_iovec",
         "//libc:types_struct_mmsghdr",
         "//libc:types_struct_timespec",
         "//libc/src/__support/CPP:scope",
         "//libc/src/string:strlen",
+        "//libc/src/sys/socket:recvmmsg",
+        "//libc/src/sys/socket:sendmmsg",
+        "//libc/src/sys/socket:socketpair",
     ],
 )
 
@@ -148,10 +148,10 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
-        "//libc:recvfrom",
-        "//libc:sendto",
-        "//libc:socketpair",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/sys/socket:recvfrom",
+        "//libc/src/sys/socket:sendto",
+        "//libc/src/sys/socket:socketpair",
     ],
 )
 
@@ -162,10 +162,10 @@ libc_test(
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
         "//libc:read",
-        "//libc:shutdown",
-        "//libc:socketpair",
         "//libc:types_ssize_t",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/sys/socket:shutdown",
+        "//libc/src/sys/socket:socketpair",
     ],
 )
 
@@ -189,8 +189,8 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
-        "//libc:socket",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/sys/socket",
     ],
 )
 
@@ -199,22 +199,22 @@ libc_test(
     srcs = ["linux/socketopt_test.cpp"],
     deps = [
         "//libc:close",
-        "//libc:getsockopt",
         "//libc:hdr_netinet_in_macros",
         "//libc:hdr_netinet_tcp_macros",
         "//libc:hdr_sys_socket_macros",
         "//libc:hdr_time_macros",
         "//libc:pipe",
-        "//libc:recv",
-        "//libc:setsockopt",
-        "//libc:socket",
-        "//libc:socketpair",
         "//libc:types_socklen_t",
         "//libc:types_struct_linger",
         "//libc:types_struct_timespec",
         "//libc:types_struct_timeval",
         "//libc/src/__support/CPP:scope",
         "//libc/src/__support/time:clock_gettime",
+        "//libc/src/sys/socket",
+        "//libc/src/sys/socket:getsockopt",
+        "//libc/src/sys/socket:recv",
+        "//libc/src/sys/socket:setsockopt",
+        "//libc/src/sys/socket:socketpair",
     ],
 )
 
@@ -225,10 +225,10 @@ libc_test(
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
         "//libc:pipe",
-        "//libc:send",
-        "//libc:sockatmark",
-        "//libc:socketpair",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/sys/socket:send",
+        "//libc/src/sys/socket:sockatmark",
+        "//libc/src/sys/socket:socketpair",
         "//libc/test/UnitTest:test_logger",
     ],
 )
@@ -239,8 +239,8 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
-        "//libc:socketpair",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/sys/socket:socketpair",
     ],
 )
 
@@ -249,19 +249,19 @@ libc_test(
     srcs = ["linux/sockname_test.cpp"],
     deps = [
         ":socket_test_support",
-        "//libc:accept",
-        "//libc:bind",
         "//libc:close",
-        "//libc:connect",
-        "//libc:getpeername",
-        "//libc:getsockname",
         "//libc:hdr_sys_socket_macros",
-        "//libc:listen",
-        "//libc:socket",
         "//libc:types_sa_family_t",
         "//libc:types_socklen_t",
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
         "//libc/src/stdio:remove",
+        "//libc/src/sys/socket",
+        "//libc/src/sys/socket:accept",
+        "//libc/src/sys/socket:bind",
+        "//libc/src/sys/socket:connect",
+        "//libc/src/sys/socket:getpeername",
+        "//libc/src/sys/socket:getsockname",
+        "//libc/src/sys/socket:listen",
     ],
 )
