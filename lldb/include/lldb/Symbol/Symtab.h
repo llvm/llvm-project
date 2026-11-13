@@ -13,6 +13,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include <atomic>
 #include <map>
 #include <mutex>
 #include <vector>
@@ -233,10 +234,10 @@ public:
 
   /// Returns a bitmask of lldb::SymtabState flags describing the state of this
   /// symbol table.
-  uint32_t GetState() const {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    return m_state;
-  }
+  ///
+  /// This doesn't take the symbol table's mutex, so it doesn't wait for a
+  /// parse on another thread to finish.
+  uint32_t GetState() const { return m_state.load(); }
   void SetWasParsedFromObjectFile() {
     SetStateFlags(lldb::eSymtabStateParsedFromObjectFile);
   }
@@ -288,13 +289,10 @@ protected:
   bool m_file_addr_to_index_computed = false;
   bool m_name_indexes_computed = false;
   /// A bitmask of lldb::SymtabState flags.
-  uint32_t m_state = lldb::eSymtabStateNone;
+  std::atomic<uint32_t> m_state = lldb::eSymtabStateNone;
 
 private:
-  void SetStateFlags(lldb::SymtabState state) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    m_state |= state;
-  }
+  void SetStateFlags(lldb::SymtabState state) { m_state.fetch_or(state); }
   UniqueCStringMap<uint32_t> &
   GetNameToSymbolIndexMap(lldb::FunctionNameType type) {
     auto map = m_name_to_symbol_indices.find(type);

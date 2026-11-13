@@ -1025,6 +1025,10 @@ Symtab *Module::GetSymtab(bool can_create) {
 }
 
 uint32_t Module::GetSymtabState() {
+  // An object file that hasn't been loaded has no symbol table, so don't load
+  // it.
+  if (!m_did_load_objfile.load())
+    return eSymtabStateNone;
   if (ObjectFile *objfile = GetObjectFile())
     if (Symtab *symtab = objfile->GetSymtab(/*can_create=*/false))
       return symtab->GetState();
