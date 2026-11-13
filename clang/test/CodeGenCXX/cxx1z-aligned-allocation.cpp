@@ -58,7 +58,7 @@ void *a1(long n) { return new A[n]; }
 void a2(A *p) { delete p; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a3P1A(
-// CHECK: call void @_ZdaPvSt11align_val_t(ptr allocptr noundef %{{.*}}, i64 noundef 32) #9
+// CHECK: call void @_ZdaPvSt11align_val_t(ptr allocptr noundef %{{.*}}, i64 noundef 32) #11
 void a3(A *p) { delete[] p; }
 
 

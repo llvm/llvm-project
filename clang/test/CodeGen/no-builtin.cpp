@@ -61,4 +61,4 @@ B::~B() {} // Anchoring B so B::foo() gets generated
 // CHECK:     attributes #6 = {{{.*}}"no-builtin-memcpy"{{.*}}}
 // CHECK-NOT: attributes #5 = {{{.*}}"no-builtin-memcpy"{{.*}}}
 // CHECK-NOT: attributes #5 = {{{.*}}"no-builtin-memset"{{.*}}}
-// CHECK:     attributes #8 = { builtin nounwind }
+// CHECK:     attributes #8 = { builtin nounwind allockind("free") "alloc-family"="_Znwm" }

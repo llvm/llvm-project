@@ -17,7 +17,9 @@
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -1393,12 +1395,58 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   ///
   /// We model such elidable calls with the 'builtin' attribute.
   llvm::Function *Fn = dyn_cast<llvm::Function>(CalleePtr);
-  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn) {
-    if (Fn->hasFnAttribute(llvm::Attribute::NoBuiltin))
+  UnsignedOrNone AlignArg = std::nullopt;
+  if (CalleeDecl->isReplaceableGlobalAllocationFunction(&AlignArg)) {
+    auto &Ctx = CallOrInvoke->getContext();
+    llvm::AllocFnKind AK = llvm::AllocFnKind::Unknown;
+    bool IsDeleter = CalleeDecl->getOverloadedOperator() == OO_Array_Delete ||
+                     CalleeDecl->getOverloadedOperator() == OO_Delete;
+    if (IsDeleter) {
+      AK = AK | llvm::AllocFnKind::Free;
+    } else {
+      if (AlignArg)
+        AK = llvm::AllocFnKind::Aligned;
+      AK = AK | llvm::AllocFnKind::Alloc | llvm::AllocFnKind::Uninitialized;
+    }
+    ASTContext &ASTCtx = CalleeDecl->getASTContext();
+    ASTNameGenerator gen = ASTNameGenerator(ASTCtx);
+    std::string Mangled = gen.getName(CalleeDecl);
+
+    if (Mangled.find("??") == 0) {
+      // MSVC mangling
+      if (CalleeDecl->getOverloadedOperator() == clang::OO_Array_Delete ||
+          CalleeDecl->getOverloadedOperator() == clang::OO_Array_New) {
+        Mangled = "??_U@YAPAXI@Z";
+      } else {
+        Mangled = "??2@YAPAXI@Z";
+      }
+    } else if (Mangled.find("_Z") == 0 || Mangled.find("_Z") == 1) {
+      // LLVM Mangling
+      if (CalleeDecl->getOverloadedOperator() == clang::OO_Array_Delete ||
+          CalleeDecl->getOverloadedOperator() == clang::OO_Array_New) {
+        if (AlignArg)
+          Mangled = "_ZnamSt11align_val_t";
+        else
+          Mangled = "_Znam";
+      } else if (AlignArg)
+        Mangled = "_ZnwmSt11align_val_t";
+      else
+        Mangled = "_Znwm";
+    } else {
+      std::string msg =
+          "unknown mangling when resolving mangled form of operator::new: " +
+          Mangled;
+      llvm_unreachable(msg.c_str());
+    }
+
+    CallOrInvoke->addFnAttr(llvm::Attribute::get(Ctx, "alloc-family", Mangled));
+    if (Fn && Fn->hasFnAttribute(llvm::Attribute::NoBuiltin))
       CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+    CallOrInvoke->addFnAttr(llvm::Attribute::get(
+        Ctx, llvm::Attribute::AllocKind, static_cast<uint64_t>(AK)));
 
     // A sane operator new does not read or write accessible memory.
-    if (CGF.CGM.getCodeGenOpts().AssumeSaneOperatorNew &&
+    if (Fn && CGF.CGM.getCodeGenOpts().AssumeSaneOperatorNew &&
         CalleeDecl->getDeclName().isAnyOperatorNew()) {
       // FIXME: inaccessiblemem could cause issues if LTO makes the
       // previously inaccessible memory accessible after linking.
