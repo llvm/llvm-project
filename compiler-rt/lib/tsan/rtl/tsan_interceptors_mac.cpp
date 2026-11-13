@@ -496,6 +496,50 @@ TSAN_INTERCEPTOR(int, objc_sync_exit, id obj) {
   return result;
 }
 
+// Reads of ObjC properties are already visible to TSan, but writes go through
+// the runtime. We also need to know about nonatomic writes, that occur in
+// instrumented code. This helper informs the runtime that such a write has
+// occurred.
+static void ObjCPropertyIvarWrite(ThreadState* thr, uptr pc,
+                                  ScopedInterceptor& si, uptr caller_pc,
+                                  id self, ptrdiff_t offset) {
+  bool in_ignored_lib;
+  if (libignore()->IsIgnored(caller_pc, &in_ignored_lib))
+    return;
+  // ignore_interceptors_accesses is on by default on Apple platforms, so we'd
+  // ignore this memory access - poke a hole for ivar writes.
+  si.DisableIgnores();
+  MemoryAccess(thr, pc, (uptr)self + offset, sizeof(id), kAccessWrite);
+  si.EnableIgnores();
+}
+
+TSAN_INTERCEPTOR(void, objc_setProperty_nonatomic, id self, SEL _cmd,
+                 id newValue, ptrdiff_t offset) {
+  SCOPED_TSAN_INTERCEPTOR(objc_setProperty_nonatomic, self, _cmd, newValue,
+                          offset);
+  ObjCPropertyIvarWrite(thr, pc, si, GET_CALLER_PC(), self, offset);
+  REAL(objc_setProperty_nonatomic)(self, _cmd, newValue, offset);
+}
+
+TSAN_INTERCEPTOR(void, objc_setProperty_nonatomic_copy, id self, SEL _cmd,
+                 id newValue, ptrdiff_t offset) {
+  SCOPED_TSAN_INTERCEPTOR(objc_setProperty_nonatomic_copy, self, _cmd, newValue,
+                          offset);
+  ObjCPropertyIvarWrite(thr, pc, si, GET_CALLER_PC(), self, offset);
+  REAL(objc_setProperty_nonatomic_copy)(self, _cmd, newValue, offset);
+}
+
+// The generic entry point, used when the optimized setters above are not
+// available. Atomic stores are race free, so hide them from TSan.
+TSAN_INTERCEPTOR(void, objc_setProperty, id self, SEL _cmd, ptrdiff_t offset,
+                 id newValue, BOOL atomic, signed char shouldCopy) {
+  SCOPED_TSAN_INTERCEPTOR(objc_setProperty, self, _cmd, offset, newValue,
+                          atomic, shouldCopy);
+  if (!atomic)
+    ObjCPropertyIvarWrite(thr, pc, si, GET_CALLER_PC(), self, offset);
+  REAL(objc_setProperty)(self, _cmd, offset, newValue, atomic, shouldCopy);
+}
+
 TSAN_INTERCEPTOR(int, swapcontext, ucontext_t *oucp, const ucontext_t *ucp) {
   {
     SCOPED_INTERCEPTOR_RAW(swapcontext, oucp, ucp);
