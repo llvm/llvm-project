@@ -69,7 +69,6 @@
 using namespace llvm;
 using namespace opt_tool;
 
-static codegen::RegisterCodeGenFlags CFG;
 static codegen::RegisterMTuneFlag MTF;
 static codegen::RegisterSaveStatsFlag SSF;
 
