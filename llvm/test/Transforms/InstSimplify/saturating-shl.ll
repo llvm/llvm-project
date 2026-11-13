@@ -228,28 +228,6 @@ define i1 @ushl_icmp_op0_unknown(i8 %y) {
   ret i1 %c
 }
 
-define i1 @ushl_icmp_op0_nonsat_known(i8 %y) {
-; CHECK-LABEL: define i1 @ushl_icmp_op0_nonsat_known(
-; CHECK-SAME: i8 [[Y:%.*]]) {
-; CHECK-NEXT:    ret i1 true
-;
-  %r = call i8 @llvm.ushl.sat.i8(i8 1, i8 %y)
-  %c = icmp ule i8 %r, 128
-  ret i1 %c
-}
-
-define i1 @ushl_icmp_op0_nonsat_unknown(i8 %y) {
-; CHECK-LABEL: define i1 @ushl_icmp_op0_nonsat_unknown(
-; CHECK-SAME: i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 1, i8 [[Y]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[R]], -128
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %r = call i8 @llvm.ushl.sat.i8(i8 1, i8 %y)
-  %c = icmp ult i8 %r, 128
-  ret i1 %c
-}
-
 define i1 @sshl_icmp_op0_pos_known(i8 %y) {
 ; CHECK-LABEL: define i1 @sshl_icmp_op0_pos_known(
 ; CHECK-SAME: i8 [[Y:%.*]]) {

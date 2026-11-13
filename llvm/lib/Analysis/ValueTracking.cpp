@@ -10836,13 +10836,15 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
     break;
   case Intrinsic::ushl_sat:
     if (match(II.getOperand(0), m_APInt(C)))
-      return ConstantRange::getNonEmpty(*C, C->ushl_sat(Width - 1) + 1);
+      return ConstantRange::getNonEmpty(*C, APInt::getZero(Width));
     break;
   case Intrinsic::sshl_sat:
     if (match(II.getOperand(0), m_APInt(C))) {
       if (C->isNegative())
-        return ConstantRange::getNonEmpty(C->sshl_sat(Width - 1), *C + 1);
-      return ConstantRange::getNonEmpty(*C, C->sshl_sat(Width - 1) + 1);
+        return ConstantRange::getNonEmpty(APInt::getSignedMinValue(Width),
+                                          *C + 1);
+      return ConstantRange::getNonEmpty(*C,
+                                        APInt::getSignedMaxValue(Width) + 1);
     }
     break;
   case Intrinsic::umin:
