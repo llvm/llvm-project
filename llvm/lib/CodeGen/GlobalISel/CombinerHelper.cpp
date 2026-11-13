@@ -5724,7 +5724,21 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
+    // Before legalization, also accept a G_SMULH that will be narrowed into
+    // legal multiplies (see LegalizerHelper::narrowScalarMul).
+    auto CanNarrowMulH = [&]() {
+      if (!isPreLegalize() || DstTy.isVector())
+        return false;
+      LegalizeActionStep Step = LI->getAction({TargetOpcode::G_SMULH, {DstTy}});
+      LLT NarrowTy = Step.NewType;
+      return Step.Action == LegalizeActions::NarrowScalar &&
+             NarrowTy.isScalar() &&
+             SizeInBits % NarrowTy.getSizeInBits() == 0 &&
+             isLegal({TargetOpcode::G_MUL, {NarrowTy}}) &&
+             isLegal({TargetOpcode::G_UMULH, {NarrowTy}});
+    };
     if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
+        !CanNarrowMulH() &&
         !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
       return false;
     if (Opcode == TargetOpcode::G_SREM &&
