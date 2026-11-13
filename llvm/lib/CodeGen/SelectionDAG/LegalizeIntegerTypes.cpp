@@ -126,6 +126,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SPLICE_RIGHT:
     Res = PromoteIntRes_VECTOR_SPLICE(N);
     break;
+  case ISD::EXPERIMENTAL_VP_SPLICE:
+    Res = PromoteIntRes_VP_SPLICE(N);
+    break;
   case ISD::VECTOR_REPEAT:
     Res = PromoteIntRes_VECTOR_REPEAT(N);
     break;
@@ -6234,6 +6237,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   EVT OutVT = V0.getValueType();
 
   return DAG.getNode(N->getOpcode(), dl, OutVT, V0, V1, N->getOperand(2));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VP_SPLICE(SDNode *N) {
+  SDLoc dl(N);
+
+  SDValue V0 = GetPromotedInteger(N->getOperand(0));
+  SDValue V1 = GetPromotedInteger(N->getOperand(1));
+  EVT OutVT = V0.getValueType();
+
+  SmallVector<SDValue, 6> NewOps(N->ops());
+  NewOps[0] = V0;
+  NewOps[1] = V1;
+  return DAG.getNode(N->getOpcode(), dl, OutVT, NewOps);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_REPEAT(SDNode *N) {
