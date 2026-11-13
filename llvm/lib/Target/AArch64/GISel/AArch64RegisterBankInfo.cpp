@@ -103,59 +103,10 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
 RegisterBankInfo::InstructionMappings
 AArch64RegisterBankInfo::getInstrAlternativeMappings(
     const MachineInstr &MI) const {
-  const MachineFunction &MF = *MI.getParent()->getParent();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-
   if (InstructionMappings Mappings = getGeneratedInstrAltMappings(MI);
       !Mappings.empty())
     return Mappings;
 
-  switch (MI.getOpcode()) {
-  case TargetOpcode::G_BITCAST: {
-    TypeSize Size = TRI.getRegSizeInBits(MI.getOperand(0).getReg(), MRI);
-    if (Size != 32 && Size != 64)
-      break;
-
-    // If the instruction has any implicit-defs or uses,
-    // do not mess with it.
-    if (MI.getNumOperands() != 2)
-      break;
-
-    InstructionMappings AltMappings;
-    const InstructionMapping &GPRMapping = getInstructionMapping(
-        /*ID*/ 1, /*Cost*/ 1,
-        getCopyMapping(AArch64::GPRRegBankID, AArch64::GPRRegBankID, Size),
-        /*NumOperands*/ 2);
-    const InstructionMapping &FPRMapping = getInstructionMapping(
-        /*ID*/ 2, /*Cost*/ 1,
-        getCopyMapping(AArch64::FPRRegBankID, AArch64::FPRRegBankID, Size),
-        /*NumOperands*/ 2);
-    const InstructionMapping &GPRToFPRMapping = getInstructionMapping(
-        /*ID*/ 3,
-        /*Cost*/
-        copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank,
-                 TypeSize::getFixed(Size)),
-        getCopyMapping(AArch64::FPRRegBankID, AArch64::GPRRegBankID, Size),
-        /*NumOperands*/ 2);
-    const InstructionMapping &FPRToGPRMapping = getInstructionMapping(
-        /*ID*/ 3,
-        /*Cost*/
-        copyCost(AArch64::GPRRegBank, AArch64::FPRRegBank,
-                 TypeSize::getFixed(Size)),
-        getCopyMapping(AArch64::GPRRegBankID, AArch64::FPRRegBankID, Size),
-        /*NumOperands*/ 2);
-
-    AltMappings.push_back(&GPRMapping);
-    AltMappings.push_back(&FPRMapping);
-    AltMappings.push_back(&GPRToFPRMapping);
-    AltMappings.push_back(&FPRToGPRMapping);
-    return AltMappings;
-  }
-  default:
-    break;
-  }
   return RegisterBankInfo::getInstrAlternativeMappings(MI);
 }
 
