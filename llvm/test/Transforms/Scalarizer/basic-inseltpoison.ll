@@ -202,7 +202,7 @@ define void @f3(ptr %src, ptr %dst) {
   ret void
 }
 
-; Check that !tbaa.struct information is preserved.
+; Check that !tbaa.struct fields become the correct per-lane !tbaa tags.
 define void @f4(ptr %src, ptr %dst) {
 ; CHECK-LABEL: define void @f4(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
@@ -858,7 +858,7 @@ define <2 x i32> @f23_crash(<2 x i32> %srcvec, i32 %v1) {
 !2 = !{!15, !15, i64 0}
 !3 = !{ !3, !{!"llvm.loop.parallel_accesses", !13} }
 !4 = !{ float 4.0 }
-!5 = !{ i64 0, i64 8, null }
+!5 = !{i64 0, i64 4, !1, i64 4, i64 4, !2, i64 8, i64 4, !1, i64 12, i64 4, !2}
 !13 = distinct !{}
 !14 = !{!"set1", !0}
 !15 = !{!"set2", !0}
@@ -868,7 +868,7 @@ define <2 x i32> @f23_crash(<2 x i32> %srcvec, i32 %v1) {
 ; CHECK: [[META2]] = !{!"root"}
 ; CHECK: [[SET2_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
 ; CHECK: [[META4]] = !{!"set2", [[META2]]}
-; CHECK: [[TBAA_STRUCT5]] = !{i64 0, i64 8, null}
+; CHECK: [[TBAA_STRUCT5]] = !{i64 0, i64 4, [[SET1_TBAA0]], i64 4, i64 4, [[SET2_TBAA3]], i64 8, i64 4, [[SET1_TBAA0]], i64 12, i64 4, [[SET2_TBAA3]]}
 ; CHECK: [[ACC_GRP6]] = distinct !{}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]]}
 ; CHECK: [[META8]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP6]]}
