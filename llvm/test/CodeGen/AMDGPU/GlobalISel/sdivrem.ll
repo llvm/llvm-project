@@ -202,8 +202,8 @@ define amdgpu_kernel void @sdivrem_i64(ptr addrspace(1) %out0, ptr addrspace(1) 
 ; GFX8-NEXT:    s_subb_u32 s13, 0, s5
 ; GFX8-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX8-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX8-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX8-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX8-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX8-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX8-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -389,8 +389,8 @@ define amdgpu_kernel void @sdivrem_i64(ptr addrspace(1) %out0, ptr addrspace(1) 
 ; GFX9-NEXT:    s_subb_u32 s13, 0, s5
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX9-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX9-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX9-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -552,13 +552,13 @@ define amdgpu_kernel void @sdivrem_i64(ptr addrspace(1) %out0, ptr addrspace(1) 
 ; GFX10-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX10-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX10-NEXT:    v_trunc_f32_e32 v2, v1
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX10-NEXT:    v_add_f32_e32 v0, v2, v0
+; GFX10-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s14, v1
-; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX10-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX10-NEXT:    s_mul_i32 s16, s12, s14
+; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s15, v0
 ; GFX10-NEXT:    s_mul_hi_u32 s18, s12, s15
 ; GFX10-NEXT:    s_mul_i32 s19, s13, s15
@@ -1568,8 +1568,8 @@ define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX8-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX8-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX8-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX8-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX8-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX8-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -1740,8 +1740,8 @@ define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1
 ; GFX8-NEXT:    s_subb_u32 s19, 0, s7
 ; GFX8-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX8-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX8-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX8-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX8-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX8-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX8-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX8-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -1931,8 +1931,8 @@ define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1
 ; GFX9-NEXT:    s_subb_u32 s17, 0, s5
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX9-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX9-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX9-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -2080,8 +2080,8 @@ define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1
 ; GFX9-NEXT:    s_subb_u32 s19, 0, s7
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX9-NEXT:    v_trunc_f32_e32 v2, v1
+; GFX9-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX9-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
@@ -2249,13 +2249,13 @@ define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1
 ; GFX10-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX10-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX10-NEXT:    v_trunc_f32_e32 v2, v1
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX10-NEXT:    v_add_f32_e32 v0, v2, v0
+; GFX10-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s18, v1
-; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX10-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX10-NEXT:    s_mul_i32 s20, s16, s18
+; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s19, v0
 ; GFX10-NEXT:    s_mul_hi_u32 s22, s16, s19
 ; GFX10-NEXT:    s_mul_i32 s23, s17, s19
@@ -2398,13 +2398,13 @@ define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1
 ; GFX10-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX10-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX10-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v1
+; GFX10-NEXT:    v_trunc_f32_e32 v2, v1
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX10-NEXT:    v_add_f32_e32 v0, v2, v0
+; GFX10-NEXT:    v_mul_f32_e32 v2, 0xcf800000, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s18, v1
-; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX10-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX10-NEXT:    s_mul_i32 s20, s16, s18
+; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s19, v0
 ; GFX10-NEXT:    s_mul_hi_u32 s22, s16, s19
 ; GFX10-NEXT:    s_mul_i32 s23, s17, s19
