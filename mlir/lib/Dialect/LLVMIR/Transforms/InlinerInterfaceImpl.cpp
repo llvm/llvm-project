@@ -167,7 +167,8 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
   // uniquer.
   walker.addWalk([&](LLVM::AliasScopeDomainAttr domainAttr) {
     mapping[domainAttr] = LLVM::AliasScopeDomainAttr::get(
-        domainAttr.getContext(), domainAttr.getDescription());
+        domainAttr.getContext(), domainAttr.getDescription(),
+        domainAttr.getDisjointScopes());
   });
 
   walker.addWalk([&](LLVM::AliasScopeAttr scopeAttr) {
