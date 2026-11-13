@@ -212,53 +212,51 @@ define void @nest_fixed_and_rvv(ptr nest %chain) nounwind "probe-stack"="inline-
   ret void
 }
 
-; preserve_most may only clobber t1, t2 and t3.
+; preserve_most may only clobber t0 to t3, and the static chain is in t2.
 define preserve_mostcc void @nest_preserve_most(ptr nest %chain) nounwind "probe-stack"="inline-asm" {
 ; RV64I-LABEL: nest_preserve_most:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -2032
 ; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd t0, 2016(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a0, 2008(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a1, 2000(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a2, 1992(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a3, 1984(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a4, 1976(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a5, 1968(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a6, 1960(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd a7, 1952(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd t4, 1944(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd t5, 1936(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd t6, 1928(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a0, 2016(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a1, 2008(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a2, 2000(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a3, 1992(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a4, 1984(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a5, 1976(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a6, 1968(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a7, 1960(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd t4, 1952(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd t5, 1944(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd t6, 1936(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui a0, 23
 ; RV64I-NEXT:    sub t1, sp, a0
-; RV64I-NEXT:    lui t3, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t3
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    bne sp, t1, .LBB3_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    addi sp, sp, -2048
 ; RV64I-NEXT:    addi sp, sp, -1824
-; RV64I-NEXT:    addi a1, sp, 8
+; RV64I-NEXT:    addi a1, sp, 16
 ; RV64I-NEXT:    mv a0, t2
 ; RV64I-NEXT:    call use
 ; RV64I-NEXT:    lui a0, 24
 ; RV64I-NEXT:    addi a0, a0, -224
 ; RV64I-NEXT:    add sp, sp, a0
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld t0, 2016(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld a0, 2008(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld a1, 2000(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld a2, 1992(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld a3, 1984(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld a4, 1976(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld a5, 1968(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld a6, 1960(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld a7, 1952(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld t4, 1944(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld t5, 1936(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld t6, 1928(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a0, 2016(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a1, 2008(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a2, 2000(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a3, 1992(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a4, 1984(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a5, 1976(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a6, 1968(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a7, 1960(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld t4, 1952(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld t5, 1944(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld t6, 1936(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    ret
 ;
@@ -266,47 +264,45 @@ define preserve_mostcc void @nest_preserve_most(ptr nest %chain) nounwind "probe
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -2032
 ; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw t0, 2024(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw a0, 2020(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw a1, 2016(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw a2, 2012(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw a3, 2008(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw a4, 2004(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw a5, 2000(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw a6, 1996(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw a7, 1992(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw t4, 1988(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw t5, 1984(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw t6, 1980(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a0, 2024(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a1, 2020(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a2, 2016(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a3, 2012(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a4, 2008(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a5, 2004(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a6, 2000(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a7, 1996(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw t4, 1992(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw t5, 1988(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw t6, 1984(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui a0, 23
 ; RV32I-NEXT:    sub t1, sp, a0
-; RV32I-NEXT:    lui t3, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t3
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    bne sp, t1, .LBB3_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    addi sp, sp, -2048
 ; RV32I-NEXT:    addi sp, sp, -1776
-; RV32I-NEXT:    addi a1, sp, 12
+; RV32I-NEXT:    addi a1, sp, 16
 ; RV32I-NEXT:    mv a0, t2
 ; RV32I-NEXT:    call use
 ; RV32I-NEXT:    lui a0, 24
 ; RV32I-NEXT:    addi a0, a0, -272
 ; RV32I-NEXT:    add sp, sp, a0
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw t0, 2024(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw a0, 2020(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw a1, 2016(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw a2, 2012(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw a3, 2008(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw a4, 2004(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw a5, 2000(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw a6, 1996(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw a7, 1992(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw t4, 1988(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw t5, 1984(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw t6, 1980(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a0, 2024(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a1, 2020(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a2, 2016(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a3, 2012(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a4, 2008(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a5, 2004(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a6, 2000(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a7, 1996(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw t4, 1992(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw t5, 1988(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw t6, 1984(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    ret
   %a = alloca [100000 x i8], align 1
