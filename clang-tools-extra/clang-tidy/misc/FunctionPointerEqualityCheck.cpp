@@ -33,6 +33,9 @@ FunctionPointerEqualityCheck::FunctionPointerEqualityCheck(
                                              "::std::unordered_set"))) {}
 
 void FunctionPointerEqualityCheck::registerMatchers(MatchFinder *Finder) {
+  const auto CompileTimeOrUnevaluated =
+      anyOf(hasAncestor(expr(matchers::hasUnevaluatedContext())),
+            hasAncestor(staticAssertDecl()));
   // Matching ptr == ptr, but not ptr == nullptr, or ptr == integer (function
   // pointers to 1 and -1 are frequently used for "invalid" function pointers).
   // Also match equality comparisons of member pointers that point to
@@ -44,7 +47,8 @@ void FunctionPointerEqualityCheck::registerMatchers(MatchFinder *Finder) {
                      hasLHS(hasType(FunctionPointerType)),
                      hasRHS(hasType(FunctionPointerType)),
                      unless(hasEitherOperand(ignoringParenCasts(
-                         anyOf(nullPointerConstant(), hasType(isInteger()))))))
+                         anyOf(nullPointerConstant(), hasType(isInteger()))))),
+                     unless(CompileTimeOrUnevaluated))
           .bind("op"),
       this);
 

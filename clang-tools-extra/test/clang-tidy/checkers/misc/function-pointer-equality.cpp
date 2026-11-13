@@ -67,3 +67,11 @@ bool weird_nullptr_edgecase(decltype(nullptr) a, void (*b)()) {
 void test_nullptr_t() {
   weird_nullptr_edgecase(nullptr, &f);
 }
+
+void test_static_assert() {
+  // Can never lead to unsoundness due to code folding.
+  static_assert(f != (g));
+  static_assert((&f) != &g);
+  sizeof(f == g);
+  decltype(f != g);
+}
