@@ -20,7 +20,44 @@ define i32 @foo(i32 %treemap) nounwind {
 entry:
   %sub = sub i32 0, %treemap
   %and = and i32 %treemap, %sub
-  %0 = call i32 asm "bsfl $1,$0", "=r,rm"(i32 %and)
+  %0 = call i32 asm "bsfl $1,$0", "=r,m"(i32 %and)
   ret i32 %0
 }
 
+; The asm reads *p, and folding its "rm" operand to a stack slot gives it a
+; memoperand for the slot. That mustn't hide the read of *p from the
+; scheduler, which has to keep the store to *p before the asm.
+define i32 @folded(ptr %p, i32 %x, i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
+; CHECK-LABEL: folded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $1000, (%ebx) # imm = 0x3E8
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:    incl %edi
+; CHECK-NEXT:    incl %esi
+; CHECK-NEXT:    incl %edx
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    movl (%ebx), %eax
+; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    retl
+  store i32 1000, ptr %p
+  %a1 = add i32 %a, 1
+  %b1 = add i32 %b, 1
+  %c1 = add i32 %c, 1
+  %d1 = add i32 %d, 1
+  %r = call i32 asm "movl $1, $0; addl $2, $0", "=&r,*m,rm,r,r,r,r,~{ebp}"(ptr elementtype(i32) %p, i32 %x, i32 %a1, i32 %b1, i32 %c1, i32 %d1)
+  ret i32 %r
+}

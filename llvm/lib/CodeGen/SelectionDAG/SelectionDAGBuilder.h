@@ -826,10 +826,12 @@ struct RegsForValue {
 
   /// Add this value to the specified inlineasm node operand list. This adds the
   /// code marker, matching input operand index (if applicable), and includes
-  /// the number of values added into it.
+  /// the number of values added into it. If \p MayFoldRegister, the register
+  /// allocator may fold the (single) register to a stack slot.
   void AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
                             unsigned MatchingIdx, const SDLoc &dl,
-                            SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
+                            SelectionDAG &DAG, std::vector<SDValue> &Ops,
+                            bool MayFoldRegister = false) const;
 
   /// Check if the total RegCount is greater than one.
   bool occupiesMultipleRegs() const {
