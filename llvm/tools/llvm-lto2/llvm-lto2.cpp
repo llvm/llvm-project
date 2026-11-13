@@ -295,7 +295,8 @@ static int usage() {
 
 static int run(int argc, char **argv) {
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "Resolution-based LTO test harness");
 
   if (TimeTrace)

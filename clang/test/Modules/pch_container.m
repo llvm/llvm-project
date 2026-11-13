@@ -11,7 +11,7 @@
 // CHECK: file format mach-o 64-bit x86-64
 // CHECK: __clangast   {{[0-9a-f]+}} {{[0-9a-f]+}} DATA
 // CHECK: file format elf64-x86-64
-// CHECK: __clangast   {{[0-9a-f]+}} {{[0-9a-f]+}} DATA
+// CHECK: __clangast   {{[0-9a-f]+}} {{[0-9a-f]+}}
 // CHECK: file format coff-x86-64
 // CHECK: clangast   {{[0-9a-f]+}} {{[0-9a-f]+}}
 

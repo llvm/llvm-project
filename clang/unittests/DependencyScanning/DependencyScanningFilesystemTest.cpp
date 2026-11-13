@@ -679,3 +679,34 @@ TEST(DependencyScanningWorkerFilesystem, LocalFSRealPath) {
     EXPECT_EQ(GetRealPath(DepFS, "/both.c"), "/both.c");
   }
 }
+
+TEST(DependencyScanningWorkerFilesystem, LocalFSDirectoryIteration) {
+  auto GlobalFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  GlobalFS->setCurrentWorkingDirectory("/");
+  GlobalFS->addFile("/dir/both", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  GlobalFS->addFile("/dir/glob.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  auto LocalFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  LocalFS->setCurrentWorkingDirectory("/");
+  LocalFS->addFile("/dir/both/loc.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  DependencyScanningServiceOptions Opts;
+  DependencyScanningService Service(std::move(Opts));
+  DependencyScanningWorkerFilesystem DepFS(Service, GlobalFS, LocalFS);
+
+  // "/dir/both" is a directory in LocalFS, which takes precedence.
+  auto Stat = DepFS.status("/dir/both");
+  ASSERT_TRUE(Stat);
+  EXPECT_TRUE(Stat->isDirectory());
+
+  // Directory iteration is consistent with status().
+  std::error_code EC;
+  llvm::StringMap<llvm::sys::fs::file_type> Entries;
+  for (llvm::vfs::directory_iterator It = DepFS.dir_begin("/dir", EC), End;
+       !EC && It != End; It.increment(EC))
+    Entries[llvm::sys::path::filename(It->path())] = It->type();
+  ASSERT_FALSE(EC);
+  EXPECT_EQ(Entries.size(), 2u);
+  EXPECT_EQ(Entries.lookup("both"), llvm::sys::fs::file_type::directory_file);
+  EXPECT_EQ(Entries.lookup("glob.c"), llvm::sys::fs::file_type::regular_file);
+}

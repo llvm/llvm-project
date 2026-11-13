@@ -308,3 +308,4 @@ body:             |
     %2:_(<2 x f64>) = G_FPOW %0, %1
     $q0 = COPY %2(<2 x f64>)
     RET_ReallyLR implicit $q0
+...

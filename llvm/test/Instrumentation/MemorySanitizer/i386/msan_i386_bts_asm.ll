@@ -11,6 +11,7 @@ define dso_local i32 @main() sanitize_memory {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
 ; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
 ; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
 ; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
@@ -87,6 +88,7 @@ define dso_local i32 @main() sanitize_memory {
 ; CONS-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CONS-NEXT:  [[ENTRY:.*:]]
 ; CONS-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
+; CONS-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
 ; CONS-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
 ; CONS-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
 ; CONS-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
