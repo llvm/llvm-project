@@ -14,14 +14,6 @@ struct S {
 };
 
 //.
-// MIN: @.src = private unnamed_addr constant [21 x i8] c"cfi-vtable-check.cpp\00", align 1
-// MIN: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'S'\00" }
-//.
-// TRAP_CUTOFF: @.src = private unnamed_addr constant [21 x i8] c"cfi-vtable-check.cpp\00", align 1
-// TRAP_CUTOFF: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'S'\00" }
-//.
-// XDSO_TRAP: @.src = private unnamed_addr constant [21 x i8] c"cfi-vtable-check.cpp\00", align 1
-// XDSO_TRAP: @[[GLOB0:[0-9]+]] = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'S'\00" }
 // XDSO_TRAP: @llvm.used = appending global [1 x ptr] [ptr @__cfi_check_fail], section "llvm.metadata"
 //.
 // MIN-LABEL: define hidden void @test(
@@ -32,15 +24,14 @@ struct S {
 // MIN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
 // MIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS1S"), !nosanitize [[META1:![0-9]+]]
-// MIN-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META1]]
 // MIN-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META1]]
 // MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
 // MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal_abort() #[[ATTR3:[0-9]+]], !nosanitize [[META1]]
 // MIN-NEXT:    unreachable, !nosanitize [[META1]]
 // MIN:       [[CONT]]:
 // MIN-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
-// MIN-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VFN]], align 8
-// MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// MIN-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
+// MIN-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // MIN-NEXT:    ret void
 //
 // TRAP_CUTOFF-LABEL: define hidden void @test(
@@ -51,14 +42,17 @@ struct S {
 // TRAP_CUTOFF-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // TRAP_CUTOFF-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
 // TRAP_CUTOFF-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS1S"), !nosanitize [[META1:![0-9]+]]
-// TRAP_CUTOFF-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META1]]
+// TRAP_CUTOFF-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 54), !nosanitize [[META1]]
+// TRAP_CUTOFF-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true, !nosanitize [[META1]]
+// TRAP_CUTOFF-NEXT:    [[TMP4:%.*]] = or i1 [[TMP1]], [[TMP3]], !nosanitize [[META1]]
+// TRAP_CUTOFF-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META1]]
 // TRAP_CUTOFF:       [[TRAP]]:
-// TRAP_CUTOFF-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META1]]
+// TRAP_CUTOFF-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !nosanitize [[META1]]
 // TRAP_CUTOFF-NEXT:    unreachable, !nosanitize [[META1]]
 // TRAP_CUTOFF:       [[CONT]]:
 // TRAP_CUTOFF-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
-// TRAP_CUTOFF-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// TRAP_CUTOFF-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// TRAP_CUTOFF-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
+// TRAP_CUTOFF-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // TRAP_CUTOFF-NEXT:    ret void
 //
 // XDSO_TRAP-LABEL: define hidden void @test(
@@ -86,15 +80,15 @@ struct S {
 // SPEC_TRAP-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // SPEC_TRAP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // SPEC_TRAP-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// SPEC_TRAP-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS1S"), !nosanitize [[META1:![0-9]+]]
-// SPEC_TRAP-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META1]]
-// SPEC_TRAP-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META1]]
+// SPEC_TRAP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS1S"), !nosanitize [[META1:![0-9]+]]
+// SPEC_TRAP-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF2:![0-9]+]], !nosanitize [[META1]]
 // SPEC_TRAP:       [[TRAP]]:
 // SPEC_TRAP-NEXT:    call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META1]]
 // SPEC_TRAP-NEXT:    unreachable, !nosanitize [[META1]]
 // SPEC_TRAP:       [[CONT]]:
-// SPEC_TRAP-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META1]]
-// SPEC_TRAP-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// SPEC_TRAP-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
+// SPEC_TRAP-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
+// SPEC_TRAP-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // SPEC_TRAP-NEXT:    ret void
 //
 extern "C" void test(S *s) {
@@ -108,8 +102,9 @@ extern "C" void test(S *s) {
 //.
 // TRAP_CUTOFF: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // TRAP_CUTOFF: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-// TRAP_CUTOFF: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// TRAP_CUTOFF: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
+// TRAP_CUTOFF: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+// TRAP_CUTOFF: attributes #[[ATTR3:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
+// TRAP_CUTOFF: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 //.
 // XDSO_TRAP: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // XDSO_TRAP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -120,7 +115,7 @@ extern "C" void test(S *s) {
 // XDSO_TRAP: attributes #[[ATTR6:[0-9]+]] = { nomerge noreturn nounwind }
 //.
 // SPEC_TRAP: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// SPEC_TRAP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+// SPEC_TRAP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 // SPEC_TRAP: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 // SPEC_TRAP: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
 //.

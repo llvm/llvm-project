@@ -2031,37 +2031,36 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   MicrosoftVTableContext &VFTContext = CGM.getMicrosoftVTableContext();
   MethodVFTableLocation ML = VFTContext.getMethodVFTableLocation(GD);
 
-  // Compute the identity of the most derived class whose virtual table is
-  // located at the MethodVFTableLocation ML.
-  auto getObjectWithVPtr = [&] {
-    return llvm::find_if(VFTContext.getVFPtrOffsets(
-                             ML.VBase ? ML.VBase : MethodDecl->getParent()),
-                         [&](const std::unique_ptr<VPtrInfo> &Info) {
-                           return Info->FullOffsetInMDC == ML.VFPtrOffset;
-                         })
-        ->get()
-        ->ObjectWithVPtr;
-  };
+  if (CGM.getCodeGenOpts().PrepareForLTO) {
+    // Compute the identity of the most derived class whose virtual table is
+    // located at the MethodVFTableLocation ML.
+    const CXXRecordDecl *ObjectWithVPtr =
+        llvm::find_if(VFTContext.getVFPtrOffsets(
+                          ML.VBase ? ML.VBase : MethodDecl->getParent()),
+                      [&](const std::unique_ptr<VPtrInfo> &Info) {
+                        return Info->FullOffsetInMDC == ML.VFPtrOffset;
+                      })
+            ->get()
+            ->ObjectWithVPtr;
+    if (CGF.ShouldEmitVTableTypeCheckedLoad(ObjectWithVPtr)) {
+      llvm::Value *VFunc = CGF.EmitVTableTypeCheckedLoad(
+          ObjectWithVPtr, VTable, Ty,
+          ML.Index *
+              CGM.getContext().getTargetInfo().getPointerWidth(
+                  LangAS::Default) /
+              8,
+          Loc);
+      return CGCallee(GD, VFunc);
+    }
 
-  llvm::Value *VFunc;
-  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
-    VFunc = CGF.EmitVTableTypeCheckedLoad(
-        getObjectWithVPtr(), VTable, Ty,
-        ML.Index *
-            CGM.getContext().getTargetInfo().getPointerWidth(LangAS::Default) /
-            8,
-        Loc);
-  } else {
-    if (CGM.getCodeGenOpts().PrepareForLTO)
-      CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
-
-    llvm::Value *VFuncPtr =
-        Builder.CreateConstInBoundsGEP1_64(Ty, VTable, ML.Index, "vfn");
-    VFunc = Builder.CreateAlignedLoad(Ty, VFuncPtr, CGF.getPointerAlign());
+    CGF.EmitTypeMetadataCodeForVCall(ObjectWithVPtr, VTable, Loc);
   }
 
-  CGCallee Callee(GD, VFunc);
-  return Callee;
+  llvm::Value *VFuncPtr =
+      Builder.CreateConstInBoundsGEP1_64(Ty, VTable, ML.Index, "vfn");
+  llvm::Value *VFunc =
+      Builder.CreateAlignedLoad(Ty, VFuncPtr, CGF.getPointerAlign());
+  return CGCallee(GD, VFunc);
 }
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(

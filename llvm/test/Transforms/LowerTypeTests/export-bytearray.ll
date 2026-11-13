@@ -1,10 +1,10 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck --check-prefixes=CHECK,X86 %s
-; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86 %s < %t
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t.out %s | FileCheck --check-prefixes=CHECK,X86 %s
+; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-X86 %s < %t.out
 
 ; RUN: opt -mtriple=aarch64-unknown-linux -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck --check-prefixes=CHECK,ARM %s
-; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-ARM %s < %t
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t.out %s | FileCheck --check-prefixes=CHECK,ARM %s
+; RUN: FileCheck --check-prefixes=SUMMARY,SUMMARY-ARM %s < %t.out
 
 @foo = constant [2048 x i8] zeroinitializer, !type !0, !type !1, !type !2, !type !3
 

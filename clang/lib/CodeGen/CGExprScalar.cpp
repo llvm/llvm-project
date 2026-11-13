@@ -2513,7 +2513,7 @@ static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
 }
 
 bool CodeGenFunction::isPointerKnownNonNull(const Expr *E) {
-  assert(E->getType()->isSignableType(getContext()));
+  assert(E->getType().getAtomicUnqualifiedType()->isSignableType(getContext()));
 
   E = E->IgnoreParens();
 
