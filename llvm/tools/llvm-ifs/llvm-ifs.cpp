@@ -440,8 +440,19 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
   IFSSymbol InitialEmptySymbol;
   IFSSymbol &PrevSymbol = InitialEmptySymbol;
   for (const auto &[Symbol, InputFilePath] : AllSymbols) {
-    if (std::tie(PrevSymbol.Name, PrevSymbol.Version) !=
-        std::tie(Symbol.Name, Symbol.Version)) {
+    if (Symbol.Name != PrevSymbol.Name) {
+      Stub.Symbols.push_back(Symbol);
+      PrevSymbol = Symbol;
+      continue;
+    }
+
+    if (Symbol.Version != PrevSymbol.Version) {
+      if (Symbol.Default && PrevSymbol.Default) {
+        WithColor::error() << "Interface Stub: Multiple default versions for "
+                           << Symbol.Name << ".\nFilename: " << InputFilePath
+                           << "\n";
+        return -1;
+      }
       Stub.Symbols.push_back(Symbol);
       PrevSymbol = Symbol;
       continue;
