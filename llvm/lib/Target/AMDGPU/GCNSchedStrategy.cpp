@@ -25,6 +25,7 @@
 
 #include "GCNSchedStrategy.h"
 #include "AMDGPUIGroupLP.h"
+#include "AMDGPUPrefetchOrdering.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNRegPressure.h"
 #include "GCNRematStrategy.h"
@@ -1434,6 +1435,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
+  DAG.addMutation(createAMDGPUPrefetchOrderingDAGMutation());
   DAG.addMutation(
       createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PreRAReentry));
 
@@ -1654,6 +1656,7 @@ bool GCNSchedStage::initGCNRegion() {
     SavedMutations.swap(DAG.Mutations);
     bool IsInitialStage = StageID == GCNSchedStageID::OccInitialSchedule ||
                           StageID == GCNSchedStageID::ILPInitialSchedule;
+    DAG.addMutation(createAMDGPUPrefetchOrderingDAGMutation());
     DAG.addMutation(createIGroupLPDAGMutation(
         IsInitialStage ? AMDGPU::SchedulingPhase::Initial
                        : AMDGPU::SchedulingPhase::PreRAReentry));
@@ -2953,6 +2956,7 @@ void GCNPostScheduleDAGMILive::schedule() {
   if (HasIGLPInstrs) {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
+    addMutation(createAMDGPUPrefetchOrderingDAGMutation());
     addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
   }
 

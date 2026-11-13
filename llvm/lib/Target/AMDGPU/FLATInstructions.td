@@ -526,11 +526,13 @@ class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VGPROp_64:$vaddr), str
   FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
   let has_vdst = 0;
   let has_data = 0;
+  // mayStore keeps a prefetch from being treated as dead and is required by its
+  // patterns. Ordering against loads comes from AMDGPUPrefetchOrdering, not
+  // from side effects.
   let mayLoad = 1;
   let mayStore = 1;
   let VM_CNT = 0;
   let LGKM_CNT = 0;
-  let hasSideEffects = 1;
 }
 
 multiclass FLAT_Flat_Prefetch_Pseudo<string opName> {
