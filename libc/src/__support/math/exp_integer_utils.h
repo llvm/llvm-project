@@ -42,7 +42,7 @@ LIBC_INLINE_VAR constexpr Frac128 LOG2_E_F128 =
 // > for i from 0 to 15 do {
 //   print(1+round(2^(i/16), 128, RN));
 // };
-// LSB(EXP_MID4[i]) = 2^-127
+// LSB(EXP_MID[i]) = 2^-127
 LIBC_INLINE_VAR constexpr Frac128 EXP_MID[] = {
     Frac128({0x0000'0000'0000'0000, 0x8000'0000'0000'0000}),
     Frac128({0xc5c9'5b8c'2154'c1b2, 0x85aa'c367'cc48'7b14}),
@@ -62,12 +62,25 @@ LIBC_INLINE_VAR constexpr Frac128 EXP_MID[] = {
     Frac128({0x7b9d'0c7a'ed98'0fc3, 0xf525'7d15'2486'cc2c}),
 };
 
+// 2^x for x from 0 to (0b1111/2^4) = 15/16
+// Taking the upper 64 bits of EXP_MID[i] above
+LIBC_INLINE_VAR constexpr Frac64 EXP_MID_64[] = {
+    Frac64(0x8000'0000'0000'0000), Frac64(0x85aa'c367'cc48'7b14),
+    Frac64(0x8b95'c1e3'ea8b'd6e6), Frac64(0x91c3'd373'ab11'c336),
+    Frac64(0x9837'f051'8db8'a96f), Frac64(0x9ef5'3260'91a1'11ad),
+    Frac64(0xa5fe'd6a9'b151'38ea), Frac64(0xad58'3eea'42a1'4ac6),
+    Frac64(0xb504'f333'f9de'6484), Frac64(0xbd08'a39f'580c'36be),
+    Frac64(0xc567'2a11'5506'dadd), Frac64(0xce24'8c15'1f84'80e3),
+    Frac64(0xd744'fcca'd69d'6af4), Frac64(0xe0cc'deec'2a94'e111),
+    Frac64(0xeac0'c6e7'dd24'392e), Frac64(0xf525'7d15'2486'cc2c),
+};
+
 // 128-bit polynomial approximation of 2^x coefficients generated with Sollya:
 // > P = fpminimax(2^x, 12, [|1, 128...|], [0, 1/16], absolute, fixed);
 // Store the fractional part of the coefficients below
 // > dirtyinfnorm(2^x - P(x), [0, 1/16]);
 // 0x1.b328...p-117
-// LSB(EXPF_COEFFS[i]) = 2^-128
+// LSB(EXP_COEFFS[i]) = 2^-128
 LIBC_INLINE_VAR constexpr Frac128 EXP_COEFFS[] = {
     // degree-0 = 1, add back afterwards to reduce calc ops
     Frac128({0xc9e3'b398'033f'0902, 0xb172'17f7'd1cf'79ab}),
@@ -91,8 +104,8 @@ LIBC_INLINE_VAR constexpr Frac128 EXP_COEFFS[] = {
 // 0x1.999e...p-67
 // This is different from EXPF_COEFFS: EXPF_COEFFS is for approximating for x in
 // range of [0, 1]
-// LSB(EXP_COEFFS[i]) = 2^-64
-LIBC_INLINE_VAR constexpr Frac64 EXP_64_COEFFS[] = {
+// LSB(EXP_COEFFS_64[i]) = 2^-64
+LIBC_INLINE_VAR constexpr Frac64 EXP_COEFFS_64[] = {
     // degree-0 = 1, add back afterwards to reduce calc ops
     Frac64(0xb172'17f7'd1cf'7aac), Frac64(0x3d7f'7bff'0589'89ce),
     Frac64(0x0e35'846b'8328'7490), Frac64(0x0276'556d'c04e'4f50),
@@ -187,16 +200,18 @@ LIBC_ALWAYS_INLINE Frac64 exp_fast_path(uint64_t l2y_r_hi) {
 
 #if defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
   Frac64 x2 = x_lo_frac * x_lo_frac;
-  Frac64 p_even = fputil::polyeval(x2, EXP_64_COEFFS[0], EXP_64_COEFFS[2],
-                                   EXP_64_COEFFS[4], EXP_64_COEFFS[6]);
-  Frac64 p_odd = fputil::polyeval(x2, EXP_64_COEFFS[1], EXP_64_COEFFS[3],
-                                  EXP_64_COEFFS[5]);
+  Frac64 p_even = fputil::polyeval(x2, EXP_COEFFS_64[0], EXP_COEFFS_64[2],
+                                   EXP_COEFFS_64[4], EXP_COEFFS_64[6]);
+  Frac64 p_odd = fputil::polyeval(x2, EXP_COEFFS_64[1], EXP_COEFFS_64[3],
+                                  EXP_COEFFS_64[5]);
   Frac64 p = fputil::multiply_add(p_odd, x_lo_frac, p_even) * x_lo_frac;
 #else  // !defined(LIBC_TYPES_HAS_INT128) || defined(LIBC_MATH_HAS_SMALL_TABLES)
-  Frac64 p = x_lo_frac * fputil::polyeval(x_lo_frac, EXP_64_COEFFS[0],
-                                          EXP_64_COEFFS[1], EXP_64_COEFFS[2],
-                                          EXP_64_COEFFS[3], EXP_64_COEFFS[4],
-                                          EXP_64_COEFFS[5], EXP_64_COEFFS[6]);
+  Frac64 p(EXP_COEFFS_64[6]);
+  LIBC_LOOP_NOUNROLL
+  for (int i = 5; i >= 0; --i) {
+    p = p * x_lo_frac + EXP_COEFFS_64[i];
+  }
+  p *= x_lo_frac;
 #endif // defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
 
   // With:
@@ -206,7 +221,7 @@ LIBC_ALWAYS_INLINE Frac64 exp_fast_path(uint64_t l2y_r_hi) {
   //  2^mid * 2^lo = mid_val * (p + 1)
   // The same applies for both of the 64-bit and 128-bit paths
   // (Workaround because we're dealing with fractional representation of things)
-  Frac64 mid_val = EXP_MID[x_mid].to_frac64();
+  Frac64 mid_val = EXP_MID_64[x_mid];
   Frac64 result = fputil::multiply_add(mid_val, p, mid_val);
 
   return result;
@@ -229,12 +244,12 @@ LIBC_ALWAYS_INLINE uint64_t exp_accurate_path(Frac128 l2y_r, bool is_neg, int d,
                        EXP_COEFFS[7], EXP_COEFFS[9], EXP_COEFFS[11]);
   Frac128 p = fputil::multiply_add(p_odd, x_lo_frac, p_even) * x_lo_frac;
 #else  // !defined(LIBC_TYPES_HAS_INT128) || defined(LIBC_MATH_HAS_SMALL_TABLES)
-  Frac128 p =
-      x_lo_frac * fputil::polyeval(x_lo_frac, EXP_COEFFS[0], EXP_COEFFS[1],
-                                   EXP_COEFFS[2], EXP_COEFFS[3], EXP_COEFFS[4],
-                                   EXP_COEFFS[5], EXP_COEFFS[6], EXP_COEFFS[7],
-                                   EXP_COEFFS[8], EXP_COEFFS[9], EXP_COEFFS[10],
-                                   EXP_COEFFS[11]);
+  Frac128 p(EXP_COEFFS[11]);
+  LIBC_LOOP_NOUNROLL
+  for (int i = 10; i >= 0; --i) {
+    p = p * x_lo_frac + EXP_COEFFS[i];
+  }
+  p *= x_lo_frac;
 #endif // defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
 
   Frac128 mid_val = EXP_MID[x_mid];
