@@ -212,6 +212,45 @@ int64_t test_sati_i64(int64_t a) { return __riscv_sati_i64(a, 16); }
 uint64_t test_usati_u64(int64_t a) { return __riscv_usati_u64(a, 16); }
 #endif
 
+// CHECK-LABEL: test_nclipu_u32:
+// RV32:        nclipu{{[[:space:]]}}
+// RV64:        srl{{[[:space:]]}}
+// RV64-NEXT:   pnclipup.w{{[[:space:]]}}
+uint32_t test_nclipu_u32(uint64_t a, unsigned shamt) {
+  return __riscv_nclipu_u32(a, shamt);
+}
+
+// CHECK-LABEL: test_nclipru_u32:
+// RV32:        nclipru{{[[:space:]]}}
+// RV64:        shlr{{[[:space:]]}}
+// RV64-NEXT:   pnclipup.w{{[[:space:]]}}
+uint32_t test_nclipru_u32(uint64_t a, unsigned shamt) {
+  return __riscv_nclipru_u32(a, shamt);
+}
+
+// CHECK-LABEL: test_nsrar_i32:
+// RV32:        nsrar{{[[:space:]]}}
+// RV64:        shar{{[[:space:]]}}
+int32_t test_nsrar_i32(int64_t a, unsigned shamt) {
+  return __riscv_nsrar_i32(a, shamt);
+}
+
+// CHECK-LABEL: test_nclip_i32:
+// RV32:        nclip{{[[:space:]]}}
+// RV64:        sra{{[[:space:]]}}
+// RV64-NEXT:   pnclipp.w{{[[:space:]]}}
+int32_t test_nclip_i32(int64_t a, unsigned shamt) {
+  return __riscv_nclip_i32(a, shamt);
+}
+
+// CHECK-LABEL: test_nclipr_i32:
+// RV32:        nclipr{{[[:space:]]}}
+// RV64:        shar{{[[:space:]]}}
+// RV64-NEXT:   pnclipp.w{{[[:space:]]}}
+int32_t test_nclipr_i32(int64_t a, unsigned shamt) {
+  return __riscv_nclipr_i32(a, shamt);
+}
+
 // CHECK-LABEL: test_pmv_s_u8x4:
 // CHECK:       pmv.bs
 uint8x4_t test_pmv_s_u8x4(uint8_t x) { return __riscv_pmv_s_u8x4(x); }

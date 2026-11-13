@@ -41,9 +41,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 
 // CHECK: %[[GL_THRD_NUM:.*]] = call i32 @__kmpc_global_thread_num
 // CHECK: %[[TASK_DESC:.*]] = call ptr @__kmpc_omp_target_task_alloc(ptr @6, i32 {{.*}}, i32 0, i64 160, i64 16, ptr [[TGT_TSK_PRXY_FNC:.*]], i64 -1)
-// CHECK: %[[TSK_PTR:.*]] = getelementptr inbounds nuw %struct.[[TSK_WTH_PRVTS]], ptr %[[TASK_DESC]], i32 0, i32 0
-// CHECK: %[[SHAREDS:.*]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TSK_PTR]], i32 0, i32 0
-// CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[SHAREDS]], align 8
+// CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[TASK_DESC]], align 8
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[SHAREDS_PTR]], ptr align 1 %[[STRUCTARG]], i64 16, i1 false)
 // CHECK: %[[VAL_50:.*]] = getelementptr inbounds nuw %struct.[[TSK_WTH_PRVTS]], ptr %[[TASK_DESC]], i32 0, i32 1
 // CHECK: %[[VAL_51:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[VAL_50]], i32 0, i32 0
@@ -62,8 +60,6 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: %[[PTRS:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[PRIVATE_DATA]], i32 0, i32 1
 // CHECK: %[[SIZES:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[PRIVATE_DATA]], i32 0, i32 2
 // CHECK: %[[STRUCTARG:.*]] = alloca { ptr, ptr }, align 8
-// CHECK: %[[TASK:.*]] = getelementptr inbounds nuw %struct.[[TSK_WTH_PRVTS]], ptr %[[TASK_DESC_PARAM]], i32 0, i32 0
-// CHECK: %[[SHAREDS:.*]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TASK]], i32 0, i32 0
-// CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[SHAREDS]], align 8
+// CHECK: %[[SHAREDS_PTR:.*]] = load ptr, ptr %[[TASK_DESC_PARAM]], align 8
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[STRUCTARG]], ptr align 1 %[[SHAREDS_PTR]], i64 16, i1 false)
 // CHECK: call void @[[WORKER]](i32 %[[THREAD_ID_PARAM]], ptr %[[BASEPTRS]], ptr %[[PTRS]], ptr %[[SIZES]], ptr %[[STRUCTARG]])

@@ -493,6 +493,18 @@ __packed_pabs(abs_u64, int64_t, uint64_t)
 #define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
 #endif
 
+/* Scalar Narrowing Clip */
+__packed_binary_builtin_mixed(nclipu_u32, uint32_t, uint64_t, unsigned,
+                              __builtin_riscv_nclipu_u32)
+__packed_binary_builtin_mixed(nclipru_u32, uint32_t, uint64_t, unsigned,
+                              __builtin_riscv_nclipru_u32)
+__packed_binary_builtin_mixed(nsrar_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nsrar_i32)
+__packed_binary_builtin_mixed(nclip_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nclip_i32)
+__packed_binary_builtin_mixed(nclipr_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nclipr_i32)
+
 /* Scalar Multiply High */
 #define __packed_mulh_builtin(name, res_ty, ty1, ty2)                          \
   static __inline__ res_ty __DEFAULT_FN_ATTRS __riscv_##name(ty1 __rs1,        \

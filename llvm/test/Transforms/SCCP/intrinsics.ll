@@ -135,4 +135,74 @@ define <4 x i32> @pr63380(<4 x i32> %input) {
   ret <4 x i32> %ctlz.3
 }
 
+define void @ushl_sat_range(ptr %p1, ptr %p2) {
+; CHECK-LABEL: @ushl_sat_range(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P1:%.*]], align 1, !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[P2:%.*]], align 1, !range [[RNG4:![0-9]+]]
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i8 [[S]], 7
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i8 [[S]], 36
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    ret void
+;
+  %x = load i8, ptr %p1, !range !{i8 3, i8 10}
+  %y = load i8, ptr %p2, !range !{i8 1, i8 3}
+  %s = call i8 @llvm.ushl.sat.i8(i8 %x, i8 %y)
+  %cmp1 = icmp uge i8 %s, 6
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp ult i8 %s, 37
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp uge i8 %s, 7
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp ult i8 %s, 36
+  call void @use(i1 %cmp4)
+  ret void
+}
+
+define void @ushl_sat_partial_oob(ptr %p1, ptr %p2) {
+; CHECK-LABEL: @ushl_sat_partial_oob(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P1:%.*]], align 1, !range [[RNG5:![0-9]+]]
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[P2:%.*]], align 1, !range [[RNG6:![0-9]+]]
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i8 [[S]], 4
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp ult i8 [[S]], 8
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    ret void
+;
+  %x = load i8, ptr %p1, !range !{i8 3, i8 5}
+  %y = load i8, ptr %p2, !range !{i8 -4, i8 2}
+  %s = call i8 @llvm.ushl.sat.i8(i8 %x, i8 %y)
+  %cmp1 = icmp uge i8 %s, 3
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp ult i8 %s, 9
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp uge i8 %s, 4
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp ult i8 %s, 8
+  call void @use(i1 %cmp4)
+  ret void
+}
+
+define void @sshl_sat_const_lhs(i8 %y) {
+; CHECK-LABEL: @sshl_sat_const_lhs(
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -3, i8 [[Y:%.*]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[S]], -3
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %s = call i8 @llvm.sshl.sat.i8(i8 -3, i8 %y)
+  %cmp1 = icmp sle i8 %s, -3
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp slt i8 %s, -3
+  call void @use(i1 %cmp2)
+  ret void
+}
+
 declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1 immarg)

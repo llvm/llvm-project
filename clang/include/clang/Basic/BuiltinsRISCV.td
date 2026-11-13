@@ -282,6 +282,13 @@ def sati_i64 : RISCVBuiltin<"int64_t(int64_t, _Constant unsigned int)">;
 def usati_u64 : RISCVBuiltin<"uint64_t(int64_t, _Constant unsigned int)">;
 } // Features = "experimental-p,64bit"
 
+// Scalar Narrowing Clip
+def nclipu_u32  : RISCVBuiltin<"uint32_t(uint64_t, unsigned int)">;
+def nclipru_u32 : RISCVBuiltin<"uint32_t(uint64_t, unsigned int)">;
+def nsrar_i32   : RISCVBuiltin<"int32_t(int64_t, unsigned int)">;
+def nclip_i32   : RISCVBuiltin<"int32_t(int64_t, unsigned int)">;
+def nclipr_i32  : RISCVBuiltin<"int32_t(int64_t, unsigned int)">;
+
 // Scalar Multiply High
 def mulh_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def mulhr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;

@@ -37,6 +37,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
@@ -1810,6 +1811,18 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       "Load hasn't been implemented yet for this system semantic. FIXME");
 }
 
+// Maps a [[vk::builtin(...)]] name to its SPIR-V spec `BuiltIn` decoration.
+// Deliberately not creating dependency on llvm::SPIRV::BuiltIn in front end.
+// Sema's handleVkBuiltInAttr only allows names handled here to reach CodeGen.
+static unsigned getSPIRVVkBuiltinID(StringRef BuiltIn) {
+  unsigned ID = llvm::StringSwitch<unsigned>(BuiltIn)
+                    .Case("PointSize", /* BuiltIn::PointSize */ 1)
+                    .Default(-1);
+  assert(ID != static_cast<unsigned>(-1) &&
+         "Sema should only allow builtin names implemented here");
+  return ID;
+}
+
 void CGHLSLRuntime::emitSystemSemanticStore(
     IRBuilder<> &B, llvm::Value *Source, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic,
@@ -1886,6 +1899,15 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
 
+  // [[vk::builtin(...)]] takes precedence over the recognized-semantic
+  // dispatch, so without this check they'd always be treated as an arbitrary
+  // user semantic. The attribute is only ever attached when targeting SPIR-V.
+  if (const auto *BuiltInAttr = Decl->getAttr<HLSLVkBuiltInAttr>())
+    return createSPIRVInputLoad(
+        B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+        llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+        getSPIRVVkBuiltinID(BuiltInAttr->getBuiltIn()), InterpMode);
+
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
       llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());
@@ -1911,6 +1933,15 @@ void CGHLSLRuntime::handleScalarSemanticStore(
     IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
+  // See the matching comment in `handleScalarSemanticLoad`
+  if (const auto *BuiltInAttr = Decl->getAttr<HLSLVkBuiltInAttr>()) {
+    createSPIRVOutputStore(
+        B, CGM.getModule(), Source, Semantic->getAttrName()->getName(),
+        llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+        getSPIRVVkBuiltinID(BuiltInAttr->getBuiltIn()), InterpMode);
+    return;
+  }
+
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   llvm::dxbc::PSV::SemanticKind SemanticKind =
       llvm::hlsl::getSemanticKind(Semantic->getAttrName()->getName());

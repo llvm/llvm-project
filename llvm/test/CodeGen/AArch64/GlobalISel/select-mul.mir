@@ -5,11 +5,6 @@ name:            mul_i64_sext_imm32
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 
 body:             |
   bb.0:
