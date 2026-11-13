@@ -29,19 +29,16 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    s_mov_b32 s2, 0
 ; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    s_branch .LBB0_3
-; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB0_2: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
 ; CHECK-NEXT:    s_or_b32 s4, s1, 1
 ; CHECK-NEXT:    s_and_b32 s0, s0, s3
+; CHECK-NEXT:    s_andn2_b32 s3, s3, exec_lo
+; CHECK-NEXT:    s_or_b32 s3, s3, s0
 ; CHECK-NEXT:    s_cmp_lt_i32 s1, 0
-; CHECK-NEXT:    s_cselect_b32 s5, 1, 0
-; CHECK-NEXT:    s_andn2_b32 s1, s3, exec_lo
-; CHECK-NEXT:    s_or_b32 s3, s1, s0
 ; CHECK-NEXT:    s_mov_b32 s1, s4
-; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
 ; CHECK-NEXT:  .LBB0_3: ; %bb2
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

@@ -280,18 +280,14 @@ define amdgpu_ps <2 x i32> @fcmp_ogt_v2bf16_ss(<2 x bfloat> inreg %a, <2 x bfloa
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX1250-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX1250-NEXT:    s_lshl_b32 s3, s1, 16
-; GFX1250-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX1250-NEXT:    s_cmp_gt_f32 s0, s3
-; GFX1250-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX1250-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX1250-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX1250-NEXT:    s_cmp_gt_f32 s2, s1
-; GFX1250-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX1250-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX1250-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX1250-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX1250-NEXT:    s_cmp_gt_f32 s0, s1
 ; GFX1250-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX1250-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX1250-NEXT:    s_cmp_gt_f32 s2, s3
 ; GFX1250-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cmp = fcmp ogt <2 x bfloat> %a, %b

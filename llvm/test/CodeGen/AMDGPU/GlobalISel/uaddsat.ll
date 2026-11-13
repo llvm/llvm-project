@@ -3013,14 +3013,12 @@ define amdgpu_ps i48 @s_uaddsat_i48(i48 inreg %lhs, i48 inreg %rhs) {
 ; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX6-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX6-NEXT:    s_addc_u32 s2, s1, s3
-; GFX6-NEXT:    s_and_b32 s1, s2, 0xffff
-; GFX6-NEXT:    s_cmp_lg_u32 s2, s1
-; GFX6-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX6-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX6-NEXT:    s_and_b32 s1, s2, 0xffff
 ; GFX6-NEXT:    s_or_b32 s0, s0, s3
-; GFX6-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX6-NEXT:    s_cmp_lg_u32 s2, s1
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], -1, s[0:1]
 ; GFX6-NEXT:    ; return to shader part epilog
 ;

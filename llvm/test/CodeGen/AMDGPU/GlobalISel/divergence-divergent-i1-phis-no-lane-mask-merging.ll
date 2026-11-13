@@ -168,11 +168,9 @@ define void @divergent_i1_phi_used_inside_loop_bigger_loop_body(float %val, floa
 ; GFX10-NEXT:    s_cbranch_execz .LBB3_5
 ; GFX10-NEXT:  .LBB3_3: ; %loop_start
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    s_cmpk_le_i32 s6, 0x3e8
-; GFX10-NEXT:    s_cselect_b32 s9, 1, 0
 ; GFX10-NEXT:    s_andn2_b32 s7, s7, exec_lo
 ; GFX10-NEXT:    s_and_b32 s8, exec_lo, s4
-; GFX10-NEXT:    s_cmp_lg_u32 s9, 0
+; GFX10-NEXT:    s_cmpk_le_i32 s6, 0x3e8
 ; GFX10-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX10-NEXT:  ; %bb.4: ; %if
 ; GFX10-NEXT:    ; in Loop: Header=BB3_3 Depth=1

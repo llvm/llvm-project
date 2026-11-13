@@ -363,19 +363,15 @@ define amdgpu_ps i64 @s_sdiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_mov_b32 s3, s0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v0
 ; CHECK-NEXT:    s_mul_i32 s5, s1, s4
+; CHECK-NEXT:    s_add_i32 s6, s1, 1
 ; CHECK-NEXT:    s_sub_i32 s2, s2, s5
 ; CHECK-NEXT:    s_cmp_ge_u32 s2, s4
-; CHECK-NEXT:    s_cselect_b32 s5, 1, 0
-; CHECK-NEXT:    s_add_i32 s6, s1, 1
-; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
 ; CHECK-NEXT:    s_cselect_b32 s6, s6, s1
 ; CHECK-NEXT:    s_sub_i32 s1, s2, s4
-; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
+; CHECK-NEXT:    s_cmp_ge_u32 s2, s4
 ; CHECK-NEXT:    s_cselect_b32 s1, s1, s2
-; CHECK-NEXT:    s_cmp_ge_u32 s1, s4
-; CHECK-NEXT:    s_cselect_b32 s1, 1, 0
 ; CHECK-NEXT:    s_add_i32 s2, s6, 1
-; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cmp_ge_u32 s1, s4
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_branch .LBB1_3

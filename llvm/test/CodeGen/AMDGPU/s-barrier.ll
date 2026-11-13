@@ -628,28 +628,51 @@ define void @signal_var_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %cnt
 }
 
 define amdgpu_ps void @test_barrier_leave_write_to_scc(i32 inreg %val, ptr addrspace(1) %out) {
-; GFX12-LABEL: test_barrier_leave_write_to_scc:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_barrier_leave
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX12-NEXT:    s_movk_i32 s0, 0x7b
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_cselect_b32 s0, s0, 0x1c8
-; GFX12-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_endpgm
+; GFX12-SDAG-LABEL: test_barrier_leave_write_to_scc:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_barrier_leave
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX12-SDAG-NEXT:    s_movk_i32 s0, 0x7b
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_cselect_b32 s0, s0, 0x1c8
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-SDAG-NEXT:    s_endpgm
 ;
-; GFX13-LABEL: test_barrier_leave_write_to_scc:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX13-NEXT:    s_movk_i32 s0, 0x7b
-; GFX13-NEXT:    s_barrier_leave 1
-; GFX13-NEXT:    s_cselect_b32 s0, s0, 0x1c8
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13-NEXT:    v_mov_b32_e32 v2, s0
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX13-NEXT:    s_endpgm
+; GFX12-GISEL-LABEL: test_barrier_leave_write_to_scc:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_barrier_leave
+; GFX12-GISEL-NEXT:    s_movk_i32 s1, 0x7b
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX12-GISEL-NEXT:    s_cselect_b32 s0, s1, 0x1c8
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-GISEL-NEXT:    s_endpgm
+;
+; GFX13-SDAG-LABEL: test_barrier_leave_write_to_scc:
+; GFX13-SDAG:       ; %bb.0:
+; GFX13-SDAG-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX13-SDAG-NEXT:    s_movk_i32 s0, 0x7b
+; GFX13-SDAG-NEXT:    s_barrier_leave 1
+; GFX13-SDAG-NEXT:    s_cselect_b32 s0, s0, 0x1c8
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX13-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-SDAG-NEXT:    s_endpgm
+;
+; GFX13-GISEL-LABEL: test_barrier_leave_write_to_scc:
+; GFX13-GISEL:       ; %bb.0:
+; GFX13-GISEL-NEXT:    s_movk_i32 s1, 0x7b
+; GFX13-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX13-GISEL-NEXT:    s_barrier_leave 1
+; GFX13-GISEL-NEXT:    s_cselect_b32 s0, s1, 0x1c8
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX13-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-GISEL-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.barrier.leave(i16 1)
   %cmp = icmp ne i32 %val, 0
   %ret = select i1 %cmp, i32 123, i32 456

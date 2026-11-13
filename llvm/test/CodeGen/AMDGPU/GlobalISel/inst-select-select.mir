@@ -18,8 +18,6 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B32_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -49,8 +47,6 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64 = S_CSELECT_B64 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -80,8 +76,6 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64 = S_CSELECT_B64 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -111,8 +105,6 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64 = S_CSELECT_B64 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -142,8 +134,6 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64 = S_CSELECT_B64 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -173,8 +163,6 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64 = S_CSELECT_B64 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -204,8 +192,6 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY2]], [[COPY3]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B32_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -237,8 +223,6 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B32_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -550,8 +534,6 @@ body: |
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
     ; GCN-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[S_XOR_B32_]], [[COPY3]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B32_]]
     %0:sgpr(i32) = COPY $sgpr0
@@ -584,8 +566,6 @@ body: |
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
     ; GCN-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY3]], [[S_MOV_B32_]], implicit-def dead $scc
     ; GCN-NEXT: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN-NEXT: $scc = COPY [[COPY4]]
     ; GCN-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY2]], [[S_XOR_B32_]], implicit $scc
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_CSELECT_B32_]]
     %0:sgpr(i32) = COPY $sgpr0

@@ -76,20 +76,16 @@ define amdgpu_ps i32 @s_udiv_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GISEL-NEXT:    s_mul_i32 s3, s2, s1
+; GISEL-NEXT:    s_add_i32 s4, s2, 1
 ; GISEL-NEXT:    s_sub_i32 s0, s0, s3
 ; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
-; GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GISEL-NEXT:    s_add_i32 s4, s2, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, s4, s2
-; GISEL-NEXT:    s_sub_i32 s4, s0, s1
-; GISEL-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-NEXT:    s_cselect_b32 s0, s4, s0
+; GISEL-NEXT:    s_sub_i32 s3, s0, s1
 ; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
-; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
-; GISEL-NEXT:    s_add_i32 s1, s2, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GISEL-NEXT:    s_cselect_b32 s0, s1, s2
+; GISEL-NEXT:    s_cselect_b32 s0, s3, s0
+; GISEL-NEXT:    s_add_i32 s3, s2, 1
+; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
+; GISEL-NEXT:    s_cselect_b32 s0, s3, s2
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
 ; CGP-LABEL: s_udiv_i32:
@@ -108,20 +104,16 @@ define amdgpu_ps i32 @s_udiv_i32(i32 inreg %num, i32 inreg %den) {
 ; CGP-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; CGP-NEXT:    v_readfirstlane_b32 s2, v0
 ; CGP-NEXT:    s_mul_i32 s3, s2, s1
+; CGP-NEXT:    s_add_i32 s4, s2, 1
 ; CGP-NEXT:    s_sub_i32 s0, s0, s3
 ; CGP-NEXT:    s_cmp_ge_u32 s0, s1
-; CGP-NEXT:    s_cselect_b32 s3, 1, 0
-; CGP-NEXT:    s_add_i32 s4, s2, 1
-; CGP-NEXT:    s_cmp_lg_u32 s3, 0
 ; CGP-NEXT:    s_cselect_b32 s2, s4, s2
-; CGP-NEXT:    s_sub_i32 s4, s0, s1
-; CGP-NEXT:    s_cmp_lg_u32 s3, 0
-; CGP-NEXT:    s_cselect_b32 s0, s4, s0
+; CGP-NEXT:    s_sub_i32 s3, s0, s1
 ; CGP-NEXT:    s_cmp_ge_u32 s0, s1
-; CGP-NEXT:    s_cselect_b32 s0, 1, 0
-; CGP-NEXT:    s_add_i32 s1, s2, 1
-; CGP-NEXT:    s_cmp_lg_u32 s0, 0
-; CGP-NEXT:    s_cselect_b32 s0, s1, s2
+; CGP-NEXT:    s_cselect_b32 s0, s3, s0
+; CGP-NEXT:    s_add_i32 s3, s2, 1
+; CGP-NEXT:    s_cmp_ge_u32 s0, s1
+; CGP-NEXT:    s_cselect_b32 s0, s3, s2
 ; CGP-NEXT:    ; return to shader part epilog
   %result = udiv i32 %num, %den
   %readlane = call i32 @llvm.amdgcn.readfirstlane(i32 %result)

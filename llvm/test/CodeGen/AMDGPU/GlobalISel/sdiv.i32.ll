@@ -100,20 +100,16 @@ define amdgpu_ps i32 @s_sdiv_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
 ; GISEL-NEXT:    s_mul_i32 s5, s4, s1
+; GISEL-NEXT:    s_add_i32 s6, s4, 1
 ; GISEL-NEXT:    s_sub_i32 s0, s0, s5
 ; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
-; GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; GISEL-NEXT:    s_add_i32 s6, s4, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s5, 0
 ; GISEL-NEXT:    s_cselect_b32 s4, s6, s4
-; GISEL-NEXT:    s_sub_i32 s6, s0, s1
-; GISEL-NEXT:    s_cmp_lg_u32 s5, 0
-; GISEL-NEXT:    s_cselect_b32 s0, s6, s0
+; GISEL-NEXT:    s_sub_i32 s5, s0, s1
 ; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
-; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
-; GISEL-NEXT:    s_add_i32 s1, s4, 1
-; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
-; GISEL-NEXT:    s_cselect_b32 s0, s1, s4
+; GISEL-NEXT:    s_cselect_b32 s0, s5, s0
+; GISEL-NEXT:    s_add_i32 s5, s4, 1
+; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
+; GISEL-NEXT:    s_cselect_b32 s0, s5, s4
 ; GISEL-NEXT:    s_xor_b32 s1, s3, s2
 ; GISEL-NEXT:    s_xor_b32 s0, s0, s1
 ; GISEL-NEXT:    s_sub_i32 s0, s0, s1
@@ -142,20 +138,16 @@ define amdgpu_ps i32 @s_sdiv_i32(i32 inreg %num, i32 inreg %den) {
 ; CGP-NEXT:    s_xor_b32 s2, s3, s2
 ; CGP-NEXT:    v_readfirstlane_b32 s3, v0
 ; CGP-NEXT:    s_mul_i32 s4, s3, s1
+; CGP-NEXT:    s_add_i32 s5, s3, 1
 ; CGP-NEXT:    s_sub_i32 s0, s0, s4
 ; CGP-NEXT:    s_cmp_ge_u32 s0, s1
-; CGP-NEXT:    s_cselect_b32 s4, 1, 0
-; CGP-NEXT:    s_add_i32 s5, s3, 1
-; CGP-NEXT:    s_cmp_lg_u32 s4, 0
 ; CGP-NEXT:    s_cselect_b32 s3, s5, s3
-; CGP-NEXT:    s_sub_i32 s5, s0, s1
-; CGP-NEXT:    s_cmp_lg_u32 s4, 0
-; CGP-NEXT:    s_cselect_b32 s0, s5, s0
+; CGP-NEXT:    s_sub_i32 s4, s0, s1
 ; CGP-NEXT:    s_cmp_ge_u32 s0, s1
-; CGP-NEXT:    s_cselect_b32 s0, 1, 0
-; CGP-NEXT:    s_add_i32 s1, s3, 1
-; CGP-NEXT:    s_cmp_lg_u32 s0, 0
-; CGP-NEXT:    s_cselect_b32 s0, s1, s3
+; CGP-NEXT:    s_cselect_b32 s0, s4, s0
+; CGP-NEXT:    s_add_i32 s4, s3, 1
+; CGP-NEXT:    s_cmp_ge_u32 s0, s1
+; CGP-NEXT:    s_cselect_b32 s0, s4, s3
 ; CGP-NEXT:    s_xor_b32 s0, s0, s2
 ; CGP-NEXT:    s_sub_i32 s0, s0, s2
 ; CGP-NEXT:    ; return to shader part epilog
