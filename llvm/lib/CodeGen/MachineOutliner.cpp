@@ -1004,8 +1004,8 @@ void MachineOutliner::recordUnprofitableCandidate(OutlinedFunction &OF) {
     return;
 
   // Read mode uses the merged count to check frame costs.
-  if (!llvm::any_of(OF.Candidates, [&](const Candidate &C) {
-        return OF.SequenceSize > C.getCallOverhead();
+  if (llvm::all_of(OF.Candidates, [&](const Candidate &C) {
+        return OF.SequenceSize <= C.getCallOverhead();
       }))
     return;
 
@@ -1070,7 +1070,8 @@ bool MachineOutliner::publishUnprofitableCandidates(InstructionMapper &Mapper) {
   }
 
   bool Published = false;
-  for (auto [SequenceID, Candidates] : llvm::enumerate(CandidateGroups)) {
+  for (const auto &[SequenceID, Candidates] :
+       llvm::enumerate(CandidateGroups)) {
     // Publishing competing sequences would count the same instructions twice.
     // Read mode prunes overlapping sites, but cannot reconcile their merged
     // counts across modules. Conservatively discard both groups rather than
