@@ -5148,12 +5148,27 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
       return 0;
   }
 
+  // Fixed-length SVE vectors assembled from constants and scalars may be
+  // materialized through the constant pool or stack. Per-lane insertion costs
+  // do not account for the shared setup cost, so add a conservative overhead.
+  // TODO: Model the scalarization overhead of wide fixed-length SVE vectors
+  // accurately.
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  bool IsWideFixedLengthSVE =
+      Ty->getPrimitiveSizeInBits().getFixedValue() > AArch64::SVEBitsPerBlock &&
+      ST->useSVEForFixedLengthVectors(LT.second);
+  unsigned FixedLengthSVECost =
+      IsWideFixedLengthSVE
+          ? ST->getCLOpts().sve_wide_vector_constant_materialization_overhead
+          : 0;
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind);
+                                           CostKind) +
+           FixedLengthSVECost;
   unsigned VecInstCost =
       CostKind == TTI::TCK_CodeSize ? 1 : ST->getVectorInsertExtractBaseCost();
-  return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
+  return DemandedElts.popcount() * (Insert + Extract) * VecInstCost +
+         FixedLengthSVECost;
 }
 
 std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(

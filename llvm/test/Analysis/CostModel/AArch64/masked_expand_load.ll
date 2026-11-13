@@ -90,8 +90,8 @@ define void @fixed() {
 ; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:14 SizeLat:8 for: %v2f32 = call <2 x float> @llvm.masked.expandload.v2f32.p0(ptr poison, <2 x i1> poison, <2 x float> poison)
 ; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:30 SizeLat:18 for: %v4f32 = call <4 x float> @llvm.masked.expandload.v4f32.p0(ptr poison, <4 x i1> poison, <4 x float> poison)
 ; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:14 SizeLat:8 for: %v2f64 = call <2 x double> @llvm.masked.expandload.v2f64.p0(ptr poison, <2 x i1> poison, <2 x double> poison)
-; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:32 SizeLat:20 for: %v4i64 = call <4 x i64> @llvm.masked.expandload.v4i64.p0(ptr poison, <4 x i1> poison, <4 x i64> poison)
-; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:92 Lat:248 SizeLat:152 for: %v32f16 = call <32 x half> @llvm.masked.expandload.v32f16.p0(ptr poison, <32 x i1> poison, <32 x half> poison)
+; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:17 Lat:37 SizeLat:25 for: %v4i64 = call <4 x i64> @llvm.masked.expandload.v4i64.p0(ptr poison, <4 x i1> poison, <4 x i64> poison)
+; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:157 CodeSize:97 Lat:253 SizeLat:157 for: %v32f16 = call <32 x half> @llvm.masked.expandload.v32f16.p0(ptr poison, <32 x i1> poison, <32 x half> poison)
 ; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:9 SizeLat:6 for: %v1i128 = call <1 x i128> @llvm.masked.expandload.v1i128.p0(ptr poison, <1 x i1> poison, <1 x i128> poison)
 ; SVE-ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
