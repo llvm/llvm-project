@@ -2227,6 +2227,12 @@ static std::optional<bool> TryWithMinMaxDecomposition(CmpInst::Predicate Pred,
   if (D.sub(decompose(B, Info, /*IsSigned=*/true, DL)))
     return std::nullopt;
 
+  if (none_of(D.Vars, [](const DecompEntry &E) {
+        auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
+        return MM && MM->isSigned();
+      }))
+    return std::nullopt;
+
   return checkSignedDecompositionWithMinMax(Pred, D, Info, /*Depth=*/2);
 }
 
@@ -2269,8 +2275,6 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   auto R = Info.getConstraintForSolving(Pred, A, B);
   if (auto ImpliedCondition = TryWithLinkedDecomposition(R))
     return ImpliedCondition;
-  if (auto ImpliedCondition = TryWithMinMaxDecomposition(Pred, A, B, Info))
-    return ImpliedCondition;
 
   // For non-negative operands unsigned queries can also be checked against the
   // signed system.
@@ -2299,6 +2303,10 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
         return ImpliedCondition;
     }
   }
+
+  if (auto ImpliedCondition = TryWithMinMaxDecomposition(Pred, A, B, Info))
+    return ImpliedCondition;
+
   return std::nullopt;
 }
 
