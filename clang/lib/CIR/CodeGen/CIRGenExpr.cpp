@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Address.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
@@ -2268,7 +2269,9 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
       emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
     }
   } else {
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    if (shouldEmitLifetimeMarkers)
+      if (cir::AllocaOp alloca = object.getUnderlyingAllocaOp())
+        emitTemporaryLifetimeStart(m, e, alloca, object.getAlignment());
     emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
   }
   pushTemporaryCleanup(*this, m, e, object);
@@ -3415,6 +3418,7 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
       resultLV = branchGenFunc(*this, expr);
       resultPtr = resultLV ? resultLV->getPointer() : mlir::Value();
       eval.endEvaluation();
+      branchCleanups.deferLifetimeExtendedCleanups();
       branchCleanups.forceCleanup({&resultPtr});
     }
 

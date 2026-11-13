@@ -327,6 +327,10 @@ void CIRGenFunction::LexicalScope::cleanup() {
   // blocks or branches are needed.
   if (performCleanup) {
     assert(!cir::MissingFeatures::generateDebugInfo());
+    // A ternary arm leaves lifetime-extended cleanups to the enclosing
+    // full-expression.
+    if (isTernary())
+      deferLifetimeExtendedCleanups();
     forceCleanup();
   }
 

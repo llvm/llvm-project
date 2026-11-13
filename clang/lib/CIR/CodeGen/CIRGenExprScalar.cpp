@@ -3464,6 +3464,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       eval.beginEvaluation();
       branch = Visit(expr);
       eval.endEvaluation();
+      branchCleanups.deferLifetimeExtendedCleanups();
       branchCleanups.forceCleanup({&branch});
     }
 
