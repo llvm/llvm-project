@@ -143,6 +143,12 @@ STATISTIC(NumClonedCalleeIndirectCallsites,
 STATISTIC(NumClonedCalleeEdgesMarkedRequiresDeclImport,
           "Number of summary indirect call edges to cloned callees marked as "
           "requiring a declaration import (thin link)");
+STATISTIC(NumCallsAssignedTrimmedInlinedContexts,
+          "Number of calls assigned contexts trimmed within their inlined "
+          "stack id sequence");
+STATISTIC(NumTrimmedInlinedContextIds,
+          "Number of (duplicated) context ids for contexts trimmed within a "
+          "call's inlined stack id sequence");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -241,6 +247,21 @@ static cl::opt<bool>
 static cl::opt<bool> AllowRecursiveContexts(
     "memprof-allow-recursive-contexts", cl::init(true), cl::Hidden,
     cl::desc("Allow cloning of contexts having recursive cycles"));
+
+// When updating the stack nodes for callsites, a call with inlined frames is
+// assigned the contexts that include all of its stack ids that have context
+// nodes. The profile may have trimmed some contexts at an earlier stack id in
+// that sequence (because they had a single allocation type from that point
+// on); when a later stack id has a node due to other contexts, those trimmed
+// contexts are not assigned to the call, only to calls whose last stack id
+// with a node is the earlier id (e.g. an out-of-line copy of the inlined
+// callee). When enabled, also assign them to the call with the inlined frames,
+// via duplicates of their context ids (the other calls keep the originals).
+// TODO: Remove this option once the new handling is validated more widely.
+static cl::opt<bool> AssignTrimmedInlinedContexts(
+    "memprof-assign-trimmed-inlined-contexts", cl::init(true), cl::Hidden,
+    cl::desc("Assign contexts trimmed within a call's inlined stack id "
+             "sequence to that call"));
 
 // Set the minimum absolute count threshold for allowing inlining of indirect
 // calls promoted during cloning.
@@ -551,6 +572,31 @@ public:
       return false;
     }
 
+    // Removes from Ids any that are not on this node (i.e. on none of the
+    // edges its context ids are computed from). Walks the edges once for all
+    // ids, stopping early once every id has been found.
+    void removeContextIdsNotPresent(DenseSet<uint32_t> &Ids) const {
+      DenseSet<uint32_t> NotFound = Ids;
+      auto Edges = llvm::concat<const std::shared_ptr<ContextEdge>>(
+          CalleeEdges, useCallerEdgesForContextInfo()
+                           ? CallerEdges
+                           : std::vector<std::shared_ptr<ContextEdge>>());
+      for (const auto &Edge : Edges) {
+        const auto &EdgeIds = Edge->getContextIds();
+        // Iterate over the smaller of the two sets.
+        if (EdgeIds.size() < NotFound.size()) {
+          for (auto Id : EdgeIds)
+            NotFound.erase(Id);
+        } else {
+          NotFound.remove_if(
+              [&EdgeIds](uint32_t Id) { return EdgeIds.contains(Id); });
+        }
+        if (NotFound.empty())
+          return;
+      }
+      set_subtract(Ids, NotFound);
+    }
+
     // List of clones of this ContextNode, initially empty.
     std::vector<ContextNode *> Clones;
 
@@ -784,6 +830,11 @@ private:
     // Initially empty, if needed this will be updated to contain the context
     // ids for use in a new context node created for this callsite.
     DenseSet<uint32_t> ContextIds;
+    // Duplicates, created for this callsite, of the ids of contexts trimmed at
+    // a stack id before the last one in StackNodes (see
+    // -memprof-assign-trimmed-inlined-contexts). Any new node created for this
+    // callsite gets these in addition to ContextIds.
+    DenseSet<uint32_t> TrimmedInlinedDupIds;
   };
 
   /// Helper to remove edge from graph, updating edge iterator if it is provided
@@ -809,14 +860,32 @@ private:
 
   /// Duplicates the given set of context ids, updating the provided
   /// map from each original id with the newly generated context ids,
-  /// and returning the new duplicated id set.
+  /// and returning the new duplicated id set. If provided, OnDuplicate is
+  /// invoked with each original id and its new duplicate.
   DenseSet<uint32_t> duplicateContextIds(
       const DenseSet<uint32_t> &StackSequenceContextIds,
-      DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds);
+      DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds,
+      function_ref<void(uint32_t OldId, uint32_t NewId)> OnDuplicate = nullptr);
 
   /// Propagates all duplicated context ids across the graph.
   void propagateDuplicateContextIds(
       const DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds);
+
+  /// Cache of the ids of contexts trimmed at each node (i.e. that are on the
+  /// node but not on any of its caller edges). The sets are stored in a vector
+  /// and looked up by index, so that references to them are not invalidated
+  /// by adding more entries.
+  struct TrimmedAtNodeCache {
+    DenseMap<const ContextNode *, unsigned> NodeToIndex;
+    std::vector<DenseSet<uint32_t>> TrimmedAtNodeIds;
+  };
+
+  /// Returns the ids of contexts that were trimmed at a stack node before the
+  /// last one in the given call's inlined stack node sequence (see the
+  /// definition for details).
+  DenseSet<uint32_t>
+  computeTrimmedInlinedContextIds(ArrayRef<ContextNode *> StackNodes,
+                                  TrimmedAtNodeCache &Cache);
 
   /// Connect the NewNode to OrigNode's callees if TowardsCallee is true,
   /// else to its callers. Also updates OrigNode's edges to remove any context
@@ -1752,11 +1821,15 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 DenseSet<uint32_t>
 CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
     const DenseSet<uint32_t> &StackSequenceContextIds,
-    DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds) {
+    DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds,
+    function_ref<void(uint32_t OldId, uint32_t NewId)> OnDuplicate) {
   DenseSet<uint32_t> NewContextIds;
+  NewContextIds.reserve(StackSequenceContextIds.size());
   for (auto OldId : StackSequenceContextIds) {
     NewContextIds.insert(++LastContextId);
     OldToNewContextIds[OldId].insert(LastContextId);
+    if (OnDuplicate)
+      OnDuplicate(OldId, LastContextId);
     assert(ContextIdToAllocationType.count(OldId));
     // The new context has the same allocation type and size info as original.
     ContextIdToAllocationType[LastContextId] = ContextIdToAllocationType[OldId];
@@ -1955,9 +2028,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // In this case there is no need to create any new context nodes, simply
   // assign the context node for stack id to this Call.
   if (Calls.size() == 1) {
-    auto &[Call, StackNodes, Func, SavedContextIds] = Calls[0];
+    auto &[Call, StackNodes, Func, SavedContextIds, TrimmedInlinedDupIds] =
+        Calls[0];
     if (StackNodes.size() == 1) {
       assert(SavedContextIds.empty());
+      // Only calls with inlined frames get these.
+      assert(TrimmedInlinedDupIds.empty());
       // It should be this Node
       assert(Node == StackNodes[0]);
       if (Node->Recursive)
@@ -1992,10 +2068,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
     CreatedNode = false;
-    auto &[Call, StackNodes, Func, SavedContextIds] = Calls[I];
+    auto &[Call, StackNodes, Func, SavedContextIds, TrimmedInlinedDupIds] =
+        Calls[I];
     // Skip any for which we didn't assign any ids, these don't get a node in
     // the graph.
-    if (SavedContextIds.empty()) {
+    if (SavedContextIds.empty() && TrimmedInlinedDupIds.empty()) {
       // If this call has a matching call (located in the same function and
       // having the same stack ids), simply add it to the context node created
       // for its matching call earlier. These can be treated the same through
@@ -2025,11 +2102,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     // removed them already during the post order traversal.
     set_intersect(SavedContextIds, LastNodeContextIds);
     ContextNode *PrevNode = LastNode;
-    bool Skip = false;
+    bool Skip = SavedContextIds.empty();
     // Iterate backwards through the stack nodes, starting after the last one
     // in the list, which was handled once outside for all Calls.
-    for (auto NodeIter = StackNodes.rbegin() + 1; NodeIter != StackNodes.rend();
-         NodeIter++) {
+    for (auto NodeIter = StackNodes.rbegin() + 1;
+         !Skip && NodeIter != StackNodes.rend(); NodeIter++) {
       ContextNode *CurNode = *NodeIter;
       // We should only have kept stack ids that had nodes and weren't
       // recursive.
@@ -2054,6 +2131,18 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       }
     }
     if (Skip)
+      SavedContextIds.clear();
+    // Add the duplicates created for this call (see updateStackNodes) that are
+    // still on its first node. Calls given them as well normally come later in
+    // the post order, but one may have been processed first and claimed them
+    // when edges between the nodes are missing, or when a recursive context
+    // traverses the initial nodes more than once with different continuations
+    // (in which case the same happens to the original ids).
+    if (!TrimmedInlinedDupIds.empty()) {
+      StackNodes[0]->removeContextIdsNotPresent(TrimmedInlinedDupIds);
+      SavedContextIds.insert_range(TrimmedInlinedDupIds);
+    }
+    if (SavedContextIds.empty())
       continue;
 
     // Create new context node.
@@ -2236,6 +2325,86 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   }
 }
 
+// Returns the ids of contexts whose stacks end partway through the given
+// call's inlined sequence of stack nodes: those that follow the sequence from
+// StackNodes[0] (the innermost inlined callee frame) through some node before
+// the last, and were trimmed at that node, i.e. have no caller edge out of it.
+// For example, given nodes [A, B, C], a context whose stack ends at A, or that
+// follows A->B and ends at B, is returned, but one that follows A->B->C (which
+// is assigned to the call normally) or A->D is not.
+//
+// Nothing is returned if the sequence contains a recursive node before the
+// last, as updateStackNodes does not assign such calls a node at all.
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+DenseSet<uint32_t> CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
+    computeTrimmedInlinedContextIds(ArrayRef<ContextNode *> StackNodes,
+                                    TrimmedAtNodeCache &Cache) {
+  assert(StackNodes.size() >= 2);
+  DenseSet<uint32_t> Result;
+
+  // Returns the index in the cache of the ids of contexts trimmed at the given
+  // node. This only depends on the node, which is often shared by many calls'
+  // inlined sequences, so it is computed once per node.
+  auto GetTrimmedAtNodeIndex = [&Cache](const ContextNode *Node) {
+    auto [It, Inserted] =
+        Cache.NodeToIndex.try_emplace(Node, Cache.TrimmedAtNodeIds.size());
+    unsigned Index = It->second;
+    if (!Inserted)
+      return Index;
+    // All of the node's context ids flow in through its callee edges. Those
+    // not flowing out through a caller edge were trimmed here.
+    DenseSet<uint32_t> &Trimmed = Cache.TrimmedAtNodeIds.emplace_back();
+    for (const auto &CalleeEdge : Node->CalleeEdges)
+      Trimmed.insert_range(CalleeEdge->getContextIds());
+    for (const auto &CallerEdge : Node->CallerEdges) {
+      set_subtract(Trimmed, CallerEdge->getContextIds());
+      if (Trimmed.empty())
+        break;
+    }
+    return Index;
+  };
+
+  // Collect the cache index for each node but the last. Skip the walk
+  // entirely if no contexts were trimmed at any of them (the common case).
+  SmallVector<unsigned, 8> TrimmedAtNodeIdsIndices;
+  bool AnyTrimmed = false;
+  for (ContextNode *Node : StackNodes.drop_back()) {
+    assert(Node);
+    if (Node->Recursive)
+      return Result;
+    unsigned Index = GetTrimmedAtNodeIndex(Node);
+    AnyTrimmed |= !Cache.TrimmedAtNodeIds[Index].empty();
+    TrimmedAtNodeIdsIndices.push_back(Index);
+  }
+  if (!AnyTrimmed)
+    return Result;
+
+  // Walk the sequence from the innermost node outward, tracking in
+  // PrefixContextIds the contexts that follow the call's stack nodes from the
+  // first through the current one. Any of those contexts that were trimmed at
+  // the current node end partway through the call's sequence, so add them to
+  // Result. All contexts on the first node trivially follow the sequence up to
+  // it, so start with all those trimmed there, and start PrefixContextIds with
+  // the ids on the edge out of the first node (rather than the possibly very
+  // large set of ids on the first node itself).
+  Result = Cache.TrimmedAtNodeIds[TrimmedAtNodeIdsIndices[0]];
+  DenseSet<uint32_t> PrefixContextIds;
+  for (unsigned I = 1; I < TrimmedAtNodeIdsIndices.size(); I++) {
+    auto *Edge = StackNodes[I]->findEdgeFromCallee(StackNodes[I - 1]);
+    if (!Edge)
+      break;
+    if (I == 1)
+      PrefixContextIds = Edge->getContextIds();
+    else
+      set_intersect(PrefixContextIds, Edge->getContextIds());
+    if (PrefixContextIds.empty())
+      break;
+    Result.insert_range(set_intersection(
+        PrefixContextIds, Cache.TrimmedAtNodeIds[TrimmedAtNodeIdsIndices[I]]));
+  }
+  return Result;
+}
+
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // Map of stack id to all calls with that as the last (outermost caller)
@@ -2260,8 +2429,44 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // (outermost caller) stack id with a node.
       uint64_t LastId = StackNodes.back()->OrigStackOrAllocId;
       StackIdToMatchingCalls[LastId].push_back(
-          {Call.call(), std::move(StackNodes), Func, {}});
+          {Call.call(), std::move(StackNodes), Func, {}, {}});
     }
+  }
+
+  // In order to do the best and maximal matching of inlined calls to context
+  // node sequences, sort the calls with each last stack id by the length of
+  // their stack node sequences in descending order, and within each length,
+  // lexicographically by stack id. The latter is so that we can specially
+  // handle calls that have identical stack id sequences (either due to cloning
+  // or artificially because of the MIB context trimming). Those with the same
+  // stack ids are then sorted by function to facilitate efficiently mapping
+  // them to the same context node. Because the functions are pointers, to
+  // ensure a stable sort first assign each function pointer to its first index
+  // in the Calls array, and then use that to sort by. The stack nodes are
+  // compared by stack id rather than by pointer, for a deterministic order.
+  auto StackIdsLess = [](ArrayRef<ContextNode *> A, ArrayRef<ContextNode *> B) {
+    return std::lexicographical_compare(
+        A.begin(), A.end(), B.begin(), B.end(),
+        [](const ContextNode *X, const ContextNode *Y) {
+          return X->OrigStackOrAllocId < Y->OrigStackOrAllocId;
+        });
+  };
+  for (auto &Entry : StackIdToMatchingCalls) {
+    auto &Calls = Entry.second;
+    if (Calls.size() == 1)
+      continue;
+    DenseMap<const FuncTy *, unsigned> FuncToIndex;
+    for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
+      FuncToIndex.insert({CallCtxInfo.Func, Idx});
+    auto CallLess = [&FuncToIndex, &StackIdsLess](const CallContextInfo &A,
+                                                  const CallContextInfo &B) {
+      return A.StackNodes.size() > B.StackNodes.size() ||
+             (A.StackNodes.size() == B.StackNodes.size() &&
+              (StackIdsLess(A.StackNodes, B.StackNodes) ||
+               (A.StackNodes == B.StackNodes &&
+                FuncToIndex[A.Func] < FuncToIndex[B.Func])));
+    };
+    llvm::stable_sort(Calls, CallLess);
   }
 
   // First make a pass through all stack ids that correspond to a call,
@@ -2271,6 +2476,111 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // there is more than one call with the same stack ids. Their (possibly newly
   // duplicated) context ids are saved in the StackIdToMatchingCalls map.
   DenseMap<uint32_t, DenseSet<uint32_t>> OldToNewContextIds;
+
+  // First, give each call with inlined frames duplicates of the ids of any
+  // contexts trimmed at a stack id before the last one in its sequence (see
+  // computeTrimmedInlinedContextIds), saved in its TrimmedInlinedDupIds.
+  // Those contexts are also assigned, with their original ids, to calls whose
+  // last stack id with a node is the earlier id, so this call gets its own
+  // copies. This pass only reads the graph, as does the main loop below (the
+  // duplicates are only added to the graph afterwards, by
+  // propagateDuplicateContextIds), so it can run first; that lets the main
+  // loop hand these duplicates to the other calls that should also get them
+  // (see AddTrimmedInlinedDups).
+
+  // The stack nodes of each call that duplicates were created for. These
+  // reference the vectors in StackIdToMatchingCalls, which is not modified
+  // after this point.
+  std::vector<ArrayRef<ContextNode *>> TrimmedInlinedDupCreatorNodes;
+  // Map from each original trimmed context id to its duplicates, each paired
+  // with the index in TrimmedInlinedDupCreatorNodes of the creating call.
+  DenseMap<uint32_t, SmallVector<std::pair<uint32_t, unsigned>, 1>>
+      OrigToTrimmedInlinedDups;
+  if (AssignTrimmedInlinedContexts) {
+    TrimmedAtNodeCache Cache;
+    for (auto &Entry : StackIdToMatchingCalls) {
+      auto &Calls = Entry.second;
+      // The main loop below skips these, see the comments there. All calls in
+      // this entry share the same last node.
+      if (Calls[0].StackNodes.back()->Recursive)
+        continue;
+      for (unsigned I = 0; I < Calls.size(); I++) {
+        auto &CallCtxInfo = Calls[I];
+        auto &StackNodes = CallCtxInfo.StackNodes;
+        // Calls are sorted longest sequence first, so no later call has
+        // inlined frames either.
+        if (StackNodes.size() < 2)
+          break;
+        // Calls in the same function with the same stack ids are adjacent
+        // after sorting, and will share a context node (see
+        // CallToMatchingCall below), so only give duplicates to the first.
+        if (I > 0 && Calls[I - 1].Func == CallCtxInfo.Func &&
+            Calls[I - 1].StackNodes == StackNodes)
+          continue;
+        auto Trimmed = computeTrimmedInlinedContextIds(StackNodes, Cache);
+        if (Trimmed.empty())
+          continue;
+        unsigned CreatorIdx = TrimmedInlinedDupCreatorNodes.size();
+        TrimmedInlinedDupCreatorNodes.push_back(StackNodes);
+        CallCtxInfo.TrimmedInlinedDupIds = duplicateContextIds(
+            Trimmed, OldToNewContextIds, [&](uint32_t OldId, uint32_t NewId) {
+              OrigToTrimmedInlinedDups[OldId].push_back({NewId, CreatorIdx});
+            });
+        NumCallsAssignedTrimmedInlinedContexts++;
+        NumTrimmedInlinedContextIds += Trimmed.size();
+      }
+    }
+  }
+
+  // Adds to the given saved context ids, for a call with the given last stack
+  // node, the trimmed inlined duplicates of any of those ids created for other
+  // calls. The saved context ids are computed from the graph, which does not
+  // include the duplicates until propagateDuplicateContextIds below adds them
+  // to all of the same nodes and edges as the originals. A call assigned an
+  // original should also be assigned its duplicates; otherwise, when that
+  // call's new node takes the originals, the duplicates would be left behind
+  // on the original stack nodes, which have no call to clone.
+  //
+  // TODO: The saved context ids may themselves be duplicates (created for a
+  // call with the same stack ids in a different function), in which case the
+  // original context id is not found here and the trimmed inlined duplicates
+  // are not added. In the future, handle that by looking up the originals of
+  // the saved ids.
+  auto AddTrimmedInlinedDups = [&](DenseSet<uint32_t> &SavedContextIds,
+                                   const ContextNode *LastNode) {
+    SmallVector<uint32_t> DupIdsToAdd;
+    // Collects the duplicates of one original id that this call should get.
+    auto AddDups = [&](ArrayRef<std::pair<uint32_t, unsigned>> Dups) {
+      for (auto [DupId, CreatorIdx] : Dups) {
+        ArrayRef<ContextNode *> CreatorNodes =
+            TrimmedInlinedDupCreatorNodes[CreatorIdx];
+        // Skip the duplicate if this call ends at a node of the creating
+        // call's sequence other than its first. Such a call overlaps the
+        // stretch of the context the creating call needs the duplicate on,
+        // and would compete with it for the duplicate; being assigned the
+        // original there is enough for it. Calls ending at the creating call's
+        // first node or below only cover the callee side of the context, and
+        // are processed after the creating call in the post order traversal,
+        // so they take only what flows on below it.
+        if (is_contained(CreatorNodes.drop_front(), LastNode))
+          continue;
+        DupIdsToAdd.push_back(DupId);
+      }
+    };
+    // Iterate over the smaller of the two.
+    if (OrigToTrimmedInlinedDups.size() < SavedContextIds.size()) {
+      for (auto &[OrigId, Dups] : OrigToTrimmedInlinedDups)
+        if (SavedContextIds.contains(OrigId))
+          AddDups(Dups);
+    } else {
+      for (auto Id : SavedContextIds) {
+        auto It = OrigToTrimmedInlinedDups.find(Id);
+        if (It != OrigToTrimmedInlinedDups.end())
+          AddDups(It->second);
+      }
+    }
+    SavedContextIds.insert_range(DupIdsToAdd);
+  };
   // Save a map from each call to any that are found to match it. I.e. located
   // in the same function and have the same (possibly trimmed) stack ids. We use
   // this to avoid creating extra graph nodes as they can be treated the same.
@@ -2283,36 +2593,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       if (StackNodes.size() == 1)
         continue;
     }
-    // In order to do the best and maximal matching of inlined calls to context
-    // node sequences we will sort the vectors of stack nodes in descending
-    // order of length, and within each length, lexicographically by stack id.
-    // The latter is so that we can specially handle calls that have identical
-    // stack id sequences (either due to cloning or artificially because of the
-    // MIB context trimming). Those with the same stack ids are then sorted by
-    // function to facilitate efficiently mapping them to the same context node.
-    // Because the functions are pointers, to ensure a stable sort first assign
-    // each function pointer to its first index in the Calls array, and then use
-    // that to sort by.
-    DenseMap<const FuncTy *, unsigned> FuncToIndex;
-    for (const auto &[Idx, CallCtxInfo] : enumerate(Calls))
-      FuncToIndex.insert({CallCtxInfo.Func, Idx});
-    auto StackIdsLess = [](ArrayRef<ContextNode *> A,
-                           ArrayRef<ContextNode *> B) {
-      return std::lexicographical_compare(
-          A.begin(), A.end(), B.begin(), B.end(),
-          [](const ContextNode *X, const ContextNode *Y) {
-            return X->OrigStackOrAllocId < Y->OrigStackOrAllocId;
-          });
-    };
-    auto CallLess = [&FuncToIndex, &StackIdsLess](const CallContextInfo &A,
-                                                  const CallContextInfo &B) {
-      return A.StackNodes.size() > B.StackNodes.size() ||
-             (A.StackNodes.size() == B.StackNodes.size() &&
-              (StackIdsLess(A.StackNodes, B.StackNodes) ||
-               (A.StackNodes == B.StackNodes &&
-                FuncToIndex[A.Func] < FuncToIndex[B.Func])));
-    };
-    llvm::stable_sort(Calls, CallLess);
 
     // Find the node for the last stack id, which should be the same
     // across all calls recorded for this id, and is the id for this
@@ -2341,7 +2621,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
 #endif
 
     for (unsigned I = 0; I < Calls.size(); I++) {
-      auto &[Call, StackNodes, Func, SavedContextIds] = Calls[I];
+      auto &[Call, StackNodes, Func, SavedContextIds, TrimmedInlinedDupIds] =
+          Calls[I];
       assert(SavedContextIds.empty());
       assert(LastNode == StackNodes.back());
 
@@ -2351,6 +2632,33 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       if (I > 0 && StackNodes != Calls[I - 1].StackNodes)
         MatchingIdsFuncSet.clear();
 #endif
+
+      // Check if the next set of stack ids is the same (since the Calls vector
+      // of tuples is sorted by the stack ids we can just look at the next one).
+      // If so, save them in the CallToMatchingCall map so that they get
+      // assigned to the same context node, and skip them. Comparing the stack
+      // nodes is equivalent to comparing the stack ids, as each stack id has
+      // its own node and the stack id to node map is not modified here. This
+      // is done before computing this call's context ids so that, when it
+      // gets a node only from its TrimmedInlinedDupIds, these calls are
+      // assigned to that node too.
+      bool DuplicateContextIds = false;
+      for (unsigned J = I + 1; J < Calls.size(); J++) {
+        auto &CallCtxInfo = Calls[J];
+        if (CallCtxInfo.StackNodes != StackNodes)
+          break;
+        auto *NextFunc = CallCtxInfo.Func;
+        if (NextFunc != Func) {
+          // We have another Call with the same ids but that cannot share this
+          // node, must duplicate ids for it.
+          DuplicateContextIds = true;
+          break;
+        }
+        auto &NextCall = CallCtxInfo.Call;
+        CallToMatchingCall[NextCall] = Call;
+        // Update I so that it gets incremented correctly to skip this call.
+        I = J;
+      }
 
       // First compute the context ids for this stack id sequence (the
       // intersection of the context ids of the corresponding nodes).
@@ -2431,30 +2739,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       MatchingIdsFuncSet.insert(Func);
 #endif
 
-      // Check if the next set of stack ids is the same (since the Calls vector
-      // of tuples is sorted by the stack ids we can just look at the next one).
-      // If so, save them in the CallToMatchingCall map so that they get
-      // assigned to the same context node, and skip them. Comparing the stack
-      // nodes is equivalent to comparing the stack ids, as each stack id has
-      // its own node and the stack id to node map is not modified here.
-      bool DuplicateContextIds = false;
-      for (unsigned J = I + 1; J < Calls.size(); J++) {
-        auto &CallCtxInfo = Calls[J];
-        if (CallCtxInfo.StackNodes != StackNodes)
-          break;
-        auto *NextFunc = CallCtxInfo.Func;
-        if (NextFunc != Func) {
-          // We have another Call with the same ids but that cannot share this
-          // node, must duplicate ids for it.
-          DuplicateContextIds = true;
-          break;
-        }
-        auto &NextCall = CallCtxInfo.Call;
-        CallToMatchingCall[NextCall] = Call;
-        // Update I so that it gets incremented correctly to skip this call.
-        I = J;
-      }
-
       // If we don't have duplicate context ids, then we can assign all the
       // context ids computed for the original node sequence to this call.
       // If there are duplicate calls with the same stack ids then we synthesize
@@ -2468,6 +2752,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
               ? duplicateContextIds(StackSequenceContextIds, OldToNewContextIds)
               : StackSequenceContextIds;
       assert(!SavedContextIds.empty());
+      if (!OrigToTrimmedInlinedDups.empty())
+        AddTrimmedInlinedDups(SavedContextIds, LastNode);
 
       if (!DuplicateContextIds) {
         // Update saved last node's context ids to remove those that are
