@@ -57,9 +57,9 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 8
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 16
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 24
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 32
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 64
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 96
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP33]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP34]], align 4
@@ -286,9 +286,9 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) #0 {
 ; MAX-BW-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; MAX-BW-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
 ; MAX-BW-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[INDEX]]
-; MAX-BW-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 8
-; MAX-BW-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 16
-; MAX-BW-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 24
+; MAX-BW-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 32
+; MAX-BW-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 64
+; MAX-BW-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, ptr [[TMP32]], i64 96
 ; MAX-BW-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP32]], align 4
 ; MAX-BW-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i32>, ptr [[TMP33]], align 4
 ; MAX-BW-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i32>, ptr [[TMP34]], align 4

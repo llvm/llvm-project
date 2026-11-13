@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/FunctionSpecialization.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -27,77 +28,11 @@ using namespace llvm;
 
 STATISTIC(NumSpecsCreated, "Number of specializations created");
 
-namespace llvm {
-
-static cl::opt<bool> ForceSpecialization(
-    "force-specialization", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Force function specialization for every call site with a constant "
-        "argument"));
-
-static cl::opt<unsigned> MaxClones(
-    "funcspec-max-clones", cl::init(3), cl::Hidden, cl::desc(
-    "The maximum number of clones allowed for a single function "
-    "specialization"));
-
-static cl::opt<unsigned>
-    MaxDiscoveryIterations("funcspec-max-discovery-iterations", cl::init(100),
-                           cl::Hidden,
-                           cl::desc("The maximum number of iterations allowed "
-                                    "when searching for transitive "
-                                    "phis"));
-
-static cl::opt<unsigned> MaxIncomingPhiValues(
-    "funcspec-max-incoming-phi-values", cl::init(8), cl::Hidden,
-    cl::desc("The maximum number of incoming values a PHI node can have to be "
-             "considered during the specialization bonus estimation"));
-
-static cl::opt<unsigned> MaxBlockPredecessors(
-    "funcspec-max-block-predecessors", cl::init(2), cl::Hidden, cl::desc(
-    "The maximum number of predecessors a basic block can have to be "
-    "considered during the estimation of dead code"));
-
-static cl::opt<unsigned> MinFunctionSize(
-    "funcspec-min-function-size", cl::init(500), cl::Hidden,
-    cl::desc("Don't specialize functions that have less than this number of "
-             "instructions"));
-
-static cl::opt<unsigned>
-    MaxCodeSizeGrowth("funcspec-max-codesize-growth", cl::init(3), cl::Hidden,
-                      cl::desc("Maximum codesize growth allowed per function"));
-
-static cl::opt<unsigned> MinCodeSizeSavings(
-    "funcspec-min-codesize-savings", cl::init(20), cl::Hidden,
-    cl::desc("Reject specializations whose codesize savings are less than this "
-             "much percent of the original function size"));
-
-static cl::opt<unsigned> MinLatencySavings(
-    "funcspec-min-latency-savings", cl::init(20), cl::Hidden,
-    cl::desc("Reject specializations whose latency savings are less than this "
-             "much percent of the original function size"));
-
-static cl::opt<unsigned> MinInliningBonus(
-    "funcspec-min-inlining-bonus", cl::init(300), cl::Hidden,
-    cl::desc("Reject specializations whose inlining bonus is less than this "
-             "much percent of the original function size"));
-
-static cl::opt<bool> SpecializeOnAddress(
-    "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
-    "Enable function specialization on the address of global values"));
-
-static cl::opt<bool> SpecializeLiteralConstant(
-    "funcspec-for-literal-constant", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Enable specialization of functions that take a literal constant as an "
-        "argument"));
-
-} // end namespace llvm
-
 bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB,
                                             BasicBlock *Succ) const {
   unsigned I = 0;
   return all_of(predecessors(Succ), [&I, BB, Succ, this](BasicBlock *Pred) {
-    return I++ < MaxBlockPredecessors &&
+    return I++ < Opts.funcspec_max_block_predecessors &&
            (Pred == BB || Pred == Succ || !isBlockExecutable(Pred));
   });
 }
@@ -303,8 +238,8 @@ bool InstCostVisitor::discoverTransitivelyIncomingValues(
   while (!WorkList.empty()) {
     PHINode *PN = WorkList.pop_back_val();
 
-    if (++Iter > MaxDiscoveryIterations ||
-        PN->getNumIncomingValues() > MaxIncomingPhiValues)
+    if (++Iter > Opts.funcspec_max_discovery_iterations ||
+        PN->getNumIncomingValues() > Opts.funcspec_max_incoming_phi_values)
       return false;
 
     if (!TransitivePHIs.insert(PN).second)
@@ -338,7 +273,7 @@ bool InstCostVisitor::discoverTransitivelyIncomingValues(
 }
 
 Constant *InstCostVisitor::visitPHINode(PHINode &I) {
-  if (I.getNumIncomingValues() > MaxIncomingPhiValues)
+  if (I.getNumIncomingValues() > Opts.funcspec_max_incoming_phi_values)
     return nullptr;
 
   bool Inserted = VisitedPHIs.insert(&I).second;
@@ -639,6 +574,15 @@ template <> struct llvm::DenseMapInfo<SpecSig> {
   }
 };
 
+FunctionSpecializer::FunctionSpecializer(
+    SCCPSolver &Solver, Module &M, FunctionAnalysisManager *FAM,
+    std::function<BlockFrequencyInfo &(Function &)> GetBFI,
+    std::function<const TargetLibraryInfo &(Function &)> GetTLI,
+    std::function<TargetTransformInfo &(Function &)> GetTTI,
+    std::function<AssumptionCache &(Function &)> GetAC)
+    : Opts(getIPOOptions(M)), Solver(Solver), M(M), FAM(FAM), GetBFI(GetBFI),
+      GetTLI(GetTLI), GetTTI(GetTTI), GetAC(GetAC) {}
+
 FunctionSpecializer::~FunctionSpecializer() {
   LLVM_DEBUG(
     if (NumSpecsCreated > 0)
@@ -685,23 +629,25 @@ bool FunctionSpecializer::run() {
     }
 
     // When specializing literal constants is enabled, always require functions
-    // to be larger than MinFunctionSize, to prevent excessive specialization.
+    // to be larger than -funcspec-min-function-size, to prevent excessive
+    // specialization.
     const bool RequireMinSize =
-        !ForceSpecialization &&
-        (SpecializeLiteralConstant || !F.hasFnAttribute(Attribute::NoInline));
+        !Opts.funcspec_force &&
+        (Opts.funcspec_for_literal_constant || !F.isNoInline());
 
     // If the code metrics reveal that we shouldn't duplicate the function,
     // or if the code size implies that this function is easy to get inlined,
     // then we shouldn't specialize it.
     if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-        (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
+        (RequireMinSize && Metrics.NumInsts < Opts.funcspec_min_function_size))
       continue;
 
     // When specialization on literal constants is disabled, only consider
     // recursive functions when running multiple times to save wasted analysis,
     // as we will not be able to specialize on any newly found literal constant
     // return values.
-    if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
+    if (!Opts.funcspec_for_literal_constant && !Inserted &&
+        !Metrics.isRecursive)
       continue;
 
     int64_t Sz = Metrics.NumInsts.getValue();
@@ -740,8 +686,8 @@ bool FunctionSpecializer::run() {
       return AllSpecs[I].Score > AllSpecs[J].Score;
     return I > J;
   };
-  const unsigned NSpecs =
-      std::min(NumCandidates * MaxClones, unsigned(AllSpecs.size()));
+  const unsigned NSpecs = std::min(NumCandidates * Opts.funcspec_max_clones,
+                                   unsigned(AllSpecs.size()));
   SmallVector<unsigned> BestSpecs(NSpecs + 1);
   std::iota(BestSpecs.begin(), BestSpecs.begin() + NSpecs, 0);
   if (AllSpecs.size() > NSpecs) {
@@ -970,7 +916,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
 
       auto IsProfitable = [&]() -> bool {
         // No check required.
-        if (ForceSpecialization)
+        if (Opts.funcspec_force)
           return true;
 
         LLVM_DEBUG(
@@ -978,7 +924,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << Score << " (" << (Score * 100 / FuncSize) << "%)}\n");
 
         // Minimum inlining bonus.
-        if (Score > MinInliningBonus * FuncSize / 100)
+        if (Score > Opts.funcspec_min_inlining_bonus * FuncSize / 100)
           return true;
 
         LLVM_DEBUG(
@@ -987,7 +933,8 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << (CodeSizeSavings * 100 / FuncSize) << "%)}\n");
 
         // Minimum codesize savings.
-        if (CodeSizeSavings < MinCodeSizeSavings * FuncSize / 100)
+        if (CodeSizeSavings <
+            Opts.funcspec_min_codesize_savings * FuncSize / 100)
           return false;
 
         // Lazily compute the Latency, to avoid unnecessarily computing BFI.
@@ -1000,10 +947,11 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << (LatencySavings * 100 / FuncSize) << "%)}\n");
 
         // Minimum latency savings.
-        if (LatencySavings < MinLatencySavings * FuncSize / 100)
+        if (LatencySavings < Opts.funcspec_min_latency_savings * FuncSize / 100)
           return false;
         // Maximum codesize growth.
-        if ((FunctionGrowth[F] + SpecSize) / FuncSize > MaxCodeSizeGrowth)
+        if ((FunctionGrowth[F] + SpecSize) / FuncSize >
+            Opts.funcspec_max_codesize_growth)
           return false;
 
         Score += std::max(CodeSizeSavings, LatencySavings);
@@ -1151,8 +1099,9 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
     return false;
 
   Type *Ty = A->getType();
-  if (!Ty->isPointerTy() && (!SpecializeLiteralConstant ||
-      (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
+  if (!Ty->isPointerTy() &&
+      (!Opts.funcspec_for_literal_constant ||
+       (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
     return false;
 
   // SCCP solver does not record an argument that will be constructed on
@@ -1198,7 +1147,7 @@ Constant *FunctionSpecializer::getCandidateConstant(Value *V) {
   // global variable, unless explicitly enabled.
   if (C && C->getType()->isPointerTy() && !C->isNullValue())
     if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C));
-        GV && !(GV->isConstant() || SpecializeOnAddress))
+        GV && !(GV->isConstant() || Opts.funcspec_on_address))
       return nullptr;
 
   return C;

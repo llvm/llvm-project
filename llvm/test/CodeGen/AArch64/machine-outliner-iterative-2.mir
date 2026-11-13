@@ -33,7 +33,6 @@
 #ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
 #ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
 name:            a
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 machineFunctionInfo:
@@ -79,7 +78,6 @@ body:             |
 #ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
 #ITER2-NEXT: BL @OUTLINED_FUNCTION_{{[0-9]+}}
 name:            b
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 machineFunctionInfo:

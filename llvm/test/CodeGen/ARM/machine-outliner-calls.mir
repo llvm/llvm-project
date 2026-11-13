@@ -16,7 +16,6 @@
 ---
 
 name:           outline_call_arm
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_call_arm
   ; CHECK: bb.0:
@@ -78,7 +77,6 @@ body:             |
 ---
 
 name:           outline_call_thumb
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_call_thumb
   ; CHECK: bb.0:
@@ -129,7 +127,6 @@ body:             |
 ---
 
 name:           outline_call_tailcall_arm
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_call_tailcall_arm
   ; CHECK: bb.0:
@@ -186,7 +183,6 @@ body:             |
 ---
 
 name:           outline_call_tailcall_thumb
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_call_tailcall_thumb
   ; CHECK: bb.0:
@@ -234,7 +230,6 @@ body:             |
 ---
 
 name:           outline_call_KO_mcount
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_call_KO_mcount
   ; CHECK: bb.0:
@@ -301,7 +296,6 @@ body:             |
 ---
 
 name:           bar
-tracksRegLiveness: true
 body:             |
   bb.0:
     BX_RET 14, $noreg
@@ -351,3 +345,4 @@ body:             |
   ; CHECK:   $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r2 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   tBX_RET 14 /* CC::al */, $noreg
+...

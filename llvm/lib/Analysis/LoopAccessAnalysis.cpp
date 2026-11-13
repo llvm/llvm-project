@@ -235,13 +235,15 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
-  // For the computations below, make sure they don't unsigned wrap.
-  if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
-    return false;
-  const SCEV *StartOffset = SE.getNoopOrZeroExtend(
-      SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
+  // If Start u< StartPtr, StartOffset wraps to a value above DerefBytes, so
+  // the final MaxOffset u<= DerefBytes check rejects it.
+  const SCEV *Start = AR->getStart();
+  const SCEV *StartOffset =
+      SE.getNoopOrZeroExtend(SE.getMinusSCEV(Start, StartPtr), WiderTy);
 
   MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
+  DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
+  StartOffset = SE.applyLoopGuards(StartOffset, LoopGuards);
 
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
@@ -273,7 +275,6 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
       return false;
-    DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
   } else {
     // For a negative step StartOffset is the highest offset and AR at MaxBTC
     // is DistToLastIter below it, so it must not fall below StartPtr. The end

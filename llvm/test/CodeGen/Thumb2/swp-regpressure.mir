@@ -85,7 +85,6 @@
 ---
 name:            high_pressure
 alignment:       2
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           'float 0.000000e+00'
@@ -275,7 +274,6 @@ body:             |
 ---
 name:            low_pressure
 alignment:       2
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           'float 0.000000e+00'
