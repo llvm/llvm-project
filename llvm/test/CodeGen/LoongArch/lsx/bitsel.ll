@@ -66,3 +66,59 @@ entry:
   %3 = or <16 x i8> %0, %2
   ret <16 x i8> %3
 }
+
+define <8 x i16> @bitseli_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
+; CHECK-LABEL: bitseli_v8i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr2, 127
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = xor <8 x i16> %a, splat (i16 -1)
+  %1 = and <8 x i16> %b, %0
+  %2 = and <8 x i16> %a, splat (i16 32639)
+  %3 = or <8 x i16> %1, %2
+  ret <8 x i16> %3
+}
+
+define <4 x i32> @bitseli_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
+; CHECK-LABEL: bitseli_v4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr2, 127
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = xor <4 x i32> %a, splat (i32 -1)
+  %1 = and <4 x i32> %b, %0
+  %2 = and <4 x i32> %a, splat (i32 2139062143)
+  %3 = or <4 x i32> %1, %2
+  ret <4 x i32> %3
+}
+
+define <2 x i64> @bitseli_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
+; CHECK-LABEL: bitseli_v2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr2, 127
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = xor <2 x i64> %a, splat (i64 -1)
+  %1 = and <2 x i64> %b, %0
+  %2 = and <2 x i64> %a, splat (i64 9187201950435737471)
+  %3 = or <2 x i64> %1, %2
+  ret <2 x i64> %3
+}
+
+define <8 x i16> @bitseli_v8i16_not_byte_splat(<8 x i16> %a, <8 x i16> %b) nounwind {
+; CHECK-LABEL: bitseli_v8i16_not_byte_splat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.h $vr2, 383
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = xor <8 x i16> %a, splat (i16 -1)
+  %1 = and <8 x i16> %b, %0
+  %2 = and <8 x i16> %a, splat (i16 383)
+  %3 = or <8 x i16> %1, %2
+  ret <8 x i16> %3
+}
