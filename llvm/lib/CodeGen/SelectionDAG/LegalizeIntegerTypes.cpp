@@ -2061,8 +2061,14 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
                                                     OpNo); break;
   case ISD::MGATHER:  Res = PromoteIntOp_MGATHER(cast<MaskedGatherSDNode>(N),
                                                  OpNo); break;
+  case ISD::VP_GATHER:
+    Res = PromoteIntOp_VP_GATHER(cast<VPGatherSDNode>(N), OpNo);
+    break;
   case ISD::MSCATTER: Res = PromoteIntOp_MSCATTER(cast<MaskedScatterSDNode>(N),
                                                   OpNo); break;
+  case ISD::VP_SCATTER:
+    Res = PromoteIntOp_VP_SCATTER(cast<VPScatterSDNode>(N), OpNo);
+    break;
   case ISD::VECTOR_COMPRESS:
     Res = PromoteIntOp_VECTOR_COMPRESS(N, OpNo);
     break;
@@ -2690,6 +2696,16 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MGATHER(MaskedGatherSDNode *N,
   return SDValue();
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_GATHER(VPGatherSDNode *N,
+                                                 unsigned OpNo) {
+  assert(OpNo == 2 && "Only the index operand can be promoted");
+  SmallVector<SDValue, 6> NewOps(N->ops());
+  // Extend the index since the high bits will be used for address computation.
+  NewOps[OpNo] = N->isIndexSigned() ? SExtPromotedInteger(N->getOperand(OpNo))
+                                    : ZExtPromotedInteger(N->getOperand(OpNo));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
                                                 unsigned OpNo) {
   bool TruncateStore = N->isTruncatingStore();
@@ -2714,6 +2730,16 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
   return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), N->getMemoryVT(),
                               SDLoc(N), NewOps, N->getMemOperand(),
                               N->getIndexType(), TruncateStore);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_SCATTER(VPScatterSDNode *N,
+                                                  unsigned OpNo) {
+  assert(OpNo == 3 && "Only the index operand can be promoted");
+  SmallVector<SDValue, 7> NewOps(N->ops());
+  // Extend the index since the high bits will be used for address computation.
+  NewOps[OpNo] = N->isIndexSigned() ? SExtPromotedInteger(N->getOperand(OpNo))
+                                    : ZExtPromotedInteger(N->getOperand(OpNo));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_COMPRESS(SDNode *N,
