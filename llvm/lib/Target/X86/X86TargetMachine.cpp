@@ -218,15 +218,16 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   for (Attribute A : reverse(FnAttrs)) {
     if (!A.isStringAttribute())
       break;
-    if (Attribute *Dst =
-            StringSwitch<Attribute *>(A.getKindAsString())
-                .Case("target-cpu", &Attrs.CPU)
-                .Case("tune-cpu", &Attrs.TuneCPU)
-                .Case("target-features", &Attrs.FS)
-                .Case("prefer-vector-width", &Attrs.PreferVecWidth)
-                .Case("min-legal-vector-width", &Attrs.MinLegalVecWidth)
-                .Case("use-soft-float", &Attrs.SoftFloat)
-                .Default(nullptr))
+    Attribute *Dst =
+        StringSwitch<Attribute *>(A.getKindAsString())
+            .Case("target-cpu", &Attrs.CPU)
+            .Case("tune-cpu", &Attrs.TuneCPU)
+            .Case("target-features", &Attrs.FS)
+            .Case("prefer-vector-width", &Attrs.PreferVecWidth)
+            .Case("min-legal-vector-width", &Attrs.MinLegalVecWidth)
+            .Case("use-soft-float", &Attrs.SoftFloat)
+            .Default(nullptr);
+    if (Dst)
       *Dst = A;
   }
 

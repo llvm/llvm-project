@@ -42,6 +42,8 @@ class X86TargetMachine final : public CodeGenTargetMachineImpl {
              MinLegalVecWidth == RHS.MinLegalVecWidth &&
              SoftFloat == RHS.SoftFloat;
     }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
   };
   mutable LastSubtargetCache<X86Subtarget, SubtargetAttrs> LastSubtarget;
   // True if this is used in JIT.

@@ -39,7 +39,7 @@ public:
   /// Return the last subtarget if \p NewAttrs match, and remember
   /// \p NewFnAttrs for it.
   const SubtargetT *lookup(AttributeSet NewFnAttrs, const AttrsT &NewAttrs) {
-    if (!Subtarget || !(Attrs == NewAttrs))
+    if (!Subtarget || Attrs != NewAttrs)
       return nullptr;
     FnAttrs = NewFnAttrs;
     return Subtarget;
