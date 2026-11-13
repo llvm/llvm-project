@@ -8165,10 +8165,98 @@ OpenMPIRBuilder::createScope(const LocationDescription &Loc,
   return Builder.saveIP();
 }
 
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createLaneSerializedRegion(const LocationDescription &Loc,
+                                            BodyGenCallbackTy BodyGenCB) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // Everything after the insertion point continues once every lane is done.
+  BasicBlock *ExitBB =
+      splitBB(Builder, /*CreateBranch=*/false, "omp.lanes.exit");
+  BasicBlock *EntryBB = Builder.GetInsertBlock();
+  Function *F = EntryBB->getParent();
+  LLVMContext &Ctx = M.getContext();
+
+  Value *Mask = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_warp_active_thread_mask), {},
+      "omp.lanes.mask");
+  Value *ThreadId = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(
+          OMPRTL___kmpc_get_hardware_thread_id_in_block),
+      {}, "omp.lanes.tid");
+  Value *WarpSize = createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_get_warp_size), {},
+      "omp.lanes.warpsize");
+  // The warp size is a power of two.
+  Value *Lane = Builder.CreateAnd(
+      ThreadId, Builder.CreateSub(WarpSize, Builder.getInt32(1)),
+      "omp.lanes.lane");
+  Value *LaneBit =
+      Builder.CreateShl(Builder.getInt64(1), Builder.CreateZExt(Lane, Int64),
+                        "omp.lanes.lanebit");
+
+  BasicBlock *HeaderBB = BasicBlock::Create(Ctx, "omp.lanes.header", F, ExitBB);
+  BasicBlock *BodyBB = BasicBlock::Create(Ctx, "omp.lanes.body", F, ExitBB);
+  BasicBlock *LatchBB = BasicBlock::Create(Ctx, "omp.lanes.latch", F, ExitBB);
+  Builder.CreateBr(HeaderBB);
+
+  // Each iteration serves the lowest lane that is still waiting.
+  Builder.SetInsertPoint(HeaderBB);
+  PHINode *Waiting = Builder.CreatePHI(Int64, 2, "omp.lanes.waiting");
+  Waiting->addIncoming(Mask, EntryBB);
+  Value *Rest = Builder.CreateAnd(
+      Waiting, Builder.CreateSub(Waiting, Builder.getInt64(1)),
+      "omp.lanes.rest");
+  Value *Next = Builder.CreateXor(Waiting, Rest, "omp.lanes.next");
+  Builder.CreateCondBr(Builder.CreateICmpEQ(Next, LaneBit), BodyBB, LatchBB);
+
+  Builder.SetInsertPoint(BodyBB);
+  Instruction *BodyTerm = Builder.CreateBr(LatchBB);
+
+  Builder.SetInsertPoint(LatchBB);
+  createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_syncwarp), {Mask});
+  Waiting->addIncoming(Rest, LatchBB);
+  Builder.CreateCondBr(Builder.CreateIsNull(Rest), ExitBB, HeaderBB);
+
+  if (Error Err = BodyGenCB(/*AllocaIP=*/InsertPointTy(),
+                            BodyTerm->getIterator(), /*DeallocBlocks=*/{}))
+    return Err;
+
+  Builder.SetInsertPoint(ExitBB->getFirstInsertionPt());
+  return Builder.saveIP();
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createCritical(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
     FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
 
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // Where the threads of a warp run in lockstep they cannot wait for one
+  // another (see createLaneSerializedRegion), so the device runtime lets only
+  // one of them contend for the critical lock. Send each through in turn.
+  const Triple &T = M.getTargetTriple();
+  if (Config.IsGPU.value_or(false) && hasGridValue(T) &&
+      getGridValue(T, Builder.GetInsertBlock()->getParent())
+          .GV_Lockstep_Lanes) {
+    auto CriticalCB = [&](InsertPointTy, InsertPointTy CodeGenIP,
+                          ArrayRef<BasicBlock *>) -> Error {
+      InsertPointOrErrorTy AfterIP =
+          emitCriticalRegion(LocationDescription(CodeGenIP, Loc.DL), BodyGenCB,
+                             FiniCB, CriticalName, HintInst);
+      return AfterIP.takeError();
+    };
+    return createLaneSerializedRegion(Loc, CriticalCB);
+  }
+  return emitCriticalRegion(Loc, BodyGenCB, FiniCB, CriticalName, HintInst);
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitCriticalRegion(
+    const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+    FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 

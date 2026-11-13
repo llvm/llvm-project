@@ -288,39 +288,41 @@ int bar(int n){
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
-// CHECK1-NEXT:    [[CRITICAL_COUNTER:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META6]], !align [[META7]]
-// CHECK1-NEXT:    [[TMP1:%.*]] = call i64 @__kmpc_warp_active_thread_mask()
-// CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-// CHECK1-NEXT:    store i32 0, ptr [[CRITICAL_COUNTER]], align 4
-// CHECK1-NEXT:    br label [[OMP_CRITICAL_LOOP:%.*]]
-// CHECK1:       omp.critical.loop:
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[CRITICAL_COUNTER]], align 4
-// CHECK1-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP3]], [[NVPTX_NUM_THREADS]]
-// CHECK1-NEXT:    br i1 [[TMP4]], label [[OMP_CRITICAL_TEST:%.*]], label [[OMP_CRITICAL_EXIT:%.*]]
-// CHECK1:       omp.critical.test:
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[CRITICAL_COUNTER]], align 4
-// CHECK1-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP2]], [[TMP5]]
-// CHECK1-NEXT:    br i1 [[TMP6]], label [[OMP_CRITICAL_BODY:%.*]], label [[OMP_CRITICAL_SYNC:%.*]]
-// CHECK1:       omp.critical.body:
-// CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
-// CHECK1-NEXT:    call void @__kmpc_critical(ptr @[[GLOB1]], i32 [[TMP8]], ptr @"_gomp_critical_user_$var")
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP9]], 1
+// CHECK1-NEXT:    [[OMP_LANES_MASK:%.*]] = call i64 @__kmpc_warp_active_thread_mask()
+// CHECK1-NEXT:    [[OMP_LANES_TID:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK1-NEXT:    [[OMP_LANES_WARPSIZE:%.*]] = call i32 @__kmpc_get_warp_size()
+// CHECK1-NEXT:    [[TMP1:%.*]] = sub i32 [[OMP_LANES_WARPSIZE]], 1
+// CHECK1-NEXT:    [[OMP_LANES_LANE:%.*]] = and i32 [[OMP_LANES_TID]], [[TMP1]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = zext i32 [[OMP_LANES_LANE]] to i64
+// CHECK1-NEXT:    [[OMP_LANES_LANEBIT:%.*]] = shl i64 1, [[TMP2]]
+// CHECK1-NEXT:    br label [[OMP_LANES_HEADER:%.*]]
+// CHECK1:       omp.lanes.header:
+// CHECK1-NEXT:    [[OMP_LANES_WAITING:%.*]] = phi i64 [ [[OMP_LANES_MASK]], [[ENTRY:%.*]] ], [ [[OMP_LANES_REST:%.*]], [[OMP_LANES_LATCH:%.*]] ]
+// CHECK1-NEXT:    [[TMP3:%.*]] = sub i64 [[OMP_LANES_WAITING]], 1
+// CHECK1-NEXT:    [[OMP_LANES_REST]] = and i64 [[OMP_LANES_WAITING]], [[TMP3]]
+// CHECK1-NEXT:    [[OMP_LANES_NEXT:%.*]] = xor i64 [[OMP_LANES_WAITING]], [[OMP_LANES_REST]]
+// CHECK1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[OMP_LANES_NEXT]], [[OMP_LANES_LANEBIT]]
+// CHECK1-NEXT:    br i1 [[TMP4]], label [[OMP_LANES_BODY:%.*]], label [[OMP_LANES_LATCH]]
+// CHECK1:       omp.lanes.body:
+// CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
+// CHECK1-NEXT:    call void @__kmpc_critical(ptr @[[GLOB1]], i32 [[TMP6]], ptr @"_gomp_critical_user_$var")
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP0]], align 4
+// CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1
 // CHECK1-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
-// CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB1]], i32 [[TMP8]], ptr @"_gomp_critical_user_$var")
-// CHECK1-NEXT:    br label [[OMP_CRITICAL_SYNC]]
-// CHECK1:       omp.critical.sync:
-// CHECK1-NEXT:    call void @__kmpc_syncwarp(i64 [[TMP1]])
-// CHECK1-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP5]], 1
-// CHECK1-NEXT:    store i32 [[TMP10]], ptr [[CRITICAL_COUNTER]], align 4
-// CHECK1-NEXT:    br label [[OMP_CRITICAL_LOOP]]
-// CHECK1:       omp.critical.exit:
+// CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB1]], i32 [[TMP6]], ptr @"_gomp_critical_user_$var")
+// CHECK1-NEXT:    br label [[OMP_LANES_BODY_AFTER:%.*]]
+// CHECK1:       omp.lanes.body.after:
+// CHECK1-NEXT:    br label [[OMP_LANES_LATCH]]
+// CHECK1:       omp.lanes.latch:
+// CHECK1-NEXT:    call void @__kmpc_syncwarp(i64 [[OMP_LANES_MASK]])
+// CHECK1-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[OMP_LANES_REST]], 0
+// CHECK1-NEXT:    br i1 [[TMP8]], label [[OMP_LANES_EXIT:%.*]], label [[OMP_LANES_HEADER]]
+// CHECK1:       omp.lanes.exit:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -557,39 +559,41 @@ int bar(int n){
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK2-NEXT:    [[CRITICAL_COUNTER:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META6]], !align [[META7]]
-// CHECK2-NEXT:    [[TMP1:%.*]] = call i64 @__kmpc_warp_active_thread_mask()
-// CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-// CHECK2-NEXT:    store i32 0, ptr [[CRITICAL_COUNTER]], align 4
-// CHECK2-NEXT:    br label [[OMP_CRITICAL_LOOP:%.*]]
-// CHECK2:       omp.critical.loop:
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[CRITICAL_COUNTER]], align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP3]], [[NVPTX_NUM_THREADS]]
-// CHECK2-NEXT:    br i1 [[TMP4]], label [[OMP_CRITICAL_TEST:%.*]], label [[OMP_CRITICAL_EXIT:%.*]]
-// CHECK2:       omp.critical.test:
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[CRITICAL_COUNTER]], align 4
-// CHECK2-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP2]], [[TMP5]]
-// CHECK2-NEXT:    br i1 [[TMP6]], label [[OMP_CRITICAL_BODY:%.*]], label [[OMP_CRITICAL_SYNC:%.*]]
-// CHECK2:       omp.critical.body:
-// CHECK2-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
-// CHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
-// CHECK2-NEXT:    call void @__kmpc_critical(ptr @[[GLOB1]], i32 [[TMP8]], ptr @"_gomp_critical_user_$var")
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP9]], 1
+// CHECK2-NEXT:    [[OMP_LANES_MASK:%.*]] = call i64 @__kmpc_warp_active_thread_mask()
+// CHECK2-NEXT:    [[OMP_LANES_TID:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK2-NEXT:    [[OMP_LANES_WARPSIZE:%.*]] = call i32 @__kmpc_get_warp_size()
+// CHECK2-NEXT:    [[TMP1:%.*]] = sub i32 [[OMP_LANES_WARPSIZE]], 1
+// CHECK2-NEXT:    [[OMP_LANES_LANE:%.*]] = and i32 [[OMP_LANES_TID]], [[TMP1]]
+// CHECK2-NEXT:    [[TMP2:%.*]] = zext i32 [[OMP_LANES_LANE]] to i64
+// CHECK2-NEXT:    [[OMP_LANES_LANEBIT:%.*]] = shl i64 1, [[TMP2]]
+// CHECK2-NEXT:    br label [[OMP_LANES_HEADER:%.*]]
+// CHECK2:       omp.lanes.header:
+// CHECK2-NEXT:    [[OMP_LANES_WAITING:%.*]] = phi i64 [ [[OMP_LANES_MASK]], [[ENTRY:%.*]] ], [ [[OMP_LANES_REST:%.*]], [[OMP_LANES_LATCH:%.*]] ]
+// CHECK2-NEXT:    [[TMP3:%.*]] = sub i64 [[OMP_LANES_WAITING]], 1
+// CHECK2-NEXT:    [[OMP_LANES_REST]] = and i64 [[OMP_LANES_WAITING]], [[TMP3]]
+// CHECK2-NEXT:    [[OMP_LANES_NEXT:%.*]] = xor i64 [[OMP_LANES_WAITING]], [[OMP_LANES_REST]]
+// CHECK2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[OMP_LANES_NEXT]], [[OMP_LANES_LANEBIT]]
+// CHECK2-NEXT:    br i1 [[TMP4]], label [[OMP_LANES_BODY:%.*]], label [[OMP_LANES_LATCH]]
+// CHECK2:       omp.lanes.body:
+// CHECK2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
+// CHECK2-NEXT:    call void @__kmpc_critical(ptr @[[GLOB1]], i32 [[TMP6]], ptr @"_gomp_critical_user_$var")
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP0]], align 4
+// CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP7]], 1
 // CHECK2-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
-// CHECK2-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB1]], i32 [[TMP8]], ptr @"_gomp_critical_user_$var")
-// CHECK2-NEXT:    br label [[OMP_CRITICAL_SYNC]]
-// CHECK2:       omp.critical.sync:
-// CHECK2-NEXT:    call void @__kmpc_syncwarp(i64 [[TMP1]])
-// CHECK2-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP5]], 1
-// CHECK2-NEXT:    store i32 [[TMP10]], ptr [[CRITICAL_COUNTER]], align 4
-// CHECK2-NEXT:    br label [[OMP_CRITICAL_LOOP]]
-// CHECK2:       omp.critical.exit:
+// CHECK2-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB1]], i32 [[TMP6]], ptr @"_gomp_critical_user_$var")
+// CHECK2-NEXT:    br label [[OMP_LANES_BODY_AFTER:%.*]]
+// CHECK2:       omp.lanes.body.after:
+// CHECK2-NEXT:    br label [[OMP_LANES_LATCH]]
+// CHECK2:       omp.lanes.latch:
+// CHECK2-NEXT:    call void @__kmpc_syncwarp(i64 [[OMP_LANES_MASK]])
+// CHECK2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[OMP_LANES_REST]], 0
+// CHECK2-NEXT:    br i1 [[TMP8]], label [[OMP_LANES_EXIT:%.*]], label [[OMP_LANES_HEADER]]
+// CHECK2:       omp.lanes.exit:
 // CHECK2-NEXT:    ret void
 //
 //

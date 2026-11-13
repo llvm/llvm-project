@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
@@ -15,6 +16,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -3145,6 +3147,74 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
   const llvm::Align PtrAlign = DL.getPointerABIAlignment(GV->getAddressSpace());
   if (const llvm::MaybeAlign Alignment = GV->getAlign())
     EXPECT_EQ(*Alignment, std::max(TypeAlign, PtrAlign));
+}
+
+TEST_F(OpenMPIRBuilderTest, CriticalDirectiveAMDGPU) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  M->setTargetTriple(Triple("amdgcn-amd-amdhsa"));
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.setConfig(OpenMPIRBuilderConfig(
+      /*IsTargetDevice=*/true, /*IsGPU=*/true,
+      /*OpenMPOffloadMandatory=*/false, /*HasRequiresReverseOffload=*/false,
+      /*HasRequiresUnifiedAddress=*/false,
+      /*HasRequiresUnifiedSharedMemory=*/false,
+      /*HasRequiresDynamicAllocators=*/false));
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  Type *PrivType = F->arg_begin()->getType();
+  AllocaInst *PrivAI = Builder.CreateAlloca(PrivType, /*AddrSpace=*/5);
+  StoreInst *BodyStore = nullptr;
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                       ArrayRef<BasicBlock *> DeallocBlocks) {
+    Builder.restoreIP(CodeGenIP);
+    BodyStore = Builder.CreateStore(F->arg_begin(), PrivAI);
+  };
+  auto FiniCB = [&](InsertPointTy IP) {};
+
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP,
+      OMPBuilder.createCritical(Builder, BODYGENCB_WRAPPER(BodyGenCB),
+                                FINICB_WRAPPER(FiniCB), "testCRT", nullptr));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  auto FindCall = [&](StringRef Name) -> CallInst * {
+    for (Instruction &I : instructions(*F))
+      if (auto *CI = dyn_cast<CallInst>(&I))
+        if (CI->getCalledFunction() &&
+            CI->getCalledFunction()->getName() == Name)
+          return CI;
+    return nullptr;
+  };
+  CallInst *MaskCI = FindCall("__kmpc_warp_active_thread_mask");
+  CallInst *EnterCI = FindCall("__kmpc_critical");
+  CallInst *ExitCI = FindCall("__kmpc_end_critical");
+  CallInst *SyncCI = FindCall("__kmpc_syncwarp");
+  ASSERT_NE(MaskCI, nullptr);
+  ASSERT_NE(EnterCI, nullptr);
+  ASSERT_NE(ExitCI, nullptr);
+  ASSERT_NE(SyncCI, nullptr);
+  ASSERT_NE(BodyStore, nullptr);
+  EXPECT_EQ(SyncCI->getArgOperand(0), MaskCI);
+
+  // The lock is taken and released inside a loop over the active lanes, which
+  // the warp synchronizes on at the end of each iteration.
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+  Loop *L = LI.getLoopFor(SyncCI->getParent());
+  ASSERT_NE(L, nullptr);
+  EXPECT_TRUE(L->contains(EnterCI));
+  EXPECT_TRUE(L->contains(BodyStore));
+  EXPECT_TRUE(L->contains(ExitCI));
+  EXPECT_FALSE(L->contains(MaskCI));
+  EXPECT_TRUE(isa<PHINode>(L->getHeader()->front()));
+  EXPECT_TRUE(DT.dominates(EnterCI, BodyStore));
+  EXPECT_TRUE(DT.dominates(BodyStore, ExitCI));
 }
 
 TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
