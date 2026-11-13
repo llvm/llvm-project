@@ -66,7 +66,8 @@ public:
 
 class MLIRMutator {
 public:
-  MLIRMutator(std::vector<std::unique_ptr<MLIRGeneMutationStrategy>> &&Strategies)
+  MLIRMutator(
+      std::vector<std::unique_ptr<MLIRGeneMutationStrategy>> &&Strategies)
       : Strategies(std::move(Strategies)) {}
 
   void mutateModule(ModuleOp module, int Seed, size_t MaxSize);
