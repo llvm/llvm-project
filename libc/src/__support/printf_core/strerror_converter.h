@@ -35,9 +35,9 @@ LIBC_INLINE int convert_strerror(Writer<mode, CharT> *writer,
   // normal form
   if ((to_conv.flags & FormatFlags::ALTERNATE_FORM) == 0) {
     char strerror_buff[64];
-    auto strerror_result = get_error_string(error_num, strerror_buff);
+    const char *strerror_result = get_error_cstring(error_num, strerror_buff);
     to_conv.conv_val_ptr =
-        reinterpret_cast<void *>(const_cast<char *>(strerror_result.data()));
+        reinterpret_cast<void *>(const_cast<char *>(strerror_result));
     to_conv.conv_name = CharT{'s'};
     return convert_string(writer, to_conv);
   } else {

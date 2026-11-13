@@ -42,24 +42,27 @@ constexpr size_t SIG_ARRAY_SIZE = max_key_val(PLATFORM_SIGNALS) + 1;
 constexpr MessageMapper<SIG_ARRAY_SIZE, TOTAL_STR_LEN>
     signal_mapper(PLATFORM_SIGNALS);
 
-cpp::string_view build_signal_string(int sig_num, cpp::span<char> buffer) {
-  cpp::string_view base_str;
+cpp::string_view signal_base_string(int &sig_num) {
   if (sig_num >= SIGRTMIN && sig_num <= SIGRTMAX) {
-    base_str = cpp::string_view("Real-time signal");
     sig_num -= SIGRTMIN;
-  } else {
-    base_str = cpp::string_view("Unknown signal");
+    return "Real-time signal";
   }
+  return "Unknown signal";
+}
 
-  // if the buffer can't hold "Unknown signal" + ' ' + num_str, then just
-  // return "Unknown signal".
-  if (buffer.size() <
-      (base_str.size() + 1 + IntegerToString<int>::buffer_size()))
-    return base_str;
+// The buffer has to hold the text and a terminator for the caller that wants a
+// C string. Otherwise only the base string is given.
+bool can_build_signal_string(cpp::string_view base_str,
+                             cpp::span<char> buffer) {
+  return buffer.size() >=
+         base_str.size() + 1 + IntegerToString<int>::buffer_size() + 1;
+}
 
-  cpp::StringStream buffer_stream(
-      {const_cast<char *>(buffer.data()), buffer.size()});
-  buffer_stream << base_str << ' ' << sig_num << '\0';
+// Writes the text into the buffer without a terminator.
+cpp::string_view build_signal_string(cpp::string_view base_str, int sig_num,
+                                     cpp::span<char> buffer) {
+  cpp::StringStream buffer_stream(buffer);
+  buffer_stream << base_str << ' ' << sig_num;
   return buffer_stream.str();
 }
 
@@ -73,8 +76,27 @@ cpp::string_view get_signal_string(int sig_num, cpp::span<char> buffer) {
   auto opt_str = signal_mapper.get_str(sig_num);
   if (opt_str)
     return *opt_str;
-  else
-    return build_signal_string(sig_num, buffer);
+  cpp::string_view base_str = signal_base_string(sig_num);
+  if (!can_build_signal_string(base_str, buffer))
+    return base_str;
+  return build_signal_string(base_str, sig_num, buffer);
+}
+
+const char *get_signal_cstring(int sig_num) {
+  return get_signal_cstring(sig_num, {signal_buffer, SIG_BUFFER_SIZE});
+}
+
+const char *get_signal_cstring(int sig_num, cpp::span<char> buffer) {
+  // The descriptions of known signals are stored with their terminator.
+  auto opt_str = signal_mapper.get_str(sig_num);
+  if (opt_str)
+    return opt_str->data();
+  cpp::string_view base_str = signal_base_string(sig_num);
+  if (!can_build_signal_string(base_str, buffer))
+    return base_str.data();
+  cpp::string_view text = build_signal_string(base_str, sig_num, buffer);
+  buffer[text.size()] = '\0';
+  return buffer.data();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

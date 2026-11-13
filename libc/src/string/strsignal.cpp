@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strsignal, (int sig_num)) {
-  return const_cast<char *>(get_signal_string(sig_num).data());
+  return const_cast<char *>(get_signal_cstring(sig_num));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
