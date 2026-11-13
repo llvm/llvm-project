@@ -380,7 +380,7 @@ def shifts_too_big : GICombineRule<
          [{ return Helper.matchShiftsTooBig(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
 
-// Shared frag for the shift-chain rules below: all shift opcodes that have a
+// Shared frag for the shift-immed-chain rule below: all shift opcodes that have a
 // (dst, base, amount) shape.
 def shift_chain_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
@@ -395,12 +395,19 @@ def shift_immed_chain : GICombineRule<
          [{ return Helper.matchShiftImmedChain(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyShiftImmedChain(*${mi}, ${matchinfo}); }])>;
 
+// Plain shifts that can distribute over bitwise operations (saturating shifts
+// such as G_SSHLSAT and G_USHLSAT do not distribute over bitwise logic).
+def plain_shift_chain_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_SHL, G_ASHR, G_LSHR],
+           (pattern (op $dst, $base, $amt)))>;
+
 // Transform shift (logic (shift X, C0), Y), C1
 //        -> logic (shift X, (C0+C1)), (shift Y, C1), if shifts are same
 def shift_of_shifted_logic_matchdata : GIDefMatchData<"ShiftOfShiftedLogic">;
 def shift_of_shifted_logic_chain : GICombineRule<
   (defs root:$d, shift_of_shifted_logic_matchdata:$matchinfo),
-  (match (shift_chain_frags $d):$mi,
+  (match (plain_shift_chain_frags $d):$mi,
          [{ return Helper.matchShiftOfShiftedLogic(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyShiftOfShiftedLogic(*${mi}, ${matchinfo}); }])>;
 

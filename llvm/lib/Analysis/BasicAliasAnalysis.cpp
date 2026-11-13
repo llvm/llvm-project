@@ -766,8 +766,9 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           CastedValue(Index, 0, SExtBits, TruncBits, NonNeg), DL, 0, AC, DT);
 
       // Scale by the type size.
-      unsigned TypeSize = AllocTypeSize.getFixedValue();
-      LE = LE.mul(APInt(IndexSize, TypeSize), NUW, NUSW);
+      APInt TypeSize(IndexSize, AllocTypeSize.getFixedValue(),
+                     /*isSigned=*/false, /*implicitTrunc=*/true);
+      LE = LE.mul(TypeSize, NUW, NUSW);
       Decomposed.Offset += LE.Offset;
       APInt Scale = LE.Scale;
       if (!LE.IsNUW)
