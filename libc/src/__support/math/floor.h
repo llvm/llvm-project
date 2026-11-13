@@ -17,8 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double floor(double x) {
-#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
-    !defined(LIBC_USE_CONSTEXPR)
+#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
   if (cpp::is_constant_evaluated()) {
     return fputil::floor(x);
   } else {

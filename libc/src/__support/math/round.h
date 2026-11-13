@@ -48,7 +48,7 @@ namespace math {
 // default rounding mode (FE_TONEAREST) only.
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double round(double x) {
-#if __has_builtin(__builtin_round) && !defined(LIBC_USE_CONSTEXPR) &&          \
+#if __has_builtin(__builtin_round) &&                                          \
     (defined(__LIBC_USE_BUILTIN_ROUND) ||                                      \
      (defined(LIBC_COMPILER_IS_CLANG) &&                                       \
       defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE) &&                               \

@@ -24,8 +24,7 @@ namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16 roundf16(float16 x) {
 #if defined(__LIBC_USE_BUILTIN_ROUND) &&                                       \
-    defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS) &&                           \
-    !defined(LIBC_USE_CONSTEXPR)
+    defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS)
   if (cpp::is_constant_evaluated()) {
     return fputil::round(x);
   } else {
