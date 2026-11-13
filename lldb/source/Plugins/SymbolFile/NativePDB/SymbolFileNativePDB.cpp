@@ -1292,11 +1292,12 @@ lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
   return TranslateLanguage(item->m_compile_opts->getLanguage());
 }
 
-void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
+bool SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
+  const size_t num_symbols = symtab.GetNumSymbols();
   auto *section_list =
       m_objfile_sp->GetModule()->GetObjectFile()->GetSectionList();
   if (!section_list)
-    return;
+    return false;
 
   llvm::DenseMap<lldb::addr_t, llvm::SmallVector<uint32_t, 1>> symbols_by_addr;
   for (uint32_t i = 0, n = symtab.GetNumSymbols(); i < n; ++i) {
@@ -1399,6 +1400,9 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
   }
 
   finish_last_symbol(nullptr);
+  // Only the symbols added here are resized, so nothing changed unless
+  // symbols were added.
+  return symtab.GetNumSymbols() > num_symbols;
 }
 
 size_t SymbolFileNativePDB::ParseFunctions(CompileUnit &comp_unit) {

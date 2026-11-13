@@ -1733,3 +1733,64 @@ LinkEditData:
   EncodeDecode(*nonzero_module_symtab);
   EncodeDecode(*split_module_symtab);
 }
+
+namespace {
+/// A SymbolFile whose AddSymbols only changes a symbol that is already in the
+/// symbol table, as SymbolFileWasm does with mangled names.
+class SymbolFileResizingSymbol : public SymbolFileSymtab {
+public:
+  SymbolFileResizingSymbol(ObjectFileSP objfile_sp, bool resize)
+      : SymbolFileSymtab(std::move(objfile_sp)), m_resize(resize) {}
+
+  bool AddSymbols(Symtab &symtab) override {
+    if (!m_resize)
+      return false;
+    symtab.SymbolAtIndex(0)->SetByteSize(1);
+    return true;
+  }
+
+private:
+  bool m_resize;
+};
+} // namespace
+
+TEST_F(SymtabTest, TestSymbolFileChangedSymbols) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400180
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B042500106000890425041060005DC3
+Symbols:
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400180
+    Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  for (bool resize : {false, true}) {
+    SCOPED_TRACE(resize ? "resize" : "no change");
+    auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+    ObjectFile *objfile = module_sp->GetObjectFile();
+    ASSERT_NE(objfile, nullptr);
+    SymbolFileResizingSymbol symbol_file(objfile->shared_from_this(), resize);
+    Symtab *symtab = symbol_file.GetSymtab();
+    ASSERT_NE(symtab, nullptr);
+    ASSERT_GT(symtab->GetNumSymbols(), 0U);
+    EXPECT_EQ(static_cast<bool>(symtab->GetState() &
+                                eSymtabStateSymbolFileAddedSymbols),
+              resize);
+  }
+}

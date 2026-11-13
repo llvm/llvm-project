@@ -111,7 +111,7 @@ public:
 
   size_t ParseVariablesForContext(const SymbolContext &sc) override;
 
-  void AddSymbols(Symtab &symtab) override;
+  bool AddSymbols(Symtab &symtab) override;
 
   CompilerDecl GetDeclForUID(lldb::user_id_t uid) override;
   CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) override;
