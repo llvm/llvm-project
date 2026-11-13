@@ -2980,9 +2980,8 @@ void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
 }
 
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
-  if ((!CGM.getCodeGenOpts().WholeProgramVTables ||
-       !CGM.HasHiddenLTOVisibility(RD)) &&
-      !CGM.getCodeGenOpts().DevirtualizeSpeculatively)
+  if (!CGM.getCodeGenOpts().WholeProgramVTables ||
+      !CGM.HasHiddenLTOVisibility(RD))
     return false;
 
   if (CGM.getCodeGenOpts().VirtualFunctionElimination)
