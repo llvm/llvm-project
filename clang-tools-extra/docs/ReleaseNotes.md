@@ -451,6 +451,9 @@ infrastructure are described first, followed by tool-specific sections.
     `decltype((x))` and in the initializers and return statements of
     `decltype(auto)` declarations.
 
+  - Fixed an invalid fix-it that changed `&(S::value)` into the pointer-to-member
+    `&S::value`.
+
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
   fixes when applying De Morgan's theorem to overloaded comparison operators.
