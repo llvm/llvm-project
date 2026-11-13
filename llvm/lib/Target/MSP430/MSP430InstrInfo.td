@@ -924,7 +924,7 @@ def : Pat<(extloadi16i8 addr:$src), (MOVZX16rm8 addr:$src)>;
 
 // anyext
 def : Pat<(i16 (anyext GR8:$src)),
-          (SUBREG_TO_REG GR8:$src, subreg_8bit)>;
+          (INSERT_SUBREG (i16 (IMPLICIT_DEF)), GR8:$src, subreg_8bit)>;
 
 // truncs
 def : Pat<(i8 (trunc GR16:$src)),
