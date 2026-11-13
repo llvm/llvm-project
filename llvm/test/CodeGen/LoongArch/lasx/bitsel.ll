@@ -70,8 +70,7 @@ entry:
 define <16 x i16> @bitseli_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; CHECK-LABEL: bitseli_v16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.b $xr2, 127
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr2, $xr0
+; CHECK-NEXT:    xvbitseli.b $xr0, $xr1, 127
 ; CHECK-NEXT:    ret
 entry:
   %0 = xor <16 x i16> %a, splat (i16 -1)
@@ -84,8 +83,7 @@ entry:
 define <8 x i32> @bitseli_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; CHECK-LABEL: bitseli_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.b $xr2, 127
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr2, $xr0
+; CHECK-NEXT:    xvbitseli.b $xr0, $xr1, 127
 ; CHECK-NEXT:    ret
 entry:
   %0 = xor <8 x i32> %a, splat (i32 -1)
@@ -98,8 +96,7 @@ entry:
 define <4 x i64> @bitseli_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: bitseli_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.b $xr2, 127
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr2, $xr0
+; CHECK-NEXT:    xvbitseli.b $xr0, $xr1, 127
 ; CHECK-NEXT:    ret
 entry:
   %0 = xor <4 x i64> %a, splat (i64 -1)
