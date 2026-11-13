@@ -9193,7 +9193,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       if (state.getDeclarator().getContext() == DeclaratorContext::Prototype) {
         if (state.getSema().getLangOpts().getHLSLVersion() <
             LangOptions::HLSL_202x)
-          state.getSema().Diag(attr.getLoc(), diag::warn_hlsl_groupshared_202x);
+          state.getSema().Diag(attr.getLoc(), diag::ext_hlsl_groupshared_202x);
 
         // Note: we don't check for the usage of HLSLParamModifiers in/out/inout
         // here because the check in the AT_HLSLParamModifier case is sufficient
