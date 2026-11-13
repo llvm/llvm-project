@@ -16,9 +16,19 @@ define void @stlf_profitable(ptr noalias %A, i64 %n) {
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[BI0:%.*]] = add i64 [[I]], -5
+; CHECK-NEXT:    [[BI1:%.*]] = add i64 [[I]], -4
+; CHECK-NEXT:    [[BI2:%.*]] = add i64 [[I]], -3
 ; CHECK-NEXT:    [[BG0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI0]]
+; CHECK-NEXT:    [[BG1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI1]]
+; CHECK-NEXT:    [[BG2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI2]]
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[BG0]], align 4
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[BG0]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[BG1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr [[BG2]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[L1]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 7, i32 8, i32 9, i32 10>
@@ -41,40 +51,24 @@ define void @stlf_profitable(ptr noalias %A, i64 %n) {
 ; VETO-NEXT:    [[BI0:%.*]] = add i64 [[I]], -5
 ; VETO-NEXT:    [[BI1:%.*]] = add i64 [[I]], -4
 ; VETO-NEXT:    [[BI2:%.*]] = add i64 [[I]], -3
-; VETO-NEXT:    [[BI3:%.*]] = add i64 [[I]], -2
 ; VETO-NEXT:    [[BG0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI0]]
 ; VETO-NEXT:    [[BG1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI1]]
 ; VETO-NEXT:    [[BG2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI2]]
-; VETO-NEXT:    [[BG3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI3]]
+; VETO-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; VETO-NEXT:    [[L0:%.*]] = load i32, ptr [[BG0]], align 4
 ; VETO-NEXT:    [[L1:%.*]] = load i32, ptr [[BG1]], align 4
-; VETO-NEXT:    [[L2:%.*]] = load i32, ptr [[BG2]], align 4
-; VETO-NEXT:    [[L3:%.*]] = load i32, ptr [[BG3]], align 4
+; VETO-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[BG2]], align 4
 ; VETO-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
 ; VETO-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[L1]], i64 1
-; VETO-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L2]], i64 2
-; VETO-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[L3]], i64 3
+; VETO-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; VETO-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; VETO-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP3]], <i32 1, i32 2, i32 3, i32 4>
 ; VETO-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], [[TMP4]]
 ; VETO-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], <i32 7, i32 8, i32 9, i32 10>
 ; VETO-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP6]], [[TMP4]]
 ; VETO-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 11, i32 12, i32 13, i32 14>
 ; VETO-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP8]], [[TMP6]]
-; VETO-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
-; VETO-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
-; VETO-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
-; VETO-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; VETO-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
-; VETO-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
-; VETO-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; VETO-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP9]], i64 0
-; VETO-NEXT:    store i32 [[TMP10]], ptr [[G0]], align 4
-; VETO-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP9]], i64 1
-; VETO-NEXT:    store i32 [[TMP11]], ptr [[G1]], align 4
-; VETO-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP9]], i64 2
-; VETO-NEXT:    store i32 [[TMP12]], ptr [[G2]], align 4
-; VETO-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP9]], i64 3
-; VETO-NEXT:    store i32 [[TMP13]], ptr [[G3]], align 4
+; VETO-NEXT:    store <4 x i32> [[TMP9]], ptr [[G0]], align 4
 ; VETO-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; VETO-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; VETO-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]

@@ -4,7 +4,8 @@
 ; Four i32 stores at byte 4*i, widened to a 16-byte store, with a loop stride
 ; of 16 bytes. The i16 loads read 8 bytes starting 18 bytes below the store
 ; base. 18 is not a multiple of the 4-byte store element, and the load spans
-; the stores of the previous two iterations, so no 16-byte store is formed.
+; the stores of the previous two iterations, so it is not loaded as one
+; vector. The 16-byte store is still formed.
 define void @load_not_element_aligned(ptr noalias %A, i64 %n) {
 ; CHECK-LABEL: define void @load_not_element_aligned(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -15,27 +16,23 @@ define void @load_not_element_aligned(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[SB:%.*]] = shl i64 [[I]], 2
 ; CHECK-NEXT:    [[LB0:%.*]] = add i64 [[SB]], -18
 ; CHECK-NEXT:    [[LB1:%.*]] = add i64 [[SB]], -16
-; CHECK-NEXT:    [[LB3:%.*]] = add i64 [[SB]], -12
+; CHECK-NEXT:    [[LB3:%.*]] = add i64 [[SB]], -14
 ; CHECK-NEXT:    [[LP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[LB0]]
 ; CHECK-NEXT:    [[LP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[LB1]]
 ; CHECK-NEXT:    [[LP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[LB3]]
+; CHECK-NEXT:    [[SP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[SB]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i16, ptr [[LP0]], align 2
-; CHECK-NEXT:    [[L3:%.*]] = load i16, ptr [[LP3]], align 2
+; CHECK-NEXT:    [[L3:%.*]] = load i16, ptr [[LP1]], align 2
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i16 [[L0]] to i32
 ; CHECK-NEXT:    [[Z3:%.*]] = zext i16 [[L3]] to i32
-; CHECK-NEXT:    [[V0:%.*]] = add i32 [[Z0]], 1
-; CHECK-NEXT:    [[V3:%.*]] = add i32 [[Z3]], 4
-; CHECK-NEXT:    [[S1:%.*]] = add i64 [[SB]], 4
-; CHECK-NEXT:    [[S3:%.*]] = add i64 [[SB]], 12
-; CHECK-NEXT:    [[SP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[SB]]
-; CHECK-NEXT:    [[SP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[S1]]
-; CHECK-NEXT:    [[SP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[S3]]
-; CHECK-NEXT:    store i32 [[V0]], ptr [[SP0]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[LP1]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[LP3]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP1]], <i32 2, i32 3>
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[SP1]], align 4
-; CHECK-NEXT:    store i32 [[V3]], ptr [[SP3]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[Z0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Z3]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[SP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]

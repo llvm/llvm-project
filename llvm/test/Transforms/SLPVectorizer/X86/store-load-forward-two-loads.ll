@@ -114,3 +114,70 @@ loop:
 exit:
   ret void
 }
+
+; The load column is poison, p[1], p[2], p[3], so the vector load is emitted
+; 4 bytes below the first scalar load. The store p[8..11] is the window that
+; load reads two iterations ahead. Anchoring the distance at the first load
+; (then applying that shift) forwards, and the chain vectorizes. Anchoring at
+; a later scalar load leaves the window misaligned.
+define void @stlf_first_load_anchor(ptr %a, i32 noundef %x, i64 %n) {
+; CHECK-LABEL: define void @stlf_first_load_anchor(
+; CHECK-SAME: ptr [[A:%.*]], i32 noundef [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[K_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 64) ]
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[G1]], i64 -4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i32> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> <i32 0, i32 5, i32 7, i32 9>, [[TMP6]]
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[Q0]], align 4
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i32, ptr [[P]], i64 4
+; CHECK-NEXT:    [[K_NEXT]] = add i64 [[K]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[K_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %p = phi ptr [ %a, %entry ], [ %p.next, %loop ]
+  %k = phi i64 [ 0, %entry ], [ %k.next, %loop ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %p, i64 64) ]
+  %g1 = getelementptr inbounds i32, ptr %p, i64 1
+  %g2 = getelementptr inbounds i32, ptr %p, i64 2
+  %g3 = getelementptr inbounds i32, ptr %p, i64 3
+  %l1 = load i32, ptr %g1, align 4
+  %l2 = load i32, ptr %g2, align 4
+  %l3 = load i32, ptr %g3, align 4
+  %a1 = add i32 %l1, %x
+  %a2 = add i32 %l2, %x
+  %a3 = add i32 %l3, %x
+  %m1 = mul i32 %a1, 5
+  %m2 = mul i32 %a2, 7
+  %m3 = mul i32 %a3, 9
+  %q0 = getelementptr inbounds i32, ptr %p, i64 8
+  %q1 = getelementptr inbounds i32, ptr %q0, i64 1
+  %q2 = getelementptr inbounds i32, ptr %q0, i64 2
+  %q3 = getelementptr inbounds i32, ptr %q0, i64 3
+  store i32 0, ptr %q0, align 4
+  store i32 %m1, ptr %q1, align 4
+  store i32 %m2, ptr %q2, align 4
+  store i32 %m3, ptr %q3, align 4
+  %p.next = getelementptr inbounds i32, ptr %p, i64 4
+  %k.next = add i64 %k, 1
+  %c = icmp slt i64 %k.next, %n
+  br i1 %c, label %loop, label %exit
+exit:
+  ret void
+}
+declare void @llvm.assume(i1)

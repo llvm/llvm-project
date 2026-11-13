@@ -72,7 +72,8 @@ for.end:
 ; the bytes written by earlier iterations lie above it. The <4 x i32> load
 ; A[i+6..i+9] straddles the windows stored one and two iterations ago
 ; (A[i+4..i+7] and A[i+8..i+11]), the mirror image of an ascending loop loading
-; A[i-6..i-3]. Vectorization is rejected.
+; A[i-6..i-3]. The load is split into two <2 x i32> loads, one per window,
+; and the store stays <4 x i32>.
 define void @negative_stride_conflict_above(ptr noalias %a, i64 %n) {
 ; CHECK-LABEL: define void @negative_stride_conflict_above(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -81,32 +82,17 @@ define void @negative_stride_conflict_above(ptr noalias %a, i64 %n) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[L0P:%.*]] = add i64 [[I]], 6
-; CHECK-NEXT:    [[L1P:%.*]] = add i64 [[I]], 7
 ; CHECK-NEXT:    [[L2P:%.*]] = add i64 [[I]], 8
-; CHECK-NEXT:    [[L3P:%.*]] = add i64 [[I]], 9
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[L0P]]
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[L1P]]
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[L2P]]
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[L3P]]
-; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[G0]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[X3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add i32 [[X0]], 1
-; CHECK-NEXT:    [[Y1:%.*]] = add i32 [[X1]], 2
-; CHECK-NEXT:    [[Y2:%.*]] = add i32 [[X2]], 3
-; CHECK-NEXT:    [[Y3:%.*]] = add i32 [[X3]], 4
-; CHECK-NEXT:    [[I1:%.*]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[I2:%.*]] = add i64 [[I]], 2
-; CHECK-NEXT:    [[I3:%.*]] = add i64 [[I]], 3
 ; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; CHECK-NEXT:    store i32 [[Y0]], ptr [[S0]], align 4
-; CHECK-NEXT:    store i32 [[Y1]], ptr [[S1]], align 4
-; CHECK-NEXT:    store i32 [[Y2]], ptr [[S2]], align 4
-; CHECK-NEXT:    store i32 [[Y3]], ptr [[S3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[G0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[G2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[S0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], -4
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i64 [[I_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]

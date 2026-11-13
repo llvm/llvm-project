@@ -15,30 +15,19 @@ define void @stlf_recurrence(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[B0:%.*]] = add i64 [[I]], -5
 ; CHECK-NEXT:    [[B1:%.*]] = add i64 [[I]], -4
 ; CHECK-NEXT:    [[B2:%.*]] = add i64 [[I]], -3
-; CHECK-NEXT:    [[B3:%.*]] = add i64 [[I]], -2
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B0]]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B1]]
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B2]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B3]]
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P0]], align 4
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[P3]], align 4
-; CHECK-NEXT:    [[T1:%.*]] = add nsw i32 [[L0]], 1
-; CHECK-NEXT:    [[T2:%.*]] = add nsw i32 [[L1]], 2
-; CHECK-NEXT:    [[T3:%.*]] = add nsw i32 [[L2]], 3
-; CHECK-NEXT:    [[T4:%.*]] = add nsw i32 [[L3]], 4
-; CHECK-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
-; CHECK-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; CHECK-NEXT:    store i32 [[T1]], ptr [[GEP0]], align 4
-; CHECK-NEXT:    store i32 [[T2]], ptr [[GEP1]], align 4
-; CHECK-NEXT:    store i32 [[T3]], ptr [[GEP2]], align 4
-; CHECK-NEXT:    store i32 [[T4]], ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]

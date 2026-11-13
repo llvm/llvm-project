@@ -9,6 +9,8 @@ define void @shift_hidden_conflict(ptr %a, i32 noundef %x, i64 %n) {
 ; CHECK-LABEL: define void @shift_hidden_conflict(
 ; CHECK-SAME: ptr [[A:%.*]], i32 noundef [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
@@ -16,24 +18,16 @@ define void @shift_hidden_conflict(ptr %a, i32 noundef %x, i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 64) ]
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[A1:%.*]] = add i32 [[L1]], [[X]]
-; CHECK-NEXT:    [[A2:%.*]] = add i32 [[L2]], [[X]]
-; CHECK-NEXT:    [[A3:%.*]] = add i32 [[L3]], [[X]]
-; CHECK-NEXT:    [[M1:%.*]] = mul i32 [[A1]], 5
-; CHECK-NEXT:    [[M2:%.*]] = mul i32 [[A2]], 7
-; CHECK-NEXT:    [[M3:%.*]] = mul i32 [[A3]], 9
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 9
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i32, ptr [[Q0]], i64 1
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i32, ptr [[Q0]], i64 2
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr inbounds i32, ptr [[Q0]], i64 3
-; CHECK-NEXT:    store i32 0, ptr [[Q0]], align 4
-; CHECK-NEXT:    store i32 [[M1]], ptr [[Q1]], align 4
-; CHECK-NEXT:    store i32 [[M2]], ptr [[Q2]], align 4
-; CHECK-NEXT:    store i32 [[M3]], ptr [[Q3]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[G2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[L1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 poison, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i32> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> <i32 0, i32 5, i32 7, i32 9>, [[TMP7]]
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[Q0]], align 4
 ; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i32, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[K_NEXT]] = add i64 [[K]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[K_NEXT]], [[N]]

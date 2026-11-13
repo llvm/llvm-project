@@ -64,8 +64,8 @@ exit:
 }
 
 ; Same stride, but the load starts one element later (A[i-5..i-2]) and runs
-; past the previous store. That is a real forwarding failure, so VF4 stays
-; scalar.
+; past the previous store. That is a real forwarding failure, so the load is
+; not widened to <4 x i32>; the store still is.
 define void @stride_gap_overrun(ptr noalias %A, i64 %n) {
 ; CHECK-LABEL: define void @stride_gap_overrun(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -77,29 +77,18 @@ define void @stride_gap_overrun(ptr noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[LP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[LI0]]
 ; CHECK-NEXT:    [[LI1:%.*]] = add i64 [[I]], -4
 ; CHECK-NEXT:    [[LP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[LI1]]
-; CHECK-NEXT:    [[LI2:%.*]] = add i64 [[I]], -3
-; CHECK-NEXT:    [[LP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[LI2]]
 ; CHECK-NEXT:    [[LI3:%.*]] = add i64 [[I]], -2
 ; CHECK-NEXT:    [[LP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[LI3]]
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[LP0]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[LP1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[LP2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[LP3]], align 4
-; CHECK-NEXT:    [[V0:%.*]] = add i32 [[L0]], 1
-; CHECK-NEXT:    [[V1:%.*]] = add i32 [[L1]], 2
-; CHECK-NEXT:    [[V2:%.*]] = add i32 [[L2]], 3
-; CHECK-NEXT:    [[V3:%.*]] = add i32 [[L3]], 4
-; CHECK-NEXT:    [[SI1:%.*]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[SI2:%.*]] = add i64 [[I]], 2
-; CHECK-NEXT:    [[SI3:%.*]] = add i64 [[I]], 3
 ; CHECK-NEXT:    [[SP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[SP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SI1]]
-; CHECK-NEXT:    [[SP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SI2]]
-; CHECK-NEXT:    [[SP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[SI3]]
-; CHECK-NEXT:    store i32 [[V0]], ptr [[SP0]], align 4
-; CHECK-NEXT:    store i32 [[V1]], ptr [[SP1]], align 4
-; CHECK-NEXT:    store i32 [[V2]], ptr [[SP2]], align 4
-; CHECK-NEXT:    store i32 [[V3]], ptr [[SP3]], align 4
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[LP0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[LP1]], align 4
+; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[LP3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[L3]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[SP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 6
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -142,6 +131,67 @@ loop:
   %c = icmp slt i64 %i.next, %n
   br i1 %c, label %loop, label %exit
 
+exit:
+  ret void
+}
+
+; The loop step is a runtime value, so the store has no constant stride. The
+; check falls back to the tiled predicate instead of using the stride.
+define void @stride_unknown(ptr noalias %A, i64 %step, i64 %n) {
+; CHECK-LABEL: define void @stride_unknown(
+; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[STEP:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[K_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
+; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 5
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[G2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[Q0]], align 4
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 [[STEP]]
+; CHECK-NEXT:    [[K_NEXT]] = add i64 [[K]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[K_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %p = phi ptr [ %A, %entry ], [ %p.next, %loop ]
+  %k = phi i64 [ 0, %entry ], [ %k.next, %loop ]
+  %g1 = getelementptr inbounds i32, ptr %p, i64 1
+  %g2 = getelementptr inbounds i32, ptr %p, i64 2
+  %g3 = getelementptr inbounds i32, ptr %p, i64 3
+  %l0 = load i32, ptr %p, align 4
+  %l1 = load i32, ptr %g1, align 4
+  %l2 = load i32, ptr %g2, align 4
+  %l3 = load i32, ptr %g3, align 4
+  %t0 = add nsw i32 %l0, 1
+  %t1 = add nsw i32 %l1, 2
+  %t2 = add nsw i32 %l2, 3
+  %t3 = add nsw i32 %l3, 4
+  %q0 = getelementptr inbounds i32, ptr %p, i64 5
+  %q1 = getelementptr inbounds i32, ptr %p, i64 6
+  %q2 = getelementptr inbounds i32, ptr %p, i64 7
+  %q3 = getelementptr inbounds i32, ptr %p, i64 8
+  store i32 %t0, ptr %q0, align 4
+  store i32 %t1, ptr %q1, align 4
+  store i32 %t2, ptr %q2, align 4
+  store i32 %t3, ptr %q3, align 4
+  %p.next = getelementptr inbounds i8, ptr %p, i64 %step
+  %k.next = add i64 %k, 1
+  %c = icmp slt i64 %k.next, %n
+  br i1 %c, label %loop, label %exit
 exit:
   ret void
 }

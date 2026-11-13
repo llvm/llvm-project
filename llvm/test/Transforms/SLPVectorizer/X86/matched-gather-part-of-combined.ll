@@ -22,21 +22,18 @@ define void @test(ptr %0, i32 %.sroa.31.0.copyload4033) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -24
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -36
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -20
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP7]], i64 1
-; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i32> [[TMP9]], [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i32> [[TMP10]], splat (i32 1)
-; CHECK-NEXT:    store <2 x i32> [[TMP11]], ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i32 [[TMP12]], [[DOTSROA_31_0_COPYLOAD4033]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i32 [[TMP13]], 1
-; CHECK-NEXT:    [[DOTSROA_54126_0__SROA_IDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -28
-; CHECK-NEXT:    store i32 [[TMP14]], ptr [[DOTSROA_54126_0__SROA_IDX]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = or i32 [[TMP6]], [[DOTSROA_31_0_COPYLOAD4033]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i32 [[TMP15]], 1
-; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = call <6 x i32> @llvm.masked.load.v6i32.p0(ptr align 4 [[TMP5]], <6 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <6 x i32> poison)
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <6 x i32> [[TMP8]], <6 x i32> poison, <2 x i32> <i32 0, i32 5>
+; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i32> [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i32 [[TMP12]], [[DOTSROA_31_0_COPYLOAD4033]]
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP17]], <4 x i32> [[TMP18]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i64 3
+; CHECK-NEXT:    [[TMP16:%.*]] = or <4 x i32> [[TMP15]], splat (i32 1)
+; CHECK-NEXT:    store <4 x i32> [[TMP16]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    br label %[[_LOOPEXIT1924]]
 ;
 .preheader1937.preheader:
