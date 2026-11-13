@@ -143,6 +143,7 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     allowCoExec(Res, CoExecMask::SALU, 1);
     allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
     allowCoExec(Res, CoExecMask::WMMA, 4);
+    allowCoExec(Res, CoExecMask::PK_F32, 7);
     return Res;
 
   // 8-cycle occupancy, 12-cycle window.
@@ -191,9 +192,10 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     allowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
     allowCoExec(Res, CoExecMask::VALU, 3);
     allowCoExec(Res, CoExecMask::WMMA, 8);
+    allowCoExec(Res, CoExecMask::PK_F32, 11);
     return Res;
 
-  // 4-cycle occupancy, 8-cycle window.
+  // 4-cycle occupancy, 8-cycle window (12 for PK_F32).
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64:
@@ -260,10 +262,13 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_mac_vgprcd_e64:
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_mac_vgprcd_e64:
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_mac_vgprcd_e64:
-    Res.TotalWindow = 8;
+    Res.TotalWindow = 12;
     allowCoExec(Res, CoExecMask::SALU, 1);
     allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
     allowCoExec(Res, CoExecMask::WMMA, 4);
+    // Only PK_F32 waits past cycle 8.
+    allowCoExec(Res, CoExecMask::All & ~CoExecMask::PK_F32, 8);
+    allowCoExec(Res, CoExecMask::PK_F32, 11);
     return Res;
 
   // 16-cycle occupancy, 20-cycle window.
@@ -332,6 +337,7 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     allowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
     allowCoExec(Res, CoExecMask::VALU, 3);
     allowCoExec(Res, CoExecMask::WMMA, 16);
+    allowCoExec(Res, CoExecMask::PK_F32, 19);
     return Res;
 
   // 9-cycle occupancy, 12-cycle window.
@@ -353,6 +359,7 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     allowCoExec(Res, CoExecMask::SALU, 1);
     allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 4);
     allowCoExec(Res, CoExecMask::WMMA, 9);
+    allowCoExec(Res, CoExecMask::PK_F32, 11);
     return Res;
 
   // 18-cycle occupancy, 19-cycle window.
@@ -362,13 +369,57 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   case V_MFMA_F64_16X16X4F64_vgprcd_e64:
     Res.TotalWindow = 19;
     allowCoExec(Res, CoExecMask::DS | CoExecMask::SALU | CoExecMask::VMEM, 0);
-    allowCoExec(Res, CoExecMask::WMMA | CoExecMask::VALU, 18);
+    allowCoExec(Res, CoExecMask::WMMA | CoExecMask::VALU | CoExecMask::PK_F32,
+                18);
     return Res;
 
   default:
     // Default fallback: permissive 8-cycle pattern
     return CoExecInfo::build(0, 9, "AAAAAAAAA");
   }
+}
+
+bool llvm::AMDGPU::hasCoExecInfo(const GCNSubtarget &ST) {
+  return ST.hasGFX950Insts();
+}
+
+CoExecMaskT llvm::AMDGPU::getCoExecMaskForMI(const MachineInstr &MI,
+                                             const SIInstrInfo &SII) {
+  switch (classifyFlavor(MI, SII)) {
+  case InstructionFlavor::WMMA:
+    return CoExecMask::WMMA;
+  case InstructionFlavor::TRANS:
+    return CoExecMask::TRANS;
+  case InstructionFlavor::SingleCycleVALU:
+  case InstructionFlavor::MultiCycleVALU:
+    switch (MI.getOpcode()) {
+    case AMDGPU::V_PK_ADD_F32:
+    case AMDGPU::V_PK_FMA_F32:
+    case AMDGPU::V_PK_MOV_B32:
+    case AMDGPU::V_PK_MUL_F32:
+      return CoExecMask::PK_F32;
+    default:
+      return CoExecMask::VALU;
+    }
+  // LDS DMA and tensor DMA issue on the VALU pipe.
+  case InstructionFlavor::DMA:
+    return CoExecMask::VALU;
+  case InstructionFlavor::DS:
+    return CoExecMask::DS;
+  case InstructionFlavor::VMEM:
+    return CoExecMask::VMEM;
+  case InstructionFlavor::SMEM:
+    return CoExecMask::SMEM;
+  case InstructionFlavor::SALU:
+  // Fences are s_barrier_*/s_wait_*, which issue on the scalar pipe.
+  case InstructionFlavor::Fence:
+    return CoExecMask::SALU;
+  case InstructionFlavor::Other:
+    return CoExecMask::CTRL;
+  case InstructionFlavor::NUM_FLAVORS:
+    break;
+  }
+  llvm_unreachable("Unknown InstructionFlavor");
 }
 
 InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,

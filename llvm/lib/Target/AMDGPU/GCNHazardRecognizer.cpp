@@ -290,12 +290,6 @@ void GCNHazardRecognizer::updateMultiCycleVALUState(const MachineInstr &MI) {
   }
 }
 
-AMDGPU::CoExecMaskT
-GCNHazardRecognizer::getCoExecMaskForMI(const MachineInstr &MI,
-                                        const SIInstrInfo &TII) {
-  return AMDGPU::getCoExecMask(AMDGPU::classifyFlavor(MI, TII));
-}
-
 unsigned GCNHazardRecognizer::checkTRANSHazard(const MachineInstr &MI) const {
   if (!CyclesUntilTRANS)
     return 0;
@@ -335,7 +329,7 @@ GCNHazardRecognizer::checkWMMACoexecSlot(const MachineInstr &MI) const {
     return 0;
 
   unsigned Stage = *CurrentCoExecStage;
-  AMDGPU::CoExecMaskT InstMask = getCoExecMaskForMI(MI, TII);
+  AMDGPU::CoExecMaskT InstMask = AMDGPU::getCoExecMaskForMI(MI, TII);
   unsigned StallCycles = ActiveCoExecInfo.getStallCycles(InstMask, Stage);
 
   // No stall required if the instruction can co-execute at the current stage.
@@ -388,7 +382,7 @@ GCNHazardRecognizer::checkMultiShadowHazard(const MachineInstr &MI) const {
   // We need to wait for at least one to clear.
 
   unsigned LookAheadStage = *CurrentCoExecStage + CyclesUntilTRANS;
-  AMDGPU::CoExecMaskT InstMask = getCoExecMaskForMI(MI, TII);
+  AMDGPU::CoExecMaskT InstMask = AMDGPU::getCoExecMaskForMI(MI, TII);
   return CyclesUntilTRANS +
          ActiveCoExecInfo.getStallCycles(InstMask, LookAheadStage);
 }
@@ -404,11 +398,13 @@ void GCNHazardRecognizer::schedulerEmitInstruction(MachineInstr *MI) {
         dbgs() << "  Stage " << Stage << "("
                << AMDGPU::getStageTypeName(ActiveCoExecInfo.getType(Stage))
                << ") Emit ["
-               << AMDGPU::getCoExecMaskName(getCoExecMaskForMI(*MI, TII))
+               << AMDGPU::getCoExecMaskName(
+                      AMDGPU::getCoExecMaskForMI(*MI, TII))
                << "]: " << *MI;
       } else {
         dbgs() << "  Emit ["
-               << AMDGPU::getCoExecMaskName(getCoExecMaskForMI(*MI, TII))
+               << AMDGPU::getCoExecMaskName(
+                      AMDGPU::getCoExecMaskForMI(*MI, TII))
                << "]: " << *MI;
       }
     }
@@ -418,7 +414,7 @@ void GCNHazardRecognizer::schedulerEmitInstruction(MachineInstr *MI) {
                           CyclesUntilTRANS > 0 || CyclesUntilVALU > 0;
     if (!HasActiveState)
       dbgs() << "  Emit ["
-             << AMDGPU::getCoExecMaskName(getCoExecMaskForMI(*MI, TII))
+             << AMDGPU::getCoExecMaskName(AMDGPU::getCoExecMaskForMI(*MI, TII))
              << "]: " << *MI;
   });
   updateWMMAWindowState(*MI);
