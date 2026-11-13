@@ -86,10 +86,6 @@ name:            test_frem_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -189,9 +185,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = G_FREM %0, %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = G_FREM %0, %1
     $r0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -200,16 +196,6 @@ name:            test_frem_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -363,14 +349,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST4]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST5]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %5(f64) = G_MERGE_VALUES %2(f32), %3(f32)
-    %6(f64) = G_FREM %4, %5
-    %7(f32), %8(f32) = G_UNMERGE_VALUES %6(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3(f32)
+    %6:_(f64) = G_FREM %4, %5
+    %7:_(f32), %8:_(f32) = G_UNMERGE_VALUES %6(f64)
     $r0 = COPY %7(f32)
     $r1 = COPY %8(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -380,10 +366,6 @@ name:            test_fpow_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -483,9 +465,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = G_FPOW %0, %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = G_FPOW %0, %1
     $r0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -494,16 +476,6 @@ name:            test_fpow_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -657,14 +629,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST4]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST5]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %5(f64) = G_MERGE_VALUES %2(f32), %3(f32)
-    %6(f64) = G_FPOW %4, %5
-    %7(f32), %8(f32) = G_UNMERGE_VALUES %6(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3(f32)
+    %6:_(f64) = G_FPOW %4, %5
+    %7:_(f32), %8:_(f32) = G_UNMERGE_VALUES %6(f64)
     $r0 = COPY %7(f32)
     $r1 = COPY %8(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -674,10 +646,6 @@ name:            test_fadd_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -758,9 +726,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = G_FADD %0, %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = G_FADD %0, %1
     $r0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -769,16 +737,6 @@ name:            test_fadd_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -901,14 +859,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST4]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST5]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %5(f64) = G_MERGE_VALUES %2(f32), %3(f32)
-    %6(f64) = G_FADD %4, %5
-    %7(f32),%8(f32) = G_UNMERGE_VALUES %6(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3(f32)
+    %6:_(f64) = G_FADD %4, %5
+    %7:_(f32),%8:_(f32) = G_UNMERGE_VALUES %6(f64)
     $r0 = COPY %7(f32)
     $r1 = COPY %8(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -918,10 +876,6 @@ name:            test_fsub_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -1002,9 +956,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = G_FSUB %0, %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = G_FSUB %0, %1
     $r0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -1013,16 +967,6 @@ name:            test_fsub_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -1145,14 +1089,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST4]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST5]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %5(f64) = G_MERGE_VALUES %2(f32), %3(f32)
-    %6(f64) = G_FSUB %4, %5
-    %7(f32),%8(f32) = G_UNMERGE_VALUES %6(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3(f32)
+    %6:_(f64) = G_FSUB %4, %5
+    %7:_(f32),%8:_(f32) = G_UNMERGE_VALUES %6(f64)
     $r0 = COPY %7(f32)
     $r1 = COPY %8(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -1162,10 +1106,6 @@ name:            test_fmul_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -1246,9 +1186,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = G_FMUL %0, %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = G_FMUL %0, %1
     $r0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -1257,16 +1197,6 @@ name:            test_fmul_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -1389,14 +1319,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST4]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST5]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %5(f64) = G_MERGE_VALUES %2(f32), %3(f32)
-    %6(f64) = G_FMUL %4, %5
-    %7(f32),%8(f32) = G_UNMERGE_VALUES %6(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3(f32)
+    %6:_(f64) = G_FMUL %4, %5
+    %7:_(f32),%8:_(f32) = G_UNMERGE_VALUES %6(f64)
     $r0 = COPY %7(f32)
     $r1 = COPY %8(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -1406,10 +1336,6 @@ name:            test_fdiv_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -1490,9 +1416,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = G_FDIV %0, %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = G_FDIV %0, %1
     $r0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -1501,16 +1427,6 @@ name:            test_fdiv_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -1633,14 +1549,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST4]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST5]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %5(f64) = G_MERGE_VALUES %2(f32), %3(f32)
-    %6(f64) = G_FDIV %4, %5
-    %7(f32),%8(f32) = G_UNMERGE_VALUES %6(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3(f32)
+    %6:_(f64) = G_FDIV %4, %5
+    %7:_(f32),%8:_(f32) = G_UNMERGE_VALUES %6(f64)
     $r0 = COPY %7(f32)
     $r1 = COPY %8(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -1650,8 +1566,6 @@ name:            test_fconstant_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
 body:             |
   bb.0:
     liveins:
@@ -1665,7 +1579,7 @@ body:             |
     ; SOFT: [[C:%[0-9]+]]:_(f32) = G_CONSTANT i32 -1080033280
     ; SOFT-NEXT: $r0 = COPY [[C]](f32)
     ; SOFT-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = G_FCONSTANT float -1.25
+    %0:_(f32) = G_FCONSTANT float -1.25
     $r0 = COPY %0(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -1674,10 +1588,6 @@ name:            test_fconstant_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins:
@@ -1721,8 +1631,8 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[C1]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[C]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f64) = G_FCONSTANT double -2.4
-    %1(f32),%2(f32) = G_UNMERGE_VALUES %0(f64)
+    %0:_(f64) = G_FCONSTANT double -2.4
+    %1:_(f32),%2:_(f32) = G_UNMERGE_VALUES %0(f64)
     $r0 = COPY %2(f32)
     $r1 = COPY %1(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -1732,9 +1642,6 @@ name:            test_fneg_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -1757,8 +1664,8 @@ body:             |
     ; SOFT-NEXT: [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[XOR]](i32)
     ; SOFT-NEXT: $r0 = COPY [[BITCAST1]](f32)
     ; SOFT-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = G_FNEG %0
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = G_FNEG %0
     $r0 = COPY %1(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -1767,13 +1674,6 @@ name:            test_fneg_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -1861,11 +1761,11 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST3]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %3(f64) = G_FNEG %2
-    %4(f32),%5(f32) = G_UNMERGE_VALUES %3(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %3:_(f64) = G_FNEG %2
+    %4:_(f32),%5:_(f32) = G_UNMERGE_VALUES %3(f64)
     $r0 = COPY %4(f32)
     $r1 = COPY %5(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -1875,11 +1775,6 @@ name:            test_fpext_float_to_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -1961,9 +1856,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST1]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(f32) = COPY $r0
-    %1(f64) = G_FPEXT %0(f32)
-    %2(f32), %3(f32) = G_UNMERGE_VALUES %1(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f64) = G_FPEXT %0(f32)
+    %2:_(f32), %3:_(f32) = G_UNMERGE_VALUES %1(f64)
     $r0 = COPY %2(f32)
     $r1 = COPY %3(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -1973,11 +1868,6 @@ name:            test_fptrunc_double_to_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -2059,10 +1949,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %3(f32) = G_FPTRUNC %2(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %3:_(f32) = G_FPTRUNC %2(f64)
     $r0 = COPY %3(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2071,9 +1961,6 @@ name:            test_fptosi_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -2137,8 +2024,8 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[COPY1]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(i32) = G_FPTOSI %0(f32)
+    %0:_(f32) = COPY $r0
+    %1:_(i32) = G_FPTOSI %0(f32)
     $r0 = COPY %1(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2147,11 +2034,6 @@ name:            test_fptosi_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -2229,10 +2111,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[COPY2]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %3(i32) = G_FPTOSI %2(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %3:_(i32) = G_FPTOSI %2(f64)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2241,9 +2123,6 @@ name:            test_fptoui_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -2307,8 +2186,8 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[COPY1]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(i32) = G_FPTOUI %0(f32)
+    %0:_(f32) = COPY $r0
+    %1:_(i32) = G_FPTOUI %0(f32)
     $r0 = COPY %1(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2317,11 +2196,6 @@ name:            test_fptoui_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -2399,10 +2273,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[COPY2]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f64) = G_MERGE_VALUES %0(f32), %1(f32)
-    %3(i32) = G_FPTOUI %2(f64)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f64) = G_MERGE_VALUES %0(f32), %1(f32)
+    %3:_(i32) = G_FPTOUI %2(f64)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2411,9 +2285,6 @@ name:            test_sitofp_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -2477,8 +2348,8 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(f32) = G_SITOFP %0(i32)
+    %0:_(i32) = COPY $r0
+    %1:_(f32) = G_SITOFP %0(i32)
     $r0 = COPY %1(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2487,11 +2358,6 @@ name:            test_sitofp_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -2569,9 +2435,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST1]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(i32) = COPY $r0
-    %1(f64) = G_SITOFP %0(i32)
-    %2(f32), %3(f32) = G_UNMERGE_VALUES %1(f64)
+    %0:_(i32) = COPY $r0
+    %1:_(f64) = G_SITOFP %0(i32)
+    %2:_(f32), %3:_(f32) = G_UNMERGE_VALUES %1(f64)
     $r0 = COPY %2(f32)
     $r1 = COPY %3(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -2581,9 +2447,6 @@ name:            test_uitofp_float
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -2647,8 +2510,8 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(i32) = COPY $r0
-    %1(f32) = G_UITOFP %0(i32)
+    %0:_(i32) = COPY $r0
+    %1:_(f32) = G_UITOFP %0(i32)
     $r0 = COPY %1(f32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2657,11 +2520,6 @@ name:            test_uitofp_double
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0
@@ -2739,9 +2597,9 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST1]](f32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
-    %0(i32) = COPY $r0
-    %1(f64) = G_UITOFP %0(i32)
-    %2(f32), %3(f32) = G_UNMERGE_VALUES %1(f64)
+    %0:_(i32) = COPY $r0
+    %1:_(f64) = G_UITOFP %0(i32)
+    %2:_(f32), %3:_(f32) = G_UNMERGE_VALUES %1(f64)
     $r0 = COPY %2(f32)
     $r1 = COPY %3(f32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
@@ -2753,11 +2611,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -2782,10 +2635,10 @@ body:             |
     ; SOFT-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
     ; SOFT-NEXT: $r0 = COPY [[C]](i32)
     ; SOFT-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(true), %0(f32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(true), %0(f32), %1
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2794,11 +2647,6 @@ name:            test_fcmp_false_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -2821,10 +2669,10 @@ body:             |
     ; SOFT-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; SOFT-NEXT: $r0 = COPY [[C]](i32)
     ; SOFT-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(false), %0(f32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(false), %0(f32), %1
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
     ; For soft float we just need to return a '0' constant, but the truncation
@@ -2835,11 +2683,6 @@ name:            test_fcmp_oeq_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -2927,12 +2770,12 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(oeq), %0(f32), %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(oeq), %0(f32), %1
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %3(i32) = G_ZEXT %2(i1)
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -2941,11 +2784,6 @@ name:            test_fcmp_ogt_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3033,12 +2871,12 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(ogt), %0(f32), %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(ogt), %0(f32), %1
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %3(i32) = G_ZEXT %2(i1)
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3047,11 +2885,6 @@ name:            test_fcmp_oge_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3139,12 +2972,12 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(oge), %0(f32), %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(oge), %0(f32), %1
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %3(i32) = G_ZEXT %2(i1)
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3153,11 +2986,6 @@ name:            test_fcmp_olt_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3245,12 +3073,12 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(olt), %0(f32), %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(olt), %0(f32), %1
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %3(i32) = G_ZEXT %2(i1)
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3259,11 +3087,6 @@ name:            test_fcmp_ole_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3351,12 +3174,12 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(ole), %0(f32), %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(ole), %0(f32), %1
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %3(i32) = G_ZEXT %2(i1)
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3365,11 +3188,6 @@ name:            test_fcmp_ord_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3459,10 +3277,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(ord), %0(f32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(ord), %0(f32), %1
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3471,11 +3289,6 @@ name:            test_fcmp_ugt_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3565,10 +3378,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(ugt), %0(f32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(ugt), %0(f32), %1
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3577,11 +3390,6 @@ name:            test_fcmp_uge_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3671,10 +3479,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(uge), %0(f32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(uge), %0(f32), %1
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3683,11 +3491,6 @@ name:            test_fcmp_ult_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3777,10 +3580,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(ult), %0(f32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(ult), %0(f32), %1
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3789,11 +3592,6 @@ name:            test_fcmp_ule_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3883,10 +3681,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(ule), %0(f32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(ule), %0(f32), %1
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -3895,11 +3693,6 @@ name:            test_fcmp_une_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -3989,10 +3782,10 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(une), %0(f32), %1
-    %3(i32) = G_ZEXT %2(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(une), %0(f32), %1
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4001,11 +3794,6 @@ name:            test_fcmp_uno_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -4093,12 +3881,12 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(uno), %0(f32), %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(uno), %0(f32), %1
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %3(i32) = G_ZEXT %2(i1)
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4107,11 +3895,6 @@ name:            test_fcmp_one_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -4243,12 +4026,12 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[OR]], [[C1]]
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[AND]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(one), %0(f32), %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(one), %0(f32), %1
     ; The result of the G_OR needs to be truncated, and the combiner turns the
     ; truncation into the following masking sequence.
-    %3(i32) = G_ZEXT %2(i1)
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4257,11 +4040,6 @@ name:            test_fcmp_ueq_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1
@@ -4393,12 +4171,12 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[OR]], [[C1]]
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[AND]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(i1) = G_FCMP floatpred(ueq), %0(f32), %1
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(i1) = G_FCMP floatpred(ueq), %0(f32), %1
     ; The result of the G_OR needs to be truncated, and the combiner turns the
     ; truncation into the following masking sequence.
-    %3(i32) = G_ZEXT %2(i1)
+    %3:_(i32) = G_ZEXT %2(i1)
     $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4407,15 +4185,6 @@ name:            test_fcmp_true_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -4440,16 +4209,16 @@ body:             |
     ; SOFT-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
     ; SOFT-NEXT: $r0 = COPY [[C]](i32)
     ; SOFT-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(true), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(true), %4(f64), %5
     ; The result needs to be truncated, and the combiner turns the truncation
     ; into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4458,15 +4227,6 @@ name:            test_fcmp_false_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -4491,16 +4251,16 @@ body:             |
     ; SOFT-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; SOFT-NEXT: $r0 = COPY [[C]](i32)
     ; SOFT-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(false), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(false), %4(f64), %5
     ; The result needs to be truncated, and the combiner turns the truncation
     ; into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4509,15 +4269,6 @@ name:            test_fcmp_oeq_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -4633,16 +4384,16 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(oeq), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(oeq), %4(f64), %5
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4651,15 +4402,6 @@ name:            test_fcmp_ogt_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -4775,16 +4517,16 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(ogt), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(ogt), %4(f64), %5
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4793,15 +4535,6 @@ name:            test_fcmp_oge_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -4917,16 +4650,16 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(oge), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(oge), %4(f64), %5
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -4935,15 +4668,6 @@ name:            test_fcmp_olt_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -5059,16 +4783,16 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(olt), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(olt), %4(f64), %5
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -5077,15 +4801,6 @@ name:            test_fcmp_ole_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -5201,16 +4916,16 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(ole), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(ole), %4(f64), %5
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -5219,15 +4934,6 @@ name:            test_fcmp_ord_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -5345,14 +5051,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(ord), %4(f64), %5
-    %7(i32) = G_ZEXT %6(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(ord), %4(f64), %5
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -5361,15 +5067,6 @@ name:            test_fcmp_ugt_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -5487,14 +5184,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(ugt), %4(f64), %5
-    %7(i32) = G_ZEXT %6(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(ugt), %4(f64), %5
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -5503,15 +5200,6 @@ name:            test_fcmp_uge_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -5629,14 +5317,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(uge), %4(f64), %5
-    %7(i32) = G_ZEXT %6(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(uge), %4(f64), %5
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -5645,15 +5333,6 @@ name:            test_fcmp_ult_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -5771,14 +5450,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(ult), %4(f64), %5
-    %7(i32) = G_ZEXT %6(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(ult), %4(f64), %5
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -5787,15 +5466,6 @@ name:            test_fcmp_ule_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -5913,14 +5583,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(ule), %4(f64), %5
-    %7(i32) = G_ZEXT %6(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(ule), %4(f64), %5
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -5929,15 +5599,6 @@ name:            test_fcmp_une_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -6055,14 +5716,14 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(une), %4(f64), %5
-    %7(i32) = G_ZEXT %6(i1)
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(une), %4(f64), %5
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -6071,15 +5732,6 @@ name:            test_fcmp_uno_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -6195,16 +5847,16 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ICMP]](i1)
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[ZEXT]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(uno), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(uno), %4(f64), %5
     ; For aeabi, we just need to truncate the result. The combiner changes the
     ; truncation into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -6213,15 +5865,6 @@ name:            test_fcmp_one_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -6397,16 +6040,16 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[OR]], [[C1]]
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[AND]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(one), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(one), %4(f64), %5
     ; The result of the G_OR needs to be truncated, and the combiner turns the
     ; truncation into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -6415,15 +6058,6 @@ name:            test_fcmp_ueq_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -6599,16 +6233,16 @@ body:             |
     ; SOFT-DEFAULT-THUMB-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[OR]], [[C1]]
     ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[AND]](i32)
     ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(f32) = COPY $r0
-    %1(f32) = COPY $r1
-    %2(f32) = COPY $r2
-    %3(f32) = COPY $r3
-    %4(f64) = G_MERGE_VALUES %0(f32), %1
-    %5(f64) = G_MERGE_VALUES %2(f32), %3
-    %6(i1) = G_FCMP floatpred(ueq), %4(f64), %5
+    %0:_(f32) = COPY $r0
+    %1:_(f32) = COPY $r1
+    %2:_(f32) = COPY $r2
+    %3:_(f32) = COPY $r3
+    %4:_(f64) = G_MERGE_VALUES %0(f32), %1
+    %5:_(f64) = G_MERGE_VALUES %2(f32), %3
+    %6:_(i1) = G_FCMP floatpred(ueq), %4(f64), %5
     ; The result of the G_OR needs to be truncated, and the combiner turns the
     ; truncation into the following masking sequence.
-    %7(i32) = G_ZEXT %6(i1)
+    %7:_(i32) = G_ZEXT %6(i1)
     $r0 = COPY %7(i32)
     BX_RET 14, $noreg, implicit $r0
 ...

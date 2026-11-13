@@ -149,6 +149,9 @@ def CC_Hexagon: CallingConv<[
   CCIfHlx2048<
     CCIfType<[v1024i32,v2048i16,v4096i8],
       CCAssignToReg<[LL0,LL1,LL2,LL3,LL4,LL5]>>>,
+  CCIfHlx2048<
+    CCIfType<[v512i32,v1024i16,v2048i8,v1024i32,v2048i16,v4096i8],
+      CCCustom<"CC_Hexagon_VTCM_Stack">>>,
 
   CCDelegateTo<CC_HexagonStack>
 ]>;
