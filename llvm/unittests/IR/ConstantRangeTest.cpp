@@ -2733,7 +2733,11 @@ TEST_F(ConstantRangeTest, UShlSat) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.ushl_sat(CR2);
       },
-      [](const APInt &N1, const APInt &N2) { return N1.ushl_sat(N2); },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        return N1.ushl_sat(N2);
+      },
       PreferSmallestUnsigned);
 }
 
@@ -2773,7 +2777,11 @@ TEST_F(ConstantRangeTest, SShlSat) {
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.sshl_sat(CR2);
       },
-      [](const APInt &N1, const APInt &N2) { return N1.sshl_sat(N2); },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        return N1.sshl_sat(N2);
+      },
       PreferSmallestSigned);
 }
 

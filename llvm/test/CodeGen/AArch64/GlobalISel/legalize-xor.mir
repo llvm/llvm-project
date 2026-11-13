@@ -2,11 +2,13 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_scalar_xor_small
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_scalar_xor_small
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
@@ -147,11 +149,13 @@ body:             |
 ...
 ---
 name:            test_vector_xor_v16s16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_xor_v16s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<8 x i16>) = G_XOR [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[XOR1:%[0-9]+]]:_(<8 x i16>) = G_XOR [[COPY1]], [[COPY1]]
@@ -168,11 +172,13 @@ body:             |
 ...
 ---
 name:            test_vector_xor_v32s8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_xor_v32s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<16 x i8>) = G_XOR [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[XOR1:%[0-9]+]]:_(<16 x i8>) = G_XOR [[COPY1]], [[COPY1]]

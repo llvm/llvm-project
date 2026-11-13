@@ -73,7 +73,7 @@ body:             |
     %2:gr32 = nsw ADD32rr %0, %1, implicit-def dead $eflags
     $eax = COPY %2
     RET 0, $eax
-
+...
 ---
 name:            mul_function
 alignment:       16
@@ -94,3 +94,4 @@ body:             |
     %2:gr32 = nsw IMUL32rr %0, %1, implicit-def dead $eflags
     $eax = COPY %2
     RET 0, $eax
+...

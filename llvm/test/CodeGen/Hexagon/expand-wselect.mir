@@ -9,4 +9,3 @@ body: |
   bb.0:
     liveins: $p0, $w0, $w1
     $w2 = PS_wselect killed $p0, killed $w0, killed $w1
----

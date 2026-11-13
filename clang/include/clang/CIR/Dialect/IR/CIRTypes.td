@@ -37,7 +37,8 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def CIR_IntType : CIR_Type<"Int", "int", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
@@ -87,6 +88,13 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     }
     bool isUnsignedFundamental() const {
       return isFundamentalUIntType(*this);
+    }
+
+    /// Key of the data-layout entry that carries
+    /// TargetInfo::getBitIntMaxAlign(), in bits. The width is not a layout
+    /// input. Every _BitInt reads this one entry.
+    static IntType getBitIntMaxAlignKey(mlir::MLIRContext *ctx) {
+      return get(ctx, /*width=*/1, /*isSigned=*/false, /*isBitInt=*/true);
     }
 
     /// Returns a minimum bitwidth of cir::IntType

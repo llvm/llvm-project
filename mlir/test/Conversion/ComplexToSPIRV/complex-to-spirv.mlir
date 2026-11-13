@@ -221,6 +221,54 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
 
 // -----
 
+func.func @complex_tan(%arg: complex<f32>) -> complex<f32> {
+  %tan = complex.tan %arg : complex<f32>
+  return %tan : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_tan
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[TWO:.+]] = spirv.Constant 2.000000e+00 : f32
+//       CHECK:   %[[TWORE:.+]] = spirv.FMul %[[RE]], %[[TWO]] : f32
+//       CHECK:   %[[TWOIM:.+]] = spirv.FMul %[[IM]], %[[TWO]] : f32
+//       CHECK:   %[[RSIN:.+]] = spirv.GL.Sin %[[TWORE]] : f32
+//       CHECK:   %[[RCOS:.+]] = spirv.GL.Cos %[[TWORE]] : f32
+//       CHECK:   %[[ISIN:.+]] = spirv.GL.Sinh %[[TWOIM]] : f32
+//       CHECK:   %[[ICOS:.+]] = spirv.GL.Cosh %[[TWOIM]] : f32
+//       CHECK:   %[[DENOM:.+]] = spirv.FAdd %[[RCOS]], %[[ICOS]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FDiv %[[RSIN]], %[[DENOM]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FDiv %[[ISIN]], %[[DENOM]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_tanh(%arg: complex<f32>) -> complex<f32> {
+  %tanh = complex.tanh %arg : complex<f32>
+  return %tanh : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_tanh
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[TWO:.+]] = spirv.Constant 2.000000e+00 : f32
+//       CHECK:   %[[TWORE:.+]] = spirv.FMul %[[RE]], %[[TWO]] : f32
+//       CHECK:   %[[TWOIM:.+]] = spirv.FMul %[[IM]], %[[TWO]] : f32
+//       CHECK:   %[[SIN:.+]] = spirv.GL.Sin %[[TWOIM]] : f32
+//       CHECK:   %[[COS:.+]] = spirv.GL.Cos %[[TWOIM]] : f32
+//       CHECK:   %[[SINH:.+]] = spirv.GL.Sinh %[[TWORE]] : f32
+//       CHECK:   %[[COSH:.+]] = spirv.GL.Cosh %[[TWORE]] : f32
+//       CHECK:   %[[DENOM:.+]] = spirv.FAdd %[[COS]], %[[COSH]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FDiv %[[SIN]], %[[DENOM]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FDiv %[[SINH]], %[[DENOM]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
 } {
@@ -414,6 +462,86 @@ func.func @complex_expm1(%arg: complex<f32>) -> complex<f32> {
 
 // -----
 
+func.func @complex_sqrt(%arg: complex<f32>) -> complex<f32> {
+  %sqrt = complex.sqrt %arg : complex<f32>
+  return %sqrt : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_sqrt
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[ABSRE:.+]] = spirv.GL.FAbs %[[RE]] : f32
+//       CHECK:   %[[ABSIM:.+]] = spirv.GL.FAbs %[[IM]] : f32
+//       CHECK:   %[[MAX:.+]] = spirv.GL.FMax %[[ABSRE]], %[[ABSIM]] : f32
+//       CHECK:   %[[MIN:.+]] = spirv.GL.FMin %[[ABSRE]], %[[ABSIM]] : f32
+//       CHECK:   %[[RATIO:.+]] = spirv.FDiv %[[MIN]], %[[MAX]] : f32
+//       CHECK:   %[[RATIOSQ:.+]] = spirv.FMul %[[RATIO]], %[[RATIO]] : f32
+//       CHECK:   %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
+//       CHECK:   %[[SUM:.+]] = spirv.FAdd %[[RATIOSQ]], %[[ONE]] : f32
+//       CHECK:   %[[SQRT:.+]] = spirv.GL.Sqrt %[[SUM]] : f32
+//       CHECK:   %[[ABS:.+]] = spirv.FMul %[[MAX]], %[[SQRT]] : f32
+//       CHECK:   %[[FINALABS:.+]] = spirv.GL.Sqrt %[[ABS]] : f32
+//       CHECK:   %[[ANGLE:.+]] = spirv.GL.Atan2 %[[IM]], %[[RE]] : f32
+//       CHECK:   %[[SCALE:.+]] = spirv.Constant 5.000000e-01 : f32
+//       CHECK:   %[[SCALEDANGLE:.+]] = spirv.FMul %[[ANGLE]], %[[SCALE]] : f32
+//       CHECK:   %[[COS:.+]] = spirv.GL.Cos %[[SCALEDANGLE]] : f32
+//       CHECK:   %[[SIN:.+]] = spirv.GL.Sin %[[SCALEDANGLE]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FMul %[[FINALABS]], %[[COS]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FMul %[[FINALABS]], %[[SIN]] : f32
+//       CHECK:   %[[ZERO:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[REZ:.+]] = spirv.FOrdEqual %[[RE]], %[[ZERO]] : f32
+//       CHECK:   %[[IMZ:.+]] = spirv.FOrdEqual %[[IM]], %[[ZERO]] : f32
+//       CHECK:   %[[ISZERO:.+]] = spirv.LogicalAnd %[[REZ]], %[[IMZ]] : i1
+//       CHECK:   %[[ZRE:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[ZIM:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[SELRE:.+]] = spirv.Select %[[ISZERO]], %[[ZRE]], %[[RESRE]] : i1, f32
+//       CHECK:   %[[SELIM:.+]] = spirv.Select %[[ISZERO]], %[[ZIM]], %[[RESIM]] : i1, f32
+//       CHECK:   spirv.CompositeConstruct %[[SELRE]], %[[SELIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_rsqrt(%arg: complex<f32>) -> complex<f32> {
+  %rsqrt = complex.rsqrt %arg : complex<f32>
+  return %rsqrt : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_rsqrt
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[ABSRE:.+]] = spirv.GL.FAbs %[[RE]] : f32
+//       CHECK:   %[[ABSIM:.+]] = spirv.GL.FAbs %[[IM]] : f32
+//       CHECK:   %[[MAX:.+]] = spirv.GL.FMax %[[ABSRE]], %[[ABSIM]] : f32
+//       CHECK:   %[[MIN:.+]] = spirv.GL.FMin %[[ABSRE]], %[[ABSIM]] : f32
+//       CHECK:   %[[RATIO:.+]] = spirv.FDiv %[[MIN]], %[[MAX]] : f32
+//       CHECK:   %[[RATIOSQ:.+]] = spirv.FMul %[[RATIO]], %[[RATIO]] : f32
+//       CHECK:   %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
+//       CHECK:   %[[SUM:.+]] = spirv.FAdd %[[RATIOSQ]], %[[ONE]] : f32
+//       CHECK:   %[[SQRT:.+]] = spirv.GL.Sqrt %[[SUM]] : f32
+//       CHECK:   %[[ABS:.+]] = spirv.FMul %[[MAX]], %[[SQRT]] : f32
+//       CHECK:   %[[FINALABS:.+]] = spirv.GL.InverseSqrt %[[ABS]] : f32
+//       CHECK:   %[[ANGLE:.+]] = spirv.GL.Atan2 %[[IM]], %[[RE]] : f32
+//       CHECK:   %[[SCALE:.+]] = spirv.Constant -5.000000e-01 : f32
+//       CHECK:   %[[SCALEDANGLE:.+]] = spirv.FMul %[[ANGLE]], %[[SCALE]] : f32
+//       CHECK:   %[[COS:.+]] = spirv.GL.Cos %[[SCALEDANGLE]] : f32
+//       CHECK:   %[[SIN:.+]] = spirv.GL.Sin %[[SCALEDANGLE]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FMul %[[FINALABS]], %[[COS]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FMul %[[FINALABS]], %[[SIN]] : f32
+//       CHECK:   %[[ZERO:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[REZ:.+]] = spirv.FOrdEqual %[[RE]], %[[ZERO]] : f32
+//       CHECK:   %[[IMZ:.+]] = spirv.FOrdEqual %[[IM]], %[[ZERO]] : f32
+//       CHECK:   %[[ISZERO:.+]] = spirv.LogicalAnd %[[REZ]], %[[IMZ]] : i1
+//       CHECK:   %[[ZRE:.+]] = spirv.Constant 0x7F800000 : f32
+//       CHECK:   %[[ZIM:.+]] = spirv.Constant 0x7FC00000 : f32
+//       CHECK:   %[[SELRE:.+]] = spirv.Select %[[ISZERO]], %[[ZRE]], %[[RESRE]] : i1, f32
+//       CHECK:   %[[SELIM:.+]] = spirv.Select %[[ISZERO]], %[[ZIM]], %[[RESIM]] : i1, f32
+//       CHECK:   spirv.CompositeConstruct %[[SELRE]], %[[SELIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
 } {
@@ -438,5 +566,118 @@ func.func @complex_expm1_opencl(%arg: complex<f32>) -> complex<f32> {
 //       CHECK:   spirv.CL.sin
 //       CHECK:   spirv.CL.cos
 //       CHECK:   spirv.FSub
+
+func.func @complex_sqrt_opencl(%arg: complex<f32>) -> complex<f32> {
+  %sqrt = complex.sqrt %arg : complex<f32>
+  return %sqrt : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_sqrt_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.atan2
+
+func.func @complex_rsqrt_opencl(%arg: complex<f32>) -> complex<f32> {
+  %rsqrt = complex.rsqrt %arg : complex<f32>
+  return %rsqrt : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_rsqrt_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.rsqrt
+//       CHECK:   spirv.CL.atan2
+
+func.func @complex_tan_opencl(%arg: complex<f32>) -> complex<f32> {
+  %tan = complex.tan %arg : complex<f32>
+  return %tan : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_tan_opencl
+//       CHECK:   spirv.CL.sin
+//       CHECK:   spirv.CL.cos
+//       CHECK:   spirv.CL.sinh
+//       CHECK:   spirv.CL.cosh
+
+func.func @complex_tanh_opencl(%arg: complex<f32>) -> complex<f32> {
+  %tanh = complex.tanh %arg : complex<f32>
+  return %tanh : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_tanh_opencl
+//       CHECK:   spirv.CL.sin
+//       CHECK:   spirv.CL.cos
+//       CHECK:   spirv.CL.sinh
+//       CHECK:   spirv.CL.cosh
+
+}
+
+// -----
+
+func.func @complex_log(%arg: complex<f32>) -> complex<f32> {
+  %log = complex.log %arg : complex<f32>
+  return %log : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_log
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[RESQ:.+]] = spirv.FMul %[[RE]], %[[RE]] : f32
+//       CHECK:   %[[IMSQ:.+]] = spirv.FMul %[[IM]], %[[IM]] : f32
+//       CHECK:   %[[SUM:.+]] = spirv.FAdd %[[RESQ]], %[[IMSQ]] : f32
+//       CHECK:   %[[ABS:.+]] = spirv.GL.Sqrt %[[SUM]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.GL.Log %[[ABS]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.GL.Atan2 %[[IM]], %[[RE]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_log1p(%arg: complex<f32>) -> complex<f32> {
+  %log1p = complex.log1p %arg : complex<f32>
+  return %log1p : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_log1p
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
+//       CHECK:   %[[ONEPRE:.+]] = spirv.FAdd %[[ONE]], %[[RE]] : f32
+//       CHECK:   %[[RESQ:.+]] = spirv.FMul %[[ONEPRE]], %[[ONEPRE]] : f32
+//       CHECK:   %[[IMSQ:.+]] = spirv.FMul %[[IM]], %[[IM]] : f32
+//       CHECK:   %[[SUM:.+]] = spirv.FAdd %[[RESQ]], %[[IMSQ]] : f32
+//       CHECK:   %[[ABS:.+]] = spirv.GL.Sqrt %[[SUM]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.GL.Log %[[ABS]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.GL.Atan2 %[[IM]], %[[ONEPRE]] : f32
+//       CHECK:   spirv.CompositeConstruct %[[RESRE]], %[[RESIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @complex_log_opencl(%arg: complex<f32>) -> complex<f32> {
+  %log = complex.log %arg : complex<f32>
+  return %log : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_log_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.log
+//       CHECK:   spirv.CL.atan2
+
+func.func @complex_log1p_opencl(%arg: complex<f32>) -> complex<f32> {
+  %log1p = complex.log1p %arg : complex<f32>
+  return %log1p : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_log1p_opencl
+//       CHECK:   spirv.Constant 1.000000e+00 : f32
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.log
+//       CHECK:   spirv.CL.atan2
 
 }

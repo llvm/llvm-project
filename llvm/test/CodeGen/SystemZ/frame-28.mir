@@ -17,7 +17,7 @@
   declare i32 @foo()
 
   @ptr = external dso_local local_unnamed_addr global ptr
----
+...
 
 # Test elimination of redundant LAYs in successor blocks.
 # CHECK-LABEL: fun1:
