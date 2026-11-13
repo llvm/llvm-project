@@ -7701,25 +7701,25 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     }
   }
 
-  // A two-source shuffle narrower than its legal type costs no more than that
+  // A two-source shuffle narrower than its legal type costs the same as that
   // shuffle of the legal type.
-  if (Kind == TTI::SK_PermuteTwoSrc && !Mask.empty() &&
-      isa<FixedVectorType>(SrcTy) && LT.first == 1 &&
-      LT.second.isFixedLengthVector() &&
+  auto *SrcVTy = dyn_cast<FixedVectorType>(SrcTy);
+  if (Kind == TTI::SK_PermuteTwoSrc && !Mask.empty() && SrcVTy &&
+      LT.first == 1 && LT.second.isFixedLengthVector() &&
       LT.second.getScalarSizeInBits() == SrcTy->getScalarSizeInBits()) {
-    unsigned NumSrcElts = cast<FixedVectorType>(SrcTy)->getNumElements();
+    unsigned NumSrcElts = SrcVTy->getNumElements();
     unsigned NumLTElts = LT.second.getVectorNumElements();
     if (Mask.size() <= NumLTElts &&
         (NumSrcElts < NumLTElts || Mask.size() < NumLTElts)) {
       SmallVector<int, 16> WideMask(NumLTElts, PoisonMaskElem);
-      for (auto [I, M] : enumerate(Mask))
-        if (M >= 0)
-          WideMask[I] = M < (int)NumSrcElts ? M : M - NumSrcElts + NumLTElts;
+      for (auto [I, M] : enumerate(Mask)) {
+        if (M == PoisonMaskElem)
+          continue;
+        WideMask[I] = M < (int)NumSrcElts ? M : M - NumSrcElts + NumLTElts;
+      }
       auto *WideTy = FixedVectorType::get(SrcTy->getScalarType(), NumLTElts);
-      return std::min(getShuffleCost(Kind, WideTy, WideTy, CostKind, WideMask,
-                                     0, nullptr, Args, CtxI),
-                      BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask,
-                                            Index, SubTp, Args, CtxI));
+      return getShuffleCost(Kind, WideTy, WideTy, CostKind, WideMask, 0,
+                            nullptr, Args, CtxI);
     }
   }
 
