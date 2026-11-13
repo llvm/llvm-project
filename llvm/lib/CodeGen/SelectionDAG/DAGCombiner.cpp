@@ -995,7 +995,7 @@ bool DAGCombiner::isOneUseSetCC(SDValue N) const {
   return false;
 }
 
-static bool isConstantSplatVectorMaskForType(const SDValue V, EVT ScalarTy) {
+static bool isConstantSplatVectorMaskForType(SDValue V, EVT ScalarTy) {
   if (!ScalarTy.isSimple())
     return false;
 
