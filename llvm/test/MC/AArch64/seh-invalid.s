@@ -10,3 +10,11 @@
   .seh_save_vg_sm 2048
 // CHECK: error: offset must be between 0 and 2040 bytes
   .seh_endproc
+
+.seh_proc save_vg_sm_in_epilogue
+  .seh_endprologue
+  .seh_startepilogue
+  .seh_save_vg_sm 0
+// CHECK: error: .seh_save_vg_sm cannot be used in an epilogue
+  .seh_endepilogue
+  .seh_endproc

@@ -30,32 +30,27 @@ static bool matchLibcall(const TargetLowering &TLI, const MachineOperand &MO,
          StringRef(TLI.getLibcallName(LC)) == MO.getSymbolName();
 }
 
-bool AArch64PrologueEpilogueCommon::requiresVGSMCall() const {
-  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+bool AArch64PrologueEpilogueCommon::requiresGetVGCall() const {
   return AFI->hasStreamingModeChanges() &&
-         (!ST.hasSVE() || (MF.needsWinCFI() && !ST.hasSME()));
+         !MF.getSubtarget<AArch64Subtarget>().hasSVE();
 }
 
 bool AArch64PrologueEpilogueCommon::isVGInstruction(
     MachineBasicBlock::iterator MBBI, const TargetLowering &TLI) const {
   unsigned Opc = MBBI->getOpcode();
-  if (MF.needsWinCFI() && Opc == AArch64::SEH_Nop)
-    return true;
-
-  if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::BFMXri)
+  if (Opc == AArch64::SEH_Nop || Opc == AArch64::CNTD_XPiI ||
+      Opc == AArch64::BFMXri)
     return true;
 
   if (Opc == AArch64::MRS &&
       MBBI->getOperand(1).getImm() == AArch64SysReg::SVCR)
     return true;
 
-  if (!requiresVGSMCall())
+  if (!requiresGetVGCall())
     return false;
 
   if (Opc == AArch64::BL)
-    return matchLibcall(TLI, MBBI->getOperand(0),
-                        RTLIB::SMEABI_GET_CURRENT_VG) ||
-           matchLibcall(TLI, MBBI->getOperand(0), RTLIB::SMEABI_SME_STATE);
+    return matchLibcall(TLI, MBBI->getOperand(0), RTLIB::SMEABI_GET_CURRENT_VG);
 
   return Opc == TargetOpcode::COPY;
 }
@@ -185,13 +180,22 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   //
   // On Windows, some register pairs involving LR can't be folded because
   // there isn't a corresponding unwind opcode.
+  auto InvalidForWinCFI = [&]() {
+    if (!NeedsWinCFI)
+      return false;
+    if (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre)
+      return RegInfo.getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
+             RegInfo.getEncodingValue(MBBI->getOperand(1).getReg());
+    if (NewOpc == AArch64::STRXpre) {
+      return std::next(MBBI) != MBBI->getParent()->instr_end() &&
+         std::next(MBBI)->getOpcode() == AArch64::SEH_SaveVGSM;
+    }
+    return false;
+  };
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
       CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue() ||
-      (NeedsWinCFI &&
-       (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre) &&
-       RegInfo.getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
-           RegInfo.getEncodingValue(MBBI->getOperand(1).getReg()))) {
+      InvalidForWinCFI()) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy) {
@@ -211,8 +215,10 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   // Get rid of the SEH code associated with the old instruction.
   if (NeedsWinCFI) {
     auto SEH = std::next(MBBI);
-    if (AArch64InstrInfo::isSEHInstruction(*SEH))
+    if (AArch64InstrInfo::isSEHInstruction(*SEH)) {
+      assert(SEH->getOpcode() != AArch64::SEH_SaveVGSM);
       SEH->eraseFromParent();
+    }
   }
 
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));
@@ -481,13 +487,11 @@ void AArch64PrologueEmitter::collectBlockLiveins() {
     LiveRegs.removeReg(AArch64::FP);
     LiveRegs.removeReg(AArch64::LR);
 
-    // X0 will be clobbered by the SME ABI support routine calls in the
-    // prologue. This is necessary to spill VG if required where SVE is
-    // unavailable, but X0 is preserved around these calls.
-    if (requiresVGSMCall()) {
+    // X0 will be clobbered by a call to __arm_get_current_vg in the prologue.
+    // This is necessary to spill VG if required where SVE is unavailable, but
+    // X0 is preserved around this call.
+    if (requiresGetVGCall())
       LiveRegs.removeReg(AArch64::X0);
-      LiveRegs.removeReg(AArch64::X1);
-    }
   }
 }
 
@@ -1469,7 +1473,8 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     // If the offset is 0 and the AfterCSR pop is not actually trying to
     // allocate more stack for arguments (in space that an untimely interrupt
     // may clobber), convert it to a post-index ldp.
-    if (OffsetOp.getImm() == 0 && AfterCSRPopSize >= 0) {
+    if (Pop->getFlag(MachineInstr::FrameDestroy) && OffsetOp.getImm() == 0 &&
+        AfterCSRPopSize >= 0) {
       convertCalleeSaveRestoreToSPPrePostIncDec(
           Pop, DL, ProloguePopSize, EmitCFI, MachineInstr::FrameDestroy,
           ProloguePopSize);

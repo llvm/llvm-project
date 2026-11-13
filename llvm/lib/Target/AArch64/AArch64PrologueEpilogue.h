@@ -51,7 +51,7 @@ public:
   };
 
 protected:
-  bool requiresVGSMCall() const;
+  bool requiresGetVGCall() const;
 
   bool isVGInstruction(MachineBasicBlock::iterator MBBI,
                        const TargetLowering &TLI) const;

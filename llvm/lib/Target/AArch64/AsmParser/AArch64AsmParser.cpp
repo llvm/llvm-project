@@ -8073,6 +8073,9 @@ bool AArch64AsmParser::parseDirectiveSEHSavePReg(SMLoc L) {
 /// parseDirectiveSEHSaveVGSM
 /// ::= .seh_save_vg_sm offset
 bool AArch64AsmParser::parseDirectiveSEHSaveVGSM(SMLoc L) {
+  if (getStreamer().isInEpilogCFI())
+    return Error(L, ".seh_save_vg_sm cannot be used in an epilogue");
+
   int64_t Offset;
   if (parseImmExpr(Offset))
     return true;
