@@ -115,13 +115,9 @@ public:
   /// Sema::FunctionScopeInfo for later use in synthesized calls to the
   /// SYCL runtime library after the function body has been parsed.
   ///
-  /// KernelInfoType is the type to be passed as the explicit template argument
-  /// to SYCL runtime libraries.
-  ///
   /// KernelLaunchIdExpr is an UnresolvedLookupExpr or UnresolvedMemberExpr
   /// for the SYCL kernel launch function.
   struct SYCLKernelCallStmtASTFragments {
-    QualType KernelInfoType;
     Expr *KernelLaunchIdExpr;
   };
 
