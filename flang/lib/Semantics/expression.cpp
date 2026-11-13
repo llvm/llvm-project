@@ -3275,6 +3275,16 @@ static std::optional<int> GetMatchingDistance(
             *dummyDataAttr == common::CUDADataAttr::Constant)) {
       return true;
     }
+    // IGNORE_TKR(M) ignores managed and unified storage.
+    auto isHostManagedOrUnified{[](std::optional<common::CUDADataAttr> attr) {
+      return !attr || *attr == common::CUDADataAttr::Managed ||
+          *attr == common::CUDADataAttr::Unified;
+    }};
+    if (dummyIgnoreTKR.test(common::IgnoreTKR::Managed) &&
+        isHostManagedOrUnified(dummyDataAttr) &&
+        isHostManagedOrUnified(actualDataAttr)) {
+      return true;
+    }
     return false;
   }};
 
