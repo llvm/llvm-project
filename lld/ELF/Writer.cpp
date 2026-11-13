@@ -1118,32 +1118,46 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   for (StringRef s : ctx.arg.symbolOrderingFile)
     symbolOrder.insert({CachedHashStringRef(s), {priority++, false}});
 
-  // Build a map from sections to their priorities.
-  auto addSym = [&](Symbol &sym) {
-    auto it = symbolOrder.find(CachedHashStringRef(sym.getName()));
-    if (it == symbolOrder.end())
-      return;
-    SymbolOrderEntry &ent = it->second;
-    ent.present = true;
+  // We want both global and local symbols. We get the global ones from the
+  // symbol table (in chunks) and iterate the object files for the local ones.
+  // Looking up every symbol in symbolOrder is expensive, so do lookups in
+  // parallel and then process the matches serially.
+  using Matches = SmallVector<std::pair<Symbol *, SymbolOrderEntry *>, 0>;
+  std::vector<std::pair<ArrayRef<Symbol *>, Matches>> work;
+  const size_t chunkSize = 4096;
+  for (ArrayRef<Symbol *> syms = ctx.symtab->getSymbols(); !syms.empty();
+       syms = syms.drop_front(std::min(chunkSize, syms.size())))
+    work.emplace_back(syms.take_front(chunkSize), Matches());
+  for (ELFFileBase *file : ctx.objectFiles)
+    work.emplace_back(file->getLocalSymbols(), Matches());
 
-    maybeWarnUnorderableSymbol(ctx, &sym);
+  // parallelForEach() processes continguous runs of items, so the symbol
+  // table chunks from the getSymbols() loop above would contain most of
+  // the work but be processed by just one or two threads. Use
+  // parallelForEachFineGrained() to distribute the work across threads better.
+  parallelForEachFineGrained(work, [&](auto &pair) {
+    auto &[syms, matches] = pair;
+    for (Symbol *sym : syms) {
+      auto it = symbolOrder.find(CachedHashStringRef(sym->getName()));
+      if (it != symbolOrder.end())
+        matches.emplace_back(sym, &it->second);
+    }
+  });
 
-    if (auto *d = dyn_cast<Defined>(&sym)) {
-      if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section)) {
-        int &priority = sectionOrder[cast<InputSectionBase>(sec)];
-        priority = std::min(priority, ent.priority);
+  for (const auto &[syms, matches] : work) {
+    for (auto [sym, ent] : matches) {
+      ent->present = true;
+
+      maybeWarnUnorderableSymbol(ctx, sym);
+
+      if (auto *d = dyn_cast<Defined>(sym)) {
+        if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section)) {
+          int &priority = sectionOrder[cast<InputSectionBase>(sec)];
+          priority = std::min(priority, ent->priority);
+        }
       }
     }
-  };
-
-  // We want both global and local symbols. We get the global ones from the
-  // symbol table and iterate the object files for the local ones.
-  for (Symbol *sym : ctx.symtab->getSymbols())
-    addSym(*sym);
-
-  for (ELFFileBase *file : ctx.objectFiles)
-    for (Symbol *sym : file->getLocalSymbols())
-      addSym(*sym);
+  }
 
   if (ctx.arg.warnSymbolOrdering)
     for (auto orderEntry : symbolOrder)
