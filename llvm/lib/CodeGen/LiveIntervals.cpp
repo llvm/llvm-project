@@ -143,16 +143,21 @@ bool LiveIntervals::invalidate(
 
 void LiveIntervals::clear() {
   // Free the live intervals themselves.
-  for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i)
-    destroyInterval(VirtRegIntervals[Register::index2VirtReg(i)]);
+  for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i) {
+    if (LiveInterval *LI = VirtRegIntervals[Register::index2VirtReg(i)])
+      destroyInterval(*LI);
+  }
   VirtRegIntervals.clear();
   RegMaskSlots.clear();
   RegMaskBits.clear();
   RegMaskBlocks.clear();
   LiveOutTags.clear();
 
-  for (LiveRange *LR : RegUnitRanges)
-    destroyRegUnitRange(LR);
+  for (LiveRange *LR : RegUnitRanges) {
+    if (LR)
+      destroyRegUnitRange(*LR);
+  }
+
   RegUnitRanges.clear();
 
   IntervalRecycler.clear(RangeAllocator);
@@ -252,18 +257,14 @@ LiveRange *LiveIntervals::createRegUnitRange() {
       LiveRange(UseSegmentSetForPhysRegs);
 }
 
-void LiveIntervals::destroyInterval(LiveInterval *LI) {
-  if (!LI)
-    return;
-  LI->~LiveInterval();
-  IntervalRecycler.Deallocate(RangeAllocator, LI);
+void LiveIntervals::destroyInterval(LiveInterval &LI) {
+  LI.~LiveInterval();
+  IntervalRecycler.Deallocate(RangeAllocator, &LI);
 }
 
-void LiveIntervals::destroyRegUnitRange(LiveRange *LR) {
-  if (!LR)
-    return;
-  LR->~LiveRange();
-  RegUnitRangeRecycler.Deallocate(RangeAllocator, LR);
+void LiveIntervals::destroyRegUnitRange(LiveRange &LR) {
+  LR.~LiveRange();
+  RegUnitRangeRecycler.Deallocate(RangeAllocator, &LR);
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.
