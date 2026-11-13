@@ -1917,191 +1917,84 @@ alias(
 
 ################################# ctype targets ################################
 
-libc_function(
+alias(
     name = "isalnum",
-    srcs = ["src/ctype/isalnum.cpp"],
-    hdrs = ["src/ctype/isalnum.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isalnum",
 )
 
-libc_function(
+alias(
     name = "isalpha",
-    srcs = ["src/ctype/isalpha.cpp"],
-    hdrs = ["src/ctype/isalpha.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isalpha",
 )
 
-libc_function(
+alias(
     name = "isascii",
-    srcs = ["src/ctype/isascii.cpp"],
-    hdrs = ["src/ctype/isascii.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isascii",
 )
 
-libc_function(
+alias(
     name = "isblank",
-    srcs = ["src/ctype/isblank.cpp"],
-    hdrs = ["src/ctype/isblank.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isblank",
 )
 
-libc_function(
+alias(
     name = "iscntrl",
-    srcs = ["src/ctype/iscntrl.cpp"],
-    hdrs = ["src/ctype/iscntrl.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:iscntrl",
 )
 
-libc_function(
+alias(
     name = "isdigit",
-    srcs = ["src/ctype/isdigit.cpp"],
-    hdrs = ["src/ctype/isdigit.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isdigit",
 )
 
-libc_function(
+alias(
     name = "isgraph",
-    srcs = ["src/ctype/isgraph.cpp"],
-    hdrs = ["src/ctype/isgraph.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isgraph",
 )
 
-libc_function(
+alias(
     name = "islower",
-    srcs = ["src/ctype/islower.cpp"],
-    hdrs = ["src/ctype/islower.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:islower",
 )
 
-libc_function(
+alias(
     name = "isprint",
-    srcs = ["src/ctype/isprint.cpp"],
-    hdrs = ["src/ctype/isprint.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isprint",
 )
 
-libc_function(
+alias(
     name = "ispunct",
-    srcs = ["src/ctype/ispunct.cpp"],
-    hdrs = ["src/ctype/ispunct.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:ispunct",
 )
 
-libc_function(
+alias(
     name = "isspace",
-    srcs = ["src/ctype/isspace.cpp"],
-    hdrs = ["src/ctype/isspace.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isspace",
 )
 
-libc_function(
+alias(
     name = "isupper",
-    srcs = ["src/ctype/isupper.cpp"],
-    hdrs = ["src/ctype/isupper.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isupper",
 )
 
-libc_function(
+alias(
     name = "isxdigit",
-    srcs = ["src/ctype/isxdigit.cpp"],
-    hdrs = ["src/ctype/isxdigit.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:isxdigit",
 )
 
-libc_function(
+alias(
     name = "toascii",
-    srcs = ["src/ctype/toascii.cpp"],
-    hdrs = ["src/ctype/toascii.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:toascii",
 )
 
-libc_function(
+alias(
     name = "tolower",
-    srcs = ["src/ctype/tolower.cpp"],
-    hdrs = ["src/ctype/tolower.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:tolower",
 )
 
-libc_function(
+alias(
     name = "toupper",
-    srcs = ["src/ctype/toupper.cpp"],
-    hdrs = ["src/ctype/toupper.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:ctype_utils",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/ctype:toupper",
 )
 
 ################################ fenv targets ################################
