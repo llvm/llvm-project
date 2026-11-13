@@ -213,8 +213,8 @@ class TestDAP_variables(DAPTestCaseBase):
         value = children[0].value
         self.assertEqual(value, "111", f"verify pt.x got set to 111 (111 != {value})")
 
-        # Continue to the second breakpoint to check shadowed variables and the new
-        # local variables is update to the new values.
+        # Continue to the second breakpoint to check shadowed variables in
+        # nested block scopes and updated local variable values.
         session.continue_to_breakpoint(bp2)
         frame = session.top_frame_from(thread_id)
 
@@ -222,50 +222,57 @@ class TestDAP_variables(DAPTestCaseBase):
         # Build a child dict with `pt.x` updated to its new value.
         pt_children = self.expect_not_none(expect_locals["pt"].children)
         pt_children["x"].value = "111"
-        expect_locals["x @ main.cpp:27"] = ExpectVar(type="int", value="89")
-        expect_locals["x @ main.cpp:29"] = ExpectVar(type="int", value="42")
-        expect_locals["x @ main.cpp:31"] = ExpectVar(type="int", value="72")
+        expect_locals["x"] = ExpectVar(type="int", value="89")
 
-        local_variables = session.get_variables(frame.locals.variablesReference)
-        session.verify_variables(local_variables, expect_locals)
+        local_scopes = frame.local_scopes()
+        self.assertEqual(len(local_scopes), 3)
+        inner_block, outer_block, func_locals = local_scopes
+        self.assertTrue(inner_block.name.startswith("Block: main.cpp:"))
+        self.assertTrue(outer_block.name.startswith("Block: main.cpp:"))
+        self.assertEqual(func_locals.name, "Locals: main")
 
-        # Renaming a variable with and without the differentiator suffix.
-        self.expect_error(frame.locals.set("x2", 9))
-        self.expect_error(frame.locals.set("x @ main.cpp:0", 9))
+        session.verify_variables(
+            session.get_variables(inner_block.variablesReference),
+            {"x": ExpectVar(type="int", value="72")},
+        )
+        session.verify_variables(
+            session.get_variables(outer_block.variablesReference),
+            {"x": ExpectVar(type="int", value="42")},
+        )
+        session.verify_variables(
+            session.get_variables(func_locals.variablesReference),
+            expect_locals,
+        )
 
-        self.expect_success(frame.locals.set("x @ main.cpp:27", 19))
-        self.expect_success(frame.locals.set("x @ main.cpp:29", 21))
-        self.expect_success(frame.locals.set("x @ main.cpp:31", 23))
+        # Setting an unknown variable or invalid value should fail.
+        self.expect_error(func_locals.set("x2", 9))
+        self.expect_error(inner_block.set("x", "invalid"))
 
-        # An invalid value should have no effect.
-        self.expect_error(frame.locals.set("x @ main.cpp:31", "invalid"))
+        # Each shadowed `x` can be updated in its own block scope.
+        self.expect_success(func_locals.set("x", 19))
+        self.expect_success(outer_block.set("x", 21))
+        self.expect_success(inner_block.set("x", 23))
 
-        expect_locals["x @ main.cpp:27"].value = "19"
-        expect_locals["x @ main.cpp:29"].value = "21"
-        expect_locals["x @ main.cpp:31"].value = "23"
+        expect_locals["x"].value = "19"
+        session.verify_variables(
+            session.get_variables(inner_block.variablesReference),
+            {"x": ExpectVar(type="int", value="23")},
+        )
+        session.verify_variables(
+            session.get_variables(outer_block.variablesReference),
+            {"x": ExpectVar(type="int", value="21")},
+        )
+        session.verify_variables(
+            session.get_variables(func_locals.variablesReference),
+            expect_locals,
+        )
 
-        local_vars = session.get_variables(frame.locals.variablesReference)
-        session.verify_variables(local_vars, expect_locals)
-
-        # The plain `x` variable should refer to the innermost x.
-        self.expect_success(frame.locals.set("x", 22))
-        expect_locals["x @ main.cpp:31"].value = "22"
-
-        local_vars = session.get_variables(frame.locals.variablesReference)
-        session.verify_variables(local_vars, expect_locals)
-
-        # At breakpoint 3 there should be no shadowed variables.
+        # At breakpoint 3 the inner blocks have exited so only `Locals: main` remains.
         session.continue_to_breakpoint(bp3)
         frame = session.top_frame_from(thread_id)
+        self.assertEqual(len(frame.local_scopes()), 1)
 
         local_vars = session.get_variables(frame.locals.variablesReference)
-        names = [var.name for var in local_vars]
-        # The first shadowed `x` shouldn't have a suffix anymore.
-        expect_locals["x"] = ExpectVar(type="int", value="19")
-        self.assertNotIn("x @ main.cpp:27", names)
-        self.assertNotIn("x @ main.cpp:29", names)
-        self.assertNotIn("x @ main.cpp:31", names)
-
         session.verify_variables(local_vars, expect_locals)
         session.continue_to_exit()
 
@@ -542,7 +549,7 @@ class TestDAP_variables(DAPTestCaseBase):
 
         # The frame's scopes should carry corresponding presentation hints.
         self.assertEqual(frame.globals.scope.name, "Globals")
-        self.assertEqual(frame.locals.scope.name, "Locals")
+        self.assertEqual(frame.locals.scope.name, "Locals: main")
         self.assertEqual(frame.locals.scope.presentationHint, "locals")
         self.assertEqual(frame.registers.scope.name, "Registers")
         self.assertEqual(frame.registers.scope.presentationHint, "registers")
@@ -652,22 +659,33 @@ class TestDAP_variables(DAPTestCaseBase):
         thread_ctx.step_out()
 
         frame = thread_ctx.top_frame()
-        local_vars = session.get_variables(frame.locals.variablesReference)
+        local_scopes = frame.local_scopes()
+        self.assertEqual(len(local_scopes), 2)
+        block_scope, func_locals = local_scopes
+        self.assertTrue(block_scope.name.startswith("Block: main.cpp:"))
+        self.assertEqual(func_locals.name, "Locals: main")
 
         return_name = "(Return Value)"
-        expect_locals: dict[str, ExpectVar] = {
-            return_name: ExpectVar(type="int", value="300", read_only=True),
-            "argc": ExpectVar(),
-            "argv": ExpectVar(),
-            "pt": ExpectVar(read_only=True),
-            "valid_str": ExpectVar(),
-            "malformed_str": ExpectVar(),
-            "x": ExpectVar(),
-            "return_result": ExpectVar(type="int"),
-        }
-        session.verify_variables(local_vars, expect_locals)
+        session.verify_variables(
+            session.get_variables(block_scope.variablesReference),
+            {
+                return_name: ExpectVar(type="int", value="300", read_only=True),
+                "return_result": ExpectVar(type="int"),
+            },
+        )
+        session.verify_variables(
+            session.get_variables(func_locals.variablesReference),
+            {
+                "argc": ExpectVar(),
+                "argv": ExpectVar(),
+                "pt": ExpectVar(read_only=True),
+                "valid_str": ExpectVar(),
+                "malformed_str": ExpectVar(),
+                "x": ExpectVar(),
+            },
+        )
 
-        self.expect_error(frame.locals.set("(Return Value)", 20))
+        self.expect_error(block_scope.set("(Return Value)", 20))
 
     @skipIfWindows
     def test_indexedVariables(self):
@@ -823,3 +841,102 @@ class TestDAP_variables(DAPTestCaseBase):
                         f"variable {var.name} {var_ref=} was reused!",
                     )
                     seen_refs.add(var_ref)
+
+    @skipIfWindows
+    def test_block_scopes(self):
+        """Test per-block scopes, empty block omission, source ranges, inlined
+        frames, and return values when stepping out into an empty block."""
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        source = "main.cpp"
+        bp9_line = line_number(source, "// breakpoint 9")
+        bp10_line = line_number(source, "// breakpoint 10")
+        with session.configure(LaunchArgs(program)) as ctx:
+            [bp9_id, bp10_id] = session.resolve_source_breakpoints(
+                source, [bp9_line, bp10_line]
+            )
+
+        # Stop inside `inlined_block_helper` (called from `test_block_scopes`).
+        stop_event = session.verify_stopped_on_breakpoint(
+            bp9_id, after=ctx.process_event
+        )
+        thread_ctx = session.thread_context_from(stop_event)
+        frames = thread_ctx.frames()
+        self.assertGreaterEqual(len(frames), 2)
+
+        # Frame 0 (`inlined_block_helper`): empty `if` block is omitted; scopes
+        # stop at the inlined function block rather than leaking caller blocks.
+        inlined_frame = frames[0]
+        inlined_scopes = inlined_frame.scopes()
+        self.assertEqual(len(inlined_scopes), 4)
+        inlined_block, inlined_locals, inlined_globals, inlined_regs = inlined_scopes
+
+        self.assertTrue(inlined_block.name.startswith("Block: main.cpp:"))
+        self.assertEqual(inlined_block.scope.presentationHint, "locals")
+        self.assertFalse(inlined_block.scope.expensive)
+        self.assertIsNotNone(inlined_block.scope.source)
+        self.assertEqual(inlined_block.scope.source.name, "main.cpp")
+        self.assertIsNotNone(inlined_block.scope.line)
+        self.assertIsNotNone(inlined_block.scope.column)
+        self.assertIsNotNone(inlined_block.scope.endLine)
+        self.assertLessEqual(inlined_block.scope.line, bp9_line)
+        self.assertGreaterEqual(inlined_block.scope.endLine, bp9_line)
+
+        self.assertEqual(inlined_locals.name, "Locals: inlined_block_helper(int)")
+        self.assertEqual(inlined_locals.scope.presentationHint, "locals")
+        self.assertFalse(inlined_locals.scope.expensive)
+        self.assertEqual(inlined_globals.name, "Globals")
+        self.assertTrue(inlined_globals.scope.expensive)
+        self.assertEqual(inlined_regs.name, "Registers")
+        self.assertTrue(inlined_regs.scope.expensive)
+
+        session.verify_variables(
+            session.get_variables(inlined_block.variablesReference),
+            {"inlined_inner": ExpectVar(type="int", value="22")},
+        )
+        session.verify_variables(
+            session.get_variables(inlined_locals.variablesReference),
+            {
+                "inlined_arg": ExpectVar(type="int", value="20"),
+                "inlined_local": ExpectVar(type="int", value="21"),
+            },
+        )
+
+        # Frame 1 (`test_block_scopes`): empty `if (func_local > 0)` block is
+        # omitted, leaving the `{ int outer_block_var = 20; ... }` block and
+        # `Locals: test_block_scopes()`.
+        caller_frame = frames[1]
+        caller_local_scopes = caller_frame.local_scopes()
+        self.assertEqual(len(caller_local_scopes), 2)
+        caller_block, caller_locals = caller_local_scopes
+        self.assertTrue(caller_block.name.startswith("Block: main.cpp:"))
+        self.assertEqual(caller_locals.name, "Locals: test_block_scopes()")
+        session.verify_variables(
+            session.get_variables(caller_block.variablesReference),
+            {"outer_block_var": ExpectVar(type="int", value="20")},
+        )
+        session.verify_variables(
+            session.get_variables(caller_locals.variablesReference),
+            {"func_local": ExpectVar(type="int", value="10")},
+        )
+
+        # Continue to breakpoint 10, step into `test_return_variable`, and step
+        # out into an empty `if` block: `(Return Value)` should appear in the
+        # topmost emitted scope (`Locals: test_block_scopes()`).
+        session.continue_to_breakpoint(bp10_id)
+        [ret_bp_id] = session.resolve_function_breakpoints(["test_return_variable"])
+        session.continue_to_breakpoint(ret_bp_id)
+        thread_ctx.step_out()
+
+        after_step_out_frame = thread_ctx.top_frame()
+        after_local_scopes = after_step_out_frame.local_scopes()
+        self.assertEqual(len(after_local_scopes), 1)
+        self.assertEqual(after_local_scopes[0].name, "Locals: test_block_scopes()")
+        session.verify_variables(
+            session.get_variables(after_local_scopes[0].variablesReference),
+            {
+                "(Return Value)": ExpectVar(type="int", value="300", read_only=True),
+                "func_local": ExpectVar(type="int", value="10"),
+            },
+        )
+        session.continue_to_exit()

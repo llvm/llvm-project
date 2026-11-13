@@ -108,7 +108,7 @@ class TestDAP_logpoints(DAPTestCaseBase):
         # Check that stop works as expected for updated logpoint.
         loop_stop = session.continue_to_breakpoint(breakpoint_id)
         frame = session.top_frame_from(loop_stop)
-        self.assertEqual(frame.locals["i"].value_as_int, 0)
+        self.assertEqual(frame.find_variable("i").value_as_int, 0)
         captured = session.collect_console(after=initial_stop, until=loop_stop)
         self.assertNotIn(log_prefix, captured.seen_texts)
 
