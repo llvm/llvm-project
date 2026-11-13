@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/OffloadBundle.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
@@ -349,4 +350,132 @@ FileHeader:
   ModuleSpecList specs = ObjectFile::GetModuleSpecifications(
       FileSpec(), data, /*file_offset=*/0, data->GetByteSize());
   EXPECT_EQ(specs.GetSize(), 1u);
+}
+
+TEST_F(ObjectContainerClangOffloadBundleTest, NonZeroFileOffsetIgnored) {
+  auto gpu_file = MakeGPUELF("EF_AMDGPU_MACH_AMDGCN_GFX942");
+  ASSERT_THAT_EXPECTED(gpu_file, llvm::Succeeded());
+  DataExtractorSP gpu_data = gpu_file->moduleSpec().GetExtractor();
+  llvm::ArrayRef<uint8_t> gpu_bytes(gpu_data->GetDataStart(),
+                                    gpu_data->GetByteSize());
+  std::vector<uint8_t> bundle =
+      MakeBundle("hipv4-amdgcn-amd-amdhsa--gfx942", gpu_bytes);
+  auto bundled_file = MakeELFContainingBundle(bundle);
+  ASSERT_THAT_EXPECTED(bundled_file, llvm::Succeeded());
+
+  auto temp_file = bundled_file->writeToTemporaryFile();
+  ASSERT_THAT_EXPECTED(temp_file, llvm::Succeeded());
+  const std::string path = temp_file->TmpName;
+  llvm::FileRemover file_remover(path);
+  ASSERT_THAT_ERROR(temp_file->keep(), llvm::Succeeded());
+  FileSpec file(path);
+
+  ModuleSpec input_spec = bundled_file->moduleSpec();
+  DataExtractorSP data = input_spec.GetExtractor();
+
+  ModuleSpecList non_zero_specs =
+      ObjectContainerClangOffloadBundle::GetModuleSpecifications(
+          file, data, /*file_offset=*/0x1000, data->GetByteSize());
+  EXPECT_EQ(non_zero_specs.GetSize(), 0u);
+}
+
+TEST_F(ObjectContainerClangOffloadBundleTest, FindsLLVMOffloadingSection) {
+  auto gpu_file = MakeGPUELF("EF_AMDGPU_MACH_AMDGCN_GFX942");
+  ASSERT_THAT_EXPECTED(gpu_file, llvm::Succeeded());
+  DataExtractorSP gpu_data = gpu_file->moduleSpec().GetExtractor();
+  llvm::ArrayRef<uint8_t> gpu_bytes(gpu_data->GetDataStart(),
+                                    gpu_data->GetByteSize());
+
+  std::string yaml = "--- !ELF\n"
+                     "FileHeader:\n"
+                     "  Class:           ELFCLASS64\n"
+                     "  Data:            ELFDATA2LSB\n"
+                     "  Type:            ET_DYN\n"
+                     "  Machine:         EM_X86_64\n"
+                     "Sections:\n"
+                     "  - Name:            .llvm.offloading\n"
+                     "    Type:            SHT_PROGBITS\n"
+                     "    Offset:          0x1000\n"
+                     "    AddressAlign:    0x10\n"
+                     "    Content:         " +
+                     llvm::toHex(gpu_bytes) + "\n...\n";
+  auto elf_file = TestFile::fromYaml(yaml);
+  ASSERT_THAT_EXPECTED(elf_file, llvm::Succeeded());
+
+  auto temp_file = elf_file->writeToTemporaryFile();
+  ASSERT_THAT_EXPECTED(temp_file, llvm::Succeeded());
+  const std::string path = temp_file->TmpName;
+  llvm::FileRemover file_remover(path);
+  ASSERT_THAT_ERROR(temp_file->keep(), llvm::Succeeded());
+  FileSpec file(path);
+
+  ModuleSpec input_spec = elf_file->moduleSpec();
+  DataExtractorSP data = input_spec.GetExtractor();
+  ModuleSpecList device_specs =
+      ObjectContainerClangOffloadBundle::GetModuleSpecifications(
+          file, data, /*file_offset=*/0, data->GetByteSize());
+  ASSERT_EQ(device_specs.GetSize(), 1u);
+  ModuleSpec spec;
+  ASSERT_TRUE(device_specs.GetModuleSpecAtIndex(0, spec));
+  EXPECT_EQ(spec.GetArchitecture().GetClangTargetCPU(), "gfx942");
+  EXPECT_EQ(spec.GetObjectOffset(), 0x1000u);
+  EXPECT_EQ(spec.GetObjectSize(), gpu_bytes.size());
+}
+
+TEST_F(ObjectContainerClangOffloadBundleTest, FindsOffloadBinaryPayload) {
+  llvm::object::OffloadBinary::OffloadingImage image;
+  image.TheImageKind = llvm::object::IMG_Bitcode;
+  image.TheOffloadKind = llvm::object::OFK_OpenMP;
+  image.StringData["triple"] = "amdgcn-amd-amdhsa";
+  image.StringData["arch"] = "gfx942";
+  const uint8_t dummy_img[] = {0xde, 0xad, 0xbe, 0xef};
+  image.Image = llvm::MemoryBuffer::getMemBuffer(
+      llvm::StringRef(reinterpret_cast<const char *>(dummy_img),
+                      sizeof(dummy_img)),
+      "", false);
+
+  llvm::SmallString<0> binary_bytes = llvm::object::OffloadBinary::write(image);
+
+  std::string yaml = "--- !ELF\n"
+                     "FileHeader:\n"
+                     "  Class:           ELFCLASS64\n"
+                     "  Data:            ELFDATA2LSB\n"
+                     "  Type:            ET_DYN\n"
+                     "  Machine:         EM_X86_64\n"
+                     "Sections:\n"
+                     "  - Name:            .llvm.offloading\n"
+                     "    Type:            SHT_PROGBITS\n"
+                     "    Offset:          0x1000\n"
+                     "    AddressAlign:    0x10\n"
+                     "    Content:         " +
+                     llvm::toHex(llvm::ArrayRef<uint8_t>(
+                         reinterpret_cast<const uint8_t *>(binary_bytes.data()),
+                         binary_bytes.size())) +
+                     "\n...\n";
+  auto elf_file = TestFile::fromYaml(yaml);
+  ASSERT_THAT_EXPECTED(elf_file, llvm::Succeeded());
+
+  auto temp_file = elf_file->writeToTemporaryFile();
+  ASSERT_THAT_EXPECTED(temp_file, llvm::Succeeded());
+  const std::string path = temp_file->TmpName;
+  llvm::FileRemover file_remover(path);
+  ASSERT_THAT_ERROR(temp_file->keep(), llvm::Succeeded());
+  FileSpec file(path);
+
+  ModuleSpec input_spec = elf_file->moduleSpec();
+  DataExtractorSP data = input_spec.GetExtractor();
+  ModuleSpecList device_specs =
+      ObjectContainerClangOffloadBundle::GetModuleSpecifications(
+          file, data, /*file_offset=*/0, data->GetByteSize());
+  ASSERT_EQ(device_specs.GetSize(), 1u);
+  ModuleSpec spec;
+  ASSERT_TRUE(device_specs.GetModuleSpecAtIndex(0, spec));
+  EXPECT_EQ(spec.GetArchitecture().GetTriple().getArchName(), "amdgcn");
+  uint64_t expected_img_offset =
+      llvm::StringRef(binary_bytes)
+          .find(llvm::StringRef(reinterpret_cast<const char *>(dummy_img),
+                                sizeof(dummy_img)));
+  ASSERT_NE(expected_img_offset, llvm::StringRef::npos);
+  EXPECT_EQ(spec.GetObjectOffset(), 0x1000u + expected_img_offset);
+  EXPECT_EQ(spec.GetObjectSize(), sizeof(dummy_img));
 }
