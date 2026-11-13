@@ -17,14 +17,29 @@ void bar();
 void baz(int n) {
   static float a[10];
   static double b;
-  // CHECK: call ptr @llvm.stacksave.p0()
-  // CHECK: [[A_BUF_SIZE:%.+]] = mul nuw i64 10, [[NUM_ELEMS:%[^,]+]]
+  // CHECK: [[RES:%.+]] = call i32 @__kmpc_single(ptr @{{.+}}, i32 [[GTID:%.+]])
+  // CHECK: [[IS_SINGLE:%.+]] = icmp ne i32 [[RES]], 0
+  // CHECK: br i1 [[IS_SINGLE]], label %[[SINGLE_THEN:[^,]+]], label %[[SINGLE_END:[^,]+]]
+  // CHECK: [[SINGLE_THEN]]:
 
   // float a_buffer[10][n];
-  // CHECK: [[A_BUF:%.+]] = alloca float, i64 [[A_BUF_SIZE]],
+  // CHECK: [[A_BUF_SIZE:%.+]] = mul nuw i64 10, [[NUM_ELEMS:%[^,]+]]
+  // CHECK: [[A_BUF_BYTES:%.+]] = mul nuw i64 [[A_BUF_SIZE]], 4
+  // CHECK: [[A_BUF:%.+]] = call ptr @__kmpc_aligned_alloc(i32 [[GTID]], i64 16, i64 [[A_BUF_BYTES]], ptr null)
+  // CHECK: store ptr [[A_BUF]], ptr [[A_BUF_ADDR:%.+]],
 
   // double b_buffer[10];
-  // CHECK: [[B_BUF:%.+]] = alloca double, i64 10,
+  // CHECK: [[B_BUF:%.+]] = call ptr @__kmpc_aligned_alloc(i32 [[GTID]], i64 16, i64 80, ptr null)
+  // CHECK: store ptr [[B_BUF]], ptr [[B_BUF_ADDR:%.+]],
+  // CHECK: store i32 1, ptr [[DID_IT:%.+]],
+  // CHECK: call void @__kmpc_end_single(ptr @{{.+}}, i32 [[GTID]])
+  // CHECK: [[SINGLE_END]]:
+  // CHECK: store ptr [[A_BUF_ADDR]], ptr %
+  // CHECK: store ptr [[B_BUF_ADDR]], ptr %
+  // CHECK: [[DID_IT_VAL:%.+]] = load i32, ptr [[DID_IT]],
+  // CHECK: call void @__kmpc_copyprivate(ptr @{{.+}}, i32 [[GTID]], i64 16, ptr %{{.+}}, ptr @.omp.copyprivate.copy_func{{.*}}, i32 [[DID_IT_VAL]])
+  // CHECK: [[A_BUF:%.+]] = load ptr, ptr [[A_BUF_ADDR]],
+  // CHECK: [[B_BUF:%.+]] = load ptr, ptr [[B_BUF_ADDR]],
 #pragma omp for simd reduction(inscan, +:a[:n], b)
   for (int i = 0; i < 10; ++i) {
     // CHECK: call void @__kmpc_for_static_init_4(
@@ -58,6 +73,10 @@ void baz(int n) {
     // CHECK: call void @__kmpc_barrier(
     foo();
 #pragma omp scan inclusive(a[:n], b)
+    // CHECK: [[RES:%.+]] = call i32 @__kmpc_master(ptr @{{.+}}, i32 [[GTID]])
+    // CHECK: [[IS_MASTER:%.+]] = icmp ne i32 [[RES]], 0
+    // CHECK: br i1 [[IS_MASTER]], label %[[MASTER_THEN:[^,]+]], label %[[MASTER_END:[^,]+]]
+    // CHECK: [[MASTER_THEN]]:
     // CHECK: [[LOG2_10:%.+]] = call double @llvm.log2.f64(double 1.000000e+01)
     // CHECK: [[CEIL_LOG2_10:%.+]] = call double @llvm.ceil.f64(double [[LOG2_10]])
     // CHECK: [[CEIL_LOG2_10_INT:%.+]] = fptoui double [[CEIL_LOG2_10]] to i32
@@ -114,6 +133,17 @@ void baz(int n) {
     // CHECK: [[CMP:%.+]] = icmp ne i32 [[K_NEXT]], [[CEIL_LOG2_10_INT]]
     // CHECK: br i1 [[CMP]], label %[[OUTER_BODY]], label %[[OUTER_EXIT:[^,]+]]
     // CHECK: [[OUTER_EXIT]]:
+
+    // a = a_buffer[9]; b = b_buffer[9];
+    // CHECK: [[LAST:%.+]] = mul nsw i64 9, [[NUM_ELEMS]]
+    // CHECK: [[LAST_REF:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[LAST]]
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 @_ZZ3baziE1a, ptr align 4 [[LAST_REF]], i64 %{{.+}}, i1 false)
+    // CHECK: [[LAST_REF_B:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 9
+    // CHECK: [[LAST_VAL:%.+]] = load double, ptr [[LAST_REF_B]],
+    // CHECK: store double [[LAST_VAL]], ptr @_ZZ3baziE1b,
+    // CHECK: call void @__kmpc_end_master(ptr @{{.+}}, i32 [[GTID]])
+    // CHECK: [[MASTER_END]]:
+    // CHECK: call void @__kmpc_barrier(
     bar();
     // CHECK: call void @__kmpc_for_static_init_4(
     // CHECK: call ptr @llvm.stacksave.p0()
@@ -150,18 +180,39 @@ void baz(int n) {
     // CHECK: [[LOOP_CONTINUE]]:
     // CHECK: call void @llvm.stackrestore.p0(ptr %
     // CHECK: call void @__kmpc_for_static_fini(
-    // CHECK: call void @llvm.stackrestore.p0(ptr
     // CHECK: call void @__kmpc_barrier(
+    // CHECK: [[DID_IT_VAL:%.+]] = load i32, ptr [[DID_IT]],
+    // CHECK: [[FREE:%.+]] = icmp ne i32 [[DID_IT_VAL]], 0
+    // CHECK: br i1 [[FREE]], label %[[FREE_THEN:[^,]+]], label %[[FREE_END:[^,]+]]
+    // CHECK: [[FREE_THEN]]:
+    // CHECK: call void @__kmpc_free(i32 [[GTID]], ptr [[A_BUF]], ptr null)
+    // CHECK: call void @__kmpc_free(i32 [[GTID]], ptr [[B_BUF]], ptr null)
+    // CHECK: [[FREE_END]]:
   }
 
-  // CHECK: call ptr @llvm.stacksave.p0()
-  // CHECK: [[A_BUF_SIZE:%.+]] = mul nuw i64 10, [[NUM_ELEMS:%[^,]+]]
+  // CHECK: [[RES:%.+]] = call i32 @__kmpc_single(ptr @{{.+}}, i32 [[GTID]])
+  // CHECK: [[IS_SINGLE:%.+]] = icmp ne i32 [[RES]], 0
+  // CHECK: br i1 [[IS_SINGLE]], label %[[SINGLE_THEN:[^,]+]], label %[[SINGLE_END:[^,]+]]
+  // CHECK: [[SINGLE_THEN]]:
 
   // float a_buffer[10][n];
-  // CHECK: [[A_BUF:%.+]] = alloca float, i64 [[A_BUF_SIZE]],
+  // CHECK: [[A_BUF_SIZE:%.+]] = mul nuw i64 10, [[NUM_ELEMS:%[^,]+]]
+  // CHECK: [[A_BUF_BYTES:%.+]] = mul nuw i64 [[A_BUF_SIZE]], 4
+  // CHECK: [[A_BUF:%.+]] = call ptr @__kmpc_aligned_alloc(i32 [[GTID]], i64 16, i64 [[A_BUF_BYTES]], ptr null)
+  // CHECK: store ptr [[A_BUF]], ptr [[A_BUF_ADDR:%.+]],
 
   // double b_buffer[10];
-  // CHECK: [[B_BUF:%.+]] = alloca double, i64 10,
+  // CHECK: [[B_BUF:%.+]] = call ptr @__kmpc_aligned_alloc(i32 [[GTID]], i64 16, i64 80, ptr null)
+  // CHECK: store ptr [[B_BUF]], ptr [[B_BUF_ADDR:%.+]],
+  // CHECK: store i32 1, ptr [[DID_IT:%.+]],
+  // CHECK: call void @__kmpc_end_single(ptr @{{.+}}, i32 [[GTID]])
+  // CHECK: [[SINGLE_END]]:
+  // CHECK: store ptr [[A_BUF_ADDR]], ptr %
+  // CHECK: store ptr [[B_BUF_ADDR]], ptr %
+  // CHECK: [[DID_IT_VAL:%.+]] = load i32, ptr [[DID_IT]],
+  // CHECK: call void @__kmpc_copyprivate(ptr @{{.+}}, i32 [[GTID]], i64 16, ptr %{{.+}}, ptr @.omp.copyprivate.copy_func{{.*}}, i32 [[DID_IT_VAL]])
+  // CHECK: [[A_BUF:%.+]] = load ptr, ptr [[A_BUF_ADDR]],
+  // CHECK: [[B_BUF:%.+]] = load ptr, ptr [[B_BUF_ADDR]],
 #pragma omp for simd reduction(inscan, +:a[:n], b)
   for (int i = 0; i < 10; ++i) {
     // CHECK: call void @__kmpc_for_static_init_4(
@@ -203,6 +254,10 @@ void baz(int n) {
     // CHECK: call void @__kmpc_barrier(
     foo();
 #pragma omp scan exclusive(a[:n], b)
+    // CHECK: [[RES:%.+]] = call i32 @__kmpc_master(ptr @{{.+}}, i32 [[GTID]])
+    // CHECK: [[IS_MASTER:%.+]] = icmp ne i32 [[RES]], 0
+    // CHECK: br i1 [[IS_MASTER]], label %[[MASTER_THEN:[^,]+]], label %[[MASTER_END:[^,]+]]
+    // CHECK: [[MASTER_THEN]]:
     // CHECK: [[LOG2_10:%.+]] = call double @llvm.log2.f64(double 1.000000e+01)
     // CHECK: [[CEIL_LOG2_10:%.+]] = call double @llvm.ceil.f64(double [[LOG2_10]])
     // CHECK: [[CEIL_LOG2_10_INT:%.+]] = fptoui double [[CEIL_LOG2_10]] to i32
@@ -259,6 +314,17 @@ void baz(int n) {
     // CHECK: [[CMP:%.+]] = icmp ne i32 [[K_NEXT]], [[CEIL_LOG2_10_INT]]
     // CHECK: br i1 [[CMP]], label %[[OUTER_BODY]], label %[[OUTER_EXIT:[^,]+]]
     // CHECK: [[OUTER_EXIT]]:
+
+    // a = a_buffer[9]; b = b_buffer[9];
+    // CHECK: [[LAST:%.+]] = mul nsw i64 9, [[NUM_ELEMS]]
+    // CHECK: [[LAST_REF:%.+]] = getelementptr inbounds nuw float, ptr [[A_BUF]], i64 [[LAST]]
+    // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 @_ZZ3baziE1a, ptr align 4 [[LAST_REF]], i64 %{{.+}}, i1 false)
+    // CHECK: [[LAST_REF_B:%.+]] = getelementptr inbounds nuw double, ptr [[B_BUF]], i64 9
+    // CHECK: [[LAST_VAL:%.+]] = load double, ptr [[LAST_REF_B]],
+    // CHECK: store double [[LAST_VAL]], ptr @_ZZ3baziE1b,
+    // CHECK: call void @__kmpc_end_master(ptr @{{.+}}, i32 [[GTID]])
+    // CHECK: [[MASTER_END]]:
+    // CHECK: call void @__kmpc_barrier(
     bar();
     // CHECK: call void @__kmpc_for_static_init_4(
     // CHECK: call ptr @llvm.stacksave.p0()
@@ -294,10 +360,30 @@ void baz(int n) {
     // CHECK: [[LOOP_CONTINUE]]:
     // CHECK: call void @llvm.stackrestore.p0(ptr %
     // CHECK: call void @__kmpc_for_static_fini(
-    // CHECK: call void @llvm.stackrestore.p0(ptr
     // CHECK: call void @__kmpc_barrier(
+    // CHECK: [[DID_IT_VAL:%.+]] = load i32, ptr [[DID_IT]],
+    // CHECK: [[FREE:%.+]] = icmp ne i32 [[DID_IT_VAL]], 0
+    // CHECK: br i1 [[FREE]], label %[[FREE_THEN:[^,]+]], label %[[FREE_END:[^,]+]]
+    // CHECK: [[FREE_THEN]]:
+    // CHECK: call void @__kmpc_free(i32 [[GTID]], ptr [[A_BUF]], ptr null)
+    // CHECK: call void @__kmpc_free(i32 [[GTID]], ptr [[B_BUF]], ptr null)
+    // CHECK: [[FREE_END]]:
   }
 }
+
+// CHECK: define internal void @.omp.copyprivate.copy_func(ptr noundef %{{.+}}, ptr noundef %{{.+}})
+// CHECK: [[DST_ELEM:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i64 0, i64 0
+// CHECK: [[DST:%.+]] = load ptr, ptr [[DST_ELEM]],
+// CHECK: [[SRC_ELEM:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i64 0, i64 0
+// CHECK: [[SRC:%.+]] = load ptr, ptr [[SRC_ELEM]],
+// CHECK: [[VAL:%.+]] = load ptr, ptr [[SRC]],
+// CHECK: store ptr [[VAL]], ptr [[DST]],
+// CHECK: [[DST_ELEM:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i64 0, i64 1
+// CHECK: [[DST:%.+]] = load ptr, ptr [[DST_ELEM]],
+// CHECK: [[SRC_ELEM:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i64 0, i64 1
+// CHECK: [[SRC:%.+]] = load ptr, ptr [[SRC_ELEM]],
+// CHECK: [[VAL:%.+]] = load ptr, ptr [[SRC]],
+// CHECK: store ptr [[VAL]], ptr [[DST]],
 
 #endif
 // CHECK: !{!"llvm.loop.vectorize.enable"}
