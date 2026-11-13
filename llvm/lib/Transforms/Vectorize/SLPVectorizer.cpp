@@ -2564,6 +2564,30 @@ private:
   InstructionCost getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                 Type *ScalarTy) const;
 
+  /// \returns the cost of the shuffles that take the values in \p VL from the
+  /// vectorized tree entries. Only the values in \p DemandedElts with a zero
+  /// insert cost are counted, as returned by \p GetInsertCost for the lane.
+  /// \param ForPoisonSrc true if initial vector is poison, false otherwise.
+  InstructionCost getVectorizedScalarsShuffleCost(
+      ArrayRef<Value *> VL, const APInt &DemandedElts, bool ForPoisonSrc,
+      Type *ScalarTy,
+      function_ref<InstructionCost(const APInt &)> GetInsertCost) const;
+
+  /// \returns the cost of the shuffles that put the lanes of the tree entries
+  /// in \p ValueMasks into the vector \p Base of \p ScalarTy elements.
+  /// \p ScaleCost scales the cost of the shuffle of the given entry.
+  InstructionCost getEntriesLanesShuffleCost(
+      MutableArrayRef<std::pair<const TreeEntry *, SmallVector<int>>>
+          ValueMasks,
+      Value *Base, Type *ScalarTy,
+      function_ref<InstructionCost(InstructionCost, const TreeEntry &)>
+          ScaleCost) const;
+
+  /// \returns the cost of casting the vector of the demoted entry \p E to
+  /// \p VecTy, or zero if \p E is not demoted.
+  InstructionCost getDemotedEntryCastCost(const TreeEntry &E,
+                                          FixedVectorType *VecTy) const;
+
   /// Set the Builder insert point to one after the last instruction in
   /// the bundle
   void setInsertPointAfterBundle(const TreeEntry *E);
@@ -20633,24 +20657,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             Data.InsertElements.emplace_back(VU);
             DemandedElts.push_back(APInt::getZero(FTy->getNumElements()));
             VecId = ShuffledInserts.size() - 1;
-            auto It = MinBWs.find(ScalarTE);
-            if (It != MinBWs.end() &&
+            if (MinBWs.contains(ScalarTE) &&
                 VectorCasts
                     .insert(std::make_pair(ScalarTE, FTy->getElementType()))
                     .second) {
-              unsigned BWSz = It->second.first;
-              unsigned DstBWSz = DL->getTypeSizeInBits(FTy->getElementType());
-              unsigned VecOpcode;
-              if (DstBWSz < BWSz)
-                VecOpcode = Instruction::Trunc;
-              else
-                VecOpcode =
-                    It->second.second ? Instruction::SExt : Instruction::ZExt;
-              InstructionCost C = TTI->getCastInstrCost(
-                  VecOpcode, FTy,
-                  getWidenedType(IntegerType::get(FTy->getContext(), BWSz),
-                                 FTy->getNumElements()),
-                  getCastContextHint(*ScalarTE), CostKind);
+              InstructionCost C = getDemotedEntryCastCost(*ScalarTE, FTy);
               LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                                 << " for extending externally used vector with "
                                    "non-equal minimum bitwidth.\n");
@@ -20975,113 +20986,17 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     return InstructionCost::getInvalid();
 
   Cost += ExtractCost;
-  auto &&ResizeToVF = [this, &Cost](const TreeEntry *TE, ArrayRef<int> Mask,
-                                    bool ForSingleMask) {
-    InstructionCost C = 0;
-    unsigned VF = Mask.size();
-    unsigned VecVF = TE->getVectorFactor();
-    bool HasLargeIndex =
-        any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); });
-    if ((VF != VecVF && HasLargeIndex) ||
-        !ShuffleVectorInst::isIdentityMask(Mask, VF)) {
-
-      if (HasLargeIndex) {
-        SmallVector<int> OrigMask(VecVF, PoisonMaskElem);
-        std::copy(Mask.begin(), std::next(Mask.begin(), std::min(VF, VecVF)),
-                  OrigMask.begin());
-        C = getShuffleCost(
-            *TTI, TTI::SK_PermuteSingleSrc,
-            cast<VectorType>(getWidenedType(TE->getMainOp()->getType(), VecVF)),
-            CostKind, OrigMask);
-        LLVM_DEBUG(
-            dbgs() << "SLP: Adding cost " << C
-                   << " for final shuffle of insertelement external users.\n";
-            TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
-        Cost += C;
-        return std::make_pair(TE, true);
-      }
-
-      if (!ForSingleMask) {
-        SmallVector<int> ResizeMask(VF, PoisonMaskElem);
-        for (unsigned I = 0; I < VF; ++I) {
-          if (Mask[I] != PoisonMaskElem)
-            ResizeMask[Mask[I]] = Mask[I];
-        }
-        if (!ShuffleVectorInst::isIdentityMask(ResizeMask, VF))
-          C = getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
-                             cast<VectorType>(getWidenedType(
-                                 TE->getMainOp()->getType(), VecVF)),
-                             CostKind, ResizeMask);
-        LLVM_DEBUG(
-            dbgs() << "SLP: Adding cost " << C
-                   << " for final shuffle of insertelement external users.\n";
-            TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
-
-        Cost += C;
-      }
-    }
-    return std::make_pair(TE, false);
-  };
   // Calculate the cost of the reshuffled vectors, if any.
   for (int I = 0, E = ShuffledInserts.size(); I < E; ++I) {
+    auto *VecTy = cast<FixedVectorType>(
+        ShuffledInserts[I].InsertElements.front()->getType());
     Value *Base = ShuffledInserts[I].InsertElements.front()->getOperand(0);
     auto Vector = ShuffledInserts[I].ValueMasks.takeVector();
-    unsigned VF = 0;
-    auto EstimateShufflesCost = [&](ArrayRef<int> Mask,
-                                    ArrayRef<const TreeEntry *> TEs) {
-      assert((TEs.size() == 1 || TEs.size() == 2) &&
-             "Expected exactly 1 or 2 tree entries.");
-      if (TEs.size() == 1) {
-        if (VF == 0)
-          VF = TEs.front()->getVectorFactor();
-        auto *FTy = getWidenedType(TEs.back()->Scalars.front()->getType(), VF);
-        if (!ShuffleVectorInst::isIdentityMask(Mask, VF) &&
-            !all_of(enumerate(Mask), [=](const auto &Data) {
-              return Data.value() == PoisonMaskElem ||
-                     (Data.index() < VF &&
-                      static_cast<int>(Data.index()) == Data.value());
-            })) {
-          InstructionCost C =
-              getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
-                             cast<VectorType>(FTy), CostKind, Mask);
-          C = ScaleCost(C, *TEs.front());
-          LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
-                            << " for final shuffle of insertelement "
-                               "external users.\n";
-                     TEs.front()->dump();
-                     dbgs() << "SLP: Current total cost = " << Cost << "\n");
-          Cost += C;
-        }
-      } else {
-        if (VF == 0) {
-          if (TEs.front() &&
-              TEs.front()->getVectorFactor() == TEs.back()->getVectorFactor())
-            VF = TEs.front()->getVectorFactor();
-          else
-            VF = Mask.size();
-        }
-        auto *FTy = getWidenedType(TEs.back()->Scalars.front()->getType(), VF);
-        InstructionCost C = getShuffleCost(
-            *TTI, TTI::SK_PermuteTwoSrc, cast<VectorType>(FTy), CostKind, Mask);
-        C = ScaleCost(C, *TEs.back());
-        LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
-                          << " for final shuffle of vector node and external "
-                             "insertelement users.\n";
-                   if (TEs.front()) { TEs.front()->dump(); } TEs.back()->dump();
-                   dbgs() << "SLP: Current total cost = " << Cost << "\n");
-        Cost += C;
-      }
-      VF = Mask.size();
-      return TEs.back();
-    };
-    (void)performExtractsShuffleAction<const TreeEntry>(
+    Cost += getEntriesLanesShuffleCost(
         MutableArrayRef(Vector.data(), Vector.size()), Base,
-        [](const TreeEntry *E) { return E->getVectorFactor(); }, ResizeToVF,
-        EstimateShufflesCost);
+        VecTy->getElementType(), ScaleCost);
     InstructionCost InsertCost = TTI->getScalarizationOverhead(
-        cast<FixedVectorType>(
-            ShuffledInserts[I].InsertElements.front()->getType()),
-        DemandedElts[I],
+        VecTy, DemandedElts[I],
         /*Insert*/ true, /*Extract*/ false, CostKind);
     Cost -= InsertCost;
   }
@@ -21996,6 +21911,19 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
                             VecTy, CostKind, Mask);
     };
     InstructionCost ShuffleCost = GetShuffleCost(SubMask, Entries, VecTy);
+    auto GetInsertCost = [&](const APInt &DemandedElts) {
+      return getScalarizationOverhead(*TTI, Opts.slp_revec,
+                                      VL.front()->getType(), MaskVecTy,
+                                      DemandedElts, /*Insert=*/true,
+                                      /*Extract=*/false, CostKind);
+    };
+    auto GetVectorizedScalarsCost = [&](const APInt &DemandedElts,
+                                        bool ForPoisonSrc) -> InstructionCost {
+      if (MinBWs.contains(TE))
+        return TTI::TCC_Free;
+      return getVectorizedScalarsShuffleCost(
+          VL, DemandedElts, ForPoisonSrc, VL.front()->getType(), GetInsertCost);
+    };
     InstructionCost FirstShuffleCost = 0;
     SmallVector<int> FirstMask(SubMask.begin(), SubMask.end());
     if (Entries.size() == 1 || !Entries[0]->isGather()) {
@@ -22015,10 +21943,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       }
       if (!IsIdentity)
         FirstShuffleCost = GetShuffleCost(FirstMask, Entries.front(), VecTy);
+      FirstShuffleCost += GetInsertCost(DemandedElts);
       FirstShuffleCost +=
-          getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
-                                   MaskVecTy, DemandedElts, /*Insert=*/true,
-                                   /*Extract=*/false, CostKind);
+          GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/false);
     }
     InstructionCost SecondShuffleCost = 0;
     SmallVector<int> SecondMask(SubMask.begin(), SubMask.end());
@@ -22041,19 +21968,17 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       }
       if (!IsIdentity)
         SecondShuffleCost = GetShuffleCost(SecondMask, Entries[1], VecTy);
+      SecondShuffleCost += GetInsertCost(DemandedElts);
       SecondShuffleCost +=
-          getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
-                                   MaskVecTy, DemandedElts, /*Insert=*/true,
-                                   /*Extract=*/false, CostKind);
+          GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/false);
     }
     APInt DemandedElts = APInt::getAllOnes(SubMask.size());
     for (auto [I, Idx] : enumerate(SubMask))
       if (Idx == PoisonMaskElem)
         DemandedElts.clearBit(I);
-    InstructionCost BuildVectorCost =
-        getScalarizationOverhead(*TTI, Opts.slp_revec, VL.front()->getType(),
-                                 MaskVecTy, DemandedElts, /*Insert=*/true,
-                                 /*Extract=*/false, CostKind);
+    InstructionCost BuildVectorCost = GetInsertCost(DemandedElts);
+    BuildVectorCost +=
+        GetVectorizedScalarsCost(DemandedElts, /*ForPoisonSrc=*/true);
     const TreeEntry *BestEntry = nullptr;
     auto MaskSlice = MutableArrayRef(Mask).slice(MaskBase, VL.size());
     if (FirstShuffleCost < ShuffleCost) {
@@ -22158,6 +22083,179 @@ BoUpSLP::isGatherShuffledEntry(
   return Res;
 }
 
+InstructionCost BoUpSLP::getDemotedEntryCastCost(const TreeEntry &E,
+                                                 FixedVectorType *VecTy) const {
+  auto It = MinBWs.find(&E);
+  if (It == MinBWs.end())
+    return TTI::TCC_Free;
+  unsigned BWSz = It->second.first;
+  unsigned DstBWSz = DL->getTypeSizeInBits(VecTy->getElementType());
+  unsigned VecOpcode;
+  if (DstBWSz < BWSz)
+    VecOpcode = Instruction::Trunc;
+  else
+    VecOpcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
+  return TTI->getCastInstrCost(
+      VecOpcode, VecTy,
+      getWidenedType(IntegerType::get(VecTy->getContext(), BWSz),
+                     VecTy->getNumElements()),
+      getCastContextHint(E), CostKind);
+}
+
+InstructionCost BoUpSLP::getEntriesLanesShuffleCost(
+    MutableArrayRef<std::pair<const TreeEntry *, SmallVector<int>>> ValueMasks,
+    Value *Base, Type *ScalarTy,
+    function_ref<InstructionCost(InstructionCost, const TreeEntry &)> ScaleCost)
+    const {
+  InstructionCost Cost = 0;
+  auto ResizeToVF = [&](const TreeEntry *TE, ArrayRef<int> Mask,
+                        bool ForSingleMask) {
+    InstructionCost C = 0;
+    unsigned VF = Mask.size();
+    unsigned VecVF = TE->getVectorFactor();
+    bool HasLargeIndex =
+        any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); });
+    if ((VF != VecVF && HasLargeIndex) ||
+        !ShuffleVectorInst::isIdentityMask(Mask, VF)) {
+
+      if (HasLargeIndex) {
+        SmallVector<int> OrigMask(VecVF, PoisonMaskElem);
+        std::copy(Mask.begin(), std::next(Mask.begin(), std::min(VF, VecVF)),
+                  OrigMask.begin());
+        C = getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
+                           cast<VectorType>(getWidenedType(ScalarTy, VecVF)),
+                           CostKind, OrigMask);
+        LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
+                          << " for resizing the lanes of the vectorized "
+                             "entry.\n";
+                   TE->dump());
+        Cost += C;
+        return std::make_pair(TE, true);
+      }
+
+      if (!ForSingleMask) {
+        SmallVector<int> ResizeMask(VF, PoisonMaskElem);
+        for (unsigned I = 0; I < VF; ++I) {
+          if (Mask[I] != PoisonMaskElem)
+            ResizeMask[Mask[I]] = Mask[I];
+        }
+        if (!ShuffleVectorInst::isIdentityMask(ResizeMask, VF))
+          C = getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
+                             cast<VectorType>(getWidenedType(ScalarTy, VecVF)),
+                             CostKind, ResizeMask);
+        LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
+                          << " for resizing the lanes of the vectorized "
+                             "entry.\n";
+                   TE->dump());
+        Cost += C;
+      }
+    }
+    return std::make_pair(TE, false);
+  };
+  unsigned VF = 0;
+  auto EstimateShufflesCost = [&](ArrayRef<int> Mask,
+                                  ArrayRef<const TreeEntry *> TEs) {
+    assert((TEs.size() == 1 || TEs.size() == 2) &&
+           "Expected exactly 1 or 2 tree entries.");
+    if (TEs.size() == 1) {
+      if (VF == 0)
+        VF = TEs.front()->getVectorFactor();
+      auto *FTy = getWidenedType(ScalarTy, VF);
+      if (!ShuffleVectorInst::isIdentityMask(Mask, VF) &&
+          !all_of(enumerate(Mask), [=](const auto &Data) {
+            return Data.value() == PoisonMaskElem ||
+                   (Data.index() < VF &&
+                    static_cast<int>(Data.index()) == Data.value());
+          })) {
+        InstructionCost C =
+            getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
+                           cast<VectorType>(FTy), CostKind, Mask);
+        C = ScaleCost(C, *TEs.front());
+        LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
+                          << " for the shuffle of the lanes of the vectorized "
+                             "entry.\n";
+                   TEs.front()->dump());
+        Cost += C;
+      }
+    } else {
+      if (VF == 0) {
+        if (TEs.front() &&
+            TEs.front()->getVectorFactor() == TEs.back()->getVectorFactor())
+          VF = TEs.front()->getVectorFactor();
+        else
+          VF = Mask.size();
+      }
+      auto *FTy = getWidenedType(ScalarTy, VF);
+      InstructionCost C = getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc,
+                                         cast<VectorType>(FTy), CostKind, Mask);
+      C = ScaleCost(C, *TEs.back());
+      LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
+                        << " for the shuffle of the lanes of the vectorized "
+                           "entries.\n";
+                 if (TEs.front()) { TEs.front()->dump(); } TEs.back()->dump());
+      Cost += C;
+    }
+    VF = Mask.size();
+    return TEs.back();
+  };
+  (void)performExtractsShuffleAction<const TreeEntry>(
+      ValueMasks, Base, [](const TreeEntry *E) { return E->getVectorFactor(); },
+      ResizeToVF, EstimateShufflesCost);
+  return Cost;
+}
+
+InstructionCost BoUpSLP::getVectorizedScalarsShuffleCost(
+    ArrayRef<Value *> VL, const APInt &DemandedElts, bool ForPoisonSrc,
+    Type *ScalarTy,
+    function_ref<InstructionCost(const APInt &)> GetInsertCost) const {
+  if (isa<VectorType>(ScalarTy))
+    return TTI::TCC_Free;
+  const unsigned VF = VL.size();
+  auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VF));
+  SmallMapVector<const TreeEntry *, SmallVector<int>, 2> EntryMasks;
+  APInt ShuffledElts = APInt::getZero(VF);
+  for (auto [I, V] : enumerate(VL)) {
+    if (!DemandedElts[I] || !isa<Instruction>(V) || V->getType() != ScalarTy)
+      continue;
+    ArrayRef<TreeEntry *> VTEs = getTreeEntries(V);
+    const auto *It = find_if(VTEs, [&](const TreeEntry *E) {
+      return !TransformedToGatherNodes.contains(E) && !DeletedNodes.contains(E);
+    });
+    if (It == VTEs.end())
+      continue;
+    // A paid insert also covers the lane move, as the extract folds into it.
+    if (GetInsertCost(APInt::getOneBitSet(VF, I)) != TTI::TCC_Free)
+      continue;
+    EntryMasks.try_emplace(*It, VF, PoisonMaskElem).first->second[I] =
+        (*It)->findLaneForValue(V);
+    ShuffledElts.setBit(I);
+  }
+  if (ShuffledElts.isZero())
+    return TTI::TCC_Free;
+
+  // The vector the shuffled scalars are placed into. It already holds the
+  // constants and the scalars inserted before the first shuffled one.
+  const unsigned FirstShuffled = ShuffledElts.countr_zero();
+  SmallVector<Constant *> BaseElts(VF, PoisonValue::get(ScalarTy));
+  for (auto [I, V] : enumerate(VL))
+    if (!ForPoisonSrc || (!ShuffledElts[I] && !isa<PoisonValue>(V) &&
+                          (!isa<Instruction>(V) || I < FirstShuffled)))
+      BaseElts[I] = Constant::getNullValue(ScalarTy);
+  Constant *Base = ConstantVector::get(BaseElts);
+
+  InstructionCost Cost = 0;
+  for (const TreeEntry *E : make_first_range(EntryMasks))
+    Cost += getDemotedEntryCastCost(*E, cast<FixedVectorType>(VecTy));
+  auto Vector = EntryMasks.takeVector();
+  Cost += getEntriesLanesShuffleCost(
+      MutableArrayRef(Vector.data(), Vector.size()), Base, ScalarTy,
+      [](InstructionCost C, const TreeEntry &) { return C; });
+  // Keep the inserts alone if the target has no valid cost for the shuffles.
+  if (!Cost.isValid())
+    return TTI::TCC_Free;
+  return Cost;
+}
+
 InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                        Type *ScalarTy) const {
   const unsigned VF = VL.size();
@@ -22196,13 +22294,19 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                        cast<VectorType>(VecTy), CostKind, ConstantShuffleMask);
   }
 
+  auto GetInsertCost = [&](const APInt &DemandedElts) {
+    return getScalarizationOverhead(
+        *TTI, Opts.slp_revec, ScalarTy, cast<VectorType>(VecTy), DemandedElts,
+        /*Insert=*/true,
+        /*Extract=*/false, CostKind, ForPoisonSrc && !IsAnyNonUndefConst, VL);
+  };
   // 2. Insert unique non-constants.
   if (!DemandedElements.isZero())
-    Cost += getScalarizationOverhead(*TTI, Opts.slp_revec, ScalarTy,
-                                     cast<VectorType>(VecTy), DemandedElements,
-                                     /*Insert=*/true,
-                                     /*Extract=*/false, CostKind,
-                                     ForPoisonSrc && !IsAnyNonUndefConst, VL);
+    Cost += GetInsertCost(DemandedElements);
+
+  // 3. Shuffle the scalars of the vectorized entries.
+  Cost += getVectorizedScalarsShuffleCost(VL, DemandedElements, ForPoisonSrc,
+                                          ScalarTy, GetInsertCost);
   return Cost;
 }
 

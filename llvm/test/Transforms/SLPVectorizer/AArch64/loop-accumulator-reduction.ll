@@ -50,8 +50,7 @@ define double @loop_acc_fadd(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[C8]], i64 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul reassoc nnan ninf arcp contract afn <4 x double> [[TMP14]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[TMP12]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP20]], <4 x double> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP22:%.*]] = fmul <4 x double> [[TMP19]], [[TMP21]]
 ; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP22]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
@@ -504,14 +503,15 @@ define double @two_exit_phis(ptr %p, i64 %n, i1 %c) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[SUM1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SD1:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[SUM1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV3:%.*]] = mul nuw i64 [[IV]], 3
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV3]]
-; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[P0]], align 8
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[P0]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[P1]], align 8
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr double, ptr [[P0]], i64 2
 ; CHECK-NEXT:    [[L2:%.*]] = load double, ptr [[P2]], align 8
+; CHECK-NEXT:    [[C8:%.*]] = load double, ptr getelementptr (double, ptr @cst, i64 8), align 8
+; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[P0]], align 8
+; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[P1]], align 8
 ; CHECK-NEXT:    [[C0:%.*]] = load double, ptr @cst, align 8
 ; CHECK-NEXT:    [[C1:%.*]] = load double, ptr getelementptr (double, ptr @cst, i64 1), align 8
 ; CHECK-NEXT:    [[C2:%.*]] = load double, ptr getelementptr (double, ptr @cst, i64 2), align 8
@@ -520,7 +520,6 @@ define double @two_exit_phis(ptr %p, i64 %n, i1 %c) {
 ; CHECK-NEXT:    [[C5:%.*]] = load double, ptr getelementptr (double, ptr @cst, i64 5), align 8
 ; CHECK-NEXT:    [[C6:%.*]] = load double, ptr getelementptr (double, ptr @cst, i64 6), align 8
 ; CHECK-NEXT:    [[C7:%.*]] = load double, ptr getelementptr (double, ptr @cst, i64 7), align 8
-; CHECK-NEXT:    [[C8:%.*]] = load double, ptr getelementptr (double, ptr @cst, i64 8), align 8
 ; CHECK-NEXT:    [[SD:%.*]] = fmul fast double [[L0]], [[C0]]
 ; CHECK-NEXT:    [[T2:%.*]] = fmul fast double [[L1]], [[C1]]
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd fast double [[T2]], [[SD]]
@@ -536,11 +535,13 @@ define double @two_exit_phis(ptr %p, i64 %n, i1 %c) {
 ; CHECK-NEXT:    [[D02:%.*]] = fadd fast double [[D01]], [[D00]]
 ; CHECK-NEXT:    [[D03:%.*]] = fmul fast double [[L2]], [[C8]]
 ; CHECK-NEXT:    [[D:%.*]] = fadd fast double [[D02]], [[D03]]
-; CHECK-NEXT:    [[SA:%.*]] = fmul double [[A]], [[A]]
-; CHECK-NEXT:    [[T1:%.*]] = fadd fast double [[SA]], [[ACC]]
-; CHECK-NEXT:    [[SB:%.*]] = fmul double [[B]], [[B]]
-; CHECK-NEXT:    [[T3:%.*]] = fadd fast double [[T1]], [[SB]]
-; CHECK-NEXT:    [[SD1:%.*]] = fmul double [[D]], [[D]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 0.000000e+00>, double [[A]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[B]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[D]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[D]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[T3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP5]])
 ; CHECK-NEXT:    [[SUM1]] = fadd fast double [[T3]], [[SD1]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], [[N]]
