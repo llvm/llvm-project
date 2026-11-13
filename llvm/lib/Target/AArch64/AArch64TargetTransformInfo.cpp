@@ -7701,6 +7701,28 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     }
   }
 
+  // A two-source shuffle narrower than its legal type costs the same as that
+  // shuffle of the legal type.
+  auto *SrcVTy = dyn_cast<FixedVectorType>(SrcTy);
+  if (Kind == TTI::SK_PermuteTwoSrc && !Mask.empty() && SrcVTy &&
+      LT.first == 1 && LT.second.isFixedLengthVector() &&
+      LT.second.getScalarSizeInBits() == SrcTy->getScalarSizeInBits()) {
+    unsigned NumSrcElts = SrcVTy->getNumElements();
+    unsigned NumLTElts = LT.second.getVectorNumElements();
+    if (Mask.size() <= NumLTElts &&
+        (NumSrcElts < NumLTElts || Mask.size() < NumLTElts)) {
+      SmallVector<int, 16> WideMask(NumLTElts, PoisonMaskElem);
+      for (auto [I, M] : enumerate(Mask)) {
+        if (M == PoisonMaskElem)
+          continue;
+        WideMask[I] = M < (int)NumSrcElts ? M : M - NumSrcElts + NumLTElts;
+      }
+      auto *WideTy = FixedVectorType::get(SrcTy->getScalarType(), NumLTElts);
+      return getShuffleCost(Kind, WideTy, WideTy, CostKind, WideMask, 0,
+                            nullptr, Args, CtxI);
+    }
+  }
+
   // Restore optimal kind.
   if (IsExtractSubvector)
     Kind = TTI::SK_ExtractSubvector;
