@@ -293,8 +293,8 @@ func.func @taskgroup_bounded_reduction(%x: memref<f32>, %y: !llvm.ptr) {
 func.func @taskgroup_unbounded_reduction(%x: memref<f32>) {
   // Without a reduced recipe effects attribute, assume arbitrary effects.
   // expected-remark@below {{recursive memory effects}}
-  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below 2 {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below 2 {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
   omp.taskgroup task_reduction(
