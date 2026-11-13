@@ -14311,7 +14311,7 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let accessSize = HLXVectorAccess;
 let isHLX = 1;
-let hasHlxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 }
 def LX_S16b_new : HInst<
@@ -20700,6 +20700,117 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let prefersSlot3 = 1;
 let Defs = [USR_OVF];
+}
+def M8_cvt_rs_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"cvt.hf = acc($Rs32)",
+tc_db96aa6b, TypeST>, Enc_ecbcc8, Requires<[HasV73,UseHMX]> {
+let Inst{13-0} = 0b01101000010000;
+let Inst{31-21} = 0b10100110111;
+let hasSideEffects = 1;
+}
+def M8_mxclracc_hf : HInst<
+(outs),
+(ins),
+"mxclracc.hf",
+tc_77f94a5e, TypeST>, Enc_e3b0c4, Requires<[HasV68,UseHMX]> {
+let Inst{13-0} = 0b00000000010011;
+let Inst{31-16} = 0b1010011011100000;
+let hasSideEffects = 1;
+}
+def M8_mxmem : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"mxmem($Rs32,$Rt32) = cvt",
+tc_74e96cae, TypeST>, Enc_ca3887, Requires<[HasV73,UseHMX]> {
+let Inst{7-0} = 0b00011000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100110111;
+let hasSideEffects = 1;
+let mayStore = 1;
+}
+def M8_mxmem2_bias : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"bias = mxmem2($Rs32)",
+tc_28a44d1d, TypeLD>, Enc_ecbcc8, Requires<[HasV68,UseHMX]> {
+let Inst{13-0} = 0b00001111111110;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isRestrictNoSlot1Store = 1;
+}
+def M8_mxmem2_st_bias : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"mxmem2($Rs32) = bias",
+tc_db96aa6b, TypeST>, Enc_ecbcc8, Requires<[HasV68,UseHMX]> {
+let Inst{13-0} = 0b00000000010110;
+let Inst{31-21} = 0b10100110111;
+let hasSideEffects = 1;
+let isRestrictNoSlot1Store = 1;
+let mayStore = 1;
+}
+def M8_mxmem_blk_sm_act_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"activation.hf = mxmem($Rs32,$Rt32)",
+tc_3fb06227, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11100100;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXActivate = 1;
+}
+def M8_mxmem_sm_act_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"activation.hf = mxmem($Rs32,$Rt32):deep",
+tc_3fb06227, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11100010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXActivate = 1;
+}
+def M8_mxmem_wei_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"weight.hf = mxmem($Rs32,$Rt32)",
+tc_1e779a4b, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11101111;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXWeight = 1;
+}
+def M8_mxmemdp_wei_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"weight.hf = mxmem($Rs32,$Rt32):deep",
+tc_1e779a4b, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11110100;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXWeight = 1;
+}
+def M8_mxmems_blk_sm_act_hf : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"activation.hf = mxmem($Rs32,$Rt32):single",
+tc_3fb06227, TypeLD>, Enc_ca3887, Requires<[HasV68,UseHMX]> {
+let Inst{7-0} = 0b11111000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10010010000;
+let hasSideEffects = 1;
+let mayLoad = 1;
+let isHMXActivate = 1;
 }
 def PS_loadrbabs : HInst<
 (outs IntRegs:$Rd32),
@@ -31332,7 +31443,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31356,7 +31467,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31379,7 +31490,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31402,7 +31513,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31424,7 +31535,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31447,7 +31558,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31470,7 +31581,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31492,7 +31603,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31514,7 +31625,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -31645,7 +31756,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -31668,7 +31779,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -31690,7 +31801,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -31712,7 +31823,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -31733,7 +31844,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -31755,7 +31866,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -31777,7 +31888,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -31798,7 +31909,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -31819,7 +31930,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -35267,7 +35378,7 @@ let Inst{31-16} = 0b0001111000000001;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vassignp : HInst<
@@ -35709,7 +35820,7 @@ let Inst{31-21} = 0b00011110101;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasHvxTmp = 1;
+let isTmpWrite = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vconv_bf_qf32 : HInst<

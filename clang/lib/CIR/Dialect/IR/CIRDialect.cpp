@@ -744,6 +744,16 @@ LogicalResult cir::AssumeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AnnotationOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AnnotationOp::verify() {
+  if (mlir::ArrayAttr args = getAnnotation().getArgs(); args && !args.empty())
+    return emitOpError("annotation must not have arguments");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LocalInitOp
 //===----------------------------------------------------------------------===//
 
@@ -829,7 +839,7 @@ void cir::ConditionOp::getSuccessorRegions(
     if (mlir::Region *cleanup = loopOp.maybeGetCleanup())
       regions.emplace_back(cleanup);
     else
-      regions.emplace_back(getOperation());
+      regions.emplace_back(loopOp.getOperation());
     return;
   }
 
@@ -1340,7 +1350,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
     return result;
 
   // Handle simple constant casts.
-  if (auto srcConst = getSrc().getDefiningOp<cir::ConstantOp>()) {
+  if (mlir::Attribute src = adaptor.getSrc()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
       mlir::Type srcTy = getSrc().getType();
@@ -1352,7 +1362,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
       auto srcIntTy = mlir::cast<cir::IntType>(srcTy);
       auto dstIntTy = mlir::cast<cir::IntType>(getType());
-      auto constIntAttr = srcConst.getValueAttr<cir::IntAttr>();
+      auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(src);
       if (!constIntAttr)
         return {};
 
@@ -1362,6 +1372,18 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
                          : srcValue.zextOrTrunc(dstIntTy.getWidth());
       return cir::IntAttr::get(dstIntTy, newVal);
     }
+    case cir::CastKind::int_to_bool:
+      if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(src))
+        return cir::BoolAttr::get(getContext(), !intAttr.getValue().isZero());
+      break;
+    case cir::CastKind::bool_to_int:
+      // Zero-extend the bit, which also fits a signed one-bit integer.
+      if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(src))
+        return cir::IntAttr::get(
+            getType(),
+            llvm::APInt(mlir::cast<cir::IntType>(getType()).getWidth(),
+                        boolAttr.getValue()));
+      break;
     default:
       break;
     }
@@ -3541,6 +3563,17 @@ void cir::TernaryOp::build(
     result.addTypes(TypeRange{yield.getOperandTypes().front()});
 }
 
+void cir::TernaryOp::getEntrySuccessorRegions(
+    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
+  // A constant condition selects one region.
+  FoldAdaptor adaptor(operands, *this);
+  auto cond = mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCond());
+  if (!cond || cond.getValue())
+    regions.emplace_back(&getTrueRegion());
+  if (!cond || !cond.getValue())
+    regions.emplace_back(&getFalseRegion());
+}
+
 //===----------------------------------------------------------------------===//
 // SelectOp
 //===----------------------------------------------------------------------===//
@@ -4988,6 +5021,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   p << ')';
   if (getSideEffects())
     p << " side_effects";
+  if (getConvergent())
+    p << " convergent";
 
   p.printOptionalAttrDict(
       getOperation()->getDiscardableAttrDictionary().getValue());
@@ -4999,7 +5034,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
 void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                              ArrayRef<ValueRange> asmOperands,
                              StringRef asmString, StringRef constraints,
-                             bool sideEffects, cir::AsmFlavor asmFlavor,
+                             bool sideEffects, bool convergent,
+                             cir::AsmFlavor asmFlavor,
                              ArrayRef<Attribute> operandAttrs) {
   // Set up the operands_segments for VariadicOfVariadic
   SmallVector<int32_t> segments;
@@ -5018,6 +5054,9 @@ void cir::InlineAsmOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 
   if (sideEffects)
     odsState.addAttribute("side_effects", odsBuilder.getUnitAttr());
+
+  if (convergent)
+    odsState.addAttribute("convergent", odsBuilder.getUnitAttr());
 
   odsState.addAttribute("operand_attrs", odsBuilder.getArrayAttr(operandAttrs));
 }
@@ -5129,6 +5168,9 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 
   if (parser.parseOptionalKeyword("side_effects").succeeded())
     result.attributes.set("side_effects", UnitAttr::get(ctxt));
+
+  if (parser.parseOptionalKeyword("convergent").succeeded())
+    result.attributes.set("convergent", UnitAttr::get(ctxt));
 
   if (parser.parseOptionalAttrDict(result.attributes).failed())
     return mlir::failure();

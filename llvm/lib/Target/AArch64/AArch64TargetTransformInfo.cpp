@@ -424,13 +424,22 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 }
 
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  assert(K != TargetTransformInfo::RGK_Scalar);
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
+  // Don't maximize bandwidth for i1s. The legal width of predicates is derived
+  // from the data vectors they are used with. Maximizing the predicate width
+  // will just result in excessive VFs with a lot of unpacking.
+  if (ElementTy && ElementTy->isIntegerTy(1))
+    return false;
 
-  if (K == TargetTransformInfo::RGK_FixedWidthVector && ST->isNeonAvailable())
+  // If we don't know the specific class of vector just return true. Later VF
+  // selection will ask us about fixed or scalable vectors.
+  if (K == TargetTransformInfo::VectorKind::FixedOrScalable)
     return true;
 
-  return K == TargetTransformInfo::RGK_ScalableVector &&
+  if (K == TargetTransformInfo::VectorKind::FixedWidth && ST->isNeonAvailable())
+    return true;
+
+  return K == TargetTransformInfo::VectorKind::Scalable &&
          ST->isSVEorStreamingSVEAvailable() &&
          !ST->disableMaximizeScalableBandwidth();
 }
@@ -7026,6 +7035,23 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
+    // A non-power-of-2 i1 vector is widened with the identity and reduced as
+    // the promoted integer vector, the i1 min/max lowering does not apply. The
+    // zero identity of or/xor is set by a single masking and.
+    if (ValTy->isIntOrIntVectorTy(1) &&
+        !isPowerOf2_32(ValVTy->getNumElements()) && LT.first == 1) {
+      unsigned PaddedElts = MTy.getVectorNumElements();
+      auto *PaddedTy =
+          FixedVectorType::get(ValVTy->getElementType(), PaddedElts);
+      if (ISD != ISD::AND)
+        return Entry->Cost +
+               getArithmeticInstrCost(Instruction::And, PaddedTy, CostKind);
+      return Entry->Cost +
+             getScalarizationOverhead(
+                 PaddedTy,
+                 APInt::getBitsSetFrom(PaddedElts, ValVTy->getNumElements()),
+                 /*Insert=*/true, /*Extract=*/false, CostKind);
+    }
     if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;
@@ -7052,8 +7078,15 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
+  if (IsUnsigned && Opcode == Instruction::Add &&
+      VecVT.isScalableVectorOf(MVT::i1) && ResVT.isSimple() &&
+      getTLI()->isTypeLegal(VecVT)) {
+    // This is vecreduce.add(ZExt(mask)) which can lower as cntp(mask).
+    return 1;
+  }
+
   if (Opcode == Instruction::Add && VecVT.isSimple() && ResVT.isSimple() &&
-      VecVT.getSizeInBits() >= 64) {
+      !VecVT.isScalableVT() && VecVT.getFixedSizeInBits() >= 64) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases are:

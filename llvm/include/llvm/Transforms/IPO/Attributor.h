@@ -946,13 +946,16 @@ private:
   /// argument or call site argument. See also `getCalleeArgNo` and
   /// `getCallSiteArgNo`.
   int getArgNo(bool CallbackCalleeArgIfApplicable) const {
-    if (CallbackCalleeArgIfApplicable)
-      if (Argument *Arg = getAssociatedArgument())
-        return Arg->getArgNo();
     switch (getPositionKind()) {
     case IRPosition::IRP_ARGUMENT:
       return cast<Argument>(getAsValuePtr())->getArgNo();
     case IRPosition::IRP_CALL_SITE_ARGUMENT: {
+      // Only call site arguments can be associated with a callback callee
+      // argument.
+      if (CallbackCalleeArgIfApplicable) {
+        if (Argument *Arg = getAssociatedArgument())
+          return Arg->getArgNo();
+      }
       Use &U = *getAsUsePtr();
       return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
     }
@@ -972,7 +975,11 @@ private:
   }
 
   /// Verify internal invariants.
+#ifdef EXPENSIVE_CHECKS
   LLVM_ABI void verify();
+#else
+  void verify() {}
+#endif
 
   /// Return the underlying pointer as Value *, valid for all positions but
   /// IRP_CALL_SITE_ARGUMENT.
@@ -1250,7 +1257,11 @@ struct InformationCache {
     return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
-  bool isOnlyUsedByAssume(const Instruction &I) const {
+  bool isOnlyUsedByAssume(const Instruction &I) {
+    const Function &F = *I.getFunction();
+    FunctionInfo &FI = getFunctionInfo(F);
+    if (!FI.AssumeOnlyValuesCollected)
+      collectAssumeOnlyValues(FI);
     return AssumeOnlyValues.contains(&I);
   }
 
@@ -1297,6 +1308,17 @@ struct InformationCache {
   LLVM_ABI ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return true if \p F has an exact definition or is inlineable.
+  ///
+  /// This is computed once when the information of \p F is initialized. For
+  /// functions that are not initialized yet, only the definition is checked,
+  /// as InlineableFunctions is also only filled on initialization.
+  bool isExactOrInlineable(const Function &F) const {
+    if (const FunctionInfo *FI = FuncInfoMap.lookup(&F))
+      return FI->IsExactOrInlineable;
+    return F.hasExactDefinition();
+  }
+
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
 
@@ -1305,6 +1327,9 @@ struct InformationCache {
 private:
   struct FunctionInfo {
     LLVM_ABI ~FunctionInfo();
+
+    /// Whether the function has an exact definition or is inlineable.
+    bool IsExactOrInlineable = false;
 
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
@@ -1322,6 +1347,10 @@ private:
 
     /// Function has the `"kernel"` attribute
     bool IsKernel;
+
+    /// The values only used by `llvm.assume`s in the function have been added
+    /// to AssumeOnlyValues.
+    bool AssumeOnlyValuesCollected = false;
   };
 
   /// A map type from functions to informatio about it.
@@ -1343,6 +1372,10 @@ private:
   /// Vector of functions that might be callable indirectly, i.a., via a
   /// function pointer.
   SmallVector<Function *> IndirectlyCallableFunctions;
+
+  /// Add the values only used by `llvm.assume`s in the function of \p FI to
+  /// AssumeOnlyValues. This is done on demand, as few users need them.
+  LLVM_ABI void collectAssumeOnlyValues(FunctionInfo &FI);
 
   /// Initialize the function information cache \p FI for the function \p F.
   ///
@@ -1807,7 +1840,7 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
+    return InfoCache.isExactOrInlineable(F) ||
            (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
@@ -2514,7 +2547,18 @@ private:
   /// the inner level.
   ///{
   using AAMapKeyTy = std::pair<const char *, IRPosition>;
-  DenseMap<AAMapKeyTy, AbstractAttribute *> AAMap;
+  /// The IDs are adjacent bytes and the positions of a value differ only in
+  /// the low bits, both of which the default hash functions mostly ignore.
+  struct AAMapKeyInfo : DenseMapInfo<AAMapKeyTy> {
+    static unsigned getHashValue(const AAMapKeyTy &Key) {
+      const IRPosition &IRP = Key.second;
+      auto ID = reinterpret_cast<uintptr_t>(Key.first);
+      auto Pos = reinterpret_cast<uintptr_t>(static_cast<void *>(IRP));
+      auto Ctx = reinterpret_cast<uintptr_t>(IRP.getCallBaseContext());
+      return detail::combineHashValue(unsigned(ID), unsigned(Pos ^ Ctx));
+    }
+  };
+  DenseMap<AAMapKeyTy, AbstractAttribute *, AAMapKeyInfo> AAMap;
   ///}
 
   /// Map to remember all requested signature changes (= argument replacements).
@@ -3193,6 +3237,10 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   const StateType &getState() const override { return *this; }
+
+  bool isAtFixpoint() const final { return StateTy::isAtFixpoint(); }
+
+  bool isStateAtFixpoint() const final { return StateTy::isAtFixpoint(); }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -3332,10 +3380,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Return false if an AA should not be updated for \p IRP.
   static bool isValidIRPositionForUpdate(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFnInterfaceKind())
+      return true;
     Function *AssociatedFn = IRP.getAssociatedFunction();
-    bool IsFnInterface = IRP.isFnInterfaceKind();
-    assert((!IsFnInterface || AssociatedFn) &&
-           "Function interface without a function?");
+    assert(AssociatedFn && "Function interface without a function?");
 
     // TODO: Not all attributes require an exact definition. Find a way to
     //       enable deduction for some but not all attributes in case the
@@ -3344,7 +3392,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
     // TODO: We could always determine abstract attributes and if sufficient
     //       information was found we could duplicate the functions that do not
     //       have an exact definition.
-    return !IsFnInterface || A.isFunctionIPOAmendable(*AssociatedFn);
+    return A.isFunctionIPOAmendable(*AssociatedFn);
   }
 
   /// Initialize the state with the information in the Attributor \p A.
@@ -3368,6 +3416,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Return the internal abstract state for inspection.
   virtual StateType &getState() = 0;
   virtual const StateType &getState() const = 0;
+
+  /// Return true if the state is at a fixpoint, like
+  /// getState().isAtFixpoint() but with a single virtual call.
+  virtual bool isStateAtFixpoint() const { return getState().isAtFixpoint(); }
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const { return *this; };

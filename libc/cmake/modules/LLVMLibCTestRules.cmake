@@ -64,7 +64,7 @@ function(_get_common_test_compile_options_impl output_var c_test)
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
       if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-        (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
+          (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
         list(APPEND compile_options "-D_MM_MALLOC_H_INCLUDED")
       endif()
       list(APPEND compile_options "-fno-exceptions")
@@ -109,6 +109,13 @@ function(_get_common_test_compile_options_impl output_var c_test)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       if(NOT c_test)
         list(APPEND compile_options "-fext-numeric-literals")
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "11.0.0")
+          # AllocChecker's operator new overloads inline malloc/aligned_alloc
+          # while C++ forbids marking replaceable operator delete inline,
+          # causing GCC to report false-positive -Wmismatched-new-delete
+          # diagnostics.
+          list(APPEND compile_options "-Wno-mismatched-new-delete")
+        endif()
       endif()
     else()
       list(APPEND compile_options "-Wno-c99-extensions")
@@ -312,8 +319,8 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           # object. External baremetal startup code can reference the public C exit
           # symbol, so use the public-packaging object for exit in this configuration.
           if(dep STREQUAL "libc.src.stdlib.exit" AND
-            NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND
-            LIBC_TARGET_OS_IS_BAREMETAL)
+              NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND
+              LIBC_TARGET_OS_IS_BAREMETAL)
             string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
           endif()
           list(APPEND dep_obj ${object_file_raw})
@@ -354,8 +361,8 @@ endif()
 # that the driver selects the same multilib. GPU and UEFI targets do not link a
 # compiler runtime.
 if(LLVM_INCLUDE_TESTS AND LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU AND
-  NOT LIBC_TARGET_OS_IS_UEFI AND
-  NOT LIBC_TEST_BUILTINS_LIBRARY AND NOT LIBC_TEST_BUILTINS_TARGET)
+    NOT LIBC_TARGET_OS_IS_UEFI AND
+    NOT LIBC_TEST_BUILTINS_LIBRARY AND NOT LIBC_TEST_BUILTINS_TARGET)
   separate_arguments(libc_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
   execute_process(
     COMMAND ${CMAKE_CXX_COMPILER} ${libc_cxx_flags}
@@ -572,8 +579,8 @@ function(_link_libc_hermetic_test fq_target_name fq_build_target_name startup_ta
 
   set(compiler_runtime "")
   if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND
-    NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND
-    NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
+      NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND
+      NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
     list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
 
@@ -942,8 +949,8 @@ function(add_libc_fuzzer target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
   target_link_libraries(${fq_target_name} PRIVATE
-    ${link_object_files}
-    ${link_libraries}
+      ${link_object_files}
+      ${link_libraries}
   )
 
   set_target_properties(${fq_target_name}

@@ -13,7 +13,6 @@
 
 #include "copyprof_reporting.h"
 
-#include "copyprof_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
@@ -39,4 +38,5 @@ void LogCopyProfReport(uptr pc, uptr bp, uptr obj_size, bool did_allocate) {
   stack_trace.PrintTo(&output);
   Printf("%s", output.data());
 }
+
 }  // namespace __copyprof

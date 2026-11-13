@@ -259,10 +259,10 @@ public:
 
   // These integral expressions for STAT= and TEAM= must be variables
   // (i.e., Designator or pointer-valued FunctionRef).
-  std::optional<Expr<SomeInteger>> stat() const;
-  CoarrayRef &set_stat(Expr<SomeInteger> &&);
-  // When team() is Expr<SomeInteger>, it's TEAM_NUMBER=; otherwise,
-  // it's TEAM=.
+  std::optional<Expr<Type<TypeCategory::Integer>>> stat() const;
+  CoarrayRef &set_stat(Expr<Type<TypeCategory::Integer>> &&);
+  // When team() is Expr<Type<TypeCategory::Integer>>, it's TEAM_NUMBER=;
+  // otherwise, it's TEAM=.
   std::optional<Expr<SomeType>> team() const;
   CoarrayRef &set_team(Expr<SomeType> &&);
   // When notify() is Expr<Some>, it's NOTIFY=.
@@ -281,7 +281,8 @@ private:
   common::CopyableIndirection<DataRef> base_;
   std::vector<Expr<SubscriptInteger>> cosubscript_;
   std::optional<common::CopyableIndirection<Expr<SomeType>>> notify_;
-  std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_;
+  std::optional<common::CopyableIndirection<Expr<Type<TypeCategory::Integer>>>>
+      stat_;
   std::optional<common::CopyableIndirection<Expr<SomeType>>> team_;
 };
 
@@ -347,7 +348,7 @@ public:
   bool operator==(const Substring &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
-  std::optional<Expr<SomeCharacter>> Fold(FoldingContext &);
+  std::optional<Expr<Type<TypeCategory::Character>>> Fold(FoldingContext &);
 
 private:
   void SetBounds(std::optional<Expr<SubscriptInteger>> &,
@@ -395,8 +396,8 @@ template <typename T> class Designator {
 
 public:
   using Result = T;
-  static_assert(
-      IsSpecificIntrinsicType<Result> || std::is_same_v<Result, SomeDerived>);
+  static_assert(IsSpecificIntrinsicType<Result> ||
+      std::is_same_v<Result, Type<TypeCategory::Derived>>);
 
   constexpr int kind() const { return kind_; }
 
@@ -410,10 +411,12 @@ public:
     CHECK_KIND(kind, T);
   }
   template <typename A, typename U = T,
-      typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
+      typename =
+          std::enable_if_t<std::is_same_v<U, Type<TypeCategory::Derived>>>>
   explicit Designator(const A &x) : Designator(0, x) {}
   template <typename A, typename U = T, typename = common::NoLvalue<A>,
-      typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
+      typename =
+          std::enable_if_t<std::is_same_v<U, Type<TypeCategory::Derived>>>>
   explicit Designator(A &&x) : Designator(0, std::move(x)) {}
   bool operator==(const Designator &) const;
   Designator(int kind, const DataRef &that)
@@ -425,10 +428,12 @@ public:
     CHECK_KIND(kind, T);
   }
   template <typename U = T,
-      typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
+      typename =
+          std::enable_if_t<std::is_same_v<U, Type<TypeCategory::Derived>>>>
   Designator(const DataRef &that) : Designator(0, that) {}
   template <typename U = T,
-      typename = std::enable_if_t<std::is_same_v<U, SomeDerived>>>
+      typename =
+          std::enable_if_t<std::is_same_v<U, Type<TypeCategory::Derived>>>>
   Designator(DataRef &&that) : Designator(0, std::move(that)) {}
 
   std::optional<DynamicType> GetType() const;
