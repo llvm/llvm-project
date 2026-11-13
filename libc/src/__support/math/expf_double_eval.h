@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace double_eval {
 
-LIBC_INLINE float expf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float expf(float x) {
   using FPBits = fputil::FPBits<float>;
   using FPBounds = math::check::exp_internal::Bounds<float>;
 

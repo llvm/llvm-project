@@ -814,6 +814,7 @@ add_header_library(
   HDRS
     ceil.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -837,6 +838,7 @@ add_header_library(
   HDRS
     ceilf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -858,6 +860,7 @@ add_header_library(
   HDRS
     ceilf16.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations
@@ -2536,6 +2539,7 @@ add_header_library(
   HDRS
     rint.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -2559,6 +2563,7 @@ add_header_library(
   HDRS
     rintf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -2580,6 +2585,7 @@ add_header_library(
   HDRS
     rintf16.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations
@@ -2602,6 +2608,7 @@ add_header_library(
   HDRS
     round.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
@@ -2630,6 +2637,7 @@ add_header_library(
   HDRS
     roundeven.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -2653,6 +2661,7 @@ add_header_library(
   HDRS
     roundevenf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -2674,6 +2683,7 @@ add_header_library(
   HDRS
     roundevenf16.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations
@@ -2696,6 +2706,7 @@ add_header_library(
   HDRS
     roundf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
@@ -2722,6 +2733,7 @@ add_header_library(
   HDRS
     roundf16.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations
@@ -2941,6 +2953,7 @@ add_header_library(
     copysignf16.h
   DEPENDS
     libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
   FLAGS
@@ -3937,6 +3950,7 @@ add_header_library(
   HDRS
     floor.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -3960,6 +3974,7 @@ add_header_library(
   HDRS
     floorf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -3981,6 +3996,7 @@ add_header_library(
   HDRS
     floorf16.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations
@@ -6599,6 +6615,7 @@ add_header_library(
   HDRS
     trunc.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -6622,6 +6639,7 @@ add_header_library(
   HDRS
     truncf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
   FLAGS
@@ -6643,6 +6661,7 @@ add_header_library(
   HDRS
     truncf16.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations

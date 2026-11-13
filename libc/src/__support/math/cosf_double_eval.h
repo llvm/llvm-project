@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace double_eval {
 
-LIBC_INLINE float cosf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float cosf(float x) {
   using namespace sincosf_utils_internal;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS

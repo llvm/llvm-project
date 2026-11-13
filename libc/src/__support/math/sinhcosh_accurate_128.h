@@ -63,7 +63,8 @@ LIBC_INLINE_VAR constexpr Frac128 SINH_SMALL_POLY_128[10] = {
 };
 
 // 128-bit accurate path for sinh(x) when 2^-26 < |x| < 2^-2:
-LIBC_NOINLINE LIBC_INLINE double sinh_small_accurate_128(double x) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+sinh_small_accurate_128(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
   int exp_x = xbits.get_exponent(); // in [-26, -3]
@@ -188,7 +189,8 @@ LIBC_INLINE_VAR constexpr Frac64 EXP2_COSH_W_LO64[3] = {
 // in 128-bit precision using direct base-2 192-bit fixed-point range reduction
 // for 2^-2 <= |x| < 0x1.633ce8fb9f87ep+9 (sinh) or
 // 2^-27 < |x| < 0x1.633ce8fb9f87ep+9 (cosh).
-LIBC_NOINLINE LIBC_INLINE double exp_pm_accurate_128(double x, bool is_sinh) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+exp_pm_accurate_128(double x, bool is_sinh) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
   int exp_x = xbits.get_exponent(); // in [-2, 9] for sinh, [-27, 9] for cosh
@@ -208,7 +210,7 @@ LIBC_NOINLINE LIBC_INLINE double exp_pm_accurate_128(double x, bool is_sinh) {
   //   w   = v^2 in [0, 1)      (lsb = 2^-128).
   int k_p = 0;
   bool u_is_neg = false;
-  Frac128 v;
+  Frac128 v{};
   if (LIBC_LIKELY(exp_x >= -6)) {
     // Since p.val[3] has lsb = 2^(exp_x - 62), the 2^-5 bit of |z| is at bit
     // shr = 57 - exp_x (in [48, 63]) of p.val[3]:

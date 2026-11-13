@@ -59,7 +59,7 @@ LIBC_INLINE_VAR constexpr double EXP_P_COEFFS[6] = {
 };
 
 // Evaluate P(u) ~ (e^u - 1 - u) / u^2 using Estrin's scheme:
-LIBC_ALWAYS_INLINE double exp_poly(double u, double u2) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double exp_poly(double u, double u2) {
   double c0 = fputil::multiply_add(u, EXP_P_COEFFS[1], EXP_P_COEFFS[0]);
   double c1 = fputil::multiply_add(u, EXP_P_COEFFS[3], EXP_P_COEFFS[2]);
   double u4 = u2 * u2;
@@ -139,8 +139,8 @@ LIBC_INLINE_VAR constexpr double EXP2_MID[128] = {
 
 #endif // LIBC_MATH_HAS_SMALL_TABLES
 
-LIBC_NOINLINE LIBC_INLINE double exp_denorm(double x, int hi, double r,
-                                            bool is_exp2) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+exp_denorm(double x, int hi, double r, bool is_exp2) {
   using FPBits = fputil::FPBits<double>;
   if (is_exp2 && LIBC_UNLIKELY(static_cast<double>(hi) == x))
     return FPBits(uint64_t(1) << (hi + 1074)).get_val();

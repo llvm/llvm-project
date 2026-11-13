@@ -128,7 +128,7 @@ LIBC_INLINE_VAR constexpr double COEFFS[32][8] = {
 
 } // namespace erff_internal
 
-LIBC_INLINE float erff(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float erff(float x) {
   using namespace erff_internal;
 
   using FPBits = typename fputil::FPBits<float>;

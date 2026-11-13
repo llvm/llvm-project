@@ -75,7 +75,8 @@ LIBC_INLINE_VAR constexpr Frac64 TANH_SMALL_W_LO64[4] = {
 };
 
 // 128-bit accurate path for tanh(x) when 2^-27 < |x| < 2^-3:
-LIBC_NOINLINE LIBC_INLINE double tanh_small_accurate_128(double x) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+tanh_small_accurate_128(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
   int exp_x = xbits.get_exponent(); // in [-27, -4]
@@ -142,7 +143,8 @@ LIBC_NOINLINE LIBC_INLINE double tanh_small_accurate_128(double x) {
 // Dividing numerator and denominator by 2^hi_p gives:
 //   tanh(|x|) = (m_final - 2^-hi_p) / (m_final + 2^-hi_p)
 // where 2^-hi_p is a single bit in Frac128.
-LIBC_NOINLINE LIBC_INLINE double tanh_accurate_128(double x) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+tanh_accurate_128(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
   int exp_x = xbits.get_exponent(); // in [-3, 4]

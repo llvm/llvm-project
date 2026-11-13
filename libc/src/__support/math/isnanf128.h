@@ -18,7 +18,7 @@ namespace math {
 
 using LIBC_NAMESPACE::fputil::Float128;
 
-LIBC_INLINE LIBC_CONSTEXPR int isnanf128(Float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int isnanf128(Float128 x) {
   return fputil::FPBits<Float128>(x).is_nan();
 }
 

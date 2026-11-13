@@ -88,7 +88,7 @@ LIBC_INLINE_VAR constexpr double COEFFS[16][7] = {
 
 } // namespace cbrtf_internal
 
-LIBC_INLINE float cbrtf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float cbrtf(float x) {
   using namespace cbrtf_internal;
 
   using FloatBits = typename fputil::FPBits<float>;

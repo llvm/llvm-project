@@ -115,9 +115,10 @@ LIBC_INLINE_VAR constexpr fputil::DoubleDouble COEFFS[9] = {
 //   idx, k_d   = round( 2^4 * num_d / den_d )
 //   final_sign = sign of the final result
 //   const_term = the constant term in the final expression.
-LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
-                                       int idx, double k_d, double final_sign,
-                                       const fputil::DoubleDouble &const_term) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float
+atan2f_double_double(double num_d, double den_d, double q_d, int idx,
+                     double k_d, double final_sign,
+                     const fputil::DoubleDouble &const_term) {
   fputil::DoubleDouble q;
   double num_r = 0, den_r = 0;
 
@@ -239,7 +240,7 @@ LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
 // 0x1.aec6f...p-100
 // which is about rounding errors of double-double (2^-104).
 
-LIBC_INLINE float atan2f(float y, float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float atan2f(float y, float x) {
   using namespace atan2f_internal;
   using namespace atan_internal;
   using FPBits = typename fputil::FPBits<float>;
