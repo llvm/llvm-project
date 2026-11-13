@@ -334,7 +334,10 @@ void GSIStreamBuilder::addPublicSymbols(std::vector<BulkPublic> &&PublicsIn) {
   });
 
   // Assign offsets and calculate the length of the public symbol records.
-  uint32_t SymOffset = 0;
+  // Accumulate in 64 bits so the total does not silently wrap;
+  // finalizeMsfLayout rejects streams larger than UINT32_MAX using the
+  // untruncated RecordByteSize.
+  uint64_t SymOffset = 0;
   for (BulkPublic &Pub : Publics) {
     Pub.SymOffset = SymOffset;
     SymOffset += sizeOfPublic(Pub);
