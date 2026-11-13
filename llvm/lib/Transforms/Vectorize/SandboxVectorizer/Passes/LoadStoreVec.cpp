@@ -25,14 +25,6 @@ namespace sandboxir {
 
 #define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
-/// \returns true if \p Ty is a pointer, or a vector of pointers, in a
-/// non-integral address space, which has no stable integer representation.
-static bool isNonIntegralPtr(Type *Ty, const DataLayout &DL) {
-  Type *ScalarTy = Ty->getScalarType();
-  return ScalarTy->isPointerTy() &&
-         DL.isNonIntegralAddressSpace(ScalarTy->getPointerAddressSpace());
-}
-
 std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
@@ -80,25 +72,63 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   return VecL;
 }
 
-Constant *LoadStoreVec::getEquivalentConstantWithType(Constant *C,
-                                                      Type *DestTy) {
-  Type *SrcTy = C->getType();
-  // A non-integral pointer has no fixed ptrtoint/inttoptr representation.
-  if (isNonIntegralPtr(SrcTy, *DL) || isNonIntegralPtr(DestTy, *DL))
-    return nullptr;
-  if (SrcTy == DestTy)
-    return C;
-
-  Constant *AsInt = C;
-  if (!SrcTy->isIntegerTy()) {
-    Type *IntTy = IntegerType::get(*Ctx, Utils::getNumBits(SrcTy, *DL));
-    AsInt = SrcTy->isPointerTy() ? ConstantExpr::getPtrToInt(C, IntTy)
-                                 : ConstantExpr::getBitCast(C, IntTy);
+Type *Reinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
+  Context &Ctx = Ty->getContext();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+    auto *ElmIntTy =
+        IntegerType::get(Ctx, Utils::getNumBits(VecTy->getElementType(), DL));
+    return FixedVectorType::get(ElmIntTy, VecTy->getNumElements());
   }
-  if (DestTy->isIntegerTy())
-    return AsInt;
-  return DestTy->isPointerTy() ? ConstantExpr::getIntToPtr(AsInt, DestTy)
-                               : ConstantExpr::getBitCast(AsInt, DestTy);
+  return IntegerType::get(Ctx, Utils::getNumBits(Ty, DL));
+}
+
+SmallVector<Reinterpret::CastStep, 3>
+Reinterpret::getCastChain(Type *SrcTy, Type *DestTy, const DataLayout &DL) {
+  assert(canReinterpret(SrcTy, DestTy, DL) &&
+         "Cannot reinterpret a non-integral pointer!");
+  assert(Utils::getNumBits(SrcTy, DL) == Utils::getNumBits(DestTy, DL) &&
+         "Expected types of the same size!");
+  SmallVector<CastStep, 3> Chain;
+  if (SrcTy == DestTy)
+    return Chain;
+  Type *Ty = SrcTy;
+  if (Ty->getScalarType()->isPointerTy()) {
+    Ty = getIntTypeFor(Ty, DL);
+    Chain.emplace_back(Instruction::Opcode::PtrToInt, Ty);
+  }
+  bool DestIsPtr = DestTy->getScalarType()->isPointerTy();
+  Type *BitCastTy = DestIsPtr ? getIntTypeFor(DestTy, DL) : DestTy;
+  if (Ty != BitCastTy)
+    Chain.emplace_back(Instruction::Opcode::BitCast, BitCastTy);
+  if (DestIsPtr)
+    Chain.emplace_back(Instruction::Opcode::IntToPtr, DestTy);
+  // ptrtoint, bitcast, and inttoptr, with any step omitted. A vector of
+  // pointers and a scalar pointer of the same width need all three.
+  assert(Chain.size() <= 3 && "Unexpected reinterpret cast chain!");
+  return Chain;
+}
+
+Constant *Reinterpret::reinterpretConstant(Constant *C, Type *DestTy,
+                                           const DataLayout &DL) {
+  if (!canReinterpret(C->getType(), DestTy, DL))
+    return nullptr;
+  Constant *NewC = C;
+  for (auto [Opc, Ty] : getCastChain(C->getType(), DestTy, DL)) {
+    switch (Opc) {
+    case Instruction::Opcode::PtrToInt:
+      NewC = ConstantExpr::getPtrToInt(NewC, Ty);
+      break;
+    case Instruction::Opcode::BitCast:
+      NewC = ConstantExpr::getBitCast(NewC, Ty);
+      break;
+    case Instruction::Opcode::IntToPtr:
+      NewC = ConstantExpr::getIntToPtr(NewC, Ty);
+      break;
+    default:
+      llvm_unreachable("Unexpected cast in reinterpret chain!");
+    }
+  }
+  return NewC;
 }
 
 Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
@@ -171,7 +201,7 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
   for (Constant *C : ConstantElements) {
     unsigned Bits = Utils::getNumBits(C, *DL);
     if (Bits == LaneBits) {
-      Constant *Lane = getEquivalentConstantWithType(C, LaneTy);
+      Constant *Lane = Reinterpret::reinterpretConstant(C, LaneTy, *DL);
       if (Lane == nullptr)
         return nullptr;
       LaneTyConstants.push_back(Lane);
@@ -197,7 +227,8 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
         // without changing its bits, so a float lane stays a float.
         Constant *SliceCInt = ConstantInt::get(
             *Ctx, Val.extractBits(LaneBits, EndianAwareSlice * LaneBits));
-        Constant *SliceC = getEquivalentConstantWithType(SliceCInt, LaneTy);
+        Constant *SliceC =
+            Reinterpret::reinterpretConstant(SliceCInt, LaneTy, *DL);
         if (SliceC == nullptr)
           return nullptr;
         LaneTyConstants.push_back(SliceC);
