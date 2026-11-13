@@ -43,6 +43,10 @@ using common::RealFlag;
 using common::RealFlags;
 using common::RelationalOperator;
 
+// Keep DATA initialization and scalar expansion during folding within the
+// same limit, so oversized initializers can be diagnosed before expansion.
+static constexpr std::uint64_t maxDataInitBytes{1000000000};
+
 // Integers are always ordered; reals may not be.
 ENUM_CLASS(Ordering, Less, Equal, Greater)
 ENUM_CLASS(Relation, Less, Equal, Greater, Unordered)

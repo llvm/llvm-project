@@ -30,11 +30,6 @@ static constexpr bool makeDefaultInitializationExplicit{false};
 // objects and pointers.
 static constexpr bool removeOriginalInits{false};
 
-// Impose a hard limit that's more than large enough for real applications but
-// small enough to cause artificial stress tests to fail reasonably instead of
-// crashing the compiler with a memory allocation failure.
-static constexpr auto maxDataInitBytes{std::size_t{1000000000}}; // 1GiB
-
 namespace Fortran::semantics {
 
 // Steps through a list of values in a DATA statement set; implements
@@ -372,7 +367,7 @@ bool DataInitializationCompiler<DSV>::InitElement(
   const SomeExpr *expr{*values_};
   if (!expr) {
     CHECK(exprAnalyzer_.context().AnyFatalError());
-  } else if (symbol.size() > maxDataInitBytes) {
+  } else if (symbol.size() > evaluate::maxDataInitBytes) {
     evaluate::AttachDeclaration(
         exprAnalyzer_.context().Say(
             "'%s' is too large to initialize with a DATA statement"_todo_en_US,
