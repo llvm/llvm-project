@@ -11822,7 +11822,7 @@ bool ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
   }
 
   // Check conditions due to any @llvm.assume intrinsics.
-  for (auto &AssumeVH : AC.assumptions()) {
+  for (auto &AssumeVH : AC.conditionalAssumptions()) {
     if (!AssumeVH)
       continue;
     auto *CI = cast<CallInst>(AssumeVH);
@@ -11917,7 +11917,7 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   }
 
   // Check conditions due to any @llvm.assume intrinsics.
-  for (auto &AssumeVH : AC.assumptions()) {
+  for (auto &AssumeVH : AC.conditionalAssumptions()) {
     if (!AssumeVH)
       continue;
     auto *CI = cast<CallInst>(AssumeVH);
@@ -15966,7 +15966,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
   SmallVector<PointerIntPair<Value *, 1, bool>> Terms;
   // First, collect information from assumptions dominating the loop.
-  for (auto &AssumeVH : SE.AC.assumptions()) {
+  for (auto &AssumeVH : SE.AC.conditionalAssumptions()) {
     if (!AssumeVH)
       continue;
     auto *AssumeI = cast<CallInst>(AssumeVH);
