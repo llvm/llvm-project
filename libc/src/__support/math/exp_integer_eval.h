@@ -35,6 +35,7 @@ LIBC_ALWAYS_INLINE uint64_t exp_bits(uint64_t x_u,
   using FPBits = fputil::FPBits<double>;
 
   uint64_t x_abs = x_u & 0x7fff'ffff'ffff'ffff;
+  bool is_neg = (x_u >> 63) != 0;
 
   if (x_abs > FPBits::inf().uintval())
     return x_u | (uint64_t(1) << (FPBits::FRACTION_LEN - 1));
@@ -50,13 +51,15 @@ LIBC_ALWAYS_INLINE uint64_t exp_bits(uint64_t x_u,
       if (x_abs == 0)
         return ONE;
 
-      bool is_neg = (x_u >> 63) != 0;
-
       if (x_abs == 0x3ca0'0000'0000'0000) {
         if (rounding == FE_TONEAREST || (rounding == FE_UPWARD && !is_neg) ||
             ((rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO) && is_neg))
           return is_neg ? ONE - 1 : ONE + 1;
       }
+
+      if (rounding == FE_TONEAREST && is_neg &&
+          x_abs > 0x3c90'0000'0000'0000) // |x| > 2^-54
+        return ONE - 1;
 
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       if (rounding == FE_UPWARD && !is_neg)
@@ -98,7 +101,6 @@ LIBC_ALWAYS_INLINE uint64_t exp_bits(uint64_t x_u,
 
   // Main calculations
 
-  bool is_neg = (x_u >> 63) != 0;
   uint32_t x_e = static_cast<uint32_t>(x_abs >> FPBits::FRACTION_LEN);
   uint64_t x_s = x_abs & FPBits::FRACTION_MASK;
 
