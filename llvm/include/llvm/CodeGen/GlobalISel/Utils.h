@@ -581,10 +581,6 @@ LLVM_ABI bool canCreateUndefOrPoison(Register Reg,
                                      const MachineRegisterInfo &MRI,
                                      bool ConsiderFlagsAndMetadata = true);
 
-/// Returns true if \p Reg can create poison from non-poison operands.
-LLVM_ABI bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
-                              bool ConsiderFlagsAndMetadata = true);
-
 /// Returns true if \p Reg cannot be poison and undef.
 LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
                                                const MachineRegisterInfo &MRI,
