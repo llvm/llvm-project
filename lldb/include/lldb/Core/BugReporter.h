@@ -30,7 +30,7 @@ public:
 /// reporter asks for the same thing.
 llvm::ArrayRef<llvm::StringRef> GetBugReportQuestions();
 
-/// The note that follows an error that may be a bug in LLDB.
+/// Appended to an error that may be a bug in LLDB. Starts with a newline.
 llvm::StringRef GetBugReportNote();
 
 } // namespace lldb_private

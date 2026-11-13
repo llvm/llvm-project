@@ -182,7 +182,7 @@ TEST_F(DiagnosticEventTest, InternalError) {
   ListenerSP listener_sp = Listener::MakeListener("test-listener");
   listener_sp->StartListeningForEvents(&debugger_sp->GetBroadcaster(),
                                        lldb::eBroadcastBitError);
-  const std::string note = ("\nnote: " + GetBugReportNote()).str();
+  const std::string note = GetBugReportNote().str();
 
   Debugger::ReportInternalError("foo", debugger_sp->GetID());
   EXPECT_EQ(GetErrorMessage(listener_sp), "foo" + note);
@@ -219,7 +219,7 @@ TEST_F(DiagnosticEventTest, InternalErrorMultipleDebuggers) {
   }
 
   Debugger::ReportInternalError("qux");
-  const std::string expected = ("qux\nnote: " + GetBugReportNote()).str();
+  const std::string expected = ("qux" + GetBugReportNote()).str();
   for (const ListenerSP &listener_sp : listeners)
     EXPECT_EQ(GetErrorMessage(listener_sp), expected);
 

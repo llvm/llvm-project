@@ -18,5 +18,5 @@ llvm::ArrayRef<llvm::StringRef> lldb_private::GetBugReportQuestions() {
 }
 
 llvm::StringRef lldb_private::GetBugReportNote() {
-  return "if you believe this is a bug, use the 'bugreport' command";
+  return "\nnote: if you believe this is a bug, use the 'bugreport' command";
 }

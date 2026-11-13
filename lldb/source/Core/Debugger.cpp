@@ -1846,7 +1846,7 @@ static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
   }
 
   if (internal_error && debugger.ShouldSuggestBugReport(message))
-    message += ("\nnote: " + GetBugReportNote()).str();
+    message += GetBugReportNote();
 
   Broadcaster &broadcaster = debugger.GetBroadcaster();
   if (!broadcaster.EventTypeHasListeners(event_type)) {
