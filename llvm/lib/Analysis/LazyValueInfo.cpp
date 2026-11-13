@@ -18,6 +18,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
@@ -1890,7 +1891,8 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   const Use *CurrU = &U;
   // TODO: Increase limit?
   const unsigned MaxUsesToInspect = 3;
-  for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
+  unsigned I = 0;
+  for (; I < MaxUsesToInspect; ++I) {
     std::optional<ValueLatticeElement> CondVal;
     auto *CurrI = cast<Instruction>(CurrU->getUser());
 
@@ -1944,6 +1946,20 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     if (V->getType()->isVectorTy() && !isNotCrossLaneOperation(CurrI))
       break;
     CurrU = &*CurrI->use_begin();
+  }
+
+  // Emit a remark when we're over the budget, but only the non-constant value
+  // (which no condition can possibly narrow, so reporting that is just noise).
+  if (I == MaxUsesToInspect && !isa<Constant>(V)) {
+    Function *F = CtxI->getFunction();
+    if (OptimizationRemarkEmitter::allowExtraAnalysis(*F, DEBUG_TYPE)) {
+      OptimizationRemarkEmitter ORE(F);
+      ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "UseLimitReached",
+                                        cast<Instruction>(CurrU->getUser()))
+               << "stopped looking for conditions on " << ore::NV("Value", V)
+               << " after " << ore::NV("MaxUses", MaxUsesToInspect)
+               << " transitive uses");
+    }
   }
   return VL;
 }
