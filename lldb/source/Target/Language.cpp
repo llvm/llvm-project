@@ -9,8 +9,6 @@
 #include <array>
 #include <atomic>
 #include <functional>
-#include <map>
-#include <mutex>
 
 #include "lldb/Target/Language.h"
 
@@ -24,15 +22,11 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
-
-typedef std::unique_ptr<Language> LanguageUP;
-typedef std::map<lldb::LanguageType, LanguageUP> LanguagesMap;
 
 #define LLDB_PROPERTIES_language
 #include "TargetProperties.inc"
@@ -63,48 +57,8 @@ bool LanguageProperties::GetEnableFilterForLineBreakpoints() const {
       idx, g_language_properties[idx].default_uint_value != 0);
 }
 
-static LanguagesMap &GetLanguagesMap() {
-  static LanguagesMap *g_map = nullptr;
-  static llvm::once_flag g_initialize;
-
-  llvm::call_once(g_initialize, [] {
-    g_map = new LanguagesMap(); // NOTE: INTENTIONAL LEAK due to global
-                                // destructor chain
-  });
-
-  return *g_map;
-}
-static std::mutex &GetLanguagesMutex() {
-  static std::mutex *g_mutex = nullptr;
-  static llvm::once_flag g_initialize;
-
-  llvm::call_once(g_initialize, [] {
-    g_mutex = new std::mutex(); // NOTE: INTENTIONAL LEAK due to global
-                                // destructor chain
-  });
-
-  return *g_mutex;
-}
-
 Language *Language::FindPlugin(lldb::LanguageType language) {
-  std::lock_guard<std::mutex> guard(GetLanguagesMutex());
-  LanguagesMap &map(GetLanguagesMap());
-  auto iter = map.find(language), end = map.end();
-  if (iter != end)
-    return iter->second.get();
-
-  Language *language_ptr = nullptr;
-
-  for (auto create_callback : PluginManager::GetLanguageCreateCallbacks()) {
-    language_ptr = create_callback(language);
-
-    if (language_ptr) {
-      map[language] = std::unique_ptr<Language>(language_ptr);
-      return language_ptr;
-    }
-  }
-
-  return nullptr;
+  return PluginManager::GetLanguageInstance(language);
 }
 
 Language *Language::FindPlugin(llvm::StringRef file_path) {
@@ -153,31 +107,8 @@ Language::FindPluginForManglingScheme(Mangled::ManglingScheme scheme) {
 
 void Language::ForEach(
     llvm::function_ref<IterationAction(Language *)> callback) {
-  // If we want to iterate over all languages, we first have to complete the
-  // LanguagesMap.
-  static llvm::once_flag g_initialize;
-  llvm::call_once(g_initialize, [] {
-    for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes;
-         ++lang) {
-      FindPlugin(static_cast<lldb::LanguageType>(lang));
-    }
-  });
-
-  // callback may call a method in Language that attempts to acquire the same
-  // lock (such as Language::ForEach or Language::FindPlugin). To avoid a
-  // deadlock, we do not use callback while holding the lock.
-  std::vector<Language *> loaded_plugins;
-  {
-    std::lock_guard<std::mutex> guard(GetLanguagesMutex());
-    LanguagesMap &map(GetLanguagesMap());
-    for (const auto &entry : map) {
-      if (entry.second)
-        loaded_plugins.push_back(entry.second.get());
-    }
-  }
-
-  for (auto *lang : loaded_plugins) {
-    if (callback(lang) == IterationAction::Stop)
+  for (Language *language : PluginManager::GetAllLanguageInstances()) {
+    if (callback(language) == IterationAction::Stop)
       break;
   }
 }
