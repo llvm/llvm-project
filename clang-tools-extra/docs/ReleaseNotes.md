@@ -150,6 +150,12 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`llvm-mlir-use-after-erase
+  <clang-tidy/checks/llvm/mlir-use-after-erase>` check.
+
+  Finds uses of an MLIR operation after it has been erased or replaced, for
+  example through `Operation::erase` or `RewriterBase::eraseOp`.
+
 - New {doc}`modernize-use-if-consteval
   <clang-tidy/checks/modernize/use-if-consteval>` check.
 
@@ -252,6 +258,21 @@ infrastructure are described first, followed by tool-specific sections.
     Boolean model that avoids relying on a SAT solver. Previously, only SAT was
     available. This leads to faster analysis, but the trade-off is more false
     positives (when has value checks involve correlated variables or ORs).
+
+- Improved {doc}`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by adding the
+  {option}`ReportAccessOnlyUseForTypes` option, which restricts diagnostics to
+  uses that access the object (a member access, a dereference, or a subscript)
+  for the configured pointer-like types, ignoring other references such as
+  passing, comparing, or copying the moved-from variable. The
+  {option}`InvalidationFunctions` option now defaults to
+  `::std::move;::std::forward`; custom values replace this default, so list
+  these functions explicitly to continue checking them. Entries may specify
+  an explicit argument index to model functions that invalidate a specific
+  argument. The {option}`HandleAccessorFunctions` has also been added, which
+  unwraps a handle object to the underlying resource that gets invalidated
+  (for example, an `operator->` or a `getResource()` that returns the wrapped
+  resource).
 
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing

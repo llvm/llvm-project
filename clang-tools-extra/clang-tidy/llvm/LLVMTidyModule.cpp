@@ -8,6 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
+#include "../bugprone/UseAfterMoveCheck.h"
 #include "../readability/ElseAfterReturnCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
@@ -37,6 +38,8 @@ public:
     CheckFactories.registerCheck<FormatvStringCheck>("llvm-formatv-string");
     CheckFactories.registerCheck<LLVMHeaderGuardCheck>("llvm-header-guard");
     CheckFactories.registerCheck<IncludeOrderCheck>("llvm-include-order");
+    CheckFactories.registerCheck<bugprone::UseAfterMoveCheck>(
+        "llvm-mlir-use-after-erase");
     CheckFactories.registerCheck<readability::NamespaceCommentCheck>(
         "llvm-namespace-comment");
     CheckFactories.registerCheck<PreferIsaOrDynCastInConditionalsCheck>(
@@ -66,6 +69,16 @@ public:
     Options.CheckOptions["llvm-else-after-return.WarnOnUnfixable"] = "false";
     Options.CheckOptions["llvm-else-after-return.WarnOnConditionVariables"] =
         "false";
+    Options.CheckOptions["llvm-mlir-use-after-erase.InvalidationFunctions"] =
+        "::mlir::Operation::erase$;::mlir::Operation::destroy$;"
+        "::mlir::RewriterBase::eraseOp(0);"
+        "::mlir::RewriterBase::eraseOpResults(0);"
+        "::mlir::RewriterBase::replaceOp(0)";
+    Options
+        .CheckOptions["llvm-mlir-use-after-erase.ReportAccessOnlyUseForTypes"] =
+        "::mlir::Operation;::mlir::OpState";
+    Options.CheckOptions["llvm-mlir-use-after-erase.HandleAccessorFunctions"] =
+        "::mlir::OpState::operator->;::mlir::OpState::getOperation";
     return Options;
   }
 };
