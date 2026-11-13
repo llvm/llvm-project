@@ -109,9 +109,10 @@ space attributes for pointers:
 
 ## Relocatable linking
 
-`-r` links the SYCL device code of its inputs, adds the code that registers it
-with the SYCL runtime, and merges the inputs into one relocatable object. The
-object can be linked later by any host linker, or put into a static library.
+With `-r`, clang links the SYCL device code of its inputs and merges the inputs
+into one object file. That object file also contains the code that registers the
+device code with the SYCL runtime, so any host linker can link it later, also
+from a static library.
 
 ```console
 clang++ -fsycl -c a.cpp b.cpp
