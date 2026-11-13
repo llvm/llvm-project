@@ -21,7 +21,11 @@
 
 void foo() {
 
-  int x = 0, y = 2, sem = 0;
+  // Keep the variables in separate TSan shadow cells. Accesses synchronized by
+  // the dependence wait must not evict the access history for the race on y.
+  _Alignas(8) int x = 0;
+  _Alignas(8) int y = 2;
+  _Alignas(8) int sem = 0;
 
 #pragma omp task depend(inout : x) shared(x, sem)
   {
@@ -53,7 +57,7 @@ int main() {
 
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK-NEXT:   {{(Write|Read)}} of size 4
-// CHECK-NEXT: #0 {{.*}}taskwait-depend.c:42
+// CHECK-NEXT: #0 {{.*}}taskwait-depend.c:46
 // CHECK:   Previous write of size 4
-// CHECK-NEXT: #0 {{.*}}taskwait-depend.c:35
+// CHECK-NEXT: #0 {{.*}}taskwait-depend.c:39
 // CHECK: ThreadSanitizer: reported {{[0-9]+}} warnings
