@@ -719,9 +719,8 @@ public:
     // trigger generation of an offload kernel entry point and to schedule
     // an invocation of it on a device with kernelFunc (a SYCL kernel object)
     // passed as a kernel argument. This call will result in an implicit call
-    // to sycl_kernel_launch() with the symbol name for the generated offload
-    // kernel entry point passed as the first function argument followed by
-    // kernelFunc.
+    // to sycl_kernel_launch() with a synthesized kernel information type
+    // passed as the first template argument.
     kernel_entry_point<KernelName>(kernelFunc);
   }
 };
@@ -813,14 +812,15 @@ There are a few items worthy of note:
 
 Within `single_task()`, the call to `kernel_entry_point()` is effectively
 replaced with a synthesized call to a `sycl_kernel_launch` template that
-looks approximately as follows.
+looks approximately as follows where `kernel-info` is an exposition only
+name.
 
 ```c++
 struct kernel-info {
   using kernel_name = KN;
   static constexpr const char kernel_entry_point_name[] = "sycl-kernel-caller-for-KN";
 };
-sycl_kernel_launch<KN>(kernelFunc);
+sycl_kernel_launch<kernel-info>(kernelFunc);
 ```
 
 There are a few items worthy of note:

@@ -440,8 +440,11 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
 ClassTemplateDecl *SemaSYCL::GetSYCLKernelInfoClassTemplate() {
   if (!SYCLKernelInfoClassTemplate) {
     ASTContext &Ctx = getASTContext();
-    DeclContext *DC = Ctx.getTranslationUnitDecl();
     SourceLocation Loc;
+
+    // The class template is implicitly declared in the translation unit
+    // declaration context.
+    DeclContext *DC = Ctx.getTranslationUnitDecl();
 
     // Build a reserved identifier for the name of the class template. The
     // name is formally unspecified.
@@ -461,8 +464,7 @@ ClassTemplateDecl *SemaSYCL::GetSYCLKernelInfoClassTemplate() {
         Ctx, /*TemplateLoc*/ Loc, /*LAngleLoc*/ Loc, KernelNameParam,
         /*RAngleLoc*/ Loc, /*RequiresClause*/ nullptr);
 
-    // Build the class template and register it with its corresponding
-    // DeclContext.
+    // Build the class template and add it to its declaration context.
     CXXRecordDecl *KernelInfoDecl =
         CXXRecordDecl::Create(Ctx, TagTypeKind::Class, DC, /*StartLoc*/ Loc,
                               /*IdLoc*/ Loc, KernelInfoID);
@@ -470,7 +472,6 @@ ClassTemplateDecl *SemaSYCL::GetSYCLKernelInfoClassTemplate() {
         Ctx, DC, /*L*/ Loc, DeclarationName(KernelInfoID), ParamList,
         KernelInfoDecl);
     KernelInfoDecl->setDescribedClassTemplate(SYCLKernelInfoClassTemplate);
-    SYCLKernelInfoClassTemplate->setAccess(AS_public);
     DC->addDecl(SYCLKernelInfoClassTemplate);
     SemaRef.addSynthesizedTopLevelDecl(SYCLKernelInfoClassTemplate);
   }
@@ -531,6 +532,8 @@ QualType SemaSYCL::GetSYCLKernelInfoClassSpecializationType(QualType KNT) {
       // Retrieve the canonical underlying type to use for the returned
       // specialization type.
       UnderlyingKernelInfoType = Ctx.getCanonicalTagType(KernelInfoDecl);
+    } else {
+      UnderlyingKernelInfoType = Ctx.getCanonicalTagType(IT->second);
     }
   }
 
@@ -551,12 +554,11 @@ namespace {
 /// kernel entry point function.
 ///
 /// template<>
-/// struct sycl-kernel-info<KNT> {
+/// struct  __sycl_kernel_info<KNT> {
 ///   using kernel_name = KNT;
 ///   static constexpr const char kernel_entry_point_name[] = "<kernel-name>";
 /// };
-ClassTemplateSpecializationDecl *
-BuildSYCLKernelInfoClassSpecializationDefn(Sema &SemaRef, QualType KNT) {
+void BuildSYCLKernelInfoClassSpecializationDefn(Sema &SemaRef, QualType KNT) {
   assert(!KNT->isDependentType());
 
   ASTContext &Ctx = SemaRef.getASTContext();
@@ -616,8 +618,6 @@ BuildSYCLKernelInfoClassSpecializationDefn(Sema &SemaRef, QualType KNT) {
 
   // Complete the definition of the specialization.
   KernelInfoDecl->completeDefinition();
-
-  return KernelInfoDecl;
 }
 
 /// BuildSYCLKernelLaunchIdExpr performs lookup for a 'sycl_kernel_launch'
@@ -704,9 +704,8 @@ ExprResult BuildSYCLKernelLaunchIdExpr(Sema &SemaRef, FunctionDecl *FD,
 }
 
 // Constructs the arguments to be passed for the SYCL kernel launch call.
-// The first argument is a string literal that contains the SYCL kernel
-// name. The remaining arguments are the parameters of 'FD' passed as
-// move-elligible xvalues. Returns true on error and false otherwise.
+// The arguments are the parameters of 'FD' passed as move-elligible xvalues.
+// Returns true on error and false otherwise.
 bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
                                    SmallVectorImpl<Expr *> &Args,
                                    SourceLocation Loc) {
@@ -736,8 +735,7 @@ bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
 
 // Constructs the SYCL kernel launch call.
 StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
-                                         QualType InfoDeclType, Expr *IdExpr,
-                                         SourceLocation Loc) {
+                                         Expr *IdExpr, SourceLocation Loc) {
   SmallVector<Stmt *> Stmts;
   // IdExpr may be null if name lookup failed.
   if (IdExpr) {
@@ -998,7 +996,7 @@ StmtResult BuildResolvedSYCLKernelCallStmt(
   if (verifyKernelParams(FD, SemaRef.SYCL()))
     return StmtError();
 
-  // Inject an explicit specialization declaration for a specialization
+  // Inject an explicit specialization definition for a specialization
   // of __sycl_kernel_info parameterized by the kernel name type.
   BuildSYCLKernelInfoClassSpecializationDefn(SemaRef, SKI.getKernelNameType());
 
@@ -1010,9 +1008,8 @@ StmtResult BuildResolvedSYCLKernelCallStmt(
   // Build the host kernel launch statement. An appropriate source location
   // is required to emit diagnostics.
   SourceLocation Loc = Body->getLBracLoc();
-  StmtResult LaunchResult =
-      BuildSYCLKernelLaunchCallStmt(SemaRef, FD, ASTFragments.KernelInfoType,
-                                    ASTFragments.KernelLaunchIdExpr, Loc);
+  StmtResult LaunchResult = BuildSYCLKernelLaunchCallStmt(
+      SemaRef, FD, ASTFragments.KernelLaunchIdExpr, Loc);
   if (LaunchResult.isInvalid())
     return StmtError();
 
@@ -1071,9 +1068,8 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(
   assert(SemaRef.CurContext == FD && "The current declaration context does not "
                                      "match the requested function context");
 
-  if (FD->isTemplated()) {
+  if (FD->isTemplated())
     return BuildUnresolvedSYCLKernelCallStmt(SemaRef, Body, ASTFragments);
-  } else {
+  else
     return BuildResolvedSYCLKernelCallStmt(SemaRef, FD, Body, ASTFragments);
-  }
 }

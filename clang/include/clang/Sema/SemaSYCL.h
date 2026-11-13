@@ -99,19 +99,27 @@ public:
   /// 'KNT'.
   QualType GetSYCLKernelInfoClassSpecializationType(QualType KNT);
 
-  /// SYCLKernelCallStmtASTFragments holds portions of the AST used for lookup
-  /// of SYCL runtime library functions. These are constructed at the beginning
-  /// of a function definition and later used in synthesized calls to the
-  /// SYCL runtime library. In a dependent context, these are used to construct
-  /// an UnresolvedSYCLKernelCallStmt. During template instantiation, or in a
-  /// non-dependent context, these are used to construct a SYCLKernelCallStmt.
+  /// SYCLKernelCallStmtASTFragments holds portions of the AST used to resolve
+  /// SYCL runtime library functions. In a dependent context, these are used to
+  /// construct an UnresolvedSYCLKernelCallStmt. During template instantiation,
+  /// or in a non-dependent context, these are used to construct a
+  /// SYCLKernelCallStmt.
+  ///
+  /// Implicit calls to the SYCL runtime library may resolve to a function
+  /// template, a member function template, or a call operator of a variable
+  /// template depending on the results of unqualified lookup as performed at
+  /// the beginning of the function body of a sycl_kernel_entry_point attributed
+  /// function. Performing that lookup requires the stack of parsing scopes
+  /// active when the definition is parsed. For that reason, these AST portions
+  /// are constructed at the beginning of a function definition and cached in
+  /// Sema::FunctionScopeInfo for later use in synthesized calls to the
+  /// SYCL runtime library after the function body has been parsed.
   ///
   /// KernelInfoType is the type to be passed as the explicit template argument
   /// to SYCL runtime libraries.
   ///
   /// KernelLaunchIdExpr is an UnresolvedLookupExpr or UnresolvedMemberExpr
-  /// for the SYCL kernel launch function, with KernelInfoType used as the
-  /// explicit template argument.
+  /// for the SYCL kernel launch function.
   struct SYCLKernelCallStmtASTFragments {
     QualType KernelInfoType;
     Expr *KernelLaunchIdExpr;
