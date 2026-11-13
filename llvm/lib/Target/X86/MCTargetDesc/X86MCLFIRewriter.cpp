@@ -28,7 +28,7 @@ using namespace llvm;
 // LFI reserved registers.
 static constexpr MCRegister LFIBaseReg = X86::R14;
 static constexpr MCRegister LFIScratchReg = X86::R11;
-static constexpr MCRegister LFITPReg = X86::R15;
+static constexpr MCRegister LFICtxReg = X86::R15;
 
 // Segment register whose base always holds the sandbox base address.
 static constexpr MCRegister LFIBaseSeg = X86::GS;
@@ -36,6 +36,10 @@ static constexpr MCRegister LFIBaseSeg = X86::GS;
 // Byte offset into the context register file (pointed to by R15) where the
 // thread pointer is stored.
 static constexpr int TPOffset = 16;
+
+// Byte offset from the context register where the syscall handler address is
+// stored.
+static constexpr int SyscallOffset = -8;
 
 static bool isPrefix(const MCInst &Inst, const MCInstrInfo &InstInfo) {
   return X86II::isPrefix(InstInfo.get(Inst.getOpcode()).TSFlags);
@@ -152,7 +156,7 @@ void X86::X86MCLFIRewriter::discardPrefixes() {
 // ->
 // .bundle_lock
 // leaq .Ltmp(%rip), %r11
-// jmpq *(%r14)
+// jmpq *-8(%r15)
 // .Ltmp:
 // .bundle_unlock
 void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
@@ -172,12 +176,12 @@ void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
           .addReg(X86::NoRegister),
       STI);
 
-  // jmpq *-8(%r14)
+  // jmpq *-8(%r15)
   Out.emitInstruction(MCInstBuilder(X86::JMP64m)
-                          .addReg(LFIBaseReg)
+                          .addReg(LFICtxReg)
                           .addImm(1)
                           .addReg(X86::NoRegister)
-                          .addImm(-8)
+                          .addImm(SyscallOffset)
                           .addReg(X86::NoRegister),
                       STI);
 
@@ -245,7 +249,7 @@ void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
   } else {
     Target = Inst.getOperand(0).getReg();
 
-    if (Target == LFIBaseReg || Target == LFITPReg || Target == X86::RSP)
+    if (Target == LFIBaseReg || Target == LFICtxReg || Target == X86::RSP)
       return error(Inst, "indirect branch through reserved register");
   }
 
@@ -327,7 +331,7 @@ static void emitTPLoad(MCRegister Reg, MCStreamer &Out,
                        const MCSubtargetInfo &STI) {
   Out.emitInstruction(MCInstBuilder(X86::MOV64rm)
                           .addReg(Reg)
-                          .addReg(LFITPReg)
+                          .addReg(LFICtxReg)
                           .addImm(1)
                           .addReg(X86::NoRegister)
                           .addImm(TPOffset)
@@ -374,7 +378,7 @@ void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
   // runtime's thread-local block, so this access is safe.
   if (!HasBase && !HasIndex && !HasDisp) {
     MCInst Modified(Inst);
-    Modified.getOperand(MemIdx + X86::AddrBaseReg).setReg(LFITPReg);
+    Modified.getOperand(MemIdx + X86::AddrBaseReg).setReg(LFICtxReg);
     Modified.getOperand(MemIdx + X86::AddrDisp).setImm(TPOffset);
     Modified.getOperand(MemIdx + X86::AddrSegmentReg).setReg(X86::NoRegister);
     return emitWithPrefixes(Modified, Out, STI);
@@ -906,7 +910,7 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
     return error(Inst, "unsupported lock prefix");
 
   if (mayModifyRegister(Inst, LFIBaseReg) ||
-      mayModifyRegister(Inst, LFITPReg) || mayModifyRegister(Inst, LFIBaseSeg))
+      mayModifyRegister(Inst, LFICtxReg) || mayModifyRegister(Inst, LFIBaseSeg))
     return error(Inst, "illegal modification of reserved LFI register");
 
   if (isWriteSegmentBase(Inst.getOpcode()))

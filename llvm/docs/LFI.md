@@ -64,6 +64,11 @@ on AArch64 and `r15` on X86-64. The layout is as follows:
 | 8 | 8 | Reserved for use by the LFI runtime. |
 | 16 | 8 | Virtual thread pointer (used for TP access). |
 
+The runtime call table is stored directly below the context register block, so
+runtime call entrypoints are loaded from negative offsets from the context
+register. The table is read-only to the sandbox. The system call entrypoint is
+stored at offset -8.
+
 ## Linker Support
 
 In the initial version, LFI only supports static linking, and only supports
@@ -436,11 +441,12 @@ and are not supported: the rewriter reports an error for them.
 
 #### System instructions
 
-System calls are rewritten into a sequence that loads the address of the first
-runtime call entrypoint and jumps to it. The runtime call entrypoint table is
-stored at a negative offset from the sandbox base, so it can be referenced by
-`x27`. The rewrite also saves and restores the link register, since it is
-used for branching into the runtime.
+System calls are rewritten into a sequence that loads the address of the
+system call runtime entrypoint and jumps to it. The runtime call entrypoint
+table is stored at a negative offset from the context register, so it can be
+referenced by `x25` (see [Context Register](#context-register)). The rewrite
+also saves and restores the link register, since it is used for branching into
+the runtime.
 
 :::{list-table}
 :header-rows: 1
@@ -452,7 +458,7 @@ used for branching into the runtime.
     ```
   - ```gas
     mov x26, x30
-    ldur x30, [x27, #-8]
+    ldur x30, [x25, #-8]
     blr x30
     add x30, x27, w26, uxtw
     ```
@@ -599,8 +605,7 @@ The X86-64 LFI target is `x86_64_lfi`.
 
 The X86-64 LFI target reserves the following registers:
 
-- `r14`: always holds the sandbox base address. Also used as the runtime call
-  table pointer (the runtime call table is stored at the sandbox base).
+- `r14`: always holds the sandbox base address.
 - `gs`: always holds the sandbox base address (used as a segment register for
   memory access sandboxing).
 - `rsp`: always holds an address within the sandbox.
@@ -895,9 +900,9 @@ access, which traps if it exits the sandbox, so they are not rewritten.
 
 System calls are rewritten into a sequence that loads the return address into
 the scratch register and jumps to the runtime call handler. The runtime call
-handler table is stored at the address pointed to by `r14`. The `r11`
-register stores the return address (marked by the label `.Ltmp` in the
-block below).
+handler table is stored at a negative offset from the context register `r15`
+(see [Context Register](#context-register)). The `r11` register stores the
+return address (marked by the label `.Ltmp` in the block below).
 
 :::{list-table}
 :header-rows: 1
@@ -909,7 +914,7 @@ block below).
     ```
   - ```gas
     leaq .Ltmp(%rip), %r11
-    jmpq *-8(%r14)
+    jmpq *-8(%r15)
     .Ltmp:
     ```
 :::
