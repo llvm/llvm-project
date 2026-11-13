@@ -47,16 +47,6 @@ using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::rr;
 using namespace llvm::omp::target::debug;
 
-namespace llvm::offload::tmp {
-llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
-                                         ol_device_handle_t Device,
-                                         TargetAllocTy Kind, int64_t Size,
-                                         void *HostPtr);
-llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
-                             ol_device_handle_t Device, void *Ptr,
-                             TargetAllocTy Kind);
-} // namespace llvm::offload::tmp
-
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
@@ -480,20 +470,33 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
     return TargetPtr = *AllocOrErr;
   }
 
-  auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
-      Context, DeviceHandle, static_cast<TargetAllocTy>(Kind), Size, HstPtr);
-  if (!AllocOrErr) {
-    REPORT() << "Failure to allocate device memory: "
-             << llvm::toString(AllocOrErr.takeError());
+  // liboffload has no default allocation kind; it is a device allocation.
+  ol_result_t Res = OL_SUCCESS;
+  switch (Kind) {
+  case TARGET_ALLOC_HOST:
+    Res = olMemAllocHost(Context, DeviceHandle, Size, &TargetPtr);
+    break;
+  case TARGET_ALLOC_SHARED:
+    Res = olMemAlloc(Context, DeviceHandle, OL_ALLOC_TYPE_MANAGED, Size,
+                     &TargetPtr);
+    break;
+  case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_DEFAULT:
+    Res = olMemAlloc(Context, DeviceHandle, OL_ALLOC_TYPE_DEVICE, Size,
+                     &TargetPtr);
+    break;
+  default:
+    llvm_unreachable("unhandled TargetAllocTy");
+  }
+  if (Res) {
+    REPORT() << "Failure to allocate device memory: " << Res->Details;
     return nullptr;
   }
-  assert(*AllocOrErr && "Null pointer upon successful allocation");
-
-  TargetPtr = *AllocOrErr;
+  assert(TargetPtr && "Null pointer upon successful allocation");
   return TargetPtr;
 }
 
-int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
+int32_t DeviceTy::deleteData(void *TgtAllocBegin) {
   /// RAII to establish tool anchors before and after data deletion
   OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
                     RegionInterface.getCallbacks<ompt_target_data_delete>(),
@@ -511,11 +514,9 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
     return OFFLOAD_SUCCESS;
   }
 
-  if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
-          Context, DeviceHandle, TgtAllocBegin,
-          static_cast<TargetAllocTy>(Kind))) {
+  if (auto Res = olMemFree(Context, TgtAllocBegin)) {
     REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
-             << llvm::toString(std::move(Err));
+             << Res->Details;
     return OFFLOAD_FAIL;
   }
 

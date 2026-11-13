@@ -7310,6 +7310,17 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op1, m_Zero()))
       return Op0;
     break;
+  case Intrinsic::ushl_sat:
+  case Intrinsic::sshl_sat:
+    if (isPoisonShift(Op1, Q))
+      return PoisonValue::get(ReturnType);
+    // X << 0 -> X
+    if (match(Op1, m_Zero()))
+      return Op0;
+    // 0 << Y -> 0
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    break;
   case Intrinsic::load_relative:
     if (auto *C0 = dyn_cast<Constant>(Op0))
       if (auto *C1 = dyn_cast<Constant>(Op1))
@@ -7751,9 +7762,11 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
 static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
                                   const SimplifyQuery &Q) {
   auto *F = Call->getCalledFunction();
-  if (!F || !canConstantFoldCallTo(Call, F, Q.TLI))
+  if (!F)
     return nullptr;
 
+  // Check for constant arguments before querying canConstantFoldCallTo.
+  // Checking arguments is cheaper than TLI classification and attribute checks.
   SmallVector<Constant *, 4> ConstantArgs;
   ConstantArgs.reserve(Args.size());
   for (Value *Arg : Args) {
@@ -7765,6 +7778,10 @@ static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
     }
     ConstantArgs.push_back(C);
   }
+
+  // Check if this is a known library function that we know how to fold.
+  if (!canConstantFoldCallTo(Call, F, Q.TLI))
+    return nullptr;
 
   return ConstantFoldCall(Call, F, ConstantArgs, Q.TLI);
 }

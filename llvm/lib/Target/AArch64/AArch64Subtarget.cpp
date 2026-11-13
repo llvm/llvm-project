@@ -167,6 +167,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA17:
   case AppleM4:
   case AppleM5:
+  case AppleM6:
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;

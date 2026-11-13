@@ -1,0 +1,64 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler \
+# RUN:     -amdgpu-use-amdgpu-trackers=1 -amdgpu-avgpr-banking=1 \
+# RUN:     -misched-only-block=1 -debug-only=machine-scheduler -filetype=null %s \
+# RUN:     2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# 300 rigid ArchVGPRs and 212 AGPRs are live through bb.1, so the combined
+# file is only a few registers over its 512 budget while the ArchVGPR bank is
+# far past its limit. The candidate excess must reflect the larger ArchVGPR
+# excess, not the combined one.
+
+# CHECK: Region register pressure: VGPRs: 304 AGPRs: 212
+# CHECK: Picking: Cand SU({{[0-9]+}}) REG-EXCESS VGPR_32:49
+# CHECK: Picking: Cand SU({{[0-9]+}}) REG-EXCESS VGPR_32:48
+
+--- |
+  define amdgpu_kernel void @bank_excess() #0 {
+    ret void
+  }
+  attributes #0 = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" }
+...
+---
+name:            bank_excess
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       1
+body:             |
+  bb.0:
+    %v0:vreg_1024_align2 = IMPLICIT_DEF
+    %v1:vreg_1024_align2 = IMPLICIT_DEF
+    %v2:vreg_1024_align2 = IMPLICIT_DEF
+    %v3:vreg_1024_align2 = IMPLICIT_DEF
+    %v4:vreg_1024_align2 = IMPLICIT_DEF
+    %v5:vreg_1024_align2 = IMPLICIT_DEF
+    %v6:vreg_1024_align2 = IMPLICIT_DEF
+    %v7:vreg_1024_align2 = IMPLICIT_DEF
+    %v8:vreg_1024_align2 = IMPLICIT_DEF
+    %v9:vreg_384_align2 = IMPLICIT_DEF
+    %a0:areg_1024_align2 = IMPLICIT_DEF
+    %a1:areg_1024_align2 = IMPLICIT_DEF
+    %a2:areg_1024_align2 = IMPLICIT_DEF
+    %a3:areg_1024_align2 = IMPLICIT_DEF
+    %a4:areg_1024_align2 = IMPLICIT_DEF
+    %a5:areg_1024_align2 = IMPLICIT_DEF
+    %a6:areg_512_align2 = IMPLICIT_DEF
+    %a7:areg_128_align2 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %x0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %x1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    %x2:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+    %x3:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
+    %y0:vgpr_32 = V_ADD_U32_e32 %x0, %x1, implicit $exec
+    %y1:vgpr_32 = V_ADD_U32_e32 %x2, %x3, implicit $exec
+    %z:vgpr_32 = V_ADD_U32_e32 %y0, %y1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0, implicit %v0, implicit %v1, implicit %v2, implicit %v3, implicit %v4, implicit %v5, implicit %v6, implicit %v7, implicit %v8, implicit %v9, implicit %a0, implicit %a1, implicit %a2, implicit %a3, implicit %a4, implicit %a5, implicit %a6, implicit %a7, implicit %z
+...

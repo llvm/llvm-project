@@ -24,7 +24,6 @@
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "PluginInterface.h"
-#include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -221,25 +220,26 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
 
     void *MemAlloc = nullptr;
     switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-    case TARGET_ALLOC_HOST:
-    case TARGET_ALLOC_SHARED:
+    case OL_ALLOC_TYPE_DEVICE:
+    case OL_ALLOC_TYPE_HOST:
+    case OL_ALLOC_TYPE_MANAGED:
       MemAlloc = std::malloc(Size);
       break;
+    default:
+      llvm_unreachable("unexpected allocation type");
     }
     return MemAlloc;
   }
 
   /// Free the memory. Use std::free in all cases.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     std::free(TgtPtr);
     return Plugin::success();
   }
@@ -345,8 +345,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
   }
+  /// All operations are synchronous, so there is never pending work.
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
-    return true;
+    return false;
   }
   Expected<bool> isEventCompleteImpl(void *Event,
                                      AsyncInfoWrapperTy &AsyncInfo) override {
@@ -483,7 +484,7 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
   }
 
   void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
-                       TargetAllocTy Kind) override {
+                       ol_alloc_type_t Kind) override {
     std::lock_guard<std::mutex> Lock(AllocsMutex);
     Allocs[Ptr] = Entry{&Device, Kind, static_cast<size_t>(Size)};
   }
@@ -512,7 +513,7 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
 private:
   struct Entry {
     GenericDeviceTy *Device;
-    TargetAllocTy Kind;
+    ol_alloc_type_t Kind;
     size_t Size;
   };
   std::map<void *, Entry> Allocs;

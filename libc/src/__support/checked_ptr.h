@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CHECKED_PTR_H
 
 #include "hdr/types/size_t.h"
+#include "src/__support/CPP/cstddef/nullptr_t.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/unique_ptr.h"
 #include "src/__support/CPP/utility.h"
@@ -100,6 +101,7 @@ public:
   using element_type = typename PtrType::element_type;
   using pointer = typename PtrType::pointer;
 
+  LIBC_INLINE constexpr CheckedPtr(cpp::nullptr_t) : ptr(nullptr) {}
   LIBC_INLINE constexpr explicit CheckedPtr(pointer p) : ptr(p) {}
   LIBC_INLINE constexpr CheckedPtr(pointer p, const deleter_type &d)
       : ptr(p, d) {}

@@ -26,7 +26,6 @@
 ...
 ---
 name: spills_fills_stack_id_ppr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr }
 stack:
@@ -69,7 +68,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_ppr2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr2 }
 stack:
@@ -114,7 +112,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_ppr2mul2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr2mul2 }
 stack:
@@ -159,7 +156,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_pnr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: pnr }
 stack:
@@ -202,7 +198,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_virtreg_pnr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: pnr_p8to15 }
 stack:
@@ -245,7 +240,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_virtreg_ppr_to_pnr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: ppr }
   - { id: 1, class: pnr_p8to15 }
@@ -279,7 +273,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: zpr }
 stack:
@@ -314,7 +307,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: zpr2 }
 stack:
@@ -351,7 +343,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr2strided
-tracksRegLiveness: true
 registers:
   - { id: 0, class: zpr2strided }
 stack:
@@ -396,7 +387,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr3
-tracksRegLiveness: true
 registers:
   - { id: 0, class: zpr3 }
 stack:
@@ -435,7 +425,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: zpr4 }
 stack:
@@ -476,7 +465,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr4strided
-tracksRegLiveness: true
 registers:
   - { id: 0, class: zpr4strided }
 stack:

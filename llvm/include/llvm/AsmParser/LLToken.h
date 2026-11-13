@@ -402,6 +402,8 @@ enum Kind {
   kw_summaries,
   kw_flags,
   kw_blockcount,
+  kw_cfiFunctionDefs,
+  kw_cfiFunctionDecls,
   kw_linkage,
   kw_visibility,
   kw_notEligibleToImport,
