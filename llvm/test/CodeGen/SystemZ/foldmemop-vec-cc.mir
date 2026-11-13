@@ -14,12 +14,6 @@
 ---
 name:            fun0
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }

@@ -38,11 +38,6 @@
 ---
 name:            fun0
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -70,11 +65,6 @@ body:             |
 ---
 name:            fun1
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -102,11 +92,6 @@ body:             |
 ---
 name:            fun2
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: vr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -134,11 +119,6 @@ body:             |
 ---
 name:            fun3
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -166,11 +146,6 @@ body:             |
 ---
 name:            fun4
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -199,11 +174,6 @@ body:             |
 ---
 name:            fun5
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -231,11 +201,6 @@ body:             |
 ---
 name:            fun6
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -263,11 +228,6 @@ body:             |
 ---
 name:            fun7
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -295,11 +255,6 @@ body:             |
 ---
 name:            fun8
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: vr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -327,11 +282,6 @@ body:             |
 ---
 name:            fun9
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -359,11 +309,6 @@ body:             |
 ---
 name:            fun10
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -392,11 +337,6 @@ body:             |
 ---
 name:            fun11
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -423,11 +363,6 @@ body:             |
 ---
 name:            fun12
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -455,11 +390,6 @@ body:             |
 ---
 name:            fun13
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -487,11 +417,6 @@ body:             |
 ---
 name:            fun14
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: vr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -519,11 +444,6 @@ body:             |
 ---
 name:            fun15
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -551,11 +471,6 @@ body:             |
 ---
 name:            fun16
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -584,11 +499,6 @@ body:             |
 ---
 name:            fun17
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -616,11 +526,6 @@ body:             |
 ---
 name:            fun18
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -648,11 +553,6 @@ body:             |
 ---
 name:            fun19
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -680,11 +580,6 @@ body:             |
 ---
 name:            fun20
 alignment:       16
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: vr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -712,11 +607,6 @@ body:             |
 ---
 name:            fun21
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -744,11 +634,6 @@ body:             |
 ---
 name:            fun22
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -777,11 +662,6 @@ body:             |
 ---
 name:            fun23
 alignment:       16
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }

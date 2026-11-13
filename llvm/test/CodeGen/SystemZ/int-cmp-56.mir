@@ -18,31 +18,10 @@
 # Test CGR -> CG
 # CHECK: name:            fun1
 # CHECK: CG %10, %stack.0, 0, $noreg, implicit-def $cc :: (load (s64) from %stack.0)
-# CHECK-NEXT: %12:gr64bit = LOCGHI %12, 8, 14, 12, implicit $cc
+# CHECK-NEXT: %11:gr64bit = LOCGHI %11, 8, 14, 12, implicit $cc
 ---
 name:            fun1
 alignment:       16
-registers:
-  - { id: 0, class: addr64bit }
-  - { id: 1, class: gr64bit }
-  - { id: 2, class: gr64bit }
-  - { id: 3, class: gr64bit }
-  - { id: 4, class: gr64bit }
-  - { id: 5, class: gr64bit }
-  - { id: 6, class: gr64bit }
-  - { id: 7, class: gr64bit }
-  - { id: 8, class: gr64bit }
-  - { id: 9, class: gr64bit }
-  - { id: 10, class: gr64bit }
-  - { id: 11, class: gr64bit }
-  - { id: 12, class: gr64bit }
-  - { id: 13, class: gr64bit }
-  - { id: 14, class: gr64bit }
-  - { id: 15, class: gr64bit }
-  - { id: 16, class: gr64bit }
-  - { id: 17, class: gr64bit }
-  - { id: 18, class: gr64bit }
-  - { id: 19, class: gr64bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
 frameInfo:
@@ -95,31 +74,10 @@ body:             |
 # Test CLGR -> CLG
 # CHECK: name:            fun2
 # CHECK: CLG %10, %stack.0, 0, $noreg, implicit-def $cc :: (load (s64) from %stack.0)
-# CHECK-NEXT: %12:gr64bit = LOCGHI %12, 8, 14, 12, implicit $cc
+# CHECK-NEXT: %11:gr64bit = LOCGHI %11, 8, 14, 12, implicit $cc
 ---
 name:            fun2
 alignment:       16
-registers:
-  - { id: 0, class: addr64bit }
-  - { id: 1, class: gr64bit }
-  - { id: 2, class: gr64bit }
-  - { id: 3, class: gr64bit }
-  - { id: 4, class: gr64bit }
-  - { id: 5, class: gr64bit }
-  - { id: 6, class: gr64bit }
-  - { id: 7, class: gr64bit }
-  - { id: 8, class: gr64bit }
-  - { id: 9, class: gr64bit }
-  - { id: 10, class: gr64bit }
-  - { id: 11, class: gr64bit }
-  - { id: 12, class: gr64bit }
-  - { id: 13, class: gr64bit }
-  - { id: 14, class: gr64bit }
-  - { id: 15, class: gr64bit }
-  - { id: 16, class: gr64bit }
-  - { id: 17, class: gr64bit }
-  - { id: 18, class: gr64bit }
-  - { id: 19, class: gr64bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
 frameInfo:
@@ -172,31 +130,10 @@ body:             |
 # Test CR -> C
 # CHECK: name:            fun3
 # CHECK: C %10, %stack.0, 0, $noreg, implicit-def $cc :: (load (s32) from %stack.0)
-# CHECK: %12:gr32bit = LOCHIMux %12, 8, 14, 12, implicit $cc
+# CHECK: %11:gr32bit = LOCHIMux %11, 8, 14, 12, implicit $cc
 ---
 name:            fun3
 alignment:       16
-registers:
-  - { id: 0, class: addr64bit }
-  - { id: 1, class: gr32bit }
-  - { id: 2, class: gr32bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: gr32bit }
-  - { id: 5, class: gr32bit }
-  - { id: 6, class: gr32bit }
-  - { id: 7, class: gr32bit }
-  - { id: 8, class: gr32bit }
-  - { id: 9, class: gr32bit }
-  - { id: 10, class: gr32bit }
-  - { id: 11, class: gr32bit }
-  - { id: 12, class: gr32bit }
-  - { id: 13, class: gr32bit }
-  - { id: 14, class: gr32bit }
-  - { id: 15, class: gr32bit }
-  - { id: 16, class: gr32bit }
-  - { id: 17, class: gr32bit }
-  - { id: 18, class: gr32bit }
-  - { id: 19, class: gr32bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
 frameInfo:
@@ -249,31 +186,10 @@ body:             |
 # Test CLR -> CL
 # CHECK: name:            fun4
 # CHECK: CL %10, %stack.0, 0, $noreg, implicit-def $cc :: (load (s32) from %stack.0)
-# CHECK: %12:gr32bit = LOCHIMux %12, 8, 14, 12, implicit $cc
+# CHECK: %11:gr32bit = LOCHIMux %11, 8, 14, 12, implicit $cc
 ---
 name:            fun4
 alignment:       16
-registers:
-  - { id: 0, class: addr64bit }
-  - { id: 1, class: gr32bit }
-  - { id: 2, class: gr32bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: gr32bit }
-  - { id: 5, class: gr32bit }
-  - { id: 6, class: gr32bit }
-  - { id: 7, class: gr32bit }
-  - { id: 8, class: gr32bit }
-  - { id: 9, class: gr32bit }
-  - { id: 10, class: gr32bit }
-  - { id: 11, class: gr32bit }
-  - { id: 12, class: gr32bit }
-  - { id: 13, class: gr32bit }
-  - { id: 14, class: gr32bit }
-  - { id: 15, class: gr32bit }
-  - { id: 16, class: gr32bit }
-  - { id: 17, class: gr32bit }
-  - { id: 18, class: gr32bit }
-  - { id: 19, class: gr32bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
 frameInfo:

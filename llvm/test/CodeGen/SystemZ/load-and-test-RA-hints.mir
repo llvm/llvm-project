@@ -89,35 +89,6 @@
 ---
 name:            proofnumberscan
 alignment:       16
-registers:       
-  - { id: 0, class: addr64bit }
-  - { id: 1, class: addr64bit }
-  - { id: 2, class: grx32bit }
-  - { id: 3, class: grx32bit }
-  - { id: 4, class: grx32bit }
-  - { id: 5, class: grx32bit }
-  - { id: 6, class: grx32bit }
-  - { id: 7, class: grx32bit }
-  - { id: 8, class: grx32bit }
-  - { id: 9, class: grx32bit }
-  - { id: 10, class: grx32bit }
-  - { id: 11, class: grx32bit }
-  - { id: 12, class: gr64bit }
-  - { id: 13, class: gr64bit }
-  - { id: 14, class: grx32bit }
-  - { id: 15, class: gr64bit }
-  - { id: 16, class: gr64bit }
-  - { id: 17, class: grx32bit }
-  - { id: 18, class: grx32bit }
-  - { id: 19, class: addr64bit }
-  - { id: 20, class: grx32bit }
-  - { id: 21, class: addr64bit }
-  - { id: 22, class: addr64bit }
-  - { id: 23, class: grx32bit }
-  - { id: 24, class: grx32bit }
-  - { id: 25, class: grx32bit }
-  - { id: 26, class: grx32bit }
-  - { id: 27, class: grx32bit }
 body:             |
   bb.0.bb:
     successors: %bb.1, %bb.2
