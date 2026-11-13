@@ -570,9 +570,9 @@ define float @ret_maximum_nsz__no_nzero__no_nzero(float nofpclass(nzero) %arg0, 
 }
 
 define float @ret_maximum_nsz__pzero__nzero(float nofpclass(nan inf nzero sub norm) %arg0, float nofpclass(nan inf pzero sub norm) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_maximum_nsz__pzero__nzero
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_maximum_nsz__pzero__nzero
 ; CHECK-SAME: (float nofpclass(nan inf nzero sub norm) [[ARG0:%.*]], float nofpclass(nan inf pzero sub norm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan inf nzero sub norm) float @llvm.maximum.f32(float nofpclass(nan inf nzero sub norm) [[ARG0]], float nofpclass(nan inf pzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan inf sub norm) float @llvm.maximum.f32(float nofpclass(nan inf nzero sub norm) [[ARG0]], float nofpclass(nan inf pzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.maximum.f32(float %arg0, float %arg1)
@@ -580,9 +580,9 @@ define float @ret_maximum_nsz__pzero__nzero(float nofpclass(nan inf nzero sub no
 }
 
 define float @ret_maximum_nsz__nzero__pzero(float nofpclass(nan inf pzero sub norm) %arg0, float nofpclass(nan inf nzero sub norm) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @ret_maximum_nsz__nzero__pzero
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_maximum_nsz__nzero__pzero
 ; CHECK-SAME: (float nofpclass(nan inf pzero sub norm) [[ARG0:%.*]], float nofpclass(nan inf nzero sub norm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan inf nzero sub norm) float @llvm.maximum.f32(float nofpclass(nan inf pzero sub norm) [[ARG0]], float nofpclass(nan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan inf sub norm) float @llvm.maximum.f32(float nofpclass(nan inf pzero sub norm) [[ARG0]], float nofpclass(nan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.maximum.f32(float %arg0, float %arg1)
@@ -630,9 +630,9 @@ define float @ret_maximum_nsz__no_nzero__no_nzero__ieee_dapz(float nofpclass(nze
 }
 
 define float @ret_maximum_nsz__qnan_nsub__pzero_qnan__ieee_dynamic(float nofpclass(snan inf zero psub norm) %arg0, float nofpclass(snan inf nzero sub norm) %arg1) #9 {
-; CHECK-LABEL: define nofpclass(snan inf nzero sub norm) float @ret_maximum_nsz__qnan_nsub__pzero_qnan__ieee_dynamic
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @ret_maximum_nsz__qnan_nsub__pzero_qnan__ieee_dynamic
 ; CHECK-SAME: (float nofpclass(snan inf zero psub norm) [[ARG0:%.*]], float nofpclass(snan inf nzero sub norm) [[ARG1:%.*]]) #[[ATTR10:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero sub norm) float @llvm.maximum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf sub norm) float @llvm.maximum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.maximum.f32(float %arg0, float %arg1)
@@ -650,9 +650,9 @@ define float @ret_maximum_nsz__qnan_nsub__nzero_qnan__ieee_dynamic(float nofpcla
 }
 
 define float @ret_maximum_nsz__qnan_nsub__pzero_qnan__ieee_daz(float nofpclass(snan inf zero psub norm) %arg0, float nofpclass(snan inf nzero sub norm) %arg1) #4 {
-; CHECK-LABEL: define nofpclass(snan inf nzero sub norm) float @ret_maximum_nsz__qnan_nsub__pzero_qnan__ieee_daz
+; CHECK-LABEL: define nofpclass(snan inf sub norm) float @ret_maximum_nsz__qnan_nsub__pzero_qnan__ieee_daz
 ; CHECK-SAME: (float nofpclass(snan inf zero psub norm) [[ARG0:%.*]], float nofpclass(snan inf nzero sub norm) [[ARG1:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf nzero sub norm) float @llvm.maximum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf sub norm) float @llvm.maximum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.maximum.f32(float %arg0, float %arg1)
@@ -692,9 +692,9 @@ define float @ret_minimum_nsz__no_nzero__no_nzero(float nofpclass(nzero) %arg0, 
 }
 
 define float @ret_minimum_nsz__pzero__nzero(float nofpclass(nan inf nzero sub norm) %arg0, float nofpclass(nan inf pzero sub norm) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_minimum_nsz__pzero__nzero
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_minimum_nsz__pzero__nzero
 ; CHECK-SAME: (float nofpclass(nan inf nzero sub norm) [[ARG0:%.*]], float nofpclass(nan inf pzero sub norm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan inf pzero sub norm) float @llvm.minimum.f32(float nofpclass(nan inf nzero sub norm) [[ARG0]], float nofpclass(nan inf pzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan inf sub norm) float @llvm.minimum.f32(float nofpclass(nan inf nzero sub norm) [[ARG0]], float nofpclass(nan inf pzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.minimum.f32(float %arg0, float %arg1)
@@ -702,9 +702,9 @@ define float @ret_minimum_nsz__pzero__nzero(float nofpclass(nan inf nzero sub no
 }
 
 define float @ret_minimum_nsz__nzero__pzero(float nofpclass(nan inf pzero sub norm) %arg0, float nofpclass(nan inf nzero sub norm) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_minimum_nsz__nzero__pzero
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_minimum_nsz__nzero__pzero
 ; CHECK-SAME: (float nofpclass(nan inf pzero sub norm) [[ARG0:%.*]], float nofpclass(nan inf nzero sub norm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan inf pzero sub norm) float @llvm.minimum.f32(float nofpclass(nan inf pzero sub norm) [[ARG0]], float nofpclass(nan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(nan inf sub norm) float @llvm.minimum.f32(float nofpclass(nan inf pzero sub norm) [[ARG0]], float nofpclass(nan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.minimum.f32(float %arg0, float %arg1)
@@ -762,9 +762,9 @@ define float @ret_minimum_nsz__qnan_nsub__pzero_qnan__ieee_dynamic(float nofpcla
 }
 
 define float @ret_minimum_nsz__qnan_nsub__nzero_qnan__ieee_dynamic(float nofpclass(snan inf zero psub norm) %arg0, float nofpclass(snan inf pzero sub norm) %arg1) #9 {
-; CHECK-LABEL: define nofpclass(snan inf pzero psub norm) float @ret_minimum_nsz__qnan_nsub__nzero_qnan__ieee_dynamic
+; CHECK-LABEL: define nofpclass(snan inf psub norm) float @ret_minimum_nsz__qnan_nsub__nzero_qnan__ieee_dynamic
 ; CHECK-SAME: (float nofpclass(snan inf zero psub norm) [[ARG0:%.*]], float nofpclass(snan inf pzero sub norm) [[ARG1:%.*]]) #[[ATTR10]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf pzero psub norm) float @llvm.minimum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf pzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf psub norm) float @llvm.minimum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf pzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.minimum.f32(float %arg0, float %arg1)
@@ -772,9 +772,9 @@ define float @ret_minimum_nsz__qnan_nsub__nzero_qnan__ieee_dynamic(float nofpcla
 }
 
 define float @ret_minimum_nsz__qnan_nsub__pzero_qnan__ieee_daz(float nofpclass(snan inf zero psub norm) %arg0, float nofpclass(snan inf nzero sub norm) %arg1) #4 {
-; CHECK-LABEL: define nofpclass(snan inf pzero psub norm) float @ret_minimum_nsz__qnan_nsub__pzero_qnan__ieee_daz
+; CHECK-LABEL: define nofpclass(snan inf psub norm) float @ret_minimum_nsz__qnan_nsub__pzero_qnan__ieee_daz
 ; CHECK-SAME: (float nofpclass(snan inf zero psub norm) [[ARG0:%.*]], float nofpclass(snan inf nzero sub norm) [[ARG1:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf pzero psub norm) float @llvm.minimum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf psub norm) float @llvm.minimum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf nzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.minimum.f32(float %arg0, float %arg1)
@@ -782,9 +782,9 @@ define float @ret_minimum_nsz__qnan_nsub__pzero_qnan__ieee_daz(float nofpclass(s
 }
 
 define float @ret_minimum_nsz__qnan_nsub__nzero_qnan__ieee_dapz(float nofpclass(snan inf zero psub norm) %arg0, float nofpclass(snan inf pzero sub norm) %arg1) #6 {
-; CHECK-LABEL: define nofpclass(snan inf pzero psub norm) float @ret_minimum_nsz__qnan_nsub__nzero_qnan__ieee_dapz
+; CHECK-LABEL: define nofpclass(snan inf psub norm) float @ret_minimum_nsz__qnan_nsub__nzero_qnan__ieee_dapz
 ; CHECK-SAME: (float nofpclass(snan inf zero psub norm) [[ARG0:%.*]], float nofpclass(snan inf pzero sub norm) [[ARG1:%.*]]) #[[ATTR7]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf pzero psub norm) float @llvm.minimum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf pzero sub norm) [[ARG1]]) #[[ATTR11]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz nofpclass(snan inf psub norm) float @llvm.minimum.f32(float nofpclass(snan inf zero psub norm) [[ARG0]], float nofpclass(snan inf pzero sub norm) [[ARG1]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call nsz float @llvm.minimum.f32(float %arg0, float %arg1)
