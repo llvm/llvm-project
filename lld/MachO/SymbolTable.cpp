@@ -28,9 +28,9 @@ Symbol *SymbolTable::find(CachedHashStringRef cachedName) {
   return symVector[it->second];
 }
 
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
+std::pair<Symbol *, bool> SymbolTable::insert(CachedHashStringRef name,
                                               const InputFile *file) {
-  auto p = symMap.insert({CachedHashStringRef(name), (int)symVector.size()});
+  auto p = symMap.insert({name, (int)symVector.size()});
 
   Symbol *sym;
   if (!p.second) {
@@ -99,13 +99,14 @@ static void transplantSymbolsAtOffset(InputSection *fromIsec,
   });
 }
 
-Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
-                                 InputSection *isec, uint64_t value,
-                                 uint64_t size, bool isWeakDef,
+Defined *SymbolTable::addDefined(CachedHashStringRef hashedName,
+                                 InputFile *file, InputSection *isec,
+                                 uint64_t value, uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern,
                                  bool isReferencedDynamically, bool noDeadStrip,
                                  bool isWeakDefCanBeHidden, bool isCold,
                                  Symbol *known) {
+  StringRef name = hashedName.val();
   bool overridesWeakDef = false;
   Symbol *s;
   bool wasInserted;
@@ -114,7 +115,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
     s->isUsedInRegularObj |= !file || isa<ObjFile>(file);
     wasInserted = false;
   } else {
-    std::tie(s, wasInserted) = insert(name, file);
+    std::tie(s, wasInserted) = insert(hashedName, file);
   }
 
   assert(!file || !isa<BitcodeFile>(file) || !isec);
@@ -237,14 +238,14 @@ Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
                     src->weakDefCanBeHidden, src->cold);
 }
 
-Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
+Symbol *SymbolTable::addUndefined(CachedHashStringRef name, InputFile *file,
                                   bool isWeakRef) {
   auto [s, wasInserted] = insert(name, file);
 
   RefState refState = isWeakRef ? RefState::Weak : RefState::Strong;
 
   if (wasInserted)
-    replaceSymbol<Undefined>(s, name, file, refState,
+    replaceSymbol<Undefined>(s, name.val(), file, refState,
                              /*wasBitcodeSymbol=*/false);
   else if (auto *lazy = dyn_cast<LazyArchive>(s))
     lazy->fetchArchiveMember();
@@ -257,8 +258,9 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
   return s;
 }
 
-Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
-                               uint32_t align, bool isPrivateExtern) {
+Symbol *SymbolTable::addCommon(CachedHashStringRef name, InputFile *file,
+                               uint64_t size, uint32_t align,
+                               bool isPrivateExtern) {
   auto [s, wasInserted] = insert(name, file);
 
   if (!wasInserted) {
@@ -272,7 +274,8 @@ Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
     // a name conflict, we fall through to the replaceSymbol() call below.
   }
 
-  replaceSymbol<CommonSymbol>(s, name, file, size, align, isPrivateExtern);
+  replaceSymbol<CommonSymbol>(s, name.val(), file, size, align,
+                              isPrivateExtern);
   return s;
 }
 
@@ -329,22 +332,22 @@ Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
   return s;
 }
 
-Symbol *SymbolTable::addLazyObject(StringRef name, InputFile &file) {
+Symbol *SymbolTable::addLazyObject(CachedHashStringRef name, InputFile &file) {
   auto [s, wasInserted] = insert(name, &file);
 
   if (wasInserted) {
-    replaceSymbol<LazyObject>(s, file, name);
+    replaceSymbol<LazyObject>(s, file, name.val());
   } else if (isa<Undefined>(s)) {
     if (!s->hasPendingDefinition) {
-      extract(file, name);
+      extract(file, name.val());
       s->hasPendingDefinition = true;
     }
   } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
     if (dysym->isWeakDef()) {
       if (dysym->getRefState() != RefState::Unreferenced)
-        extract(file, name);
+        extract(file, name.val());
       else
-        replaceSymbol<LazyObject>(s, file, name);
+        replaceSymbol<LazyObject>(s, file, name.val());
     }
   }
   return s;
