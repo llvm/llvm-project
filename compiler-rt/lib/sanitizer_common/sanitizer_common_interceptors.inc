@@ -7724,17 +7724,15 @@ INTERCEPTOR(int, open_by_handle_at, int mount_fd, struct file_handle* handle,
 #if SANITIZER_INTERCEPT_STRLCPY
 INTERCEPTOR(SIZE_T, strlcpy, char *dst, char *src, SIZE_T size) {
   void *ctx;
-  SIZE_T res;
+  SIZE_T srclen = 0;
   COMMON_INTERCEPTOR_ENTER(ctx, strlcpy, dst, src, size);
   if (src) {
-    // Keep strnlen as macro argument, as macro may ignore it.
-    COMMON_INTERCEPTOR_READ_STRING(
-        ctx, src, Min(internal_strnlen(src, size), size - 1) + 1);
+    srclen = internal_strlen(src);
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, src, srclen + 1);
   }
-  res = REAL(strlcpy)(dst, src, size);
-  if (size > 0)
-    COMMON_INTERCEPTOR_COPY_STRING(ctx, dst, src, Min(res, size - 1));
-  return res;
+  if (dst && src && size > 0)
+    COMMON_INTERCEPTOR_COPY_STRING(ctx, dst, src, Min(srclen, size - 1));
+  return REAL(strlcpy)(dst, src, size);
 }
 
 INTERCEPTOR(SIZE_T, strlcat, char *dst, char *src, SIZE_T size) {
