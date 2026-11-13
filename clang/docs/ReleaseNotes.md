@@ -875,6 +875,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   Such declarations are now rejected, matching GCC. (#GH225033)
 - Fixed a crash on `break` out of a `for` loop whose init-statement declares a variable in C89 mode (a Clang
   extension), which happened at `-O1` and above or when the variable had a `cleanup` attribute. (#GH170243)
+- A second `extern inline` definition of a `gnu_inline` function is now rejected as a redefinition, as in GCC, which also fixes a crash in CodeGen. (#GH110774)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)

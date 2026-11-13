@@ -16422,7 +16422,10 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
     }
   }
 
-  if (canRedefineFunction(Definition, getLangOpts()))
+  // A GNU89 extern inline definition may be followed by a definition that is
+  // not itself one; GCC rejects a second extern inline definition.
+  if (canRedefineFunction(Definition, getLangOpts()) &&
+      !canRedefineFunction(FD, getLangOpts()))
     return;
 
   // Don't emit an error when this is redefinition of a typo-corrected
@@ -16448,7 +16451,8 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
   }
 
   if (getLangOpts().GNUMode && Definition->isInlineSpecified() &&
-      Definition->getStorageClass() == SC_Extern)
+      Definition->getStorageClass() == SC_Extern &&
+      !canRedefineFunction(Definition, getLangOpts()))
     Diag(FD->getLocation(), diag::err_redefinition_extern_inline)
         << FD << getLangOpts().CPlusPlus;
   else
