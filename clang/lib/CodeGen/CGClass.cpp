@@ -2945,22 +2945,28 @@ void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
   auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
   EmitSanitizerStatReport(SSK);
 
+  llvm::ConstantInt *CrossDsoTypeId =
+      UseCrossDsoSlowPath ? CGM.CreateCrossDsoCfiTypeId(MD) : nullptr;
+  if (!CrossDsoTypeId && (CGM.getCodeGenOpts().SanitizeTrap.has(M) ||
+                          CGM.getCodeGenOpts().SanitizeMinimalRuntime)) {
+    EmitCheck(std::make_pair(TypeTest, M), SanitizerHandler::CFICheckFail, {},
+              {});
+    return;
+  }
+
+  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
+    EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, {});
+    return;
+  }
+
   llvm::Constant *StaticData[] = {
       llvm::ConstantInt::get(Int8Ty, TCK),
       EmitCheckSourceLocation(Loc),
       EmitCheckTypeDescriptor(T),
   };
 
-  llvm::ConstantInt *CrossDsoTypeId =
-      UseCrossDsoSlowPath ? CGM.CreateCrossDsoCfiTypeId(MD) : nullptr;
   if (CrossDsoTypeId) {
     EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, StaticData);
-    return;
-  }
-
-  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
-    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
     return;
   }
 
@@ -2998,8 +3004,6 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   auto CheckHandler = SanitizerHandler::CFICheckFail;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
 
-  EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
-
   CanQualType T = CGM.getContext().getCanonicalTagType(RD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
@@ -3017,6 +3021,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   if (SanOpts.has(SanitizerKind::CFIVCall) &&
       !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
                                                      TypeName)) {
+    EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
     EmitCheck(std::make_pair(CheckResult, CheckOrdinal), CheckHandler, {}, {});
   }
 
