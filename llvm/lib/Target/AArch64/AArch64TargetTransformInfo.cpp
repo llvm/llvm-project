@@ -7179,9 +7179,12 @@ AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
         getCastInstrCost(Instruction::Trunc, LegalVTy, PromotedVTy,
                          TTI::CastContextHint::None, CostKind);
   }
+
   const auto *Entry =
       CostTableLookup(ShuffleTbl, TTI::SK_Splice, PromotedVT.getSimpleVT());
-  assert(Entry && "Illegal Type for Splice");
+  if (!Entry)
+    return InstructionCost::getInvalid();
+
   LegalizationCost += Entry->Cost;
   return LegalizationCost * LT.first;
 }

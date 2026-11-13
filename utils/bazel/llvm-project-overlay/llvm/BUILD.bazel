@@ -2587,6 +2587,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "CodeGenToolOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenToolOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "SelectionDAGOptionsTableGen",
     strip_include_prefix = "lib/CodeGen/SelectionDAG",
     tbl_outs = {"lib/CodeGen/SelectionDAG/SelectionDAGOptions.inc": ["-gen-opt-parser-defs"]},
@@ -2666,6 +2675,7 @@ cc_library(
         ":CFGuard",
         ":CGData",
         ":CodeGenOptionsTableGen",
+        ":CodeGenToolOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
