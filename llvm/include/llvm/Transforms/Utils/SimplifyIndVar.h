@@ -52,13 +52,12 @@ public:
 /// by using ScalarEvolution to analyze the IV's recurrence. Returns a pair
 /// where the first entry indicates that the function makes changes and the
 /// second entry indicates that it introduced new opportunities for loop
-/// unswitching. If \p HoistInvariantCmps is set, compares made loop-invariant
-/// are moved to the loop preheader.
+/// unswitching. Compares made loop-invariant are moved to the loop preheader.
 LLVM_ABI std::pair<bool, bool>
 simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
                   LoopInfo *LI, const TargetTransformInfo *TTI,
                   SmallVectorImpl<WeakTrackingVH> &Dead, SCEVExpander &Rewriter,
-                  IVVisitor *V = nullptr, bool HoistInvariantCmps = false);
+                  IVVisitor *V = nullptr);
 
 /// SimplifyLoopIVs - Simplify users of induction variables within this
 /// loop. This does not actually change or add IVs.

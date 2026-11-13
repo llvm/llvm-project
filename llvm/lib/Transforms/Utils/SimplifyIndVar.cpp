@@ -63,8 +63,6 @@ namespace {
     SCEVExpander     &Rewriter;
     SmallVectorImpl<WeakTrackingVH> &DeadInsts;
 
-    bool HoistInvariantCmps;
-
     bool Changed = false;
     bool RunUnswitching = false;
 
@@ -72,10 +70,9 @@ namespace {
     SimplifyIndvar(Loop *Loop, ScalarEvolution *SE, DominatorTree *DT,
                    LoopInfo *LI, const TargetTransformInfo *TTI,
                    SCEVExpander &Rewriter,
-                   SmallVectorImpl<WeakTrackingVH> &Dead,
-                   bool HoistInvariantCmps)
+                   SmallVectorImpl<WeakTrackingVH> &Dead)
         : L(Loop), LI(LI), SE(SE), DT(DT), TTI(TTI), Rewriter(Rewriter),
-          DeadInsts(Dead), HoistInvariantCmps(HoistInvariantCmps) {
+          DeadInsts(Dead) {
       assert(LI && "IV simplification requires LoopInfo");
     }
 
@@ -245,9 +242,8 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *NewRHS =
       Rewriter.expandCodeFor(InvariantRHS, IVOperand->getType(), PHTerm);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified comparison: " << *ICmp << '\n');
-  IRBuilder<> Builder(HoistInvariantCmps ? PHTerm : ICmp);
-  Builder.SetCurrentDebugLocation(HoistInvariantCmps ? DebugLoc::getDropped()
-                                                     : ICmp->getDebugLoc());
+  IRBuilder<> Builder(PHTerm);
+  Builder.SetCurrentDebugLocation(DebugLoc::getDropped());
   Value *NewICmp = Builder.CreateICmp(InvariantPredicate, NewLHS, NewRHS, "",
                                       ICmp->hasSameSign());
   NewICmp->takeName(ICmp);
@@ -1064,10 +1060,9 @@ std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
                                         DominatorTree *DT, LoopInfo *LI,
                                         const TargetTransformInfo *TTI,
                                         SmallVectorImpl<WeakTrackingVH> &Dead,
-                                        SCEVExpander &Rewriter, IVVisitor *V,
-                                        bool HoistInvariantCmps) {
+                                        SCEVExpander &Rewriter, IVVisitor *V) {
   SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, TTI,
-                     Rewriter, Dead, HoistInvariantCmps);
+                     Rewriter, Dead);
   SIV.simplifyUsers(CurrIV, V);
   return {SIV.hasChanged(), SIV.runUnswitching()};
 }
