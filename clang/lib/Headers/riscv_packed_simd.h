@@ -470,6 +470,9 @@ __packed_binary_builtin(aaddu_u32, uint32_t, __builtin_riscv_aaddu_u32)
 __packed_binary_builtin(asub_i32, int32_t, __builtin_riscv_asub_i32)
 __packed_binary_builtin(asubu_u32, uint32_t, __builtin_riscv_asubu_u32)
 
+/* Scalar Shift-Add */
+__packed_binary_builtin(ssh1sadd_i32, int32_t, __builtin_riscv_ssh1sadd_i32)
+
 /* Scalar Saturating Addition and Subtraction */
 __packed_binary_builtin(sadd_i32, int32_t, __builtin_elementwise_add_sat)
 __packed_binary_builtin(saddu_u32, uint32_t, __builtin_elementwise_add_sat)

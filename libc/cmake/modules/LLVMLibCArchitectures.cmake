@@ -234,7 +234,7 @@ endif()
 # if the compiler is clang. If the compiler is GCC we just error out as there
 # is no equivalent of an option like --target.
 if(explicit_target_triple AND
-  (NOT (libc_compiler_triple STREQUAL explicit_target_triple)))
+    (NOT (libc_compiler_triple STREQUAL explicit_target_triple)))
   set(LIBC_CROSSBUILD TRUE)
   if(CMAKE_COMPILER_IS_GNUCXX)
     message(FATAL_ERROR

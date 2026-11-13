@@ -1614,6 +1614,11 @@ Expected<size_t> readNativeFileSlice(file_t FileHandle,
   return readNativeFileImpl(FileHandle, Buf, &Overlapped);
 }
 
+std::error_code getRealPathFromHandle(file_t Handle,
+                                      SmallVectorImpl<char> &RealPath) {
+  return realPathFromHandle(Handle.get(), RealPath);
+}
+
 std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
                             LockKind Kind) {
   DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;

@@ -202,7 +202,6 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
 
     // Propagate SrcReg of copies to MI.
     MO.setReg(SrcReg);
-    MRI->clearKillFlags(SrcReg);
     // Coalesce single use copies.
     if (OnlyOneUse) {
       // If (and only if) we've eliminated all uses of the copy, also
@@ -675,9 +674,7 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         MachineInstr *Def = MRI->getUniqueVRegDef(NewReg);
         assert(Def != nullptr && "CSEd register has no unique definition?");
         Def->clearRegisterDeads(NewReg);
-        // Replace with NewReg and clear kill flags which may be wrong now.
         MRI->replaceRegWith(OldReg, NewReg);
-        MRI->clearKillFlags(NewReg);
       }
 
       // Go through implicit defs of CSMI and MI, if a def is not dead at MI,

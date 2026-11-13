@@ -98,7 +98,6 @@ CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(bool, SeparateNamedSections)
-CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(VectorLibrary, VectorLibrary)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
@@ -370,16 +369,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(SeparateNamedSections);
 
-  static cl::opt<DebuggerKind> DebuggerTuningOpt(
-      "debugger-tune", cl::desc("Tune debug info for a particular debugger"),
-      cl::init(DebuggerKind::Default),
-      cl::values(
-          clEnumValN(DebuggerKind::GDB, "gdb", "gdb"),
-          clEnumValN(DebuggerKind::LLDB, "lldb", "lldb"),
-          clEnumValN(DebuggerKind::DBX, "dbx", "dbx"),
-          clEnumValN(DebuggerKind::SCE, "sce", "SCE targets (e.g. PS4)")));
-  CGBINDOPT(DebuggerTuningOpt);
-
   static cl::opt<VectorLibrary> VectorLibrary(
       "vector-library", cl::Hidden, cl::desc("Vector functions library"),
       cl::init(VectorLibrary::NoLibrary),
@@ -468,7 +457,7 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
 
-  mc::RegisterMCTargetOptionsFlags();
+  mc::RegisterMCToolOptions();
 }
 
 codegen::RegisterMTuneFlag::RegisterMTuneFlag() {
@@ -516,9 +505,10 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
 }
 
 // Common utility function tightly tied to the options listed here. Initializes
-// a TargetOptions object with CodeGen flags and returns it.
+// a TargetOptions object with CodeGen options and returns it.
 TargetOptions
-codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
+codegen::getTargetOptions(const cl::LibraryOptionsContext &LibraryOptions,
+                          const Triple &TheTriple) {
   TargetOptions Options;
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
@@ -553,9 +543,8 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.JMCInstrument = getJMCInstrument();
   Options.XCOFFReadOnlyPointers = getXCOFFReadOnlyPointers();
 
-  Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
+  Options.MCOptions = mc::getMCTargetOptions(LibraryOptions);
 
-  Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();
   return Options;
 }
@@ -741,7 +730,7 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
   //
   // FIXME: verifyOptionsConsistency validates consistency for target-abi. We
   // should consistently handle all ABI module flags either here or there.
-  StringRef ABIName = mc::getABIName();
+  StringRef ABIName = mc::getABIName(M.getContext().getLibraryOptions());
   if (!ABIName.empty() && !M.getModuleFlag("target-abi")) {
     M.addModuleFlag(Module::Error, "target-abi",
                     MDString::get(M.getContext(), ABIName));
@@ -761,7 +750,7 @@ Expected<std::unique_ptr<TargetMachine>> codegen::createTargetMachineForTriple(
       TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
   if (!TheTarget)
     return createStringError(inconvertibleErrorCode(), Error);
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+  TargetOptions Options = codegen::getTargetOptions(LibraryOptions, TheTriple);
   Options.MCOptions.LibraryOptions = &LibraryOptions;
   auto *Target = TheTarget->createTargetMachine(
       TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(), Options,

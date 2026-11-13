@@ -484,12 +484,4 @@
 #  define _LIBCPP_WARN_UNUSED
 #endif
 
-#if defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__OPTIMIZE_SIZE__)
-#  define _LIBCPP_ENABLE_LOOP_VECTORIZATION _Pragma("clang loop vectorize(enable) interleave(enable)")
-#  define _LIBCPP_HAS_LOOP_VECTORIZATION_PRAGMA 1
-#else
-#  define _LIBCPP_ENABLE_LOOP_VECTORIZATION
-#  define _LIBCPP_HAS_LOOP_VECTORIZATION_PRAGMA 0
-#endif
-
 #endif // _LIBCPP___CONFIGURATION_ATTRIBUTES_H

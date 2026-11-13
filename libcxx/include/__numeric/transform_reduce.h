@@ -34,7 +34,6 @@ transform_reduce(_InputIterator __first, _InputIterator __last, _Tp __init, _Bin
       __init =
           __b(std::move(__init), __b(__b(__u(__first[0]), __u(__first[1])), __b(__u(__first[2]), __u(__first[3]))));
   }
-  _LIBCPP_ENABLE_LOOP_VECTORIZATION
   for (; __first != __last; ++__first)
     __init = __b(std::move(__init), __u(*__first));
   return __init;
@@ -55,7 +54,6 @@ template <class _InputIterator1, class _InputIterator2, class _Tp, class _Binary
                     __b1(__b1(__b2(__first1[0], __first2[0]), __b2(__first1[1], __first2[1])),
                          __b1(__b2(__first1[2], __first2[2]), __b2(__first1[3], __first2[3]))));
   }
-  _LIBCPP_ENABLE_LOOP_VECTORIZATION
   for (; __first1 != __last1; ++__first1, (void)++__first2)
     __init = __b1(std::move(__init), __b2(*__first1, *__first2));
   return __init;

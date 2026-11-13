@@ -8,8 +8,10 @@
 
 #include "IPOOptions.h"
 #include "llvm/Option/LibraryOptions.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 
 #define OPTIONS_STRUCT_DEFS
 #include "IPOOptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::IPOOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::IPOOptions)

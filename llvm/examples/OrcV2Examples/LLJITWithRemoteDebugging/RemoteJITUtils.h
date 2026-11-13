@@ -38,7 +38,6 @@ llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 connectTCPSocket(llvm::StringRef NetworkAddress);
 
 llvm::Expected<std::unique_ptr<llvm::orc::DefinitionGenerator>>
-loadDylib(llvm::orc::ExecutionSession &ES, llvm::orc::DylibManager &DylibMgr,
-          llvm::StringRef RemotePath);
+loadDylib(llvm::orc::DylibManager &DylibMgr, llvm::StringRef RemotePath);
 
 #endif

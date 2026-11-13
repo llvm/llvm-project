@@ -1940,7 +1940,6 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
 InstructionSelector::ComplexRendererFns
 X86InstructionSelector::selectAddr(MachineOperand &Root) const {
   MachineInstr *MI = Root.getParent();
-  MachineIRBuilder MIRBuilder(*MI);
 
   MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
   MachineInstr *Ptr = MRI.getVRegDef(Root.getReg());

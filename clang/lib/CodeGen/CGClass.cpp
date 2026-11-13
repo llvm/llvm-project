@@ -910,6 +910,12 @@ public:
       return;
     }
 
+    // Unreachable, e.g. after a noreturn member copy; drop it like EmitStmt.
+    if (!CGF.HaveInsertPoint()) {
+      reset();
+      return;
+    }
+
     uint64_t FirstByteOffset;
     if (FirstField->isBitField()) {
       const CGRecordLayout &RL =

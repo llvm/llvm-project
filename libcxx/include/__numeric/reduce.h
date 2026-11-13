@@ -70,7 +70,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator 
     for (; __last - __first >= 4; __first += 4)
       __init = __b(std::move(__init), __b(__b(__first[0], __first[1]), __b(__first[2], __first[3])));
   }
-  _LIBCPP_ENABLE_LOOP_VECTORIZATION
   for (; __first != __last; ++__first)
     __init = __b(std::move(__init), *__first);
   return __init;

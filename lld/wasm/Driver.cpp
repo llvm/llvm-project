@@ -1468,6 +1468,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Resolve any variant symbols that were created due to signature
   // mismatches.
   symtab->handleSymbolVariants();
+  symtab->checkImportAttributes();
   if (errorCount())
     return;
 

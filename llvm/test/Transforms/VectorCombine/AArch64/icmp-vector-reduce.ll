@@ -32,8 +32,8 @@ define i1 @or_zext_i3(<4 x i3> %x) {
 define i1 @or_zext_v3_costly(<3 x i8> %x) {
 ; CHECK-LABEL: define i1 @or_zext_v3_costly(
 ; CHECK-SAME: <3 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v3i1(<3 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.umax.v3i8(<3 x i8> [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %zext = zext <3 x i8> %x to <3 x i32>

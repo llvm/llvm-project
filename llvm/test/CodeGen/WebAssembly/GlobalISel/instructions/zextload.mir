@@ -4,7 +4,6 @@
 
 ---
 name: zextload_i1_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -28,7 +27,6 @@ body: |
 ...
 ---
 name: zextload_i1_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -52,7 +50,6 @@ body: |
 ...
 ---
 name: zextload_i8_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -76,7 +73,6 @@ body: |
 ...
 ---
 name: zextload_i8_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -100,7 +96,6 @@ body: |
 ...
 ---
 name: zextload_i16_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -124,7 +119,6 @@ body: |
 ...
 ---
 name: zextload_i16_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -148,7 +142,6 @@ body: |
 ...
 ---
 name: zextload_i32_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -172,7 +165,6 @@ body: |
 ...
 ---
 name: zextload_i48_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments

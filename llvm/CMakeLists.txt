@@ -642,11 +642,18 @@ set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, 
 
 set(LLVM_USE_STATIC_LIBXML2 "OFF" CACHE BOOL "Use static version of libxml2. Can be ON, or OFF")
 
-option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
+set(LLVM_ENABLE_LIBEDIT "ON" CACHE STRING "Use libedit if available. Can be ON, OFF, or FORCE_ON")
 
 option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
 
-option(LLVM_ENABLE_THREADS "Use threads if available." ON)
+# On z/OS, threads cannot be used because TLS is not supported.
+if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+  set(LLVM_ENABLE_THREADS_DEFAULT OFF)
+else()
+  set(LLVM_ENABLE_THREADS_DEFAULT ON)
+endif()
+
+option(LLVM_ENABLE_THREADS "Use threads if available." LLVM_ENABLE_THREADS_DEFAULT)
 
 set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 

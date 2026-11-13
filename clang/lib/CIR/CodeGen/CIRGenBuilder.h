@@ -643,10 +643,11 @@ public:
                                                   mlir::Value objectPtr,
                                                   mlir::Value memberPtr) {
     auto memberPtrTy = mlir::cast<cir::DataMemberType>(memberPtr.getType());
+    auto objectPtrTy = mlir::cast<cir::PointerType>(objectPtr.getType());
 
-    // TODO(cir): consider address space.
-    assert(!cir::MissingFeatures::addressSpace());
-    cir::PointerType resultTy = getPointerTo(memberPtrTy.getMemberTy());
+    // The member lives in the same address space as the object.
+    cir::PointerType resultTy =
+        getPointerTo(memberPtrTy.getMemberTy(), objectPtrTy.getAddrSpace());
 
     return cir::GetRuntimeMemberOp::create(*this, loc, resultTy, objectPtr,
                                            memberPtr);

@@ -15,9 +15,6 @@
 
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/SymbolTable.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 //===----------------------------------------------------------------------===//
 // PDL Dialect Operations

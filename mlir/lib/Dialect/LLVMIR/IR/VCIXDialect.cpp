@@ -14,7 +14,6 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/TypeSwitch.h"
 

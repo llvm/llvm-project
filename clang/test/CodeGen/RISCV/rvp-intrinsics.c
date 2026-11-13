@@ -204,38 +204,72 @@ uint32_t test_asubu_u32(uint32_t a, uint32_t b) {
   return __riscv_asubu_u32(a, b);
 }
 
+/* Scalar Shift-Add */
+
+// RV32-LABEL: define dso_local i32 @test_ssh1sadd_i32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ssh1sadd.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_ssh1sadd_i32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.ssh1sadd.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_ssh1sadd_i32(int32_t a, int32_t b) {
+  return __riscv_ssh1sadd_i32(a, b);
+}
+
 /* Scalar Widening Zip */
 
-// CHECK-LABEL: define dso_local i64 @test_wzip8p_64(
+// RV32-LABEL: define dso_local i64 @test_wzip8p_64(
 // RV32-SAME: i32 noundef [[RS1:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1]] to <4 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2]] to <4 x i8>
+// RV32-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> [[TMP1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i64 @test_wzip8p_64(
 // RV64-SAME: i32 noundef signext [[RS1:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1]] to <4 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2]] to <4 x i8>
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> [[TMP1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
-// CHECK-NEXT:    ret i64 [[TMP2]]
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1]] to <4 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2]] to <4 x i8>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> [[TMP1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
 //
 uint64_t test_wzip8p_64(uint32_t rs1, uint32_t rs2) {
   return __riscv_wzip8p_64(rs1, rs2);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_wzip16p_64(
+// RV32-LABEL: define dso_local i64 @test_wzip16p_64(
 // RV32-SAME: i32 noundef [[RS1:%.*]], i32 noundef [[RS2:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2]] to <2 x i16>
+// RV32-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> [[TMP1]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i64 @test_wzip16p_64(
 // RV64-SAME: i32 noundef signext [[RS1:%.*]], i32 noundef signext [[RS2:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1]] to <2 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2]] to <2 x i16>
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> [[TMP1]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
-// CHECK-NEXT:    ret i64 [[TMP2]]
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast i32 [[RS2]] to <2 x i16>
+// RV64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> [[TMP1]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
 //
 uint64_t test_wzip16p_64(uint32_t rs1, uint32_t rs2) {
   return __riscv_wzip16p_64(rs1, rs2);
 }
 
 // CHECK-LABEL: define dso_local i64 @test_wzip8p_64_constant(
-// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 -105873736745117663
 //
@@ -669,7 +703,7 @@ int64_t test_mqrwacc_i64(int64_t rd, int32_t a, int32_t b) {
 /* Packed Splat (32-bit) */
 
 // CHECK-LABEL: define dso_local i32 @test_pmv_s_u8x4(
-// CHECK-SAME: i8 noundef zeroext [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: i8 noundef zeroext [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[X]], i64 0
 // CHECK-NEXT:    [[VECINIT3_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
@@ -6554,7 +6588,7 @@ int32x2_t test_pwmulsu_i32x2(int16x2_t rs1, uint16x2_t rs2) {
 // CHECK-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i8> zeroinitializer, <4 x i8> [[TMP0]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> zeroinitializer, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
@@ -6566,7 +6600,7 @@ int16x4_t test_pwcvth_i16x4(int8x4_t rs1) {
 // CHECK-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i8> zeroinitializer, <4 x i8> [[TMP0]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> zeroinitializer, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[SHUFFLE_I]] to i64
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
@@ -6578,7 +6612,7 @@ uint16x4_t test_pwcvth_u16x4(uint8x4_t rs1) {
 // CHECK-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i16> zeroinitializer, <2 x i16> [[TMP0]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> zeroinitializer, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
@@ -6590,7 +6624,7 @@ int32x2_t test_pwcvth_i32x2(int16x2_t rs1) {
 // CHECK-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i16> zeroinitializer, <2 x i16> [[TMP0]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> zeroinitializer, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to i64
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
@@ -9803,7 +9837,7 @@ uint16x2_t test_pwunziphe_u16x2(uint8x4_t a) {
 // CHECK-SAME: i32 noundef [[A_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i8> <i8 poison, i8 0, i8 poison, i8 0>, <4 x i8> [[TMP0]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> <i8 poison, i8 0, i8 poison, i8 0>, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[SHUFFLE_I_I]] to i32
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -9813,7 +9847,7 @@ int16x2_t test_pwunzipho_i16x2(int8x4_t a) { return __riscv_pwunzipho_i16x2(a); 
 // CHECK-SAME: i32 noundef [[A_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i8> <i8 poison, i8 0, i8 poison, i8 0>, <4 x i8> [[TMP0]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> <i8 poison, i8 0, i8 poison, i8 0>, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[SHUFFLE_I_I]] to i32
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
@@ -9937,7 +9971,7 @@ uint16x4_t test_pwunziphe_u16x4(uint8x8_t a) {
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <8 x i8> <i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0>, <8 x i8> [[TMP0]], <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> <i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0>, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[SHUFFLE_I_I]] to i64
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
@@ -9947,7 +9981,7 @@ int16x4_t test_pwunzipho_i16x4(int8x8_t a) { return __riscv_pwunzipho_i16x4(a); 
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <8 x i8> <i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0>, <8 x i8> [[TMP0]], <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> <i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0>, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[SHUFFLE_I_I]] to i64
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
@@ -9981,7 +10015,7 @@ uint32x2_t test_pwunziphe_u32x2(uint16x4_t a) {
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i16> <i16 poison, i16 0, i16 poison, i16 0>, <4 x i16> [[TMP0]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> <i16 poison, i16 0, i16 poison, i16 0>, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I]] to i64
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
@@ -9991,7 +10025,7 @@ int32x2_t test_pwunzipho_i32x2(int16x4_t a) { return __riscv_pwunzipho_i32x2(a);
 // CHECK-SAME: i64 noundef [[A_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i16> <i16 poison, i16 0, i16 poison, i16 0>, <4 x i16> [[TMP0]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+// CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> <i16 poison, i16 0, i16 poison, i16 0>, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[SHUFFLE_I_I]] to i64
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //

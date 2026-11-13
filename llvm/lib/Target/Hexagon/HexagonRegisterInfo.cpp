@@ -221,6 +221,8 @@ HexagonRegisterInfo::getBaseReservedRegs(const MachineFunction &MF) const {
   Reserved.set(Hexagon::FRAMEKEY);    // C17
   Reserved.set(Hexagon::PKTCOUNTLO);  // C18
   Reserved.set(Hexagon::PKTCOUNTHI);  // C19
+  Reserved.set(Hexagon::VFRAMELIMIT); // C28
+  Reserved.set(Hexagon::VSP);         // C29
   Reserved.set(Hexagon::UTIMERLO);    // C30
   Reserved.set(Hexagon::UTIMERHI);    // C31
   // Out of the control registers, only C8 is explicitly defined in
@@ -274,6 +276,14 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int Offset = HFI.getFrameIndexReference(MF, FI, BP).getFixed();
   // Add the offset from the instruction.
   int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
+
+  if (BP == Hexagon::VSP) {
+    auto &MRI = MF.getRegInfo();
+    Register VSPCopy = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_tfrcrr), VSPCopy)
+        .addReg(BP);
+    BP = VSPCopy;
+  }
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
@@ -464,6 +474,9 @@ Register HexagonRegisterInfo::getStackRegister() const {
   return Hexagon::R29;
 }
 
+Register HexagonRegisterInfo::getVTCMStackRegister() const {
+  return Hexagon::VSP;
+}
 
 unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       const TargetRegisterClass &RC, unsigned GenIdx) const {
@@ -479,6 +492,7 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
     case Hexagon::CircRegsRegClassID:
       return ISub[GenIdx];
     case Hexagon::HvxWRRegClassID:
+    case Hexagon::HlxLLRRegClassID:
       return VSub[GenIdx];
     case Hexagon::HvxVQRRegClassID:
       return WSub[GenIdx];

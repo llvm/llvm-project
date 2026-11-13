@@ -14,7 +14,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/StringExtras.h"
 
 using namespace mlir;
 using namespace mlir::ptr;

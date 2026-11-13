@@ -2059,7 +2059,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     break;
   }
-  case TargetOpcode::G_FREM: {
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_STRICT_FREM: {
     FPClassTest InterestedLHS = fcNone;
     FPClassTest InterestedRHS = fcNone;
 
@@ -2471,7 +2472,9 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
     case TargetOpcode::G_FMUL:
     case TargetOpcode::G_STRICT_FMUL:
     case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_STRICT_FDIV:
     case TargetOpcode::G_FREM:
+    case TargetOpcode::G_STRICT_FREM:
     case TargetOpcode::G_FMA:
     case TargetOpcode::G_STRICT_FMA:
     case TargetOpcode::G_FMAD:

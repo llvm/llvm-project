@@ -10,6 +10,9 @@
 //  Declarations that describe the RISC-V register files
 //===----------------------------------------------------------------------===//
 
+defvar RV32 = DefaultMode;
+def RV64 : HwMode<[IsRV64]>;
+
 let Namespace = "RISCV" in {
 class RISCVReg<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let HWEncoding{4-0} = Enc;

@@ -6076,6 +6076,14 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     { Intrinsic::masked_expandload,    MVT::v16i16, { 2, 8, 1, 3 } },
     { Intrinsic::masked_expandload,    MVT::v32i16, { 2, 9, 1, 3 } },
 
+    { Intrinsic::masked_expandload,    MVT::v8f16,  { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16f16, { 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v32f16, { 2, 9, 1, 3 } },
+
+    { Intrinsic::masked_expandload,    MVT::v8bf16, { 2, 7, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v16bf16,{ 2, 8, 1, 3 } },
+    { Intrinsic::masked_expandload,    MVT::v32bf16,{ 2, 9, 1, 3 } },
+
     { Intrinsic::masked_compressstore, MVT::v16i8,  { 3,10, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v32i8,  { 3,11, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v64i8,  { 3,12, 1, 8 } },
@@ -6083,6 +6091,14 @@ X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     { Intrinsic::masked_compressstore, MVT::v8i16,  { 3,10, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v16i16, { 3,11, 1, 7 } },
     { Intrinsic::masked_compressstore, MVT::v32i16, { 3,12, 1, 8 } },
+
+    { Intrinsic::masked_compressstore, MVT::v8f16,  { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v16f16, { 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v32f16, { 3,12, 1, 8 } },
+
+    { Intrinsic::masked_compressstore, MVT::v8bf16, { 3,10, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v16bf16,{ 3,11, 1, 7 } },
+    { Intrinsic::masked_compressstore, MVT::v32bf16,{ 3,12, 1, 8 } },
   };
 
   static const CostKindTblEntry AVX512CostTable[] = {
@@ -7424,6 +7440,9 @@ bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const {
 
   if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
     return true;
+
+  if (ScalarTy->isHalfTy() || ScalarTy->isBFloatTy())
+    return ST->hasVBMI2();
 
   if (!ScalarTy->isIntegerTy())
     return false;

@@ -338,6 +338,13 @@ td_library(
     includes = ["include"],
 )
 
+td_library(
+    name = "BuiltinsHexagonDepTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsHexagonDep.td"],
+    includes = ["include"],
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
 gentbl_cc_library(
     name = "basic_builtins_aarch64_gen",
     tbl_outs = {"include/clang/Basic/BuiltinsAArch64.inc": ["-gen-clang-builtins"]},
@@ -392,7 +399,10 @@ gentbl_cc_library(
     tbl_outs = {"include/clang/Basic/BuiltinsHexagon.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/BuiltinsHexagon.td",
-    deps = [":BuiltinsBaseTdFiles"],
+    deps = [
+        ":BuiltinsBaseTdFiles",
+        ":BuiltinsHexagonDepTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -3171,6 +3181,7 @@ cc_library(
         ":cir_interfaces",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
         "//mlir:ControlFlowInterfaces",

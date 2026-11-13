@@ -142,7 +142,7 @@ struct TransferReadOpMemOpModel
       result = arith::SelectOp::create(builder, loc, mask, reachingDefinition,
                                        padSplat);
     }
-    readOp.getVector().replaceAllUsesWith(result);
+    readOp.getResult().replaceAllUsesWith(result);
     return DeletionKind::Delete;
   }
 };

@@ -2003,7 +2003,12 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
             .value_or(0);
     if (Success && AttrInfo.Name && !AttrInfo.Name.getString().empty()) {
-      uint32_t Hash = hashFullyQualifiedName(InputDIE, Unit, File);
+      uint32_t Hash = hashFullyQualifiedName(
+          InputDIE, [&](const DWARFDie &Referrer, const DWARFFormValue &Ref) {
+            CompileUnit *RefCU;
+            return Linker.resolveDIEReference(File, CompileUnits, Ref, Referrer,
+                                              RefCU);
+          });
       Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
                               Hash);
     }
@@ -2698,52 +2703,6 @@ void DWARFLinker::patchFrameInfoForObject(LinkContext &Context) {
                              FrameData.substr(InputOffset, FDERemainingBytes));
     InputOffset += FDERemainingBytes;
   }
-}
-
-uint32_t DWARFLinker::DIECloner::hashFullyQualifiedName(DWARFDie DIE,
-                                                        CompileUnit &U,
-                                                        const DWARFFile &File,
-                                                        int ChildRecurseDepth) {
-  const char *Name = nullptr;
-  DWARFUnit *OrigUnit = &U.getOrigUnit();
-  CompileUnit *CU = &U;
-  std::optional<DWARFFormValue> Ref;
-
-  while (true) {
-    if (const char *CurrentName = DIE.getName(DINameKind::ShortName))
-      Name = CurrentName;
-
-    if (!(Ref = DIE.find(dwarf::DW_AT_specification)) &&
-        !(Ref = DIE.find(dwarf::DW_AT_abstract_origin)))
-      break;
-
-    if (!Ref->isFormClass(DWARFFormValue::FC_Reference))
-      break;
-
-    CompileUnit *RefCU;
-    if (auto RefDIE =
-            Linker.resolveDIEReference(File, CompileUnits, *Ref, DIE, RefCU)) {
-      CU = RefCU;
-      OrigUnit = &RefCU->getOrigUnit();
-      DIE = RefDIE;
-    }
-  }
-
-  unsigned Idx = OrigUnit->getDIEIndex(DIE);
-  if (!Name && DIE.getTag() == dwarf::DW_TAG_namespace)
-    Name = "(anonymous namespace)";
-
-  if (CU->getInfo(Idx).ParentIdx == 0 ||
-      // FIXME: dsymutil-classic compatibility. Ignore modules.
-      CU->getOrigUnit().getDIEAtIndex(CU->getInfo(Idx).ParentIdx).getTag() ==
-          dwarf::DW_TAG_module)
-    return djbHash(Name ? Name : "", djbHash(ChildRecurseDepth ? "" : "::"));
-
-  DWARFDie Die = OrigUnit->getDIEAtIndex(CU->getInfo(Idx).ParentIdx);
-  return djbHash(
-      (Name ? Name : ""),
-      djbHash((Name ? "::" : ""),
-              hashFullyQualifiedName(Die, *CU, File, ++ChildRecurseDepth)));
 }
 
 static uint64_t getDwoId(const DWARFDie &CUDie) {

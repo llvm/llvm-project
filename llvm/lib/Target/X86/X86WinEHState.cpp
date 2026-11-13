@@ -314,6 +314,7 @@ void WinEHStateFnPassImpl::emitExceptionRegistrationRecord(Function *F) {
          Personality == EHPersonality::MSVC_X86SEH);
 
   IRBuilder<> Builder(F->getEntryBlock().begin());
+  Builder.disableGEPCanonicalization();
   Type *Int8PtrType = Builder.getPtrTy();
   Type *Int32Ty = Builder.getInt32Ty();
   Type *VoidTy = Builder.getVoidTy();
@@ -824,6 +825,7 @@ void WinEHStateFnPassImpl::addStateStores(Function &F,
     bool InCleanup = isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHIIt());
 
     IRBuilder<> Builder(Call);
+    Builder.disableGEPCanonicalization();
     Value *State;
     if (InCleanup) {
       Value *StateField =
@@ -838,6 +840,7 @@ void WinEHStateFnPassImpl::addStateStores(Function &F,
 
 void WinEHStateFnPassImpl::insertStateNumberStore(Instruction *IP, int State) {
   IRBuilder<> Builder(IP);
+  Builder.disableGEPCanonicalization();
   Value *StateField =
       Builder.CreateStructGEP(RegNodeTy, RegNode, StateFieldIndex);
   Builder.CreateStore(Builder.getInt32(State), StateField);

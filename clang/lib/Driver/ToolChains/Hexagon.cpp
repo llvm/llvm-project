@@ -188,6 +188,16 @@ void hexagon::getHexagonTargetFeatures(const Driver &D,
 
   handleHVXTargetFeatures(D, Args, Features, Cpu, HasHVX);
 
+  // HLX is available on v85 and later.
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hlx,
+                               options::OPT_mno_hexagon_hlx)) {
+    unsigned CpuVer = 0;
+    // getAsInteger returns 'true' on error.
+    if (Cpu.substr(1).getAsInteger(10, CpuVer) || CpuVer < 85)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Cpu;
+  }
+
   if (HexagonToolChain::isAutoHVXEnabled(Args) && !HasHVX)
     D.Diag(diag::warn_drv_needs_hvx) << "auto-vectorization";
 }
@@ -236,6 +246,10 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_mhexagon_hvx_ieee_fp))
       CmdArgs.push_back("-mhvx-ieee-fp");
   }
+
+  if (Args.hasFlag(options::OPT_mhexagon_hlx, options::OPT_mno_hexagon_hlx,
+                   false))
+    CmdArgs.push_back("-mhlx");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
     CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(*G)));

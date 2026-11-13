@@ -538,7 +538,7 @@ class OpEmitter {
 
 public:
   // Emits the declaration of `op` to `os` and appends the headers declaring
-  // the traits it uses to `includes`.
+  // the traits and constraints it uses to `includes`.
   static void
   emitDecl(const Operator &op, raw_ostream &os,
            const StaticVerifierFunctionEmitter &staticVerifierEmitter,
@@ -566,6 +566,10 @@ private:
   void addTrait(const Twine &trait, ArrayRef<StringRef> cppIncludes);
   void addTrait(const tblgen::NativeTrait &trait);
   void addTrait(const tblgen::InterfaceTrait &trait);
+
+  // Records the headers declaring the type and attribute constraints of the
+  // operands, results and attributes as required by the op declaration.
+  void addConstraintIncludes();
 
   // Generate methods for accessing the attribute names of this operation.
   void genAttrNameGetters();
@@ -783,7 +787,7 @@ private:
   // avoid duplicates.
   llvm::StringSet<> interfaceUsingNames;
 
-  // The headers declaring the traits added to the op class.
+  // The headers declaring the traits and constraints used by the op class.
   SmallVector<StringRef> requiredIncludes;
 
   // The headers required by the op definition beyond those of the declaration.
@@ -1037,6 +1041,7 @@ OpEmitter::OpEmitter(const Operator &op,
   verifyCtx.addSubst("_ctxt", "this->getOperation()->getContext()");
 
   genTraits();
+  addConstraintIncludes();
 
   // Generate C++ code for various op methods. The order here determines the
   // methods in the generated file.
@@ -1106,6 +1111,15 @@ void OpEmitter::addTrait(const tblgen::NativeTrait &trait) {
 
 void OpEmitter::addTrait(const tblgen::InterfaceTrait &trait) {
   addTrait(trait.getFullyQualifiedTraitName(), trait.getCppIncludes());
+}
+
+void OpEmitter::addConstraintIncludes() {
+  for (const NamedTypeConstraint &operand : op.getOperands())
+    llvm::append_range(requiredIncludes, operand.constraint.getCppIncludes());
+  for (const NamedTypeConstraint &result : op.getResults())
+    llvm::append_range(requiredIncludes, result.constraint.getCppIncludes());
+  for (const NamedAttribute &namedAttr : op.getAttributes())
+    llvm::append_range(requiredIncludes, namedAttr.attr.getCppIncludes());
 }
 
 static void errorIfPruned(size_t line, Method *m, const Twine &methodName,

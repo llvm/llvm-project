@@ -1829,6 +1829,8 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::uadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::usub_sat:
+  case Intrinsic::sshl_sat:
+  case Intrinsic::ushl_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::bitreverse:
@@ -2344,29 +2346,6 @@ static APFloat FlushWithDenormKind(const APFloat &V,
   default:
     llvm_unreachable("Invalid denormal mode!");
   }
-}
-
-Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
-                         DenormalMode DenormMode = DenormalMode::getIEEE()) {
-  if (!DenormMode.isValid() ||
-      DenormMode.Input == DenormalMode::DenormalModeKind::Dynamic ||
-      DenormMode.Output == DenormalMode::DenormalModeKind::Dynamic)
-    return nullptr;
-
-  llvm_fenv_clearexcept();
-  auto Input = FlushWithDenormKind(V, DenormMode.Input);
-  double Result = NativeFP(Input.convertToDouble());
-  if (llvm_fenv_testexcept()) {
-    llvm_fenv_clearexcept();
-    return nullptr;
-  }
-
-  Constant *Output = GetConstantFoldFPValue(Result, Ty);
-  if (DenormMode.Output == DenormalMode::DenormalModeKind::IEEE)
-    return Output;
-  const auto *CFP = static_cast<ConstantFP *>(Output);
-  const auto Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
-  return ConstantFP::get(Ty->getContext(), Res);
 }
 
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
@@ -3942,6 +3921,15 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, C0->usub_sat(*C1));
       else
         return ConstantInt::get(Ty, C0->ssub_sat(*C1));
+    case Intrinsic::ushl_sat:
+    case Intrinsic::sshl_sat:
+      if (!C0 || !C1)
+        return nullptr;
+      if (C1->uge(C1->getBitWidth()))
+        return PoisonValue::get(Ty);
+      if (IntrinsicID == Intrinsic::ushl_sat)
+        return ConstantInt::get(Ty, C0->ushl_sat(*C1));
+      return ConstantInt::get(Ty, C0->sshl_sat(*C1));
     case Intrinsic::cttz:
     case Intrinsic::ctlz:
       assert(C1 && "Must be constant int");
@@ -4893,6 +4881,29 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 }
 
 } // end anonymous namespace
+
+Constant *llvm::ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
+                               Type *Ty, DenormalMode DenormMode) {
+  assert(DenormMode.isValid() && "invalid denormal mode");
+  if (DenormMode.Input == DenormalMode::DenormalModeKind::Dynamic ||
+      DenormMode.Output == DenormalMode::DenormalModeKind::Dynamic)
+    return nullptr;
+
+  llvm_fenv_clearexcept();
+  APFloat Input = FlushWithDenormKind(V, DenormMode.Input);
+  double Result = NativeFP(Input.convertToDouble());
+  if (llvm_fenv_testexcept()) {
+    llvm_fenv_clearexcept();
+    return nullptr;
+  }
+
+  Constant *Output = GetConstantFoldFPValue(Result, Ty);
+  if (DenormMode.Output == DenormalMode::DenormalModeKind::IEEE)
+    return Output;
+  auto *CFP = cast<ConstantFP>(Output);
+  APFloat Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
+  return ConstantFP::get(Ty->getContext(), Res);
+}
 
 Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
                                       ArrayRef<Constant *> Ops, Type *Ty,

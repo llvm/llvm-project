@@ -621,16 +621,6 @@ def PPCvcmp_rec   : SDNode<"PPCISD::VCMP_rec", SDT_PPCvcmp, [SDNPOutGlue]>;
 def PPCcondbranch : SDNode<"PPCISD::COND_BRANCH", SDT_PPCcondbr,
                            [SDNPHasChain, SDNPOptInGlue]>;
 
-// ATOMIC_CMP_SWAP - the exact same as the target-independent nodes
-// except they ensure that the compare input is zero-extended for
-// sub-word versions because the atomic loads zero-extend.
-def PPCatomicCmpSwap_8 :
-  SDNode<"PPCISD::ATOMIC_CMP_SWAP_8", SDTAtomic3,
-         [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
-def PPCatomicCmpSwap_16 :
-  SDNode<"PPCISD::ATOMIC_CMP_SWAP_16", SDTAtomic3,
-         [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
-
 // GPRC, CHAIN = LBRX CHAIN, Ptr, Type - This is a
 // byte-swapping load instruction.  It loads "Type" bits, byte swaps it,
 // then puts it in the bottom bits of the GPRC.  TYPE can be either i16
@@ -2093,11 +2083,6 @@ foreach bitsz = [8, 16, 32] in {
   def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$old, gprc:$new)),
           (!cast<Instruction>(pseudo) memrr:$ptr, gprc:$old, gprc:$new)>;
 }
-
-def : Pat<(PPCatomicCmpSwap_8 ForceXForm:$ptr, i32:$old, i32:$new),
-        (ATOMIC_CMP_SWAP_I8 ForceXForm:$ptr, i32:$old, i32:$new)>;
-def : Pat<(PPCatomicCmpSwap_16 ForceXForm:$ptr, i32:$old, i32:$new),
-        (ATOMIC_CMP_SWAP_I16 ForceXForm:$ptr, i32:$old, i32:$new)>;
 
 // Instructions to support atomic operations
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
