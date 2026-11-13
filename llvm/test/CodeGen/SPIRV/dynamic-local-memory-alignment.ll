@@ -1,6 +1,7 @@
 ; RUN: not opt -S -mtriple=spirv64-intel -passes=spirv-lower-dynamic-local-memory %s -o /dev/null 2>&1 | FileCheck %s
 ; RUN: not llc -O0 -mtriple=spirv64-intel %s -o /dev/null 2>&1 | FileCheck %s
-; RUN: opt -S -mtriple=spirv64-unknown-unknown -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=UNCHANGED
+; RUN: not opt -S -mtriple=spirv64-unknown-unknown -passes=spirv-lower-dynamic-local-memory %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -S -mtriple=spirv64-amd-amdhsa -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=UNCHANGED
 
 ; Local memory arguments are only aligned to 32 bytes, so dynamic local memory
 ; requiring more cannot be lowered to one.

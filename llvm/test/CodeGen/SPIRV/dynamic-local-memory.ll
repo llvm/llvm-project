@@ -1,6 +1,6 @@
 ; RUN: opt -S -mtriple=spirv64-intel -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=IR
 ; RUN: opt -S -mtriple=spirv64-amd-amdhsa -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=UNCHANGED
-; RUN: opt -S -mtriple=spirv64-unknown-unknown -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=UNCHANGED
+; RUN: opt -S -mtriple=spirv64-unknown-unknown -passes=spirv-lower-dynamic-local-memory %s | FileCheck %s --check-prefix=IR
 ; RUN: llc -O0 -mtriple=spirv64-intel %s -o - | FileCheck %s --check-prefix=SPV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-intel %s -o - -filetype=obj | spirv-val %}
 
@@ -12,7 +12,7 @@
 @unused = external addrspace(3) global [0 x i8]
 @sized = internal addrspace(3) global [4 x i32] poison, align 4
 
-; Only Intel GPUs take the memory as a kernel argument.
+; AMDHSA does not take the memory as a kernel argument.
 ; UNCHANGED: @buf = external addrspace(3) global [0 x i32]
 ; UNCHANGED-NOT: @__spirv_dynamic_local_memory
 ; UNCHANGED: define spir_kernel void @kernel(ptr addrspace(1) noundef %out) addrspace(9)
