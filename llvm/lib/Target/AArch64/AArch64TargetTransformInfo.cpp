@@ -5041,21 +5041,20 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
         auto *FMul = cast<BinaryOperator>(U);
         auto *Op0 = FMul->getOperand(0);
         auto *Op1 = FMul->getOperand(1);
-        if (S == Scalar) {
-          // We need an extract if both operands are the Scalar
-          if (Op0 == Scalar && Op1 == Scalar)
-            return false;
-          // If the other operand is an extract with nonzero lane then we'll
-          // need an extract.
-          const auto *OtherEE =
-              dyn_cast<ExtractElementInst>(Op0 == Scalar ? Op1 : Op0);
-          if (OtherEE && !IsLaneZeroExtract(OtherEE))
-            return false;
-        } else {
-          // If there's a different value used in an FMul that Scalar is used
-          // in, then if that also has nonzero lane then we need an extract.
-          if (L != 0 && (Op0 == Scalar || Op1 == Scalar))
-            return false;
+        // If there's a different value used in an FMul that Scalar is used
+        // in, then if that also has nonzero lane then we need an extract.
+        if (S != Scalar && L != 0 && (Op0 == Scalar || Op1 == Scalar))
+          return false;
+
+        // We need an extract if both operands are the Scalar
+        if (Op0 == Scalar && Op1 == Scalar)
+          return false;
+        // If the other operand is an extract with nonzero lane then we'll
+        // need an extract.
+        const auto *OtherEE =
+            dyn_cast<ExtractElementInst>(Op0 == Scalar ? Op1 : Op0);
+        if (OtherEE && !IsLaneZeroExtract(OtherEE))
+          return false;
         }
       }
     } else {
