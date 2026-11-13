@@ -417,6 +417,8 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
   InputFile *newFile = nullptr;
 
   file_magic magic = identify_magic(mbref.getBuffer());
+  if (magic != file_magic::macho_object && magic != file_magic::archive)
+    parsePendingObjects();
   switch (magic) {
   case file_magic::archive: {
     bool isCommandLineLoad = loadType != LoadType::LCLinkerOption;
@@ -467,7 +469,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
             reason = "-all_load";
             break;
           }
-          if (Error e = file->fetch(c, reason)) {
+          if (Error e = file->fetch(c, reason, /*deferParse=*/true)) {
             if (config->warnThinArchiveMissingMembers)
               warn(toString(file) + ": " + reason +
                    " failed to load archive member: " + toString(std::move(e)));
@@ -483,7 +485,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
       if (file->getArchive().hasSymbolTable()) {
         for (const object::Archive::Symbol &sym : file->getArchive().symbols())
           if (sym.getName().starts_with(objc::symbol_names::klass))
-            file->fetch(sym);
+            file->fetch(sym, /*deferParse=*/true);
       }
 
       // TODO: no need to look for ObjC sections for a given archive member if
@@ -507,7 +509,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
             archiveContents->push_back({path, isLazy, *mb});
           if (!hasObjCSection(*mb))
             continue;
-          if (Error e = file->fetch(c, "-ObjC"))
+          if (Error e = file->fetch(c, "-ObjC", /*deferParse=*/true))
             error(toString(file) + ": -ObjC failed to load archive member: " +
                   toString(std::move(e)));
         }
@@ -522,9 +524,16 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
     newFile = file;
     break;
   }
-  case file_magic::macho_object:
-    newFile = make<ObjFile>(mbref, getModTime(path), "", isLazy);
+  case file_magic::macho_object: {
+    auto *obj = make<ObjFile>(mbref, getModTime(path), "", isLazy,
+                              /*forceHidden=*/false, /*compatArch=*/true,
+                              /*builtFromBitcode=*/false,
+                              /*deferParse=*/!isLazy);
+    if (!isLazy)
+      parseLater(*obj);
+    newFile = obj;
     break;
+  }
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::tapi_file:
