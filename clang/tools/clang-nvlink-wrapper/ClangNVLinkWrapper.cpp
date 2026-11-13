@@ -398,7 +398,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
   Conf.RemarksFilename =
       Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
   Conf.RemarksPasses =
-      Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+      Args.getLastArgValue(OPT_opt_remarks_passes, RemarksPasses);
   Conf.RemarksFormat =
       Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
 
@@ -833,7 +833,8 @@ int main(int argc, char **argv) {
   for (const opt::Arg *Arg : Args.filtered(OPT_plugin_opt))
     NewArgv.push_back(Arg->getValue());
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              NewArgv);
 
   // Get the input files to pass to 'nvlink'.
   auto FilesOrErr = getInput(LibraryOptions, Args);

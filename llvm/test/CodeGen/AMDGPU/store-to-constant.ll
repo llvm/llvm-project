@@ -182,3 +182,211 @@ define amdgpu_kernel void @store_as4_2xdouble(ptr addrspace(4) %p, <2 x double> 
   store <2 x double> %v, ptr addrspace(4) %p
   ret void
 }
+
+define amdgpu_kernel void @store_as4_v32i8(ptr addrspace(4) %dst, <32 x i8> %value) {
+; CHECK-LABEL: store_as4_v32i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x20
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9] offset:16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_endpgm
+  store <32 x i8> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_v16i16(ptr addrspace(4) %dst, <16 x i16> %value) {
+; CHECK-LABEL: store_as4_v16i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x20
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9] offset:16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_endpgm
+  store <16 x i16> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_v8i32(ptr addrspace(4) %dst, <8 x i32> %value) {
+; CHECK-LABEL: store_as4_v8i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x20
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9] offset:16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_endpgm
+  store <8 x i32> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_v4i64(ptr addrspace(4) %dst, <4 x i64> %value) {
+; CHECK-LABEL: store_as4_v4i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x20
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9] offset:16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_endpgm
+  store <4 x i64> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_v16f16(ptr addrspace(4) %dst, <16 x half> %value) {
+; CHECK-LABEL: store_as4_v16f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x20
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9] offset:16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_endpgm
+  store <16 x half> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_v8f32(ptr addrspace(4) %dst, <8 x float> %value) {
+; CHECK-LABEL: store_as4_v8f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x20
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9] offset:16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_endpgm
+  store <8 x float> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_v4f64(ptr addrspace(4) %dst, <4 x double> %value) {
+; CHECK-LABEL: store_as4_v4f64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x20
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9] offset:16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_endpgm
+  store <4 x double> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as6_v4i64(<4 x i64> %value) {
+; CHECK-LABEL: store_as6_v4i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0x1010
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0x1000
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; CHECK-NEXT:    s_endpgm
+  store <4 x i64> %value, ptr addrspace(6) inttoptr (i32 4096 to ptr addrspace(6)), align 32
+  ret void
+}
+
+define amdgpu_kernel void @store_as4_v16bf16(ptr addrspace(4) %dst, <16 x bfloat> %value) {
+; CHECK-LABEL: store_as4_v16bf16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x20
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9] offset:16
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v5, s3
+; CHECK-NEXT:    global_store_dwordx4 v0, v[2:5], s[8:9]
+; CHECK-NEXT:    s_endpgm
+  store <16 x bfloat> %value, ptr addrspace(4) %dst, align 32
+  ret void
+}
