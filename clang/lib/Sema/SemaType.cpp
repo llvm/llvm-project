@@ -1413,6 +1413,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     const auto &OpenCLOptions = S.getOpenCLOptions();
     bool IsOpenCLC30Compatible =
         S.getLangOpts().getOpenCLCompatibleVersion() >= 300;
+    // OpenCL C v1.2 s6.1.3 / v2.0 s6.1.3 - Image types are only supported if
+    // the device supports images.
     // OpenCL C v3.0 s6.3.3 - OpenCL image types require __opencl_c_images
     // support.
     // OpenCL C v3.0 s6.2.1 - OpenCL 3d image write types requires support
@@ -1425,6 +1427,10 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
          !OpenCLOptions.isSupported("__opencl_c_images", S.getLangOpts()))) {
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
           << 0 << Result << "__opencl_c_images";
+      declarator.setInvalidType();
+    } else if ((Result->isImageType() || Result->isSamplerT()) &&
+               !S.Context.getTargetInfo().hasOpenCLImageSupport()) {
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << Result;
       declarator.setInvalidType();
     } else if (Result->isOCLImage3dWOType() &&
                !OpenCLOptions.isSupported("cl_khr_3d_image_writes",
