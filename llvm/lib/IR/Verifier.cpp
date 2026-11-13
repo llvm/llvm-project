@@ -4732,8 +4732,8 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
   if (const char *Reason = BitInsertInst::areInvalidOperands(
           BII.getOperand(0), BII.getOperand(1), BII.getOperand(2)))
     Check(false, Reason, &BII);
-  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) >=
-            DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
+  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()->getScalarType()) >=
+            DL.getTypeSizeInBits(BII.getOperand(1)->getType()->getScalarType()),
         "bitinsert val type cannot be wider than base type!", &BII);
   visitInstruction(BII);
 }
@@ -4749,8 +4749,8 @@ void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
   if (const char *Reason = BitExtractInst::areInvalidOperands(
           BEI.getType(), BEI.getOperand(0), BEI.getOperand(1)))
     Check(false, Reason, &BEI);
-  Check(DL.getTypeSizeInBits(BEI.getType()) <=
-            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()),
+  Check(DL.getTypeSizeInBits(BEI.getType()->getScalarType()) <=
+            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()->getScalarType()),
         "bitextract result type cannot be wider than source type!", &BEI);
   visitInstruction(BEI);
 }
