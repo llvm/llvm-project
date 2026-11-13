@@ -30,6 +30,7 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Enum.h"
@@ -998,6 +999,51 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   assert(getHLSLBufferLayoutType(StructType) == nullptr &&
          "layout type for this struct already exist");
   LayoutTypes[StructType] = LayoutTy;
+}
+
+void CGHLSLRuntime::setPreciseFPOptions(LangOptions &Opts) {
+  // If HLSL `precise` appears anywhere in the TU, compile the whole TU as if
+  // -ffp-model=strict (-Gis) had been specified.
+  if (!CGM.getContext().getTranslationUnitDecl()->hasAttr<HLSLPreciseAttr>())
+    return;
+
+  bool SupportsStrictFP = CGM.getTarget().hasStrictFP() || Opts.ExpStrictFP;
+  auto ExceptionMode =
+      SupportsStrictFP ? LangOptions::FPE_Strict : LangOptions::FPE_Ignore;
+  bool AlreadyStrict =
+      Opts.getDefaultFPContractMode() == LangOptions::FPM_Off &&
+      Opts.getComplexRange() == LangOptions::CX_Full &&
+      Opts.RoundingMath == SupportsStrictFP &&
+      Opts.getFPExceptionMode() == ExceptionMode;
+
+  // Match -Gis, including the target's existing strict-FP fallback.
+  // Sema has already consulted MathErrno (e.g. to mark libm builtins const).
+  // This is consistent because the HLSL driver already passes -fmath-errno by
+  // default; it has no effect on HLSL intrinsics.
+  Opts.MathErrno = true;
+  Opts.setDefaultFPContractMode(LangOptions::FPM_Off);
+  Opts.setComplexRange(LangOptions::CX_Full);
+  // HLSL enables -ffast-math by default; precise must not allow lossy FP
+  // optimizations, so clear it and every option it implies.
+  Opts.FastMath = false;
+  Opts.UnsafeFPMath = false;
+  Opts.AllowFPReassoc = false;
+  Opts.NoHonorNaNs = false;
+  Opts.NoHonorInfs = false;
+  Opts.NoSignedZero = false;
+  Opts.AllowRecip = false;
+  Opts.ApproxFunc = false;
+  if (!AlreadyStrict) {
+    Opts.RoundingMath = true;
+    Opts.setFPExceptionMode(LangOptions::FPE_Strict);
+    // Mirrors the fallback in CompilerInstance::createTarget.
+    if (!SupportsStrictFP) {
+      CGM.getDiags().Report(diag::warn_fe_backend_unsupported_fp_rounding);
+      Opts.RoundingMath = false;
+      CGM.getDiags().Report(diag::warn_fe_backend_unsupported_fp_exceptions);
+      Opts.setFPExceptionMode(LangOptions::FPE_Ignore);
+    }
+  }
 }
 
 void CGHLSLRuntime::finishCodeGen() {

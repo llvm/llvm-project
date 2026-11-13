@@ -3025,6 +3025,21 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
+void SemaHLSL::handlePreciseAttr(Decl *D, const ParsedAttr &AL) {
+  auto *TU = getASTContext().getTranslationUnitDecl();
+  if (!TU->hasAttr<HLSLPreciseAttr>())
+    TU->addAttr(HLSLPreciseAttr::CreateImplicit(getASTContext()));
+
+  D->addAttr(HLSLPreciseAttr::Create(getASTContext(), AL));
+}
+
+void SemaHLSL::deferFPNaNInfDiagnostic(const CallExpr *Call, bool IsNaN) {
+  // A later precise declaration can invalidate this fast-math diagnostic.
+  DeferredFPNaNInfDiagnostics.emplace_back(
+      Call->getBeginLoc(), PDiag(diag::warn_fp_nan_inf_when_disabled)
+                               << IsNaN << 0 << Call->getSourceRange());
+}
+
 static bool isMatrixType(QualType QT) {
   const Type *Ty = QT->getUnqualifiedDesugaredType();
   return Ty->isDependentType() || Ty->isConstantMatrixType();
@@ -3632,6 +3647,11 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     SemaRef.Consumer.HandleTopLevelDecl(DG);
   }
   diagnoseAvailabilityViolations(TU);
+
+  if (!TU->hasAttr<HLSLPreciseAttr>())
+    for (const auto &[Loc, PD] : DeferredFPNaNInfDiagnostics)
+      Diag(Loc, PD);
+  DeferredFPNaNInfDiagnostics.clear();
 }
 
 // For resource member access through a global struct array, verify that the
@@ -5119,6 +5139,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
+
+    FPOptions FPO = TheCall->getFPFeaturesInEffect(getLangOpts());
+    if (FPO.getNoHonorInfs() &&
+        (BuiltinID == Builtin::BI__builtin_hlsl_elementwise_isinf ||
+         BuiltinID == Builtin::BI__builtin_hlsl_elementwise_isfinite))
+      deferFPNaNInfDiagnostic(TheCall, /*IsNan=*/false);
+
+    if (FPO.getNoHonorNaNs() &&
+        BuiltinID == Builtin::BI__builtin_hlsl_elementwise_isnan)
+      deferFPNaNInfDiagnostic(TheCall, /*IsNan=*/true);
     break;
   }
   case Builtin::BI__builtin_hlsl_mad: {
