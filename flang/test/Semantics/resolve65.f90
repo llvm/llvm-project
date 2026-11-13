@@ -77,6 +77,7 @@ module m2
       type(t), intent(out) :: x
       intent(in) :: y
       interface
+        !ERROR: A dummy procedure without the POINTER attribute may not have an INTENT attribute
         subroutine y()
         end
       end interface
