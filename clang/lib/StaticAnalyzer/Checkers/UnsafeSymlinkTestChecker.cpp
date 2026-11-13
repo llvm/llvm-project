@@ -204,6 +204,7 @@ private:
                             CheckerContext &C) const;
 
   void initData(const RecordDecl *StatDecl, const Preprocessor &PP) const;
+  bool isInitialized() const { return ASTValues && ASTValues->IsValid; }
   ExplodedNode *checkUseOfS_ISLNK(
       ExplodedNode *Node, const MemRegion *Region, const Stmt *S,
       CheckerContext &C,
@@ -343,6 +344,9 @@ void UnsafeSymlinkTestChecker::handleLStat(const CallEvent &Call,
 
 void UnsafeSymlinkTestChecker::handleOpen(const CallEvent &Call,
                                           CheckerContext &C) const {
+  if (!isInitialized())
+    return;
+
   ProgramStateRef State = C.getState();
   const MemRegion *FNameReg = Call.getArgSVal(0).getAsRegion();
   FileNameKey FName(FNameReg);
@@ -384,6 +388,9 @@ void UnsafeSymlinkTestChecker::handleOpen(const CallEvent &Call,
 
 void UnsafeSymlinkTestChecker::handleFStat(const CallEvent &Call,
                                            CheckerContext &C) const {
+  if (!isInitialized())
+    return;
+
   ProgramStateRef State = C.getState();
   SymbolRef FileDescSym = Call.getArgSVal(0).getAsSymbol();
   const auto *FStatReg =
@@ -412,6 +419,9 @@ void UnsafeSymlinkTestChecker::handleFStat(const CallEvent &Call,
 
 void UnsafeSymlinkTestChecker::handleFileAccess(const CallEvent &Call,
                                                 CheckerContext &C) const {
+  if (!isInitialized())
+    return;
+
   ProgramStateRef State = C.getState();
   SymbolRef FileDescSym = Call.getArgSVal(0).getAsSymbol();
   if (!FileDescSym)
@@ -466,9 +476,6 @@ void UnsafeSymlinkTestChecker::handleFileAccess(const CallEvent &Call,
 
 void UnsafeSymlinkTestChecker::checkPostCall(const CallEvent &Call,
                                              CheckerContext &C) const {
-  if (ASTValues && !ASTValues->IsValid)
-    return;
-
   if (const FnHandler *Fn = Callbacks.lookup(Call))
     (*Fn)(this, Call, C);
   else if (FileAccessFn.contains(Call))
@@ -538,7 +545,7 @@ ExplodedNode *UnsafeSymlinkTestChecker::checkUseOfS_ISLNK(
 
 void UnsafeSymlinkTestChecker::checkBranchCondition(const Stmt *S,
                                                     CheckerContext &C) const {
-  if (!ASTValues || !ASTValues->IsValid)
+  if (!isInitialized())
     return;
 
   ExplodedNode *NewNode = C.getPredecessor();
@@ -570,6 +577,8 @@ ProgramStateRef UnsafeSymlinkTestChecker::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
     ArrayRef<const MemRegion *> Explicits, ArrayRef<const MemRegion *> Regions,
     const StackFrame *SF, const CallEvent *Call) const {
+  if (!isInitialized())
+    return State;
   if (Call && Callbacks.lookup(*Call))
     return State;
 
@@ -592,7 +601,7 @@ ProgramStateRef UnsafeSymlinkTestChecker::checkRegionChanges(
 
 void UnsafeSymlinkTestChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                                 CheckerContext &C) const {
-  if (!ASTValues || !ASTValues->IsValid)
+  if (!isInitialized())
     return;
 
   ProgramStateRef State = C.getState();
@@ -612,7 +621,7 @@ void UnsafeSymlinkTestChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
 void UnsafeSymlinkTestChecker::checkLiveSymbols(ProgramStateRef State,
                                                 SymbolReaper &SymReaper) const {
-  if (!ASTValues || !ASTValues->IsValid)
+  if (!isInitialized())
     return;
 
   // The SVal objects at these regions may be needed at checkFileAccess later.

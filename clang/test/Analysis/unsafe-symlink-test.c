@@ -375,3 +375,17 @@ void test_inval_p(struct stat *stat1, const char *buf, size_t size) {
 
   write(fd, buf, size); // no-warning
 }
+
+int test_no_first_lstat(int fd, const char *buf, size_t size) {
+  struct stat st;
+  if (fstat(fd, &st) != 0)
+    return -1;
+
+  int fd1 = open("a/b", 1);
+  if (fd1 == -1)
+    return -1;
+
+  write(fd1, buf, size);
+
+  return 0;
+}
