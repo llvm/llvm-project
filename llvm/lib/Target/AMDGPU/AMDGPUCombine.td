@@ -263,6 +263,29 @@ def combine_or_s64_s32 : GICombineRule<
          (G_OR $or, $x_lo, $y),
          (G_MERGE_VALUES $dst, $or, $x_hi))>;
 
+// (or (and i32:$x, 0xffff), (shl i32:$y, 16)) ->
+//   (bitcast (v2i16 build_vector (trunc $x), (trunc $y)))
+// On true16 the build_vector is a free REG_SEQUENCE of lo16/hi16 subregisters.
+def or_pack_s16_frag : GICombinePatFrag<(outs root:$dst), (ins $x, $y),
+  [(pattern (G_OR $dst, i32:$lo, i32:$hi),
+            (G_AND i32:$lo, i32:$x, i32:$mask), (G_CONSTANT i32:$mask, 65535),
+            (G_SHL i32:$hi, i32:$y, i32:$c16), (G_CONSTANT i32:$c16, 16)),
+   (pattern (G_OR $dst, i32:$hi, i32:$lo),
+            (G_AND i32:$lo, i32:$x, i32:$mask), (G_CONSTANT i32:$mask, 65535),
+            (G_SHL i32:$hi, i32:$y, i32:$c16), (G_CONSTANT i32:$c16, 16))]>;
+
+let Predicates = [Predicate<"Subtarget->useRealTrue16Insts()">] in
+def combine_or_pack_s16 : GICombineRule<
+  (defs root:$dst),
+  (match (or_pack_s16_frag $dst, i32:$x, i32:$y):$dst,
+         // Leave the d16 hi load pattern alone, it folds the shifted half
+         // into the load itself.
+         [{ return !getDefIgnoringCopies(${y}.getReg(), MRI)->mayLoad(); }]),
+  (apply (G_TRUNC i16:$lo16, $x),
+         (G_TRUNC i16:$hi16, $y),
+         (G_BUILD_VECTOR v2i16:$vec, $lo16, $hi16),
+         (G_BITCAST $dst, $vec))>;
+
 // (trunc (lshr i32:$src, 16)) -> (unmerge_hi i16:$src)
 // Reads the high half in place instead of shifting it down into a fresh
 // 32-bit register; with true16 the unmerge is just a hi16 subregister.
@@ -381,7 +404,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
    sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
-   binop_s64_with_s32_mask_combines, combine_or_s64_s32,
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32, combine_or_pack_s16,
    fold_carry_into_addsub_combines, simplify_demanded_bits]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }

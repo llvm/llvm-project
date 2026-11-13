@@ -15868,6 +15868,35 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return SDValue();
 }
 
+/// If \p V is a 32-bit value whose low or high 16 bits are known zero because
+/// it was built as a half-zero pack, return the i16 value occupying the other
+/// half and set \p IsHigh to say which half that is. Otherwise return a null
+/// SDValue.
+static SDValue getHalfOfPackedImmZeroAndI16(SDValue V, bool &IsHigh) {
+  if (V.getOpcode() == ISD::ZERO_EXTEND &&
+      V.getOperand(0).getValueType() == MVT::i16) {
+    IsHigh = false;
+    return V.getOperand(0);
+  }
+
+  if (V.getOpcode() != ISD::BITCAST)
+    return SDValue();
+
+  SDValue BV = V.getOperand(0);
+  if (BV.getOpcode() != ISD::BUILD_VECTOR || BV.getValueType() != MVT::v2i16)
+    return SDValue();
+
+  if (isNullConstant(BV.getOperand(0))) {
+    IsHigh = true;
+    return BV.getOperand(1);
+  }
+  if (isNullConstant(BV.getOperand(1))) {
+    IsHigh = false;
+    return BV.getOperand(0);
+  }
+  return SDValue();
+}
+
 SDValue SITargetLowering::performOrCombine(SDNode *N,
                                            DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -15913,6 +15942,28 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     SDLoc DL(N);
     return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, LHS.getOperand(0),
                        LHS.getOperand(1), DAG.getConstant(Sel, DL, MVT::i32));
+  }
+
+  // Rejoin the two 16-bit halves of a 32-bit value into a packed vector:
+  //
+  //   (or (bitcast (v2i16 build_vector 0, Hi)), (zero_extend i16:Lo)) ->
+  //     (bitcast (v2i16 build_vector Lo, Hi))
+  //
+  // Restricted to true16: the build_vector selects to a free REG_SEQUENCE
+  // on true16 targets and to v_perm_b32 otherwise. The v_perm_b32 selector
+  // mask needs an extra s_mov_b32, which makes this more expensive
+  if (VT == MVT::i32 && isTypeLegal(MVT::v2i16) &&
+      Subtarget->useRealTrue16Insts()) {
+    bool LHSIsHigh, RHSIsHigh;
+    SDValue LHSHalf = getHalfOfPackedImmZeroAndI16(LHS, LHSIsHigh);
+    SDValue RHSHalf = getHalfOfPackedImmZeroAndI16(RHS, RHSIsHigh);
+    if (LHSHalf && RHSHalf && LHSIsHigh != RHSIsHigh) {
+      SDLoc SL(N);
+      SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i16,
+                                LHSIsHigh ? RHSHalf : LHSHalf,
+                                LHSIsHigh ? LHSHalf : RHSHalf);
+      return DAG.getNode(ISD::BITCAST, SL, MVT::i32, Vec);
+    }
   }
 
   // or (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
