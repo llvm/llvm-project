@@ -12,8 +12,8 @@ define i32 @func1() {
   ret i32 2
 }
 
-define i32 @function_with_jump_table(i32 %index) {
-  %gep = getelementptr inbounds [2 x ptr], ptr @func_array, i32 0, i32 %index
+define i32 @function_with_jump_table(i64 %index) {
+  %gep = getelementptr inbounds [2 x ptr], ptr @func_array, i64 0, i64 %index
   %func_ptr = load ptr, ptr %gep
   %result = call i32 %func_ptr(), !dbg !8
   ret i32 %result

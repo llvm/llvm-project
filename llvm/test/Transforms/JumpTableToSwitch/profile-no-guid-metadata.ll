@@ -25,14 +25,14 @@ define i32 @jt_target_1() {
   ret i32 20
 }
 
-define i32 @caller(i32 %idx) {
+define i32 @caller(i64 %idx) {
 ; CHECK-LABEL: define i32 @caller(
-; CHECK-SAME: i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @jt, i32 0, i32 [[IDX]]
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @jt, i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[FPTR:%.*]] = load ptr, ptr [[GEP]], align 8
-; CHECK-NEXT:    switch i32 [[IDX]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CALL0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CALL1:.*]]
+; CHECK-NEXT:    switch i64 [[IDX]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
+; CHECK-NEXT:      i64 0, label %[[CALL0:.*]]
+; CHECK-NEXT:      i64 1, label %[[CALL1:.*]]
 ; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[DEFAULT_SWITCH_CASE_UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
@@ -46,20 +46,20 @@ define i32 @caller(i32 %idx) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], %[[CALL0]] ], [ [[TMP2]], %[[CALL1]] ]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
-  %gep = getelementptr inbounds [2 x ptr], ptr @jt, i32 0, i32 %idx
+  %gep = getelementptr inbounds [2 x ptr], ptr @jt, i64 0, i64 %idx
   %fptr = load ptr, ptr %gep
   %r = call i32 %fptr(), !prof !0
   ret i32 %r
 }
 
-define i32 @caller_only_zero_guids(i32 %idx) {
+define i32 @caller_only_zero_guids(i64 %idx) {
 ; CHECK-LABEL: define i32 @caller_only_zero_guids(
-; CHECK-SAME: i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @jt, i32 0, i32 [[IDX]]
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @jt, i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[FPTR:%.*]] = load ptr, ptr [[GEP]], align 8
-; CHECK-NEXT:    switch i32 [[IDX]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CALL_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CALL_1:.*]]
+; CHECK-NEXT:    switch i64 [[IDX]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
+; CHECK-NEXT:      i64 0, label %[[CALL_0:.*]]
+; CHECK-NEXT:      i64 1, label %[[CALL_1:.*]]
 ; CHECK-NEXT:    ], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[DEFAULT_SWITCH_CASE_UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
@@ -73,7 +73,7 @@ define i32 @caller_only_zero_guids(i32 %idx) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], %[[CALL_0]] ], [ [[TMP2]], %[[CALL_1]] ]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
-  %gep = getelementptr inbounds [2 x ptr], ptr @jt, i32 0, i32 %idx
+  %gep = getelementptr inbounds [2 x ptr], ptr @jt, i64 0, i64 %idx
   %fptr = load ptr, ptr %gep
   %r = call i32 %fptr(), !prof !1
   ret i32 %r
