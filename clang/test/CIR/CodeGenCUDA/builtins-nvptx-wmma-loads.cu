@@ -277,16 +277,14 @@ DEVICE void test_imma_m32n8k16_ld_a_s8(int *dst, const int *src, unsigned stride
 DEVICE void test_imma_m32n8k16_ld_b_s8(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m32n8k16.load.b.row.stride.s8"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m32n8k16.load.b.row.stride.s8.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __imma_m32n8k16_ld_b_s8(dst, src, stride, 0);
 
   // CIR: %[[R1:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m32n8k16.load.b.col.stride.s8"
   // LLVM: %[[R1:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m32n8k16.load.b.col.stride.s8.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R1]],
+  // CIR-NEXT: cir.store align(4) %[[R1]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R1]], ptr %{{.*}}, align 4
   __imma_m32n8k16_ld_b_s8(dst, src, stride, 1);
@@ -314,14 +312,16 @@ DEVICE void test_imma_m32n8k16_ld_a_u8(int *dst, const int *src, unsigned stride
 DEVICE void test_imma_m32n8k16_ld_b_u8(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m32n8k16.load.b.row.stride.u8"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m32n8k16.load.b.row.stride.u8.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __imma_m32n8k16_ld_b_u8(dst, src, stride, 0);
 
   // CIR: %[[R1:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m32n8k16.load.b.col.stride.u8"
   // LLVM: %[[R1:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m32n8k16.load.b.col.stride.u8.p0(ptr %{{.*}}, i32 %{{.*}})
+  // CIR-NEXT: cir.store align(4) %[[R1]],
+  // LLVM-NOT: extractvalue
+  // LLVM: store i32 %[[R1]], ptr %{{.*}}, align 4
   __imma_m32n8k16_ld_b_u8(dst, src, stride, 1);
 
 }
@@ -347,14 +347,16 @@ DEVICE void test_imma_m32n8k16_ld_c(int *dst, const int *src, unsigned stride) {
 DEVICE void test_imma_m8n32k16_ld_a_s8(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n32k16.load.a.row.stride.s8"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n32k16.load.a.row.stride.s8.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __imma_m8n32k16_ld_a_s8(dst, src, stride, 0);
 
   // CIR: %[[R1:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n32k16.load.a.col.stride.s8"
   // LLVM: %[[R1:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n32k16.load.a.col.stride.s8.p0(ptr %{{.*}}, i32 %{{.*}})
+  // CIR-NEXT: cir.store align(4) %[[R1]],
+  // LLVM-NOT: extractvalue
+  // LLVM: store i32 %[[R1]], ptr %{{.*}}, align 4
   __imma_m8n32k16_ld_a_s8(dst, src, stride, 1);
 
 }
@@ -380,14 +382,16 @@ DEVICE void test_imma_m8n32k16_ld_b_s8(int *dst, const int *src, unsigned stride
 DEVICE void test_imma_m8n32k16_ld_a_u8(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n32k16.load.a.row.stride.u8"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n32k16.load.a.row.stride.u8.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __imma_m8n32k16_ld_a_u8(dst, src, stride, 0);
 
   // CIR: %[[R1:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n32k16.load.a.col.stride.u8"
   // LLVM: %[[R1:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n32k16.load.a.col.stride.u8.p0(ptr %{{.*}}, i32 %{{.*}})
+  // CIR-NEXT: cir.store align(4) %[[R1]],
+  // LLVM-NOT: extractvalue
+  // LLVM: store i32 %[[R1]], ptr %{{.*}}, align 4
   __imma_m8n32k16_ld_a_u8(dst, src, stride, 1);
 
 }
@@ -429,8 +433,7 @@ DEVICE void test_imma_m8n32k16_ld_c(int *dst, const int *src, unsigned stride) {
 DEVICE void test_imma_m8n8k32_ld_a_s4(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k32.load.a.row.stride.s4"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n8k32.load.a.row.stride.s4.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __imma_m8n8k32_ld_a_s4(dst, src, stride, 0);
@@ -442,8 +445,7 @@ DEVICE void test_imma_m8n8k32_ld_a_s4(int *dst, const int *src, unsigned stride)
 DEVICE void test_imma_m8n8k32_ld_b_s4(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k32.load.b.col.stride.s4"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n8k32.load.b.col.stride.s4.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __imma_m8n8k32_ld_b_s4(dst, src, stride, 1);
@@ -455,8 +457,7 @@ DEVICE void test_imma_m8n8k32_ld_b_s4(int *dst, const int *src, unsigned stride)
 DEVICE void test_imma_m8n8k32_ld_a_u4(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k32.load.a.row.stride.u4"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n8k32.load.a.row.stride.u4.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __imma_m8n8k32_ld_a_u4(dst, src, stride, 0);
@@ -468,8 +469,7 @@ DEVICE void test_imma_m8n8k32_ld_a_u4(int *dst, const int *src, unsigned stride)
 DEVICE void test_imma_m8n8k32_ld_b_u4(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k32.load.b.col.stride.u4"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n8k32.load.b.col.stride.u4.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __imma_m8n8k32_ld_b_u4(dst, src, stride, 1);
@@ -497,8 +497,7 @@ DEVICE void test_imma_m8n8k32_ld_c(int *dst, const int *src, unsigned stride) {
 DEVICE void test_bmma_m8n8k128_ld_a_b1(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k128.load.a.row.stride.b1"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n8k128.load.a.row.stride.b1.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __bmma_m8n8k128_ld_a_b1(dst, src, stride, 0);
@@ -510,8 +509,7 @@ DEVICE void test_bmma_m8n8k128_ld_a_b1(int *dst, const int *src, unsigned stride
 DEVICE void test_bmma_m8n8k128_ld_b_b1(int *dst, const int *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k128.load.b.col.stride.b1"
   // LLVM: %[[R0:.*]] = call{{.*}} i32 @llvm.nvvm.wmma.m8n8k128.load.b.col.stride.b1.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store i32 %[[R0]], ptr %{{.*}}, align 4
   __bmma_m8n8k128_ld_b_b1(dst, src, stride, 1);
@@ -539,16 +537,14 @@ DEVICE void test_bmma_m8n8k128_ld_c(int *dst, const int *src, unsigned stride) {
 DEVICE void test_dmma_m8n8k4_ld_a(double *dst, const double *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k4.load.a.row.stride.f64"
   // LLVM: %[[R0:.*]] = call{{.*}} double @llvm.nvvm.wmma.m8n8k4.load.a.row.stride.f64.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store double %[[R0]], ptr %{{.*}}, align 4
   __dmma_m8n8k4_ld_a(dst, src, stride, 0);
 
   // CIR: %[[R1:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k4.load.a.col.stride.f64"
   // LLVM: %[[R1:.*]] = call{{.*}} double @llvm.nvvm.wmma.m8n8k4.load.a.col.stride.f64.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R1]],
+  // CIR-NEXT: cir.store align(4) %[[R1]],
   // LLVM-NOT: extractvalue
   // LLVM: store double %[[R1]], ptr %{{.*}}, align 4
   __dmma_m8n8k4_ld_a(dst, src, stride, 1);
@@ -560,14 +556,16 @@ DEVICE void test_dmma_m8n8k4_ld_a(double *dst, const double *src, unsigned strid
 DEVICE void test_dmma_m8n8k4_ld_b(double *dst, const double *src, unsigned stride) {
   // CIR: %[[R0:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k4.load.b.row.stride.f64"
   // LLVM: %[[R0:.*]] = call{{.*}} double @llvm.nvvm.wmma.m8n8k4.load.b.row.stride.f64.p0(ptr %{{.*}}, i32 %{{.*}})
-  // CIR-NOT: cir.extract_member
-  // CIR: cir.store align(4) %[[R0]],
+  // CIR-NEXT: cir.store align(4) %[[R0]],
   // LLVM-NOT: extractvalue
   // LLVM: store double %[[R0]], ptr %{{.*}}, align 4
   __dmma_m8n8k4_ld_b(dst, src, stride, 0);
 
   // CIR: %[[R1:.*]] = cir.call_llvm_intrinsic "nvvm.wmma.m8n8k4.load.b.col.stride.f64"
   // LLVM: %[[R1:.*]] = call{{.*}} double @llvm.nvvm.wmma.m8n8k4.load.b.col.stride.f64.p0(ptr %{{.*}}, i32 %{{.*}})
+  // CIR-NEXT: cir.store align(4) %[[R1]],
+  // LLVM-NOT: extractvalue
+  // LLVM: store double %[[R1]], ptr %{{.*}}, align 4
   __dmma_m8n8k4_ld_b(dst, src, stride, 1);
 
 }

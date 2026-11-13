@@ -15,7 +15,6 @@
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -280,49 +279,19 @@ static NVPTXMmaLdstInfo getNVPTXMmaLdstInfo(unsigned BuiltinID) {
 #undef MMA_LDST
 #undef MMA_INTR
 
-// FP16 WMMA fragments are stored in i32 slots, but their intrinsic register
-// representation is <2 x half>. FP32 fragments use float in both
-// representations.
-static mlir::Type getWMMARegisterType(mlir::Type storageType) {
-  if (mlir::isa<cir::SingleType>(storageType))
-    return storageType;
-  return cir::VectorType::getFixed(cir::FP16Type::get(storageType.getContext()),
-                                   2);
-}
-
-static cir::StructType getWMMAResultType(CIRGenBuilderTy &builder,
-                                         mlir::Type registerType,
-                                         unsigned numRegisters) {
-  llvm::SmallVector<mlir::Type, 8> members(numRegisters, registerType);
-  return builder.getAnonRecordTy(members, /*packed=*/false,
-                                 cir::RecordType::getAllDataKinds(members));
-}
-
-static void loadWMMAFragment(CIRGenBuilderTy &builder, mlir::Location loc,
-                             Address src, unsigned numRegisters,
-                             llvm::SmallVectorImpl<mlir::Value> &values) {
-  mlir::Type registerType = getWMMARegisterType(src.getElementType());
-  // Every slot is four bytes, even when the fragment contains packed halves.
-  CharUnits alignment =
-      std::min(src.getAlignment(), CharUnits::fromQuantity(4));
-  for (unsigned i = 0; i < numRegisters; ++i) {
-    mlir::Value ptr = builder.createPtrStride(loc, src.emitRawPointer(),
-                                              builder.getSInt32(i, loc));
-    mlir::Value value =
-        builder.createAlignedLoad(loc, src.getElementType(), ptr, alignment);
-    values.push_back(builder.createBitcast(loc, value, registerType));
-  }
-}
-
 static void storeWMMAFragment(CIRGenBuilderTy &builder, mlir::Location loc,
                               mlir::Value result, Address dst,
                               unsigned numRegisters) {
   CharUnits alignment =
       std::min(dst.getAlignment(), CharUnits::fromQuantity(4));
+  if (numRegisters == 1) {
+    builder.createStore(loc, result, dst.withAlignment(alignment));
+    return;
+  }
+
+  // FP16 intrinsic registers are <2 x half>, stored in i32 fragment slots.
   for (unsigned i = 0; i < numRegisters; ++i) {
-    mlir::Value value = result;
-    if (numRegisters != 1)
-      value = cir::ExtractMemberOp::create(builder, loc, result, i);
+    mlir::Value value = cir::ExtractMemberOp::create(builder, loc, result, i);
     value = builder.createBitcast(loc, value, dst.getElementType());
     mlir::Value ptr = builder.createPtrStride(loc, dst.emitRawPointer(),
                                               builder.getSInt32(i, loc));
@@ -337,83 +306,25 @@ emitWMMALoad(CIRGenFunction &cgf, const CallExpr *expr, unsigned builtinId) {
   Address dst = cgf.emitPointerWithAlignment(expr->getArg(0));
   mlir::Value src = cgf.emitScalarExpr(expr->getArg(1));
   mlir::Value ldm = cgf.emitScalarExpr(expr->getArg(2));
-  auto isColMajor = expr->getArg(3)->getIntegerConstantExpr(cgf.getContext());
-  if (!isColMajor)
+  std::optional<llvm::APSInt> isColMajorArg =
+      expr->getArg(3)->getIntegerConstantExpr(cgf.getContext());
+  if (!isColMajorArg)
     return std::nullopt;
+  bool isColMajor = isColMajorArg->getSExtValue();
 
   NVPTXMmaLdstInfo info = getNVPTXMmaLdstInfo(builtinId);
-  unsigned intrinsicId = *isColMajor != 0 ? info.IID_col : info.IID_row;
+  unsigned intrinsicId = isColMajor ? info.IID_col : info.IID_row;
   if (!intrinsicId)
     return std::nullopt;
 
   cir::FuncType intrinsicType =
       cgf.getIntrinsicType(intrinsicId, {src.getType()});
-  llvm::StringRef name =
-      llvm::Intrinsic::getBaseName(intrinsicId).drop_front(5);
+  llvm::StringRef name = llvm::Intrinsic::getBaseName(intrinsicId);
+  assert(name.starts_with("llvm.") && "Not an LLVM intrinsic!");
+  name = name.drop_front(5);
   mlir::Value result = builder.emitIntrinsicCallOp(
       loc, name, intrinsicType.getReturnType(), mlir::ValueRange{src, ldm});
   storeWMMAFragment(builder, loc, result, dst, info.NumResults);
-  return mlir::Value{};
-}
-
-static std::optional<mlir::Value> emitWMMAStore(CIRGenFunction &cgf,
-                                                const CallExpr *expr) {
-  auto &builder = cgf.getBuilder();
-  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
-  mlir::Value dst = cgf.emitScalarExpr(expr->getArg(0));
-  Address src = cgf.emitPointerWithAlignment(expr->getArg(1));
-  mlir::Value ldm = cgf.emitScalarExpr(expr->getArg(2));
-  auto isColMajor = expr->getArg(3)->getIntegerConstantExpr(cgf.getContext());
-  if (!isColMajor)
-    return std::nullopt;
-
-  bool isFloat = mlir::isa<cir::SingleType>(src.getElementType());
-  std::string name = (llvm::Twine("nvvm.wmma.m16n16k16.store.d.") +
-                      (*isColMajor != 0 ? "col.stride." : "row.stride.") +
-                      (isFloat ? "f32" : "f16"))
-                         .str();
-  llvm::SmallVector<mlir::Value, 10> values{dst};
-  loadWMMAFragment(builder, loc, src, isFloat ? 8 : 4, values);
-  values.push_back(ldm);
-  cir::LLVMIntrinsicCallOp::create(builder, loc, builder.getStringAttr(name),
-                                   /*resType=*/mlir::Type{}, values);
-  return mlir::Value{};
-}
-
-static std::optional<mlir::Value> emitWMMAMma(CIRGenFunction &cgf,
-                                              const CallExpr *expr) {
-  auto &builder = cgf.getBuilder();
-  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
-  Address dst = cgf.emitPointerWithAlignment(expr->getArg(0));
-  Address srcA = cgf.emitPointerWithAlignment(expr->getArg(1));
-  Address srcB = cgf.emitPointerWithAlignment(expr->getArg(2));
-  Address srcC = cgf.emitPointerWithAlignment(expr->getArg(3));
-  auto layout = expr->getArg(4)->getIntegerConstantExpr(cgf.getContext());
-  auto satf = expr->getArg(5)->getIntegerConstantExpr(cgf.getContext());
-  if (!layout || layout->getSExtValue() < 0 || layout->getSExtValue() > 3 ||
-      !satf)
-    return std::nullopt;
-
-  bool isFloatC = mlir::isa<cir::SingleType>(srcC.getElementType());
-  bool isFloatD = mlir::isa<cir::SingleType>(dst.getElementType());
-  const char *layouts[] = {"row.row", "row.col", "col.row", "col.col"};
-  std::string name =
-      (llvm::Twine("nvvm.wmma.m16n16k16.mma.") +
-       layouts[layout->getSExtValue()] + (isFloatD ? ".f32" : ".f16") +
-       (isFloatC ? ".f32" : ".f16") + (*satf != 0 ? ".satfinite" : ""))
-          .str();
-
-  // Read every input before writing D, since the fragments may alias.
-  llvm::SmallVector<mlir::Value, 24> values;
-  loadWMMAFragment(builder, loc, srcA, 8, values);
-  loadWMMAFragment(builder, loc, srcB, 8, values);
-  loadWMMAFragment(builder, loc, srcC, isFloatC ? 8 : 4, values);
-  unsigned numResults = isFloatD ? 8 : 4;
-  mlir::Type resultType = getWMMAResultType(
-      builder, getWMMARegisterType(dst.getElementType()), numResults);
-  mlir::Value result =
-      builder.emitIntrinsicCallOp(loc, name, resultType, values);
-  storeWMMAFragment(builder, loc, result, dst, numResults);
   return mlir::Value{};
 }
 
@@ -750,7 +661,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
     return emitWMMALoad(*this, expr, builtinId);
   case NVPTX::BI__hmma_m16n16k16_st_c_f16:
   case NVPTX::BI__hmma_m16n16k16_st_c_f32:
-    return emitWMMAStore(*this, expr);
   case NVPTX::BI__hmma_m32n8k16_st_c_f16:
   case NVPTX::BI__hmma_m32n8k16_st_c_f32:
   case NVPTX::BI__hmma_m8n32k16_st_c_f16:
@@ -772,7 +682,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__hmma_m16n16k16_mma_f32f16:
   case NVPTX::BI__hmma_m16n16k16_mma_f32f32:
   case NVPTX::BI__hmma_m16n16k16_mma_f16f32:
-    return emitWMMAMma(*this, expr);
   case NVPTX::BI__hmma_m32n8k16_mma_f16f16:
   case NVPTX::BI__hmma_m32n8k16_mma_f32f16:
   case NVPTX::BI__hmma_m32n8k16_mma_f32f32:
