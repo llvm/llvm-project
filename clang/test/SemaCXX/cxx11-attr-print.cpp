@@ -36,15 +36,13 @@ int foo() __attribute__((const));
 // CHECK: int bar() __attribute__((__const));
 int bar() __attribute__((__const));
 
-// FIXME: It's unfortunate that the string literal prints with the below three
-// cases given that the string is only exposed via the [[nodiscard]] spelling.
-// CHECK: int f1() __attribute__((warn_unused_result("")));
+// CHECK: int f1() __attribute__((warn_unused_result));
 int f1() __attribute__((warn_unused_result));
 
-// CHECK: {{\[}}[clang::warn_unused_result("")]];
+// CHECK: {{\[}}[clang::warn_unused_result]];
 int f2 [[clang::warn_unused_result]] ();
 
-// CHECK: {{\[}}[gnu::warn_unused_result("")]];
+// CHECK: {{\[}}[gnu::warn_unused_result]];
 int f3 [[gnu::warn_unused_result]] ();
 
 // FIXME: ast-print need to print C++11

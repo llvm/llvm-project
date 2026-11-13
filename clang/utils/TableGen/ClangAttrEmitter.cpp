@@ -442,6 +442,12 @@ namespace {
       : Argument(Arg, Attr)
     {}
 
+    std::string getIsOmitted() const override {
+      // For optional arguments, an empty string is indistinguishable from an
+      // omitted one.
+      return "get" + getUpperName().str() + "().empty()";
+    }
+
     void writeAccessors(raw_ostream &OS) const override {
       OS << "  llvm::StringRef get" << getUpperName() << "() const {\n";
       OS << "    return llvm::StringRef(" << getLowerName() << ", "
@@ -1784,12 +1790,19 @@ static void writeAvailabilityValue(raw_ostream &OS) {
 }
 
 static void writeDeprecatedAttrValue(raw_ostream &OS, StringRef Variety) {
-  OS << "\\\"\" << getMessage() << \"\\\"\";\n";
   // Only GNU deprecated has an optional fixit argument at the second position.
-  if (Variety == "GNU")
-     OS << "    if (!getReplacement().empty()) OS << \", \\\"\""
-           " << getReplacement() << \"\\\"\";\n";
-  OS << "    OS << \"";
+  // The argument list is omitted if it would be empty.
+  if (Variety == "GNU") {
+    OS << "    if (!getMessage().empty() || !getReplacement().empty()) {\n";
+    OS << "      OS << \"(\\\"\" << getMessage() << \"\\\"\";\n";
+    OS << "      if (!getReplacement().empty())\n";
+    OS << "        OS << \", \\\"\" << getReplacement() << \"\\\"\";\n";
+    OS << "      OS << \")\";\n";
+    OS << "    }\n";
+  } else {
+    OS << "    if (!getMessage().empty())\n";
+    OS << "      OS << \"(\\\"\" << getMessage() << \"\\\")\";\n";
+  }
 }
 
 static void writeGetSpellingFunction(const Record &R, raw_ostream &OS) {
@@ -1901,9 +1914,7 @@ writePrettyPrintFunction(const Record &R,
       writeAvailabilityValue(OS);
       OS << ")\";\n";
     } else if (Spelling == "deprecated" || Spelling == "gnu::deprecated") {
-      OS << "    OS << \"(";
       writeDeprecatedAttrValue(OS, Variety);
-      OS << ")\";\n";
     } else {
       // To avoid printing parentheses around an empty argument list or
       // printing spurious commas at the end of an argument list, we need to
