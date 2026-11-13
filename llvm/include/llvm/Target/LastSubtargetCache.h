@@ -19,36 +19,44 @@
 
 namespace llvm {
 
+class Module;
+
 /// Cache of the last subtarget returned by getSubtargetImpl. A query hits if
-/// the function has the same function attributes as the last one, or else the
-/// same \p AttrsT, which must hold every per-function input to the subtarget.
+/// the function has the same function attributes and module as the last one,
+/// or else the same \p AttrsT, which must hold every input to the subtarget
+/// key, including module-level ones.
 ///
 /// Attributes are compared by their uniqued pointers, so the cache must be
 /// cleared before it sees functions from a different LLVMContext.
 template <typename SubtargetT, typename AttrsT> class LastSubtargetCache {
   AttributeSet FnAttrs;
+  const Module *M = nullptr;
   AttrsT Attrs;
   const SubtargetT *Subtarget = nullptr;
 
 public:
-  /// Return the last subtarget if the function attributes match.
-  const SubtargetT *lookup(AttributeSet NewFnAttrs) const {
-    return Subtarget && FnAttrs == NewFnAttrs ? Subtarget : nullptr;
+  /// Return the last subtarget if the function attributes and module match.
+  const SubtargetT *lookup(AttributeSet NewFnAttrs, const Module *NewM) const {
+    return Subtarget && FnAttrs == NewFnAttrs && M == NewM ? Subtarget
+                                                           : nullptr;
   }
 
   /// Return the last subtarget if \p NewAttrs match, and remember
-  /// \p NewFnAttrs for it.
-  const SubtargetT *lookup(AttributeSet NewFnAttrs, const AttrsT &NewAttrs) {
+  /// \p NewFnAttrs and \p NewM for it.
+  const SubtargetT *lookup(AttributeSet NewFnAttrs, const Module *NewM,
+                           const AttrsT &NewAttrs) {
     if (!Subtarget || Attrs != NewAttrs)
       return nullptr;
     FnAttrs = NewFnAttrs;
+    M = NewM;
     return Subtarget;
   }
 
   /// Remember \p NewSubtarget for these attributes.
-  void set(AttributeSet NewFnAttrs, const AttrsT &NewAttrs,
+  void set(AttributeSet NewFnAttrs, const Module *NewM, const AttrsT &NewAttrs,
            const SubtargetT *NewSubtarget) {
     FnAttrs = NewFnAttrs;
+    M = NewM;
     Attrs = NewAttrs;
     Subtarget = NewSubtarget;
   }

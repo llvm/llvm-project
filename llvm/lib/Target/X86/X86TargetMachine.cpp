@@ -210,7 +210,8 @@ X86TargetMachine::~X86TargetMachine() = default;
 const X86Subtarget *
 X86TargetMachine::getSubtargetImpl(const Function &F) const {
   AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
-  if (const X86Subtarget *ST = LastSubtarget.lookup(FnAttrs))
+  const Module *M = F.getParent();
+  if (const X86Subtarget *ST = LastSubtarget.lookup(FnAttrs, M))
     return ST;
 
   // String attributes are sorted after the enum attributes.
@@ -231,7 +232,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
       *Dst = A;
   }
 
-  if (const X86Subtarget *ST = LastSubtarget.lookup(FnAttrs, Attrs))
+  if (const X86Subtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
     return ST;
 
   StringRef CPU =
@@ -308,7 +309,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
         MaybeAlign(F.getParent()->getOverrideStackAlignment()),
         PreferVectorWidthOverride, RequiredVectorWidth);
   }
-  LastSubtarget.set(FnAttrs, Attrs, I.get());
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
