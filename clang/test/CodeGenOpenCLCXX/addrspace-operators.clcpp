@@ -1,4 +1,5 @@
 //RUN: %clang_cc1 %s -triple spir -emit-llvm -O0 -o - | FileCheck %s
+//RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple spir -emit-llvm -O0 -o - | FileCheck %s %}
 
 enum E {
   a,
@@ -19,6 +20,7 @@ __global int globI;
 //CHECK-LABEL: define{{.*}} spir_func void @_Z3barv()
 void bar() {
   C c;
+  //CHECK: [[E_LOCAL:%[.a-z0-9]+]] = alloca i32
   //CHECK: [[A1:%[.a-z0-9]+]] ={{.*}} addrspacecast ptr [[C:%[a-z0-9]+]] to ptr addrspace(4)
   //CHECK: call spir_func void @_ZNU3AS41C6AssignE1E(ptr addrspace(4) {{[^,]*}} [[A1]], i32 noundef 0)
   c.Assign(a);
@@ -27,13 +29,15 @@ void bar() {
   c.OrAssign(a);
 
   E e;
-  //CHECK: store i32 1, ptr %e
+  //CHECK: store i32 1, ptr [[E_LOCAL]]
   e = b;
   //CHECK: store i32 0, ptr addrspace(1) @globE
   globE = a;
-  //CHECK: store i32 %or, ptr addrspace(1) @globI
+  //CHECK: [[OR:%[.a-z0-9]+]] = or i32 {{.*}}, 1
+  //CHECK: store i32 [[OR]], ptr addrspace(1) @globI
   globI |= b;
-  //CHECK: store i32 %add, ptr addrspace(1) @globI
+  //CHECK: [[ADD:%[.a-z0-9]+]] = add nsw i32 {{.*}}, 0
+  //CHECK: store i32 [[ADD]], ptr addrspace(1) @globI
   globI += a;
   //CHECK: [[GVIV1:%[0-9]+]] = load volatile i32, ptr addrspace(1) @globVI
   //CHECK: [[AND:%[a-z0-9]+]] = and i32 [[GVIV1]], 1
@@ -64,4 +68,4 @@ void bar() {
 //CHECK: [[E:%[0-9]+]] = load i32, ptr [[E_ADDR]]
 //CHECK: [[MI_GEP:%[a-z0-9]+]] = getelementptr inbounds nuw %class.C, ptr addrspace(4) [[THIS1]], i32 0, i32 1
 //CHECK: [[MI:%[0-9]+]] = load i32, ptr addrspace(4) [[MI_GEP]]
-//CHECK: %or = or i32 [[MI]], [[E]]
+//CHECK: %{{.*}} = or i32 [[MI]], [[E]]
