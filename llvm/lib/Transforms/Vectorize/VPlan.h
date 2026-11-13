@@ -480,6 +480,10 @@ public:
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
 
+  /// Return the opcode of this recipe. For recipes that do not
+  /// directly map to LLVM IR instructions, assign opcode 0.
+  virtual unsigned getOpcode() const { return 0; }
+
   /// Return the cost of this recipe, taking into account if the cost
   /// computation should be skipped and the ForceTargetInstructionCost flag.
   /// Also takes care of printing the cost for debugging.
@@ -1522,7 +1526,7 @@ public:
     return New;
   }
 
-  unsigned getOpcode() const { return Opcode; }
+  unsigned getOpcode() const override { return Opcode; }
 
   /// Add \p Op as operand of this VPInstruction. Only supported for AnyOf,
   /// ComputeReductionResult, BuildVector, ExtractLane,
@@ -1874,7 +1878,7 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  unsigned getOpcode() const { return Opcode; }
+  unsigned getOpcode() const override { return Opcode; }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1932,7 +1936,10 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  Instruction::CastOps getOpcode() const { return Opcode; }
+  unsigned getOpcode() const override { return Opcode; }
+  Instruction::CastOps getCastOpcode() const {
+    return static_cast<Instruction::CastOps>(Opcode);
+  }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2284,7 +2291,7 @@ public:
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenGEPSC)
 
   /// This recipe generates a GEP instruction.
-  unsigned getOpcode() const { return Instruction::GetElementPtr; }
+  unsigned getOpcode() const override { return Instruction::GetElementPtr; }
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
@@ -2801,7 +2808,7 @@ public:
   ~VPWidenPHIRecipe() override = default;
 
   /// This recipe generates a PHI.
-  unsigned getOpcode() const { return Instruction::PHI; }
+  unsigned getOpcode() const override { return Instruction::PHI; }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenPHISC)
 
@@ -3587,7 +3594,9 @@ public:
     return getNumOperands() - isPredicated();
   }
 
-  unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
+  unsigned getOpcode() const override {
+    return getUnderlyingInstr()->getOpcode();
+  }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3615,6 +3624,8 @@ public:
   /// Generate the extraction of the appropriate bit from the block mask and the
   /// conditional branch.
   void execute(VPTransformState &State) override;
+
+  unsigned getOpcode() const override { return Instruction::CondBr; }
 
   /// Return the cost of this VPBranchOnMaskRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3925,8 +3936,7 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
 
-  /// Returns the opcode of the widened load.
-  unsigned getOpcode() const { return Instruction::Load; }
+  unsigned getOpcode() const override { return Instruction::Load; }
 
   /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
@@ -3979,8 +3989,7 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadEVLSC)
 
-  /// Returns the opcode of the widened load.
-  unsigned getOpcode() const { return Instruction::Load; }
+  unsigned getOpcode() const override { return Instruction::Load; }
 
   /// Return the EVL operand.
   VPValue *getEVL() const { return getOperand(1); }
@@ -4038,6 +4047,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
   /// Generate a wide store or scatter.
   void execute(VPTransformState &State) override;
 
+  unsigned getOpcode() const override { return Instruction::Store; }
+
   /// Return the cost of this VPWidenStoreRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
@@ -4093,6 +4104,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
 
   /// Generate the wide store or scatter.
   void execute(VPTransformState &State) override;
+
+  unsigned getOpcode() const override { return Instruction::Store; }
 
   /// Return the cost of this VPWidenStoreEVLRecipe.
   InstructionCost computeCost(ElementCount VF,

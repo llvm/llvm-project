@@ -3883,7 +3883,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   if (match(VecOp, m_Isa<VPWidenCastRecipe>(m_ZExtOrSExt(m_VPValue(A)))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
-          cast<VPWidenCastRecipe>(VecOp)->getOpcode(), A->getScalarType()))
+          cast<VPWidenCastRecipe>(VecOp)->getCastOpcode(), A->getScalarType()))
     return new VPExpressionRecipe(cast<VPWidenCastRecipe>(VecOp), Red);
 
   return nullptr;
@@ -3892,7 +3892,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 using ExtendKind = TTI::PartialReductionExtendKind;
 
 static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
-  return TTI::getPartialReductionExtendKind(Cast->getOpcode());
+  return TTI::getPartialReductionExtendKind(Cast->getCastOpcode());
 }
 
 /// Returns true if the narrow \p Mul in ext(mul(ext(A), ext(B))) or
@@ -4000,7 +4000,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     if (!ExtA || ExtB || !isa<VPIRValue>(ValB))
       return;
     Type *NarrowTy = ExtA->getOperand(0)->getScalarType();
-    Instruction::CastOps ExtOpc = ExtA->getOpcode();
+    Instruction::CastOps ExtOpc = ExtA->getCastOpcode();
     const APInt *Const;
     if (!match(ValB, m_APInt(Const)) ||
         !llvm::canConstantBeExtended(
@@ -4070,15 +4070,15 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         canFoldOuterExtendIntoMul(Mul) &&
         IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext)) {
       auto *NewExt0 = new VPWidenCastRecipe(
-          Ext0->getOpcode(), Ext0->getOperand(0), Ext->getScalarType(), nullptr,
-          *Ext0, *Ext0, Ext0->getDebugLoc());
+          Ext0->getCastOpcode(), Ext0->getOperand(0), Ext->getScalarType(),
+          nullptr, *Ext0, *Ext0, Ext0->getDebugLoc());
       NewExt0->insertBefore(Ext0);
 
       VPWidenCastRecipe *NewExt1 = NewExt0;
       if (Ext0 != Ext1) {
-        NewExt1 = new VPWidenCastRecipe(Ext1->getOpcode(), Ext1->getOperand(0),
-                                        Ext->getScalarType(), nullptr, *Ext1,
-                                        *Ext1, Ext1->getDebugLoc());
+        NewExt1 = new VPWidenCastRecipe(
+            Ext1->getCastOpcode(), Ext1->getOperand(0), Ext->getScalarType(),
+            nullptr, *Ext1, *Ext1, Ext1->getDebugLoc());
         NewExt1->insertBefore(Ext1);
       }
       auto *NewMul = Mul->cloneWithOperands({NewExt0, NewExt1});
@@ -4363,7 +4363,7 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
       VPUser *MaybeCast = IsStore ? StoredValue->getDefiningRecipe()
                                   : R.getVPSingleValue()->getSingleUser();
       if (auto *Cast = dyn_cast_if_present<VPWidenCastRecipe>(MaybeCast))
-        CastHint = Cast->getOpcode();
+        CastHint = Cast->getCastOpcode();
 
       VectorType *VectorAccessType = VectorType::get(AccessType, VF);
       if (!TTI.hasMultiVectorLoadStore(/*NumVectors=*/UF, MaskSource,
@@ -5266,7 +5266,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
   const APInt *Const;
   if (match(Op, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
     auto *ExtA = cast<VPWidenCastRecipe>(Op->getOperand(0));
-    Instruction::CastOps ExtOpc = ExtA->getOpcode();
+    Instruction::CastOps ExtOpc = ExtA->getCastOpcode();
     Type *NarrowTy = ExtA->getOperand(0)->getScalarType();
     if (!Op->hasOneUse() ||
         !llvm::canConstantBeExtended(
@@ -5324,10 +5324,10 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
            "Expected the outer extend to be foldable");
     VPBuilder Builder(Mul);
     auto *NewLHS = Builder.createWidenCast(
-        MulLHS->getOpcode(), MulLHS->getOperand(0), Ext->getScalarType());
+        MulLHS->getCastOpcode(), MulLHS->getOperand(0), Ext->getScalarType());
     auto *NewRHS = MulLHS == MulRHS
                        ? NewLHS
-                       : Builder.createWidenCast(MulRHS->getOpcode(),
+                       : Builder.createWidenCast(MulRHS->getCastOpcode(),
                                                  MulRHS->getOperand(0),
                                                  Ext->getScalarType());
     auto *NewMul = Mul->cloneWithOperands({NewLHS, NewRHS});
