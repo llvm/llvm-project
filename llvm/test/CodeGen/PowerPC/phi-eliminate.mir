@@ -45,64 +45,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 1, class: gprc, preferred-register: '' }
-  - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 3, class: g8rc, preferred-register: '' }
-  - { id: 4, class: gprc, preferred-register: '' }
-  - { id: 5, class: g8rc, preferred-register: '' }
-  - { id: 6, class: g8rc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
-  - { id: 8, class: gprc, preferred-register: '' }
-  - { id: 9, class: gprc, preferred-register: '' }
-  - { id: 10, class: g8rc, preferred-register: '' }
-  - { id: 11, class: gprc, preferred-register: '' }
-  - { id: 12, class: gprc, preferred-register: '' }
-  - { id: 13, class: crrc, preferred-register: '' }
-  - { id: 14, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 15, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 16, class: gprc, preferred-register: '' }
-  - { id: 17, class: gprc, preferred-register: '' }
-  - { id: 18, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 19, class: gprc, preferred-register: '' }
-  - { id: 20, class: gprc, preferred-register: '' }
-  - { id: 21, class: gprc, preferred-register: '' }
-  - { id: 22, class: crrc, preferred-register: '' }
-  - { id: 23, class: gprc, preferred-register: '' }
-  - { id: 24, class: gprc, preferred-register: '' }
-  - { id: 25, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 26, class: gprc, preferred-register: '' }
-  - { id: 27, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 28, class: gprc, preferred-register: '' }
-  - { id: 29, class: gprc, preferred-register: '' }
-  - { id: 30, class: gprc, preferred-register: '' }
-  - { id: 31, class: crrc, preferred-register: '' }
-  - { id: 32, class: gprc, preferred-register: '' }
-  - { id: 33, class: gprc, preferred-register: '' }
-  - { id: 34, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 35, class: gprc, preferred-register: '' }
-  - { id: 36, class: gprc, preferred-register: '' }
-  - { id: 37, class: gprc, preferred-register: '' }
-  - { id: 38, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 39, class: g8rc, preferred-register: '' }
-  - { id: 40, class: gprc, preferred-register: '' }
-  - { id: 41, class: gprc, preferred-register: '' }
-  - { id: 42, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 43, class: gprc, preferred-register: '' }
-  - { id: 44, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 45, class: gprc, preferred-register: '' }
-  - { id: 46, class: gprc, preferred-register: '' }
-  - { id: 47, class: crrc, preferred-register: '' }
-  - { id: 48, class: gprc, preferred-register: '' }
-  - { id: 49, class: gprc, preferred-register: '' }
-  - { id: 50, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 51, class: g8rc, preferred-register: '' }
-  - { id: 52, class: gprc, preferred-register: '' }
-  - { id: 53, class: gprc, preferred-register: '' }
-  - { id: 54, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 55, class: gprc, preferred-register: '' }
-  - { id: 56, class: gprc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%5' }
   - { reg: '$x4', virtual-reg: '%6' }
@@ -140,7 +82,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:g8rc = COPY $x3
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY [[COPY]].sub_32
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gprc = COPY [[COPY1]].sub_32
-  ; CHECK-NEXT:   MTCTR8loop undef %10:g8rc, implicit-def dead $ctr8
+  ; CHECK-NEXT:   MTCTR8loop undef %4:g8rc, implicit-def dead $ctr8
   ; CHECK-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 55
   ; CHECK-NEXT:   [[LI1:%[0-9]+]]:gprc_and_gprc_nor0 = LI 48
   ; CHECK-NEXT: {{  $}}
@@ -166,7 +108,7 @@ body:             |
   ; CHECK-NEXT:   [[CMPLWI:%[0-9]+]]:crrc = CMPLWI [[SUBF]], 10
   ; CHECK-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[LI1]], [[LI]], [[CMPLWI]].sub_lt
   ; CHECK-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[ISEL]], [[SUBF]]
-  ; CHECK-NEXT:   [[STBU:%[0-9]+]]:g8rc_and_g8rc_nox0 = STBU [[ADD4_]], -1, undef %0:g8rc_and_g8rc_nox0 :: (store (s8) into %ir.7)
+  ; CHECK-NEXT:   [[STBU:%[0-9]+]]:g8rc_and_g8rc_nox0 = STBU [[ADD4_]], -1, undef %14:g8rc_and_g8rc_nox0 :: (store (s8) into %ir.7)
   ; CHECK-NEXT:   [[DIVW1:%[0-9]+]]:gprc = DIVW [[DIVW]], [[COPY2]]
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gprc = COPY [[DIVW1]]
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gprc = COPY [[DIVW]]

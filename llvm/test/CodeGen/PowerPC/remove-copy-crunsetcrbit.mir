@@ -54,32 +54,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: crbitrc, preferred-register: '' }
-  - { id: 1, class: crbitrc, preferred-register: '' }
-  - { id: 2, class: crbitrc, preferred-register: '' }
-  - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 4, class: gprc, preferred-register: '' }
-  - { id: 5, class: crrc, preferred-register: '' }
-  - { id: 6, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 7, class: gprc, preferred-register: '' }
-  - { id: 8, class: crrc, preferred-register: '' }
-  - { id: 9, class: crbitrc, preferred-register: '' }
-  - { id: 10, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 11, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 12, class: g8rc, preferred-register: '' }
-  - { id: 13, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 15, class: g8rc, preferred-register: '' }
-  - { id: 16, class: gprc, preferred-register: '' }
-  - { id: 17, class: crrc, preferred-register: '' }
-  - { id: 18, class: crbitrc, preferred-register: '' }
-  - { id: 19, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 20, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 21, class: gprc, preferred-register: '' }
-  - { id: 22, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 23, class: g8rc, preferred-register: '' }
-  - { id: 24, class: crbitrc, preferred-register: '' }
 liveins:
   - { reg: '$x2', virtual-reg: '' }
 frameInfo:
@@ -171,8 +145,8 @@ body:             |
 #Copy of CRUNSET should be removed in register coalescing pass
 #CHECK-LABEL: copycrunset
 #CHECK: bb.1.while.body.preheader:
-#CHECK-NOT: %9:crbitrc = CRUNSET
+#CHECK-NOT: %7:crbitrc = CRUNSET
 #CHECK: bb.2.while.body:
-#CHECK-NOT: %24:crbitrc = COPY %9
-#CHECK: %24:crbitrc = CRUNSET
+#CHECK-NOT: %14:crbitrc = COPY %7
+#CHECK: %14:crbitrc = CRUNSET
 #CHECK: B %bb.3

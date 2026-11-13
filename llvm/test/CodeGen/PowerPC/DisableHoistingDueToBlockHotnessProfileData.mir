@@ -128,24 +128,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: crbitrc, preferred-register: '' }
-  - { id: 1, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 2, class: gprc, preferred-register: '' }
-  - { id: 3, class: g8rc, preferred-register: '' }
-  - { id: 4, class: g8rc, preferred-register: '' }
-  - { id: 5, class: g8rc, preferred-register: '' }
-  - { id: 6, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 7, class: gprc, preferred-register: '' }
-  - { id: 8, class: gprc, preferred-register: '' }
-  - { id: 9, class: crrc, preferred-register: '' }
-  - { id: 10, class: gprc, preferred-register: '' }
-  - { id: 11, class: crrc, preferred-register: '' }
-  - { id: 12, class: gprc, preferred-register: '' }
-  - { id: 13, class: gprc, preferred-register: '' }
-  - { id: 14, class: g8rc, preferred-register: '' }
-  - { id: 15, class: g8rc, preferred-register: '' }
-  - { id: 16, class: crrc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%3' }
   - { reg: '$x4', virtual-reg: '%4' }
@@ -241,13 +223,13 @@ body:             |
 #CHECK-HOIST: bb.1.for.body.lr.ph:
 #CHECK-HOIST: %14:g8rc = COPY $x2
 #CHECK-HOIST: STD %14, 24, $x1 :: (store (s64) into stack + 24)
-#CHECK-HOIST: %15:g8rc = EXTSW_32_64 %7
+#CHECK-HOIST: %15:g8rc = EXTSW_32_64 %4
 #CHECK-HOIST: B %bb.3
 
 #CHECK-HOIST: bb.4.if.then:
 #CHECK-HOIST-NOT: %14:g8rc = COPY $x2
 #CHECK-HOIST-NOT: STD %14, 24, $x1 :: (store (s64) into stack + 24)
-#CHECK-HOIST-NOT: %15:g8rc = EXTSW_32_64 %7
+#CHECK-HOIST-NOT: %15:g8rc = EXTSW_32_64 %4
 #CHECK-HOIST: bb.5.for.inc:
 
 # CHECK for disabling instruction hoisting due to block hotness
@@ -255,12 +237,12 @@ body:             |
 #CHECK-NO-HOIST: bb.1.for.body.lr.ph:
 #CHECK-NO-HOIST-NOT: %14:g8rc = COPY $x2
 #CHECK-NO-HOIST-NOT: STD %14, 24, $x1 :: (store (s64) into stack + 24)
-#CHECK-NO-HOIST-NOT: %15:g8rc = EXTSW_32_64 %7
+#CHECK-NO-HOIST-NOT: %15:g8rc = EXTSW_32_64 %4
 #CHECK-NO-HOIST: B %bb.3
 
 #CHECK-NO-HOIST: bb.4.if.then:
 #CHECK-NO-HOIST: %14:g8rc = COPY $x2
 #CHECK-NO-HOIST: STD %14, 24, $x1 :: (store (s64) into stack + 24)
-#CHECK-NO-HOIST: %15:g8rc = EXTSW_32_64 %7
+#CHECK-NO-HOIST: %15:g8rc = EXTSW_32_64 %4
 #CHECK-NO-HOIST: bb.5.for.inc:
 

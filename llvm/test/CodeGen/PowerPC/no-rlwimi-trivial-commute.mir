@@ -40,18 +40,6 @@ name:            main
 alignment:       4
 exposesReturnsTwice: false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc_and_g8rc_nox0 }
-  - { id: 1, class: g8rc_and_g8rc_nox0 }
-  - { id: 2, class: gprc }
-  - { id: 3, class: gprc }
-  - { id: 4, class: gprc }
-  - { id: 5, class: g8rc_and_g8rc_nox0 }
-  - { id: 6, class: g8rc_and_g8rc_nox0 }
-  - { id: 7, class: gprc }
-  - { id: 8, class: gprc }
-  - { id: 9, class: gprc }
-  - { id: 10, class: g8rc }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -70,18 +58,18 @@ body:             |
   bb.0.entry:
     liveins: $x2
 
-    %0 = ADDIStocHA8 $x2, @b
-    %1 = LD target-flags(ppc-toc-lo) @b, %0 :: (load (s64) from @b)
-    %2 = LWZ 0, %1 :: (load (s32) from %ir.0)
-    %3 = LI 0
-    %4 = RLWIMI %3, %2, 0, 0, 31
+    %0:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @b
+    %1:g8rc_and_g8rc_nox0 = LD target-flags(ppc-toc-lo) @b, %0 :: (load (s64) from @b)
+    %2:gprc = LWZ 0, %1 :: (load (s32) from %ir.0)
+    %3:gprc = LI 0
+    %4:gprc = RLWIMI %3, %2, 0, 0, 31
     ; CHECK-LABEL: name: main
     ; CHECK: %[[REG1:[0-9]+]]:gprc = LI 0
     ; CHECK: %[[REG2:[0-9]+]]:gprc = COPY %[[REG1]]
     ; CHECK: %[[REG2]]:gprc = RLWIMI %[[REG2]], %2, 0, 0, 31
-    %8 = RLWIMI %3, %4, 0, 0, 31
+    %8:gprc = RLWIMI %3, %4, 0, 0, 31
     STW %4, 0, %1 :: (store (s32) into %ir.0)
-    %10 = EXTSW_32_64 %8
+    %10:g8rc = EXTSW_32_64 %8
     STW %8, 0, %1 :: (store (s32) into %ir.0)
     $x3 = COPY %10
     BLR8 implicit $x3, implicit $lr8, implicit $rm

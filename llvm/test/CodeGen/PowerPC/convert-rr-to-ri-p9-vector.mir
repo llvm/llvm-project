@@ -9,21 +9,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 1, class: g8rc, preferred-register: '' }
-  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 3, class: gprc, preferred-register: '' }
-  - { id: 4, class: g8rc, preferred-register: '' }
-  - { id: 5, class: g8rc, preferred-register: '' }
-  - { id: 6, class: g8rc, preferred-register: '' }
-  - { id: 7, class: vssrc, preferred-register: '' }
-  - { id: 8, class: gprc, preferred-register: '' }
-  - { id: 9, class: g8rc, preferred-register: '' }
-  - { id: 10, class: g8rc, preferred-register: '' }
-  - { id: 11, class: g8rc, preferred-register: '' }
-  - { id: 12, class: vssrc, preferred-register: '' }
-  - { id: 13, class: vssrc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -31,22 +16,22 @@ body:             |
   bb.0.entry:
     liveins: $x3, $x4
 
-    %1 = COPY $x4
-    %0 = COPY $x3
-    %2 = COPY %1.sub_32
-    %3 = ADDI %2, 1
-    %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
-    %6 = LI8 97
-    %7 = LXSSPX %0, %6, implicit $rm
+    %1:g8rc = COPY $x4
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %2:gprc_and_gprc_nor0 = COPY %1.sub_32
+    %3:gprc = ADDI %2, 1
+    %5:g8rc = IMPLICIT_DEF
+    %4:g8rc = INSERT_SUBREG %5, %3, %subreg.sub_32
+    %6:g8rc = LI8 97
+    %7:vssrc = LXSSPX %0, %6, implicit $rm
     ; CHECK:  lfs [[REG1:[0-9]+]], 97(3)
-    %8 = ADDI %2, 2
-    %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
-    %11 = LI8 -92
-    %12 = LXSSPX %0, %11, implicit $rm
+    %8:gprc = ADDI %2, 2
+    %10:g8rc = IMPLICIT_DEF
+    %9:g8rc = INSERT_SUBREG %10, %8, %subreg.sub_32
+    %11:g8rc = LI8 -92
+    %12:vssrc = LXSSPX %0, %11, implicit $rm
     ; CHECK-NEXT:  lfs [[REG2:[0-9]+]], -92(3)
-    %13 = XSADDSP %7, %12
+    %13:vssrc = XSADDSP %7, %12
     ; CHECK-NEXT:  xsaddsp {{[0-9]+}}, [[REG1]], [[REG2]]
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
@@ -56,21 +41,6 @@ body:             |
 ---
 name:            testLXSDX
 tracksRegLiveness: true
-registers:       
-  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 1, class: g8rc, preferred-register: '' }
-  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 3, class: gprc, preferred-register: '' }
-  - { id: 4, class: g8rc, preferred-register: '' }
-  - { id: 5, class: g8rc, preferred-register: '' }
-  - { id: 6, class: g8rc, preferred-register: '' }
-  - { id: 7, class: vsfrc, preferred-register: '' }
-  - { id: 8, class: gprc, preferred-register: '' }
-  - { id: 9, class: g8rc, preferred-register: '' }
-  - { id: 10, class: g8rc, preferred-register: '' }
-  - { id: 11, class: g8rc, preferred-register: '' }
-  - { id: 12, class: vsfrc, preferred-register: '' }
-  - { id: 13, class: vsfrc, preferred-register: '' }
 liveins:         
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
@@ -78,22 +48,22 @@ body:             |
   bb.0.entry:
     liveins: $x3, $x4
   
-    %1 = COPY $x4
-    %0 = COPY $x3
-    %2 = COPY %1.sub_32
-    %3 = ADDI %2, 1
-    %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, %3, %subreg.sub_32
-    %6 = LI8 99
-    %7 = LXSDX %0, %6, implicit $rm
+    %1:g8rc = COPY $x4
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %2:gprc_and_gprc_nor0 = COPY %1.sub_32
+    %3:gprc = ADDI %2, 1
+    %5:g8rc = IMPLICIT_DEF
+    %4:g8rc = INSERT_SUBREG %5, %3, %subreg.sub_32
+    %6:g8rc = LI8 99
+    %7:vsfrc = LXSDX %0, %6, implicit $rm
     ; CHECK:  lfd [[REG1:[0-9]+]], 99(3)
-    %8 = ADDI %2, 2
-    %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, %8, %subreg.sub_32
-    %11 = LI8 -120
-    %12 = LXSDX %0, %11, implicit $rm
+    %8:gprc = ADDI %2, 2
+    %10:g8rc = IMPLICIT_DEF
+    %9:g8rc = INSERT_SUBREG %10, %8, %subreg.sub_32
+    %11:g8rc = LI8 -120
+    %12:vsfrc = LXSDX %0, %11, implicit $rm
     ; CHECK-NEXT:  lfd [[REG2:[0-9]+]], -120(3)
-    %13 = XSADDDP %7, %12, implicit $rm
+    %13:vsfrc = XSADDDP %7, %12, implicit $rm
     ; CHECK-NEXT:  xsadddp {{[0-9]+}}, [[REG1]], [[REG2]]
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
@@ -108,11 +78,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 1, class: vssrc, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
-  - { id: 3, class: g8rc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
@@ -121,10 +86,10 @@ body:             |
   bb.0.entry:
     liveins: $x3, $f1, $x5
 
-    %2 = COPY $x5
-    %1 = COPY $f1
-    %0 = COPY $x3
-    %3 = LI8 443
+    %2:g8rc = COPY $x5
+    %1:vssrc = COPY $f1
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %3:g8rc = LI8 443
     STXSSPX %1, %0, %3, implicit $rm
     ; CHECK: stfs {{[0-9]+}}, 443(3)
     BLR8 implicit $lr8, implicit $rm
@@ -139,11 +104,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-  - { id: 1, class: vsfrc, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
-  - { id: 3, class: g8rc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
@@ -152,10 +112,10 @@ body:             |
   bb.0.entry:
     liveins: $x3, $f1, $x5
 
-    %2 = COPY $x5
-    %1 = COPY $f1
-    %0 = COPY $x3
-    %3 = LI8  7
+    %2:g8rc = COPY $x5
+    %1:vsfrc = COPY $f1
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %3:g8rc = LI8  7
     STXSDX %1, %0, %3, implicit $rm
     ; CHECK: stfd {{[0-9]+}}, 7(3)
     BLR8 implicit $lr8, implicit $rm
