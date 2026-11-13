@@ -1411,10 +1411,7 @@ public:
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
-    /// Conditional arms leave lifetime-extended entries pending until the
-    /// enclosing full expression ends.
-    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {},
-                      bool deferLifetimeExtended = false) {
+    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
 
@@ -1460,15 +1457,9 @@ public:
       // by either forceDeactivate's or popCleanupBlocks's pops (both only
       // pop cir.cleanup.scope ops); they already dominate the post-scope
       // insertion point on their own.
-      ArrayRef<mlir::Value *> valuesToPop =
-          didSpillAny ? ArrayRef<mlir::Value *>() : valuesToReload;
-      if (deferLifetimeExtended)
-        cgf.popCleanupBlocks(cleanupStackDepth, valuesToPop);
-      else
-        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize(),
-                             valuesToPop);
-
       if (didSpillAny) {
+        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize());
+
         // Reload the spilled values now that all cleanup popping (and
         // promotion of any lifetime-extended cleanups onto the EH stack) is
         // done.
@@ -1477,6 +1468,9 @@ public:
             continue;
           *valPtr = cgf.builder.createLoad(valPtr->getLoc(), addr);
         }
+      } else {
+        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize(),
+                             valuesToReload);
       }
 
       performCleanup = false;

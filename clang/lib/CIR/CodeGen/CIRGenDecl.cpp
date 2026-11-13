@@ -481,8 +481,9 @@ void CIRGenFunction::emitLoopConditionVariable(
   // The temporaries that the initializer lifetime-extends are destroyed with
   // the variable as well ([class.temporary]p6). Their cleanups are pushed when
   // the initializer's full-expression ends, so capture them too and guard them
-  // with the same flag. Their lifetime-end cleanups are captured unguarded, as
-  // their lifetimes start before the initializer runs.
+  // with the same flag. Their lifetime-end cleanups are captured without the
+  // flag: ending the lifetime of storage whose lifetime never started is
+  // harmless, unlike destroying an object that was never constructed.
   bool needsCleanup = d.needsDestruction(getContext()) != QualType::DK_none;
   bool extendsTemporaries = !temps.withDestructor.empty();
   bool capturesExtendedCleanups =

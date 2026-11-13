@@ -309,7 +309,11 @@ void CIRGenFunction::LexicalScope::cleanup() {
   // blocks or branches are needed.
   if (performCleanup) {
     assert(!cir::MissingFeatures::generateDebugInfo());
-    forceCleanup({}, /*deferLifetimeExtended=*/isTernary());
+    // A ternary arm leaves lifetime-extended cleanups to the enclosing
+    // full-expression.
+    if (isTernary())
+      deferLifetimeExtendedCleanups();
+    forceCleanup();
   }
 
   mlir::Block *curBlock = builder.getBlock();

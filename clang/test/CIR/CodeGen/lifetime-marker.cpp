@@ -8,6 +8,10 @@
 // RUN: FileCheck --input-file=%t-eh.cir %s --check-prefixes=CIR-EH,EXT-CIR,EXT-CIR-EH
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fcxx-exceptions -fexceptions -fclangir -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
 // RUN: FileCheck --input-file=%t-eh.ll %s --check-prefixes=LLVM-EH,EXT-LLVM,EXT-LLVM-EH
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fsanitize-address-use-after-scope -fclangir -emit-cir %s -o %t-precise.cir
+// RUN: FileCheck --input-file=%t-precise.cir %s --check-prefix=PRECISE
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -disable-lifetime-markers -fclangir -emit-cir %s -o %t-disabled.cir
+// RUN: FileCheck --input-file=%t-disabled.cir %s --implicit-check-not "cir.lifetime"
 
 void use(int);
 
@@ -547,6 +551,299 @@ void extended_temporary() {
 // LLVM-EH:         call void @_Z3usei
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[TMP]])
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[R]])
+
+extern "C" void consume(const int &);
+extern "C" void after();
+
+struct Guard {
+  Guard(int);
+  ~Guard();
+  int value;
+};
+
+extern "C" void use_guard(const Guard &);
+
+// Trivial destruction must not suppress the lifetime end. End the storage
+// lifetime at the full-expression boundary, before the next statement.
+extern "C" void scalar() {
+  consume(42);
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @scalar()
+// CIR: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!s32i>
+// CIR: cir.lifetime.start %[[TMP]]
+// CIR: cir.store{{.*}}, %[[TMP]]
+// CIR: cir.call @consume(%[[TMP]])
+// CIR: cir.lifetime.end %[[TMP]]
+// CIR: cir.call @after()
+// LLVM-LABEL: define{{.*}} void @scalar()
+// LLVM: %[[TMP:.*]] = alloca i32
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM: call void @consume(ptr{{.*}} %[[TMP]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM: call void @after()
+// A lifetime-only cleanup does not introduce an unwind edge on its own.
+// LLVM-EH-LABEL: define{{.*}} void @scalar()
+// LLVM-EH-NOT: invoke
+// LLVM-EH: call void @consume(
+// LLVM-EH: call void @llvm.lifetime.end.p0(
+// LLVM-EH: call void @after()
+// LLVM-EH-NOT: landingpad
+// LLVM-EH: ret void
+
+// Register the end before the destructor so the destructor runs first.
+extern "C" void nontrivial() {
+  use_guard(Guard(1));
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @nontrivial()
+// CIR: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR: cir.lifetime.start %[[TMP]]
+// CIR: cir.call @_ZN5GuardC1Ei(%[[TMP]]
+// CIR: cir.call @use_guard(%[[TMP]])
+// CIR: cir.call @_ZN5GuardD1Ev(%[[TMP]])
+// CIR: cir.lifetime.end %[[TMP]]
+// CIR: cir.call @after()
+// LLVM-LABEL: define{{.*}} void @nontrivial()
+// LLVM: %[[TMP:.*]] = alloca %struct.Guard
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM: call void @use_guard(ptr{{.*}} %[[TMP]])
+// LLVM: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM: call void @after()
+
+// The pending end is promoted after initialization and belongs to the
+// enclosing scope, rather than the initialization full-expression.
+extern "C" void extended() {
+  const Guard &ref = Guard(2);
+  use_guard(ref);
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @extended()
+// CIR: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR: cir.lifetime.start %[[TMP]]
+// CIR: cir.call @use_guard(
+// CIR: cir.call @after()
+// CIR: cir.call @_ZN5GuardD1Ev(%[[TMP]])
+// CIR: cir.lifetime.end %[[TMP]]
+// LLVM-LABEL: define{{.*}} void @extended()
+// LLVM: %[[TMP:.*]] = alloca %struct.Guard
+// LLVM: call void @use_guard(
+// LLVM: call void @after()
+// LLVM: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+
+// The conditional pending entry contains only an address and a marker kind.
+// Its empty type and null destroyer must never reach emitDestroy. Hoisting
+// the start lets the full-expression cleanup end its lifetime without a flag.
+extern "C" void conditional_scalar(bool enabled) {
+  (void)(enabled && (consume(43), true));
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @conditional_scalar(
+// CIR: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!s32i>
+// CIR-NOT: cleanup.cond
+// CIR: cir.lifetime.start %[[TMP]]
+// CIR-NEXT: {{.*}}cir.ternary
+// CIR: cir.call @consume(%[[TMP]])
+// CIR: } cleanup normal {
+// CIR-NEXT: cir.lifetime.end %[[TMP]]
+// CIR: cir.call @after()
+// LLVM-LABEL: define{{.*}} void @conditional_scalar(
+// LLVM: call void @llvm.lifetime.start.p0(ptr %[[TMP:.*]])
+// LLVM: br i1
+// LLVM: call void @consume(ptr{{.*}} %[[TMP]])
+// LLVM: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM: call void @after()
+
+// Precise lifetime boundaries must retain conditional starts and guarded ends.
+// PRECISE-LABEL: cir.func{{.*}} @conditional_scalar(
+// PRECISE: %[[TMP:.*]] = cir.alloca "ref.tmp0"
+// PRECISE: %[[ACTIVE:.*]] = cir.alloca "cleanup.cond"
+// PRECISE: cir.ternary
+// PRECISE: cir.lifetime.start %[[TMP]]
+// PRECISE: cir.call @consume(%[[TMP]])
+// PRECISE: } cleanup normal {
+// PRECISE: %[[FLAG:.*]] = cir.load{{.*}} %[[ACTIVE]]
+// PRECISE: cir.if %[[FLAG]] {
+// PRECISE-NEXT: cir.lifetime.end %[[TMP]]
+
+// Both pending actions use the same stack. Guard the destructor and end
+// separately, in reverse registration order.
+extern "C" void conditional_guard(bool enabled) {
+  (void)(enabled && (use_guard(Guard(3)), true));
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @conditional_guard(
+// CIR: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR: %[[LIFE:.*]] = cir.alloca "cleanup.cond"{{.*}} : !cir.ptr<!cir.bool>
+// CIR: %[[DTOR:.*]] = cir.alloca "cleanup.cond"{{.*}} : !cir.ptr<!cir.bool>
+// CIR: cir.lifetime.start %[[TMP]]
+// CIR: cir.call @_ZN5GuardC1Ei(%[[TMP]]
+// CIR: cir.call @use_guard(%[[TMP]])
+// CIR: } cleanup normal {
+// CIR: %[[CHECK_DTOR:.*]] = cir.load{{.*}} %[[DTOR]]
+// CIR: cir.if %[[CHECK_DTOR]] {
+// CIR: cir.call @_ZN5GuardD1Ev(%[[TMP]])
+// CIR: %[[CHECK_LIFE:.*]] = cir.load{{.*}} %[[LIFE]]
+// CIR: cir.if %[[CHECK_LIFE]] {
+// CIR: cir.lifetime.end %[[TMP]]
+// CIR: cir.call @after()
+
+// The deferred destructor and lifetime end also run in that order during
+// unwinding, with their own activation flags.
+// LLVM-EH-LABEL: define{{.*}} void @conditional_guard(
+// LLVM-EH: %[[TMP:.*]] = alloca %struct.Guard
+// LLVM-EH: %[[LIFE:.*]] = alloca i8
+// LLVM-EH: %[[DTOR:.*]] = alloca i8
+// LLVM-EH: call void @llvm.lifetime.start.p0(ptr %[[TMP]])
+// LLVM-EH: store i8 1, ptr %[[LIFE]]
+// LLVM-EH: invoke void @_ZN5GuardC1Ei(
+// LLVM-EH: store i8 1, ptr %[[DTOR]]
+// LLVM-EH: invoke void @use_guard(
+// LLVM-EH: load i8, ptr %[[DTOR]]
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM-EH: load i8, ptr %[[LIFE]]
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: landingpad
+// LLVM-EH: load i8, ptr %[[DTOR]]
+// LLVM-EH: call void @_ZN5GuardD1Ev(ptr{{.*}} %[[TMP]])
+// LLVM-EH: load i8, ptr %[[LIFE]]
+// LLVM-EH: call void @llvm.lifetime.end.p0(ptr %[[TMP]])
+// LLVM-EH: resume
+// LLVM-EH: call void @after()
+
+// A conditionally initialized scalar reference extends the chosen temporary's
+// lifetime. The end entries are promoted with their active flags intact.
+extern "C" void conditional_extended(bool enabled) {
+  const int &ref = enabled ? static_cast<const int &>(44)
+                          : static_cast<const int &>(45);
+  consume(ref);
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @conditional_extended(
+// CIR-DAG: %[[LEFT:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!s32i>
+// CIR-DAG: %[[RIGHT:.*]] = cir.alloca "ref.tmp1"{{.*}} : !cir.ptr<!s32i>
+// CIR: cir.lifetime.start %[[LEFT]]
+// CIR-NOT: cir.lifetime.end
+// CIR: cir.lifetime.start %[[RIGHT]]
+// CIR-NOT: cir.lifetime.end
+// CIR: cir.call @consume(
+// CIR-NOT: cir.lifetime.end
+// CIR: cir.call @after()
+// CIR: cir.if %{{.*}} {
+// CIR: cir.lifetime.end %[[RIGHT]]
+// CIR: cir.if %{{.*}} {
+// CIR: cir.lifetime.end %[[LEFT]]
+
+struct Holder {
+  int value;
+};
+
+// End the complete object's storage lifetime, rather than its member address.
+extern "C" void subobject() {
+  consume(Holder{46}.value);
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @subobject()
+// CIR: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Holder>
+// CIR: cir.lifetime.start %[[TMP]]
+// CIR: cir.call @consume(
+// CIR: cir.lifetime.end %[[TMP]] : !cir.ptr<!rec_Holder>
+// CIR: cir.call @after()
+
+using IntArray = int[2];
+
+// A pending array lifetime end applies once to the entire alloca.
+extern "C" void extended_array() {
+  const IntArray &ref = IntArray{47, 48};
+  consume(ref[0]);
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @extended_array()
+// CIR: %[[TMP:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!cir.array<!s32i x 2>>
+// CIR: cir.lifetime.start %[[TMP]]
+// CIR: cir.call @consume(
+// CIR: cir.call @after()
+// CIR: cir.lifetime.end %[[TMP]]
+
+// Mixing unconditional and conditional temporaries keeps both destructor and
+// lifetime-end order across the conditional scope.
+extern "C" void mixed(bool enabled) {
+  (use_guard(Guard(4)), (void)(enabled && (use_guard(Guard(5)), true)),
+   use_guard(Guard(6)));
+  after();
+}
+
+// CIR-LABEL: cir.func{{.*}} @mixed(
+// CIR-DAG: %[[FIRST:.*]] = cir.alloca "ref.tmp0"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR-DAG: %[[SECOND:.*]] = cir.alloca "ref.tmp1"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR-DAG: %[[THIRD:.*]] = cir.alloca "ref.tmp2"{{.*}} : !cir.ptr<!rec_Guard>
+// CIR: cir.call @use_guard(%[[THIRD]])
+// CIR: cir.call @_ZN5GuardD1Ev(%[[THIRD]])
+// CIR: cir.lifetime.end %[[THIRD]]
+// CIR: cir.call @_ZN5GuardD1Ev(%[[SECOND]])
+// CIR: cir.lifetime.end %[[SECOND]]
+// CIR: cir.call @_ZN5GuardD1Ev(%[[FIRST]])
+// CIR: cir.lifetime.end %[[FIRST]]
+// CIR: cir.call @after()
+
+// Hoisting nested branches must place both starts before the outer conditional.
+// The starts execute on every loop iteration, and both ends precede after().
+extern "C" void nested_loop(bool first, bool second) {
+  while (first) {
+    (void)(first && (second ? (consume(49), true) : (consume(50), false)));
+    after();
+  }
+}
+
+// CIR-LABEL: cir.func{{.*}} @nested_loop(
+// CIR-NOT: cleanup.cond
+// CIR: cir.while
+// CIR: } do {
+// CIR: cir.lifetime.start %[[LEFT:.*]] :
+// CIR-NEXT: cir.lifetime.start %[[RIGHT:.*]] :
+// CIR-NEXT: {{.*}}cir.ternary
+// CIR: cir.call @consume(%[[LEFT]])
+// CIR: cir.call @consume(%[[RIGHT]])
+// CIR: } cleanup normal {
+// CIR-NEXT: cir.lifetime.end %[[RIGHT]]
+// CIR-NEXT: cir.lifetime.end %[[LEFT]]
+// CIR: cir.call @after()
+
+// Lifetime-extended entries from both arms are captured by the loop cleanup,
+// keeping their branch flags rather than ending at the initializer boundary.
+extern "C" void conditional_extended_loop(bool enabled) {
+  while (const int &ref = enabled ? static_cast<const int &>(51)
+                                 : static_cast<const int &>(0)) {
+    consume(ref);
+  }
+}
+
+// CIR-LABEL: cir.func{{.*}} @conditional_extended_loop(
+// CIR-DAG: %[[LEFT:.*]] = cir.alloca "ref.tmp0"
+// CIR-DAG: %[[RIGHT:.*]] = cir.alloca "ref.tmp1"
+// CIR: cir.while {
+// CIR: cir.lifetime.start %[[LEFT]]
+// CIR-NOT: cir.lifetime.end
+// CIR: cir.lifetime.start %[[RIGHT]]
+// CIR-NOT: cir.lifetime.end
+// CIR: cir.condition
+// CIR: } do {
+// CIR: cir.call @consume(
+// CIR: } cleanup normal {
+// CIR: cir.if %{{.*}} {
+// CIR: cir.lifetime.end %[[RIGHT]]
+// CIR: cir.if %{{.*}} {
+// CIR: cir.lifetime.end %[[LEFT]]
 
 #ifdef __EXCEPTIONS
 

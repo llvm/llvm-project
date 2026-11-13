@@ -2122,17 +2122,50 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
       emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
     }
   } else {
-    mlir::Location loc = getLoc(m->getSourceRange());
-    if (cir::AllocaOp alloca = object.getUnderlyingAllocaOp()) {
-      if (emitLifetimeStartOp(loc, alloca.getResult())) {
-        Address lifetimeAddr(alloca.getResult(), object.getAlignment());
+    if (shouldEmitLifetimeMarkers) {
+      if (cir::AllocaOp alloca = object.getUnderlyingAllocaOp()) {
+        mlir::Location loc = getLoc(m->getSourceRange());
+        Address addr(alloca.getResult(), object.getAlignment());
         switch (m->getStorageDuration()) {
-        case SD_FullExpression:
-          pushFullExprLifetimeEnd(lifetimeAddr);
-          break;
         case SD_Automatic:
-          pushLifetimeEndAfterFullExpr(lifetimeAddr, m->getExtendingDecl());
+          if (emitLifetimeStartOp(loc, alloca.getResult()))
+            pushLifetimeEndAfterFullExpr(addr, m->getExtendingDecl());
           break;
+
+        case SD_FullExpression: {
+          // Avoid creating a conditional cleanup just to hold a lifetime end.
+          // Instead, start the lifetime of a conditional temporary before the
+          // conditional so that its end is unconditional too. A temporary with
+          // a destructor needs a conditional cleanup anyway, and the sanitizers
+          // that need precise lifetimes must not see the temporary live on a
+          // path that never creates it.
+          const SanitizerSet &sanitizers = getLangOpts().Sanitize;
+          if (isInConditionalBranch() && !e->getType().isDestructedType() &&
+              !(sanitizers.has(SanitizerKind::HWAddress) ||
+                sanitizers.has(SanitizerKind::Memory) ||
+                sanitizers.has(SanitizerKind::MemtagStack) ||
+                cgm.getCodeGenOpts().SanitizeAddressUseAfterScope)) {
+            {
+              mlir::OpBuilder::InsertionGuard guard(builder);
+              builder.restoreInsertionPoint(
+                  outermostConditional->getInsertPoint());
+              emitLifetimeStartOp(loc, alloca.getResult());
+              outermostConditional->advanceInsertPoint(
+                  &*std::prev(builder.getInsertionPoint()));
+            }
+            // Without an active flag, the end runs whether or not the branch
+            // did.
+            deferredConditionalCleanupStack.push_back(
+                {NormalEHLifetimeMarker, addr, QualType(), nullptr,
+                 Address::invalid()});
+            break;
+          }
+
+          if (emitLifetimeStartOp(loc, alloca.getResult()))
+            pushFullExprLifetimeEnd(addr);
+          break;
+        }
+
         default:
           llvm_unreachable("alloca-backed temporary has unexpected duration");
         }
@@ -3278,7 +3311,8 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
       resultLV = branchGenFunc(*this, expr);
       resultPtr = resultLV ? resultLV->getPointer() : mlir::Value();
       eval.endEvaluation();
-      branchCleanups.forceCleanup({&resultPtr}, /*deferLifetimeExtended=*/true);
+      branchCleanups.deferLifetimeExtendedCleanups();
+      branchCleanups.forceCleanup({&resultPtr});
     }
 
     // A branch that produced no result is a throw-expression; its region is

@@ -64,8 +64,8 @@ void CIRGenFunction::emitPendingCleanup(const PendingCleanupEntry &entry) {
   if (entry.kind & LifetimeMarker) {
     assert(entry.addr.getDefiningOp<cir::AllocaOp>() &&
            "lifetime cleanup requires the raw alloca address");
-    CallLifetimeEnd(entry.addr.getPointer())
-        .emit(*this, EHScopeStack::Cleanup::Flags());
+    mlir::Value addr = entry.addr.getPointer();
+    emitLifetimeEndOp(addr.getLoc(), addr);
     return;
   }
   emitDestroy(entry.addr, entry.type, entry.destroyer);
