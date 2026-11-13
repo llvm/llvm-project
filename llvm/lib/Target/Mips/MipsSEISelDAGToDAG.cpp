@@ -1230,7 +1230,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       // the 16 bit chunk is zero.
       //
       // For optimization purposes we always synthesize the splat value as
-      // an i32 value, then if we're targetting MIPS64, use SUBREG_TO_REG
+      // an i32 value, then if we're targetting MIPS64, use INSERT_SUBREG
       // just before combining the values with dinsu to produce an i64. This
       // enables SelectionDAG to aggressively share components of splat values
       // where possible.
@@ -1284,15 +1284,21 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
         const bool HiResNonZero = Highest || Higher;
         const bool ResNonZero = Hi || Lo;
 
+        // The high halves of HiRes and Res are not used by dinsu or dsll32.
+        SDValue Undef64Val = SDValue(
+            CurDAG->getMachineNode(Mips::IMPLICIT_DEF, DL, MVT::i64), 0);
+
         if (HiResNonZero)
-          HiRes = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(HiRes, 0),
-              CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
+          HiRes = CurDAG
+                      ->getTargetInsertSubreg(Mips::sub_32, DL, MVT::i64,
+                                              Undef64Val, SDValue(HiRes, 0))
+                      .getNode();
 
         if (ResNonZero)
-          Res = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
-              CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
+          Res = CurDAG
+                    ->getTargetInsertSubreg(Mips::sub_32, DL, MVT::i64,
+                                            Undef64Val, SDValue(Res, 0))
+                    .getNode();
 
         // We have 3 cases:
         //   The HiRes is nonzero but Res is $zero  => dsll32 HiRes, 0
