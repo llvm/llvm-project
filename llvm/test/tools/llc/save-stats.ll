@@ -12,7 +12,7 @@
 ; CHECK: "asm-printer.EmittedInsts":
 ; CHECK: }
 
-; INVALID_ARG: {{.*}}llc{{.*}}: for the --save-stats option: Cannot find option named 'invalid'!
+; INVALID_ARG: {{.*}}llc{{.*}}: invalid value 'invalid' in '--save-stats=invalid'
 define i32 @func() {
   ret i32 0
 }
