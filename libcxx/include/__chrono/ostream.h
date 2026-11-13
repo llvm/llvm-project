@@ -54,7 +54,7 @@ namespace chrono {
 template <class _CharT, class _Traits, class _Duration>
   requires(!treat_as_floating_point_v<typename _Duration::rep> && _Duration{1} < days{1})
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_time<_Duration>& __tp) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
 }
 
 template <class _CharT, class _Traits>
@@ -67,17 +67,17 @@ basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os,
 
 template <class _CharT, class _Traits, class _Duration>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const utc_time<_Duration>& __tp) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
 }
 
 template <class _CharT, class _Traits, class _Duration>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const tai_time<_Duration>& __tp) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
 }
 
 template <class _CharT, class _Traits, class _Duration>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const gps_time<_Duration>& __tp) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
 }
 
 #      endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
@@ -85,7 +85,7 @@ basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os,
 
 template <class _CharT, class _Traits, class _Duration>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const file_time<_Duration> __tp) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
 }
 
 template <class _CharT, class _Traits, class _Duration>
@@ -151,7 +151,7 @@ template <class _CharT, class _Traits, class _Rep, class _Period>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const duration<_Rep, _Period>& __d) {
   basic_ostringstream<_CharT, _Traits> __s;
   __s.flags(__os.flags());
-  __s.imbue(__os.getloc());
+  __s.imbue(__os.__getloc());
   __s.precision(__os.precision());
   __s << __d.count() << chrono::__units_suffix<_CharT, _Period>();
   return __os << __s.str();
@@ -171,8 +171,8 @@ basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os,
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const month& __m) {
-  return __os << (__m.ok() ? std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%b}"), __m)
-                           : std::format(__os.getloc(),
+  return __os << (__m.ok() ? std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%b}"), __m)
+                           : std::format(__os.__getloc(),
                                          _LIBCPP_STATICALLY_WIDEN(_CharT, "{} is not a valid month"),
                                          static_cast<unsigned>(__m))); // TODO FMT Standard mandated locale isn't used.
 }
@@ -185,8 +185,8 @@ basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os,
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const weekday& __wd) {
-  return __os << (__wd.ok() ? std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%a}"), __wd)
-                            : std::format(__os.getloc(), // TODO FMT Standard mandated locale isn't used.
+  return __os << (__wd.ok() ? std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%a}"), __wd)
+                            : std::format(__os.__getloc(), // TODO FMT Standard mandated locale isn't used.
                                           _LIBCPP_STATICALLY_WIDEN(_CharT, "{} is not a valid weekday"),
                                           static_cast<unsigned>(__wd.c_encoding())));
 }
@@ -195,8 +195,8 @@ template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const weekday_indexed& __wdi) {
   auto __i = __wdi.index();
   return __os << (__i >= 1 && __i <= 5
-                      ? std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}[{}]"), __wdi.weekday(), __i)
-                      : std::format(__os.getloc(),
+                      ? std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}[{}]"), __wdi.weekday(), __i)
+                      : std::format(__os.__getloc(),
                                     _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}[{} is not a valid index]"),
                                     __wdi.weekday(),
                                     __i));
@@ -204,36 +204,36 @@ basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os,
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const weekday_last& __wdl) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}[last]"), __wdl.weekday());
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}[last]"), __wdl.weekday());
 }
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const month_day& __md) {
   // TODO FMT The Standard allows 30th of February to be printed.
   // It would be nice to show an error message instead.
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}/{}"), __md.month(), __md.day());
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}/{}"), __md.month(), __md.day());
 }
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const month_day_last& __mdl) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}/last"), __mdl.month());
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}/last"), __mdl.month());
 }
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const month_weekday& __mwd) {
   return __os << std::format(
-             __os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}/{:L}"), __mwd.month(), __mwd.weekday_indexed());
+             __os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}/{:L}"), __mwd.month(), __mwd.weekday_indexed());
 }
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const month_weekday_last& __mwdl) {
   return __os << std::format(
-             __os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}/{:L}"), __mwdl.month(), __mwdl.weekday_last());
+             __os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L}/{:L}"), __mwdl.month(), __mwdl.weekday_last());
 }
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const year_month& __ym) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{}/{:L}"), __ym.year(), __ym.month());
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{}/{:L}"), __ym.year(), __ym.month());
 }
 
 template <class _CharT, class _Traits>
@@ -245,13 +245,13 @@ basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os,
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const year_month_day_last& __ymdl) {
   return __os << std::format(
-             __os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{}/{:L}"), __ymdl.year(), __ymdl.month_day_last());
+             __os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{}/{:L}"), __ymdl.year(), __ymdl.month_day_last());
 }
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const year_month_weekday& __ymwd) {
   return __os << std::format(
-             __os.getloc(),
+             __os.__getloc(),
              _LIBCPP_STATICALLY_WIDEN(_CharT, "{}/{:L}/{:L}"),
              __ymwd.year(),
              __ymwd.month(),
@@ -262,7 +262,7 @@ template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const year_month_weekday_last& __ymwdl) {
   return __os << std::format(
-             __os.getloc(),
+             __os.__getloc(),
              _LIBCPP_STATICALLY_WIDEN(_CharT, "{}/{:L}/{:L}"),
              __ymwdl.year(),
              __ymwdl.month(),
@@ -271,7 +271,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const year_month_weekday_last& 
 
 template <class _CharT, class _Traits, class _Duration>
 basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const hh_mm_ss<_Duration> __hms) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
 }
 
 #    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
@@ -314,7 +314,7 @@ basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os,
 template <class _CharT, class _Traits, class _Duration, class _TimeZonePtr>
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _TimeZonePtr>& __tp) {
-  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T %Z}"), __tp);
+  return __os << std::format(__os.__getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T %Z}"), __tp);
 }
 #      endif
 #    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB

@@ -479,7 +479,7 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
   unique_ptr<char_type, void (*)(void*)> __wb(__wbuf, __do_nothing);
   char_type* __wn;
   char_type* __we              = __wbuf + __bz;
-  locale __loc                 = __iob.getloc();
+  const locale& __loc          = __iob.__getloc();
   const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__loc);
   bool __neg                   = false;
   if (__do_get(__b, __e, __intl, __loc, __iob.flags(), __err, __neg, __ct, __wb, __wn, __we)) {
@@ -518,7 +518,7 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
   unique_ptr<char_type, void (*)(void*)> __wb(__wbuf, __do_nothing);
   char_type* __wn;
   char_type* __we              = __wbuf + __bz;
-  locale __loc                 = __iob.getloc();
+  const locale& __loc          = __iob.__getloc();
   const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__loc);
   bool __neg                   = false;
   if (__do_get(__b, __e, __intl, __loc, __iob.flags(), __err, __neg, __ct, __wb, __wn, __we)) {
@@ -776,7 +776,7 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
     __db = __hd.get();
   }
   // gather info
-  locale __loc                 = __iob.getloc();
+  const locale& __loc          = __iob.__getloc();
   const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__loc);
   __ct.widen(__bb, __bb + __n, __db);
   bool __neg = __n > 0 && __bb[0] == '-';
@@ -813,7 +813,7 @@ template <class _CharT, class _OutputIterator>
 _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
     iter_type __s, bool __intl, ios_base& __iob, char_type __fl, const string_type& __digits) const {
   // gather info
-  locale __loc                 = __iob.getloc();
+  const locale& __loc          = __iob.__getloc();
   const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__loc);
   bool __neg                   = __digits.size() > 0 && __digits[0] == __ct.widen('-');
   money_base::pattern __pat;
