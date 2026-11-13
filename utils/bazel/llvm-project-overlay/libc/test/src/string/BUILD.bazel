@@ -241,9 +241,9 @@ libc_test_library(
     }),
     deps = [
         "//libc:__support_macros_attributes",
-        "//libc:__support_macros_properties_os",
         "//libc:hdr_stdint_proxy",
         "//libc:hdr_sys_mman_macros",
+        "//libc/src/__support/macros/properties:os",
     ],
 )
 
@@ -252,9 +252,9 @@ libc_test(
     srcs = ["memcpy_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:__support_macros_properties_os",
         "//libc:hdr_signal_macros",
         "//libc:memcpy",
+        "//libc/src/__support/macros/properties:os",
     ] + select({
         "//libc:full_build": [],
         "//conditions:default": [
@@ -286,9 +286,9 @@ libc_test(
     srcs = ["memset_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:__support_macros_properties_os",
         "//libc:hdr_signal_macros",
         "//libc:memset",
+        "//libc/src/__support/macros/properties:os",
     ] + select({
         "//libc:full_build": [],
         "//conditions:default": [

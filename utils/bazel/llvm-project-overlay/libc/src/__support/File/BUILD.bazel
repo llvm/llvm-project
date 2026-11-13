@@ -38,7 +38,6 @@ libc_support_library(
         "//libc:__support_error_or",
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_architectures",
         "//libc:__support_threads_mutex",
         "//libc:__support_wchar_character_converter",
         "//libc:__support_wchar_mbstate",
@@ -60,6 +59,7 @@ libc_support_library(
         "//libc:types_wint_t",
         "//libc/src/__support/CPP:new",
         "//libc/src/__support/CPP:span",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 

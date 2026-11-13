@@ -209,9 +209,9 @@ libc_test(
     name = "strfromf_test",
     srcs = ["strfromf_test.cpp"],
     deps = [
-        "//libc:__support_macros_properties_architectures",
         "//libc:strfromf",
         "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -219,10 +219,10 @@ libc_test(
     name = "strfromf128_test",
     srcs = ["strfromf128_test.cpp"],
     deps = [
-        "//libc:__support_macros_properties_architectures",
         "//libc:strfromf",
         "//libc:strfromf128",
         "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -230,9 +230,9 @@ libc_test(
     name = "strfromd_test",
     srcs = ["strfromd_test.cpp"],
     deps = [
-        "//libc:__support_macros_properties_architectures",
         "//libc:strfromd",
         "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -240,9 +240,9 @@ libc_test(
     name = "strfroml_test",
     srcs = ["strfroml_test.cpp"],
     deps = [
-        "//libc:__support_macros_properties_architectures",
         "//libc:strfroml",
         "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -251,10 +251,10 @@ libc_test_library(
     hdrs = ["StrtolTest.h"],
     deps = [
         "//libc:__support_ctype_utils",
-        "//libc:__support_macros_properties_architectures",
         "//libc:hdr_errno_macros",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )

@@ -67,11 +67,11 @@ libc_test(
         "//libc:__support_big_int",
         "//libc:__support_integer_literals",
         "//libc:__support_integer_to_string",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_uint128",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/CPP:span",
         "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -80,7 +80,7 @@ libc_test(
     srcs = ["arg_list_test.cpp"],
     deps = [
         "//libc:__support_arg_list",
-        "//libc:__support_macros_properties_os",
+        "//libc/src/__support/macros/properties:os",
     ],
 )
 
@@ -90,10 +90,10 @@ libc_test(
     deps = [
         "//libc:__support_big_int",
         "//libc:__support_integer_literals",
-        "//libc:__support_macros_properties_types",
         "//libc:hdr_math_macros",
         "//libc:llvm_libc_macros_math_macros",
         "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -119,7 +119,7 @@ libc_test(
     srcs = ["integer_literals_test.cpp"],
     deps = [
         "//libc:__support_integer_literals",
-        "//libc:__support_macros_properties_types",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -128,11 +128,11 @@ libc_test(
     srcs = ["printf_core/parser_test.cpp"],
     deps = [
         "//libc:__support_arg_list",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_printf_core_printf_core_structs",
         "//libc:__support_printf_core_printf_parser",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros/properties:types",
         "//libc/test/UnitTest:printf_matcher",
     ],
 )

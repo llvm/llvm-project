@@ -1,0 +1,67 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "architectures",
+    hdrs = ["architectures.h"],
+)
+
+libc_support_library(
+    name = "compiler",
+    hdrs = ["compiler.h"],
+)
+
+libc_support_library(
+    name = "os",
+    hdrs = ["os.h"],
+)
+
+libc_support_library(
+    name = "complex_types",
+    hdrs = ["complex_types.h"],
+    deps = [
+        ":types",
+        "//libc:hdr_stdint_proxy",
+        "//libc:llvm_libc_types_cfloat128",
+        "//libc:llvm_libc_types_cfloat16",
+    ],
+)
+
+libc_support_library(
+    name = "types",
+    hdrs = ["types.h"],
+    deps = [
+        ":architectures",
+        ":compiler",
+        ":cpu_features",
+        ":os",
+        "//libc:__support_macros_config",
+        "//libc:hdr_float_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc:llvm_libc_macros_float16_macros",
+        "//libc:llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "cpu_features",
+    hdrs = ["cpu_features.h"],
+    deps = [
+        ":architectures",
+        ":compiler",
+    ],
+)

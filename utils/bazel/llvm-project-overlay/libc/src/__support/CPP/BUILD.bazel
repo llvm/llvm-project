@@ -53,9 +53,9 @@ libc_support_library(
         ":type_traits",
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_compiler",
         "//libc:__support_macros_sanitizer",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support/macros/properties:compiler",
     ],
 )
 
@@ -124,8 +124,8 @@ libc_support_library(
     deps = [
         ":type_traits",
         "//libc:__support_macros_attributes",
-        "//libc:__support_macros_properties_types",
         "//libc:hdr_limits_macros",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -145,12 +145,12 @@ libc_support_library(
         "//libc:__support_common",
         "//libc:__support_macros_config",
         "//libc:__support_macros_macro_utils",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_os",
         "//libc:__support_macros_sanitizer",
         "//libc:func_aligned_alloc",
         "//libc:func_free",
         "//libc:func_malloc",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:os",
     ],
 )
 
@@ -191,8 +191,8 @@ libc_support_library(
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_cpu_features",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 
@@ -261,11 +261,11 @@ libc_support_library(
         ":nullptr_t",
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_complex_types",
-        "//libc:__support_macros_properties_types",
         "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_macros_stdfix_macros",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:complex_types",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -304,7 +304,7 @@ libc_support_library(
         ":type_traits",
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_architectures",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )

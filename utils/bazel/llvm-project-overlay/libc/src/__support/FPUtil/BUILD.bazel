@@ -36,14 +36,14 @@ libc_support_library(
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_uint128",
         "//libc:hdr_errno_macros",
         "//libc:hdr_fenv_macros",
         "//libc/src/__support/CPP:algorithm",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -82,10 +82,10 @@ libc_support_library(
         ":comparison_operations",
         ":dyadic_float",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_types",
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -95,10 +95,10 @@ libc_support_library(
     deps = [
         ":dyadic_float",
         ":fp_bits",
-        "//libc:__support_macros_properties_types",
         "//libc:hdr_fenv_macros",
         "//libc/src/__support/CPP:algorithm",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -127,13 +127,13 @@ libc_support_library(
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_cpu_features",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_sign",
         "//libc:hdr_errno_macros",
         "//libc:hdr_fenv_macros",
         "//libc/src/__support/CPP:optional",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -157,10 +157,6 @@ libc_support_library(
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_cpu_features",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_macros_sanitizer",
         "//libc:hdr_fenv_macros",
         "//libc:hdr_math_macros",
@@ -169,6 +165,10 @@ libc_support_library(
         "//libc:types_fenv_t",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -192,13 +192,13 @@ libc_support_library(
         "//libc:__support_libc_assert",
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_math_extras",
         "//libc:__support_sign",
         "//libc:__support_uint128",
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -209,10 +209,10 @@ libc_support_library(
         ":fp_bits",
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_cpu_features",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 
@@ -243,12 +243,12 @@ libc_support_library(
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_uint128",
         "//libc:hdr_fenv_macros",
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -281,8 +281,6 @@ libc_support_library(
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_sign",
         "//libc:hdr_errno_macros",
         "//libc:hdr_fenv_macros",
@@ -290,6 +288,8 @@ libc_support_library(
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -341,13 +341,13 @@ libc_support_library(
         ":rounding_mode",
         "//libc:__support_common",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_cpu_features",
         "//libc:__support_uint128",
         "//libc:hdr_fenv_macros",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 
@@ -368,14 +368,14 @@ libc_support_library(
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_cpu_features",
         "//libc:__support_uint128",
         "//libc:hdr_fenv_macros",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 
@@ -385,10 +385,10 @@ libc_support_library(
     deps = [
         "//libc:__support_common",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_cpu_features",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 
@@ -419,10 +419,10 @@ libc_support_library(
         "//libc:__support_common",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_cpu_features",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 
@@ -433,8 +433,8 @@ libc_support_library(
         ":multiply_add",
         "//libc:__support_common",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_cpu_features",
         "//libc:__support_number_pair",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 
@@ -460,10 +460,10 @@ libc_support_library(
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_types",
         "//libc:hdr_errno_macros",
         "//libc:hdr_fenv_macros",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 

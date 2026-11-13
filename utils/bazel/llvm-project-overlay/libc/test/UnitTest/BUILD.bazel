@@ -24,7 +24,6 @@ libc_test_library(
     deps = [
         "//libc:__support_big_int",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_osutil_io",
         "//libc:__support_uint128",
         "//libc:func_aligned_alloc",
@@ -34,6 +33,7 @@ libc_test_library(
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support/CPP:string",
         "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/macros/properties:types",
     ],
 )
 
@@ -62,9 +62,6 @@ libc_test_library(
         "//libc:__support_libc_assert",
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:__support_macros_properties_compiler",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_stringutil_StringUtil",
         "//libc:__support_uint128",
         "//libc:__support_wchar_string_converter",
@@ -90,6 +87,9 @@ libc_test_library(
         "//libc/src/__support/FPUtil:fpbits_str",
         "//libc/src/__support/FPUtil:rounding_mode",
         "//libc/src/__support/fixed_point",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:types",
     ] + select({
         "//libc:full_build": [
             "//libc:close",
@@ -177,7 +177,6 @@ libc_test_library(
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
-        "//libc:__support_macros_properties_architectures",
         "//libc:hdr_fenv_macros",
         "//libc:hdr_math_macros",
         "//libc:hdr_stdint_proxy",
@@ -193,6 +192,7 @@ libc_test_library(
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/FPUtil:fpbits_str",
         "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros/properties:architectures",
     ],
 )
 
@@ -243,10 +243,10 @@ libc_test_library(
     deps = [
         "//libc:__support_big_int",
         "//libc:__support_macros_config",
-        "//libc:__support_macros_properties_types",
         "//libc:__support_wchar_string_converter",
         "//libc/src/__support/CPP:string",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:types",
     ],
 )

@@ -54,9 +54,9 @@ libc_test(
     name = "fprintf_test",
     srcs = ["fprintf_test.cpp"],
     deps = [
-        "//libc:__support_macros_properties_architectures",
         "//libc:fprintf",
         "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros/properties:architectures",
     ] + select({
         "//libc:full_build": [
             "//libc:fclose",
