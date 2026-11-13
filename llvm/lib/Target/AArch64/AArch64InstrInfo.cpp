@@ -264,6 +264,10 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     NumBytes = 24;
     break;
 
+  case AArch64::StkChkIndirectCall:
+    NumBytes = F.hasFnAttribute("ptrauth-calls") ? 16 : 12;
+    break;
+
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
     break;

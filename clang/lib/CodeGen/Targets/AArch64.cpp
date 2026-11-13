@@ -206,6 +206,21 @@ private:
                                      QualType ReturnType) const;
 };
 
+class DarwinAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
+public:
+  DarwinAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind Kind)
+      : AArch64TargetCodeGenInfo(CGM, Kind) {}
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &CGM) const override {
+    AArch64TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+    addStackProbeTargetAttributes(D, GV, CGM);
+    if (!CGM.getLangOpts().StackCheck || !D)
+      return;
+    if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D))
+      cast<llvm::Function>(GV)->addFnAttr("probe-stack", "__chkstk_darwin");
+  }
+};
+
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
 public:
   WindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K)
@@ -1345,4 +1360,10 @@ std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM,
                                                AArch64ABIKind K) {
   return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM, K);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createDarwinAArch64TargetCodeGenInfo(CodeGenModule &CGM,
+                                              AArch64ABIKind K) {
+  return std::make_unique<DarwinAArch64TargetCodeGenInfo>(CGM, K);
 }

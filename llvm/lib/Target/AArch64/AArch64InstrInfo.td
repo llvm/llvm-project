@@ -1591,6 +1591,15 @@ def BR_JumpTable : Pseudo<(outs), (ins i32imm:$jti), []>, Sched<[]> {
   let Size = 44; // 28 fixed + 16 variable, for table size materialization
 }
 
+// In order to prevent the address register of the Darwin stack checking
+// function from being spilled, and thus potentially exposed to corruption,
+// we bundle the addr materialization and branch into this pseudo.
+def StkChkIndirectCall : Pseudo<(outs), (ins), []>, Sched<[]> {
+  let isCall = 1;
+  let Uses = [X9, SP];
+  let Defs = [LR, X16, X17];
+}
+
 // Space-consuming pseudo to aid testing of placement and reachability
 // algorithms. Immediate operand is the number of bytes this "instruction"
 // occupies; register operands can be used to enforce dependency and constrain

@@ -4857,14 +4857,21 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   // Round the size of the allocation up to the stack alignment size
   // by add SA-1 to the size. This doesn't overflow because we're computing
   // an address inside an alloca.
-  AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
-                          DAG.getConstant(StackAlignMask, dl, IntPtr),
-                          SDNodeFlags::NoUnsignedWrap);
+  // For Darwin with stack checking, we delay this rounding until after the
+  // checking routine is called in order to ensure that adding 0xf doesn't
+  // potentially wrap, and therefore even if the allocation amount is a small
+  // wrapped value, we still do a check of the pre-overflow amount.
+  Triple TT = DAG.getTarget().getTargetTriple();
+  if (!TT.isOSDarwin() || TT.getArch() != Triple::aarch64 ||
+      TLI.getStackProbeSymbolName(*FuncInfo.MF).empty()) {
+    AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
+                            DAG.getConstant(StackAlignMask, dl, IntPtr),
+                            SDNodeFlags::NoUnsignedWrap);
 
-  // Mask out the low bits for alignment purposes.
-  AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
-                          DAG.getSignedConstant(~StackAlignMask, dl, IntPtr));
-
+    // Mask out the low bits for alignment purposes.
+    AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
+                            DAG.getSignedConstant(~StackAlignMask, dl, IntPtr));
+  }
   SDValue Ops[] = {
       getRoot(), AllocSize,
       DAG.getConstant(Alignment ? Alignment->value() : 0, dl, IntPtr)};

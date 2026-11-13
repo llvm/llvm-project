@@ -889,6 +889,11 @@ public:
     return SanitizerMask();
   }
 
+  /// Return true if stack checking should be enabled by default.
+  virtual bool useStackChecking(const llvm::opt::ArgList &Args) const {
+    return false;
+  }
+
   /// Returns true when it's possible to split LTO unit to use whole
   /// program devirtualization and CFI santiizers.
   virtual bool canSplitThinLTOUnit() const { return true; }

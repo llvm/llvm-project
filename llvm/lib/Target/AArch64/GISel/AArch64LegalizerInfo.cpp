@@ -2647,9 +2647,61 @@ bool AArch64LegalizerInfo::legalizeExtractVectorElt(
 
 bool AArch64LegalizerInfo::legalizeDynStackAlloc(
     MachineInstr &MI, LegalizerHelper &Helper) const {
+  assert(MI.getOpcode() == TargetOpcode::G_DYN_STACKALLOC);
+
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  // The "probe-stack" attribute either holds the symbol to call, or the
+  // special string "inline-asm".
+  StringRef ProbeStackAttr =
+    MF.getFunction().getFnAttribute("probe-stack").getValueAsString();
+
+  // FIXME: "inline-asm" isn't supported on darwin here, fallback to the
+  // generic implementation.
+  if (ST->isTargetDarwin() && ProbeStackAttr != "inline-asm") {
+    Register Dst = MI.getOperand(0).getReg();
+    Register AllocSize = MI.getOperand(1).getReg();
+    Align Alignment = assumeAligned(MI.getOperand(2).getImm());
+
+    const auto &MF = *MI.getMF();
+    const auto &TLI = *MF.getSubtarget().getTargetLowering();
+
+    MIRBuilder.setInstr(MI);
+
+    if (ProbeStackAttr != "") {
+      MIRBuilder.buildCopy(AArch64::X9, AllocSize);
+      auto ChkInst = MIRBuilder.buildInstr(AArch64::StkChkIndirectCall, {}, {});
+      auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+      const auto Mask =
+          Subtarget.getRegisterInfo()->getDarwinStackProbePreservedMask();
+      ChkInst.addRegMask(Mask);
+    }
+
+    // Now lower it as a normal alloca.
+    LLT PtrTy = MRI.getType(Dst);
+    LLT IntPtrTy = LLT::integer(PtrTy.getSizeInBits());
+
+    Register SPReg = TLI.getStackPointerRegisterToSaveRestore();
+    auto SPTmp = MIRBuilder.buildCopy(PtrTy, SPReg);
+    SPTmp = MIRBuilder.buildCast(IntPtrTy, SPTmp);
+
+    auto Alloc = MIRBuilder.buildSub(IntPtrTy, SPTmp, AllocSize);
+    if (Alignment > Align(1)) {
+      APInt AlignMask(IntPtrTy.getSizeInBits(), Alignment.value(), true);
+      AlignMask.negate();
+      auto AlignCst = MIRBuilder.buildConstant(IntPtrTy, AlignMask);
+      Alloc = MIRBuilder.buildAnd(IntPtrTy, Alloc, AlignCst);
+    }
+
+    SPTmp = MIRBuilder.buildCast(PtrTy, Alloc);
+    MIRBuilder.buildCopy(SPReg, SPTmp);
+    MIRBuilder.buildCopy(Dst, SPTmp);
+
+    MI.eraseFromParent();
+    return true;
+  }
 
   // If stack probing is not enabled for this function, use the default
   // lowering.

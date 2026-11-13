@@ -172,7 +172,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
                  F.getParent()->getModuleFlag("probe-stack")))
       ProbeKind = PS->getString();
     if (ProbeKind.size()) {
-      if (ProbeKind != "inline-asm")
+      if (ProbeKind != "inline-asm" && ProbeKind != "__chkstk_darwin")
         report_fatal_error("Unsupported stack probing method");
       StackProbeSize = ProbeSize;
     }

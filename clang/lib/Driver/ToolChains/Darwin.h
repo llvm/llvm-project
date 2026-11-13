@@ -719,6 +719,8 @@ public:
 
   bool getDefaultDebugSimpleTemplateNames() const override;
 
+  bool useStackChecking(const llvm::opt::ArgList &Args) const override;
+
   /// }
 
 private:

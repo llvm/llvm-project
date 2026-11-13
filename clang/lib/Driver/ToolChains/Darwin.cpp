@@ -3239,6 +3239,34 @@ void DarwinClang::AddCCKextLibArgs(const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(P));
 }
 
+bool DarwinClang::useStackChecking(const llvm::opt::ArgList &Args) const {
+  // Only arm64(e) is supported (this also excludes arm64_32).
+  if (getArch() != llvm::Triple::aarch64)
+    return false;
+  if (!isTargetIOSBased() && !isTargetXROS() && !isTargetMacOSBased() &&
+      !isTargetWatchOSBased())
+    return false;
+  if (isTargetIPhoneOS() && isIPhoneOSVersionLT(13, 0))
+    return false;
+  if (isTargetMacOS() && isMacosxVersionLT(10, 15))
+    return false;
+  if (isTargetWatchOSBased() && getTriple().getOSVersion() < VersionTuple(6))
+    return false;
+
+  if (Args.hasArg(options::OPT_nodefaultlibs))
+    return false;
+  const SanitizerArgs &Sanitize = getSanitizerArgs(Args);
+  // We don't enable for firmware using -ffreestanding, unless we're
+  // specifically targeting the kernel.
+  if (Args.hasArg(options::OPT_ffreestanding) &&
+      !Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext))
+    return false;
+  if (Sanitize.needsAsanRt())
+    return false;
+
+  return TargetEnvironment != Simulator;
+}
+
 DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
                                      Action::OffloadKind) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());

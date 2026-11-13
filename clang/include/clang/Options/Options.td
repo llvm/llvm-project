@@ -4672,6 +4672,11 @@ def fstack_protector : Flag<["-"], "fstack-protector">, Group<f_Group>,
            "stack frame such that a buffer overflow from a vulnerable variable will "
            "overwrite the guard value before overwriting the function's return "
            "address. The reference stack guard value is stored in a global variable.">;
+defm stack_check : BoolFOption<"stack-check",
+  LangOpts<"StackCheck">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " stack checking">>;
 def ftrivial_auto_var_init : Joined<["-"], "ftrivial-auto-var-init=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Initialize trivial automatic stack variables. Defaults to 'uninitialized'">,
@@ -7831,7 +7836,6 @@ defm signaling_nans : BooleanFFlag<"signaling-nans">, Group<clang_ignored_gcc_op
 defm single_precision_constant : BooleanFFlag<"single-precision-constant">,
     Group<clang_ignored_gcc_optimization_f_Group>;
 defm spec_constr_count : BooleanFFlag<"spec-constr-count">, Group<clang_ignored_f_Group>;
-defm stack_check : BooleanFFlag<"stack-check">, Group<clang_ignored_f_Group>;
 defm strength_reduce :
     BooleanFFlag<"strength-reduce">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm tls_model : BooleanFFlag<"tls-model">, Group<clang_ignored_f_Group>;
