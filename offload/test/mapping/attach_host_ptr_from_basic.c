@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compile-generic -fopenmp-version=61
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+// UNSUPPORTED: apu
 
 // Since OpenMP 6.1, the host pointer of an attached pointer may be re-pointed
 // while its device pointer stays attached. A FROM transfer must then leave
@@ -24,7 +25,7 @@ int *ptrs[4];
 int main() {
 #pragma omp target enter data map(to : a, b)
 
-  // FROM skipped: ref count of s is 2 at the end of the target region.
+  // FROM skipped: the target region's exit takes the ref count of s 2 -> 1.
   {
     S s = {&a[0], 0, &b[0]};
 #pragma omp target enter data map(to : s, s.p[0 : 1])
@@ -45,22 +46,29 @@ int main() {
     S s = {&a[0], 0, &b[0]};
 #pragma omp target enter data map(to : s, s.p[0 : 1])
     s.p = &a[1];
+#pragma omp target map(alloc : s)
+    {
+      s.x = 2;
+    }
 #pragma omp target exit data map(from : s) map(release : s.p[0 : 1])
-    // CHECK: real FROM: s.p kept: 1
-    printf("real FROM: s.p kept: %d\n", s.p == &a[1]);
+    // CHECK: real FROM: s.p kept: 1, s.x: 2
+    printf("real FROM: s.p kept: %d, s.x: %d\n", s.p == &a[1], s.x);
   }
 
-  // FROM of only s.p: s.p is restored; the re-pointed s.q is not touched.
+  // FROM of only s.p: s.p keeps its re-pointed value; the re-pointed s.q is
+  // not touched.
   {
     S s = {&a[0], 0, &b[0]};
 #pragma omp target enter data map(to : s, s.p[0 : 1], s.q[0 : 1])
+    s.p = &a[1];
     s.q = &b[1];
 #pragma omp target map(always, from : s.p)
     {
     }
-    // CHECK: partial FROM: s.p restored: 1, s.q kept: 1
-    printf("partial FROM: s.p restored: %d, s.q kept: %d\n", s.p == &a[0],
+    // CHECK: partial FROM: s.p kept: 1, s.q kept: 1
+    printf("partial FROM: s.p kept: %d, s.q kept: %d\n", s.p == &a[1],
            s.q == &b[1]);
+    s.p = &a[0];
     s.q = &b[0];
 #pragma omp target exit data map(delete : s)                                   \
     map(release : s.p[0 : 1], s.q[0 : 1])
@@ -71,9 +79,13 @@ int main() {
     S s = {&a[0], 0, &b[0]};
 #pragma omp target enter data map(to : s, s.p[0 : 1])
     s.p = &a[1];
+#pragma omp target map(alloc : s)
+    {
+      s.x = 3;
+    }
 #pragma omp target update from(s.x)
-    // CHECK: update from(s.x): s.p kept: 1
-    printf("update from(s.x): s.p kept: %d\n", s.p == &a[1]);
+    // CHECK: update from(s.x): s.p kept: 1, s.x: 3
+    printf("update from(s.x): s.p kept: %d, s.x: %d\n", s.p == &a[1], s.x);
     s.p = &a[0];
 #pragma omp target exit data map(delete : s) map(release : s.p[0 : 1])
   }

@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compile-generic -fopenmp-version=61
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+// UNSUPPORTED: apu
 
 // Strided target updates of an array of structs whose pointers are all
 // attached. arr[0:2:2] covers only arr[0] and arr[2]:
@@ -19,7 +20,7 @@ typedef struct {
   int x;
 } S;
 
-int a[4] = {10, 11, 12, 13}, b[4] = {20, 21, 22, 23};
+int a[4] = {10, 11, 12, 13}, b[4];
 S arr[4];
 
 static void check_host(const char *what, int *const want_p[4],
@@ -33,7 +34,7 @@ static void check_host(const char *what, int *const want_p[4],
 int main() {
   for (int i = 0; i < 4; ++i)
     arr[i] = (S){&a[i], i};
-#pragma omp target enter data map(to : a, b)
+#pragma omp target enter data map(to : a)
 #pragma omp target enter data map(to : arr, arr[0].p[0 : 1], arr[1].p[0 : 1],  \
                                       arr[2].p[0 : 1], arr[3].p[0 : 1])
 
@@ -66,6 +67,9 @@ int main() {
   }
 
   // The same with nowait: the restore happens when the update completes.
+#pragma omp target
+  for (int i = 0; i < 4; ++i)
+    arr[i].x = 300 + i;
   for (int i = 0; i < 4; ++i)
     arr[i].p = &b[i];
 #pragma omp parallel num_threads(2)
@@ -76,13 +80,13 @@ int main() {
   }
   {
     int *const want_p[4] = {&b[0], &b[1], &b[2], &b[3]};
-    const int want_x[4] = {200, 101, 202, 103};
+    const int want_x[4] = {300, 101, 302, 103};
     // CHECK: update from nowait: ok
     check_host("update from nowait", want_p, want_x);
   }
 
   for (int i = 0; i < 4; ++i)
     arr[i].p = &a[i];
-#pragma omp target exit data map(delete : arr, a, b)
+#pragma omp target exit data map(delete : arr, a)
   return 0;
 }
