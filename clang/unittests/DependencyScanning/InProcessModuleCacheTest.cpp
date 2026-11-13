@@ -3,6 +3,7 @@
 #include "clang/Basic/AtomicLineLogger.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
@@ -113,4 +114,56 @@ TEST(InProcessModuleCache, WriteReturnsSharedBuffer) {
   ASSERT_EQ(RewrittenOrErr.getError(), std::error_code{});
   ASSERT_TRUE(*RewrittenOrErr);
   EXPECT_EQ((*RewrittenOrErr)->getBufferStart(), Written->getBufferStart());
+}
+
+TEST(InProcessModuleCache, FlushInBackground) {
+  AtomicLineLogger Logger;
+  ModuleCacheEntries Entries;
+  Entries.startFlushing(Logger);
+  std::shared_ptr<ModuleCache> ModCache =
+      makeInProcessModuleCache(Entries, Logger);
+
+  llvm::SmallString<256> Dir;
+  ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("cache", Dir));
+  llvm::SmallString<256> Path(Dir);
+  llvm::sys::path::append(Path, "M.pcm");
+
+  // Large enough for the buffer to be memory-mapped when read back.
+  std::string Contents(1024 * 1024, 'm');
+  off_t Size;
+  time_t WrittenModTime;
+  auto WrittenOrErr = ModCache->write(
+      Path, llvm::MemoryBuffer::getMemBufferCopy(Contents, Path), Size,
+      WrittenModTime);
+  ASSERT_EQ(WrittenOrErr.getError(), std::error_code{});
+  std::unique_ptr<llvm::MemoryBuffer> Written = std::move(*WrittenOrErr);
+
+  Entries.stopFlushing();
+
+  // The PCM got written to disk without an explicit flush.
+  EXPECT_TRUE(llvm::sys::fs::exists(Path));
+
+  // Flushing should not invalidate the previously-returned buffer.
+  EXPECT_EQ(Written->getBuffer(), Contents);
+
+  // The flushed PCM is now memory-mapped from disk, with the same metadata.
+  time_t ModTime;
+  std::unique_ptr<llvm::MemoryBuffer> Read;
+  ASSERT_THAT_ERROR(ModCache->read(Path, Size, ModTime).moveInto(Read),
+                    llvm::Succeeded());
+  EXPECT_EQ(Read->getBuffer(), Contents);
+  EXPECT_EQ(Read->getBufferKind(), llvm::MemoryBuffer::MemoryBuffer_MMap);
+  EXPECT_EQ(Size, off_t(Contents.size()));
+  EXPECT_EQ(ModTime, WrittenModTime);
+
+  // Writing the same contents again keeps the PCM flushed.
+  ASSERT_EQ(ModCache
+                ->write(Path,
+                        llvm::MemoryBuffer::getMemBufferCopy(Contents, Path),
+                        Size, ModTime)
+                .getError(),
+            std::error_code{});
+  EXPECT_EQ(ModTime, WrittenModTime);
+
+  llvm::sys::fs::remove_directories(Dir);
 }
