@@ -2733,6 +2733,21 @@ void PruneThreadPlans();
   lldb::InstrumentationRuntimeSP
   GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type);
 
+  /// Enable or disable the instrumentation runtime plugin \p irt in this
+  /// process.
+  ///
+  /// Disabling destroys this process's instance of the plugin, which
+  /// deactivates it. Enabling creates a new instance of the plugin (if one
+  /// doesn't already exist) and gives it a chance to activate using the
+  /// modules that are currently loaded.
+  llvm::Error
+  SetInstrumentationRuntimeEnabled(lldb::InstrumentationRuntimeType irt,
+                                   bool enabled);
+
+  /// \return true if this process has an instance of the instrumentation
+  /// runtime plugin \p irt.
+  bool InstrumentationRuntimeIsEnabled(lldb::InstrumentationRuntimeType irt);
+
   /// Try to fetch the module specification for a module with the given file
   /// name and architecture. Process sub-classes have to override this method
   /// if they support platforms where the Platform object can't get the module
@@ -3574,6 +3589,9 @@ protected:
                         /// with an explicit call to Kill or Detach?
   LanguageRuntimeCollection m_language_runtimes;
   std::recursive_mutex m_language_runtimes_mutex;
+  /// The instrumentation runtime plugin instances for this process. A null
+  /// entry means the plugin has been disabled in this process. The entry is
+  /// kept so that a new instance isn't created when modules are loaded.
   InstrumentationRuntimeCollection m_instrumentation_runtimes;
   std::unique_ptr<NextEventAction> m_next_event_action_up;
   std::vector<PreResumeCallbackAndBaton> m_pre_resume_actions;

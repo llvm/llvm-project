@@ -6443,8 +6443,11 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
   // them of the modified modules.
   InstrumentationRuntime::ModulesDidLoad(module_list, this,
                                          m_instrumentation_runtimes);
-  for (auto &runtime : m_instrumentation_runtimes)
-    runtime.second->ModulesDidLoad(module_list);
+  for (auto &runtime : m_instrumentation_runtimes) {
+    // A null entry means the plugin is disabled in this process.
+    if (runtime.second)
+      runtime.second->ModulesDidLoad(module_list);
+  }
 
   // Give the language runtimes a chance to be created before informing them of
   // the modified modules.
@@ -6529,6 +6532,74 @@ Process::GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type) {
     return InstrumentationRuntimeSP();
   } else
     return (*pos).second;
+}
+
+llvm::Error
+Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
+                                          bool enabled) {
+  if (!IsAlive())
+    return llvm::createStringErrorV("process {} is not alive", GetID());
+
+  if (!enabled) {
+    InstrumentationRuntimeSP &runtime_sp = m_instrumentation_runtimes[irt];
+    // Destroy any instance of this plugin. We rely on the plugin's destructor
+    // being implicitly called here to deactivate the plugin (e.g. remove its
+    // breakpoints). That only happens if this map holds the only reference to
+    // the plugin.
+    assert((!runtime_sp || runtime_sp.use_count() == 1) &&
+           "instrumentation runtime plugin unexpectedly still referenced");
+    // FIXME: The plugins pass a raw `this` pointer as the baton for their
+    // breakpoint callbacks. If one of this plugin's breakpoint callbacks is
+    // running on another thread (e.g. the thread handling the stop event) when
+    // the plugin is disabled, destroying the plugin here causes a
+    // use-after-free.
+    //
+    // A null entry is stored rather than removing the entry so that
+    // `InstrumentationRuntime::ModulesDidLoad` doesn't create a new instance
+    // (e.g. after dlopen) if the plugin is still enabled globally.
+    runtime_sp = nullptr;
+    return llvm::Error::success();
+  }
+
+  // This process already has an instance of this plugin so it is already
+  // enabled.
+  if (GetInstrumentationRuntime(irt))
+    return llvm::Error::success();
+
+  // There's no instance of this plugin for this process so create one. This
+  // can happen if the plugin was disabled in this process or if the plugin was
+  // never instantiated for this process because it was disabled globally (e.g.
+  // `plugin disable instrumentation-runtime.*` in .lldbinit).
+
+  // Create the plugin by finding its create callback and calling it.
+  lldb::InstrumentationRuntimeSP new_plugin = nullptr;
+  for (auto &cbs : PluginManager::GetInstrumentationRuntimeCallbacks(
+           /*enabled_only=*/false)) {
+    InstrumentationRuntimeType other_irt = cbs.get_type_callback();
+    if (other_irt != irt)
+      continue;
+
+    new_plugin = cbs.create_callback(shared_from_this());
+    break;
+  }
+  if (!new_plugin)
+    return llvm::createStringError("failed to create new instance of plugin");
+
+  m_instrumentation_runtimes[irt] = new_plugin;
+
+  // Pretend the modules currently loaded in the target were just loaded to
+  // give the new plugin a chance to activate. If the plugin's runtime isn't
+  // loaded yet the plugin will try to activate again when more modules are
+  // loaded.
+  ModuleList module_list(GetTarget().GetImages());
+  new_plugin->ModulesDidLoad(module_list);
+  return llvm::Error::success();
+}
+
+bool Process::InstrumentationRuntimeIsEnabled(
+    lldb::InstrumentationRuntimeType irt) {
+  // The plugin is enabled if and only if this process has an instance of it.
+  return GetInstrumentationRuntime(irt) != nullptr;
 }
 
 bool Process::GetModuleSpec(const FileSpec &module_file_spec,
