@@ -68,6 +68,11 @@ using llvm::hlsl::CBufferRowSizeInBytes;
 
 namespace {
 
+enum class SPIRVExecutionMode : uint32_t {
+  DerivativeGroupQuadsKHR = 5289,
+  DerivativeGroupLinearKHR = 5290
+};
+
 void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   // The validation of ValVersionStr is done at HLSLToolChain::TranslateArgs.
   // Assume ValVersionStr is legal here.
@@ -1001,7 +1006,8 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
-static void addSPIRVQuadAllExecutionModes(llvm::Module &M) {
+static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
+  llvm::Module &M = CGM.getModule();
   Function *QuadAll =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::spv_quad_all);
   if (!QuadAll)
@@ -1018,11 +1024,28 @@ static void addSPIRVQuadAllExecutionModes(llvm::Module &M) {
     if (F->hasFnAttribute("hlsl.numthreads")) {
       StringRef NumThreads =
           F->getFnAttribute("hlsl.numthreads").getValueAsString();
-      // DerivativeGroupLinearKHR is 5290; DerivativeGroupQuadsKHR is 5289.
-      unsigned Mode = NumThreads.ends_with(",1,1") ? 5290 : 5289;
+      SmallVector<StringRef, 3> Dimensions;
+      NumThreads.split(Dimensions, ',');
+      assert(Dimensions.size() == 3 && "expected three numthreads dimensions");
+      std::array<uint32_t, 3> Threads;
+      for (auto [Dimension, Thread] : llvm::zip(Dimensions, Threads)) {
+        [[maybe_unused]] bool Invalid = Dimension.getAsInteger(10, Thread);
+        assert(!Invalid && "expected an integer numthreads dimension");
+      }
+      bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
+      if (IsLinear ? (uint64_t(Threads[0]) * Threads[1] * Threads[2]) % 4 != 0
+                   : Threads[0] % 2 != 0 || Threads[1] % 2 != 0) {
+        CGM.getDiags().Report(diag::err_hlsl_spirv_quad_all_numthreads)
+            << F->getName() << IsLinear;
+        continue;
+      }
+      SPIRVExecutionMode Mode =
+          IsLinear ? SPIRVExecutionMode::DerivativeGroupLinearKHR
+                   : SPIRVExecutionMode::DerivativeGroupQuadsKHR;
       MDNode *MD = MDNode::get(
           M.getContext(),
-          {ValueAsMetadata::get(F), ConstantAsMetadata::get(B.getInt32(Mode))});
+          {ValueAsMetadata::get(F),
+           ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Mode)))});
       M.getOrInsertNamedMetadata("spirv.ExecutionMode")->addOperand(MD);
     }
 
@@ -1077,7 +1100,7 @@ void CGHLSLRuntime::finishCodeGen() {
 
   generateGlobalCtorDtorCalls();
   if (T.isSPIRV())
-    addSPIRVQuadAllExecutionModes(M);
+    addSPIRVQuadAllExecutionModes(CGM);
 }
 
 void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(

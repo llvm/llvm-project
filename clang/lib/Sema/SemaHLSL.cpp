@@ -3191,7 +3191,6 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
                              SourceRange Range);
   const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
-  void DiagnoseQuadAllCall(CallExpr *CE);
   void DiagnoseBarrierCall(CallExpr *CE);
   uint64_t DiagnoseBarrierGroupMemory(Expr *MemoryArg, uint64_t MemoryFlags,
                                       bool HasVisibleGroup, bool IsAllMemory);
@@ -3227,35 +3226,10 @@ public:
   }
 
   bool VisitCallExpr(CallExpr *CE) override {
-    DiagnoseQuadAllCall(CE);
     DiagnoseBarrierCall(CE);
     return true;
   }
 };
-
-void DiagnoseHLSLAvailability::DiagnoseQuadAllCall(CallExpr *CE) {
-  const FunctionDecl *FD = CE->getDirectCallee();
-  if (!FD || FD->getBuiltinID() != Builtin::BI__builtin_hlsl_quad_all)
-    return;
-
-  const llvm::Triple::EnvironmentType AllowedStages[] = {
-      llvm::Triple::Pixel, llvm::Triple::Compute, llvm::Triple::Mesh,
-      llvm::Triple::Amplification};
-  llvm::Triple::EnvironmentType Stage = GetCurrentShaderEnvironment();
-  if (Stage == llvm::Triple::UnknownEnvironment ||
-      llvm::is_contained(AllowedStages, Stage))
-    return;
-
-  SmallVector<StringRef, 4> StageStrings;
-  llvm::transform(AllowedStages, std::back_inserter(StageStrings),
-                  [](llvm::Triple::EnvironmentType ST) {
-                    return StringRef(
-                        HLSLShaderAttr::ConvertEnvironmentTypeToStr(ST));
-                  });
-  SemaRef.Diag(CE->getExprLoc(), diag::err_hlsl_builtin_unsupported_in_stage)
-      << FD << llvm::Triple::getEnvironmentTypeName(Stage)
-      << (std::size(AllowedStages) != 1) << join(StageStrings, ", ");
-}
 
 uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierGroupMemory(
     Expr *MemoryArg, uint64_t MemoryFlags, bool HasVisibleGroup,
