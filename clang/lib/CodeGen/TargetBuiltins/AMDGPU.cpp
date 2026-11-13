@@ -781,11 +781,16 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_fract);
   case AMDGPU::BI__builtin_amdgcn_ubfe:
-    return emitBuiltinWithOneOverloadedType<3>(*this, E,
-                                               Intrinsic::amdgcn_ubfe);
-  case AMDGPU::BI__builtin_amdgcn_sbfe:
-    return emitBuiltinWithOneOverloadedType<3>(*this, E,
-                                               Intrinsic::amdgcn_sbfe);
+  case AMDGPU::BI__builtin_amdgcn_sbfe: {
+    // ubfe/sbfe are not overloaded, so emit them without an overload type.
+    Intrinsic::ID IID = BuiltinID == AMDGPU::BI__builtin_amdgcn_ubfe
+                            ? Intrinsic::amdgcn_ubfe
+                            : Intrinsic::amdgcn_sbfe;
+    Function *F = CGM.getIntrinsic(IID);
+    return Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0)),
+                                  EmitScalarExpr(E->getArg(1)),
+                                  EmitScalarExpr(E->getArg(2))});
+  }
   case AMDGPU::BI__builtin_amdgcn_ballot_w32:
   case AMDGPU::BI__builtin_amdgcn_ballot_w64: {
     llvm::Type *ResultType = ConvertType(E->getType());

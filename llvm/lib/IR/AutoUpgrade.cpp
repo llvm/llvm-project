@@ -1766,6 +1766,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
+      if (Name == "ubfe.i32" || Name == "sbfe.i32") {
+        // ubfe/sbfe are no longer overloaded on the result type; map the legacy
+        // mangled name to the unmangled declaration.
+        Intrinsic::ID IID = Name == "ubfe.i32" ? Intrinsic::amdgcn_ubfe
+                                               : Intrinsic::amdgcn_sbfe;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
       if (Name.consume_front("atomic.")) {
         if (Name.starts_with("inc") || Name.starts_with("dec") ||
             Name.starts_with("cond.sub") || Name.starts_with("csub")) {

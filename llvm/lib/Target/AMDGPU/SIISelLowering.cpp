@@ -8158,23 +8158,13 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
 
 static SDValue lowerBFEIntrinsic(SDValue Op, SelectionDAG &DAG,
                                  Intrinsic::ID IntrinsicID) {
+  // ubfe/sbfe model the 32-bit VALU V_BFE_{U,I}32 instruction; the i32 type is
+  // fixed by the intrinsic signature.
   bool Signed = IntrinsicID == Intrinsic::amdgcn_sbfe;
   SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-  SDValue Src = Op.getOperand(1);
-  SDValue Offset = Op.getOperand(2);
-  SDValue Width = Op.getOperand(3);
-
-  if (VT != MVT::i32) {
-    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-        DAG.getMachineFunction().getFunction(),
-        Twine(Intrinsic::getBaseName(IntrinsicID)) + " only supports i32",
-        DL.getDebugLoc()));
-    return DAG.getPOISON(VT);
-  }
-
-  return DAG.getNode(Signed ? AMDGPUISD::BFE_I32 : AMDGPUISD::BFE_U32, DL, VT,
-                     Src, Offset, Width);
+  return DAG.getNode(Signed ? AMDGPUISD::BFE_I32 : AMDGPUISD::BFE_U32, DL,
+                     Op.getValueType(), Op.getOperand(1), Op.getOperand(2),
+                     Op.getOperand(3));
 }
 
 static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,

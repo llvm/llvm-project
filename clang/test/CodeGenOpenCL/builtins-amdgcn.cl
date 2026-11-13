@@ -1258,13 +1258,13 @@ kernel void test_alignbyte(global uint* out, uint src0, uint src1, uint src2) {
 }
 
 // CHECK-LABEL: @test_ubfe(
-// CHECK: tail call{{.*}} i32 @llvm.amdgcn.ubfe.i32(i32 %src0, i32 %src1, i32 %src2)
+// CHECK: tail call{{.*}} i32 @llvm.amdgcn.ubfe(i32 %src0, i32 %src1, i32 %src2)
 kernel void test_ubfe(global uint* out, uint src0, uint src1, uint src2) {
   *out = __builtin_amdgcn_ubfe(src0, src1, src2);
 }
 
 // CHECK-LABEL: @test_sbfe(
-// CHECK: tail call{{.*}} i32 @llvm.amdgcn.sbfe.i32(i32 %src0, i32 %src1, i32 %src2)
+// CHECK: tail call{{.*}} i32 @llvm.amdgcn.sbfe(i32 %src0, i32 %src1, i32 %src2)
 kernel void test_sbfe(global uint* out, uint src0, uint src1, uint src2) {
   *out = __builtin_amdgcn_sbfe(src0, src1, src2);
 }
