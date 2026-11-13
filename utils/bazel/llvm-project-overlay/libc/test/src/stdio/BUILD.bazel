@@ -121,12 +121,12 @@ libc_test(
     name = "remove_test",
     srcs = ["remove_test.cpp"],
     deps = [
-        "//libc:access",
-        "//libc:close",
         "//libc:hdr_sys_stat_macros",
         "//libc/src/fcntl:open",
         "//libc/src/stdio:remove",
         "//libc/src/sys/stat:mkdirat",
+        "//libc/src/unistd:access",
+        "//libc/src/unistd:close",
     ],
 )
 

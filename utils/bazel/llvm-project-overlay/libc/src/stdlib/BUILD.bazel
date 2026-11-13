@@ -257,7 +257,6 @@ libc_support_library(
     hdrs = ["environ_internal.h"],
     deps = [
         "//libc:config_app_h",
-        "//libc:environ",
         "//libc:types_size_t",
         "//libc/src/__support:checked_ptr",
         "//libc/src/__support:common",
@@ -267,6 +266,7 @@ libc_support_library(
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
         "//libc/src/string/memory_utils",
+        "//libc/src/unistd:environ",
     ],
 )
 

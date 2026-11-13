@@ -92,14 +92,11 @@ libc_test_library(
         "//libc/src/time:clock",
     ] + select({
         "//libc:full_build": [
-            "//libc:close",
-            "//libc:fork",
             "//libc:llvm_libc_macros_poll_macros",
             "//libc:llvm_libc_macros_signal_macros",
             "//libc:llvm_libc_macros_sys_wait_macros",
             "//libc:llvm_libc_types_pid_t",
             "//libc:llvm_libc_types_struct_pollfd",
-            "//libc:pipe",
             "//libc/src/poll",
             "//libc/src/signal",
             "//libc/src/signal:kill",
@@ -110,6 +107,9 @@ libc_test_library(
             "//libc/src/stdlib:getenv",
             "//libc/src/string:strsignal",
             "//libc/src/sys/wait:waitpid",
+            "//libc/src/unistd:close",
+            "//libc/src/unistd:fork",
+            "//libc/src/unistd:pipe",
         ],
         "//conditions:default": [],
     }) + select({

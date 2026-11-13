@@ -3188,140 +3188,49 @@ alias(
     actual = "//libc/src/time:clock",
 )
 
-libc_function(
+alias(
     name = "access",
-    srcs = ["src/unistd/linux/access.cpp"],
-    hdrs = ["src/unistd/access.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:access",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:access",
 )
 
-libc_function(
+alias(
     name = "chdir",
-    srcs = ["src/unistd/linux/chdir.cpp"],
-    hdrs = ["src/unistd/chdir.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:chdir",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:chdir",
 )
 
-libc_function(
+alias(
     name = "chown",
-    srcs = ["src/unistd/linux/chown.cpp"],
-    hdrs = ["src/unistd/chown.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":types_gid_t",
-        ":types_uid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:chown",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:chown",
 )
 
-libc_function(
+alias(
     name = "close",
-    srcs = ["src/unistd/linux/close.cpp"],
-    hdrs = ["src/unistd/close.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:close",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:close",
 )
 
-libc_function(
+alias(
     name = "dup",
-    srcs = ["src/unistd/linux/dup.cpp"],
-    hdrs = ["src/unistd/dup.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:dup",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:dup",
 )
 
-libc_function(
+alias(
     name = "dup2",
-    srcs = ["src/unistd/linux/dup2.cpp"],
-    hdrs = ["src/unistd/dup2.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:dup2",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:dup2",
 )
 
-libc_function(
+alias(
     name = "dup3",
-    srcs = ["src/unistd/linux/dup3.cpp"],
-    hdrs = ["src/unistd/dup3.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:dup3",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:dup3",
 )
 
-libc_function(
+alias(
     name = "environ",
-    srcs = ["src/unistd/environ.cpp"],
-    hdrs = ["src/unistd/environ.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:environ",
 )
 
-libc_function(
+alias(
     name = "fchdir",
-    srcs = ["src/unistd/linux/fchdir.cpp"],
-    hdrs = ["src/unistd/fchdir.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fchdir",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:fchdir",
 )
 
 alias(
@@ -3379,166 +3288,54 @@ alias(
     actual = "//libc/src/sched:sched_yield",
 )
 
-libc_function(
+alias(
     name = "fchown",
-    srcs = ["src/unistd/linux/fchown.cpp"],
-    hdrs = ["src/unistd/fchown.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":types_gid_t",
-        ":types_uid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fchown",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:fchown",
 )
 
-libc_function(
+alias(
     name = "fsync",
-    srcs = ["src/unistd/linux/fsync.cpp"],
-    hdrs = ["src/unistd/fsync.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fsync",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:fsync",
 )
 
-libc_function(
+alias(
     name = "ftruncate",
-    srcs = ["src/unistd/linux/ftruncate.cpp"],
-    hdrs = ["src/unistd/ftruncate.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:ftruncate",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:ftruncate",
 )
 
-libc_function(
+alias(
     name = "getcwd",
-    srcs = ["src/unistd/linux/getcwd.cpp"],
-    hdrs = ["src/unistd/getcwd.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:checked_ptr",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getcwd",
-        "//libc/src/__support/macros:config",
-        "//libc/src/string:allocating_string_utils",
-    ],
+    actual = "//libc/src/unistd:getcwd",
 )
 
-libc_function(
+alias(
     name = "geteuid",
-    srcs = ["src/unistd/linux/geteuid.cpp"],
-    hdrs = ["src/unistd/geteuid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_uid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:geteuid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:geteuid",
 )
 
-libc_function(
+alias(
     name = "gethostname",
-    srcs = ["src/unistd/linux/gethostname.cpp"],
-    hdrs = ["src/unistd/gethostname.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":types_size_t",
-        ":types_struct_utsname",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:uname",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-        "//libc/src/string:utils",
-    ],
+    actual = "//libc/src/unistd:gethostname",
 )
 
-libc_function(
+alias(
     name = "getpagesize",
-    srcs = ["src/unistd/linux/getpagesize.cpp"],
-    hdrs = ["src/unistd/getpagesize.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:linux_auxv",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getpagesize",
 )
 
-libc_function(
+alias(
     name = "getpid",
-    srcs = ["src/unistd/linux/getpid.cpp"],
-    hdrs = ["src/unistd/getpid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getpid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getpid",
 )
 
-libc_function(
+alias(
     name = "getppid",
-    srcs = ["src/unistd/linux/getppid.cpp"],
-    hdrs = ["src/unistd/getppid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getppid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getppid",
 )
 
-libc_function(
+alias(
     name = "fork",
-    srcs = ["src/unistd/linux/fork.cpp"],
-    hdrs = ["src/unistd/fork.h"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_signal_macros",
-        ":hdr_unistd_macros",
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/threads:fork_callbacks",
-        "//libc/src/__support/threads:identifier",
-        "//libc/src/__support/threads:thread",
-        "//libc/src/__support/threads:thread_headers",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:fork",
 )
 
 alias(
@@ -3571,60 +3368,24 @@ alias(
     actual = "//libc/src/sys/wait:waitpid",
 )
 
-libc_function(
+alias(
     name = "getsid",
-    srcs = ["src/unistd/linux/getsid.cpp"],
-    hdrs = ["src/unistd/getsid.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getsid",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:getsid",
 )
 
-libc_function(
+alias(
     name = "getuid",
-    srcs = ["src/unistd/linux/getuid.cpp"],
-    hdrs = ["src/unistd/getuid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_uid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getuid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getuid",
 )
 
-libc_function(
+alias(
     name = "getegid",
-    srcs = ["src/unistd/linux/getegid.cpp"],
-    hdrs = ["src/unistd/getegid.h"],
-    deps = [
-        ":types_gid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getegid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getegid",
 )
 
-libc_function(
+alias(
     name = "getgid",
-    srcs = ["src/unistd/linux/getgid.cpp"],
-    hdrs = ["src/unistd/getgid.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_gid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getgid",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:getgid",
 )
 
 # libc_function(
@@ -3642,236 +3403,74 @@ libc_function(
 #     ],
 # )
 
-libc_function(
+alias(
     name = "isatty",
-    srcs = ["src/unistd/linux/isatty.cpp"],
-    hdrs = ["src/unistd/isatty.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":sys_ioctl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:ioctl",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:isatty",
 )
 
-libc_function(
+alias(
     name = "link",
-    srcs = ["src/unistd/linux/link.cpp"],
-    hdrs = ["src/unistd/link.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:link",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:link",
 )
 
-libc_function(
+alias(
     name = "linkat",
-    srcs = ["src/unistd/linux/linkat.cpp"],
-    hdrs = ["src/unistd/linkat.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:linkat",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:linkat",
 )
 
-libc_function(
+alias(
     name = "pipe",
-    srcs = ["src/unistd/linux/pipe.cpp"],
-    hdrs = ["src/unistd/pipe.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pipe",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:pipe",
 )
 
-libc_function(
+alias(
     name = "lseek",
-    srcs = ["src/unistd/linux/lseek.cpp"],
-    hdrs = ["src/unistd/lseek.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:lseek",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:lseek",
 )
 
-libc_function(
+alias(
     name = "pread",
-    srcs = ["src/unistd/linux/pread.cpp"],
-    hdrs = ["src/unistd/pread.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pread",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:pread",
 )
 
-libc_function(
+alias(
     name = "pwrite",
-    srcs = ["src/unistd/linux/pwrite.cpp"],
-    hdrs = ["src/unistd/pwrite.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:pwrite",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:pwrite",
 )
 
-libc_function(
+alias(
     name = "read",
-    srcs = ["src/unistd/linux/read.cpp"],
-    hdrs = ["src/unistd/read.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:read",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:sanitizer",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:read",
 )
 
-libc_function(
+alias(
     name = "readlink",
-    srcs = ["src/unistd/linux/readlink.cpp"],
-    hdrs = ["src/unistd/readlink.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:readlink",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:readlink",
 )
 
-libc_function(
+alias(
     name = "readlinkat",
-    srcs = ["src/unistd/linux/readlinkat.cpp"],
-    hdrs = ["src/unistd/readlinkat.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:readlinkat",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:readlinkat",
 )
 
-libc_function(
+alias(
     name = "rmdir",
-    srcs = ["src/unistd/linux/rmdir.cpp"],
-    hdrs = ["src/unistd/rmdir.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:rmdir",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:rmdir",
 )
 
-libc_function(
+alias(
     name = "setsid",
-    srcs = ["src/unistd/linux/setsid.cpp"],
-    hdrs = ["src/unistd/setsid.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:setsid",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:setsid",
 )
 
-libc_function(
+alias(
     name = "symlink",
-    srcs = ["src/unistd/linux/symlink.cpp"],
-    hdrs = ["src/unistd/symlink.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:symlink",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:symlink",
 )
 
-libc_function(
+alias(
     name = "symlinkat",
-    srcs = ["src/unistd/linux/symlinkat.cpp"],
-    hdrs = ["src/unistd/symlinkat.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:symlinkat",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:symlinkat",
 )
 
 #TODO: Enable once fullbuild is added to bazel, since this depends on a macro
@@ -3889,106 +3488,34 @@ libc_function(
 #     ],
 # )
 
-libc_function(
+alias(
     name = "swab",
-    srcs = ["src/unistd/swab.cpp"],
-    hdrs = ["src/unistd/swab.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/unistd:swab",
 )
 
-libc_function(
+alias(
     name = "truncate",
-    srcs = ["src/unistd/linux/truncate.cpp"],
-    hdrs = ["src/unistd/truncate.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_off_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:truncate",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:truncate",
 )
 
-libc_function(
+alias(
     name = "unlink",
-    srcs = ["src/unistd/linux/unlink.cpp"],
-    hdrs = ["src/unistd/unlink.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:unlink",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:unlink",
 )
 
-libc_function(
+alias(
     name = "unlinkat",
-    srcs = ["src/unistd/linux/unlinkat.cpp"],
-    hdrs = ["src/unistd/unlinkat.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:unlinkat",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:unlinkat",
 )
 
-# WARNING: NOT FULLY IMPLEMENTED, FOR TESTING USE ONLY
-libc_function(
+alias(
     name = "sysconf",
-    srcs = ["src/unistd/linux/sysconf.cpp"],
-    hdrs = ["src/unistd/sysconf.h"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_limits_macros",
-        ":hdr_sys_auxv_macros",
-        ":hdr_sys_resource_macros",
-        ":hdr_unistd_macros",
-        ":types_struct_rlimit",
-        ":types_struct_sysinfo",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:linux_auxv",
-        "//libc/src/__support/OSUtil:linux_sysinfo",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:prlimit",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sysinfo",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:sysconf",
 )
 
-libc_function(
+alias(
     name = "write",
-    srcs = ["src/unistd/linux/write.cpp"],
-    hdrs = ["src/unistd/write.h"],
-    deps = [
-        ":hdr_unistd_macros",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:write",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/unistd:write",
 )
 
 ################################ stdio targets #################################

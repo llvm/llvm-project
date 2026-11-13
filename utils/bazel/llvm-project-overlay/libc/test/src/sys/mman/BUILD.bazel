@@ -25,7 +25,6 @@ libc_test(
     name = "mincore_test",
     srcs = ["linux/mincore_test.cpp"],
     deps = [
-        "//libc:getpagesize",
         "//libc:hdr_sys_mman_macros",
         "//libc/src/sys/mman:madvise",
         "//libc/src/sys/mman:mincore",
@@ -33,6 +32,7 @@ libc_test(
         "//libc/src/sys/mman:mmap",
         "//libc/src/sys/mman:munlock",
         "//libc/src/sys/mman:munmap",
+        "//libc/src/unistd:getpagesize",
     ],
 )
 
@@ -40,7 +40,6 @@ libc_test(
     name = "mlock_test",
     srcs = ["linux/mlock_test.cpp"],
     deps = [
-        "//libc:getpagesize",
         "//libc:hdr_sys_mman_macros",
         "//libc:hdr_sys_resource_macros",
         "//libc/src/__support/OSUtil:syscall",
@@ -54,6 +53,7 @@ libc_test(
         "//libc/src/sys/mman:munlockall",
         "//libc/src/sys/mman:munmap",
         "//libc/src/sys/resource:getrlimit",
+        "//libc/src/unistd:getpagesize",
     ],
 )
 
@@ -61,12 +61,12 @@ libc_test(
     name = "mmap_test",
     srcs = ["linux/mmap_test.cpp"],
     deps = [
-        "//libc:close",
         "//libc:hdr_sys_mman_macros",
         "//libc/src/__support/CPP:scope",
         "//libc/src/sys/mman:memfd_create",
         "//libc/src/sys/mman:mmap",
         "//libc/src/sys/mman:munmap",
+        "//libc/src/unistd:close",
     ],
 )
 
@@ -97,13 +97,13 @@ libc_test(
     name = "msync_test",
     srcs = ["linux/msync_test.cpp"],
     deps = [
-        "//libc:getpagesize",
         "//libc:hdr_sys_mman_macros",
         "//libc/src/sys/mman:mlock",
         "//libc/src/sys/mman:mmap",
         "//libc/src/sys/mman:msync",
         "//libc/src/sys/mman:munlock",
         "//libc/src/sys/mman:munmap",
+        "//libc/src/unistd:getpagesize",
     ],
 )
 
@@ -141,14 +141,14 @@ libc_test(
     name = "remap_file_pages_test",
     srcs = ["linux/remap_file_pages_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:getpagesize",
         "//libc:hdr_sys_mman_macros",
         "//libc:hdr_sys_stat_macros",
         "//libc/src/fcntl:open",
         "//libc/src/sys/mman:mmap",
         "//libc/src/sys/mman:munmap",
         "//libc/src/sys/mman:remap_file_pages",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:getpagesize",
     ],
 )
 
@@ -156,8 +156,6 @@ libc_test(
     name = "shm_test",
     srcs = ["linux/shm_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:ftruncate",
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_sys_mman_macros",
         "//libc/src/fcntl",
@@ -166,5 +164,7 @@ libc_test(
         "//libc/src/sys/mman:munmap",
         "//libc/src/sys/mman:shm_open",
         "//libc/src/sys/mman:shm_unlink",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:ftruncate",
     ],
 )

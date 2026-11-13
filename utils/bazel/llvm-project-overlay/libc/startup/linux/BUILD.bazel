@@ -53,7 +53,6 @@ libc_startup_library(
         ":irelative_hdr",
         "//libc:config_app_h",
         "//libc:config_linux_app_h",
-        "//libc:environ",
         "//libc:hdr_elf_proxy",
         "//libc:hdr_link_macros",
         "//libc:hdr_pthread_macros",
@@ -76,6 +75,7 @@ libc_startup_library(
         "//libc/src/link:_r_debug",
         "//libc/src/stdlib:atexit",
         "//libc/src/stdlib:exit",
+        "//libc/src/unistd:environ",
     ] + selects.with_or({
         PLATFORM_CPU_X86_64: [
             "//libc/startup/linux/x86_64:irelative",

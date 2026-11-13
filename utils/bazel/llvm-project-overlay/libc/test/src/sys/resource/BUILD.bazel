@@ -14,14 +14,14 @@ libc_test(
     name = "getrlimit_setrlimit_test",
     srcs = ["getrlimit_setrlimit_test.cpp"],
     deps = [
-        "//libc:close",
         "//libc:hdr_sys_resource_macros",
         "//libc:hdr_sys_stat_macros",
         "//libc:types_struct_rlimit",
-        "//libc:unlink",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/fcntl:open",
         "//libc/src/sys/resource:getrlimit",
         "//libc/src/sys/resource:setrlimit",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:unlink",
     ],
 )
