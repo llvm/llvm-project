@@ -718,7 +718,9 @@ void RuntimePointerChecking::groupChecks(
   // dependence between accesses to the same underlying object, and could retry
   // with runtime checks without dependency information being available. In this
   // case we will use the fallback path and create separate checking groups for
-  // accesses not present in DepCands.
+  // accesses not present in DepCands. With dependency information, the class
+  // is split into runs of pointers instead, and grouping the pointers of a run
+  // doesn't cover memory between them (see splitClass).
 
   unsigned TotalComparisons = 0;
 
@@ -1677,8 +1679,8 @@ public:
   /// (i.e. the pointers have computable bounds). A return value of false means
   /// we couldn't analyze and generate runtime checks for all pointers in the
   /// loop, but if \p AllowPartial is set then we will have checks for those
-  /// pointers we could analyze. \p DepChecker is used to remove unknown
-  /// dependences from DepCands.
+  /// pointers we could analyze. \p DepChecker is used to split the classes of
+  /// DepCands with unknown dependences.
   bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, Loop *TheLoop,
                        const SymbolicStrideMap &Strides,
                        Value *&UncomputablePtr, bool AllowPartial,
@@ -2198,6 +2200,127 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   return true;
 }
 
+/// Split the class of \p Leader in \p DepCands into sub-classes, so that
+/// accesses of the same sub-class need no runtime checks against each other.
+///
+/// \p UnknownDeps tell us which accesses must be in separate classes.
+///
+/// We assume that the dependency checker has already looked at
+/// every pair of accesses within a class. Every pair of elements should
+/// either NoDep, a recorded safe dependence or Unknown.
+///
+/// Only the pairs with unknown dependences need runtime checks.
+/// Thus, splitting the class along the unknown dependencies is sound.
+///
+/// For example, two rows of an RGB image, r0 = img and r1 = img + S:
+///
+///   r0[3*x] = ..;  r0[3*x+1] = ..;  r0[3*x+2] = ..;
+///   r1[3*x] = ..;  r1[3*x+1] = ..;  r1[3*x+2] = ..;
+///
+/// Distances within a row are constant and not a multiple of the step, so
+/// those pairs are NoDep. Distances across rows depend on S, so those pairs
+/// are unknown:
+///
+///                r0[3x]  r0[3x+1]  r0[3x+2]
+///     r1[3x]       ?        ?         ?
+///     r1[3x+1]     ?        ?         ?
+///     r1[3x+2]     ?        ?         ?
+///
+/// Instead of six classes checked pairwise, we get one class per row, and
+/// grouping turns them into a single check between the rows.
+static void
+splitClass(MemoryDepChecker::DepCandidates &DepCands,
+           MemoryDepChecker::MemAccessInfo Leader,
+           const DenseMap<Value *, SmallPtrSet<Value *, 2>> &UnknownDeps,
+           PredicatedScalarEvolution &PSE, const Loop *L) {
+  // The main idea is to split the class into runs of interleaved pointers
+  // without unknown dependences between them.
+  //
+  // We could've just split the class using the given unknown dependencies
+  // between its elements, but that can potentially introduce overly
+  // conservative checks that always fail. For example, in
+  //
+  //   a[i + off] = a[i] + a[i + 9000]
+  //
+  // the reads have no unknown dependence between them, but merged into one
+  // range, they cover a[i + off] for any off in [0, 9000]. Meaning that in
+  // this case keeping a[i] and a[i + 9000] in separate classes allows us
+  // to generate more precise runtime checks.
+  //
+  // Grouping pointer runs into separate classes allows us to keep the
+  // number of runtime checks under control for the most widespread cases
+  // and avoid generating checks against too wide of a range.
+  SmallVector<MemoryDepChecker::MemAccessInfo> Members(
+      DepCands.members(Leader));
+  DepCands.eraseClass(Leader);
+
+  // Only pointers with the same constant step, whose starts differ by a
+  // constant, are at constant distances from each other, so only they can form
+  // a run. It also means that unknown dependences, which come from distances
+  // that are not constant, are mostly between different buckets.
+  struct Bucket {
+    const SCEV *Start;
+    const SCEVConstant *Step;
+    SmallVector<std::pair<APInt, MemoryDepChecker::MemAccessInfo>, 4> Members;
+  };
+  SmallVector<Bucket, 4> Buckets;
+  ScalarEvolution &SE = *PSE.getSE();
+  for (MemoryDepChecker::MemAccessInfo Access : Members) {
+    const SCEV *Start;
+    const SCEVConstant *Step;
+    if (!match(PSE.getSCEV(Access.getPointer()),
+               m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step),
+                                   m_SpecificLoop(L)))) {
+      // We can't tell where the range of such a pointer lies, so it gets a
+      // sub-class of its own, as if we removed the whole class.
+      DepCands.insert(Access);
+      continue;
+    }
+    auto *It = find_if(Buckets, [&](const Bucket &B) {
+      return B.Step == Step && SE.computeConstantDifference(Start, B.Start);
+    });
+    if (It == Buckets.end())
+      It = &Buckets.emplace_back(Bucket{Start, Step, {}});
+    It->Members.emplace_back(*SE.computeConstantDifference(Start, It->Start),
+                             Access);
+  }
+
+  for (Bucket &B : Buckets) {
+    const APInt Step = B.Step->getAPInt().abs();
+    stable_sort(B.Members, [](const auto &X, const auto &Y) {
+      return X.first.slt(Y.first);
+    });
+    SmallPtrSet<Value *, 4> RunPtrs;
+    MemoryDepChecker::MemAccessInfo RunLeader;
+    const APInt *PrevOffset = nullptr;
+    for (const auto &[Offset, Access] : B.Members) {
+      Value *Ptr = Access.getPointer();
+      const auto DepsIt = UnknownDeps.find(Ptr);
+      const bool HasUnknownDepInRun = DepsIt != UnknownDeps.end() &&
+                                      any_of(DepsIt->second, [&](Value *Other) {
+                                        return RunPtrs.contains(Other);
+                                      });
+      // Assuming more than one iteration, if a pointer starts at most a step
+      // after the previous one, it starts within the range of the previous
+      // one. So the ranges of a run cover one region without gaps, and an
+      // access of another sub-class can't fit between them without overlapping
+      // one of them. E.g. a[3i] and a[3i + 2] over i32 (8 <= 12 bytes) stay in
+      // one run, while a[i] and a[i + 9000] (36000 > 4 bytes) don't.
+      //
+      // We also start a new run before a pointer with an unknown dependence on
+      // a pointer of the run, as those need a runtime check against each other.
+      if (!PrevOffset || (Offset - *PrevOffset).ugt(Step) ||
+          HasUnknownDepInRun) {
+        RunLeader = Access;
+        RunPtrs.clear();
+      }
+      RunPtrs.insert(Ptr);
+      DepCands.unionSets(RunLeader, Access);
+      PrevOffset = &Offset;
+    }
+  }
+}
+
 bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                                      Loop *TheLoop,
                                      const SymbolicStrideMap &StridesMap,
@@ -2213,9 +2336,13 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   if (auto *Deps = DepChecker.getDependences()) {
     // If there are unknown dependences, this means runtime checks are needed to
     // ensure there's no overlap between accesses to the same underlying object.
-    // Remove the equivalence classes containing both source and destination
-    // accesses from DepCands. This ensures runtime checks will be generated
-    // between those accesses and prevents them from being grouped together.
+    //
+    // Removing the class entirely can produce a large number of additional
+    // checks between the elements that don't have unknown dependencies, so
+    // we collect such classes and the dependencies that force the checks
+    // to split the classes isntead.
+    SmallSetVector<MemAccessInfo, 4> UnknownDepClasses;
+    DenseMap<Value *, SmallPtrSet<Value *, 2>> UnknownDeps;
     for (const auto &Dep : *Deps) {
       if (Dep.Type != MemoryDepChecker::Dependence::Unknown) {
         assert(MemoryDepChecker::Dependence::isSafeForVectorization(Dep.Type) ==
@@ -2223,15 +2350,20 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                "Should only skip safe dependences");
         continue;
       }
-      // Both accesses are in the same class, which may already have been
-      // erased for an earlier dependence.
       MemAccessInfo Src = DepChecker.getAccess(Dep.Source);
-      [[maybe_unused]] MemAccessInfo Dst =
-          DepChecker.getAccess(Dep.Destination);
-      assert((!DepCands.contains(Src) || DepCands.isEquivalent(Src, Dst)) &&
+      MemAccessInfo Dst = DepChecker.getAccess(Dep.Destination);
+      assert(DepCands.isEquivalent(Src, Dst) &&
              "Dependences must be between accesses in the same class");
-      DepCands.eraseClass(Src);
+      assert(Src.getPointer() != Dst.getPointer() &&
+             "Unknown dependence between accesses through the same pointer");
+      UnknownDepClasses.insert(DepCands.getLeaderValue(Src));
+      UnknownDeps[Src.getPointer()].insert(Dst.getPointer());
+      UnknownDeps[Dst.getPointer()].insert(Src.getPointer());
     }
+
+    // Split the classes where we detected unknown dependencies.
+    for (MemAccessInfo Leader : UnknownDepClasses)
+      splitClass(DepCands, Leader, UnknownDeps, PSE, TheLoop);
   } else {
     CheckDeps.clear();
     DepCands = {};

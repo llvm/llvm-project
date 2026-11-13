@@ -536,26 +536,15 @@ define void @independent_interleaved_stores(ptr %a, i64 %offset, i64 %n) {
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
+; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
-; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %a High: (-4 + (8 * %n) + %a))
+; CHECK-NEXT:          (Low: %a High: ((8 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (4 + %a)<nuw> High: ((8 * %n) + %a))
 ; CHECK-NEXT:            Member: {(4 + %a)<nuw>,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: (-4 + (4 * %offset) + (8 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,8}<%loop>
 ; CHECK-EMPTY:
@@ -666,44 +655,29 @@ define void @unknown_dep_with_one_of_stores_within_step(ptr %a, i64 %offset, i64
 ; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i64, ptr %a.off, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i64, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.4 = getelementptr inbounds i8, ptr %gep.a, i64 4
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i64, ptr %a.off, i64 %iv
 ; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.10 = getelementptr inbounds i8, ptr %gep.a, i64 10
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i64, ptr %a.off, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.a.4 = getelementptr inbounds i8, ptr %gep.a, i64 4
-; CHECK-NEXT:      Check 3:
 ; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i64, ptr %a, i64 %iv
+; CHECK-NEXT:          %gep.a.4 = getelementptr inbounds i8, ptr %gep.a, i64 4
 ; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.10 = getelementptr inbounds i8, ptr %gep.a, i64 10
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.a = getelementptr inbounds i64, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.a.4 = getelementptr inbounds i8, ptr %gep.a, i64 4
-; CHECK-NEXT:      Check 5:
-; CHECK-NEXT:        Comparing group GRP2:
-; CHECK-NEXT:          %gep.a.10 = getelementptr inbounds i8, ptr %gep.a, i64 10
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.a.4 = getelementptr inbounds i8, ptr %gep.a, i64 4
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (%offset + %a) High: (-4 + (8 * %n) + %offset + %a))
 ; CHECK-NEXT:            Member: {(%offset + %a),+,8}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %a High: (-4 + (8 * %n) + %a))
+; CHECK-NEXT:          (Low: %a High: ((8 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,8}<nuw><%loop>
+; CHECK-NEXT:            Member: {(4 + %a)<nuw>,+,8}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: (10 + %a)<nuw> High: (4 + (8 * %n) + %a))
 ; CHECK-NEXT:            Member: {(10 + %a)<nuw>,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: (4 + %a)<nuw> High: ((8 * %n) + %a))
-; CHECK-NEXT:            Member: {(4 + %a)<nuw>,+,8}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -812,67 +786,48 @@ define void @interleaved_stores_with_unknown_deps_to_two_objects(ptr %a, ptr %b,
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
-; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv.2
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
+; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv.2
+; CHECK-NEXT:          %gep.b.off = getelementptr inbounds i32, ptr %b, i64 %iv.2.off.b
 ; CHECK-NEXT:      Check 2:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
+; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
 ; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.b.off = getelementptr inbounds i32, ptr %b, i64 %iv.2.off.b
-; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
-; CHECK-NEXT:        Against group GRP4:
 ; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off.a
+; CHECK-NEXT:      Check 3:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv.2
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.b.off = getelementptr inbounds i32, ptr %b, i64 %iv.2.off.b
 ; CHECK-NEXT:      Check 4:
 ; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
-; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv.2
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off.a
 ; CHECK-NEXT:      Check 5:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.b.off = getelementptr inbounds i32, ptr %b, i64 %iv.2.off.b
-; CHECK-NEXT:      Check 6:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
-; CHECK-NEXT:        Against group GRP4:
-; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off.a
-; CHECK-NEXT:      Check 7:
 ; CHECK-NEXT:        Comparing group GRP2:
-; CHECK-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv.2
+; CHECK-NEXT:          %gep.b.off = getelementptr inbounds i32, ptr %b, i64 %iv.2.off.b
 ; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.b.off = getelementptr inbounds i32, ptr %b, i64 %iv.2.off.b
-; CHECK-NEXT:      Check 8:
-; CHECK-NEXT:        Comparing group GRP2:
-; CHECK-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv.2
-; CHECK-NEXT:        Against group GRP4:
-; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off.a
-; CHECK-NEXT:      Check 9:
-; CHECK-NEXT:        Comparing group GRP3:
-; CHECK-NEXT:          %gep.b.off = getelementptr inbounds i32, ptr %b, i64 %iv.2.off.b
-; CHECK-NEXT:        Against group GRP4:
 ; CHECK-NEXT:          %gep.a.off = getelementptr inbounds i32, ptr %a, i64 %iv.2.off.a
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %a High: (-4 + (8 * %n) + %a))
+; CHECK-NEXT:          (Low: %a High: ((8 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (4 + %a)<nuw> High: ((8 * %n) + %a))
 ; CHECK-NEXT:            Member: {(4 + %a)<nuw>,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: (-4 + (8 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((4 * %offset.b) + %b) High: (-4 + (4 * %offset.b) + (8 * %n) + %b))
 ; CHECK-NEXT:            Member: {((4 * %offset.b) + %b),+,8}<%loop>
-; CHECK-NEXT:        Group GRP4:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: ((4 * %offset.a) + %a) High: (-4 + (4 * %offset.a) + (8 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset.a) + %a),+,8}<%loop>
 ; CHECK-EMPTY:
@@ -903,6 +858,85 @@ loop:
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
   br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @interleaved_stores_to_two_rows(ptr %img, i64 %stride, ptr %src, i64 %n) {
+; CHECK-LABEL: 'interleaved_stores_to_two_rows'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %a0 = getelementptr inbounds i8, ptr %img, i64 %off
+; CHECK-NEXT:          %a1 = getelementptr inbounds i8, ptr %a0, i64 1
+; CHECK-NEXT:          %a2 = getelementptr inbounds i8, ptr %a0, i64 2
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %b0 = getelementptr inbounds i8, ptr %row1, i64 %off
+; CHECK-NEXT:          %b1 = getelementptr inbounds i8, ptr %b0, i64 1
+; CHECK-NEXT:          %b2 = getelementptr inbounds i8, ptr %b0, i64 2
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %a0 = getelementptr inbounds i8, ptr %img, i64 %off
+; CHECK-NEXT:          %a1 = getelementptr inbounds i8, ptr %a0, i64 1
+; CHECK-NEXT:          %a2 = getelementptr inbounds i8, ptr %a0, i64 2
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %s.p = getelementptr inbounds float, ptr %src, i64 %x
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %b0 = getelementptr inbounds i8, ptr %row1, i64 %off
+; CHECK-NEXT:          %b1 = getelementptr inbounds i8, ptr %b0, i64 1
+; CHECK-NEXT:          %b2 = getelementptr inbounds i8, ptr %b0, i64 2
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %s.p = getelementptr inbounds float, ptr %src, i64 %x
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %img High: ((3 * %n) + %img))
+; CHECK-NEXT:            Member: {%img,+,3}<nuw><%loop>
+; CHECK-NEXT:            Member: {(1 + %img)<nuw>,+,3}<nuw><%loop>
+; CHECK-NEXT:            Member: {(2 + %img)<nuw>,+,3}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (%stride + %img) High: ((3 * %n) + %stride + %img))
+; CHECK-NEXT:            Member: {(%stride + %img),+,3}<nw><%loop>
+; CHECK-NEXT:            Member: {(1 + %stride + %img),+,3}<nw><%loop>
+; CHECK-NEXT:            Member: {(2 + %stride + %img),+,3}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %src High: ((4 * %n) + %src))
+; CHECK-NEXT:            Member: {%src,+,4}<nuw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %row1 = getelementptr inbounds i8, ptr %img, i64 %stride
+  br label %loop
+
+loop:
+  %x = phi i64 [ 0, %entry ], [ %x.next, %loop ]
+  %s.p = getelementptr inbounds float, ptr %src, i64 %x
+  %s = load float, ptr %s.p
+  %v = fptoui float %s to i8
+  %off = mul nuw nsw i64 %x, 3
+  %a0 = getelementptr inbounds i8, ptr %img, i64 %off
+  %a1 = getelementptr inbounds i8, ptr %a0, i64 1
+  %a2 = getelementptr inbounds i8, ptr %a0, i64 2
+  %b0 = getelementptr inbounds i8, ptr %row1, i64 %off
+  %b1 = getelementptr inbounds i8, ptr %b0, i64 1
+  %b2 = getelementptr inbounds i8, ptr %b0, i64 2
+  store i8 %v, ptr %a0
+  store i8 %v, ptr %a1
+  store i8 %v, ptr %a2
+  store i8 %v, ptr %b0
+  store i8 %v, ptr %b1
+  store i8 %v, ptr %b2
+  %x.next = add nuw nsw i64 %x, 1
+  %done = icmp eq i64 %x.next, %n
+  br i1 %done, label %exit, label %loop
 
 exit:
   ret void
