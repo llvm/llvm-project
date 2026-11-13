@@ -1282,6 +1282,8 @@ struct CollectCUDADeviceComponentsHelper
     }
     return (*this)(component.base());
   }
+  bool operator()(const ProcedureRef &) const { return false; }
+  bool operator()(const DescriptorInquiry &) const { return false; }
   mutable std::vector<const Component *> components;
 };
 

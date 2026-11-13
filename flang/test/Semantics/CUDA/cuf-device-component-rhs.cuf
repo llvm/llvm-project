@@ -11,7 +11,21 @@ module m
     real, allocatable, device :: d(:)
     real, allocatable, device :: e(:)
   end type
+  interface
+    integer function two_device_args(a, b)
+      real, device :: a(*)
+      real, device :: b(*)
+    end function
+  end interface
 contains
+  ! Actual arguments of a function reference are not host reads of the data.
+  subroutine function_arguments(x, y, istat)
+    type(payload) :: x, y
+    integer :: istat
+    istat = two_device_args(x%d, y%d) ! ok
+    istat = two_device_args(x%d, x%e) ! ok
+  end subroutine
+
   subroutine same_object(x, out)
     type(payload) :: x
     real :: out
