@@ -393,7 +393,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       return LI->isVolatile() || isStrongerThan(LI->getOrdering(), AO);
     if (auto *SI = dyn_cast<StoreInst>(I))
       return SI->isVolatile() || isStrongerThan(SI->getOrdering(), AO);
-    return I->isVolatile() || I->mayReadOrWriteMemory();
+    return I->mayReadOrWriteMemory();
   };
 
   // Walk backwards through the basic block, looking for dependencies.
