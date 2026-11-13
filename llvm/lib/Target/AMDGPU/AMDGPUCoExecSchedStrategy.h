@@ -17,6 +17,7 @@
 #include "AMDGPUCoExecInfo.h"
 #include "GCNSchedStrategy.h"
 #include "llvm/CodeGen/MachineScheduler.h"
+#include <optional>
 
 namespace llvm {
 
@@ -70,8 +71,10 @@ private:
   /// tryCriticalResourceDependency and tryCriticalResource: we schedule the
   /// dependencies for a SU on critical resource, then schedule that same SU on
   /// the critical resource. This agreement results in shorter live ranges and
-  /// more regular HardwareUnit access patterns. SUs are prioritized based on
-  /// depth for top-down scheduling.
+  /// more regular HardwareUnit access patterns. SUs are prioritized by how
+  /// net registers scheduling them frees; see getRegFreeDelta(). The ranking
+  /// goes stale after every pick, so it is only valid after
+  /// rebuildPrioritySUs().
   SmallSetVector<SUnit *, 16> PrioritySUs;
   /// All the SUs in the region that consume this resource.
   SmallSetVector<SUnit *, 16> AllSUs;
@@ -107,8 +110,29 @@ private:
   /// behavior which is not modelled in the compiler.
   unsigned BufferCycles = 0;
 
+  /// getRegFreeDelta() of the head of PrioritySUs, once computed.
+  std::optional<int> PriorityHeadFrees;
+
+  /// getRegFreeDelta() of every SU in the region, indexed by NodeNum and owned
+  /// by CandidateHeuristics. An entry is cleared when an SU that shares an
+  /// operand with it is scheduled.
+  SmallVectorImpl<std::optional<int>> *RegFreeCache = nullptr;
+
+  /// \returns getRegFreeDelta(\p SU), from RegFreeCache when it is valid.
+  int getCachedRegFreeDelta(const SUnit *SU);
+
+  /// Try to update PrioritySUs with a new \p SU.
+  void updatePrioritySUsWith(SUnit *SU);
+
 public:
   HardwareUnitInfo() {}
+
+  void setRegFreeCache(SmallVectorImpl<std::optional<int>> *Cache) {
+    RegFreeCache = Cache;
+  }
+
+  /// Rebuild PrioritySUs from AllSUs.
+  void rebuildPrioritySUs();
 
   size_t size() { return AllSUs.size(); }
 
@@ -172,6 +196,7 @@ public:
   void reset() {
     AllSUs.clear();
     PrioritySUs.clear();
+    PriorityHeadFrees.reset();
     ScheduledSUs.clear();
     TotalCycles = 0;
     Type = AMDGPU::InstructionFlavor::Other;
@@ -191,11 +216,10 @@ public:
   /// dependencies, it is beneficial to enable SUs multiple levels ahead.
   SUnit *getNextTargetSU(bool LookDeep = false) const;
   /// Insert the \p SU into AllSUs and account its \p BlockingCycles into
-  /// the TotalCycles. This maintains the list of PrioritySUs.
+  /// the TotalCycles.
   void insert(SUnit *SU, unsigned BlockingCycles);
   /// Update the state for \p SU being scheduled by removing it from the AllSUs
-  /// and reducing its \p BlockingCycles from the TotalCycles. This maintains
-  /// the list of PrioritySUs.
+  /// and reducing its \p BlockingCycles from the TotalCycles.
   void markScheduled(SUnit *SU, unsigned BlockingCycles);
   /// After we've collected all the region pressure for this HWUI, correct for
   /// any specifics of the behavior of this resource. For example, if the
@@ -232,6 +256,12 @@ protected:
 
   AMDGPU::CarriedLatency RegionCarriedLatency = AMDGPU::CarriedLatency::Off;
   DenseMap<MachineInstr *, unsigned> CarriedLatencies;
+  /// See HardwareUnitInfo::RegFreeCache.
+  SmallVector<std::optional<int>, 0> RegFreeCache;
+
+  /// Clear the cached register-free delta of every SU whose delta changes
+  /// because \p SU was scheduled: the other readers of the registers it reads.
+  void invalidateRegFreeDeltas(const SUnit *SU);
 
   /// Walk over the region and collect characteristics for the various
   /// heuristics.
@@ -310,6 +340,11 @@ public:
                                 SchedBoundary *Zone) const;
 
   void dumpRegionSummary();
+
+  void rebuildAllPrioritySUs() {
+    for (auto &HWUI : HWUInfo)
+      HWUI.rebuildPrioritySUs();
+  }
 };
 
 class AMDGPUCoExecSchedStrategy final : public GCNSchedStrategy {
