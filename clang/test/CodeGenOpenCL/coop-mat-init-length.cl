@@ -24,7 +24,7 @@ typedef int   __attribute__((coop_mat(memory_scope_sub_group,
 // coop_mat_init with float scalar input.
 kernel void test_init_float(global float *out) {
     MatA_t a;
-    a = coop_mat_init(1.0f);
+    a = coop_mat_init(a, 1.0f);
     (void)a;
 }
 // CHECK-LABEL: @{{.*}}test_init_float
@@ -34,7 +34,7 @@ kernel void test_init_float(global float *out) {
 // coop_mat_init with integer scalar input.
 kernel void test_init_int(void) {
     MatA_int_t m;
-    m = coop_mat_init(42);
+    m = coop_mat_init(m, 42);
     (void)m;
 }
 // CHECK-LABEL: @{{.*}}test_init_int
@@ -44,7 +44,7 @@ kernel void test_init_int(void) {
 // coop_mat_init with zero initialisation.
 kernel void test_init_zero(void) {
     MatC_t acc;
-    acc = coop_mat_init(0.0f);
+    acc = coop_mat_init(acc, 0.0f);
     (void)acc;
 }
 // CHECK-LABEL: @{{.*}}test_init_zero
@@ -54,7 +54,7 @@ kernel void test_init_zero(void) {
 // coop_mat_length test.
 kernel void test_length(global unsigned int *out) {
     MatA_t a;
-    a = coop_mat_init(0.0f);
+    a = coop_mat_init(a, 0.0f);
     unsigned int len = coop_mat_length(a);
     *out = len;
 }
