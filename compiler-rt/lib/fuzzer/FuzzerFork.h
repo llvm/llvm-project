@@ -20,9 +20,6 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
                   const std::vector<std::string> &Args,
                   const std::vector<std::string> &CorpusDirs, int NumJobs);
 
-// Removes the temp directory of the active -fork run, if any. Does nothing
-// (and does not allocate) outside of -fork mode, so it can be called from the
-// interrupt handler, which may run while the allocator is locked.
 void RmForkTempDir();
 } // namespace fuzzer
 
