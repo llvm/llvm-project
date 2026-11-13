@@ -2565,9 +2565,14 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // Reassociate sub/add sequences to create more add instructions and
   // reduce dependency chains:
   // ((X - Y) + Z) - Op1 --> (X + Z) - (Y + Op1)
+  // Preserve (X - Y) + sext(borrow) so codegen can lower the high word
+  // of a multiword subtraction to a subtract-with-borrow.
+  auto Borrow = m_ExtractValue<1>(
+      m_Intrinsic<Intrinsic::usub_with_overflow>(m_Value(), m_Value()));
   Value *Z;
   if (match(Op0, m_OneUse(m_c_Add(m_OneUse(m_Sub(m_Value(X), m_Value(Y))),
-                                  m_Value(Z))))) {
+                                  m_Value(Z)))) &&
+      !match(Z, m_SExt(Borrow))) {
     Value *XZ = Builder.CreateAdd(X, Z);
     Value *YW = Builder.CreateAdd(Y, Op1);
     return BinaryOperator::CreateSub(XZ, YW);
