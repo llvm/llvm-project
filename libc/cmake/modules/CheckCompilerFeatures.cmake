@@ -62,18 +62,10 @@ endfunction()
 
 set(AVAILABLE_COMPILER_FEATURES "")
 
-# Compiler features that are unavailable on UEFI targets. UEFI uses the
-# Microsoft C++ ABI, whose name mangler does not support fixed point types yet,
-# so any template instantiated with a fixed point type fails to compile.
-set(
-  UEFI_UNAVAILABLE_COMPILER_FEATURES
-    "fixed_point"
-)
-
 # Try compile a C file to check if flag is supported.
 foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  set(compile_options ${LIBC_COMPILE_OPTIONS_NATIVE})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${LIBC_COMPILE_OPTIONS_NATIVE})
   set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
@@ -111,9 +103,6 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     else()
       set(has_feature TRUE)
     endif()
-  elseif(LIBC_TARGET_OS_IS_UEFI AND
-      feature IN_LIST UEFI_UNAVAILABLE_COMPILER_FEATURES)
-    set(has_feature FALSE)
   else()
     try_compile(
       has_feature
