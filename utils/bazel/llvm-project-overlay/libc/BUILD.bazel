@@ -3691,6 +3691,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_prctl",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/prctl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_pread",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/pread.h"],
     target_compatible_with = select({
@@ -5158,8 +5173,8 @@ libc_support_library(
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_munmap",
         ":__support_osutil_linux_syscall_wrappers_open",
+        ":__support_osutil_linux_syscall_wrappers_prctl",
         ":__support_osutil_linux_syscall_wrappers_read",
-        ":__support_osutil_syscall",
         ":__support_threads_callonce",
         ":hdr_errno_macros",
         ":hdr_fcntl_macros",
