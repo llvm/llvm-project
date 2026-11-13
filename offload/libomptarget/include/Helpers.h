@@ -50,9 +50,9 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
                      const int64_t *ArgTypes, const map_var_info_t *ArgNames,
                      const char *RegionType) {
   SourceInfo Info(Loc);
-  INFO(1, OMP_INFOTYPE_KERNEL_ARGS, DeviceId,
-       "%s at %s:%d:%d with %d arguments:\n", RegionType, Info.getFilename(),
-       Info.getLine(), Info.getColumn(), ArgNum);
+  INFO(OMP_INFOTYPE_KERNEL_ARGS, DeviceId)
+      << RegionType << " at " << Info.getFilename() << ":" << Info.getLine()
+      << ":" << Info.getColumn() << " with " << ArgNum << " arguments:";
 
   for (int32_t I = 0; I < ArgNum; ++I) {
     const map_var_info_t VarName = (ArgNames) ? ArgNames[I] : nullptr;
@@ -81,8 +81,9 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
     else
       Type = "use_address";
 
-    INFO(1, OMP_INFOTYPE_KERNEL_ARGS, DeviceId, "%s(%s)[%" PRId64 "] %s\n",
-         Type, getNameFromMapping(VarName).c_str(), ArgSizes[I], Implicit);
+    INFO(OMP_INFOTYPE_KERNEL_ARGS, DeviceId)
+        << Type << "(" << getNameFromMapping(VarName) << ")[" << ArgSizes[I]
+        << "] " << Implicit;
   }
 }
 
@@ -101,8 +102,8 @@ static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId,
     LocStr = " at " + std::string(Info.getFilename()) + ":" +
              std::to_string(Info.getLine()) + ":" +
              std::to_string(Info.getColumn());
-  INFO(1, OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
-       "Waiting for asynchronous operations to complete%s\n", LocStr.c_str());
+  INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId)
+      << "Waiting for asynchronous operations to complete" << LocStr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
