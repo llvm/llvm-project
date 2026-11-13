@@ -6935,6 +6935,36 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   return RetBB;
 }
 
+/// Return true if all bits of the lane mask \p Reg are known to be the same,
+/// so that the bits of the inactive lanes match those of the active lanes.
+static bool isAllOrNoneLaneMask(Register Reg, const MachineRegisterInfo &MRI,
+                                const AMDGPU::LaneMaskConstants &LMC,
+                                unsigned Depth = 0) {
+  constexpr unsigned MaxDepth = 6;
+  if (Depth >= MaxDepth || !Reg.isVirtual())
+    return false;
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (!Def)
+    return false;
+
+  auto IsAllOrNone = [&](const MachineOperand &MO) {
+    if (MO.isImm())
+      return MO.getImm() == 0 || MO.getImm() == -1;
+    return MO.isReg() && !MO.getSubReg() &&
+           isAllOrNoneLaneMask(MO.getReg(), MRI, LMC, Depth + 1);
+  };
+
+  unsigned Opc = Def->getOpcode();
+  // SIFixSGPRCopies lowers a copy from SCC to S_CSELECT -1, 0.
+  if (Opc == AMDGPU::COPY)
+    return Def->getOperand(1).getReg() == AMDGPU::SCC ||
+           IsAllOrNone(Def->getOperand(1));
+  if (Opc == LMC.CSelectOpc || Opc == LMC.AndOpc || Opc == LMC.OrOpc ||
+      Opc == LMC.XorOpc)
+    return IsAllOrNone(Def->getOperand(1)) && IsAllOrNone(Def->getOperand(2));
+  return false;
+}
+
 MachineBasicBlock *
 SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                               MachineBasicBlock *BB) const {
@@ -7159,7 +7189,18 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Src2.setReg(RegOp2);
     }
 
-    if (ST.isWave64()) {
+    // Src2 is the lane mask of a uniform condition. Uniformity only means that
+    // the active lanes agree, so the bits of the inactive lanes may differ.
+    // Unless they are known to be 0 or to match the active lanes, mask Src2
+    // with EXEC. S_AND sets SCC to whether the result is non-zero.
+    const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+    if (!TII->isMaskedByExec(Src2.getReg(), MI, MRI) &&
+        !isAllOrNoneLaneMask(Src2.getReg(), MRI, LMC)) {
+      BuildMI(*BB, MII, DL, TII->get(LMC.AndOpc),
+              MRI.createVirtualRegister(TRI->getWaveMaskRegClass()))
+          .add(Src2)
+          .addReg(LMC.ExecReg);
+    } else if (ST.isWave64()) {
       if (ST.hasScalarCompareEq64()) {
         BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
             .addReg(Src2.getReg())
@@ -19427,8 +19468,10 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
 ///   select c, x, (add x, 1)  => x - (-1) - c
 ///   select c, (add x, -1), x => x - 0 - c
 ///   select c, x, (add x, -1) => x + (-1) + c
-/// The select already needs its condition in SCC or VCC, which is the form
-/// that the carry-in operand needs.
+/// The select already needs its condition in SCC or VCC, which is also where
+/// the carry-in operand is read from. Like the condition of a uniform select, a
+/// uniform carry-in is masked with EXEC when it may be non-zero in inactive
+/// lanes, so any condition can be used.
 static SDValue
 foldSelectOfIncDecToCarryOp(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
