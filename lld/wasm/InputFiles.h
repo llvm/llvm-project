@@ -121,6 +121,8 @@ public:
   // Maps input type indices to output type indices
   std::vector<uint32_t> typeMap;
   std::vector<bool> typeIsUsed;
+  // Check if the __llvm_prf_names segment is retained
+  bool prfSegmentsRetained = false;
   // Maps function indices to table indices
   std::vector<uint32_t> tableEntries;
   std::vector<uint32_t> tableEntriesRel;
