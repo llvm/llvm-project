@@ -285,6 +285,122 @@ exit:
   ret void
 }
 
+; Check that a uniform branch in the outer loop does not crash VPlan LICM when
+; checking whether llvm.lifetime.start can be hoisted. It must not be hoisted,
+; as it may alias the store on one side of the branch.
+define void @test_lifetime_uniform_branch(ptr %arr, ptr %p, i1 %c, i64 %n) {
+; CHECK-LABEL: define void @test_lifetime_uniform_branch(
+; CHECK-SAME: ptr [[ARR:%.*]], ptr [[P:%.*]], i1 [[C:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[P]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[N]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[OUTER_LATCH8:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[OUTER_LATCH8]] ]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN4:.*]], label %[[ELSE3:.*]]
+; CHECK:       [[ELSE3]]:
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> splat (i32 7), <2 x ptr> align 4 [[BROADCAST_SPLAT]], <2 x i1> splat (i1 true))
+; CHECK-NEXT:    br label %[[INNER_PH5:.*]]
+; CHECK:       [[THEN4]]:
+; CHECK-NEXT:    br label %[[INNER_PH5]]
+; CHECK:       [[INNER_PH5]]:
+; CHECK-NEXT:    br label %[[INNER6:.*]]
+; CHECK:       [[INNER6]]:
+; CHECK-NEXT:    [[K7:%.*]] = phi <2 x i64> [ zeroinitializer, %[[INNER_PH5]] ], [ [[TMP2:%.*]], %[[INNER6]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[VEC_IND]], [[K7]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> splat (i32 1), <2 x ptr> align 4 [[WIDE_GEP]], <2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP2]] = add <2 x i64> [[K7]], splat (i64 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i64> [[TMP2]], [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[OUTER_LATCH8]], label %[[INNER6]]
+; CHECK:       [[OUTER_LATCH8]]:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[J_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    br label %[[INNER_PH:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    store i32 7, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[INNER_PH]]
+; CHECK:       [[INNER_PH]]:
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ 0, %[[INNER_PH]] ], [ [[K_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = add i64 [[J]], [[K]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[IDX]]
+; CHECK-NEXT:    store i32 1, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[K_NEXT]] = add i64 [[K]], 1
+; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp eq i64 [[K_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[INNER_COND]], label %[[OUTER_LATCH]], label %[[INNER]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
+; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca i32, align 4
+  br label %outer.header
+
+outer.header:
+  %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
+  call void @llvm.lifetime.start.p0(ptr %a)
+  br i1 %c, label %then, label %else
+
+then:
+  br label %inner.ph
+
+else:
+  store i32 7, ptr %p, align 4
+  br label %inner.ph
+
+inner.ph:
+  br label %inner
+
+inner:
+  %k = phi i64 [ 0, %inner.ph ], [ %k.next, %inner ]
+  %idx = add i64 %j, %k
+  %ptr = getelementptr inbounds i32, ptr %arr, i64 %idx
+  store i32 1, ptr %ptr, align 4
+  %k.next = add i64 %k, 1
+  %inner.cond = icmp eq i64 %k.next, %n
+  br i1 %inner.cond, label %outer.latch, label %inner
+
+outer.latch:
+  call void @llvm.lifetime.end.p0(ptr %a)
+  %j.next = add i64 %j, 1
+  %outer.cond = icmp eq i64 %j.next, %n
+  br i1 %outer.cond, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
 define void @test_sideeffect(ptr %arr, i64 %n) {
 ; CHECK-LABEL: define void @test_sideeffect(
 ; CHECK-SAME: ptr [[ARR:%.*]], i64 [[N:%.*]]) {
@@ -315,7 +431,7 @@ define void @test_sideeffect(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -337,7 +453,7 @@ define void @test_sideeffect(ptr %arr, i64 %n) {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -399,7 +515,7 @@ define void @test_pseudoprobe(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -421,7 +537,7 @@ define void @test_pseudoprobe(ptr %arr, i64 %n) {
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[EXIT]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
