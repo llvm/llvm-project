@@ -90,47 +90,47 @@ namespace ISD {
 /// If V is a BUILD_VECTOR or SPLAT_VECTOR value whose elements are all the
 /// same constant or undefined, return true and return the constant value in
 /// \p SplatValue.
-LLVM_ABI bool isConstantSplatVector(const SDValue V, APInt &SplatValue);
+LLVM_ABI bool isConstantSplatVector(SDValue V, APInt &SplatValue);
 
 /// Return true if the specified value is a BUILD_VECTOR or SPLAT_VECTOR where
 /// all of the elements are ~0 or undef. If \p BuildVectorOnly is set to
 /// true, it only checks BUILD_VECTOR.
-LLVM_ABI bool isConstantSplatVectorAllOnes(const SDValue V,
+LLVM_ABI bool isConstantSplatVectorAllOnes(SDValue V,
                                            bool BuildVectorOnly = false);
 
 /// Return true if the specified value is a BUILD_VECTOR or SPLAT_VECTOR where
 /// all of the elements are 0 or undef. If \p BuildVectorOnly is set to true, it
 /// only checks BUILD_VECTOR.
-LLVM_ABI bool isConstantSplatVectorAllZeros(const SDValue V,
+LLVM_ABI bool isConstantSplatVectorAllZeros(SDValue V,
                                             bool BuildVectorOnly = false);
 
 /// Return true if the specified value is a BUILD_VECTOR where all of the
 /// elements are ~0 or undef.
-LLVM_ABI bool isBuildVectorAllOnes(const SDValue V);
+LLVM_ABI bool isBuildVectorAllOnes(SDValue V);
 
 /// Return true if the specified value is a BUILD_VECTOR where all of the
 /// elements are 0 or undef.
-LLVM_ABI bool isBuildVectorAllZeros(const SDValue V);
+LLVM_ABI bool isBuildVectorAllZeros(SDValue V);
 
 /// Return true if the specified value is a BUILD_VECTOR node of all
 /// ConstantSDNode or undef.
-LLVM_ABI bool isBuildVectorOfConstantSDNodes(const SDValue V);
+LLVM_ABI bool isBuildVectorOfConstantSDNodes(SDValue V);
 
 /// Return true if the specified value is a BUILD_VECTOR node of all
 /// ConstantFPSDNode or undef.
-LLVM_ABI bool isBuildVectorOfConstantFPSDNodes(const SDValue V);
+LLVM_ABI bool isBuildVectorOfConstantFPSDNodes(SDValue V);
 
 /// Returns true if the specified value is a vector where all elements can
 /// be truncated to the specified element size without a loss in meaning.
-LLVM_ABI bool isVectorShrinkable(const SDValue V, unsigned NewEltSize,
+LLVM_ABI bool isVectorShrinkable(SDValue V, unsigned NewEltSize,
                                  bool Signed);
 
 /// Return true if the value has at least one operand and all operands of the
 /// specified value are ISD::UNDEF.
-LLVM_ABI bool allOperandsUndef(const SDValue V);
+LLVM_ABI bool allOperandsUndef(SDValue V);
 
 /// Return true if the specified value is FREEZE(UNDEF).
-LLVM_ABI bool isFreezeUndef(const SDValue V);
+LLVM_ABI bool isFreezeUndef(SDValue V);
 
 } // end namespace ISD
 

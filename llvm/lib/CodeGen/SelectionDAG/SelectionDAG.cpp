@@ -139,7 +139,7 @@ bool ConstantFPSDNode::isValueValidForType(EVT VT,
 //                              ISD Namespace
 //===----------------------------------------------------------------------===//
 
-bool ISD::isConstantSplatVector(const SDValue V, APInt &SplatVal) {
+bool ISD::isConstantSplatVector(SDValue V, APInt &SplatVal) {
   if (V.getOpcode() == ISD::SPLAT_VECTOR) {
     if (auto OptAPInt = V.getOperand(0)->bitcastToAPInt()) {
       unsigned EltSize =
@@ -170,23 +170,22 @@ bool ISD::isConstantSplatVector(const SDValue V, APInt &SplatVal) {
 // FIXME: AllOnes and AllZeros duplicate a lot of code. Could these be
 // specializations of the more general isConstantSplatVector()?
 
-bool ISD::isConstantSplatVectorAllOnes(const SDValue V, bool BuildVectorOnly) {
+bool ISD::isConstantSplatVectorAllOnes(SDValue V, bool BuildVectorOnly) {
   // Look through a bit convert.
-  const SDValue *Current = &V;
-  while (Current->getOpcode() == ISD::BITCAST)
-    Current = &Current->getOperand(0);
+  while (V.getOpcode() == ISD::BITCAST)
+    V = V.getOperand(0);
 
-  if (!BuildVectorOnly && Current->getOpcode() == ISD::SPLAT_VECTOR) {
+  if (!BuildVectorOnly && V.getOpcode() == ISD::SPLAT_VECTOR) {
     APInt SplatVal;
-    return isConstantSplatVector(*Current, SplatVal) && SplatVal.isAllOnes();
+    return isConstantSplatVector(V, SplatVal) && SplatVal.isAllOnes();
   }
 
-  if (Current->getOpcode() != ISD::BUILD_VECTOR) return false;
+  if (V.getOpcode() != ISD::BUILD_VECTOR) return false;
 
-  unsigned i = 0, e = Current->getNumOperands();
+  unsigned i = 0, e = V.getNumOperands();
 
   // Skip over all of the undef values.
-  while (i != e && Current->getOperand(i).isUndef())
+  while (i != e && V.getOperand(i).isUndef())
     ++i;
 
   // Do not accept an all-undef vector.
@@ -200,9 +199,9 @@ bool ISD::isConstantSplatVectorAllOnes(const SDValue V, bool BuildVectorOnly) {
   // We only want to check enough bits to cover the vector elements, because
   // we care if the resultant vector is all ones, not whether the individual
   // constants are.
-  SDValue NotZero = Current->getOperand(i);
+  SDValue NotZero = V.getOperand(i);
   if (auto OptAPInt = NotZero->bitcastToAPInt()) {
-    unsigned EltSize = Current->getValueType().getScalarSizeInBits();
+    unsigned EltSize = V.getValueType().getScalarSizeInBits();
     if (OptAPInt->countr_one() < EltSize)
       return false;
   } else
@@ -212,26 +211,25 @@ bool ISD::isConstantSplatVectorAllOnes(const SDValue V, bool BuildVectorOnly) {
   // undefs. Even with the above element type twiddling, this should be OK, as
   // the same type legalization should have applied to all the elements.
   for (++i; i != e; ++i)
-    if (Current->getOperand(i) != NotZero && !Current->getOperand(i).isUndef())
+    if (V.getOperand(i) != NotZero && !V.getOperand(i).isUndef())
       return false;
   return true;
 }
 
-bool ISD::isConstantSplatVectorAllZeros(const SDValue V, bool BuildVectorOnly) {
+bool ISD::isConstantSplatVectorAllZeros(SDValue V, bool BuildVectorOnly) {
   // Look through a bit convert.
-  const SDValue *Current = &V;
-  while (Current->getOpcode() == ISD::BITCAST)
-    Current = &Current->getOperand(0);
+  while (V.getOpcode() == ISD::BITCAST)
+    V = V.getOperand(0);
 
-  if (!BuildVectorOnly && Current->getOpcode() == ISD::SPLAT_VECTOR) {
+  if (!BuildVectorOnly && V.getOpcode() == ISD::SPLAT_VECTOR) {
     APInt SplatVal;
-    return isConstantSplatVector(*Current, SplatVal) && SplatVal.isZero();
+    return isConstantSplatVector(V, SplatVal) && SplatVal.isZero();
   }
 
-  if (Current->getOpcode() != ISD::BUILD_VECTOR) return false;
+  if (V.getOpcode() != ISD::BUILD_VECTOR) return false;
 
   bool IsAllUndef = true;
-  for (const SDValue &Op : Current->getNode()->op_values()) {
+  for (const SDValue &Op : V->op_values()) {
     if (Op.isUndef())
       continue;
     IsAllUndef = false;
@@ -244,7 +242,7 @@ bool ISD::isConstantSplatVectorAllZeros(const SDValue V, bool BuildVectorOnly) {
     // we care if the resultant vector is all zeros, not whether the individual
     // constants are.
     if (auto OptAPInt = Op->bitcastToAPInt()) {
-      unsigned EltSize = Current->getValueType().getScalarSizeInBits();
+      unsigned EltSize = V.getValueType().getScalarSizeInBits();
       if (OptAPInt->countr_zero() < EltSize)
         return false;
     } else
@@ -257,15 +255,15 @@ bool ISD::isConstantSplatVectorAllZeros(const SDValue V, bool BuildVectorOnly) {
   return true;
 }
 
-bool ISD::isBuildVectorAllOnes(const SDValue V) {
+bool ISD::isBuildVectorAllOnes(SDValue V) {
   return isConstantSplatVectorAllOnes(V, /*BuildVectorOnly*/ true);
 }
 
-bool ISD::isBuildVectorAllZeros(const SDValue V) {
+bool ISD::isBuildVectorAllZeros(SDValue V) {
   return isConstantSplatVectorAllZeros(V, /*BuildVectorOnly*/ true);
 }
 
-bool ISD::isBuildVectorOfConstantSDNodes(const SDValue V) {
+bool ISD::isBuildVectorOfConstantSDNodes(SDValue V) {
   if (V.getOpcode() != ISD::BUILD_VECTOR)
     return false;
 
@@ -278,7 +276,7 @@ bool ISD::isBuildVectorOfConstantSDNodes(const SDValue V) {
   return true;
 }
 
-bool ISD::isBuildVectorOfConstantFPSDNodes(const SDValue V) {
+bool ISD::isBuildVectorOfConstantFPSDNodes(SDValue V) {
   if (V.getOpcode() != ISD::BUILD_VECTOR)
     return false;
 
@@ -291,7 +289,7 @@ bool ISD::isBuildVectorOfConstantFPSDNodes(const SDValue V) {
   return true;
 }
 
-bool ISD::isVectorShrinkable(const SDValue V, unsigned NewEltSize,
+bool ISD::isVectorShrinkable(SDValue V, unsigned NewEltSize,
                              bool Signed) {
   assert(V.getValueType().isVector() && "Expected a vector!");
 
@@ -328,7 +326,7 @@ bool ISD::isVectorShrinkable(const SDValue V, unsigned NewEltSize,
   return true;
 }
 
-bool ISD::allOperandsUndef(const SDValue V) {
+bool ISD::allOperandsUndef(SDValue V) {
   // Return false if the node has no operands.
   // This is "logically inconsistent" with the definition of "all" but
   // is probably the desired behavior.
@@ -337,7 +335,7 @@ bool ISD::allOperandsUndef(const SDValue V) {
   return all_of(V->op_values(), [](SDValue Op) { return Op.isUndef(); });
 }
 
-bool ISD::isFreezeUndef(const SDValue V) {
+bool ISD::isFreezeUndef(SDValue V) {
   return V.getOpcode() == ISD::FREEZE && V.getOperand(0).isUndef();
 }
 
