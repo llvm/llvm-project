@@ -747,6 +747,30 @@ bool dominatesAllUses(const DominatorTree &DT, const Instruction &InsertPt,
   });
 }
 
+Instruction *findPairedDivision(unsigned Opcode, Value *X, Value *Y,
+                                const BasicBlock *BB,
+                                function_ref<bool(Instruction *)> Pred) {
+  assert((Opcode == Instruction::URem || Opcode == Instruction::SRem) &&
+         "Expected remainder.");
+  // The paired division is another user of both operands.
+  if (X->hasOneUse() || Y->hasOneUse())
+    return nullptr;
+  // Constants have context-wide use lists, walk the variable operand. The
+  // dividend usually has fewer users than the divisor.
+  Value *Op = isa<Constant>(X) ? Y : X;
+  if (isa<Constant>(Op) || Op->hasNUsesOrMore(UsesLimit))
+    return nullptr;
+  const unsigned DivOpcode =
+      Opcode == Instruction::URem ? Instruction::UDiv : Instruction::SDiv;
+  for (User *U : Op->users()) {
+    auto *I = dyn_cast<Instruction>(U);
+    if (I && I->getParent() == BB &&
+        match(I, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) && Pred(I))
+      return I;
+  }
+  return nullptr;
+}
+
 SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask, UseMask MaskArg) {
   SmallBitVector UseMask(VF, true);
   for (auto [Idx, Value] : enumerate(Mask)) {

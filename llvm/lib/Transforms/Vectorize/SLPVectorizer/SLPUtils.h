@@ -34,6 +34,7 @@
 
 namespace llvm {
 class AssumptionCache;
+class BasicBlock;
 class Constant;
 class DataLayout;
 class DebugLoc;
@@ -314,6 +315,13 @@ Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
 /// uses to check.
 bool dominatesAllUses(const DominatorTree &DT, const Instruction &InsertPt,
                       const Instruction &I);
+
+/// \returns the division of \p X by \p Y in the block \p BB, paired with the
+/// remainder \p Opcode of the same operands, for which \p Pred holds, or
+/// nullptr.
+Instruction *findPairedDivision(unsigned Opcode, Value *X, Value *Y,
+                                const BasicBlock *BB,
+                                function_ref<bool(Instruction *)> Pred);
 
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.

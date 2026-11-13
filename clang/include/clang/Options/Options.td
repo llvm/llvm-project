@@ -3915,6 +3915,11 @@ def fmodules_validate_input_files_content:
 def fno_modules_validate_input_files_content:
   Flag <["-"], "fno_modules-validate-input-files-content">,
   Group<f_Group>;
+def fpch_base_dir_is_cwd : Flag<["-"], "fpch-base-dir-is-cwd">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Serialize precompiled header input paths relative to the current "
+           "working directory">,
+  MarshallingInfoFlag<HeaderSearchOpts<"PCHBaseDirIsCwd">>;
 def fpch_validate_input_files_content:
   Flag <["-"], "fpch-validate-input-files-content">,
   Group<f_Group>,
@@ -6361,15 +6366,14 @@ def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"(integrated-as) Relax all machine instructions">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxAll">>;
-def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+defm incremental_linker_compatible : BoolMOption<"incremental-linker-compatible",
+  CodeGenOpts<"IncrementalLinkerCompatible">,
   Default<"T.isDefaultIncrementalLinkerCompatibleByDefault()">,
-  HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">,
-  MarshallingInfoFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
-def mno_incremental_linker_compatible : Flag<["-"], "mno-incremental-linker-compatible">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
-  HelpText<"(integrated-as) Emit an object file which cannot be used with an incremental linker">,
-  MarshallingInfoNegativeFlag<CodeGenOpts<"IncrementalLinkerCompatible">>;
+  PosFlag<SetTrue, [], [],
+          "(integrated-as) Emit an object file which can be used with an incremental linker">,
+  NegFlag<SetFalse, [], [],
+          "(integrated-as) Emit an object file which cannot be used with an incremental linker">,
+  BothFlags<[], [ClangOption, CC1Option, CC1AsOption]>>;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Make StdCall calling convention the default">;
@@ -10192,11 +10196,11 @@ def fspv_extension_EQ
     : Joined<["-"], "fspv-extension=">,
       Group<dxc_Group>,
       HelpText<
-          "Specify the available SPIR-V extensions. If this option is not "
-          "specified, then all extensions are available. If KHR is specified, "
-          "then all KHR extensions will be available. If DXC is specifided, "
-          "then all extensions implemented by the DirectX Shader compiler will "
-          "be available. This option is useful for moving from DXC to Clang.">;
+          "Specify the available SPIR-V extensions. If KHR is specified, then "
+          "all KHR extensions will be available. If DXC is specified, then all "
+          "extensions implemented by the DirectX Shader compiler will be "
+          "available. If all is specified, then all extensions the SPIR-V "
+          "backend supports will be available. The default behavior is DXC.">;
 def fvk_use_dx_layout
     : DXCFlag<"fvk-use-dx-layout">,
       HelpText<"Use DirectX memory layout for Vulkan resources.">;

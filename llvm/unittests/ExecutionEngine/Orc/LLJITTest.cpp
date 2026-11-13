@@ -17,6 +17,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -82,6 +84,11 @@ TEST(LLJITTest, ColocatingSlabAllocator) {
 TEST(LLJITTest, ColocatingSlabAllocatorForcesJITLink) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
+
+  // JITLink's COFF backend only supports x86-64.
+  Triple TT(sys::getProcessTriple());
+  if (!TT.isOSBinFormatCOFF() || TT.getArch() != Triple::x86_64)
+    GTEST_SKIP() << "JITLink-forced test only runs on COFF/x86-64 hosts";
 
   auto J =
       LLJITBuilder()

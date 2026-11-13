@@ -240,60 +240,65 @@ InstructionCost getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec,
 InstructionCost getPairedDivisionsCost(
     const TargetTransformInfo &TTI, const DominatorTree &DT,
     const TargetLibraryInfo &TLI, bool ReVec, unsigned Opcode,
-    ArrayRef<Value *> LHS, ArrayRef<Value *> RHS, const Instruction *CtxI,
+    ArrayRef<Value *> LHS, ArrayRef<Value *> RHS, InstructionCost RemCost,
     const Instruction &InsertPt, const TTI::TargetCostKind CostKind,
+    function_ref<bool(const Value *)> IsVectorized,
     function_ref<bool(Instruction *)> IsOutOfTree,
     SmallVectorImpl<std::pair<Instruction *, unsigned>> &Divs) {
   assert((Opcode == Instruction::URem || Opcode == Instruction::SRem) &&
          "Expected remainder.");
   assert(LHS.size() == RHS.size() && "Expected same number of operands.");
-  assert(Divs.empty() && "Expected no divisions.");
+  Divs.clear();
   Type *ScalarTy = LHS.front()->getType();
   const unsigned DivOpcode =
       Opcode == Instruction::URem ? Instruction::UDiv : Instruction::SDiv;
-  auto *VecTy = dyn_cast<FixedVectorType>(getWidenedType(ScalarTy, LHS.size()));
-  if (!VecTy)
-    return InstructionCost::getInvalid();
+  auto *VecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, LHS.size()));
   APInt DemandedElts = APInt::getZero(LHS.size());
+  APInt LHSDemandedElts = APInt::getZero(LHS.size());
+  APInt RHSDemandedElts = APInt::getZero(LHS.size());
+  // The vectorized operand is extracted only for the division, if all its
+  // other users are vectorized.
+  auto IsExtractedOnlyFor = [&](Value *V, const Instruction *Div) {
+    return IsVectorized(V) && !V->hasNUsesOrMore(UsesLimit) &&
+           all_of(V->users(),
+                  [&](User *U) { return U == Div || IsVectorized(U); });
+  };
   InstructionCost Cost = 0;
   for (unsigned Lane : seq<unsigned>(LHS.size())) {
     Value *X = LHS[Lane];
     Value *Y = RHS[Lane];
-    // The paired division is another user of both operands.
-    if (X->hasOneUse() || Y->hasOneUse())
-      continue;
-    // Constants have context-wide use lists, walk the variable operand. The
-    // dividend usually has fewer users than the divisor.
-    Value *Op = isa<Constant>(X) ? Y : X;
-    if (isa<Constant>(Op) || Op->hasNUsesOrMore(UsesLimit))
-      continue;
     // The replaced division must be in the block of the bundle to share its
     // execution frequency, and the vector division must dominate all its uses,
     // which also excludes the divisions feeding the operands.
-    Instruction *Div = nullptr;
-    if (!any_of(Op->users(), [&](User *U) {
-          auto *I = dyn_cast<Instruction>(U);
-          if (!I || I->getParent() != InsertPt.getParent() ||
-              !match(I, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) ||
-              is_contained(make_first_range(Divs), I) || !IsOutOfTree(I) ||
-              !dominatesAllUses(DT, InsertPt, *I))
-            return false;
-          Div = I;
-          return true;
-        }))
+    Instruction *Div = findPairedDivision(
+        Opcode, X, Y, InsertPt.getParent(), [&](Instruction *I) {
+          return !is_contained(make_first_range(Divs), I) && IsOutOfTree(I) &&
+                 dominatesAllUses(DT, InsertPt, *I);
+        });
+    if (!Div)
       continue;
     Divs.emplace_back(Div, Lane);
     DemandedElts.setBit(Lane);
+    if (IsExtractedOnlyFor(X, Div))
+      LHSDemandedElts.setBit(Lane);
+    if (Y != X && IsExtractedOnlyFor(Y, Div))
+      RHSDemandedElts.setBit(Lane);
     Cost -= TTI.getArithmeticInstrCost(
         DivOpcode, ScalarTy, CostKind, TTI::getOperandInfo(X),
         TTI::getOperandInfo(Y), {X, Y}, Div, &TLI);
   }
   if (Divs.empty())
     return InstructionCost::getInvalid();
-  // All the replaced divisions are extracted from the vector division.
-  Cost +=
-      getScalarizationOverhead(TTI, ReVec, ScalarTy, VecTy, DemandedElts,
-                               /*Insert=*/false, /*Extract=*/true, CostKind);
+  // All the replaced divisions are extracted from the vector division instead
+  // of their operands. The operand extracts are still costed as the external
+  // uses of the tree.
+  auto GetExtractsCost = [&](const APInt &Elts) {
+    return getScalarizationOverhead(TTI, ReVec, ScalarTy, VecTy, Elts,
+                                    /*Insert=*/false, /*Extract=*/true,
+                                    CostKind);
+  };
+  Cost += GetExtractsCost(DemandedElts) - GetExtractsCost(LHSDemandedElts) -
+          GetExtractsCost(RHSDemandedElts);
   // The remainder is expanded to the vector division, multiplication and
   // subtraction.
   TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(LHS);
@@ -304,8 +309,6 @@ InstructionCost getPairedDivisionsCost(
                                      Op2Info, {}, /*CxtI=*/nullptr, &TLI) +
           TTI.getArithmeticInstrCost(Instruction::Sub, VecTy, CostKind, Op1Info,
                                      {}, {}, /*CxtI=*/nullptr, &TLI);
-  InstructionCost RemCost = TTI.getArithmeticInstrCost(
-      Opcode, VecTy, CostKind, Op1Info, Op2Info, {}, CtxI, &TLI);
   if (RemCost.isValid() && Cost < RemCost)
     return Cost;
   Divs.clear();

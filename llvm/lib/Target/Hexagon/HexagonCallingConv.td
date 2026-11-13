@@ -62,6 +62,10 @@ class CCIfHvx128<CCAction A>
   : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
          ".useHVX128BOps()", A>;
 
+class CCIfHlx2048<CCAction A>
+  : CCIf<"State.getMachineFunction().getSubtarget<HexagonSubtarget>()"
+         ".useHLX2048BOps()", A>;
+
 def CC_Hexagon: CallingConv<[
   CCIfType<[i1,i8,i16],
     CCPromoteToType<i32>>,
@@ -138,6 +142,17 @@ def CC_Hexagon: CallingConv<[
     CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16,v64bf16],
       CCAssignToStack<256,128>>>,
 
+  // HLX-2048B
+  CCIfHlx2048<
+    CCIfType<[v512i32,v1024i16,v2048i8],
+      CCAssignToReg<[L0,L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,L11]>>>,
+  CCIfHlx2048<
+    CCIfType<[v1024i32,v2048i16,v4096i8],
+      CCAssignToReg<[LL0,LL1,LL2,LL3,LL4,LL5]>>>,
+  CCIfHlx2048<
+    CCIfType<[v512i32,v1024i16,v2048i8,v1024i32,v2048i16,v4096i8],
+      CCCustom<"CC_Hexagon_VTCM_Stack">>>,
+
   CCDelegateTo<CC_HexagonStack>
 ]>;
 
@@ -179,4 +194,10 @@ def RetCC_Hexagon: CallingConv<[
   CCIfHvx128<
     CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16,v128bf16],
       CCAssignToReg<[W0]>>>,
+
+  // HLX-2048B
+  CCIfHlx2048<
+    CCIfType<[v512i32,v1024i16,v2048i8], CCAssignToReg<[L0]>>>,
+  CCIfHlx2048<
+    CCIfType<[v1024i32,v2048i16,v4096i8], CCAssignToReg<[LL0]>>>,
 ]>;

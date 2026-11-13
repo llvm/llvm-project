@@ -326,3 +326,4 @@ body:             |
     %2:fpr(<16 x i8>) = G_TRN2 %0, %1
     $q0 = COPY %2(<16 x i8>)
     RET_ReallyLR implicit $q0
+...

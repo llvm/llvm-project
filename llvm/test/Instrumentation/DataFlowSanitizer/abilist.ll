@@ -46,14 +46,12 @@ define void @f(i32 %x) {
   ; CHECK: store i8 0, ptr %[[LABELVA1_0]]
   ; CHECK: %[[LABELVA1_1:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA1]], i32 0, i32 1
   ; CHECK: store i8 %{{.*}}, ptr %[[LABELVA1_1]]
-  ; CHECK: %[[LABELVA1_0A:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA1]], i32 0, i32 0
-  ; CHECK: call void (i32, i8, ptr, ...) @__dfsw_custom3(i32 1, i8 zeroext 0, ptr %[[LABELVA1_0A]], i32 2, i32 %{{.*}})
+  ; CHECK: call void (i32, i8, ptr, ...) @__dfsw_custom3(i32 1, i8 zeroext 0, ptr %[[LABELVA1]], i32 2, i32 %{{.*}})
 
   call void (i32, ...) @custom3(i32 1, i32 2, i32 %x)
 
   ; CHECK: %[[LABELVA2_0:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA2]], i32 0, i32 0
-  ; CHECK: %[[LABELVA2_0A:.*]] = getelementptr inbounds nuw [2 x i8], ptr %[[LABELVA2]], i32 0, i32 0
-  ; CHECK: call i32 (i32, i8, ptr, ptr, ...) @__dfsw_custom4(i32 1, i8 zeroext 0, ptr %[[LABELVA2_0A]], ptr %[[LABELRETURN]], i32 2, i32 3)
+  ; CHECK: call i32 (i32, i8, ptr, ptr, ...) @__dfsw_custom4(i32 1, i8 zeroext 0, ptr %[[LABELVA2]], ptr %[[LABELRETURN]], i32 2, i32 3)
   call i32 (i32, ...) @custom4(i32 1, i32 2, i32 3)
 
   ret void

@@ -250,6 +250,13 @@ def SDT_AArch64FMA : SDTypeProfile<1, 4, [
   SDTCisSameAs<0,2>, SDTCisSameAs<0,3>, SDTCisSameAs<0,4>
 ]>;
 
+def SDT_AArch64FSCALE : SDTypeProfile<1, 3, [
+  SDTCisVec<0>,
+  SDTCisVec<1>, SDTCVecEltisVT<1,i1>,  SDTCisSameNumEltsAs<1,0>,
+  SDTCisSameAs<2,0>,
+  SDTCisVec<3>, SDTCisSameNumEltsAs<3,0>, SDTCisSameSizeAs<3,0>
+]>;
+
 // Predicated operations with the result of inactive lanes being unspecified.
 def AArch64and_u  : SDNode<"AArch64ISD::AND_U", SDT_AArch64Arith>;
 def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
@@ -300,6 +307,7 @@ defm AArch64fmaxnm_p : def_strict_fp_3op<"FMAXNM_PRED", SDT_AArch64Arith>;
 defm AArch64fmin_p   : def_strict_fp_3op<"FMIN_PRED",   SDT_AArch64Arith>;
 defm AArch64fminnm_p : def_strict_fp_3op<"FMINNM_PRED", SDT_AArch64Arith>;
 defm AArch64fmul_p   : def_strict_fp_3op<"FMUL_PRED",   SDT_AArch64Arith>;
+defm AArch64fscale_p : def_strict_fp_3op<"FLDEXP_PRED", SDT_AArch64FSCALE>;
 defm AArch64fsub_p   : def_strict_fp_3op<"FSUB_PRED",   SDT_AArch64Arith>;
 
 def AArch64fadd_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
@@ -1048,6 +1056,12 @@ let Predicates = [HasSVE_or_SME] in {
   defm FABD_ZPZZ   : sve_fp_bin_pred_hfd<"FABD_ZPmZ", AArch64fabd_p>;
   defm FMULX_ZPZZ  : sve_fp_bin_pred_hfd<"FMULX_ZPmZ", int_aarch64_sve_fmulx_u>;
   defm FDIV_ZPZZ   : sve_fp_bin_pred_hfd<"FDIV_ZPmZ", AArch64fdiv_p>;
+
+  // TODO: Create FSCALE_ZPZZ when pseudo expansion is able to handle the case
+  // when a DestructiveBinary operation reuses its second data operand.
+  def : SVE_3_Op_Pat<nxv8f16, AArch64fscale_p, nxv8i1, nxv8f16, nxv8i16, FSCALE_ZPmZ_H>;
+  def : SVE_3_Op_Pat<nxv4f32, AArch64fscale_p, nxv4i1, nxv4f32, nxv4i32, FSCALE_ZPmZ_S>;
+  def : SVE_3_Op_Pat<nxv2f64, AArch64fscale_p, nxv2i1, nxv2f64, nxv2i64, FSCALE_ZPmZ_D>;
 } // End HasSVE_or_SME
 
 let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {

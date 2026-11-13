@@ -98,18 +98,21 @@ getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec, unsigned Opcode,
                     FixedVectorType **PaddedTy = nullptr);
 
 /// Collects in \p Divs the scalar divisions with the same operands as the
-/// lanes \p LHS and \p RHS of the vector remainder \p Opcode with the context
-/// \p CtxI, and their lanes, to replace them by the lanes of the vector
-/// division emitted after \p InsertPt. \p IsOutOfTree checks that the division
-/// is not used by the tree. \returns the cost of the expanded remainder and the
-/// extracts minus the cost of the replaced divisions, if it is cheaper than the
-/// vector remainder, or an invalid cost with empty \p Divs otherwise.
+/// lanes \p LHS and \p RHS of the vector remainder \p Opcode, and their lanes,
+/// to replace them by the lanes of the vector division emitted after
+/// \p InsertPt. \p IsVectorized checks that the value is vectorized in the
+/// tree, \p IsOutOfTree checks that the division is not used by the tree.
+/// \returns the cost of the expanded remainder and the extracts minus the cost
+/// of the replaced divisions and of the extracts of their operands, if it is
+/// cheaper than the cost \p RemCost of the vector remainder, or an invalid cost
+/// with empty \p Divs otherwise.
 InstructionCost getPairedDivisionsCost(
     const TargetTransformInfo &TTI, const DominatorTree &DT,
     const TargetLibraryInfo &TLI, bool ReVec, unsigned Opcode,
-    ArrayRef<Value *> LHS, ArrayRef<Value *> RHS, const Instruction *CtxI,
+    ArrayRef<Value *> LHS, ArrayRef<Value *> RHS, InstructionCost RemCost,
     const Instruction &InsertPt,
     const TargetTransformInfo::TargetCostKind CostKind,
+    function_ref<bool(const Value *)> IsVectorized,
     function_ref<bool(Instruction *)> IsOutOfTree,
     SmallVectorImpl<std::pair<Instruction *, unsigned>> &Divs);
 

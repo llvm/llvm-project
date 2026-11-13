@@ -2450,16 +2450,15 @@ private:
                                ArrayRef<Value *> VectorizedVals,
                                SmallPtrSetImpl<Value *> &CheckedExtracts);
 
-  /// Checks if \p I is not deleted, not part of the tree, including the
-  /// copyable lanes, and not used by the ignored users of the tree. Returns
-  /// false if \p I has too many uses to check.
+  /// Checks if \p I is not deleted, not part of the tree and not used by the
+  /// ignored users of the tree. A copyable lane is also the operand of its
+  /// lane, so it is vectorized or gathered in the operand node. Returns false
+  /// if \p I has too many uses to check.
   bool isOutOfTree(Instruction *I) const {
-    return !isDeleted(I) && !isVectorized(I) &&
-           !ValueToGatherNodes.contains(I) && !I->hasNUsesOrMore(UsesLimit) &&
-           none_of(I->users(),
-                   [&](User *U) { return UserIgnoreSet.contains(U); }) &&
-           none_of(VectorizableTree,
-                   std::bind(&TreeEntry::isCopyableElement, _1, I));
+    return !isDeleted(I) && !isVectorized(I) && !isGathered(I) &&
+           !I->hasNUsesOrMore(UsesLimit) && none_of(I->users(), [&](User *U) {
+             return UserIgnoreSet.contains(U);
+           });
   }
 
   /// Estimates spill/reload cost from vector register pressure for \p E at the
@@ -9941,7 +9940,8 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   if (VL.size() == SmallVecWidth &&
       NumUniqueScalarValues == SmallVecUniqueThreshold && !BuildGatherOnly &&
       !(S && (S.getOpcode() == Instruction::Load ||
-              S.getOpcode() == Instruction::PHI))) {
+              S.getOpcode() == Instruction::PHI ||
+              S.getOpcode() == Instruction::Freeze))) {
     // Keep originals with identity reuse - no packing, no extra shuffle.
     ReuseShuffleIndices.clear();
     return true;
@@ -10170,7 +10170,9 @@ static bool tryToFindDuplicates(const VectorizeOptions &Opts,
   const auto [PackProfitable, UseOriginal] = EstimatePackPlusShuffleVsInserts();
 
   if (PackProfitable) {
-    if (UseOriginal) {
+    // The lanes of the vector freeze are frozen independently, the repeated
+    // freezes are packed to stay the same value.
+    if (UseOriginal && (!S || S.getOpcode() != Instruction::Freeze)) {
       // Prefer original scalars - avoid shuffling.
       ReuseShuffleIndices.clear();
     } else {
@@ -17822,25 +17824,29 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               *TTI, Opts.slp_revec, ShuffleOrOp, ScalarTy, VL.size(), CostKind);
           MaskedCost.isValid())
         return MaskedCost + CommonCost;
-      if ((ShuffleOrOp == Instruction::URem ||
-           ShuffleOrOp == Instruction::SRem) &&
-          It == MinBWs.end()) {
-        SmallVector<std::pair<Instruction *, unsigned>> &Divs =
-            PairedDivisions[E];
-        Divs.clear();
-        if (InstructionCost PairedCost = getPairedDivisionsCost(
-                *TTI, *DT, *TLI, Opts.slp_revec, ShuffleOrOp, E->getOperand(0),
-                E->getOperand(1), VL0, getLastInstructionInBundle(E), CostKind,
-                std::bind(&BoUpSLP::isOutOfTree, this, _1), Divs);
-            PairedCost.isValid())
-          return PairedCost + CommonCost;
-      }
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(E->getOperand(OpIdx));
+      const bool IsRem =
+          ShuffleOrOp == Instruction::URem || ShuffleOrOp == Instruction::SRem;
+      const Instruction *CxtI = VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr;
+      // The vector remainder pairs only with the vectorized division.
+      if (CxtI && IsRem &&
+          findPairedDivision(ShuffleOrOp, VL0->getOperand(0),
+                             VL0->getOperand(1), VL0->getParent(),
+                             [&](Instruction *I) { return !isVectorized(I); }))
+        CxtI = nullptr;
       InstructionCost Cost = TTI->getArithmeticInstrCost(
-          ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
-          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
+          ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {}, CxtI, TLI);
+      if (IsRem && It == MinBWs.end()) {
+        if (InstructionCost PairedCost = getPairedDivisionsCost(
+                *TTI, *DT, *TLI, Opts.slp_revec, ShuffleOrOp, E->getOperand(0),
+                E->getOperand(1), Cost, getLastInstructionInBundle(E), CostKind,
+                std::bind(&BoUpSLP::isVectorized, this, _1),
+                std::bind(&BoUpSLP::isOutOfTree, this, _1), PairedDivisions[E]);
+            PairedCost.isValid())
+          return PairedCost + CommonCost;
+      }
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
@@ -25252,27 +25258,23 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         V = Builder.CreateBinOp(
             static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS, RHS);
       V = PropagateIRFlags(V);
-      if (auto DivsIt = PairedDivisions.find(E);
-          DivsIt != PairedDivisions.end()) {
+      Value *Div = nullptr;
+      for (auto [I, Lane] : PairedDivisions.lookup(E)) {
         assert(!PaddedVecTy && "Expected no paired divisions for masked rem.");
-        const Instruction &InsertPt = getLastInstructionInBundle(E);
-        Value *Div = nullptr;
-        for (auto [I, Lane] : DivsIt->second) {
-          // The scheduling may move the bundle after the uses of the division.
-          if (isDeleted(I) || !dominatesAllUses(*DT, InsertPt, *I))
-            continue;
-          if (!Div)
-            Div = Builder.CreateBinOp(
-                static_cast<Instruction::BinaryOps>(I->getOpcode()), LHS, RHS);
-          const unsigned SubVF = getNumElements(I->getType());
-          Value *Ex =
-              isVectorizedTy(I->getType())
-                  ? createExtractVector(Builder, Div, SubVF, Lane * SubVF)
-                  : Builder.CreateExtractElement(Div, Lane);
-          Ex->takeName(I);
-          I->replaceAllUsesWith(Ex);
-          eraseInstruction(I);
-        }
+        // The scheduling may move the bundle after the uses of the division.
+        if (isDeleted(I) ||
+            !dominatesAllUses(*DT, getLastInstructionInBundle(E), *I))
+          continue;
+        if (!Div)
+          Div = Builder.CreateBinOp(
+              static_cast<Instruction::BinaryOps>(I->getOpcode()), LHS, RHS);
+        const unsigned SubVF = getNumElements(I->getType());
+        Value *Ex = isVectorizedTy(I->getType())
+                        ? createExtractVector(Builder, Div, SubVF, Lane * SubVF)
+                        : Builder.CreateExtractElement(Div, Lane);
+        Ex->takeName(I);
+        I->replaceAllUsesWith(Ex);
+        eraseInstruction(I);
       }
 
       V = FinalShuffle(V, E);
