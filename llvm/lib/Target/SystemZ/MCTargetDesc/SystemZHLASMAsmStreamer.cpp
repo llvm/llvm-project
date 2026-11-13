@@ -279,7 +279,7 @@ void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
   if (!isPowerOf2_64(ByteAlignment))
     report_fatal_error("Only power-of-two alignments are supported ");
 
-  OS << " DS 0";
+  OS.indent(Indent) << "DS 0";
   switch (ValueSize) {
   default:
     llvm_unreachable("Invalid size for machine code value!");
@@ -398,7 +398,7 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data, bool MayBeString) {
   for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
     StringRef Chunk = Data.substr(I, MaxXLLen);
     if (!(MayBeString && Chunk.size() > 1 && EmitAsString(Chunk)))
-      OS << " DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
+      OS.indent(Indent) << "DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
     EmitEOL();
   }
 }
@@ -438,8 +438,8 @@ void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
   if (Count == 0)
     return;
 
-  OS << " DC " << Count << "XL1'"
-     << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
+  OS.indent(Indent) << "DC " << Count << "XL1'"
+                    << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
   EmitEOL();
 }
 
@@ -542,6 +542,8 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   addEncodingComment(Inst, STI);
   EmitEOL();
 
+  // The instruction printer emits a single leading blank.
+  OS.indent(Indent-1);
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
 }
@@ -560,7 +562,7 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
         Sym->getName() !=
         static_cast<MCSectionGOFF &>(Sym->getSection()).getParent()->getName();
     if (EmitLabelAndEntry) {
-      OS << " ENTRY " << Sym->getName();
+      OS.indent(Indent) << "ENTRY " << Sym->getName();
       EmitEOL();
     }
 
@@ -696,7 +698,7 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   }
 
   MCStreamer::emitValueImpl(Value, Size, Loc);
-  OS << " DC ";
+  OS.indent(Indent) << "DC ";
   emitHLASMValueImpl(Value, Size, true);
   EmitEOL();
 }
@@ -711,7 +713,8 @@ void SystemZHLASMAsmStreamer::finishImpl() {
          << Sym.getName() << ")";
       EmitEOL();
     } else {
-      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+      OS.indent(Indent) << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " "
+                        << Sym.getName();
       EmitEOL();
     }
     emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
@@ -722,6 +725,6 @@ void SystemZHLASMAsmStreamer::finishImpl() {
   }
 
   // Finish the assembly output.
-  OS << " END";
+  OS.indent(Indent) << "END";
   EmitEOL();
 }
