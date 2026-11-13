@@ -102,6 +102,7 @@ compiler_support
 contributing
 build_and_test
 dev/index
+math/index
 porting
 Maintainers
 ```

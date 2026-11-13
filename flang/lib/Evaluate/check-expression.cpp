@@ -81,7 +81,9 @@ public:
     }
   }
 
-  bool operator()(const Constant<SomeDerived> &) const { return true; }
+  bool operator()(const Constant<Type<TypeCategory::Derived>> &) const {
+    return true;
+  }
   bool operator()(const DescriptorInquiry &x) const {
     const Symbol &sym{x.base().GetLastSymbol()};
     return INVARIANT && !IsAllocatable(sym) &&
@@ -218,7 +220,6 @@ template <typename A> bool IsConstantExpr(const A &x, const FoldingContext *c) {
   return IsConstantExprHelper<false>{c}(x);
 }
 template bool IsConstantExpr(const Expr<SomeType> &, const FoldingContext *);
-template bool IsConstantExpr(const Expr<SomeInteger> &, const FoldingContext *);
 template bool IsConstantExpr(
     const Expr<SubscriptInteger> &, const FoldingContext *);
 template bool IsConstantExpr(
@@ -231,8 +232,6 @@ bool IsScopeInvariantExpr(const A &x, const FoldingContext *c) {
 }
 template bool IsScopeInvariantExpr(
     const Expr<SomeType> &, const FoldingContext *);
-template bool IsScopeInvariantExpr(
-    const Expr<SomeInteger> &, const FoldingContext *);
 template bool IsScopeInvariantExpr(
     const Expr<SubscriptInteger> &, const FoldingContext *);
 
@@ -277,7 +276,6 @@ template <typename A> bool IsActuallyConstant(const A &x) {
 }
 
 template bool IsActuallyConstant(const Expr<SomeType> &);
-template bool IsActuallyConstant(const Expr<SomeInteger> &);
 template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
 template bool IsActuallyConstant(const std::optional<Expr<SubscriptInteger>> &);
 
@@ -1011,16 +1009,10 @@ void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
 template void CheckSpecificationExpr(const Expr<SomeType> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
-template void CheckSpecificationExpr(const Expr<SomeInteger> &,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
-template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 template void CheckSpecificationExpr(

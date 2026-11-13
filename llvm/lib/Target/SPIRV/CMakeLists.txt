@@ -13,6 +13,9 @@ llvm_tablegen(SPIRVGenTables.inc -gen-searchable-tables)
 llvm_tablegen(SPIRVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="SPIRVPreLegalizerCombiner")
 
+set(LLVM_TARGET_DEFINITIONS SPIRVOptions.td)
+llvm_tablegen(SPIRVOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(SPIRVCommonTableGen)
 
 add_llvm_target(SPIRVCodeGen
@@ -70,6 +73,7 @@ add_llvm_target(SPIRVCodeGen
   FrontendHLSL
   IPO
   MC
+  Option
   Passes
   SPIRVAnalysis
   SPIRVDesc

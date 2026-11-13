@@ -66,8 +66,6 @@
 
 using namespace llvm;
 
-static mc::RegisterMCToolOptions MOF;
-
 static cl::OptionCategory ToolOptions("Tool Options");
 static cl::OptionCategory ViewOptions("View Options");
 
@@ -377,11 +375,12 @@ int main(int argc, char **argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions, &MCScheduleOptions});
+  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions});
 
   // Parse flags and initialize target options.
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+  cl::parseCommandLineOptions(LibraryOptions, mc::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "llvm machine code performance analyzer.\n");
 
   Triple TheTriple(TripleNameOpt.empty()

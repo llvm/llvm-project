@@ -29,7 +29,6 @@
 ---
 name:            test_debugloc
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$q0' }

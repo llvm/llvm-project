@@ -138,7 +138,7 @@ public:
                u32 &PeerSize) const {
     u64 Old = __scoped_atomic_exchange_n(
         Watchpoint, ConsumedMask, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
-    Peer = reinterpret_cast<void *>(Old & AddressMask);
+    Peer = reinterpret_cast<void *>(static_cast<uptr>(Old & AddressMask));
     PeerAccess = (Old & WriteMask) ? CSAN_ACCESS_WRITE : 0;
     PeerSize = (Old & SizeMask) >> AddressBits;
     return !(Old & ConsumedMask);
