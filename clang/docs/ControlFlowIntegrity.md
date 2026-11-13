@@ -329,6 +329,23 @@ number of arguments passed in registers) into the binary. Some kernel CFI
 techniques, such as FineIBT, may be able to use this information to provide
 enhanced security.
 
+### `-fsanitize-kcfi-out-of-line-traps`
+
+By default (`-fno-sanitize-kcfi-out-of-line-traps`), KCFI emits the trap
+instruction inline immediately before each checked indirect call, and a check
+that passes takes a conditional branch over the trap. Consumers such as the
+Linux kernel rely on this inline layout to patch checks at boot and decode trap
+addresses.
+
+For user-space or other software that does not require inline traps,
+`-fsanitize-kcfi-out-of-line-traps` (supported on x86-64 and AArch64) moves
+each check's trap into a separate cold basic block so that a passing check
+falls through directly to the indirect call and only branches on failure. Each
+check still receives a distinct trap instruction with the call's debug location
+(and `.kcfi_traps` entry on x86-64, or register-encoding `brk` immediate on
+AArch64). Calls that are already bundled or in a basic block with an exception
+handling pad successor keep an inline trap.
+
 ## Member Function Pointer Call Checking
 
 This scheme checks that indirect calls via a member function pointer

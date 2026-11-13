@@ -11937,6 +11937,11 @@ bool AArch64InstrInfo::isMBBSafeToSplitToCold(
     case AArch64::JumpTableDest16:
     case AArch64::JumpTableDest8:
       return false;
+    // A conditional branch can't go to another section, so splitting the trap
+    // of a KCFI check from its check would have every check that passes take
+    // a branch over an unconditional one, to save one cold instruction.
+    case AArch64::KCFI_TRAP:
+      return false;
     default:
       continue;
     }

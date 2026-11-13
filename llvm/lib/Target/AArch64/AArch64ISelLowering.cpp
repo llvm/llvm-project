@@ -34626,6 +34626,39 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       .getInstr();
 }
 
+MachineInstr *
+AArch64TargetLowering::EmitKCFIOutOfLineTrap(MachineInstr &Check,
+                                             MachineBasicBlock &TrapMBB,
+                                             const TargetInstrInfo *TII) const {
+  assert(Check.getOpcode() == AArch64::KCFI_CHECK && "Unexpected KCFI check");
+  const MIMetadata MIMD(Check);
+  Check.setDesc(TII->get(AArch64::KCFI_CMP));
+
+  // The trap reports the registers that the check leaves the target and the
+  // expected type in. AArch64AsmPrinter::LowerKCFI_CHECK picks them: the
+  // expected type is in W17, or in W9 if the target is in X17, and a target of
+  // XZR is in X16. They're live into the trap's block, so that a branch to it
+  // that has to be relaxed doesn't clobber them.
+  Register AddrReg = Check.getOperand(0).getReg();
+  const Register TypeReg = AddrReg == AArch64::X17 ? AArch64::W9 : AArch64::W17;
+  if (AddrReg == AArch64::XZR)
+    AddrReg = AArch64::X16;
+  TrapMBB.addLiveIn(AddrReg);
+  TrapMBB.addLiveIn(getXRegFromWReg(TypeReg));
+
+  // Don't let the traps get merged, so that the address of one still says
+  // which check failed, as it does when they're inline.
+  BuildMI(&TrapMBB, MIMD, TII->get(AArch64::KCFI_TRAP))
+      .addReg(AddrReg)
+      .addReg(TypeReg)
+      .setMIFlag(MachineInstr::NoMerge);
+  return BuildMI(*Check.getParent(), std::next(Check.getIterator()), MIMD,
+                 TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::NE)
+      .addMBB(&TrapMBB)
+      .getInstr();
+}
+
 bool AArch64TargetLowering::shallExtractConstSplatVectorElementToStore(
     Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const {
   // On AArch64, we can efficiently extract a scalar from a splat vector using

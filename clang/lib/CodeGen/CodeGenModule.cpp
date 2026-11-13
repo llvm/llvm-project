@@ -1633,6 +1633,9 @@ void CodeGenModule::Release() {
                                 CodeGenOpts.PatchableFunctionEntryOffset);
     if (CodeGenOpts.SanitizeKcfiArity)
       getModule().addModuleFlag(llvm::Module::Override, "kcfi-arity", 1);
+    if (CodeGenOpts.SanitizeKcfiOutOfLineTraps)
+      getModule().addModuleFlag(llvm::Module::Override,
+                                "kcfi-out-of-line-traps", 1);
     // Store the hash algorithm choice for use in LLVM passes
     getModule().addModuleFlag(
         llvm::Module::Override, "kcfi-hash",

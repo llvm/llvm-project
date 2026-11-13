@@ -914,7 +914,10 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 }
 
 void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
-  assert(std::next(MI.getIterator())->isCall() &&
+  // KCFI_CMP is KCFI_CHECK without the trap: it's followed by the branch to
+  // its KCFI_TRAP, which falls through to the call.
+  const bool IsCmp = MI.getOpcode() == X86::KCFI_CMP;
+  assert((IsCmp || std::next(MI.getIterator())->isCall()) &&
          "KCFI_CHECK not followed by a call instruction");
 
   // Adjust the offset for patchable-function-prefix. X86InstrInfo::getNop()
@@ -946,6 +949,9 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
                               .addImm(-(PrefixNops + 4))
                               .addReg(X86::NoRegister));
 
+  if (IsCmp)
+    return;
+
   MCSymbol *Pass = OutContext.createTempSymbol();
   EmitAndCountInstruction(
       MCInstBuilder(X86::JCC_1)
@@ -957,6 +963,13 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   EmitAndCountInstruction(MCInstBuilder(X86::TRAP));
   emitKCFITrapEntry(MF, Trap);
   OutStreamer->emitLabel(Pass);
+}
+
+void X86AsmPrinter::LowerKCFI_TRAP(const MachineInstr &MI) {
+  MCSymbol *Trap = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(Trap);
+  EmitAndCountInstruction(MCInstBuilder(X86::TRAP));
+  emitKCFITrapEntry(*MI.getMF(), Trap);
 }
 
 void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
@@ -2562,6 +2575,12 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case X86::KCFI_CHECK:
     return LowerKCFI_CHECK(*MI);
+
+  case X86::KCFI_CMP:
+    return LowerKCFI_CHECK(*MI);
+
+  case X86::KCFI_TRAP:
+    return LowerKCFI_TRAP(*MI);
 
   case X86::ASAN_CHECK_MEMACCESS:
     return LowerASAN_CHECK_MEMACCESS(*MI);

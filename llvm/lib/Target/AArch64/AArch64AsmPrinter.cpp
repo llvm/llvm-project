@@ -156,6 +156,7 @@ public:
       HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
   void LowerKCFI_CHECK(const MachineInstr &MI);
+  void LowerKCFI_TRAP(const MachineInstr &MI);
   void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);
   void emitHwasanMemaccessSymbols(Module &M);
 
@@ -696,9 +697,13 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 
 void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   Register AddrReg = MI.getOperand(0).getReg();
-  assert(std::next(MI.getIterator())->isCall() &&
+  // KCFI_CMP is KCFI_CHECK without the trap: it's followed by the branch to
+  // its KCFI_TRAP, which falls through to the call.
+  const bool IsCmp = MI.getOpcode() == AArch64::KCFI_CMP;
+  assert((IsCmp || std::next(MI.getIterator())->isCall()) &&
          "KCFI_CHECK not followed by a call instruction");
-  assert(std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg &&
+  assert((IsCmp ||
+          std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg) &&
          "KCFI_CHECK call target doesn't match call operand");
 
   // Default to using the intra-procedure-call temporary registers for
@@ -748,6 +753,9 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
                                    .addReg(ScratchRegs[1])
                                    .addImm(0));
 
+  if (IsCmp)
+    return;
+
   MCSymbol *Pass = OutContext.createTempSymbol();
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(AArch64::Bcc)
@@ -778,6 +786,18 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   unsigned ESR = 0x8000 | ((TypeIndex & 31) << 5) | (AddrIndex & 31);
   EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(ESR));
   OutStreamer->emitLabel(Pass);
+}
+
+void AArch64AsmPrinter::LowerKCFI_TRAP(const MachineInstr &MI) {
+  // The ESR that the trap of a KCFI_CHECK has, for the registers that the
+  // KCFI_CMP that branches here left the target and the expected type in.
+  const MCRegisterInfo *RI = OutContext.getRegisterInfo();
+  const unsigned AddrIndex = RI->getEncodingValue(MI.getOperand(0).getReg());
+  const unsigned TypeIndex = RI->getEncodingValue(MI.getOperand(1).getReg());
+  assert(AddrIndex < 31 && TypeIndex < 31);
+
+  const unsigned ESR = 0x8000 | (TypeIndex << 5) | AddrIndex;
+  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(ESR));
 }
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
@@ -3973,6 +3993,14 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case AArch64::KCFI_CHECK:
     LowerKCFI_CHECK(*MI);
+    return;
+
+  case AArch64::KCFI_CMP:
+    LowerKCFI_CHECK(*MI);
+    return;
+
+  case AArch64::KCFI_TRAP:
+    LowerKCFI_TRAP(*MI);
     return;
 
   case AArch64::HWASAN_CHECK_MEMACCESS:

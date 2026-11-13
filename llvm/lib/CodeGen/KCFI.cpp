@@ -44,6 +44,10 @@ private:
   /// Target lowering for arch-specific parts.
   const TargetLowering *TLI = nullptr;
 
+  /// Whether a failed check branches to a trap in a block of its own, rather
+  /// than a passed check branching over a trap that's right before the call.
+  bool OutOfLineTraps = false;
+
   /// Emits a KCFI check before an indirect call.
   /// \returns true if the check was added and false otherwise.
   bool emitCheck(MachineBasicBlock &MBB,
@@ -80,6 +84,9 @@ PreservedAnalyses MachineKCFIPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  // Moving the traps out of line adds blocks.
+  if (MF.getFunction().getParent()->getModuleFlag("kcfi-out-of-line-traps"))
+    return PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -102,6 +109,29 @@ bool KCFI::emitCheck(MachineBasicBlock &MBB,
   assert(MBBI->isCall() && "Unexpected instruction type");
   MBBI->setCFIType(*MBB.getParent(), 0);
 
+  // Move the trap out of line: the check ends in a branch to a new block that
+  // only has the trap, and the call starts the block that the check falls
+  // through to. That branch is never taken unless the check fails, whereas a
+  // branch over an inline trap is taken every time, and the trap is laid out
+  // with the rest of the cold code.
+  //
+  // A call that's already bundled has to stay bundled with its check, and one
+  // in a block with an EH pad successor can be an invoke, which has to stay in
+  // the block of the EH label that begins its try-range. Those keep an inline
+  // trap.
+  if (OutOfLineTraps && !MBBI->isBundled() && !MBB.hasEHPadSuccessor()) {
+    MachineFunction &MF = *MBB.getParent();
+    MachineBasicBlock *TrapMBB =
+        MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+    MF.push_back(TrapMBB);
+    MachineInstr *Branch = TLI->EmitKCFIOutOfLineTrap(*Check, *TrapMBB, TII);
+    MBB.splitAt(*Branch, /*UpdateLiveIns=*/true);
+    MBB.setSuccProbability(MBB.succ_begin(), BranchProbability::getOne());
+    MBB.addSuccessor(TrapMBB, BranchProbability::getZero());
+    ++NumKCFIChecksAdded;
+    return true;
+  }
+
   // If not already bundled, bundle the check and the call to prevent
   // further changes.
   if (!MBBI->isBundled())
@@ -119,6 +149,22 @@ bool KCFI::run(MachineFunction &MF) {
   const auto &SubTarget = MF.getSubtarget();
   TII = SubTarget.getInstrInfo();
   TLI = SubTarget.getTargetLowering();
+
+  if (M->getModuleFlag("kcfi-out-of-line-traps") &&
+      TLI->supportKCFIOutOfLineTraps()) {
+    OutOfLineTraps = true;
+    // Moving a trap out of line splits the block of its call, so find the
+    // calls first, and go through them last to first so that each split only
+    // moves the instructions up to the previous one.
+    SmallVector<MachineInstr *, 8> Calls;
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB.instrs())
+        if (MI.isCall() && MI.getCFIType())
+          Calls.push_back(&MI);
+    for (MachineInstr *Call : reverse(Calls))
+      emitCheck(*Call->getParent(), Call->getIterator());
+    return !Calls.empty();
+  }
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
