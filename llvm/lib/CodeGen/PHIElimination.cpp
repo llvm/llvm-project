@@ -403,7 +403,12 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     Register *Entry = nullptr;
     if (AllEdgesCritical)
       Entry = &LoweredPHIs[MPhi];
-    if (Entry && *Entry) {
+    // Copies for a PHI in an EH pad or INLINEASM_BR indirect target have to be
+    // inserted before the call or INLINEASM_BR (see findPHICopyInsertPoint).
+    // The copies of an earlier identical PHI may come after it, so don't reuse
+    // them in such a block.
+    bool CanReuse = !MBB.isEHPad() && !MBB.isInlineAsmBrIndirectTarget();
+    if (Entry && *Entry && CanReuse) {
       // An identical PHI node was already lowered. Reuse the incoming register.
       IncomingReg = *Entry;
       reusedIncoming = true;
@@ -413,7 +418,8 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     } else {
       const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(DestReg);
       IncomingReg = MF.getRegInfo().createVirtualRegister(RC);
-      if (Entry) {
+      // Don't overwrite the register recorded for an earlier identical PHI.
+      if (Entry && !*Entry) {
         EliminateNow = false;
         *Entry = IncomingReg;
       }
