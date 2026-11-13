@@ -149,5 +149,32 @@ Symbol *GetImageBaseSymbol::operator()(LinkGraph &G) {
   return nullptr;
 }
 
+bool isCOFFWeakDefaultHelper(StringRef Name, StringRef WeakName,
+                             uint32_t Characteristics) {
+  return Characteristics == COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS &&
+         Name.consume_front(".weak.") && Name.consume_front(WeakName) &&
+         Name.consume_front(".default") && (Name.empty() || Name[0] == '.');
+}
+
+Expected<std::optional<StringRef>>
+getCOFFWeakDefaultHelper(const object::COFFObjectFile &Obj,
+                         object::COFFSymbolRef Sym) {
+  auto *WE = Sym.getWeakExternal();
+  if (!WE)
+    return std::nullopt;
+  auto Name = Obj.getSymbolName(Sym);
+  if (!Name)
+    return Name.takeError();
+  auto Target = Obj.getSymbol(WE->TagIndex);
+  if (!Target)
+    return Target.takeError();
+  auto TargetName = Obj.getSymbolName(*Target);
+  if (!TargetName)
+    return TargetName.takeError();
+  if (!isCOFFWeakDefaultHelper(*TargetName, *Name, WE->Characteristics))
+    return std::nullopt;
+  return *TargetName;
+}
+
 } // end namespace jitlink
 } // end namespace llvm

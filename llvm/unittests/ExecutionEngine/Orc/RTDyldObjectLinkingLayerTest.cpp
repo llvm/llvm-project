@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -296,6 +297,103 @@ TEST(RTDyldObjectLinkingLayerTest, TestMemoryBufferNamePropagation) {
     ES.reportError(std::move(Err));
 
   EXPECT_TRUE(ObjectIdentifer.find(ModuleName) != std::string::npos);
+}
+
+// A COFF object with a weak definition of foo, as MC emits it, plus a strong
+// definition of Other.
+static std::unique_ptr<MemoryBuffer> makeCOFFWeakFooObj(StringRef Other) {
+  std::string Yaml = (R"(--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     C3C3
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          2
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex:        4
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_ALIAS
+  - Name:            .weak.foo.default
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            )" +
+                      Other + R"(
+    Value:           1
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+)")
+                         .str();
+
+  SmallVector<char, 0> Storage;
+  if (!yaml::yaml2ObjectFile(Storage, Yaml, [](const Twine &) {}))
+    return nullptr;
+  return MemoryBuffer::getMemBufferCopy(
+      StringRef(Storage.data(), Storage.size()));
+}
+
+TEST(RTDyldObjectLinkingLayerTest, TestCOFFWeakDefaultHelperIsInternal) {
+  // Both objects define ".weak.foo.default". Linking both must not claim it.
+  auto ObjA = makeCOFFWeakFooObj("a");
+  auto ObjB = makeCOFFWeakFooObj("b");
+  ASSERT_TRUE(ObjA && ObjB);
+
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto &JD = ES.createBareJITDylib("main");
+
+  // Configured as LLJIT configures it for COFF.
+  RTDyldObjectLinkingLayer ObjLayer(ES, [](const MemoryBuffer &) {
+    return std::make_unique<SectionMemoryManager>();
+  });
+  ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
+  ObjLayer.setAutoClaimResponsibilityForObjectSymbols(true);
+
+  cantFail(ObjLayer.add(JD, std::move(ObjA)));
+  cantFail(ObjLayer.add(JD, std::move(ObjB)));
+
+  bool Resolved = false;
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD),
+      SymbolLookupSet({ES.intern("foo"), ES.intern("a"), ES.intern("b")}),
+      SymbolState::Resolved,
+      [&](Expected<SymbolMap> R) {
+        if (auto Err = R.takeError()) {
+          ADD_FAILURE() << toString(std::move(Err));
+          return;
+        }
+        Resolved = R->size() == 3;
+      },
+      NoDependenciesToRegister);
+
+  if (auto Err = ES.endSession())
+    ES.reportError(std::move(Err));
+
+  EXPECT_TRUE(Resolved);
 }
 
 } // end anonymous namespace

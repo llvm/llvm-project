@@ -8,8 +8,12 @@
 
 #include "JITLinkTestUtils.h"
 
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Object/COFF.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
@@ -106,4 +110,84 @@ TEST(COFFLinkGraphTest, GetImageBaseSymbolCustomName) {
 
   GetImageBaseSymbol GetIB("__CustomBase");
   EXPECT_EQ(GetIB(G), &CustomSym);
+}
+
+TEST(COFFLinkGraphTest, IsCOFFWeakDefaultHelper) {
+  constexpr uint32_t Alias = COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS;
+  EXPECT_TRUE(isCOFFWeakDefaultHelper(".weak.foo.default", "foo", Alias));
+  EXPECT_TRUE(isCOFFWeakDefaultHelper(".weak.foo.default.inl", "foo", Alias));
+  EXPECT_FALSE(isCOFFWeakDefaultHelper(".weak.foo.defaultx", "foo", Alias));
+  EXPECT_FALSE(isCOFFWeakDefaultHelper(".weak.foobar.default", "foo", Alias));
+  EXPECT_FALSE(isCOFFWeakDefaultHelper("bar", "foo", Alias));
+  EXPECT_FALSE(isCOFFWeakDefaultHelper(
+      ".weak.foo.default", "foo", COFF::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY));
+}
+
+TEST(COFFLinkGraphTest, GetCOFFWeakDefaultHelper) {
+  // foo is MC's weak definition, wbar is "wbar = bar", and bad has a bad
+  // TagIndex. Aux records take symbol table slots.
+  StringRef Yaml = R"(--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     C3C3
+symbols:
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex:        2
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_ALIAS
+  - Name:            .weak.foo.default
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            wbar
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex:        5
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_ALIAS
+  - Name:            bar
+    Value:           1
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            bad
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex:        100
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_ALIAS
+...
+)";
+  SmallVector<char, 0> Storage;
+  ASSERT_TRUE(yaml::yaml2ObjectFile(Storage, Yaml, [](const Twine &) {}));
+  auto Obj = cantFail(object::COFFObjectFile::create(
+      MemoryBufferRef(StringRef(Storage.data(), Storage.size()), "obj")));
+
+  auto Helper = [&](uint32_t Index) {
+    return getCOFFWeakDefaultHelper(*Obj, cantFail(Obj->getSymbol(Index)));
+  };
+  EXPECT_THAT_EXPECTED(Helper(0),
+                       HasValue(std::optional<StringRef>(".weak.foo.default")));
+  EXPECT_THAT_EXPECTED(Helper(2), HasValue(std::nullopt));
+  EXPECT_THAT_EXPECTED(Helper(3), HasValue(std::nullopt));
+  EXPECT_THAT_EXPECTED(Helper(6), Failed());
 }
