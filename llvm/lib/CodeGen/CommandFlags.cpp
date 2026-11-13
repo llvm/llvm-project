@@ -52,6 +52,70 @@ static const CodeGenToolOptions &getCodeGenToolOptions(const LLVMContext &C) {
   return C.getLibraryOptions().get<CodeGenToolOptions>();
 }
 
+static std::optional<bool> toOptional(BoolOrDefault X) {
+  if (X == BoolOrDefault::Default)
+    return std::nullopt;
+  return X == BoolOrDefault::True;
+}
+
+std::string codegen::getMArch(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().march.str();
+}
+
+std::string codegen::getMCPU(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().mcpu.str();
+}
+
+std::vector<std::string>
+codegen::getMAttrs(const cl::LibraryOptionsContext &C) {
+  ArrayRef<StringRef> MAttrs = C.get<CodeGenToolOptions>().mattr;
+  return std::vector<std::string>(MAttrs.begin(), MAttrs.end());
+}
+
+std::optional<Reloc::Model>
+codegen::getExplicitRelocModel(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().relocation_model;
+}
+
+std::optional<CodeModel::Model>
+codegen::getExplicitCodeModel(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().code_model;
+}
+
+std::optional<uint64_t>
+codegen::getExplicitLargeDataThreshold(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().large_data_threshold;
+}
+
+std::optional<CodeGenFileType>
+codegen::getExplicitFileType(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().filetype;
+}
+
+CodeGenFileType codegen::getFileType(const cl::LibraryOptionsContext &C) {
+  return getExplicitFileType(C).value_or(CodeGenFileType::AssemblyFile);
+}
+
+FloatABI::ABIType
+codegen::getFloatABIForCalls(const cl::LibraryOptionsContext &C) {
+  return C.get<CodeGenToolOptions>().float_abi;
+}
+
+std::optional<bool>
+codegen::getExplicitDataSections(const cl::LibraryOptionsContext &C) {
+  return toOptional(C.get<CodeGenToolOptions>().data_sections);
+}
+
+std::optional<bool>
+codegen::getExplicitFunctionSections(const cl::LibraryOptionsContext &C) {
+  return toOptional(C.get<CodeGenToolOptions>().function_sections);
+}
+
+std::optional<bool>
+codegen::getExplicitEmulatedTLS(const cl::LibraryOptionsContext &C) {
+  return toOptional(C.get<CodeGenToolOptions>().emulated_tls);
+}
+
 #define CGOPT(TY, NAME)                                                        \
   static cl::opt<TY> *NAME##View;                                              \
   TY codegen::get##NAME(const cl::LibraryOptionsContext &) {                   \
@@ -59,131 +123,13 @@ static const CodeGenToolOptions &getCodeGenToolOptions(const LLVMContext &C) {
     return *NAME##View;                                                        \
   }
 
-#define CGLIST(TY, NAME)                                                       \
-  static cl::list<TY> *NAME##View;                                             \
-  std::vector<TY> codegen::get##NAME(const cl::LibraryOptionsContext &) {      \
-    assert(NAME##View && "Flag not registered.");                              \
-    return *NAME##View;                                                        \
-  }
-
-// Temporary macro for incremental transition to std::optional.
-#define CGOPT_EXP(TY, NAME)                                                    \
-  CGOPT(TY, NAME)                                                              \
-  std::optional<TY> codegen::getExplicit##NAME(                                \
-      const cl::LibraryOptionsContext &) {                                     \
-    if (NAME##View->getNumOccurrences()) {                                     \
-      TY res = *NAME##View;                                                    \
-      return res;                                                              \
-    }                                                                          \
-    return std::nullopt;                                                       \
-  }
-
-CGOPT(std::string, MArch)
-CGOPT(std::string, MCPU)
 CGOPT(std::string, MTune)
-CGLIST(std::string, MAttrs)
-CGOPT_EXP(Reloc::Model, RelocModel)
-CGOPT_EXP(CodeModel::Model, CodeModel)
-CGOPT_EXP(uint64_t, LargeDataThreshold)
-CGOPT_EXP(CodeGenFileType, FileType)
-CGOPT(FloatABI::ABIType, FloatABIForCalls)
-CGOPT_EXP(bool, DataSections)
-CGOPT_EXP(bool, FunctionSections)
-CGOPT_EXP(bool, EmulatedTLS)
 CGOPT(codegen::SaveStatsMode, SaveStats)
 
 #define CGBINDOPT(NAME)                                                        \
   do {                                                                         \
     NAME##View = std::addressof(NAME);                                         \
   } while (0)
-
-codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
-  static cl::opt<std::string> MArch(
-      "march", cl::desc("Architecture to generate code for (see --version)"));
-  CGBINDOPT(MArch);
-
-  static cl::opt<std::string> MCPU(
-      "mcpu", cl::desc("Target a specific cpu type (-mcpu=help for details)"),
-      cl::value_desc("cpu-name"), cl::init(""));
-  CGBINDOPT(MCPU);
-
-  static cl::list<std::string> MAttrs(
-      "mattr", cl::CommaSeparated,
-      cl::desc("Target specific attributes (-mattr=help for details)"),
-      cl::value_desc("a1,+a2,-a3,..."));
-  CGBINDOPT(MAttrs);
-
-  static cl::opt<Reloc::Model> RelocModel(
-      "relocation-model", cl::desc("Choose relocation model"),
-      cl::values(
-          clEnumValN(Reloc::Static, "static", "Non-relocatable code"),
-          clEnumValN(Reloc::PIC_, "pic",
-                     "Fully relocatable, position independent code"),
-          clEnumValN(Reloc::DynamicNoPIC, "dynamic-no-pic",
-                     "Relocatable external references, non-relocatable code"),
-          clEnumValN(
-              Reloc::ROPI, "ropi",
-              "Code and read-only data relocatable, accessed PC-relative"),
-          clEnumValN(
-              Reloc::RWPI, "rwpi",
-              "Read-write data relocatable, accessed relative to static base"),
-          clEnumValN(Reloc::ROPI_RWPI, "ropi-rwpi",
-                     "Combination of ropi and rwpi")));
-  CGBINDOPT(RelocModel);
-
-  static cl::opt<CodeModel::Model> CodeModel(
-      "code-model", cl::desc("Choose code model"),
-      cl::values(clEnumValN(CodeModel::Tiny, "tiny", "Tiny code model"),
-                 clEnumValN(CodeModel::Small, "small", "Small code model"),
-                 clEnumValN(CodeModel::Kernel, "kernel", "Kernel code model"),
-                 clEnumValN(CodeModel::Medium, "medium", "Medium code model"),
-                 clEnumValN(CodeModel::Large, "large", "Large code model")));
-  CGBINDOPT(CodeModel);
-
-  static cl::opt<uint64_t> LargeDataThreshold(
-      "large-data-threshold",
-      cl::desc("Choose large data threshold for x86_64 medium code model"),
-      cl::init(0));
-  CGBINDOPT(LargeDataThreshold);
-
-  static cl::opt<CodeGenFileType> FileType(
-      "filetype", cl::init(CodeGenFileType::AssemblyFile),
-      cl::desc(
-          "Choose a file type (not all types are supported by all targets):"),
-      cl::values(clEnumValN(CodeGenFileType::AssemblyFile, "asm",
-                            "Emit an assembly ('.s') file"),
-                 clEnumValN(CodeGenFileType::ObjectFile, "obj",
-                            "Emit a native object ('.o') file"),
-                 clEnumValN(CodeGenFileType::Null, "null",
-                            "Emit nothing, for performance testing")));
-  CGBINDOPT(FileType);
-
-  static cl::opt<FloatABI::ABIType> FloatABIForCalls(
-      "float-abi", cl::desc("Choose float ABI type"),
-      cl::init(FloatABI::Default),
-      cl::values(clEnumValN(FloatABI::Default, "default",
-                            "Target default float ABI type"),
-                 clEnumValN(FloatABI::Soft, "soft",
-                            "Soft float ABI (implied by -soft-float)"),
-                 clEnumValN(FloatABI::Hard, "hard",
-                            "Hard float ABI (uses FP registers)")));
-  CGBINDOPT(FloatABIForCalls);
-
-  static cl::opt<bool> DataSections(
-      "data-sections", cl::desc("Emit data into separate sections"),
-      cl::init(false));
-  CGBINDOPT(DataSections);
-
-  static cl::opt<bool> FunctionSections(
-      "function-sections", cl::desc("Emit functions into separate sections"),
-      cl::init(false));
-  CGBINDOPT(FunctionSections);
-
-  static cl::opt<bool> EmulatedTLS(
-      "emulated-tls", cl::desc("Use emulated TLS model"), cl::init(false));
-  CGBINDOPT(EmulatedTLS);
-
-}
 
 ArrayRef<const cl::LibraryOptions *> codegen::getToolOptions() {
   static constexpr opt::LibraryOptionsParser Parser(
@@ -249,9 +195,9 @@ codegen::getTargetOptions(const cl::LibraryOptionsContext &LibraryOptions,
   Options.GuaranteedTailCallOpt = Opts.tailcallopt;
   Options.StackSymbolOrdering = Opts.stack_symbol_ordering;
   Options.UseInitArray = !Opts.use_ctors;
-  Options.DataSections = getExplicitDataSections(LibraryOptions)
-                             .value_or(TheTriple.hasDefaultDataSections());
-  Options.FunctionSections = getFunctionSections(LibraryOptions);
+  Options.DataSections =
+      valueOr(Opts.data_sections, TheTriple.hasDefaultDataSections());
+  Options.FunctionSections = valueOr(Opts.function_sections, false);
   Options.IgnoreXCOFFVisibility = Opts.ignore_xcoff_visibility;
   Options.XCOFFTracebackTable = Opts.xcoff_traceback_table;
   Options.BBAddrMap = Opts.basic_block_address_map;
@@ -260,8 +206,8 @@ codegen::getTargetOptions(const cl::LibraryOptionsContext &LibraryOptions,
   Options.UniqueBasicBlockSectionNames = Opts.unique_basic_block_section_names;
   Options.SeparateNamedSections = Opts.separate_named_sections;
   Options.TLSSize = Opts.tls_size;
-  Options.EmulatedTLS = getExplicitEmulatedTLS(LibraryOptions)
-                            .value_or(TheTriple.hasDefaultEmulatedTLS());
+  Options.EmulatedTLS =
+      valueOr(Opts.emulated_tls, TheTriple.hasDefaultEmulatedTLS());
   Options.EnableTLSDESC =
       valueOr(Opts.enable_tlsdesc, TheTriple.hasDefaultTLSDESC());
   Options.VecLib = Opts.vector_library;
