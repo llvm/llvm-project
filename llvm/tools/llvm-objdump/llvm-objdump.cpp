@@ -1379,8 +1379,10 @@ static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf,
   if (N < 8)
     return 0;
 
-  // Preserve the historical 4-byte granularity, but do not split instructions
-  // on targets with a larger minimum instruction alignment.
+  // We skip zeroes in multiples of at least 4, to avoid truncating
+  // instructions that start with a zero byte.
+  // For targets with a higher minimum instruction length, we instead
+  // skip multiples of that length.
   return alignDown(N, std::max(4U, MinInstAlignment));
 }
 
