@@ -15,12 +15,72 @@
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR15 %s 2>&1 | FileCheck --check-prefix=ERROR15 %s
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR16 %s 2>&1 | FileCheck --check-prefix=ERROR16 %s
 // RUN: not mlir-tblgen -gen-op-decls -I %S/../../include -DERROR17 %s 2>&1 | FileCheck --check-prefix=ERROR17 %s
+// RUN: not mlir-tblgen -gen-op-defs -I %S/../../include -DERROR18 %s 2>&1 | FileCheck --check-prefix=ERROR18 %s
+// RUN: not mlir-tblgen -gen-op-defs -I %S/../../include -DERROR19 %s 2>&1 | FileCheck --check-prefix=ERROR19 %s
+// RUN: not mlir-tblgen -gen-op-defs -I %S/../../include -DERROR20 %s 2>&1 | FileCheck --check-prefix=ERROR20 %s
+// RUN: not mlir-tblgen -gen-op-defs -I %S/../../include -DERROR21 %s 2>&1 | FileCheck --check-prefix=ERROR21 %s
 
 include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test_dialect";
 }
+
+#ifdef ERROR18
+// ERROR18: error: cannot substitute '$_self' while formatting trait predicate: missing named binding
+// ERROR18: note: template: {{.*}}$_self.getType() == $_op.getOperand(0).getType()
+// ERROR18: note: failed occurrence starts at template byte offset
+// ERROR18: note: while expanding operation 'test_dialect.unbound_self'
+// ERROR18: note: available named substitutions: $_ctxt, $_op, $a, $b
+// ERROR18: note: no positional substitutions were supplied
+def UnboundSelfOp : Op<Test_Dialect, "unbound_self", [
+    PredOpTrait<"same type",
+        CPred<"$_self.getType() == $_op.getOperand(0).getType()">>]> {
+  let arguments = (ins AnyType:$a, AnyType:$b);
+}
+#endif
+
+#ifdef ERROR19
+// ERROR19: error: cannot substitute '$missing' while formatting trait predicate: missing named binding
+// ERROR19: note: cannot substitute '$9' at template byte offset {{[0-9]+}}: positional argument out of range
+// ERROR19: note: cannot substitute '$missing' at template byte offset {{[0-9]+}}: missing named binding
+// ERROR19: note: template: {{.*}}$missing && $9 && $missing
+// ERROR19: note: while expanding operation 'test_dialect.unbound_multiple'
+// ERROR19: note: available named substitutions: $_ctxt, $_op
+// ERROR19: note: no positional substitutions were supplied
+def UnboundMultipleOp : Op<Test_Dialect, "unbound_multiple", [
+    PredOpTrait<"multiple failures", CPred<"$missing && $9 && $missing">>]>;
+#endif
+
+#ifdef ERROR20
+// ERROR20: error: cannot substitute '$missing' while formatting trait predicate
+// ERROR20: note: template:
+// ERROR20: note: while expanding operation 'test_dialect.multiclass'
+// ERROR20: note: instantiated from multiclass
+// ERROR20: note: available named substitutions: $_ctxt, $_op
+// ERROR20: note: no positional substitutions were supplied
+multiclass UnboundTraitMulticlass {
+  def Op : Op<Test_Dialect, "multiclass", [
+      PredOpTrait<"missing", CPred<"$missing">>]>;
+}
+defm Broken : UnboundTraitMulticlass;
+#endif
+
+#ifdef ERROR21
+// An inline attribute predicate binds $_self while checking that attribute.
+// That temporary binding must not make $_self available to an operation trait.
+// ERROR21: error: cannot substitute '$_self' while formatting trait predicate: missing named binding
+// ERROR21: note: while expanding operation 'test_dialect.inline_attr'
+// ERROR21: note: available named substitutions: $_ctxt, $_op, $input, $value
+// ERROR21: note: no positional substitutions were supplied
+def DependentAttr : Attr<CPred<"$_self && $input">, "dependent"> {
+  let convertFromStorage = "$_self";
+}
+def InlineAttrOp : Op<Test_Dialect, "inline_attr", [
+    PredOpTrait<"unbound self", CPred<"$_self">>]> {
+  let arguments = (ins DependentAttr:$value, I32:$input);
+}
+#endif
 
 #ifdef ERROR1
 // ERROR1: error: expected 'ins'
