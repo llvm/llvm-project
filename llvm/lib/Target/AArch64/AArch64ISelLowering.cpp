@@ -3740,19 +3740,18 @@ static SDValue getPredicateForScalableVector(SelectionDAG &DAG, SDLoc &DL,
 static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG);
 
 /// isZerosVector - Check whether V is a zero-filled vector.
-static bool isZerosVector(const SDValue V) {
+static bool isZerosVector(SDValue V) {
   // Look through a bit convert.
-  const SDValue *Current = &V;
-  while (Current->getOpcode() == ISD::BITCAST)
-    Current = &Current->getOperand(0);
+  while (V.getOpcode() == ISD::BITCAST)
+    V = V.getOperand(0);
 
-  if (ISD::isConstantSplatVectorAllZeros(*Current))
+  if (ISD::isConstantSplatVectorAllZeros(V))
     return true;
 
-  if (Current->getOpcode() != AArch64ISD::DUP)
+  if (V.getOpcode() != AArch64ISD::DUP)
     return false;
 
-  auto Opnd0 = Current->getOperand(0);
+  auto Opnd0 = V.getOperand(0);
   return isNullConstant(Opnd0) || isNullFPConstant(Opnd0);
 }
 
