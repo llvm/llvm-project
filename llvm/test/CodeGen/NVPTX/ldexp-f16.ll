@@ -7,8 +7,8 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-; Expanding ldexp directly in f16 clamps the exponent to -20. Promote to
-; f32 so smaller exponents can still scale large f16 inputs correctly.
+; The generic ldexp expansion must promote f16 to f32: expanding directly
+; in f16 clamps the exponent to -20 and miscompiles smaller exponents.
 define half @ldexp_f16(half %x, i32 %n) {
 ; CHECK-LABEL: ldexp_f16(
 ; CHECK:       cvt.f32.f16
@@ -45,6 +45,30 @@ define half @ldexp_f16_neg29(half %x) {
   ret half %r
 }
 
+; The largest finite input, 65504, rounds to the smallest subnormal, 2^-24.
+define half @ldexp_f16_neg40(half %x) {
+; CHECK-LABEL: ldexp_f16_neg40(
+; CHECK:       cvt.f32.f16 [[X:%r[0-9]+]], {{%rs[0-9]+}};
+; CHECK-NEXT:  mul.rn.f32 [[SCALED:%r[0-9]+]], [[X]], 0f2B800000;
+; CHECK-NEXT:  cvt.rn.f16.f32 [[RESULT:%rs[0-9]+]], [[SCALED]];
+; CHECK-NEXT:  st.param{{(::func)?}}.b16 [func_retval0], [[RESULT]];
+; CHECK-NEXT:  ret;
+  %r = call half @llvm.ldexp.f16.i32(half %x, i32 -40)
+  ret half %r
+}
+
+; Even the largest finite input must round to zero at this exponent.
+define half @ldexp_f16_neg41(half %x) {
+; CHECK-LABEL: ldexp_f16_neg41(
+; CHECK:       cvt.f32.f16 [[X:%r[0-9]+]], {{%rs[0-9]+}};
+; CHECK-NEXT:  mul.rn.f32 [[SCALED:%r[0-9]+]], [[X]], 0f2B000000;
+; CHECK-NEXT:  cvt.rn.f16.f32 [[RESULT:%rs[0-9]+]], [[SCALED]];
+; CHECK-NEXT:  st.param{{(::func)?}}.b16 [func_retval0], [[RESULT]];
+; CHECK-NEXT:  ret;
+  %r = call half @llvm.ldexp.f16.i32(half %x, i32 -41)
+  ret half %r
+}
+
 ; Every finite f16 input must underflow to zero for this exponent.
 define half @ldexp_f16_neg100(half %x) {
 ; CHECK-LABEL: ldexp_f16_neg100(
@@ -54,6 +78,18 @@ define half @ldexp_f16_neg100(half %x) {
 ; CHECK-NEXT:  st.param{{(::func)?}}.b16 [func_retval0], [[RESULT]];
 ; CHECK-NEXT:  ret;
   %r = call half @llvm.ldexp.f16.i32(half %x, i32 -100)
+  ret half %r
+}
+
+; Scaling the smallest subnormal by 2^24 must produce 1.0.
+define half @ldexp_f16_pos24(half %x) {
+; CHECK-LABEL: ldexp_f16_pos24(
+; CHECK:       cvt.f32.f16 [[X:%r[0-9]+]], {{%rs[0-9]+}};
+; CHECK-NEXT:  mul.rn.f32 [[SCALED:%r[0-9]+]], [[X]], 0f4B800000;
+; CHECK-NEXT:  cvt.rn.f16.f32 [[RESULT:%rs[0-9]+]], [[SCALED]];
+; CHECK-NEXT:  st.param{{(::func)?}}.b16 [func_retval0], [[RESULT]];
+; CHECK-NEXT:  ret;
+  %r = call half @llvm.ldexp.f16.i32(half %x, i32 24)
   ret half %r
 }
 

@@ -1037,9 +1037,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::FROUND, MVT::bf16, Promote);
   AddPromotedToType(ISD::FROUND, MVT::bf16, MVT::f32);
 
-  // The generic ldexp expansion clamps small exponents too early for f16.
-  setOperationAction(ISD::FLDEXP, MVT::f16, Promote);
-
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
 
   // 'Expand' implements FCOPYSIGN without calling an external library.
