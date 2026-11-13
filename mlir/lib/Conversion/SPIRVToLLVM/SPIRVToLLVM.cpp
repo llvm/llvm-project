@@ -384,6 +384,51 @@ public:
   }
 };
 
+/// Converts `spirv.PtrAccessChain` and `spirv.InBoundsPtrAccessChain` to
+/// `llvm.getelementptr`, using `element` as the first index and preserving
+/// `inbounds` for the latter.
+template <typename SPIRVOp, bool InBounds>
+class PtrAccessChainPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto baseType = cast<spirv::PointerType>(op.getBasePtr().getType());
+    // These storage classes may use a pointer ArrayStride decoration, which
+    // the SPIR-V dialect cannot represent.
+    switch (baseType.getStorageClass()) {
+    case spirv::StorageClass::Uniform:
+    case spirv::StorageClass::StorageBuffer:
+    case spirv::StorageClass::PushConstant:
+    case spirv::StorageClass::PhysicalStorageBuffer:
+      return rewriter.notifyMatchFailure(
+          op, "pointer ArrayStride is not supported for this storage class");
+    default:
+      break;
+    }
+
+    auto dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    auto elementType =
+        this->getTypeConverter()->convertType(baseType.getPointeeType());
+    if (!elementType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    SmallVector<Value, 4> indices;
+    indices.push_back(adaptor.getElement());
+    llvm::append_range(indices, adaptor.getIndices());
+
+    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
+        op, dstType, elementType, adaptor.getBasePtr(), indices,
+        InBounds ? LLVM::GEPNoWrapFlags::inbounds : LLVM::GEPNoWrapFlags::none);
+    return success();
+  }
+};
+
 class AddressOfPattern : public SPIRVToLLVMConversion<spirv::AddressOfOp> {
 public:
   using SPIRVToLLVMConversion<spirv::AddressOfOp>::SPIRVToLLVMConversion;
@@ -2562,6 +2607,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       // Memory ops
       AccessChainPattern<spirv::AccessChainOp, /*InBounds=*/false>,
       AccessChainPattern<spirv::InBoundsAccessChainOp, /*InBounds=*/true>,
+      PtrAccessChainPattern<spirv::PtrAccessChainOp, /*InBounds=*/false>,
+      PtrAccessChainPattern<spirv::InBoundsPtrAccessChainOp, /*InBounds=*/true>,
       AddressOfPattern, CopyMemoryPattern, LoadStorePattern<spirv::LoadOp>,
       LoadStorePattern<spirv::StoreOp>, VariablePattern,
 

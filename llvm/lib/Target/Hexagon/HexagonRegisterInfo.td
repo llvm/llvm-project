@@ -700,3 +700,10 @@ let Size = 32, isAllocatable = 0 in def V65Regs
 
 def HexagonCSR : CalleeSavedRegs<(add R16, R17, R18, R19, R20, R21, R22, R23,
                      R24, R25, R26, R27)>;
+
+// Functions taking HLX arguments or returning an HLX type also preserve
+// L12-L15.
+def HexagonCSR_HLX : CalleeSavedRegs<(add HexagonCSR, L12, L13, L14, L15)>;
+
+// Functions that contain a call to __builtin_eh_return also save R0-R3.
+def HexagonCSR_HLX_EH : CalleeSavedRegs<(add R0, R1, R2, R3, HexagonCSR_HLX)>;

@@ -91,7 +91,6 @@
 ---
 name:            t
 # CHECK-LABEL: name: t
-tracksRegLiveness: true
 liveins:         
   - { reg: '$edi', virtual-reg: '%2' }
 frameInfo:       
@@ -155,7 +154,6 @@ body:             |
 ---
 name:            u
 # CHECK-LABEL: name: u
-tracksRegLiveness: true
 liveins:         
   - { reg: '$edi', virtual-reg: '%2' }
 frameInfo:       

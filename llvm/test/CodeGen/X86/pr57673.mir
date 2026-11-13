@@ -25,7 +25,6 @@
 ---
 name: foo
 alignment: 16
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 40, alignment: 8 }
 body: |

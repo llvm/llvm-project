@@ -124,20 +124,22 @@ static std::string OptLLVM(const std::string &IR, CodeGenOptLevel OLvl) {
   const TargetOptions Options =
       codegen::getTargetOptions(Context.getLibraryOptions(), ModuleTriple);
   std::string E;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(codegen::getMArch(), ModuleTriple, E);
+  const Target *TheTarget = TargetRegistry::lookupTarget(
+      codegen::getMArch(Context.getLibraryOptions()), ModuleTriple, E);
   if (!TheTarget)
     ErrorAndExit(E);
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      M->getTargetTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
-      Options, codegen::getExplicitRelocModel(),
-      codegen::getExplicitCodeModel(), OLvl));
+      M->getTargetTriple(), codegen::getCPUStr(Context.getLibraryOptions()),
+      codegen::getFeaturesStr(Context.getLibraryOptions()), Options,
+      codegen::getExplicitRelocModel(Context.getLibraryOptions()),
+      codegen::getExplicitCodeModel(Context.getLibraryOptions()), OLvl));
   if (!TM)
     ErrorAndExit("Could not create target machine");
 
-  codegen::setFunctionAttributes(*M, codegen::getCPUStr(),
-                                 codegen::getFeaturesStr());
+  codegen::setFunctionAttributes(
+      *M, codegen::getCPUStr(Context.getLibraryOptions()),
+      codegen::getFeaturesStr(Context.getLibraryOptions()));
 
   // Add a pass that writes the optimized IR to an output stream
   std::string outString;
@@ -171,9 +173,9 @@ static void CreateAndRunJITFunc(const std::string &IR, CodeGenOptLevel OLvl) {
   Triple ModuleTriple(M->getTargetTriple());
 
   EngineBuilder builder(std::move(M));
-  builder.setMArch(codegen::getMArch());
-  builder.setMCPU(codegen::getCPUStr());
-  builder.setMAttrs(codegen::getFeatureList());
+  builder.setMArch(codegen::getMArch(Context.getLibraryOptions()));
+  builder.setMCPU(codegen::getCPUStr(Context.getLibraryOptions()));
+  builder.setMAttrs(codegen::getFeatureList(Context.getLibraryOptions()));
   builder.setErrorStr(&ErrorMsg);
   builder.setEngineKind(EngineKind::JIT);
   builder.setMCJITMemoryManager(std::make_unique<SectionMemoryManager>());
