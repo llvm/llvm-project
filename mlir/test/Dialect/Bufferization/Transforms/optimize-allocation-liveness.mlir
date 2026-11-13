@@ -301,6 +301,23 @@ func.func @nested_result(%cond: i1) {
   return
 }
 
+func.func private @foo()
+// CHECK-LABEL:   func.func @allocation_with_no_uses() {
+// CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<8xi32>
+// CHECK:           memref.dealloc %[[ALLOC_0]] : memref<8xi32>
+// CHECK:           call @foo() : () -> ()
+// CHECK:           return
+// CHECK:         }
+
+// This test confirms that when there is no user of the alloc, we still move
+// The dealloc operation to be as close to the alloc as possible
+func.func @allocation_with_no_uses() {
+  %alloc = memref.alloc() : memref<8xi32>
+  call @foo() : () -> ()
+  memref.dealloc %alloc : memref<8xi32>
+  return
+}
+
 // -----
 // CHECK-LABEL:   func.func @alias_user_outside_alloc_block() -> memref<4xf32> {
 // CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<4xf32>
