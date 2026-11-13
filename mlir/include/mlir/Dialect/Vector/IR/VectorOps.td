@@ -240,6 +240,11 @@ def Vector_ContractionOp :
     // iterators that index lhs, rhs, and the result.
     std::vector<std::pair<int64_t, int64_t>> getBatchDimMap();
 
+    // Returns (lhs dim, rhs dim) pairs for the free dimensions: "parallel"
+    // iterators that index exactly one of lhs and rhs. The dim of the operand
+    // that does not index the iterator is -1.
+    std::vector<std::pair<int64_t, int64_t>> getFreeDimMap();
+
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;
     }
