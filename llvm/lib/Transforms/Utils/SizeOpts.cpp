@@ -60,17 +60,20 @@ cl::opt<int> llvm::PgsoCutoffSampleProf(
 
 bool llvm::shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
                                  BlockFrequencyInfo *BFI,
-                                 PGSOQueryType QueryType) {
+                                 PGSOQueryType QueryType,
+                                 bool UseProfilingInfo) {
   if (F->hasOptSize())
     return true;
-  return shouldFuncOptimizeForSizeImpl(F, PSI, BFI, QueryType);
+  return UseProfilingInfo &&
+         shouldFuncOptimizeForSizeImpl(F, PSI, BFI, QueryType);
 }
 
 bool llvm::shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
                                  BlockFrequencyInfo *BFI,
-                                 PGSOQueryType QueryType) {
+                                 PGSOQueryType QueryType,
+                                 bool UseProfilingInfo) {
   assert(BB);
   if (BB->getParent()->hasOptSize())
     return true;
-  return shouldOptimizeForSizeImpl(BB, PSI, BFI, QueryType);
+  return UseProfilingInfo && shouldOptimizeForSizeImpl(BB, PSI, BFI, QueryType);
 }

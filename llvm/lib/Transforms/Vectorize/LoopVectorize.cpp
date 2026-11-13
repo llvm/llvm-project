@@ -6856,15 +6856,13 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
 // epilogue lowering for the tail-folded epilogue path will be handled
 // separately in getEpilogueTailLowering.
 static EpilogueLowering
-getEpilogueLowering(const VectorizeOptions &Opts, Function *F, Loop *L,
-                    LoopVectorizeHints &Hints, bool OptForSize,
-                    TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
-                    LoopVectorizationLegality &LVL,
+getEpilogueLowering(const VectorizeOptions &Opts, LoopVectorizeHints &Hints,
+                    bool OptForSize, TargetTransformInfo *TTI,
+                    TargetLibraryInfo *TLI, LoopVectorizationLegality &LVL,
                     InterleavedAccessInfo *IAI) {
   // 1) OptSize takes precedence over all other options, i.e. if this is set,
   // don't look at hints or options, and don't request an epilogue.
-  if (F->hasOptSize() ||
-      (OptForSize && Hints.getForce() != LoopVectorizeHints::FK_Enabled))
+  if (OptForSize)
     return CM_EpilogueNotAllowedOptSize;
 
   // 2) If set, obey the directives
@@ -7456,7 +7454,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool OptForSize = llvm::shouldOptimizeForSize(
       L->getHeader(), PSI,
       PSI && PSI->hasProfileSummary() ? &GetBFI() : nullptr,
-      PGSOQueryType::IRPass);
+      PGSOQueryType::IRPass,
+      Hints.getForce() != LoopVectorizeHints::FK_Enabled);
 
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
@@ -7522,10 +7521,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     }
   }
 
-  // Check the function attributes and profiles to find out if this function
-  // should be optimized for size.
   EpilogueLowering SEL =
-      getEpilogueLowering(Opts, F, L, Hints, OptForSize, TTI, TLI, LVL, &IAI);
+      getEpilogueLowering(Opts, Hints, OptForSize, TTI, TLI, LVL, &IAI);
 
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
