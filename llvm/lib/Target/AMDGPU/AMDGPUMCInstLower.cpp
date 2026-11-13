@@ -467,10 +467,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       if (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32)
         V = AMDGPU::convertSetRegImmToVgprMSBs(*MI,
                                                STI.hasSetregVGPRMSBFixup());
-      else {
-        uint8_t Imm = MI->getOperand(0).getImm() & 0xff;
-        V = Imm;
-      }
+      else
+        V = static_cast<unsigned>(MI->getOperand(0).getImm() & 0xff);
       if (V.has_value())
         OutStreamer->AddComment(
             " msbs: dst=" + Twine(*V >> 6) + " src0=" + Twine(*V & 3) +
