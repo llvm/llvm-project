@@ -92,3 +92,4 @@ body:             |
     %undef:_(<2 x i32>) = G_IMPLICIT_DEF
     %op:_(<2 x i32>) = G_UREM %undef(<2 x i32>), %rhs(<2 x i32>)
     $d0 = COPY %op(<2 x i32>)
+...

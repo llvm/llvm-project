@@ -31,14 +31,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gprnopc, preferred-register: '' }
-  - { id: 3, class: rgpr, preferred-register: '' }
-  - { id: 4, class: gprnopc, preferred-register: '' }
-  - { id: 5, class: rgpr, preferred-register: '' }
-  - { id: 6, class: rgpr, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }

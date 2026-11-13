@@ -12,8 +12,6 @@
 ---
 name:            test_global
 alignment:       4
-registers:
-  - { id: 0, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
