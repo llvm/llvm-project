@@ -27,9 +27,13 @@ subroutine f(arg)
 end
 
 ! CHECK-LABEL: define internal void @.omp_mapper._QQFfm
+! Storage-only parent for the whole variable, then each element MEMBER_OF it.
+! CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 40, i64 %{{.*}}, ptr @{{.*}})
 ! CHECK: omp_mapper.iterator.cond:
 ! CHECK: icmp ult i64 %{{.*}}, 10
 ! CHECK: omp_mapper.iterator.body:
 ! CHECK: %[[FIELD:.*]] = getelementptr %_QFfTs, ptr %omp.arraymap.ptrcurrent, i32 0, i32 0
 ! CHECK: %[[ELEM:.*]] = getelementptr inbounds [10 x i32], ptr %[[FIELD]], i64 0, i64 %{{.*}}
-! CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[ELEM]], ptr %[[ELEM]], i64 4, i64 %{{.*}}, ptr null)
+! CHECK: %[[SIZE:.*]] = mul i64 %{{.*}}, 4
+! CHECK: add nuw i64 281474976710659, %{{.*}}
+! CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[FIELD]], ptr %[[ELEM]], i64 %[[SIZE]], i64 %{{.*}}, ptr null)

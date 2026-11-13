@@ -678,12 +678,12 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     for (Value iterVal : op.getMapIterated()) {
       auto itersOp = iterVal.getDefiningOp<omp::IteratorOp>();
       bool supported = itersOp && itersOp.getLoopLowerBounds().size() == 1;
+      omp::MapInfoOp mapInfoOp;
       if (supported) {
         omp::YieldOp yieldOp = itersOp.getYieldOp();
         supported = yieldOp && yieldOp.getResults().size() == 1;
         if (supported) {
-          auto mapInfoOp =
-              yieldOp.getResults()[0].getDefiningOp<omp::MapInfoOp>();
+          mapInfoOp = yieldOp.getResults()[0].getDefiningOp<omp::MapInfoOp>();
           supported =
               mapInfoOp && !mapInfoOp.getVarPtrPtr() &&
               mapInfoOp.getMembers().empty() &&
@@ -693,6 +693,18 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       if (!supported) {
         result = todo("map/motion clause with iterator modifier");
         return;
+      }
+      // Bounds with a byte stride come from a descriptor, i.e. the locator is
+      // an element of an ALLOCATABLE or POINTER component. Mapping it needs
+      // the descriptor and an attach entry for the component's base address,
+      // which the per-iteration map.info does not carry.
+      for (Value bound : mapInfoOp.getBounds()) {
+        auto boundOp = bound.getDefiningOp<omp::MapBoundsOp>();
+        if (boundOp && boundOp.getStrideInBytes()) {
+          result = todo("iterator modifier with ALLOCATABLE or POINTER "
+                        "component in declare mapper");
+          return;
+        }
       }
     }
   };
@@ -8838,6 +8850,42 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     // selecting the mapped element, the same shape as an ordinary
     // array-section map, so the existing calculateBoundsOffset helper
     // computes its address.
+    //
+    // Like statically-known members (see processMapWithMembersOf), the
+    // iterated elements are grouped under a component for the mapper variable
+    // via MEMBER_OF, so the runtime treats them as sub-ranges of one
+    // allocation rather than independent objects. If the mapper also maps the
+    // variable itself that component is reused; otherwise a storage-only
+    // parent covering the variable is synthesized.
+    llvm::omp::OpenMPOffloadMappingFlags iteratedMemberOf =
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+    if (!declMapperInfoOp.getMapIterated().empty()) {
+      std::optional<unsigned> parentIdx;
+      for (unsigned i = 0; i < combinedInfo.BasePointers.size(); ++i) {
+        if (combinedInfo.BasePointers[i] == ptrPHI &&
+            combinedInfo.Pointers[i] == ptrPHI) {
+          parentIdx = i;
+          break;
+        }
+      }
+      if (!parentIdx) {
+        parentIdx = combinedInfo.BasePointers.size();
+        combinedInfo.BasePointers.push_back(ptrPHI);
+        combinedInfo.Pointers.push_back(ptrPHI);
+        combinedInfo.Sizes.push_back(
+            builder.getInt64(dl.getTypeSize(declMapperOp.getType())));
+        combinedInfo.Types.push_back(
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE);
+        combinedInfo.HasAttachPtr.push_back(false);
+        combinedInfo.DevicePointers.push_back(
+            llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+        combinedInfo.Mappers.push_back(nullptr);
+        combinedInfo.Names.push_back(LLVM::createMappingInformation(
+            declMapperOp.getLoc(), *ompBuilder, declMapperOp.getSymName()));
+      }
+      iteratedMemberOf = ompBuilder->getMemberOfFlag(*parentIdx);
+    }
+
     for (mlir::Value iterVal : declMapperInfoOp.getMapIterated()) {
       auto itersOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
       assert(itersOp && "map_iterated value must be defined by omp.iterator");
@@ -8851,14 +8899,17 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       assert(mapInfoOp && "expected an omp.map.info in the map_iterated body");
 
       mlir::Type varPtrMlirTy = mapInfoOp.getVarPtrType();
-      mlir::Type elemMlirTy = varPtrMlirTy;
-      if (auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(varPtrMlirTy))
-        elemMlirTy = arrTy.getElementType();
       llvm::Type *baseLLVMTy = moduleTranslation.convertType(varPtrMlirTy);
-      llvm::Value *sizeVal = builder.getInt64(dl.getTypeSize(elemMlirTy));
+      // Byte size of one element of the locator's innermost dimension; the
+      // bounds supply the (runtime) element count per iteration.
+      uint64_t elemSizeInBits = dl.getTypeSizeInBits(varPtrMlirTy);
+      if (auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(varPtrMlirTy))
+        elemSizeInBits = getArrayElementSizeInBits(arrTy, dl);
+      llvm::Value *elemSizeVal = builder.getInt64(elemSizeInBits / 8);
 
       llvm::omp::OpenMPOffloadMappingFlags mapType =
           convertClauseMapFlags(mapInfoOp.getMapType());
+      ompBuilder->setCorrectMemberOfFlag(mapType, iteratedMemberOf);
       bool hasAttachPtr =
           (mapType & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) !=
           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
@@ -8878,8 +8929,8 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       // the lb/ub/step values in the (already cleared) ModuleTranslation
       // value map.
       seg.GenEntry = [&moduleTranslation, itersOp, mapInfoOp, baseLLVMTy,
-                      sizeVal, iterInfo](llvm::IRBuilderBase &b,
-                                         llvm::Value *linearIV) mutable
+                      elemSizeVal, iterInfo](llvm::IRBuilderBase &b,
+                                             llvm::Value *linearIV) mutable
           -> llvm::Expected<llvm::SmallVector<llvm::Value *, 3>> {
         if (failed(convertIteratorRegion(
                 linearIV, iterInfo, itersOp.getRegion(), b, moduleTranslation)))
@@ -8894,8 +8945,25 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
         if (!offsetIdx.empty())
           addr = b.CreateInBoundsGEP(isByteOffset ? b.getInt8Ty() : baseLLVMTy,
                                      base, offsetIdx);
+        // Size = product over dimensions of (ub - lb + 1), times the element
+        // size, the same calculation getSizeInBytes does for static entries.
+        llvm::Value *elementCount = b.getInt64(1);
+        for (mlir::Value bound : mapInfoOp.getBounds()) {
+          auto boundOp = bound.getDefiningOp<mlir::omp::MapBoundsOp>();
+          if (!boundOp)
+            continue;
+          llvm::Value *lb =
+              moduleTranslation.lookupValue(boundOp.getLowerBound());
+          llvm::Value *ub =
+              moduleTranslation.lookupValue(boundOp.getUpperBound());
+          elementCount = b.CreateMul(
+              elementCount, b.CreateAdd(b.CreateSub(ub, lb), b.getInt64(1)));
+        }
+        llvm::Value *size = b.CreateMul(elementCount, elemSizeVal);
         moduleTranslation.forgetMapping(itersOp.getRegion());
-        return llvm::SmallVector<llvm::Value *, 3>{addr, addr, sizeVal};
+        // The array base is the component's base pointer, as for a
+        // statically-known member; MEMBER_OF ties it to the parent entry.
+        return llvm::SmallVector<llvm::Value *, 3>{base, addr, size};
       };
 
       if (mapInfoOp.getMapperId()) {

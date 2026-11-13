@@ -859,6 +859,36 @@ llvm.func @target_data_map_iterator(%addr : !llvm.ptr) {
 // -----
 
 module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  // Bounds with a byte stride come from a descriptor, i.e. the iterated
+  // locator is an element of an ALLOCATABLE or POINTER component. Mapping it
+  // needs the descriptor and an attach entry, which are not emitted yet.
+  omp.declare_mapper @mapper_iterator_allocatable : !llvm.struct<"mapper_type", (struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c4 = llvm.mlir.constant(4 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %it = omp.iterator(%iv: i64) = (%c0 to %c1 step %c1) {
+      %desc = llvm.getelementptr %arg[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"mapper_type", (struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>
+      %data = llvm.load %desc : !llvm.ptr -> !llvm.ptr
+      %bounds = omp.map.bounds lower_bound(%iv : i64) upper_bound(%iv : i64) stride(%c4 : i64) start_idx(%c0 : i64) stride_in_bytes(true)
+      %m = omp.map.info var_ptr(%data : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) bounds(%bounds) name("") -> !llvm.ptr
+      omp.yield(%m : !llvm.ptr)
+    } inclusive -> !omp.iterated<!llvm.ptr>
+    // expected-error@below {{not yet implemented: Unhandled clause iterator modifier with ALLOCATABLE or POINTER component in declare mapper in omp.declare_mapper.info operation}}
+    omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  llvm.func @target_data_mapper_iterator_allocatable(%addr : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_iterator_allocatable) name("") -> !llvm.ptr
+    // expected-error@below {{LLVM Translation failed for operation: omp.target_data}}
+    omp.target_data map_entries(%map : !llvm.ptr) {}
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   // Translation does not support mappers with multi-dimensional iterators.
   omp.declare_mapper @mapper_with_iterator : !llvm.struct<"mapper_type", (i32)> {
   ^bb0(%arg: !llvm.ptr):
