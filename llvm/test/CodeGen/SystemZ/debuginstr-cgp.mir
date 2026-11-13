@@ -167,5 +167,4 @@
 ---
 name:            Fun
 alignment:       16
-tracksRegLiveness: true
 ...

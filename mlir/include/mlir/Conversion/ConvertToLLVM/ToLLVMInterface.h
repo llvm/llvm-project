@@ -9,7 +9,6 @@
 #ifndef MLIR_CONVERSION_CONVERTTOLLVM_TOLLVMINTERFACE_H
 #define MLIR_CONVERSION_CONVERTTOLLVM_TOLLVMINTERFACE_H
 
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/MLIRContext.h"
 
 namespace mlir {

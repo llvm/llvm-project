@@ -163,7 +163,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -201,7 +200,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -239,7 +237,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -276,7 +273,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -314,7 +310,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -352,7 +347,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -389,7 +383,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -428,7 +421,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -467,7 +459,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -505,7 +496,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -544,7 +534,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -583,7 +572,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -621,7 +609,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rbp' }
@@ -662,7 +649,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -700,7 +686,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -737,7 +722,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rbx' }
   - { reg: '$rbp' }
@@ -774,7 +758,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rbx' }
   - { reg: '$rbp' }
@@ -811,7 +794,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -849,7 +831,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -886,7 +867,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rbx' }
   - { reg: '$rbp' }
@@ -923,7 +903,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rbx' }
   - { reg: '$rbp' }
@@ -961,7 +940,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rbx' }
   - { reg: '$rbp' }
@@ -998,7 +976,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rbp' }
   - { reg: '$rax' }
@@ -1050,7 +1027,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rbx' }
   - { reg: '$rbp' }
@@ -1087,7 +1063,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rbp' }
   - { reg: '$rax' }
@@ -1139,7 +1114,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }

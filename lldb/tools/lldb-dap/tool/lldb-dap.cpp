@@ -146,6 +146,10 @@ EXAMPLES:
 }
 
 static void PrintVersion() {
+  // Plugins add to the version string, so initialize them first.
+  lldb::SBDebugger::Initialize();
+  llvm::scope_exit cleanup{[]() { lldb::SBDebugger::Terminate(); }};
+
   llvm::outs() << "lldb-dap: ";
   llvm::cl::PrintVersionMessage();
   llvm::outs() << "liblldb: " << lldb::SBDebugger::GetVersionString() << '\n';

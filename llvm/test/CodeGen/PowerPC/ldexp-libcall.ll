@@ -15,7 +15,7 @@ define float @call_ldexpf(float %a, i32 %b) nounwind {
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
-  %result = call float @ldexpf(float %a, i32 %b)
+  %result = call float @llvm.ldexp.f32.i32(float %a, i32 %b)
   ret float %result
 }
 
@@ -32,7 +32,7 @@ define double @call_ldexp(double %a, i32 %b) nounwind {
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
-  %result = call double @ldexp(double %a, i32 %b)
+  %result = call double @llvm.ldexp.f64.i32(double %a, i32 %b)
   ret double %result
 }
 
@@ -49,12 +49,6 @@ define ppc_fp128 @call_ldexpl(ppc_fp128 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
-  %result = call ppc_fp128 @ldexpl(ppc_fp128 %a, i32 %b)
+  %result = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 %a, i32 %b)
   ret ppc_fp128 %result
 }
-
-declare float @ldexpf(float %a, i32 %b) #0
-declare double @ldexp(double %a, i32 %b) #0
-declare ppc_fp128 @ldexpl(ppc_fp128 %a, i32 %b) #0
-
-attributes #0 = { nounwind readonly }

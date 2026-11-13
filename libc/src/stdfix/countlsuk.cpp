@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "countlsuk.h"
+#include "src/stdfix/countlsuk.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL

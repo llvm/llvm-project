@@ -24,7 +24,6 @@
 ---
 name:            main
 alignment:       16
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: main
   ; CHECK: bb.0:

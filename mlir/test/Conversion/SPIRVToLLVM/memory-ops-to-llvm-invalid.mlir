@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-spirv-to-llvm -verify-diagnostics -split-input-file
+// RUN: mlir-opt %s -convert-spirv-to-llvm='allow-pattern-rollback=0' -verify-diagnostics -split-input-file
 
 //===----------------------------------------------------------------------===//
 // spirv.CopyMemory

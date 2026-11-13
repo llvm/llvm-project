@@ -6,7 +6,6 @@
 
 ---
 name:            invert_cond_branch
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: invert_cond_branch
   ; CHECK: bb.0:
@@ -47,7 +46,6 @@ body:             |
 ...
 ---
 name:            insert_uncond_branch
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: insert_uncond_branch
   ; CHECK: bb.0:

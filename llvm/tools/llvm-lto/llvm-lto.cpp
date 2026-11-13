@@ -516,11 +516,11 @@ static void listDependentLibraries() {
   }
 }
 
-static void printMachOCPUOnly() {
+static void printMachOCPUOnly(const cl::LibraryOptionsContext &LibraryOptions) {
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
                                true);
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  TargetOptions Options = codegen::getTargetOptions(LibraryOptions, Triple());
   for (auto &Filename : InputFilenames) {
     ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
         LTOModule::createFromFile(Context, Filename, Options);
@@ -1010,14 +1010,14 @@ int main(int argc, char **argv) {
   InitializeAllAsmParsers();
 
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
-                              "llvm LTO linker\n");
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc), "llvm LTO linker\n");
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");
 
   // set up the TargetOptions for the machine
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  TargetOptions Options = codegen::getTargetOptions(LibraryOptions, Triple());
 
   if (ListSymbolsOnly || QueryHasCtorDtor) {
     testLTOModule(Options);
@@ -1050,7 +1050,7 @@ int main(int argc, char **argv) {
   }
 
   if (PrintMachOCPUOnly) {
-    printMachOCPUOnly();
+    printMachOCPUOnly(LibraryOptions);
     return 0;
   }
 

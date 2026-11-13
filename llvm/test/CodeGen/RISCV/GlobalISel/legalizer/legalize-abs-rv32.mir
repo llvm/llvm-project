@@ -6,11 +6,13 @@
 
 ---
 name:            abs_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV32I-LABEL: name: abs_i8
-    ; RV32I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I: liveins: $x10
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
     ; RV32I-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
@@ -25,7 +27,9 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: abs_i8
-    ; RV32ZBB: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB: liveins: $x10
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
     ; RV32ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASSERT_ZEXT]], 8
     ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -45,11 +49,13 @@ body:             |
 ...
 ---
 name:            abs_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV32I-LABEL: name: abs_i16
-    ; RV32I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I: liveins: $x10
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
     ; RV32I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[ASSERT_SEXT]], [[C]](s32)
@@ -62,7 +68,9 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: abs_i16
-    ; RV32ZBB: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB: liveins: $x10
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
     ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[ASSERT_SEXT]]
@@ -80,11 +88,13 @@ body:             |
 ...
 ---
 name:            abs_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV32I-LABEL: name: abs_i32
-    ; RV32I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I: liveins: $x10
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; RV32I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
     ; RV32I-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[ASHR]]
@@ -93,7 +103,9 @@ body:             |
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: abs_i32
-    ; RV32ZBB: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB: liveins: $x10
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]], [[COPY]]
     ; RV32ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s32) = G_SMAX [[COPY]], [[SUB]]
@@ -106,11 +118,13 @@ body:             |
 ...
 ---
 name:            abs_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: abs_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY1]], [[C]](s32)

@@ -9,7 +9,6 @@
 ---
 name:            constraint_h
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: tgpr }
   - { id: 1, class: hgpr }

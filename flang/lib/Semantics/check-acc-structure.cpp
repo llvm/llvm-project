@@ -1102,6 +1102,10 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
             [&](const parser::Designator &designator) {
               if (const auto *name =
                       parser::GetDesignatorNameIfDataRef(designator)) {
+                if (!name->symbol) {
+                  // Name resolution has already reported the unresolved name.
+                  return;
+                }
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
                     context_.Warn(common::UsageWarning::OpenAccUsage,

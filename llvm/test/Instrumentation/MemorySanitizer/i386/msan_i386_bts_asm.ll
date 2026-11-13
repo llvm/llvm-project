@@ -11,13 +11,12 @@ define dso_local i32 @main() sanitize_memory {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
@@ -88,13 +87,12 @@ define dso_local i32 @main() sanitize_memory {
 ; CONS-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CONS-NEXT:  [[ENTRY:.*:]]
 ; CONS-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CONS-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CONS-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CONS-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CONS-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CONS-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CONS-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CONS-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CONS-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CONS-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CONS-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CONS-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CONS-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CONS-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CONS-NEXT:    [[TMP18:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
 ; CONS-NEXT:    call void @llvm.donothing()
 ; CONS-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4

@@ -266,6 +266,22 @@ add_libc_test(
 )
 
 add_libc_test(
+  clock_nanosleep_test
+  SUITE
+    libc-time-tests
+  SRCS
+    clock_nanosleep_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.time.clock_nanosleep
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.Test
+)
+
+add_libc_test(
   nanosleep_test
   SUITE
     libc-time-tests
@@ -344,4 +360,25 @@ add_libc_test(
   DEPENDS
     libc.src.time.tz_variables
     libc.src.time.tzset
+)
+
+# Depending on the gmtime entrypoint skips this test on targets that don't
+# enable the time functions. time_utils requires a 64-bit time_t and does not
+# compile on overlay builds whose system time_t is 32-bit (e.g. armhf).
+add_libc_test(
+  time_utils_test
+  SUITE
+    libc-time-tests
+  SRCS
+    time_utils_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_tm
+    libc.hdr.types.time_t
+    libc.src.time.gmtime
+    libc.src.time.time_constants
+    libc.src.time.time_utils
 )

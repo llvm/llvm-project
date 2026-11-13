@@ -382,8 +382,6 @@ void testComplexConditionals1() {
     *var2; // expected-warning {{invalid invocation of method 'operator*' on object 'var2' while it is in the 'unknown' state}}
   }
   
-#if 0
-  // FIXME: Get this test to pass.
   if (var0 || var1 || var2) {
     *var0; // expected-warning {{invalid invocation of method 'operator*' on object 'var0' while it is in the 'unknown' state}}
     *var1; // expected-warning {{invalid invocation of method 'operator*' on object 'var1' while it is in the 'unknown' state}}
@@ -394,7 +392,6 @@ void testComplexConditionals1() {
     *var1; // expected-warning {{invalid invocation of method 'operator*' on object 'var1' while it is in the 'consumed' state}}
     *var2; // expected-warning {{invalid invocation of method 'operator*' on object 'var2' while it is in the 'consumed' state}}
   }
-#endif
 }
 
 void testStateChangeInBranch() {

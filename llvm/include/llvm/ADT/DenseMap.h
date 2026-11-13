@@ -1360,8 +1360,9 @@ template <typename Storage1T, typename Storage2T, typename KeyT,
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
-class DenseMap : public DenseMapBase<densemap::detail::DenseMapStorage<BucketT>,
-                                     KeyT, ValueT, KeyInfoT, BucketT> {
+class LLVM_ATTRIBUTE_WARN_UNUSED DenseMap
+    : public DenseMapBase<densemap::detail::DenseMapStorage<BucketT>, KeyT,
+                          ValueT, KeyInfoT, BucketT> {
   using BaseT = DenseMapBase<densemap::detail::DenseMapStorage<BucketT>, KeyT,
                              ValueT, KeyInfoT, BucketT>;
 

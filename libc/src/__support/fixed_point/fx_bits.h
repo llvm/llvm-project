@@ -9,20 +9,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 
+#include "hdr/stdint_proxy.h"
 #include "include/llvm-libc-macros/stdfix-macros.h"
-#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/libc_assert.h"
+#include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 #include "src/__support/uint128.h"
-
-#include "fx_rep.h"
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 
@@ -275,14 +273,11 @@ fxdivi(IntType n, IntType d) {
     d_mag = d;
   }
 
-  if constexpr (OutRep::INTEGRAL_LEN > 0) {
-    constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1)
-                                  << OutRep::INTEGRAL_LEN;
+  constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1) << OutRep::INTEGRAL_LEN;
 
-    if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
-                      MAX_UNITS * static_cast<UInt128>(d_mag)))
-      return result_is_negative ? OutRep::MIN() : OutRep::MAX();
-  }
+  if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
+                    MAX_UNITS * static_cast<UInt128>(d_mag)))
+    return result_is_negative ? OutRep::MIN() : OutRep::MAX();
 
   WideFXType res;
 
@@ -390,13 +385,16 @@ divifx(IntType n, FXType d) {
 
   constexpr int F = FXRep::FRACTION_LEN;
 
-  constexpr int INTERMEDIATE_BITS =
-      sizeof(IntType) * 8 - cpp::is_signed_v<IntType> + F;
+  constexpr int INTERMEDIATE_BITS = cpp::numeric_limits<IntType>::digits + F;
 
   using WideType = cpp::conditional_t<
       cpp::is_signed_v<IntType>,
-      cpp::conditional_t<INTERMEDIATE_BITS <= 64, int64_t, Int128>,
-      cpp::conditional_t<INTERMEDIATE_BITS <= 64, uint64_t, UInt128>>;
+      cpp::conditional_t<INTERMEDIATE_BITS <=
+                             cpp::numeric_limits<int64_t>::digits,
+                         int64_t, Int128>,
+      cpp::conditional_t<INTERMEDIATE_BITS <=
+                             cpp::numeric_limits<uint64_t>::digits,
+                         uint64_t, UInt128>>;
 
   WideType scaled_n = static_cast<WideType>(n) << F;
   WideType result = scaled_n / static_cast<WideType>(d_comp);

@@ -3,32 +3,28 @@
 
 ; With ELEN 32 the i64 shuffle has no valid cost, so the insert price stays.
 
-define void @mul_lane_and_arg(ptr %p, ptr %q, i64 %c) {
-; CHECK-LABEL: define void @mul_lane_and_arg(
-; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i64 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[C]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP2]], <2 x i32> <i32 3, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <2 x i64> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[Q]], align 8
+define void @swapped_lanes(ptr %p, ptr %q) {
+; CHECK-LABEL: define void @swapped_lanes(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i64> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP4]] to <2 x i16>
+; CHECK-NEXT:    store <2 x i16> [[TMP5]], ptr [[Q]], align 2
 ; CHECK-NEXT:    ret void
 ;
-  %p1 = getelementptr inbounds i64, ptr %p, i64 1
-  %a0 = load i64, ptr %p, align 8
-  %a1 = load i64, ptr %p1, align 8
-  %x0 = xor i64 %a0, 1
-  %x1 = xor i64 %a1, 1
-  %z0 = zext i64 %x0 to i128
-  %z1 = zext i64 %x1 to i128
-  %w0 = zext i64 %x1 to i128
-  %w1 = zext i64 %c to i128
-  %m0 = mul nuw i128 %z0, %w0
-  %m1 = mul nuw i128 %z1, %w1
-  %t0 = trunc i128 %m0 to i64
-  %t1 = trunc i128 %m1 to i64
-  %q1 = getelementptr inbounds i64, ptr %q, i64 1
-  store i64 %t0, ptr %q, align 8
-  store i64 %t1, ptr %q1, align 8
+  %p1 = getelementptr inbounds i16, ptr %p, i64 1
+  %l0 = load i16, ptr %p, align 2
+  %l1 = load i16, ptr %p1, align 2
+  %e0 = zext i16 %l0 to i64
+  %e1 = zext i16 %l1 to i64
+  %s0 = shl i64 %e0, %e1
+  %s1 = shl i64 %e1, %e0
+  %t0 = trunc i64 %s0 to i16
+  %t1 = trunc i64 %s1 to i16
+  %q1 = getelementptr inbounds i16, ptr %q, i64 1
+  store i16 %t0, ptr %q, align 2
+  store i16 %t1, ptr %q1, align 2
   ret void
 }

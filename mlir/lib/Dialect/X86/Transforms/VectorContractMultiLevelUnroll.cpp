@@ -280,7 +280,7 @@ static void setNativeShapeAttr(VectorTransferOpInterface op,
 static LogicalResult matchCanonicalMatmul(MLUCandidate &candidate,
                                           PatternRewriter &rewriter) {
   vector::ContractionOp contract = candidate.contract;
-  if (contract.getKind() != vector::CombiningKind::ADD)
+  if (!contract.isAddKind())
     return rewriter.notifyMatchFailure(contract,
                                        "not using ADD combining kind");
 

@@ -9,7 +9,6 @@
 ...
 ---
 name:            func
-tracksRegLiveness: true
 tracksDebugUserValues: true
 body:             |
   bb.0:

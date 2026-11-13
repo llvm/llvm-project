@@ -19,7 +19,6 @@
 ---
 name:            fun0
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: grx32bit }
   - { id: 1, class: grx32bit }
@@ -73,7 +72,6 @@ body:             |
 ---
 name:            fun1
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64bit }
   - { id: 1, class: gr64bit }
@@ -130,7 +128,6 @@ body:             |
 ---
 name:            fun2
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: grx32bit }
   - { id: 1, class: grx32bit }
@@ -187,7 +184,6 @@ body:             |
 ---
 name:            fun3
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64bit }
   - { id: 1, class: gr64bit }

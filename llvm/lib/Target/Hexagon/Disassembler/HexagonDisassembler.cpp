@@ -142,6 +142,12 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder);
+static DecodeStatus DecodeHlxLRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder);
+static DecodeStatus DecodeHlxLLRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder);
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const MCDisassembler *Decoder);
@@ -500,7 +506,9 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
 
   }
 
-  if (HexagonMCInstrInfo::isNewValue(*MCII, MI)) {
+  // HLX NV instructions use the producing register directly in the encoding.
+  if (HexagonMCInstrInfo::isNewValue(*MCII, MI) &&
+      !HexagonMCInstrInfo::isHLX(*MCII, MI)) {
     unsigned OpIndex = HexagonMCInstrInfo::getNewValueOp(*MCII, MI);
     MCOperand &MCO = MI.getOperand(OpIndex);
     assert(MCO.isReg() && "New value consumers must be registers");
@@ -641,6 +649,31 @@ static DecodeStatus DecodeHvxVRRegisterClass(MCInst &Inst, unsigned RegNo,
       Hexagon::V30, Hexagon::V31};
 
   return DecodeRegisterClass(Inst, RegNo, HvxVRDecoderTable);
+}
+
+static DecodeStatus DecodeHlxLRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t /*Address*/,
+                                             const MCDisassembler *Decoder) {
+  static const MCPhysReg HlxLRDecoderTable[] = {
+      Hexagon::L0,  Hexagon::L1,  Hexagon::L2,  Hexagon::L3,
+      Hexagon::L4,  Hexagon::L5,  Hexagon::L6,  Hexagon::L7,
+      Hexagon::L8,  Hexagon::L9,  Hexagon::L10, Hexagon::L11,
+      Hexagon::L12, Hexagon::L13, Hexagon::L14, Hexagon::L15};
+
+  return DecodeRegisterClass(Inst, RegNo, HlxLRDecoderTable);
+}
+
+static DecodeStatus DecodeHlxLLRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t /*Address*/,
+                                              const MCDisassembler *Decoder) {
+  static const MCPhysReg HlxLLRDecoderTable[] = {
+      Hexagon::LL0, Hexagon::LL1, Hexagon::LL2, Hexagon::LL3,
+      Hexagon::LL4, Hexagon::LL5, Hexagon::LL6, Hexagon::LL7};
+
+  if (RegNo & 1)
+    return MCDisassembler::Fail;
+
+  return DecodeRegisterClass(Inst, RegNo / 2, HlxLLRDecoderTable);
 }
 
 static DecodeStatus

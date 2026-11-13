@@ -30,7 +30,6 @@
 ---
 name:            fadd_v4f32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -58,7 +57,6 @@ body:             |
 ---
 name:            fadd_v2f64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -86,7 +84,6 @@ body:             |
 ---
 name:            fsub_v4f32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -114,7 +111,6 @@ body:             |
 ---
 name:            fsub_v2f64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -142,7 +138,6 @@ body:             |
 ---
 name:            fmul_v4f32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -170,7 +165,6 @@ body:             |
 ---
 name:            fmul_v2f64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -198,7 +192,6 @@ body:             |
 ---
 name:            fdiv_v4f32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -226,7 +219,6 @@ body:             |
 ---
 name:            fdiv_v2f64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6

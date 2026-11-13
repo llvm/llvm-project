@@ -31,7 +31,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }

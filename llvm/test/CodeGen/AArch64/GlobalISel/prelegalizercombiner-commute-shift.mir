@@ -3,7 +3,6 @@
 ---
 name:            shl_add_k
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w1, $x0
@@ -32,7 +31,6 @@ body:             |
 ---
 name:            shl_or_k
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w1, $x0
@@ -61,7 +59,6 @@ body:             |
 ---
 name:            shl_or_k_multiuse
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w1, $x0
@@ -94,7 +91,6 @@ body:             |
 ---
 name:            shl_add_k_vector
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w1, $x0

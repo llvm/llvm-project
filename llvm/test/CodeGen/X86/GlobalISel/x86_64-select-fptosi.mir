@@ -57,7 +57,6 @@ name:            float_to_int8
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -88,7 +87,6 @@ name:            float_to_int16
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -119,7 +117,6 @@ name:            float_to_int32
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -147,7 +144,6 @@ name:            float_to_int64
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -175,7 +171,6 @@ name:            double_to_int8
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -206,7 +201,6 @@ name:            double_to_int16
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -237,7 +231,6 @@ name:            double_to_int32
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -265,7 +258,6 @@ name:            double_to_int64
 alignment:       16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }

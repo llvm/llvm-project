@@ -145,7 +145,6 @@
 ---
 name:            _Z11parse_rangeRyS_Ss
 alignment:       16
-tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi' }
   - { reg: '$rsi' }

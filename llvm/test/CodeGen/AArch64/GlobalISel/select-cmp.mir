@@ -4,7 +4,6 @@
 name:            cmp_imm_32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -28,7 +27,6 @@ body:             |
 name:            cmp_imm_64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -52,7 +50,6 @@ body:             |
 name:            cmp_imm_out_of_range
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -78,7 +75,6 @@ body:             |
 name:            cmp_imm_lookthrough
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -102,7 +98,6 @@ body:             |
 name:            cmp_imm_lookthrough_bad_trunc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -126,7 +121,6 @@ body:             |
 name:            cmp_neg_imm_32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -149,7 +143,6 @@ body:             |
 name:            cmp_neg_imm_64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -172,7 +165,6 @@ body:             |
 name:            cmp_neg_imm_invalid
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -195,7 +187,6 @@ body:             |
 name:            cmp_arith_extended_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $x1
@@ -223,7 +214,6 @@ body:             |
 name:            cmp_arith_extended_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $h0
@@ -253,7 +243,6 @@ body:             |
 name:            cmp_arith_extended_shl_too_large
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $x1
@@ -285,7 +274,6 @@ body:             |
 name:            cmp_add_rhs
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -316,7 +304,6 @@ body:             |
 name:            cmp_add_lhs
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -347,7 +334,6 @@ body:             |
 name:            cmp_add_lhs_vector
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -378,7 +364,6 @@ body:             |
 name:            cmp_add_rhs_64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -409,7 +394,6 @@ body:             |
 name:            cmp_add_rhs_64_zext_multi_use
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -445,7 +429,6 @@ body:             |
 name:            cmp_add_rhs_64_cmp_multi_use
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

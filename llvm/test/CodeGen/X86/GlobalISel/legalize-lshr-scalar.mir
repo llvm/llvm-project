@@ -10,7 +10,6 @@ name:            test_lshr
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -55,7 +54,6 @@ name:            test_lshr_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }

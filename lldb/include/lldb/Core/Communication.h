@@ -20,7 +20,6 @@
 
 namespace lldb_private {
 class Connection;
-class ConstString;
 class Status;
 
 /// \class Communication Communication.h "lldb/Core/Communication.h" An

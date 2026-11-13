@@ -8,7 +8,6 @@
 
 ---
 name:            gpr_pressure
-tracksRegLiveness: true
 # Keep X29 (FP) allocatable by providing the known max call frame size.
 frameInfo:
   maxCallFrameSize: 0

@@ -82,7 +82,7 @@ LIBC_ALWAYS_INLINE double exp(double x) {
   //   kd  = (k_biased & ROUND_MASK) - ROUND_SHIFT
   //   hi  = (int32_t)(k_bits >> 19) >> (13 + N)
   //   idx = (k_bits >> 32) & (2^N - 1).
-  constexpr double LOG2_E_SCALE = EXP_SCALE * LOG2_E.hi;
+  constexpr double LOG2_E_SCALE = EXP_SCALE * LOG2_E_DD.hi;
 
   double k_biased = fputil::multiply_add(x, LOG2_E_SCALE, ROUND_BIAS);
   double kd = fputil::fp_and(k_biased, ROUND_MASK) - ROUND_SHIFT;
@@ -98,7 +98,8 @@ LIBC_ALWAYS_INLINE double exp(double x) {
 #else // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   // With FMA, we use the full 53-bit:
-  //   MLOG_2_HI_53 = -2^-7 * log(2) = -LOG_2.hi * EXP_SCALE_INV  (lsb = 2^-60)
+  //   MLOG_2_HI_53 = -2^-7 * log(2) = -LOG_2_DD.hi * EXP_SCALE_INV (lsb =
+  //   2^-60)
   // to compute:
   //   u = x - k * 2^-7 * log(2) ~ t1 + d
   // where:
@@ -120,8 +121,8 @@ LIBC_ALWAYS_INLINE double exp(double x) {
   //   u.lo = fma(t1, d, d),
   // bounding the omitted term:
   //   |t1^2 * P(t1) * d| < 2^-63.
-  constexpr double MLOG_2_HI_53 = -LOG_2.hi * EXP_SCALE_INV;
-  constexpr double MLOG_2_LO_53 = -LOG_2.lo * EXP_SCALE_INV;
+  constexpr double MLOG_2_HI_53 = -LOG_2_DD.hi * EXP_SCALE_INV;
+  constexpr double MLOG_2_LO_53 = -LOG_2_DD.lo * EXP_SCALE_INV;
 
   double t1 = fputil::multiply_add(kd, MLOG_2_HI_53, x); // exact
   double d = kd * MLOG_2_LO_53;

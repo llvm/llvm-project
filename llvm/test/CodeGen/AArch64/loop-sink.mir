@@ -253,7 +253,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gpr64all, preferred-register: '' }
@@ -513,7 +512,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gpr32, preferred-register: '' }
@@ -640,7 +638,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gpr32, preferred-register: '' }
@@ -767,7 +764,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gpr32all, preferred-register: '' }
@@ -911,7 +907,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gpr32, preferred-register: '' }
@@ -1029,7 +1024,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gpr32sp, preferred-register: '' }
@@ -1167,7 +1161,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gpr32sp, preferred-register: '' }
@@ -1314,7 +1307,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 registers:
   - { id: 0, class: gpr32sp, preferred-register: '' }

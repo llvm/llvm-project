@@ -106,7 +106,7 @@ private:
     }
   }
 
-  // Specialization for optional<Expr<SomeInteger and SubscriptInteger>>
+  // Specialization for std::optional<Expr<T>>.
   template <typename T>
   evaluate::StructureConstructor GetValue(
       const std::optional<evaluate::Expr<T>> &expr,
@@ -219,8 +219,8 @@ static SomeExpr SaveDerivedPointerTarget(Scope &scope, SourceName name,
       }
       object.set_shape(arraySpec);
     }
-    object.set_init(
-        evaluate::AsGenericExpr(evaluate::Constant<evaluate::SomeDerived>{
+    object.set_init(evaluate::AsGenericExpr(
+        evaluate::Constant<evaluate::Type<common::TypeCategory::Derived>>{
             derivedType, std::move(x), std::move(shape)}));
     Symbol &symbol{*scope
                         .try_emplace(name, Attrs{Attr::TARGET, Attr::SAVE},
@@ -228,7 +228,8 @@ static SomeExpr SaveDerivedPointerTarget(Scope &scope, SourceName name,
                         .first->second};
     SetReadOnlyCompilerCreatedFlags(symbol);
     return evaluate::AsGenericExpr(
-        evaluate::Designator<evaluate::SomeDerived>{symbol});
+        evaluate::Designator<evaluate::Type<common::TypeCategory::Derived>>{
+            symbol});
   }
 }
 
@@ -305,7 +306,8 @@ static evaluate::StructureConstructor Structure(
 }
 
 static SomeExpr StructureExpr(evaluate::StructureConstructor &&x) {
-  return SomeExpr{evaluate::Expr<evaluate::SomeDerived>{std::move(x)}};
+  return SomeExpr{evaluate::Expr<evaluate::Type<common::TypeCategory::Derived>>{
+      std::move(x)}};
 }
 
 static int GetIntegerKind(const Symbol &symbol, bool canBeUninstantiated) {
@@ -357,7 +359,8 @@ static SomeExpr SaveObjectInit(
   CHECK(symbol.get<ObjectEntityDetails>().init().has_value());
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
-      evaluate::Designator<evaluate::SomeDerived>{/*kind=*/0, symbol});
+      evaluate::Designator<evaluate::Type<common::TypeCategory::Derived>>{
+          /*kind=*/0, symbol});
 }
 
 static SomeExpr IntExpr(int kind, std::int64_t n) {
@@ -483,8 +486,9 @@ const Symbol *RuntimeTableBuilder::DescribeType(
                     /*wantUninstantiatedPDT=*/true)
               : nullptr}) {
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Designator<evaluate::SomeDerived>{
+        evaluate::AsGenericExpr(evaluate::Expr<
+            evaluate::Type<common::TypeCategory::Derived>>{
+            evaluate::Designator<evaluate::Type<common::TypeCategory::Derived>>{
                 DEREF(uninstDescObject)}}));
   } else {
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
@@ -824,9 +828,11 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
         derivedDescription{DescribeType(
             DEREF(derivedScope), /*wantUninstantiatedPDT=*/false)}) {
       AddValue(values, componentSchema_, "derived"s,
-          evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
-              evaluate::Designator<evaluate::SomeDerived>{
-                  DEREF(derivedDescription)}}));
+          evaluate::AsGenericExpr(
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Derived>>{
+                  evaluate::Designator<
+                      evaluate::Type<common::TypeCategory::Derived>>{
+                      DEREF(derivedDescription)}}));
       // Package values of LEN parameters, if any
       if (const SymbolVector *
           specParams{GetTypeParameters(spec.typeSymbol())}) {

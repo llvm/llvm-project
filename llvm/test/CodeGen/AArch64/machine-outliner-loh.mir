@@ -10,7 +10,6 @@
 ---
 # CHECK-LABEL: name: func0
 name: func0
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: bb.0:
   bb.0:

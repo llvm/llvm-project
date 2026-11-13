@@ -493,8 +493,13 @@ bool RISCVVectorPeepholeImpl::ensureDominates(
     assert(MO->getParent()->getParent() == Use.getParent());
     if (!MO->isReg() || !MO->getReg().isValid())
       continue;
+    if (MO->getReg().isPhysical())
+      return false;
 
     MachineInstr *Def = MRI->getVRegDef(MO->getReg());
+    if (!Def)
+      continue;
+
     if (Def->getParent() == Dest->getParent() &&
         !strictlyDominates(Def, *Dest)) {
       if (!RISCVInstrInfo::isSafeToMove(*Dest, *Def->getNextNode()))
@@ -773,7 +778,9 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
               MachineOperand::CreateReg(MaskOp.getReg(), false));
 
   // Update the passthru, AVL and policy.
-  True.getOperand(True.getNumExplicitDefs()).setReg(FalseReg);
+  MachineOperand &TruePassthruOp = True.getOperand(True.getNumExplicitDefs());
+  TruePassthruOp.setReg(FalseReg);
+  TruePassthruOp.setIsUndef(FalseOp.isUndef());
   True.removeOperand(RISCVII::getVLOpNum(True.getDesc()));
   True.insert(True.operands_begin() + RISCVII::getVLOpNum(True.getDesc()),
               MinVL);

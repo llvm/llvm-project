@@ -14,7 +14,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringTable.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/SystemLibraries.h"
@@ -1479,13 +1478,6 @@ TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
   if (!BaselineInfoImpl)
     BaselineInfoImpl = TargetLibraryInfoImpl(F.getParent()->getTargetTriple());
   return TargetLibraryInfo(*BaselineInfoImpl, &F);
-}
-
-unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
-  if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
-      M.getModuleFlag("wchar_size")))
-    return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
-  return Triple(M.getTargetTriple()).getDefaultWCharSize();
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {

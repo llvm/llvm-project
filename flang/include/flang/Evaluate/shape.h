@@ -178,8 +178,6 @@ template <typename T> bool ContainsUntaggedRankOneBoundElement(const Expr<T> &);
 extern template bool ContainsUntaggedRankOneBoundElement(
     const Expr<SomeType> &);
 extern template bool ContainsUntaggedRankOneBoundElement(
-    const Expr<SomeInteger> &);
-extern template bool ContainsUntaggedRankOneBoundElement(
     const Expr<SubscriptInteger> &);
 
 // GetShape()

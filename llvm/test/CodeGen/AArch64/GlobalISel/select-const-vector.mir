@@ -5,7 +5,6 @@ name:            test_constant_vec_pool_v2f64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -36,7 +35,6 @@ name:            test_constant_vec_pool_v4f32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -66,7 +64,6 @@ name:            test_constant_vec_pool_v2i64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -96,7 +93,6 @@ name:            test_constant_vec_pool_v4i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -127,7 +123,6 @@ name:            test_constant_vec_pool_v2i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -157,7 +152,6 @@ name:            test_constant_all_zeros_v4f32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -185,7 +179,6 @@ name:            test_constant_all_ones_v4f32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:

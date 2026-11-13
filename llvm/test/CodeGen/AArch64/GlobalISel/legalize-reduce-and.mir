@@ -4,7 +4,6 @@
 ---
 name:            test_redand_v1i1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body:             |
@@ -30,7 +29,6 @@ body:             |
 ---
 name:            test_redand_v2i1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -58,7 +56,6 @@ body:             |
 ---
 name:            test_redand_v4i1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -92,7 +89,6 @@ body:             |
 ---
 name:            test_redand_v8i1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -134,7 +130,6 @@ body:             |
 ---
 name:            test_redand_v16i1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 frameInfo:
@@ -195,7 +190,6 @@ body:             |
 ---
 name:            test_redand_v1i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -222,7 +216,6 @@ body:             |
 ---
 name:            test_redand_v3i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }
@@ -255,7 +248,6 @@ body:             |
 ---
 name:            test_redand_v4i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -287,7 +279,6 @@ body:             |
 ---
 name:            test_redand_v8i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -326,7 +317,6 @@ body:             |
 ---
 name:            test_redand_v16i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -367,7 +357,6 @@ body:             |
 ---
 name:            test_redand_v32i8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
   - { reg: '$q1' }
@@ -413,7 +402,6 @@ body:             |
 ---
 name:            test_redand_v4i16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -444,7 +432,6 @@ body:             |
 ---
 name:            test_redand_v8i16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -477,7 +464,6 @@ body:             |
 ---
 name:            test_redand_v16i16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
   - { reg: '$q1' }
@@ -515,7 +501,6 @@ body:             |
 ---
 name:            test_redand_v2i32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -540,7 +525,6 @@ body:             |
 ---
 name:            test_redand_v4i32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -567,7 +551,6 @@ body:             |
 ---
 name:            test_redand_v8i32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
   - { reg: '$q1' }
@@ -599,7 +582,6 @@ body:             |
 ---
 name:            test_redand_v2i64
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -624,7 +606,6 @@ body:             |
 ---
 name:            test_redand_v4i64
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
   - { reg: '$q1' }

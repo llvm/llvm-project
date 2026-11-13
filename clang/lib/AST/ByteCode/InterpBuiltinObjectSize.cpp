@@ -432,10 +432,6 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
     }
 
     if (!UseClosestSurroundingVariable || DetermineForCompleteObject) {
-      // Kind=3 wants a lower bound, so we can't fall back to this.
-      if (Kind == 3 && !DetermineForCompleteObject)
-        return std::nullopt;
-
       if (InvalidBase)
         return std::nullopt;
 

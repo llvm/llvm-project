@@ -28,7 +28,6 @@
 # CHECK-NOT: lay
 ---
 name:            fun1
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 5000 }
   - { id: 1, size: 2500 }
@@ -72,7 +71,6 @@ body:             |
 # CHECK-NOT: lay
 ---
 name:            fun2
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 5000 }
   - { id: 1, size: 5000 }
@@ -116,7 +114,6 @@ body:             |
 # CHECK-NOT: lay %r1, 4096(%r15)
 ---
 name:            fun3
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 5000 }
   - { id: 1, size: 2500 }
@@ -160,7 +157,6 @@ body:             |
 # CHECK: lay %r1, 4096(%r15)
 ---
 name:            fun4
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:
@@ -190,7 +186,6 @@ body:             |
 # CHECK-NOT: lghi
 ---
 name:            fun5
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 5000 }
   - { id: 1, size: 2500 }
@@ -217,7 +212,6 @@ body:             |
 ---
 name:            fun6
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   maxAlignment:    1
@@ -250,7 +244,6 @@ body:             |
 ---
 name:            fun7
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 frameInfo:
   maxAlignment:    1
@@ -283,7 +276,6 @@ body:             |
 ---
 name:            fun8
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 liveins:
   - { reg: '$f0s' }

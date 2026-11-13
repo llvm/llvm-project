@@ -85,12 +85,16 @@ public:
     using ConditionalArgPartOrConsequent =
         std::variant<common::CopyableIndirection<ConditionalArg>, Consequent>;
 
-    ConditionalArg(Expr<SomeLogical> &&condition, Consequent &&consequent,
-        ConditionalArgPartOrConsequent &&tail);
+    ConditionalArg(Expr<Type<TypeCategory::Logical>> &&condition,
+        Consequent &&consequent, ConditionalArgPartOrConsequent &&tail);
     DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ConditionalArg)
 
-    Expr<SomeLogical> &condition() { return condition_.value(); }
-    const Expr<SomeLogical> &condition() const { return condition_.value(); }
+    Expr<Type<TypeCategory::Logical>> &condition() {
+      return condition_.value();
+    }
+    const Expr<Type<TypeCategory::Logical>> &condition() const {
+      return condition_.value();
+    }
     const Consequent &consequent() const { return consequent_; }
     Consequent &consequent() { return consequent_; }
     ConditionalArgPartOrConsequent &tail() { return tail_; }
@@ -146,7 +150,7 @@ public:
     llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   private:
-    common::CopyableIndirection<Expr<SomeLogical>> condition_;
+    common::CopyableIndirection<Expr<Type<TypeCategory::Logical>>> condition_;
     Consequent consequent_;
     ConditionalArgPartOrConsequent tail_;
   };

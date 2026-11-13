@@ -34,7 +34,6 @@
 
 ---
 name:            test_remat_v2f64
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body:             |
@@ -66,7 +65,6 @@ body:             |
 ...
 ---
 name:            test_remat_v4f32
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body:             |
@@ -98,7 +96,6 @@ body:             |
 ...
 ---
 name:            test_remat_v2f32
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body:             |
@@ -130,7 +127,6 @@ body:             |
 ...
 ---
 name:            test_remat_v4f16
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body:             |
@@ -162,7 +158,6 @@ body:             |
 ...
 ---
 name:            test_remat_v8f16
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body:             |

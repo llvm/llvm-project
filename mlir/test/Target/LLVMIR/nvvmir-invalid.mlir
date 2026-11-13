@@ -563,8 +563,48 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 // -----
 
 llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b8x16.b4x16_p64 or b8x16.b6x16_p32 for 8x16 matrix}}
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b8x16.b4x16_p64, b8x16.b6x16_p32 or s8.s4 for 8x16 matrix}}
   %l = nvvm.ldmatrix %arg0 , num = 1, layout = <row>, shape = <m = 8, n = 16>, element_type = <b8> : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4 for 8x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 , num = 3, layout = <row>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected layout to be row for 8x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 , num = 1, layout = <col>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 2 elements of type i32}}
+  %l = nvvm.ldmatrix %arg0 , num = 2, layout = <row>, shape = <m = 8, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b8, b8x16.b4x16_p64 or b8x16.b6x16_p32 for 16x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 , num = 1, layout = <col>, shape = <m = 16, n = 16>, element_type = <s8.s4> : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b16 for 8x8 matrix}}
+  %l = nvvm.ldmatrix %arg0 , num = 1, layout = <row>, shape = <m = 8, n = 8>, element_type = <s8.s4> : (!llvm.ptr<3>) -> i32
   llvm.return
 }
 
@@ -676,3 +716,11 @@ llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
 // expected-error @+2 {{'nvvm.barrier' op cannot be translated to LLVM IR without an active insertion point}}
 // expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier}}
 nvvm.barrier
+
+// -----
+
+llvm.func @st_matrix_s8_s4(%arg0: !llvm.ptr<3>, %r1: i32) {
+  // expected-error@+1 {{'nvvm.stmatrix' op expected element type to be B16 for 8x8 matrix}}
+  nvvm.stmatrix %arg0, %r1 layout = <row>, shape = <m = 8, n = 8>, element_type = <s8.s4> : !llvm.ptr<3>, i32
+  llvm.return
+}

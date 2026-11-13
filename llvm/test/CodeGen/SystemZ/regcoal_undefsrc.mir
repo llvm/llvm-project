@@ -4,7 +4,6 @@
 
 ---
 name:            fun
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fun
   ; CHECK: bb.0:

@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxBitsTest.h"
+#include "test/src/stdfix/FxBitsTest.h"
+
 #include "src/stdfix/ulrbits.h"
 
 LIST_FXBITS_TEST(ulr, unsigned long fract, uint_ulr_t, LIBC_NAMESPACE::ulrbits);

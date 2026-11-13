@@ -38,11 +38,9 @@ struct MissingFeatures {
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
   static bool emitNVVMMetadata() { return false; }
-  static bool setDSOLocal() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool hiddenVisibility() { return false; }
-  static bool protectedVisibility() { return false; }
   static bool defaultVisibility() { return false; }
 
   // Load/store attributes
@@ -186,6 +184,7 @@ struct MissingFeatures {
   static bool asmGoto() { return false; }
   static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
+  static bool asmNoConvergent() { return false; }
   static bool asmUnwindClobber() { return false; }
   static bool asmVectorType() { return false; }
   static bool assignMemcpyizer() { return false; }

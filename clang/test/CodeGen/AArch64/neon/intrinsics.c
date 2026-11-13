@@ -1664,7 +1664,7 @@ uint64x2_t test_vceqzq_u64(uint64x2_t a) {
 uint32x2_t test_vceqz_f32(float32x2_t a) {
 // CIR:   cir.cast bitcast {{%.*}} : !cir.vector<8 x !s8i> -> !cir.vector<2 x !cir.float>
 // CIR:   [[C_0:%.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.float>
-// CIR:   cir.vec.cmp(eq, {{%.*}}, [[C_0]]) : !cir.vector<2 x !cir.float>, !cir.vector<2 x !s32i>
+// CIR:   cir.vec.fcmp(oeq, {{%.*}}, [[C_0]]) : !cir.vector<2 x !cir.float>, !cir.vector<2 x !s32i>
 
 // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]]) #[[ATTR0]] {
 // LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
@@ -1681,7 +1681,7 @@ uint32x2_t test_vceqz_f32(float32x2_t a) {
 uint64x1_t test_vceqz_f64(float64x1_t a) {
 // CIR:   cir.cast bitcast {{%.*}} : !cir.vector<8 x !s8i> -> !cir.vector<1 x !cir.double>
 // CIR:   [[C_0:%.*]] = cir.const #cir.zero : !cir.vector<1 x !cir.double>
-// CIR:   cir.vec.cmp(eq, {{%.*}}, [[C_0]]) : !cir.vector<1 x !cir.double>, !cir.vector<1 x !s64i>
+// CIR:   cir.vec.fcmp(oeq, {{%.*}}, [[C_0]]) : !cir.vector<1 x !cir.double>, !cir.vector<1 x !s64i>
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]]) #[[ATTR0]] {
 // LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
@@ -1699,7 +1699,7 @@ uint64x1_t test_vceqz_f64(float64x1_t a) {
 uint32x4_t test_vceqzq_f32(float32x4_t a) {
 // CIR:   cir.cast bitcast {{%.*}} : !cir.vector<16 x !s8i> -> !cir.vector<4 x !cir.float>
 // CIR:   [[C_0:%.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
-// CIR:   cir.vec.cmp(eq, {{%.*}}, [[C_0]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR:   cir.vec.fcmp(oeq, {{%.*}}, [[C_0]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
 
 // LLVM-SAME: <4 x float> {{.*}} [[A:%.*]]) #[[ATTR0]] {
 // LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
@@ -1716,7 +1716,7 @@ uint32x4_t test_vceqzq_f32(float32x4_t a) {
 uint64x2_t test_vceqzq_f64(float64x2_t a) {
 // CIR:   cir.cast bitcast {{%.*}} : !cir.vector<16 x !s8i> -> !cir.vector<2 x !cir.double>
 // CIR:   [[C_0:%.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.double>
-// CIR:   cir.vec.cmp(eq, {{%.*}}, [[C_0]]) : !cir.vector<2 x !cir.double>, !cir.vector<2 x !s64i>
+// CIR:   cir.vec.fcmp(oeq, {{%.*}}, [[C_0]]) : !cir.vector<2 x !cir.double>, !cir.vector<2 x !s64i>
 
 // LLVM-SAME: <2 x double> {{.*}} [[A:%.*]]) #[[ATTR0]] {
 // LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>

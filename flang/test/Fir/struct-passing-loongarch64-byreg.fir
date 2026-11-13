@@ -39,14 +39,12 @@ func.func private @test_func_i16(%arg0: !ty_i16)
 // CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<ti16{i:i16}>>) {
 func.func @test_call_i16(%arg0: !fir.ref<!ty_i16>) {
   // CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<ti16{i:i16}>>
-  // CHECK: %[[STACK:.*]] = llvm.intr.stacksave : !llvm.ptr
   // CHECK: %[[ARR:.*]] = fir.alloca i64
   // CHECK: %[[CVT:.*]] = fir.convert %[[ARR]] : (!fir.ref<i64>) -> !fir.ref<!fir.type<ti16{i:i16}>>
   // CHECK: fir.store %[[IN]] to %[[CVT]] : !fir.ref<!fir.type<ti16{i:i16}>>
   // CHECK: %[[LD:.*]] = fir.load %[[ARR]] : !fir.ref<i64>
   %in = fir.load %arg0 : !fir.ref<!ty_i16>
   // CHECK: fir.call @test_func_i16(%[[LD]]) : (i64) -> ()
-  // CHECK: llvm.intr.stackrestore %[[STACK]] : !llvm.ptr
   fir.call @test_func_i16(%in) : (!ty_i16) -> ()
   // CHECK: return
   return
@@ -137,7 +135,6 @@ func.func private @test_func_i32_f32(%arg0: !ty_i32_f32)
 // CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<ti32_f32{i:i32,j:f32}>>) {
 func.func @test_call_i32_f32(%arg0: !fir.ref<!ty_i32_f32>) {
   // CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<ti32_f32{i:i32,j:f32}>>
-  // CHECK: %[[STACK:.*]] = llvm.intr.stacksave : !llvm.ptr
   // CHECK: %[[ARR:.*]] = fir.alloca tuple<i32, f32>
   // CHECK: %[[CVT:.*]] = fir.convert %[[ARR]] : (!fir.ref<tuple<i32, f32>>) -> !fir.ref<!fir.type<ti32_f32{i:i32,j:f32}>>
   // CHECK: fir.store %[[IN]] to %[[CVT]] : !fir.ref<!fir.type<ti32_f32{i:i32,j:f32}>>
@@ -146,7 +143,6 @@ func.func @test_call_i32_f32(%arg0: !fir.ref<!ty_i32_f32>) {
   // CHECK: %[[VAL_1:.*]] = fir.extract_value %[[LD]], [1 : i32] : (tuple<i32, f32>) -> f32
   %in = fir.load %arg0 : !fir.ref<!ty_i32_f32>
   // CHECK: fir.call @test_func_i32_f32(%[[VAL_0]], %[[VAL_1]]) : (i32, f32) -> ()
-  // CHECK: llvm.intr.stackrestore %[[STACK]] : !llvm.ptr
   fir.call @test_func_i32_f32(%in) : (!ty_i32_f32) -> ()
   // CHECK: return
   return

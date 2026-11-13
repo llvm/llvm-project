@@ -5,7 +5,7 @@ include "mlir/IR/BuiltinDialectBytecode.td"
 // CHECK: static ::mlir::Type readIntegerType
 
 def TestDialectTypes : DialectTypes<"Test"> {
-// CHECK: static Type readType
+// CHECK: static ::mlir::Type readType
   let elems = [
 // CHECK:      case 0:
 // CHECK-NEXT:   return readIntegerType(context, reader);

@@ -7,7 +7,6 @@ name:            select_f32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -36,7 +35,6 @@ name:            select_f64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -63,7 +61,6 @@ body:             |
 name:            csel
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
@@ -91,7 +88,6 @@ body:             |
 name:            csinc_t_0_f_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -119,7 +115,6 @@ body:             |
 name:            csinv_t_0_f_neg_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -147,7 +142,6 @@ body:             |
 name:            csinc_t_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -176,7 +170,6 @@ body:             |
 name:            csinv_t_neg_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -205,7 +198,6 @@ body:             |
 name:            csinc_f_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -234,7 +226,6 @@ body:             |
 name:            csinc_f_neg_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -263,7 +254,6 @@ body:             |
 name:            csinc_t_1_no_cmp
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -290,7 +280,6 @@ body:             |
 name:            csinc_f_1_no_cmp
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -317,7 +306,6 @@ body:             |
 name:            csinc_t_1_no_cmp_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -346,7 +334,6 @@ body:             |
 name:            csneg_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -376,7 +363,6 @@ body:             |
 name:            csneg_inverted_cc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -406,7 +392,6 @@ body:             |
 name:            csneg_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -437,7 +422,6 @@ body:             |
 name:            csneg_with_true_cst
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -468,7 +452,6 @@ body:             |
 name:            csinv_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -498,7 +481,6 @@ body:             |
 name:            csinv_inverted_cc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -528,7 +510,6 @@ body:             |
 name:            csinv_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -560,7 +541,6 @@ body:             |
 name:            xor_not_negative_one
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -597,7 +577,6 @@ body:             |
 name:            csinc_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -626,7 +605,6 @@ body:             |
 name:            csinc_s32_inverted_cc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -655,7 +633,6 @@ body:             |
 name:            csinc_ptr_add
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -687,7 +664,6 @@ body:             |
 name:            binop_dont_optimize_twice
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2

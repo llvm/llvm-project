@@ -756,29 +756,33 @@ BasicBlock *CreateFailBB(Function *F, const LibcallLoweringInfo &Libcalls) {
   if (F->getSubprogram())
     B.SetCurrentDebugLocation(
         DILocation::get(Context, 0, 0, F->getSubprogram()));
-  FunctionCallee StackChkFail;
-  SmallVector<Value *, 1> Args;
+  bool IsSmashHandler = false;
+  RTLIB::LibcallImpl ChkFailImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL);
+  if (ChkFailImpl == RTLIB::Unsupported) {
+    ChkFailImpl = Libcalls.getLibcallImpl(RTLIB::STACK_SMASH_HANDLER);
+    IsSmashHandler = true;
+  }
 
-  if (RTLIB::LibcallImpl ChkFailImpl =
-          Libcalls.getLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL)) {
-    StackChkFail = M->getOrInsertFunction(
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(ChkFailImpl),
-        Type::getVoidTy(Context));
-  } else if (RTLIB::LibcallImpl SSHImpl =
-                 Libcalls.getLibcallImpl(RTLIB::STACK_SMASH_HANDLER)) {
-    StackChkFail = M->getOrInsertFunction(
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(SSHImpl),
-        Type::getVoidTy(Context), PointerType::getUnqual(Context));
-    Args.push_back(B.CreateGlobalString(F->getName(), "SSH"));
-  } else {
+  if (ChkFailImpl == RTLIB::Unsupported) {
     Context.emitError("no libcall available for stack protector");
+    B.CreateUnreachable();
+    return FailBB;
   }
 
-  if (StackChkFail) {
-    CallInst *Call = B.CreateCall(StackChkFail, Args);
-    Call->addFnAttr(Attribute::NoReturn);
+  FunctionCallee StackChkFail =
+      Libcalls.getRuntimeLibcallsInfo().getOrInsertLibcallDecl(*M, ChkFailImpl);
+
+  CallInst *Call;
+  if (IsSmashHandler) {
+    Call =
+        B.CreateCall(StackChkFail, B.CreateGlobalString(F->getName(), "SSH"));
+  } else {
+    Call = B.CreateCall(StackChkFail);
   }
 
+  Call->setCallingConv(Libcalls.getLibcallImplCallingConv(ChkFailImpl));
+  Call->addFnAttr(Attribute::NoReturn);
   B.CreateUnreachable();
   return FailBB;
 }

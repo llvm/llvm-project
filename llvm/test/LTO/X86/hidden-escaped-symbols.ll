@@ -12,6 +12,16 @@
 ; RUN:               %t/hide-me.bc  %t/ref.bc
 ; RUN: llvm-dis %t/out.0.5.precodegen.bc -o - | FileCheck %s
 
+;; Same, with the reference before the definition.
+; RUN: llvm-lto2 run \
+; RUN:               -r %t/ref.bc,_main,plx  \
+; RUN:               -r %t/ref.bc,_hide_me,l \
+; RUN:               -r %t/hide-me.bc,_hide_me,p \
+; RUN:               --select-save-temps=precodegen \
+; RUN:               -o %t/out-rev \
+; RUN:               %t/ref.bc  %t/hide-me.bc
+; RUN: llvm-dis %t/out-rev.0.5.precodegen.bc -o - | FileCheck --check-prefix=REV %s
+
 
 ;--- hide-me.ll
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -38,4 +48,12 @@ define i8 @main() {
 ; CHECK:   %1 = load i8, ptr @"\01_hide_me", align 1
 ; CHECK:   ret i8 %1
 ; CHECK: }
+
+; REV: @"\01_hide_me" = external dso_local local_unnamed_addr global i8
+; REV: @hide_me = hidden local_unnamed_addr global i8 8, align 1
+
+; REV: define dso_local i8 @main() local_unnamed_addr #0 {
+; REV:   %1 = load i8, ptr @"\01_hide_me", align 1
+; REV:   ret i8 %1
+; REV: }
 

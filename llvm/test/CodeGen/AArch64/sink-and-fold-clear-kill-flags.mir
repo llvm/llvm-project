@@ -48,7 +48,6 @@
 ---
 name:            f
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64, preferred-register: '' }
   - { id: 1, class: gpr64common, preferred-register: '' }

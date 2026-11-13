@@ -49,7 +49,7 @@ public:
 
   static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
 
-  enum class Orientation { UNORIENTED, BYTE, WIDE };
+  enum class Orientation : uint8_t { UNORIENTED, BYTE, WIDE };
 
   using LockFunc = void(File *);
   using UnlockFunc = void(File *);
@@ -85,7 +85,23 @@ private:
   SeekFunc *platform_seek;
   CloseFunc *platform_close;
 
-  Mutex mutex;
+  uint8_t *buf;   // Pointer to the stream buffer for buffered streams
+  size_t bufsize; // Size of the buffer pointed to by |buf|.
+
+  // Current read or write pointer.
+  size_t pos;
+
+  // When the buffer is used as a read buffer, read_limit is the upper limit
+  // of the index to which the buffer can be read until.
+  size_t read_limit;
+
+  File *prev;
+  File *next;
+
+  internal::mbstate mbstate;
+
+  // Used to handle the File's mode
+  FileMode mode;
 
   // For files which are readable, we should be able to support one ungetc
   // operation even if |buf| is nullptr. So, in the constructor of File, we
@@ -93,34 +109,20 @@ private:
   // bytes so we can store a widechar.
   uint8_t ungetc_buf[4];
 
-  uint8_t *buf;   // Pointer to the stream buffer for buffered streams
-  size_t bufsize; // Size of the buffer pointed to by |buf|.
+  Mutex mutex;
 
   // Buffering mode to used to buffer.
-  int bufmode;
+  int8_t bufmode;
+
+  // Represents the previous operation that was performed.
+  FileOp prev_op : 2;
+  Orientation orientation : 2;
 
   // If own_buf is true, the |buf| is owned by the stream and will be
   // free-ed when close method is called on the stream.
-  bool own_buf;
-
-  // Used to handle the File's mode
-  FileMode mode;
-
-  // Current read or write pointer.
-  size_t pos;
-
-  // Represents the previous operation that was performed.
-  FileOp prev_op;
-
-  // When the buffer is used as a read buffer, read_limit is the upper limit
-  // of the index to which the buffer can be read until.
-  size_t read_limit;
-
-  bool eof;
-  bool err;
-
-  Orientation orientation;
-  internal::mbstate mbstate;
+  bool own_buf : 1;
+  bool eof : 1;
+  bool err : 1;
 
 protected:
   LIBC_INLINE constexpr bool write_allowed() const {
@@ -155,13 +157,13 @@ public:
                              CloseFunc *cf, uint8_t *buffer, size_t buffer_size,
                              int buffer_mode, bool owned, FileMode mode)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
-        platform_close(cf), mutex(/*timed=*/false, /*recursive=*/false,
-                                  /*robust=*/false, /*pshared=*/false),
-        ungetc_buf{}, buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
-        own_buf(owned), mode(mode), pos(0), prev_op(FileOp::NONE),
-        read_limit(0), eof(false), err(false),
-        orientation(Orientation::UNORIENTED), mbstate(), prev(nullptr),
-        next(nullptr) {
+        platform_close(cf), buf(buffer), bufsize(buffer_size), pos(0),
+        read_limit(0), prev(nullptr), next(nullptr), mbstate(), mode(mode),
+        ungetc_buf{}, mutex(/*timed=*/false, /*recursive=*/false,
+                            /*robust=*/false, /*pshared=*/false),
+        bufmode(static_cast<int8_t>(buffer_mode)), prev_op(FileOp::NONE),
+        orientation(Orientation::UNORIENTED), own_buf(owned), eof(false),
+        err(false) {
     adjust_buf();
   }
 
@@ -357,9 +359,6 @@ private:
       own_buf = false; // We shouldn't call free on |buf| when closing the file.
     }
   }
-
-  File *prev;
-  File *next;
 };
 
 // The implementation of this function is provided by the platform_file

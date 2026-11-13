@@ -69,7 +69,7 @@ static cl::opt<uint64_t> BoundedMemSetInlineSizeOpt(
 namespace {
 
 struct PreISelIntrinsicLowering {
-  const TargetMachine *TM;
+  const TargetMachine &TM;
   const ModuleLibcallLoweringInfo &ModuleLibcalls;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
@@ -81,7 +81,7 @@ struct PreISelIntrinsicLowering {
   const bool UseMemIntrinsicLibFunc;
 
   explicit PreISelIntrinsicLowering(
-      const TargetMachine *TM_,
+      const TargetMachine &TM_,
       const ModuleLibcallLoweringInfo &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
@@ -155,13 +155,10 @@ static bool lowerLoadRelative(Function &F) {
 /// Targets may provide their own expansion via
 /// TargetLowering::emitCanLoadSpeculatively; the default expansion
 /// conservatively returns false.
-static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine *TM) {
-  if (!TM)
-    return false;
-
+static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine &TM) {
   return forEachCall(F, [&](CallInst *CI) {
     const TargetLowering *TLI =
-        TM->getSubtargetImpl(*CI->getFunction())->getTargetLowering();
+        TM.getSubtargetImpl(*CI->getFunction())->getTargetLowering();
 
     IRBuilder<> Builder(CI);
     // A null result means the target cannot answer; lower to false.
@@ -282,23 +279,19 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
 }
 
 static bool canEmitLibcall(const ModuleLibcallLoweringInfo &ModuleLowering,
-                           const TargetMachine *TM, Function *F,
+                           const TargetMachine &TM, Function *F,
                            RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
-  if (!TM)
-    return true;
   const LibcallLoweringInfo &Lowering =
-      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM.getSubtargetImpl(*F));
   return Lowering.getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
 static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
-                          const TargetMachine *TM, Function *F) {
+                          const TargetMachine &TM, Function *F) {
   // TODO: Should this consider the address space of the memcpy?
-  if (!TM)
-    return true;
   const LibcallLoweringInfo &Lowering =
-      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM.getSubtargetImpl(*F));
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
@@ -307,7 +300,7 @@ static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
 bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
     MemSetInst *Memset, const TargetTransformInfo &TTI) const {
   // This pass runs even at -O0, so skip if e.g. llc -O0 is used.
-  if (!TM || TM->getOptLevel() == CodeGenOptLevel::None)
+  if (TM.getOptLevel() == CodeGenOptLevel::None)
     return false;
 
   Value *Len = Memset->getLength();
@@ -632,7 +625,6 @@ static bool expandProtectedFieldPtr(Function &Intr) {
       reportFatalUsageError("software encoding currently unsupported");
 
     auto *DS = getDeactivationSymbol(Call);
-    OperandBundleDef DSBundle("deactivation-symbol", DS);
 
     for (Use &U : llvm::make_early_inc_range(Call->uses())) {
       // Comparisons against null cannot be used to recover the original
@@ -889,7 +881,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!isa<ScalableVectorType>(Ty))
           return false;
-        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        const TargetLowering *TL = TM.getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
@@ -904,7 +896,8 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!isa<ScalableVectorType>(Ty))
           return false;
-        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        const TargetSubtargetInfo *Subtarget = TM.getSubtargetImpl(F);
+        const TargetLowering *TL = Subtarget->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         EVT VT = EVT::getEVT(Ty);
@@ -925,8 +918,10 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         default:
           llvm_unreachable("unexpected intrinsic");
         }
-        if (TL->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC) !=
-            RTLIB::Unsupported)
+
+        const LibcallLoweringInfo &Libcalls =
+            getLibcallLowering(ModuleLibcalls, *Subtarget);
+        if (Libcalls.getVectorLibcallImplOrMasked(LC) != RTLIB::Unsupported)
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });
@@ -939,12 +934,12 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       Changed |= expandProtectedFieldPtr(F);
       break;
     case Intrinsic::cond_loop:
-      if (!TM->canLowerCondLoop())
+      if (!TM.canLowerCondLoop())
         Changed |= expandCondLoop(F);
       break;
     case Intrinsic::looptrap:
       Changed |= expandLoopTrap(F);
-      if (!TM->canLowerCondLoop())
+      if (!TM.canLowerCondLoop())
         if (auto *CondLoop = M.getFunction("llvm.cond.loop"))
           Changed |= expandCondLoop(*CondLoop);
       break;
@@ -983,7 +978,7 @@ public:
       return this->getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     };
 
-    const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    const auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     PreISelIntrinsicLowering Lowering(TM, ModuleLibcalls, LookupTTI, LookupTLI,
                                       LookupAC);
     return Lowering.lowerIntrinsics(M);

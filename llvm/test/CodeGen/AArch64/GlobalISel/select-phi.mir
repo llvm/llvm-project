@@ -36,7 +36,6 @@ exposesReturnsTwice: false
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
@@ -88,7 +87,6 @@ exposesReturnsTwice: false
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }

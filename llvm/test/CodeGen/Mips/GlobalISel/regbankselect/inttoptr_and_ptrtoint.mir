@@ -10,7 +10,6 @@
 name:            inttoptr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -31,7 +30,6 @@ body:             |
 name:            ptrtoint
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

@@ -61,14 +61,21 @@ class PredOpTrait<string descr, Pred pred, list<Trait> traits = []>
   list<Trait> dependentTraits = traits;
 }
 
+let cppIncludes = ["mlir/IR/OpDefinition.h"] in {
 // Op defines an affine scope.
 def AffineScope : NativeOpTrait<"AffineScope">;
 // Op defines an automatic allocation scope.
 def AutomaticAllocationScope :
   NativeOpTrait<"AutomaticAllocationScope">;
+} // let cppIncludes = ["mlir/IR/OpDefinition.h"]
+
 // Op supports operand broadcast behavior.
 def ResultsBroadcastableShape :
-  NativeOpTrait<"ResultsBroadcastableShape">;
+  NativeOpTrait<"ResultsBroadcastableShape"> {
+  let cppIncludes = ["mlir/Dialect/Traits.h"];
+}
+
+let cppIncludes = ["mlir/IR/OpDefinition.h"] in {
 // X op Y == Y op X
 def Commutative  : NativeOpTrait<"IsCommutative">;
 // op op X == op X (unary) / X op X == X (binary)
@@ -152,6 +159,7 @@ class HasAncestor<string op> : ParamNativeOpTrait<"HasAncestor", op>,
 class AncestorOneOf<list<string> ops>
     : ParamNativeOpTrait<"HasAncestor", !interleave(ops, ", ")>,
       StructuralOpTrait;
+} // let cppIncludes = ["mlir/IR/OpDefinition.h"]
 
 // Op result type is derived from the first attribute. If the attribute is an
 // subclass of `TypeAttrBase`, its value is used, otherwise, the type of the
@@ -173,6 +181,7 @@ def SameVariadicOperandSize : GenInternalOpTrait<"SameVariadicOperandSize">;
 // to have the same array size.
 def SameVariadicResultSize : GenInternalOpTrait<"SameVariadicResultSize">;
 
+let cppIncludes = ["mlir/IR/OpDefinition.h"] in {
 // Uses an attribute named `operandSegmentSizes` to specify how many actual
 // operand each ODS-declared operand (variadic or not) corresponds to.
 // This trait is used for ops that have multiple variadic operands but do
@@ -189,6 +198,7 @@ def AttrSizedResultSegments  :
 
 // Op attached regions have no arguments
 def NoRegionArguments : NativeOpTrait<"NoRegionArguments">, StructuralOpTrait;
+} // let cppIncludes = ["mlir/IR/OpDefinition.h"]
 
 //===----------------------------------------------------------------------===//
 // Successor definitions
@@ -350,6 +360,12 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
 
   // Optional. The group of ops this op is part of.
   OpDocGroup opDocGroup = ?;
+
+  // Optional. The partition of this op. `-gen-op-decls` and `-gen-op-defs`
+  // generate the ops of one partition at a time with `-op-partition=...`,
+  // which requires every generated op to be in a partition. Ignored without
+  // `-op-partition`.
+  Partition partition = ?;
 
   // Dag containing the arguments of the op. Default to 0 arguments.
   dag arguments = (ins);

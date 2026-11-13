@@ -64,7 +64,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 24, size: 2, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -85,7 +84,6 @@ body:             |
 # An 8-byte object is exactly the size of an address, so it is still loaded.
 ---
 name:            ptrsize
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 8, stack-id: default }
 body:             |
@@ -99,7 +97,6 @@ body:             |
 # A 16-byte object has no correct implicit value, so its location is dropped.
 ---
 name:            toobig
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 16, alignment: 8, stack-id: default }
 body:             |

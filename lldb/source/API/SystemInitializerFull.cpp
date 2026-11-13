@@ -17,9 +17,9 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/ProcessTrace.h"
 #include "lldb/Utility/Timer.h"
-#include "lldb/Version/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -91,7 +91,8 @@ llvm::Error SystemInitializerFull::Initialize() {
   // Use the system log to report errors that would otherwise get dropped.
   SetLLDBErrorLog(GetLog(SystemLog::System));
 
-  LLDB_LOG(GetLog(SystemLog::System), "{0}", GetVersion());
+  LLDB_LOG(GetLog(SystemLog::System), "{0}",
+           Language::GetVersionWithLanguageInfo());
 
   auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
                        const FileSpec &spec,

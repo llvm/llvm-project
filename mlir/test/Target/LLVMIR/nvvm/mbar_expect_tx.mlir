@@ -16,14 +16,28 @@ llvm.func @mbarrier_expect_tx_shared(%barrier: !llvm.ptr<3>, %tx_count : i32) {
 
 llvm.func @mbarrier_expect_tx_shared_cluster(%barrier: !llvm.ptr<7>, %tx_count : i32) {
   // CHECK-LABEL: define void @mbarrier_expect_tx_shared_cluster(ptr addrspace(7) %0, i32 %1) {
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   nvvm.mbarrier.expect_tx %barrier, %tx_count : !llvm.ptr<7>, i32
   nvvm.mbarrier.expect_tx %barrier, %tx_count  scope = cta : !llvm.ptr<7>, i32
   nvvm.mbarrier.expect_tx %barrier, %tx_count  scope = cluster : !llvm.ptr<7>, i32
+
+  llvm.return
+}
+
+llvm.func @mbarrier_expect_tx_cluster_multicast(%barrier: !llvm.ptr<7>, %tx_count: i32, %multicast_mask: i32) {
+  // CHECK-LABEL: define void @mbarrier_expect_tx_cluster_multicast(ptr addrspace(7) %0, i32 %1, i32 %2) {
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1, i32 %2, i1 true)
+  // CHECK-NEXT: ret void
+  // CHECK-NEXT: }
+  nvvm.mbarrier.expect_tx %barrier, %tx_count multicast_mask = %multicast_mask : !llvm.ptr<7>, i32, i32
+  nvvm.mbarrier.expect_tx %barrier, %tx_count multicast_mask = %multicast_mask scope = cta : !llvm.ptr<7>, i32, i32
+  nvvm.mbarrier.expect_tx %barrier, %tx_count multicast_mask = %multicast_mask scope = cluster : !llvm.ptr<7>, i32, i32
 
   llvm.return
 }

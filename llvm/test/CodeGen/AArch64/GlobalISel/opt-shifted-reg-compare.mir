@@ -14,7 +14,6 @@
 name:            eq_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -41,7 +40,6 @@ body:             |
 name:            eq_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -68,7 +66,6 @@ body:             |
 name:            eq_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -95,7 +92,6 @@ body:             |
 name:            ne_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -122,7 +118,6 @@ body:             |
 name:            ne_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -149,7 +144,6 @@ body:             |
 name:            ne_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -176,7 +170,6 @@ body:             |
 name:            ult_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -202,7 +195,6 @@ body:             |
 name:            ult_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -228,7 +220,6 @@ body:             |
 name:            ult_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -254,7 +245,6 @@ body:             |
 name:            ugt_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -280,7 +270,6 @@ body:             |
 name:            ugt_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -306,7 +295,6 @@ body:             |
 name:            ugt_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -334,7 +322,6 @@ body:             |
 name:            uge_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -360,7 +347,6 @@ body:             |
 name:            uge_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -386,7 +372,6 @@ body:             |
 name:            uge_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -414,7 +399,6 @@ body:             |
 name:            ule_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -440,7 +424,6 @@ body:             |
 name:            ule_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -466,7 +449,6 @@ body:             |
 name:            ule_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -493,7 +475,6 @@ body:             |
 name:            slt_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -519,7 +500,6 @@ body:             |
 name:            slt_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -545,7 +525,6 @@ body:             |
 name:            slt_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -571,7 +550,6 @@ body:             |
 name:            sgt_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -597,7 +575,6 @@ body:             |
 name:            sgt_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -623,7 +600,6 @@ body:             |
 name:            sgt_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -649,7 +625,6 @@ body:             |
 name:            sge_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -675,7 +650,6 @@ body:             |
 name:            sge_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -701,7 +675,6 @@ body:             |
 name:            sge_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -729,7 +702,6 @@ body:             |
 name:            sle_shl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -755,7 +727,6 @@ body:             |
 name:            sle_ashr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -781,7 +752,6 @@ body:             |
 name:            sle_lshr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1

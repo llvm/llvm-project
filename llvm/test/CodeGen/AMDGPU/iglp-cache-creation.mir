@@ -1,0 +1,54 @@
+# RUN: llc -mtriple=amdgpu9.42 -run-pass=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42 -run-pass=machine-scheduler -misched=gcn-iterative-ilp -o - %s | FileCheck %s
+
+# Test that the pre-RA machine-scheduler stores the results of the IGLP DAG
+# analysis as additional immediate operands on the IGLP_OPT, so that they are
+# available for PostRA scheduling and serialized with the MIR.
+
+# IGLP_OPT 1: DSWCount, DSWWithPermCount, DSWWithSharedVMEMCount
+# CHECK-LABEL: name: iglp_cache_creation_small_gemm
+# CHECK: IGLP_OPT 1, 2, 0, 0{{$}}
+
+# IGLP_OPT 2: TransPipeCount, MFMAPipeCount, AddPipeCount, MFMAEnablement,
+# ExpRequirement, MFMAChains, HasCvt, HasChainBetweenCvt
+# CHECK-LABEL: name: iglp_cache_creation_exp_interleave
+# CHECK: IGLP_OPT 2, 1, 1, 0, 2, 2, 1, 0, 1{{$}}
+
+# A failed analysis (no V_PACK/V_PERM instructions) stores nothing, so PostRA
+# scheduling does not apply the strategy.
+# CHECK-LABEL: name: iglp_cache_creation_exp_interleave_failed
+# CHECK: IGLP_OPT 2{{$}}
+
+---
+name:            iglp_cache_creation_small_gemm
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_128_align2 = IMPLICIT_DEF
+    IGLP_OPT 1
+    DS_WRITE_B128_gfx9 %0, %2, 0, 0, implicit $exec
+    DS_WRITE_B128_gfx9 %1, %2, 256, 0, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            iglp_cache_creation_exp_interleave
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    IGLP_OPT 2
+    %2:vgpr_32 = nofpexcept V_EXP_F32_e32 %0, implicit $mode, implicit $exec
+    undef %3.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %2, 0, %2, 0, 0, implicit $mode, implicit $exec
+    %3.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %2, 0, %2, 0, 0, implicit $mode, implicit $exec
+    early-clobber %4:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_vgprcd_e64 %3, %1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            iglp_cache_creation_exp_interleave_failed
+body:             |
+  bb.0:
+    IGLP_OPT 2
+    S_NOP 0
+    S_ENDPGM 0
+...

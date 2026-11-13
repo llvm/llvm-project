@@ -19,8 +19,7 @@ void f1(A *a) {
 // marked invariant; the vptr load preceding it is not.
 // CIR-STRICT-LABEL: cir.func{{.*}}@_Z2f1P1A
 // CIR-STRICT:   %[[VPTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR-STRICT:   %[[FN_PTR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0]
-// CIR-STRICT:   %[[FN_PTR:.*]] = cir.load invariant {{.*}} %[[FN_PTR_PTR]]
+// CIR-STRICT:   %[[FN_PTR:.*]] = cir.vtable.get_virtual_fn %[[VPTR]][0] invariant
 
 // Without the flags the same load must not be invariant.
 // CIR-LABEL: cir.func{{.*}}@_Z2f1P1A

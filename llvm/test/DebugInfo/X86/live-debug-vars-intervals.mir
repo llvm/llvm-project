@@ -98,7 +98,6 @@
 ...
 ---
 name:            f1
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:
@@ -128,7 +127,6 @@ body:             |
 ...
 ---
 name:            f2
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:

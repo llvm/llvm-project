@@ -348,6 +348,34 @@ public:
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
+  /// Return the maximum allowed load/store width for the given type and
+  /// alignment combination based on subtarget flags.
+  /// 1. If unaligned accesses are not enabled, then any load/store that is less
+  /// than word-aligned has to be handled one byte or ushort at a time.
+  /// 2. If relaxed OOB mode is not set, we must ensure that the in-bounds
+  /// part of a partially out of bounds read/write is performed correctly. This
+  /// means that any load that isn't naturally aligned has to be split into
+  /// parts that are naturally aligned, so that, after bitcasting, we don't have
+  /// unaligned loads that could discard valid data.
+  ///
+  /// For example, if we're loading a <8 x i8>, that's actually a load of a <2 x
+  /// i32>, and if we load from an align(2) address, that address might be 2
+  /// bytes from the end of the buffer. The hardware will, when performing the
+  /// <2 x i32> load, mask off the entire first word, causing the two in-bounds
+  /// bytes to be masked off. However, if we know the offset can't be too close
+  /// to the number of records in the buffer (if known), we can skip this
+  /// expansion.
+  ///
+  /// Unlike the complete disablement of unaligned accesses from point 1,
+  /// this does not apply to unaligned scalars, but will apply to cases like
+  /// `load <2 x i32>, align 4` since the left element might be out of bounds.
+  /// Note that if we know that the base offset is known to be
+  /// less than `uint32_max - byte_size(Ty)`, we can skip these alignment
+  /// checks.
+  uint64_t getMaxBufferIntrinsicWidth(const DataLayout &DL, Type *T, Align A,
+                                      bool NoWrapFromMax,
+                                      bool NoPartialOOB) const;
+
   /// Return the width, in bits, of the num_records field of a buffer resource
   /// (V#) on this subtarget, or std::nullopt if not yet known.
   std::optional<unsigned> getBufferResourceNumRecordsWidth() const {
@@ -480,6 +508,12 @@ public:
 
   bool enableSubRegLiveness() const override { return true; }
 
+  // canReassign() walks the whole allocation order of the evictee on every
+  // local eviction query, which is expensive with a very large VGPR file.
+  bool enableRALocalReassignment(CodeGenOptLevel OptLevel) const override {
+    return !hasVGPRMSBs();
+  }
+
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
 
@@ -534,9 +568,6 @@ public:
   }
 
   bool hasMadF16() const;
-
-  // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return HasGFX1250Insts; }
 
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return HasGFX1250Insts; }

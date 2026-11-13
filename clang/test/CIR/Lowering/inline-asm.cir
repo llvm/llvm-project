@@ -83,4 +83,16 @@ cir.func @f7(%arg0: !u32i) -> !u32i {
    %3 = cir.load align(4) %0 : !cir.ptr<!u32i>, !u32i
    cir.return %3 : !u32i
 }
+
+cir.func @f8() {
+  // CHECK: call void asm sideeffect "", "~{dirflag},~{fpsr},~{flags}"() #[[CONV:[0-9]+]]
+  cir.asm(x86_att,
+    out = [],
+    in = [],
+    in_out = [],
+    {"" "~{dirflag},~{fpsr},~{flags}"}) side_effects convergent
+  cir.return
 }
+}
+
+// CHECK: attributes #[[CONV]] = { convergent }

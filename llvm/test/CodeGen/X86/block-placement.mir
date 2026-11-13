@@ -42,7 +42,6 @@
 # CHECK: name:            f
 name:            f
 alignment:       16
-tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi' }
   - { reg: '$esi' }

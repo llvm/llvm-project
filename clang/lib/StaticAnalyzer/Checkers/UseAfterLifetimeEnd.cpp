@@ -90,8 +90,7 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
   if (RetValRegion.empty())
     return;
 
-  if (ExplodedNode *N =
-          C.generateNonFatalErrorNode(State, C.getPredecessor())) {
+  if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     for (const MemRegion *R : RetValRegion)
       reportDanglingSource(R, RetVal, N, C);
   }

@@ -1170,6 +1170,7 @@ public:
       Value *Op2;
       MatrixTy Result;
       IRBuilder<> Builder(Inst);
+      Builder.disableGEPCanonicalization();
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         Result = VisitBinaryOperator(BinOp, SI, Builder);
       else if (auto *Cast = dyn_cast<CastInst>(Inst))
@@ -2001,6 +2002,7 @@ public:
     BasicBlock *End =
         SplitBlock(InsertI->getParent(), InsertI, DT, LI, nullptr, "continue");
     IRBuilder<> Builder(MatMul);
+    Builder.disableGEPCanonicalization();
     BasicBlock *InnerBody = TI.CreateTiledLoops(Start, End, Builder, DTU, *LI);
 
     Type *TileVecTy = FixedVectorType::get(MatMul->getType()->getScalarType(),
@@ -2083,6 +2085,7 @@ public:
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
+      Builder.disableGEPCanonicalization();
       for (unsigned J = 0; J < C; J += Opts.fuse_matrix_tile_size)
         for (unsigned I = 0; I < R; I += Opts.fuse_matrix_tile_size) {
           const unsigned TileR = std::min(R - I, Opts.fuse_matrix_tile_size);

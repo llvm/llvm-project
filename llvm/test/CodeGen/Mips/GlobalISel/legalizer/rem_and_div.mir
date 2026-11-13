@@ -23,7 +23,6 @@
 ---
 name:            sdiv_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -55,7 +54,6 @@ body:             |
 ---
 name:            sdiv_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -87,7 +85,6 @@ body:             |
 ---
 name:            sdiv_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -109,7 +106,6 @@ body:             |
 ---
 name:            sdiv_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -148,7 +144,6 @@ body:             |
 ---
 name:            srem_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -178,7 +173,6 @@ body:             |
 ---
 name:            srem_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -208,7 +202,6 @@ body:             |
 ---
 name:            srem_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -230,7 +223,6 @@ body:             |
 ---
 name:            srem_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -269,7 +261,6 @@ body:             |
 ---
 name:            udiv_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -300,7 +291,6 @@ body:             |
 ---
 name:            udiv_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -331,7 +321,6 @@ body:             |
 ---
 name:            udiv_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -353,7 +342,6 @@ body:             |
 ---
 name:            udiv_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -392,7 +380,6 @@ body:             |
 ---
 name:            urem_i8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -423,7 +410,6 @@ body:             |
 ---
 name:            urem_i16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -454,7 +440,6 @@ body:             |
 ---
 name:            urem_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -476,7 +461,6 @@ body:             |
 ---
 name:            urem_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7

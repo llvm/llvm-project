@@ -59,6 +59,10 @@ public:
                 PatchableFunctionPass, ShrinkWrapPass, LiveDebugValuesPass,
                 MachineLateInstrsCleanupPass, RemoveLoadsIntoFakeUsesPass,
                 BranchFolderPass, MachineBlockPlacementPass>();
+    // Logical SPIR-V cannot express the pointer induction variables that loop
+    // strength reduction creates.
+    if (TM.getSubtargetImpl()->isLogicalSPIRV())
+      Opt.DisableLSR = true;
   }
 
   void addIRPasses(PassManagerWrapper &PMW) override;
@@ -177,9 +181,7 @@ Error SPIRVCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addGlobalInstructionSelect(
     PassManagerWrapper &PMW) {
-  addMachineFunctionPass(
-      InstructionSelectPass(getOptLevel(), /*RequireRegBankSelection=*/false),
-      PMW);
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
   return Error::success();
 }
 

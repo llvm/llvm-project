@@ -17,7 +17,6 @@ name:            _16_bit_positive_offset
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -41,7 +40,6 @@ name:            _16_bit_negative_offset
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -66,7 +64,6 @@ name:            _large_positive_offset
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -93,7 +90,6 @@ name:            _large_negative_offset
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -120,7 +116,6 @@ name:            fold_f32_load
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -144,7 +139,6 @@ name:            fold_f64_store
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r6, $d6
@@ -168,7 +162,6 @@ name:            fold_i16_load
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -192,7 +185,6 @@ name:            fold_i32_store
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5

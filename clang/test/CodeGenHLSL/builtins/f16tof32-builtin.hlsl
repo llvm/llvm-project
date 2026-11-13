@@ -14,7 +14,7 @@
 // SPIRV: %[[U1:[0-9]+]] = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.spv.unpackhalf2x16.v2f32(i32 %[[#]])
 // SPIRV: %[[R1:[0-9]+]] = extractelement <2 x float> %[[U1]], i64 0
 // SPIRV: ret float %[[R1]]
-// SPIRV: declare <2 x float> @llvm.spv.unpackhalf2x16.v2f32(i32) #2
+// SPIRV: declare <2 x float> @llvm.spv.unpackhalf2x16.v2f32(i32)
 float test_scalar(uint p0) { return __builtin_hlsl_elementwise_f16tof32(p0); }
 
 // CHECK: define hidden noundef nofpclass(nan inf) <2 x float>

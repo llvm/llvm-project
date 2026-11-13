@@ -3,7 +3,6 @@
 
 ---
 name:            spam
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 body:             |

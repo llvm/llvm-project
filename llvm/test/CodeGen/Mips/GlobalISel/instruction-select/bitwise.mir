@@ -24,7 +24,6 @@ name:            and_i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -48,7 +47,6 @@ name:            and_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -71,7 +69,6 @@ name:            and_not_imm32ZExt16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -95,7 +92,6 @@ name:            or_i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -119,7 +115,6 @@ name:            or_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -142,7 +137,6 @@ name:            or_not_imm32ZExt16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -166,7 +160,6 @@ name:            xor_i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -190,7 +183,6 @@ name:            xor_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -213,7 +205,6 @@ name:            xor_not_imm32ZExt16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -236,7 +227,6 @@ name:            shl
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -259,7 +249,6 @@ name:            ashr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -282,7 +271,6 @@ name:            lshr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -305,7 +293,6 @@ name:            shlv
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -329,7 +316,6 @@ name:            ashrv
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -353,7 +339,6 @@ name:            lshrv
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5

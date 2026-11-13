@@ -30,11 +30,11 @@ public:
   void writeGotHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
-    elf::scanSection1<SPARCV9, ELF64BE>(*this, sec, shard);
+    elf::scanSection1<ELF64BE>(*this, sec, shard);
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -99,7 +99,7 @@ int64_t SPARCV9::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                               unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -107,13 +107,13 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
     uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = rel.r_offset;
     RelType type = rel.getType(false);
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    int64_t addend = rs.getAddend(rel, type);
     RelExpr expr;
     switch (type) {
     case R_SPARC_NONE:

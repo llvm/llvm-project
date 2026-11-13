@@ -198,6 +198,12 @@ let cppNamespace = "::cir" in {
       }]
       >,
       InterfaceMethod<"",
+      "cir::VisibilityKind", "getGlobalVisibility", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return $_op.getGlobalVisibility();
+      }]
+      >,
+      InterfaceMethod<"",
       "void", "setGlobalVisibility", (ins "cir::VisibilityKind":$val), [{}],
       /*defaultImplementation=*/[{
         $_op.setGlobalVisibility(val);

@@ -17,8 +17,7 @@
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/cpu_set_t.h"
 #include "hdr/types/size_t.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/alloc-checker.h"
+#include "src/__support/checked_ptr.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -26,13 +25,13 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(cpu_set_t *, __sched_cpualloc, (size_t count)) {
-  AllocChecker ac;
-  uint8_t *bytes = new (ac) uint8_t[CPU_ALLOC_SIZE(count)];
-  if (!ac) {
+  CheckedPtr<uint8_t[]> bytes =
+      make_unique_for_overwrite<uint8_t[]>(CPU_ALLOC_SIZE(count));
+  if (!bytes) {
     libc_errno = ENOMEM;
     return nullptr;
   }
-  return reinterpret_cast<cpu_set_t *>(bytes);
+  return reinterpret_cast<cpu_set_t *>(bytes.release());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

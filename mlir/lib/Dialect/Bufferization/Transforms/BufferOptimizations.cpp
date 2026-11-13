@@ -357,9 +357,6 @@ private:
   /// position.
   PostDominanceInfo postDominators;
 
-  /// The map storing the final placement blocks of a given alloc value.
-  llvm::DenseMap<Value, Block *> placementBlocks;
-
   /// The operation that this transformation is working on. It is used to also
   /// gather allocas.
   Operation *scopeOp;

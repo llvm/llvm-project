@@ -19,7 +19,9 @@ include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 // Base class for Builtin dialect types.
 class SparseTensor_Type<string name, list<Trait> traits = [],
                    string baseCppClass = "::mlir::Type">
-    : TypeDef<SparseTensor_Dialect, name, traits, baseCppClass> {}
+    : TypeDef<SparseTensor_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/SparseTensor/IR/SparseTensor.h"];
+}
 
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Dialect Types.

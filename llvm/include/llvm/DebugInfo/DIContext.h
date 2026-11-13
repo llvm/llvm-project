@@ -209,6 +209,9 @@ struct DIDumpOptions {
   bool DisplayRawContents = false;
   bool IsEH = false;
   bool DumpNonSkeleton = false;
+  /// When verifying, print each error in detail.
+  bool ShowErrorDetails = true;
+  /// When verifying, print a summary of errors by categories.
   bool ShowAggregateErrors = false;
   bool PrintRegisterOnly = false;
   std::string JsonErrSummaryFile;

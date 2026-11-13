@@ -124,6 +124,7 @@ write_cmake_config("config") {
     "LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG=1",
     "LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=1",
     "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
+    "LLVM_WINDOWS_RESTRICTED_APIS=",
     "PACKAGE_BUGREPORT=https://github.com/llvm/llvm-project/issues/",
     "PACKAGE_NAME=LLVM",
     "PACKAGE_STRING=LLVM ${llvm_version}git",

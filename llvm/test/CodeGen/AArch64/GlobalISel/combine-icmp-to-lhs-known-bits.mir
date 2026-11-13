@@ -7,7 +7,6 @@
 ---
 name:            apply_ne
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -35,7 +34,6 @@ body:             |
 ---
 name:            apply_eq
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -62,7 +60,6 @@ body:             |
 ---
 name:            dont_apply_wrong_cst_eq
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -93,7 +90,6 @@ body:             |
 ---
 name:            dont_apply_wrong_cst_ne
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -124,7 +120,6 @@ body:             |
 ---
 name:            dont_apply_vector
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -163,7 +158,6 @@ body:             |
 ---
 name:            apply_no_zext_or_trunc
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -189,7 +183,6 @@ body:             |
 ---
 name:            apply_wide_cmp
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -217,7 +210,6 @@ body:             |
 ---
 name:            apply_narrow_lhs
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

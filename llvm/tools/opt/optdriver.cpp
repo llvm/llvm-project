@@ -73,9 +73,20 @@ static codegen::RegisterCodeGenFlags CFG;
 static codegen::RegisterMTuneFlag MTF;
 static codegen::RegisterSaveStatsFlag SSF;
 
-// The OptimizationList is automatically populated with registered Passes by the
-// PassNameParser.
-static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
+static bool shouldPinPassToLegacyPM(StringRef Pass);
+
+namespace {
+// Register only the passes that the legacy pipeline accepts, so other pass
+// names do not occupy option spellings.
+struct PinnedPassNameParser : PassNameParser {
+  using PassNameParser::PassNameParser;
+  bool ignorablePassImpl(const PassInfo *P) const override {
+    return !shouldPinPassToLegacyPM(P->getPassArgument());
+  }
+};
+} // namespace
+
+static cl::list<const PassInfo *, bool, PinnedPassNameParser> PassList(cl::desc(
     "Optimizations available (use \"-passes=\" for the new pass manager)"));
 
 // This flag specifies a textual description of the optimization pass pipeline
@@ -393,14 +404,12 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
   return llvm::is_contained(PassNameExact, Pass);
 }
 
-// For use in NPM transition.
-static bool shouldForceLegacyPM() {
-  for (const PassInfo *P : PassList) {
-    StringRef Arg = P->getPassArgument();
-    if (shouldPinPassToLegacyPM(Arg))
-      return true;
-  }
-  return false;
+static void printPassNameSyntaxError() {
+  errs() << "The `opt -passname` syntax for the new pass manager is "
+            "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
+            "alias for a more concise version).\n";
+  errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
+            "for more details on the pass pipeline syntax.\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -454,9 +463,23 @@ optMain(int argc, char **argv,
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
   LLVMContext Context;
-  cl::parseCommandLineOptions(
-      Context.getLibraryOptions(), ArrayRef(argv, argc),
-      "llvm .bc -> .bc modular optimizer and analysis printer\n");
+  if (!cl::parseCommandLineOptions(
+          Context.getLibraryOptions(), codegen::getToolOptions(),
+          ArrayRef(argv, argc),
+          "llvm .bc -> .bc modular optimizer and analysis printer\n",
+          &errs())) {
+    // Unpinned pass names are not options; point `opt -passname` users to
+    // -passes.
+    if (any_of(ArrayRef(argv + 1, argc - 1), [&](StringRef Arg) {
+          if (!Arg.consume_front("-"))
+            return false;
+          Arg.consume_front("-");
+          Arg = Arg.split('=').first;
+          return Registry.getPassInfo(Arg) && !shouldPinPassToLegacyPM(Arg);
+        }))
+      printPassNameSyntaxError();
+    return 1;
+  }
 
   SmallVector<PassPluginLibraryInfo, 0> Extensions;
   for (const std::string &Path : PassPlugins) {
@@ -470,16 +493,10 @@ optMain(int argc, char **argv,
   if (Error E = passPluginArguments(Extensions, PluginArgs))
     reportFatalUsageError(std::move(E));
 
-  // TODO: remove shouldForceLegacyPM().
-  const bool UseNPM =
-      !shouldForceLegacyPM() || PassPipeline.getNumOccurrences() > 0;
+  const bool UseNPM = PassList.empty() || PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
-    errs() << "The `opt -passname` syntax for the new pass manager is "
-              "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
-              "alias for a more concise version).\n";
-    errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
-              "for more details on the pass pipeline syntax.\n\n";
+    printPassNameSyntaxError();
     return 1;
   }
 
@@ -521,7 +538,7 @@ optMain(int argc, char **argv,
     // Pass "help" as CPU for -mtune=help
     std::string SkipModuleCPU = (TuneCPUStr == "help" ? "help" : CPUStr);
     TargetOptions Options =
-        codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
     // Create the target machine just to print the help info. Use unique_ptr
     // to avoid a memory leak.
     std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
@@ -559,7 +576,8 @@ optMain(int argc, char **argv,
 
   codegen::MaybeEnableStatistics();
 
-  StringRef ABIName = mc::getABIName(); // FIXME: Handle module flag.
+  StringRef ABIName =
+      mc::getABIName(Context.getLibraryOptions()); // FIXME: Handle module flag.
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
@@ -714,7 +732,7 @@ optMain(int argc, char **argv,
   const TargetOptions *Options = TM ? &TM->Options : &CodeGenFlagsOptions;
   if (!TM) {
     CodeGenFlagsOptions =
-        codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), ModuleTriple);
   }
 
   // Override function attributes based on CPUStr, TuneCPUStr, FeaturesStr, and

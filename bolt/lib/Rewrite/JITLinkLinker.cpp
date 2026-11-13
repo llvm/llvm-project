@@ -117,7 +117,7 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
   }
 
   void
-  lookup(const LookupMap &Symbols,
+  lookup(LookupMap Symbols,
          std::unique_ptr<jitlink::JITLinkAsyncLookupContinuation> LC) override {
     jitlink::AsyncLookupResult AllResults;
 

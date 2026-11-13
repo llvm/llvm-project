@@ -289,11 +289,19 @@ void f(long double f,
 /* WG14 DR309: yes
  * Clarifying trigraph substitution
  */
+#ifdef __MVS__
+/* Trigraphs are enabled by default on z/OS in every language mode, so the
+ * same warnings are produced for all standards. */
+int dr309??(1??) = { 1 }; /* expected-warning {{trigraph converted to '[' character}}
+                             expected-warning {{trigraph converted to ']' character}}
+                           */
+#else
 int dr309??(1??) = { 1 }; /* c17andearlier-warning {{trigraph converted to '[' character}}
                              c17andearlier-warning {{trigraph converted to ']' character}}
                              c23andup-warning 2 {{trigraph ignored}}
                              c23andup-error {{expected ';' after top level declarator}}
                            */
+#endif
 
 /* NOTE: Due to interactions with the diagnostic system, dr309 should be the
  * last test case in this file because subsequent diagnostics may not be

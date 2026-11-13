@@ -13,12 +13,19 @@
 #ifndef LLD_COMMON_TARGETOPTIONSCOMMANDFLAGS_H
 #define LLD_COMMON_TARGETOPTIONSCOMMANDFLAGS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
+namespace llvm::cl {
+class LibraryOptions;
+}
+
 namespace lld {
-llvm::TargetOptions initTargetOptionsFromCodeGenFlags();
+llvm::TargetOptions
+getTargetOptions(const llvm::cl::LibraryOptionsContext &libraryOptions);
+llvm::ArrayRef<const llvm::cl::LibraryOptions *> getToolOptions();
 std::optional<llvm::Reloc::Model> getRelocModelFromCMModel();
 std::optional<llvm::CodeModel::Model> getCodeModelFromCMModel();
 std::string getCPUStr();

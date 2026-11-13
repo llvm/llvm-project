@@ -5,7 +5,6 @@
 name:            zext_32_64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10

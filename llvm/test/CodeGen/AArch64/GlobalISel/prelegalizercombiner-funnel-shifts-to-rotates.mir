@@ -4,7 +4,6 @@
 ---
 name:            test_rotr
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }
@@ -33,7 +32,6 @@ body:             |
 ---
 name:            test_rotl
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }
@@ -62,7 +60,6 @@ body:             |
 ---
 name:            test_vector_rotr
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }
@@ -91,7 +88,6 @@ body:             |
 ---
 name:            test_vector_rotl
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$w1' }

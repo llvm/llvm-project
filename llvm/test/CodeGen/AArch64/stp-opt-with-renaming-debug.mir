@@ -29,7 +29,6 @@
 # CHECK-NEXT:  RET undef $lr
 name:           test_dbg_value1
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -65,7 +64,6 @@ body:             |
 # CHECK-NEXT:  RET undef $lr, implicit $x0
 name:            test_dbg_value2
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }

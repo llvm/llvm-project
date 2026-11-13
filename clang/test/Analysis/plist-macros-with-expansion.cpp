@@ -948,3 +948,31 @@ int bz44493(void) {
 // CHECK-NEXT:   <key>expansion</key><string>--(a );</string>
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT: </array>
+
+const char *traceid(const char *);
+int trace(int, const char *, int, ...);
+#define TRACE_CALL(tracelevel, ...)  { __VA_ARGS__; }
+
+#define TRACE(tracelevel, str, ...) \
+  TRACE_CALL((tracelevel), trace((0), traceid("formatstr " str), 0, tracelevel, __VA_ARGS__))
+
+#define TRACE_WRAPPER TRACE
+
+void GH47932(void* Context_p)
+{
+  int localvar;
+  TRACE_WRAPPER(localvar, "localvar=%u ", 0); // expected-warning {{4th function call argument is an uninitialized value}}
+}
+// CHECK:      <key>macro_expansions</key>
+// CHECK-NEXT: <array>
+// CHECK-NEXT:  <dict>
+// CHECK-NEXT:   <key>location</key>
+// CHECK-NEXT:   <dict>
+// CHECK-NEXT:    <key>line</key><integer>964</integer>
+// CHECK-NEXT:    <key>col</key><integer>3</integer>
+// CHECK-NEXT:    <key>file</key><integer>0</integer>
+// CHECK-NEXT:   </dict>
+// CHECK-NEXT:   <key>name</key><string>TRACE_WRAPPER(localvar, &quot;localvar=%u &quot;, 0)</string>
+// CHECK-NEXT:   <key>expansion</key><string>{trace ((0),traceid (&quot;formatstr &quot;&quot;localvar=%u &quot;),0,localvar ,0);}</string>
+// CHECK-NEXT:  </dict>
+// CHECK-NEXT: </array>

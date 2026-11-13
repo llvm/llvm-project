@@ -662,10 +662,10 @@ enabled in the same build.
 (embed-tosa-models)=
 #### Embed TOSA models with MLIR and EmitC
 
-Supply TOSA models as textual MLIR or MLIR bytecode files and build `mlir-opt`
-and `mlir-translate` before configuring LLVM. CMake runs the MLIR lowering
-pipeline, translates the resulting EmitC to C++ headers, and compiles those
-headers into LLVM without requiring TensorFlow at build time.
+Supply TOSA models as textual MLIR (`.mlir`) or MLIR bytecode (`.bc`) files and
+build `mlir-opt` and `mlir-translate` before configuring LLVM. CMake runs the MLIR
+lowering pipeline, translates the resulting EmitC to C++ headers, and compiles
+those headers into LLVM without requiring TensorFlow at build time.
 
 :::{warning}
 Textual TOSA models produced by `tosa-converter-for-tflite` currently use a

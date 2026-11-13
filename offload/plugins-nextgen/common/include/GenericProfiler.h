@@ -16,11 +16,13 @@
 #ifndef OFFLOAD_PLUGINS_NEXTGEN_COMMON_INCLUDE_GENERICPROFILER_H
 #define OFFLOAD_PLUGINS_NEXTGEN_COMMON_INCLUDE_GENERICPROFILER_H
 
-#include "Shared/APITypes.h"
-
+#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <tuple>
+#include <utility>
+
+struct __tgt_async_info;
 
 namespace llvm {
 namespace omp {
@@ -146,35 +148,30 @@ public:
   };
 
   template <typename ProfilerFuncTy, typename... ProfilerFuncArgsTy>
-  [[maybe_unused]]
-  ProfTimerTy(ProfilerFuncTy &&, GenericProfilerTy *, ProfilerFuncArgsTy...)
-      -> ProfTimerTy<ProfilerFuncTy, ProfilerFuncArgsTy...>;
-
-  template <typename ProfilerFuncTy, typename... ProfilerFuncArgsTy>
   friend class ProfTimerTy;
 
   /// Returns an RAII style timer, which handles data allocation timing.
   [[nodiscard]] auto getScopedDataAllocTimer(GenericDeviceTy *Dev,
                                              void *HostPtr, uint64_t Size,
                                              void *ProfData = nullptr) {
-    return ProfTimerTy(
-        [](GenericProfilerTy *P, auto... args) {
-          assert(P && "P was null");
-          P->handleDataAlloc(args...);
-        },
-        this, Dev, HostPtr, Size, ProfData);
+    auto F = [](GenericProfilerTy *P, auto... args) {
+      assert(P && "P was null");
+      P->handleDataAlloc(args...);
+    };
+    return ProfTimerTy<decltype(F), void *, uint64_t, void *>(
+        std::move(F), this, Dev, HostPtr, Size, ProfData);
   }
 
   /// Returns an RAII style timer, which handles data deletion timing.
   [[nodiscard]] auto getScopedDataDeleteTimer(GenericDeviceTy *Dev,
                                               void *TgtPtr,
                                               void *ProfData = nullptr) {
-    return ProfTimerTy(
-        [](GenericProfilerTy *P, auto... args) {
-          assert(P && "P was null");
-          P->handleDataDelete(args...);
-        },
-        this, Dev, TgtPtr, ProfData);
+    auto F = [](GenericProfilerTy *P, auto... args) {
+      assert(P && "P was null");
+      P->handleDataDelete(args...);
+    };
+    return ProfTimerTy<decltype(F), void *, void *>(std::move(F), this, Dev,
+                                                    TgtPtr, ProfData);
   }
 
 protected:

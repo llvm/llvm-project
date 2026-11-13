@@ -61,8 +61,8 @@ void unroll_partial_heuristic_runtime_for(int n, float *a, float *b, float *c, f
 // CHECK-NEXT:    [[DOTCOUNT:%.*]] = load i32, ptr [[DOTCOUNT_ADDR]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER:%.*]]
 // CHECK:       omp_loop.preheader:
-// CHECK-NEXT:    [[TMP4:%.*]] = udiv i32 [[DOTCOUNT]], 4
-// CHECK-NEXT:    [[TMP5:%.*]] = urem i32 [[DOTCOUNT]], 4
+// CHECK-NEXT:    [[TMP4:%.*]] = udiv i32 [[DOTCOUNT]], 2
+// CHECK-NEXT:    [[TMP5:%.*]] = urem i32 [[DOTCOUNT]], 2
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
 // CHECK-NEXT:    [[TMP7:%.*]] = zext i1 [[TMP6]] to i32
 // CHECK-NEXT:    [[OMP_FLOOR0_TRIPCOUNT:%.*]] = add nuw i32 [[TMP4]], [[TMP7]]
@@ -88,7 +88,7 @@ void unroll_partial_heuristic_runtime_for(int n, float *a, float *b, float *c, f
 // CHECK:       omp_floor0.body:
 // CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[OMP_FLOOR0_IV]], [[TMP9]]
 // CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], [[TMP4]]
-// CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP5]], i32 4
+// CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP5]], i32 2
 // CHECK-NEXT:    br label [[OMP_TILE0_PREHEADER:%.*]]
 // CHECK:       omp_tile0.preheader:
 // CHECK-NEXT:    br label [[OMP_TILE0_HEADER:%.*]]
@@ -99,7 +99,7 @@ void unroll_partial_heuristic_runtime_for(int n, float *a, float *b, float *c, f
 // CHECK-NEXT:    [[OMP_TILE0_CMP:%.*]] = icmp ult i32 [[OMP_TILE0_IV]], [[TMP15]]
 // CHECK-NEXT:    br i1 [[OMP_TILE0_CMP]], label [[OMP_TILE0_BODY:%.*]], label [[OMP_TILE0_EXIT:%.*]]
 // CHECK:       omp_tile0.body:
-// CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i32 4, [[TMP13]]
+// CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i32 2, [[TMP13]]
 // CHECK-NEXT:    [[TMP17:%.*]] = add nuw i32 [[TMP16]], [[OMP_TILE0_IV]]
 // CHECK-NEXT:    br label [[OMP_LOOP_BODY:%.*]]
 // CHECK:       omp_loop.body:

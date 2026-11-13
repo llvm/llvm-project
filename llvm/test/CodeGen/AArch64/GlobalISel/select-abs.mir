@@ -6,7 +6,6 @@
 name:            v4s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -28,7 +27,6 @@ body:             |
 name:            v8s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -50,7 +48,6 @@ body:             |
 name:            v2s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -72,7 +69,6 @@ body:             |
 name:            v4s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -94,7 +90,6 @@ body:             |
 name:            v4s8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -116,7 +111,6 @@ body:             |
 name:            v16s8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0

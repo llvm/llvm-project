@@ -17,7 +17,6 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"

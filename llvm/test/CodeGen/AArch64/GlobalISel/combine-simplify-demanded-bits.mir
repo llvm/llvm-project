@@ -5,7 +5,6 @@
 ---
 name:            drop_redundant_outer_mask
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -29,7 +28,6 @@ body:             |
 # Drop an OR when its set bits are not demanded.
 name:            drop_disjoint_or_high_const
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -53,7 +51,6 @@ body:             |
 # Keep an OR whose set bits are demanded.
 name:            keep_or_demanded_const
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -79,7 +76,6 @@ body:             |
 # Look through both shared masks while preserving their other uses.
 name:            multiuse_chain_look_through
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -112,7 +108,6 @@ body:             |
 ---
 name: root_or_disjoint
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -136,7 +131,6 @@ body: |
 ---
 name: and_hidden_bits_lhs
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -163,7 +157,6 @@ body: |
 ---
 name: and_hidden_bits_rhs
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -190,7 +183,6 @@ body: |
 ---
 name: or_hidden_bits_lhs
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -217,7 +209,6 @@ body: |
 ---
 name: or_hidden_bits_rhs
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1

@@ -33,7 +33,6 @@
 ---
 name:            branch_entry
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
   - { reg: '$r1' }

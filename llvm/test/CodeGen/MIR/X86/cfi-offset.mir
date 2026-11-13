@@ -19,7 +19,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 frameInfo:
   stackSize:       8
   adjustsStack:    true

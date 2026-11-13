@@ -16,7 +16,6 @@ name:            p0_no_copy
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: p0_no_copy
   ; CHECK: bb.0:
@@ -46,7 +45,6 @@ name:            widen_s32_to_s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: widen_s32_to_s64
   ; CHECK: bb.0:
@@ -83,7 +81,6 @@ name:            widen_s16_to_s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: widen_s16_to_s64
   ; CHECK: bb.0:
@@ -119,7 +116,6 @@ name:            narrow_s64_to_s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: narrow_s64_to_s32
   ; CHECK: bb.0:

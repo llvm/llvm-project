@@ -175,3 +175,13 @@ void errno_realpath(char *Path, char *Buf) {
     if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   }
 }
+
+// A failed socket() sets errno to a non-zero value, so a caller that returns
+// errno on the failure path cannot return zero. GH43015 reported a false
+// use-after-free in clang 18.1.0. Since clang 19.1.0 the false positive is
+// no longer present.
+void GH43015(void) {
+  if (socket(1, 2, 3) < 0) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+  }
+}

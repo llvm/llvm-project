@@ -13,6 +13,8 @@
 #include "mlir/IR/Remarks.h"
 #include "mlir/Remark/RemarkStreamer.h"
 #include "mlir/Support/TypeID.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
@@ -23,7 +25,9 @@
 #include "llvm/Support/YAMLParser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <mutex>
 #include <optional>
+#include <thread>
 #include <vector>
 
 using namespace mlir;
@@ -793,6 +797,771 @@ TEST(Remark, TestRemarkLinking) {
   EXPECT_THAT(errOut, HasSubstr("LoopOptimized"));
   EXPECT_THAT(errOut, HasSubstr("analyzed loop"));
   EXPECT_THAT(errOut, HasSubstr("vectorized loop"));
+}
+
+class RemarkHistoryTest : public TestWithParam<bool> {
+protected:
+  struct Record {
+    remark::RemarkId id;
+    SmallVector<remark::RemarkId> related;
+    std::vector<std::string> serializedLinks;
+  };
+
+  class RecordingStreamer final
+      : public remark::detail::MLIRRemarkStreamerBase {
+  public:
+    explicit RecordingStreamer(std::vector<Record> &records)
+        : records(records) {}
+
+    void
+    streamOptimizationRemark(const remark::detail::Remark &remark) override {
+      Record record{remark.getId(), {}, {}};
+      llvm::append_range(record.related, remark.getRelatedRemarkIds());
+      for (const auto &arg : remark.generateRemark().Args)
+        if (arg.Key == "RelatedTo")
+          record.serializedLinks.push_back(arg.Val.str());
+      std::scoped_lock<std::mutex> lock(mutex);
+      records.push_back(std::move(record));
+    }
+
+  private:
+    std::mutex mutex;
+    std::vector<Record> &records;
+  };
+
+  void SetUp() override {
+    // Also match an empty category so that RemarkOpts{} is accepted.
+    remark::RemarkCategories categories;
+    categories.passed = "(Opt.*)?";
+    categories.missed = "(Opt.*)?";
+    categories.analysis = "(Opt.*)?";
+    categories.failed = "(Opt.*)?";
+    std::unique_ptr<remark::detail::RemarkEmittingPolicyBase> policy;
+    if (isFinal())
+      policy = std::make_unique<remark::RemarkEmittingPolicyFinal>();
+    else
+      policy = std::make_unique<remark::RemarkEmittingPolicyAll>();
+    auto streamer = std::make_unique<RecordingStreamer>(records);
+    ASSERT_TRUE(succeeded(remark::enableOptimizationRemarks(
+        context, std::move(streamer), std::move(policy), categories)));
+    ASSERT_TRUE(context.getRemarkEngine());
+    ASSERT_TRUE(engine().isPassedOptRemarkEnabled("Opt"));
+    ASSERT_TRUE(engine().isAnalysisOptRemarkEnabled("Opt"));
+    ASSERT_TRUE(engine().isPassedOptRemarkEnabled(""));
+    ASSERT_TRUE(engine().isAnalysisOptRemarkEnabled(""));
+  }
+
+  bool isFinal() const { return GetParam(); }
+
+  remark::detail::RemarkEngine &engine() { return *context.getRemarkEngine(); }
+
+  remark::RemarkId emit(Location loc, remark::RemarkOpts opts) {
+    auto r = remark::passed(loc, opts);
+    return r.getId();
+  }
+
+  remark::RemarkId emitAnalysis(Location loc, remark::RemarkOpts opts) {
+    auto r = remark::analysis(loc, opts);
+    return r.getId();
+  }
+
+  remark::RemarkId emitMissed(Location loc, remark::RemarkOpts opts) {
+    auto r = remark::missed(loc, opts);
+    return r.getId();
+  }
+
+  remark::RemarkId emitFailed(Location loc, remark::RemarkOpts opts) {
+    auto r = remark::failed(loc, opts);
+    return r.getId();
+  }
+
+  void flush() { engine().getRemarkEmittingPolicy()->finalize(); }
+
+  void expectLinks(remark::RemarkId id, ArrayRef<remark::RemarkId> expected) {
+    std::vector<std::string> serialized;
+    for (remark::RemarkId related : expected)
+      serialized.push_back(std::to_string(related.getValue()));
+    EXPECT_THAT(records, Contains(AllOf(Field(&Record::id, id),
+                                        Field(&Record::related,
+                                              ElementsAreArray(expected)),
+                                        Field(&Record::serializedLinks,
+                                              ElementsAreArray(serialized)))));
+  }
+
+  std::vector<Record> records;
+  // Keep records alive while the context drains its remark engine.
+  MLIRContext context;
+};
+
+TEST_P(RemarkHistoryTest, LifecycleAndCreationOrder) {
+  Location loc = UnknownLoc::get(&context);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto any = remark::RemarkQuery{};
+  emit(loc, opts);
+  flush();
+  EXPECT_THAT(engine().findRemarks(any), IsEmpty());
+
+  engine().enableHistory();
+  remark::RemarkId firstCreated, secondCreated;
+  {
+    auto pending = remark::passed(loc, opts);
+    firstCreated = pending.getId();
+    EXPECT_THAT(engine().findRemarks(any), IsEmpty());
+    secondCreated =
+        emit(loc, remark::RemarkOpts::name("Second").category("Opt"));
+    EXPECT_THAT(engine().findRemarks(any), ElementsAre(secondCreated));
+  }
+  EXPECT_LT(firstCreated.getValue(), secondCreated.getValue());
+  // Query ordering follows creation IDs, even when reports arrive out of order.
+  EXPECT_THAT(engine().findRemarks(any),
+              ElementsAre(firstCreated, secondCreated));
+  flush();
+  engine().enableHistory();
+  EXPECT_THAT(engine().findRemarks(any),
+              ElementsAre(firstCreated, secondCreated));
+  engine().clearHistory();
+  EXPECT_THAT(engine().findRemarks(any), IsEmpty());
+  auto afterClear = emit(loc, opts);
+  flush();
+  EXPECT_THAT(engine().findRemarks(any), ElementsAre(afterClear));
+  EXPECT_GT(afterClear.getValue(), secondCreated.getValue());
+
+  engine().enableHistory(false);
+  EXPECT_THAT(engine().findRemarks(any), IsEmpty());
+  emit(loc, opts);
+  flush();
+  engine().clearHistory();
+  emit(loc, opts);
+  flush();
+  EXPECT_THAT(engine().findRemarks(any), IsEmpty());
+  engine().enableHistory();
+  EXPECT_THAT(engine().findRemarks(any), IsEmpty());
+  auto afterEnable = emit(loc, opts);
+  flush();
+  EXPECT_THAT(engine().findRemarks(any), ElementsAre(afterEnable));
+  EXPECT_GT(afterEnable.getValue(), afterClear.getValue());
+
+  EXPECT_FALSE(static_cast<bool>(
+      emit(loc, remark::RemarkOpts::name("Filtered").category("Unselected"))));
+  EXPECT_THAT(engine().findRemarks(any), ElementsAre(afterEnable));
+}
+
+TEST_P(RemarkHistoryTest, ExactFieldsAndConjunction) {
+  engine().enableHistory();
+  Location loc = FileLineColLoc::get(&context, "input.mlir", 7, 2);
+  Location otherLoc = NameLoc::get(StringAttr::get(&context, "wrapped"), loc);
+  auto opts = remark::RemarkOpts::name("Candidate")
+                  .category("Opt")
+                  .subCategory("Vector")
+                  .function("kernel");
+  auto target = emit(loc, opts);
+  auto otherSub = emit(loc, opts.subCategory("Unroll"));
+  auto analysis = emitAnalysis(loc, opts);
+  auto other = emit(otherLoc, remark::RemarkOpts::name("Other")
+                                  .category("OptOther")
+                                  .subCategory("Other")
+                                  .function("helper"));
+  auto empty = emit(UnknownLoc::get(&context), remark::RemarkOpts{});
+  auto any = remark::RemarkQuery{};
+  flush();
+
+  EXPECT_THAT(engine().findRemarks(any.name("Candidate")),
+              ElementsAre(target, otherSub, analysis));
+  EXPECT_THAT(engine().findRemarks(any.category("Opt")),
+              ElementsAre(target, otherSub, analysis));
+  EXPECT_THAT(engine().findRemarks(any.subCategory("Vector")),
+              ElementsAre(target, analysis));
+  EXPECT_THAT(engine().findRemarks(any.function("kernel")),
+              ElementsAre(target, otherSub, analysis));
+  EXPECT_THAT(engine().findRemarks(any.kind(remark::RemarkKind::RemarkPassed)),
+              ElementsAre(target, otherSub, other, empty));
+  EXPECT_THAT(engine().findRemarks(any.at(loc)),
+              ElementsAre(target, otherSub, analysis));
+  EXPECT_THAT(engine().findRemarks(any.at(otherLoc)), ElementsAre(other));
+
+  auto exact = any.name("Candidate")
+                   .category("Opt")
+                   .subCategory("Vector")
+                   .function("kernel")
+                   .kind(remark::RemarkKind::RemarkPassed)
+                   .at(loc);
+  EXPECT_THAT(engine().findRemarks(exact), ElementsAre(target));
+  EXPECT_THAT(engine().findRemarks(exact.function("helper")), IsEmpty());
+  EXPECT_THAT(engine().findRemarks(any.category("Opt.*")), IsEmpty());
+  EXPECT_THAT(engine().findRemarks(any.category("Opt:Vector")), IsEmpty());
+  EXPECT_THAT(engine().findRemarks(any.name("")), ElementsAre(empty));
+  EXPECT_THAT(engine().findRemarks(any.category("")), ElementsAre(empty));
+  EXPECT_THAT(engine().findRemarks(any.subCategory("")), ElementsAre(empty));
+  EXPECT_THAT(engine().findRemarks(any.function("")), ElementsAre(empty));
+  EXPECT_THAT(engine().findRemarks(any.name("<unknown remark name>")),
+              IsEmpty());
+  EXPECT_THAT(engine().findRemarks(any.function("<unknown function>")),
+              IsEmpty());
+
+  // The existing options overload treats empty fields as wildcards.
+  EXPECT_THAT(engine().findRemarks(remark::RemarkOpts{}),
+              ElementsAre(target, otherSub, analysis, other, empty));
+  EXPECT_THAT(engine().findRemarks(opts, remark::RemarkKind::RemarkAnalysis),
+              ElementsAre(analysis));
+  EXPECT_THAT(engine().findRemarks(opts.relatedTo(other)),
+              ElementsAre(target, analysis));
+  EXPECT_THAT(engine().findRemarks(remark::RemarkOpts{},
+                                   remark::RemarkKind::RemarkAnalysis),
+              ElementsAre(analysis));
+  EXPECT_THAT(engine().findRemarks(any.kind(remark::RemarkKind::RemarkUnknown)),
+              IsEmpty());
+}
+
+TEST_P(RemarkHistoryTest, OwnsQueryAndHistoryStrings) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  remark::RemarkQuery query;
+  remark::RemarkId target;
+  {
+    std::string name = "Candidate", category = "Opt", sub = "Vector";
+    std::string function = "kernel";
+    query = remark::RemarkQuery::named(name)
+                .category(category)
+                .subCategory(sub)
+                .function(function);
+    target = emit(loc, remark::RemarkOpts::name(name)
+                           .category(category)
+                           .subCategory(sub)
+                           .function(function));
+    name.assign("Changed");
+    category.assign("Changed");
+    sub.assign("Changed");
+    function.assign("Changed");
+  }
+  flush();
+  EXPECT_THAT(engine().findRemarks(query), ElementsAre(target));
+  const auto original = query;
+  auto changed = original.name("Other");
+  EXPECT_THAT(engine().findRemarks(changed), IsEmpty());
+  EXPECT_THAT(engine().findRemarks(original), ElementsAre(target));
+
+  // Saved queries remain usable after the interned pool resets; IDs are not
+  // reset.
+  for (bool disable : {false, true}) {
+    if (disable) {
+      engine().enableHistory(false);
+      engine().enableHistory();
+    } else {
+      engine().clearHistory();
+    }
+    EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+    auto next = emit(loc, remark::RemarkOpts::name("Candidate")
+                              .category("Opt")
+                              .subCategory("Vector")
+                              .function("kernel"));
+    flush();
+    EXPECT_THAT(engine().findRemarks(original), ElementsAre(next));
+    EXPECT_GT(next.getValue(), target.getValue());
+  }
+}
+
+TEST_P(RemarkHistoryTest, QueryLinksSnapshotAndSerialization) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto query = remark::RemarkQuery{}.kind(remark::RemarkKind::RemarkAnalysis);
+  auto first =
+      emitAnalysis(loc, remark::RemarkOpts::name("First").category("Opt"));
+  auto second =
+      emitAnalysis(loc, remark::RemarkOpts::name("Second").category("Opt"));
+  flush();
+  remark::RemarkId linked, later, pendingId, noMatches, copiedWrapper;
+  {
+    auto pending = remark::analysis(
+        loc, remark::RemarkOpts::name("Pending").category("Opt"));
+    pendingId = pending.getId();
+    {
+      auto r = remark::passed(
+          loc, remark::RemarkOpts::name("Linked").category("Opt"));
+      linked = r.getId();
+      r << remark::relatedTo(query);
+      // This report occurs before Linked is reported, but after its query.
+      later =
+          emitAnalysis(loc, remark::RemarkOpts::name("Later").category("Opt"));
+    }
+  }
+  flush();
+  {
+    const auto wrapper = remark::relatedTo(query);
+    auto r = remark::passed(
+        loc, remark::RemarkOpts::name("CopiedWrapper").category("Opt"));
+    copiedWrapper = r.getId();
+    r << wrapper;
+  }
+  {
+    auto r = remark::passed(
+        loc, remark::RemarkOpts::name("NoMatches").category("Opt"));
+    noMatches = r.getId();
+    r << remark::relatedTo(query.name("Absent"));
+  }
+  flush();
+
+  expectLinks(linked, {first, second});
+  expectLinks(copiedWrapper, {first, second, pendingId, later});
+  expectLinks(noMatches, {});
+}
+
+TEST_P(RemarkHistoryTest, QueryLinksDoNotEnableHistory) {
+  Location loc = UnknownLoc::get(&context);
+  auto query = remark::RemarkQuery{};
+  emit(loc, remark::RemarkOpts::name("First").category("Opt"));
+  remark::RemarkId linked;
+  {
+    auto r =
+        remark::passed(loc, remark::RemarkOpts::name("Linked").category("Opt"));
+    linked = r.getId();
+    auto wrapper = remark::relatedTo(query);
+    r << wrapper;
+  }
+  // Both filtered and ownerless remarks accept the lazy wrapper harmlessly.
+  remark::passed(loc, remark::RemarkOpts::name("Filtered").category("Other"))
+      << remark::relatedTo(query);
+  remark::detail::InFlightRemark{} << remark::relatedTo(query);
+  EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  flush();
+  engine().enableHistory();
+  EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  EXPECT_THAT(records, Contains(AllOf(Field(&Record::id, linked),
+                                      Field(&Record::related, IsEmpty()))));
+}
+
+TEST_P(RemarkHistoryTest, HistoryControlsPreserveFinalPendingRemarks) {
+  Location loc = UnknownLoc::get(&context);
+  auto query = remark::RemarkQuery{};
+  auto beforeEnable =
+      emit(loc, remark::RemarkOpts::name("BeforeEnable").category("Opt"));
+  EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  engine().enableHistory();
+  if (isFinal())
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(beforeEnable));
+  else
+    EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  flush();
+
+  auto beforeClear =
+      emit(loc, remark::RemarkOpts::name("BeforeClear").category("Opt"));
+  engine().clearHistory();
+  if (isFinal())
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(beforeClear));
+  else
+    EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  flush();
+
+  auto beforeDisable =
+      emit(loc, remark::RemarkOpts::name("BeforeDisable").category("Opt"));
+  engine().enableHistory(false);
+  EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  engine().enableHistory();
+  if (isFinal())
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(beforeDisable));
+  else
+    EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+  engine().enableHistory(false);
+  flush();
+  engine().enableHistory();
+  EXPECT_THAT(engine().findRemarks(query), IsEmpty());
+}
+
+TEST_P(RemarkHistoryTest, SameKeyQueriesLinkPendingAndEmittedTargets) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto query = remark::RemarkQuery::named("Candidate").category("Opt");
+  auto first = emit(loc, opts);
+  auto second = emit(loc, opts);
+  if (isFinal())
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(second));
+  else
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(first, second));
+
+  remark::RemarkId beforeFlush;
+  {
+    auto r = remark::passed(
+        loc, remark::RemarkOpts::name("BeforeFlush").category("Opt"));
+    beforeFlush = r.getId();
+    r << remark::relatedTo(query);
+  }
+  flush();
+  if (isFinal()) {
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(second));
+    EXPECT_THAT(records, Not(Contains(Field(&Record::id, first))));
+    expectLinks(beforeFlush, {second});
+  } else {
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(first, second));
+    expectLinks(beforeFlush, {first, second});
+  }
+
+  // The same identity can link to an earlier batch without suppressing it.
+  remark::RemarkId sameKey;
+  {
+    auto r = remark::passed(loc, opts);
+    sameKey = r.getId();
+    r << remark::relatedTo(query);
+  }
+  flush();
+  if (isFinal())
+    expectLinks(sameKey, {second});
+  else
+    expectLinks(sameKey, {first, second});
+
+  // A pending FINAL replacement must not become a dangling query target.
+  auto replaced = emit(loc, opts);
+  remark::RemarkId consumer;
+  {
+    auto r = remark::passed(
+        loc, remark::RemarkOpts::name("Consumer").category("Opt"));
+    consumer = r.getId();
+    r << remark::relatedTo(query);
+    emit(loc, opts);
+  }
+  flush();
+  if (isFinal()) {
+    expectLinks(consumer, {second, sameKey});
+    EXPECT_THAT(records, Not(Contains(Field(&Record::id, replaced))));
+  } else {
+    expectLinks(consumer, {first, second, sameKey, replaced});
+  }
+  for (const Record &record : records)
+    for (remark::RemarkId related : record.related)
+      EXPECT_THAT(records, Contains(Field(&Record::id, related)));
+}
+
+// Querying before replacement captures r1, but FINAL must remove that link
+// when r2 supersedes r1. It must not redirect the link to r2.
+TEST_P(RemarkHistoryTest, QueryBeforeReplacementPrunesDiscardedTarget) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto query = remark::RemarkQuery::named("Candidate").at(loc);
+  auto r1 = emitMissed(loc, opts);
+  EXPECT_THAT(engine().findRemarks(query), ElementsAre(r1));
+  remark::RemarkId r3;
+  {
+    auto r = remark::missed(
+        loc, remark::RemarkOpts::name("Consumer").category("Opt"));
+    r3 = r.getId();
+    r << remark::relatedTo(query);
+  }
+  auto r2 = emitMissed(loc, opts);
+  flush();
+  if (isFinal()) {
+    EXPECT_THAT(records,
+                ElementsAre(Field(&Record::id, r3), Field(&Record::id, r2)));
+    expectLinks(r3, {});
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(r2));
+  } else {
+    expectLinks(r3, {r1});
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(r1, r2));
+  }
+}
+
+TEST_P(RemarkHistoryTest, QueryAfterReplacementLinksSurvivingTarget) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto r1 = emitMissed(loc, opts);
+  auto r2 = emitMissed(loc, opts);
+  auto query = remark::RemarkQuery::named("Candidate").at(loc);
+  if (isFinal())
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(r2));
+  else
+    EXPECT_THAT(engine().findRemarks(query), ElementsAre(r1, r2));
+  remark::RemarkId r3;
+  {
+    auto r = remark::missed(
+        loc, remark::RemarkOpts::name("Consumer").category("Opt"));
+    r3 = r.getId();
+    r << remark::relatedTo(query);
+  }
+  flush();
+  if (isFinal()) {
+    EXPECT_THAT(records,
+                ElementsAre(Field(&Record::id, r3), Field(&Record::id, r2)));
+    expectLinks(r3, {r2});
+  } else {
+    expectLinks(r3, {r1, r2});
+  }
+}
+
+TEST_P(RemarkHistoryTest, QueryLinksBeforeFinalization) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto target =
+      emitMissed(loc, remark::RemarkOpts::name("Candidate").category("Opt"));
+  remark::RemarkId consumer;
+  {
+    auto r = remark::missed(
+        loc, remark::RemarkOpts::name("Consumer").category("Opt"));
+    consumer = r.getId();
+    r << remark::relatedTo(remark::RemarkQuery::named("Candidate"));
+  }
+  if (isFinal())
+    EXPECT_THAT(records, IsEmpty());
+  else
+    EXPECT_EQ(records.size(), 2u);
+  flush();
+  expectLinks(consumer, {target});
+  EXPECT_EQ(records.size(), 2u);
+}
+
+// Final only prunes references to targets superseded in the consumer's batch.
+// Keeping a consumer in flight across finalization moves its report into the
+// next batch, after the policy has discarded the previous batch's bookkeeping.
+TEST_P(RemarkHistoryTest, InFlightConsumerOutlivesDiscardedTargetBatch) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto query = remark::RemarkQuery::named("Candidate").at(loc);
+  auto target = emitMissed(loc, opts);
+  remark::RemarkId consumer, replacement;
+  {
+    auto r = remark::missed(
+        loc, remark::RemarkOpts::name("Consumer").category("Opt"));
+    consumer = r.getId();
+    r << remark::relatedTo(query);
+    replacement = emitMissed(loc, opts);
+    flush();
+    EXPECT_THAT(records, Not(Contains(Field(&Record::id, consumer))));
+    if (isFinal()) {
+      EXPECT_THAT(records, ElementsAre(Field(&Record::id, replacement)));
+      EXPECT_THAT(engine().findRemarks(query), ElementsAre(replacement));
+    } else {
+      EXPECT_THAT(engine().findRemarks(query),
+                  ElementsAre(target, replacement));
+    }
+  }
+  flush();
+  // Final no longer knows that the previous batch superseded this target.
+  // The captured link remains unchanged, including in serialized arguments.
+  expectLinks(consumer, {target});
+  if (isFinal())
+    EXPECT_THAT(records, ElementsAre(Field(&Record::id, replacement),
+                                     Field(&Record::id, consumer)));
+  else
+    EXPECT_EQ(records.size(), 3u);
+}
+
+TEST_P(RemarkHistoryTest, EarlierBatchLinksSurviveHistoryReset) {
+  Location loc = UnknownLoc::get(&context);
+  for (bool disable : {false, true}) {
+    SCOPED_TRACE(disable);
+    // Earlier-batch links remain intact even when history was disabled.
+    engine().enableHistory(!disable);
+    auto target = emit(loc, remark::RemarkOpts::name("Target").category("Opt"));
+    flush();
+    if (disable)
+      engine().enableHistory();
+    else
+      engine().clearHistory();
+    EXPECT_THAT(engine().findRemarks(remark::RemarkQuery{}), IsEmpty());
+    engine().enableHistory(false);
+    auto consumer = emit(
+        loc,
+        remark::RemarkOpts::name("Consumer").category("Opt").relatedTo(target));
+    flush();
+    expectLinks(consumer, {target});
+    EXPECT_EQ(llvm::count_if(records,
+                             [&](const Record &r) { return r.id == target; }),
+              1);
+  }
+}
+
+TEST_P(RemarkHistoryTest, SharedTargetsEmitOnceAndQueriesUseCreationOrder) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto child =
+      emitAnalysis(loc, remark::RemarkOpts::name("Child").category("Opt"));
+  auto firstParent = emit(
+      loc,
+      remark::RemarkOpts::name("FirstParent").category("Opt").relatedTo(child));
+  auto secondParent = emitAnalysis(loc, remark::RemarkOpts::name("SecondParent")
+                                            .category("Opt")
+                                            .relatedTo(child));
+  flush();
+  auto query = remark::RemarkQuery{};
+  EXPECT_THAT(engine().findRemarks(query),
+              ElementsAre(child, firstParent, secondParent));
+  EXPECT_EQ(
+      llvm::count_if(records, [&](const Record &r) { return r.id == child; }),
+      1);
+  EXPECT_EQ(records.size(), 3u);
+  expectLinks(firstParent, {child});
+  expectLinks(secondParent, {child});
+
+  // Grouping can emit a parent first; queries still return creation order.
+  auto analyses = query.kind(remark::RemarkKind::RemarkAnalysis);
+  EXPECT_THAT(engine().findRemarks(analyses), ElementsAre(child, secondParent));
+  remark::RemarkId linked;
+  {
+    auto r =
+        remark::passed(loc, remark::RemarkOpts::name("Linked").category("Opt"));
+    linked = r.getId();
+    r << remark::relatedTo(analyses);
+  }
+  flush();
+  expectLinks(linked, {child, secondParent});
+}
+
+// The consumer shares the Final identity of the pending target it queries, so
+// its own report replaces that target and the link is pruned; the link is not
+// redirected to the consumer.
+TEST_P(RemarkHistoryTest, ConsumerReplacingItsQueryTargetLosesTheLink) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto target = emitMissed(loc, opts);
+  remark::RemarkId consumer;
+  {
+    auto r = remark::missed(loc, opts);
+    consumer = r.getId();
+    r << remark::relatedTo(remark::RemarkQuery::named("Candidate").at(loc));
+  }
+  flush();
+  if (isFinal()) {
+    EXPECT_THAT(records, ElementsAre(Field(&Record::id, consumer)));
+    expectLinks(consumer, {});
+    EXPECT_THAT(engine().findRemarks(remark::RemarkQuery::named("Candidate")),
+                ElementsAre(consumer));
+  } else {
+    EXPECT_EQ(records.size(), 2u);
+    expectLinks(consumer, {target});
+  }
+}
+
+// function() narrows a query, but the function is not part of the Final
+// identity: a same-identity report from another function replaces the matched
+// target and the link is pruned.
+TEST_P(RemarkHistoryTest, FunctionScopedQueryTargetReplacedByOtherFunction) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto kernelTarget = emit(loc, opts.function("kernel"));
+  remark::RemarkId consumer;
+  {
+    auto r = remark::passed(
+        loc, remark::RemarkOpts::name("Consumer").category("Opt"));
+    consumer = r.getId();
+    r << remark::relatedTo(
+        remark::RemarkQuery::named("Candidate").function("kernel"));
+  }
+  auto helperTarget = emit(loc, opts.function("helper"));
+  flush();
+  if (isFinal()) {
+    EXPECT_THAT(records, Not(Contains(Field(&Record::id, kernelTarget))));
+    EXPECT_THAT(records, Contains(Field(&Record::id, helperTarget)));
+    expectLinks(consumer, {});
+  } else {
+    expectLinks(consumer, {kernelTarget});
+  }
+}
+
+// An explicit link and query matches for the same target produce one link.
+TEST_P(RemarkHistoryTest, ExplicitAndQueryLinksToSameTargetAreLinkedOnce) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto target =
+      emitAnalysis(loc, remark::RemarkOpts::name("Target").category("Opt"));
+  auto query = remark::RemarkQuery::named("Target");
+  remark::RemarkId consumer;
+  {
+    auto r = remark::passed(
+        loc,
+        remark::RemarkOpts::name("Consumer").category("Opt").relatedTo(target));
+    consumer = r.getId();
+    r << remark::relatedTo(query) << remark::relatedTo(query);
+  }
+  flush();
+  expectLinks(consumer, {target});
+}
+
+// A Failure and a Passed remark at the same site have different Final
+// identities: both are searchable, both can be linked, and both are emitted.
+TEST_P(RemarkHistoryTest, FailedAndPassedAtOneSiteAreDistinctIdentities) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  auto opts = remark::RemarkOpts::name("Candidate").category("Opt");
+  auto failed = emitFailed(loc, opts);
+  auto passed = emit(loc, opts);
+  auto query = remark::RemarkQuery::named("Candidate").at(loc);
+  EXPECT_THAT(engine().findRemarks(query), ElementsAre(failed, passed));
+  EXPECT_THAT(
+      engine().findRemarks(query.kind(remark::RemarkKind::RemarkFailure)),
+      ElementsAre(failed));
+  remark::RemarkId consumer;
+  {
+    auto r = remark::passed(
+        loc, remark::RemarkOpts::name("Consumer").category("Opt"));
+    consumer = r.getId();
+    r << remark::relatedTo(query);
+  }
+  flush();
+  expectLinks(consumer, {failed, passed});
+  EXPECT_EQ(records.size(), 3u);
+}
+
+#if LLVM_ENABLE_THREADS
+// Concurrent reports, query-based links, and queries with history enabled.
+TEST_P(RemarkHistoryTest, ConcurrentReportsAndQueries) {
+  engine().enableHistory();
+  Location loc = UnknownLoc::get(&context);
+  constexpr unsigned numThreads = 4, perThread = 50;
+  std::vector<std::thread> threads;
+  for (unsigned t = 0; t < numThreads; ++t)
+    threads.emplace_back([&, t] {
+      std::string function = "f" + std::to_string(t);
+      for (unsigned i = 0; i < perThread; ++i) {
+        // Distinct names: Final identity ignores the function, so same-named
+        // remarks at one location would replace each other across threads.
+        std::string name = function + "_" + std::to_string(i);
+        remark::passed(
+            loc,
+            remark::RemarkOpts::name(name).category("Opt").function(function))
+            << remark::relatedTo(remark::RemarkQuery{}.function(function));
+        (void)engine().findRemarks(remark::RemarkQuery{});
+      }
+    });
+  for (std::thread &thread : threads)
+    thread.join();
+  flush();
+  ASSERT_EQ(records.size(), size_t{numThreads * perThread});
+  llvm::DenseSet<uint64_t> ids;
+  for (const Record &record : records)
+    ids.insert(record.id.getValue());
+  for (const Record &record : records)
+    for (remark::RemarkId related : record.related)
+      EXPECT_TRUE(ids.contains(related.getValue()));
+}
+#endif
+
+INSTANTIATE_TEST_SUITE_P(EmittingPolicies, RemarkHistoryTest, Bool(),
+                         [](const TestParamInfo<bool> &info) {
+                           return info.param ? "Final" : "All";
+                         });
+
+TEST(Remark, RawMetadataAccessorsPreserveEmptyFields) {
+  MLIRContext context;
+  Location loc = UnknownLoc::get(&context);
+  remark::detail::OptRemarkPass empty(loc, remark::RemarkOpts{});
+  EXPECT_TRUE(empty.getRawRemarkName().empty());
+  EXPECT_TRUE(empty.getRawFunction().empty());
+  EXPECT_TRUE(empty.getSubCategoryName().empty());
+  EXPECT_EQ(empty.getRemarkName(), "<unknown remark name>");
+  EXPECT_EQ(empty.getFunction(), "<unknown function>");
+
+  remark::detail::OptRemarkPass populated(loc,
+                                          remark::RemarkOpts::name("Candidate")
+                                              .category("Opt")
+                                              .subCategory("Vector")
+                                              .function("kernel"));
+  EXPECT_EQ(populated.getRawRemarkName(), "Candidate");
+  EXPECT_EQ(populated.getRawFunction(), "kernel");
+  EXPECT_EQ(populated.getCategoryName(), "Opt");
+  EXPECT_EQ(populated.getSubCategoryName(), "Vector");
+  EXPECT_EQ(populated.getCombinedCategoryName(), "Opt:Vector");
 }
 
 TEST(Remark, TestNestedLocation) {

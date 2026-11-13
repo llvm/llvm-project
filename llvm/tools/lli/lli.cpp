@@ -435,7 +435,8 @@ int main(int argc, char **argv, char * const *envp) {
   InitializeNativeTargetAsmParser();
 
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "llvm interpreter & dynamic compiler\n");
 
   if (HostJITTriple) {
@@ -524,7 +525,7 @@ int main(int argc, char **argv, char * const *envp) {
   builder.setOptLevel(getOptLevel());
 
   TargetOptions Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(Triple(TargetTriple));
+      codegen::getTargetOptions(LibraryOptions, Triple(TargetTriple));
 
   if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls();
       ABI != FloatABI::Default && !Mod->getModuleFlag("float-abi")) {

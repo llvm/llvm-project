@@ -8,7 +8,6 @@
 name:            v8s8_cst3
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -31,7 +30,6 @@ body:             |
 name:            v8s8_cst5
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -54,7 +52,6 @@ body:             |
 name:            v16s8_cst3
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -77,7 +74,6 @@ body:             |
 name:            v16s8_cst7
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -100,7 +96,6 @@ body:             |
 name:            v4s16_cst6
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -123,7 +118,6 @@ body:             |
 name:            v4s32_cst12
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -146,7 +140,6 @@ body:             |
 name:            undef_elts_should_match_1
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -171,7 +164,6 @@ body:             |
 name:            undef_elts_should_match_2
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -196,7 +188,6 @@ body:             |
 name:            undef_elts_should_match_3
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -221,7 +212,6 @@ body:             |
 name:            undef_elts_should_match_4
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -246,7 +236,6 @@ body:             |
 name:            all_undef
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -269,7 +258,6 @@ body:             |
 name:            v2s64_singleton_ext
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -291,7 +279,6 @@ body:             |
 name:            v2s64_singleton_ext_all_undef
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -313,7 +300,6 @@ body:             |
 name:            v2s64_singleton_ext_same
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0

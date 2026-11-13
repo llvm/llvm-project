@@ -127,9 +127,9 @@ define void @too_wide(ptr %in0, ptr %out0) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP5]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, <2 x ptr> [[TMP1]], <2 x i64> <i64 0, i64 16>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [2 x i8], <2 x ptr> [[TMP1]], <2 x i64> <i64 0, i64 16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16, <16 x ptr> [[TMP3]], <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [2 x i8], <16 x ptr> [[TMP3]], <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr> align 2 [[TMP4]], <16 x i1> splat (i1 true), <16 x i16> poison)
 ; CHECK-NEXT:    store <16 x i16> [[TMP0]], ptr [[OUT0:%.*]], align 2
 ; CHECK-NEXT:    ret void

@@ -4,7 +4,6 @@
 ...
 ---
 name:           unsafe_range_in_middle
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
@@ -41,7 +40,6 @@ body:             |
 ...
 ---
 name:           unsafe_range_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |

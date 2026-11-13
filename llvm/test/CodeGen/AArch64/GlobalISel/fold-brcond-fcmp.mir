@@ -11,7 +11,6 @@
 name:            oeq
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: oeq
   ; CHECK: bb.0:
@@ -52,7 +51,6 @@ body:             |
 name:            ogt
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ogt
   ; CHECK: bb.0:
@@ -93,7 +91,6 @@ body:             |
 name:            oge
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: oge
   ; CHECK: bb.0:
@@ -134,7 +131,6 @@ body:             |
 name:            olt
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: olt
   ; CHECK: bb.0:
@@ -175,7 +171,6 @@ body:             |
 name:            ole
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ole
   ; CHECK: bb.0:
@@ -216,7 +211,6 @@ body:             |
 name:            one
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: one
   ; CHECK: bb.0:
@@ -258,7 +252,6 @@ body:             |
 name:            ord
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ord
   ; CHECK: bb.0:
@@ -299,7 +292,6 @@ body:             |
 name:            uno
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: uno
   ; CHECK: bb.0:
@@ -340,7 +332,6 @@ body:             |
 name:            ueq
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ueq
   ; CHECK: bb.0:
@@ -382,7 +373,6 @@ body:             |
 name:            ugt
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ugt
   ; CHECK: bb.0:
@@ -423,7 +413,6 @@ body:             |
 name:            uge
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: uge
   ; CHECK: bb.0:
@@ -464,7 +453,6 @@ body:             |
 name:            ult
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ult
   ; CHECK: bb.0:
@@ -505,7 +493,6 @@ body:             |
 name:            ule
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: ule
   ; CHECK: bb.0:
@@ -546,7 +533,6 @@ body:             |
 name:            une
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: une
   ; CHECK: bb.0:

@@ -87,7 +87,7 @@ function(_get_compile_options_from_flags output_var)
         list(APPEND compile_options "-D__LIBC_USE_BUILTIN_FMAXF16_FMINF16")
       endif()
       if("FullFP16" IN_LIST LIBC_CPU_FEATURES AND
-        CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+          CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         list(APPEND compile_options
           "SHELL:-Xclang -target-feature -Xclang +fullfp16")
       endif()
@@ -250,7 +250,7 @@ function(_get_common_compile_options_impl output_var)
         # -ffreestanding, which in turn includes <stdlib.h>. Suppress it by
         # defining its header guard.
         if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-          (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
+            (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
           list(APPEND compile_options "-D_MM_MALLOC_H_INCLUDED")
         endif()
       endif()
@@ -266,7 +266,7 @@ function(_get_common_compile_options_impl output_var)
       endif()
       # TODO: We should set this unconditionally on Linux.
       if(LIBC_TARGET_OS_IS_LINUX AND
-        (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
+          (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
         # We use -idirafter to avoid preempting libc's own headers in case the
         # directory (e.g. /usr/include) contains other headers.
         foreach(path IN LISTS LIBC_KERNEL_HEADERS)
@@ -321,6 +321,12 @@ function(_get_common_compile_options_impl output_var)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       # Silence this warning because _Complex is a part of C99.
       list(APPEND compile_options "-fext-numeric-literals")
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "11.0.0")
+        # AllocChecker's operator new overloads inline malloc/aligned_alloc
+        # while C++ forbids marking replaceable operator delete inline, causing
+        # GCC to report false-positive -Wmismatched-new-delete diagnostics.
+        list(APPEND compile_options "-Wno-mismatched-new-delete")
+      endif()
     else()
       list(APPEND compile_options "-Wno-c99-extensions")
       list(APPEND compile_options "-Wno-gnu-imaginary-constant")

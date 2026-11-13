@@ -225,140 +225,18 @@ define <8 x bfloat> @expandload_v8bf16_v8i16(ptr %base, <8 x bfloat> %src0, <8 x
 ; AVX512VBMI2-LABEL: expandload_v8bf16_v8i16:
 ; AVX512VBMI2:       # %bb.0:
 ; AVX512VBMI2-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512VBMI2-NEXT:    vptestnmw %zmm1, %zmm1, %k0
-; AVX512VBMI2-NEXT:    kmovd %k0, %eax
-; AVX512VBMI2-NEXT:    testb $1, %al
-; AVX512VBMI2-NEXT:    jne .LBB0_1
-; AVX512VBMI2-NEXT:  # %bb.2: # %else
-; AVX512VBMI2-NEXT:    testb $2, %al
-; AVX512VBMI2-NEXT:    jne .LBB0_3
-; AVX512VBMI2-NEXT:  .LBB0_4: # %else2
-; AVX512VBMI2-NEXT:    testb $4, %al
-; AVX512VBMI2-NEXT:    jne .LBB0_5
-; AVX512VBMI2-NEXT:  .LBB0_6: # %else6
-; AVX512VBMI2-NEXT:    testb $8, %al
-; AVX512VBMI2-NEXT:    jne .LBB0_7
-; AVX512VBMI2-NEXT:  .LBB0_8: # %else10
-; AVX512VBMI2-NEXT:    testb $16, %al
-; AVX512VBMI2-NEXT:    jne .LBB0_9
-; AVX512VBMI2-NEXT:  .LBB0_10: # %else14
-; AVX512VBMI2-NEXT:    testb $32, %al
-; AVX512VBMI2-NEXT:    jne .LBB0_11
-; AVX512VBMI2-NEXT:  .LBB0_12: # %else18
-; AVX512VBMI2-NEXT:    testb $64, %al
-; AVX512VBMI2-NEXT:    jne .LBB0_13
-; AVX512VBMI2-NEXT:  .LBB0_14: # %else22
-; AVX512VBMI2-NEXT:    testb $-128, %al
-; AVX512VBMI2-NEXT:    jne .LBB0_15
-; AVX512VBMI2-NEXT:  .LBB0_16: # %else26
-; AVX512VBMI2-NEXT:    vzeroupper
-; AVX512VBMI2-NEXT:    retq
-; AVX512VBMI2-NEXT:  .LBB0_1: # %cond.load
-; AVX512VBMI2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $2, %al
-; AVX512VBMI2-NEXT:    je .LBB0_4
-; AVX512VBMI2-NEXT:  .LBB0_3: # %cond.load1
-; AVX512VBMI2-NEXT:    vpinsrw $1, (%rdi), %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $4, %al
-; AVX512VBMI2-NEXT:    je .LBB0_6
-; AVX512VBMI2-NEXT:  .LBB0_5: # %cond.load5
-; AVX512VBMI2-NEXT:    vpinsrw $2, (%rdi), %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $8, %al
-; AVX512VBMI2-NEXT:    je .LBB0_8
-; AVX512VBMI2-NEXT:  .LBB0_7: # %cond.load9
-; AVX512VBMI2-NEXT:    vpinsrw $3, (%rdi), %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $16, %al
-; AVX512VBMI2-NEXT:    je .LBB0_10
-; AVX512VBMI2-NEXT:  .LBB0_9: # %cond.load13
-; AVX512VBMI2-NEXT:    vpinsrw $4, (%rdi), %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $32, %al
-; AVX512VBMI2-NEXT:    je .LBB0_12
-; AVX512VBMI2-NEXT:  .LBB0_11: # %cond.load17
-; AVX512VBMI2-NEXT:    vpinsrw $5, (%rdi), %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $64, %al
-; AVX512VBMI2-NEXT:    je .LBB0_14
-; AVX512VBMI2-NEXT:  .LBB0_13: # %cond.load21
-; AVX512VBMI2-NEXT:    vpinsrw $6, (%rdi), %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $-128, %al
-; AVX512VBMI2-NEXT:    je .LBB0_16
-; AVX512VBMI2-NEXT:  .LBB0_15: # %cond.load25
-; AVX512VBMI2-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm0
+; AVX512VBMI2-NEXT:    kmovb %k0, %k1
+; AVX512VBMI2-NEXT:    vpexpandw (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512VBMI2-NEXT:    vzeroupper
 ; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VLVBMI2-LABEL: expandload_v8bf16_v8i16:
 ; AVX512VLVBMI2:       # %bb.0:
-; AVX512VLVBMI2-NEXT:    vptestnmw %xmm1, %xmm1, %k0
-; AVX512VLVBMI2-NEXT:    kmovd %k0, %eax
-; AVX512VLVBMI2-NEXT:    testb $1, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB0_1
-; AVX512VLVBMI2-NEXT:  # %bb.2: # %else
-; AVX512VLVBMI2-NEXT:    testb $2, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB0_3
-; AVX512VLVBMI2-NEXT:  .LBB0_4: # %else2
-; AVX512VLVBMI2-NEXT:    testb $4, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB0_5
-; AVX512VLVBMI2-NEXT:  .LBB0_6: # %else6
-; AVX512VLVBMI2-NEXT:    testb $8, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB0_7
-; AVX512VLVBMI2-NEXT:  .LBB0_8: # %else10
-; AVX512VLVBMI2-NEXT:    testb $16, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB0_9
-; AVX512VLVBMI2-NEXT:  .LBB0_10: # %else14
-; AVX512VLVBMI2-NEXT:    testb $32, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB0_11
-; AVX512VLVBMI2-NEXT:  .LBB0_12: # %else18
-; AVX512VLVBMI2-NEXT:    testb $64, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB0_13
-; AVX512VLVBMI2-NEXT:  .LBB0_14: # %else22
-; AVX512VLVBMI2-NEXT:    testb $-128, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB0_15
-; AVX512VLVBMI2-NEXT:  .LBB0_16: # %else26
-; AVX512VLVBMI2-NEXT:    retq
-; AVX512VLVBMI2-NEXT:  .LBB0_1: # %cond.load
-; AVX512VLVBMI2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $2, %al
-; AVX512VLVBMI2-NEXT:    je .LBB0_4
-; AVX512VLVBMI2-NEXT:  .LBB0_3: # %cond.load1
-; AVX512VLVBMI2-NEXT:    vpinsrw $1, (%rdi), %xmm0, %xmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $4, %al
-; AVX512VLVBMI2-NEXT:    je .LBB0_6
-; AVX512VLVBMI2-NEXT:  .LBB0_5: # %cond.load5
-; AVX512VLVBMI2-NEXT:    vpinsrw $2, (%rdi), %xmm0, %xmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $8, %al
-; AVX512VLVBMI2-NEXT:    je .LBB0_8
-; AVX512VLVBMI2-NEXT:  .LBB0_7: # %cond.load9
-; AVX512VLVBMI2-NEXT:    vpinsrw $3, (%rdi), %xmm0, %xmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $16, %al
-; AVX512VLVBMI2-NEXT:    je .LBB0_10
-; AVX512VLVBMI2-NEXT:  .LBB0_9: # %cond.load13
-; AVX512VLVBMI2-NEXT:    vpinsrw $4, (%rdi), %xmm0, %xmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $32, %al
-; AVX512VLVBMI2-NEXT:    je .LBB0_12
-; AVX512VLVBMI2-NEXT:  .LBB0_11: # %cond.load17
-; AVX512VLVBMI2-NEXT:    vpinsrw $5, (%rdi), %xmm0, %xmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $64, %al
-; AVX512VLVBMI2-NEXT:    je .LBB0_14
-; AVX512VLVBMI2-NEXT:  .LBB0_13: # %cond.load21
-; AVX512VLVBMI2-NEXT:    vpinsrw $6, (%rdi), %xmm0, %xmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $-128, %al
-; AVX512VLVBMI2-NEXT:    je .LBB0_16
-; AVX512VLVBMI2-NEXT:  .LBB0_15: # %cond.load25
-; AVX512VLVBMI2-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm0
+; AVX512VLVBMI2-NEXT:    vptestnmw %xmm1, %xmm1, %k1
+; AVX512VLVBMI2-NEXT:    vpexpandw (%rdi), %xmm0 {%k1}
 ; AVX512VLVBMI2-NEXT:    retq
   %mask = icmp eq <8 x i16> %trigger, zeroinitializer
   %res = call <8 x bfloat> @llvm.masked.expandload.v8bf16(ptr %base, <8 x i1> %mask, <8 x bfloat> %src0)
@@ -427,52 +305,52 @@ define <16 x bfloat> @expandload_v16bf16_v16i16(ptr %base, <16 x bfloat> %src0, 
 ; AVX512F-NEXT:    vpextrq $1, %xmm2, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm1
+; AVX512F-NEXT:    vmovd %ecx, %xmm1
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm3
+; AVX512F-NEXT:    vmovd %ecx, %xmm3
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm3
+; AVX512F-NEXT:    vmovd %eax, %xmm3
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %eax, %xmm4
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
 ; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm3
+; AVX512F-NEXT:    vmovd %ecx, %xmm3
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %ecx, %xmm4
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %eax, %xmm4
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %eax, %xmm5
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
 ; AVX512F-NEXT:    vmovq %xmm2, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm3
+; AVX512F-NEXT:    vmovd %ecx, %xmm3
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %ecx, %xmm4
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %eax, %xmm4
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm3
+; AVX512F-NEXT:    vmovd %ecx, %xmm3
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %ecx, %xmm4
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %eax, %xmm4
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
@@ -871,314 +749,17 @@ define <16 x bfloat> @expandload_v16bf16_v16i16(ptr %base, <16 x bfloat> %src0, 
 ; AVX512VBMI2-LABEL: expandload_v16bf16_v16i16:
 ; AVX512VBMI2:       # %bb.0:
 ; AVX512VBMI2-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512VBMI2-NEXT:    vptestnmw %zmm1, %zmm1, %k0
-; AVX512VBMI2-NEXT:    kmovd %k0, %eax
-; AVX512VBMI2-NEXT:    testb $1, %al
-; AVX512VBMI2-NEXT:    jne .LBB1_1
-; AVX512VBMI2-NEXT:  # %bb.2: # %else
-; AVX512VBMI2-NEXT:    testb $2, %al
-; AVX512VBMI2-NEXT:    jne .LBB1_3
-; AVX512VBMI2-NEXT:  .LBB1_4: # %else2
-; AVX512VBMI2-NEXT:    testb $4, %al
-; AVX512VBMI2-NEXT:    jne .LBB1_5
-; AVX512VBMI2-NEXT:  .LBB1_6: # %else6
-; AVX512VBMI2-NEXT:    testb $8, %al
-; AVX512VBMI2-NEXT:    jne .LBB1_7
-; AVX512VBMI2-NEXT:  .LBB1_8: # %else10
-; AVX512VBMI2-NEXT:    testb $16, %al
-; AVX512VBMI2-NEXT:    jne .LBB1_9
-; AVX512VBMI2-NEXT:  .LBB1_10: # %else14
-; AVX512VBMI2-NEXT:    testb $32, %al
-; AVX512VBMI2-NEXT:    jne .LBB1_11
-; AVX512VBMI2-NEXT:  .LBB1_12: # %else18
-; AVX512VBMI2-NEXT:    testb $64, %al
-; AVX512VBMI2-NEXT:    jne .LBB1_13
-; AVX512VBMI2-NEXT:  .LBB1_14: # %else22
-; AVX512VBMI2-NEXT:    testb %al, %al
-; AVX512VBMI2-NEXT:    js .LBB1_15
-; AVX512VBMI2-NEXT:  .LBB1_16: # %else26
-; AVX512VBMI2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512VBMI2-NEXT:    jne .LBB1_17
-; AVX512VBMI2-NEXT:  .LBB1_18: # %else30
-; AVX512VBMI2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512VBMI2-NEXT:    jne .LBB1_19
-; AVX512VBMI2-NEXT:  .LBB1_20: # %else34
-; AVX512VBMI2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512VBMI2-NEXT:    jne .LBB1_21
-; AVX512VBMI2-NEXT:  .LBB1_22: # %else38
-; AVX512VBMI2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512VBMI2-NEXT:    jne .LBB1_23
-; AVX512VBMI2-NEXT:  .LBB1_24: # %else42
-; AVX512VBMI2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512VBMI2-NEXT:    jne .LBB1_25
-; AVX512VBMI2-NEXT:  .LBB1_26: # %else46
-; AVX512VBMI2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512VBMI2-NEXT:    jne .LBB1_27
-; AVX512VBMI2-NEXT:  .LBB1_28: # %else50
-; AVX512VBMI2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512VBMI2-NEXT:    jne .LBB1_29
-; AVX512VBMI2-NEXT:  .LBB1_30: # %else54
-; AVX512VBMI2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512VBMI2-NEXT:    jne .LBB1_31
-; AVX512VBMI2-NEXT:  .LBB1_32: # %else58
-; AVX512VBMI2-NEXT:    retq
-; AVX512VBMI2-NEXT:  .LBB1_1: # %cond.load
-; AVX512VBMI2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $2, %al
-; AVX512VBMI2-NEXT:    je .LBB1_4
-; AVX512VBMI2-NEXT:  .LBB1_3: # %cond.load1
-; AVX512VBMI2-NEXT:    vpinsrw $1, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $4, %al
-; AVX512VBMI2-NEXT:    je .LBB1_6
-; AVX512VBMI2-NEXT:  .LBB1_5: # %cond.load5
-; AVX512VBMI2-NEXT:    vpinsrw $2, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $8, %al
-; AVX512VBMI2-NEXT:    je .LBB1_8
-; AVX512VBMI2-NEXT:  .LBB1_7: # %cond.load9
-; AVX512VBMI2-NEXT:    vpinsrw $3, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $16, %al
-; AVX512VBMI2-NEXT:    je .LBB1_10
-; AVX512VBMI2-NEXT:  .LBB1_9: # %cond.load13
-; AVX512VBMI2-NEXT:    vpinsrw $4, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $32, %al
-; AVX512VBMI2-NEXT:    je .LBB1_12
-; AVX512VBMI2-NEXT:  .LBB1_11: # %cond.load17
-; AVX512VBMI2-NEXT:    vpinsrw $5, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $64, %al
-; AVX512VBMI2-NEXT:    je .LBB1_14
-; AVX512VBMI2-NEXT:  .LBB1_13: # %cond.load21
-; AVX512VBMI2-NEXT:    vpinsrw $6, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb %al, %al
-; AVX512VBMI2-NEXT:    jns .LBB1_16
-; AVX512VBMI2-NEXT:  .LBB1_15: # %cond.load25
-; AVX512VBMI2-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512VBMI2-NEXT:    je .LBB1_18
-; AVX512VBMI2-NEXT:  .LBB1_17: # %cond.load29
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512VBMI2-NEXT:    je .LBB1_20
-; AVX512VBMI2-NEXT:  .LBB1_19: # %cond.load33
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512VBMI2-NEXT:    je .LBB1_22
-; AVX512VBMI2-NEXT:  .LBB1_21: # %cond.load37
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7,8,9],ymm1[10],ymm0[11,12,13,14,15]
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512VBMI2-NEXT:    je .LBB1_24
-; AVX512VBMI2-NEXT:  .LBB1_23: # %cond.load41
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7,8,9,10],ymm1[11],ymm0[12,13,14,15]
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512VBMI2-NEXT:    je .LBB1_26
-; AVX512VBMI2-NEXT:  .LBB1_25: # %cond.load45
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4],ymm0[5,6,7,8,9,10,11],ymm1[12],ymm0[13,14,15]
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512VBMI2-NEXT:    je .LBB1_28
-; AVX512VBMI2-NEXT:  .LBB1_27: # %cond.load49
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7,8,9,10,11,12],ymm1[13],ymm0[14,15]
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512VBMI2-NEXT:    je .LBB1_30
-; AVX512VBMI2-NEXT:  .LBB1_29: # %cond.load53
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5],ymm1[6],ymm0[7,8,9,10,11,12,13],ymm1[14],ymm0[15]
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512VBMI2-NEXT:    je .LBB1_32
-; AVX512VBMI2-NEXT:  .LBB1_31: # %cond.load57
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
-; AVX512VBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VBMI2-NEXT:    kmovw %k0, %k1
+; AVX512VBMI2-NEXT:    vpexpandw (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VLVBMI2-LABEL: expandload_v16bf16_v16i16:
 ; AVX512VLVBMI2:       # %bb.0:
-; AVX512VLVBMI2-NEXT:    vptestnmw %ymm1, %ymm1, %k0
-; AVX512VLVBMI2-NEXT:    kmovd %k0, %eax
-; AVX512VLVBMI2-NEXT:    testb $1, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB1_1
-; AVX512VLVBMI2-NEXT:  # %bb.2: # %else
-; AVX512VLVBMI2-NEXT:    testb $2, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB1_3
-; AVX512VLVBMI2-NEXT:  .LBB1_4: # %else2
-; AVX512VLVBMI2-NEXT:    testb $4, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB1_5
-; AVX512VLVBMI2-NEXT:  .LBB1_6: # %else6
-; AVX512VLVBMI2-NEXT:    testb $8, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB1_7
-; AVX512VLVBMI2-NEXT:  .LBB1_8: # %else10
-; AVX512VLVBMI2-NEXT:    testb $16, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB1_9
-; AVX512VLVBMI2-NEXT:  .LBB1_10: # %else14
-; AVX512VLVBMI2-NEXT:    testb $32, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB1_11
-; AVX512VLVBMI2-NEXT:  .LBB1_12: # %else18
-; AVX512VLVBMI2-NEXT:    testb $64, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB1_13
-; AVX512VLVBMI2-NEXT:  .LBB1_14: # %else22
-; AVX512VLVBMI2-NEXT:    testb %al, %al
-; AVX512VLVBMI2-NEXT:    js .LBB1_15
-; AVX512VLVBMI2-NEXT:  .LBB1_16: # %else26
-; AVX512VLVBMI2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512VLVBMI2-NEXT:    jne .LBB1_17
-; AVX512VLVBMI2-NEXT:  .LBB1_18: # %else30
-; AVX512VLVBMI2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512VLVBMI2-NEXT:    jne .LBB1_19
-; AVX512VLVBMI2-NEXT:  .LBB1_20: # %else34
-; AVX512VLVBMI2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512VLVBMI2-NEXT:    jne .LBB1_21
-; AVX512VLVBMI2-NEXT:  .LBB1_22: # %else38
-; AVX512VLVBMI2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512VLVBMI2-NEXT:    jne .LBB1_23
-; AVX512VLVBMI2-NEXT:  .LBB1_24: # %else42
-; AVX512VLVBMI2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512VLVBMI2-NEXT:    jne .LBB1_25
-; AVX512VLVBMI2-NEXT:  .LBB1_26: # %else46
-; AVX512VLVBMI2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512VLVBMI2-NEXT:    jne .LBB1_27
-; AVX512VLVBMI2-NEXT:  .LBB1_28: # %else50
-; AVX512VLVBMI2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512VLVBMI2-NEXT:    jne .LBB1_29
-; AVX512VLVBMI2-NEXT:  .LBB1_30: # %else54
-; AVX512VLVBMI2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512VLVBMI2-NEXT:    jne .LBB1_31
-; AVX512VLVBMI2-NEXT:  .LBB1_32: # %else58
-; AVX512VLVBMI2-NEXT:    retq
-; AVX512VLVBMI2-NEXT:  .LBB1_1: # %cond.load
-; AVX512VLVBMI2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $2, %al
-; AVX512VLVBMI2-NEXT:    je .LBB1_4
-; AVX512VLVBMI2-NEXT:  .LBB1_3: # %cond.load1
-; AVX512VLVBMI2-NEXT:    vpinsrw $1, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $4, %al
-; AVX512VLVBMI2-NEXT:    je .LBB1_6
-; AVX512VLVBMI2-NEXT:  .LBB1_5: # %cond.load5
-; AVX512VLVBMI2-NEXT:    vpinsrw $2, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $8, %al
-; AVX512VLVBMI2-NEXT:    je .LBB1_8
-; AVX512VLVBMI2-NEXT:  .LBB1_7: # %cond.load9
-; AVX512VLVBMI2-NEXT:    vpinsrw $3, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $16, %al
-; AVX512VLVBMI2-NEXT:    je .LBB1_10
-; AVX512VLVBMI2-NEXT:  .LBB1_9: # %cond.load13
-; AVX512VLVBMI2-NEXT:    vpinsrw $4, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $32, %al
-; AVX512VLVBMI2-NEXT:    je .LBB1_12
-; AVX512VLVBMI2-NEXT:  .LBB1_11: # %cond.load17
-; AVX512VLVBMI2-NEXT:    vpinsrw $5, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $64, %al
-; AVX512VLVBMI2-NEXT:    je .LBB1_14
-; AVX512VLVBMI2-NEXT:  .LBB1_13: # %cond.load21
-; AVX512VLVBMI2-NEXT:    vpinsrw $6, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb %al, %al
-; AVX512VLVBMI2-NEXT:    jns .LBB1_16
-; AVX512VLVBMI2-NEXT:  .LBB1_15: # %cond.load25
-; AVX512VLVBMI2-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512VLVBMI2-NEXT:    je .LBB1_18
-; AVX512VLVBMI2-NEXT:  .LBB1_17: # %cond.load29
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VLVBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512VLVBMI2-NEXT:    je .LBB1_20
-; AVX512VLVBMI2-NEXT:  .LBB1_19: # %cond.load33
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VLVBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512VLVBMI2-NEXT:    je .LBB1_22
-; AVX512VLVBMI2-NEXT:  .LBB1_21: # %cond.load37
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VLVBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7,8,9],ymm1[10],ymm0[11,12,13,14,15]
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512VLVBMI2-NEXT:    je .LBB1_24
-; AVX512VLVBMI2-NEXT:  .LBB1_23: # %cond.load41
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VLVBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7,8,9,10],ymm1[11],ymm0[12,13,14,15]
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512VLVBMI2-NEXT:    je .LBB1_26
-; AVX512VLVBMI2-NEXT:  .LBB1_25: # %cond.load45
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VLVBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4],ymm0[5,6,7,8,9,10,11],ymm1[12],ymm0[13,14,15]
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512VLVBMI2-NEXT:    je .LBB1_28
-; AVX512VLVBMI2-NEXT:  .LBB1_27: # %cond.load49
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VLVBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7,8,9,10,11,12],ymm1[13],ymm0[14,15]
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512VLVBMI2-NEXT:    je .LBB1_30
-; AVX512VLVBMI2-NEXT:  .LBB1_29: # %cond.load53
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VLVBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5],ymm1[6],ymm0[7,8,9,10,11,12,13],ymm1[14],ymm0[15]
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512VLVBMI2-NEXT:    je .LBB1_32
-; AVX512VLVBMI2-NEXT:  .LBB1_31: # %cond.load57
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %ymm1
-; AVX512VLVBMI2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
-; AVX512VLVBMI2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX512VLVBMI2-NEXT:    vptestnmw %ymm1, %ymm1, %k1
+; AVX512VLVBMI2-NEXT:    vpexpandw (%rdi), %ymm0 {%k1}
 ; AVX512VLVBMI2-NEXT:    retq
   %mask = icmp eq <16 x i16> %trigger, zeroinitializer
   %res = call <16 x bfloat> @llvm.masked.expandload.v16bf16(ptr %base, <16 x i1> %mask, <16 x bfloat> %src0)
@@ -1304,54 +885,54 @@ define <32 x bfloat> @expandload_v32bf16_v32i16(ptr %base, <32 x bfloat> %src0, 
 ; AVX512F-NEXT:    vpextrq $1, %xmm4, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm1
+; AVX512F-NEXT:    vmovd %ecx, %xmm1
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %ecx, %xmm5
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm5[0],xmm1[0],xmm5[1],xmm1[1],xmm5[2],xmm1[2],xmm5[3],xmm1[3]
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %eax, %xmm5
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %eax, %xmm6
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[1],xmm6[1],xmm5[2],xmm6[2],xmm5[3],xmm6[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm5[0],xmm1[0],xmm5[1],xmm1[1]
 ; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %ecx, %xmm5
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %ecx, %xmm6
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %eax, %xmm6
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm7
+; AVX512F-NEXT:    vmovd %eax, %xmm7
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1],xmm6[2],xmm7[2],xmm6[3],xmm7[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
 ; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm5, %ymm1
 ; AVX512F-NEXT:    vpextrq $1, %xmm3, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %ecx, %xmm5
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %ecx, %xmm6
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %eax, %xmm6
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm7
+; AVX512F-NEXT:    vmovd %eax, %xmm7
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1],xmm6[2],xmm7[2],xmm6[3],xmm7[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
 ; AVX512F-NEXT:    vpextrq $1, %xmm2, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %ecx, %xmm6
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm7
+; AVX512F-NEXT:    vmovd %ecx, %xmm7
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm7
+; AVX512F-NEXT:    vmovd %eax, %xmm7
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm8
+; AVX512F-NEXT:    vmovd %eax, %xmm8
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm7 = xmm7[0],xmm8[0],xmm7[1],xmm8[1],xmm7[2],xmm8[2],xmm7[3],xmm8[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1]
 ; AVX512F-NEXT:    vinserti128 $1, %xmm5, %ymm6, %ymm5
@@ -1359,50 +940,50 @@ define <32 x bfloat> @expandload_v32bf16_v32i16(ptr %base, <32 x bfloat> %src0, 
 ; AVX512F-NEXT:    vmovq %xmm4, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %ecx, %xmm5
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %ecx, %xmm6
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %eax, %xmm6
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm4[0],xmm6[0],xmm4[1],xmm6[1],xmm4[2],xmm6[2],xmm4[3],xmm6[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
 ; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %ecx, %xmm5
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %ecx, %xmm6
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm5 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm6
+; AVX512F-NEXT:    vmovd %eax, %xmm6
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm6[0],xmm0[1],xmm6[1],xmm0[2],xmm6[2],xmm0[3],xmm6[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
 ; AVX512F-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
 ; AVX512F-NEXT:    vmovq %xmm3, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %ecx, %xmm4
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %ecx, %xmm5
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %eax, %xmm5
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
 ; AVX512F-NEXT:    vmovq %xmm2, %rax
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $48, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm4
+; AVX512F-NEXT:    vmovd %ecx, %xmm4
 ; AVX512F-NEXT:    movq %rax, %rcx
 ; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %ecx, %xmm5
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm5
+; AVX512F-NEXT:    vmovd %eax, %xmm5
 ; AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3]
 ; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
 ; AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
@@ -2200,634 +1781,14 @@ define <32 x bfloat> @expandload_v32bf16_v32i16(ptr %base, <32 x bfloat> %src0, 
 ;
 ; AVX512VBMI2-LABEL: expandload_v32bf16_v32i16:
 ; AVX512VBMI2:       # %bb.0:
-; AVX512VBMI2-NEXT:    vptestnmw %zmm1, %zmm1, %k0
-; AVX512VBMI2-NEXT:    kmovd %k0, %eax
-; AVX512VBMI2-NEXT:    testb $1, %al
-; AVX512VBMI2-NEXT:    jne .LBB2_1
-; AVX512VBMI2-NEXT:  # %bb.2: # %else
-; AVX512VBMI2-NEXT:    testb $2, %al
-; AVX512VBMI2-NEXT:    jne .LBB2_3
-; AVX512VBMI2-NEXT:  .LBB2_4: # %else2
-; AVX512VBMI2-NEXT:    testb $4, %al
-; AVX512VBMI2-NEXT:    jne .LBB2_5
-; AVX512VBMI2-NEXT:  .LBB2_6: # %else6
-; AVX512VBMI2-NEXT:    testb $8, %al
-; AVX512VBMI2-NEXT:    jne .LBB2_7
-; AVX512VBMI2-NEXT:  .LBB2_8: # %else10
-; AVX512VBMI2-NEXT:    testb $16, %al
-; AVX512VBMI2-NEXT:    jne .LBB2_9
-; AVX512VBMI2-NEXT:  .LBB2_10: # %else14
-; AVX512VBMI2-NEXT:    testb $32, %al
-; AVX512VBMI2-NEXT:    jne .LBB2_11
-; AVX512VBMI2-NEXT:  .LBB2_12: # %else18
-; AVX512VBMI2-NEXT:    testb $64, %al
-; AVX512VBMI2-NEXT:    jne .LBB2_13
-; AVX512VBMI2-NEXT:  .LBB2_14: # %else22
-; AVX512VBMI2-NEXT:    testb %al, %al
-; AVX512VBMI2-NEXT:    js .LBB2_15
-; AVX512VBMI2-NEXT:  .LBB2_16: # %else26
-; AVX512VBMI2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512VBMI2-NEXT:    jne .LBB2_17
-; AVX512VBMI2-NEXT:  .LBB2_18: # %else30
-; AVX512VBMI2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512VBMI2-NEXT:    jne .LBB2_19
-; AVX512VBMI2-NEXT:  .LBB2_20: # %else34
-; AVX512VBMI2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512VBMI2-NEXT:    jne .LBB2_21
-; AVX512VBMI2-NEXT:  .LBB2_22: # %else38
-; AVX512VBMI2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512VBMI2-NEXT:    jne .LBB2_23
-; AVX512VBMI2-NEXT:  .LBB2_24: # %else42
-; AVX512VBMI2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512VBMI2-NEXT:    jne .LBB2_25
-; AVX512VBMI2-NEXT:  .LBB2_26: # %else46
-; AVX512VBMI2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512VBMI2-NEXT:    jne .LBB2_27
-; AVX512VBMI2-NEXT:  .LBB2_28: # %else50
-; AVX512VBMI2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512VBMI2-NEXT:    jne .LBB2_29
-; AVX512VBMI2-NEXT:  .LBB2_30: # %else54
-; AVX512VBMI2-NEXT:    testw %ax, %ax
-; AVX512VBMI2-NEXT:    js .LBB2_31
-; AVX512VBMI2-NEXT:  .LBB2_32: # %else58
-; AVX512VBMI2-NEXT:    testl $65536, %eax # imm = 0x10000
-; AVX512VBMI2-NEXT:    jne .LBB2_33
-; AVX512VBMI2-NEXT:  .LBB2_34: # %else62
-; AVX512VBMI2-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX512VBMI2-NEXT:    jne .LBB2_35
-; AVX512VBMI2-NEXT:  .LBB2_36: # %else66
-; AVX512VBMI2-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX512VBMI2-NEXT:    jne .LBB2_37
-; AVX512VBMI2-NEXT:  .LBB2_38: # %else70
-; AVX512VBMI2-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX512VBMI2-NEXT:    jne .LBB2_39
-; AVX512VBMI2-NEXT:  .LBB2_40: # %else74
-; AVX512VBMI2-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX512VBMI2-NEXT:    jne .LBB2_41
-; AVX512VBMI2-NEXT:  .LBB2_42: # %else78
-; AVX512VBMI2-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX512VBMI2-NEXT:    jne .LBB2_43
-; AVX512VBMI2-NEXT:  .LBB2_44: # %else82
-; AVX512VBMI2-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX512VBMI2-NEXT:    jne .LBB2_45
-; AVX512VBMI2-NEXT:  .LBB2_46: # %else86
-; AVX512VBMI2-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX512VBMI2-NEXT:    jne .LBB2_47
-; AVX512VBMI2-NEXT:  .LBB2_48: # %else90
-; AVX512VBMI2-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; AVX512VBMI2-NEXT:    jne .LBB2_49
-; AVX512VBMI2-NEXT:  .LBB2_50: # %else94
-; AVX512VBMI2-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; AVX512VBMI2-NEXT:    jne .LBB2_51
-; AVX512VBMI2-NEXT:  .LBB2_52: # %else98
-; AVX512VBMI2-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; AVX512VBMI2-NEXT:    jne .LBB2_53
-; AVX512VBMI2-NEXT:  .LBB2_54: # %else102
-; AVX512VBMI2-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; AVX512VBMI2-NEXT:    jne .LBB2_55
-; AVX512VBMI2-NEXT:  .LBB2_56: # %else106
-; AVX512VBMI2-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; AVX512VBMI2-NEXT:    jne .LBB2_57
-; AVX512VBMI2-NEXT:  .LBB2_58: # %else110
-; AVX512VBMI2-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; AVX512VBMI2-NEXT:    jne .LBB2_59
-; AVX512VBMI2-NEXT:  .LBB2_60: # %else114
-; AVX512VBMI2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; AVX512VBMI2-NEXT:    jne .LBB2_61
-; AVX512VBMI2-NEXT:  .LBB2_62: # %else118
-; AVX512VBMI2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; AVX512VBMI2-NEXT:    jne .LBB2_63
-; AVX512VBMI2-NEXT:  .LBB2_64: # %else122
-; AVX512VBMI2-NEXT:    retq
-; AVX512VBMI2-NEXT:  .LBB2_1: # %cond.load
-; AVX512VBMI2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $2, %al
-; AVX512VBMI2-NEXT:    je .LBB2_4
-; AVX512VBMI2-NEXT:  .LBB2_3: # %cond.load1
-; AVX512VBMI2-NEXT:    vpinsrw $1, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $4, %al
-; AVX512VBMI2-NEXT:    je .LBB2_6
-; AVX512VBMI2-NEXT:  .LBB2_5: # %cond.load5
-; AVX512VBMI2-NEXT:    vpinsrw $2, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $8, %al
-; AVX512VBMI2-NEXT:    je .LBB2_8
-; AVX512VBMI2-NEXT:  .LBB2_7: # %cond.load9
-; AVX512VBMI2-NEXT:    vpinsrw $3, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $16, %al
-; AVX512VBMI2-NEXT:    je .LBB2_10
-; AVX512VBMI2-NEXT:  .LBB2_9: # %cond.load13
-; AVX512VBMI2-NEXT:    vpinsrw $4, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $32, %al
-; AVX512VBMI2-NEXT:    je .LBB2_12
-; AVX512VBMI2-NEXT:  .LBB2_11: # %cond.load17
-; AVX512VBMI2-NEXT:    vpinsrw $5, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb $64, %al
-; AVX512VBMI2-NEXT:    je .LBB2_14
-; AVX512VBMI2-NEXT:  .LBB2_13: # %cond.load21
-; AVX512VBMI2-NEXT:    vpinsrw $6, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testb %al, %al
-; AVX512VBMI2-NEXT:    jns .LBB2_16
-; AVX512VBMI2-NEXT:  .LBB2_15: # %cond.load25
-; AVX512VBMI2-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm1
-; AVX512VBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512VBMI2-NEXT:    je .LBB2_18
-; AVX512VBMI2-NEXT:  .LBB2_17: # %cond.load29
-; AVX512VBMI2-NEXT:    movl $256, %ecx # imm = 0x100
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512VBMI2-NEXT:    je .LBB2_20
-; AVX512VBMI2-NEXT:  .LBB2_19: # %cond.load33
-; AVX512VBMI2-NEXT:    movl $512, %ecx # imm = 0x200
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512VBMI2-NEXT:    je .LBB2_22
-; AVX512VBMI2-NEXT:  .LBB2_21: # %cond.load37
-; AVX512VBMI2-NEXT:    movl $1024, %ecx # imm = 0x400
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512VBMI2-NEXT:    je .LBB2_24
-; AVX512VBMI2-NEXT:  .LBB2_23: # %cond.load41
-; AVX512VBMI2-NEXT:    movl $2048, %ecx # imm = 0x800
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512VBMI2-NEXT:    je .LBB2_26
-; AVX512VBMI2-NEXT:  .LBB2_25: # %cond.load45
-; AVX512VBMI2-NEXT:    movl $4096, %ecx # imm = 0x1000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512VBMI2-NEXT:    je .LBB2_28
-; AVX512VBMI2-NEXT:  .LBB2_27: # %cond.load49
-; AVX512VBMI2-NEXT:    movl $8192, %ecx # imm = 0x2000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512VBMI2-NEXT:    je .LBB2_30
-; AVX512VBMI2-NEXT:  .LBB2_29: # %cond.load53
-; AVX512VBMI2-NEXT:    movl $16384, %ecx # imm = 0x4000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testw %ax, %ax
-; AVX512VBMI2-NEXT:    jns .LBB2_32
-; AVX512VBMI2-NEXT:  .LBB2_31: # %cond.load57
-; AVX512VBMI2-NEXT:    movl $32768, %ecx # imm = 0x8000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $65536, %eax # imm = 0x10000
-; AVX512VBMI2-NEXT:    je .LBB2_34
-; AVX512VBMI2-NEXT:  .LBB2_33: # %cond.load61
-; AVX512VBMI2-NEXT:    movl $65536, %ecx # imm = 0x10000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX512VBMI2-NEXT:    je .LBB2_36
-; AVX512VBMI2-NEXT:  .LBB2_35: # %cond.load65
-; AVX512VBMI2-NEXT:    movl $131072, %ecx # imm = 0x20000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX512VBMI2-NEXT:    je .LBB2_38
-; AVX512VBMI2-NEXT:  .LBB2_37: # %cond.load69
-; AVX512VBMI2-NEXT:    movl $262144, %ecx # imm = 0x40000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX512VBMI2-NEXT:    je .LBB2_40
-; AVX512VBMI2-NEXT:  .LBB2_39: # %cond.load73
-; AVX512VBMI2-NEXT:    movl $524288, %ecx # imm = 0x80000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX512VBMI2-NEXT:    je .LBB2_42
-; AVX512VBMI2-NEXT:  .LBB2_41: # %cond.load77
-; AVX512VBMI2-NEXT:    movl $1048576, %ecx # imm = 0x100000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX512VBMI2-NEXT:    je .LBB2_44
-; AVX512VBMI2-NEXT:  .LBB2_43: # %cond.load81
-; AVX512VBMI2-NEXT:    movl $2097152, %ecx # imm = 0x200000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX512VBMI2-NEXT:    je .LBB2_46
-; AVX512VBMI2-NEXT:  .LBB2_45: # %cond.load85
-; AVX512VBMI2-NEXT:    movl $4194304, %ecx # imm = 0x400000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX512VBMI2-NEXT:    je .LBB2_48
-; AVX512VBMI2-NEXT:  .LBB2_47: # %cond.load89
-; AVX512VBMI2-NEXT:    movl $8388608, %ecx # imm = 0x800000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; AVX512VBMI2-NEXT:    je .LBB2_50
-; AVX512VBMI2-NEXT:  .LBB2_49: # %cond.load93
-; AVX512VBMI2-NEXT:    movl $16777216, %ecx # imm = 0x1000000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; AVX512VBMI2-NEXT:    je .LBB2_52
-; AVX512VBMI2-NEXT:  .LBB2_51: # %cond.load97
-; AVX512VBMI2-NEXT:    movl $33554432, %ecx # imm = 0x2000000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; AVX512VBMI2-NEXT:    je .LBB2_54
-; AVX512VBMI2-NEXT:  .LBB2_53: # %cond.load101
-; AVX512VBMI2-NEXT:    movl $67108864, %ecx # imm = 0x4000000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; AVX512VBMI2-NEXT:    je .LBB2_56
-; AVX512VBMI2-NEXT:  .LBB2_55: # %cond.load105
-; AVX512VBMI2-NEXT:    movl $134217728, %ecx # imm = 0x8000000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; AVX512VBMI2-NEXT:    je .LBB2_58
-; AVX512VBMI2-NEXT:  .LBB2_57: # %cond.load109
-; AVX512VBMI2-NEXT:    movl $268435456, %ecx # imm = 0x10000000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; AVX512VBMI2-NEXT:    je .LBB2_60
-; AVX512VBMI2-NEXT:  .LBB2_59: # %cond.load113
-; AVX512VBMI2-NEXT:    movl $536870912, %ecx # imm = 0x20000000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; AVX512VBMI2-NEXT:    je .LBB2_62
-; AVX512VBMI2-NEXT:  .LBB2_61: # %cond.load117
-; AVX512VBMI2-NEXT:    movl $1073741824, %ecx # imm = 0x40000000
-; AVX512VBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VBMI2-NEXT:    addq $2, %rdi
-; AVX512VBMI2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; AVX512VBMI2-NEXT:    je .LBB2_64
-; AVX512VBMI2-NEXT:  .LBB2_63: # %cond.load121
-; AVX512VBMI2-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
-; AVX512VBMI2-NEXT:    kmovd %eax, %k1
-; AVX512VBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    vptestnmw %zmm1, %zmm1, %k1
+; AVX512VBMI2-NEXT:    vpexpandw (%rdi), %zmm0 {%k1}
 ; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VLVBMI2-LABEL: expandload_v32bf16_v32i16:
 ; AVX512VLVBMI2:       # %bb.0:
-; AVX512VLVBMI2-NEXT:    vptestnmw %zmm1, %zmm1, %k0
-; AVX512VLVBMI2-NEXT:    kmovd %k0, %eax
-; AVX512VLVBMI2-NEXT:    testb $1, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB2_1
-; AVX512VLVBMI2-NEXT:  # %bb.2: # %else
-; AVX512VLVBMI2-NEXT:    testb $2, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB2_3
-; AVX512VLVBMI2-NEXT:  .LBB2_4: # %else2
-; AVX512VLVBMI2-NEXT:    testb $4, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB2_5
-; AVX512VLVBMI2-NEXT:  .LBB2_6: # %else6
-; AVX512VLVBMI2-NEXT:    testb $8, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB2_7
-; AVX512VLVBMI2-NEXT:  .LBB2_8: # %else10
-; AVX512VLVBMI2-NEXT:    testb $16, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB2_9
-; AVX512VLVBMI2-NEXT:  .LBB2_10: # %else14
-; AVX512VLVBMI2-NEXT:    testb $32, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB2_11
-; AVX512VLVBMI2-NEXT:  .LBB2_12: # %else18
-; AVX512VLVBMI2-NEXT:    testb $64, %al
-; AVX512VLVBMI2-NEXT:    jne .LBB2_13
-; AVX512VLVBMI2-NEXT:  .LBB2_14: # %else22
-; AVX512VLVBMI2-NEXT:    testb %al, %al
-; AVX512VLVBMI2-NEXT:    js .LBB2_15
-; AVX512VLVBMI2-NEXT:  .LBB2_16: # %else26
-; AVX512VLVBMI2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512VLVBMI2-NEXT:    jne .LBB2_17
-; AVX512VLVBMI2-NEXT:  .LBB2_18: # %else30
-; AVX512VLVBMI2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512VLVBMI2-NEXT:    jne .LBB2_19
-; AVX512VLVBMI2-NEXT:  .LBB2_20: # %else34
-; AVX512VLVBMI2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512VLVBMI2-NEXT:    jne .LBB2_21
-; AVX512VLVBMI2-NEXT:  .LBB2_22: # %else38
-; AVX512VLVBMI2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512VLVBMI2-NEXT:    jne .LBB2_23
-; AVX512VLVBMI2-NEXT:  .LBB2_24: # %else42
-; AVX512VLVBMI2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_25
-; AVX512VLVBMI2-NEXT:  .LBB2_26: # %else46
-; AVX512VLVBMI2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_27
-; AVX512VLVBMI2-NEXT:  .LBB2_28: # %else50
-; AVX512VLVBMI2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_29
-; AVX512VLVBMI2-NEXT:  .LBB2_30: # %else54
-; AVX512VLVBMI2-NEXT:    testw %ax, %ax
-; AVX512VLVBMI2-NEXT:    js .LBB2_31
-; AVX512VLVBMI2-NEXT:  .LBB2_32: # %else58
-; AVX512VLVBMI2-NEXT:    testl $65536, %eax # imm = 0x10000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_33
-; AVX512VLVBMI2-NEXT:  .LBB2_34: # %else62
-; AVX512VLVBMI2-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_35
-; AVX512VLVBMI2-NEXT:  .LBB2_36: # %else66
-; AVX512VLVBMI2-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_37
-; AVX512VLVBMI2-NEXT:  .LBB2_38: # %else70
-; AVX512VLVBMI2-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_39
-; AVX512VLVBMI2-NEXT:  .LBB2_40: # %else74
-; AVX512VLVBMI2-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_41
-; AVX512VLVBMI2-NEXT:  .LBB2_42: # %else78
-; AVX512VLVBMI2-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_43
-; AVX512VLVBMI2-NEXT:  .LBB2_44: # %else82
-; AVX512VLVBMI2-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_45
-; AVX512VLVBMI2-NEXT:  .LBB2_46: # %else86
-; AVX512VLVBMI2-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_47
-; AVX512VLVBMI2-NEXT:  .LBB2_48: # %else90
-; AVX512VLVBMI2-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_49
-; AVX512VLVBMI2-NEXT:  .LBB2_50: # %else94
-; AVX512VLVBMI2-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_51
-; AVX512VLVBMI2-NEXT:  .LBB2_52: # %else98
-; AVX512VLVBMI2-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_53
-; AVX512VLVBMI2-NEXT:  .LBB2_54: # %else102
-; AVX512VLVBMI2-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_55
-; AVX512VLVBMI2-NEXT:  .LBB2_56: # %else106
-; AVX512VLVBMI2-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_57
-; AVX512VLVBMI2-NEXT:  .LBB2_58: # %else110
-; AVX512VLVBMI2-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_59
-; AVX512VLVBMI2-NEXT:  .LBB2_60: # %else114
-; AVX512VLVBMI2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_61
-; AVX512VLVBMI2-NEXT:  .LBB2_62: # %else118
-; AVX512VLVBMI2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; AVX512VLVBMI2-NEXT:    jne .LBB2_63
-; AVX512VLVBMI2-NEXT:  .LBB2_64: # %else122
-; AVX512VLVBMI2-NEXT:    retq
-; AVX512VLVBMI2-NEXT:  .LBB2_1: # %cond.load
-; AVX512VLVBMI2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $2, %al
-; AVX512VLVBMI2-NEXT:    je .LBB2_4
-; AVX512VLVBMI2-NEXT:  .LBB2_3: # %cond.load1
-; AVX512VLVBMI2-NEXT:    vpinsrw $1, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $4, %al
-; AVX512VLVBMI2-NEXT:    je .LBB2_6
-; AVX512VLVBMI2-NEXT:  .LBB2_5: # %cond.load5
-; AVX512VLVBMI2-NEXT:    vpinsrw $2, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $8, %al
-; AVX512VLVBMI2-NEXT:    je .LBB2_8
-; AVX512VLVBMI2-NEXT:  .LBB2_7: # %cond.load9
-; AVX512VLVBMI2-NEXT:    vpinsrw $3, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $16, %al
-; AVX512VLVBMI2-NEXT:    je .LBB2_10
-; AVX512VLVBMI2-NEXT:  .LBB2_9: # %cond.load13
-; AVX512VLVBMI2-NEXT:    vpinsrw $4, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $32, %al
-; AVX512VLVBMI2-NEXT:    je .LBB2_12
-; AVX512VLVBMI2-NEXT:  .LBB2_11: # %cond.load17
-; AVX512VLVBMI2-NEXT:    vpinsrw $5, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb $64, %al
-; AVX512VLVBMI2-NEXT:    je .LBB2_14
-; AVX512VLVBMI2-NEXT:  .LBB2_13: # %cond.load21
-; AVX512VLVBMI2-NEXT:    vpinsrw $6, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testb %al, %al
-; AVX512VLVBMI2-NEXT:    jns .LBB2_16
-; AVX512VLVBMI2-NEXT:  .LBB2_15: # %cond.load25
-; AVX512VLVBMI2-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm1
-; AVX512VLVBMI2-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512VLVBMI2-NEXT:    je .LBB2_18
-; AVX512VLVBMI2-NEXT:  .LBB2_17: # %cond.load29
-; AVX512VLVBMI2-NEXT:    movl $256, %ecx # imm = 0x100
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512VLVBMI2-NEXT:    je .LBB2_20
-; AVX512VLVBMI2-NEXT:  .LBB2_19: # %cond.load33
-; AVX512VLVBMI2-NEXT:    movl $512, %ecx # imm = 0x200
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512VLVBMI2-NEXT:    je .LBB2_22
-; AVX512VLVBMI2-NEXT:  .LBB2_21: # %cond.load37
-; AVX512VLVBMI2-NEXT:    movl $1024, %ecx # imm = 0x400
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512VLVBMI2-NEXT:    je .LBB2_24
-; AVX512VLVBMI2-NEXT:  .LBB2_23: # %cond.load41
-; AVX512VLVBMI2-NEXT:    movl $2048, %ecx # imm = 0x800
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512VLVBMI2-NEXT:    je .LBB2_26
-; AVX512VLVBMI2-NEXT:  .LBB2_25: # %cond.load45
-; AVX512VLVBMI2-NEXT:    movl $4096, %ecx # imm = 0x1000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512VLVBMI2-NEXT:    je .LBB2_28
-; AVX512VLVBMI2-NEXT:  .LBB2_27: # %cond.load49
-; AVX512VLVBMI2-NEXT:    movl $8192, %ecx # imm = 0x2000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512VLVBMI2-NEXT:    je .LBB2_30
-; AVX512VLVBMI2-NEXT:  .LBB2_29: # %cond.load53
-; AVX512VLVBMI2-NEXT:    movl $16384, %ecx # imm = 0x4000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testw %ax, %ax
-; AVX512VLVBMI2-NEXT:    jns .LBB2_32
-; AVX512VLVBMI2-NEXT:  .LBB2_31: # %cond.load57
-; AVX512VLVBMI2-NEXT:    movl $32768, %ecx # imm = 0x8000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $65536, %eax # imm = 0x10000
-; AVX512VLVBMI2-NEXT:    je .LBB2_34
-; AVX512VLVBMI2-NEXT:  .LBB2_33: # %cond.load61
-; AVX512VLVBMI2-NEXT:    movl $65536, %ecx # imm = 0x10000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX512VLVBMI2-NEXT:    je .LBB2_36
-; AVX512VLVBMI2-NEXT:  .LBB2_35: # %cond.load65
-; AVX512VLVBMI2-NEXT:    movl $131072, %ecx # imm = 0x20000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX512VLVBMI2-NEXT:    je .LBB2_38
-; AVX512VLVBMI2-NEXT:  .LBB2_37: # %cond.load69
-; AVX512VLVBMI2-NEXT:    movl $262144, %ecx # imm = 0x40000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX512VLVBMI2-NEXT:    je .LBB2_40
-; AVX512VLVBMI2-NEXT:  .LBB2_39: # %cond.load73
-; AVX512VLVBMI2-NEXT:    movl $524288, %ecx # imm = 0x80000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX512VLVBMI2-NEXT:    je .LBB2_42
-; AVX512VLVBMI2-NEXT:  .LBB2_41: # %cond.load77
-; AVX512VLVBMI2-NEXT:    movl $1048576, %ecx # imm = 0x100000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX512VLVBMI2-NEXT:    je .LBB2_44
-; AVX512VLVBMI2-NEXT:  .LBB2_43: # %cond.load81
-; AVX512VLVBMI2-NEXT:    movl $2097152, %ecx # imm = 0x200000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX512VLVBMI2-NEXT:    je .LBB2_46
-; AVX512VLVBMI2-NEXT:  .LBB2_45: # %cond.load85
-; AVX512VLVBMI2-NEXT:    movl $4194304, %ecx # imm = 0x400000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX512VLVBMI2-NEXT:    je .LBB2_48
-; AVX512VLVBMI2-NEXT:  .LBB2_47: # %cond.load89
-; AVX512VLVBMI2-NEXT:    movl $8388608, %ecx # imm = 0x800000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; AVX512VLVBMI2-NEXT:    je .LBB2_50
-; AVX512VLVBMI2-NEXT:  .LBB2_49: # %cond.load93
-; AVX512VLVBMI2-NEXT:    movl $16777216, %ecx # imm = 0x1000000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; AVX512VLVBMI2-NEXT:    je .LBB2_52
-; AVX512VLVBMI2-NEXT:  .LBB2_51: # %cond.load97
-; AVX512VLVBMI2-NEXT:    movl $33554432, %ecx # imm = 0x2000000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; AVX512VLVBMI2-NEXT:    je .LBB2_54
-; AVX512VLVBMI2-NEXT:  .LBB2_53: # %cond.load101
-; AVX512VLVBMI2-NEXT:    movl $67108864, %ecx # imm = 0x4000000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; AVX512VLVBMI2-NEXT:    je .LBB2_56
-; AVX512VLVBMI2-NEXT:  .LBB2_55: # %cond.load105
-; AVX512VLVBMI2-NEXT:    movl $134217728, %ecx # imm = 0x8000000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; AVX512VLVBMI2-NEXT:    je .LBB2_58
-; AVX512VLVBMI2-NEXT:  .LBB2_57: # %cond.load109
-; AVX512VLVBMI2-NEXT:    movl $268435456, %ecx # imm = 0x10000000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; AVX512VLVBMI2-NEXT:    je .LBB2_60
-; AVX512VLVBMI2-NEXT:  .LBB2_59: # %cond.load113
-; AVX512VLVBMI2-NEXT:    movl $536870912, %ecx # imm = 0x20000000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; AVX512VLVBMI2-NEXT:    je .LBB2_62
-; AVX512VLVBMI2-NEXT:  .LBB2_61: # %cond.load117
-; AVX512VLVBMI2-NEXT:    movl $1073741824, %ecx # imm = 0x40000000
-; AVX512VLVBMI2-NEXT:    kmovd %ecx, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
-; AVX512VLVBMI2-NEXT:    addq $2, %rdi
-; AVX512VLVBMI2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; AVX512VLVBMI2-NEXT:    je .LBB2_64
-; AVX512VLVBMI2-NEXT:  .LBB2_63: # %cond.load121
-; AVX512VLVBMI2-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
-; AVX512VLVBMI2-NEXT:    kmovd %eax, %k1
-; AVX512VLVBMI2-NEXT:    vpbroadcastw (%rdi), %zmm0 {%k1}
+; AVX512VLVBMI2-NEXT:    vptestnmw %zmm1, %zmm1, %k1
+; AVX512VLVBMI2-NEXT:    vpexpandw (%rdi), %zmm0 {%k1}
 ; AVX512VLVBMI2-NEXT:    retq
   %mask = icmp eq <32 x i16> %trigger, zeroinitializer
   %res = call <32 x bfloat> @llvm.masked.expandload.v32bf16(ptr %base, <32 x i1> %mask, <32 x bfloat> %src0)

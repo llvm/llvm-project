@@ -201,7 +201,6 @@
   ; CHECK-LABEL: explicit_cmp_cndmask:
   ; CHECK:       ; %bb.0:
   ; CHECK-NEXT:    v_cmp_eq_i32_e64 s[0:1], v0, v1
-  ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
   ; CHECK-NEXT:    v_cndmask_b32_e64 v2, v3, v4, s[0:1]
     ret void
   }

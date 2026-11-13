@@ -26,7 +26,7 @@ StackSafetyAnalysis
 MergeFunctions
 AliasAnalysis
 MemorySSA
-MemProf
+MemPGO
 LoopTerminology
 CycleTerminology
 Vectorizers
@@ -174,9 +174,9 @@ yaml2obj
 
   Information about the MemorySSA utility in LLVM, as well as how to use it.
 
-- {doc}`MemProf`
+- {doc}`MemPGO`
 
-  User guide and internals of MemProf, profile guided optimizations for memory.
+  User guide and internals of MemPGO (Profile-Guided Memory Optimization) and MemProf (Memory Profiling).
 
 - {doc}`LoopTerminology`
 

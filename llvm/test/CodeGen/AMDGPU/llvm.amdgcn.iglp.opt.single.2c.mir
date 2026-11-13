@@ -101,7 +101,7 @@ body:      |
   ; GCN-NEXT:   [[DEF14:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_ADD_U32_e32_6]], [[DEF32]], 0, 0, 0, 0, implicit $exec :: (load (s128) from %ir.in16, !alias.scope !0, addrspace 7)
   ; GCN-NEXT:   [[DEF15:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[V_ADD_U32_e32_7]], [[DEF32]], 0, 0, 0, 0, implicit $exec :: (load (s128) from %ir.in17, !alias.scope !0, addrspace 7)
   ; GCN-NEXT:   dead [[COPY1:%[0-9]+]]:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_e64 [[DS_READ_B128_gfx9_2]].sub2_sub3, [[DS_READ_B128_gfx9_5]].sub2_sub3, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   IGLP_OPT 1
+  ; GCN-NEXT:   IGLP_OPT 1, 3, 2, 2
   ; GCN-NEXT:   [[DEF29:%[0-9]+]]:sreg_32 = nsw S_ADD_I32 [[DEF29]], -1, implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_LG_U32 [[DEF29]], 0, implicit-def $scc
   ; GCN-NEXT:   [[DEF6:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 64, [[DEF6]], implicit $exec

@@ -15,7 +15,7 @@ define void @memset_pattern_i128_1_dynvalue(ptr %a, i128 %value) nounwind {
 ; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[LOADSTORELOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [16 x i8], ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1
@@ -43,7 +43,7 @@ define void @memset_pattern_i128_1_nz_as(ptr addrspace(1) %a, i128 %value) nounw
 ; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[LOADSTORELOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr addrspace(1) [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(1) [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr addrspace(1) [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1
@@ -93,7 +93,7 @@ define void @memset_pattern_i128_x_nonzero_as(ptr addrspace(10) %a, i64 %x) noun
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i128, ptr addrspace(10) [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(10) [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr addrspace(10) [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], [[X]]
@@ -199,7 +199,7 @@ define void @memset_pattern_i64_x_fromnonconstptr(ptr %a, i64 %x, ptr %p) nounwi
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[LOADSTORELOOP]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [8 x i8], ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    store ptr [[P]], ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP5]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[X]]

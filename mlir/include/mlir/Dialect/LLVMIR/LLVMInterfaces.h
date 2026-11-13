@@ -33,6 +33,10 @@ LogicalResult verifyAccessGroupOpInterface(Operation *op);
 /// the alias analysis interface.
 LogicalResult verifyAliasAnalysisOpInterface(Operation *op);
 
+/// Verifies that the tbaa.struct field offsets of memory operations that
+/// implement the tbaa.struct interface are non-decreasing.
+LogicalResult verifyTBAAStructOpInterface(Operation *op);
+
 /// Verifies that the operation implementing the dereferenceable interface has
 /// exactly one result of LLVM pointer type.
 LogicalResult verifyDereferenceableOpInterface(Operation *op);

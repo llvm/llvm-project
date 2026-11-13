@@ -3145,7 +3145,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
           // TODO: Use source file full path to generate the unique module id
           // and add a format indicator as a part of function name in case we
           // will support more than one format.
-          FormatIndicatorAndUniqueModId = "clang_" + UniqueModuleId.substr(1);
+          FormatIndicatorAndUniqueModId = "clang_" + UniqueModuleId;
         else {
           // Use threadId, Pid, and current time as the unique module id when we
           // cannot generate one based on a module's strong external symbols.

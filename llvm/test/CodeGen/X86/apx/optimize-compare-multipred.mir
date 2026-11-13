@@ -10,7 +10,6 @@
 # flags shadows the producer, so the redundant compare in bb.3 must be kept.
 ---
 name: dom_shadow_clobber
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: dom_shadow_clobber
   ; CHECK: bb.0:
@@ -63,7 +62,6 @@ body: |
 # rewritten to its NF variant. Positive control for dom_shadow_clobber.
 ---
 name: dom_no_shadow
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: dom_no_shadow
   ; CHECK: bb.0:
@@ -119,7 +117,6 @@ body: |
 # declined and the compare in bb.3 is kept.
 ---
 name: too_many_conversions
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: too_many_conversions
   ; CHECK: bb.0:
@@ -185,7 +182,6 @@ body: |
 # not cover.
 ---
 name: loop_backedge
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: loop_backedge
   ; CHECK: bb.0:
@@ -252,7 +248,6 @@ body: |
 # and bails, so the redundant compare in bb.3 is kept.
 ---
 name: producer_in_nondominating_pred
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: producer_in_nondominating_pred
   ; CHECK: bb.0:
@@ -304,7 +299,6 @@ body: |
 # finds a producer in two distinct blocks and bails, keeping the compare.
 ---
 name: producer_in_two_blocks
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: producer_in_two_blocks
   ; CHECK: bb.0:
@@ -359,7 +353,6 @@ body: |
 # clobber and keeps the compare.
 ---
 name: selfloop_shadow_below
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: selfloop_shadow_below
   ; CHECK: bb.0:
@@ -410,7 +403,6 @@ body: |
 # miss this shape.
 ---
 name: twoblock_cycle_shadow_below
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: twoblock_cycle_shadow_below
   ; CHECK: bb.0:
@@ -472,7 +464,6 @@ body: |
 # cases only exercise the bail path).
 ---
 name: selfloop_nfconvertible_below
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: selfloop_nfconvertible_below
   ; CHECK: bb.0:
@@ -510,7 +501,6 @@ body: |
 # where a revisit of MultiPredMBB would double-scan the caller's chain.
 ---
 name: multipred_above_cmpmbb
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: multipred_above_cmpmbb
   ; CHECK: bb.0:
@@ -567,7 +557,6 @@ body: |
 # the cycle.
 ---
 name: threeblock_cycle_shadow_below
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: threeblock_cycle_shadow_below
   ; CHECK: bb.0:
@@ -633,7 +622,6 @@ body: |
 # cap-bail branch of the below-scan.
 ---
 name: selfloop_nfconvertible_below_cap
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: selfloop_nfconvertible_below_cap
   ; CHECK: bb.0:

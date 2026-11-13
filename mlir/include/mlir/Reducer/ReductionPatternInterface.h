@@ -9,7 +9,6 @@
 #ifndef MLIR_REDUCER_REDUCTIONPATTERNINTERFACE_H
 #define MLIR_REDUCER_REDUCTIONPATTERNINTERFACE_H
 
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/Reducer/Tester.h"
 
 namespace mlir {

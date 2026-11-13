@@ -1,0 +1,6 @@
+posix: posix-2024
+types:
+  sa_family_t:
+    in-latest-posix: ''
+  struct sockaddr_un:
+    in-latest-posix: ''

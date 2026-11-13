@@ -171,7 +171,39 @@ define void @test6() {
   ret void
 }
 
+; Unlike unsafeClaimRV, objc_claimAutoreleasedReturnValue returns a +1 object,
+; so it must be inlined exactly like retainRV.
+
+; CHECK-LABEL: define void @test7_plus1_claimRV_autoreleaseRV(
+; CHECK: call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK-NEXT: ret void
+
+define void @test7_plus1_claimRV_autoreleaseRV() {
+  %call = call ptr @callee0_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.claimAutoreleasedReturnValue) ]
+  ret void
+}
+
+; CHECK-LABEL: define void @test8_plus1_claimRV_no_autoreleaseRV(
+; CHECK: call ptr @foo0() [ "clang.arc.attachedcall"(ptr @llvm.objc.claimAutoreleasedReturnValue) ]
+; CHECK-NEXT: ret void
+
+define void @test8_plus1_claimRV_no_autoreleaseRV() {
+  %call = call ptr @callee1_no_autoreleaseRV() [ "clang.arc.attachedcall"(ptr @llvm.objc.claimAutoreleasedReturnValue) ]
+  ret void
+}
+
+; CHECK-LABEL: define void @test9_plus1_claimRV_nocall(
+; CHECK: %[[V0:.*]] = load ptr, ptr @g0,
+; CHECK-NEXT: call ptr @llvm.objc.retain(ptr %[[V0]])
+; CHECK-NEXT: ret void
+
+define void @test9_plus1_claimRV_nocall() {
+  %call = call ptr @callee2_nocall() [ "clang.arc.attachedcall"(ptr @llvm.objc.claimAutoreleasedReturnValue) ]
+  ret void
+}
+
 declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
+declare ptr @llvm.objc.claimAutoreleasedReturnValue(ptr)
 declare ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr)
 declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
 declare i32 @__gxx_personality_v0(...)

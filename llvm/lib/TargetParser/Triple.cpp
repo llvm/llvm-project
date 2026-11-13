@@ -2266,6 +2266,8 @@ bool Triple::isLittleEndian() const {
 unsigned Triple::getDefaultWCharSize() const {
   if (getArch() == Triple::xcore)
     return 1;
+  if (isArch16Bit())
+    return 2;
   if (isOSWindowsOrUEFI() || isPS())
     return 2;
   if (isOSAIX() && isArch32Bit())
@@ -2553,6 +2555,7 @@ ThreadModel Triple::getDefaultThreadModel() const { return ThreadModel::POSIX; }
 
 LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   switch (getArch()) {
+  case loongarch32:
   case loongarch64:
   case riscv32:
   case riscv64:
@@ -2574,9 +2577,11 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   case ppcle:
   case ppc64:
   case ppc64le:
-    // PowerPC uses IBM double-double, except on a handful of OSes that use
-    // plain IEEE double. NetBSD only switches to IEEE double on 32-bit PowerPC.
-    if (isOSAIX() || isOSFreeBSD() || isOSOpenBSD() || isMusl() ||
+    // PowerPC uses IBM double-double, except with SPE, musl and a handful of
+    // OSes that use plain IEEE double. NetBSD only switches to IEEE double on
+    // 32-bit PowerPC.
+    if (isOSAIX() || isOSFreeBSD() || isOSOpenBSD() ||
+        getSubArch() == PPCSubArch_spe || isMusl() ||
         (isOSNetBSD() && isPPC32()))
       return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::PPCDoubleDouble;

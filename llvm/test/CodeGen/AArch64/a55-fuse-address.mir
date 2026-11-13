@@ -22,7 +22,6 @@
 name: fuseaddress
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body: |

@@ -37,7 +37,7 @@ endif()
 set(added_archive_targets "")
 set(added_bitcode_targets "")
 foreach(archive IN ZIP_LISTS
-  libc_archive_names libc_archive_targets libc_archive_entrypoint_lists)
+    libc_archive_names libc_archive_targets libc_archive_entrypoint_lists)
   if(NOT ${archive_2})
     # If an entrypoint list is missing, then skip adding targets for it.
     continue()

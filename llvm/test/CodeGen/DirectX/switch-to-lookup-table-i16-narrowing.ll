@@ -11,7 +11,7 @@
 
 define i32 @test(i32 %i) {
 ; CHECK-LABEL: define i32 @test(
-; CHECK:         getelementptr inbounds [4 x i16], ptr @switch.table.test
+; CHECK:         getelementptr inbounds [2 x i8], ptr @switch.table.test
 ; CHECK:         load i16, ptr
 entry:
   switch i32 %i, label %def [

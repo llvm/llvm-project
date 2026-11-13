@@ -23,7 +23,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r5', virtual-reg: '' }
@@ -82,7 +81,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r5', virtual-reg: '' }
@@ -141,7 +139,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r5', virtual-reg: '' }
@@ -200,7 +197,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r5', virtual-reg: '' }

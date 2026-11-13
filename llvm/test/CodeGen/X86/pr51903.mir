@@ -39,7 +39,6 @@
 ---
 name:            f
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr64 }

@@ -14,7 +14,6 @@
 
 ---
 name:            vblendw_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1
@@ -64,7 +63,6 @@ body:             |
 ...
 ---
 name:            blend_to_mov_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1
@@ -120,7 +118,6 @@ body:             |
 ...
 ---
 name:            vpermilpd_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $ymm0, $zmm0
@@ -176,7 +173,6 @@ body:             |
 ...
 ---
 name:            vpermilps_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $ymm0, $zmm0
@@ -232,7 +228,6 @@ body:             |
 ...
 ---
 name:            vpermilps_mem_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -294,7 +289,6 @@ body:             |
 ...
 ---
 name:            vpermq_insert_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $ymm0
@@ -338,7 +332,6 @@ body:             |
 ...
 ---
 name:            unpckpd_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1, $rdi
@@ -412,7 +405,6 @@ body:             |
 ...
 ---
 name:            unpckps_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1, $rdi
@@ -480,7 +472,6 @@ body:             |
 ...
 ---
 name:            shift_to_add_test
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $xmm0, $ymm0

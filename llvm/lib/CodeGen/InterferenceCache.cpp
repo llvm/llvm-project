@@ -154,34 +154,26 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
   BlockInterference *BI = &Blocks[MBBNum];
   ArrayRef<SlotIndex> RegMaskSlots;
   ArrayRef<const uint32_t*> RegMaskBits;
+
+  // Find the earliest virtreg and fixed interference start.
+  SlotIndex FirstStart;
+  for (const RegUnitInfo &RUI : RegUnits) {
+    const LiveIntervalUnion::SegmentIter &I = RUI.VirtI;
+    if (I.valid() && (!FirstStart.isValid() || I.start() < FirstStart))
+      FirstStart = I.start();
+    LiveInterval::const_iterator FI = RUI.FixedI;
+    if (FI != RUI.Fixed->end() &&
+        (!FirstStart.isValid() || FI->start < FirstStart))
+      FirstStart = FI->start;
+  }
+
   while (true) {
     BI->Tag = Tag;
     BI->First = BI->Last = SlotIndex();
 
-    // Check for first interference from virtregs.
-    for (RegUnitInfo &RUI : RegUnits) {
-      LiveIntervalUnion::SegmentIter &I = RUI.VirtI;
-      if (!I.valid())
-        continue;
-      SlotIndex StartI = I.start();
-      if (StartI >= Stop)
-        continue;
-      if (!BI->First.isValid() || StartI < BI->First)
-        BI->First = StartI;
-    }
-
-    // Same thing for fixed interference.
-    for (RegUnitInfo &RUI : RegUnits) {
-      LiveInterval::const_iterator I = RUI.FixedI;
-      LiveInterval::const_iterator E = RUI.Fixed->end();
-      if (I == E)
-        continue;
-      SlotIndex StartI = I->start;
-      if (StartI >= Stop)
-        continue;
-      if (!BI->First.isValid() || StartI < BI->First)
-        BI->First = StartI;
-    }
+    // Check for first interference from virtregs and fixed interference.
+    if (FirstStart.isValid() && FirstStart < Stop)
+      BI->First = FirstStart;
 
     // Also check for register mask interference.
     RegMaskSlots = LIS->getRegMaskSlotsInBlock(MBBNum);

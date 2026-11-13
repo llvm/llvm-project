@@ -629,3 +629,37 @@ template <typename T> using S3 = S2<T>; // expected-note {{candidate function no
                                         // expected-note {{cannot deduce template arguments for 'GH190517::S3' from 'GH190517::S1<char>'}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }
+
+namespace post_GH147675 {
+
+template<class T> struct Foo { using self = Foo; Foo(T); };
+
+template<class> using Int = typename Foo<int>::self;
+
+template<class T> using Int2 = Foo<T>;
+
+template<class T> using Int3 = Foo<int>;
+
+template<class T> using A = Int<T>; // #post_GH147675_A
+
+template<class T> using B = Int2<T>; // #post_GH147675_B
+
+template<class T> using C = Int3<T>; // #post_GH147675_C
+
+A a = 1;
+// expected-error@-1 {{no viable constructor or deduction guide}}
+// expected-note@#post_GH147675_A 2{{candidate function}}
+// expected-note@#post_GH147675_A 2{{cannot deduce template arguments}}
+// expected-note@#post_GH147675_A 2{{implicit deduction guide}}
+
+B b = 1;
+static_assert(__is_same(decltype(b), Foo<int>));
+
+C c = 1;
+// expected-error@-1 {{no viable constructor or deduction guide}}
+// expected-note@#post_GH147675_C 2{{candidate function}}
+// expected-note@#post_GH147675_C 2{{cannot deduce template arguments}}
+// expected-note@#post_GH147675_C 2{{implicit deduction guide}}
+
+
+}

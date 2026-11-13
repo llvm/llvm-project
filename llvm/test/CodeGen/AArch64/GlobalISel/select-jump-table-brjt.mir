@@ -33,7 +33,6 @@ name:            jt_test
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 jumpTable:
   kind:            block-address

@@ -1,0 +1,36 @@
+posix: posix-2024
+functions:
+  sem_clockwait:
+    in-latest-posix: ''
+  sem_close:
+    in-latest-posix: ''
+  sem_destroy:
+    in-latest-posix: ''
+  sem_getvalue:
+    in-latest-posix: ''
+  sem_init:
+    in-latest-posix: ''
+  sem_open:
+    in-latest-posix: ''
+  sem_post:
+    in-latest-posix: ''
+  sem_timedwait:
+    in-latest-posix: ''
+  sem_trywait:
+    in-latest-posix: ''
+  sem_unlink:
+    in-latest-posix: ''
+  sem_wait:
+    in-latest-posix: ''
+macros:
+  SEM_FAILED:
+    in-latest-posix: ''
+types:
+  clockid_t:
+    in-latest-posix: ''
+  mode_t:
+    in-latest-posix: ''
+  sem_t:
+    in-latest-posix: ''
+  struct timespec:
+    in-latest-posix: ''

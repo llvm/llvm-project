@@ -34,6 +34,7 @@
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <memory>
+#include <set>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -146,8 +147,7 @@ static int preprocessInput(TGLexer &Lex, raw_ostream &OS) {
 ///
 /// This functionality is really only for the benefit of the build system.
 /// It is similar to GCC's `-M*` family of options.
-static int createDependencyFile(const TGLexer::DependenciesSetTy &Dependencies,
-                                const char *argv0) {
+static int createDependencyFile(const char *argv0) {
   if (OutputFilename == "-")
     return reportError(argv0, "the option -d must be used together with -o\n");
 
@@ -167,9 +167,14 @@ static int createDependencyFile(const TGLexer::DependenciesSetTy &Dependencies,
   if (InputFilename != "-")
     DepOut.os() << ' ' << InputFilename;
 
-  for (const auto &Dep : Dependencies) {
+  // Every other buffer in SrcMgr was added by an include directive, and its
+  // identifier is the path that the include resolved to. Buffer 1 is the main
+  // file. Use a set to sort the list and remove duplicates.
+  std::set<std::string> Dependencies;
+  for (unsigned I = 2, E = SrcMgr.getNumBuffers(); I <= E; ++I)
+    Dependencies.insert(SrcMgr.getMemoryBuffer(I)->getBufferIdentifier().str());
+  for (const std::string &Dep : Dependencies)
     DepOut.os() << ' ' << Dep;
-  }
   DepOut.os() << "\n";
   DepOut.keep();
   return 0;
@@ -226,7 +231,7 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
     if (ErrorsPrinted > 0)
       return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
     if (!DependFilename.empty()) {
-      if (int Ret = createDependencyFile(Lex.getDependencies(), argv0))
+      if (int Ret = createDependencyFile(argv0))
         return Ret;
     }
     return WriteOutput(argv0, OutputFilename, OutString);
@@ -272,7 +277,7 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {
-    if (int Ret = createDependencyFile(Parser.getDependencies(), argv0))
+    if (int Ret = createDependencyFile(argv0))
       return Ret;
   }
 

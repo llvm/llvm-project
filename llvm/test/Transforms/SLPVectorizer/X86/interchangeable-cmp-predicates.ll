@@ -605,6 +605,28 @@ define <2 x float> @select_trunc_as_icmp_eq_and_swapped_arms(i32 %flags, float %
   ret <2 x float> %v1
 }
 
+define <2 x float> @select_trunc_as_icmp_ne_and_ugt_main_pred(i32 %flags, float %a, float %b) {
+; CHECK-LABEL: define <2 x float> @select_trunc_as_icmp_ne_and_ugt_main_pred(
+; CHECK-SAME: i32 [[FLAGS:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CHECK-NEXT:    [[C0:%.*]] = trunc i32 [[FLAGS]] to i1
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], float [[A]], float 0.000000e+00
+; CHECK-NEXT:    [[M1:%.*]] = and i32 [[FLAGS]], 2
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[M1]], 0
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], float [[B]], float 0.000000e+00
+; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[S0]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[V0]], float [[S1]], i64 1
+; CHECK-NEXT:    ret <2 x float> [[TMP7]]
+;
+  %c0 = trunc i32 %flags to i1
+  %s0 = select i1 %c0, float %a, float 0.0
+  %m1 = and i32 %flags, 2
+  %c1 = icmp ugt i32 %m1, 0
+  %s1 = select i1 %c1, float %b, float 0.0
+  %v0 = insertelement <2 x float> poison, float %s0, i64 0
+  %v1 = insertelement <2 x float> %v0, float %s1, i64 1
+  ret <2 x float> %v1
+}
+
 define <4 x float> @select_trunc_as_icmp_eq_and_multi_use(i32 %flags, float %a, float %b, float %c, float %d, ptr %p) {
 ; CHECK-LABEL: define <4 x float> @select_trunc_as_icmp_eq_and_multi_use(
 ; CHECK-SAME: i32 [[FLAGS:%.*]], float [[A:%.*]], float [[B:%.*]], float [[C:%.*]], float [[D:%.*]], ptr [[P:%.*]]) {

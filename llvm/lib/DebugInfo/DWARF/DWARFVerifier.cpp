@@ -8,6 +8,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -299,6 +300,7 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
 
     NumUnitErrors += verifyDebugInfoCallSite(Die);
     NumUnitErrors += verifyDebugInfoSubprogram(Die);
+    verifyDebugInfoLocalEntities(Die);
   }
 
   DWARFDie Die = Unit.getUnitDIE(/* ExtractUnitDIEOnly = */ false);
@@ -423,6 +425,54 @@ unsigned DWARFVerifier::verifyDebugInfoSubprogram(const DWARFDie &Die) {
   }
 
   return 0;
+}
+
+static void verifySharedLocalEntities(const DWARFDie &Scope,
+                                      function_ref<void(DWARFDie)> VerifyF) {
+  for (DWARFDie Child : Scope.children()) {
+    switch (Child.getTag()) {
+    case DW_TAG_lexical_block:
+      verifySharedLocalEntities(Child, VerifyF);
+      break;
+    case DW_TAG_class_type:
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type:
+    case DW_TAG_enumeration_type:
+    case DW_TAG_typedef:
+    case DW_TAG_imported_module:
+    case DW_TAG_imported_declaration:
+      VerifyF(Child);
+      break;
+    // TODO: Static local variables are shared by instances too, but they aren't
+    // checked here. A DW_TAG_variable doesn't say whether it is static, so it'd
+    // have to be inferred from DW_AT_location.
+    default:
+      break;
+    }
+  }
+}
+
+void DWARFVerifier::verifyDebugInfoLocalEntities(const DWARFDie &Die) {
+  if (Die.getTag() != DW_TAG_subprogram &&
+      Die.getTag() != DW_TAG_inlined_subroutine)
+    return;
+
+  DWARFDie Origin = Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
+  if (!Origin)
+    return;
+
+  // Verify that a concrete subprogram instance does not define its own local
+  // types or imported entities.
+  verifySharedLocalEntities(Die, [&](DWARFDie Entity) {
+    // It may refer to the entity in the abstract origin.
+    if (Entity.find(DW_AT_abstract_origin))
+      return;
+    warn() << formatv("{0} in concrete instance {1:x+8} of a subprogram should "
+                      "only be in its abstract origin {2:x+8}:\n",
+                      TagString(Entity.getTag()), Die.getOffset(),
+                      Origin.getOffset());
+    dump(Entity) << '\n';
+  });
 }
 
 unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
@@ -1179,7 +1229,7 @@ void DWARFVerifier::verifyDebugLineRows() {
       assert(HasFullPath && "Invalid index?");
       (void)HasFullPath;
       auto [It, Inserted] = FullPathMap.try_emplace(FullPath, FileIndex);
-      if (!Inserted && It->second != FileIndex && DumpOpts.Verbose) {
+      if (!Inserted && It->second != FileIndex && DumpOpts.ShowErrorDetails) {
         warn() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}] is a "
                           "duplicate of file_names[{2}]\n",
                           *toSectionOffset(Die.find(DW_AT_stmt_list)),
@@ -1243,8 +1293,7 @@ DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
                              DIDumpOptions DumpOpts)
     : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
       IsMachOObject(false) {
-  ErrorCategory.ShowDetail(this->DumpOpts.Verbose ||
-                           !this->DumpOpts.ShowAggregateErrors);
+  ErrorCategory.ShowDetail(this->DumpOpts.ShowErrorDetails);
   if (const auto *F = DCtx.getDWARFObj().getFile()) {
     IsObjectFile = F->isRelocatableObject();
     IsMachOObject = F->isMachO();

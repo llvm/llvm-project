@@ -101,8 +101,7 @@ void test_virtual_destroying_delete(V *v) {
 // CIR:   cir.if %[[NOT_NULL]] {
 // CIR:     %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[V]] : !cir.ptr<!rec_V> -> !cir.ptr<!cir.vptr>
 // CIR:     %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:     %[[SLOT_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][1]
-// CIR:     %[[SLOT:.*]] = cir.load{{.*}} %[[SLOT_ADDR]]
+// CIR:     %[[SLOT:.*]] = cir.vtable.get_virtual_fn %[[VPTR]][1]
 // CIR:     cir.call %[[SLOT]](%[[V]]){{.*}} : (!cir.ptr<!cir.func<(!cir.ptr<!rec_V>)>>, !cir.ptr<!rec_V> {{.*}}) -> ()
 // CIR-NOT: cir.call @_ZN1VdlEPS_St19destroying_delete_t
 // CIR-NOT: cir.call @_ZN1VD{{[12]}}Ev

@@ -381,6 +381,11 @@ if os.path.exists("/dev/fd/0") and sys.platform not in ["cygwin"]:
 if re.match(r".*-(windows-msvc)$", config.target_triple):
     config.available_features.add("ms-sdk")
 
+# Targets whose object file format (XCOFF on AIX, GOFF on z/OS) does not yet
+# support wrapping a serialized module in the "__clangast" section.
+if not re.match(r".*-(aix|zos)", config.target_triple):
+    config.available_features.add("object-wrapped-module")
+
 # [PR8833] LLP64-incompatible tests
 if not re.match(
     r"^(aarch64|arm64ec|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple

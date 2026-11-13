@@ -3,7 +3,6 @@
 ---
 name:            add_x
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$p0' }
   - { reg: '$z0' }

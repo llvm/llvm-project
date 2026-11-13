@@ -14,7 +14,15 @@
 namespace llvm::omp::target {
 
 /// Constants of the Level Zero backend.
-struct LevelZeroConfig final : BackendConfig {};
+struct LevelZeroConfig final : BackendConfig {
+  interop_spec_t
+  selectInteropPreference(int32_t InteropType, int32_t NumPrefers,
+                          interop_spec_t *Prefers) const override {
+    return interop_spec_t{/*fr_id=*/omp_ifr_level_zero,
+                          /*attrs=*/{/*inorder=*/true, /*reserved=*/0},
+                          /*impl_attrs=*/0};
+  }
+};
 
 } // namespace llvm::omp::target
 

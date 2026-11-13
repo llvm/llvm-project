@@ -36,11 +36,10 @@ entry:
 ; 64R2: dinsu  $[[INS:[0-9]+]], $[[EXT]], 63, 1
 ; 64R2: dmtc1  $[[INS]], $f0
 
-  %call = tail call double @copysign(double %d0, double %d1) nounwind readnone
+  %call = tail call double @llvm.copysign.f64(double %d0, double %d1)
   ret double %call
 }
 
-declare double @copysign(double, double) nounwind readnone
 
 define float @func1(float %f0, float %f1) nounwind readnone {
 entry:
@@ -57,9 +56,8 @@ entry:
 ; 32R2: ins  $[[INS:[0-9]+]], $[[EXT]], 31, 1
 ; 32R2: mtc1 $[[INS]], $f0
 
-  %call = tail call float @copysignf(float %f0, float %f1) nounwind readnone
+  %call = tail call float @llvm.copysign.f32(float %f0, float %f1)
   ret float %call
 }
 
-declare float @copysignf(float, float) nounwind readnone
 

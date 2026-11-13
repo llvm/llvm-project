@@ -61,7 +61,6 @@
 ---
 name:            test_1
 alignment:       16
-tracksRegLiveness: true
 stack:
   - { id: 0, name: a1, type: default, offset: 0, size: 112, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -91,7 +90,6 @@ body:             |
 ---
 name:            test_2
 alignment:       16
-tracksRegLiveness: true
 stack:
   - { id: 0, name: a1, type: default, offset: 0, size: 112, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

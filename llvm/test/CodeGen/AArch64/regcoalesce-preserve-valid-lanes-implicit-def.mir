@@ -9,7 +9,6 @@
 
 ---
 name: preserve_valid_lanes
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: preserve_valid_lanes
   ; CHECK: bb.0:

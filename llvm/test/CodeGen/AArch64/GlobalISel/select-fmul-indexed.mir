@@ -6,7 +6,6 @@ name:            v2s32_fmul_indexed
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
   - { reg: '$x0' }

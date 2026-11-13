@@ -41,7 +41,6 @@
 ---
 name:            foo_nopic
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }
@@ -72,7 +71,6 @@ body:             |
 ---
 name:            foo_pic
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32_nosp }
   - { id: 1, class: gr32 }

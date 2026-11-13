@@ -99,7 +99,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -162,7 +161,6 @@ body:             |
 ---
 name:            bar
 alignment:       16
-tracksRegLiveness: true
 registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -226,7 +224,6 @@ body:             |
 ---
 name:            baz
 alignment:       16
-tracksRegLiveness: true
 registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
@@ -290,7 +287,6 @@ body:             |
 ---
 name:            qux
 alignment:       16
-tracksRegLiveness: true
 registers:       []
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }

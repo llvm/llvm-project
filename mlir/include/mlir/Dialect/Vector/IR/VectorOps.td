@@ -72,7 +72,8 @@ def Vector_ContractionOp :
     intermediate result to the accumulator argument of rank K, and returns a
     vector result of rank K (where K = num_lhs_free_dims + num_rhs_free_dims +
     num_batch_dims (see dimension type descriptions below)). For K = 0 (no
-    free or batch dimensions), the accumulator and output are a scalar.
+    free or batch dimensions), the accumulator and output are either a scalar
+    or a 0-D vector, i.e. both variants are supported: `f32` and `vector<f32>`.
 
     If operands and the result have types of different bitwidths, operands are
     promoted to have the same bitwidth as the result before performing the
@@ -217,6 +218,8 @@ def Vector_ContractionOp :
     llvm::SmallVector<::mlir::AffineMap, 4> getIndexingMapsArray() {
       return llvm::to_vector<4>(getIndexingMaps().getAsValueRange<::mlir::AffineMapAttr>());
     }
+
+    bool isAddKind() { return getKind() == vector::CombiningKind::ADD;}
 
     // Returns the bounds of each dimension in the iteration space spanned
     // by the iterator types of this operation.
@@ -422,8 +425,8 @@ def Vector_BroadcastOp :
     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "broadcast operation";
   let description = [{
-    Broadcasts the scalar or k-D vector value in the source operand
-    to a n-D result vector such that the broadcast makes sense, i.e.,
+    Broadcasts the scalar or K-D vector value in the source operand
+    to a N-D result vector such that the broadcast makes sense, i.e.,
     the source operand is duplicated to match the given rank and sizes
     in the result vector. The legality rules are:
     * the source operand must have the same element type as the result type
@@ -445,25 +448,45 @@ def Vector_BroadcastOp :
     "dim-1" broadcasting). These rules imply that any scalar broadcast (K=0) to
     any shaped vector with the same element type is always legal.
 
+    For every element in the result vector, the corresponding coordinate in
+    source dimension `j` can be computed from its zero-based, row-major linear
+    element offset `off` in the result vector as follows:
+
+    ```
+    source_coord[j](off) = floor(off / result_stride(N - K + j)) % source_dim(j)
+    ```
+
+    where `j = 1 .. K` indexes source dimensions from left to right, starting
+    at 1, and `result_stride(N - K + j)` is the row-major element stride of
+    the corresponding trailing result dimension. This stride is the product
+    of the sizes of all result dimensions to its right, or 1 for the last
+    dimension.
+
+    Dimension sizes and strides include any runtime `vscale` factors. In
+    particular, a scalable dimension `[1]` has size `vscale`. For a fixed
+    source dimension of size 1, `source_coord[j](off) == 0` for every valid
+    `off`.
+
     Example:
 
     ```mlir
     %0 = arith.constant 0.0 : f32
     %1 = vector.broadcast %0 : f32 to vector<16xf32>
     %2 = vector.broadcast %1 : vector<16xf32> to vector<4x16xf32>
-    ```
 
-    For every element in the result vector, the corresponding coordinate in
-    source dimension `j` can be computed from its linear offset `off` in the
-    result vector as follows:
-    ```
-                            / 0, if source_dim(j) == 1
-    source_coord[j](off) = |
-                            \ floor(off / result_stride(N - K + j)) % source_dim(j), otherwise
+    // Let %src = [[[a], [b], [c], [d]]].
 
+    // %3 = [[[a], [b], [c], [d]], [[a], [b], [c], [d]], ...]
+    // For off = 4, the result element is %src[0, 0, 0] = a.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
+    %3 = vector.broadcast %src : vector<1x4x1xf32> to vector<4x4x1xf32>
+
+    // %4 = [[[a, a, a, a], [b, b, b, b],
+    //        [c, c, c, c], [d, d, d, d]]]
+    // For off = 4, the result element is %src[0, 1, 0] = b.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
+    %4 = vector.broadcast %src : vector<1x4x1xf32> to vector<1x4x4xf32>
     ```
-    where `j = 1 .. K` and `result_stride(N - K + j)` is the result stride
-    corresponding to source dimension `j`.
   }];
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
@@ -2157,7 +2180,6 @@ def Vector_MaskedStoreOp :
 
 def Vector_GatherOp :
   Vector_Op<"gather", [
-    DeclareOpInterfaceMethods<MaskableOpInterface>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>

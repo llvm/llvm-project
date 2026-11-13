@@ -40,20 +40,6 @@ using namespace llvm;
 #include "AMDGPUGenSubtargetInfo.inc"
 #undef AMDGPUSubtarget
 
-static cl::opt<bool> EnableVGPRIndexMode(
-    "amdgpu-vgpr-index-mode",
-    cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
-    cl::init(false));
-
-static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
-                           cl::desc("Enable the use of AA during codegen."),
-                           cl::init(true));
-
-static cl::opt<unsigned>
-    NSAThreshold("amdgpu-nsa-threshold",
-                 cl::desc("Number of addresses from which to enable MIMG NSA."),
-                 cl::init(2), cl::Hidden);
-
 GCNSubtarget::~GCNSubtarget() = default;
 
 static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
@@ -234,7 +220,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            AMDGPU::TargetIDSetting SramEccSetting)
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
-    AMDGPUSubtarget(TT),
+    AMDGPUSubtarget(TT, TM.getCLOpts()),
     TargetID(AMDGPU::createAMDGPUTargetID(*this, "")),
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
@@ -404,7 +390,7 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.ShouldTrackPressure = true;
 
   const Function &F = Region.RegionBegin->getMF()->getFunction();
-  if (AMDGPU::getSchedStrategy(F) == "coexec") {
+  if (AMDGPU::getSchedStrategy(getCLOpts(), F) == "coexec") {
     Policy.OnlyTopDown = true;
     Policy.OnlyBottomUp = false;
     return;
@@ -478,10 +464,52 @@ bool GCNSubtarget::hasMadF16() const {
 }
 
 bool GCNSubtarget::useVGPRIndexMode() const {
-  return hasVGPRIndexMode() && (!hasMovrel() || EnableVGPRIndexMode);
+  return hasVGPRIndexMode() && (!hasMovrel() || getCLOpts().vgpr_index_mode);
 }
 
-bool GCNSubtarget::useAA() const { return UseAA; }
+bool GCNSubtarget::useAA() const { return getCLOpts().use_aa_in_codegen; }
+
+uint64_t GCNSubtarget::getMaxBufferIntrinsicWidth(const DataLayout &DL, Type *T,
+                                                  Align A, bool NoWrapFromMax,
+                                                  bool NoPartialOOB) const {
+  Align Result(16);
+  if (!hasUnalignedBufferAccessEnabled() && A < Align(4))
+    Result = A;
+  auto *VT = dyn_cast<VectorType>(T);
+  if (!hasRelaxedBufferOOBMode() && VT) {
+    TypeSize ElemBits = DL.getTypeSizeInBits(VT->getElementType());
+    if (ElemBits.isKnownMultipleOf(32)) {
+      // Word-sized operations are bounds-checked per word. So, the only case we
+      // have to worry about is stores that start out of bounds and then go in,
+      // and those can only become in-bounds on a multiple of their alignment.
+      // Therefore, we can use the declared alignment of the operation as the
+      // maximum width, rounding up to 4.
+      if (!NoWrapFromMax)
+        Result = std::min(Result, std::max(A, Align(4)));
+    } else if ((ElemBits.isKnownMultipleOf(8) ||
+                isPowerOf2_64(ElemBits.getKnownMinValue()))) {
+      // To ensure correct behavior for sub-word types, we must always scalarize
+      // unaligned loads of sub-word types. For example, if you load
+      // a <4 x i8> from offset 7 in an 8-byte buffer, expecting the vector
+      // to be padded out with 0s after that last byte, you'll get all 0s
+      // instead. To prevent this behavior when not requested, de-vectorize such
+      // loads.
+      //
+      // If we knew that the value that triggers bounds checks was a multiple of
+      // 4 along with the access being word-aligned, we could avoid the
+      // scalarization here, as the bitcast wouldn't change any check behavior,
+      // but we don't currently try to analyze this.
+      //
+      // Strict OOB checking isn't supported if the size of each element is a
+      // non-power-of-2 value less than 8, since there's no feasible way to
+      // apply such a strict bounds check.
+      if (!NoPartialOOB)
+        Result =
+            commonAlignment(Result, divideCeil(ElemBits.getKnownMinValue(), 8));
+    }
+  }
+  return Result.value() * 8;
+}
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(*this, SGPRs);
@@ -896,15 +924,15 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX12)
     return 0; // Not MIMG encoding.
 
-  if (NSAThreshold.getNumOccurrences() > 0)
-    return std::max(NSAThreshold.getValue(), 2u);
+  if (getCLOpts().nsa_threshold)
+    return std::max(*getCLOpts().nsa_threshold, 2u);
 
   int Value = static_cast<int>(MF.getFunction().getFnAttributeAsParsedInteger(
       "amdgpu-nsa-threshold", -1));
   if (Value > 0)
     return std::max(Value, 2);
 
-  return NSAThreshold;
+  return 2;
 }
 
 GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,

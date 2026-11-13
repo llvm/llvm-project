@@ -17,20 +17,16 @@ licenses(["notice"])
     for src in glob(
         ["*.test"],
         exclude = [
-            # These build an inferior with %build or %clang_host, which the bazel
-            # setup doesn't support yet.
+            # These run lldb itself through %lldb, which sources the
+            # lit-lldb-init-quiet file CMake writes into the test execution
+            # root. Bazel can't put a generated file there yet.
             "breakpoint-command.test",
-            "case-insensitive.test",
-            "case-sensitive.test",
+            "condition-lang.test",
             "dummy-target.test",
             "invalid-condition.test",
             "jit-loader_jitlink_elf.test",
             "source-regex-missing-source.test",
             "step-out.test",
-            # These run lldb itself through %lldb, which sources the
-            # lit-lldb-init-quiet file CMake writes into the test execution
-            # root. Bazel can't put a generated file there yet.
-            "condition-lang.test",
             "wasm-skip-function-header.test",
         ],
     )

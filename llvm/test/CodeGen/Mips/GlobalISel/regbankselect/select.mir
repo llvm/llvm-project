@@ -15,7 +15,6 @@
 name:            select_i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -46,7 +45,6 @@ body:             |
 name:            select_ptr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -77,7 +75,6 @@ body:             |
 name:            select_i64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 20, size: 4, alignment: 4, isImmutable: true }
   - { id: 1, offset: 16, size: 4, alignment: 8, isImmutable: true }
@@ -125,7 +122,6 @@ body:             |
 name:            select_ambiguous_i64_in_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -162,7 +158,6 @@ body:             |
 name:            select_float
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -195,7 +190,6 @@ body:             |
 name:            select_ambiguous_float_in_gpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -232,7 +226,6 @@ body:             |
 name:            select_double
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 16, size: 4, alignment: 8, isImmutable: true }
 body:             |

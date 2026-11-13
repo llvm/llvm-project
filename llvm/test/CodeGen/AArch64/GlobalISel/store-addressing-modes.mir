@@ -23,7 +23,6 @@ name:            strxrox
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -46,7 +45,6 @@ name:            strxrox_p0
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -70,7 +68,6 @@ name:            strdrox
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -93,7 +90,6 @@ name:            strwrox
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -116,7 +112,6 @@ name:            strsrox
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -139,7 +134,6 @@ name:            strhrox
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -162,7 +156,6 @@ name:            strqrox
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -185,7 +178,6 @@ name:            shl_fast_3
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -210,7 +202,6 @@ name:            shl_slow_1
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -236,7 +227,6 @@ name:            shl_slow_1_more_than_one_use
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -278,7 +268,6 @@ name:            shl_slow_4
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -303,7 +292,6 @@ name:            shl_slow_4_more_than_one_use
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -340,7 +328,6 @@ name:            shl_p0
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

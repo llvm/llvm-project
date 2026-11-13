@@ -43,7 +43,6 @@ name:            false_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -69,7 +68,6 @@ name:            true_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -95,7 +93,6 @@ name:            uno_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -131,7 +128,6 @@ name:            ord_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -167,7 +163,6 @@ name:            oeq_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -203,7 +198,6 @@ name:            une_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -239,7 +233,6 @@ name:            ueq_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -275,7 +268,6 @@ name:            one_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -311,7 +303,6 @@ name:            olt_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -347,7 +338,6 @@ name:            uge_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -383,7 +373,6 @@ name:            ult_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -419,7 +408,6 @@ name:            oge_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -455,7 +443,6 @@ name:            ole_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -491,7 +478,6 @@ name:            ugt_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -527,7 +513,6 @@ name:            ule_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -563,7 +548,6 @@ name:            ogt_s
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $f12, $f14
@@ -599,7 +583,6 @@ name:            false_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -625,7 +608,6 @@ name:            true_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -651,7 +633,6 @@ name:            uno_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -687,7 +668,6 @@ name:            ord_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -723,7 +703,6 @@ name:            oeq_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -759,7 +738,6 @@ name:            une_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -795,7 +773,6 @@ name:            ueq_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -831,7 +808,6 @@ name:            one_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -867,7 +843,6 @@ name:            olt_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -903,7 +878,6 @@ name:            uge_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -939,7 +913,6 @@ name:            ult_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -975,7 +948,6 @@ name:            oge_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -1011,7 +983,6 @@ name:            ole_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -1047,7 +1018,6 @@ name:            ugt_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -1083,7 +1053,6 @@ name:            ule_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7
@@ -1119,7 +1088,6 @@ name:            ogt_d
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d6, $d7

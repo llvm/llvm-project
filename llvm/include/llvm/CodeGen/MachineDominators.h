@@ -121,6 +121,14 @@ public:
                                  MachineFunctionAnalysisManager &MFAM);
 };
 
+/// Verifier pass for \c MachineDominatorTree.
+class MachineDominatorTreeVerifierPass
+    : public RequiredPassInfoMixin<MachineDominatorTreeVerifierPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
 /// \brief Analysis pass which computes a \c MachineDominatorTree.
 class LLVM_ABI MachineDominatorTreeWrapperPass : public MachineFunctionPass {
   // MachineFunctionPass may verify the analysis result without running pass,

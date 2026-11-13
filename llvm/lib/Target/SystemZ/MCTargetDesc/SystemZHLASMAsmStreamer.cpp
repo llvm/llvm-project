@@ -342,23 +342,11 @@ void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
 void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
-  if (Data.empty())
-    return;
-
-  OS << " DC ";
-  size_t Len = Data.size();
-  SmallVector<uint8_t> Chars;
-  Chars.resize(Len);
-  OS << "XL" << Len;
-  uint32_t Index = 0;
-  for (uint8_t C : Data) {
-    Chars[Index] = C;
-    Index++;
+  for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
+    StringRef Chunk = Data.substr(I, MaxXLLen);
+    OS << " DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
+    EmitEOL();
   }
-
-  OS << '\'' << toHex(Chars) << '\'';
-
-  EmitEOL();
 }
 
 void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
@@ -626,6 +614,15 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   assert(Size <= 8 && "Invalid size");
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
+
+  int64_t AbsValue;
+  const auto *Sec = static_cast<const MCSectionGOFF *>(getCurrentSectionOnly());
+  if (!Value->evaluateAsAbsolute(AbsValue, getAssemblerPtr()) && Size != 8 &&
+      Sec->getParent() && Sec->getParent()->getName() == GOFF::CLASS_WSA) {
+    getContext().reportError(Loc, "address constant in C_WSA64 must be 8 bytes "
+                                  "(z/OS binder restriction IEW2572E)");
+    return;
+  }
 
   MCStreamer::emitValueImpl(Value, Size, Loc);
   OS << " DC ";
