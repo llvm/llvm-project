@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains utilities to analyze memory profile information.
+// This file contains utilities to analyze memory profile information for
+// profile-guided memory optimization (MemPGO).
 //
 //===----------------------------------------------------------------------===//
 

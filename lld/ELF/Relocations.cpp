@@ -10,10 +10,10 @@
 // relocations and determines what auxiliary data structures (GOT, PLT, copy
 // relocations) need to be created during linking.
 //
-// The main entry point is scanRelocations<ELFT>(), which calls scanSection()
-// to process all relocations within an input section. For each relocation,
-// scan() analyzes the type and target, and determines whether a synthetic
-// section entry or dynamic relocation is needed.
+// The main entry point is scanRelocations(), which calls scanSection() to
+// process all relocations within an input section. For each relocation,
+// scanSection() analyzes the type and target, and determines whether a
+// synthetic section entry or dynamic relocation is needed.
 //
 // Note: This file analyzes what needs to be done but doesn't apply the
 // actual relocations - that happens later in InputSection::writeTo().
@@ -38,12 +38,12 @@
 #include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Parallel.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Parallel.h"
 #include <algorithm>
-#include <atomic>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1134,7 +1134,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   printLocation(diag, *sec, sym, offset);
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                                  unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -1144,7 +1144,7 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(false);
     uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = rel.r_offset;
     RelExpr expr = getRelExpr(type, sym, sec.content().data() + offset);
 
@@ -1153,7 +1153,7 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    rs.process(expr, type, offset, sym, rs.getAddend<ELFT>(rel, type));
+    rs.process(expr, type, offset, sym, rs.getAddend(rel, type));
   }
 }
 
@@ -1181,43 +1181,36 @@ void RelocScan::scanEhSection(EhInputSection &s) {
   }
 }
 
-template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
+void elf::scanRelocations(Ctx &ctx) {
   // Scan all relocations. Each relocation goes through a series of tests to
   // determine if it needs special treatment, such as creating GOT, PLT,
   // copy relocations, etc. Note that relocations for non-alloc sections are
   // directly processed by InputSection::relocateNonAlloc.
 
-  size_t numFiles = ctx.objectFiles.size();
-  std::atomic<size_t> next{0};
   // MIPS modifies MipsGotSection during relocation scanning, which is not
   // suitable for parallelism.
-  size_t numWorkers = ctx.arg.emachine == EM_MIPS
-                          ? 1
-                          : std::min<size_t>(ctx.arg.threadCount, numFiles + 1);
-  parallelFor(0, numWorkers, [&](unsigned shard) {
-    // Tasks claim work items off a shared counter: item 0 scans special
-    // sections (claimed first since .eh_frame is large) while item i scans
-    // ctx.objectFiles[i - 1].
-    for (size_t i;
-         (i = next.fetch_add(1, std::memory_order_relaxed)) <= numFiles;) {
-      if (i != 0) {
-        for (InputSectionBase *s : ctx.objectFiles[i - 1]->getSections())
-          if (s && s->kind() == SectionBase::Regular && s->isLive() &&
-              (s->flags & SHF_ALLOC) &&
-              !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))
-            ctx.target->scanSection(*s, shard);
-        continue;
-      }
-      RelocScan scanner(ctx, nullptr, shard);
-      for (EhInputSection *sec : ctx.in.ehFrame->sections)
-        scanner.scanEhSection(*sec);
-      ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
-      if (armExidx && armExidx->isLive())
-        for (InputSection *sec : armExidx->exidxSections)
-          if (sec->isLive())
-            ctx.target->scanSection(*sec, shard);
-    }
-  });
+  size_t numWorkers = ctx.arg.emachine == EM_MIPS ? 1 : ctx.arg.threadCount;
+  // Item 0 scans special sections (claimed first since .eh_frame is large)
+  // while item i scans ctx.objectFiles[i - 1].
+  parallelForSharded(
+      numWorkers, ctx.objectFiles.size() + 1, [&](size_t shard, size_t i) {
+        if (i != 0) {
+          for (InputSectionBase *s : ctx.objectFiles[i - 1]->getSections())
+            if (s && s->kind() == SectionBase::Regular && s->isLive() &&
+                (s->flags & SHF_ALLOC) &&
+                !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))
+              ctx.target->scanSection(*s, shard);
+          return;
+        }
+        RelocScan scanner(ctx, nullptr, shard);
+        for (EhInputSection *sec : ctx.in.ehFrame->sections)
+          scanner.scanEhSection(*sec);
+        ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
+        if (armExidx && armExidx->isLive())
+          for (InputSection *sec : armExidx->exidxSections)
+            if (sec->isLive())
+              ctx.target->scanSection(*sec, shard);
+      });
 }
 
 RelocationBaseSection &elf::getIRelativeSection(Ctx &ctx) {
@@ -2052,11 +2045,6 @@ template <class ELFT> void elf::checkNoCrossRefs(Ctx &ctx) {
     }
   }
 }
-
-template void elf::scanRelocations<ELF32LE>(Ctx &);
-template void elf::scanRelocations<ELF32BE>(Ctx &);
-template void elf::scanRelocations<ELF64LE>(Ctx &);
-template void elf::scanRelocations<ELF64BE>(Ctx &);
 
 template void elf::checkNoCrossRefs<ELF32LE>(Ctx &);
 template void elf::checkNoCrossRefs<ELF32BE>(Ctx &);

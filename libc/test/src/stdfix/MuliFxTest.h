@@ -16,7 +16,7 @@
 
 #include "test/UnitTest/Test.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/fixed_point/fx_rep.h"
 

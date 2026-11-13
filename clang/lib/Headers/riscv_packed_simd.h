@@ -470,6 +470,9 @@ __packed_binary_builtin(aaddu_u32, uint32_t, __builtin_riscv_aaddu_u32)
 __packed_binary_builtin(asub_i32, int32_t, __builtin_riscv_asub_i32)
 __packed_binary_builtin(asubu_u32, uint32_t, __builtin_riscv_asubu_u32)
 
+/* Scalar Shift-Add */
+__packed_binary_builtin(ssh1sadd_i32, int32_t, __builtin_riscv_ssh1sadd_i32)
+
 /* Scalar Saturating Addition and Subtraction */
 __packed_binary_builtin(sadd_i32, int32_t, __builtin_elementwise_add_sat)
 __packed_binary_builtin(saddu_u32, uint32_t, __builtin_elementwise_add_sat)
@@ -1004,6 +1007,61 @@ __packed_unzipe2(punzipe_i16x2, int16x2_t, int16x4_t)
 __packed_unzipo2(punzipo_i16x2, int16x2_t, int16x4_t)
 __packed_unzipe2(punzipe_u16x2, uint16x2_t, uint16x4_t)
 __packed_unzipo2(punzipo_u16x2, uint16x2_t, uint16x4_t)
+
+#if __riscv_xlen == 64
+/* Scalar Zip/Unzip */
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip8p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 0, 8, 1, 9, 2, 10,
+                                           3, 11);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip16p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 0, 4, 1, 5);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip8hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 4, 12, 5, 13, 6,
+                                           14, 7, 15);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip16hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 2, 6, 3, 7);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip8p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 0, 2, 4, 6, 8, 10,
+                                           12, 14);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip16p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 0, 2, 4, 6);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip8hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 1, 3, 5, 7, 9, 11,
+                                           13, 15);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip16hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 1, 3, 5, 7);
+}
+#endif
 
 /* Packed Pair (32-bit) */
 __packed_pair_ee4(ppaire_i8x4, int8x4_t)
