@@ -20,6 +20,8 @@
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/WindowsError.h"
 #include <fcntl.h>
+#include <mutex>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -69,6 +71,55 @@ extern "C" NTSYSAPI NTSTATUS NTAPI NtQueryVolumeInformationFile(
 #ifndef FILE_REMOTE_DEVICE
 #define FILE_REMOTE_DEVICE 0x00000010
 #endif
+
+#ifndef FILE_SUPPORTS_OPEN_BY_FILE_ID
+#define FILE_SUPPORTS_OPEN_BY_FILE_ID 0x01000000
+#endif
+
+// Defined in `winnt.h` for Windows 8+.
+// FILE_ID_128
+struct FileId128 {
+  BYTE Identifier[16];
+};
+
+// FILE_ID_INFO
+struct FileIdInfo {
+  ULONGLONG VolumeSerialNumber;
+  FileId128 FileId;
+};
+
+// Defined in `winnt.h` for Windows 11 24H2+.
+// FILE_STAT_BASIC_INFORMATION
+struct FileStatBasicInformation {
+  LARGE_INTEGER FileId;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER AllocationSize;
+  LARGE_INTEGER EndOfFile;
+  ULONG FileAttributes;
+  ULONG ReparseTag;
+  ULONG NumberOfLinks;
+  ULONG DeviceType;
+  ULONG DeviceCharacteristics;
+  ULONG Reserved;
+  LARGE_INTEGER VolumeSerialNumber;
+  FileId128 FileId128;
+};
+
+constexpr int FileStatBasicByNameInfoClass = 3;
+constexpr int FileIdInfoClass = 0x12;
+
+using GetFileInformationByName_t = BOOL(WINAPI *)(PCWSTR, int, PVOID, ULONG);
+
+static auto pfnGetFileInformationByName = []() -> GetFileInformationByName_t {
+  HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
+  if (!kernelM)
+    return nullptr;
+  return (GetFileInformationByName_t)(void *)::GetProcAddress(
+      kernelM, "GetFileInformationByName");
+}();
 
 using namespace llvm;
 
@@ -576,16 +627,25 @@ static std::error_code realPathFromHandle(HANDLE H,
   return std::error_code();
 }
 
-static std::error_code is_local_internal(HANDLE Handle, bool &Result) {
-  // Fast path for the common case: an ordinary local disk, one system call on
-  // the handle. Everything else goes through the path-based check below.
+static bool isDiskDevice(ULONG DeviceType, ULONG Characteristics) {
+  return (DeviceType == FILE_DEVICE_DISK ||
+          DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
+         !(Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE));
+}
+
+static std::optional<bool> isDiskDevice(HANDLE Handle) {
   IO_STATUS_BLOCK IoStatus;
   FILE_FS_DEVICE_INFORMATION Info;
   if (::NtQueryVolumeInformationFile(Handle, &IoStatus, &Info, sizeof(Info),
-                                     FileFsDeviceInformation) >= 0 &&
-      (Info.DeviceType == FILE_DEVICE_DISK ||
-       Info.DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
-      !(Info.Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE))) {
+                                     FileFsDeviceInformation) < 0)
+    return std::nullopt;
+  return isDiskDevice(Info.DeviceType, Info.Characteristics);
+}
+
+static std::error_code is_local_internal(HANDLE Handle, bool &Result) {
+  // Fast path for the common case: an ordinary local disk, one system call on
+  // the handle. Everything else goes through the path-based check below.
+  if (isDiskDevice(Handle).value_or(false)) {
     Result = true;
     return std::error_code();
   }
@@ -898,8 +958,69 @@ static perms perms_from_attrs(DWORD Attrs) {
   return (Attrs & FILE_ATTRIBUTE_READONLY) ? (all_read | all_exe) : all_all;
 }
 
+// The volumes seen so far by their 64-bit serial number, and whether their
+// file ids are stable.
+class FileIdVolumes {
+public:
+  std::optional<bool> lookup(uint64_t Serial) {
+    std::lock_guard<std::mutex> Guard(Lock);
+    for (const auto &[Known, Stable] : Volumes)
+      if (Known == Serial)
+        return Stable;
+    return std::nullopt;
+  }
+
+  bool insert(uint64_t Serial, bool Stable) {
+    std::lock_guard<std::mutex> Guard(Lock);
+    Volumes.emplace_back(Serial, Stable);
+    return Stable;
+  }
+
+private:
+  std::mutex Lock;
+  SmallVector<std::pair<uint64_t, bool>, 4> Volumes;
+};
+
+static FileIdVolumes &fileIdVolumes() {
+  static FileIdVolumes Volumes;
+  return Volumes;
+}
+
+static bool fileIdIsZero(const FileId128 &FileId) {
+  return llvm::all_of(FileId.Identifier, [](BYTE B) { return B == 0; });
+}
+
+static uint64_t fileIdHash(const FileId128 &FileId) {
+  return hash_combine_range(std::begin(FileId.Identifier),
+                            std::end(FileId.Identifier));
+}
+
+static bool volumeHasStableFileIds(HANDLE Handle) {
+  // Whether the file ids of the volume of Handle identify its files for as long
+  // as they exist: a local fixed NTFS or ReFS volume. Elsewhere an id may be
+  // missing, zero or change while the file is closed (FAT, network
+  // redirectors), so a UniqueID there hashes the path instead.
+  if (!isDiskDevice(Handle).value_or(false))
+    return false;
+  DWORD Flags;
+  wchar_t FileSystem[8];
+  if (!::GetVolumeInformationByHandleW(Handle, nullptr, 0, nullptr, nullptr,
+                                       &Flags, FileSystem, 8))
+    return false;
+  return (Flags & FILE_SUPPORTS_OPEN_BY_FILE_ID) &&
+         (wcscmp(FileSystem, L"NTFS") == 0 || wcscmp(FileSystem, L"ReFS") == 0);
+}
+
+static bool volumeHasStableFileIds(uint64_t VolumeSerial, HANDLE Handle) {
+  if (VolumeSerial == 0)
+    return false;
+  FileIdVolumes &Volumes = fileIdVolumes();
+  if (std::optional<bool> Stable = Volumes.lookup(VolumeSerial))
+    return *Stable;
+  return Volumes.insert(VolumeSerial, volumeHasStableFileIds(Handle));
+}
+
 static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
-  SmallVector<wchar_t, MAX_PATH> ntPath;
   if (FileHandle == INVALID_HANDLE_VALUE)
     goto handle_status_error;
 
@@ -927,8 +1048,9 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (!::GetFileInformationByHandle(FileHandle, &Info))
     goto handle_status_error;
 
-  // File indices aren't necessarily stable after closing the file handle;
-  // instead hash a canonicalized path.
+  // On a volume with stable file ids, hash the 128-bit file id. Elsewhere file
+  // indices aren't necessarily stable after closing the file handle; instead
+  // hash a canonicalized path.
   //
   // For getting a canonical path to the file, call GetFinalPathNameByHandleW
   // with VOLUME_NAME_NT. We don't really care exactly what the path looks
@@ -938,17 +1060,27 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   // drivers, such as ImDisk. (See
   // https://github.com/rust-lang/rust/pull/86447.)
   uint64_t PathHash;
-  if (std::error_code EC =
-          realPathFromHandle(FileHandle, ntPath, VOLUME_NAME_NT)) {
-    // If realPathFromHandle failed, fall back on the fields
-    // nFileIndex{High,Low} instead. They're not necessarily stable on all file
-    // systems as they're only documented as being unique/stable as long as the
-    // file handle is open - but they're a decent fallback if we couldn't get
-    // the canonical path.
-    PathHash = (static_cast<uint64_t>(Info.nFileIndexHigh) << 32ULL) |
-               static_cast<uint64_t>(Info.nFileIndexLow);
+  FileIdInfo IdInfo;
+  if (::GetFileInformationByHandleEx(FileHandle,
+                                     FILE_INFO_BY_HANDLE_CLASS(FileIdInfoClass),
+                                     &IdInfo, sizeof(IdInfo)) &&
+      !fileIdIsZero(IdInfo.FileId) &&
+      volumeHasStableFileIds(IdInfo.VolumeSerialNumber, FileHandle)) {
+    PathHash = fileIdHash(IdInfo.FileId);
   } else {
-    PathHash = hash_combine_range(ntPath);
+    SmallVector<wchar_t, MAX_PATH> ntPath;
+    if (std::error_code EC =
+            realPathFromHandle(FileHandle, ntPath, VOLUME_NAME_NT)) {
+      // If realPathFromHandle failed, fall back on the fields
+      // nFileIndex{High,Low} instead. They're not necessarily stable on all
+      // file systems as they're only documented as being unique/stable as long
+      // as the file handle is open - but they're a decent fallback if we
+      // couldn't get the canonical path.
+      PathHash = (static_cast<uint64_t>(Info.nFileIndexHigh) << 32ULL) |
+                 static_cast<uint64_t>(Info.nFileIndexLow);
+    } else {
+      PathHash = hash_combine_range(ntPath);
+    }
   }
 
   Result = file_status(
@@ -985,6 +1117,34 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
 
   if (std::error_code ec = widenPath(path8, path_utf16))
     return ec;
+
+  if (pfnGetFileInformationByName) {
+    FileStatBasicInformation Info;
+    if (pfnGetFileInformationByName(path_utf16.begin(),
+                                    FileStatBasicByNameInfoClass, &Info,
+                                    sizeof(Info))) {
+      if (!(Follow &&
+            (Info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) &&
+          isDiskDevice(Info.DeviceType, Info.DeviceCharacteristics) &&
+          !fileIdIsZero(Info.FileId128) &&
+          fileIdVolumes()
+              .lookup(Info.VolumeSerialNumber.QuadPart)
+              .value_or(false)) {
+        result = file_status(
+            file_type_from_attrs(Info.FileAttributes),
+            perms_from_attrs(Info.FileAttributes), Info.NumberOfLinks,
+            Info.LastAccessTime.HighPart, Info.LastAccessTime.LowPart,
+            Info.LastWriteTime.HighPart, Info.LastWriteTime.LowPart,
+            Info.VolumeSerialNumber.LowPart, Info.EndOfFile.HighPart,
+            Info.EndOfFile.LowPart, fileIdHash(Info.FileId128));
+        return std::error_code();
+      }
+    } else {
+      DWORD Err = ::GetLastError();
+      if (Err == ERROR_FILE_NOT_FOUND || Err == ERROR_PATH_NOT_FOUND)
+        return getStatus(INVALID_HANDLE_VALUE, result);
+    }
+  }
 
   DWORD Flags = FILE_FLAG_BACKUP_SEMANTICS;
   if (!Follow) {
