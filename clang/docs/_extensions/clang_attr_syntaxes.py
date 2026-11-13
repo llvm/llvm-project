@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from docutils import nodes
 from sphinx.errors import ExtensionError
 from sphinx.transforms import SphinxTransform
+from sphinx.util import logging
+
+
+LOGGER = logging.getLogger(__name__)
+ATTRIBUTE_HEADING_RE = re.compile(r"^###\s+(.+?)\s*$")
 
 
 class clang_attr_syntaxes(nodes.General, nodes.Element):
@@ -135,6 +141,34 @@ class ClangAttrSyntaxesTransform(SphinxTransform):
                 node.replace_self(replacement)
 
 
+def check_attribute_heading_order(app):
+    attribute_reference_dir = Path(app.srcdir) / "AttributeReference"
+    if not attribute_reference_dir.is_dir():
+        return
+
+    for path in sorted(attribute_reference_dir.glob("*.md")):
+        headings = []
+        for line_no, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            match = ATTRIBUTE_HEADING_RE.match(line)
+            if match:
+                headings.append((match.group(1), line_no))
+
+        sorted_headings = sorted(heading for heading, _ in headings)
+        for index, (heading, line_no) in enumerate(headings):
+            if heading != sorted_headings[index]:
+                LOGGER.warning(
+                    "attribute heading %r on line %d is out of order; "
+                    "expected %r here",
+                    heading,
+                    line_no,
+                    sorted_headings[index],
+                    location=str(path),
+                )
+                break
+
+
 def setup(app):
     """Register the Clang attribute syntax extension with Sphinx."""
     app.add_config_value(
@@ -144,4 +178,5 @@ def setup(app):
     )
     app.add_role("clang-attr-syntaxes", clang_attr_syntaxes_role)
     app.add_transform(ClangAttrSyntaxesTransform)
+    app.connect("builder-inited", check_attribute_heading_order)
     return {"version": "1.0", "parallel_read_safe": True, "parallel_write_safe": True}
