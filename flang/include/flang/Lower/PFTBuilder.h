@@ -716,6 +716,10 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Get the starting source location for this function like unit
   parser::CharBlock getStartingSourceLoc() const;
 
+  /// Get the source location of the active entry point: the ENTRY statement
+  /// for an alternate entry, the SUBROUTINE or FUNCTION statement otherwise.
+  parser::CharBlock getActiveEntrySourceLoc() const;
+
   void setActiveEntry(int entryIndex) {
     assert(entryIndex >= 0 && entryIndex < (int)entryPointList.size() &&
            "invalid entry point index");

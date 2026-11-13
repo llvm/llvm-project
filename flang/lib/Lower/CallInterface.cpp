@@ -634,7 +634,7 @@ Fortran::lower::CalleeInterface::getProcedureSymbol() const {
 mlir::Location Fortran::lower::CalleeInterface::getCalleeLocation() const {
   // FIXME: do NOT use unknown for the anonymous PROGRAM case. We probably
   // should just stash the location in the funit regardless.
-  return converter.genLocation(funit.getStartingSourceLoc());
+  return converter.genLocation(funit.getActiveEntrySourceLoc());
 }
 
 Fortran::evaluate::characteristics::Procedure
