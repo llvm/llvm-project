@@ -1356,7 +1356,7 @@ target:
 }
 
 define i8 @ushl_sat_unknown_rhs(i8 range(i8 0, 2) %x, i8 %y) {
-; CHECK-LABEL: define i8 @ushl_sat_unknown_rhs(
+; CHECK-LABEL: define range(i8 0, -127) i8 @ushl_sat_unknown_rhs(
 ; CHECK-SAME: i8 range(i8 0, 2) [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -1366,7 +1366,7 @@ define i8 @ushl_sat_unknown_rhs(i8 range(i8 0, 2) %x, i8 %y) {
 }
 
 define i8 @sshl_sat_pos_unknown_rhs(i8 range(i8 3, 10) %x, i8 %y) {
-; CHECK-LABEL: define i8 @sshl_sat_pos_unknown_rhs(
+; CHECK-LABEL: define range(i8 3, -128) i8 @sshl_sat_pos_unknown_rhs(
 ; CHECK-SAME: i8 range(i8 3, 10) [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -1376,7 +1376,7 @@ define i8 @sshl_sat_pos_unknown_rhs(i8 range(i8 3, 10) %x, i8 %y) {
 }
 
 define i8 @sshl_sat_neg_unknown_rhs(i8 range(i8 -10, -2) %x, i8 %y) {
-; CHECK-LABEL: define i8 @sshl_sat_neg_unknown_rhs(
+; CHECK-LABEL: define range(i8 -128, -2) i8 @sshl_sat_neg_unknown_rhs(
 ; CHECK-SAME: i8 range(i8 -10, -2) [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -1386,7 +1386,7 @@ define i8 @sshl_sat_neg_unknown_rhs(i8 range(i8 -10, -2) %x, i8 %y) {
 }
 
 define i8 @sshl_sat_partial_oob_rhs(i8 range(i8 -10, 3) %x, i8 range(i8 8, 3) %y) {
-; CHECK-LABEL: define i8 @sshl_sat_partial_oob_rhs(
+; CHECK-LABEL: define range(i8 -40, 9) i8 @sshl_sat_partial_oob_rhs(
 ; CHECK-SAME: i8 range(i8 -10, 3) [[X:%.*]], i8 range(i8 8, 3) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -1402,8 +1402,7 @@ define i1 @ushl_sat_fold(i8 %x, i8 %y) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i8 [[SAT]], 5
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i1 true
 ;
