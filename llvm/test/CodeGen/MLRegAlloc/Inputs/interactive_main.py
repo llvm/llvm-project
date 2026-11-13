@@ -56,7 +56,7 @@ def main(args):
     else:
         advice = evict_advice
 
-    interactive_host.run_interactive(args[0], advice, args[1:])
+    sys.exit(interactive_host.run_interactive(args[0], advice, args[1:]))
 
 
 if __name__ == "__main__":
