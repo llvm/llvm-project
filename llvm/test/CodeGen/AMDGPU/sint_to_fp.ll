@@ -116,6 +116,30 @@ define amdgpu_kernel void @v_sint_to_fp_i1_f32_load(ptr addrspace(1) %out, ptr a
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_sint_to_fp_i1_to_f64:
+; R600: BFE_INT
+; R600-NEXT: AND_INT * T{{[0-9]+}}.Y, PV.W, literal.x,
+; R600-NEXT: -1074790400(-1.875000e+00)
+; R600-NEXT: MOV T{{[0-9]+}}.X, 0.0,
+define amdgpu_kernel void @s_sint_to_fp_i1_to_f64(ptr addrspace(1) %out, i32 %in) {
+  %b = trunc i32 %in to i1
+  %fp = sitofp i1 %b to double
+  store double %fp, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}s_sint_to_fp_v2i1_to_v2f64:
+; R600: AND_INT * T{{[0-9]+}}.W, PV.W, literal.x,
+; R600-NEXT: -1074790400(-1.875000e+00)
+; R600-NEXT: AND_INT * T{{[0-9]+}}.Y, PV.W, literal.x,
+; R600-NEXT: -1074790400(-1.875000e+00)
+define amdgpu_kernel void @s_sint_to_fp_v2i1_to_v2f64(ptr addrspace(1) %out, <2 x i32> %in) {
+  %b = trunc <2 x i32> %in to <2 x i1>
+  %fp = sitofp <2 x i1> %b to <2 x double>
+  store <2 x double> %fp, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }

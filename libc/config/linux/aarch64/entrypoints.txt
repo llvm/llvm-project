@@ -244,7 +244,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
-    libc.src.stdlib.strfromf128
     # TODO: long double support is buggy with clang-11. Re-enable when buildbots are upgraded.
     # libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
@@ -567,6 +566,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.time.getitimer
     libc.src.sys.time.gettimeofday
 )
+
+if (LIBC_TYPES_HAS_NATIVE_FLOAT128)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h _Float128 entrypoints
+    libc.src.stdlib.strfromf128
+  )
+endif()
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
