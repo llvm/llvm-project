@@ -19,11 +19,14 @@ function filterHeaders() {
     const stem = (card.dataset.stem || "").toLowerCase();
     const stds = (card.dataset.standard || "").split(" ");
     const status = card.dataset.status || "";
+    const hasExp = card.dataset.experimental === "true";
     const syms = (card.dataset.symbols || "").toLowerCase();
     const matchQ = !query || name.includes(query) || stem.includes(query) ||
                    syms.includes(query);
     const matchStd = currentStd === "all" || stds.includes(currentStd);
-    const matchStatus = currentStatus === "all" || status === currentStatus;
+    const matchStatus =
+        currentStatus === "all" ||
+        (currentStatus === "experimental" ? hasExp : status === currentStatus);
     const show = matchQ && matchStd && matchStatus;
     card.style.display = show ? "" : "none";
     if (show)

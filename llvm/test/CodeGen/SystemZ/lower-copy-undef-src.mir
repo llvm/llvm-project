@@ -11,3 +11,4 @@ body: |
   bb.0:
     liveins: $r12q
     $r13d = COPY undef $r0d, implicit killed $r12q, implicit-def $r12q
+...
