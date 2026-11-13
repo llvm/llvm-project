@@ -144,7 +144,7 @@ bool LiveIntervals::invalidate(
 void LiveIntervals::clear() {
   // Free the live intervals themselves.
   for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i)
-    delete VirtRegIntervals[Register::index2VirtReg(i)];
+    destroyInterval(VirtRegIntervals[Register::index2VirtReg(i)]);
   VirtRegIntervals.clear();
   RegMaskSlots.clear();
   RegMaskBits.clear();
@@ -152,8 +152,12 @@ void LiveIntervals::clear() {
   LiveOutTags.clear();
 
   for (LiveRange *LR : RegUnitRanges)
-    delete LR;
+    destroyRegUnitRange(LR);
   RegUnitRanges.clear();
+
+  IntervalRecycler.clear(RangeAllocator);
+  RegUnitRangeRecycler.clear(RangeAllocator);
+  RangeAllocator.Reset();
 
   // Release VNInfo memory regions, VNInfo objects don't need to be dtor'd.
   VNInfoAllocator.Reset();
@@ -238,12 +242,28 @@ LLVM_DUMP_METHOD void LiveIntervals::dump() const { print(dbgs()); }
 
 LiveInterval *LiveIntervals::createInterval(Register reg) {
   float Weight = reg.isPhysical() ? huge_valf : 0.0F;
-  return new LiveInterval(reg, Weight);
+  return new (IntervalRecycler.Allocate(RangeAllocator))
+      LiveInterval(reg, Weight);
 }
 
 LiveRange *LiveIntervals::createRegUnitRange() {
   // Use segment set to speed-up initial computation of the live range.
-  return new LiveRange(UseSegmentSetForPhysRegs);
+  return new (RegUnitRangeRecycler.Allocate(RangeAllocator))
+      LiveRange(UseSegmentSetForPhysRegs);
+}
+
+void LiveIntervals::destroyInterval(LiveInterval *LI) {
+  if (!LI)
+    return;
+  LI->~LiveInterval();
+  IntervalRecycler.Deallocate(RangeAllocator, LI);
+}
+
+void LiveIntervals::destroyRegUnitRange(LiveRange *LR) {
+  if (!LR)
+    return;
+  LR->~LiveRange();
+  RegUnitRangeRecycler.Deallocate(RangeAllocator, LR);
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.
