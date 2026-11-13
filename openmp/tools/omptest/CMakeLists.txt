@@ -62,6 +62,8 @@ add_library(omptest
 
 # Target: ompTest library
 # On (implicit) request of GoogleTest, embed the sources provided with LLVM.
+set(OMPTEST_EMBEDS_VENDORED_GTEST FALSE)
+
 if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
   # Check if standalone build was requested together with unittests
   if (LIBOMPTEST_BUILD_STANDALONE)
@@ -82,6 +84,8 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
     target_link_libraries(omptest PUBLIC GTest::gtest)
   else()
     message(STATUS "omptest build mode: GTest-based")
+
+    set(OMPTEST_EMBEDS_VENDORED_GTEST TRUE)
 
     # Add GoogleTest-based header and embed GTest symbols into the shared lib.
     # Merging of GTest is desired, such that omptest is self-contained and
@@ -157,6 +161,15 @@ configure_package_config_file(
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/omptest-config.cmake
   INSTALL_DESTINATION "${OMPTEST_CONFIG_INSTALL_DIR}"
 )
+
+if(LIBOMPTEST_INSTALL_COMPONENTS AND OMPTEST_EMBEDS_VENDORED_GTEST)
+  message(WARNING "Not installing ompTest: this build embeds LLVM's vendored"
+                  " GoogleTest, whose headers are not installed with it.\n"
+                  "Use LIBOMPTEST_USE_SYSTEM_GTEST=ON, or"
+                  " LIBOMPTEST_BUILD_STANDALONE=ON together with"
+                  " LIBOMPTEST_BUILD_UNITTESTS=OFF.")
+  set(LIBOMPTEST_INSTALL_COMPONENTS OFF)
+endif()
 
 # Perform installation only if requested by the user.
 if(LIBOMPTEST_INSTALL_COMPONENTS)
