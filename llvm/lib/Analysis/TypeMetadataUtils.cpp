@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -238,6 +239,15 @@ llvm::getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset,
     return std::pair<Function *, Constant *>(nullptr, nullptr);
 
   return std::pair<Function *, Constant *>(Fn, C);
+}
+
+bool llvm::isNullVTableSlot(GlobalVariable *GV, uint64_t Offset, Module &M) {
+  const DataLayout &DL = M.getDataLayout();
+  Type *FnPtrTy = PointerType::get(M.getContext(), DL.getProgramAddressSpace());
+  APInt Off(DL.getIndexTypeSizeInBits(GV->getType()), Offset);
+  Constant *C =
+      ConstantFoldLoadFromConst(GV->getInitializer(), FnPtrTy, Off, DL);
+  return C && C->isNullValue();
 }
 
 static void replaceRelativePointerUserWithZero(User *U) {

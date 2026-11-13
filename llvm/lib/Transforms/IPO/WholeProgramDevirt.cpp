@@ -1082,8 +1082,13 @@ bool DevirtModule::tryFindVirtualCallTargets(
     std::tie(Fn, C) =
         getFunctionAtVTableOffset(TM.Bits->GV, TM.Offset + ByteOffset, M);
 
-    if (!Fn)
+    if (!Fn) {
+      // Calling a null pointer is UB, so a null slot does not provide a call
+      // target. Rust uses null for the drop slot of types without drop glue.
+      if (isNullVTableSlot(TM.Bits->GV, TM.Offset + ByteOffset, M))
+        continue;
       return false;
+    }
 
     if (FunctionsToSkip.match(Fn->getName()))
       return false;
