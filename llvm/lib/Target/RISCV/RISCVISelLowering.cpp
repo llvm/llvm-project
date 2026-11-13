@@ -2515,6 +2515,46 @@ void RISCVTargetLowering::getTgtMemIntrinsic(
   }
 }
 
+bool RISCVTargetLowering::isLegalXqcislsScaledAddressingMode(
+    const DataLayout &DL, const AddrMode &AM, Type *Ty, Instruction *I) const {
+
+  int64_t Scale = AM.Scale;
+  if (Scale <= 0)
+    return false;
+
+  if (AM.BaseOffs)
+    return false;
+
+  // The address operands of calls (e.g. memcpy/memset) and prefetches are
+  // passed in a register, so a scaled index can't be folded into them.
+  // if (isa_and_present<CallBase>(I))
+  //   return false;
+
+  // FIXME: this incorrectly rejects in soft-float cases but I'm punting on
+  // that for the moment.
+  // This should also need to change for zfinx and friends, but those are being
+  // put off for a different PR.
+  if (!Ty->isIntOrPtrTy())
+    return false;
+
+  // FIXME: need to poke at getTypeStoreSize() vs ex: AArch64's
+  // getTypeStoreSize()
+  uint64_t Size = DL.getTypeStoreSize(Ty).getFixedValue();
+  if (Size != 1 && Size != 2 && Size != 4)
+    return false;
+
+  if (isPowerOf2_64(Scale) && Scale <= 128)
+    return true;
+
+  // FIXME: Scales of (2^n)+1 should be re-writable as r + (r << n)) if there
+  // is no base register in theory, but need to figure out how to actually
+  // test this.
+  // Either needs to be IR level, use some off-by-default flags, or
+  // maybe a mock like ex: AArch64/AddressingModes.cpp?
+  // The mock tests might be good to have going forward anyway...
+  return !AM.HasBaseReg && isPowerOf2_64(Scale - 1) && Scale <= 129;
+}
+
 bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                 const AddrMode &AM, Type *Ty,
                                                 unsigned AS,
@@ -2530,6 +2570,10 @@ bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   // RVV instructions only support register addressing.
   if (Subtarget.hasVInstructions() && isa<VectorType>(Ty))
     return AM.HasBaseReg && AM.Scale == 0 && !AM.BaseOffs;
+
+  if (Subtarget.hasVendorXqcisls() &&
+      isLegalXqcislsScaledAddressingMode(DL, AM, Ty, I))
+    return true;
 
   // The Xqcilo extension provides load/store instructions with a 26-bit signed
   // offset.

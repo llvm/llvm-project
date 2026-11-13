@@ -553,6 +553,10 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
+  // FIXME: This needs way more tinkering/understanding or should be xqci
+  // specific
+  bool LSRWithInstrQueries() const override { return true; }
+
   bool shouldConsiderAddressTypePromotion(
       const Instruction &I,
       bool &AllowPromotionWithoutCommonHeader) const override;
