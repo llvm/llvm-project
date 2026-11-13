@@ -152,17 +152,22 @@ public:
 
     if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
       if (e->isGLValue()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "ScalarExprEmitter: constant expr GL Value");
-        return {};
+        if (e->hasAPValueResult() && !e->getAPValueResult().isLValue())
+          return builder.getConstant(cgf.getLoc(e->getSourceRange()),
+                                     mlir::cast<mlir::TypedAttr>(result));
+        mlir::Value val =
+            builder.getConstant(cgf.getLoc(e->getSourceRange()),
+                                mlir::cast<mlir::TypedAttr>(result));
+        return cgf.emitLoadOfScalar(
+            cgf.makeNaturalAlignPointeeAddrLValue(val, e->getType()),
+            e->getExprLoc());
       }
 
       return builder.getConstant(cgf.getLoc(e->getSourceRange()),
                                  mlir::cast<mlir::TypedAttr>(result));
     }
 
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: constant expr");
-    return {};
+    return Visit(e->getSubExpr());
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {

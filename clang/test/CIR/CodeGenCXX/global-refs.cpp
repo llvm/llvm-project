@@ -187,6 +187,20 @@ const int &test_return() {
   return get_ref(val);
 }
 
+int test_load() {
+  // CIR-LABEL: cir.func {{.*}} @_Z9test_loadv
+  // CIR: %[[VAL_ADDR:.*]] = cir.const #cir.global_view<@_ZL3val> : !cir.ptr<!s32i>
+  // CIR: %[[LOAD:.*]] = cir.load align(4) %[[VAL_ADDR]] : !cir.ptr<!s32i>, !s32i
+  // CIR: cir.store{{.*}} %[[LOAD]], %[[RET_ADDR:.*]] : !s32i, !cir.ptr<!s32i>
+  // LLVM-LABEL: define {{.*}} @_Z9test_loadv
+  // LLVMCIR: %[[VAL:.*]] = load i32, ptr @_ZL3val, align 4
+  // LLVMCIR: store i32 %[[VAL]], ptr %{{.*}}, align 4
+  // LLVMCIR: ret i32
+  // OGCG: %[[VAL:.*]] = load i32, ptr @_ZL3val, align 4
+  // OGCG: ret i32 %[[VAL]]
+  return get_ref(val);
+}
+
 // TODO(cir): Once we get destructors for temporaries done, we should test them
 // here, same as the 'const-WithCtor' examples, except with the 'withCtorDtor'
 // versions.
