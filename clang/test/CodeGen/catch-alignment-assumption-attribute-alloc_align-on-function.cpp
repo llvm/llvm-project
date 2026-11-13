@@ -36,7 +36,7 @@ char **__attribute__((alloc_align(2)))
 // CHECK-SANITIZE-NORECOVER:       handler.return_alignment_assumption:
 // CHECK-SANITIZE-NORECOVER-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[RETURN_SLOC_LOAD]] to i64, !nosanitize [[META2]]
 // CHECK-SANITIZE-NORECOVER-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize [[META2]]
-// CHECK-SANITIZE-NORECOVER-NEXT:    call void @__ubsan_handle_return_alignment_assumption_abort(ptr @[[GLOB2:[0-9]+]], i64 [[TMP2]], i64 [[TMP3]], i64 [[ALIGNMENT]], i64 0) #[[ATTR3:[0-9]+]], !nosanitize [[META2]]
+// CHECK-SANITIZE-NORECOVER-NEXT:    call void @__ubsan_handle_return_alignment_assumption_abort(ptr @[[GLOB2:[0-9]+]], i64 [[TMP2]], i64 [[TMP3]], i64 [[ALIGNMENT]], i64 0) #[[ATTR2:[0-9]+]], !nosanitize [[META2]]
 // CHECK-SANITIZE-NORECOVER-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK-SANITIZE-NORECOVER:       cont:
 // CHECK-SANITIZE-NORECOVER-NEXT:    ret ptr [[TMP0]]
@@ -61,7 +61,7 @@ char **__attribute__((alloc_align(2)))
 // CHECK-SANITIZE-RECOVER:       handler.return_alignment_assumption:
 // CHECK-SANITIZE-RECOVER-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[RETURN_SLOC_LOAD]] to i64, !nosanitize [[META2]]
 // CHECK-SANITIZE-RECOVER-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize [[META2]]
-// CHECK-SANITIZE-RECOVER-NEXT:    call void @__ubsan_handle_return_alignment_assumption(ptr @[[GLOB2:[0-9]+]], i64 [[TMP2]], i64 [[TMP3]], i64 [[ALIGNMENT]], i64 0) #[[ATTR3:[0-9]+]], !nosanitize [[META2]]
+// CHECK-SANITIZE-RECOVER-NEXT:    call void @__ubsan_handle_return_alignment_assumption(ptr @[[GLOB2:[0-9]+]], i64 [[TMP2]], i64 [[TMP3]], i64 [[ALIGNMENT]], i64 0) #[[ATTR2:[0-9]+]], !nosanitize [[META2]]
 // CHECK-SANITIZE-RECOVER-NEXT:    br label [[CONT]], !nosanitize [[META2]]
 // CHECK-SANITIZE-RECOVER:       cont:
 // CHECK-SANITIZE-RECOVER-NEXT:    ret ptr [[TMP0]]
@@ -84,7 +84,7 @@ char **__attribute__((alloc_align(2)))
 // CHECK-SANITIZE-TRAP-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
 // CHECK-SANITIZE-TRAP-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF1:![0-9]+]], !nosanitize [[META2:![0-9]+]]
 // CHECK-SANITIZE-TRAP:       trap:
-// CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !nosanitize [[META2]]
+// CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2:[0-9]+]], !nosanitize [[META2]]
 // CHECK-SANITIZE-TRAP-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK-SANITIZE-TRAP:       cont:
 // CHECK-SANITIZE-TRAP-NEXT:    ret ptr [[TMP0]]
@@ -99,7 +99,7 @@ passthrough(char **x, unsigned long alignment) {
 // CHECK-NOSANITIZE-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NOSANITIZE-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK-NOSANITIZE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK-NOSANITIZE-NEXT:    [[CALL:%.*]] = call noundef align 128 ptr @_Z11passthroughPPcm(ptr noundef [[TMP0]], i64 noundef 128)
+// CHECK-NOSANITIZE-NEXT:    [[CALL:%.*]] = call noundef align 128 ptr @_Z11passthroughPPcm(ptr noundef [[TMP0]], i64 allocalign noundef 128)
 // CHECK-NOSANITIZE-NEXT:    ret ptr [[CALL]]
 //
 // CHECK-SANITIZE-NORECOVER-LABEL: define dso_local noundef ptr @_Z6callerPPc
@@ -108,17 +108,7 @@ passthrough(char **x, unsigned long alignment) {
 // CHECK-SANITIZE-NORECOVER-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-SANITIZE-NORECOVER-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK-SANITIZE-NORECOVER-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK-SANITIZE-NORECOVER-NEXT:    [[CALL:%.*]] = call noundef ptr @_Z11passthroughPPcm(ptr noundef [[TMP0]], i64 noundef 128)
-// CHECK-SANITIZE-NORECOVER-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[CALL]] to i64
-// CHECK-SANITIZE-NORECOVER-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
-// CHECK-SANITIZE-NORECOVER-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-SANITIZE-NORECOVER-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[HANDLER_ALIGNMENT_ASSUMPTION:%.*]], !prof [[PROF1]], !nosanitize [[META2]]
-// CHECK-SANITIZE-NORECOVER:       handler.alignment_assumption:
-// CHECK-SANITIZE-NORECOVER-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[CALL]] to i64, !nosanitize [[META2]]
-// CHECK-SANITIZE-NORECOVER-NEXT:    call void @__ubsan_handle_alignment_assumption_abort(ptr @[[GLOB3:[0-9]+]], i64 [[TMP1]], i64 128, i64 0) #[[ATTR3]], !nosanitize [[META2]]
-// CHECK-SANITIZE-NORECOVER-NEXT:    unreachable, !nosanitize [[META2]]
-// CHECK-SANITIZE-NORECOVER:       cont:
-// CHECK-SANITIZE-NORECOVER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 128) ]
+// CHECK-SANITIZE-NORECOVER-NEXT:    [[CALL:%.*]] = call noundef ptr @_Z11passthroughPPcm(ptr noundef [[TMP0]], i64 allocalign noundef 128)
 // CHECK-SANITIZE-NORECOVER-NEXT:    ret ptr [[CALL]]
 //
 // CHECK-SANITIZE-RECOVER-LABEL: define dso_local noundef ptr @_Z6callerPPc
@@ -127,17 +117,7 @@ passthrough(char **x, unsigned long alignment) {
 // CHECK-SANITIZE-RECOVER-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-SANITIZE-RECOVER-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK-SANITIZE-RECOVER-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK-SANITIZE-RECOVER-NEXT:    [[CALL:%.*]] = call noundef ptr @_Z11passthroughPPcm(ptr noundef [[TMP0]], i64 noundef 128)
-// CHECK-SANITIZE-RECOVER-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[CALL]] to i64
-// CHECK-SANITIZE-RECOVER-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
-// CHECK-SANITIZE-RECOVER-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-SANITIZE-RECOVER-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[HANDLER_ALIGNMENT_ASSUMPTION:%.*]], !prof [[PROF1]], !nosanitize [[META2]]
-// CHECK-SANITIZE-RECOVER:       handler.alignment_assumption:
-// CHECK-SANITIZE-RECOVER-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[CALL]] to i64, !nosanitize [[META2]]
-// CHECK-SANITIZE-RECOVER-NEXT:    call void @__ubsan_handle_alignment_assumption(ptr @[[GLOB3:[0-9]+]], i64 [[TMP1]], i64 128, i64 0) #[[ATTR3]], !nosanitize [[META2]]
-// CHECK-SANITIZE-RECOVER-NEXT:    br label [[CONT]], !nosanitize [[META2]]
-// CHECK-SANITIZE-RECOVER:       cont:
-// CHECK-SANITIZE-RECOVER-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 128) ]
+// CHECK-SANITIZE-RECOVER-NEXT:    [[CALL:%.*]] = call noundef ptr @_Z11passthroughPPcm(ptr noundef [[TMP0]], i64 allocalign noundef 128)
 // CHECK-SANITIZE-RECOVER-NEXT:    ret ptr [[CALL]]
 //
 // CHECK-SANITIZE-TRAP-LABEL: define dso_local noundef ptr @_Z6callerPPc
@@ -146,16 +126,7 @@ passthrough(char **x, unsigned long alignment) {
 // CHECK-SANITIZE-TRAP-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-SANITIZE-TRAP-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // CHECK-SANITIZE-TRAP-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK-SANITIZE-TRAP-NEXT:    [[CALL:%.*]] = call noundef ptr @_Z11passthroughPPcm(ptr noundef [[TMP0]], i64 noundef 128)
-// CHECK-SANITIZE-TRAP-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[CALL]] to i64
-// CHECK-SANITIZE-TRAP-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
-// CHECK-SANITIZE-TRAP-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-SANITIZE-TRAP-NEXT:    br i1 [[MASKCOND]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF1]], !nosanitize [[META2]]
-// CHECK-SANITIZE-TRAP:       trap:
-// CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.ubsantrap(i8 23) #[[ATTR3]], !nosanitize [[META2]]
-// CHECK-SANITIZE-TRAP-NEXT:    unreachable, !nosanitize [[META2]]
-// CHECK-SANITIZE-TRAP:       cont:
-// CHECK-SANITIZE-TRAP-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[CALL]], i64 128) ]
+// CHECK-SANITIZE-TRAP-NEXT:    [[CALL:%.*]] = call noundef ptr @_Z11passthroughPPcm(ptr noundef [[TMP0]], i64 allocalign noundef 128)
 // CHECK-SANITIZE-TRAP-NEXT:    ret ptr [[CALL]]
 //
 char **caller(char **x) {
