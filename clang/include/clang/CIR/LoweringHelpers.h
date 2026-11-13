@@ -33,16 +33,6 @@ template <typename StorageTy> StorageTy getZeroInitFromType(mlir::Type ty);
 template <> mlir::APInt getZeroInitFromType(mlir::Type ty);
 template <> mlir::APFloat getZeroInitFromType(mlir::Type ty);
 
-template <typename AttrTy, typename StorageTy>
-void convertToDenseElementsAttrImpl(cir::ConstArrayAttr attr,
-                                    llvm::SmallVectorImpl<StorageTy> &values);
-
-template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr
-convertToDenseElementsAttr(cir::ConstArrayAttr attr,
-                           const llvm::SmallVectorImpl<int64_t> &dims,
-                           mlir::Type type);
-
 std::optional<mlir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
                     mlir::SymbolTableCollection &symbolTables,

@@ -10262,8 +10262,6 @@ public:
     getTrailingObjects<Stmt *>()[NumChildren] = S;
   }
 
-  void setChildren(ArrayRef<Stmt *> Children);
-
   /// Sets the list of variables for this clause.
   ///
   /// \param Clauses The list of clauses for the directive.
