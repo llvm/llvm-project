@@ -24,7 +24,7 @@ define internal i8 @main() {
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    sbiw r28, 13
+; CHECK-NEXT:    sbiw r28, 11
 ; CHECK-NEXT:    in r0, 63
 ; CHECK-NEXT:    cli
 ; CHECK-NEXT:    out 62, r29
@@ -32,15 +32,11 @@ define internal i8 @main() {
 ; CHECK-NEXT:    out 61, r28
 ; CHECK-NEXT:    ldi r16, 0
 ; CHECK-NEXT:    ldi r17, 0
-; CHECK-NEXT:    ldi r18, -1
+; CHECK-NEXT:    ldi r25, -1
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    ldi r24, 123
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    std Y+1, r24 ; 1-byte Folded Spill
-; CHECK-NEXT:    movw r24, r28
-; CHECK-NEXT:    adiw r24, 6
-; CHECK-NEXT:    std Y+3, r25 ; 2-byte Folded Spill
-; CHECK-NEXT:    std Y+2, r24 ; 2-byte Folded Spill
 ; CHECK-NEXT:    movw r8, r16
 ; CHECK-NEXT:    movw r6, r16
 ; CHECK-NEXT:    movw r4, r16
@@ -49,19 +45,19 @@ define internal i8 @main() {
 ; CHECK-NEXT:  .LBB0_1: ; %bb1
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    andi r30, 1
-; CHECK-NEXT:    ldd r31, Y+4 ; 1-byte Folded Reload
+; CHECK-NEXT:    ldd r31, Y+2 ; 1-byte Folded Reload
 ; CHECK-NEXT:    dec r31
 ; CHECK-NEXT:    cpi r30, 0
 ; CHECK-NEXT:    movw r8, r18
 ; CHECK-NEXT:    movw r6, r20
 ; CHECK-NEXT:    movw r4, r22
 ; CHECK-NEXT:    movw r2, r24
-; CHECK-NEXT:    mov r18, r31
+; CHECK-NEXT:    mov r25, r31
 ; CHECK-NEXT:    brne .LBB0_2
 ; CHECK-NEXT:    rjmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    std Y+4, r18 ; 1-byte Folded Spill
+; CHECK-NEXT:    std Y+2, r25 ; 1-byte Folded Spill
 ; CHECK-NEXT:    movw r18, r8
 ; CHECK-NEXT:    movw r20, r6
 ; CHECK-NEXT:    movw r22, r4
@@ -72,16 +68,16 @@ define internal i8 @main() {
 ; CHECK-NEXT:    movw r12, r16
 ; CHECK-NEXT:    movw r14, r16
 ; CHECK-NEXT:    call __udivdi3
-; CHECK-NEXT:    std Y+13, r25
-; CHECK-NEXT:    std Y+12, r24
-; CHECK-NEXT:    std Y+11, r23
-; CHECK-NEXT:    std Y+10, r22
-; CHECK-NEXT:    std Y+9, r21
-; CHECK-NEXT:    std Y+8, r20
-; CHECK-NEXT:    std Y+7, r19
-; CHECK-NEXT:    std Y+6, r18
-; CHECK-NEXT:    ldd r30, Y+2 ; 2-byte Folded Reload
-; CHECK-NEXT:    ldd r31, Y+3 ; 2-byte Folded Reload
+; CHECK-NEXT:    std Y+11, r25
+; CHECK-NEXT:    std Y+10, r24
+; CHECK-NEXT:    std Y+9, r23
+; CHECK-NEXT:    std Y+8, r22
+; CHECK-NEXT:    std Y+7, r21
+; CHECK-NEXT:    std Y+6, r20
+; CHECK-NEXT:    std Y+5, r19
+; CHECK-NEXT:    std Y+4, r18
+; CHECK-NEXT:    movw r30, r28
+; CHECK-NEXT:    adiw r30, 4
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    ldi r30, 1
@@ -101,13 +97,13 @@ define internal i8 @main() {
 ; CHECK-NEXT:    rjmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: ; %bb3
 ; CHECK-NEXT:    ldd r24, Y+1 ; 1-byte Folded Reload
-; CHECK-NEXT:    std Y+5, r24
+; CHECK-NEXT:    std Y+3, r24
 ; CHECK-NEXT:    movw r24, r28
-; CHECK-NEXT:    adiw r24, 5
+; CHECK-NEXT:    adiw r24, 3
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    ldd r24, Y+5
-; CHECK-NEXT:    adiw r28, 13
+; CHECK-NEXT:    ldd r24, Y+3
+; CHECK-NEXT:    adiw r28, 11
 ; CHECK-NEXT:    in r0, 63
 ; CHECK-NEXT:    cli
 ; CHECK-NEXT:    out 62, r29

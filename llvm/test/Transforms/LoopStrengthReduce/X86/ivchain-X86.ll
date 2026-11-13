@@ -40,22 +40,22 @@ define i32 @simple(ptr %a, ptr %b, i32 %x) nounwind {
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    shll $2, %edx
 ; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    leal (%edx,%edx), %esi
 ; X32-NEXT:    .p2align 4
 ; X32-NEXT:  .LBB0_1: # %loop
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
-; X32-NEXT:    addl (%edi), %eax
-; X32-NEXT:    addl (%edi,%edx), %eax
-; X32-NEXT:    addl %edx, %edi
-; X32-NEXT:    addl (%edx,%edi), %eax
-; X32-NEXT:    addl %edx, %edi
-; X32-NEXT:    addl (%edx,%edi), %eax
-; X32-NEXT:    addl %esi, %edi
-; X32-NEXT:    cmpl %ecx, %edi
+; X32-NEXT:    addl (%esi), %eax
+; X32-NEXT:    addl (%esi,%edx), %eax
+; X32-NEXT:    addl %edx, %esi
+; X32-NEXT:    addl (%edx,%esi), %eax
+; X32-NEXT:    addl %edx, %esi
+; X32-NEXT:    addl (%edx,%esi), %eax
+; X32-NEXT:    addl %edx, %esi
+; X32-NEXT:    addl %edx, %esi
+; X32-NEXT:    cmpl %ecx, %esi
 ; X32-NEXT:    jne .LBB0_1
 ; X32-NEXT:  # %bb.2: # %exit
 ; X32-NEXT:    popl %esi
