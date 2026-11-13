@@ -114,7 +114,7 @@ libc_test_library(
         "//conditions:default": [],
     }) + select({
         "//libc:full_build_linux": [
-            "//libc:prctl",
+            "//libc/src/sys/prctl",
         ],
         "//conditions:default": [],
     }),
