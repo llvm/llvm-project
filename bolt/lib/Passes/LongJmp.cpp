@@ -537,6 +537,9 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   const static int RangeShortJmp = BC.MIB->getShortJmpEncodingSize();
   const static int RangeSingleInstr = BC.MIB->getUncondBranchEncodingSize();
   const static int CodePointerSizeBits = BC.AsmInfo->getCodePointerSize() * 8;
+  const static uint64_t ShortJmpMask = ~((1ULL << RangeShortJmp) - 1);
+  const static uint64_t SingleInstrMask =
+      ~((1ULL << (RangeSingleInstr - 1)) - 1);
 
   // Reject non-call users of existing stubs that clobber x16
   if (Bits == RangeShortJmp || Bits == CodePointerSizeBits) {
@@ -554,12 +557,11 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   const BinaryBasicBlock *TgtBB = Func.getBasicBlockForLabel(RealTargetSym);
   uint64_t TgtAddress = getSymbolAddress(BC, RealTargetSym, TgtBB);
   uint64_t DotAddress = BBAddresses[&StubBB];
-  const int64_t Offset = TgtAddress - DotAddress;
   uint64_t PCRelTgtAddress = DotAddress > TgtAddress ? DotAddress - TgtAddress
                                                      : TgtAddress - DotAddress;
 
   // If it fits in one instruction, do not relax
-  if (isIntN(RangeSingleInstr, Offset))
+  if (!(PCRelTgtAddress & SingleInstrMask))
     return Error::success();
 
   // Do not relax non-call branches beyond 128MiB.
@@ -569,9 +571,7 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   }
 
   // Fits short jmp
-  const int64_t PageOffset = static_cast<int64_t>(alignDown(TgtAddress, 4096) -
-                                                  alignDown(DotAddress, 4096));
-  if (isIntN(RangeShortJmp, PageOffset)) {
+  if (!(PCRelTgtAddress & ShortJmpMask)) {
     if (Bits >= RangeShortJmp)
       return Error::success();
 
