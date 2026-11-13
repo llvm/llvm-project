@@ -1055,8 +1055,7 @@ SemaSYCL::BuildSYCLKernelCallStmtASTFragments(FunctionDecl *FD) {
   if (KernelLaunchIdER.isInvalid())
     return {};
 
-  return SemaSYCL::SYCLKernelCallStmtASTFragments{KernelInfoType,
-                                                  KernelLaunchIdER.get()};
+  return SemaSYCL::SYCLKernelCallStmtASTFragments{KernelLaunchIdER.get()};
 }
 
 StmtResult SemaSYCL::BuildSYCLKernelCallStmt(
