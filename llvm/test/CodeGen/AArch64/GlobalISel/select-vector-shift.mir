@@ -5,10 +5,6 @@ name:            shl_v2i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -34,11 +30,6 @@ name:            shl_v2i32_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 liveins:
   - { reg: '$d0' }
 frameInfo:
@@ -68,11 +59,6 @@ name:            shl_v2i32_imm_out_of_range
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 liveins:
   - { reg: '$d0' }
 frameInfo:
@@ -103,10 +89,6 @@ name:            shl_v4i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -132,11 +114,6 @@ name:            shl_v4i32_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 liveins:
   - { reg: '$q0' }
 frameInfo:
@@ -166,10 +143,6 @@ name:            shl_v2i64
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -195,11 +168,6 @@ name:            shl_v2i64_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 liveins:
   - { reg: '$q0' }
 frameInfo:
@@ -229,11 +197,6 @@ name:            shl_v2i64_imm_out_of_range
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 liveins:
   - { reg: '$q0' }
 frameInfo:
@@ -265,10 +228,6 @@ name:            ashr_v2i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -295,10 +254,6 @@ name:            ashr_v4i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -325,10 +280,6 @@ name:            ashr_v2i64
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -398,10 +349,6 @@ name:            lshr_v4i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -574,11 +521,6 @@ name:            shl_v2i32_imm_dup
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: fpr }
 liveins:
   - { reg: '$d0' }
 frameInfo:
