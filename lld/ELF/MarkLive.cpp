@@ -554,10 +554,10 @@ static void processSectionEdges(
     fn(sec.nextInSectionGroup, 0);
 }
 
-// Level-synchronous marking with depth-first workers and work sharing on idle.
-// Each level is a parallelFor round: workers claim chunks of the level and walk
-// depth-first for cache locality. Once one runs out of chunks, the others move
-// their stacks to the next level.
+// Level-synchronous marking with depth-first workers. Each level is a
+// parallelFor round: workers claim chunks of the level and walk depth-first for
+// cache locality. Once one runs out of chunks, the others move their stacks to
+// the next level.
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   const size_t numThreads = parallel::getThreadCount();
@@ -596,9 +596,9 @@ void MarkLive<ELFT, TrackWhyLive>::markParallel() {
                      level.begin() + std::min(begin + chunkSize, end));
         while (!stack.empty()) {
           visit(*stack.pop_back_val(), stack);
-          // Share the stack only after 256 visits in this level: each level
-          // ends with a barrier, and sharing sooner would add many levels on
-          // deep, narrow graphs.
+          // Move the stack only after 256 visits in this level: each level
+          // ends with a barrier, and moving it sooner would add many levels
+          // on deep, narrow graphs.
           if (++visited >= 256 && !stack.empty() &&
               anyIdle.load(std::memory_order_relaxed)) {
             std::lock_guard<std::mutex> lock(mu);
