@@ -1150,33 +1150,43 @@ GCNTargetMachine::getTargetIDSettingFromModuleFlag(const Module &M,
 
 const TargetSubtargetInfo *
 GCNTargetMachine::getSubtargetImpl(const Function &F) const {
-  StringRef GPU = getGPUName(F);
-  StringRef FS = getFeatureString(F);
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const GCNSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  const Module &M = *F.getParent();
-  OOBFlagValue BufOOB = getOOBFlagValue(M, AMDGPUOOBMode::BufferFlag);
-  OOBFlagValue TBufOOB = getOOBFlagValue(M, AMDGPUOOBMode::TBufferFlag);
-  bool BufRelaxed = BufOOB == OOBFlagValue::Relaxed;
-  bool TBufRelaxed = TBufOOB == OOBFlagValue::Relaxed;
+  SubtargetAttrs Attrs;
+  Attrs.GPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.BufRelaxed =
+      getOOBFlagValue(*M, AMDGPUOOBMode::BufferFlag) == OOBFlagValue::Relaxed;
+  Attrs.TBufRelaxed =
+      getOOBFlagValue(*M, AMDGPUOOBMode::TBufferFlag) == OOBFlagValue::Relaxed;
+  Attrs.Xnack = getTargetIDSettingFromModuleFlag(*M, "amdgpu.xnack");
+  Attrs.SramEcc = getTargetIDSettingFromModuleFlag(*M, "amdgpu.sramecc");
+
+  if (const GCNSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef GPU =
+      Attrs.GPU.isValid() ? Attrs.GPU.getValueAsString() : getTargetCPU();
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString()
+                                    : getTargetFeatureString();
 
   using AMDGPU::TargetIDSetting;
-  TargetIDSetting Xnack = getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
-  TargetIDSetting SramEcc =
-      getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
-
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
-  if (BufRelaxed)
+  if (Attrs.BufRelaxed)
     SubtargetKey.append(",buf-oob=1");
-  if (TBufRelaxed)
+  if (Attrs.TBufRelaxed)
     SubtargetKey.append(",tbuf-oob=1");
-  if (Xnack != TargetIDSetting::Any) {
+  if (Attrs.Xnack != TargetIDSetting::Any) {
     SubtargetKey.append(",xnack=");
-    SubtargetKey.push_back(Xnack == TargetIDSetting::On ? '1' : '0');
+    SubtargetKey.push_back(Attrs.Xnack == TargetIDSetting::On ? '1' : '0');
   }
-  if (SramEcc != TargetIDSetting::Any) {
+  if (Attrs.SramEcc != TargetIDSetting::Any) {
     SubtargetKey.append(",sramecc=");
-    SubtargetKey.push_back(SramEcc == TargetIDSetting::On ? '1' : '0');
+    SubtargetKey.push_back(Attrs.SramEcc == TargetIDSetting::On ? '1' : '0');
   }
 
   auto &I = SubtargetMap[SubtargetKey];
@@ -1186,7 +1196,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 
     // Enforce the subtarget is covered by the subarch. Tolerate no subarch for
     // legacy compatibility.
-    const Triple &TT = M.getTargetTriple();
+    const Triple &TT = M->getTargetTriple();
     if (GPUSubArch != TT.getSubArch() && Kind != AMDGPU::GK_NONE) {
       // Check if this is a generic subarch which has subtargets. Ignore
       // unknown subtargets with a known subarch, since for whatever reason
@@ -1200,10 +1210,12 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
       }
     }
 
-    I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this, BufRelaxed,
-                                       TBufRelaxed, Xnack, SramEcc);
+    I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this,
+                                       Attrs.BufRelaxed, Attrs.TBufRelaxed,
+                                       Attrs.Xnack, Attrs.SramEcc);
   }
 
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
