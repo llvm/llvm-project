@@ -7550,6 +7550,8 @@ static void buildMulHighWithCarries(MachineIRBuilder &B, LLT NarrowTy,
                                     SmallVectorImpl<Register> &HighParts) {
   LLT CarryTy = LLT::integer(1);
   unsigned NumParts = Src1Parts.size();
+  assert(Src2Parts.size() == NumParts && "Expected the same number of parts");
+  assert(NumParts > 1 && "Expected at least two parts");
   auto Zero = B.buildConstant(NarrowTy, 0);
 
   // The running sum of the product, one narrow part per element.
@@ -7557,7 +7559,12 @@ static void buildMulHighWithCarries(MachineIRBuilder &B, LLT NarrowTy,
   for (unsigned I = 0; I != NumParts; ++I) {
     // Build the row Src1Parts[I] * Src2, which takes NumParts + 1 parts.
     SmallVector<Register, 8> Row;
-    Row.push_back(B.buildMul(NarrowTy, Src1Parts[I], Src2Parts[0]).getReg(0));
+    Row.reserve(NumParts + 1);
+    // The low part of the first row is the lowest part of the full product,
+    // which the high half doesn't need, so don't build it.
+    Row.push_back(
+        I == 0 ? Register()
+               : B.buildMul(NarrowTy, Src1Parts[I], Src2Parts[0]).getReg(0));
     Register Carry;
     for (unsigned J = 1; J != NumParts; ++J) {
       auto Lo = B.buildMul(NarrowTy, Src1Parts[I], Src2Parts[J]);
@@ -7573,7 +7580,7 @@ static void buildMulHighWithCarries(MachineIRBuilder &B, LLT NarrowTy,
         B.buildUAdde(NarrowTy, CarryTy, HiTop, Zero, Carry).getReg(0));
 
     if (I == 0) {
-      std::copy(Row.begin(), Row.end(), Acc.begin());
+      llvm::copy(Row, Acc.begin());
       continue;
     }
 
@@ -7610,7 +7617,6 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   unsigned NumParts = Size / NarrowSize;
   bool IsMulHigh = MI.getOpcode() == TargetOpcode::G_UMULH ||
                    MI.getOpcode() == TargetOpcode::G_SMULH;
-  unsigned DstTmpParts = NumParts * (IsMulHigh ? 2 : 1);
 
   SmallVector<Register, 2> Src1Parts, Src2Parts;
   extractParts(Src1, NarrowTy, NumParts, Src1Parts, MIRBuilder, MRI);
@@ -7618,13 +7624,16 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
 
   SmallVector<Register, 2> DstTmpRegs;
   ArrayRef<Register> DstRegs;
-  if (IsMulHigh &&
-      LI.isLegal({TargetOpcode::G_UADDE, {NarrowTy, LLT::integer(1)}})) {
+  LLT CarryTy = LLT::integer(1);
+  if (IsMulHigh && NumParts > 1 &&
+      LI.isLegal({TargetOpcode::G_UADDO, {NarrowTy, CarryTy}}) &&
+      LI.isLegal({TargetOpcode::G_UADDE, {NarrowTy, CarryTy}})) {
     // Chain the carries directly when add-with-carry is available.
     buildMulHighWithCarries(MIRBuilder, NarrowTy, Src1Parts, Src2Parts,
                             DstTmpRegs);
     DstRegs = DstTmpRegs;
   } else {
+    unsigned DstTmpParts = NumParts * (IsMulHigh ? 2 : 1);
     DstTmpRegs.resize(DstTmpParts);
     multiplyRegisters(DstTmpRegs, Src1Parts, Src2Parts, NarrowTy);
     // Take only high half of registers if this is high mul.
