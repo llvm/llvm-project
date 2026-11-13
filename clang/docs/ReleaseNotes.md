@@ -461,6 +461,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   and view constructors and factory functions to opt in to
   `-Wunsafe-buffer-usage-in-container` diagnostics.
 
+- Added `[[clang::unsafe_buffer_usage_in_data_call]]` (and equivalent spelling
+  `[[clang::unsafe_buffer_usage("data")]]`) to allow custom container and view
+  data accessor methods to opt in to `-Wunsafe-buffer-usage-in-data-call`
+  diagnostics.
+
 - The thread safety attribute `lock_returned` (`RETURN_CAPABILITY`) can now be
   applied to function pointers, like the other thread safety function
   attributes:
@@ -819,6 +824,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-memory`, `-io`, `-printf` and `-scanf`. For example,
   `-Wno-unsafe-buffer-usage-in-libc-call-string-examination` silences `strlen`
   while `memcpy` is still diagnosed. (#GH127849)
+
+- Added `-Wunsafe-buffer-usage-in-data-call` as a diagnostic group under
+  `-Wunsafe-buffer-usage` to control warnings on unsafe casts of pointers
+  returned by container `data()` calls, which were previously diagnosed directly
+  under `-Wunsafe-buffer-usage`.
+
+- `-Wunsafe-buffer-usage-in-data-call` now warns on unsafe casts of pointers
+  returned by methods annotated with
+  `[[clang::unsafe_buffer_usage_in_data_call]]` or
+  `[[clang::unsafe_buffer_usage("data")]]`.
 
 - Fixed the `no-` prefix being dropped when diagnosing an unknown
   `-Wno-error=` or `-Wno-fatal-errors=` warning option. Clang now preserves

@@ -8471,6 +8471,35 @@ alternatives, though the attribute can be used even when the fix can't be automa
   }
   ```
 
+- Attribute attached to container data accessor methods: The spellings
+  `[[clang::unsafe_buffer_usage_in_data_call]]` and
+  `[[clang::unsafe_buffer_usage("data")]]` are equivalent and can be placed on
+  methods of container or view types that return a pointer to the underlying
+  buffer (such as `data()` on custom span types) to opt them in to
+  `-Wunsafe-buffer-usage-in-data-call`.
+
+  Unlike the general `[[clang::unsafe_buffer_usage]]` attribute, which warns on
+  every call, this form only warns when the returned pointer is explicitly cast
+  to a pointer to a larger, incomplete, or dependent type, matching the built-in
+  check for `std::span::data`:
+
+  ```c++
+  template <typename T>
+  class CustomSpan {
+  public:
+    [[clang::unsafe_buffer_usage_in_data_call]]
+    constexpr T *data() const noexcept;
+  };
+
+  struct Large { int a, b; };
+
+  void example(CustomSpan<int> s) {
+    int *p = s.data();                   // no warning
+    char *bytes = (char *)s.data();      // no warning: cast to smaller type
+    Large *l = (Large *)s.data();        // warning: unsafe invocation of 'data'
+  }
+  ```
+
   }];
 }
 
