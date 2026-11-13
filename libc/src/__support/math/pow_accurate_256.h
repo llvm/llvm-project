@@ -218,7 +218,9 @@ LIBC_INLINE int64_t log2_range_reduce(uint64_t x_mant, unsigned &idx1,
   int64_t d1 = static_cast<int64_t>(mant_x * RD_SMALL_K[idx1]) -
                (1LL << 58);                                      // lsb = 2^-58
   k2 = static_cast<int>((d1 + (1LL << 50)) >> 51);               // lsb = 2^-7
-  return (d1 << 7) - (static_cast<int64_t>(k2) << 58) - d1 * k2; // lsb = 2^-65
+  return static_cast<int64_t>((static_cast<uint64_t>(d1) << 7) -
+                              (static_cast<uint64_t>(k2) << 58)) -
+         d1 * k2; // lsb = 2^-65
 }
 
 // Multiply a in-place by 64-bit b and return the high 64-bit word.
@@ -431,8 +433,8 @@ LIBC_COLD LIBC_INLINE DFloat256 exp2_f256(const DFloat256 &z) {
   uint64_t p1 = 45462 + ((q * p2) >> 16);
   unsigned idx1 = static_cast<unsigned>((q * p1 + (1ULL << 27)) >> 28);
 
-  int64_t rem_hi = static_cast<int64_t>(f.val[3]) -
-                   static_cast<int64_t>(LOG2_R1_FRAC256[idx1].val[3]);
+  int64_t rem_hi =
+      static_cast<int64_t>(f.val[3] - LOG2_R1_FRAC256[idx1].val[3]);
   int k2 = static_cast<int>(((rem_hi >> 32) * 5814539LL + (1LL << 46)) >> 47);
   if (k2 < -4)
     k2 = -4;

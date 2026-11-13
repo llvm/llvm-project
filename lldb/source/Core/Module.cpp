@@ -153,10 +153,15 @@ Module::Module(const ModuleSpec &module_spec)
   if (extractor_sp)
     file_size = extractor_sp->GetByteSize();
 
-  // First extract all module specifications from the file using the local file
-  // path. If there are no specifications, then don't fill anything in
+  // A supplied extractor contains the requested object's bytes. Preserve its
+  // backing-file offset; plain file lookups still enumerate the container.
+  const lldb::offset_t object_offset =
+      extractor_sp ? module_spec.GetObjectOffset() : 0;
+  const lldb::offset_t object_size = extractor_sp && module_spec.GetObjectSize()
+                                         ? module_spec.GetObjectSize()
+                                         : file_size;
   ModuleSpecList modules_specs = ObjectFile::GetModuleSpecifications(
-      module_spec.GetFileSpec(), 0, file_size, extractor_sp);
+      module_spec.GetFileSpec(), object_offset, object_size, extractor_sp);
   if (modules_specs.GetSize() == 0)
     return;
 
@@ -226,6 +231,7 @@ Module::Module(const ModuleSpec &module_spec)
   // (for mod time in a BSD static archive) of from the matching module
   // specification
   m_object_offset = matching_module_spec.GetObjectOffset();
+  m_object_size = matching_module_spec.GetObjectSize();
   m_object_mod_time = matching_module_spec.GetObjectModificationTime();
 }
 
@@ -336,6 +342,23 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
     }
   }
   return m_objfile_sp.get();
+}
+
+ModuleSpec Module::GetModuleSpec() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  const UUID &uuid = GetUUID();
+  DataExtractorSP extractor_sp = m_extractor_sp;
+  ObjectFile *objfile = GetObjectFile();
+  ModuleSpec spec(m_file, uuid, extractor_sp);
+  spec.GetPlatformFileSpec() = m_platform_file;
+  spec.GetSymbolFileSpec() = m_symfile_spec;
+  spec.GetArchitecture() = m_arch;
+  spec.SetObjectName(m_object_name);
+  spec.SetObjectOffset(objfile ? objfile->GetFileOffset() : m_object_offset);
+  spec.SetObjectSize(objfile ? objfile->GetByteSize() : m_object_size);
+  spec.GetObjectModificationTime() = m_object_mod_time;
+  spec.GetSourceMappingList() = m_source_mappings;
+  return spec;
 }
 
 const lldb_private::UUID &Module::GetUUID() {
@@ -1024,6 +1047,13 @@ Symtab *Module::GetSymtab(bool can_create) {
   return nullptr;
 }
 
+uint32_t Module::GetSymtabState() {
+  if (ObjectFile *objfile = GetObjectFile())
+    if (Symtab *symtab = objfile->GetSymtab(/*can_create=*/false))
+      return symtab->GetState();
+  return eSymtabStateNone;
+}
+
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
                                       std::string object_name) {
   // Container objects whose paths do not specify a file directly can call this
@@ -1095,7 +1125,8 @@ void Module::ReportWarningOptimization(
      << " was compiled with optimization - stepping may behave "
         "oddly; variables may not be available";
   llvm::StringRef msg = ss.GetString();
-  Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(msg.str(), debugger_id);
 }
 
 void Module::ReportWarningUnsupportedLanguage(
@@ -1106,7 +1137,8 @@ void Module::ReportWarningUnsupportedLanguage(
      << "\". "
         "Inspection of frame variables will be limited";
   llvm::StringRef msg = ss.GetString();
-  Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(msg.str(), debugger_id);
 }
 
 void Module::ReportErrorIfModifyDetected(
@@ -1126,20 +1158,22 @@ void Module::ReportErrorIfModifyDetected(
   }
 }
 
-std::once_flag *Module::GetDiagnosticOnceFlag(llvm::StringRef msg) {
-  std::lock_guard<std::recursive_mutex> guard(m_diagnostic_mutex);
-  auto &once_ptr = m_shown_diagnostics[llvm::stable_hash_name(msg)];
-  if (!once_ptr)
-    once_ptr = std::make_unique<std::once_flag>();
-  return once_ptr.get();
+bool Module::ShouldReportDiagnostic(llvm::StringRef msg) {
+  return m_shown_diagnostics.Insert(llvm::stable_hash_name(msg));
 }
 
-void Module::ReportError(const llvm::formatv_object_base &payload) {
+void Module::ReportError(const llvm::formatv_object_base &payload,
+                         bool internal_error) {
   StreamString strm;
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
   std::string msg = payload.str();
   strm << ' ' << msg;
-  Debugger::ReportError(strm.GetString().str(), {}, GetDiagnosticOnceFlag(msg));
+  if (!ShouldReportDiagnostic(msg))
+    return;
+  if (internal_error)
+    Debugger::ReportInternalError(strm.GetString().str());
+  else
+    Debugger::ReportError(strm.GetString().str());
 }
 
 void Module::ReportWarning(const llvm::formatv_object_base &payload) {
@@ -1147,8 +1181,8 @@ void Module::ReportWarning(const llvm::formatv_object_base &payload) {
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
   std::string msg = payload.str();
   strm << ' ' << msg;
-  Debugger::ReportWarning(strm.GetString().str(), {},
-                          GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(strm.GetString().str());
 }
 
 void Module::LogMessage(Log *log, const llvm::formatv_object_base &payload) {
@@ -1208,14 +1242,20 @@ ObjectFile *Module::GetObjectFile() {
       else if (m_file)
         file_size = FileSystem::Instance().GetByteSize(m_file);
 
-      if (file_size > m_object_offset) {
+      // A supplied subobject extractor starts at byte zero even when its
+      // backing-file offset is larger than the extractor itself.
+      const bool data_backed_object =
+          m_extractor_sp && m_object_size &&
+          m_extractor_sp->GetByteSize() == m_object_size;
+      if (data_backed_object || file_size > m_object_offset) {
         m_did_load_objfile = true;
         // FindPlugin will modify its extractor_sp argument. Do not let it
         // modify our m_extractor_sp member.
         DataExtractorSP extractor_sp = m_extractor_sp;
         m_objfile_sp = ObjectFile::FindPlugin(
             shared_from_this(), &m_file, m_object_offset,
-            file_size - m_object_offset, extractor_sp, data_offset);
+            data_backed_object ? m_object_size : file_size - m_object_offset,
+            extractor_sp, data_offset);
         if (m_objfile_sp) {
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
@@ -1600,10 +1640,9 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
       HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_name.str()});
 
   if (!sdk_path_or_err) {
-    Debugger::ReportError("Error while searching for Xcode SDK: " +
-                              toString(sdk_path_or_err.takeError()),
-                          /*debugger_id=*/std::nullopt,
-                          GetDiagnosticOnceFlag(sdk_name));
+    std::string error = toString(sdk_path_or_err.takeError());
+    if (ShouldReportDiagnostic(sdk_name))
+      Debugger::ReportError("Error while searching for Xcode SDK: " + error);
     return;
   }
 

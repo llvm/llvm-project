@@ -9183,9 +9183,7 @@ CodeGenModule::getOrCreateMSVCGlobalDeleteWrapper(const FunctionDecl *GlobOD) {
     auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
     llvm::Function *TrapFn =
         llvm::Intrinsic::getOrInsertDeclaration(&M, llvm::Intrinsic::trap);
-    auto *TrapCall = llvm::CallInst::Create(TrapFn, {}, "", BB);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
+    llvm::CallInst::Create(TrapFn, {}, "", BB);
     new llvm::UnreachableInst(LLVMCtx, BB);
 
     // The empty is referenced only by the wrapper's weak alias. When this TU

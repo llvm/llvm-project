@@ -54,6 +54,13 @@ static bool recordIsTransparentUnion(ModuleOp modOp, cir::RecordType recTy) {
   return layout && layout.getTransparentUnion();
 }
 
+/// Read from the layout, which also covers a last field that has one.
+static bool recordHasFlexibleArrayMember(ModuleOp modOp,
+                                         cir::RecordType recTy) {
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
+  return layout && layout.getFlexibleArrayMember();
+}
+
 /// Whether the classifier could give this type the SSEUP class, looking
 /// through arrays and records at the types they hold.
 static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
@@ -393,6 +400,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
         if (recordIsTransparentUnion(modOp, recTy))
           flags = flags | llvm::abi::RecordFlags::IsTransparent;
+        if (recordHasFlexibleArrayMember(modOp, recTy))
+          flags = flags | llvm::abi::RecordFlags::HasFlexibleArrayMember;
         llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
             dl.getTypeSizeInBits(type).getFixedValue());
         llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
@@ -771,11 +780,12 @@ CIRABIClassifierCommon::classifySignature(
   return fc;
 }
 
-/// FIXME: Only the AMDGPU kernel convention is mapped. Every other convention
-/// is classified as C.
+/// FIXME: Implement proper support for other calling conventions.
 llvm::CallingConv::ID cir::convertCallingConv(cir::CallingConv cc) {
   if (cc == cir::CallingConv::AMDGPUKernel)
     return llvm::CallingConv::AMDGPU_KERNEL;
+  if (cc == cir::CallingConv::SpirKernel)
+    return llvm::CallingConv::SPIR_KERNEL;
   return llvm::CallingConv::C;
 }
 

@@ -8834,6 +8834,20 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
   AAMemoryLocationCallSite(const IRPosition &IRP, Attributor &A)
       : AAMemoryLocationImpl(IRP, A) {}
 
+  void initialize(Attributor &A) override {
+    AAMemoryLocationImpl::initialize(A);
+
+    // Volatile calls may also access inaccessible memory, which the callee's
+    // attributes do not say.
+    auto &CB = cast<CallBase>(getAnchorValue());
+    if (CB.isVolatile()) {
+      bool Changed = false;
+      removeKnownBits(NO_INACCESSIBLE_MEM);
+      updateStateAndAccessesMap(getState(), NO_INACCESSIBLE_MEM, &CB, nullptr,
+                                Changed, getAccessKindFromInst(&CB));
+    }
+  }
+
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness liveness information and then it makes

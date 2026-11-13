@@ -93,9 +93,11 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
     rm -f /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst; \
     fi
 
+ARG LLVM_VERSION_MAJOR=24
+
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
-    sudo ./llvm.sh 23 && \
+    sudo ./llvm.sh ${LLVM_VERSION_MAJOR} && \
     rm llvm.sh
 
 # Install the LLVM testing tools, which the llvm.sh script above does not
@@ -105,9 +107,9 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 # the tools into /usr/bin under versioned names (lit-23, FileCheck-23, ...),
 # so also symlink them under their canonical names.
 # llvm-link is required to build bitcode library for GPU targets
-RUN apt-get install -y llvm-23-tools llvm-23 && \
-    ln -s -t /usr/bin $(dpkg -L llvm-23-tools | grep '^/usr/lib/llvm-23/bin/') && \
-    ln -s /usr/lib/llvm-23/bin/llvm-link /usr/bin/llvm-link
+RUN apt-get install -y llvm-${LLVM_VERSION_MAJOR}-tools llvm-${LLVM_VERSION_MAJOR} && \
+    ln -s -t /usr/bin $(dpkg -L llvm-${LLVM_VERSION_MAJOR}-tools | grep "^/usr/lib/llvm-${LLVM_VERSION_MAJOR}/bin/") && \
+    ln -s /usr/lib/llvm-${LLVM_VERSION_MAJOR}/bin/llvm-link /usr/bin/llvm-link
 
 # Install gmp and mpfr for cross compilation
 RUN wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz && \

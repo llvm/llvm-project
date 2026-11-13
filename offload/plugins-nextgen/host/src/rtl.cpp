@@ -220,7 +220,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, ol_alloc_type_t Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
@@ -345,8 +345,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
   }
+  /// All operations are synchronous, so there is never pending work.
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
-    return true;
+    return false;
   }
   Expected<bool> isEventCompleteImpl(void *Event,
                                      AsyncInfoWrapperTy &AsyncInfo) override {

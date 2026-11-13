@@ -269,12 +269,10 @@ PerfSupportPlugin::PerfSupportPlugin(ExecutorProcessControl &EPC,
                                      ExecutorAddr RegisterPerfImplAddr,
                                      bool EmitDebugInfo, bool EmitUnwindInfo)
     : EPC(EPC), RegisterPerfStart(
-                    sps::ProxySpec<Proxy<void()>,
-                                   perf_sps_ci::RegisterPerfStart>::dispatch,
+                    sps::ProxySpec<perf_sps_ci::RegisterPerfStart>::dispatch,
                     RegisterPerfStartAddr),
-      RegisterPerfEnd(
-          sps::ProxySpec<Proxy<void()>, perf_sps_ci::RegisterPerfEnd>::dispatch,
-          RegisterPerfEndAddr),
+      RegisterPerfEnd(sps::ProxySpec<perf_sps_ci::RegisterPerfEnd>::dispatch,
+                      RegisterPerfEndAddr),
       RegisterPerfImplAddr(RegisterPerfImplAddr), CodeIndex(0),
       EmitDebugInfo(EmitDebugInfo), EmitUnwindInfo(EmitUnwindInfo) {
   cantFail(RegisterPerfStart(EPC.getExecutionSession()));

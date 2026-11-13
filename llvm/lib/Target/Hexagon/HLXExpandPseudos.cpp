@@ -85,6 +85,7 @@ bool HLXExpandPseudos::expandPseudos(MachineInstr &MI) {
     MachineInstr *Start = BuildMI(*MBB, MI, DL, HII->get(LoadOpc), Reg0)
                               .add(Op1)
                               .cloneMemRefs(MI)
+                              .copyImplicitOps(MI)
                               .getInstr();
     MachineInstr *End =
         BuildMI(*MBB, MI, DL, HII->get(AssignOpc), Reg0)
@@ -110,6 +111,7 @@ bool HLXExpandPseudos::expandPseudos(MachineInstr &MI) {
                             .add(Op0)
                             .add(Op1)
                             .cloneMemRefs(MI)
+                            .copyImplicitOps(MI)
                             .getInstr();
     if (IsBundled)
       return true;

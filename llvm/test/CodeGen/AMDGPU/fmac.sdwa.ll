@@ -1,9 +1,11 @@
 ; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GCN,GFX1010 %s
-; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GCN,GFX1010 %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GCN,GFX1100 %s
 
 ; GCN-LABEL: {{^}}addMul2D:
-; GFX1010: v_fmac_f16
-; GFX1010: v_fmac_f16
+; GFX1010: v_fma_f16 {{.*}} op_sel:[1,0,1,0]
+; GFX1010: v_fma_f16 {{.*}} op_sel:[1,0,1,0]
+; GFX1100: v_fmac_f16
+; GFX1100: v_fmac_f16
 define hidden <4 x half> @addMul2D(ptr nocapture readonly %arg, ptr addrspace(4) nocapture readonly %arg1, <2 x i32> %arg2, i32 %arg3) local_unnamed_addr #0 {
 bb:
   %tmp = extractelement <2 x i32> %arg2, i64 1

@@ -1,0 +1,13 @@
+posix: posix-2024
+functions:
+  iconv:
+    in-latest-posix: ''
+  iconv_close:
+    in-latest-posix: ''
+  iconv_open:
+    in-latest-posix: ''
+types:
+  iconv_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
