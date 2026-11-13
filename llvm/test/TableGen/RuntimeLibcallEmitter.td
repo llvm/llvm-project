@@ -119,12 +119,16 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-EMPTY:
 // CHECK-NEXT:enum FuncArgTypeID : char {
 // CHECK-NEXT:  NoFuncArgType = 0,
+// CHECK-NEXT:  AllocaPtr,
+// CHECK-NEXT:  BFloat,
 // CHECK-NEXT:  Bool,
+// CHECK-NEXT:  CmpResult,
 // CHECK-NEXT:  Dbl,
 // CHECK-NEXT:  Ellip,
 // CHECK-NEXT:  FP128,
 // CHECK-NEXT:  Floating,
 // CHECK-NEXT:  Flt,
+// CHECK-NEXT:  Half,
 // CHECK-NEXT:  Int,
 // CHECK-NEXT:  Int8,
 // CHECK-NEXT:  Int16,
@@ -148,10 +152,13 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  Same,
 // CHECK-NEXT:  SizeT,
 // CHECK-NEXT:  Struct,
+// CHECK-NEXT:  ThreadLocalVariable,
 // CHECK-NEXT:  UInt,
+// CHECK-NEXT:  UInt8,
 // CHECK-NEXT:  UInt16,
 // CHECK-NEXT:  UInt32,
 // CHECK-NEXT:  UInt64,
+// CHECK-NEXT:  UInt128,
 // CHECK-NEXT:  UIntPlus,
 // CHECK-NEXT:  UIntX,
 // CHECK-NEXT:  ULLong,
@@ -167,6 +174,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  V8I32,
 // CHECK-NEXT:  V16F32,
 // CHECK-NEXT:  V16I32,
+// CHECK-NEXT:  Variable,
 // CHECK-NEXT:  Void,
 // CHECK-NEXT:  X86FP80,
 // CHECK-NEXT:};
@@ -296,6 +304,21 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  0, // RTLIB::impl_sqrtl_f128
 // CHECK-NEXT:  2, // RTLIB::impl_sqrtl_f80
 // CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:static ArrayRef<RTLIB::FuncArgTypeID>
+// CHECK-NEXT:getStructElementTypes(RTLIB::FuncArgTypeID ID) {
+// CHECK-NEXT:  switch (ID) {
+// CHECK-NEXT:  default:
+// CHECK-NEXT:    return {};
+// CHECK-NEXT:  }
+// CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT:static bool isInRegStruct(RTLIB::FuncArgTypeID ID) {
+// CHECK-NEXT:  switch (ID) {
+// CHECK-NEXT:  default:
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }
+// CHECK-NEXT:}
 // CHECK-EMPTY:
 // CHECK-NEXT:#endif // GET_INIT_RUNTIME_LIBCALL_SIGNATURES
 

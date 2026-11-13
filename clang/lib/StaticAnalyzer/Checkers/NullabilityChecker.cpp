@@ -477,6 +477,8 @@ void NullabilityChecker::reportBugIfInvariantHolds(
     StringRef Msg, ErrorKind Error, const BugType &BT, ExplodedNode *N,
     const MemRegion *Region, CheckerContext &C, const Stmt *ValueExpr,
     bool SuppressPath) const {
+  if (!N)
+    return;
   ProgramStateRef OriginalState = N->getState();
 
   if (checkInvariantViolation(OriginalState, N, C))
@@ -484,6 +486,8 @@ void NullabilityChecker::reportBugIfInvariantHolds(
   if (SuppressPath) {
     OriginalState = OriginalState->set<InvariantViolated>(true);
     N = C.addTransition(OriginalState, N);
+    if (!N)
+      return;
   }
 
   reportBug(Msg, Error, BT, N, Region, C.getBugReporter(), ValueExpr);

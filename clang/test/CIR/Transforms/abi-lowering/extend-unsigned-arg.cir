@@ -17,18 +17,18 @@ module attributes {
 } {
 
   cir.func @takes_u16(%arg0: !u16i)
-      attributes { test_classify = #extend_unsigned_arg } {
+      requires_call_conv_lowering attributes { test_classify = #extend_unsigned_arg } {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @takes_u16(%arg0: !u16i {llvm.zeroext})
+  // CHECK: cir.func{{.*}} @takes_u16(%arg0: !u16i {llvm.noundef, llvm.zeroext})
 
   cir.func @caller(%arg0: !u16i)
-      attributes { test_classify = #extend_unsigned_arg } {
+      requires_call_conv_lowering attributes { test_classify = #extend_unsigned_arg } {
     cir.call @takes_u16(%arg0) : (!u16i) -> ()
     cir.return
   }
 
-  // CHECK: cir.call @takes_u16(%arg0) : (!u16i {llvm.zeroext}) -> ()
+  // CHECK: cir.call @takes_u16(%arg0) : (!u16i {llvm.noundef, llvm.zeroext}) -> ()
 
 }

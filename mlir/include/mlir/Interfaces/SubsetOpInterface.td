@@ -35,6 +35,7 @@ def SubsetOpInterface : OpInterface<"SubsetOpInterface"> {
   }];
 
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/SubsetOpInterface.h"];
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
@@ -123,6 +124,7 @@ def SubsetExtractionOpInterface
   }];
 
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/SubsetOpInterface.h"];
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
@@ -166,6 +168,7 @@ def SubsetInsertionOpInterface
   }];
 
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/SubsetOpInterface.h"];
   let methods = [
       InterfaceMethod<
         /*desc=*/[{

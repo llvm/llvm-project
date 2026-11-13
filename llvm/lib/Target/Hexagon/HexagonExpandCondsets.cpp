@@ -1328,7 +1328,13 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(LIS->print(dbgs() << "After predicating\n"));
 
   PredUpd.insert(CoalUpd.begin(), CoalUpd.end());
-  updateLiveness(PredUpd, true, true, true);
+  updateLiveness(PredUpd, true, false, true);
+
+  KillUpd.insert(PredUpd.begin(), PredUpd.end());
+  for (Register R : KillUpd) {
+    if (R.isVirtual())
+      MRI->clearKillFlags(R);
+  }
 
   if (Changed)
     distributeLiveIntervals(PredUpd);

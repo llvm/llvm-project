@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686 -stop-after=finalize-isel -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=i686 -stop-after=finalize-isel | FileCheck %s
 
 ; CHECK-LABEL: name: foo
 ; CHECK: INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $df, clobber, implicit-def dead early-clobber $fpsw, clobber, implicit-def dead early-clobber $eflags

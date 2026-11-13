@@ -47,7 +47,6 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRGPUDialect
   MLIRGPUUtils
   MLIRIR
-  MLIRLinalgDialect
   MLIRMemorySlotInterfaces
   MLIRMemRefDialect
   MLIRMemRefTransforms

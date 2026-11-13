@@ -1586,6 +1586,32 @@ let isCommutable = 1, isReMaterializable = 1 in {
   } // End SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble]
 } // End isCommutable = 1, isReMaterializable = 1
 
+// GFX950 v_pk_{add,mul}_f32: opsel[1:0] == 2'b10 is invalid. These patterns
+// reject a src1 that needs OP_SEL_0, so the commuted form puts that operand in
+// src0. Otherwise, the default pattern gives the valid opsel[1:0] == 2'b11.
+let SubtargetPredicate = HasGFX950Insts, AddedComplexity = 1 in {
+def : GCNPat<
+  (v2f32 (any_fadd (VOP3PMods v2f32:$src0, i32:$src0_mods),
+                   (VOP3PModsPkAddMulOpSel0 v2f32:$src1, i32:$src1_mods))),
+  (V_PK_ADD_F32 $src0_mods, $src0, $src1_mods, $src1)
+>;
+
+def : GCNPat<
+  (v2f32 (any_fmul (VOP3PMods v2f32:$src0, i32:$src0_mods),
+                   (VOP3PModsPkAddMulOpSel0 v2f32:$src1, i32:$src1_mods))),
+  (V_PK_MUL_F32 $src0_mods, $src0, $src1_mods, $src1)
+>;
+
+// v_pk_fma_f32: Don't fold a swizzle that needs OP_SEL_0 into src1 or src2; it
+// is materialized separately instead.
+def : GCNPat<
+  (v2f32 (any_fma (VOP3PMods v2f32:$src0, i32:$src0_mods),
+                  (VOP3PModsPkFmaOpSel0 v2f32:$src1, i32:$src1_mods),
+                  (VOP3PModsPkFmaOpSel0 v2f32:$src2, i32:$src2_mods))),
+  (V_PK_FMA_F32 $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2)
+>;
+} // End SubtargetPredicate = HasGFX950Insts, AddedComplexity = 1
+
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
 def : AMDGPUMnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 

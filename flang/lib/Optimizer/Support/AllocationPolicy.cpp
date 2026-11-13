@@ -48,7 +48,8 @@ fir::AllocationSizeContext fir::getAllocationSizeContext(mlir::Operation *op) {
 
 bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
                                   const AllocationPolicy &allocationPolicy,
-                                  const AllocationSizeContext &sizeContext) {
+                                  const AllocationSizeContext &sizeContext,
+                                  std::optional<std::int64_t> alignment) {
   if (fir::hasDynamicSize(sequenceType) || !sizeContext.dataLayout ||
       !sizeContext.kindMap)
     return false;
@@ -60,6 +61,7 @@ bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
   info.isTemporary = true;
   info.isDynamic = false;
   info.byteSize = static_cast<std::int64_t>(sizeAndAlignment->first);
+  info.alignment = alignment;
   AllocationPolicy copyInPolicy = allocationPolicy;
   copyInPolicy.stackArrays = false;
   return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);

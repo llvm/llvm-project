@@ -16,12 +16,6 @@
 
 using namespace llvm::omp::target::debug;
 
-// Temporary helper from liboffload until all usage of AsyncInfo is migrated
-// to liboffload queues.
-namespace llvm::offload::tmp {
-__tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue);
-} // namespace llvm::offload::tmp
-
 AsyncInfoTy::AsyncInfoTy(DeviceTy &Device, SyncTy SyncType)
     : Device(Device), SyncType(SyncType) {
   if (auto Res = olCreateQueue(Device.Context, Device.DeviceHandle, &Queue)) {
@@ -37,10 +31,6 @@ AsyncInfoTy::~AsyncInfoTy() {
     if (auto Res = olDestroyQueue(Queue))
       REPORT() << "Failed to destroy queue " << Queue << ": " << Res->Details;
   }
-}
-
-AsyncInfoTy::operator __tgt_async_info *() {
-  return llvm::offload::tmp::__ol_tgt_GetAsyncInfoFromQueue(Queue);
 }
 
 int AsyncInfoTy::synchronize() {

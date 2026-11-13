@@ -1,0 +1,162 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// A struct of one aggregate field is not a single-element struct, so AMDGPU
+// passes it Direct with no coerce type. The argument is passed as that field.
+// A return is not flattened and stays whole.
+
+!s32i = !cir.int<s, 32>
+!rec_cdwrap_t = !cir.struct<"cdwrap_t" {data !cir.complex<!cir.double>}>
+!rec_arrwrap_t = !cir.struct<"arrwrap_t" {data !cir.array<!s32i x 3>}>
+!rec_inner = !cir.struct<"inner" {data !s32i, data !s32i, data !s32i}>
+!rec_nestwrap_t = !cir.struct<"nestwrap_t" {data !rec_inner}>
+!rec_triple_t = !cir.struct<"triple_t" {data !s32i, data !s32i, data !s32i}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  // The complex field is passed in place of the struct.
+  cir.func @arg_cdwrap(%arg0: !rec_cdwrap_t) requires_call_conv_lowering {
+    %0 = cir.alloca "w" align(8) init : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
+    cir.store %arg0, %1 : !rec_cdwrap_t, !cir.ptr<!rec_cdwrap_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_cdwrap(%[[ARG:.*]]: !cir.complex<!cir.double>) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[FIELD:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[ARG]], %[[FIELD]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)>
+  // CHECK-NEXT:   %[[W:.*]] = cir.alloca "w" align(8) init : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[W_CAST:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
+  // CHECK-NEXT:   cir.copy %[[COERCE]] align(8) to %[[W_CAST]] align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>, !cir.ptr<!rec_cdwrap_t>
+  // CHECK-NEXT:   cir.return
+
+  // The array field is passed in place of the struct.
+  cir.func @arg_arrwrap(%arg0: !rec_arrwrap_t) requires_call_conv_lowering {
+    %0 = cir.alloca "w" align(4) init : !cir.ptr<!rec_arrwrap_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_arrwrap_t, target_address_space(5)> -> !cir.ptr<!rec_arrwrap_t>
+    cir.store %arg0, %1 : !rec_arrwrap_t, !cir.ptr<!rec_arrwrap_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_arrwrap(%[[ARG:.*]]: !cir.array<!s32i x 3>) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_arrwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[FIELD:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_arrwrap_t, target_address_space(5)> -> !cir.ptr<!cir.array<!s32i x 3>, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[ARG]], %[[FIELD]] : !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>, target_address_space(5)>
+  // CHECK-NEXT:   %[[W:.*]] = cir.alloca "w" align(4) init : !cir.ptr<!rec_arrwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[W_CAST:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_arrwrap_t, target_address_space(5)> -> !cir.ptr<!rec_arrwrap_t>
+  // CHECK-NEXT:   cir.copy %[[COERCE]] align(4) to %[[W_CAST]] align(4) : !cir.ptr<!rec_arrwrap_t, target_address_space(5)>, !cir.ptr<!rec_arrwrap_t>
+  // CHECK-NEXT:   cir.return
+
+  // The inner struct is passed whole, not split into its three ints.
+  cir.func @arg_nestwrap(%arg0: !rec_nestwrap_t) requires_call_conv_lowering {
+    %0 = cir.alloca "w" align(4) init : !cir.ptr<!rec_nestwrap_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_nestwrap_t, target_address_space(5)> -> !cir.ptr<!rec_nestwrap_t>
+    cir.store %arg0, %1 : !rec_nestwrap_t, !cir.ptr<!rec_nestwrap_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_nestwrap(%[[ARG:.*]]: !rec_inner) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_nestwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[FIELD:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_nestwrap_t, target_address_space(5)> -> !cir.ptr<!rec_inner, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[ARG]], %[[FIELD]] : !rec_inner, !cir.ptr<!rec_inner, target_address_space(5)>
+  // CHECK-NEXT:   %[[W:.*]] = cir.alloca "w" align(4) init : !cir.ptr<!rec_nestwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[W_CAST:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_nestwrap_t, target_address_space(5)> -> !cir.ptr<!rec_nestwrap_t>
+  // CHECK-NEXT:   cir.copy %[[COERCE]] align(4) to %[[W_CAST]] align(4) : !cir.ptr<!rec_nestwrap_t, target_address_space(5)>, !cir.ptr<!rec_nestwrap_t>
+  // CHECK-NEXT:   cir.return
+
+  // A struct of three ints is split into three arguments.
+  cir.func @arg_triple(%arg0: !rec_triple_t) requires_call_conv_lowering {
+    %0 = cir.alloca "w" align(4) init : !cir.ptr<!rec_triple_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_triple_t, target_address_space(5)> -> !cir.ptr<!rec_triple_t>
+    cir.store %arg0, %1 : !rec_triple_t, !cir.ptr<!rec_triple_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_triple(%[[A0:[^:]+]]: !s32i, %[[A1:[^:]+]]: !s32i, %[[A2:[^:]+]]: !s32i) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_triple_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[F0:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_triple_t, target_address_space(5)> -> !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[A0]], %[[F0]] : !s32i, !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[F1:.*]] = cir.get_member %[[COERCE]][1] {name = ""} : !cir.ptr<!rec_triple_t, target_address_space(5)> -> !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[A1]], %[[F1]] : !s32i, !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[F2:.*]] = cir.get_member %[[COERCE]][2] {name = ""} : !cir.ptr<!rec_triple_t, target_address_space(5)> -> !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[A2]], %[[F2]] : !s32i, !cir.ptr<!s32i, target_address_space(5)>
+  // CHECK-NEXT:   %[[W:.*]] = cir.alloca "w" align(4) init : !cir.ptr<!rec_triple_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[W_CAST:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_triple_t, target_address_space(5)> -> !cir.ptr<!rec_triple_t>
+  // CHECK-NEXT:   cir.copy %[[COERCE]] align(4) to %[[W_CAST]] align(4) : !cir.ptr<!rec_triple_t, target_address_space(5)>, !cir.ptr<!rec_triple_t>
+  // CHECK-NEXT:   cir.return
+
+  // The caller loads the array field and passes it.
+  cir.func @call_arrwrap(%arg0: !rec_arrwrap_t) requires_call_conv_lowering {
+    %0 = cir.alloca "w" align(4) init : !cir.ptr<!rec_arrwrap_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_arrwrap_t, target_address_space(5)> -> !cir.ptr<!rec_arrwrap_t>
+    cir.store %arg0, %1 : !rec_arrwrap_t, !cir.ptr<!rec_arrwrap_t>
+    %2 = cir.load align(4) %1 : !cir.ptr<!rec_arrwrap_t>, !rec_arrwrap_t
+    cir.call @arg_arrwrap(%2) : (!rec_arrwrap_t) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func @call_arrwrap(%[[ARG:.*]]: !cir.array<!s32i x 3>) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_arrwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[FIELD:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_arrwrap_t, target_address_space(5)> -> !cir.ptr<!cir.array<!s32i x 3>, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[ARG]], %[[FIELD]] : !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>, target_address_space(5)>
+  // CHECK-NEXT:   %[[W:.*]] = cir.alloca "w" align(4) init : !cir.ptr<!rec_arrwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[W_CAST:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_arrwrap_t, target_address_space(5)> -> !cir.ptr<!rec_arrwrap_t>
+  // CHECK-NEXT:   cir.copy %[[COERCE]] align(4) to %[[W_CAST]] align(4) : !cir.ptr<!rec_arrwrap_t, target_address_space(5)>, !cir.ptr<!rec_arrwrap_t>
+  // CHECK-NEXT:   %[[W_FIELD:.*]] = cir.get_member %[[W_CAST]][0] {name = ""} : !cir.ptr<!rec_arrwrap_t> -> !cir.ptr<!cir.array<!s32i x 3>>
+  // CHECK-NEXT:   %[[ARR:.*]] = cir.load %[[W_FIELD]] : !cir.ptr<!cir.array<!s32i x 3>>, !cir.array<!s32i x 3>
+  // CHECK-NEXT:   cir.call @arg_arrwrap(%[[ARR]]) : (!cir.array<!s32i x 3>) -> ()
+  // CHECK-NEXT:   cir.return
+
+  // The caller loads the inner struct and passes it.
+  cir.func @call_nestwrap(%arg0: !rec_nestwrap_t) requires_call_conv_lowering {
+    %0 = cir.alloca "w" align(4) init : !cir.ptr<!rec_nestwrap_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_nestwrap_t, target_address_space(5)> -> !cir.ptr<!rec_nestwrap_t>
+    cir.store %arg0, %1 : !rec_nestwrap_t, !cir.ptr<!rec_nestwrap_t>
+    %2 = cir.load align(4) %1 : !cir.ptr<!rec_nestwrap_t>, !rec_nestwrap_t
+    cir.call @arg_nestwrap(%2) : (!rec_nestwrap_t) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func @call_nestwrap(%[[ARG:.*]]: !rec_inner) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_nestwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[FIELD:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_nestwrap_t, target_address_space(5)> -> !cir.ptr<!rec_inner, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[ARG]], %[[FIELD]] : !rec_inner, !cir.ptr<!rec_inner, target_address_space(5)>
+  // CHECK-NEXT:   %[[W:.*]] = cir.alloca "w" align(4) init : !cir.ptr<!rec_nestwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[W_CAST:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_nestwrap_t, target_address_space(5)> -> !cir.ptr<!rec_nestwrap_t>
+  // CHECK-NEXT:   cir.copy %[[COERCE]] align(4) to %[[W_CAST]] align(4) : !cir.ptr<!rec_nestwrap_t, target_address_space(5)>, !cir.ptr<!rec_nestwrap_t>
+  // CHECK-NEXT:   %[[W_FIELD:.*]] = cir.get_member %[[W_CAST]][0] {name = ""} : !cir.ptr<!rec_nestwrap_t> -> !cir.ptr<!rec_inner>
+  // CHECK-NEXT:   %[[INNER:.*]] = cir.load %[[W_FIELD]] : !cir.ptr<!rec_inner>, !rec_inner
+  // CHECK-NEXT:   cir.call @arg_nestwrap(%[[INNER]]) : (!rec_inner) -> ()
+  // CHECK-NEXT:   cir.return
+
+  // The argument is passed as its field, but the return stays the struct.
+  cir.func @ret_cdwrap(%arg0: !rec_cdwrap_t) -> !rec_cdwrap_t requires_call_conv_lowering {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+    %1 = cir.alloca "w" align(8) init : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+    %2 = cir.cast address_space %1 : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
+    %3 = cir.cast address_space %0 : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
+    cir.store %arg0, %2 : !rec_cdwrap_t, !cir.ptr<!rec_cdwrap_t>
+    cir.copy %2 align(8) to %3 align(8) : !cir.ptr<!rec_cdwrap_t>
+    %4 = cir.load %0 : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>, !rec_cdwrap_t
+    cir.return %4 : !rec_cdwrap_t
+  }
+
+  // CHECK: cir.func @ret_cdwrap(%[[ARG:.*]]: !cir.complex<!cir.double>) -> !rec_cdwrap_t {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[FIELD:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[ARG]], %[[FIELD]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)>
+  // CHECK-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[W:.*]] = cir.alloca "w" align(8) init : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[W_CAST:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
+  // CHECK-NEXT:   %[[RETVAL_CAST:.*]] = cir.cast address_space %[[RETVAL]] : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
+  // CHECK-NEXT:   cir.copy %[[COERCE]] align(8) to %[[W_CAST]] align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>, !cir.ptr<!rec_cdwrap_t>
+  // CHECK-NEXT:   cir.copy %[[W_CAST]] align(8) to %[[RETVAL_CAST]] align(8) : !cir.ptr<!rec_cdwrap_t>
+  // CHECK-NEXT:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>, !rec_cdwrap_t
+  // CHECK-NEXT:   cir.return %[[RET]] : !rec_cdwrap_t
+}

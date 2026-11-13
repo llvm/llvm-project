@@ -1985,9 +1985,15 @@ public:
   /// Determine if the call requires strict floating point semantics.
   bool isStrictFP() const { return hasFnAttr(Attribute::StrictFP); }
 
-  /// Return true if the call should not be inlined.
-  bool isNoInline() const { return hasFnAttr(Attribute::NoInline); }
+  /// Return true if the call should not be inlined, either because the call
+  /// site is marked noinline or because the callee should not be inlined (see
+  /// Function::isNoInline).
+  LLVM_ABI bool isNoInline() const;
   void setIsNoInline() { addFnAttr(Attribute::NoInline); }
+
+  /// Return true if this is a call to an intrinsic with a volatile flag that
+  /// is set, e.g., a volatile memcpy.
+  LLVM_ABI bool isVolatile() const;
 
   LLVM_ABI MemoryEffects getMemoryEffects() const;
   LLVM_ABI void setMemoryEffects(MemoryEffects ME);

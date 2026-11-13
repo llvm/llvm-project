@@ -83,7 +83,7 @@ static LogicalResult
 serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
                 const spirv::SerializationOptions &options) {
   SmallVector<uint32_t, 0> binary;
-  if (failed(spirv::serialize(moduleOp, binary)))
+  if (failed(spirv::serialize(moduleOp, binary, options)))
     return failure();
 
   size_t sizeInBytes = binary.size() * sizeof(uint32_t);

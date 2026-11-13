@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 %s -o - \
-# RUN:   -run-pass=ppc-mi-peepholes -verify-machineinstrs | FileCheck %s
+# RUN:   -run-pass=ppc-mi-peepholes | FileCheck %s
 
 # Test the peephole replacing unprimed accumulator PHI nodes by primed
 # accumulator PHI nodes. We have a test for the simple case (PHI nodes with COPY

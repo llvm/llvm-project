@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++20 %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s %}
 
 struct ThisShouldBeCalled {
     ThisShouldBeCalled() {}

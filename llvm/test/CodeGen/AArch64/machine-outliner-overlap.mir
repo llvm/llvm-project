@@ -36,7 +36,6 @@
 ...
 ---
 name:           overlap
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
@@ -113,3 +112,4 @@ body:             |
     $x9 = ADDXri $x9, 16, 0
     $x9 = ADDXri $x9, 16, 0
     RET undef $x9
+...

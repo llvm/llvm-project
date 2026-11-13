@@ -143,7 +143,7 @@ body:             |
     S_NOP 0, implicit %65, implicit %66
     %67:vreg_64 = IMPLICIT_DEF
     %68:vgpr_32 = FLAT_LOAD_DWORD %67, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
-    %69:vgpr_32 = V_ADD_F32_e64 0, killed %68, 0, 1, 0, 0, implicit $mode, implicit $exec
+    %69:vgpr_32 = V_ADD_F32_e64 0, %68, 0, 1, 0, 0, implicit $mode, implicit $exec
     %70:vgpr_32 = FLAT_LOAD_DWORD %67, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     S_ENDPGM 0, implicit %69, implicit %70
 ...
@@ -287,7 +287,7 @@ body:             |
     S_NOP 0, implicit %65, implicit %66
     %67:vreg_64 = IMPLICIT_DEF
     %68:vgpr_32 = FLAT_LOAD_DWORD %67, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
-    %69:vgpr_32 = V_ADD_F32_e64 0, killed %68, 0, 1, 0, 0, implicit $mode, implicit $exec
+    %69:vgpr_32 = V_ADD_F32_e64 0, %68, 0, 1, 0, 0, implicit $mode, implicit $exec
     %70:vgpr_32 = FLAT_LOAD_DWORD %67, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     S_ENDPGM 0, implicit %69, implicit %70
 ...

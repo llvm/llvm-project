@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i32 @llvm.cttz.i32(i32, i1)

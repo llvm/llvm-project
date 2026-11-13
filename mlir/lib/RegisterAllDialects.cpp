@@ -22,7 +22,6 @@
 #include "mlir/Dialect/Arith/Transforms/BufferDeallocationOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/Transforms/BufferViewFlowOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
-#include "mlir/Dialect/Arith/Transforms/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
@@ -51,7 +50,7 @@
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Linalg/Transforms/AllInterfaces.h"
-#include "mlir/Dialect/Linalg/Transforms/RuntimeOpVerification.h"
+#include "mlir/Dialect/Linalg/Transforms/RuntimeVerifiableOpInterfaceImpl.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/MLProgram/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
@@ -62,7 +61,7 @@
 #include "mlir/Dialect/MemRef/Transforms//MemorySlotInterfacesImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/BufferViewFlowOpInterfaceImpl.h"
-#include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
+#include "mlir/Dialect/MemRef/Transforms/RuntimeVerifiableOpInterfaceImpl.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialectDecl.h"
 #include "mlir/Dialect/NVGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -89,9 +88,8 @@
 #include "mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.h"
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
-#include "mlir/Dialect/Tensor/Transforms/RuntimeOpVerification.h"
-#include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
-#include "mlir/Dialect/Tosa/IR/ShardingInterfaceImpl.h"
+#include "mlir/Dialect/Tensor/Transforms/RuntimeVerifiableOpInterfaceImpl.h"
+#include "mlir/Dialect/Tensor/Transforms/SubsetOpInterfaceImpl.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/PDLExtension/PDLExtension.h"
@@ -169,7 +167,6 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   arith::registerBufferDeallocationOpInterfaceExternalModels(registry);
   arith::registerBufferizableOpInterfaceExternalModels(registry);
   arith::registerBufferViewFlowOpInterfaceExternalModels(registry);
-  arith::registerShardingInterfaceExternalModels(registry);
   arith::registerValueBoundsOpInterfaceExternalModels(registry);
   bufferization::registerBufferizableOpInterfaceExternalModels(registry);
   bufferization::registerValueBoundsOpInterfaceExternalModels(registry);
@@ -188,8 +185,8 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   memref::registerBufferViewFlowOpInterfaceExternalModels(registry);
   memref::registerRuntimeVerifiableOpInterfaceExternalModels(registry);
   memref::registerValueBoundsOpInterfaceExternalModels(registry);
-  memref::registerDestructurableTypeExternalModels(registry);
-  memref::registerMemorySlotOpInterfaceExternalModels(registry);
+  memref::registerDestructurableTypeInterfaceExternalModels(registry);
+  memref::registerMemorySlotInterfacesExternalModels(registry);
   ml_program::registerBufferizableOpInterfaceExternalModels(registry);
   nvgpu::registerMemoryAccessOpInterfacesExternalModels(registry);
   scf::registerBufferDeallocationOpInterfaceExternalModels(registry);
@@ -204,10 +201,9 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   tensor::registerSubsetOpInterfaceExternalModels(registry);
   tensor::registerTilingInterfaceExternalModels(registry);
   tensor::registerValueBoundsOpInterfaceExternalModels(registry);
-  tosa::registerShardingInterfaceExternalModels(registry);
   vector::registerBufferizableOpInterfaceExternalModels(registry);
   vector::registerIndexedAccessOpInterfaceExternalModels(registry);
-  vector::registerMemorySlotExternalModels(registry);
+  vector::registerMemorySlotInterfacesExternalModels(registry);
   vector::registerSubsetOpInterfaceExternalModels(registry);
   vector::registerValueBoundsOpInterfaceExternalModels(registry);
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);

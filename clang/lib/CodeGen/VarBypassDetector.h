@@ -48,8 +48,8 @@ class VarBypassDetector {
   llvm::DenseMap<const Stmt *, unsigned> ToScopes;
   // Set of variables which were bypassed by some jump.
   llvm::DenseSet<const VarDecl *> Bypasses;
-  // Map from a bypassing jump (goto/switch) to the variable declarations it
-  // bypasses. Used to reinitialize those variables at the jump.
+  // Map from a bypassing jump (goto/asm goto/switch) to the variable
+  // declarations it bypasses. Used to reinitialize those variables at the jump.
   llvm::DenseMap<const Stmt *, llvm::SmallSetVector<const VarDecl *, 4>>
       BypassedVarsAtSource;
   // If true assume that all variables are being bypassed.
@@ -58,8 +58,8 @@ class VarBypassDetector {
 public:
   void Init(CodeGenModule &CGM, const Stmt *Body);
 
-  /// Returns true if the variable declaration was by bypassed by any goto or
-  /// switch statement.
+  /// Returns true if the variable declaration was bypassed by any goto, asm
+  /// goto, or switch statement.
   bool IsBypassed(const VarDecl *D) const {
     return AlwaysBypassed || Bypasses.contains(D);
   }

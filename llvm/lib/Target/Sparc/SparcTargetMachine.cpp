@@ -110,7 +110,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  auto &I = SubtargetMap[CPU + FS];
+  auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I)
     I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this);
   return I.get();
@@ -166,9 +166,6 @@ void SparcPassConfig::addPreEmitPass(){
     addPass(&BranchRelaxationPassID);
 
   addPass(createSparcDelaySlotFillerLegacyPass());
-  addPass(new SparcInsertNOPLoadLegacy());
-  addPass(new SparcDetectRoundChangeLegacy());
-  addPass(new SparcFixAllFDIVSQRTLegacy());
   addPass(new SparcErrataWorkaroundLegacy());
 }
 
