@@ -18847,6 +18847,24 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (TEPtr->UserTreeIndex)
       EntriesToOperands[TEPtr->UserTreeIndex.UserTE].push_back(TEPtr.get());
   }
+  // The scheduler moves a bundle above its scalar users in the block, so the
+  // vector value is live from the earliest such user. The operands of phis
+  // (live until the backedge) and of split nodes (built at the split node
+  // position) keep the last instruction.
+  for (const ExternalUser &EU : ExternalUses) {
+    auto *UserI = dyn_cast_if_present<Instruction>(EU.User);
+    const TreeEntry *UserTE = EU.E.UserTreeIndex.UserTE;
+    if (!UserI || isa<PHINode>(UserI) ||
+        (UserTE &&
+         (UserTE->State == TreeEntry::SplitVectorize ||
+          (UserTE->hasState() && UserTE->getOpcode() == Instruction::PHI))))
+      continue;
+    auto It = EntriesToLastInstruction.find(&EU.E);
+    if (It != EntriesToLastInstruction.end() &&
+        UserI->getParent() == It->second->getParent() &&
+        UserI->comesBefore(It->second))
+      It->second = UserI;
+  }
 
   // Cache NoCallIntrinsicOrDoesNotReturn results - the same intrinsic call may
   // be queried many times during the spill cost scan, and each computation
