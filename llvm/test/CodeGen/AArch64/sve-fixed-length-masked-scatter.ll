@@ -531,10 +531,9 @@ define void @masked_scatter_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    fcmeq v1.4h, v0.4h, #0.0
 ; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
-; CHECK-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    shl v1.2d, v1.2d, #63
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
@@ -663,8 +662,7 @@ define void @masked_scatter_v2bf16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    fcmeq v1.4s, v1.4s, #0.0
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    shl v1.2d, v1.2d, #63
+; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]

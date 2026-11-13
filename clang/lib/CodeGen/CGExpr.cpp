@@ -4723,8 +4723,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     }
     if (NoMerge)
       TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
   }
 
@@ -4744,10 +4742,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
 
   if (InNoMergeAttributedStmt)
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-  if (TrapIntrinsic->doesNotThrow())
-    TrapCall->setDoesNotThrow();
   if (TrapIntrinsic->doesNotReturn()) {
-    TrapCall->setDoesNotReturn();
     Builder.CreateUnreachable();
     if (EnsureInsertPoint)
       EmitBlock(createBasicBlock());
@@ -4758,10 +4753,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
 }
 
 void CodeGenFunction::EmitTrapCallAndMakeUnreachable() {
-  llvm::CallInst *TrapCall =
-      EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
-  TrapCall->setDoesNotReturn();
-  TrapCall->setDoesNotThrow();
+  EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
   if (HaveInsertPoint()) {
     Builder.CreateUnreachable();
     Builder.ClearInsertionPoint();

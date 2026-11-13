@@ -58,8 +58,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 static cl::OptionCategory LTOCategory("LTO Options");
 
 static cl::opt<char>

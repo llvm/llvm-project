@@ -103,9 +103,6 @@ static std::mutex TempFilesMutex;
 /// Temporary files to be cleaned up.
 static std::list<SmallString<128>> TempFiles;
 
-/// Codegen flags for LTO backend.
-static codegen::RegisterCodeGenFlags CodeGenFlags;
-
 namespace {
 // Must not overlap with llvm::opt::DriverFlag.
 enum WrapperFlags { WrapperOnlyOption = (1 << 4) };
