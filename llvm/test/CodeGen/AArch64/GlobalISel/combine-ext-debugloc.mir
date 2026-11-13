@@ -40,7 +40,6 @@
 ...
 ---
 name:            main
-tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -54,6 +53,7 @@ registers:
   - { id: 9, class: _, preferred-register: '' }
 body:             |
   bb.1.entry:
+    liveins: $x0
     %0:_(i8) = G_IMPLICIT_DEF
     %4:_(p0) = COPY $x0
     %10:_(p0) = G_IMPLICIT_DEF debug-location !DILocation(line: 0, scope: !4)

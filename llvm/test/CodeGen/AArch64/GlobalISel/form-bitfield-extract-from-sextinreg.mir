@@ -149,3 +149,4 @@ body:             |
     %mul:_(i32) = G_MUL %shift, %sext_inreg
     $w0 = COPY %mul
     RET_ReallyLR implicit $w0
+...

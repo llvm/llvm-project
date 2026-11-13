@@ -296,3 +296,4 @@ body:             |
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(i64)
     $x0 = COPY %ptr_add(p0)
     RET_ReallyLR implicit $x0
+...

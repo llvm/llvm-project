@@ -377,6 +377,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### New Compiler Flags
 
+- Added `-fpch-base-dir-is-cwd` to serialize precompiled header input paths
+  relative to the current working directory. Paths resolve against the
+  consumer's working directory when loading the PCH, allowing a build tree
+  to be moved without rewriting paths. Paths outside the working directory
+  remain absolute. This option cannot be combined with `--relocatable-pch`.
+
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
   built module out of date when a header is added to a directory it enumerated,
   such as an umbrella directory or the directory of an umbrella header, after it
@@ -819,6 +825,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   the no- prefix in the diagnostic and spelling suggestion.
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
+
+- `-Wunsequenced` now diagnoses unsequenced volatile accesses.
 
 ### Improvements to Clang's time-trace
 
