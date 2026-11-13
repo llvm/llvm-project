@@ -7197,11 +7197,13 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
   Builder.CreateCondBr(IsFinalRow, Result->getExit(), Latch);
   // Match the retained outer bound to the count used in the total product.
   cast<CmpInst>(&Result->getCond()->front())->setOperand(1, TripCounts.front());
+
   // Trip counts are unsigned and may exceed the IV's signed range.
-  // FIXME: Preserve nsw when the trip count is known to fit the signed range.
+  // TODO: Preserve nsw when the trip count is known to fit the signed range.
   for (auto [IV, TripCount] : zip(Plan.IndVars, TripCounts))
     if (!isa<ConstantInt>(TripCount))
       cast<BinaryOperator>(IV->getIncomingValue(1))->setHasNoSignedWrap(false);
+
   Plan.IndVars.front()->setIncomingValue(0, OuterBegin);
   Plan.IndVars.front()->setIncomingBlock(0, Entry);
 }

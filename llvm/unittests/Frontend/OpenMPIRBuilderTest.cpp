@@ -8962,13 +8962,10 @@ static void runVirtualCollapseCounts(
     std::array<PHINode *, 2> IVs{cast<PHINode>(Loops[0]->getIndVar()),
                                  cast<PHINode>(Loops[1]->getIndVar())};
     auto *OuterCmp = cast<CmpInst>(&Loops[0]->getCond()->front());
-    BasicBlock *Compute = Bits == 64 ? Entry : Loops[0]->getPreheader();
+    BasicBlock *Compute = Loops[0]->getPreheader();
     B.restoreIP(Loops[0]->getAfterIP());
     B.CreateRetVoid();
-    auto *Collapsed =
-        OMP.collapseLoops({}, Loops,
-                          Bits == 64 ? Entry->getTerminator()->getIterator()
-                                     : OpenMPIRBuilder::InsertPointTy());
+    auto *Collapsed = OMP.collapseLoops({}, Loops, {});
     auto *Product = dyn_cast<BinaryOperator>(Collapsed->getTripCount());
     ASSERT_THAT_EXPECTED(OMP.applyWorkshareLoop({}, Collapsed, Entry->begin(),
                                                 false,
@@ -9269,9 +9266,7 @@ TEST_P(OpenMPIRBuilderTestWithIVBits, VirtualCollapseAssertOK) {
   // New executor instructions use the collapse location, not the source loops'.
   DebugLoc CollapseDL =
       DILocation::get(Ctx, DL.getLine() + 1, DL.getCol(), DL.getScope());
-  auto *Collapsed = OMP.collapseLoops(
-      CollapseDL, {Outer, Inner},
-      Bits == 64 ? ComputeIP : OpenMPIRBuilder::InsertPointTy());
+  auto *Collapsed = OMP.collapseLoops(CollapseDL, {Outer, Inner}, ComputeIP);
   // MLIR connects block-argument inputs after translating the loop.
   Phi->addIncoming(Incoming, BB);
   EXPECT_FALSE(OuterNext->hasNoSignedWrap());
@@ -9282,8 +9277,7 @@ TEST_P(OpenMPIRBuilderTestWithIVBits, VirtualCollapseAssertOK) {
   EXPECT_EQ(Frozen->getOperand(0), Phi);
   EXPECT_TRUE(Phi->hasOneUse());
   EXPECT_EQ(Product->getOperand(1), Counts[1]);
-  EXPECT_EQ(Product->getParent(),
-            Bits == 64 ? Merge : Collapsed->getPreheader());
+  EXPECT_EQ(Product->getParent(), Merge);
   EXPECT_EQ(Frozen->getParent(), Product->getParent());
   EXPECT_EQ(ComputeIP->getDebugLoc(), DL);
   EXPECT_EQ(Product->getDebugLoc(), CollapseDL);
