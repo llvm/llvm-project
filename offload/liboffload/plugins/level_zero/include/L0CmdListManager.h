@@ -22,7 +22,7 @@
 #include <atomic>
 #include <mutex>
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 /// Manager for Level Zero command list operations.
 /// Encapsulates all zeCommandListAppend* calls with thread safety.
@@ -211,5 +211,5 @@ public:
   }
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CMDLISTMANAGER_H

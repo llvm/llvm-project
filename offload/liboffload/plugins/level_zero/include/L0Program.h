@@ -15,7 +15,7 @@
 
 #include "L0Kernel.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 class L0DeviceTy;
 
@@ -143,6 +143,6 @@ protected:
   bool isExportedSymbol(uint32_t Flags) override;
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PROGRAM_H

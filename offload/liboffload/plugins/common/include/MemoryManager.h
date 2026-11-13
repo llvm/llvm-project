@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
-#define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
+#ifndef OFFLOAD_PLUGIN_COMMON_MEMORYMANAGER_H
+#define OFFLOAD_PLUGIN_COMMON_MEMORYMANAGER_H
 
 #include <algorithm>
 #include <cassert>
@@ -438,4 +438,4 @@ constexpr const int MemoryManagerTy::NumBuckets;
 
 } // namespace llvm
 
-#endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
+#endif // OFFLOAD_PLUGIN_COMMON_MEMORYMANAGER_H

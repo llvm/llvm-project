@@ -81,8 +81,7 @@ using namespace llvm::offload::debug;
 using namespace error;
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 /// Forward declarations for all specialized data structures.
@@ -133,8 +132,7 @@ getOrNullProfilerSpecificData(AsyncInfoWrapperTy &AsyncInfoWrapper) {
 }
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 static double setTicksToTime() {
@@ -176,8 +174,7 @@ void setOmptAsyncCopyProfile(bool Enable) {}
 void setGlobalOmptKernelProfile(void *Device, int Enable) {}
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 namespace hsa_utils {
@@ -2590,9 +2587,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Load the grid values depending on the wavefront.
     if (WavefrontSize == 32)
-      GridValues = getAMDGPUGridValues<32>();
+      GridValues = llvm::omp::getAMDGPUGridValues<32>();
     else if (WavefrontSize == 64)
-      GridValues = getAMDGPUGridValues<64>();
+      GridValues = llvm::omp::getAMDGPUGridValues<64>();
     else
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "unexpected AMDGPU wavefront %d", WavefrontSize);
@@ -4969,12 +4966,11 @@ static Error timeKernelInNsAsync(void *Data) {
 }
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 extern "C" {
-llvm::omp::target::plugin::GenericPluginTy *createPlugin_amdgpu() {
-  return new llvm::omp::target::plugin::AMDGPUPluginTy();
+llvm::offload::plugin::GenericPluginTy *createPlugin_amdgpu() {
+  return new llvm::offload::plugin::AMDGPUPluginTy();
 }
 }

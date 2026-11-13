@@ -14,7 +14,7 @@
 #include "L0Device.h"
 #include "L0Plugin.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 using namespace error;
 
@@ -129,4 +129,4 @@ LevelZeroPluginContextTy::getAllocInfo(const void *Ptr) {
                        "pointer is not a known allocation in this context");
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

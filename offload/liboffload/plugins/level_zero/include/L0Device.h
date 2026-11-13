@@ -23,7 +23,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 class LevelZeroPluginTy;
 
@@ -157,7 +157,7 @@ public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0DriverTy &Driver,
              const std::string_view zeId, int32_t ComputeIndex)
-      : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, llvm::omp::SPIRVGridValues),
         L0Driver(Driver), zeDevice(zeDevice), zeId(zeId),
         ComputeIndex(ComputeIndex) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
@@ -606,5 +606,5 @@ public:
   Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override;
 };
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEVICE_H
