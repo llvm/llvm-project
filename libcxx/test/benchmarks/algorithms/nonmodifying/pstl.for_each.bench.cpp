@@ -12,9 +12,9 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstdint>
 #include <cmath>
 #include <numeric>
+#include <forward_list>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -33,12 +33,12 @@ int main(int argc, char** argv) {
   // A function that does significant work per element
   auto expensive = [](double& x) { x = std::pow(std::exp(std::sqrt(std::sin(std::cos(x)) + 1.0)), 1.7); };
 
-  auto bm = [](std::string name, auto&& policy, auto&& func) {
+  auto bm = [](auto cnt, std::string name, auto&& policy, auto&& func) {
     benchmark::RegisterBenchmark(
         name,
         [&policy, &func](auto& st) {
           std::size_t size = st.range(0);
-          std::vector<double> c(size);
+          decltype(cnt) c(size);
           std::iota(c.begin(), c.end(), 1.);
           for ([[maybe_unused]] auto _ : st) {
             benchmark::ClobberMemory();
@@ -51,14 +51,24 @@ int main(int argc, char** argv) {
         ->Arg(1 << 26) // 67'108'864
         ->UseRealTime();
   };
+
+  auto vec  = std::vector<double>{};
+  auto list = std::forward_list<double>{};
+
 #if defined(TEST_PSTL_ENABLE_SEQ_BASELINES)
-  bm("std::for_each(std::execution::seq, vector<double>) (minimal)", std::execution::seq, minimal);
-  bm("std::for_each(std::execution::seq, vector<double>) (cheap)", std::execution::seq, cheap);
-  bm("std::for_each(std::execution::seq, vector<double>) (expensive)", std::execution::seq, expensive);
+  bm(vec, "std::for_each(std::execution::seq, vector<double>) (minimal)", std::execution::seq, minimal);
+  bm(vec, "std::for_each(std::execution::seq, vector<double>) (cheap)", std::execution::seq, cheap);
+  bm(vec, "std::for_each(std::execution::seq, vector<double>) (expensive)", std::execution::seq, expensive);
+  bm(list, "std::for_each(std::execution::seq, forward_list<double>) (minimal)", std::execution::seq, minimal);
+  bm(list, "std::for_each(std::execution::seq, forward_list<double>) (cheap)", std::execution::seq, cheap);
+  bm(list, "std::for_each(std::execution::seq, forward_list<double>) (expensive)", std::execution::seq, expensive);
 #endif
-  bm("std::for_each(std::execution::par, vector<double>) (minimal)", std::execution::par, minimal);
-  bm("std::for_each(std::execution::par, vector<double>) (cheap)", std::execution::par, cheap);
-  bm("std::for_each(std::execution::par, vector<double>) (expensive)", std::execution::par, expensive);
+  bm(vec, "std::for_each(std::execution::par, vector<double>) (minimal)", std::execution::par, minimal);
+  bm(vec, "std::for_each(std::execution::par, vector<double>) (cheap)", std::execution::par, cheap);
+  bm(vec, "std::for_each(std::execution::par, vector<double>) (expensive)", std::execution::par, expensive);
+  bm(list, "std::for_each(std::execution::par, forward_list<double>) (minimal)", std::execution::par, minimal);
+  bm(list, "std::for_each(std::execution::par, forward_list<double>) (cheap)", std::execution::par, cheap);
+  bm(list, "std::for_each(std::execution::par, forward_list<double>) (expensive)", std::execution::par, expensive);
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
