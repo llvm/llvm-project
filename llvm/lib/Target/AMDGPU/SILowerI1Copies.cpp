@@ -646,8 +646,28 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
         LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs);
 
         SSAUpdater.calculate();
+
+        // The merge clobbers SCC, so save and restore it if it is live here,
+        // e.g. if the copy is between an SCC def and a terminator that uses
+        // it.
+        bool SCCLive = MBB.computeRegisterLiveness(
+                           &TII->getRegisterInfo(), AMDGPU::SCC, MI,
+                           std::numeric_limits<unsigned>::max()) !=
+                       MachineBasicBlock::LQR_Dead;
+        Register SavedSCC;
+        if (SCCLive) {
+          SavedSCC = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_CSELECT_B32), SavedSCC)
+              .addImm(-1)
+              .addImm(0);
+        }
         buildMergeLaneMasks(MBB, MI, DL, DstReg,
                             SSAUpdater.getValueInMiddleOfBlock(&MBB), SrcReg);
+        if (SCCLive) {
+          BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_CMP_LG_U32))
+              .addReg(SavedSCC)
+              .addImm(0);
+        }
         DeadCopies.push_back(&MI);
       }
     }
