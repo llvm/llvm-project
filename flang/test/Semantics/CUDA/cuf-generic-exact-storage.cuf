@@ -1,0 +1,80 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/exact.cuf -o - | FileCheck %s --check-prefix=EXACT
+! RUN: not bbc -fcuda -emit-hlfir %t/mismatch.cuf -o - 2>&1 | FileCheck %s --check-prefix=MISMATCH
+! RUN: bbc -fcuda -emit-hlfir %t/rank.cuf -o - | FileCheck %s --check-prefix=RANK
+
+!--- exact.cuf
+attributes(global) subroutine shared_caller()
+  integer, shared :: a
+  interface choose
+    attributes(device) subroutine shared_specific(x)
+      integer, shared :: x
+    end subroutine
+  end interface
+  ! EXACT-LABEL: func.func @_QPshared_caller
+  ! EXACT-COUNT-2: fir.call @_QPshared_specific
+  call choose(a)
+  call shared_specific(a)
+end subroutine
+
+module constants
+  integer, constant :: a
+end module
+
+attributes(device) subroutine constant_caller()
+  use constants
+  interface choose
+    attributes(device) subroutine constant_specific(x)
+      integer, constant :: x
+    end subroutine
+  end interface
+  ! EXACT-LABEL: func.func @_QPconstant_caller
+  ! EXACT-COUNT-2: fir.call @_QPconstant_specific
+  call choose(a)
+  call constant_specific(a)
+end subroutine
+
+!--- mismatch.cuf
+! Argument checking already rejects this association; the generic reference
+! must stay rejected even though exact SHARED associations are accepted.
+attributes(device) subroutine shared_requirement(a)
+  integer, device :: a
+  interface choose
+    attributes(device) subroutine shared_specific(x)
+      integer, shared :: x
+    end subroutine
+  end interface
+  ! MISMATCH: No specific subroutine of generic 'choose' matches the actual arguments
+  call choose(a)
+end subroutine
+
+!--- rank.cuf
+! An exact SHARED or CONSTANT association keeps its infinite table distance,
+! so the DEVICE specific, whose distance is finite, is still preferred.
+module rank_constants
+  integer, constant :: c
+end module
+
+attributes(global) subroutine rank_caller()
+  use rank_constants
+  integer, shared :: s
+  interface choose_shared
+    attributes(device) subroutine shared_specific(x)
+      integer, shared :: x
+    end subroutine
+    attributes(device) subroutine device_specific(x)
+      integer, device :: x
+    end subroutine
+  end interface
+  interface choose_constant
+    attributes(device) subroutine constant_specific(x)
+      integer, constant :: x
+    end subroutine
+    procedure :: device_specific
+  end interface
+  ! RANK-LABEL: func.func @_QPrank_caller
+  ! RANK: fir.call @_QPdevice_specific
+  ! RANK: fir.call @_QPdevice_specific
+  call choose_shared(s)
+  call choose_constant(c)
+end subroutine

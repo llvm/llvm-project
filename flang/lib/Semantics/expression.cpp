@@ -3269,6 +3269,12 @@ static std::optional<int> GetMatchingDistance(
         dummyDataAttr == common::CUDADataAttr::Device && !actualDataAttr) {
       return true;
     }
+    // Exact SHARED and CONSTANT associations.
+    if (dummyDataAttr && dummyDataAttr == actualDataAttr &&
+        (*dummyDataAttr == common::CUDADataAttr::Shared ||
+            *dummyDataAttr == common::CUDADataAttr::Constant)) {
+      return true;
+    }
     return false;
   }};
 
