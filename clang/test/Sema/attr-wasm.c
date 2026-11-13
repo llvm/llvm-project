@@ -29,9 +29,9 @@ void module_z(void) __attribute__((import_module("bar"))); //expected-warning {{
 void both(void) __attribute__((import_name("foo"), import_module("bar")));
 
 // export_name tests
-void export_a(void) __attribute__((export_name)); //expected-error {{'export_name' attribute takes one argument}}
-extern int export_a_var __attribute__((export_name)); //expected-error {{'export_name' attribute takes one argument}}
-void export_b(void) __attribute__((export_name("foo", "bar"))); //expected-error {{'export_name' attribute takes one argument}}
+void export_a(void) __attribute__((export_name));
+extern int export_a_var __attribute__((export_name));
+void export_b(void) __attribute__((export_name("foo", "bar"))); //expected-error {{'export_name' attribute takes no more than 1 argument}}
 
 void export_c(void) __attribute__((export_name("foo"))); //expected-note {{previous attribute is here}}
 void export_c(void) __attribute__((export_name("bar"))); //expected-warning {{export name (bar) does not match the export name (foo) of the previous declaration}}
