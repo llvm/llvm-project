@@ -11,6 +11,7 @@ Checks: [
   '-bugprone-missing-end-comparison',
   '-bugprone-narrowing-conversions',
   '-bugprone-signed-bitwise',
+  '-bugprone-unchecked-optional-access',
   '-bugprone-unused-return-value',
   'cppcoreguidelines-init-variables',
   'cppcoreguidelines-missing-std-forward',

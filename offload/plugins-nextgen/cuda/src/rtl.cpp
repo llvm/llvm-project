@@ -597,7 +597,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, ol_alloc_type_t Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment = 0) override {
     if (Size == 0)
       return nullptr;
@@ -1415,7 +1415,7 @@ private:
     // Allocate a buffer to store all of the known constructor / destructor
     // functions in so we can iterate them on the device.
     auto BufferOrErr =
-        allocate(Funcs.size() * sizeof(void *), nullptr, OL_ALLOC_TYPE_DEVICE);
+        allocate(Funcs.size() * sizeof(void *), OL_ALLOC_TYPE_DEVICE);
     if (!BufferOrErr)
       return BufferOrErr.takeError();
 

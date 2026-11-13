@@ -524,7 +524,7 @@ body:             |
     %16:fpr32 = COPY %13.ssub
     STRSui %16, %0, 0 :: (store (s32) into %ir.hist)
     RET_ReallyLR
-
+...
 ---
 name:            insert_vec_from_gpr64_zero_high
 registers:

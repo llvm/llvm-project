@@ -74,7 +74,7 @@ public:
 
   /// Hook that is called when memory is allocated on the device.
   virtual void handleDataAlloc(uint64_t StartNanos, uint64_t EndNanos,
-                               void *HostPtr, uint64_t Size, void *Data) {}
+                               uint64_t Size, void *Data) {}
 
   /// Hook that is called when memory is freed on the device.
   virtual void handleDataDelete(uint64_t StartNanos, uint64_t EndNanos,
@@ -152,14 +152,14 @@ public:
 
   /// Returns an RAII style timer, which handles data allocation timing.
   [[nodiscard]] auto getScopedDataAllocTimer(GenericDeviceTy *Dev,
-                                             void *HostPtr, uint64_t Size,
+                                             uint64_t Size,
                                              void *ProfData = nullptr) {
     auto F = [](GenericProfilerTy *P, auto... args) {
       assert(P && "P was null");
       P->handleDataAlloc(args...);
     };
-    return ProfTimerTy<decltype(F), void *, uint64_t, void *>(
-        std::move(F), this, Dev, HostPtr, Size, ProfData);
+    return ProfTimerTy<decltype(F), uint64_t, void *>(std::move(F), this, Dev,
+                                                      Size, ProfData);
   }
 
   /// Returns an RAII style timer, which handles data deletion timing.

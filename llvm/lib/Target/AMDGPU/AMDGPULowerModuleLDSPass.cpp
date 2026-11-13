@@ -265,8 +265,7 @@ class AMDGPULowerModuleLDS {
     Function *Decl = Intrinsic::getOrInsertDeclaration(
         Func->getParent(), Intrinsic::donothing, {});
 
-    Value *UseInstance[1] = {
-        Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
+    Value *UseInstance[] = {SGV};
 
     Builder.CreateCall(
         Decl, {}, {OperandBundleDefT<Value *>("ExplicitUse", UseInstance)});
@@ -383,7 +382,6 @@ public:
 
     LLVMContext &Ctx = M.getContext();
     IRBuilder<> Builder(M);
-    Builder.disableGEPCanonicalization();
     Type *I32 = Type::getInt32Ty(Ctx);
 
     for (size_t Index = 0; Index < ModuleScopeVariables.size(); Index++) {
@@ -838,7 +836,6 @@ public:
     if (!KernelsThatIndirectlyAllocateDynamicLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
       IRBuilder<> Builder(M);
-      Builder.disableGEPCanonicalization();
       Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
 
       std::vector<Constant *> newDynamicLDS;
@@ -1121,8 +1118,6 @@ public:
                                       KernelsThatIndirectlyAllocateDynamicLDS);
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-      IRBuilder<> Builder(M);
-
       // The order must be consistent between lookup table and accesses to
       // lookup table
       auto TableLookupVariablesOrdered =

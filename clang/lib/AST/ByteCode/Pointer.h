@@ -49,6 +49,9 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isConstInMutable() const {
+    return !isRoot() && getInlineDesc()->IsConstInMutable;
+  }
   bool isExtern() const { return Pointee && Pointee->isExtern(); }
   bool isVolatile() const {
     return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
@@ -57,8 +60,6 @@ struct PtrView {
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
   const Block *block() const { return Pointee; }
-
-  unsigned getEvalID() { return Pointee->getEvalID(); }
 
   bool isRoot() const { return Base == 0; }
 
@@ -970,11 +971,6 @@ public:
     if (!isBlockPointer())
       return false;
     return view().isConst();
-  }
-  bool isConstInMutable() const {
-    if (!isBlockPointer())
-      return false;
-    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
   }
 
   /// Checks if an object or a subfield is volatile.
