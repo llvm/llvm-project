@@ -1213,6 +1213,123 @@ void ScopedAliasMetadataDeepCloner::remap(Function::iterator FStart,
   }
 }
 
+namespace {
+/// Utility for cloning !tbaa and !tbaa.struct metadata that refers to distinct
+/// TBAA nodes. A distinct TBAA root is a type hierarchy of its own, so each
+/// inlined copy of a function gets its own clone of it, and accesses from
+/// different copies are in different type hierarchies. TBAA nodes that do not
+/// refer to a distinct node, such as a uniqued root shared by a whole
+/// language, are left as they are.
+class TBAAMetadataDeepCloner {
+  using MetadataMap = DenseMap<const MDNode *, TrackingMDNodeRef>;
+  /// The nodes to clone: every distinct node reachable from the function's
+  /// TBAA metadata, and every reachable node that refers to one of them.
+  SetVector<const MDTuple *> MD;
+  MetadataMap MDMap;
+
+public:
+  TBAAMetadataDeepCloner(const Function *F);
+
+  /// Create a new clone of the TBAA metadata, which will be used by
+  /// subsequent remap() calls.
+  void clone();
+
+  /// Remap instructions in the given range from the original to the cloned
+  /// metadata.
+  void remap(Function::iterator FStart, Function::iterator FEnd);
+};
+} // namespace
+
+TBAAMetadataDeepCloner::TBAAMetadataDeepCloner(const Function *F) {
+  SetVector<const MDTuple *> Reachable;
+  for (const BasicBlock &BB : *F) {
+    for (const Instruction &I : BB) {
+      if (const auto *M =
+              dyn_cast_or_null<MDTuple>(I.getMetadata(LLVMContext::MD_tbaa)))
+        Reachable.insert(M);
+      if (const auto *M = dyn_cast_or_null<MDTuple>(
+              I.getMetadata(LLVMContext::MD_tbaa_struct)))
+        Reachable.insert(M);
+    }
+  }
+
+  // Walk the reachable graph, recording the users of each node and the
+  // distinct nodes.
+  DenseMap<const MDTuple *, SmallVector<const MDTuple *, 2>> Users;
+  SmallVector<const MDTuple *, 8> Worklist;
+  for (unsigned Idx = 0; Idx < Reachable.size(); ++Idx) {
+    const MDTuple *M = Reachable[Idx];
+    if (M->isDistinct())
+      Worklist.push_back(M);
+    for (const Metadata *Op : M->operands())
+      if (const auto *OpMD = dyn_cast_or_null<MDTuple>(Op)) {
+        Reachable.insert(OpMD);
+        Users[OpMD].push_back(M);
+      }
+  }
+
+  // Every node that refers to a cloned node has to be cloned too.
+  while (!Worklist.empty()) {
+    const MDTuple *M = Worklist.pop_back_val();
+    if (!MD.insert(M))
+      continue;
+    auto It = Users.find(M);
+    if (It != Users.end())
+      append_range(Worklist, It->second);
+  }
+}
+
+void TBAAMetadataDeepCloner::clone() {
+  assert(MDMap.empty() && "clone() already called ?");
+
+  SmallVector<TempMDTuple, 16> DummyNodes;
+  for (const MDTuple *I : MD) {
+    DummyNodes.push_back(MDTuple::getTemporary(I->getContext(), {}));
+    MDMap[I].reset(DummyNodes.back().get());
+  }
+
+  // Create new metadata nodes to replace the dummy nodes, replacing old
+  // metadata references with either a dummy node or an already-created new
+  // node. A distinct node must stay distinct: a uniqued clone of a root would
+  // be shared by every copy inlined from the same function.
+  SmallVector<Metadata *, 4> NewOps;
+  for (const MDTuple *I : MD) {
+    for (const Metadata *Op : I->operands()) {
+      auto It = MDMap.end();
+      if (const auto *M = dyn_cast_or_null<MDNode>(Op))
+        It = MDMap.find(M);
+      if (It != MDMap.end())
+        NewOps.push_back(It->second);
+      else
+        NewOps.push_back(const_cast<Metadata *>(Op));
+    }
+
+    MDNode *NewM = I->isDistinct()
+                       ? MDNode::getDistinct(I->getContext(), NewOps)
+                       : MDNode::get(I->getContext(), NewOps);
+    MDTuple *TempM = cast<MDTuple>(MDMap[I]);
+    assert(TempM->isTemporary() && "Expected temporary node");
+
+    TempM->replaceAllUsesWith(NewM);
+    NewOps.clear();
+  }
+}
+
+void TBAAMetadataDeepCloner::remap(Function::iterator FStart,
+                                   Function::iterator FEnd) {
+  if (MDMap.empty())
+    return; // Nothing to do.
+
+  for (BasicBlock &BB : make_range(FStart, FEnd)) {
+    for (Instruction &I : BB) {
+      for (unsigned Kind : {LLVMContext::MD_tbaa, LLVMContext::MD_tbaa_struct})
+        if (MDNode *M = I.getMetadata(Kind))
+          if (MDNode *MNew = MDMap.lookup(M))
+            I.setMetadata(Kind, MNew);
+    }
+  }
+}
+
 /// If the inlined function has noalias arguments,
 /// then add new alias scopes for each noalias argument, tag the mapped noalias
 /// parameters with noalias metadata specifying the new scope, and tag all
@@ -2797,6 +2914,9 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // the function, so that we do not get in trouble when inlining caller ==
     // callee.
     ScopedAliasMetadataDeepCloner SAMetadataCloner(CB.getCalledFunction());
+    // Likewise, each inlined copy gets its own clone of the TBAA metadata
+    // that refers to distinct TBAA nodes.
+    TBAAMetadataDeepCloner TBAAMetadataCloner(CB.getCalledFunction());
 
     auto &DL = Caller->getDataLayout();
 
@@ -2939,6 +3059,10 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // Now clone the inlined noalias scope metadata.
     SAMetadataCloner.clone();
     SAMetadataCloner.remap(FirstNewBlock, Caller->end());
+
+    // Now clone the inlined TBAA metadata that refers to distinct nodes.
+    TBAAMetadataCloner.clone();
+    TBAAMetadataCloner.remap(FirstNewBlock, Caller->end());
 
     // Add noalias metadata if necessary.
     AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo);

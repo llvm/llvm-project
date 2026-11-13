@@ -7544,6 +7544,19 @@ nodes with different roots have an unknown aliasing relationship, and LLVM
 conservatively infers `MayAlias` between them.  The rules mentioned in
 this section only pertain to TBAA nodes living under the same root.
 
+Two roots are the same root only if they are the same `MDNode`.  Uniqued
+roots with the same `MDString` operand are one node, so a type hierarchy
+with a named uniqued root, such as `!{!"Simple C++ TBAA"}`, is shared by
+all functions that use that name.  A `distinct` root is a root of its own,
+even if another root has the same operand.  When a function is inlined,
+each inlined copy gets a clone of every `distinct` node reachable from its
+`!tbaa` and `!tbaa.struct` metadata, together with the nodes that refer to
+them.  Accesses from different inlined copies of the function then belong
+to different type hierarchies, and LLVM infers `MayAlias` between them.
+Other transformations that duplicate code within a function, such as loop
+unrolling, do not clone TBAA metadata, and the copies they create share
+the root.
+
 (tbaa_node_semantics)=
 
 ##### Semantics
