@@ -33,7 +33,6 @@ public:
   static char ID;
   SystemZShortenInstLegacy();
 
-  bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();

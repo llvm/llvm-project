@@ -193,6 +193,7 @@ private:
   selectVOP3BMods(MachineOperand &Root) const;
 
   ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3NoOpSelMods(MachineOperand &Root) const;
 
   std::pair<Register, unsigned>
   selectVOP3PModsImpl(Register RootReg, const MachineRegisterInfo &MRI,

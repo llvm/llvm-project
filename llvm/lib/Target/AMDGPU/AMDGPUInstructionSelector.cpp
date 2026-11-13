@@ -4943,6 +4943,14 @@ AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
   }};
 }
 
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3NoOpSelMods(MachineOperand &Root) const {
+  Register Unused;
+  if (isExtractHiElt(*MRI, Root.getReg(), Unused))
+    return {};
+  return selectVOP3NoMods(Root);
+}
+
 enum class SrcStatus {
   IS_SAME,
   IS_UPPER_HALF,

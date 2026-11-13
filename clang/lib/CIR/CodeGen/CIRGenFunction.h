@@ -2468,6 +2468,11 @@ public:
   LValue emitLValueForLambdaField(const FieldDecl *field,
                                   mlir::Value thisValue);
 
+  void emitLambdaVLACapture(const VariableArrayType *vat, LValue lv) {
+    mlir::Value size = vlaSizeMap[vat->getSizeExpr()];
+    emitStoreThroughLValue(RValue::get(size), lv);
+  }
+
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
   /// stored in the reference.

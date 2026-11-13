@@ -7,7 +7,6 @@
 
 # CHECK-LABEL: name: inc_update_iterator_test
 name:            inc_update_iterator_test
-tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: gpr32 }
@@ -22,6 +21,7 @@ registers:
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
+    liveins: $d0, $w0, $w1, $w2
 
     %3 = COPY $w2
     %2 = COPY $w1

@@ -5583,7 +5583,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (!MRI.isSSA() && MI.isCopy())
     return verifyCopy(MI, MRI, ErrInfo);
 
-  if (SIInstrInfo::isGenericOpcode(Opcode))
+  if (SIInstrInfo::isGenericOpcode(Opcode) && !MI.isInlineAsm())
     return true;
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
@@ -6311,11 +6311,11 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (const MachineOperand *CPol = getNamedOperand(MI, AMDGPU::OpName::cpol)) {
     if (CPol->getImm() & AMDGPU::CPol::SCAL) {
       if (!ST.hasScaleOffset()) {
-        ErrInfo = "Subtarget does not support offset scaling";
+        ErrInfo = "subtarget does not support offset scaling";
         return false;
       }
       if (!AMDGPU::supportsScaleOffset(*this, MI.getOpcode())) {
-        ErrInfo = "Instruction does not support offset scaling";
+        ErrInfo = "instruction does not support offset scaling";
         return false;
       }
     }
@@ -8285,16 +8285,8 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
   const TargetRegisterClass *CurrSRC =
       RI.getSubRegisterClass(CurrRC, Op.getSubReg());
   if (RI.getMatchingSuperRegClass(ExpectedRC, CurrSRC, AMDGPU::lo16)) {
-    const DebugLoc &DL = MI.getDebugLoc();
-    Register NewDstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-    BuildMI(*MBB, MI, DL, get(AMDGPU::IMPLICIT_DEF), Undef);
-    BuildMI(*MBB, MI, DL, get(AMDGPU::REG_SEQUENCE), NewDstReg)
-        .addReg(Op.getReg(), {}, Op.getSubReg())
-        .addImm(AMDGPU::lo16)
-        .addReg(Undef)
-        .addImm(AMDGPU::hi16);
-    Op.setReg(NewDstReg);
+    Op.setReg(buildVGPR32FromLo16(*MBB, MI, MI.getDebugLoc(), Op.getReg(),
+                                  Op.getSubReg()));
     Op.setSubReg(AMDGPU::NoSubRegister);
   }
 }
@@ -8302,6 +8294,22 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
                                           MachineRegisterInfo &MRI) const {
   for (unsigned OpIdx = 0; OpIdx < MI.getNumExplicitOperands(); OpIdx++)
     legalizeOperandsVALUt16(MI, OpIdx, MRI);
+}
+
+Register SIInstrInfo::buildVGPR32FromLo16(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator I,
+                                          const DebugLoc &DL, Register Src,
+                                          unsigned SrcSubReg) const {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  Register Dst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+  BuildMI(MBB, I, DL, get(AMDGPU::IMPLICIT_DEF), Undef);
+  BuildMI(MBB, I, DL, get(AMDGPU::REG_SEQUENCE), Dst)
+      .addReg(Src, {}, SrcSubReg)
+      .addImm(AMDGPU::lo16)
+      .addReg(Undef)
+      .addImm(AMDGPU::hi16);
+  return Dst;
 }
 
 void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
@@ -9002,16 +9010,9 @@ void SIInstrInfo::moveToVALUImpl(
         RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
       const TargetRegisterClass *SrcRegRC = getOpRegClass(Inst, 1);
       if (RI.getMatchingSuperRegClass(NewDstRC, SrcRegRC, AMDGPU::lo16)) {
-        Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
-        Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(AMDGPU::IMPLICIT_DEF), Undef);
-        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-                get(AMDGPU::REG_SEQUENCE), NewDstReg)
-            .addReg(Inst.getOperand(1).getReg())
-            .addImm(AMDGPU::lo16)
-            .addReg(Undef)
-            .addImm(AMDGPU::hi16);
+        Register NewDstReg = buildVGPR32FromLo16(
+            *Inst.getParent(), Inst, Inst.getDebugLoc(),
+            Inst.getOperand(1).getReg(), AMDGPU::NoSubRegister);
         Inst.eraseFromParent();
         MRI.replaceRegWith(DstReg, NewDstReg);
         addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
