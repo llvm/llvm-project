@@ -4528,6 +4528,110 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// VecFCmpOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
+  // Do not fold when fenv is present.
+  // TODO(cir): This is overly conservative. We could fold comparisons as long
+  //            as we can prove that the operation wouldn't raise exceptions or
+  //            when the fenv attribute does not require strict exception
+  //            semantics.
+  if (getFenvAttr())
+    return {};
+
+  cir::FCmpOpKind kind = getKind();
+  if (kind == cir::FCmpOpKind::_true || kind == cir::FCmpOpKind::_false) {
+    mlir::Attribute elt =
+        cir::IntAttr::get(getType().getElementType(),
+                          (kind == cir::FCmpOpKind::_true) ? -1LL : 0LL);
+    SmallVector<mlir::Attribute, 16> elements(getType().getFixedSize(), elt);
+    return cir::ConstVectorAttr::get(
+        getType(), mlir::ArrayAttr::get(getContext(), elements));
+  }
+
+  auto lhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
+  auto rhsVecAttr =
+      mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
+  if (!lhsVecAttr || !rhsVecAttr)
+    return {};
+
+  mlir::ArrayAttr lhsElts = lhsVecAttr.getElts();
+  mlir::ArrayAttr rhsElts = rhsVecAttr.getElts();
+  uint64_t vecSize = lhsElts.size();
+  SmallVector<mlir::Attribute, 16> elements;
+  elements.reserve(vecSize);
+  for (auto [lhsElt, rhsElt] : llvm::zip_equal(lhsElts, rhsElts)) {
+    auto lhsFP = mlir::cast<cir::FPAttr>(lhsElt);
+    auto rhsFP = mlir::cast<cir::FPAttr>(rhsElt);
+
+    llvm::APFloat::cmpResult cr = lhsFP.getValue().compare(rhsFP.getValue());
+    bool unordered = cr == llvm::APFloat::cmpUnordered;
+    bool eq = cr == llvm::APFloat::cmpEqual;
+    bool lt = cr == llvm::APFloat::cmpLessThan;
+    bool gt = cr == llvm::APFloat::cmpGreaterThan;
+    bool cmpResult = false;
+    switch (kind) {
+    case cir::FCmpOpKind::oeq:
+      cmpResult = eq;
+      break;
+    case cir::FCmpOpKind::ogt:
+      cmpResult = gt;
+      break;
+    case cir::FCmpOpKind::oge:
+      cmpResult = gt || eq;
+      break;
+    case cir::FCmpOpKind::olt:
+      cmpResult = lt;
+      break;
+    case cir::FCmpOpKind::ole:
+      cmpResult = lt || eq;
+      break;
+    case cir::FCmpOpKind::one:
+      cmpResult = lt || gt;
+      break;
+    case cir::FCmpOpKind::ord:
+      cmpResult = !unordered;
+      break;
+    case cir::FCmpOpKind::ueq:
+      cmpResult = unordered || eq;
+      break;
+    case cir::FCmpOpKind::ugt:
+      cmpResult = unordered || gt;
+      break;
+    case cir::FCmpOpKind::uge:
+      cmpResult = unordered || gt || eq;
+      break;
+    case cir::FCmpOpKind::ult:
+      cmpResult = unordered || lt;
+      break;
+    case cir::FCmpOpKind::ule:
+      cmpResult = unordered || lt || eq;
+      break;
+    case cir::FCmpOpKind::une:
+      cmpResult = unordered || lt || gt;
+      break;
+    case cir::FCmpOpKind::uno:
+      cmpResult = unordered;
+      break;
+    case cir::FCmpOpKind::_true:
+    case cir::FCmpOpKind::_false:
+      llvm_unreachable("Op kind have been handled already");
+    }
+
+    // A true result is all bits set (-1 in two's complement), and a false
+    // result is all bits clear. For a 1-bit element type these are the same
+    // bit pattern as 1 and 0, respectively.
+    elements.push_back(
+        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL));
+  }
+
+  return cir::ConstVectorAttr::get(
+      getType(), mlir::ArrayAttr::get(getContext(), elements));
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleOp
 //===----------------------------------------------------------------------===//
 

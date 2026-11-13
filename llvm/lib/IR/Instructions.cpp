@@ -27,6 +27,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
@@ -655,6 +656,21 @@ bool CallBase::hasClobberingOperandBundles() const {
               LLVMContext::OB_convergencectrl,
               LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
+}
+
+bool CallBase::isVolatile() const {
+  // There are a very limited number of intrinsics with volatile flags.
+  if (const auto *MI = dyn_cast<MemIntrinsic>(this))
+    return MI->isVolatile();
+
+  switch (getIntrinsicID()) {
+  case Intrinsic::matrix_column_major_load:
+    return cast<ConstantInt>(getArgOperand(2))->isOne();
+  case Intrinsic::matrix_column_major_store:
+    return cast<ConstantInt>(getArgOperand(3))->isOne();
+  default:
+    return false;
+  }
 }
 
 MemoryEffects CallBase::getMemoryEffects() const {
@@ -2651,14 +2667,21 @@ BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
 
 const char *BitInsertInst::areInvalidOperands(Value *Base, Value *Val,
                                               Value *Offset) {
-  if (!Base->getType()->isByteTy())
-    return "bitinsert base must be a byte type";
-  if (!(Val->getType()->isFloatingPointTy() || Val->getType()->isIntegerTy() ||
-        Val->getType()->isPointerTy() || Val->getType()->isByteTy()))
+  Type *BaseTy = Base->getType();
+  if (!BaseTy->isByteOrByteVectorTy())
+    return "bitinsert base must be a byte type or a vector of byte type";
+  Type *ValTy = Val->getType()->getScalarType();
+  if (!(ValTy->isFloatingPointTy() || ValTy->isIntegerTy() ||
+        ValTy->isPointerTy() || ValTy->isByteTy()))
     return "bitinsert value must be an integer, floating-point, pointer, or "
-           "byte type";
-  if (!Offset->getType()->isIntegerTy(32))
-    return "bitinsert offset must be i32";
+           "byte type, or a vector of those types";
+  if (!Offset->getType()->isIntOrIntVectorTy(32))
+    return "bitinsert offset must be i32 or a vector of i32";
+  if (BaseTy->getWithNewType(ValTy) != Val->getType() ||
+      BaseTy->getWithNewType(Offset->getType()->getScalarType()) !=
+          Offset->getType())
+    return "bitinsert operands must all be scalars or all be vectors with the "
+           "same number of elements";
   return nullptr;
 }
 
@@ -2677,14 +2700,20 @@ BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
 
 const char *BitExtractInst::areInvalidOperands(const Type *Ty, Value *Src,
                                                Value *Offset) {
-  if (!(Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy() ||
-        Ty->isByteTy()))
+  const Type *EltTy = Ty->getScalarType();
+  if (!(EltTy->isFloatingPointTy() || EltTy->isIntegerTy() ||
+        EltTy->isPointerTy() || EltTy->isByteTy()))
     return "bitextract result must be an integer, floating-point, pointer, or "
-           "byte type";
-  if (!Src->getType()->isByteTy())
-    return "bitextract source must be a byte type";
-  if (!Offset->getType()->isIntegerTy(32))
-    return "bitextract offset must be i32";
+           "byte type, or a vector of those types";
+  if (!Src->getType()->isByteOrByteVectorTy())
+    return "bitextract source must be a byte type or a vector of byte type";
+  if (!Offset->getType()->isIntOrIntVectorTy(32))
+    return "bitextract offset must be i32 or a vector of i32";
+  if (Ty->getWithNewType(Src->getType()->getScalarType()) != Src->getType() ||
+      Ty->getWithNewType(Offset->getType()->getScalarType()) !=
+          Offset->getType())
+    return "bitextract operands must all be scalars or all be vectors with the "
+           "same number of elements";
   return nullptr;
 }
 

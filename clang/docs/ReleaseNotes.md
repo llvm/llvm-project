@@ -826,6 +826,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
+- `-Wunsequenced` now diagnoses unsequenced volatile accesses.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
