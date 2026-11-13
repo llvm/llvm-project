@@ -1312,6 +1312,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   subexpression, e.g. due to unclosed parenthesis. (#GH226555)
 - Fixed an assertion when emitting base destructor as alias on targets (such
   as AVR) which have different address spaces for code and data. (#GH236285)
+- Fixed an assertion when casting 'AddrLabelExpr' on targets (such as AVR)
+  which which have different address spaces for code and data. (#GH236067)
 
 ### OpenACC Specific Changes
 
