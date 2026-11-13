@@ -2209,6 +2209,18 @@ class RVPBinaryIntrinsic
   def int_riscv_mhaccsu_i32  : RVPScalarTernaryIntrinsic;
   def int_riscv_mhraccsu_i32 : RVPScalarTernaryIntrinsic;
 
+  // Scalar Multiply High Accumulate with a halfwidth third operand. The
+  // low (h0) or high (h1) halfword of each <2 x i16> element is used.
+  class RVPScalarMulHighAccHalfIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               llvm_anyvector_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mhacc_h0   : RVPScalarMulHighAccHalfIntrinsic;
+  def int_riscv_mhacc_h1   : RVPScalarMulHighAccHalfIntrinsic;
+  def int_riscv_mhaccsu_h0 : RVPScalarMulHighAccHalfIntrinsic;
+  def int_riscv_mhaccsu_h1 : RVPScalarMulHighAccHalfIntrinsic;
+
   // Scalar "Q-format" Multiplication. On RV64 these map to the packed
   // pmulq.w family on the low words.
   def int_riscv_mulq_i32  : RVPScalarBinaryIntrinsic;

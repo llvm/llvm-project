@@ -1748,6 +1748,29 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_mhraccsu_i32:
     ID = Intrinsic::riscv_mhraccsu_i32;
     break;
+  case RISCV::BI__builtin_riscv_mhacc_h0_i32:
+  case RISCV::BI__builtin_riscv_mhacc_h1_i32:
+  case RISCV::BI__builtin_riscv_mhaccsu_h0_i32:
+  case RISCV::BI__builtin_riscv_mhaccsu_h1_i32: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_mhacc_h0_i32:
+      ID = Intrinsic::riscv_mhacc_h0;
+      break;
+    case RISCV::BI__builtin_riscv_mhacc_h1_i32:
+      ID = Intrinsic::riscv_mhacc_h1;
+      break;
+    case RISCV::BI__builtin_riscv_mhaccsu_h0_i32:
+      ID = Intrinsic::riscv_mhaccsu_h0;
+      break;
+    case RISCV::BI__builtin_riscv_mhaccsu_h1_i32:
+      ID = Intrinsic::riscv_mhaccsu_h1;
+      break;
+    }
+    IntrinsicTypes = {ResultType, Ops[2]->getType()};
+    break;
+  }
 
   // Scalar "Q-format" Multiplication
   case RISCV::BI__builtin_riscv_mulq_i32:

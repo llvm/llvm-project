@@ -736,6 +736,78 @@ int32_t test_mhraccsu_i32(int32_t rd, int32_t a, uint32_t b) {
   return __riscv_mhraccsu_i32(rd, a, b);
 }
 
+// RV32-LABEL: define dso_local i32 @test_mhacc_h0_i32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[B_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.mhacc.h0.i32.v2i16(i32 [[RD]], i32 [[A]], <2 x i16> [[TMP0]])
+// RV32-NEXT:    ret i32 [[TMP1]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhacc_h0_i32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[B_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.mhacc.h0.i32.v2i16(i32 [[RD]], i32 [[A]], <2 x i16> [[TMP0]])
+// RV64-NEXT:    ret i32 [[TMP1]]
+//
+int32_t test_mhacc_h0_i32(int32_t rd, int32_t a, int16x2_t b) {
+  return __riscv_mhacc_h0_i32(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mhacc_h1_i32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[B_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.mhacc.h1.i32.v2i16(i32 [[RD]], i32 [[A]], <2 x i16> [[TMP0]])
+// RV32-NEXT:    ret i32 [[TMP1]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhacc_h1_i32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[B_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.mhacc.h1.i32.v2i16(i32 [[RD]], i32 [[A]], <2 x i16> [[TMP0]])
+// RV64-NEXT:    ret i32 [[TMP1]]
+//
+int32_t test_mhacc_h1_i32(int32_t rd, int32_t a, int16x2_t b) {
+  return __riscv_mhacc_h1_i32(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mhaccsu_h0_i32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[B_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.mhaccsu.h0.i32.v2i16(i32 [[RD]], i32 [[A]], <2 x i16> [[TMP0]])
+// RV32-NEXT:    ret i32 [[TMP1]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhaccsu_h0_i32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[B_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.mhaccsu.h0.i32.v2i16(i32 [[RD]], i32 [[A]], <2 x i16> [[TMP0]])
+// RV64-NEXT:    ret i32 [[TMP1]]
+//
+int32_t test_mhaccsu_h0_i32(int32_t rd, int32_t a, uint16x2_t b) {
+  return __riscv_mhaccsu_h0_i32(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mhaccsu_h1_i32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[B_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.mhaccsu.h1.i32.v2i16(i32 [[RD]], i32 [[A]], <2 x i16> [[TMP0]])
+// RV32-NEXT:    ret i32 [[TMP1]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhaccsu_h1_i32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef [[B_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[B_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.mhaccsu.h1.i32.v2i16(i32 [[RD]], i32 [[A]], <2 x i16> [[TMP0]])
+// RV64-NEXT:    ret i32 [[TMP1]]
+//
+int32_t test_mhaccsu_h1_i32(int32_t rd, int32_t a, uint16x2_t b) {
+  return __riscv_mhaccsu_h1_i32(rd, a, b);
+}
+
 /* Scalar "Q-format" Multiplication */
 
 // RV32-LABEL: define dso_local i32 @test_mulq_i32(

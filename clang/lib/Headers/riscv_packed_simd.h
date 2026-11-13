@@ -514,6 +514,10 @@ __packed_ternary_builtin(mhaccu_u32, uint32_t, __builtin_riscv_mhaccu_u32)
 __packed_ternary_builtin(mhraccu_u32, uint32_t, __builtin_riscv_mhraccu_u32)
 __packed_ternary_builtin_mixed(mhaccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhaccsu_i32)
 __packed_ternary_builtin_mixed(mhraccsu_i32, int32_t, int32_t, uint32_t, __builtin_riscv_mhraccsu_i32)
+__packed_ternary_builtin_mixed(mhacc_h0_i32, int32_t, int32_t, int16x2_t, __builtin_riscv_mhacc_h0_i32)
+__packed_ternary_builtin_mixed(mhacc_h1_i32, int32_t, int32_t, int16x2_t, __builtin_riscv_mhacc_h1_i32)
+__packed_ternary_builtin_mixed(mhaccsu_h0_i32, int32_t, int32_t, uint16x2_t, __builtin_riscv_mhaccsu_h0_i32)
+__packed_ternary_builtin_mixed(mhaccsu_h1_i32, int32_t, int32_t, uint16x2_t, __builtin_riscv_mhaccsu_h1_i32)
 
 /* Scalar "Q-format" Multiplication */
 __packed_binary_builtin(mulq_i32, int32_t, __builtin_riscv_mulq_i32)

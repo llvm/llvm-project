@@ -4644,3 +4644,64 @@ define i32 @ssh1sadd_intrinsic_i32(i32 %a, i32 %b) nounwind {
   %res = call i32 @llvm.riscv.ssh1sadd.i32(i32 %a, i32 %b)
   ret i32 %res
 }
+
+declare i32 @llvm.riscv.mhacc.h0.i32.v2i16(i32, i32, <2 x i16>)
+declare i32 @llvm.riscv.mhacc.h1.i32.v2i16(i32, i32, <2 x i16>)
+declare i32 @llvm.riscv.mhaccsu.h0.i32.v2i16(i32, i32, <2 x i16>)
+declare i32 @llvm.riscv.mhaccsu.h1.i32.v2i16(i32, i32, <2 x i16>)
+
+define i32 @mhacc_h0_i32(i32 %rd, i32 %rs1, <2 x i16> %rs2) nounwind {
+; RV32-LABEL: mhacc_h0_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mhacc.h0 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mhacc_h0_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmhacc.w.h0 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mhacc.h0.i32.v2i16(i32 %rd, i32 %rs1, <2 x i16> %rs2)
+  ret i32 %r
+}
+
+define i32 @mhacc_h1_i32(i32 %rd, i32 %rs1, <2 x i16> %rs2) nounwind {
+; RV32-LABEL: mhacc_h1_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mhacc.h1 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mhacc_h1_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmhacc.w.h1 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mhacc.h1.i32.v2i16(i32 %rd, i32 %rs1, <2 x i16> %rs2)
+  ret i32 %r
+}
+
+define i32 @mhaccsu_h0_i32(i32 %rd, i32 %rs1, <2 x i16> %rs2) nounwind {
+; RV32-LABEL: mhaccsu_h0_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mhaccsu.h0 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mhaccsu_h0_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmhaccsu.w.h0 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mhaccsu.h0.i32.v2i16(i32 %rd, i32 %rs1, <2 x i16> %rs2)
+  ret i32 %r
+}
+
+define i32 @mhaccsu_h1_i32(i32 %rd, i32 %rs1, <2 x i16> %rs2) nounwind {
+; RV32-LABEL: mhaccsu_h1_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mhaccsu.h1 a0, a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mhaccsu_h1_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmhaccsu.w.h1 a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.riscv.mhaccsu.h1.i32.v2i16(i32 %rd, i32 %rs1, <2 x i16> %rs2)
+  ret i32 %r
+}
