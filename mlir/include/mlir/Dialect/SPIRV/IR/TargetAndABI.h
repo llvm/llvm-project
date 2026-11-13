@@ -73,6 +73,10 @@ private:
 /// Returns the attribute name for specifying function parameter alignment.
 StringRef getFuncParamAlignmentAttrName();
 
+/// Returns the attribute name for specifying function parameter max byte
+/// offset.
+StringRef getFuncParamMaxByteOffsetAttrName();
+
 /// Returns the attribute name for specifying function parameter and result
 /// attributes.
 StringRef getFuncParamAttrName();

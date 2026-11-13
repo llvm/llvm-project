@@ -4,6 +4,7 @@ spirv.func @valid(%result: !spirv.ptr<i32, CrossWorkgroup> {
     spirv.func_param_attr = [#spirv.function_parameter_attribute<Sret>]},
     %p: !spirv.ptr<f32, CrossWorkgroup> {
     spirv.alignment = 16 : i32,
+    spirv.max_byte_offset = 64 : i32,
     spirv.func_param_attr = [#spirv.function_parameter_attribute<NoAlias>,
                             #spirv.function_parameter_attribute<NoCapture>]}
 ) "None" {
@@ -30,6 +31,13 @@ spirv.func @alignment_not_integer(%p: !spirv.ptr<f32, CrossWorkgroup> {
 
 // expected-error @+1 {{'spirv.alignment' requires a pointer parameter}}
 spirv.func @alignment_not_pointer(%p: i32 {spirv.alignment = 16 : i32}) "None" {
+  spirv.Return
+}
+
+// -----
+
+// expected-error @+1 {{'spirv.max_byte_offset' requires a pointer parameter}}
+spirv.func @max_byte_offset_not_pointer(%p: i32 {spirv.max_byte_offset = 16 : i32}) "None" {
   spirv.Return
 }
 
