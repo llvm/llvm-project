@@ -210,6 +210,7 @@ define void @addrproducer_captures(i64 %x, i64 %y, ptr %out) {
   call void @esc(ptr %a) memory(inaccessiblemem: write) nounwind willreturn
   %dst = call ptr @opaque(ptr %a) memory(none) nounwind willreturn
   store { i32, i32 } %v, ptr %dst, align 4
+  ; this memcpy should remain %a -> %out
   call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %a, i64 8, i1 false)
   ret void
 }
