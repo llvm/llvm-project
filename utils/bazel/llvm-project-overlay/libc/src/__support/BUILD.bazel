@@ -53,8 +53,8 @@ libc_support_library(
     deps = [
         ":common",
         "//libc:hdr_stdint_proxy",
-        "//libc:string_memory_utils",
         "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
     ],
 )
 
@@ -74,11 +74,11 @@ libc_support_library(
     hdrs = ["fixedvector.h"],
     deps = [
         ":libc_assert",
-        "//libc:string_memory_utils",
         "//libc/src/__support/CPP:array",
         "//libc/src/__support/CPP:iterator",
         "//libc/src/__support/CPP:type_traits",
         "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
     ],
 )
 

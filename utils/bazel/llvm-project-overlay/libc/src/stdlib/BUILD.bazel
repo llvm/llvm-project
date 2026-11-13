@@ -258,7 +258,6 @@ libc_support_library(
     deps = [
         "//libc:config_app_h",
         "//libc:environ",
-        "//libc:string_memory_utils",
         "//libc:types_size_t",
         "//libc/src/__support:checked_ptr",
         "//libc/src/__support:common",
@@ -267,6 +266,7 @@ libc_support_library(
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
     ],
 )
 
@@ -292,13 +292,13 @@ libc_support_library(
     ],
     deps = [
         "//libc:hdr_stdint_proxy",
-        "//libc:string_memory_utils",
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:cstddef",
         "//libc/src/__support/CPP:utility",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
     ],
 )
 
@@ -361,7 +361,6 @@ libc_function(
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_limits_macros",
         "//libc:hdr_sys_stat_macros",
-        "//libc:string_memory_utils",
         "//libc:types_mode_t",
         "//libc:types_size_t",
         "//libc/src/__support:common",
@@ -376,6 +375,7 @@ libc_function(
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:readlink",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:statx",
         "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
     ],
 )
 

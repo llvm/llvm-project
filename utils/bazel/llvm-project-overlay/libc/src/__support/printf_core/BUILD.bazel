@@ -68,10 +68,10 @@ libc_support_library(
     textual_hdrs = ["overflow_modes.def"],
     deps = [
         ":printf_core_structs",
-        "//libc:string_memory_utils",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:optimization",
+        "//libc/src/string/memory_utils",
     ],
 )
 

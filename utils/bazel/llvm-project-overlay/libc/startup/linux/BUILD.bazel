@@ -25,10 +25,10 @@ libc_support_library(
     deps = [
         "//libc:hdr_elf_proxy",
         "//libc:hdr_link_macros",
-        "//libc:string_memory_utils",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
     ],
 )
 

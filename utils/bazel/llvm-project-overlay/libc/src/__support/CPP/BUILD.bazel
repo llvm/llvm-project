@@ -240,13 +240,13 @@ libc_support_library(
         "//libc:func_malloc",
         "//libc:func_realloc",
         "//libc:hdr_stdint_proxy",
-        "//libc:string_memory_utils",
         "//libc:string_utils",
         "//libc/src/__support:common",
         "//libc/src/__support:integer_to_string",
         "//libc/src/__support:libc_assert",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
     ],
 )
 

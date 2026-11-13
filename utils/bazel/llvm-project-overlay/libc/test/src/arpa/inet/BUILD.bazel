@@ -79,11 +79,11 @@ libc_test(
     deps = [
         "//libc:hdr_errno_macros",
         "//libc:hdr_sys_socket_macros",
-        "//libc:string_memory_utils",
         "//libc:types_struct_in6_addr",
         "//libc:types_struct_in_addr",
         "//libc/src/__support:common",
         "//libc/src/arpa/inet:inet_pton",
+        "//libc/src/string/memory_utils",
     ],
 )
 

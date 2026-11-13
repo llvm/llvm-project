@@ -156,7 +156,6 @@ libc_support_library(
         "//libc:hdr_fenv_macros",
         "//libc:hdr_math_macros",
         "//libc:hdr_stdint_proxy",
-        "//libc:string_memory_utils",
         "//libc:types_fenv_t",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/CPP:bit",
@@ -169,6 +168,7 @@ libc_support_library(
         "//libc/src/__support/macros/properties:compiler",
         "//libc/src/__support/macros/properties:cpu_features",
         "//libc/src/__support/macros/properties:types",
+        "//libc/src/string/memory_utils",
     ],
 )
 
