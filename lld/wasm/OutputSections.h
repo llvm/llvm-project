@@ -132,6 +132,25 @@ protected:
   std::string nameData;
 };
 
+// A linker-synthesized custom section that describes the final address and size
+// of every memory-tagged global. Runtimes use it to assign tags to globals at
+// instantiation time, mirroring the descriptors that AArch64 ELF linkers emit
+// in DT_AARCH64_MEMTAG_GLOBALS.
+class MemtagGlobalsSection : public OutputSection {
+public:
+  MemtagGlobalsSection();
+
+  size_t getSize() const override {
+    return header.size() + nameData.size() + payload.size();
+  }
+  bool isNeeded() const override { return !payload.empty(); }
+  void writeTo(uint8_t *buf) override;
+  void finalizeContents() override;
+
+private:
+  std::string nameData;
+  std::string payload;
+};
 } // namespace wasm
 } // namespace lld
 
