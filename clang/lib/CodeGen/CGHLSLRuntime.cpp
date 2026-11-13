@@ -1006,6 +1006,28 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
+static std::optional<SPIRVExecutionMode>
+getSPIRVDerivativeGroupMode(CodeGenModule &CGM, const Function &F) {
+  StringRef NumThreads = F.getFnAttribute("hlsl.numthreads").getValueAsString();
+  SmallVector<StringRef, 3> Dimensions;
+  NumThreads.split(Dimensions, ',');
+  assert(Dimensions.size() == 3 && "expected three numthreads dimensions");
+  std::array<uint32_t, 3> Threads;
+  for (auto [Dimension, Thread] : llvm::zip(Dimensions, Threads)) {
+    [[maybe_unused]] bool Invalid = Dimension.getAsInteger(10, Thread);
+    assert(!Invalid && "expected an integer numthreads dimension");
+  }
+  bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
+  if (IsLinear ? (uint64_t(Threads[0]) * Threads[1] * Threads[2]) % 4 != 0
+               : Threads[0] % 2 != 0 || Threads[1] % 2 != 0) {
+    CGM.getDiags().Report(diag::err_hlsl_spirv_quad_all_numthreads)
+        << F.getName() << IsLinear;
+    return std::nullopt;
+  }
+  return IsLinear ? SPIRVExecutionMode::DerivativeGroupLinearKHR
+                  : SPIRVExecutionMode::DerivativeGroupQuadsKHR;
+}
+
 static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
   llvm::Module &M = CGM.getModule();
   Function *QuadAll =
@@ -1022,30 +1044,14 @@ static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
       continue;
 
     if (F->hasFnAttribute("hlsl.numthreads")) {
-      StringRef NumThreads =
-          F->getFnAttribute("hlsl.numthreads").getValueAsString();
-      SmallVector<StringRef, 3> Dimensions;
-      NumThreads.split(Dimensions, ',');
-      assert(Dimensions.size() == 3 && "expected three numthreads dimensions");
-      std::array<uint32_t, 3> Threads;
-      for (auto [Dimension, Thread] : llvm::zip(Dimensions, Threads)) {
-        [[maybe_unused]] bool Invalid = Dimension.getAsInteger(10, Thread);
-        assert(!Invalid && "expected an integer numthreads dimension");
-      }
-      bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
-      if (IsLinear ? (uint64_t(Threads[0]) * Threads[1] * Threads[2]) % 4 != 0
-                   : Threads[0] % 2 != 0 || Threads[1] % 2 != 0) {
-        CGM.getDiags().Report(diag::err_hlsl_spirv_quad_all_numthreads)
-            << F->getName() << IsLinear;
+      std::optional<SPIRVExecutionMode> Mode =
+          getSPIRVDerivativeGroupMode(CGM, *F);
+      if (!Mode)
         continue;
-      }
-      SPIRVExecutionMode Mode =
-          IsLinear ? SPIRVExecutionMode::DerivativeGroupLinearKHR
-                   : SPIRVExecutionMode::DerivativeGroupQuadsKHR;
       MDNode *MD = MDNode::get(
           M.getContext(),
           {ValueAsMetadata::get(F),
-           ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(Mode)))});
+           ConstantAsMetadata::get(B.getInt32(llvm::to_underlying(*Mode)))});
       M.getOrInsertNamedMetadata("spirv.ExecutionMode")->addOperand(MD);
     }
 
