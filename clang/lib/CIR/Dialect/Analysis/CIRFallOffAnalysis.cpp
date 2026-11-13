@@ -10,8 +10,8 @@
 // leaves it (falling through, break, continue, explicit return, or reaching an
 // `implicit` terminator), and each structured operation combines the exits of
 // its regions according to its semantics. Reachable noreturn calls, user
-// traps and throws are recorded as the abnormal and fake edges Sema's CFG
-// check uses to tell "maybe" from "always".
+// traps and throws are one more kind of exit, the edges Sema's CFG check uses
+// to tell "maybe" from "always".
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,24 +40,73 @@ enum class Exits : uint8_t {
   Continue = 1 << 2,
   ExplicitReturn = 1 << 3,
   ImplicitReturn = 1 << 4,
+  // A reachable noreturn call, user trap, throw or `__builtin_unreachable`:
+  // the edges Sema's CFG check uses to tell "maybe" from "always".
+  NoReturn = 1 << 5,
   // Outcomes of a reachable `cir.condition` terminating the region.
-  CondTrue = 1 << 5,
-  CondFalse = 1 << 6,
+  CondTrue = 1 << 6,
+  CondFalse = 1 << 7,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CondFalse)
 };
 
+/// The exits that leave the whole function.
+constexpr Exits functionExits =
+    Exits::ExplicitReturn | Exits::ImplicitReturn | Exits::NoReturn;
+
 /// The exits that leave an enclosing operation too, not just the region.
-constexpr Exits escapingExits = Exits::Break | Exits::Continue |
-                                Exits::ExplicitReturn | Exits::ImplicitReturn;
+constexpr Exits escapingExits = Exits::Break | Exits::Continue | functionExits;
 
 /// Whether control may leave through any of `kinds`.
 bool mayExitVia(Exits exits, Exits kinds) {
   return (exits & kinds) != Exits::None;
 }
 
+/// The labels gotos can reach. A reached goto may target a label in a region
+/// a walk saw as dead, so the function is walked again until no new label
+/// becomes a target.
+class GotoTargets {
+public:
+  explicit GotoTargets(FuncOp func) : func(func) {}
+
+  /// Forget the gotos the previous walk reached.
+  void startWalk() {
+    reachedGotos.clear();
+    reachedIndirectGoto = false;
+  }
+  void addReachedGoto(GotoOp op) { reachedGotos.insert(op.getLabelAttr()); }
+  /// A cir.indirect_goto can reach every label whose address is taken.
+  void addReachedIndirectGoto() { reachedIndirectGoto = true; }
+  /// Add the labels the walk's gotos target; whether any of them is new.
+  bool finishWalk();
+
+  bool empty() const { return targets.empty(); }
+  bool isTarget(mlir::Operation *op) const {
+    auto label = mlir::dyn_cast<LabelOp>(op);
+    return label && targets.contains(label.getLabelAttr());
+  }
+  /// Whether a target is nested in `op`, so a dead `op` still needs a visit.
+  bool enclosesTarget(mlir::Operation *op) const {
+    return targetAncestors.contains(op);
+  }
+
+private:
+  void addAddressTakenLabels();
+  void updateTargetAncestors();
+
+  FuncOp func;
+  llvm::DenseSet<mlir::StringAttr> targets;
+  llvm::DenseSet<mlir::Operation *> targetAncestors;
+  llvm::DenseSet<mlir::StringAttr> reachedGotos;
+  bool reachedIndirectGoto = false;
+  bool addedAddressTakenLabels = false;
+  /// The function's labels, collected once a goto makes them matter. Never
+  /// empty after that, since a goto only targets a label of this function.
+  llvm::SmallVector<LabelOp> labels;
+};
+
 class FallOffAnalyzer {
 public:
-  explicit FallOffAnalyzer(FuncOp func) : func(func) {}
+  explicit FallOffAnalyzer(FuncOp func) : func(func), gotoTargets(func) {}
 
   FallOffKind run();
 
@@ -75,35 +124,9 @@ private:
   Exits visitCleanupScope(CleanupScopeOp op, bool entered);
   void visitTerminator(mlir::Operation *op, Exits &exits,
                        llvm::SmallVectorImpl<mlir::Block *> &liveSuccessors);
-  void addAddressTakenLabels();
-  void updateLabelAncestors();
-
-  /// Whether a dead operation still needs a visit because a label inside it
-  /// can be reached through a goto.
-  bool containsTargetedLabel(mlir::Operation *op) const {
-    return labelAncestors.contains(op);
-  }
-  bool isTargetedLabel(mlir::Operation *op) const {
-    auto label = mlir::dyn_cast<LabelOp>(op);
-    return label && targetedLabels.contains(label.getLabelAttr());
-  }
 
   FuncOp func;
-  bool abnormalEdge = false;
-  bool fakeEdge = false;
-  /// Labels control can reach through a goto or an indirect branch, and the
-  /// operations enclosing them.
-  llvm::DenseSet<mlir::StringAttr> targetedLabels;
-  llvm::DenseSet<mlir::Operation *> labelAncestors;
-  /// Labels targeted by the gotos reached so far.
-  llvm::DenseSet<mlir::StringAttr> reachedGotoTargets;
-  /// Whether a cir.indirect_goto is reachable; it can reach every label whose
-  /// address is taken.
-  bool reachedIndirectGoto = false;
-  bool addedAddressTakenLabels = false;
-  /// The function's labels, collected once a goto makes them matter. Never
-  /// empty after that, since a goto only targets a label of this function.
-  llvm::SmallVector<LabelOp> labels;
+  GotoTargets gotoTargets;
   /// The enclosing switches, innermost last. A reachable switch dispatches to
   /// all of its cases, wherever they are nested in its body.
   struct SwitchState {
@@ -198,32 +221,33 @@ FallOffKind FallOffAnalyzer::run() {
     body = &getCoroutineUserBody(coro);
   }
 
-  // A reached goto may target a label in a region already walked as dead, so
-  // walk again until no new label is targeted; without gotos, once.
-  Exits exits = Exits::None;
-  while (true) {
-    abnormalEdge = fakeEdge = reachedIndirectGoto = false;
-    reachedGotoTargets.clear();
+  // Without gotos, one walk.
+  Exits exits;
+  do {
+    gotoTargets.startWalk();
     exits = visitRegion(*body, /*entered=*/true);
-
-    size_t numTargeted = targetedLabels.size();
-    targetedLabels.insert_range(reachedGotoTargets);
-    if (reachedIndirectGoto)
-      addAddressTakenLabels();
-    if (targetedLabels.size() == numTargeted)
-      break;
-    updateLabelAncestors();
-  }
+  } while (gotoTargets.finishWalk());
 
   bool explicitReturn = mayExitVia(exits, Exits::ExplicitReturn);
   if (!mayExitVia(exits, Exits::Normal | Exits::ImplicitReturn))
     return explicitReturn ? FallOffKind::Never : FallOffKind::NeverAndNoReturn;
-  if (abnormalEdge || fakeEdge || explicitReturn)
+  if (explicitReturn || mayExitVia(exits, Exits::NoReturn))
     return FallOffKind::Maybe;
   return FallOffKind::Always;
 }
 
-void FallOffAnalyzer::addAddressTakenLabels() {
+bool GotoTargets::finishWalk() {
+  size_t numTargets = targets.size();
+  targets.insert_range(reachedGotos);
+  if (reachedIndirectGoto)
+    addAddressTakenLabels();
+  if (targets.size() == numTargets)
+    return false;
+  updateTargetAncestors();
+  return true;
+}
+
+void GotoTargets::addAddressTakenLabels() {
   if (addedAddressTakenLabels)
     return;
   addedAddressTakenLabels = true;
@@ -232,18 +256,18 @@ void FallOffAnalyzer::addAddressTakenLabels() {
     attr.walk(
         [&](BlockAddrInfoAttr info) {
           if (info.getFunc().getAttr() == funcName)
-            targetedLabels.insert(info.getLabel());
+            targets.insert(info.getLabel());
         },
         [&](BlockAddrDiffAttr diff) {
           if (diff.getFunc().getAttr() == funcName) {
-            targetedLabels.insert(diff.getLhsLabel());
-            targetedLabels.insert(diff.getRhsLabel());
+            targets.insert(diff.getLhsLabel());
+            targets.insert(diff.getRhsLabel());
           }
         });
   };
   auto addFromOp = [&](mlir::Operation *op) {
     if (auto blockAddr = mlir::dyn_cast<BlockAddressOp>(op))
-      targetedLabels.insert(blockAddr.getBlockAddrInfo().getLabel());
+      targets.insert(blockAddr.getBlockAddrInfo().getLabel());
     else if (mlir::isa<ConstantOp, GlobalOp>(op))
       for (mlir::NamedAttribute attr : op->getAttrs())
         addFromAttr(attr.getValue());
@@ -255,16 +279,16 @@ void FallOffAnalyzer::addAddressTakenLabels() {
       global->walk(addFromOp);
 }
 
-void FallOffAnalyzer::updateLabelAncestors() {
+void GotoTargets::updateTargetAncestors() {
   if (labels.empty())
     func.getBody().walk([&](LabelOp label) { labels.push_back(label); });
-  labelAncestors.clear();
+  targetAncestors.clear();
   for (LabelOp label : labels) {
-    if (!targetedLabels.contains(label.getLabelAttr()))
+    if (!targets.contains(label.getLabelAttr()))
       continue;
     for (mlir::Operation *parent = label->getParentOp(); parent != func;
          parent = parent->getParentOp())
-      if (!labelAncestors.insert(parent).second)
+      if (!targetAncestors.insert(parent).second)
         break;
   }
 }
@@ -278,7 +302,7 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
   bool mayHideCase = inEnteredSwitch();
   auto mustVisitDead = [&](mlir::Operation &op) {
     return (mayHideCase && op.getNumRegions() != 0) ||
-           containsTargetedLabel(&op);
+           gotoTargets.enclosesTarget(&op);
   };
   // Most regions have a single block, which an inline map holds without
   // allocating.
@@ -286,10 +310,10 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
   llvm::SmallDenseMap<mlir::Block *, bool, 4> visited;
   llvm::SmallVector<std::pair<mlir::Block *, bool>> worklist;
   worklist.push_back({&region.front(), entered});
-  if (!region.hasOneBlock() && (mayHideCase || !targetedLabels.empty()))
+  if (!region.hasOneBlock() && (mayHideCase || !gotoTargets.empty()))
     for (mlir::Block &block : llvm::drop_begin(region))
       if (llvm::any_of(block, [&](mlir::Operation &op) {
-            return isTargetedLabel(&op) || mustVisitDead(op);
+            return gotoTargets.isTarget(&op) || mustVisitDead(op);
           }))
         worklist.push_back({&block, false});
 
@@ -309,7 +333,7 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
     llvm::SmallVector<mlir::Block *> liveSuccessors;
     for (mlir::Operation &op : *block) {
       if (!live) {
-        if (isTargetedLabel(&op)) {
+        if (gotoTargets.isTarget(&op)) {
           live = true;
           continue;
         }
@@ -328,11 +352,9 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
         continue;
 
       auto call = mlir::dyn_cast<CallOp>(op);
-      if ((call && call.isNoReturn()) || isAssumeFalse(&op)) {
-        abnormalEdge = true;
-        live = false;
-      } else if (mlir::isa<ThrowOp>(op)) {
-        fakeEdge = true;
+      if ((call && call.isNoReturn()) || isAssumeFalse(&op) ||
+          mlir::isa<ThrowOp>(op)) {
+        exits |= Exits::NoReturn;
         live = false;
       } else if (&op == terminator) {
         visitTerminator(&op, exits, liveSuccessors);
@@ -367,7 +389,7 @@ void FallOffAnalyzer::visitTerminator(
     else if (mlir::isa<ReturnOp>(op))
       exits |= Exits::ExplicitReturn;
     else
-      abnormalEdge = true;
+      exits |= Exits::NoReturn;
   } else if (mlir::isa<BreakOp>(op)) {
     exits |= Exits::Break;
   } else if (mlir::isa<ContinueOp>(op)) {
@@ -379,9 +401,9 @@ void FallOffAnalyzer::visitTerminator(
     if (mayExitVia(outcomes, Exits::CondFalse))
       liveSuccessors.push_back(brCond.getDestFalse());
   } else if (auto gotoOp = mlir::dyn_cast<GotoOp>(op)) {
-    reachedGotoTargets.insert(gotoOp.getLabelAttr());
+    gotoTargets.addReachedGoto(gotoOp);
   } else if (mlir::isa<IndirectGotoOp>(op)) {
-    reachedIndirectGoto = true;
+    gotoTargets.addReachedIndirectGoto();
   } else {
     // Everything else with successors (cir.br, cir.switch.flat, ...)
     // reaches all of them.
@@ -468,9 +490,8 @@ Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
     }
   }
 
-  // Breaks and continues stop at the loop; returns leave it.
-  Exits exits = (condExits | bodyExits | stepExits) &
-                (Exits::ExplicitReturn | Exits::ImplicitReturn);
+  // Breaks and continues stop at the loop; what leaves the function leaves it.
+  Exits exits = (condExits | bodyExits | stepExits) & functionExits;
   if (mayExitVia(condExits, Exits::CondFalse) ||
       mayExitVia(bodyExits, Exits::Break))
     exits |= Exits::Normal;
@@ -483,9 +504,9 @@ Exits FallOffAnalyzer::visitSwitch(SwitchOp op, bool entered) {
   SwitchScope scope(*this, entered);
   Exits bodyExits = visitRegion(op.getBody(), /*entered=*/false);
 
-  // Breaks stop at the switch; continues and returns leave it.
-  Exits exits = bodyExits & (Exits::Continue | Exits::ExplicitReturn |
-                             Exits::ImplicitReturn);
+  // Breaks stop at the switch; continues and what leaves the function leave
+  // it.
+  Exits exits = bodyExits & (Exits::Continue | functionExits);
   // As in the CFG check, a switch listing every enumerator has no implicit
   // default edge.
   if (mayExitVia(bodyExits, Exits::Normal | Exits::Break) ||
@@ -505,8 +526,7 @@ Exits FallOffAnalyzer::visitCleanupScope(CleanupScopeOp op, bool entered) {
   Exits cleanupExits = visitRegion(op.getCleanupRegion(), leavesBody);
   if (!leavesBody || mayExitVia(cleanupExits, Exits::Normal))
     return bodyExits;
-  abnormalEdge = true;
-  return Exits::None;
+  return Exits::NoReturn;
 }
 
 llvm::StringRef cir::stringifyFallOffKind(FallOffKind kind) {
