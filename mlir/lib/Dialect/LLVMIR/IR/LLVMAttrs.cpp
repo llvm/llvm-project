@@ -46,6 +46,16 @@ static ParseResult parseSourceLanguage(AsmParser &parser,
 static void printSourceLanguage(AsmPrinter &printer,
                                 DISourceLanguageNameAttr language);
 
+/// Parses an integer value and signless integer type, with an optional trailing
+/// "unsigned" keyword.
+static ParseResult parseWidthAPInt(AsmParser &parser, APInt &value,
+                                   bool &isUnsigned);
+
+/// Prints an integer value and its signless width type, followed by "unsigned"
+/// if set.
+static void printWidthAPInt(AsmPrinter &printer, const APInt &value,
+                            bool isUnsigned);
+
 #include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
@@ -763,68 +773,47 @@ MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // DIEnumeratorAttr
 //===----------------------------------------------------------------------===//
 
-Attribute DIEnumeratorAttr::parse(AsmParser &parser, Type odsType) {
-  if (parser.parseLess())
-    return {};
-  SMLoc widthLoc = parser.getCurrentLocation();
-  IntegerType widthType;
-  if (parser.parseType(widthType) || parser.parseComma())
-    return {};
-  unsigned bitWidth = widthType.getWidth();
-  if (!widthType.isSignless() || bitWidth == 0) {
-    parser.emitError(widthLoc, "expected positive signless integer width");
-    return {};
-  }
+static ParseResult parseWidthAPInt(AsmParser &parser, APInt &value,
+                                   bool &isUnsigned) {
+  SMLoc loc = parser.getCurrentLocation();
+  APInt parsedValue;
+  if (parser.parseInteger(parsedValue) || parser.parseColon())
+    return failure();
 
-  StringAttr name;
-  std::string nameStr;
-  if (succeeded(parser.parseOptionalString(&nameStr))) {
-    name = StringAttr::get(parser.getContext(), nameStr);
-    if (parser.parseComma())
-      return {};
-  }
+  SMLoc typeLoc = parser.getCurrentLocation();
+  Type type;
+  if (parser.parseType(type))
+    return failure();
 
-  SMLoc valueLoc = parser.getCurrentLocation();
-  if (succeeded(parser.parseOptionalKeyword("true")) ||
-      succeeded(parser.parseOptionalKeyword("false"))) {
-    parser.emitError(valueLoc, "expected integer value");
-    return {};
-  }
-  APInt value;
-  if (parser.parseInteger(value))
-    return {};
+  auto intType = dyn_cast<IntegerType>(type);
+  if (!intType || !intType.isSignless() || intType.getWidth() == 0)
+    return parser.emitError(typeLoc,
+                            "expected non-zero width signless integer type");
 
-  bool isUnsigned = false;
-  if (succeeded(parser.parseOptionalComma())) {
-    if (parser.parseKeyword("isUnsigned"))
-      return {};
-    isUnsigned = true;
-  }
-  if (parser.parseGreater())
-    return {};
+  isUnsigned = succeeded(parser.parseOptionalKeyword("unsigned"));
+  unsigned width = intType.getWidth();
 
-  if (isUnsigned && value.isNegative()) {
-    parser.emitError(valueLoc,
-                     "unsigned enumerator cannot have a negative value");
-    return {};
+  if (isUnsigned) {
+    if (parsedValue.isNegative())
+      return parser.emitError(loc,
+                              "negative integer cannot have an unsigned type");
+    if (parsedValue.getActiveBits() > width)
+      return parser.emitError(loc,
+                              "integer value too large for the given type");
+    value = parsedValue.zextOrTrunc(width);
+  } else {
+    if (parsedValue.getSignificantBits() > width)
+      return parser.emitError(loc,
+                              "integer value out of range for the given type");
+    value = parsedValue.sextOrTrunc(width);
   }
-  unsigned minBits =
-      isUnsigned ? value.getActiveBits() : value.getSignificantBits();
-  if (minBits > bitWidth) {
-    parser.emitError(valueLoc, "integer value out of range for i") << bitWidth;
-    return {};
-  }
-  value =
-      isUnsigned ? value.zextOrTrunc(bitWidth) : value.sextOrTrunc(bitWidth);
-  return DIEnumeratorAttr::get(parser.getContext(), name, value, isUnsigned);
+  return success();
 }
 
-void DIEnumeratorAttr::print(AsmPrinter &printer) const {
-  printer << "<i" << getValue().getBitWidth() << ", ";
-  if (getName())
-    printer << getName() << ", ";
-  getValue().print(printer.getStream(), /*isSigned=*/!getIsUnsigned());
-  if (getIsUnsigned())
-    printer << ", isUnsigned";
-  printer << '>';
+static void printWidthAPInt(AsmPrinter &printer, const APInt &value,
+                            bool isUnsigned) {
+  value.print(printer.getStream(), /*isSigned=*/!isUnsigned);
+  printer.getStream() << " : i" << value.getBitWidth();
+  if (isUnsigned)
+    printer.getStream() << " unsigned";
 }
