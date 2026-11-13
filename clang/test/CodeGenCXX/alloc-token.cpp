@@ -162,7 +162,8 @@ struct PlacedWithPtr {
   long len;
 };
 
-// Allocation calls whose result is only named by a later placement new.
+// Allocation calls whose result is only named by a later placement new. The
+// inference order is sizeof, then placement new, then cast.
 
 // CHECK-LABEL: define dso_local noundef ptr @_Z25test_placement_new_directv(
 // CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR:![0-9]+]]
@@ -202,13 +203,40 @@ PlacedNoPtr *test_placement_new_array() {
   return new (mem) PlacedNoPtr[10];
 }
 
-// The placement new names the constructed object and takes precedence over a
-// sizeof in the size argument, which may only describe the storage.
+// A sizeof in the size argument states what the allocation was sized for and
+// takes precedence: the placement new may construct only a header, with the
+// elements placed by pointer arithmetic.
 // CHECK-LABEL: define dso_local noundef ptr @_Z34test_placement_new_sizeof_prevailsv(
-// CHECK: call noalias ptr @malloc(i64 noundef 16){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-PlacedNoPtr *test_placement_new_sizeof_prevails() {
-  void *mem = malloc(sizeof(PlacedWithPtr));
-  return new (mem) PlacedNoPtr();
+// CHECK: call noalias ptr @malloc(i64 noundef 40){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_CHAR:![0-9]+]]
+long *test_placement_new_sizeof_prevails() {
+  void *mem = malloc(2 * sizeof(PlacedWithPtr) + sizeof(long));
+  long *count = new (mem) long(2);
+  // The same holds for a sizeof of a character type.
+  void *bytes = malloc(sizeof(char) * 64);
+  sink = new (bytes) PlacedWithPtr();
+  return count;
+}
+
+// A cast of the result is weaker evidence than the placement new, whether the
+// cast is to a raw storage pointer (char *, void *) or to a base class.
+struct DerivedWithPtr : PlacedNoPtr {
+  void *next;
+};
+// CHECK-LABEL: define dso_local void @_Z28test_placement_new_over_castv(
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 32){{.*}} !alloc_token [[META_DERIVEDWITHPTR:![0-9]+]]
+void test_placement_new_over_cast() {
+  char *p1 = static_cast<char *>(malloc(64));
+  sink = new (p1) PlacedWithPtr();
+  auto *p2 = (unsigned char *)malloc(64);
+  sink = new (p2) PlacedWithPtr();
+  // The member access is an implicit lvalue-to-rvalue cast to void *.
+  sink = new (__size_returning_new(64).p) PlacedWithPtr();
+  auto *base = static_cast<PlacedNoPtr *>(malloc(32));
+  sink = new (base) DerivedWithPtr();
 }
 
 // Storage constructed into with different types: no type is inferred.
@@ -286,28 +314,121 @@ void test_placement_new_indirect() {
   sink = new (span.storage) PlacedNoPtr();
 }
 
-// Likewise over a cast of the result, whether to a raw storage pointer
-// (void *, char *, ...) or to a base class of the constructed type.
-struct DerivedWithPtr : PlacedNoPtr {
-  void *next;
+// A variable is used only if the function defines it exactly once, so that
+// its value does not depend on control flow. A null pointer initializer does
+// not count as a definition.
+// CHECK-LABEL: define dso_local void @_Z36test_placement_new_single_definitionb(
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+void test_placement_new_single_definition(bool c) {
+  // Declared without initializer, assigned once.
+  void *p;
+  p = malloc(64);
+  sink = new (p) PlacedNoPtr();
+  // Initialized to null, assigned once in a branch.
+  void *q = nullptr;
+  if (c)
+    q = malloc(64);
+  if (q)
+    sink = new (q) PlacedWithPtr();
+  // Defined once, used inside a branch and a loop.
+  void *r = malloc(64);
+  if (c)
+    sink = new (r) PlacedNoPtr();
+  void *s = malloc(64);
+  for (int i = 0; i < 2; ++i)
+    sink = new (s) PlacedWithPtr();
+}
+
+// Reassigned variables are not used: the storage the placement new ends up in
+// depends on control flow, and the sizeof or cast of the other definition
+// would be overridden. Nothing is inferred for any of these allocations.
+// CHECK-LABEL: define dso_local void @_Z29test_placement_new_reassignedb(
+// CHECK: call noalias ptr @malloc(i64 noundef 8)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 8)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 32)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 32)
+// CHECK-NOT: !alloc_token
+// CHECK: ret void
+void test_placement_new_reassigned(bool c) {
+  // Freed and reassigned before the placement new.
+  void *p = malloc(8);
+  free(p);
+  p = malloc(8);
+  sink = new (p) long(10);
+  // Redefined in one branch of an if, used in the other.
+  void *q = malloc(64);
+  if (c)
+    q = malloc(32);
+  else
+    sink = new (q) PlacedNoPtr();
+  // Captured by reference and reassigned before the lambda runs.
+  void *r = malloc(64);
+  auto construct = [&] { sink = new (r) PlacedNoPtr(); };
+  r = malloc(32);
+  construct();
+}
+
+// A parameter's incoming value is a definition that cannot be seen, so
+// parameters are not used.
+// CHECK-LABEL: define dso_local void @_Z28test_placement_new_parameterPvb(
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: ret void
+void test_placement_new_parameter(void *p, bool c) {
+  if (c)
+    p = malloc(64);
+  sink = new (p) PlacedNoPtr();
+}
+
+// Other writes to the variable disqualify it as well: compound assignment,
+// address-of, a write to one of its fields, a non-const member call, and
+// binding to a non-const reference, directly or as a call argument.
+struct Storage {
+  void *p;
+  size_t n;
+  void reset();
 };
-// CHECK-LABEL: define dso_local void @_Z30test_placement_new_raw_storagev(
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 32){{.*}} !alloc_token [[META_DERIVEDWITHPTR:![0-9]+]]
-void test_placement_new_raw_storage() {
-  char *p1 = static_cast<char *>(malloc(64));
-  sink = new (p1) PlacedWithPtr();
-  auto *p2 = (unsigned char *)malloc(64);
-  sink = new (p2) PlacedWithPtr();
-  // The member access is an implicit lvalue-to-rvalue cast to void *.
-  sink = new (__size_returning_new(64).p) PlacedWithPtr();
-  void *p3 = malloc(sizeof(char) * 64);
-  sink = new (p3) PlacedWithPtr();
-  auto *base = static_cast<PlacedNoPtr *>(malloc(32));
-  sink = new (base) DerivedWithPtr();
+Storage alloc_storage(size_t) __attribute__((malloc_span));
+void rebind(void *&p);
+// CHECK-LABEL: define dso_local void @_Z31test_placement_new_other_writesv(
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call { ptr, i64 } @_Z13alloc_storagem(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: ret void
+void test_placement_new_other_writes() {
+  void *p = malloc(64);
+  sink = &p;
+  sink = new (p) PlacedNoPtr();
+  Storage s1 = alloc_storage(64);
+  s1.p = sink;
+  sink = new (s1.p) PlacedNoPtr();
+  Storage s2 = alloc_storage(64);
+  s2.reset();
+  sink = new (s2.p) PlacedNoPtr();
+  void *q = malloc(64);
+  void *&qref = q;
+  qref = sink;
+  sink = new (q) PlacedNoPtr();
+  void *r = malloc(64);
+  rebind(r);
+  sink = new (r) PlacedNoPtr();
 }
 
 // Non-generic lambdas use the captured variable; a generic lambda's dependent
@@ -323,79 +444,6 @@ void test_placement_new_lambda() {
   void *mem2 = malloc(64);
   auto construct2 = [mem2](auto x) { sink = new (mem2) decltype(x)(); };
   construct2(PlacedNoPtr{});
-}
-
-// Variables are resolved with a lexical def-use chain: the nearest preceding
-// definition that dominates the use.
-// CHECK-LABEL: define dso_local void @_Z27test_placement_new_reassignv(
-// CHECK: call noalias ptr @malloc(i64 noundef 8)
-// CHECK-NOT: @malloc{{.*}}!alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 8){{.*}} !alloc_token [[META_LONG]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-void test_placement_new_reassign() {
-  // The first allocation is freed and the variable reassigned before the
-  // placement new: only the second allocation is typed.
-  void *p = malloc(8);
-  free(p);
-  p = malloc(8);
-  sink = new (p) long(10);
-  // Declared without initializer, assigned later.
-  void *q;
-  q = malloc(64);
-  sink = new (q) PlacedNoPtr();
-  // Each definition is matched to the uses that follow it.
-  void *r = malloc(64);
-  sink = new (r) PlacedWithPtr();
-  r = malloc(64);
-  sink = new (r) PlacedNoPtr();
-}
-
-// Definitions that do not dominate the use, later definitions in a loop, and
-// other writes to the variable make the use ambiguous: nothing is inferred.
-// CHECK-LABEL: define dso_local void @_Z29test_placement_new_ambiguous2b(
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 32)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 32)
-// CHECK-NOT: !alloc_token
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: !alloc_token
-// CHECK: ret void
-void test_placement_new_ambiguous2(bool c) {
-  // A definition in a branch does not dominate the use after it.
-  void *p = malloc(64);
-  if (c)
-    p = malloc(32);
-  sink = new (p) PlacedNoPtr();
-  // A definition after the use inside the loop reaches it around the back
-  // edge.
-  void *q = malloc(64);
-  for (int i = 0; i < 2; ++i) {
-    sink = new (q) PlacedNoPtr();
-    q = malloc(32);
-  }
-  // Address taken: the variable may be written through the pointer.
-  void *r = malloc(64);
-  sink = &r;
-  sink = new (r) PlacedNoPtr();
-}
-
-// Uses inside a branch or loop are dominated by a definition before it.
-// CHECK-LABEL: define dso_local void @_Z29test_placement_new_dominatingb(
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-void test_placement_new_dominating(bool c) {
-  void *p = malloc(64);
-  if (c)
-    sink = new (p) PlacedNoPtr();
-  void *q = malloc(64);
-  for (int i = 0; i < 2; ++i)
-    sink = new (q) PlacedWithPtr();
 }
 
 template <typename T>
@@ -422,5 +470,6 @@ void test_placement_new_template() {
 // CHECK: [[META_TESTCLASS]] = !{!"TestClass", i1 true}
 // CHECK: [[META_PLACEDNOPTR]] = !{!"PlacedNoPtr", i1 false}
 // CHECK: [[META_PLACEDWITHPTR]] = !{!"PlacedWithPtr", i1 true}
-// CHECK: [[META_CLASSPLACEMENT]] = !{!"ClassPlacement", i1 true}
+// CHECK: [[META_CHAR]] = !{!"char", i1 false}
 // CHECK: [[META_DERIVEDWITHPTR]] = !{!"DerivedWithPtr", i1 true}
+// CHECK: [[META_CLASSPLACEMENT]] = !{!"ClassPlacement", i1 true}

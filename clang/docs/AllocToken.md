@@ -60,10 +60,13 @@ The following command-line options affect generated token IDs:
 
 For `new` expressions the allocated type is known syntactically. For untyped
 allocation functions such as `malloc`, the type is inferred heuristically from
-the allocation call and its context, for example from a `sizeof` in the size
-argument, a cast of the result, or a placement `new` into the result. The
-heuristics are syntactic and ignore control flow and reassignments. If no type
-can be inferred, the allocation receives the fallback token.
+the allocation call and its context, in this order: a `sizeof` in the size
+argument, a placement `new` into the result, and a cast of the result. The
+heuristics are syntactic: `sizeof` expressions and casts ignore control flow
+and reassignments, and a placement `new` through a variable is only used if
+the function defines the variable exactly once (variables that are reassigned
+are not used for inference). If no type can be inferred, the allocation
+receives the fallback token.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 
