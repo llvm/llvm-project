@@ -4849,7 +4849,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto MC = EmitScalarExpr(Arg2);
     auto MatrixOperand =
         (E->getNumArgs() == 4) ? EmitScalarExpr(E->getArg(3)) : Zero;
-
+    MatrixOperand =
+        Builder.CreateIntCast(MatrixOperand, Int32Ty, /*isSigned=*/false);
     const auto *MATy = Arg0->getType()->getAs<CooperativeMatrixType>();
     const auto *MBTy = Arg1->getType()->getAs<CooperativeMatrixType>();
     const auto *MCTy = Arg2->getType()->getAs<CooperativeMatrixType>();

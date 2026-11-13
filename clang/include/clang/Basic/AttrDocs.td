@@ -1526,6 +1526,8 @@ chmat44 vmat2;
 ```
 See [OpenCL C cl_khr_cooperative_matrix extension](https://github.com/KhronosGroup/OpenCL-Docs/pull/1627)
 for more details about the cooperative matrix usage and limitations.
+The OpenCL cooperative matrix extension is experimental, and its specification is still in draft form.
+This implementation and its interfaces may change.
   }];
 }
 
