@@ -13,6 +13,8 @@ define i32 @call_foo(ptr %a) safestack {
 ; CHECK-NEXT:    [[UNSAFE_STACK_PTR:%.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr, align 8
 ; CHECK-NEXT:    [[UNSAFE_STACK_STATIC_TOP:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i64 -16
 ; CHECK-NEXT:    store ptr [[UNSAFE_STACK_STATIC_TOP]], ptr @__safestack_unsafe_stack_ptr, align 8
+; CHECK-NEXT:    [[UNSAFE_STACK_BASE:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr [[UNSAFE_STACK_PTR]], ptr [[UNSAFE_STACK_BASE]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[UNSAFE_STACK_PTR]], i64 -10
 ; CHECK-NEXT:    call void @alloca_test_use(ptr [[TMP1]])
 ; CHECK-NEXT:    store ptr [[UNSAFE_STACK_PTR]], ptr @__safestack_unsafe_stack_ptr, align 8
