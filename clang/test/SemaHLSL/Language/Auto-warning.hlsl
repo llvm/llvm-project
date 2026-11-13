@@ -10,6 +10,8 @@
 // hlsl2018-warning@*{{support for HLSL language version hlsl2018 is incomplete, recommend using hlsl202x instead}}
 // hlsl2021-warning@*{{support for HLSL language version hlsl2021 is incomplete, recommend using hlsl202x instead}}
 
+using namespace hlsl;
+
 // expected-warning@+1{{'auto' type specifier is an HLSL 202x extension}}
 auto foo(float A) -> float {
   return A;
