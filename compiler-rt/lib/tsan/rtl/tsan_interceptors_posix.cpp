@@ -285,13 +285,12 @@ ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
   LazyInitialize(thr);
   if (UNLIKELY(atomic_load(&thr->in_blocking_func, memory_order_relaxed))) {
     // pthread_join is marked as blocking, but it's also known to call other
-    // intercepted functions (mmap, free). If we don't reset in_blocking_func
-    // we can get deadlocks and memory corruptions if we deliver a synchronous
-    // signal inside of an mmap/free interceptor.
-    // So reset it and restore it back in the destructor.
+    // intercepted functions (mmap, free) after the blocking wait has finished
+    // while holding internal libc locks (such as glibc's stack_cache_lock in
+    // __deallocate_stack). Reset in_blocking_func so we don't deliver signals
+    // synchronously while those internal locks are held.
     // See https://github.com/google/sanitizers/issues/1540
     atomic_store(&thr->in_blocking_func, 0, memory_order_relaxed);
-    in_blocking_func_ = true;
   }
   if (!thr_->is_inited) return;
   if (!thr_->ignore_interceptors) FuncEntry(thr, pc);
@@ -305,8 +304,6 @@ ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
 ScopedInterceptor::~ScopedInterceptor() {
   if (!thr_->is_inited) return;
   DisableIgnores();
-  if (UNLIKELY(in_blocking_func_))
-    EnterBlockingFunc(thr_);
   if (!thr_->ignore_interceptors) {
     ProcessPendingSignals(thr_);
     FuncExit(thr_);
@@ -1195,7 +1192,11 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
         },
         th);
     if (tid == kInvalidTid) {
-      return REAL(pthread_join)(th, ret);
+      ScopedIgnoreInterceptors ignore;
+      ThreadIgnoreBegin(thr, pc);
+      int res = REAL(pthread_join)(th, ret);
+      ThreadIgnoreEnd(thr);
+      return res;
     }
   }
 #endif
@@ -1220,7 +1221,13 @@ template <class Fn>
 static int ThreadDetachCommon(ThreadState* thr, uptr pc, uptr th,
                               const Fn& detach) {
   Tid tid = ThreadConsumeTid(thr, pc, th);
-  int res = detach();
+  int res;
+  {
+    ScopedIgnoreInterceptors ignore;
+    ThreadIgnoreBegin(thr, pc);
+    res = detach();
+    ThreadIgnoreEnd(thr);
+  }
   if (res == 0) {
     ThreadDetach(thr, pc, tid);
   }
@@ -1247,9 +1254,13 @@ TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
 TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
   SCOPED_INTERCEPTOR_RAW(pthread_tryjoin_np, th, ret);
   Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
-  ThreadIgnoreBegin(thr, pc);
-  int res = REAL(pthread_tryjoin_np)(th, ret);
-  ThreadIgnoreEnd(thr);
+  int res;
+  {
+    ScopedIgnoreInterceptors ignore;
+    ThreadIgnoreBegin(thr, pc);
+    res = REAL(pthread_tryjoin_np)(th, ret);
+    ThreadIgnoreEnd(thr);
+  }
   if (res == 0)
     ThreadJoin(thr, pc, tid);
   else
@@ -1370,7 +1381,6 @@ void CondMutexUnlockCtx<Fn>::Unlock() const {
   // tsan code. Also ScopedInterceptor and BlockingCall destructors won't run
   // since the thread is cancelled, so we have to manually execute them
   // (the thread still can run some user code due to pthread_cleanup_push).
-  CHECK_EQ(atomic_load(&thr->in_blocking_func, memory_order_relaxed), 1);
   atomic_store(&thr->in_blocking_func, 0, memory_order_relaxed);
   MutexPostLock(thr, pc, (uptr)m, MutexFlagDoPreLockOnPostLock);
   // Undo BlockingCall ctor effects.
