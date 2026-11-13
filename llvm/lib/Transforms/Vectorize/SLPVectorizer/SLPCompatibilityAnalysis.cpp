@@ -606,6 +606,11 @@ bool InstructionsState::isCopyableElement(Value *V) const {
   }
   if (!I)
     return !isa<PoisonValue>(V);
+  // A select main op with copyables is formed only for the or reductions: the
+  // or-like selects, the selects with non-zero false values other than the
+  // main op, are copyable.
+  if (isa<SelectInst>(MainOp))
+    return I != MainOp && !match(I, m_Select(m_Value(), m_Value(), m_Zero()));
   // For a GEP main op only single-index GEPs with the same source element
   // type can be matching lanes; GEPs with a different shape are copyable.
   if (getOpcode() == Instruction::GetElementPtr)

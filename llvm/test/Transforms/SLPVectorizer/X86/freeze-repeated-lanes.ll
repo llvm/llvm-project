@@ -65,26 +65,17 @@ define i32 @or_of_selects(ptr %a, i32 %x) {
 define i32 @or_like_chain(ptr %a, i32 %idx) {
 ; CHECK-LABEL: define i32 @or_like_chain(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 5, i32 4, i32 poison, i32 100>, i32 [[IDX]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> <i32 poison, i32 4, i32 poison, i32 poison>, <4 x i32> <i32 2, i32 2, i32 5, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 100, i32 poison>, i32 [[IDX]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> <i32 4, i32 4, i32 poison, i32 5>, <4 x i32> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 5, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt <4 x i32> [[TMP6]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <4 x i32> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP8]], <4 x i1> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[TMP10]], i32 [[V3]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP5]], i64 3
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[TMP7]], i32 [[V2]], i32 [[S3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP5]], i64 1
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[TMP12]], i32 [[V1]], i32 [[S2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP5]], i64 2
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], i32 [[V0]], i32 [[S1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> [[TMP8]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP4]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP10]])
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
   %v0 = load i32, ptr %a, align 4
