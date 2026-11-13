@@ -3285,6 +3285,11 @@ static std::optional<int> GetMatchingDistance(
         isHostManagedOrUnified(actualDataAttr)) {
       return true;
     }
+    // A bare NULL() has no storage.
+    if (dummyIsAllocatableOrPointer && actual &&
+        evaluate::IsBareNullPointer(actual->UnwrapExpr())) {
+      return true;
+    }
     return false;
   }};
 
