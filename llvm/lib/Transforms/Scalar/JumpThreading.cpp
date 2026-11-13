@@ -34,6 +34,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -219,9 +220,6 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
 PreservedAnalyses JumpThreadingPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  // Jump Threading has no sense for the targets with divergent CF
-  if (TTI.hasBranchDivergence(&F))
-    return PreservedAnalyses::all();
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &LVI = AM.getResult<LazyValueAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
@@ -1028,6 +1026,12 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
       BPI->eraseBlock(BB);
     return true;
   }
+
+  // On targets with branch divergence only uniform branches are threaded; both
+  // sides of a divergent branch are executed anyway.
+  UniformityInfo *UI = getUniformityInfo();
+  if (UI && !UI->isUniformTerminator(Terminator))
+    return ConstantFolded;
 
   Instruction *CondInst = dyn_cast<Instruction>(Condition);
 
@@ -2190,6 +2194,11 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
   if (PredBB->isEHPad())
     return false;
 
+  // PredBB is duplicated together with its conditional branch.
+  UniformityInfo *UI = getUniformityInfo();
+  if (UI && !UI->isUniformTerminator(PredBBBranch))
+    return false;
+
   // Find a predecessor that we can thread.  For simplicity, we only consider a
   // successor edge out of BB to which we thread exactly one incoming edge into
   // PredBB.
@@ -2526,6 +2535,12 @@ bool JumpThreadingPass::doesBlockHaveProfileData(BasicBlock *BB) {
     return false;
 
   return hasValidBranchWeightMD(*TI);
+}
+
+UniformityInfo *JumpThreadingPass::getUniformityInfo() {
+  if (!TTI->hasBranchDivergence(F))
+    return nullptr;
+  return runExternalAnalysis<UniformityInfoAnalysis>();
 }
 
 /// Update the block frequency of BB and branch weight and the metadata on the
@@ -3012,6 +3027,10 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     }
 
     if (!SI)
+      continue;
+    // The select becomes a branch on its condition, which must be uniform.
+    UniformityInfo *UI = getUniformityInfo();
+    if (UI && !UI->isUniformAtUse(SI->getOperandUse(0)))
       continue;
     // Expand the select.
     Value *Cond = SI->getCondition();

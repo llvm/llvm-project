@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -187,6 +188,10 @@ private:
                                     bool HasProfile);
   /// Check if the block has profile metadata for its outgoing edges.
   bool doesBlockHaveProfileData(BasicBlock *BB);
+
+  /// Returns the uniformity info, or nullptr if the target has no branch
+  /// divergence.
+  UniformityInfo *getUniformityInfo();
 
   /// Returns analysis preserved by the pass.
   PreservedAnalyses getPreservedAnalysis() const;
