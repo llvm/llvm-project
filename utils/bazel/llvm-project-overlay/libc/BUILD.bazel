@@ -3435,17 +3435,6 @@ libc_function(
 )
 
 libc_support_library(
-    name = "__stack_chk_fail",
-    srcs = ["src/compiler/generic/__stack_chk_fail.cpp"],
-    hdrs = ["src/compiler/__stack_chk_fail.h"],
-    deps = [
-        ":hdr_stdint_proxy",
-        ":stdlib_abort_utils",
-        "//libc/src/__support/OSUtil:io",
-    ],
-)
-
-libc_support_library(
     name = "qsort_util",
     hdrs = [
         "src/stdlib/heap_sort.h",

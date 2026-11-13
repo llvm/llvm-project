@@ -1,0 +1,27 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "__stack_chk_fail",
+    srcs = ["generic/__stack_chk_fail.cpp"],
+    hdrs = ["__stack_chk_fail.h"],
+    deps = [
+        "//libc:hdr_stdint_proxy",
+        "//libc:stdlib_abort_utils",
+        "//libc/src/__support/OSUtil:io",
+    ],
+)
