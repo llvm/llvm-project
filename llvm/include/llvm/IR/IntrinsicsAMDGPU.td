@@ -1652,7 +1652,7 @@ class AMDGPUBufferIntrinsic<AMDGPUBufferIntrinsicKind kind, bit isDeprecatedIntI
   bit IsTyped = false;
   // The *_format intrinsics, which convert their data according to the format
   // in the resource.
-  bit IsFormat = false;
+  bit IsFormatFromRsrc = false;
   // Asynchronous loads to LDS.
   bit IsAsync = false;
 
@@ -1821,7 +1821,7 @@ def int_amdgcn_raw_ptr_atomic_buffer_load : AMDGPUBufferAtomicLoad;
 def int_amdgcn_raw_buffer_store : AMDGPUBufferStore</*isDeprecatedIntIntrinsic=*/true>;
 def int_amdgcn_raw_ptr_buffer_store : AMDGPUBufferStore;
 
-let IsFormat = true in {
+let IsFormatFromRsrc = true in {
   def int_amdgcn_raw_buffer_load_format : AMDGPUBufferLoad</*isDeprecatedIntIntrinsic=*/true>;
   def int_amdgcn_raw_ptr_buffer_load_format : AMDGPUBufferLoad;
   def int_amdgcn_raw_buffer_store_format : AMDGPUBufferStore</*isDeprecatedIntIntrinsic=*/true>;
@@ -1897,7 +1897,7 @@ def int_amdgcn_struct_ptr_atomic_buffer_load : AMDGPUBufferAtomicLoad;
 def int_amdgcn_struct_buffer_store : AMDGPUBufferStore</*isDeprecatedIntIntrinsic=*/true>;
 def int_amdgcn_struct_ptr_buffer_store : AMDGPUBufferStore;
 
-let IsFormat = true in {
+let IsFormatFromRsrc = true in {
   def int_amdgcn_struct_buffer_load_format : AMDGPUBufferLoad</*isDeprecatedIntIntrinsic=*/true>;
   def int_amdgcn_struct_ptr_buffer_load_format : AMDGPUBufferLoad;
   def int_amdgcn_struct_buffer_store_format : AMDGPUBufferStore</*isDeprecatedIntIntrinsic=*/true>;

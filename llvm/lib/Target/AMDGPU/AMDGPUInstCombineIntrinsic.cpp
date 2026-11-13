@@ -2391,12 +2391,11 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
       const AMDGPU::BufferIntrinsicInfo *BufInfo =
           AMDGPU::lookupBufferIntrinsic(II.getIntrinsicID());
       // buffer_load_format takes its format from the resource, which is
-      // unknown here, so of the format loads, only typed (tbuffer) loads can be
-      // trimmed.
+      // unknown here.
       bool CanAdjustOffset = BufInfo &&
                              (BufInfo->Kind == AMDGPU::BufferKindLoad ||
                               BufInfo->Kind == AMDGPU::BufferKindSLoad) &&
-                             (!BufInfo->IsFormat || BufInfo->isTyped());
+                             !BufInfo->isFormatFromRsrc();
       // If resulting type is vec3, there is no point in trimming the scalar
       // load with updated offset, as the vec3 would most likely be widened to
       // vec4 anyway during lowering.

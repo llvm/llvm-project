@@ -62,9 +62,9 @@ struct BufferIntrinsicInfo {
   uint8_t ImmOffsetArg;
   uint8_t FormatArg;
   uint8_t AuxArg;
-  /// The data is converted according to a format. This includes the typed
-  /// (tbuffer) intrinsics.
-  bool IsFormat;
+  /// The data is converted according to the format in the resource (the
+  /// *_format intrinsics).
+  bool IsFormatFromRsrc;
   /// Loads to LDS that are asynchronous.
   bool IsAsync;
 
@@ -78,6 +78,12 @@ private:
 public:
   bool isStruct() const { return VIndexArg != NoArg; }
   bool isTyped() const { return FormatArg != NoArg; }
+  /// Whether the data is converted according to the format in the resource.
+  bool isFormatFromRsrc() const { return IsFormatFromRsrc; }
+  /// Whether the data is converted according to a format, drawn either from
+  /// the resource descriptor (untyped/MUBUF _format instructions) or from an
+  /// explicit argument (tbuffer/MFBUF instructions).
+  bool isFormat() const { return IsFormatFromRsrc || isTyped(); }
 
   /// The stored value for stores and atomics.
   std::optional<unsigned> getVDataArg() const { return getArg(VDataArg); }

@@ -53,8 +53,7 @@ class BufferIntrinsicInfo<AMDGPUBufferIntrinsic intr> {
   bits<8> ImmOffsetArg = intr.ImmOffsetArg;
   bits<8> FormatArg = intr.FormatArg;
   bits<8> AuxArg = intr.AuxArg;
-  // Typed intrinsics also convert their data according to a format.
-  bit IsFormat = !or(intr.IsFormat, intr.IsTyped);
+  bit IsFormatFromRsrc = intr.IsFormatFromRsrc;
   bit IsAsync = intr.IsAsync;
 
   // Check the computed layout against the intrinsic's signature. Absent arguments (255) are looked up in
@@ -78,7 +77,7 @@ class BufferIntrinsicInfo<AMDGPUBufferIntrinsic intr> {
 def BufferIntrinsicsTable : GenericTable {
   let FilterClass = "BufferIntrinsicInfo";
   let CppTypeName = "BufferIntrinsicInfo";
-  let Fields = ["Intr", "Kind", "RsrcArg", "VDataArg", "SizeArg", "VIndexArg", "VOffsetArg", "SOffsetArg", "ImmOffsetArg", "FormatArg", "AuxArg", "IsFormat", "IsAsync"];
+  let Fields = ["Intr", "Kind", "RsrcArg", "VDataArg", "SizeArg", "VIndexArg", "VOffsetArg", "SOffsetArg", "ImmOffsetArg", "FormatArg", "AuxArg", "IsFormatFromRsrc", "IsAsync"];
   string TypeOf_Kind = "BufferIntrinsicKind";
 
   let PrimaryKey = ["Intr"];

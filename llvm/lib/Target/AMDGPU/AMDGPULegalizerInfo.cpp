@@ -6758,7 +6758,7 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(
   MachineRegisterInfo &MRI = *B.getMRI();
   auto OpIdx = [&](unsigned Arg) { return AMDGPU::getMIROperandIdx(MI, Arg); };
   const bool IsTyped = Info.isTyped();
-  const bool IsFormat = Info.IsFormat;
+  const bool IsFormat = Info.isFormat();
 
   Register VData = MI.getOperand(OpIdx(*Info.getVDataArg())).getReg();
   LLT Ty = MRI.getType(VData);
@@ -6886,7 +6886,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(
   GISelChangeObserver &Observer = Helper.Observer;
   auto OpIdx = [&](unsigned Arg) { return AMDGPU::getMIROperandIdx(MI, Arg); };
   const bool IsTyped = Info.isTyped();
-  const bool IsFormat = Info.IsFormat;
+  const bool IsFormat = Info.isFormat();
 
   // FIXME: Verifier should enforce 1 MMO for these intrinsics.
   MachineMemOperand *MMO = *MI.memoperands_begin();

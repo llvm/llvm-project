@@ -11944,7 +11944,7 @@ SDValue SITargetLowering::lowerBufferIntrinsicWithChain(
   case AMDGPU::BufferKindAtomicLoad: {
     SmallVector<SDValue, 10> Ops = getBufferIntrinsicOps(Op, Info, DAG);
     if (!Info.isTyped())
-      return lowerIntrinsicLoad(M, Info.IsFormat, DAG, Ops);
+      return lowerIntrinsicLoad(M, Info.isFormatFromRsrc(), DAG, Ops);
 
     EVT LoadVT = Op.getValueType();
     if (LoadVT.getScalarSizeInBits() == 16)
@@ -12597,7 +12597,7 @@ SDValue SITargetLowering::lowerBufferIntrinsicVoid(
                                      M->getMemoryVT(), M->getMemOperand());
     }
 
-    bool IsFormat = Info.IsFormat;
+    bool IsFormat = Info.isFormatFromRsrc();
     bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
 
     if (IsFormat && !IsD16 && EltType.getSizeInBits() < 32) {
