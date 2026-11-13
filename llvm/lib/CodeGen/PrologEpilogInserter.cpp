@@ -361,8 +361,13 @@ PrologEpilogInserterPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
   MachineOptimizationRemarkEmitter &ORE =
       MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+  unsigned NumBlockIDs = MF.getNumBlockIDs();
   if (!PEIImpl(&ORE).run(MF))
     return PreservedAnalyses::all();
+
+  // Inline stack probes (e.g. X86 inlineStackProbe) may also split blocks.
+  if (MF.getNumBlockIDs() != NumBlockIDs)
+    return getMachineFunctionPassPreservedAnalyses();
 
   // Segmented-stack and HiPE prologues insert new basic blocks, so the CFG is
   // not preserved for such functions.
