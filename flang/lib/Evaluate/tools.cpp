@@ -1262,42 +1262,81 @@ private:
   bool inSubscript_;
 };
 
-// A device object is identified by the CUDA symbol that designates it and by
-// the base object it is taken from, so that x%d and y%d are two objects while
-// a(1) and a(2), or m(1)%d and m(2)%d, are the same one.
-using CUDADeviceObject = std::pair<const Symbol *, const Symbol *>;
+// Collect the distinct component references of an expression that designate a
+// device component. The data attribute of a component hides the one of its
+// base, so a component reference is a device object by itself: m(1)%d and
+// m(2)%d are two allocations, even though they share the component symbol.
+struct CollectCUDADeviceComponentsHelper
+    : public AnyTraverse<CollectCUDADeviceComponentsHelper> {
+  using Base = AnyTraverse<CollectCUDADeviceComponentsHelper>;
+  CollectCUDADeviceComponentsHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const Component &component) const {
+    if (IsCUDADeviceSymbol(component.GetLastSymbol())) {
+      if (std::find_if(components.begin(), components.end(),
+              [&](const Component *c) { return *c == component; }) ==
+          components.end()) {
+        components.push_back(&component);
+      }
+      return false;
+    }
+    return (*this)(component.base());
+  }
+  mutable std::vector<const Component *> components;
+};
 
-static std::set<CUDADeviceObject> CollectUniqueCUDADeviceObjects(
+// The device objects of an expression: the device components, and the other
+// device symbols. A symbol is identified with the base object it is taken from
+// so that a(1) and a(2) are the same one.
+struct CUDADeviceObjects {
+  std::vector<const Component *> components;
+  std::set<std::pair<const Symbol *, const Symbol *>> symbols;
+};
+
+static CUDADeviceObjects CollectUniqueCUDADeviceObjects(
     const Expr<SomeType> &expr) {
+  CUDADeviceObjects objects;
   std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
-  std::set<CUDADeviceObject> objects;
   semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
   for (const auto &symbolVector : symbolVectors) {
     for (const auto &sym : symbolVector) {
       if (cudaSymbols.find(sym) != cudaSymbols.end()) {
         if (IsCUDADeviceSymbol(*sym)) {
-          objects.emplace(
-              &sym->GetUltimate(), &symbolVector.back()->GetUltimate());
+          // Components are handled below, by component reference.
+          if (!sym->owner().IsDerivedType()) {
+            objects.symbols.emplace(
+                &sym->GetUltimate(), &symbolVector.back()->GetUltimate());
+          }
           break;
         }
       }
     }
   }
+  CollectCUDADeviceComponentsHelper components;
+  components(expr);
+  objects.components = std::move(components.components);
   for (const Symbol &sym : CollectCudaSubscriptSymbolsHelper{}(expr)) {
     if (IsCUDADeviceSymbol(sym)) {
-      objects.emplace(&sym, &sym);
+      objects.symbols.emplace(&sym, &sym);
     }
   }
   return objects;
 }
 
 int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
-  return CollectUniqueCUDADeviceObjects(expr).size();
+  CUDADeviceObjects objects{CollectUniqueCUDADeviceObjects(expr)};
+  return objects.components.size() + objects.symbols.size();
 }
 
 int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr) {
+  CUDADeviceObjects objects{CollectUniqueCUDADeviceObjects(expr)};
   int count{0};
-  for (const CUDADeviceObject &object : CollectUniqueCUDADeviceObjects(expr)) {
+  for (const Component *component : objects.components) {
+    if (IsCUDAManagedOrUnifiedSymbol(component->GetLastSymbol())) {
+      ++count;
+    }
+  }
+  for (const auto &object : objects.symbols) {
     if (IsCUDAManagedOrUnifiedSymbol(*object.first)) {
       ++count;
     }

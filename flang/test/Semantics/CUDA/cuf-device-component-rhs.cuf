@@ -2,8 +2,9 @@
 
 ! Device components that share a component symbol but belong to different
 ! objects are different device objects on the right-hand side of a host
-! assignment. Different elements of the same object are one device object. A
-! device array used as a subscript is a reference to a device object as well.
+! assignment: x%d and y%d, or m(1)%d and m(2)%d, are different allocations.
+! Different elements of the same array are one device object. A device array
+! used as a subscript is a reference to a device object as well.
 
 module m
   type :: payload
@@ -17,10 +18,17 @@ contains
     out = x%d(1) + x%d(2) ! ok
   end subroutine
 
-  subroutine managed_elements(m, out)
+  subroutine managed_same_element(m, out)
     type(payload), managed :: m(:)
     real :: out
-    out = m(1)%d(1) + m(2)%d(1) ! ok
+    out = m(1)%d(1) + m(1)%d(2) ! ok
+  end subroutine
+
+  subroutine managed_two_elements(m, out)
+    type(payload), managed :: m(:)
+    real :: out
+    !ERROR: More than one reference to a CUDA object on the right hand side of the assignment
+    out = m(1)%d(1) + m(2)%d(1)
   end subroutine
 
   subroutine device_subscript(a, idx, out)
