@@ -72,6 +72,12 @@ defm : BoolField<"x86-indirect-branch-tracking", "false",
 defm : BoolField<"x86-use-vzeroupper", "true",
   "Minimize AVX to SSE transition penalty">;
 
+// X86InstrCMovSetCC.td
+defm : BoolField<"x86-cf-reg-operand", "true",
+  "Enable CFCMOV with register operands (select with zero)">;
+defm : BoolField<"x86-cf-mem-operand", "false",
+  "Enable CFCMOV with memory operands (conditional faulting load/store)">;
+
 // X86InstrInfo.cpp
 defm : BoolField<"disable-spill-fusing", "false",
   "Disable fusing of spill code into instructions">;

@@ -33,9 +33,7 @@ let isCommutable = 1, SchedRW = [WriteCMOV] in {
 let Predicates = [HasCMOV, HasCF, In64BitMode] in {
   def rr : ITy<0x40, MRMDestRegCC, t, (outs t.RegClass:$dst),
                (ins t.RegClass:$src1, ccode:$cond),
-               "cfcmov${cond}", unaryop_ndd_args,
-               [(set t.RegClass:$dst,
-                 (X86cmov 0, t.RegClass:$src1, timm:$cond, EFLAGS))]>, UseEFLAGS, NF;
+               "cfcmov${cond}", unaryop_ndd_args, []>, UseEFLAGS, NF;
   def rr_REV : ITy<0x40, MRMSrcRegCC, t, (outs t.RegClass:$dst),
                    (ins t.RegClass:$src1, ccode:$cond),
                    "cfcmov${cond}", unaryop_ndd_args,
@@ -106,14 +104,26 @@ let Predicates = [HasCMOV, HasNDD] in {
   def : Pat<(X86cmov (loadi64 ndd_addr:$src1), GR64:$src2, timm:$cond, EFLAGS),
             (CMOV64rm_ND GR64:$src2, ndd_addr:$src1, (inv_cond_XFORM timm:$cond))>;
 }
-let Predicates = [HasCMOV, HasCF] in {
+// Register-operand CFCMOV for select with zero. With
+// -x86-cf-reg-operand=false, XOR + CMOV is used instead.
+let Predicates = [HasCMOV, HasCF, UseCFRegOperand] in {
+  def : Pat<(X86cmov 0, GR16:$src1, timm:$cond, EFLAGS),
+            (CFCMOV16rr GR16:$src1, timm:$cond)>;
+  def : Pat<(X86cmov 0, GR32:$src1, timm:$cond, EFLAGS),
+            (CFCMOV32rr GR32:$src1, timm:$cond)>;
+  def : Pat<(X86cmov 0, GR64:$src1, timm:$cond, EFLAGS),
+            (CFCMOV64rr GR64:$src1, timm:$cond)>;
   def : Pat<(X86cmov GR16:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV16rr GR16:$src1, (inv_cond_XFORM timm:$cond))>;
   def : Pat<(X86cmov GR32:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV32rr GR32:$src1, (inv_cond_XFORM timm:$cond))>;
   def : Pat<(X86cmov GR64:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV64rr GR64:$src1, (inv_cond_XFORM timm:$cond))>;
+}
 
+// Memory-operand CFCMOV (conditional faulting load/store) is only selected
+// with -x86-cf-mem-operand.
+let Predicates = [HasCMOV, HasCF, UseCFMemOperand] in {
   def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV16rm addr:$src1, timm:$cond)>;
   def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),

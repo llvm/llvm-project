@@ -227,11 +227,11 @@ void f_prefer_256_bit(void) {}
 __attribute__((target("no-prefer-256-bit")))
 void f_no_prefer_256_bit(void) {}
 
-// CHECK: [[f_apxf]] = {{.*}}"target-features"="{{.*}}+ccmp{{.*}}+egpr{{.*}}+jmpabs{{.*}}+ndd{{.*}}+nf{{.*}}+ppx{{.*}}+push2pop2{{.*}}+zu
+// CHECK: [[f_apxf]] = {{.*}}"target-features"="{{.*}}+ccmp{{.*}}+cf{{.*}}+egpr{{.*}}+jmpabs{{.*}}+ndd{{.*}}+nf{{.*}}+ppx{{.*}}+push2pop2{{.*}}+zu
 __attribute__((target("apxf")))
 void f_apxf(void) {}
 
-// CHECK: [[f_no_apxf]] = {{.*}}"target-features"="{{.*}}-ccmp{{.*}}-egpr{{.*}}-jmpabs{{.*}}-ndd{{.*}}-nf{{.*}}-ppx{{.*}}-push2pop2{{.*}}-zu
+// CHECK: [[f_no_apxf]] = {{.*}}"target-features"="{{.*}}-ccmp{{.*}}-cf{{.*}}-egpr{{.*}}-jmpabs{{.*}}-ndd{{.*}}-nf{{.*}}-ppx{{.*}}-push2pop2{{.*}}-zu
 __attribute__((target("no-apxf")))
 void f_no_apxf(void) {}
 

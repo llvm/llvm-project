@@ -155,7 +155,8 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
 }
 
 bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
-  if (!ST->hasCF())
+  // Memory-operand CFCMOV (conditional load/store) is opt-in.
+  if (!ST->hasCF() || !ST->getCLOpts().cf_mem_operand)
     return false;
   if (!Ty)
     return true;
