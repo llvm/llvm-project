@@ -61,6 +61,18 @@ protected:
 
   void SetActive(bool IsActive) { m_is_active = IsActive; }
 
+  /// Create a baton for this plugin's breakpoint callbacks. The baton only
+  /// holds a weak reference to this plugin so the plugin can be destroyed
+  /// (e.g. when it is disabled) while one of its breakpoint callbacks is
+  /// running on another thread. Callbacks must use GetRuntimeFromBaton() to
+  /// access the plugin.
+  lldb::BatonSP CreateBreakpointBaton();
+
+  /// \return the plugin that \p baton (created by CreateBreakpointBaton())
+  /// refers to or nullptr if the plugin has been destroyed. The plugin is kept
+  /// alive while the returned pointer is held.
+  static lldb::InstrumentationRuntimeSP GetRuntimeFromBaton(void *baton);
+
   /// Return a regular expression which can be used to identify a valid version
   /// of the runtime library.
   virtual const RegularExpression &GetPatternForRuntimeLibrary() = 0;

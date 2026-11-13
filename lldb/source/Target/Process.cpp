@@ -6541,23 +6541,16 @@ Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
     return llvm::createStringErrorV("process {} is not alive", GetID());
 
   if (!enabled) {
-    InstrumentationRuntimeSP &runtime_sp = m_instrumentation_runtimes[irt];
-    // Destroy any instance of this plugin. We rely on the plugin's destructor
-    // being implicitly called here to deactivate the plugin (e.g. remove its
-    // breakpoints). That only happens if this map holds the only reference to
-    // the plugin.
-    assert((!runtime_sp || runtime_sp.use_count() == 1) &&
-           "instrumentation runtime plugin unexpectedly still referenced");
-    // FIXME: The plugins pass a raw `this` pointer as the baton for their
-    // breakpoint callbacks. If one of this plugin's breakpoint callbacks is
-    // running on another thread (e.g. the thread handling the stop event) when
-    // the plugin is disabled, destroying the plugin here causes a
-    // use-after-free.
+    // Destroy any instance of this plugin. The plugin's destructor deactivates
+    // the plugin (e.g. removes its breakpoints). If one of the plugin's
+    // breakpoint callbacks is running on another thread (e.g. the thread
+    // handling the stop event) then the callback holds a reference to the
+    // plugin so the plugin is only destroyed once the callback finishes.
     //
     // A null entry is stored rather than removing the entry so that
     // `InstrumentationRuntime::ModulesDidLoad` doesn't create a new instance
     // (e.g. after dlopen) if the plugin is still enabled globally.
-    runtime_sp = nullptr;
+    m_instrumentation_runtimes[irt] = nullptr;
     return llvm::Error::success();
   }
 

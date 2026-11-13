@@ -802,8 +802,13 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
   if (!baton)
     return false;
 
+  // Hold a reference to the plugin while using it. The plugin might have been
+  // destroyed (e.g. because it was disabled) in which case don't stop.
+  InstrumentationRuntimeSP runtime_sp = GetRuntimeFromBaton(baton);
+  if (!runtime_sp)
+    return false;
   InstrumentationRuntimeTSan *const instance =
-      static_cast<InstrumentationRuntimeTSan *>(baton);
+      static_cast<InstrumentationRuntimeTSan *>(runtime_sp.get());
 
   ProcessSP process_sp = instance->GetProcessSP();
 
@@ -925,8 +930,8 @@ void InstrumentationRuntimeTSan::Activate() {
       process_sp->GetTarget()
           .CreateBreakpoint(symbol_address, internal, hardware)
           .get();
-  breakpoint->SetCallback(InstrumentationRuntimeTSan::NotifyBreakpointHit, this,
-                          sync);
+  breakpoint->SetCallback(InstrumentationRuntimeTSan::NotifyBreakpointHit,
+                          CreateBreakpointBaton(), sync);
   breakpoint->SetBreakpointKind("thread-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 

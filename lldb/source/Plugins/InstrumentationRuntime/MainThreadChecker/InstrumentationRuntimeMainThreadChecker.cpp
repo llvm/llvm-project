@@ -155,8 +155,13 @@ bool InstrumentationRuntimeMainThreadChecker::NotifyBreakpointHit(
   if (!baton)
     return false; ///< false => resume execution.
 
+  // Hold a reference to the plugin while using it. The plugin might have been
+  // destroyed (e.g. because it was disabled) in which case don't stop.
+  InstrumentationRuntimeSP runtime_sp = GetRuntimeFromBaton(baton);
+  if (!runtime_sp)
+    return false;
   InstrumentationRuntimeMainThreadChecker *const instance =
-      static_cast<InstrumentationRuntimeMainThreadChecker *>(baton);
+      static_cast<InstrumentationRuntimeMainThreadChecker *>(runtime_sp.get());
 
   ProcessSP process_sp = instance->GetProcessSP();
   ThreadSP thread_sp = context->exe_ctx_ref.GetThreadSP();
@@ -217,7 +222,8 @@ void InstrumentationRuntimeMainThreadChecker::Activate() {
           .get();
   const bool sync = false;
   breakpoint->SetCallback(
-      InstrumentationRuntimeMainThreadChecker::NotifyBreakpointHit, this, sync);
+      InstrumentationRuntimeMainThreadChecker::NotifyBreakpointHit,
+      CreateBreakpointBaton(), sync);
   breakpoint->SetBreakpointKind("main-thread-checker-report");
   SetBreakpointID(breakpoint->GetID());
 
