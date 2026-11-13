@@ -12,7 +12,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define void @nested_loop_inner_vectorized(ptr nocapture noundef %buf, i64 noundef %width, i64 noundef %height, i64 noundef %stride) {
 ; WITHOUT-LABEL: define void @nested_loop_inner_vectorized(
-; WITHOUT-SAME: ptr nocapture noundef [[BUF:%.*]], i64 noundef [[WIDTH:%.*]], i64 noundef [[HEIGHT:%.*]], i64 noundef [[STRIDE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; WITHOUT-SAME: ptr nofree noundef captures(none) [[BUF:%.*]], i64 noundef [[WIDTH:%.*]], i64 noundef [[HEIGHT:%.*]], i64 noundef [[STRIDE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; WITHOUT-NEXT:  [[ENTRY:.*:]]
 ; WITHOUT-NEXT:    [[CMP_HEIGHT:%.*]] = icmp eq i64 [[HEIGHT]], 0
 ; WITHOUT-NEXT:    [[CMP_WIDTH:%.*]] = icmp eq i64 [[WIDTH]], 0
@@ -21,7 +21,7 @@ define void @nested_loop_inner_vectorized(ptr nocapture noundef %buf, i64 nounde
 ; WITHOUT:       [[OUTER_HEADER_PREHEADER]]:
 ; WITHOUT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDTH]], 4
 ; WITHOUT-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDTH]], -4
-; WITHOUT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDTH]]
+; WITHOUT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDTH]], [[N_VEC]]
 ; WITHOUT-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; WITHOUT:       [[OUTER_HEADER]]:
 ; WITHOUT-NEXT:    [[Y:%.*]] = phi i64 [ [[Y_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
@@ -31,7 +31,7 @@ define void @nested_loop_inner_vectorized(ptr nocapture noundef %buf, i64 nounde
 ; WITHOUT-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], [ 0, %[[OUTER_HEADER]] ]
 ; WITHOUT-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y]], i64 [[INDEX]]
 ; WITHOUT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
-; WITHOUT-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[WIDE_LOAD]], <i8 1, i8 1, i8 1, i8 1>
+; WITHOUT-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; WITHOUT-NEXT:    store <4 x i8> [[TMP1]], ptr [[TMP0]], align 1
 ; WITHOUT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; WITHOUT-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -59,7 +59,7 @@ define void @nested_loop_inner_vectorized(ptr nocapture noundef %buf, i64 nounde
 ; WITHOUT-NEXT:    ret void
 ;
 ; WITH-LABEL: define void @nested_loop_inner_vectorized(
-; WITH-SAME: ptr nocapture noundef [[BUF:%.*]], i64 noundef [[WIDTH:%.*]], i64 noundef [[HEIGHT:%.*]], i64 noundef [[STRIDE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; WITH-SAME: ptr nofree noundef captures(none) [[BUF:%.*]], i64 noundef [[WIDTH:%.*]], i64 noundef [[HEIGHT:%.*]], i64 noundef [[STRIDE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; WITH-NEXT:  [[ENTRY:.*:]]
 ; WITH-NEXT:    [[CMP_HEIGHT:%.*]] = icmp eq i64 [[HEIGHT]], 0
 ; WITH-NEXT:    [[CMP_WIDTH:%.*]] = icmp eq i64 [[WIDTH]], 0
@@ -68,73 +68,40 @@ define void @nested_loop_inner_vectorized(ptr nocapture noundef %buf, i64 nounde
 ; WITH:       [[OUTER_HEADER_PREHEADER]]:
 ; WITH-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDTH]], 4
 ; WITH-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDTH]], -4
-; WITH-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[OUTER_HEADER_US:.*]], label %[[OUTER_HEADER_PREHEADER_SPLIT:.*]]
-; WITH:       [[OUTER_HEADER_US]]:
-; WITH-NEXT:    [[Y_US:%.*]] = phi i64 [ [[Y_NEXT_US:%.*]], %[[OUTER_LATCH_LOOPEXIT_LOOPEXIT_US:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
-; WITH-NEXT:    [[BUF_Y_US:%.*]] = phi ptr [ [[BUF_NEXT_US:%.*]], %[[OUTER_LATCH_LOOPEXIT_LOOPEXIT_US]] ], [ [[BUF]], %[[OUTER_HEADER_PREHEADER]] ]
-; WITH-NEXT:    br label %[[INNER_US:.*]]
-; WITH:       [[INNER_US]]:
-; WITH-NEXT:    [[X_US:%.*]] = phi i64 [ [[X_NEXT_US:%.*]], %[[INNER_US]] ], [ 0, %[[OUTER_HEADER_US]] ]
-; WITH-NEXT:    [[PTR_US:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y_US]], i64 [[X_US]]
-; WITH-NEXT:    [[VAL_US:%.*]] = load i8, ptr [[PTR_US]], align 1
-; WITH-NEXT:    [[INC_US:%.*]] = add i8 [[VAL_US]], 1
-; WITH-NEXT:    store i8 [[INC_US]], ptr [[PTR_US]], align 1
-; WITH-NEXT:    [[X_NEXT_US]] = add nuw i64 [[X_US]], 1
-; WITH-NEXT:    [[CMP_X_US:%.*]] = icmp eq i64 [[X_NEXT_US]], [[WIDTH]]
-; WITH-NEXT:    br i1 [[CMP_X_US]], label %[[OUTER_LATCH_LOOPEXIT_LOOPEXIT_US]], label %[[INNER_US]], !llvm.loop [[LOOP0:![0-9]+]]
-; WITH:       [[OUTER_LATCH_LOOPEXIT_LOOPEXIT_US]]:
-; WITH-NEXT:    [[BUF_NEXT_US]] = getelementptr inbounds i8, ptr [[BUF_Y_US]], i64 [[STRIDE]]
-; WITH-NEXT:    [[Y_NEXT_US]] = add nuw i64 [[Y_US]], 1
-; WITH-NEXT:    [[CMP_Y_US:%.*]] = icmp eq i64 [[Y_NEXT_US]], [[HEIGHT]]
-; WITH-NEXT:    br i1 [[CMP_Y_US]], label %[[EXIT]], label %[[OUTER_HEADER_US]]
-; WITH:       [[OUTER_HEADER_PREHEADER_SPLIT]]:
-; WITH-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDTH]]
-; WITH-NEXT:    br i1 [[CMP_N]], label %[[OUTER_HEADER_US2:.*]], label %[[OUTER_HEADER:.*]]
-; WITH:       [[OUTER_HEADER_US2]]:
-; WITH-NEXT:    [[Y_US3:%.*]] = phi i64 [ [[Y_NEXT_US7:%.*]], %[[MIDDLE_BLOCK_US:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER_SPLIT]] ]
-; WITH-NEXT:    [[BUF_Y_US4:%.*]] = phi ptr [ [[BUF_NEXT_US6:%.*]], %[[MIDDLE_BLOCK_US]] ], [ [[BUF]], %[[OUTER_HEADER_PREHEADER_SPLIT]] ]
+; WITH-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDTH]], [[N_VEC]]
 ; WITH-NEXT:    br label %[[VECTOR_BODY_US:.*]]
-; WITH:       [[MIDDLE_BLOCK_US]]:
-; WITH-NEXT:    [[BUF_NEXT_US6]] = getelementptr inbounds i8, ptr [[BUF_Y_US4]], i64 [[STRIDE]]
-; WITH-NEXT:    [[Y_NEXT_US7]] = add nuw i64 [[Y_US3]], 1
-; WITH-NEXT:    [[CMP_Y_US8:%.*]] = icmp eq i64 [[Y_NEXT_US7]], [[HEIGHT]]
-; WITH-NEXT:    br i1 [[CMP_Y_US8]], label %[[EXIT]], label %[[OUTER_HEADER_US2]]
 ; WITH:       [[VECTOR_BODY_US]]:
-; WITH-NEXT:    [[INDEX_US:%.*]] = phi i64 [ 0, %[[OUTER_HEADER_US2]] ], [ [[INDEX_NEXT_US:%.*]], %[[VECTOR_BODY_US]] ]
+; WITH-NEXT:    [[Y:%.*]] = phi i64 [ [[Y_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; WITH-NEXT:    [[BUF_Y_US4:%.*]] = phi ptr [ [[BUF_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT]] ], [ [[BUF]], %[[OUTER_HEADER_PREHEADER]] ]
+; WITH-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VECTOR_BODY:.*]], label %[[VECTOR_BODY1:.*]]
+; WITH:       [[VECTOR_BODY1]]:
+; WITH-NEXT:    [[INDEX_US:%.*]] = phi i64 [ [[INDEX_NEXT_US:%.*]], %[[VECTOR_BODY1]] ], [ 0, %[[VECTOR_BODY_US]] ]
 ; WITH-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y_US4]], i64 [[INDEX_US]]
 ; WITH-NEXT:    [[WIDE_LOAD_US:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
-; WITH-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[WIDE_LOAD_US]], <i8 1, i8 1, i8 1, i8 1>
+; WITH-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[WIDE_LOAD_US]], splat (i8 1)
 ; WITH-NEXT:    store <4 x i8> [[TMP1]], ptr [[TMP0]], align 1
 ; WITH-NEXT:    [[INDEX_NEXT_US]] = add nuw i64 [[INDEX_US]], 4
 ; WITH-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT_US]], [[N_VEC]]
-; WITH-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK_US]], label %[[VECTOR_BODY_US]], !llvm.loop [[LOOP3:![0-9]+]]
+; WITH-NEXT:    br i1 [[TMP2]], label %[[OUTER_HEADER:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP0:![0-9]+]]
 ; WITH:       [[OUTER_HEADER]]:
-; WITH-NEXT:    [[Y:%.*]] = phi i64 [ [[Y_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER_SPLIT]] ]
-; WITH-NEXT:    [[BUF_Y:%.*]] = phi ptr [ [[BUF_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT]] ], [ [[BUF]], %[[OUTER_HEADER_PREHEADER_SPLIT]] ]
-; WITH-NEXT:    br label %[[VECTOR_BODY:.*]]
+; WITH-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LATCH_LOOPEXIT]], label %[[VECTOR_BODY]]
 ; WITH:       [[VECTOR_BODY]]:
-; WITH-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; WITH-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y]], i64 [[INDEX]]
-; WITH-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
-; WITH-NEXT:    [[TMP4:%.*]] = add <4 x i8> [[WIDE_LOAD]], <i8 1, i8 1, i8 1, i8 1>
-; WITH-NEXT:    store <4 x i8> [[TMP4]], ptr [[TMP3]], align 1
-; WITH-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; WITH-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; WITH-NEXT:    br i1 [[TMP5]], label %[[INNER:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3]]
+; WITH-NEXT:    [[X_PH:%.*]] = phi i64 [ 0, %[[VECTOR_BODY_US]] ], [ [[N_VEC]], %[[OUTER_HEADER]] ]
+; WITH-NEXT:    br label %[[INNER:.*]]
 ; WITH:       [[INNER]]:
-; WITH-NEXT:    [[X:%.*]] = phi i64 [ [[X_NEXT:%.*]], %[[INNER]] ], [ [[N_VEC]], %[[VECTOR_BODY]] ]
-; WITH-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y]], i64 [[X]]
+; WITH-NEXT:    [[X:%.*]] = phi i64 [ [[X_NEXT:%.*]], %[[INNER]] ], [ [[X_PH]], %[[VECTOR_BODY]] ]
+; WITH-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y_US4]], i64 [[X]]
 ; WITH-NEXT:    [[VAL:%.*]] = load i8, ptr [[PTR]], align 1
 ; WITH-NEXT:    [[INC:%.*]] = add i8 [[VAL]], 1
 ; WITH-NEXT:    store i8 [[INC]], ptr [[PTR]], align 1
 ; WITH-NEXT:    [[X_NEXT]] = add nuw i64 [[X]], 1
 ; WITH-NEXT:    [[CMP_X:%.*]] = icmp eq i64 [[X_NEXT]], [[WIDTH]]
-; WITH-NEXT:    br i1 [[CMP_X]], label %[[OUTER_LATCH_LOOPEXIT]], label %[[INNER]], !llvm.loop [[LOOP0]]
+; WITH-NEXT:    br i1 [[CMP_X]], label %[[OUTER_LATCH_LOOPEXIT]], label %[[INNER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; WITH:       [[OUTER_LATCH_LOOPEXIT]]:
-; WITH-NEXT:    [[BUF_NEXT]] = getelementptr inbounds i8, ptr [[BUF_Y]], i64 [[STRIDE]]
+; WITH-NEXT:    [[BUF_NEXT]] = getelementptr inbounds i8, ptr [[BUF_Y_US4]], i64 [[STRIDE]]
 ; WITH-NEXT:    [[Y_NEXT]] = add nuw i64 [[Y]], 1
 ; WITH-NEXT:    [[CMP_Y:%.*]] = icmp eq i64 [[Y_NEXT]], [[HEIGHT]]
-; WITH-NEXT:    br i1 [[CMP_Y]], label %[[EXIT]], label %[[OUTER_HEADER]]
+; WITH-NEXT:    br i1 [[CMP_Y]], label %[[EXIT]], label %[[VECTOR_BODY_US]]
 ; WITH:       [[EXIT]]:
 ; WITH-NEXT:    ret void
 ;
@@ -178,7 +145,7 @@ exit:
 
 define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %width, i64 %height, i32 %shift_x, i32 %shift_y, ptr noalias nocapture %tmp) {
 ; WITHOUT-LABEL: define void @ass_shift_bitmap_c(
-; WITHOUT-SAME: ptr noalias nocapture [[BUF:%.*]], i64 [[STRIDE:%.*]], i64 [[WIDTH:%.*]], i64 [[HEIGHT:%.*]], i32 [[SHIFT_X:%.*]], i32 [[SHIFT_Y:%.*]], ptr noalias nocapture [[TMP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; WITHOUT-SAME: ptr noalias nofree captures(none) [[BUF:%.*]], i64 [[STRIDE:%.*]], i64 [[WIDTH:%.*]], i64 [[HEIGHT:%.*]], i32 [[SHIFT_X:%.*]], i32 [[SHIFT_Y:%.*]], ptr noalias nofree captures(none) [[TMP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; WITHOUT-NEXT:  [[ENTRY:.*:]]
 ; WITHOUT-NEXT:    [[CMP_HEIGHT:%.*]] = icmp eq i64 [[HEIGHT]], 0
 ; WITHOUT-NEXT:    [[CMP_WIDTH:%.*]] = icmp eq i64 [[WIDTH]], 0
@@ -191,7 +158,7 @@ define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %wi
 ; WITHOUT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; WITHOUT-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i32> poison, i32 [[SHIFT_Y]], i64 0
 ; WITHOUT-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT3]], <2 x i32> poison, <2 x i32> zeroinitializer
-; WITHOUT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDTH]]
+; WITHOUT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDTH]], [[N_VEC]]
 ; WITHOUT-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; WITHOUT:       [[OUTER_HEADER]]:
 ; WITHOUT-NEXT:    [[Y:%.*]] = phi i64 [ [[Y_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
@@ -203,25 +170,24 @@ define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %wi
 ; WITHOUT-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y]], i64 [[INDEX]]
 ; WITHOUT-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP0]], align 1
 ; WITHOUT-NEXT:    [[TMP1:%.*]] = zext <2 x i8> [[WIDE_LOAD]] to <2 x i32>
-; WITHOUT-NEXT:    [[TMP2:%.*]] = shl nuw nsw <2 x i32> [[TMP1]], <i32 1, i32 1>
-; WITHOUT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP]], i64 [[INDEX]]
+; WITHOUT-NEXT:    [[TMP2:%.*]] = shl nuw nsw <2 x i32> [[TMP1]], splat (i32 1)
+; WITHOUT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x i8], ptr [[TMP]], i64 [[INDEX]]
 ; WITHOUT-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i16>, ptr [[TMP3]], align 2
 ; WITHOUT-NEXT:    [[TMP4:%.*]] = mul nuw nsw <2 x i32> [[TMP2]], [[BROADCAST_SPLAT]]
-; WITHOUT-NEXT:    [[TMP5]] = lshr <2 x i32> [[TMP4]], <i32 6, i32 6>
+; WITHOUT-NEXT:    [[TMP5]] = lshr <2 x i32> [[TMP4]], splat (i32 6)
 ; WITHOUT-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[TMP5]], <2 x i32> <i32 1, i32 2>
 ; WITHOUT-NEXT:    [[TMP7:%.*]] = add nuw nsw <2 x i32> [[TMP2]], [[TMP6]]
 ; WITHOUT-NEXT:    [[TMP8:%.*]] = sub nsw <2 x i32> [[TMP7]], [[TMP5]]
-; WITHOUT-NEXT:    [[TMP9:%.*]] = and <2 x i32> [[TMP8]], <i32 65535, i32 65535>
+; WITHOUT-NEXT:    [[TMP9:%.*]] = and <2 x i32> [[TMP8]], splat (i32 65535)
 ; WITHOUT-NEXT:    [[TMP10:%.*]] = mul nuw nsw <2 x i32> [[TMP9]], [[BROADCAST_SPLAT4]]
-; WITHOUT-NEXT:    [[TMP11:%.*]] = lshr <2 x i32> [[TMP10]], <i32 6, i32 6>
+; WITHOUT-NEXT:    [[TMP11:%.*]] = lshr <2 x i32> [[TMP10]], splat (i32 6)
 ; WITHOUT-NEXT:    [[TMP12:%.*]] = trunc <2 x i32> [[TMP11]] to <2 x i16>
 ; WITHOUT-NEXT:    [[TMP13:%.*]] = trunc <2 x i32> [[TMP8]] to <2 x i16>
-; WITHOUT-NEXT:    [[TMP14:%.*]] = add <2 x i16> [[WIDE_LOAD2]], [[TMP13]]
+; WITHOUT-NEXT:    [[TMP16:%.*]] = add <2 x i16> [[WIDE_LOAD2]], splat (i16 1)
+; WITHOUT-NEXT:    [[TMP14:%.*]] = add <2 x i16> [[TMP16]], [[TMP13]]
 ; WITHOUT-NEXT:    [[TMP15:%.*]] = sub <2 x i16> [[TMP14]], [[TMP12]]
-; WITHOUT-NEXT:    [[TMP16:%.*]] = zext <2 x i16> [[TMP15]] to <2 x i32>
-; WITHOUT-NEXT:    [[TMP17:%.*]] = add nuw nsw <2 x i32> [[TMP16]], <i32 1, i32 1>
-; WITHOUT-NEXT:    [[TMP18:%.*]] = lshr <2 x i32> [[TMP17]], <i32 1, i32 1>
-; WITHOUT-NEXT:    [[TMP19:%.*]] = trunc <2 x i32> [[TMP18]] to <2 x i8>
+; WITHOUT-NEXT:    [[TMP17:%.*]] = lshr <2 x i16> [[TMP15]], splat (i16 1)
+; WITHOUT-NEXT:    [[TMP19:%.*]] = trunc <2 x i16> [[TMP17]] to <2 x i8>
 ; WITHOUT-NEXT:    store <2 x i8> [[TMP19]], ptr [[TMP0]], align 1
 ; WITHOUT-NEXT:    store <2 x i16> [[TMP12]], ptr [[TMP3]], align 2
 ; WITHOUT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -241,7 +207,7 @@ define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %wi
 ; WITHOUT-NEXT:    [[BUF_VAL:%.*]] = load i8, ptr [[BUF_PTR]], align 1
 ; WITHOUT-NEXT:    [[BUF_EXT:%.*]] = zext i8 [[BUF_VAL]] to i32
 ; WITHOUT-NEXT:    [[PX_INIT:%.*]] = shl nuw nsw i32 [[BUF_EXT]], 1
-; WITHOUT-NEXT:    [[TMP_PTR:%.*]] = getelementptr inbounds i16, ptr [[TMP]], i64 [[X]]
+; WITHOUT-NEXT:    [[TMP_PTR:%.*]] = getelementptr inbounds [2 x i8], ptr [[TMP]], i64 [[X]]
 ; WITHOUT-NEXT:    [[SHIFTED_FROM_TOP:%.*]] = load i16, ptr [[TMP_PTR]], align 2
 ; WITHOUT-NEXT:    [[MUL_X:%.*]] = mul nuw nsw i32 [[PX_INIT]], [[SHIFT_X]]
 ; WITHOUT-NEXT:    [[B_X]] = lshr i32 [[MUL_X]], 6
@@ -252,12 +218,11 @@ define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %wi
 ; WITHOUT-NEXT:    [[B_Y_FULL:%.*]] = lshr i32 [[MUL_Y]], 6
 ; WITHOUT-NEXT:    [[B_Y:%.*]] = trunc i32 [[B_Y_FULL]] to i16
 ; WITHOUT-NEXT:    [[PX_TRUNC:%.*]] = trunc i32 [[PX_SUB_BX]] to i16
-; WITHOUT-NEXT:    [[PX_ADD_TOP:%.*]] = add i16 [[SHIFTED_FROM_TOP]], [[PX_TRUNC]]
+; WITHOUT-NEXT:    [[PX_ADD_TOP1:%.*]] = add i16 [[SHIFTED_FROM_TOP]], 1
+; WITHOUT-NEXT:    [[PX_ADD_TOP:%.*]] = add i16 [[PX_ADD_TOP1]], [[PX_TRUNC]]
 ; WITHOUT-NEXT:    [[PX_SUB_BY:%.*]] = sub i16 [[PX_ADD_TOP]], [[B_Y]]
-; WITHOUT-NEXT:    [[PX_EXT:%.*]] = zext i16 [[PX_SUB_BY]] to i32
-; WITHOUT-NEXT:    [[PX_PLUS1:%.*]] = add nuw nsw i32 [[PX_EXT]], 1
-; WITHOUT-NEXT:    [[RESULT:%.*]] = lshr i32 [[PX_PLUS1]], 1
-; WITHOUT-NEXT:    [[RESULT_TRUNC:%.*]] = trunc i32 [[RESULT]] to i8
+; WITHOUT-NEXT:    [[RESULT:%.*]] = lshr i16 [[PX_SUB_BY]], 1
+; WITHOUT-NEXT:    [[RESULT_TRUNC:%.*]] = trunc i16 [[RESULT]] to i8
 ; WITHOUT-NEXT:    store i8 [[RESULT_TRUNC]], ptr [[BUF_PTR]], align 1
 ; WITHOUT-NEXT:    store i16 [[B_Y]], ptr [[TMP_PTR]], align 2
 ; WITHOUT-NEXT:    [[X_NEXT]] = add nuw i64 [[X]], 1
@@ -272,7 +237,7 @@ define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %wi
 ; WITHOUT-NEXT:    ret void
 ;
 ; WITH-LABEL: define void @ass_shift_bitmap_c(
-; WITH-SAME: ptr noalias nocapture [[BUF:%.*]], i64 [[STRIDE:%.*]], i64 [[WIDTH:%.*]], i64 [[HEIGHT:%.*]], i32 [[SHIFT_X:%.*]], i32 [[SHIFT_Y:%.*]], ptr noalias nocapture [[TMP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; WITH-SAME: ptr noalias nofree captures(none) [[BUF:%.*]], i64 [[STRIDE:%.*]], i64 [[WIDTH:%.*]], i64 [[HEIGHT:%.*]], i32 [[SHIFT_X:%.*]], i32 [[SHIFT_Y:%.*]], ptr noalias nofree captures(none) [[TMP:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; WITH-NEXT:  [[ENTRY:.*:]]
 ; WITH-NEXT:    [[CMP_HEIGHT:%.*]] = icmp eq i64 [[HEIGHT]], 0
 ; WITH-NEXT:    [[CMP_WIDTH:%.*]] = icmp eq i64 [[WIDTH]], 0
@@ -285,123 +250,56 @@ define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %wi
 ; WITH-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; WITH-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i32> poison, i32 [[SHIFT_Y]], i64 0
 ; WITH-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT3]], <2 x i32> poison, <2 x i32> zeroinitializer
-; WITH-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[OUTER_HEADER_US_PREHEADER:.*]], label %[[OUTER_HEADER_PREHEADER_SPLIT:.*]]
-; WITH:       [[OUTER_HEADER_US_PREHEADER]]:
-; WITH-NEXT:    [[TMP_PROMOTED:%.*]] = load i16, ptr [[TMP]], align 2
-; WITH-NEXT:    br label %[[OUTER_HEADER_US:.*]]
-; WITH:       [[OUTER_HEADER_US]]:
-; WITH-NEXT:    [[SHIFTED_FROM_TOP_US15:%.*]] = phi i16 [ [[B_Y_US:%.*]], %[[OUTER_HEADER_US]] ], [ [[TMP_PROMOTED]], %[[OUTER_HEADER_US_PREHEADER]] ]
-; WITH-NEXT:    [[Y_US:%.*]] = phi i64 [ [[Y_NEXT_US:%.*]], %[[OUTER_HEADER_US]] ], [ 0, %[[OUTER_HEADER_US_PREHEADER]] ]
-; WITH-NEXT:    [[BUF_Y_US:%.*]] = phi ptr [ [[BUF_NEXT_US:%.*]], %[[OUTER_HEADER_US]] ], [ [[BUF]], %[[OUTER_HEADER_US_PREHEADER]] ]
-; WITH-NEXT:    [[BUF_VAL_US:%.*]] = load i8, ptr [[BUF_Y_US]], align 1
-; WITH-NEXT:    [[BUF_EXT_US:%.*]] = zext i8 [[BUF_VAL_US]] to i32
-; WITH-NEXT:    [[PX_INIT_US:%.*]] = shl nuw nsw i32 [[BUF_EXT_US]], 1
-; WITH-NEXT:    [[MUL_X_US:%.*]] = mul nuw nsw i32 [[PX_INIT_US]], [[SHIFT_X]]
-; WITH-NEXT:    [[B_X_US:%.*]] = lshr i32 [[MUL_X_US]], 6
-; WITH-NEXT:    [[PX_SUB_BX_US:%.*]] = sub nsw i32 [[PX_INIT_US]], [[B_X_US]]
-; WITH-NEXT:    [[PX_MASKED_US:%.*]] = and i32 [[PX_SUB_BX_US]], 65535
-; WITH-NEXT:    [[MUL_Y_US:%.*]] = mul nuw nsw i32 [[PX_MASKED_US]], [[SHIFT_Y]]
-; WITH-NEXT:    [[B_Y_FULL_US:%.*]] = lshr i32 [[MUL_Y_US]], 6
-; WITH-NEXT:    [[B_Y_US]] = trunc i32 [[B_Y_FULL_US]] to i16
-; WITH-NEXT:    [[PX_TRUNC_US:%.*]] = trunc i32 [[PX_SUB_BX_US]] to i16
-; WITH-NEXT:    [[PX_ADD_TOP_US:%.*]] = add i16 [[SHIFTED_FROM_TOP_US15]], [[PX_TRUNC_US]]
-; WITH-NEXT:    [[PX_SUB_BY_US:%.*]] = sub i16 [[PX_ADD_TOP_US]], [[B_Y_US]]
-; WITH-NEXT:    [[PX_EXT_US:%.*]] = zext i16 [[PX_SUB_BY_US]] to i32
-; WITH-NEXT:    [[PX_PLUS1_US:%.*]] = add nuw nsw i32 [[PX_EXT_US]], 1
-; WITH-NEXT:    [[RESULT_US:%.*]] = lshr i32 [[PX_PLUS1_US]], 1
-; WITH-NEXT:    [[RESULT_TRUNC_US:%.*]] = trunc i32 [[RESULT_US]] to i8
-; WITH-NEXT:    store i8 [[RESULT_TRUNC_US]], ptr [[BUF_Y_US]], align 1
-; WITH-NEXT:    [[BUF_NEXT_US]] = getelementptr inbounds i8, ptr [[BUF_Y_US]], i64 [[STRIDE]]
-; WITH-NEXT:    [[Y_NEXT_US]] = add nuw i64 [[Y_US]], 1
-; WITH-NEXT:    [[CMP_Y_US:%.*]] = icmp eq i64 [[Y_NEXT_US]], [[HEIGHT]]
-; WITH-NEXT:    br i1 [[CMP_Y_US]], label %[[EXIT_LOOPEXIT:.*]], label %[[OUTER_HEADER_US]]
-; WITH:       [[OUTER_HEADER_PREHEADER_SPLIT]]:
-; WITH-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDTH]]
-; WITH-NEXT:    br i1 [[CMP_N]], label %[[OUTER_HEADER_US5:.*]], label %[[OUTER_HEADER:.*]]
-; WITH:       [[OUTER_HEADER_US5]]:
-; WITH-NEXT:    [[Y_US6:%.*]] = phi i64 [ [[Y_NEXT_US10:%.*]], %[[MIDDLE_BLOCK_US:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER_SPLIT]] ]
-; WITH-NEXT:    [[BUF_Y_US7:%.*]] = phi ptr [ [[BUF_NEXT_US9:%.*]], %[[MIDDLE_BLOCK_US]] ], [ [[BUF]], %[[OUTER_HEADER_PREHEADER_SPLIT]] ]
+; WITH-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDTH]], [[N_VEC]]
 ; WITH-NEXT:    br label %[[VECTOR_BODY_US:.*]]
-; WITH:       [[MIDDLE_BLOCK_US]]:
-; WITH-NEXT:    [[BUF_NEXT_US9]] = getelementptr inbounds i8, ptr [[BUF_Y_US7]], i64 [[STRIDE]]
-; WITH-NEXT:    [[Y_NEXT_US10]] = add nuw i64 [[Y_US6]], 1
-; WITH-NEXT:    [[CMP_Y_US11:%.*]] = icmp eq i64 [[Y_NEXT_US10]], [[HEIGHT]]
-; WITH-NEXT:    br i1 [[CMP_Y_US11]], label %[[EXIT]], label %[[OUTER_HEADER_US5]]
 ; WITH:       [[VECTOR_BODY_US]]:
-; WITH-NEXT:    [[INDEX_US:%.*]] = phi i64 [ 0, %[[OUTER_HEADER_US5]] ], [ [[INDEX_NEXT_US:%.*]], %[[VECTOR_BODY_US]] ]
-; WITH-NEXT:    [[VECTOR_RECUR_US:%.*]] = phi <2 x i32> [ <i32 poison, i32 0>, %[[OUTER_HEADER_US5]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY_US]] ]
-; WITH-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y_US7]], i64 [[INDEX_US]]
-; WITH-NEXT:    [[WIDE_LOAD_US:%.*]] = load <2 x i8>, ptr [[TMP0]], align 1
-; WITH-NEXT:    [[TMP1:%.*]] = zext <2 x i8> [[WIDE_LOAD_US]] to <2 x i32>
-; WITH-NEXT:    [[TMP2:%.*]] = shl nuw nsw <2 x i32> [[TMP1]], <i32 1, i32 1>
-; WITH-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP]], i64 [[INDEX_US]]
-; WITH-NEXT:    [[WIDE_LOAD2_US:%.*]] = load <2 x i16>, ptr [[TMP3]], align 2
-; WITH-NEXT:    [[TMP4:%.*]] = mul nuw nsw <2 x i32> [[TMP2]], [[BROADCAST_SPLAT]]
-; WITH-NEXT:    [[TMP5]] = lshr <2 x i32> [[TMP4]], <i32 6, i32 6>
-; WITH-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR_US]], <2 x i32> [[TMP5]], <2 x i32> <i32 1, i32 2>
-; WITH-NEXT:    [[TMP7:%.*]] = add nuw nsw <2 x i32> [[TMP2]], [[TMP6]]
-; WITH-NEXT:    [[TMP8:%.*]] = sub nsw <2 x i32> [[TMP7]], [[TMP5]]
-; WITH-NEXT:    [[TMP9:%.*]] = and <2 x i32> [[TMP8]], <i32 65535, i32 65535>
-; WITH-NEXT:    [[TMP10:%.*]] = mul nuw nsw <2 x i32> [[TMP9]], [[BROADCAST_SPLAT4]]
-; WITH-NEXT:    [[TMP11:%.*]] = lshr <2 x i32> [[TMP10]], <i32 6, i32 6>
-; WITH-NEXT:    [[TMP12:%.*]] = trunc <2 x i32> [[TMP11]] to <2 x i16>
-; WITH-NEXT:    [[TMP13:%.*]] = trunc <2 x i32> [[TMP8]] to <2 x i16>
-; WITH-NEXT:    [[TMP14:%.*]] = add <2 x i16> [[WIDE_LOAD2_US]], [[TMP13]]
-; WITH-NEXT:    [[TMP15:%.*]] = sub <2 x i16> [[TMP14]], [[TMP12]]
-; WITH-NEXT:    [[TMP16:%.*]] = zext <2 x i16> [[TMP15]] to <2 x i32>
-; WITH-NEXT:    [[TMP17:%.*]] = add nuw nsw <2 x i32> [[TMP16]], <i32 1, i32 1>
-; WITH-NEXT:    [[TMP18:%.*]] = lshr <2 x i32> [[TMP17]], <i32 1, i32 1>
-; WITH-NEXT:    [[TMP19:%.*]] = trunc <2 x i32> [[TMP18]] to <2 x i8>
-; WITH-NEXT:    store <2 x i8> [[TMP19]], ptr [[TMP0]], align 1
-; WITH-NEXT:    store <2 x i16> [[TMP12]], ptr [[TMP3]], align 2
-; WITH-NEXT:    [[INDEX_NEXT_US]] = add nuw i64 [[INDEX_US]], 2
-; WITH-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT_US]], [[N_VEC]]
-; WITH-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK_US]], label %[[VECTOR_BODY_US]], !llvm.loop [[LOOP4:![0-9]+]]
-; WITH:       [[OUTER_HEADER]]:
-; WITH-NEXT:    [[Y:%.*]] = phi i64 [ [[Y_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER_SPLIT]] ]
-; WITH-NEXT:    [[BUF_Y:%.*]] = phi ptr [ [[BUF_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT]] ], [ [[BUF]], %[[OUTER_HEADER_PREHEADER_SPLIT]] ]
-; WITH-NEXT:    br label %[[VECTOR_BODY:.*]]
+; WITH-NEXT:    [[Y:%.*]] = phi i64 [ [[Y_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; WITH-NEXT:    [[BUF_Y:%.*]] = phi ptr [ [[BUF_NEXT:%.*]], %[[OUTER_LATCH_LOOPEXIT]] ], [ [[BUF]], %[[OUTER_HEADER_PREHEADER]] ]
+; WITH-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[INNER_PREHEADER:.*]], label %[[VECTOR_BODY:.*]]
 ; WITH:       [[VECTOR_BODY]]:
-; WITH-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; WITH-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 0>, %[[OUTER_HEADER]] ], [ [[TMP26:%.*]], %[[VECTOR_BODY]] ]
+; WITH-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], [ 0, %[[VECTOR_BODY_US]] ]
+; WITH-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ [[TMP26:%.*]], %[[VECTOR_BODY]] ], [ <i32 poison, i32 0>, %[[VECTOR_BODY_US]] ]
 ; WITH-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y]], i64 [[INDEX]]
 ; WITH-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP21]], align 1
 ; WITH-NEXT:    [[TMP22:%.*]] = zext <2 x i8> [[WIDE_LOAD]] to <2 x i32>
-; WITH-NEXT:    [[TMP23:%.*]] = shl nuw nsw <2 x i32> [[TMP22]], <i32 1, i32 1>
-; WITH-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i16, ptr [[TMP]], i64 [[INDEX]]
+; WITH-NEXT:    [[TMP23:%.*]] = shl nuw nsw <2 x i32> [[TMP22]], splat (i32 1)
+; WITH-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [2 x i8], ptr [[TMP]], i64 [[INDEX]]
 ; WITH-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i16>, ptr [[TMP24]], align 2
 ; WITH-NEXT:    [[TMP25:%.*]] = mul nuw nsw <2 x i32> [[TMP23]], [[BROADCAST_SPLAT]]
-; WITH-NEXT:    [[TMP26]] = lshr <2 x i32> [[TMP25]], <i32 6, i32 6>
+; WITH-NEXT:    [[TMP26]] = lshr <2 x i32> [[TMP25]], splat (i32 6)
 ; WITH-NEXT:    [[TMP27:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[TMP26]], <2 x i32> <i32 1, i32 2>
 ; WITH-NEXT:    [[TMP28:%.*]] = add nuw nsw <2 x i32> [[TMP23]], [[TMP27]]
 ; WITH-NEXT:    [[TMP29:%.*]] = sub nsw <2 x i32> [[TMP28]], [[TMP26]]
-; WITH-NEXT:    [[TMP30:%.*]] = and <2 x i32> [[TMP29]], <i32 65535, i32 65535>
+; WITH-NEXT:    [[TMP30:%.*]] = and <2 x i32> [[TMP29]], splat (i32 65535)
 ; WITH-NEXT:    [[TMP31:%.*]] = mul nuw nsw <2 x i32> [[TMP30]], [[BROADCAST_SPLAT4]]
-; WITH-NEXT:    [[TMP32:%.*]] = lshr <2 x i32> [[TMP31]], <i32 6, i32 6>
+; WITH-NEXT:    [[TMP32:%.*]] = lshr <2 x i32> [[TMP31]], splat (i32 6)
 ; WITH-NEXT:    [[TMP33:%.*]] = trunc <2 x i32> [[TMP32]] to <2 x i16>
 ; WITH-NEXT:    [[TMP34:%.*]] = trunc <2 x i32> [[TMP29]] to <2 x i16>
-; WITH-NEXT:    [[TMP35:%.*]] = add <2 x i16> [[WIDE_LOAD2]], [[TMP34]]
+; WITH-NEXT:    [[TMP14:%.*]] = add <2 x i16> [[WIDE_LOAD2]], splat (i16 1)
+; WITH-NEXT:    [[TMP35:%.*]] = add <2 x i16> [[TMP14]], [[TMP34]]
 ; WITH-NEXT:    [[TMP36:%.*]] = sub <2 x i16> [[TMP35]], [[TMP33]]
-; WITH-NEXT:    [[TMP37:%.*]] = zext <2 x i16> [[TMP36]] to <2 x i32>
-; WITH-NEXT:    [[TMP38:%.*]] = add nuw nsw <2 x i32> [[TMP37]], <i32 1, i32 1>
-; WITH-NEXT:    [[TMP39:%.*]] = lshr <2 x i32> [[TMP38]], <i32 1, i32 1>
-; WITH-NEXT:    [[TMP40:%.*]] = trunc <2 x i32> [[TMP39]] to <2 x i8>
+; WITH-NEXT:    [[TMP17:%.*]] = lshr <2 x i16> [[TMP36]], splat (i16 1)
+; WITH-NEXT:    [[TMP40:%.*]] = trunc <2 x i16> [[TMP17]] to <2 x i8>
 ; WITH-NEXT:    store <2 x i8> [[TMP40]], ptr [[TMP21]], align 1
 ; WITH-NEXT:    store <2 x i16> [[TMP33]], ptr [[TMP24]], align 2
 ; WITH-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; WITH-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; WITH-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4]]
+; WITH-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; WITH:       [[MIDDLE_BLOCK]]:
 ; WITH-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i32> [[TMP26]], i64 1
+; WITH-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LATCH_LOOPEXIT]], label %[[INNER_PREHEADER]]
+; WITH:       [[INNER_PREHEADER]]:
+; WITH-NEXT:    [[X_PH:%.*]] = phi i64 [ 0, %[[VECTOR_BODY_US]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
+; WITH-NEXT:    [[SHIFTED_FROM_LEFT_PH:%.*]] = phi i32 [ 0, %[[VECTOR_BODY_US]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
 ; WITH-NEXT:    br label %[[INNER:.*]]
 ; WITH:       [[INNER]]:
-; WITH-NEXT:    [[X:%.*]] = phi i64 [ [[X_NEXT:%.*]], %[[INNER]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
-; WITH-NEXT:    [[SHIFTED_FROM_LEFT:%.*]] = phi i32 [ [[B_X:%.*]], %[[INNER]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
+; WITH-NEXT:    [[X:%.*]] = phi i64 [ [[X_NEXT:%.*]], %[[INNER]] ], [ [[X_PH]], %[[INNER_PREHEADER]] ]
+; WITH-NEXT:    [[SHIFTED_FROM_LEFT:%.*]] = phi i32 [ [[B_X:%.*]], %[[INNER]] ], [ [[SHIFTED_FROM_LEFT_PH]], %[[INNER_PREHEADER]] ]
 ; WITH-NEXT:    [[BUF_PTR:%.*]] = getelementptr inbounds i8, ptr [[BUF_Y]], i64 [[X]]
 ; WITH-NEXT:    [[BUF_VAL:%.*]] = load i8, ptr [[BUF_PTR]], align 1
 ; WITH-NEXT:    [[BUF_EXT:%.*]] = zext i8 [[BUF_VAL]] to i32
 ; WITH-NEXT:    [[PX_INIT:%.*]] = shl nuw nsw i32 [[BUF_EXT]], 1
-; WITH-NEXT:    [[TMP_PTR:%.*]] = getelementptr inbounds i16, ptr [[TMP]], i64 [[X]]
+; WITH-NEXT:    [[TMP_PTR:%.*]] = getelementptr inbounds [2 x i8], ptr [[TMP]], i64 [[X]]
 ; WITH-NEXT:    [[SHIFTED_FROM_TOP:%.*]] = load i16, ptr [[TMP_PTR]], align 2
 ; WITH-NEXT:    [[MUL_X:%.*]] = mul nuw nsw i32 [[PX_INIT]], [[SHIFT_X]]
 ; WITH-NEXT:    [[B_X]] = lshr i32 [[MUL_X]], 6
@@ -412,12 +310,11 @@ define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %wi
 ; WITH-NEXT:    [[B_Y_FULL:%.*]] = lshr i32 [[MUL_Y]], 6
 ; WITH-NEXT:    [[B_Y:%.*]] = trunc i32 [[B_Y_FULL]] to i16
 ; WITH-NEXT:    [[PX_TRUNC:%.*]] = trunc i32 [[PX_SUB_BX]] to i16
-; WITH-NEXT:    [[PX_ADD_TOP:%.*]] = add i16 [[SHIFTED_FROM_TOP]], [[PX_TRUNC]]
+; WITH-NEXT:    [[PX_ADD_TOP1:%.*]] = add i16 [[SHIFTED_FROM_TOP]], 1
+; WITH-NEXT:    [[PX_ADD_TOP:%.*]] = add i16 [[PX_ADD_TOP1]], [[PX_TRUNC]]
 ; WITH-NEXT:    [[PX_SUB_BY:%.*]] = sub i16 [[PX_ADD_TOP]], [[B_Y]]
-; WITH-NEXT:    [[PX_EXT:%.*]] = zext i16 [[PX_SUB_BY]] to i32
-; WITH-NEXT:    [[PX_PLUS1:%.*]] = add nuw nsw i32 [[PX_EXT]], 1
-; WITH-NEXT:    [[RESULT:%.*]] = lshr i32 [[PX_PLUS1]], 1
-; WITH-NEXT:    [[RESULT_TRUNC:%.*]] = trunc i32 [[RESULT]] to i8
+; WITH-NEXT:    [[RESULT:%.*]] = lshr i16 [[PX_SUB_BY]], 1
+; WITH-NEXT:    [[RESULT_TRUNC:%.*]] = trunc i16 [[RESULT]] to i8
 ; WITH-NEXT:    store i8 [[RESULT_TRUNC]], ptr [[BUF_PTR]], align 1
 ; WITH-NEXT:    store i16 [[B_Y]], ptr [[TMP_PTR]], align 2
 ; WITH-NEXT:    [[X_NEXT]] = add nuw i64 [[X]], 1
@@ -427,10 +324,7 @@ define void @ass_shift_bitmap_c(ptr noalias nocapture %buf, i64 %stride, i64 %wi
 ; WITH-NEXT:    [[BUF_NEXT]] = getelementptr inbounds i8, ptr [[BUF_Y]], i64 [[STRIDE]]
 ; WITH-NEXT:    [[Y_NEXT]] = add nuw i64 [[Y]], 1
 ; WITH-NEXT:    [[CMP_Y:%.*]] = icmp eq i64 [[Y_NEXT]], [[HEIGHT]]
-; WITH-NEXT:    br i1 [[CMP_Y]], label %[[EXIT]], label %[[OUTER_HEADER]]
-; WITH:       [[EXIT_LOOPEXIT]]:
-; WITH-NEXT:    store i16 [[B_Y_US]], ptr [[TMP]], align 2
-; WITH-NEXT:    br label %[[EXIT]]
+; WITH-NEXT:    br i1 [[CMP_Y]], label %[[EXIT]], label %[[VECTOR_BODY_US]]
 ; WITH:       [[EXIT]]:
 ; WITH-NEXT:    ret void
 ;
@@ -499,19 +393,6 @@ exit:
   ret void
 }
 
-;
-; Verify the inner loop is vectorized.
-; Verify there is only one vectorized copy of the inner loop.
-; WITHOUT: {{^vector\.body.*:}}
-; WITHOUT: add <{{[0-9]+}} x i8>
-; WITHOUT: store <{{[0-9]+}} x i8>
-;
-; WITHOUT-NOT: {{^vector\.body.*:}}
-;
-; WITHOUT: ret void
-
-
-
 ;.
 ; WITHOUT: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; WITHOUT: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -521,9 +402,9 @@ exit:
 ; WITHOUT: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
 ; WITH: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; WITH: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
-; WITH: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
+; WITH: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; WITH: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; WITH: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; WITH: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]], [[META1]]}
-; WITH: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; WITH: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; WITH: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
