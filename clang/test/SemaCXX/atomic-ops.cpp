@@ -22,3 +22,11 @@ void f() {
   __atomic_store(p, p, __ATOMIC_RELAXED);
   __atomic_compare_exchange(p, p, q, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 }
+
+using nullptr_t = decltype(nullptr);
+
+void atomic_minmax_nullptr_t(_Atomic(nullptr_t)* an) {
+  *an = __c11_atomic_fetch_max(an, nullptr, 0); // expected-error{{address argument to atomic operation must be a pointer to atomic integer, pointer or supported floating point type ('_Atomic(nullptr_t) *' invalid)}}
+  *an = __c11_atomic_fetch_min(an, nullptr, 0); // expected-error{{address argument to atomic operation must be a pointer to atomic integer, pointer or supported floating point type ('_Atomic(nullptr_t) *' invalid)}}
+
+}
