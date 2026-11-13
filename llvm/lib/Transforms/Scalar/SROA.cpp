@@ -43,6 +43,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -3503,8 +3504,8 @@ private:
     LoadInst *Load =
         IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
 
-    Load->copyMetadata(LI, {LLVMContext::MD_mem_parallel_loop_access,
-                            LLVMContext::MD_access_group});
+    copyMetadataForMemoryAccess(
+        *Load, LI, int64_t(NewAllocaBeginOffset) - int64_t(BeginOffset));
     return extractVector(IRB, Load, BeginIndex, EndIndex, "vec");
   }
 
@@ -3537,8 +3538,6 @@ private:
     Value *OldOp = LI.getOperand(0);
     assert(OldOp == OldPtr);
 
-    AAMDNodes AATags = LI.getAAMetadata();
-
     unsigned AS = LI.getPointerAddressSpace();
 
     Type *TargetTy = IsSplit ? Type::getIntNTy(LI.getContext(), SliceSize * 8)
@@ -3564,15 +3563,7 @@ private:
       if (NewLI->isAtomic())
         NewLI->setAlignment(LI.getAlign());
 
-      // Copy any metadata that is valid for the new load. This may require
-      // conversion to a different kind of metadata, e.g. !nonnull might change
-      // to !range or vice versa.
-      copyMetadataForLoad(*NewLI, LI);
-
-      // Do this after copyMetadataForLoad() to preserve the TBAA shift.
-      if (AATags)
-        NewLI->setAAMetadata(AATags.adjustForAccess(
-            NewBeginOffset - BeginOffset, NewLI->getType(), DL));
+      copyMetadataForMemoryAccess(*NewLI, LI, NewBeginOffset - BeginOffset);
 
       // Try to preserve nonnull metadata
       V = NewLI;
@@ -3594,15 +3585,9 @@ private:
           IRB.CreateAlignedLoad(TargetTy, getNewAllocaSlicePtr(IRB, LTy),
                                 getSliceAlign(), LI.isVolatile(), LI.getName());
 
-      if (AATags)
-        NewLI->setAAMetadata(AATags.adjustForAccess(
-            NewBeginOffset - BeginOffset, NewLI->getType(), DL));
-
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
-      NewLI->copyMetadata(LI, {LLVMContext::MD_mem_parallel_loop_access,
-                               LLVMContext::MD_access_group});
-
+      copyMetadataForMemoryAccess(*NewLI, LI, NewBeginOffset - BeginOffset);
       V = NewLI;
       IsPtrAdjusted = true;
     }
@@ -3645,8 +3630,7 @@ private:
     return !LI.isVolatile() && !IsPtrAdjusted;
   }
 
-  bool rewriteVectorizedStoreInst(Value *V, StoreInst &SI, Value *OldOp,
-                                  AAMDNodes AATags) {
+  bool rewriteVectorizedStoreInst(Value *V, StoreInst &SI, Value *OldOp) {
     // Capture V for the purpose of debug-info accounting once it's converted
     // to a vector store.
     Value *OrigV = V;
@@ -3669,11 +3653,7 @@ private:
       V = insertVector(IRB, Old, V, BeginIndex, "vec");
     }
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
-    Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group});
-    if (AATags)
-      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+    copyMetadataForMemoryAccess(*Store, SI, NewBeginOffset - BeginOffset);
     Pass.DeadInsts.push_back(&SI);
 
     // NOTE: Careful to use OrigV rather than V.
@@ -3683,7 +3663,7 @@ private:
     return true;
   }
 
-  bool rewriteIntegerStore(Value *V, StoreInst &SI, AAMDNodes AATags) {
+  bool rewriteIntegerStore(Value *V, StoreInst &SI) {
     assert(IntTy && "We cannot extract an integer from the alloca");
     assert(!SI.isVolatile());
     if (DL.getTypeSizeInBits(V->getType()).getFixedValue() !=
@@ -3697,11 +3677,7 @@ private:
     }
     V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
-    Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group});
-    if (AATags)
-      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+    copyMetadataForMemoryAccess(*Store, SI, NewBeginOffset - BeginOffset);
 
     migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
                      Store, Store->getPointerOperand(),
@@ -3717,7 +3693,6 @@ private:
     Value *OldOp = SI.getOperand(1);
     assert(OldOp == OldPtr);
 
-    AAMDNodes AATags = SI.getAAMetadata();
     Value *V = SI.getValueOperand();
 
     // Strip all inbounds GEPs and pointer casts to try to dig out any root
@@ -3739,9 +3714,9 @@ private:
     }
 
     if (VecTy)
-      return rewriteVectorizedStoreInst(V, SI, OldOp, AATags);
+      return rewriteVectorizedStoreInst(V, SI, OldOp);
     if (IntTy && V->getType()->isIntegerTy())
-      return rewriteIntegerStore(V, SI, AATags);
+      return rewriteIntegerStore(V, SI);
 
     StoreInst *NewSI;
     if (NewBeginOffset == NewAllocaBeginOffset &&
@@ -3759,11 +3734,7 @@ private:
       NewSI =
           IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(), SI.isVolatile());
     }
-    NewSI->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group});
-    if (AATags)
-      NewSI->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+    copyMetadataForMemoryAccess(*NewSI, SI, NewBeginOffset - BeginOffset);
     if (SI.isVolatile())
       NewSI->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
     if (NewSI->isAtomic())
@@ -3942,11 +3913,7 @@ private:
     Value *NewPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
     StoreInst *New =
         IRB.CreateAlignedStore(V, NewPtr, NewAI.getAlign(), II.isVolatile());
-    New->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
-                           LLVMContext::MD_access_group});
-    if (AATags)
-      New->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                V->getType(), DL));
+    copyMetadataForMemoryAccess(*New, II, NewBeginOffset - BeginOffset);
 
     migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
                      New, New->getPointerOperand(), V, DL);
@@ -4144,11 +4111,7 @@ private:
     } else {
       LoadInst *Load = IRB.CreateAlignedLoad(OtherTy, SrcPtr, SrcAlign,
                                              II.isVolatile(), "copyload");
-      Load->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
-                              LLVMContext::MD_access_group});
-      if (AATags)
-        Load->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                   Load->getType(), DL));
+      copyMetadataForMemoryAccess(*Load, II, NewBeginOffset - BeginOffset);
       Src = Load;
     }
 
@@ -4167,11 +4130,7 @@ private:
 
     StoreInst *Store = cast<StoreInst>(
         IRB.CreateAlignedStore(Src, DstPtr, DstAlign, II.isVolatile()));
-    Store->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group});
-    if (AATags)
-      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  Src->getType(), DL));
+    copyMetadataForMemoryAccess(*Store, II, NewBeginOffset - BeginOffset);
 
     APInt Offset(DL.getIndexTypeSizeInBits(DstPtr->getType()), 0);
     if (IsDest) {
@@ -4455,7 +4414,7 @@ private:
   };
 
   struct LoadOpSplitter : public OpSplitter<LoadOpSplitter> {
-    AAMDNodes AATags;
+    LoadInst *AggLoad;
     // A vector to hold the split components that we want to emit
     // separate fake uses for.
     SmallVector<Value *, 4> Components;
@@ -4464,11 +4423,11 @@ private:
     SmallVector<Instruction *, 1> FakeUses;
 
     LoadOpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
-                   AAMDNodes AATags, Align BaseAlign, const DataLayout &DL,
+                   LoadInst *AggLoad, Align BaseAlign, const DataLayout &DL,
                    IRBuilderTy &IRB)
         : OpSplitter<LoadOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign, DL,
                                      IRB),
-          AATags(AATags) {}
+          AggLoad(AggLoad) {}
 
     /// Emit a leaf load of a single value. This is called at the leaves of the
     /// recursive emission to actually load values.
@@ -4482,10 +4441,12 @@ private:
 
       APInt Offset(
           DL.getIndexSizeInBits(Ptr->getType()->getPointerAddressSpace()), 0);
-      if (AATags &&
-          GEPOperator::accumulateConstantOffset(BaseTy, GEPIndices, DL, Offset))
-        Load->setAAMetadata(
-            AATags.adjustForAccess(Offset.getZExtValue(), Load->getType(), DL));
+      bool KnownOffset =
+          GEPOperator::accumulateConstantOffset(BaseTy, GEPIndices, DL, Offset);
+      copyMetadataForMemoryAccess(
+          *Load, *AggLoad,
+          KnownOffset ? std::optional<int64_t>(Offset.getZExtValue())
+                      : std::nullopt);
       // Record the load so we can generate a fake use for this aggregate
       // component.
       Components.push_back(Load);
@@ -4521,7 +4482,7 @@ private:
 
     // We have an aggregate being loaded, split it apart.
     LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
-    LoadOpSplitter Splitter(&LI, *U, LI.getType(), LI.getAAMetadata(),
+    LoadOpSplitter Splitter(&LI, *U, LI.getType(), &LI,
                             getAdjustedAlignment(&LI, 0), DL, IRB);
     Splitter.recordFakeUses(LI);
     Value *V = PoisonValue::get(LI.getType());
@@ -4535,12 +4496,11 @@ private:
 
   struct StoreOpSplitter : public OpSplitter<StoreOpSplitter> {
     StoreOpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
-                    AAMDNodes AATags, StoreInst *AggStore, Align BaseAlign,
-                    const DataLayout &DL, IRBuilderTy &IRB)
+                    StoreInst *AggStore, Align BaseAlign, const DataLayout &DL,
+                    IRBuilderTy &IRB)
         : OpSplitter<StoreOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign,
                                       DL, IRB),
-          AATags(AATags), AggStore(AggStore) {}
-    AAMDNodes AATags;
+          AggStore(AggStore) {}
     StoreInst *AggStore;
     /// Emit a leaf store of a single value. This is called at the leaves of the
     /// recursive emission to actually produce stores.
@@ -4560,10 +4520,7 @@ private:
       APInt Offset(
           DL.getIndexSizeInBits(Ptr->getType()->getPointerAddressSpace()), 0);
       GEPOperator::accumulateConstantOffset(BaseTy, GEPIndices, DL, Offset);
-      if (AATags) {
-        Store->setAAMetadata(AATags.adjustForAccess(
-            Offset.getZExtValue(), ExtractValue->getType(), DL));
-      }
+      copyMetadataForMemoryAccess(*Store, *AggStore, Offset.getZExtValue());
 
       // migrateDebugInfo requires the base Alloca. Walk to it from this gep.
       // If we cannot (because there's an intervening non-const or unbounded
@@ -4595,7 +4552,7 @@ private:
 
     // We have an aggregate being stored, split it apart.
     LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
-    StoreOpSplitter Splitter(&SI, *U, V->getType(), SI.getAAMetadata(), &SI,
+    StoreOpSplitter Splitter(&SI, *U, V->getType(), &SI,
                              getAdjustedAlignment(&SI, 0), DL, IRB);
     Splitter.emitSplitOps(V->getType(), V, V->getName() + ".fca");
     Visited.erase(&SI);
@@ -5043,8 +5000,7 @@ public:
                        PartPtrTy, BasePtr->getName() + "."),
         getAdjustedAlignment(SplitI, It.getOffset()),
         /*IsVolatile*/ false, SplitI->getName());
-    PLoad->copyMetadata(*SplitI, {LLVMContext::MD_mem_parallel_loop_access,
-                                  LLVMContext::MD_access_group});
+    copyMetadataForMemoryAccess(*PLoad, *SplitI, It.getOffset());
     return PLoad;
   }
 
@@ -5059,13 +5015,8 @@ public:
                        PartPtrTy, BasePtr->getName() + "."),
         getAdjustedAlignment(SplitI, It.getOffset()),
         /*IsVolatile*/ false);
-    PStore->copyMetadata(*SplitI, {LLVMContext::MD_mem_parallel_loop_access,
-                                   LLVMContext::MD_access_group,
-                                   LLVMContext::MD_DIAssignID});
-    AAMDNodes AATags = SplitI->getAAMetadata();
-    if (AATags)
-      PStore->setAAMetadata(
-          AATags.adjustForAccess(It.getOffset(), StoreVal->getType(), DL));
+    copyMetadataForMemoryAccess(*PStore, *SplitI, It.getOffset());
+    PStore->copyMetadata(*SplitI, LLVMContext::MD_DIAssignID);
 
     return PStore;
   }

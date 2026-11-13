@@ -8,11 +8,11 @@ define i32 @split_copy(ptr %src) {
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[A_SROA_2:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr [[SRC]], align 8, !tbaa [[INT_TBAA0:![0-9]+]], !alias.scope [[META4:![0-9]+]], !noalias [[META4]], !llvm.mem.parallel_loop_access [[META7:![0-9]+]], !llvm.access.group [[META7]], !noalias.addrspace [[META8:![0-9]+]]
-; CHECK-NEXT:    store i32 [[A_SROA_0_0_COPYLOAD]], ptr [[A_SROA_0]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META4]], !noalias [[META4]], !llvm.mem.parallel_loop_access [[META7]], !llvm.access.group [[META7]], !noalias.addrspace [[META8]]
+; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr [[SRC]], align 8, !tbaa [[INT_TBAA0:![0-9]+]], !alias.scope [[META4:![0-9]+]], !noalias [[META4]], !nontemporal [[META7:![0-9]+]], !llvm.mem.parallel_loop_access [[META8:![0-9]+]], !llvm.access.group [[META8]], !annotation [[META9:![0-9]+]], !nosanitize [[META10:![0-9]+]], !mmra [[META11:![0-9]+]], !noalias.addrspace [[META12:![0-9]+]], !mem.cache_hint [[META13:![0-9]+]]
+; CHECK-NEXT:    store i32 [[A_SROA_0_0_COPYLOAD]], ptr [[A_SROA_0]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15:![0-9]+]]
 ; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 4, !tbaa [[FLOAT_TBAA9:![0-9]+]], !alias.scope [[META4]], !noalias [[META4]], !llvm.mem.parallel_loop_access [[META7]], !llvm.access.group [[META7]], !noalias.addrspace [[META8]]
-; CHECK-NEXT:    store i32 [[A_SROA_2_0_COPYLOAD]], ptr [[A_SROA_2]], align 4, !tbaa [[FLOAT_TBAA9]], !alias.scope [[META4]], !noalias [[META4]], !llvm.mem.parallel_loop_access [[META7]], !llvm.access.group [[META7]], !noalias.addrspace [[META8]]
+; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 4, !tbaa [[FLOAT_TBAA17:![0-9]+]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META13]]
+; CHECK-NEXT:    store i32 [[A_SROA_2_0_COPYLOAD]], ptr [[A_SROA_2]], align 4, !tbaa [[FLOAT_TBAA17]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_X:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    [[A_SROA_2_0_A_SROA_2_4_Y:%.*]] = load volatile i32, ptr [[A_SROA_2]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[A_SROA_0_0_A_SROA_0_0_X]], [[A_SROA_2_0_A_SROA_2_4_Y]]
@@ -33,7 +33,7 @@ define i32 @rewrite_set(i32 %v) {
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[A_SROA_2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[V]], ptr [[A_SROA_0]], align 8
-; CHECK-NEXT:    store i32 0, ptr [[A_SROA_2]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META4]], !noalias [[META4]], !llvm.mem.parallel_loop_access [[META7]], !llvm.access.group [[META7]], !noalias.addrspace [[META8]]
+; CHECK-NEXT:    store i32 0, ptr [[A_SROA_2]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_X:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    [[A_SROA_2_0_A_SROA_2_4_Y:%.*]] = load volatile i32, ptr [[A_SROA_2]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[A_SROA_0_0_A_SROA_0_0_X]], [[A_SROA_2_0_A_SROA_2_4_Y]]
@@ -55,9 +55,9 @@ define i32 @split_aggregate_store({i32, i32} %v) {
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[A_SROA_2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[V_FCA_0_EXTRACT:%.*]] = extractvalue { i32, i32 } [[V]], 0
-; CHECK-NEXT:    store i32 [[V_FCA_0_EXTRACT]], ptr [[A_SROA_0]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META4]], !noalias [[META4]], !noalias.addrspace [[META8]]
+; CHECK-NEXT:    store i32 [[V_FCA_0_EXTRACT]], ptr [[A_SROA_0]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    [[V_FCA_1_EXTRACT:%.*]] = extractvalue { i32, i32 } [[V]], 1
-; CHECK-NEXT:    store i32 [[V_FCA_1_EXTRACT]], ptr [[A_SROA_2]], align 4, !tbaa [[FLOAT_TBAA9]], !alias.scope [[META4]], !noalias [[META4]], !noalias.addrspace [[META8]]
+; CHECK-NEXT:    store i32 [[V_FCA_1_EXTRACT]], ptr [[A_SROA_2]], align 4, !tbaa [[FLOAT_TBAA17]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_X:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    [[A_SROA_2_0_A_SROA_2_4_Y:%.*]] = load volatile i32, ptr [[A_SROA_2]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[A_SROA_0_0_A_SROA_0_0_X]], [[A_SROA_2_0_A_SROA_2_4_Y]]
@@ -82,9 +82,9 @@ define {i32, i32} @split_aggregate_load(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[A_SROA_3_0_COPYLOAD:%.*]] = load i32, ptr [[A_SROA_3_0_SRC_SROA_IDX]], align 1
 ; CHECK-NEXT:    store i32 [[A_SROA_3_0_COPYLOAD]], ptr [[A_SROA_3]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V_FCA_0_LOAD:%.*]] = load i32, ptr [[A_SROA_0]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META4]], !noalias [[META4]], !noalias.addrspace [[META8]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V_FCA_0_LOAD:%.*]] = load i32, ptr [[A_SROA_0]], align 8, !tbaa [[INT_TBAA0]], !invariant.load [[META10]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META19:![0-9]+]]
 ; CHECK-NEXT:    [[V_FCA_0_INSERT:%.*]] = insertvalue { i32, i32 } poison, i32 [[A_SROA_0_0_A_SROA_0_0_V_FCA_0_LOAD]], 0
-; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_V_FCA_1_LOAD:%.*]] = load i32, ptr [[A_SROA_3]], align 4, !tbaa [[FLOAT_TBAA9]], !alias.scope [[META4]], !noalias [[META4]], !noalias.addrspace [[META8]]
+; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_V_FCA_1_LOAD:%.*]] = load i32, ptr [[A_SROA_3]], align 4, !tbaa [[FLOAT_TBAA17]], !invariant.load [[META10]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META19]]
 ; CHECK-NEXT:    [[V_FCA_1_INSERT:%.*]] = insertvalue { i32, i32 } [[V_FCA_0_INSERT]], i32 [[A_SROA_3_0_A_SROA_3_4_V_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1]], ptr [[DST]], align 1
@@ -110,7 +110,7 @@ define double @rewrite_load(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 8
 ; CHECK-NEXT:    [[A_SROA_3_0_COPYLOAD:%.*]] = load i32, ptr [[A_SROA_3_0_SRC_SROA_IDX]], align 1
 ; CHECK-NEXT:    store i32 [[A_SROA_3_0_COPYLOAD]], ptr [[A_SROA_3]], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V:%.*]] = load double, ptr [[A_SROA_0]], align 8, !fpmath [[META11:![0-9]+]], !invariant.load [[META12:![0-9]+]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META13:![0-9]+]], !llvm.mem.parallel_loop_access [[META7]], !invariant.group [[META12]], !llvm.access.group [[META7]], !noundef [[META12]], !noalias.addrspace [[META8]], !nofpclass [[META14:![0-9]+]], !mem.cache_hint [[META15:![0-9]+]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V:%.*]] = load double, ptr [[A_SROA_0]], align 8, !fpmath [[META20:![0-9]+]], !invariant.load [[META10]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !noundef [[META10]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !nofpclass [[META21:![0-9]+]], !mem.cache_hint [[META19]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1:%.*]] = load volatile double, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    store volatile double [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 8
@@ -130,7 +130,7 @@ define ptr @rewrite_pointer_load(ptr %v) {
 ; CHECK-SAME: ptr [[V:%.*]]) {
 ; CHECK-NEXT:    [[A_SROA_1:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    store ptr [[V]], ptr [[A_SROA_1]], align 8
-; CHECK-NEXT:    [[A_SROA_1_0_A_SROA_1_8_R:%.*]] = load volatile ptr, ptr [[A_SROA_1]], align 8, !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META13]], !llvm.mem.parallel_loop_access [[META7]], !nonnull [[META12]], !dereferenceable [[META17:![0-9]+]], !dereferenceable_or_null [[META17]], !invariant.group [[META12]], !align [[META17]], !llvm.access.group [[META7]], !noundef [[META12]], !noalias.addrspace [[META8]], !mem.cache_hint [[META15]]
+; CHECK-NEXT:    [[A_SROA_1_0_A_SROA_1_8_R:%.*]] = load volatile ptr, ptr [[A_SROA_1]], align 8, !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !nonnull [[META10]], !dereferenceable [[META22:![0-9]+]], !dereferenceable_or_null [[META22]], !align [[META22]], !llvm.access.group [[META8]], !noundef [[META10]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META19]]
 ; CHECK-NEXT:    ret ptr [[A_SROA_1_0_A_SROA_1_8_R]]
 ;
   %a = alloca [2 x ptr], align 8
@@ -146,11 +146,11 @@ define i32 @presplit_load(ptr %src) {
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[A_SROA_2:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[SRC]], align 8, !llvm.mem.parallel_loop_access [[META7]], !llvm.access.group [[META7]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[SRC]], align 8, !invariant.load [[META10]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !invariant.group [[META10]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META19]]
 ; CHECK-NEXT:    [[SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[SRC_SROA_IDX]], align 4, !llvm.mem.parallel_loop_access [[META7]], !llvm.access.group [[META7]]
-; CHECK-NEXT:    store i32 [[V1]], ptr [[A_SROA_0]], align 8, !llvm.mem.parallel_loop_access [[META7]], !llvm.access.group [[META7]]
-; CHECK-NEXT:    store i32 [[V2]], ptr [[A_SROA_2]], align 4, !llvm.mem.parallel_loop_access [[META7]], !llvm.access.group [[META7]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[SRC_SROA_IDX]], align 4, !invariant.load [[META10]], !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i32 [[V1]], ptr [[A_SROA_0]], align 8, !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
+; CHECK-NEXT:    store i32 [[V2]], ptr [[A_SROA_2]], align 4, !alias.scope [[META4]], !noalias [[META4]], !nontemporal [[META7]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]], !annotation [[META9]], !nosanitize [[META10]], !mmra [[META11]], !noalias.addrspace [[META12]], !mem.cache_hint [[META15]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_X:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    [[A_SROA_2_0_A_SROA_2_4_Y:%.*]] = load volatile i32, ptr [[A_SROA_2]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[A_SROA_0_0_A_SROA_0_0_X]], [[A_SROA_2_0_A_SROA_2_4_Y]]
@@ -201,15 +201,20 @@ define i32 @presplit_load(ptr %src) {
 ; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]], !"scope"}
 ; CHECK: [[META6]] = distinct !{[[META6]], i1 false, !"domain"}
-; CHECK: [[META7]] = distinct !{}
-; CHECK: [[META8]] = !{i32 5, i32 6}
-; CHECK: [[FLOAT_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-; CHECK: [[META10]] = !{!"float", [[META2]], i64 0}
-; CHECK: [[META11]] = !{float 2.500000e+00}
-; CHECK: [[META12]] = !{}
-; CHECK: [[META13]] = !{i32 1}
-; CHECK: [[META14]] = !{i32 3}
-; CHECK: [[META15]] = !{i32 0, [[META16:![0-9]+]]}
+; CHECK: [[META7]] = !{i32 1}
+; CHECK: [[META8]] = distinct !{}
+; CHECK: [[META9]] = !{!"preserved memory metadata"}
+; CHECK: [[META10]] = !{}
+; CHECK: [[META11]] = !{!"test", !"relaxed"}
+; CHECK: [[META12]] = !{i32 5, i32 6}
+; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
+; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[META15]] = !{i32 1, [[META16:![0-9]+]]}
 ; CHECK: [[META16]] = !{!"nvvm.l1_eviction", !"last"}
-; CHECK: [[META17]] = !{i64 8}
+; CHECK: [[FLOAT_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+; CHECK: [[META18]] = !{!"float", [[META2]], i64 0}
+; CHECK: [[META19]] = !{i32 0, [[META16]]}
+; CHECK: [[META20]] = !{float 2.500000e+00}
+; CHECK: [[META21]] = !{i32 3}
+; CHECK: [[META22]] = !{i64 8}
 ;.
