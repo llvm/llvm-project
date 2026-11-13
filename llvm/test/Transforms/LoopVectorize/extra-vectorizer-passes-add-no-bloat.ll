@@ -127,7 +127,6 @@ exit:
 ; WITHOUT: ret void
 
 ; WITH-LABEL: define void @nested_loop_inner_vectorized(
-; FIXME: SimpleLoopUnswitch duplicates the vectorized inner loop below.
 ; WITH: {{^vector\.body.*:}}
 ; WITH-NOT: {{^vector\.body.*:}}
 ; WITH: ret void
