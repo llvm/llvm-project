@@ -40,7 +40,6 @@ libc_test(
     name = "mlock_test",
     srcs = ["linux/mlock_test.cpp"],
     deps = [
-        "//libc:__support_osutil_syscall",
         "//libc:getpagesize",
         "//libc:getrlimit",
         "//libc:hdr_sys_mman_macros",
@@ -54,6 +53,7 @@ libc_test(
         "//libc:munlock",
         "//libc:munlockall",
         "//libc:munmap",
+        "//libc/src/__support/OSUtil:syscall",
     ],
 )
 
@@ -61,12 +61,12 @@ libc_test(
     name = "mmap_test",
     srcs = ["linux/mmap_test.cpp"],
     deps = [
-        "//libc:__support_cpp_scope",
         "//libc:close",
         "//libc:hdr_sys_mman_macros",
         "//libc:memfd_create",
         "//libc:mmap",
         "//libc:munmap",
+        "//libc/src/__support/CPP:scope",
     ],
 )
 

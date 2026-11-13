@@ -7,16 +7,14 @@
 # RUN:    FileCheck -check-prefix=NO-RELAX %s
 ---
 name:            relax_cb
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }
 body:             |
   ; RELAX-LABEL: name: relax_cb
   ; RELAX: bb.0:
+  ; RELAX-NEXT:   liveins: $w0, $w1
+  ; RELAX-NEXT: {{  $}}
   ; RELAX-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; RELAX-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
   ; RELAX-NEXT:   CBWPrr 1, [[COPY]], [[COPY1]], %bb.1
@@ -31,11 +29,14 @@ body:             |
   ; RELAX-NEXT:   $w0 = ADDWrr [[ADDWrr4]], [[ADDWrr3]]
   ; RELAX-NEXT: {{  $}}
   ; RELAX-NEXT: bb.2:
+  ; RELAX-NEXT:   liveins: $w0
+  ; RELAX-NEXT: {{  $}}
   ; RELAX-NEXT:   RET_ReallyLR implicit $w0
   ;
   ; NO-RELAX-LABEL: name: relax_cb
   ; NO-RELAX: bb.0:
   ; NO-RELAX-NEXT:   successors: %bb.1, %bb.2
+  ; NO-RELAX-NEXT:   liveins: $w0, $w1
   ; NO-RELAX-NEXT: {{  $}}
   ; NO-RELAX-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; NO-RELAX-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
@@ -50,9 +51,12 @@ body:             |
   ; NO-RELAX-NEXT:   $w0 = ADDWrr [[ADDWrr4]], [[ADDWrr3]]
   ; NO-RELAX-NEXT: {{  $}}
   ; NO-RELAX-NEXT: bb.2:
+  ; NO-RELAX-NEXT:   liveins: $w0
+  ; NO-RELAX-NEXT: {{  $}}
   ; NO-RELAX-NEXT:   RET_ReallyLR implicit $w0
   bb.0:
     successors: %bb.1, %bb.2
+    liveins: $w0, $w1
     %0:gpr32 = COPY $w0
     %1:gpr32 = COPY $w1
     CBWPrr 0, %0, %1, %bb.2
@@ -67,13 +71,11 @@ body:             |
     $w0 = ADDWrr %6, %5
 
   bb.2:
+    liveins: $w0
     RET_ReallyLR implicit $w0
 ...
 ---
 name:              relax_and_split_block
-registers:
-  - { id: 0, class: gpr32 }
-  - { id: 1, class: gpr32 }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$w1', virtual-reg: '%1' }

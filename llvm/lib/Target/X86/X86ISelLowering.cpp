@@ -24746,8 +24746,26 @@ static SDValue splitVSETCC(EVT VT, SDValue LHS, SDValue RHS, ISD::CondCode Cond,
                      DAG.getNode(ISD::SETCC, dl, HiVT, LHS2, RHS2, CC));
 }
 
+/// If we have AVX512, but not BWI and this is a vXi16/vXi8 setcc, just
+/// pre-promote its result type since vXi1 vectors don't get promoted
+/// during type legalization.
+static SDValue truncateAVX512SetCCNoBWI(EVT VT, EVT OpVT, SDValue LHS,
+                                        SDValue RHS, ISD::CondCode CC,
+                                        const SDLoc &DL, SelectionDAG &DAG,
+                                        const X86Subtarget &Subtarget) {
+  if (Subtarget.hasAVX512() && !Subtarget.hasBWI() && VT.isVector() &&
+      VT.getVectorElementType() == MVT::i1 &&
+      (OpVT.getVectorElementType() == MVT::i8 ||
+       OpVT.getVectorElementType() == MVT::i16)) {
+    SDValue Setcc = DAG.getSetCC(DL, OpVT, LHS, RHS, CC);
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, Setcc);
+  }
+  return SDValue();
+}
+
 static SDValue LowerIntVSETCC_AVX512(SDValue Op, const SDLoc &dl,
-                                     SelectionDAG &DAG) {
+                                     SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   SDValue Op0 = Op.getOperand(0);
   SDValue Op1 = Op.getOperand(1);
   ISD::CondCode CC = Op.getOperandCondCode(2);
@@ -24757,6 +24775,16 @@ static SDValue LowerIntVSETCC_AVX512(SDValue Op, const SDLoc &dl,
 
   EVT OpVT = Op0.getValueType();
   APInt C;
+
+  // In AVX-512 architecture setcc returns mask with i1 elements,
+  // But there is no compare instruction for i8 and i16 elements in KNL.
+  // Split/fallback to AVX2 lowering and then trunc the result to vXi1.
+  if (OpVT.getScalarSizeInBits() < 32 && !Subtarget.hasBWI()) {
+    if (OpVT.is512BitVector())
+      return splitVSETCC(VT, Op0, Op1, CC, DAG, dl);
+
+    return truncateAVX512SetCCNoBWI(VT, OpVT, Op0, Op1, CC, dl, DAG, Subtarget);
+  }
 
   // Prefer a compare against zero over splat(±1), which becomes a
   // constant-pool load. Analogous to TranslateX86CC for scalars.
@@ -25078,13 +25106,8 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
          "Value types for source and destination must be the same!");
 
   // The result is boolean, but operands are int/float
-  if (VT.getVectorElementType() == MVT::i1) {
-    // In AVX-512 architecture setcc returns mask with i1 elements,
-    // But there is no compare instruction for i8 and i16 elements in KNL.
-    assert((VTOp0.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
-           "Unexpected operand type");
-    return LowerIntVSETCC_AVX512(Op, dl, DAG);
-  }
+  if (VT.getVectorElementType() == MVT::i1)
+    return LowerIntVSETCC_AVX512(Op, dl, DAG, Subtarget);
 
   // Lower using XOP integer comparisons.
   if (VT.is128BitVector() && Subtarget.hasXOP()) {
@@ -48081,10 +48104,6 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
   if (ExtractVT != MVT::i32)
     return SDValue();
 
-  EVT VT = Extract->getOperand(0).getValueType();
-  if (!isPowerOf2_32(VT.getVectorNumElements()))
-    return SDValue();
-
   // Match shuffle + add pyramid.
   ISD::NodeType BinOp;
   SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
@@ -48103,6 +48122,10 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!Root || Root.getOpcode() != ISD::MUL)
     return SDValue();
 
+  EVT RootVT = Root.getValueType();
+  if (!isPowerOf2_32(RootVT.getVectorNumElements()))
+    return SDValue();
+
   // Check whether we have an extend and mul pattern
   SDValue LHS, RHS;
   if (!detectExtMul(DAG, Root, LHS, RHS))
@@ -48115,7 +48138,7 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
 
   // If the original vector was wider than 4 elements, sum over the results
   // in the DP vector.
-  unsigned Stages = Log2_32(VT.getVectorNumElements());
+  unsigned Stages = Log2_32(RootVT.getVectorNumElements());
   EVT DpVT = DP.getValueType();
 
   if (Stages > StageBias) {
@@ -59212,23 +59235,6 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = widenBuildVec(N, DAG))
     return V;
 
-  return SDValue();
-}
-
-/// If we have AVX512, but not BWI and this is a vXi16/vXi8 setcc, just
-/// pre-promote its result type since vXi1 vectors don't get promoted
-/// during type legalization.
-static SDValue truncateAVX512SetCCNoBWI(EVT VT, EVT OpVT, SDValue LHS,
-                                        SDValue RHS, ISD::CondCode CC,
-                                        const SDLoc &DL, SelectionDAG &DAG,
-                                        const X86Subtarget &Subtarget) {
-  if (Subtarget.hasAVX512() && !Subtarget.hasBWI() && VT.isVector() &&
-      VT.getVectorElementType() == MVT::i1 &&
-      (OpVT.getVectorElementType() == MVT::i8 ||
-       OpVT.getVectorElementType() == MVT::i16)) {
-    SDValue Setcc = DAG.getSetCC(DL, OpVT, LHS, RHS, CC);
-    return DAG.getNode(ISD::TRUNCATE, DL, VT, Setcc);
-  }
   return SDValue();
 }
 

@@ -1,0 +1,47 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "StringUtil",
+    srcs = glob(["tables/**/*.h"]) + [
+        "error_to_string.cpp",
+        "message_mapper.h",
+        "platform_errors.h",
+        "platform_signals.h",
+        "signal_to_string.cpp",
+    ],
+    hdrs = [
+        "error_to_string.h",
+        "signal_to_string.h",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_signal_macros",
+        "//libc/src/__support:integer_to_string",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/CPP:stringstream",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)

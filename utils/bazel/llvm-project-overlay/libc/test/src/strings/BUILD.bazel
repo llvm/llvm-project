@@ -14,8 +14,8 @@ libc_test(
     name = "bcopy_test",
     srcs = ["bcopy_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
         "//libc:bcopy",
+        "//libc/src/__support/CPP:span",
         "//libc/test/UnitTest:memory_matcher",
         "//libc/test/src/string:memory_check_utils",
     ],

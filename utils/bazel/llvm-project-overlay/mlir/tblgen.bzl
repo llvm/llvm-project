@@ -257,8 +257,9 @@ def _gentbl_test_impl(ctx):
 
     test_args.extend(["-o", "/dev/null"])
 
+    exe = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.write(
-        ctx.outputs.executable,
+        exe,
         content = " ".join(test_args),
         is_executable = True,
     )
@@ -282,7 +283,11 @@ def _gentbl_test_impl(ctx):
             source_attributes = ["td_file", "td_srcs"],
             dependency_attributes = ["tblgen", "deps"],
         ),
-        DefaultInfo(runfiles = runfiles),
+        DefaultInfo(
+            files = depset([exe]),
+            executable = exe,
+            runfiles = runfiles,
+        ),
     ]
 
 gentbl_test = rule(
@@ -473,7 +478,6 @@ def _gentbl_shard_impl(ctx):
 gentbl_shard_rule = rule(
     _gentbl_shard_impl,
     doc = "",
-    output_to_genfiles = True,
     attrs = {
         "index": attr.int(mandatory = True, doc = ""),
         "sharder": attr.label(

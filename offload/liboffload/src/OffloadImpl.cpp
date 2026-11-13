@@ -1297,14 +1297,19 @@ Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
-  if (auto Err = Device.unloadBinary(Program->Image))
-    return Err;
+  auto *Image = Program->Image;
 
+  // Unregister the image first: unloading frees it, and deinit must not run
+  // its destructors a second time if something below fails. A failed unload
+  // therefore leaks the image instead of retrying it at deinit.
   auto &LoadedImages = Device.LoadedImages;
-  LoadedImages.erase(
-      std::find(LoadedImages.begin(), LoadedImages.end(), Program->Image));
+  auto It = std::find(LoadedImages.begin(), LoadedImages.end(), Image);
+  if (It != LoadedImages.end())
+    LoadedImages.erase(It);
 
-  return olDestroy(Program);
+  Error Result = Device.callGlobalDestructors(Device.Plugin, *Image);
+  Result = joinErrors(std::move(Result), Device.unloadBinary(Image));
+  return joinErrors(std::move(Result), olDestroy(Program));
 }
 
 Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
@@ -1707,11 +1712,8 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
 }
 
 namespace tmp {
-// Temporary helpers to help transition of libomptarget to liboffload
-DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
-  return Program->Image;
-}
-
+// Helpers for virtual address management that are only used RecordReplay until
+// it transitions to a new code.
 void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device) {
   return Device->Device->getSuggestedVirtualAddress();
 }

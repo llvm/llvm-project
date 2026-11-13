@@ -442,6 +442,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   separated from surrounding arguments by whitespace. Quoted arguments can no
   longer be split across multiple lines using a backslash.
 
+- `clang-dxc -spirv` without `-fspv-extension` now enables the SPIR-V
+  extensions that DXC implements, as `-fspv-extension=DXC` does, instead of all
+  extensions. `-fspv-extension=all` restores the previous behavior.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -825,6 +829,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   the no- prefix in the diagnostic and spelling suggestion.
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
+
+- `-Wunsequenced` now diagnoses unsequenced volatile accesses.
 
 ### Improvements to Clang's time-trace
 
@@ -1233,6 +1239,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   A function template specialization such as `f<int>` is now resolved like the
   argument of `std::addressof`, and an unresolvable overload set is diagnosed.
   (#GH77928)
+
+- Fixed bugs where Clang could apply an incorrectly high alignment to a vptr
+  load within a virtual function thunk. (#GH242501)
 
 #### Bug Fixes to AST Handling
 
