@@ -588,9 +588,9 @@ static bool isInterleavingMask(ArrayRef<int> Mask) {
 
 static bool isDeinterleavingMask(ArrayRef<int> Mask) {
   int Offset = Mask[0];
-  int HalfNumElements = Mask.size() / 2;
+  int NumElements = Mask.size();
 
-  for (int Idx = 1; Idx < HalfNumElements; ++Idx) {
+  for (int Idx = 1; Idx < NumElements; ++Idx) {
     if (Mask[Idx] != (Idx * 2) + Offset)
       return false;
   }

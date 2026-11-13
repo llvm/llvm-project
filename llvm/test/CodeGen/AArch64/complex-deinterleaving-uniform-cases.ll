@@ -309,3 +309,46 @@ entry:
   %interleaved.vec = shufflevector <6 x float> %zr, <6 x float> %zi, <12 x i32> <i32 0, i32 6, i32 1, i32 7, i32 2, i32 8, i32 3, i32 9, i32 4, i32 10, i32 5, i32 11>
   ret <12 x float> %interleaved.vec
 }
+
+; Expected to not transform, the shuffles are not deinterleaving: lane 1 of
+; %real is element 0 of %x, not element 2.
+define <4 x i32> @not_deinterleaving_splat_lanes(<4 x i32> %x) {
+; CHECK-LABEL: not_deinterleaving_splat_lanes:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    dup v1.2s, v0.s[0]
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    ext v0.8b, v1.8b, v0.8b, #4
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    ret
+entry:
+  %real = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 0>
+  %imag = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %interleaved.vec = shufflevector <2 x i32> %real, <2 x i32> %imag, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x i32> %interleaved.vec
+}
+
+; Expected to not transform, the upper half of %b.real is not deinterleaving:
+; its last lane is element 4 of %b, not element 6.
+define <8 x float> @add_90_upper_lanes_not_deinterleaving(<8 x float> %a, <8 x float> %b) {
+; CHECK-LABEL: add_90_upper_lanes_not_deinterleaving:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 v4.4s, v2.4s, v3.4s
+; CHECK-NEXT:    uzp1 v5.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp2 v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    mov v4.s[3], v3.s[0]
+; CHECK-NEXT:    fadd v1.4s, v1.4s, v5.4s
+; CHECK-NEXT:    fsub v2.4s, v4.4s, v0.4s
+; CHECK-NEXT:    zip1 v0.4s, v2.4s, v1.4s
+; CHECK-NEXT:    zip2 v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %a.real = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %a.imag = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %b.real = shufflevector <8 x float> %b, <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 4>
+  %b.imag = shufflevector <8 x float> %b, <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %0 = fsub fast <4 x float> %b.real, %a.imag
+  %1 = fadd fast <4 x float> %b.imag, %a.real
+  %interleaved.vec = shufflevector <4 x float> %0, <4 x float> %1, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  ret <8 x float> %interleaved.vec
+}
