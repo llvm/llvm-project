@@ -46,7 +46,7 @@ define i32 @t4(ptr %fn, i32 %n, i32 %r) {
 ; CHECK: decl %[[n:.*]]
 ; CHECK-DAG: movl %[[r]], {{[0-9]+}}(%esp)
 ; CHECK-DAG: movl %[[n]], {{[0-9]+}}(%esp)
-; CHECK: jmpl *%{{.*}}
+; CHECK: jmpl *{{.*}}
 
 entry:
   %r1 = add i32 %r, 1
@@ -74,7 +74,7 @@ define i32 @t5(ptr %fn, i32 %n, i32 %r) alignstack(32) {
 ; CHECK: leal {{[-0-9]+}}(%ebp), %esp
 ; CHECK: popl %esi
 ; CHECK: popl %ebp
-; CHECK: jmpl *%{{.*}}
+; CHECK: jmpl *{{.*}}
 
 entry:
   %a = alloca i8, i32 %n
