@@ -6553,6 +6553,11 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
                  *OrigLoop, CostCtx, Range);
 
+  // Rewrite predicated invariant loads when a single-lane masked load is legal
+  // and no more expensive than scalarizing the load.
+  RUN_VPLAN_PASS(VPlanTransforms::widenPredicatedInvariantLoads, *Plan, CostCtx,
+                 Range);
+
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
     Range.End = Range.Start * 2;
