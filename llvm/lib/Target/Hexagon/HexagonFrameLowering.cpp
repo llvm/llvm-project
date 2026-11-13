@@ -2605,7 +2605,7 @@ bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
         case Hexagon::PS_storerll:
           Changed |= expandStoreVec2(B, I, MRI, HII, NewRegs, /*IsHLX=*/true);
           break;
-      }
+        }
     }
   }
 
