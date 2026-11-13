@@ -1606,6 +1606,18 @@
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix LANAI %s
 // LANAI: #define __lanai__ 1
 //
+// RUN: %clang_cc1 -triple aarch64-nintendo-nn -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NINTENDO-DEFAULT %s
+// RUN: %clang_cc1 -triple armv7-nintendo-nn -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NINTENDO-DEFAULT %s
+// RUN: %clang_cc1 -x c++ -triple aarch64-nintendo-nn -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NINTENDO-CXX %s
+// RUN: %clang_cc1 -x c++ -triple armv7-nintendo-nn -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NINTENDO-CXX %s
+// RUN: %clang_cc1 -triple aarch64-nintendo-nn -pthread -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NINTENDO-THREADS %s
+// RUN: %clang_cc1 -triple armv7-nintendo-nn -pthread -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NINTENDO-THREADS %s
+// NINTENDO-CXX: #define _GNU_SOURCE 1
+// NINTENDO-THREADS: #define _REENTRANT 1
+// NINTENDO-DEFAULT-NOT: _GNU_SOURCE
+// NINTENDO-DEFAULT-NOT: _REENTRANT
+// NINTENDO-DEFAULT: #define __NINTENDO_OS__ 1
+
 // RUN: %clang_cc1 -triple=aarch64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
 // RUN: %clang_cc1 -triple=arm-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
 // RUN: %clang_cc1 -triple=riscv64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
