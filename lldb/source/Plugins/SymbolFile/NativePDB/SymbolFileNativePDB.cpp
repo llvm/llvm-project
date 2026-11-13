@@ -12,6 +12,7 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/ObjectFile/PDB/ObjectFilePDB.h"
+#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
@@ -374,6 +375,8 @@ llvm::StringRef SymbolFileNativePDB::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileNativePDB::CreateInstance(ObjectFileSP objfile_sp) {
+  if (!llvm::isa_and_nonnull<ObjectFilePECOFF, ObjectFilePDB>(objfile_sp.get()))
+    return nullptr;
   if (!SymbolFilePDB::UseNativePDB())
     return nullptr;
 
@@ -516,12 +519,10 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     if (block_base >= func_base)
       child_block->AddRange(Block::Range(block_base - func_base, block.CodeSize));
     else {
-      GetObjectFile()->GetModule()->ReportError(
+      GetObjectFile()->GetModule()->ReportInternalError(
           "S_BLOCK32 at modi: {0:d} offset: {1:d}: adding range "
           "[{2:x16}-{3:x16}) which has a base that is less than the "
-          "function's "
-          "low PC 0x%" PRIx64 ". Please file a bug and attach the file at the "
-          "start of this error message",
+          "function's low PC {4:x16}",
           block_id.modi, block_id.offset, block_base,
           block_base + block.CodeSize, func_base);
     }
@@ -1606,8 +1607,11 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
       }
       CompilandIndexItem::GlobalLineTable::Entry line_entry(
           LLDB_INVALID_ADDRESS, 0);
-      for (const LineNumberEntry &entry : group.LineNumbers) {
+      const bool has_columns = lines.hasColumnInfo() &&
+                               group.Columns.size() == group.LineNumbers.size();
+      for (const auto &[i, entry] : llvm::enumerate(group.LineNumbers)) {
         LineInfo cur_info(entry.Flags);
+        uint16_t column = has_columns ? group.Columns[i].StartColumn : 0;
 
         if (cur_info.isAlwaysStepInto() || cur_info.isNeverStepInto())
           continue;
@@ -1620,8 +1624,8 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
 
         uint32_t lno = cur_info.getStartLine();
 
-        LineTable::Entry new_entry(addr, lno, 0, file_index, is_statement, false,
-                                 is_prologue, is_epilogue, false);
+        LineTable::Entry new_entry(addr, lno, column, file_index, is_statement,
+                                   false, is_prologue, is_epilogue, false);
         // Terminal entry has lower precedence than new entry.
         auto iter = line_set.find(new_entry);
         if (iter != line_set.end() && iter->is_terminal_entry)
@@ -1662,8 +1666,10 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
     SegmentOffsetLength sol = GetSegmentOffsetAndLength(func_record);
     addr_t file_vm_addr =
         m_index->MakeVirtualAddress(sol.so.segment, sol.so.offset);
-    if (file_vm_addr == LLDB_INVALID_ADDRESS)
+    if (file_vm_addr == LLDB_INVALID_ADDRESS) {
+      iter = syms.at(getScopeEndOffset(func_record));
       continue;
+    }
 
     Address func_base(file_vm_addr, comp_unit.GetModule()->GetSectionList());
     PdbCompilandSymId func_id{modi, record_offset};

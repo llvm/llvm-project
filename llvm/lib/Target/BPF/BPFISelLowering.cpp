@@ -113,6 +113,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   for (auto VT : {MVT::i32, MVT::i64}) {
     setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
+    // No atomic sub insn. Expand it into atomic add of the negated value.
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Expand);
   }
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
@@ -353,9 +355,9 @@ void BPFTargetLowering::ReplaceNodeResults(
   }
 
   SDLoc DL(N);
-  // We'll still produce a fatal error downstream, but this diagnostic is more
-  // user-friendly.
   fail(DL, DAG, Msg);
+  for (EVT VT : N->values())
+    Results.push_back(VT == MVT::Other ? N->getOperand(0) : DAG.getUNDEF(VT));
 }
 
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {

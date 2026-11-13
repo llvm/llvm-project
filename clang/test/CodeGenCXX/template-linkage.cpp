@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s %}
 
 // CHECK: Outer5Inner{{.*}}localE6memberE = external global
 
@@ -40,7 +41,7 @@ template<typename T> void X1<T>::blarg() { }
 extern template struct X0<char>;
 extern template struct X1<char>;
 
-// CHECK-LABEL: define linkonce_odr void @_ZN2X1IcED1Ev(ptr {{[^,]*}} %this) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN2X1IcED1Ev(ptr {{[^,]*}} %{{.*}}) unnamed_addr
 void test_X1() {
   X1<char> i1c;
 }

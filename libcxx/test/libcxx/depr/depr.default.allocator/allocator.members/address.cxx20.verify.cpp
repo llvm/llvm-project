@@ -16,27 +16,18 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <memory>
-#include <cassert>
-
-#include "test_macros.h"
 
 template <class T>
-void test_address() {
-  T* tp        = new T();
-  const T* ctp = tp;
-  const std::allocator<T> a;
-  assert(a.address(*tp) == tp);  // expected-error 2 {{no member}}
-  assert(a.address(*ctp) == tp); // expected-error 2 {{no member}}
-  delete tp;
+void test_address(const std::allocator<T>& a, T& x, const T& cx) {
+  (void)a.address(x);  // expected-error 2 {{no member}}
+  (void)a.address(cx); // expected-error 2 {{no member}}
 }
 
 struct A {
   void operator&() const {}
 };
 
-int main(int, char**) {
-  test_address<int>();
-  test_address<A>();
-
-  return 0;
+void test(const std::allocator<int>& ai, int& i, const std::allocator<A>& aa, A& x) {
+  test_address(ai, i, i);
+  test_address(aa, x, x);
 }

@@ -33,6 +33,11 @@ mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
 /// nullptr. Otherwise maps the block argument to its operand and returns it.
 mlir::Value getACCOperandForBlockArg(mlir::Value v);
 
+/// If `operand` is a `launch` or `ins` operand of an `acc.compute_region`,
+/// returns the body block argument it is threaded to; otherwise nullptr.
+/// Unlike `ComputeRegionOp::getBlockArg`, duplicate operands are distinguished.
+mlir::BlockArgument getACCBlockArgForOperand(mlir::OpOperand &operand);
+
 /// If `v` is not a block argument of an `acc.compute_region` body, returns
 /// nullptr. Otherwise maps the block argument to its operand and returns the
 /// defining operation if it is one of `ACC_DATA_ENTRY_OPS`.

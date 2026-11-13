@@ -23,7 +23,7 @@ module attributes {
 } {
 
   cir.func @callee(%arg0: !s32i, %arg1: !s32i, %arg2: !s8i) -> !s32i
-      attributes { test_classify = #direct_ignore_extend } {
+      requires_call_conv_lowering attributes { test_classify = #direct_ignore_extend } {
     cir.return %arg0 : !s32i
   }
 
@@ -32,7 +32,7 @@ module attributes {
   // CHECK-NEXT:   cir.return %arg0 : !s32i
 
   cir.func @caller(%arg0: !s32i, %arg1: !s32i, %arg2: !s8i) -> !s32i
-      attributes { test_classify = #direct_ignore_extend } {
+      requires_call_conv_lowering attributes { test_classify = #direct_ignore_extend } {
     %0 = cir.call @callee(%arg0, %arg1, %arg2) : (!s32i, !s32i, !s8i) -> !s32i
     cir.return %0 : !s32i
   }

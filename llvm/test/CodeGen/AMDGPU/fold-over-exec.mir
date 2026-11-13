@@ -30,7 +30,7 @@ body:             |
   bb.2: ; end loop
     successors: %bb.3(0x40000000)
     %2:sreg_64_xexec = V_CMP_EQ_U32_e64 %I_out, %tid_y, implicit $exec
-    %3:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %2, implicit $exec
+    %3:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %2, implicit $exec
     S_BRANCH %bb.3
 
   bb.3: ; exit

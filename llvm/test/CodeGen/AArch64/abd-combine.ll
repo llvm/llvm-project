@@ -108,19 +108,10 @@ define <8 x i16> @abdu_const_both() {
 }
 
 define <8 x i16> @abdu_const_bothhigh() {
-; CHECK-SD-LABEL: abdu_const_bothhigh:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.8h, #1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: abdu_const_bothhigh:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvni v1.4h, #1
-; CHECK-GI-NEXT:    usubl v0.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    abs v0.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: abdu_const_bothhigh:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.8h, #1
+; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534> to <8 x i32>
   %zextsrc2 = zext <8 x i16> <i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535> to <8 x i32>
   %sub = sub <8 x i32> %zextsrc1, %zextsrc2
@@ -584,19 +575,10 @@ define <8 x i16> @abds_const_both() {
 }
 
 define <8 x i16> @abds_const_bothhigh() {
-; CHECK-SD-LABEL: abds_const_bothhigh:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.8h, #1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: abds_const_bothhigh:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvni v1.4h, #1
-; CHECK-GI-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    abs v0.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: abds_const_bothhigh:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.8h, #1
+; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534> to <8 x i32>
   %zextsrc2 = sext <8 x i16> <i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535> to <8 x i32>
   %sub = sub <8 x i32> %zextsrc1, %zextsrc2

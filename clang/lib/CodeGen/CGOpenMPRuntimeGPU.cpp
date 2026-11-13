@@ -355,6 +355,9 @@ public:
               isOpenMPDistributeDirective(D->getDirectiveKind()));
     }
   }
+  // A metadirective has no associated statement; visit its variants and
+  // conditions.
+  void VisitOMPMetaDirective(const OMPMetaDirective *D) { VisitStmt(D); }
   void VisitCapturedStmt(const CapturedStmt *S) {
     if (!S)
       return;
@@ -632,6 +635,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
   case OMPD_target_simd:
+  case OMPD_target_loop:
   case OMPD_target_teams_distribute_simd:
     return true;
   case OMPD_target_teams_distribute:

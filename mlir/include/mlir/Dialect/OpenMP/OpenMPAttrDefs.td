@@ -19,6 +19,7 @@ include "mlir/IR/CommonAttrConstraints.td"
 class OpenMP_Attr<string name, string attrMnemonic, list<Trait> traits = [],
                   string baseCppClass = "::mlir::Attribute">
     : AttrDef<OpenMP_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/OpenMP/OpenMPOpsAttributes.h"];
   let mnemonic = attrMnemonic;
 }
 

@@ -29,6 +29,7 @@ class BlockFrequencyInfo;
 class CallBase;
 class DataLayout;
 class Function;
+class LLVMContext;
 class ProfileSummaryInfo;
 class TargetTransformInfo;
 class TargetLibraryInfo;
@@ -45,8 +46,10 @@ const int OptMinSizeThreshold = 5;
 /// Use when -O3 is specified.
 const int OptAggressiveThreshold = 250;
 
+/// Return -inline-instr-cost.
+LLVM_ABI int getInstrCost(const LLVMContext &C);
+
 // Various magic constants used to adjust heuristics.
-LLVM_ABI int getInstrCost();
 const int IndirectCallThreshold = 100;
 const int LoopPenalty = 25;
 const int ColdccPenalty = 2000;
@@ -254,12 +257,12 @@ LLVM_ABI std::optional<int> getStringFnAttrAsInt(CallBase &CB,
 
 /// Generate the parameters to tune the inline cost analysis based only on the
 /// commandline options.
-LLVM_ABI InlineParams getInlineParams();
+LLVM_ABI InlineParams getInlineParams(const LLVMContext &C);
 
 /// Generate the parameters to tune the inline cost analysis based on command
 /// line options. If -inline-threshold option is not explicitly passed,
 /// \p Threshold is used as the default threshold.
-LLVM_ABI InlineParams getInlineParams(int Threshold);
+LLVM_ABI InlineParams getInlineParams(const LLVMContext &C, int Threshold);
 
 /// Generate the parameters to tune the inline cost analysis based on command
 /// line options. If -inline-threshold option is not explicitly passed,
@@ -267,7 +270,8 @@ LLVM_ABI InlineParams getInlineParams(int Threshold);
 /// An \p OptLevel value above 3 is considered an aggressive optimization mode.
 /// Optimization for size is handled via separate thresholds for
 /// optsize/minsize, rather than changes to the default threshold.
-LLVM_ABI InlineParams getInlineParamsFromOptLevel(unsigned OptLevel);
+LLVM_ABI InlineParams getInlineParamsFromOptLevel(const LLVMContext &C,
+                                                  unsigned OptLevel);
 
 /// Return the cost associated with a callsite, including parameter passing
 /// and the call/return instruction.

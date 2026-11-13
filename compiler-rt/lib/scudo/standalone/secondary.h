@@ -587,7 +587,9 @@ public:
         Quarantine[I].invalidate();
       }
     }
-    QuarantinePos = -1U;
+    // Reset to 0 (matching initial state) rather than UINT32_MAX so that
+    // (QuarantinePos + 1) in store() does not overflow u32.
+    QuarantinePos = 0;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }

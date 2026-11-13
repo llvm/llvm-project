@@ -27,6 +27,7 @@ define void @fixed() {
 ; CHECK-32-64-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> poison, ptr poison, <2 x i1> poison)
 ; CHECK-32-64-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> poison, ptr poison, <4 x i1> poison)
 ; CHECK-32-64-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:92 Lat:152 SizeLat:152 for: call void @llvm.masked.compressstore.v32f16.p0(<32 x half> poison, ptr poison, <32 x i1> poison)
+; CHECK-32-64-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:5 SizeLat:6 for: call void @llvm.masked.compressstore.v1i128.p0(<1 x i128> poison, ptr poison, <1 x i1> poison)
 ; CHECK-32-64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-8-64-LABEL: 'fixed'
@@ -48,69 +49,73 @@ define void @fixed() {
 ; CHECK-8-64-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> poison, ptr poison, <2 x i1> poison)
 ; CHECK-8-64-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:92 Lat:152 SizeLat:152 for: call void @llvm.masked.compressstore.v32f16.p0(<32 x half> poison, ptr poison, <32 x i1> poison)
+; CHECK-8-64-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:5 SizeLat:6 for: call void @llvm.masked.compressstore.v1i128.p0(<1 x i128> poison, ptr poison, <1 x i1> poison)
 ; CHECK-8-64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-8-64-STREAMING-ONLY-LABEL: 'fixed'
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i8.p0(<2 x i8> poison, ptr poison, <2 x i1> poison)
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4i8.p0(<4 x i8> poison, ptr poison, <4 x i1> poison)
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> poison, ptr poison, <8 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i8.p0(<2 x i8> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i8.p0(<4 x i8> poison, ptr poison, <4 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> poison, ptr poison, <8 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v16i8.p0(<16 x i8> poison, ptr poison, <16 x i1> poison)
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i16.p0(<2 x i16> poison, ptr poison, <2 x i1> poison)
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> poison, ptr poison, <4 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i16.p0(<2 x i16> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v8i16.p0(<8 x i16> poison, ptr poison, <8 x i1> poison)
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> poison, ptr poison, <2 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> poison, ptr poison, <2 x i1> poison)
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2f16.p0(<2 x half> poison, ptr poison, <2 x i1> poison)
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4f16.p0(<4 x half> poison, ptr poison, <4 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f16.p0(<2 x half> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:18 SizeLat:18 for: call void @llvm.masked.compressstore.v4f16.p0(<4 x half> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v8f16.p0(<8 x half> poison, ptr poison, <8 x i1> poison)
-; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> poison, ptr poison, <2 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v4f32.p0(<4 x float> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> poison, ptr poison, <2 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 16 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 32 for: call void @llvm.masked.compressstore.v32f16.p0(<32 x half> poison, ptr poison, <32 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:5 SizeLat:6 for: call void @llvm.masked.compressstore.v1i128.p0(<1 x i128> poison, ptr poison, <1 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-8-64-SVE256-LABEL: 'fixed'
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i8.p0(<2 x i8> poison, ptr poison, <2 x i1> poison)
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4i8.p0(<4 x i8> poison, ptr poison, <4 x i1> poison)
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> poison, ptr poison, <8 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i8.p0(<2 x i8> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i8.p0(<4 x i8> poison, ptr poison, <4 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> poison, ptr poison, <8 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v16i8.p0(<16 x i8> poison, ptr poison, <16 x i1> poison)
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i16.p0(<2 x i16> poison, ptr poison, <2 x i1> poison)
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> poison, ptr poison, <4 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i16.p0(<2 x i16> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v8i16.p0(<8 x i16> poison, ptr poison, <8 x i1> poison)
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> poison, ptr poison, <2 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> poison, ptr poison, <2 x i1> poison)
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2f16.p0(<2 x half> poison, ptr poison, <2 x i1> poison)
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4f16.p0(<4 x half> poison, ptr poison, <4 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f16.p0(<2 x half> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:18 SizeLat:18 for: call void @llvm.masked.compressstore.v4f16.p0(<4 x half> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v8f16.p0(<8 x half> poison, ptr poison, <8 x i1> poison)
-; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> poison, ptr poison, <2 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> poison, ptr poison, <2 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v4f32.p0(<4 x float> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> poison, ptr poison, <2 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 4 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> poison, ptr poison, <4 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 16 for: call void @llvm.masked.compressstore.v32f16.p0(<32 x half> poison, ptr poison, <32 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:5 SizeLat:6 for: call void @llvm.masked.compressstore.v1i128.p0(<1 x i128> poison, ptr poison, <1 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-UNAVAILABLE-LABEL: 'fixed'
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i8.p0(<2 x i8> poison, ptr poison, <2 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4i8.p0(<4 x i8> poison, ptr poison, <4 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> poison, ptr poison, <8 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v16i8.p0(<16 x i8> poison, ptr poison, <16 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i16.p0(<2 x i16> poison, ptr poison, <2 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> poison, ptr poison, <4 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v8i16.p0(<8 x i16> poison, ptr poison, <8 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> poison, ptr poison, <2 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> poison, ptr poison, <4 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> poison, ptr poison, <2 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2f16.p0(<2 x half> poison, ptr poison, <2 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4f16.p0(<4 x half> poison, ptr poison, <4 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v8f16.p0(<8 x half> poison, ptr poison, <8 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> poison, ptr poison, <2 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4f32.p0(<4 x float> poison, ptr poison, <4 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> poison, ptr poison, <2 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> poison, ptr poison, <4 x i1> poison)
-; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.v32f16.p0(<32 x half> poison, ptr poison, <32 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i8.p0(<2 x i8> poison, ptr poison, <2 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i8.p0(<4 x i8> poison, ptr poison, <4 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> poison, ptr poison, <8 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:48 Lat:80 SizeLat:80 for: call void @llvm.masked.compressstore.v16i8.p0(<16 x i8> poison, ptr poison, <16 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i16.p0(<2 x i16> poison, ptr poison, <2 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> poison, ptr poison, <4 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: call void @llvm.masked.compressstore.v8i16.p0(<8 x i16> poison, ptr poison, <8 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> poison, ptr poison, <2 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> poison, ptr poison, <4 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> poison, ptr poison, <2 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f16.p0(<2 x half> poison, ptr poison, <2 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:18 SizeLat:18 for: call void @llvm.masked.compressstore.v4f16.p0(<4 x half> poison, ptr poison, <4 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:23 Lat:38 SizeLat:38 for: call void @llvm.masked.compressstore.v8f16.p0(<8 x half> poison, ptr poison, <8 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> poison, ptr poison, <2 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:18 SizeLat:18 for: call void @llvm.masked.compressstore.v4f32.p0(<4 x float> poison, ptr poison, <4 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> poison, ptr poison, <2 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> poison, ptr poison, <4 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:92 Lat:152 SizeLat:152 for: call void @llvm.masked.compressstore.v32f16.p0(<32 x half> poison, ptr poison, <32 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:5 SizeLat:6 for: call void @llvm.masked.compressstore.v1i128.p0(<1 x i128> poison, ptr poison, <1 x i1> poison)
 ; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
@@ -137,6 +142,7 @@ entry:
   ; Examples of illegal fixed-width types
   call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> poison, ptr poison, <4 x i1> poison)
   call void @llvm.masked.compressstore.v32f16.p0(<32 x half> poison, ptr poison, <32 x i1> poison)
+  call void @llvm.masked.compressstore.v128.p0(<1 x i128> poison, ptr poison, <1 x i1> poison)
 
   ret void
 }
@@ -162,6 +168,7 @@ define void @scalable() {
 ; CHECK-32-64-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i64.p0(<vscale x 1 x i64> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-32-64-NEXT:  Cost Model: Found costs of 16 for: call void @llvm.masked.compressstore.nxv4i64.p0(<vscale x 4 x i64> poison, ptr poison, <vscale x 4 x i1> poison)
 ; CHECK-32-64-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv32f16.p0(<vscale x 32 x half> poison, ptr poison, <vscale x 32 x i1> poison)
+; CHECK-32-64-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i128.p0(<vscale x 1 x i128> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-32-64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-8-64-LABEL: 'scalable'
@@ -184,6 +191,7 @@ define void @scalable() {
 ; CHECK-8-64-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i64.p0(<vscale x 1 x i64> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-8-64-NEXT:  Cost Model: Found costs of 16 for: call void @llvm.masked.compressstore.nxv4i64.p0(<vscale x 4 x i64> poison, ptr poison, <vscale x 4 x i1> poison)
 ; CHECK-8-64-NEXT:  Cost Model: Found costs of 32 for: call void @llvm.masked.compressstore.nxv32f16.p0(<vscale x 32 x half> poison, ptr poison, <vscale x 32 x i1> poison)
+; CHECK-8-64-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i128.p0(<vscale x 1 x i128> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-8-64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-8-64-STREAMING-ONLY-LABEL: 'scalable'
@@ -206,6 +214,7 @@ define void @scalable() {
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i64.p0(<vscale x 1 x i64> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 16 for: call void @llvm.masked.compressstore.nxv4i64.p0(<vscale x 4 x i64> poison, ptr poison, <vscale x 4 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of 32 for: call void @llvm.masked.compressstore.nxv32f16.p0(<vscale x 32 x half> poison, ptr poison, <vscale x 32 x i1> poison)
+; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i128.p0(<vscale x 1 x i128> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-8-64-STREAMING-ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-8-64-SVE256-LABEL: 'scalable'
@@ -228,6 +237,7 @@ define void @scalable() {
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i64.p0(<vscale x 1 x i64> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 16 for: call void @llvm.masked.compressstore.nxv4i64.p0(<vscale x 4 x i64> poison, ptr poison, <vscale x 4 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of 32 for: call void @llvm.masked.compressstore.nxv32f16.p0(<vscale x 32 x half> poison, ptr poison, <vscale x 32 x i1> poison)
+; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i128.p0(<vscale x 1 x i128> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-8-64-SVE256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-UNAVAILABLE-LABEL: 'scalable'
@@ -250,6 +260,7 @@ define void @scalable() {
 ; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i64.p0(<vscale x 1 x i64> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv4i64.p0(<vscale x 4 x i64> poison, ptr poison, <vscale x 4 x i1> poison)
 ; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv32f16.p0(<vscale x 32 x half> poison, ptr poison, <vscale x 32 x i1> poison)
+; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of Invalid for: call void @llvm.masked.compressstore.nxv1i128.p0(<vscale x 1 x i128> poison, ptr poison, <vscale x 1 x i1> poison)
 ; CHECK-UNAVAILABLE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
@@ -277,6 +288,7 @@ entry:
   call void @llvm.masked.compressstore.nxv1i64.p0(<vscale x 1 x i64> poison, ptr poison, <vscale x 1 x i1> poison)
   call void @llvm.masked.compressstore.nxv4i64.p0(<vscale x 4 x i64> poison, ptr poison, <vscale x 4 x i1> poison)
   call void @llvm.masked.compressstore.nxv32f16.p0(<vscale x 32 x half> poison, ptr poison, <vscale x 32 x i1> poison)
+  call void @llvm.masked.compressstore.nxv1i128.p0(<vscale x 1 x i128> poison, ptr poison, <vscale x 1 x i1> poison)
 
   ret void
 }

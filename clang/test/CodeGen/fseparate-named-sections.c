@@ -1,7 +1,9 @@
 // REQUIRES: x86-registered-target
 
 // RUN: %clang_cc1 -triple x86_64-pc-linux -S -o - < %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-pc-linux -S -o - < %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-pc-linux -S -fseparate-named-sections -o - < %s | FileCheck %s --check-prefix=SEPARATE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-pc-linux -S -fseparate-named-sections -o - < %s | FileCheck %s --check-prefix=SEPARATE %}
 
 __attribute__((section("custom_text"))) void f(void) {}
 __attribute__((section("custom_text"))) void g(void) {}

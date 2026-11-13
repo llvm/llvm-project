@@ -1,15 +1,23 @@
-//===-- Utility class to test int to fixed point conversions ----*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test int to fixed point conversions.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_FXBITSTEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_FXBITSTEST_H
 
 #include "test/UnitTest/Test.h"
 
-#include "src/__support/CPP/bit.h"
-#include "src/__support/fixed_point/fx_bits.h"
+#include "src/__support/fixed_point/fx_rep.h"
+#include "src/__support/math_extras.h"
 
 template <typename T, typename XType>
 class FxBitsTest : public LIBC_NAMESPACE::testing::Test {
@@ -52,3 +60,5 @@ public:
     test_special_numbers(&func);                                               \
   }                                                                            \
   static_assert(true, "Require semicolon.")
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_FXBITSTEST_H

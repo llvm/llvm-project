@@ -148,6 +148,11 @@ defm FlatGVSMode : AMDGPUSubtargetFeature<"flat-gvs-mode",
   [FeatureFlatAddressSpace]
 >;
 
+defm ScaleOffset : AMDGPUSubtargetFeature<"scale-offset",
+  "Scalar and global loads support scale_offset bit.",
+  /*GenPredicate=*/0
+>;
+
 defm AddNoCarryInsts : AMDGPUSubtargetFeature<"add-no-carry-insts",
   "Have VALU add/sub instructions without carry out"
 >;
@@ -2508,6 +2513,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
+   FeatureScaleOffset,
    FeatureFlatGVSMode,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -2744,6 +2750,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
+   FeatureScaleOffset,
    FeatureFlatGVSMode,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -emit-llvm -std=c++11 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -I%S %s -triple x86_64-apple-darwin10 -emit-llvm -std=c++11 -o - | FileCheck %s %}
 #include <typeinfo>
 
 namespace Test1 {

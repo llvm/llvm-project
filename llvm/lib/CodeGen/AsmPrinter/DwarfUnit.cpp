@@ -2240,6 +2240,14 @@ void DwarfTypeUnit::addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
   getCU().addGlobalTypeUnitType(Ty, Context);
 }
 
+DIE *DwarfTypeUnit::getOrCreateContextDIE(const DIScope *Context) {
+  // Because DwarfTypeUnit does not handle lexical blocks, local types are
+  // emitted as immediate children of subprograms.
+  if (auto *LS = dyn_cast_or_null<DILexicalBlockBase>(Context))
+    Context = LS->getSubprogram();
+  return DwarfUnit::getOrCreateContextDIE(Context);
+}
+
 const MCSymbol *DwarfUnit::getCrossSectionRelativeBaseAddress() const {
   if (!Asm->doesDwarfUseRelocationsAcrossSections())
     return nullptr;

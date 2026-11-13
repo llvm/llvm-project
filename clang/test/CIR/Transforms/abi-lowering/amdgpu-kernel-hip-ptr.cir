@@ -12,14 +12,15 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
   cir.lowering_options = #cir.lowering_options<
     exceptions = false, threadsafe_statics = true, cuda = true,
-    cuda_is_device = true, hip = true, hlsl = false, gpu_rdc = false,
-    openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
-    long_double_size = 0, enable_noundef_attrs = true>
+    cuda_is_device = true, hip = true, hlsl = false, sycl_is_device = false,
+    gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+    clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = true,
+    no_trapping_math = true, ssp_buffer_size = 8>
 } {
 
   // The kernel casts the incoming global pointer back to generic before the
   // body's spill reads it.
-  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(amdgpu_kernel) {
+  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(amdgpu_kernel) requires_call_conv_lowering {
     %0 = cir.alloca "p" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
     cir.store %arg0, %0 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
     cir.return
@@ -31,7 +32,7 @@ module attributes {
 
   // A pointer already outside the generic address space is left alone.
   cir.func @kernel_global_ptr(%arg0: !cir.ptr<!s32i, target_address_space(1)>)
-      cc(amdgpu_kernel) {
+      cc(amdgpu_kernel) requires_call_conv_lowering {
     cir.return
   }
 
@@ -39,14 +40,14 @@ module attributes {
   // CHECK-NOT:    cir.cast
 
   // A struct holding only a pointer is unwrapped to it, then coerced.
-  cir.func @kernel_ptr_wrap(%arg0: !rec_PtrWrap) cc(amdgpu_kernel) {
+  cir.func @kernel_ptr_wrap(%arg0: !rec_PtrWrap) cc(amdgpu_kernel) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @kernel_ptr_wrap(%{{.*}}: !cir.ptr<{{.*}}, target_address_space(1)>){{.*}}cc(amdgpu_kernel)
 
   // Only kernels are coerced.
-  cir.func @device_ptr(%arg0: !cir.ptr<!s32i>) {
+  cir.func @device_ptr(%arg0: !cir.ptr<!s32i>) requires_call_conv_lowering {
     cir.return
   }
 
