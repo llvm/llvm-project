@@ -249,6 +249,16 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "dmulf128",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+        "//libc/src/__support/FPUtil:float128",
+    ],
+)
+
+math_mpfr_test(
     name = "dsqrtl",
     hdrs = ["SqrtTest.h"],
 )

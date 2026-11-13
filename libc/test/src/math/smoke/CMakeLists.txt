@@ -6694,6 +6694,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  dmulf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dmulf128_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+    libc.src.math.dmulf128
+)
+
+add_fp_unittest(
   f16mul_test
   SUITE
     libc-math-smoke-tests
