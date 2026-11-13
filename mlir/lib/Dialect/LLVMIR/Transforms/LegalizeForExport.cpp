@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMControlFlowOps.h"
 #include "mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"

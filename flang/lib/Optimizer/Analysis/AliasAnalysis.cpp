@@ -17,7 +17,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"

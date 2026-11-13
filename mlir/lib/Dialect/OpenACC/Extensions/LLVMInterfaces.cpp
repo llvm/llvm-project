@@ -8,7 +8,9 @@
 
 #include "mlir/Dialect/OpenACC/Extensions/LLVMInterfaces.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCastOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"

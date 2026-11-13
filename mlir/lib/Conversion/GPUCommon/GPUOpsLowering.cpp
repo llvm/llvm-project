@@ -10,7 +10,12 @@
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCastOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"

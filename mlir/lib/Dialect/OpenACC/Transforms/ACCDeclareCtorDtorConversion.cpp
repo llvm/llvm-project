@@ -11,7 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/Builders.h"

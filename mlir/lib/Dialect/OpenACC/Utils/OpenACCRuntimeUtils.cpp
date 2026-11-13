@@ -8,6 +8,9 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCRuntimeUtils.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/Support/ErrorHandling.h"
 

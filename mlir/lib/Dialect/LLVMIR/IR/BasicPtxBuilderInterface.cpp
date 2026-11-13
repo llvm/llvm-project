@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMControlFlowOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Utils/CodegenUtils.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 
 #include "mlir/Conversion/LLVMCommon/StructBuilder.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
