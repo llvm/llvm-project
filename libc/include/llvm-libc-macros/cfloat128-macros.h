@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_MACROS_CFLOAT128_MACROS_H
 #define LLVM_LIBC_MACROS_CFLOAT128_MACROS_H
 
-#include "float-macros.h" // LDBL_MANT_DIG
-
 // Currently, the complex variant of C23 `_Float128` type is only defined as a
 // built-in type in GCC 7 or later, for C and in GCC 13 or later, for C++. For
 // clang, the complex variant of `__float128` is defined instead, and only on
@@ -33,7 +31,7 @@
 #endif
 #endif
 
-#if !defined(LIBC_TYPES_HAS_CFLOAT128) && (LDBL_MANT_DIG == 113)
+#if !defined(LIBC_TYPES_HAS_CFLOAT128) && (__LDBL_MANT_DIG__ == 113)
 #define LIBC_TYPES_HAS_CFLOAT128
 #define LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE
 #endif
