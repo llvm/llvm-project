@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
@@ -263,12 +264,43 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
+static MachineOperand *getSalvageOpsForAShr(const MachineRegisterInfo &MRI,
+                                            MachineInstr &AShr,
+                                            SmallVectorImpl<uint64_t> &Ops) {
+  assert(AShr.getOpcode() == TargetOpcode::G_ASHR && "Must be a G_ASHR");
+
+  const LLT Ty = MRI.getType(AShr.getOperand(1).getReg());
+  const unsigned Width = Ty.getSizeInBits();
+  // The DWARF generic type is address-sized.
+  const unsigned StackWidth =
+      AShr.getMF()->getDataLayout().getPointerSizeInBits();
+  // TODO: Support non-scalar types.
+  if (!Ty.isScalar() || Width > StackWidth)
+    return nullptr;
+
+  const MachineInstr *AmtDef = MRI.getVRegDef(AShr.getOperand(2).getReg());
+  if (!AmtDef || AmtDef->getOpcode() != TargetOpcode::G_CONSTANT)
+    return nullptr;
+  const APInt &Amt = AmtDef->getOperand(1).getCImm()->getValue();
+  if (Amt.uge(Width))
+    return nullptr;
+
+  if (Width < StackWidth) {
+    auto ExtOps = DIExpression::getExtOps(Width, StackWidth, true);
+    Ops.append(ExtOps.begin(), ExtOps.end());
+  }
+  Ops.append({dwarf::DW_OP_constu, Amt.getZExtValue(), dwarf::DW_OP_shra});
+  return &AShr.getOperand(1);
+}
+
 static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
+  case TargetOpcode::G_ASHR:
+    return getSalvageOpsForAShr(MRI, MI, Ops);
   case TargetOpcode::COPY:
     return getSalvageOpsForCopy(MRI, MI);
   default:
