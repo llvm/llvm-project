@@ -145,6 +145,17 @@ uint64_t SBType::GetByteAlign() {
   return llvm::divideCeil(bit_align.value_or(0), 8);
 }
 
+uint64_t SBType::GetByteStride() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return 0;
+
+  return m_opaque_sp->GetCompilerType(/*prefer_dynamic=*/false)
+      .GetByteStride(nullptr)
+      .value_or(0);
+}
+
 bool SBType::IsPointerType() {
   LLDB_INSTRUMENT_VA(this);
 

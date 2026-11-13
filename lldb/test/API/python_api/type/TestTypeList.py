@@ -354,3 +354,24 @@ class TypeAndTypeListTestCase(TestBase):
 
         # And an over-aligned type.
         self.assertEqual(module.FindFirstType("OverAlignedStruct").GetByteAlign(), 128)
+
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
+    def test_GetByteStride(self):
+        """Exercise SBType::GetByteStride"""
+        self.build()
+        spec = lldb.SBModuleSpec()
+        spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact()))
+        module = lldb.SBModule(spec)
+        self.assertTrue(module)
+
+        # Invalid types should not crash.
+        self.assertEqual(lldb.SBType().GetByteStride(), 0)
+
+        # For naturally aligned types, the stride is the size.
+        int_type = module.GetBasicType(lldb.eBasicTypeInt)
+        self.assertEqual(int_type.GetByteStride(), int_type.GetByteSize())
+
+        # Struct sizes already include tail padding.
+        over_aligned_struct = module.FindFirstType("OverAlignedStruct")
+        self.assertEqual(over_aligned_struct.GetByteSize(), 128)
+        self.assertEqual(over_aligned_struct.GetByteStride(), 128)

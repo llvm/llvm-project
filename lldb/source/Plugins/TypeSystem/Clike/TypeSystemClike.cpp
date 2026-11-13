@@ -415,6 +415,12 @@ unsigned TypeSystemClike::GetTypeQualifiers(lldb::opaque_compiler_type_t type) {
   return 0;
 }
 
+std::optional<uint64_t>
+TypeSystemClike::GetByteStride(lldb::opaque_compiler_type_t type,
+                               ExecutionContextScope *exe_scope) {
+  return std::nullopt;
+}
+
 std::optional<size_t>
 TypeSystemClike::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                                  ExecutionContextScope *exe_scope) {
