@@ -987,8 +987,13 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 }
 
 static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
+                                const DeclaratorDecl *D,
                                 HLSLAppliedSemanticAttr *Semantic,
                                 bool IsInput) {
+  // Explicitly annotated built-ins skip location assignment
+  if (D->hasAttr<HLSLVkBuiltInAttr>())
+    return true;
+
   if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
     return false;
 
@@ -1026,6 +1031,57 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return IsInput;
   default:
     return false;
+  }
+}
+
+static void validateVkBuiltinUsage(Sema &S, FunctionDecl *FD,
+                                   const DeclaratorDecl *D,
+                                   const HLSLVkBuiltInAttr *Attr,
+                                   IOType CurrentIOType) {
+  const ASTContext &AstContext = S.getASTContext();
+  if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
+    return;
+
+  StringRef BuiltIn = Attr->getBuiltIn();
+
+  QualType T =
+      (D == FD ? FD->getReturnType() : D->getType()).getNonReferenceType();
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType Stage = ShaderAttr->getType();
+  bool IsIn = any(CurrentIOType & IOType::In);
+  bool IsOut = any(CurrentIOType & IOType::Out);
+
+  if (BuiltIn == "PointSize") {
+    // Vulkan requires PointSize to be a 32-bit float
+    // (VUID-PointSize-PointSize-04317). Without native 16-bit types, `half` is
+    // lowered to a 32-bit float, so it is accepted as well.
+    bool Is32BitFloat = T->isSpecificBuiltinType(BuiltinType::Float) ||
+                        (T->isSpecificBuiltinType(BuiltinType::Half) &&
+                         !AstContext.getLangOpts().NativeHalfType);
+    if (!Is32BitFloat)
+      S.Diag(Attr->getLocation(), diag::err_hlsl_vk_builtin_wrong_type)
+          << BuiltIn << S.getASTContext().FloatTy;
+
+    // PointSize is a per-vertex value, so patch-constant (hull/domain)
+    // and per-primitive (mesh) data never carries it.
+    // Note: Sema does not set this bit yet.
+    bool IsPatchConstantOrPrimitive =
+        any(CurrentIOType & IOType::PatchConstantOrPrimitive);
+    bool LegalStage =
+        !IsPatchConstantOrPrimitive &&
+        ((Stage == llvm::Triple::Vertex && IsOut) ||
+         Stage == llvm::Triple::Hull || Stage == llvm::Triple::Domain ||
+         Stage == llvm::Triple::Geometry ||
+         (Stage == llvm::Triple::Mesh && IsOut));
+    if (!LegalStage) {
+      StringRef IOTypeName = (IsIn && IsOut) ? "inputs and outputs"
+                             : IsIn          ? "inputs"
+                                             : "outputs";
+      S.Diag(Attr->getLocation(), diag::err_hlsl_vk_builtin_wrong_stage)
+          << BuiltIn << llvm::Triple::getEnvironmentTypeName(Stage)
+          << IOTypeName;
+    }
   }
 }
 
@@ -1076,8 +1132,14 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
 
-  if (!isVkPipelineBuiltin(getASTContext(), FD, A,
-                           any(SC.CurrentIOType & IOType::In))) {
+  bool IsBuiltin = isVkPipelineBuiltin(getASTContext(), FD, D, A,
+                                       any(SC.CurrentIOType & IOType::In));
+  if (IsBuiltin) {
+    if (const auto *BuiltInAttr = D->getAttr<HLSLVkBuiltInAttr>())
+      validateVkBuiltinUsage(SemaRef, FD, D, BuiltInAttr, SC.CurrentIOType);
+  }
+
+  if (!IsBuiltin) {
     bool HasVkLocation = false;
     if (auto *A = D->getAttr<HLSLVkLocationAttr>()) {
       HasVkLocation = true;
@@ -2241,6 +2303,15 @@ void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Location))
     return;
 
+  // vk::builtin and vk::location mutually exclusive
+  if (const auto *BuiltIn = D->getAttr<HLSLVkBuiltInAttr>()) {
+    Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << BuiltIn
+        << (AL.isRegularKeywordAttribute() ||
+            BuiltIn->isRegularKeywordAttribute());
+    Diag(BuiltIn->getLocation(), diag::note_conflicting_attribute);
+  }
+
   D->addAttr(::new (getASTContext())
                  HLSLVkLocationAttr(getASTContext(), AL, Location));
 }
@@ -2251,22 +2322,28 @@ void SemaHLSL::handleVkBuiltInAttr(Decl *D, const ParsedAttr &AL) {
   if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, BuiltIn, &ArgLoc))
     return;
 
-  // No built-ins are implemented yet. A name is added here together with its
-  // validation and CodeGen support, so Sema never accepts a built-in that the
-  // rest of the compiler ignores. Candidates: "PointSize", "HelperInvocation",
-  // "BaseVertex", "BaseInstance", "DrawIndex", "DeviceIndex", "ViewportMaskNV".
-  constexpr ArrayRef<StringRef> SupportedBuiltIns;
+  static constexpr StringRef SupportedBuiltIns[] = {
+      "PointSize", // TODO: uncomment build-ins as they're fully implemented
+                   // "HelperInvocation", "BaseVertex", "BaseInstance",
+                   // "DrawIndex", "DeviceIndex", "ViewportMaskNV",
+  };
   if (!llvm::is_contained(SupportedBuiltIns, BuiltIn)) {
     std::string Quoted;
     llvm::raw_string_ostream OS(Quoted);
-    if (SupportedBuiltIns.empty())
-      OS << "none";
-    else
-      llvm::interleaveComma(SupportedBuiltIns, OS,
-                            [&](StringRef S) { OS << "'" << S << "'"; });
+    llvm::interleaveComma(SupportedBuiltIns, OS,
+                          [&](StringRef S) { OS << "'" << S << "'"; });
     Diag(ArgLoc, diag::err_hlsl_vk_builtin_unsupported_value)
         << BuiltIn << Quoted;
     return;
+  }
+
+  // vk::builtin and vk::location mutually exclusive.
+  if (const auto *Location = D->getAttr<HLSLVkLocationAttr>()) {
+    Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << Location
+        << (AL.isRegularKeywordAttribute() ||
+            Location->isRegularKeywordAttribute());
+    Diag(Location->getLoc(), diag::note_conflicting_attribute);
   }
 
   D->addAttr(::new (getASTContext())
