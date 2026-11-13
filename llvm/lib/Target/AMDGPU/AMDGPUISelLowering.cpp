@@ -2029,7 +2029,7 @@ SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
   //   [-0x400000,0x3FFFFF] for Sign
   //   [ 0x000000,0x3FFFFF] for !Sign
   // This matches what is done in expandDivRemToFloatImpl.
-  if (DivBits > (Sign ? 23 : 22))
+  if (DivBits > (Sign ? 23u : 22u))
     return SDValue();
 
   ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;

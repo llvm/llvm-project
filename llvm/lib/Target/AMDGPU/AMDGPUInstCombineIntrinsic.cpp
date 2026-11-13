@@ -1574,8 +1574,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     bool IsCompr = IID == Intrinsic::amdgcn_exp_compr;
     bool Changed = false;
     for (int I = 0; I < (IsCompr ? 2 : 4); ++I) {
-      if ((!IsCompr && (EnBits & (1 << I)) == 0) ||
-          (IsCompr && ((EnBits & (0x3 << (2 * I))) == 0))) {
+      if ((!IsCompr && (EnBits & (1ULL << I)) == 0) ||
+          (IsCompr && ((EnBits & (0x3ULL << (2 * I))) == 0))) {
         Value *Src = II.getArgOperand(I + 2);
         if (!isa<PoisonValue>(Src)) {
           IC.replaceOperand(II, I + 2, PoisonValue::get(Src->getType()));
