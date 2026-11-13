@@ -4299,24 +4299,9 @@ alias(
 
 ############################# sys/sendfile targets #############################
 
-libc_function(
+alias(
     name = "sendfile",
-    srcs = ["src/sys/sendfile/linux/sendfile.cpp"],
-    hdrs = ["src/sys/sendfile/sendfile.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":types_off_t",
-        ":types_size_t",
-        ":types_ssize_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sendfile",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/sendfile",
 )
 
 ############################### sys/stat targets ###############################
