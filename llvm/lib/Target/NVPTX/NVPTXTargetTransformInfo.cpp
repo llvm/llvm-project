@@ -574,17 +574,15 @@ InstructionCost NVPTXTTIImpl::getScalarizationOverhead(
     VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
     TTI::VectorInstrContext VIC) const {
-  if (!InTy->getElementCount().isFixed())
+  if (!isa<FixedVectorType>(InTy))
     return InstructionCost::getInvalid();
 
-  auto NumElements = InTy->getElementCount().getFixedValue();
+  auto NumElements = VL.size();
   InstructionCost Cost = 0;
   if (Insert && !VL.empty()) {
-    bool AllConstant = all_of(seq(NumElements), [&](int Idx) {
-      return !DemandedElts[Idx] || isa<Constant>(VL[Idx]);
+    Insert &= any_of(seq(NumElements), [&](int Idx) {
+      return DemandedElts[Idx] && !isa<Constant>(VL[Idx]);
     });
-    if (AllConstant)
-      Insert = false;
   }
   auto [NumRegs, RegVT] = getTypeLegalizationCost(InTy);
   if (Insert && RegVT.is32BitVector() && NVPTX::isPackedVectorTy(RegVT)) {
