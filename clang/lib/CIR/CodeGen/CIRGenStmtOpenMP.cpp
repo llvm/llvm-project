@@ -217,19 +217,15 @@ CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
   }
   assert(s.clauses().empty() && "Sema rejects hint without a name");
 
-  mlir::Location begin = getLoc(s.getBeginLoc());
-  auto criticalOp =
-      mlir::omp::CriticalOp::create(builder, begin, mlir::FlatSymbolRefAttr());
-
-  mlir::Block &block = criticalOp.getRegion().emplaceBlock();
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(&block);
-
-  LexicalScope ls{*this, begin, builder.getInsertionBlock()};
-  mlir::LogicalResult res =
-      emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
-  ls.forceCleanup();
-  mlir::omp::TerminatorOp::create(builder, getLoc(s.getEndLoc()));
+  mlir::LogicalResult res = mlir::success();
+  mlir::omp::CriticalOp::create(
+      builder, getLoc(s.getBeginLoc()), mlir::FlatSymbolRefAttr(),
+      /*bodyBuilder=*/[&](mlir::OpBuilder &b, mlir::Location loc) {
+        LexicalScope ls{*this, loc, b.getInsertionBlock()};
+        res = emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
+        ls.forceCleanup();
+        mlir::omp::TerminatorOp::create(b, getLoc(s.getEndLoc()));
+      });
   return res;
 }
 mlir::LogicalResult

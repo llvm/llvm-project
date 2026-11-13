@@ -1832,6 +1832,11 @@ def CriticalOp : OpenMP_Op<"critical", [
 
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$name);
 
+  let builders = [
+    OpBuilder<(ins "FlatSymbolRefAttr":$name,
+      "function_ref<void(OpBuilder &, Location)>":$bodyBuilder)>
+  ];
+
   let assemblyFormat = [{
     (`(` $name^ `)`)? $region attr-dict
   }];
