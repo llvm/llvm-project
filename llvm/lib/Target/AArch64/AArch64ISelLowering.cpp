@@ -22413,8 +22413,7 @@ static SDValue performReinterpretCastCombine(SDNode *N) {
 }
 
 // Match:
-//   Lo = ANY_EXTEND_VECTOR_INREG(Src) or UUNPKLO(Src)
-//   (Even, Odd) = VECTOR_DEINTERLEAVE(Lo, UUNPKHI(Src))
+//   (Even, Odd) = VECTOR_DEINTERLEAVE(UUNPKLO(Src), UUNPKHI(Src))
 //   AND(Even, SPLAT(Mask)) or AND(Odd, SPLAT(Mask))
 // Replace the AND with:
 //   Even -> BITCAST(TRN1(Src, Zero))
