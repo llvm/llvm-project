@@ -2891,14 +2891,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
     If the output mode is `preservesign`, or `positivezero`,
     denormal outputs may be flushed to zero by standard floating-point
-    operations. Note that on some targets, the determination of whether to
-    flush is tied to underflow detection rather than to whether the final
-    result is denormal. Underflow may be detected before the final normalization
-    and rounding steps. This means flushing may occur even when the final
-    result would round up to the smallest normal number (or round down to
-    the smallest negative normal number). It is not mandated that
-    flushing to zero occurs, but if an output is flushed to zero,
-    it must respect the sign mode. Not all targets support all modes.
+    operations. It is not mandated that flushing to zero occurs, but if
+    a denormal output is flushed to zero, it must respect the sign
+    mode. Not all targets support all modes.
 
     If the mode is `dynamic`, the behavior is derived from the
     dynamic state of the floating-point environment. Transformations
@@ -2922,6 +2917,16 @@ fn -> other_fn -> other_fn ; fn is norecurse
     targets support separately setting the denormal mode per type, and
     no attempt is made to diagnose unsupported uses. Currently the separate
     `float:` attribute is respected by the AMDGPU and NVPTX backends.
+
+    **NOTE:** Although `denormal_fpenv` is specified to only flush denormal
+    values, in practice most hardware implementations will flush based on
+    whether IEEE 754 underflow conditions are detected, not on whether the
+    final output is denormal. This can lead to edge cases like
+    `fmul(f0x00800000, f0x3f7fffff)`, which produces `f0x00800000` (the
+    minimum positive normal number) but will return `0.0` with
+    `denormal_fpenv(preservesign)` on most hardware that supports denormal
+    flushing. In such cases, inexact outputs rounded to the minimum magnitude
+    positive or negitive normal number may also be flushed by the hardware.
 
     **Examples:**
 
