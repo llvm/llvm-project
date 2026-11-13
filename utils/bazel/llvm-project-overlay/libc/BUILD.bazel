@@ -18,7 +18,7 @@ load(
     "libc_math_function",
     "libc_support_library",
 )
-load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_RISCV64", "PLATFORM_CPU_X86_64")
+load(":platforms.bzl", "PLATFORM_CPU_X86_64")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -2114,386 +2114,6 @@ libc_support_library(
 alias(
     name = "bfloat16",  # Alias for test/src/math:bfloat16_test.
     actual = "//libc/src/__support/FPUtil:bfloat16",
-)
-
-libc_support_library(
-    name = "__support_threads_cleanup_stack",
-    hdrs = ["src/__support/threads/cleanup_stack.h"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":types_struct___pthread_cleanup_frame",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_linux_futex_word_type",
-    hdrs = ["src/__support/threads/linux/futex_word.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_stdint_proxy",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_thread_attributes",
-    hdrs = ["src/__support/threads/thread_attributes.h"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_threads_cleanup_stack",
-        ":hdr_stdint_proxy",
-        ":types_size_t",
-        ":types_struct___pthread_cleanup_frame",
-        "//libc/src/__support/CPP:atomic",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:architectures",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_futex_utils",
-    hdrs = ["src/__support/threads/futex_utils.h"],
-    deps = select({
-        "@platforms//os:linux": [":__support_threads_linux_futex_utils"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "__support_threads_linux_futex_utils",
-    hdrs = ["src/__support/threads/linux/futex_utils.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_error_or",
-        ":__support_threads_linux_futex_word_type",
-        ":__support_time_time",
-        ":types_struct_timespec",
-        "//libc/src/__support/CPP:atomic",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_sleep",
-    hdrs = ["src/__support/threads/sleep.h"],
-    deps = [
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_identifier",
-    hdrs = ["src/__support/threads/identifier.h"],
-    deps = [
-        ":types_pid_t",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:optimization",
-    ] + select({
-        ":full_build": [
-            ":__support_threads_thread_headers",
-        ],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "__support_threads_mutex_common",
-    hdrs = ["src/__support/threads/mutex_common.h"],
-    deps = ["//libc/src/__support/macros:config"],
-)
-
-libc_support_library(
-    name = "__support_threads_unix_mutex",
-    hdrs = ["src/__support/threads/unix_mutex.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_libc_assert",
-        ":__support_threads_identifier",
-        ":__support_threads_mutex_common",
-        ":__support_threads_raw_mutex",
-        ":types_pid_t",
-        ":types_size_t",
-        "//libc/src/__support/CPP:atomic",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:optimization",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_raw_mutex",
-    hdrs = ["src/__support/threads/raw_mutex.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_libc_assert",
-        ":__support_threads_futex_utils",
-        ":__support_threads_linux_futex_utils",
-        ":__support_threads_sleep",
-        ":__support_time_time",
-        ":hdr_errno_macros",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:optimization",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_raw_rwlock",
-    hdrs = ["src/__support/threads/raw_rwlock.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_libc_assert",
-        ":__support_threads_raw_mutex",
-        ":__support_threads_sleep",
-        ":__support_time_time",
-        ":hdr_errno_macros",
-        "//libc/src/__support/CPP:atomic",
-        "//libc/src/__support/CPP:limits",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:optimization",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_mutex",
-    hdrs = ["src/__support/threads/mutex.h"],
-    deps = [
-        ":__support_threads_mutex_common",
-        ":__support_threads_unix_mutex",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_tcb",
-    hdrs = ["src/__support/threads/tcb.h"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    textual_hdrs = select({
-        "@platforms//os:linux": [
-            "src/__support/threads/linux/tcb.h",
-            "src/__support/threads/linux/x86_64/tcb.h",
-            "src/__support/threads/linux/aarch64/tcb.h",
-            "src/__support/threads/linux/riscv/tcb.h",
-        ],
-        "//conditions:default": [],
-    }),
-    deps = [
-        ":__support_threads_thread_attributes",
-        ":hdr_offsetof_macros",
-        ":hdr_stdint_proxy",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:architectures",
-        "//libc/src/__support/macros/properties:os",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_thread_headers",
-    hdrs = ["src/__support/threads/thread.h"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_error_or",
-        ":__support_threads_tcb",
-        ":__support_threads_thread_attributes",
-        ":hdr_stdint_proxy",
-        ":types_struct_sched_param",
-        "//libc/src/__support/CPP:atomic",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/CPP:stringstream",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:architectures",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_thread",
-    srcs = ["src/__support/threads/thread.cpp"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_fixedvector",
-        ":__support_threads_cleanup_stack",
-        ":__support_threads_mutex",
-        ":__support_threads_thread_headers",
-        ":hdr_limits_macros",
-        ":types_struct___pthread_cleanup_frame",
-        "//libc/src/__support/CPP:array",
-        "//libc/src/__support/CPP:mutex",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ] + select({
-        "@platforms//os:linux": [":__support_threads_linux_thread"],
-        "//conditions:default": [],
-    }),
-)
-
-libc_support_library(
-    name = "__support_threads_linux_thread",
-    srcs = ["src/__support/threads/linux/thread.cpp"],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_common",
-        ":__support_error_or",
-        ":__support_fixedvector",
-        ":__support_threads_futex_utils",
-        ":__support_threads_linux_futex_utils",
-        ":__support_threads_linux_futex_word_type",
-        ":__support_threads_linux_tls",
-        ":__support_threads_mutex",
-        ":__support_threads_thread_attributes",
-        ":__support_threads_thread_headers",
-        ":config_app_h",
-        ":hdr_errno_macros",
-        ":hdr_fcntl_macros",
-        ":hdr_sched_macros",
-        ":hdr_stdint_proxy",
-        ":hdr_sys_mman_macros",
-        "//libc/src/__support/CPP:array",
-        "//libc/src/__support/CPP:atomic",
-        "//libc/src/__support/CPP:mutex",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/CPP:stringstream",
-        "//libc/src/__support/OSUtil:linux_sigmask",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:clone",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:close",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:exit",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getpid",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mmap",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mprotect",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:munmap",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:read",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_getparam",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_getscheduler",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sched_setscheduler",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:tgkill",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:write",
-        "//libc/src/__support/macros:attributes",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_linux_tls",
-    srcs = selects.with_or({
-        PLATFORM_CPU_X86_64: ["src/__support/threads/linux/x86_64/tls.cpp"],
-        PLATFORM_CPU_ARM64: ["src/__support/threads/linux/aarch64/tls.cpp"],
-        PLATFORM_CPU_RISCV64: ["src/__support/threads/linux/riscv/tls.cpp"],
-        "//conditions:default": [],
-    }),
-    copts = [
-        "-ffreestanding",
-        "-fno-builtin",
-        "-fno-omit-frame-pointer",
-        "-fno-stack-protector",
-        "-O3",
-    ],
-    full_build_only = True,
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_threads_tcb",
-        ":config_app_h",
-        ":hdr_sys_mman_macros",
-        ":string_memory_utils",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:exit",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:getrandom",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:mmap",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:munmap",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_callonce",
-    hdrs = ["src/__support/threads/callonce.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    textual_hdrs = [
-        "src/__support/threads/linux/callonce.h",
-    ],
-    deps = [
-        ":__support_threads_futex_utils",
-        ":__support_threads_linux_futex_utils",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros:optimization",
-    ],
-)
-
-libc_support_library(
-    name = "__support_threads_fork_callbacks",
-    srcs = ["src/__support/threads/fork_callbacks.cpp"],
-    hdrs = ["src/__support/threads/fork_callbacks.h"],
-    deps = [
-        ":__support_threads_mutex",
-        "//libc/src/__support/CPP:mutex",
-        "//libc/src/__support/macros:config",
-    ],
 )
 
 libc_support_library(
@@ -7316,10 +6936,10 @@ libc_support_library(
         ":__support_blockstore",
         ":__support_common",
         ":__support_fixedvector",
-        ":__support_threads_mutex",
         "//libc/src/__support/CPP:mutex",
         "//libc/src/__support/CPP:new",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/threads:mutex",
     ],
 )
 
@@ -7359,10 +6979,10 @@ libc_function(
     full_build_only = True,
     deps = [
         ":__support_common",
-        ":__support_threads_thread_headers",
         ":fflush_internal",
         "//libc/src/__support/OSUtil:exit",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/threads:thread_headers",
     ],
 )
 
@@ -7648,10 +7268,10 @@ libc_function(
     hdrs = ["src/stdlib/rand.h"],
     deps = [
         ":__support_common",
-        ":__support_threads_sleep",
         ":hdr_stdlib_macros",
         ":rand_util",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/threads:sleep",
     ],
 )
 
@@ -8984,16 +8604,16 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_libc_errno",
-        ":__support_threads_fork_callbacks",
-        ":__support_threads_identifier",
-        ":__support_threads_thread",
-        ":__support_threads_thread_headers",
         ":errno",
         ":hdr_signal_macros",
         ":hdr_unistd_macros",
         ":types_pid_t",
         "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/threads:fork_callbacks",
+        "//libc/src/__support/threads:identifier",
+        "//libc/src/__support/threads:thread",
+        "//libc/src/__support/threads:thread_headers",
     ],
 )
 
@@ -9039,7 +8659,6 @@ libc_support_library(
         ":__restore_rt",
         ":__support_common",
         ":__support_error_or",
-        ":__support_threads_raw_rwlock",
         ":hdr_signal_macros",
         ":types_siginfo_t",
         ":types_sigset_t",
@@ -9049,6 +8668,7 @@ libc_support_library(
         "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/OSUtil:vdso",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/threads:raw_rwlock",
     ],
 )
 

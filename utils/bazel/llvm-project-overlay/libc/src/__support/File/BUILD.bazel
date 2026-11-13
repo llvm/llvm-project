@@ -36,7 +36,6 @@ libc_support_library(
         ":file_io_result",
         "//libc:__support_alloc_checker",
         "//libc:__support_error_or",
-        "//libc:__support_threads_mutex",
         "//libc:__support_wchar_character_converter",
         "//libc:__support_wchar_mbstate",
         "//libc:__support_wchar_wcrtomb",
@@ -60,6 +59,7 @@ libc_support_library(
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/threads:mutex",
     ],
 )
 
