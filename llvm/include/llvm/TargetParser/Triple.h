@@ -298,7 +298,8 @@ public:
     OpenEmbedded,
     Intel,
     Meta,
-    LastVendorType = Meta
+    Nintendo,
+    LastVendorType = Nintendo
   };
   enum OSType {
     UnknownOS,
@@ -352,7 +353,8 @@ public:
     Firmware,
     QURT,
     H2,
-    LastOSType = H2
+    NintendoOS,
+    LastOSType = NintendoOS
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -756,6 +758,8 @@ public:
   bool isOSSolaris() const { return getOS() == Triple::Solaris; }
 
   bool isOSIAMCU() const { return getOS() == Triple::ELFIAMCU; }
+
+  bool isNintendoOS() const { return getOS() == Triple::NintendoOS; }
 
   bool isOSUnknown() const { return getOS() == Triple::UnknownOS; }
 
