@@ -20,16 +20,19 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 
 using namespace mlir;
@@ -51,21 +54,38 @@ ModuleToObject::~ModuleToObject() = default;
 
 Operation &ModuleToObject::getOperation() { return module; }
 
+/// Looks up the LLVM target for the given triple, emits an error at `loc` and
+/// returns null if it is not available.
+static const llvm::Target *lookupTarget(Location loc,
+                                        const llvm::Triple &triple) {
+  std::string error;
+  const llvm::Target *target =
+      llvm::TargetRegistry::lookupTarget(triple, error);
+  if (!target)
+    emitError(loc) << "Failed to lookup target for triple '" << triple.str()
+                   << "' " << error;
+  return target;
+}
+
 FailureOr<llvm::TargetMachine *> ModuleToObject::getOrCreateTargetMachine() {
   if (targetMachine)
     return targetMachine.get();
   // Load the target.
-  std::string error;
   llvm::Triple parsedTriple(triple);
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
+      lookupTarget(getOperation().getLoc(), parsedTriple);
   if (!target)
-    return getOperation().emitError()
-           << "Failed to lookup target for triple '" << triple << "' " << error;
+    return failure();
+
+  // A context without library options must not hide the global ones, e.g.,
+  // those parsed from the command line of the tool.
+  llvm::TargetOptions targetOptions;
+  if (libraryOptions && !libraryOptions->args().empty())
+    targetOptions.MCOptions.LibraryOptions = libraryOptions;
 
   // Create the target machine using the target.
-  targetMachine.reset(
-      target->createTargetMachine(parsedTriple, chip, features, {}, {}));
+  targetMachine.reset(target->createTargetMachine(parsedTriple, chip, features,
+                                                  targetOptions, {}));
   if (!targetMachine)
     return getOperation().emitError()
            << "Failed to create target machine for triple '" << triple << "'";
@@ -224,14 +244,15 @@ FailureOr<SmallString<0>> ModuleToObject::translateModuleToISA(
 }
 
 void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
-  // Create the target machine.
-  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
-  if (failed(targetMachine))
+  // Don't create the target machine yet, the initial LLVM IR callback may still
+  // set the library options it is created with.
+  llvm::Triple parsedTriple(triple);
+  if (!lookupTarget(getOperation().getLoc(), parsedTriple))
     return;
 
   // Set the data layout and target triple of the module.
-  module.setDataLayout((*targetMachine)->getTargetTriple().computeDataLayout());
-  module.setTargetTriple((*targetMachine)->getTargetTriple());
+  module.setDataLayout(parsedTriple.computeDataLayout());
+  module.setTargetTriple(parsedTriple);
 }
 
 FailureOr<SmallVector<char, 0>>
@@ -253,6 +274,15 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
   // Translate the module to LLVM IR.
   llvm::LLVMContext llvmContext;
   setupLLVMContext(llvmContext);
+
+  // The target machine may refer to the library options of the LLVM context,
+  // so it must not outlive the context.
+  libraryOptions = &llvmContext.getLibraryOptions();
+  llvm::scope_exit resetTargetMachine([this]() {
+    targetMachine.reset();
+    libraryOptions = nullptr;
+  });
+
   std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
   if (!llvmModule) {
     getOperation().emitError() << "Failed creating the llvm::Module.";

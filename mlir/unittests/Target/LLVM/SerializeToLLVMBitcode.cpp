@@ -15,10 +15,14 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
@@ -243,4 +247,76 @@ TEST_F(MLIRTargetLLVM,
   ASSERT_TRUE(serializedBinary != std::nullopt);
   ASSERT_TRUE(!serializedBinary->getObject().empty());
   ASSERT_TRUE(!optimizedLLVMIR.empty());
+}
+
+namespace {
+/// Serializer recording which library options its target machine uses.
+class LibraryOptionsRecorder : public LLVM::ModuleToObject {
+public:
+  using ModuleToObject::ModuleToObject;
+
+  /// Whether the target machine uses the library options of the LLVM context.
+  bool usesContextOptions = false;
+
+  /// Whether the target machine uses the global library options.
+  bool usesGlobalOptions = false;
+
+protected:
+  FailureOr<SmallVector<char, 0>>
+  moduleToObject(llvm::Module &llvmModule) override {
+    FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+    if (failed(targetMachine))
+      return failure();
+    const llvm::cl::LibraryOptionsContext *targetMachineOptions =
+        (*targetMachine)->Options.MCOptions.LibraryOptions;
+    usesContextOptions =
+        targetMachineOptions == &llvmModule.getContext().getLibraryOptions();
+    usesGlobalOptions = targetMachineOptions == nullptr;
+    return ModuleToObject::moduleToObject(llvmModule);
+  }
+};
+} // namespace
+
+// Test that the target machine uses the library options that the initial LLVM
+// IR callback sets on the LLVM context.
+TEST_F(MLIRTargetLLVM,
+       SKIP_WITHOUT_NATIVE(TargetMachineUsesContextLibraryOptions)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+
+  bool parsedOptions = false;
+  auto initialCallback = [&parsedOptions](llvm::Module &module) {
+    const char *args[] = {"prog", "-print-inst-addrs"};
+    parsedOptions = llvm::cl::parseCommandLineOptions(
+        module.getContext().getLibraryOptions(), args, "", &llvm::nulls());
+  };
+
+  std::string targetTriple = llvm::sys::getProcessTriple();
+  LibraryOptionsRecorder serializer(*(module->getOperation()), targetTriple, "",
+                                    "", 3, initialCallback);
+  std::optional<SmallVector<char, 0>> serializedModule = serializer.run();
+  ASSERT_TRUE(!!serializedModule);
+  ASSERT_TRUE(parsedOptions);
+  ASSERT_TRUE(serializer.usesContextOptions);
+}
+
+// Test that the target machine uses the global library options when none are
+// set on the LLVM context.
+TEST_F(MLIRTargetLLVM,
+       SKIP_WITHOUT_NATIVE(TargetMachineUsesGlobalLibraryOptions)) {
+  MLIRContext context(registry);
+
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(moduleStr, &context);
+  ASSERT_TRUE(!!module);
+
+  std::string targetTriple = llvm::sys::getProcessTriple();
+  LibraryOptionsRecorder serializer(*(module->getOperation()), targetTriple, "",
+                                    "");
+  std::optional<SmallVector<char, 0>> serializedModule = serializer.run();
+  ASSERT_TRUE(!!serializedModule);
+  ASSERT_TRUE(serializer.usesGlobalOptions);
 }
