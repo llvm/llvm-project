@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomConditionCache.h"
@@ -8554,10 +8553,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       Dominator = Dominator->getIDom();
     }
 
-  if (AC && getKnowledgeValidInContext(V, {Attribute::NoUndef}, *AC, CtxI, DT))
-    return true;
-
-  return false;
+  return AC &&
+         AC->assumeBundlesOfKind(BundleAttr::NoUndef, V,
+                                 [&](OperandBundleUse OBU, AssumeInst *AI) {
+                                   return isValidAssumeForContext(AI, CtxI, DT);
+                                 });
 }
 
 bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V, AssumptionCache *AC,

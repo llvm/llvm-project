@@ -12,7 +12,7 @@
 
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumeBundleQueries.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -36,7 +36,7 @@ static bool isAligned(const Value *Base, Align Alignment,
 
 static bool isDereferenceableAndAlignedPointerViaAssumption(
     const Value *Ptr, Align Alignment, const SimplifyQuery &SQ, bool IgnoreFree,
-    function_ref<bool(const RetainedKnowledge &RK)> CheckSize) {
+    function_ref<bool(const AssumeDereferenceableInfo &)> CheckSize) {
   if (!SQ.CtxI)
     return false;
   // Look through assumes to see if both dereferenceability and alignment can
@@ -44,25 +44,30 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
   bool PtrCanBeFreed = Ptr->canBeFreed() && !IgnoreFree;
   bool IsAligned = Ptr->getPointerAlignment(SQ.DL) >= Alignment;
   bool IsDerefable = false;
-  return getKnowledgeForValue(
-      Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *SQ.AC,
-      [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-        if (!isValidAssumeForContext(Assume, SQ.CtxI, SQ.DT))
-          return false;
-        if (RK.AttrKind == Attribute::Alignment) {
-          IsAligned |= RK.ArgValue >= Alignment.value();
-        } else {
-          assert(RK.AttrKind == Attribute::Dereferenceable);
-          // Dereferenceable information from assumptions is only valid if the
-          // value cannot be freed between the assumption and use.
-          if (!IsDerefable &&
-              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CtxI, SQ.DT)) &&
-              CheckSize(RK))
-            IsDerefable = true;
-        }
-        // Stop looking if we have proven both necessary facts.
-        return IsAligned && IsDerefable;
-      });
+  return SQ.AC->assumeBundlesFor(Ptr, [&](BundleAttr BA, OperandBundleUse OBU,
+                                          AssumeInst *AI) {
+    switch (BA) {
+    case BundleAttr::Align: {
+      if (!IsAligned && isValidAssumeForContext(AI, SQ.CtxI, SQ.DT)) {
+        auto [_1, _2, _3, Align, Offset] = getAssumeAlignInfo(OBU);
+
+        IsAligned =
+            Align && Offset && MinAlign(*Align, *Offset) >= Alignment.value();
+      }
+    } break;
+
+    case BundleAttr::Dereferenceable: {
+      if (!IsDerefable && isValidAssumeForContext(AI, SQ.CtxI, SQ.DT)) {
+        IsDerefable =
+            (!PtrCanBeFreed || willNotFreeBetween(AI, SQ.CtxI, SQ.DT)) &&
+            CheckSize(getAssumeDereferenceableInfo(OBU));
+      }
+    } break;
+    default:
+      return false;
+    }
+    return IsAligned && IsDerefable;
+  });
 }
 
 /// Test if V is always a pointer to allocated and suitably aligned memory for
@@ -221,11 +226,12 @@ static bool isDereferenceableAndAlignedPointer(
     return isDereferenceableAndAlignedPointer(
         ASC->getOperand(0), Alignment, Size, SQ, IgnoreFree, Visited, MaxDepth);
 
-  return SQ.AC &&
-         isDereferenceableAndAlignedPointerViaAssumption(
-             V, Alignment, SQ, IgnoreFree, [Size](const RetainedKnowledge &RK) {
-               return RK.ArgValue >= Size.getZExtValue();
-             });
+  return SQ.AC && isDereferenceableAndAlignedPointerViaAssumption(
+                      V, Alignment, SQ, IgnoreFree,
+                      [Size](const AssumeDereferenceableInfo &ADI) {
+                        return ADI.CountVal &&
+                               *ADI.CountVal >= Size.getZExtValue();
+                      });
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
@@ -423,8 +429,9 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   SimplifyQuery SQ(DL, &DT, AC, CtxI);
   return isDereferenceableAndAlignedPointerViaAssumption(
              Base, Alignment, SQ, /*IgnoreFree=*/false,
-             [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
-               const SCEV *DerefBytesSCEV = SE.getSCEV(RK.IRArgValue);
+             [&SE, AccessSizeSCEV,
+              &LoopGuards](const AssumeDereferenceableInfo &ADI) {
+               const SCEV *DerefBytesSCEV = SE.getSCEV(ADI.Count);
                Type *WiderTy = SE.getWiderType(AccessSizeSCEV->getType(),
                                                DerefBytesSCEV->getType());
                const SCEV *AccessSizeExt =

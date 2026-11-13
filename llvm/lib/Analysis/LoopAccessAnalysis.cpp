@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
-#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -209,12 +208,13 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
-  getKnowledgeForValue(
-      StartPtrV, Attribute::Dereferenceable, *AC,
-      [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-        if (!isValidAssumeForContext(Assume, CtxI, DT))
+  AC->assumeBundlesOfKind(
+      BundleAttr::Dereferenceable, StartPtrV,
+      [&](OperandBundleUse OBU, AssumeInst *AI) {
+        if (!isValidAssumeForContext(AI, CtxI, DT))
           return false;
-        const SCEV *DerefRKSCEV = SE.getSCEV(RK.IRArgValue);
+        const SCEV *DerefRKSCEV =
+            SE.getSCEV(getAssumeDereferenceableInfo(OBU).Count);
         Type *CommonTy =
             SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
         DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
