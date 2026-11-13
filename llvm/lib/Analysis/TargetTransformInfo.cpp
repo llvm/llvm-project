@@ -1663,6 +1663,10 @@ bool TargetTransformInfo::allowVectorElementIndexingUsingGEP() const {
   return TTIImpl->allowVectorElementIndexingUsingGEP();
 }
 
+bool TargetTransformInfo::allowLoadWidening() const {
+  return TTIImpl->allowLoadWidening();
+}
+
 bool TargetTransformInfo::isUniform(const Instruction *I,
                                     const SmallBitVector &UniformArgs) const {
   return TTIImpl->isUniform(I, UniformArgs);
