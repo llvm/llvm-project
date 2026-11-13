@@ -242,6 +242,27 @@ struct TypedOperandInfo {
   }
 };
 
+struct InstrMappingInfo {
+  const Record *IDRec;
+  unsigned ID;
+  unsigned Cost;
+
+  InstrMappingInfo(const Record &Rec)
+      : IDRec(Rec.getValueAsDef("ID")), Cost(Rec.getValueAsInt("Cost")) {
+    ID = IDRec->getValueAsInt("ID");
+  }
+
+  std::string getIDVarName(StringRef TargetName) const {
+    return (TargetName +
+            "GenRegisterBankInfo::" + IDRec->getValueAsString("Name"))
+        .str();
+  }
+
+  bool operator<(const InstrMappingInfo &RHS) const {
+    return std::tie(ID, Cost) < std::tie(RHS.ID, RHS.Cost);
+  }
+};
+
 using TypedOperandInfoMap = DenseMap<const Record *, TypedOperandInfo>;
 
 struct InstrShape {
@@ -338,6 +359,8 @@ private:
   DenseMap<const InstrShape *,
            std::map<std::vector<const RegisterBank *>, size_t>>
       ShapeToTupleStart;
+  DenseMap<const InstrShape *, size_t> OperandsMappingSizes;
+  DenseMap<const InstrShape *, std::set<InstrMappingInfo>> PossibleMappingInfos;
 
   void collectValueMappings();
   void validateMappingRules();
@@ -357,6 +380,8 @@ private:
                                 bool EmitAlt);
   void emitOperandMappingForShape(raw_ostream &OS, size_t ShapeIdx,
                                   const InstrShape &Shape);
+  void emitInstrMappingForShape(raw_ostream &OS, size_t ShapeIdx,
+                                const InstrShape &Shape);
   void emitSearchMethod(raw_ostream &OS, StringRef TargetName, bool EmitAlt);
 
 public:
@@ -403,6 +428,7 @@ void RegisterBankEmitter::emitBaseClassDefinition(
         "MachineInstr &MI) const;\n"
      << "  InstructionMappings getGeneratedInstrAltMappings(const "
         "MachineInstr &MI) const;\n";
+  OS << "public:\n";
   for (const auto &MappingIDDef :
        Records.getAllDerivedDefinitions("RegBankMappingID")) {
     StringRef Name = MappingIDDef->getValueAsString("Name");
@@ -411,6 +437,7 @@ void RegisterBankEmitter::emitBaseClassDefinition(
     OS << "  static inline constexpr unsigned " << Name << " = "
        << MappingIDDef->getValueAsInt("ID") << ";\n";
   }
+  OS << "protected:\n";
 }
 
 /// Visit each register class belonging to the given register bank.
@@ -554,8 +581,10 @@ void RegisterBankEmitter::collectInstrMappings() {
           Rules.push_back(RuleDef);
       }
     }
-    for (const auto *RuleDef : Rec->getValueAsListOfDefs("Rules"))
+    for (const auto *RuleDef : Rec->getValueAsListOfDefs("Rules")) {
       BankAssignments[Shape].insert(getBankAssignment(*RuleDef, *Shape));
+      PossibleMappingInfos[Shape].insert(InstrMappingInfo(*RuleDef));
+    }
   }
 
   for (auto &KV : InstrMappingRules) {
@@ -641,6 +670,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
       const auto &[Shape, CGIs] = KV;
 
       emitOperandMappingForShape(OS, ShapeIdx, Shape);
+      emitInstrMappingForShape(OS, ShapeIdx, Shape);
     }
 
     OS << "static size_t getValueMappingIdx(unsigned BankID, const TypeSize "
@@ -835,13 +865,16 @@ void RegisterBankEmitter::emitOperandMappingForShape(raw_ostream &OS,
                                                      const InstrShape &Shape) {
   OS << "static constexpr RegisterBankInfo::ValueMapping\n"
         "GeneratedOperandsMappingsShape"
-     << ShapeIdx << "[] = {\n";
+     << ShapeIdx << "[][" << Shape.getNumOperands() << "] = {\n";
   std::set<std::vector<const RegisterBank *>> &Assignments =
       BankAssignments[&Shape];
   if (Assignments.empty()) {
+    OS << "  {\n";
     for (size_t I : llvm::seq(Shape.Shape.size()))
-      OS << "  {nullptr, 0}, " << "// " << I << '\n';
-    OS << "};\n\n";
+      OS << "    {nullptr, 0}, " << "// " << I << '\n';
+    OS << "  },\n"
+          "};\n\n";
+    OperandsMappingSizes[&Shape] = 1;
     return;
   }
 
@@ -862,20 +895,44 @@ void RegisterBankEmitter::emitOperandMappingForShape(raw_ostream &OS,
         getCartesianProduct(Components);
     OffsetMap[Assignment] = Idx;
     for (const auto &Tup : Product) {
+      OS << "  // " << Idx++ << '\n' << "  {\n";
       for (int I : Shape.Shape) {
         if (I >= 0) {
           const ValueMapping &VM = Tup[I];
-          OS << "  {&GeneratedPartialMappings[" << VM.getPartialMappingIdx()
-             << "], " << VM.getNumBreakDowns() << "}, // " << Idx++ << '\n';
+          OS << "    {&GeneratedPartialMappings[" << VM.getPartialMappingIdx()
+             << "], " << VM.getNumBreakDowns() << "},\n";
         } else {
-          OS << "  {nullptr, 0}, " << "// " << Idx++ << '\n';
+          OS << "    {nullptr, 0},\n";
         }
       }
-      OS << '\n';
+      OS << "  },\n\n";
     }
   }
   OS << "};\n";
+  OperandsMappingSizes[&Shape] = Idx;
   ShapeToTupleStart[&Shape] = OffsetMap;
+}
+
+void RegisterBankEmitter::emitInstrMappingForShape(raw_ostream &OS,
+                                                   size_t ShapeIdx,
+                                                   const InstrShape &Shape) {
+  OS << "static constexpr RegisterBankInfo::InstructionMapping\n"
+        "GenerateInstrMappingsShape"
+     << ShapeIdx << "[] = {\n"
+     << "  // ID, Cost, OperandsMapping, NumOperands\n";
+  const std::set<InstrMappingInfo> &MappingInfos = PossibleMappingInfos[&Shape];
+  if (MappingInfos.empty())
+    OS << "  {},\n";
+  for (const auto &Info : MappingInfos) {
+    OS << "\n  // ID = " << Info.getIDVarName(Target.getName())
+       << ", Cost = " << Info.Cost << '\n';
+    for (size_t Idx : llvm::seq(OperandsMappingSizes[&Shape])) {
+      OS << "  {" << Info.getIDVarName(Target.getName()) << ", " << Info.Cost
+         << ", GeneratedOperandsMappingsShape" << ShapeIdx << '[' << Idx << ']'
+         << ", " << Shape.getNumOperands() << "},\n";
+    }
+  }
+  OS << "};\n\n";
 }
 
 void RegisterBankEmitter::emitOperandsMappingRules(
@@ -908,8 +965,22 @@ void RegisterBankEmitter::emitOperandsMappingRules(
 
     std::vector<const RegisterBank *> BankAssignment =
         getBankAssignment(*RuleDef, Shape);
-    OS << "        ArrayRef<ValueMapping> OperandsMappings = "
-          "OperandsMappingStart.drop_front("
+    const std::set<InstrMappingInfo> &InstrMappingInfos =
+        PossibleMappingInfos[&Shape];
+    size_t IDCostOffset =
+        std::distance(
+            InstrMappingInfos.begin(),
+            llvm::find_if(
+                InstrMappingInfos,
+                [RuleDef](const InstrMappingInfo &Info) {
+                  return Info.ID == RuleDef->getValueAsDef("ID")->getValueAsInt(
+                                        "ID") &&
+                         Info.Cost == RuleDef->getValueAsInt("Cost");
+                })) *
+        OperandsMappingSizes[&Shape];
+    OS << "        ArrayRef<InstructionMapping> InstrMappings = "
+          "InstrMappingStart.drop_front("
+       << IDCostOffset << ").drop_front("
        << ShapeToTupleStart[&Shape][BankAssignment] << ");\n";
     OS << "        std::array Coord = {";
     StringRef TargetName = Target.getName();
@@ -924,7 +995,7 @@ void RegisterBankEmitter::emitOperandsMappingRules(
           "          break;\n";
     // decode instruction mapping position
     ListSeparator Plus(" + ");
-    OS << "        size_t Idx = (";
+    OS << "        size_t Idx = ";
     for (const auto &[Idx, Bank] : llvm::enumerate(BankAssignment)) {
       OS << Plus << "Coord[" << Idx << "] * "
          << llvm::accumulate(ArrayRef(BankAssignment).drop_front(Idx + 1), 1,
@@ -932,21 +1003,12 @@ void RegisterBankEmitter::emitOperandsMappingRules(
                                return LHS * RHS->getValueMappings().size();
                              });
     }
-    OS << ") * " << Shape.getNumOperands() << ";\n";
-    StringRef MapID = RuleDef->getValueAsDef("ID")->getValueAsString("Name");
-    unsigned Cost = RuleDef->getValueAsInt("Cost");
-    if (!EmitAlt) {
-      OS << "        return getInstructionMapping(" << MapID << ", " << Cost
-         << ", "
-            "&OperandsMappings[Idx], "
-         << Shape.getNumOperands() << ");\n";
-    } else {
-      OS << "        Mappings.push_back(&getInstructionMapping(" << MapID << ", "
-         << Cost
-         << ", "
-            "&OperandsMappings[Idx], "
-         << Shape.getNumOperands() << "));\n";
-    }
+    OS << ";\n";
+
+    if (!EmitAlt)
+      OS << "        return InstrMappings[Idx];\n";
+    else
+      OS << "        Mappings.push_back(&InstrMappings[Idx]);\n";
 
     OS << "      }\n\n";
   }
@@ -1001,9 +1063,8 @@ void RegisterBankEmitter::emitSearchMethod(raw_ostream &OS,
       for (const auto *CGI : CGIs)
         OS << "\n    case " << TargetName << "::" << CGI->getName() << ":";
       OS << " {\n"
-            "      ArrayRef<ValueMapping> OperandsMappingStart = "
-         << TargetName << "::GeneratedOperandsMappingsShape" << ShapeIdx
-         << ";\n";
+            "      ArrayRef<InstructionMapping> InstrMappingStart = "
+         << TargetName << "::GenerateInstrMappingsShape" << ShapeIdx << ";\n";
       emitOperandsMappingRules(OS, **CGIs.begin(), Shape, Rules, EmitAlt);
       OS << "      break;\n"
             "    }\n";
