@@ -835,6 +835,14 @@ public:
     ReportError(llvm::formatv(format, std::forward<Args>(args)...));
   }
 
+  /// Report an error that may be a bug in LLDB, see
+  /// Debugger::ReportInternalError.
+  template <typename... Args>
+  void ReportInternalError(const char *format, Args &&...args) {
+    ReportError(llvm::formatv(format, std::forward<Args>(args)...),
+                /*internal_error=*/true);
+  }
+
   // Only report an error once when the module is first detected to be modified
   // so we don't spam the console with many messages.
   template <typename... Args>
@@ -1199,7 +1207,8 @@ private:
   void LogMessageVerboseBacktrace(Log *log,
                                   const llvm::formatv_object_base &payload);
   void ReportWarning(const llvm::formatv_object_base &payload);
-  void ReportError(const llvm::formatv_object_base &payload);
+  void ReportError(const llvm::formatv_object_base &payload,
+                   bool internal_error = false);
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
   /// Returns true the first time \p msg is passed.
   bool ShouldReportDiagnostic(llvm::StringRef msg);
