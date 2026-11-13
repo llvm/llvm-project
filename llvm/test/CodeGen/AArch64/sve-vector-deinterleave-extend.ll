@@ -4,7 +4,7 @@
 define void @deinterleave_i32(<vscale x 4 x i32> %interleaved) {
 ; CHECK-LABEL: deinterleave_i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-NEXT:    trn1 z2.s, z0.s, z1.s
 ; CHECK-NEXT:    trn2 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    // fake_use: $z2
@@ -29,7 +29,7 @@ entry:
 define void @deinterleave_i16(<vscale x 8 x i16> %interleaved) {
 ; CHECK-LABEL: deinterleave_i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov z1.h, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    trn1 z2.h, z0.h, z1.h
 ; CHECK-NEXT:    trn2 z0.h, z0.h, z1.h
@@ -57,7 +57,7 @@ entry:
 define void @deinterleave_i8(<vscale x 16 x i8> %interleaved) {
 ; CHECK-LABEL: deinterleave_i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov z1.b, #0 // =0x0
 ; CHECK-NEXT:    trn1 z2.b, z0.b, z1.b
 ; CHECK-NEXT:    trn2 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    // fake_use: $z2

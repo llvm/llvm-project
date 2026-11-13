@@ -22412,95 +22412,11 @@ static SDValue performReinterpretCastCombine(SDNode *N) {
   return SDValue();
 }
 
-// Match:
-//   (Even, Odd) = VECTOR_DEINTERLEAVE(UUNPKLO(Src), UUNPKHI(Src))
-//   AND(Even, SPLAT(Mask)) or AND(Odd, SPLAT(Mask))
-// Replace the AND with:
-//   Even -> BITCAST(TRN1(Src, Zero))
-//   Odd  -> BITCAST(TRN2(Src, Zero))
-// Mask clears the extra upper bits
-static SDValue performSVEDeinterleaveExtendCombine(
-    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
-
-  if (DCI.getDAGCombineLevel() != AfterLegalizeTypes &&
-      DCI.getDAGCombineLevel() != AfterLegalizeVectorOps)
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-
-  bool IsSupportedType =
-      VT == MVT::nxv8i16 || VT == MVT::nxv4i32 || VT == MVT::nxv2i64;
-
-  if (!IsSupportedType)
-    return SDValue();
-
-  SDValue Splat = N->getOperand(1);
-  if (Splat.getOpcode() != ISD::SPLAT_VECTOR)
-    return SDValue();
-
-  unsigned ExpectedSplatValue = 0;
-  EVT ExpectedSourceVT;
-  switch (VT.getSimpleVT().SimpleTy) {
-  case MVT::nxv8i16:
-    ExpectedSplatValue = 0xff;
-    ExpectedSourceVT = MVT::nxv16i8;
-    break;
-  case MVT::nxv4i32:
-    ExpectedSplatValue = 0xffff;
-    ExpectedSourceVT = MVT::nxv8i16;
-    break;
-  case MVT::nxv2i64:
-    ExpectedSplatValue = 0xffffffff;
-    ExpectedSourceVT = MVT::nxv4i32;
-    break;
-  default:
-    return SDValue();
-  }
-
-  auto *SplatValue = dyn_cast<ConstantSDNode>(Splat.getOperand(0));
-  if (!SplatValue || SplatValue->getZExtValue() != ExpectedSplatValue)
-    return SDValue();
-
-  SDValue Deinterleave = N->getOperand(0);
-  if (Deinterleave.getOpcode() != ISD::VECTOR_DEINTERLEAVE)
-    return SDValue();
-
-  if (Deinterleave.getNumOperands() != 2)
-    return SDValue();
-
-  SDValue VectorExtend = Deinterleave.getOperand(0);
-  SDValue UunpkHi = Deinterleave.getOperand(1);
-
-  if (VectorExtend.getOpcode() != AArch64ISD::UUNPKLO ||
-      UunpkHi.getOpcode() != AArch64ISD::UUNPKHI)
-    return SDValue();
-
-  if (VectorExtend.getOperand(0) != UunpkHi.getOperand(0))
-    return SDValue();
-
-  SDValue Source = VectorExtend.getOperand(0);
-  if (Source.getValueType() != ExpectedSourceVT)
-    return SDValue();
-
-  unsigned ResultNumber = Deinterleave.getResNo();
-  unsigned TrnOpcode = ResultNumber == 0 ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
-
-  SDLoc DL(N);
-  SDValue Zero = DAG.getConstant(0, DL, ExpectedSourceVT);
-  SDValue Transpose =
-      DAG.getNode(TrnOpcode, DL, ExpectedSourceVT, Source, Zero);
-
-  SDValue Result = DAG.getNode(ISD::BITCAST, DL, VT, Transpose);
-  return Result;
-}
-
 static SDValue performSVEAndCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
-  if (SDValue Res = performSVEDeinterleaveExtendCombine(N, DCI, DAG))
-    return Res;
 
   // Zero/any extend of an unsigned unpack
   if (Opc == AArch64ISD::UUNPKHI || Opc == AArch64ISD::UUNPKLO) {

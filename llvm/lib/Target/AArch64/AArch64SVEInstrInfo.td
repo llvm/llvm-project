@@ -2223,6 +2223,38 @@ let Predicates = [HasSVE_or_SME] in {
   defm TRN1_PPP : sve_int_perm_bin_perm_pp<0b100, "trn1", AArch64trn1, int_aarch64_sve_trn1_b16, int_aarch64_sve_trn1_b32, int_aarch64_sve_trn1_b64>;
   defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2", AArch64trn2, int_aarch64_sve_trn2_b16, int_aarch64_sve_trn2_b32, int_aarch64_sve_trn2_b64>;
 
+  // Select TRNs with a zero vector for deinterleave and zero-extension.
+  def : Pat<(nxv8i16 (and (AArch64uzp1
+                           (AArch64uunpklo nxv16i8:$src),
+                           (AArch64uunpkhi nxv16i8:$src)),
+                          (splat_vector (i32 0xff)))),
+            (TRN1_ZZZ_B ZPR:$src, (DUP_ZI_B 0, 0))>;
+  def : Pat<(nxv8i16 (and (AArch64uzp2
+                           (AArch64uunpklo nxv16i8:$src),
+                           (AArch64uunpkhi nxv16i8:$src)),
+                          (splat_vector (i32 0xff)))),
+            (TRN2_ZZZ_B ZPR:$src, (DUP_ZI_B 0, 0))>;
+  def : Pat<(nxv4i32 (and (AArch64uzp1
+                           (AArch64uunpklo nxv8i16:$src),
+                           (AArch64uunpkhi nxv8i16:$src)),
+                          (splat_vector (i32 0xffff)))),
+            (TRN1_ZZZ_H ZPR:$src, (DUP_ZI_H 0, 0))>;
+  def : Pat<(nxv4i32 (and (AArch64uzp2
+                           (AArch64uunpklo nxv8i16:$src),
+                           (AArch64uunpkhi nxv8i16:$src)),
+                          (splat_vector (i32 0xffff)))),
+            (TRN2_ZZZ_H ZPR:$src, (DUP_ZI_H 0, 0))>;
+  def : Pat<(nxv2i64 (and (AArch64uzp1
+                           (AArch64uunpklo nxv4i32:$src),
+                           (AArch64uunpkhi nxv4i32:$src)),
+                          (splat_vector (i64 0xffffffff)))),
+            (TRN1_ZZZ_S ZPR:$src, (DUP_ZI_S 0, 0))>;
+  def : Pat<(nxv2i64 (and (AArch64uzp2
+                           (AArch64uunpklo nxv4i32:$src),
+                           (AArch64uunpkhi nxv4i32:$src)),
+                          (splat_vector (i64 0xffffffff)))),
+            (TRN2_ZZZ_S ZPR:$src, (DUP_ZI_S 0, 0))>;
+
   // Extract lo/hi halves of legal predicate types.
   def : Pat<(nxv1i1 (extract_subvector nxv2i1:$Ps, (i64 0))),
             (PUNPKLO_PP PPR:$Ps)>;
