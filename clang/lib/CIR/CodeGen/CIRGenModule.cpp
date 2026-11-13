@@ -413,6 +413,14 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
   case llvm::Triple::spirv64:
     theTargetCIRGenInfo = createCommonSPIRTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
+  case llvm::Triple::systemz: {
+    // z/OS XPLINK target info is not implemented yet.
+    // We just default to SystemZ ELF Target for now.
+    if (triple.isOSzOS())
+      assert(!cir::MissingFeatures::targetCIRGenInfoOS());
+    theTargetCIRGenInfo = createSystemZTargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
+  }
   }
 }
 
