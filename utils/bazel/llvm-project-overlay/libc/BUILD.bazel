@@ -2186,15 +2186,9 @@ alias(
 
 ################################ link targets ##################################
 
-libc_function(
+alias(
     name = "_r_debug",
-    srcs = ["src/link/_r_debug.cpp"],
-    hdrs = ["src/link/_r_debug.h"],
-    deps = [
-        ":types_struct_r_debug",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/link:_r_debug",
 )
 
 ################################ math targets ##################################

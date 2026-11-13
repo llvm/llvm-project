@@ -51,7 +51,6 @@ libc_startup_library(
     deps = [
         ":gnu_property_section",
         ":irelative_hdr",
-        "//libc:_r_debug",
         "//libc:atexit",
         "//libc:config_app_h",
         "//libc:config_linux_app_h",
@@ -76,6 +75,7 @@ libc_startup_library(
         "//libc/src/__support/threads:thread_headers",
         "//libc/src/errno:program_invocation_name",
         "//libc/src/errno:program_invocation_short_name",
+        "//libc/src/link:_r_debug",
     ] + selects.with_or({
         PLATFORM_CPU_X86_64: [
             "//libc/startup/linux/x86_64:irelative",
