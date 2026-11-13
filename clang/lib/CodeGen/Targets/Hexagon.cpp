@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -54,6 +55,9 @@ public:
     const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD)
       return;
+    if (const auto *Attr = FD->getAttr<HexagonHLXVectorStackLimitAttr>())
+      cast<llvm::Function>(GV)->addFnAttr("hlx-vector-stack-limit",
+                                          llvm::utostr(Attr->getLimit()));
   }
 };
 

@@ -7356,6 +7356,10 @@ def mhexagon_scs_reg : Joined<["-"], "mscs-reg=">,
   HelpText<"Register holding the shadow call stack pointer: one of the "
            "callee-saved registers r16-r27, default r18 (Hexagon only). "
            "The chosen register must also be reserved with -ffixed-<reg>.">;
+def fhlx_vector_stack_limit_EQ : Joined<["-"], "fhlx-vector-stack-limit=">,
+  Group<m_Group>, MetaVarName<"<bytes>">,
+  HelpText<"Report an error if a function needs more than <bytes> bytes of "
+           "HLX vector stack (Hexagon only, requires -mhlx)">;
 } // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
   Visibility<[ClangOption, CC1Option]>,
