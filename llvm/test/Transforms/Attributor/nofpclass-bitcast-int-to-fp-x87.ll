@@ -134,7 +134,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_set(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__quiet_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan) x86_fp80 @bitcast_to_x87__quiet_bit_clear(
+; CHECK-LABEL: define x86_fp80 @bitcast_to_x87__quiet_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -4611686018427387905
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 0
@@ -148,7 +148,7 @@ define x86_fp80 @bitcast_to_x87__quiet_bit_clear(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf) x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_clear(
+; CHECK-LABEL: define nofpclass(inf) x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -23058430092136939521
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 0
@@ -162,7 +162,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_clear(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan zero sub) x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_clear(
+; CHECK-LABEL: define nofpclass(zero sub) x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -4611686018427387905
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 18446744073709551616
@@ -176,7 +176,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_clear(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__quiet_bit_set(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero) x86_fp80 @bitcast_to_x87__quiet_bit_set(
+; CHECK-LABEL: define nofpclass(inf zero) x86_fp80 @bitcast_to_x87__quiet_bit_set(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -1
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 4611686018427387904
@@ -190,7 +190,7 @@ define x86_fp80 @bitcast_to_x87__quiet_bit_set(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_set(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero) x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_set(
+; CHECK-LABEL: define nofpclass(inf zero) x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_set(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -18446744073709551617
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 4611686018427387904
@@ -204,7 +204,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_set(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_set(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero sub) x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_set(
+; CHECK-LABEL: define nofpclass(inf zero sub) x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_set(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -1
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 23058430092136939520
@@ -262,7 +262,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_set__integer_bit_clear(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__quiet_bit_clear__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf norm) x86_fp80 @bitcast_to_x87__quiet_bit_clear__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf norm) x86_fp80 @bitcast_to_x87__quiet_bit_clear__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -13835058055282163713
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 0
@@ -276,7 +276,7 @@ define x86_fp80 @bitcast_to_x87__quiet_bit_clear__integer_bit_clear(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_clear__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf norm) x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_clear__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf norm) x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_clear__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -32281802128991715329
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 0
@@ -290,7 +290,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_clear__integer_bit_cle
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_clear__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_clear__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_clear__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -13835058055282163713
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 18446744073709551616
@@ -304,7 +304,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_clear__integer_bit_clear
 }
 
 define x86_fp80 @bitcast_to_x87__quiet_bit_set__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero norm) x86_fp80 @bitcast_to_x87__quiet_bit_set__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf zero norm) x86_fp80 @bitcast_to_x87__quiet_bit_set__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -9223372036854775809
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 4611686018427387904
@@ -318,7 +318,7 @@ define x86_fp80 @bitcast_to_x87__quiet_bit_set__integer_bit_clear(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_set__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero norm) x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_set__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf zero norm) x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_set__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -27670116110564327425
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 4611686018427387904
@@ -332,7 +332,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_clear__quiet_bit_set__integer_bit_clear
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_set__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_set__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_set__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -9223372036854775809
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 23058430092136939520
@@ -478,7 +478,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_set__quiet_bit_set__integer_bit_set(i80
 ;---------------------------------------------------------------------
 
 define x86_fp80 @bitcast_to_x87__frac_all_zeros(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan sub) x86_fp80 @bitcast_to_x87__frac_all_zeros(
+; CHECK-LABEL: define nofpclass(sub) x86_fp80 @bitcast_to_x87__frac_all_zeros(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -9223372036854775808
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 0
@@ -506,7 +506,7 @@ define x86_fp80 @bitcast_to_x87__frac_all_zeros__integer_bit_set(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__frac_all_zeros__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf sub norm) x86_fp80 @bitcast_to_x87__frac_all_zeros__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf sub norm) x86_fp80 @bitcast_to_x87__frac_all_zeros__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -18446744073709551616
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 0
@@ -522,7 +522,7 @@ define x86_fp80 @bitcast_to_x87__frac_all_zeros__integer_bit_clear(i80 %arg) {
 
 
 define x86_fp80 @bitcast_to_x87__frac_all_ones(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero) x86_fp80 @bitcast_to_x87__frac_all_ones(
+; CHECK-LABEL: define nofpclass(inf zero) x86_fp80 @bitcast_to_x87__frac_all_ones(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -1
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 9223372036854775807
@@ -550,7 +550,7 @@ define x86_fp80 @bitcast_to_x87__frac_all_ones__integer_bit_set(i80 %arg) {
 }
 
 define x86_fp80 @bitcast_to_x87__frac_all_ones__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero norm) x86_fp80 @bitcast_to_x87__frac_all_ones__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf zero norm) x86_fp80 @bitcast_to_x87__frac_all_ones__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -9223372036854775809
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 9223372036854775807
@@ -786,7 +786,7 @@ define x86_fp80 @bitcast_to_x87__exp_all_ones__integer_bit_clear(i80 %arg) {
 
 
 define x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan zero sub norm) x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_clear(
+; CHECK-LABEL: define nofpclass(zero sub norm) x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -4611686018427387905
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 604444463063240877801472
@@ -814,7 +814,7 @@ define x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_clear__integer_bit_set(
 }
 
 define x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_clear__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_clear__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_clear__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -13835058055282163713
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 604444463063240877801472
@@ -830,7 +830,7 @@ define x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_clear__integer_bit_clea
 
 
 define x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_set(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_set(
+; CHECK-LABEL: define nofpclass(inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_set(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -1
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 604449074749259305189376
@@ -858,7 +858,7 @@ define x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_set__integer_bit_set(i8
 }
 
 define x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_set__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(snan inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_set__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf zero sub norm) x86_fp80 @bitcast_to_x87__exp_all_ones__quiet_bit_set__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -9223372036854775809
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 604449074749259305189376
@@ -918,7 +918,7 @@ define x86_fp80 @bitcast_to_x87__exp_all_ones__frac_lsb_set__integer_bit_clear(i
 
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_clear__frac_all_zeros(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf sub) x86_fp80 @bitcast_to_x87__exp_lsb_clear__frac_all_zeros(
+; CHECK-LABEL: define nofpclass(inf sub) x86_fp80 @bitcast_to_x87__exp_lsb_clear__frac_all_zeros(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -27670116110564327424
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 0
@@ -946,7 +946,7 @@ define x86_fp80 @bitcast_to_x87__exp_lsb_clear__frac_all_zeros__integer_bit_set(
 }
 
 define x86_fp80 @bitcast_to_x87__exp_lsb_clear__frac_all_zeros__integer_bit_clear(i80 %arg) {
-; CHECK-LABEL: define nofpclass(qnan inf sub norm) x86_fp80 @bitcast_to_x87__exp_lsb_clear__frac_all_zeros__integer_bit_clear(
+; CHECK-LABEL: define nofpclass(inf sub norm) x86_fp80 @bitcast_to_x87__exp_lsb_clear__frac_all_zeros__integer_bit_clear(
 ; CHECK-SAME: i80 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and i80 [[ARG]], -36893488147419103232
 ; CHECK-NEXT:    [[ORR:%.*]] = or i80 [[AND]], 0

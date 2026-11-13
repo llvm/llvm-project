@@ -302,6 +302,7 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
 
     break;
   }
+  // Invalid for Motorola's 80-bit floating-point format.
   case APFloatBase::S_x87DoubleExtended: {
     // Layout of the x87 floating point type:
     // [0:62] fraction
@@ -328,7 +329,7 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
     const bool IntegerBitKnownSet = Bits.One[IntegerBitIndex];
     const bool IntegerBitKnownClear = Bits.Zero[IntegerBitIndex];
 
-    // zero and subnormal require an exponent with all zero bits and a cleared
+    // Zero and subnormal require an exponent with all zero bits and a cleared
     // integer bit.
     if (ExponentKnownNotAllZeros || IntegerBitKnownSet)
       Known.knownNot(fcZero | fcSubnormal);
@@ -361,13 +362,20 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
          (ExponentKnownNotAllOnes || FractionKnownAllZeros)))
       Known.knownNot(fcNan);
 
-    const bool QuietBitKnownSet = Bits.One[FractionBits - 1];
-    const bool QuietBitKnownClear = Bits.Zero[FractionBits - 1];
+    // Non-canonical NaN has a non-zero exponent with the integer bit cleared.
+    const bool NeverNonCanonicalNaN =
+        ExponentKnownAllZeros || IntegerBitKnownSet;
 
-    if (QuietBitKnownSet)
-      Known.knownNot(fcSNan);
-    else if (QuietBitKnownClear)
-      Known.knownNot(fcQNan);
+    // Be conservative when handling non-canonical NaN.
+    if (NeverNonCanonicalNaN) {
+      const bool QuietBitKnownSet = Bits.One[FractionBits - 1];
+      const bool QuietBitKnownClear = Bits.Zero[FractionBits - 1];
+
+      if (QuietBitKnownSet)
+        Known.knownNot(fcSNan);
+      else if (QuietBitKnownClear)
+        Known.knownNot(fcQNan);
+    }
 
     break;
   }
