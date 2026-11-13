@@ -47,9 +47,9 @@ static std::unique_ptr<MLIRMutator> Mutator;
 
 static std::unique_ptr<MLIRMutator> createMutator() {
   std::vector<std::unique_ptr<MLIRGeneMutationStrategy>> Strategies;
-  //Strategies.push_back(std::make_unique<NonsenseMutationStrategy>());
+  Strategies.push_back(std::make_unique<NonsenseMutationStrategy>());
   Strategies.push_back(std::make_unique<SynonymousMutationStrategy>());
-  //Strategies.push_back(std::make_unique<MissenseMutationStrategy>());
+  Strategies.push_back(std::make_unique<MissenseMutationStrategy>());
   return std::make_unique<MLIRMutator>(std::move(Strategies));
 }
 
