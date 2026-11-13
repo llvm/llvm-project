@@ -24,8 +24,6 @@ libc_test(
     name = "raw_mutex_test",
     srcs = ["linux/raw_mutex_test.cpp"],
     deps = [
-        "//libc:__support_osutil_exit",
-        "//libc:__support_osutil_syscall",
         "//libc:__support_threads_raw_mutex",
         "//libc:__support_threads_sleep",
         "//libc:__support_time_clock_gettime",
@@ -35,6 +33,8 @@ libc_test(
         "//libc:mmap",
         "//libc:munmap",
         "//libc/src/__support/CPP:atomic",
+        "//libc/src/__support/OSUtil:exit",
+        "//libc/src/__support/OSUtil:syscall",
     ],
 )
 

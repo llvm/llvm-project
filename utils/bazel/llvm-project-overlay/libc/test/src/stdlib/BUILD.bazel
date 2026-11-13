@@ -146,7 +146,6 @@ libc_test(
         "//libc:__support_c_string",
         "//libc:__support_fixedvector",
         "//libc:__support_libc_assert",
-        "//libc:__support_osutil_path",
         "//libc:chdir",
         "//libc:close",
         "//libc:getcwd",
@@ -164,6 +163,7 @@ libc_test(
         "//libc/src/__support/CPP:string",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/CPP:utility",
+        "//libc/src/__support/OSUtil:path",
     ],
 )
 

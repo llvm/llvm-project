@@ -51,8 +51,6 @@ libc_startup_library(
     deps = [
         ":gnu_property_section",
         ":irelative_hdr",
-        "//libc:__support_osutil_linux_auxv",
-        "//libc:__support_osutil_syscall",
         "//libc:__support_threads_linux_futex_utils",
         "//libc:__support_threads_linux_tls",
         "//libc:__support_threads_tcb",
@@ -74,6 +72,8 @@ libc_startup_library(
         "//libc:program_invocation_short_name",
         "//libc:types_struct_link_map",
         "//libc:types_struct_r_debug",
+        "//libc/src/__support/OSUtil:linux_auxv",
+        "//libc/src/__support/OSUtil:syscall",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:exit_group",
         "//libc/src/__support/macros:config",
     ] + selects.with_or({
