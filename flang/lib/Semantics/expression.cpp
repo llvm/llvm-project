@@ -3250,6 +3250,19 @@ static std::optional<int> GetMatchingDistance(
     if (dummyIsValue && actualIsDeviceMemory() && mayRunOnDevice) {
       return true;
     }
+    // A device procedure's DEVICE dummy accepts reference temporaries, VALUE
+    // variables and function results.
+    if (procedure.cudaSubprogramAttrs == common::CUDASubprogramAttrs::Device &&
+        dummyDataAttr == common::CUDADataAttr::Device && !dummyIsValue &&
+        !dummyIsAllocatableOrPointer && !actualDataAttr && actual) {
+      if (const auto *expr{actual->UnwrapExpr()}) {
+        const Symbol *symbol{evaluate::GetFirstSymbol(*expr)};
+        if (!symbol || semantics::IsValue(*symbol) ||
+            semantics::IsFunctionResult(*symbol)) {
+          return true;
+        }
+      }
+    }
     return false;
   }};
 
