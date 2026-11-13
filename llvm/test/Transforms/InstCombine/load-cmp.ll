@@ -27,8 +27,8 @@
   %Foo { i32 12, i32 3, i32 9, i32 8 } ]
 
 
-define i1 @test1(i32 %X) {
-; CHECK-LABEL: @test1(
+define i1 @test1_inbounds(i32 %X) {
+; CHECK-LABEL: @test1_inbounds(
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -38,8 +38,20 @@ define i1 @test1(i32 %X) {
   ret i1 %R
 }
 
-define i1 @test1_noinbounds(i32 %X) {
-; CHECK-LABEL: @test1_noinbounds(
+define i1 @test1_nusw(i32 %X) {
+; CHECK-LABEL: @test1_nusw(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr nusw [10 x i16], ptr @G16, i32 0, i32 %X
+  %Q = load i16, ptr %P
+  %R = icmp eq i16 %Q, 0
+  ret i1 %R
+}
+
+define i1 @test1_noflags(i32 %X) {
+; CHECK-LABEL: @test1_noflags(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
