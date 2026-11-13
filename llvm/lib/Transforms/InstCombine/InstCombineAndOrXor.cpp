@@ -1585,6 +1585,23 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     }
   }
 
+  // (fcmp ueq/oeq X, C1) | (fcmp ugt X, C2) -> (fcmp ugt X, C2) if C1 > C2.
+  // X == C1 implies X > C2, and ugt is true for NaN.
+  if (!IsAnd && !IsLogicalSelect && LHS0 == RHS0) {
+    if (PredL == FCmpInst::FCMP_UGT) {
+      std::swap(LHS, RHS);
+      std::swap(LHS1, RHS1);
+      std::swap(PredL, PredR);
+    }
+    const APFloat *C1, *C2;
+    if ((PredL == FCmpInst::FCMP_UEQ || PredL == FCmpInst::FCMP_OEQ) &&
+        PredR == FCmpInst::FCMP_UGT && match(LHS1, m_APFloat(C1)) &&
+        match(RHS1, m_APFloat(C2)) &&
+        C1->compare(*C2) == APFloat::cmpGreaterThan)
+      return Builder.CreateFCmpFMF(FCmpInst::FCMP_UGT, RHS0, RHS1,
+                                   FMFSource::intersect(LHS, RHS));
+  }
+
   return nullptr;
 }
 
