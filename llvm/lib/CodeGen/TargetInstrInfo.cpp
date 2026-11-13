@@ -876,7 +876,37 @@ static void transferImplicitOperands(MachineInstr *MI,
   --CopyMI;
 
   Register DstReg = MI->getOperand(0).getReg();
+  bool DefinesDst = CopyMI->definesRegister(DstReg, TRI);
   for (const MachineOperand &MO : MI->implicit_operands()) {
+    // If the copy was split, an implicit def overlapping the copy result would
+    // redefine the parts written by the earlier instructions.
+    // So we should only define the parts outside the copy result.
+    if (!DefinesDst && MO.isDef() && TRI->regsOverlap(DstReg, MO.getReg())) {
+      Register Reg = MO.getReg();
+      // Collect the lanes of the subregs that do not overlap with Dst.
+      LaneBitmask UncoveredLanes;
+      for (MCSubRegIndexIterator SRI(Reg, TRI); SRI.isValid(); ++SRI)
+        if (!TRI->regsOverlap(SRI.getSubReg(), DstReg))
+          UncoveredLanes |= TRI->getSubRegIndexLaneMask(SRI.getSubRegIndex());
+      if (UncoveredLanes.none())
+        continue;
+
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      SmallVector<unsigned, 4> Indexes;
+      [[maybe_unused]] bool Covered =
+          RC && TRI->getCoveringSubRegIndexes(RC, UncoveredLanes, Indexes);
+      assert(
+          Covered &&
+          "Failed to find subregs covering the lanes outside the copy result");
+
+      // Add implicit-def for corresponding sub-registers.
+      for (unsigned Idx : Indexes)
+        CopyMI->addOperand(MachineOperand::CreateReg(
+            TRI->getSubReg(Reg, Idx), /*isDef=*/true, /*isImp=*/true,
+            /*isKill=*/false, MO.isDead()));
+      continue;
+    }
+
     CopyMI->addOperand(MO);
 
     // Be conservative about preserving kills when subregister defs are
