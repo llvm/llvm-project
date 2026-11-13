@@ -5955,11 +5955,13 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     auto *LD = cast<LoadSDNode>(Op);
     if (ISD::isUNINDEXEDLoad(LD) && !ISD::isEXTLoad(LD)) {
       if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
-        if (includesPoison(Kind) && Cst->containsPoisonElement())
-          return false;
-        if (includesUndef(Kind) && Cst->containsUndefElement())
-          return false;
-        return true;
+        // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
+        if (includesPoison(Kind) && includesUndef(Kind))
+          return ::isGuaranteedNotToBeUndefOrPoison(Cst);
+        if (includesPoison(Kind))
+          return ::isGuaranteedNotToBePoison(Cst);
+        assert(includesUndef(Kind) && "UndefOnly expected");
+        return ::isGuaranteedNotToBeUndef(Cst);
       }
     }
     break;
