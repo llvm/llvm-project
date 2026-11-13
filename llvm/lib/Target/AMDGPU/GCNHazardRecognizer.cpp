@@ -208,7 +208,7 @@ bool GCNHazardRecognizer::hasCoExecWindowModel() const {
   // but have different WMMA latencies, so they need their own slot patterns
   // before they can be modeled here.
   if (ST.hasWMMACoexecutionHazards() && ST.hasTransCoexecutionHazard() &&
-      AMDGPU::isGFX1250(ST))
+      ST.getCPU() == "gfx1250")
     return true;
 
   if (ST.hasGFX950Insts() &&
