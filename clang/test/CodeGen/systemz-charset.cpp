@@ -75,16 +75,14 @@ const char32_t *UnicodeUCNString32 = U"\u00E2\u00AC\U000000DF";
 
 
 struct string_view {
-    int S;
     const char* D;
-    constexpr string_view() : S(0), D(0){}
-    constexpr string_view(const char* Str) : S(__builtin_strlen(Str)), D(Str) {}
-    constexpr string_view(int Size, const char* Str) : S(Size), D(Str) {}
-    constexpr int size() const {
-        return S;
-    }
+    int S;
+    constexpr string_view(const char* Str) : D(Str), S(__builtin_strlen(Str)) {}
     constexpr const char* data() const {
         return D;
+    }
+    constexpr int size() const {
+        return S;
     }
 };
 
