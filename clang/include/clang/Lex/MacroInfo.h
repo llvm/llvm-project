@@ -416,6 +416,7 @@ public:
                                    const SourceManager &SM) const;
 
   void dump() const;
+  void dump(const SourceManager *SM) const;
 
   static bool classof(const MacroDirective *) { return true; }
 };

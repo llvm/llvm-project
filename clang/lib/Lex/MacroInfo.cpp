@@ -225,7 +225,9 @@ MacroDirective::findDirectiveAtLoc(SourceLocation L,
   return DefInfo();
 }
 
-LLVM_DUMP_METHOD void MacroDirective::dump() const {
+LLVM_DUMP_METHOD void MacroDirective::dump() const { dump(/*SM=*/nullptr); }
+
+LLVM_DUMP_METHOD void MacroDirective::dump(const SourceManager *SM) const {
   llvm::raw_ostream &Out = llvm::errs();
 
   switch (getKind()) {
@@ -234,7 +236,11 @@ LLVM_DUMP_METHOD void MacroDirective::dump() const {
   case MD_Visibility: Out << "VisibilityMacroDirective"; break;
   }
   Out << " " << this;
-  // FIXME: Dump SourceLocation.
+  if (SM) {
+    Out << " <";
+    Loc.print(Out, *SM);
+    Out << ">";
+  }
   if (auto *Prev = getPrevious())
     Out << " prev " << Prev;
 
