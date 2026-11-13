@@ -59,6 +59,7 @@
 ; LAXX-NEXT:         Canonicalize Freeze Instructions in Loops
 ; LAXX-NEXT:         Induction Variable Users
 ; LAXX-NEXT:         Loop Strength Reduction
+; LAXX-NEXT:         Loop Terminator Folding
 ; LAXX-NEXT:       Lower Garbage Collection Instructions
 ; LAXX-NEXT:       Shadow Stack GC Lowering
 ; LAXX-NEXT:       Remove unreachable blocks from the CFG
