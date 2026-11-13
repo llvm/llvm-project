@@ -757,6 +757,13 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
           RV && RV->getType()->isPtrOrPtrVectorTy())
         PushPtrOperand(RV);
     }
+
+    // Constant expression addrspacecasts are not visited above. They are only
+    // reachable through operands of a specific address space.
+    for (Value *Op : I.operands())
+      if (isa<ConstantExpr>(Op) && Op->getType()->isPtrOrPtrVectorTy() &&
+          Op->getType()->getPointerAddressSpace() != FlatAddrSpace)
+        PushPtrOperand(Op);
   }
 
   std::vector<WeakTrackingVH> Postorder; // The resultant postorder.

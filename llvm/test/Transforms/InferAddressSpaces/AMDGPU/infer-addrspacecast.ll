@@ -72,3 +72,33 @@ define i32 @rebuilt_addrspacecast_drops_nonnull(i1 %c, ptr addrspace(3) %p, ptr 
 }
 
 declare void @use_flat(ptr)
+
+@g = internal addrspace(3) global [16 x i32] poison
+
+; Test that constant expression addrspacecasts are inferred.
+
+; CHECK-LABEL: @constexpr_addrspacecast_to_memory(
+; CHECK-NEXT: store volatile ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @g, i64 9), ptr addrspace(1) poison
+; CHECK-NEXT: ret void
+define void @constexpr_addrspacecast_to_memory() {
+  store volatile ptr addrspace(3) addrspacecast (ptr getelementptr (i32, ptr addrspacecast (ptr addrspace(3) @g to ptr), i64 9) to ptr addrspace(3)), ptr addrspace(1) poison
+  ret void
+}
+
+; The addrspacecast is an operand of another constant expression.
+; CHECK-LABEL: @constexpr_gep_addrspacecast_to_memory(
+; CHECK-NEXT: store volatile ptr addrspace(3) getelementptr (i32, ptr addrspace(3) getelementptr (i32, ptr addrspace(3) @g, i64 9), i64 1), ptr addrspace(1) poison
+; CHECK-NEXT: ret void
+define void @constexpr_gep_addrspacecast_to_memory() {
+  store volatile ptr addrspace(3) getelementptr (i32, ptr addrspace(3) addrspacecast (ptr getelementptr (i32, ptr addrspacecast (ptr addrspace(3) @g to ptr), i64 9) to ptr addrspace(3)), i64 1), ptr addrspace(1) poison
+  ret void
+}
+
+; A flat expression that is not cast back is left alone.
+; CHECK-LABEL: @constexpr_flat_to_memory(
+; CHECK-NEXT: store volatile ptr getelementptr (i32, ptr addrspacecast (ptr addrspace(3) @g to ptr), i64 9), ptr addrspace(1) poison
+; CHECK-NEXT: ret void
+define void @constexpr_flat_to_memory() {
+  store volatile ptr getelementptr (i32, ptr addrspacecast (ptr addrspace(3) @g to ptr), i64 9), ptr addrspace(1) poison
+  ret void
+}
