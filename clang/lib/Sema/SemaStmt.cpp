@@ -3710,6 +3710,13 @@ static bool hasDeducedReturnType(FunctionDecl *FD) {
   return FPT->getReturnType()->isUndeducedType();
 }
 
+/// The type of the object initialized by a by-value return.
+static QualType getReturnObjectType(ASTContext &Ctx, QualType RetType) {
+  if (RetType.hasAddressSpace())
+    return Ctx.removeAddrSpaceQualType(RetType);
+  return RetType;
+}
+
 StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
                                          Expr *RetValExp,
                                          NamedReturnInfo &NRInfo,
@@ -3849,8 +3856,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
 
     // In C++ the return statement is handled via a copy initialization.
     // the C version of which boils down to CheckSingleAssignmentConstraints.
-    InitializedEntity Entity =
-        InitializedEntity::InitializeResult(ReturnLoc, FnRetType);
+    InitializedEntity Entity = InitializedEntity::InitializeResult(
+        ReturnLoc, getReturnObjectType(Context, FnRetType));
     ExprResult Res = PerformMoveOrCopyInitialization(
         Entity, NRInfo, RetValExp, SupressSimplerImplicitMoves);
     if (Res.isInvalid()) {
@@ -4350,8 +4357,8 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     // the C version of which boils down to CheckSingleAssignmentConstraints.
     if (!HasDependentReturnType && !RetValExp->isTypeDependent()) {
       // we have a non-void function with an expression, continue checking
-      InitializedEntity Entity =
-          InitializedEntity::InitializeResult(ReturnLoc, RetType);
+      InitializedEntity Entity = InitializedEntity::InitializeResult(
+          ReturnLoc, getReturnObjectType(Context, RetType));
       ExprResult Res = PerformMoveOrCopyInitialization(
           Entity, NRInfo, RetValExp, SupressSimplerImplicitMoves);
       if (Res.isInvalid() && AllowRecovery)
