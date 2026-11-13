@@ -9356,14 +9356,17 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
 }
 
-/// When a divergent value (in VGPR) is passed to an inline asm with an SGPR
-/// constraint ('s'), we need to insert v_readfirstlane to move the value from
-/// VGPR to SGPR. This is done by modifying the CopyToReg nodes in the glue
-/// chain that feed into the INLINEASM node.
+/// An inline asm input with an SGPR constraint ('s', a physical SGPR, or a
+/// tied input matched to an SGPR output) must be in an SGPR, but even a
+/// uniform value may be selected into a VGPR. Speculatively insert
+/// v_readfirstlane for every such input; it can be folded away later when the
+/// source is already scalar. This is done by modifying the CopyToReg nodes in
+/// the glue chain that feed into the INLINEASM node.
 SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   unsigned NumOps = Op.getNumOperands();
 
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  const MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
   SmallSet<Register, 8> SGPRInputRegs;
 
   unsigned NumVals = 0;
@@ -9372,17 +9375,16 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     const InlineAsm::Flag Flags(Op.getConstantOperandVal(I));
     NumVals = Flags.getNumOperandRegisters();
 
-    unsigned RCID;
-    bool IsSGPRInput = Flags.getKind() == InlineAsm::Kind::RegUse &&
-                       NumVals > 0 && Flags.hasRegClassConstraint(RCID) &&
-                       TRI->isSGPRClass(TRI->getRegClass(RCID));
+    // Tied inputs have no register class constraint of their own, so check
+    // the class of the register the input is copied into instead.
+    bool IsRegInput = Flags.isRegUseKind() && NumVals != 0;
 
     for (unsigned J = 0; J < NumVals; ++J) {
       SDValue Val = Op.getOperand(I + 1 + J);
       if (const RegisterSDNode *RegNode =
               dyn_cast<RegisterSDNode>(Val.getNode())) {
         Register Reg = RegNode->getReg();
-        if (IsSGPRInput || (Reg.isPhysical() && TRI->isSGPRPhysReg(Reg)))
+        if (IsRegInput && TRI->isSGPRReg(MRI, Reg))
           SGPRInputRegs.insert(Reg);
       }
     }
@@ -9391,7 +9393,31 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   if (SGPRInputRegs.empty())
     return Op;
 
-  // Walk the glue chain and insert readfirstlane for divergent SGPR inputs.
+  // Values that are guaranteed to stay in SGPRs. A readfirstlane on them is
+  // redundant and needlessly constrains the result to sreg_32_xm0. This also
+  // keeps the lowering idempotent, since it may run again on the same node.
+  // Every register accepted by read_register is an SGPR. Live-in vregs (inreg
+  // arguments) are copies of physical SGPRs, and glued CopyFromReg nodes are
+  // inline asm or call outputs; their register class cannot be changed later.
+  auto IsKnownSGPRValue = [&](SDValue V) {
+    if (isa<ConstantSDNode, ConstantFPSDNode, FrameIndexSDNode>(V) ||
+        V.getOpcode() == ISD::READ_REGISTER)
+      return true;
+    if (V.getOpcode() == ISD::INTRINSIC_WO_CHAIN) {
+      unsigned IntrID = V.getConstantOperandVal(0);
+      return IntrID == Intrinsic::amdgcn_readfirstlane ||
+             IntrID == Intrinsic::amdgcn_readlane;
+    }
+    if (V.getOpcode() != ISD::CopyFromReg)
+      return false;
+    Register SrcReg = cast<RegisterSDNode>(V.getOperand(1))->getReg();
+    if (!TRI->isSGPRReg(MRI, SrcReg))
+      return false;
+    return SrcReg.isPhysical() || MRI.getLiveInPhysReg(SrcReg) ||
+           V.getOperand(V.getNumOperands() - 1).getValueType() == MVT::Glue;
+  };
+
+  // Walk the glue chain and insert readfirstlane for SGPR inputs.
   SDLoc DL(Op);
   SDNode *N = Op.getOperand(NumOps - 1).getNode();
 
@@ -9399,8 +9425,7 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
     SDValue SrcVal = N->getOperand(2);
 
-    // Insert readfirstlane if copying a divergent value to an SGPR input.
-    if (SrcVal->isDivergent() && SGPRInputRegs.count(Reg)) {
+    if (SGPRInputRegs.count(Reg) && !IsKnownSGPRValue(SrcVal)) {
       SDValue ReadFirstLaneID =
           DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
       SDValue ReadFirstLane =
