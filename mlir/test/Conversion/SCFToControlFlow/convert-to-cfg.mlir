@@ -860,7 +860,13 @@ func.func @parallel_loop_annotation_2d(%arg0 : index, %arg1 : index, %arg2 : ind
 // CHECK: #[[UNROLL:.*]] = #llvm.loop_unroll<disable = true>
 // CHECK: #[[ANNOTATION:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL]]>
 // CHECK: func.func @loop_annotation_value_dialect
+// CHECK-NOT: test.extra
+// CHECK-NOT: test.unrelated
+// CHECK-NOT: llvm.unrelated
 // CHECK: cf.br {{.*}} {test.annotation = #[[ANNOTATION]]}
+// CHECK-NOT: test.extra
+// CHECK-NOT: test.unrelated
+// CHECK-NOT: llvm.unrelated
 // CHECK: return
 #annotation = #llvm.loop_annotation<unroll = <disable = true>>
 func.func @loop_annotation_value_dialect(%lb : index, %ub : index, %step : index) {
