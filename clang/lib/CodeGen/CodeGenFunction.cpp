@@ -50,6 +50,7 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/xxhash.h"
@@ -1398,6 +1399,15 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.push_back(getOrEmitConvergenceEntryToken(CurFn));
+
+  if (D && D->hasAttr<OracleFunctionAttr>()) {
+    Fn->addFnAttr("oracle-function");
+    Fn->setDoesNotThrow();
+    Fn->setNoSync();
+    Fn->setWillReturn();
+    Fn->setMemoryEffects(
+        llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref));
+  }
 }
 
 void CodeGenFunction::EmitFunctionBody(const Stmt *Body) {

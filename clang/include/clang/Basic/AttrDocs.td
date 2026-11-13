@@ -10839,3 +10839,11 @@ void example2() {
 ```
   }];
 }
+
+def OracleFunctionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use the `oracle_function` attribute on a function to denote that it should
+only be used as an oracle for __builtin_speculative_load.
+}];
+}
