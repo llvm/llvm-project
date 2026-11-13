@@ -35,7 +35,7 @@ define void @masked_scatter_nxv2f16(<vscale x 2 x half> %data, <vscale x 2 x ptr
 ; instructions.
 
 ; CHECK-LABEL: @masked_scatter_v2f32(
-; CHECK-NOT: call void @llvm.masked.scatter.v2f32
+; CHECK: call void @llvm.masked.scatter.v2f32
 define void @masked_scatter_v2f32(<2 x float> %data, <2 x ptr> %ptrs, <2 x i1> %masks) {
   call void @llvm.masked.scatter.v2f32(<2 x float> %data, <2 x ptr> %ptrs, i32 0, <2 x i1> %masks)
   ret void
@@ -46,7 +46,7 @@ define void @masked_scatter_v2f32(<2 x float> %data, <2 x ptr> %ptrs, <2 x i1> %
 ; instructions and because we are not targeting fixed width SVE.
 
 ; CHECK-LABEL: @masked_scatter_v4i32(
-; CHECK-NOT: call void @llvm.masked.scatter.v4i32
+; CHECK: call void @llvm.masked.scatter.v4i32
 define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %masks) {
   call void @llvm.masked.scatter.v4i32(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
   ret void

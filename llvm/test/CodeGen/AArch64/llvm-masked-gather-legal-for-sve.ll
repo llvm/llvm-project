@@ -35,7 +35,7 @@ define <vscale x 2 x half> @masked_gather_nxv2f16(<vscale x 2 x ptr> %ld, <vscal
 ; instructions.
 
 ; CHECK-LABEL: @masked_gather_v2f32(
-; CHECK-NOT: call <2 x float> @llvm.masked.gather.v2f32
+; CHECK: call <2 x float> @llvm.masked.gather.v2f32
 define <2 x float> @masked_gather_v2f32(<2 x ptr> %ld, <2 x i1> %masks, <2 x float> %passthru) {
   %res = call <2 x float> @llvm.masked.gather.v2f32(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x float> %passthru)
   ret <2 x float> %res
@@ -46,7 +46,7 @@ define <2 x float> @masked_gather_v2f32(<2 x ptr> %ld, <2 x i1> %masks, <2 x flo
 ; instructions and because we are not targeting fixed width SVE.
 
 ; CHECK-LABEL: @masked_gather_v4i32(
-; CHECK-NOT: call <4 x i32> @llvm.masked.gather.v4i32
+; CHECK: call <4 x i32> @llvm.masked.gather.v4i32
 define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> %passthru) {
   %res = call <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
   ret <4 x i32> %res
