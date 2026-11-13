@@ -11,8 +11,6 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -210,29 +208,6 @@ LanguageRuntime *LanguageRuntime::FindPlugin(Process *process,
 }
 
 LanguageRuntime::LanguageRuntime(Process *process) : Runtime(process) {}
-
-LanguageRuntime::ThrownErrorLocation::ThrownErrorLocation(
-    lldb::StackFrameSP callee_frame_sp) {
-  if (!callee_frame_sp)
-    return;
-  lldb::ProcessSP process_sp = callee_frame_sp->CalculateProcess();
-  if (!process_sp)
-    return;
-  LanguageRuntime *runtime = process_sp->GetLanguageRuntime(
-      callee_frame_sp->GuessLanguage().AsLanguageType());
-  if (!runtime)
-    return;
-  *this = runtime->GetThrownErrorLocation(*callee_frame_sp);
-  m_runtime = runtime;
-}
-
-std::optional<lldb::ValueObjectSP>
-LanguageRuntime::ThrownErrorLocation::GetThrownError(
-    lldb::StackFrameSP caller_frame_sp) const {
-  if (!caller_frame_sp || !m_runtime)
-    return std::nullopt;
-  return m_runtime->GetThrownError(*caller_frame_sp, *this);
-}
 
 BreakpointPreconditionSP
 LanguageRuntime::GetExceptionPrecondition(LanguageType language,

@@ -185,24 +185,12 @@ public:
     return {};
   }
 
-  /// A description of how to find an error thrown by a function. It is
-  /// computed from the callee's frame, and is only meaningful in the frame the
-  /// callee returns to.
-  class ThrownErrorLocation {
-  public:
-    ThrownErrorLocation(lldb::StackFrameSP callee_frame_sp = nullptr);
-
-    /// See LanguageRuntime::GetThrownError.
-    std::optional<lldb::ValueObjectSP>
-    GetThrownError(lldb::StackFrameSP caller_frame_sp) const;
-
+  /// A description of how to find an error thrown by a function.
+  struct ThrownErrorLocation {
     std::optional<Value> location;
     /// Whether the error can only be found in the caller's frame, for example
     /// in a register, so \c location is not known until the function returns.
     bool read_after_return = false;
-
-  private:
-    LanguageRuntime *m_runtime = nullptr;
   };
 
   /// Given a frame, compute the location where its function would place an
@@ -211,12 +199,12 @@ public:
     return {};
   }
 
-  /// Given \p frame, the frame a callee returned to, and \p location,
-  /// computed by GetThrownErrorLocation from the callee's frame, get the
-  /// error the callee threw.
+  /// Given \p frame, the frame a function returned to, and \p location,
+  /// computed by GetThrownErrorLocation from the function's frame, get the
+  /// error the function threw.
   ///
   /// \return
-  ///     std::nullopt if the callee did not throw. Otherwise the thrown
+  ///     std::nullopt if the function did not throw. Otherwise the thrown
   ///     error, which is null if the error could not be read.
   virtual std::optional<lldb::ValueObjectSP>
   GetThrownError(StackFrame &frame, const ThrownErrorLocation &location) {

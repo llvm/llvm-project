@@ -88,6 +88,9 @@ private:
   lldb::ValueObjectSP m_return_valobj_sp;
   bool m_return_value_is_thrown_error = false;
   bool m_calculate_return_value;
+  /// The runtime of the function being stepped out of, which finds the error
+  /// it throws, if any.
+  LanguageRuntime *m_thrown_error_runtime = nullptr;
   LanguageRuntime::ThrownErrorLocation m_thrown_error_location;
   StreamString m_constructor_errors;
 
