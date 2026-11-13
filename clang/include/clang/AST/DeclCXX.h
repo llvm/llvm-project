@@ -54,7 +54,6 @@
 namespace clang {
 
 class ASTContext;
-class DeclStateReverter;
 class ClassTemplateDecl;
 class ConstructorUsingShadowDecl;
 class CXXBasePath;

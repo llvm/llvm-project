@@ -21,7 +21,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/GlobalDecl.h"
+#include "clang/AST/DeclVisitor.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "llvm/ADT/BitVector.h"
 #include <variant>
@@ -189,204 +189,6 @@ struct MemberSpecializationFootprint {
 };
 
 class PTUMutationActions;
-class PTUCheckpointLedger;
-
-class DeclStateReverter {
-private:
-  struct TemplateCommonAccess : RedeclarableTemplateDecl {
-    using RedeclarableTemplateDecl::Common;
-  };
-
-  static void clearCommonPtr(const RedeclarableTemplateDecl &RT) {
-    static_cast<const TemplateCommonAccess &>(RT).Common = nullptr;
-  }
-
-  struct ClassTemplateCommonAccess : ClassTemplateDecl {
-    using ClassTemplateDecl::getCommonPtr;
-  };
-
-  struct ClassTemplateSpecAccess : ClassTemplateDecl {
-    using ClassTemplateDecl::getSpecializations;
-  };
-  struct FunctionTemplateSpecAccess : FunctionTemplateDecl {
-    using FunctionTemplateDecl::getSpecializations;
-  };
-  struct VarTemplateSpecAccess : VarTemplateDecl {
-    using VarTemplateDecl::getSpecializations;
-  };
-
-  static void clearCanonInjectedTST(ClassTemplateDecl &CTD) {
-    auto *Ptr = static_cast<ClassTemplateCommonAccess &>(CTD).getCommonPtr();
-    Ptr->CanonInjectedTST = CanQualType();
-  }
-
-  // DeclContext::FirstDecl/LastDecl -- protected.
-  struct DeclContextLinkAccess : DeclContext {
-    using DeclContext::FirstDecl;
-    using DeclContext::LastDecl;
-  };
-
-  static void clearDeclContextChain(DeclContext &DC) {
-    auto &Access = static_cast<DeclContextLinkAccess &>(DC);
-    Access.FirstDecl = nullptr;
-    Access.LastDecl = nullptr;
-  }
-
-  struct TagDeclDefinitionAccess : TagDecl {
-    using TagDecl::setBeingDefined;
-  };
-
-  static void clearBeingDefined(TagDecl &TD) {
-    static_cast<TagDeclDefinitionAccess &>(TD).setBeingDefined(false);
-  }
-
-  struct DeclLexicalLinkAccess : Decl {
-    using Decl::NextInContextAndBits;
-  };
-
-  static void clearNextInContext(Decl &D) {
-    static_cast<DeclLexicalLinkAccess &>(D).NextInContextAndBits.setPointer(
-        nullptr);
-  }
-
-  template <typename decl_type>
-  struct RedeclLinkAccess : Redeclarable<decl_type> {
-    using Redeclarable<decl_type>::RedeclLink;
-  };
-
-  template <typename decl_type>
-  static void setLatestRedecl(Redeclarable<decl_type> &D, decl_type *Latest) {
-    static_cast<RedeclLinkAccess<decl_type> &>(D).RedeclLink.setLatest(Latest);
-  }
-
-protected:
-  static DefinitionDataFootprint
-  createDefinitionDataFootprint(const CXXRecordDecl &RD);
-
-  static void restoreDefinitionDataFootprint(const DefinitionDataFootprint &FP,
-                                             CXXRecordDecl &RD);
-
-  // Generic across every other footprint type exclusing DefinitionDataFootprint
-  // -- SpecializationFootprint, VarSpecializationFootprint,
-  // FunctionSpecializationFootprint, MemberSpecializationFootprint.
-  template <typename FootprintT, typename OwnerT>
-  static FootprintT createFootprint(const OwnerT &Owner) {
-    FootprintT FP;
-    FP.update(Owner);
-    return FP;
-  }
-  template <typename FootprintT, typename OwnerT>
-  static void restoreFootprint(const FootprintT &FP, OwnerT &Owner) {
-    FP.restore(Owner);
-  }
-
-  static void revertDefinitionArrival(CXXRecordDecl *RD);
-  static void revertDefinitionArrival(VarDecl *VD);
-  static void revertDefinitionArrival(FunctionDecl *FD);
-  static void revertDefinitionArrival(EnumDecl *ED);
-
-  // True if Common could still be created later -- i.e. nobody has called
-  // getCommonPtr() anywhere in this template's redecl chain yet.
-  static bool isCommonPtrValid(const RedeclarableTemplateDecl *RT) {
-    return static_cast<const TemplateCommonAccess *>(RT)->Common != nullptr;
-  }
-
-  // True if CanonInjectedTST could still be cached later. Only valid to
-  // call once Common itself is confirmed to exist.
-  static bool isTemplateCanonInjectedTSTValid(const ClassTemplateDecl *CTD) {
-    auto *Ptr =
-        static_cast<const ClassTemplateCommonAccess *>(CTD)->getCommonPtr();
-    return !Ptr->CanonInjectedTST.isNull();
-  }
-
-  // Write-once fields, fixed null prior state, so revert is a
-  // direct reset, not a snapshot restore.
-  static void resetTemplateCommonBase(RedeclarableTemplateDecl &RT) {
-    clearCommonPtr(RT);
-  }
-
-  static void resetCanonInjectedTST(ClassTemplateDecl &CTD) {
-    clearCanonInjectedTST(CTD);
-  }
-
-  // Specializations are appended in commit order, and rollback is strictly
-  // LIFO (only the most recently committed PTU is ever rolled back).
-  static void removeSpecializations(PTUCheckpointLedger &Ledger,
-                                    const RedeclarableTemplateDecl *TD,
-                                    PTUID ID);
-
-  // static const Type *getRawTypeForDecl(const TypeDecl *TD) {
-  //   return TD->TypeForDecl;
-  // }
-
-  // static bool needToTrackTypeForDecl(const TypeDecl *TD) {
-  //   const Type *T = getRawTypeForDecl(TD);
-  //   return !T || T->isCanonicalUnqualified();
-  // }
-
-  // static void resetTypeForDecl(TypeDecl *TD) { TD->TypeForDecl = nullptr; }
-public:
-  static void forgetCodeGenMangledNames(CodeGenerator *CodeGen,
-                                       ASTContext &Ctx, const Decl *D);
-private:
-  PTUCheckpointLedger &PTUSlabCheckpoints;
-    ASTContext &Ctx;
-public:
-  friend PTUMutationActions;
-
-  explicit DeclStateReverter(PTUCheckpointLedger &Ledger, ASTContext &Ctx)
-      : PTUSlabCheckpoints(Ledger), Ctx(Ctx) {}
-
-  static bool isExtensibleContainer(const Decl *D) {
-    return isa<NamespaceDecl>(D) || isa<CXXRecordDecl>(D);
-  }
-
-  static bool hasNoPreviousDecl(Decl *D) {
-    return D->getPreviousDecl() == nullptr;
-  }
-
-  void detachDefData(CXXRecordDecl *D);
-
-  static void detachCommonBase(const RedeclarableTemplateDecl *RT);
-
-  void detachFromDCLookup(Decl *D, PTUID ID);
-
-  void detachFromExternCLookup(Decl *D, DeclContext *ExternCCtx, PTUID ID);
-
-  static void removeFromIdResolver(Sema &S, NamedDecl *D);
-
-  template <typename DeclT> DeclT *findSurvivor(DeclT *D, PTUID ID) const;
-
-  template <typename decl_type>
-  void patchRedeclLink(Redeclarable<decl_type> *D, decl_type *Survivor) {
-    setLatestRedecl<decl_type>(*D->getFirstDecl(), Survivor);
-  }
-  template <typename decl_type>
-  void unlinkRedeclChain2(Redeclarable<decl_type> *D, decl_type *Survivor) {
-    auto *Latest = static_cast<decl_type *>(D);
-
-    // Rebuild First -> ... -> Survivor -> ... -> Latest as
-    // First -> ... -> Survivor.
-    Latest->getFirstDecl()->RedeclLink.setLatest(Survivor);
-
-    // The chain is circular: a withdrawn declaration still linked into it can
-    // never walk back around to itself, so redecls() on one would not
-    // terminate. Give each withdrawn declaration a chain of its own.
-    for (decl_type *Dead = Latest; Dead != Survivor;) {
-      decl_type *Next = Dead->getPreviousDecl();
-      Dead->First = Dead;
-      Dead->RedeclLink = Redeclarable<decl_type>::LatestDeclLink(Ctx);
-      Dead = Next;
-    }
-  }
-
-  void detachFromRedeclChain(const Decl *D, PTUID ID);
-
-  void repairLexicalChain(DeclContext &DC, PTUID ID);
-
-private:
-  NamedDecl *tryDetachRedeclChain(Decl *D, PTUID ID);
-};
 
 /// Maps addresses to the PTU that allocated them, by keeping the slab
 /// checkpoint taken before each PTU began.
@@ -523,8 +325,8 @@ public:
     return std::get_if<T>(&It->second.back().Data);
   }
 
-  /// Drop every entry with ID >= \p ID for this (Owner, K), erasing the
-  /// key entirely once its history is empty.
+  /// Remove all entries with IDs greater than or equal to \p ID for this
+  /// (Owner, K). If no entries remain, remove the key entirely.
   void removeFrom(const Decl *Owner, MutationKind K, PTUID ID) {
     auto It = Store.find({Owner, K});
     if (It == Store.end())
@@ -635,11 +437,6 @@ public:
   void sweep(PTUMutationActions &Act, OnConfirmedFn OnConfirmed);
 };
 
-// enum class LangMode : uint8_t {
-//   C,   // no DefinitionData, no templates, no implicit special members
-//   CXX, // full set
-// };
-
 // Overall flow:
 // - Track changes made by other PTUs so they can be applied to the relevant
 //   chains/mutations when those PTUs are committed.
@@ -669,12 +466,6 @@ private:
   friend class PTUMutationActions;
 
 public:
-  // Sema/CodeGenerator deliberately live on PTUMutationActions instead --
-  // nothing here (PTU stack, checkpoints, footprints, sweep tracking)
-  // actually needs either; they were only ever pass-through conveniences
-  // for revert-side-effect cleanup (IdResolver, SpecialMemberCache,
-  // CodeGen mangled-name forgetting), which is PTUMutationActions'/
-  // DeclStateReverter's concern, not this class's.
   IncrementalStateTracker(ASTContext &Ctx)
       : Ctx(Ctx), PTUSlabCheckpoints(Ctx) {}
 
@@ -734,9 +525,9 @@ public:
   explicit SemaCacheReverter(Sema &S, IncrementalStateTracker &Tracker)
       : SemaRef(S), Tracker(Tracker) {}
 
-  // Sema::SpecialMemberCache stores the CXXMethodDecl* resolved by a previous
-  // LookupSpecialMember() call for each (RD, kind+qualifiers). Remove entries
-  // whose cached method belongs to the PTU being rolled back.
+  // Sema::SpecialMemberCache stores the CXXMethodDecl* found by previous
+  // LookupSpecialMember() calls for each (RD, kind+qualifiers). Remove entries
+  // that refer to methods from the PTU being rolled back.
   void restoreSpecialMemberCache(PTUID ID);
 
   // Sema::VTablesUsed records, per class, whether its vtable has already
@@ -744,23 +535,27 @@ public:
   void restoreVTableUsed(CXXRecordDecl *RD);
 };
 
-class PTUMutationActions {
+class PTUMutationActions : public ConstDeclVisitor<PTUMutationActions> {
 private:
   IncrementalStateTracker &Tracker;
   SweepTracker &HiddenMutationTracker;
   Sema &SemaRef;
-  // Optional (null under -fsyntax-only, where no CodeGenerator exists).
   CodeGenerator *CodeGen = nullptr;
   SemaCacheReverter SemaCache;
-  DeclStateReverter Reverter;
 
+  MutationRecord *Rec = nullptr;
+
+  PTUID CurrentID() const { return Tracker.currentID(); }
+  MutationRecord &Record() const {
+    assert(Rec && "Invalid MutationRecord");
+    return *Rec;
+  }
 public:
   explicit PTUMutationActions(IncrementalStateTracker &Tracker, Sema &S,
                               CodeGenerator *CodeGen = nullptr)
       : Tracker(Tracker),
         HiddenMutationTracker(Tracker.getHiddenMutationTracker()),
-        SemaRef(S), CodeGen(CodeGen), SemaCache(S, Tracker),
-        Reverter(Tracker.getPTUSlabCheckpoints(), Tracker.getASTContext()) {}
+        SemaRef(S), CodeGen(CodeGen), SemaCache(S, Tracker) {}
 
   Sema &getSema() const { return SemaRef; }
   CodeGenerator *getCodeGen() const { return CodeGen; }
@@ -779,39 +574,18 @@ public:
   void syncSweepTracking(const Decl *D, DeclShape S, uint32_t Kinds,
                          bool IsNew);
 
-private:
-  void commitMembers(PTUID ID, const DeclContext *Members);
+  bool shouldRecurseInto(const Decl *D);
 
-  void commitClass(PTUID ID, const CXXRecordDecl *RD, MutationRecord &Rec,
-                   bool IsNew);
-  void commitFunction(PTUID ID, const FunctionDecl *FD, MutationRecord &Rec,
-                      bool IsNew);
-  void commitVar(PTUID ID, const VarDecl *VD, MutationRecord &Rec, bool IsNew);
+  void VisitDeclContext(const DeclContext *DC);
+  void VisitCXXRecordDecl(const CXXRecordDecl *RD);
+  void VisitFunctionDecl(const FunctionDecl *FD);
+  void VisitVarDecl(const VarDecl *VD);
+  void VisitEnumDecl(const EnumDecl *ED);
+  void VisitRedeclarableTemplateDecl(const RedeclarableTemplateDecl *RT);
+  void VisitTypedefNameDecl(const TypedefNameDecl *D);
 
-  void commitEnum(PTUID ID, const EnumDecl *ED, MutationRecord &Rec,
-                  bool IsNew);
-  void commitTemplate(PTUID ID, const RedeclarableTemplateDecl *ED,
-                      MutationRecord &Rec, bool IsNew);
-  void commitTypedef(PTUID ID, const TypedefNameDecl *ED, MutationRecord &Rec,
-                     bool IsNew);
+  void commitDecl(const Decl *D, MutationRecord *Rec);
 
-  void restoreClass(PTUID ID, CXXRecordDecl *RD, MutationRecord &Rec);
-
-  void restoreFunction(PTUID ID, FunctionDecl *FD, MutationRecord &Rec);
-
-  void restoreTemplate(PTUID ID, RedeclarableTemplateDecl *TD,
-                       MutationRecord &Rec);
-
-  void restoreVar(PTUID ID, VarDecl *VD, MutationRecord &Rec);
-
-  void restoreEnum(PTUID ID, EnumDecl *ED, MutationRecord &Rec);
-
-  void restoreTypedef(PTUID ID, TypedefNameDecl *TD, MutationRecord &Rec);
-
-public:
-  void restoreDecl(PTUID ID, Decl *D, MutationRecord &Rec);
-  void commitDecl(PTUID ID, const Decl *D, MutationRecord &Rec,
-                  bool IsNew = false);
   // Actual commit action: updates IncrementalStateTracker tracking info for
   // decls from the previous PTU after a successful PTU. And add tracking info
   // for newly created Decls

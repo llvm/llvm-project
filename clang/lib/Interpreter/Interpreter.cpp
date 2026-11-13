@@ -35,7 +35,6 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
-#include "clang/Interpreter/ErrorRecovery.h"
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
