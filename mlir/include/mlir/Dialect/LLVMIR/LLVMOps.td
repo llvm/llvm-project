@@ -26,6 +26,14 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
+// Op partitions of the LLVM dialect ops.
+def LLVM_ArithPartition : Partition<"Arith">;
+def LLVM_CastPartition : Partition<"Cast">;
+def LLVM_ConstantPartition : Partition<"Constant">;
+def LLVM_ControlFlowPartition : Partition<"ControlFlow">;
+def LLVM_MemoryPartition : Partition<"Memory">;
+def LLVM_ModulePartition : Partition<"Module">;
+
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
 }
@@ -152,6 +160,7 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
 }
 
 // Integer binary operations.
+let partition = LLVM_ArithPartition in {
 def LLVM_AddOp : LLVM_IntArithmeticOpWithOverflowFlag<"add", "Add",
     [Commutative, Pure]>;
 def LLVM_SubOp : LLVM_IntArithmeticOpWithOverflowFlag<"sub", "Sub", [Pure]>;
@@ -248,8 +257,10 @@ def LLVM_FDivOp : LLVM_FloatArithmeticOp<"fdiv", "FDiv">;
 def LLVM_FRemOp : LLVM_FloatArithmeticOp<"frem", "FRem">;
 def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
   LLVM_ScalarOrVectorOf<LLVM_AnyFloat>, "fneg", "FNeg">;
+} // let partition = LLVM_ArithPartition
 
 // Memory-related operations.
+let partition = LLVM_MemoryPartition in {
 def LLVM_AllocaOp : LLVM_Op<"alloca",
     [DeclareOpInterfaceMethods<PromotableAllocationOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>]>,
@@ -569,8 +580,10 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   ];
   let hasVerifier = 1;
 }
+} // let partition = LLVM_MemoryPartition
 
 // Casts.
+let partition = LLVM_CastPartition in {
 class LLVM_CastOp<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([Pure], traits)>,
@@ -756,8 +769,10 @@ def LLVM_FPExtOp : LLVM_CastOpWithFastMathFlag<"fpext", "FPExt",
 def LLVM_FPTruncOp : LLVM_CastOpWithFastMathFlag<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
+} // let partition = LLVM_CastPartition
 
 // Call-related operations.
+let partition = LLVM_ControlFlowPartition in {
 def LLVM_InvokeOp
     : LLVM_Op<"invoke", [AttrSizedOperandSegments,
                          DeclareOpInterfaceMethods<BranchOpInterface>,
@@ -943,11 +958,13 @@ def LLVM_CallOp
     LLVMFunctionType getCalleeFunctionType();
   }];
 }
+} // let partition = LLVM_ControlFlowPartition
 
 //===----------------------------------------------------------------------===//
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
+let partition = LLVM_ArithPartition in {
 def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [Pure,
     TypesMatchWith<
         "result type matches vector element type", "vector", "res",
@@ -1142,8 +1159,10 @@ def LLVM_FreezeOp : LLVM_Op<"freeze", [Pure, SameOperandsAndResultType]> {
     $res = LLVM::FreezeOp::create($_builder, $_location, $val);
   }];
 }
+} // let partition = LLVM_ArithPartition
 
 // Terminators.
+let partition = LLVM_ControlFlowPartition in {
 def LLVM_BrOp : LLVM_TerminatorOp<"br",
     [DeclareOpInterfaceMethods<BranchOpInterface>, Pure]> {
   let arguments = (ins
@@ -1340,12 +1359,14 @@ def LLVM_SwitchOp
     }
   }];
 }
+} // let partition = LLVM_ControlFlowPartition
 
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary operations (do not appear in LLVM IR but necessary for the dialect
 // to work correctly).
 ////////////////////////////////////////////////////////////////////////////////
 
+let partition = LLVM_ConstantPartition in {
 def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
     [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins FlatSymbolRefAttr:$global_name);
@@ -1437,7 +1458,9 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
   let hasFolder = 1;
 }
+} // let partition = LLVM_ConstantPartition
 
+let partition = LLVM_ModulePartition in {
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
      SymbolVisibility, Symbol,
@@ -1853,8 +1876,10 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
   }];
   let hasVerifier = 1;
 }
+} // let partition = LLVM_ModulePartition
 
 
+let partition = LLVM_ConstantPartition in {
 def LLVM_DSOLocalEquivalentOp : LLVM_Op<"dso_local_equivalent",
     [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins FlatSymbolRefAttr:$function_name);
@@ -1942,7 +1967,9 @@ def LLVM_BlockAddressOp : LLVM_Op<"blockaddress",
   let hasVerifier = 1;
   let hasFolder = 1;
 }
+} // let partition = LLVM_ConstantPartition
 
+let partition = LLVM_ControlFlowPartition in {
 def LLVM_BlockTagOp : LLVM_Op<"blocktag"> {
   let description = [{
     This operation uses a `tag` to uniquely identify an MLIR block in a
@@ -2035,7 +2062,9 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
     }
   }];
 }
+} // let partition = LLVM_ControlFlowPartition
 
+let partition = LLVM_ModulePartition in {
 def LLVM_ComdatSelectorOp
     : LLVM_Op<"comdat_selector", [SymbolName, SymbolVisibility, Symbol]> {
   let arguments = (ins
@@ -2246,7 +2275,9 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
 }
+} // let partition = LLVM_ModulePartition
 
+let partition = LLVM_ConstantPartition in {
 def LLVM_NoneTokenOp
     : LLVM_Op<"mlir.none", [Pure]> {
   let summary = "Defines a value containing an empty token to LLVM type.";
@@ -2441,6 +2472,7 @@ def LLVM_ConstantOp
   let hasFolder = 1;
   let hasVerifier = 1;
 }
+} // let partition = LLVM_ConstantPartition
 
 // Atomic operations.
 //
@@ -2448,6 +2480,9 @@ def LLVM_ConstantOp
 def LLVM_AtomicRMWType
     : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnySignlessInteger, LLVM_AnyFixedVector]>;
 
+def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnySignlessInteger, LLVM_AnyPointer]>;
+
+let partition = LLVM_MemoryPartition in {
 def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",
                      "val", "res", "$_self">]> {
@@ -2513,8 +2548,6 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
   }];
   let hasVerifier = 1;
 }
-
-def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnySignlessInteger, LLVM_AnyPointer]>;
 
 def LLVM_AtomicCmpXchgOp : LLVM_MemAccessOpBase<"cmpxchg", [
       TypesMatchWith<"operand #1 and operand #2 have the same type",
@@ -2597,7 +2630,9 @@ def LLVM_FenceOp : LLVM_Op<"fence">, LLVM_MemOpPatterns {
   ];
   let hasVerifier = 1;
 }
+} // let partition = LLVM_MemoryPartition
 
+let partition = LLVM_ControlFlowPartition in {
 def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     The InlineAsmOp mirrors the underlying LLVM semantics with a notable
@@ -2644,11 +2679,13 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
 
   let hasVerifier = 1;
 }
+} // let partition = LLVM_ControlFlowPartition
 
 //===--------------------------------------------------------------------===//
 // MetadataAsValueOp
 //===--------------------------------------------------------------------===//
 
+let partition = LLVM_ConstantPartition in {
 def LLVM_MetadataAsValueOp
     : LLVM_Op<"mlir.metadata_as_value", [Pure, ConstantLike]> {
   let summary =
@@ -2712,11 +2749,13 @@ def LLVM_MetadataAsValueOp
 
   let hasFolder = 1;
 }
+} // let partition = LLVM_ConstantPartition
 
 //===--------------------------------------------------------------------===//
 // CallIntrinsicOp
 //===--------------------------------------------------------------------===//
 
+let partition = LLVM_ControlFlowPartition in {
 def LLVM_CallIntrinsicOp
     : LLVM_Op<"call_intrinsic",
               [ArgAndResultAttrsOpInterface,
@@ -2751,7 +2790,9 @@ def LLVM_CallIntrinsicOp
 
   let hasVerifier = 1;
 }
+} // let partition = LLVM_ControlFlowPartition
 
+let partition = LLVM_ModulePartition in {
 def LLVM_LinkerOptionsOp
     : LLVM_Op<"linker_options"> {
   let summary = "Options to pass to the linker when the object file is linked";
@@ -2863,5 +2904,6 @@ def LLVM_NamedMetadataOp
     return convertNamedMetadataOp(op, moduleTranslation);
   }];
 }
+} // let partition = LLVM_ModulePartition
 
 #endif // LLVMIR_OPS

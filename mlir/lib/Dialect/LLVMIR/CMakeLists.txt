@@ -1,29 +1,32 @@
 add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
-  IR/LLVMOps.cpp
   IR/NVVMOps.cpp
   IR/ROCDLOps.cpp
   )
 
-set(LLVM_TARGET_DEFINITIONS IR/LLVMOps.cpp)
-foreach(index RANGE 7)
-  set(LLVM_SHARDED_SRC LLVMOps.${index}.cpp)
-  list(APPEND LLVM_SHARDED_SRCS ${LLVM_SHARDED_SRC})
-  mlir_src_sharder(${LLVM_SHARDED_SRC}
-    -op-shard-index=${index})
-endforeach()
-add_public_tablegen_target(MLIRLLVMOpsShardGen)
 add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
   IR/LLVMInterfaces.cpp
-  IR/LLVMMemorySlot.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
   IR/LLVMDialectBytecode.cpp
-  ${LLVM_SHARDED_SRCS}
+  IR/LLVMArithOps.cpp
+  IR/LLVMCastOps.cpp
+  IR/LLVMConstantOps.cpp
+  IR/LLVMConstrainedIntrinsicOps.cpp
+  IR/LLVMControlFlowOps.cpp
+  IR/LLVMCoroIntrinsicOps.cpp
+  IR/LLVMDebugIntrinsicOps.cpp
+  IR/LLVMFloatIntrinsicOps.cpp
+  IR/LLVMIntegerIntrinsicOps.cpp
+  IR/LLVMMemoryIntrinsicOps.cpp
+  IR/LLVMMiscIntrinsicOps.cpp
+  IR/LLVMMemoryOps.cpp
+  IR/LLVMModuleOps.cpp
+  IR/LLVMVectorIntrinsicOps.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -34,10 +37,8 @@ add_mlir_dialect_library(MLIRLLVMDialect
   DEPENDS
   MLIRLLVMDialectBytecodeIncGen
   MLIRLLVMInterfacesIncGen
-  MLIRLLVMIntrinsicOpsIncGen
   MLIRLLVMAllOpsIncGen
   MLIRLLVMOpsIncGen
-  MLIRLLVMOpsShardGen
   MLIRLLVMTranslationDialectInterfaceIncGen
   MLIRLLVMTypesIncGen
   MLIROpenMPOpsIncGen

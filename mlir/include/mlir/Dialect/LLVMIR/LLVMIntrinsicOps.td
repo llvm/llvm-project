@@ -13,6 +13,17 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 // operations and intrinsics. However, we systematically prefix them with
 // "intr." to avoid potential name clashes.
 
+// Op partitions of the LLVM dialect intrinsic ops.
+// Intrinsics that fit no other partition are in `MiscIntrinsic`.
+def LLVM_ConstrainedIntrinsicPartition : Partition<"ConstrainedIntrinsic">;
+def LLVM_CoroIntrinsicPartition : Partition<"CoroIntrinsic">;
+def LLVM_DebugIntrinsicPartition : Partition<"DebugIntrinsic">;
+def LLVM_FloatIntrinsicPartition : Partition<"FloatIntrinsic">;
+def LLVM_IntegerIntrinsicPartition : Partition<"IntegerIntrinsic">;
+def LLVM_MemoryIntrinsicPartition : Partition<"MemoryIntrinsic">;
+def LLVM_MiscIntrinsicPartition : Partition<"MiscIntrinsic">;
+def LLVM_VectorIntrinsicPartition : Partition<"VectorIntrinsic">;
+
 class LLVM_UnaryIntrOpBase<string func, Type element,
                            list<Trait> traits = [], bit requiresFastmath = 0> :
     LLVM_OneResultIntrOp<func, [], [0],
@@ -103,6 +114,7 @@ class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
                    I1Attr:$is_zero_poison);
 }
 
+let partition = LLVM_IntegerIntrinsicPartition in {
 def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
     /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
     /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
@@ -110,7 +122,9 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
                    I1Attr:$is_int_min_poison);
 }
+} // let partition = LLVM_IntegerIntrinsicPartition
 
+let partition = LLVM_FloatIntrinsicPartition in {
 // Do not use LLVM_UnaryIntrOpF here: arithmetic.fence operates on floating
 // types, but the fence itself should not carry fastmath flags.
 def LLVM_ArithmeticFenceOp
@@ -157,6 +171,8 @@ def LLVM_FMulAddOp : LLVM_TernarySameArgsIntrOpF<"fmuladd">;
 def LLVM_Log10Op : LLVM_UnaryIntrOpF<"log10">;
 def LLVM_Log2Op : LLVM_UnaryIntrOpF<"log2">;
 def LLVM_LogOp : LLVM_UnaryIntrOpF<"log">;
+} // let partition = LLVM_FloatIntrinsicPartition
+let partition = LLVM_MemoryIntrinsicPartition in {
 def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresArgAndResultAttrs=*/0, /*requiresOpBundles=*/0,
@@ -164,6 +180,8 @@ def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0],
 > {
   let arguments = (ins LLVM_AnyPointer:$addr, I32Attr:$rw, I32Attr:$hint, I32Attr:$cache);
 }
+} // let partition = LLVM_MemoryIntrinsicPartition
+let partition = LLVM_FloatIntrinsicPartition in {
 def LLVM_RoundEvenOp : LLVM_UnaryIntrOpF<"roundeven">;
 def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
 def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
@@ -194,6 +212,8 @@ def LLVM_LroundOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"lround">;
 def LLVM_LlroundOp : LLVM_IntRoundIntrOpBase<"llround">;
 def LLVM_LrintOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"lrint">;
 def LLVM_LlrintOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"llrint">;
+} // let partition = LLVM_FloatIntrinsicPartition
+let partition = LLVM_IntegerIntrinsicPartition in {
 def LLVM_BitReverseOp : LLVM_UnaryIntrOpI<"bitreverse">;
 def LLVM_ByteSwapOp : LLVM_UnaryIntrOpI<"bswap">;
 def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrOp<"ctlz">;
@@ -206,12 +226,16 @@ def LLVM_PdepOp : LLVM_BinarySameArgsIntrOpI<"pdep">;
 def LLVM_PextOp : LLVM_BinarySameArgsIntrOpI<"pext">;
 def LLVM_SMulHOp : LLVM_BinarySameArgsIntrOpI<"smulh">;
 def LLVM_UMulHOp : LLVM_BinarySameArgsIntrOpI<"umulh">;
+} // let partition = LLVM_IntegerIntrinsicPartition
+let partition = LLVM_FloatIntrinsicPartition in {
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrOpF<"minnum">;
 def LLVM_MaximumOp : LLVM_BinarySameArgsIntrOpF<"maximum">;
 def LLVM_MinimumOp : LLVM_BinarySameArgsIntrOpF<"minimum">;
 def LLVM_MaximumNumOp : LLVM_BinarySameArgsIntrOpF<"maximumnum">;
 def LLVM_MinimumNumOp : LLVM_BinarySameArgsIntrOpF<"minimumnum">;
+} // let partition = LLVM_FloatIntrinsicPartition
+let partition = LLVM_IntegerIntrinsicPartition in {
 def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
@@ -228,7 +252,9 @@ class LLVM_CmpIntrOp<string func>
 
 def LLVM_SCmpOp : LLVM_CmpIntrOp<"scmp">;
 def LLVM_UCmpOp : LLVM_CmpIntrOp<"ucmp">;
+} // let partition = LLVM_IntegerIntrinsicPartition
 
+let partition = LLVM_FloatIntrinsicPartition in {
 def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
@@ -261,7 +287,9 @@ def LLVM_ATan2Op : LLVM_BinarySameArgsIntrOpF<"atan2">;
 def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
 def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
 def LLVM_TanhOp : LLVM_UnaryIntrOpF<"tanh">;
+} // let partition = LLVM_FloatIntrinsicPartition
 
+let partition = LLVM_MemoryIntrinsicPartition in {
 class LLVM_MemcpyIntrOpBase<string name> :
     LLVM_ZeroResultIntrOp<name, [0, 1, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
@@ -474,9 +502,11 @@ def LLVM_LaunderInvariantGroupOp
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
+} // let partition = LLVM_MemoryIntrinsicPartition
 
 // Constrained Floating-Point Intrinsics.
 
+let partition = LLVM_ConstrainedIntrinsicPartition in {
 class LLVM_ConstrainedIntr<string mnem, int numArgs,
                            bit overloadedResult, list<int> overloadedOperands,
                            bit hasRoundingMode,
@@ -856,9 +886,11 @@ def LLVM_ConstrainedFPExtIntr
     $arg_0 $fpExceptionBehavior (`fastmath` `` $fastmathFlags^)? attr-dict `:` type($arg_0) `to` type(results)
   }];
 }
+} // let partition = LLVM_ConstrainedIntrinsicPartition
 
 // Intrinsics with multiple returns.
 
+let partition = LLVM_IntegerIntrinsicPartition in {
 class LLVM_ArithWithOverflowOp<string mnem>
     : LLVM_IntrOp<mnem, [0], [], [Pure, SameOperandsElementType], 2>,
       Arguments<(ins LLVM_ScalarOrVectorOf<AnySignlessInteger>,
@@ -881,11 +913,13 @@ def LLVM_SSubSat : LLVM_BinarySameArgsIntrOpI<"ssub.sat">;
 def LLVM_USubSat : LLVM_BinarySameArgsIntrOpI<"usub.sat">;
 def LLVM_SSHLSat : LLVM_BinarySameArgsIntrOpI<"sshl.sat">;
 def LLVM_USHLSat : LLVM_BinarySameArgsIntrOpI<"ushl.sat">;
+} // let partition = LLVM_IntegerIntrinsicPartition
 
 //
 // Optimization hint intrinsics.
 //
 
+let partition = LLVM_MiscIntrinsicPartition in {
 def LLVM_FakeUseOp : LLVM_ZeroResultIntrOp<"fake.use"> {
   let arguments = (ins Variadic<LLVM_Type>:$args);
   let assemblyFormat = "$args attr-dict `:` type($args)";
@@ -955,11 +989,13 @@ def LLVM_ThreadlocalAddressOp : LLVM_OneResultIntrOp<"threadlocal.address", [],
                                 [0], [Pure]> {
   let arguments = (ins LLVM_AnyPointer:$global);
 }
+} // let partition = LLVM_MiscIntrinsicPartition
 
 //
 // Coroutine intrinsics.
 //
 
+let partition = LLVM_CoroIntrinsicPartition in {
 def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [TokenProducerTrait], 1> {
   let arguments = (ins I32:$align,
                        LLVM_AnyPointer:$promise,
@@ -1094,11 +1130,13 @@ def LLVM_CoroAwaitSuspendHandleOp
       qualified(type($wrapper))
   }];
 }
+} // let partition = LLVM_CoroIntrinsicPartition
 
 //
 // Debug function intrinsics.
 //
 
+let partition = LLVM_DebugIntrinsicPartition in {
 class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     : LLVM_IntrOp<name, [], [], traits, 0> {
   let mlirBuilder = [{
@@ -1194,11 +1232,13 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
   }];
   let assemblyFormat = "$label attr-dict";
 }
+} // let partition = LLVM_DebugIntrinsicPartition
 
 //
 // Variadic function intrinsics.
 //
 
+let partition = LLVM_MemoryIntrinsicPartition in {
 def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart", [0]>,
                      Arguments<(ins LLVM_AnyPointer:$arg_list)> {
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
@@ -1216,20 +1256,24 @@ def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend", [0]>,
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
   let summary = "Destroys `arg_list`, which has been initialized by `intr.vastart` or `intr.vacopy`.";
 }
+} // let partition = LLVM_MemoryIntrinsicPartition
 
 //
 // Exception handling intrinsics.
 //
 
+let partition = LLVM_MiscIntrinsicPartition in {
 def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for", [], [0]> {
     let arguments = (ins LLVM_AnyPointer:$type_info);
     let assemblyFormat = "$type_info attr-dict `:` functional-type(operands, results)";
 }
+} // let partition = LLVM_MiscIntrinsicPartition
 
 //
 // Stack save/restore intrinsics.
 //
 
+let partition = LLVM_MemoryIntrinsicPartition in {
 def LLVM_StackSaveOp : LLVM_OneResultIntrOp<"stacksave", [0]> {
   let assemblyFormat = "attr-dict `:` qualified(type($res))";
 }
@@ -1238,11 +1282,13 @@ def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore", [0]> {
   let arguments = (ins LLVM_AnyPointer:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
+} // let partition = LLVM_MemoryIntrinsicPartition
 
 //
 // Vector Reductions.
 //
 
+let partition = LLVM_VectorIntrinsicPartition in {
 // LLVM vector reduction over a single vector.
 class LLVM_VecReductionBase<string mnem, Type element, bit requiresFastmath=0>
     : LLVM_OneResultIntrOp<"vector.reduce." # mnem, [], [0],
@@ -1682,11 +1728,13 @@ def LLVM_masked_compressstore
     OpBuilder<(ins "Value":$value, "Value":$ptr, "Value":$mask, CArg<"uint64_t", "1">:$align)>
   ];
 }
+} // let partition = LLVM_VectorIntrinsicPartition
 
 //
 // Annotate intrinsics.
 //
 
+let partition = LLVM_MiscIntrinsicPartition in {
 def LLVM_VarAnnotation
     : LLVM_ZeroResultIntrOp<"var.annotation", [0, 1],
         [AllTypesMatch<["annotation", "fileName", "attr"]>]> {
@@ -1741,11 +1789,13 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
 
   let assemblyFormat = "`failureKind` `=` $failureKind attr-dict";
 }
+} // let partition = LLVM_MiscIntrinsicPartition
 
 //
 // Vector intrinsics.
 //
 
+let partition = LLVM_VectorIntrinsicPartition in {
 /// Create a call to vscale intrinsic.
 def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
@@ -1946,5 +1996,6 @@ def LLVM_VPStridedStoreOp
     : LLVM_ZeroResultIntrOp<"experimental.vp.strided.store",[0, 1, 2], []>,
       Arguments<(ins LLVM_AnyVector:$val, LLVM_AnyPointer:$ptr,
                      AnySignlessInteger:$stride, LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+} // let partition = LLVM_VectorIntrinsicPartition
 
 #endif // LLVM_INTRINSIC_OP

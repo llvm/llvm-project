@@ -14,7 +14,7 @@
 #include "TypeDetail.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -759,6 +759,57 @@ bool LLVM::LLVMTargetExtType::supportsMemOps() const {
 
 const llvm::fltSemantics &LLVMPPCFP128Type::getFloatSemantics() const {
   return APFloat::PPCDoubleDouble();
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for destructurable types
+//===----------------------------------------------------------------------===//
+
+std::optional<DenseMap<Attribute, Type>>
+LLVM::LLVMStructType::getSubelementIndexMap() const {
+  // Empty structs have no sub-elements and cannot be destructured.
+  if (getBody().empty())
+    return std::nullopt;
+  Type i32 = IntegerType::get(getContext(), 32);
+  DenseMap<Attribute, Type> destructured;
+  for (const auto &[index, elemType] : llvm::enumerate(getBody()))
+    destructured.insert({IntegerAttr::get(i32, index), elemType});
+  return destructured;
+}
+
+Type LLVM::LLVMStructType::getTypeAtIndex(Attribute index) const {
+  auto indexAttr = llvm::dyn_cast<IntegerAttr>(index);
+  if (!indexAttr || !indexAttr.getType().isInteger(32))
+    return {};
+  int32_t indexInt = indexAttr.getInt();
+  ArrayRef<Type> body = getBody();
+  if (indexInt < 0 || body.size() <= static_cast<uint32_t>(indexInt))
+    return {};
+  return body[indexInt];
+}
+
+std::optional<DenseMap<Attribute, Type>>
+LLVM::LLVMArrayType::getSubelementIndexMap() const {
+  constexpr size_t maxArraySizeForDestructuring = 16;
+  if (getNumElements() > maxArraySizeForDestructuring)
+    return {};
+  int32_t numElements = getNumElements();
+
+  Type i32 = IntegerType::get(getContext(), 32);
+  DenseMap<Attribute, Type> destructured;
+  for (int32_t index = 0; index < numElements; ++index)
+    destructured.insert({IntegerAttr::get(i32, index), getElementType()});
+  return destructured;
+}
+
+Type LLVM::LLVMArrayType::getTypeAtIndex(Attribute index) const {
+  auto indexAttr = llvm::dyn_cast<IntegerAttr>(index);
+  if (!indexAttr || !indexAttr.getType().isInteger(32))
+    return {};
+  int32_t indexInt = indexAttr.getInt();
+  if (indexInt < 0 || getNumElements() <= static_cast<uint32_t>(indexInt))
+    return {};
+  return getElementType();
 }
 
 //===----------------------------------------------------------------------===//
