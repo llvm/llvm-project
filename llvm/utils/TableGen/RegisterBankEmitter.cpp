@@ -333,6 +333,8 @@ private:
   DenseMap<const CodeGenInstruction *, const InstrShape *> CGIToShapeMap;
   DenseMap<const CodeGenInstruction *, std::vector<const Record *>>
       InstrMappingRules;
+  DenseMap<const CodeGenInstruction *, std::vector<const Record *>>
+      InstrAltMappingRules;
   DenseMap<const InstrShape *,
            std::map<std::vector<const RegisterBank *>, size_t>>
       ShapeToTupleStart;
@@ -351,10 +353,11 @@ private:
                                                       const InstrShape &Shape);
   void emitOperandsMappingRules(raw_ostream &OS, const CodeGenInstruction &CGI,
                                 const InstrShape &Shape,
-                                const std::vector<const Record *> Rules);
+                                const std::vector<const Record *> Rules,
+                                bool EmitAlt);
   void emitOperandMappingForShape(raw_ostream &OS, size_t ShapeIdx,
                                   const InstrShape &Shape);
-  void emitSearchMethod(raw_ostream &OS, StringRef TargetName);
+  void emitSearchMethod(raw_ostream &OS, StringRef TargetName, bool EmitAlt);
 
 public:
   RegisterBankEmitter(const RecordKeeper &R) : Target(R), Records(R) {}
@@ -397,6 +400,8 @@ void RegisterBankEmitter::emitBaseClassDefinition(
      << "  " << TargetName << "GenRegisterBankInfo(unsigned HwMode = 0);\n"
      << "\n"
      << "  const InstructionMapping &getGeneratedInstrMapping(const "
+        "MachineInstr &MI) const;\n"
+     << "  InstructionMappings getGeneratedInstrAltMappings(const "
         "MachineInstr &MI) const;\n";
   for (const auto &MappingIDDef :
        Records.getAllDerivedDefinitions("RegBankMappingID")) {
@@ -540,14 +545,25 @@ void RegisterBankEmitter::collectInstrMappings() {
     for (const auto *Opc : Opcodes) {
       std::vector<const Record *> &Rules =
           InstrMappingRules[&Target.getInstruction(Opc)];
-      for (const auto *RuleDef : Rec->getValueAsListOfDefs("Rules"))
-        Rules.push_back(RuleDef);
+      std::vector<const Record *> &AltRules =
+          InstrAltMappingRules[&Target.getInstruction(Opc)];
+      for (const auto *RuleDef : Rec->getValueAsListOfDefs("Rules")) {
+        if (RuleDef->getValueAsBit("IsAlternative"))
+          AltRules.push_back(RuleDef);
+        else
+          Rules.push_back(RuleDef);
+      }
     }
     for (const auto *RuleDef : Rec->getValueAsListOfDefs("Rules"))
       BankAssignments[Shape].insert(getBankAssignment(*RuleDef, *Shape));
   }
 
   for (auto &KV : InstrMappingRules) {
+    llvm::stable_sort(KV.second, [](const Record *LHS, const Record *RHS) {
+      return LHS->getValueAsInt("Priority") > RHS->getValueAsInt("Priority");
+    });
+  }
+  for (auto &KV : InstrAltMappingRules) {
     llvm::stable_sort(KV.second, [](const Record *LHS, const Record *RHS) {
       return LHS->getValueAsInt("Priority") > RHS->getValueAsInt("Priority");
     });
@@ -796,8 +812,6 @@ void RegisterBankEmitter::emitBaseClassImplementation(
         "class ID "
         "0x\").concat(llvm::Twine::utohexstr(RegClassID)).str().c_str());\n"
         "}\n";
-
-  emitSearchMethod(OS, TargetName);
 }
 
 std::vector<const RegisterBank *>
@@ -866,7 +880,7 @@ void RegisterBankEmitter::emitOperandMappingForShape(raw_ostream &OS,
 
 void RegisterBankEmitter::emitOperandsMappingRules(
     raw_ostream &OS, const CodeGenInstruction &CGI, const InstrShape &Shape,
-    const std::vector<const Record *> Rules) {
+    const std::vector<const Record *> Rules, bool EmitAlt) {
   std::vector<std::string> LLTSizeNames;
   for (int I : Shape.RepresentativeOperands) {
     std::string RegName = CGI.Operands[I].Name.str() + "Reg";
@@ -884,6 +898,9 @@ void RegisterBankEmitter::emitOperandsMappingRules(
   OS << '\n';
 
   for (const auto *RuleDef : Rules) {
+    if (EmitAlt != RuleDef->getValueAsBit("IsAlternative"))
+      continue;
+
     if (StringRef Pred = RuleDef->getValueAsString("Predicate"); !Pred.empty())
       OS << "      if (" << Pred << ") {\n";
     else
@@ -918,28 +935,45 @@ void RegisterBankEmitter::emitOperandsMappingRules(
     OS << ") * " << Shape.getNumOperands() << ";\n";
     StringRef MapID = RuleDef->getValueAsDef("ID")->getValueAsString("Name");
     unsigned Cost = RuleDef->getValueAsInt("Cost");
-    OS << "        return getInstructionMapping(" << MapID << ", " << Cost
-       << ", "
-          "&OperandsMappings[Idx], "
-       << Shape.getNumOperands() << ");\n";
+    if (!EmitAlt) {
+      OS << "        return getInstructionMapping(" << MapID << ", " << Cost
+         << ", "
+            "&OperandsMappings[Idx], "
+         << Shape.getNumOperands() << ");\n";
+    } else {
+      OS << "        Mappings.push_back(&getInstructionMapping(" << MapID << ", "
+         << Cost
+         << ", "
+            "&OperandsMappings[Idx], "
+         << Shape.getNumOperands() << "));\n";
+    }
 
     OS << "      }\n\n";
   }
 }
 
 void RegisterBankEmitter::emitSearchMethod(raw_ostream &OS,
-                                           StringRef TargetName) {
-  OS << '\n';
-  OS << "const RegisterBankInfo::InstructionMapping &\n"
-     << TargetName
-     << "GenRegisterBankInfo::getGeneratedInstrMapping(const "
-        "MachineInstr &MI) const {\n";
+                                           StringRef TargetName, bool EmitAlt) {
+  if (EmitAlt) {
+    OS << "RegisterBankInfo::InstructionMappings\n"
+       << TargetName
+       << "GenRegisterBankInfo::getGeneratedInstrAltMappings(const "
+          "MachineInstr &MI) const {\n";
+  } else {
+    OS << "const RegisterBankInfo::InstructionMapping &\n"
+       << TargetName
+       << "GenRegisterBankInfo::getGeneratedInstrMapping(const "
+          "MachineInstr &MI) const {\n";
+  }
+
   OS << "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
         "  [[maybe_unused]] const MachineRegisterInfo &MRI = "
         "MF.getRegInfo();\n";
   OS << "  const TargetSubtargetInfo &STI = MF.getSubtarget();\n"
         "  [[maybe_unused]] const TargetRegisterInfo &TRI = "
         "*STI.getRegisterInfo();\n\n";
+  if (EmitAlt)
+    OS << "  InstructionMappings Mappings;\n";
   OS << "  const unsigned Opc = MI.getOpcode();\n\n";
 
   OS << "  switch(Opc) {\n"
@@ -951,29 +985,36 @@ void RegisterBankEmitter::emitSearchMethod(raw_ostream &OS,
     // instruction with same rules, cluster them in the same case body
     std::map<std::vector<const Record *>, std::set<const CodeGenInstruction *>>
         GroupedInstrMappingRules;
+    DenseMap<const CodeGenInstruction *, std::vector<const Record *>>
+        &MappingRules = EmitAlt ? InstrAltMappingRules : InstrMappingRules;
     for (auto *CGI : CGIs) {
-      auto It = InstrMappingRules.find(CGI);
-      if (It == InstrMappingRules.end())
+      auto It = MappingRules.find(CGI);
+      if (It == MappingRules.end())
         continue;
       std::vector<const Record *> &Rules = It->second;
       GroupedInstrMappingRules[Rules].insert(CGI);
     }
 
     for (const auto &[Rules, CGIs] : GroupedInstrMappingRules) {
+      if (Rules.empty())
+        continue;
       for (const auto *CGI : CGIs)
         OS << "\n    case " << TargetName << "::" << CGI->getName() << ":";
       OS << " {\n"
             "      ArrayRef<ValueMapping> OperandsMappingStart = "
          << TargetName << "::GeneratedOperandsMappingsShape" << ShapeIdx
          << ";\n";
-      emitOperandsMappingRules(OS, **CGIs.begin(), Shape, Rules);
+      emitOperandsMappingRules(OS, **CGIs.begin(), Shape, Rules, EmitAlt);
       OS << "      break;\n"
             "    }\n";
     }
   }
 
-  OS << "  }\n"
-        "  return getInvalidInstructionMapping();\n";
+  OS << "  }\n";
+  if (EmitAlt)
+    OS << "  return Mappings;\n";
+  else
+    OS << "  return getInvalidInstructionMapping();\n";
 
   OS << "}\n";
 }
@@ -1032,6 +1073,12 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   emitHeader(OS, TargetName, Banks);
   emitBaseClassDefinition(OS, TargetName, Banks);
   emitBaseClassImplementation(OS, TargetName, Banks);
+  {
+    IfDefEmitter IfDef(OS, "GET_TARGET_REGBANK_SEARCH_METHOD");
+    emitSearchMethod(OS, TargetName, /*EmitAlt=*/false);
+    OS << '\n';
+    emitSearchMethod(OS, TargetName, /*EmitAlt=*/true);
+  }
 }
 
 static TableGen::Emitter::OptClass<RegisterBankEmitter>
