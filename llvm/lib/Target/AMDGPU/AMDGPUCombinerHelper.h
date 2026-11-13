@@ -60,6 +60,10 @@ public:
   /// \p MI, or a known non-logical-zero \p LHS or \p RHS.
   bool canIgnoreLegacyMinMaxTies(const MachineInstr &MI, Register LHS,
                                  Register RHS) const;
+
+  /// V_CVT_SCALEF32_* conversions to a narrow format only read the exponent
+  /// field of their f32 scale operand.
+  bool matchExponentOnlyScale(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 };
 
 } // namespace llvm

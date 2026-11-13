@@ -398,9 +398,6 @@ bb:
 define amdgpu_ps <2 x i64> @s_shl_v2i64_zext_v2i32(<2 x i32> inreg %x) {
 ; GCN-LABEL: s_shl_v2i64_zext_v2i32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_brev_b32 s2, -4
-; GCN-NEXT:    s_mov_b32 s3, s2
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; GCN-NEXT:    s_lshl_b32 s0, s0, 2
 ; GCN-NEXT:    s_lshl_b32 s2, s1, 2
 ; GCN-NEXT:    s_mov_b32 s1, 0
@@ -409,13 +406,10 @@ define amdgpu_ps <2 x i64> @s_shl_v2i64_zext_v2i32(<2 x i32> inreg %x) {
 ;
 ; GFX10PLUS-LABEL: s_shl_v2i64_zext_v2i32:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_brev_b32 s2, -4
-; GFX10PLUS-NEXT:    s_mov_b32 s3, s2
-; GFX10PLUS-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GFX10PLUS-NEXT:    s_mov_b32 s3, 0
 ; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX10PLUS-NEXT:    s_lshl_b32 s2, s1, 2
 ; GFX10PLUS-NEXT:    s_mov_b32 s1, 0
+; GFX10PLUS-NEXT:    s_mov_b32 s3, 0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %and = and <2 x i32> %x, <i32 1073741823, i32 1073741823>
   %ext = zext <2 x i32> %and to <2 x i64>
@@ -427,8 +421,6 @@ define <2 x i64> @v_shl_v2i64_zext_v2i32(<2 x i32> %x) {
 ; GCN-LABEL: v_shl_v2i64_zext_v2i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 0x3fffffff, v1
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
@@ -438,21 +430,18 @@ define <2 x i64> @v_shl_v2i64_zext_v2i32(<2 x i32> %x) {
 ; GFX10-LABEL: v_shl_v2i64_zext_v2i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v0
-; GFX10-NEXT:    v_and_b32_e32 v1, 0x3fffffff, v1
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 2, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_shl_v2i64_zext_v2i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v0
-; GFX11-NEXT:    v_and_b32_e32 v1, 0x3fffffff, v1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_lshlrev_b32 v2, 2, v1
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %and = and <2 x i32> %x, <i32 1073741823, i32 1073741823>
   %ext = zext <2 x i32> %and to <2 x i64>

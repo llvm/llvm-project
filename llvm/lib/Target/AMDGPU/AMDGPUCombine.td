@@ -333,6 +333,14 @@ def expand_promoted_fmed3 : GICombineRule<
 
 } // End Predicates = [NotHasMed3_16]
 
+// V_CVT_SCALEF32_* conversions to a narrow format only read the exponent field
+// of their f32 scale operand.
+def exponent_only_scale : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_INTRINSIC):$root,
+         [{ return Helper.matchExponentOnlyScale(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 // Combines which should only apply on SI/CI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
@@ -355,7 +363,8 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
    fold_fabs_fptrunc, rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16,
    sign_extension_in_reg, smulu64, trunc_lshr16_to_unmerge,
    binop_s64_with_s32_mask_combines, combine_or_s64_s32,
-   fold_carry_into_addsub_combines, simplify_demanded_bits]> {
+   fold_carry_into_addsub_combines, simplify_demanded_bits,
+   exponent_only_scale]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

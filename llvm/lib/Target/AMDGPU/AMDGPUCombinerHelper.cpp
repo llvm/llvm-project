@@ -583,3 +583,16 @@ bool AMDGPUCombinerHelper::matchBinopWith32BitMask(Register X,
     return false;
   return matchConstantIs32BitMask(X) || matchConstantIs32BitMask(Y);
 }
+
+bool AMDGPUCombinerHelper::matchExponentOnlyScale(MachineInstr &MI,
+                                                  BuildFnTy &MatchInfo) const {
+  std::optional<unsigned> ScaleArgIdx =
+      AMDGPU::getExponentOnlyScaleArgIdx(cast<GIntrinsic>(MI).getIntrinsicID());
+  if (!ScaleArgIdx)
+    return false;
+
+  // The intrinsic ID operand follows the defs.
+  unsigned OpIdx = MI.getNumExplicitDefs() + 1 + *ScaleArgIdx;
+  return matchSimplifyDemandedBitsOfUse(
+      MI, OpIdx, AMDGPU::getExponentOnlyScaleDemandedBits(), MatchInfo);
+}

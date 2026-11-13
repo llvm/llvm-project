@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GISelMITest.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -3082,4 +3083,233 @@ TEST_F(AArch64GISelMITest, SimplifyMultipleUseDemandedBitsChain) {
   EXPECT_EQ(Root->getOperand(1).getReg(), XReg);
   EXPECT_FALSE(MRI->use_nodbg_empty(AReg));
   EXPECT_FALSE(MRI->use_nodbg_empty(BReg));
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsMixedShiftAmountsNoLegalizer) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  // The replacement uses the outer amount type, not the inner amount type.
+  const struct {
+    unsigned Inner, Outer;
+    bool Fold;
+  } Cases[] = {{10, 1, false}, {8, 1, true}};
+  LLT S64 = MRI->getType(Copies[0]);
+  LLT S3 = LLT::integer(3);
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT,
+                        /*MDT=*/nullptr, /*LI=*/nullptr);
+  for (auto [InnerAmt, OuterAmt, Fold] : Cases) {
+    SCOPED_TRACE(::testing::Message() << InnerAmt << ", " << OuterAmt);
+    Register X = Copies[0];
+    auto Inner = B.buildLShr(S64, X, B.buildConstant(S64, InnerAmt));
+    auto Outer = B.buildShl(S64, Inner, B.buildConstant(S3, OuterAmt));
+    auto Use = B.buildCopy(S64, Outer);
+    APInt Demand = APInt::getHighBitsSet(64, 64 - OuterAmt);
+    BuildFnTy Apply;
+    auto Size = std::distance(EntryMBB->begin(), EntryMBB->end());
+    ASSERT_EQ(Helper.matchSimplifyDemandedBitsOfUse(*Use, 1, Demand, Apply),
+              Fold);
+    EXPECT_EQ(Use->getOperand(1).getReg(), Outer.getReg(0));
+    EXPECT_EQ(std::distance(EntryMBB->begin(), EntryMBB->end()), Size);
+    if (!Fold)
+      continue;
+    Apply(B);
+    Register Result = Use->getOperand(1).getReg();
+    MachineInstr *Shift = MRI->getVRegDef(Result);
+    EXPECT_EQ(Shift->getOpcode(), TargetOpcode::G_LSHR);
+    EXPECT_EQ(Shift->getOperand(1).getReg(), X);
+    Register Amount = Shift->getOperand(2).getReg();
+    EXPECT_EQ(MRI->getType(Amount), S3);
+    auto Value = getIConstantVRegVal(Amount, *MRI);
+    ASSERT_TRUE(Value);
+    EXPECT_EQ(Value->getZExtValue(), InnerAmt - OuterAmt);
+  }
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsShlUbfx) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  const struct {
+    unsigned Lsb, Shift, Demand;
+    bool SharedInner, SharedOuter, Fold;
+  } Cases[] = {
+      {8, 12, 0x10000, false, false, true},  // Left shift by four.
+      {12, 8, 0x1000, false, false, true},   // Right shift by four.
+      {8, 8, 0x1000, false, false, true},    // No shift.
+      {12, 8, 0x1001, false, false, false},  // Low bits are demanded.
+      {12, 8, 0x10000, false, false, false}, // Outside the extracted width.
+      {12, 8, 0x1000, true, false, false}, // Do not duplicate a shared extract.
+      {8, 8, 0x1000, true, false, true},   // Bypassing needs no new shift.
+      {12, 8, 0x1000, false, true, false}, // Other users demand all bits.
+  };
+  LLT S32 = LLT::scalar(32);
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  for (auto [Lsb, ShiftAmt, Demand, SharedInner, SharedOuter, Fold] : Cases) {
+    SCOPED_TRACE(::testing::Message()
+                 << Lsb << ", " << ShiftAmt << ", " << Demand << ", "
+                 << SharedInner << ", " << SharedOuter);
+    auto X = B.buildTrunc(S32, Copies[0]);
+    auto Inner =
+        B.buildInstr(TargetOpcode::G_UBFX, {S32},
+                     {X, B.buildConstant(S32, Lsb), B.buildConstant(S32, 8)});
+    auto Outer = B.buildShl(S32, Inner, B.buildConstant(S32, ShiftAmt));
+    auto Use = B.buildCopy(S32, Outer);
+    Register InnerReg = Inner.getReg(0);
+    Register OuterReg = Outer.getReg(0);
+    MachineInstr *Side = nullptr;
+    if (SharedInner || SharedOuter)
+      Side = B.buildCopy(S32, SharedInner ? InnerReg : OuterReg).getInstr();
+    BuildFnTy Apply;
+    auto Size = std::distance(EntryMBB->begin(), EntryMBB->end());
+    ASSERT_EQ(Helper.matchSimplifyDemandedBitsOfUse(*Use, 1, APInt(32, Demand),
+                                                    Apply),
+              Fold);
+    EXPECT_EQ(Use->getOperand(1).getReg(), OuterReg);
+    EXPECT_EQ(Outer->getOperand(1).getReg(), InnerReg);
+    EXPECT_EQ(Inner->getOpcode(), TargetOpcode::G_UBFX);
+    EXPECT_EQ(std::distance(EntryMBB->begin(), EntryMBB->end()), Size);
+    if (Fold) {
+      Apply(B);
+      Register Result = Use->getOperand(1).getReg();
+      if (Lsb == ShiftAmt) {
+        EXPECT_EQ(Result, X.getReg(0));
+      } else {
+        MachineInstr *NewShift = MRI->getVRegDef(Result);
+        EXPECT_EQ(NewShift->getOpcode(),
+                  Lsb > ShiftAmt ? TargetOpcode::G_LSHR : TargetOpcode::G_SHL);
+        EXPECT_EQ(NewShift->getOperand(1).getReg(), X.getReg(0));
+        auto Amount =
+            getIConstantVRegVal(NewShift->getOperand(2).getReg(), *MRI);
+        ASSERT_TRUE(Amount);
+        EXPECT_EQ(Amount->getZExtValue(), 4u);
+      }
+    }
+    if (Side) {
+      EXPECT_EQ(Side->getOperand(1).getReg(),
+                SharedInner ? InnerReg : OuterReg);
+      EXPECT_EQ(MRI->getVRegDef(InnerReg)->getOpcode(), TargetOpcode::G_UBFX);
+    }
+  }
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsLaneCopiesNoLegalizer) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  bool SavedUseExtended = LLT::getUseExtended();
+  LLT::setUseExtended(true);
+  auto RestoreTypes =
+      scope_exit([&] { LLT::setUseExtended(SavedUseExtended); });
+  LLT I32 = LLT::integer(32);
+  LLT F32 = LLT::float32();
+  LLT VI32 = LLT::fixed_vector(2, I32);
+  LLT VF32 = LLT::fixed_vector(2, F32);
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT,
+                        /*MDT=*/nullptr, /*LI=*/nullptr);
+  for (unsigned Opcode : {TargetOpcode::G_AND, TargetOpcode::G_OR}) {
+    for (unsigned Lane : {0u, 1u}) {
+      SCOPED_TRACE(::testing::Message() << Opcode << ", lane " << Lane);
+      auto X = B.buildBitcast(VF32, Copies[0]);
+      auto Neg = B.buildFNeg(VF32, X);
+      auto Abs = B.buildFAbs(VF32, Neg);
+      auto Bits = B.buildBitcast(VI32, Abs);
+      auto C0 = B.buildCopy(I32, B.buildConstant(I32, 255));
+      auto C1 = B.buildCopy(I32, B.buildConstant(I32, 65280));
+      auto Constants = B.buildBuildVector(VI32, {C0.getReg(0), C1.getReg(0)});
+      auto ConstantsCopy = B.buildCopy(VI32, Constants);
+      auto Logic = B.buildInstr(Opcode, {VI32}, {Bits, ConstantsCopy});
+      auto Unmerge = B.buildUnmerge(I32, Logic);
+      auto Use = B.buildCopy(I32, Unmerge.getReg(Lane));
+      auto OtherUse = B.buildCopy(I32, Unmerge.getReg(Lane));
+      auto OtherLane = B.buildCopy(I32, Unmerge.getReg(1 - Lane));
+      auto LogicSide = B.buildCopy(VI32, Logic);
+      auto SignSide = B.buildCopy(VF32, Abs);
+      Register Original = Use->getOperand(1).getReg();
+      BuildFnTy Apply;
+      auto Size = std::distance(EntryMBB->begin(), EntryMBB->end());
+      ASSERT_TRUE(Helper.matchSimplifyDemandedBitsOfUse(*Use, 1, APInt(32, 255),
+                                                        Apply));
+      EXPECT_EQ(Use->getOperand(1).getReg(), Original);
+      EXPECT_EQ(std::distance(EntryMBB->begin(), EntryMBB->end()), Size);
+      Apply(B);
+
+      bool BypassToX = (Opcode == TargetOpcode::G_AND) == (Lane == 0);
+      MachineInstr *NewDef = MRI->getVRegDef(Use->getOperand(1).getReg());
+      if (BypassToX) {
+        ASSERT_EQ(NewDef->getOpcode(), TargetOpcode::G_BITCAST);
+        EXPECT_EQ(MRI->getType(NewDef->getOperand(0).getReg()), I32);
+        EXPECT_EQ(MRI->getType(NewDef->getOperand(1).getReg()), F32);
+        NewDef = MRI->getVRegDef(NewDef->getOperand(1).getReg());
+        ASSERT_EQ(NewDef->getOpcode(), TargetOpcode::G_UNMERGE_VALUES);
+        EXPECT_EQ(NewDef->getOperand(2).getReg(), X.getReg(0));
+      } else {
+        EXPECT_EQ(Use->getOperand(1).getReg(),
+                  Lane == 0 ? C0.getReg(0) : C1.getReg(0));
+        EXPECT_EQ(std::distance(EntryMBB->begin(), EntryMBB->end()), Size);
+      }
+      EXPECT_EQ(OtherUse->getOperand(1).getReg(), Original);
+      EXPECT_EQ(OtherLane->getOperand(1).getReg(), Unmerge.getReg(1 - Lane));
+      EXPECT_EQ(Unmerge->getOperand(2).getReg(), Logic.getReg(0));
+      EXPECT_EQ(LogicSide->getOperand(1).getReg(), Logic.getReg(0));
+      EXPECT_EQ(SignSide->getOperand(1).getReg(), Abs.getReg(0));
+      EXPECT_EQ(Logic->getOperand(1).getReg(), Bits.getReg(0));
+      EXPECT_EQ(Abs->getOperand(1).getReg(), Neg.getReg(0));
+    }
+  }
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsMatcherFactsAndRootRevisit) {
+  StringRef MIRString = R"(
+    %x:_(s32) = G_TRUNC %0
+    %high:_(s32) = G_CONSTANT i32 65280
+    %inner:_(s32) = G_OR %x, %high
+    %amt:_(s32) = G_CONSTANT i32 4
+    %shift:_(s32) = G_SHL %inner, %amt
+    %low:_(s32) = G_CONSTANT i32 255
+    %root:_(s32) = G_AND %shift, %low
+    %out:_(s32) = COPY %root
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Inner = findOpcode(*MF, TargetOpcode::G_OR);
+  MachineInstr *Shift = findOpcode(*MF, TargetOpcode::G_SHL);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND);
+  ASSERT_NE(Inner, nullptr);
+  ASSERT_NE(Shift, nullptr);
+  ASSERT_NE(Root, nullptr);
+  Register X = Inner->getOperand(1).getReg();
+  Register InnerReg = Inner->getOperand(0).getReg();
+  Register ShiftReg = Shift->getOperand(0).getReg();
+
+  class Observer : public GISelChangeObserver {
+  public:
+    SmallVector<MachineInstr *> Changed;
+    void erasingInstr(MachineInstr &) override {}
+    void createdInstr(MachineInstr &) override {}
+    void changingInstr(MachineInstr &) override {}
+    void changedInstr(MachineInstr &MI) override { Changed.push_back(&MI); }
+  } Changes;
+  GISelValueTracking VT(*MF);
+  GISelObserverWrapper Observers({&VT, &Changes});
+  CombinerHelper Helper(Observers, B, /*IsPreLegalize=*/false, &VT);
+  BuildFnTy Apply;
+  // The unsuccessful RHS constant probe must still return its known zero bits
+  // so the LHS probe can remove the OR below the shift.
+  ASSERT_TRUE(Helper.matchSimplifyDemandedBits(*Root, Apply));
+  EXPECT_EQ(Shift->getOperand(1).getReg(), InnerReg);
+  EXPECT_TRUE(Changes.Changed.empty());
+  Apply(B);
+  EXPECT_EQ(Shift->getOperand(1).getReg(), X);
+  EXPECT_EQ(Root->getOperand(1).getReg(), ShiftReg);
+  // Only a grandchild operand changed, but the root must be revisited too.
+  EXPECT_TRUE(llvm::is_contained(Changes.Changed, Root));
 }

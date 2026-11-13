@@ -1097,10 +1097,25 @@ public:
   LLVM_ABI bool matchSimplifyDemandedBits(MachineInstr &MI,
                                           BuildFnTy &MatchInfo) const;
 
+  /// Match demanded-bits simplification of operand \p OpNo of \p MI, where
+  /// only \p DemandedBits of that operand are read.
+  LLVM_ABI bool matchSimplifyDemandedBitsOfUse(MachineInstr &MI, unsigned OpNo,
+                                               const APInt &DemandedBits,
+                                               BuildFnTy &MatchInfo) const;
+
 private:
-  Register simplifyMultipleUseDemandedBits(Register R,
-                                           const APInt &DemandedBits,
-                                           unsigned Depth) const;
+  /// Find an existing value agreeing on the demanded bits. With a selected
+  /// lane, the replacement may have a different element type of the same size;
+  /// the caller must extract and bitcast that lane as needed.
+  Register simplifyMultipleUseDemandedBits(
+      Register R, const APInt &DemandedBits, unsigned Depth,
+      std::optional<unsigned> Lane = std::nullopt) const;
+
+  /// Preserve known bits from unsuccessful probes for the root matcher.
+  bool matchSimplifyDemandedBitsOfUse(MachineInstr &MI, unsigned OpNo,
+                                      const APInt &DemandedBits,
+                                      KnownBits &Known,
+                                      BuildFnTy &MatchInfo) const;
 
   /// Walk a use operand; \p DoRewrite false probes without changing MIR.
   bool simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
