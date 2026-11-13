@@ -74,15 +74,13 @@ add a1, a2, (a3)
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
 # expected-note@-2:13 {{register must be a GPR}}
 # expected-note@-3:13 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
-lw a0, -2049(a3)
-# expected-error@-1:8 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
+lw a0, -2049(a3) # expected-error:8 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
 lw a0, -2049(f0)
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
 # expected-note@-2:8 {{operand must be a bare symbol name}}
 # expected-note@-3:8 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
 # expected-note@-4:8 {{immediate must be an integer in the range [-2048, 2047]}}
-ld a0, (a3)
-# expected-error@-1:1 {{instruction requires the following: 'Zilsd' (Load/Store pair instructions)}}
+ld a0, (a3) # expected-error:1 {{instruction requires the following: 'Zilsd' (Load/Store pair instructions)}}
 
 add a1, a2, foo
 # expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
@@ -184,10 +182,8 @@ nandi t0, zero, 0 # expected-error:1 {{unrecognized instruction mnemonic}}
 addi foo, sp, 10 # expected-error:6 {{register must be a GPR}}
 slti a10, a2, 0x20 # expected-error:6 {{register must be a GPR}}
 slt x32, s0, s0 # expected-error:5 {{register must be a GPR}}
-lw a0, 0(f0)
-# expected-error@-1:10 {{register must be a GPR}}
-lw a0, (f0)
-# expected-error@-1:9 {{register must be a GPR}}
+lw a0, 0(f0) # expected-error:10 {{register must be a GPR}}
+lw a0, (f0) # expected-error:9 {{register must be a GPR}}
 
 # RV64I mnemonics
 addiw a0, sp, 100 # expected-error:1 {{instruction requires the following: RV64I Base Instruction Set}}

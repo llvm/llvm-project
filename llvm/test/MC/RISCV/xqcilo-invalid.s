@@ -2,129 +2,121 @@
 # RUN: llvm-mc --verify=plus -triple riscv32 -mattr=+xqcilo < %s
 # RUN: llvm-mc --verify=minus -triple riscv32 -mattr=-xqcilo < %s
 
-# plus-error@+2:9 {{register must be a GPR}}
-# minus-error@+1:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lb 11, 12(x10)
+# plus-error@-1:9 {{register must be a GPR}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# plus-error@+2:12 {{too few operands for instruction}}
-# minus-error@+1:1 {{invalid instruction}}
 qc.e.lb x11
+# plus-error@-1:12 {{too few operands for instruction}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# plus-error@+2:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
-# minus-error@+1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lb x11, 33445562212(x10)
+# plus-error@-1:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
+# minus-error@-2 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# minus-error@+1:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
-qc.e.lb x11, 12(x10)
+qc.e.lb x11, 12(x10) # minus-error:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
 
-# plus-error@+2:10 {{register must be a GPR}}
-# minus-error@+1:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lbu 11, 12(x10)
+# plus-error@-1:10 {{register must be a GPR}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# plus-error@+2:13 {{too few operands for instruction}}
-# minus-error@+1:1 {{invalid instruction}}
 qc.e.lbu x11
+# plus-error@-1:13 {{too few operands for instruction}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# plus-error@+2:15 {{immediate must be an integer in the range [-33554432, 33554431]}}
-# minus-error@+1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lbu x11, 33445562212(x10)
+# plus-error@-1:15 {{immediate must be an integer in the range [-33554432, 33554431]}}
+# minus-error@-2 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# minus-error@+1:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
-qc.e.lbu x11, 12(x10)
+qc.e.lbu x11, 12(x10) # minus-error:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
 
-# plus-error@+2:9 {{register must be a GPR}}
-# minus-error@+1:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lh 11, 12(x10)
+# plus-error@-1:9 {{register must be a GPR}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# plus-error@+2:12 {{too few operands for instruction}}
-# minus-error@+1:1 {{invalid instruction}}
 qc.e.lh x11
+# plus-error@-1:12 {{too few operands for instruction}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# plus-error@+2:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
-# minus-error@+1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lh x11, 33445562212(x10)
+# plus-error@-1:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
+# minus-error@-2 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# minus-error@+1:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
-qc.e.lh x11, 12(x10)
+qc.e.lh x11, 12(x10) # minus-error:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
 
-# plus-error@+2:10 {{register must be a GPR}}
-# minus-error@+1:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lhu 11, 12(x10)
+# plus-error@-1:10 {{register must be a GPR}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# plus-error@+2:13 {{too few operands for instruction}}
-# minus-error@+1:1 {{invalid instruction}}
 qc.e.lhu x11
+# plus-error@-1:13 {{too few operands for instruction}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# plus-error@+2:15 {{immediate must be an integer in the range [-33554432, 33554431]}}
-# minus-error@+1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lhu x11, 33445562212(x10)
+# plus-error@-1:15 {{immediate must be an integer in the range [-33554432, 33554431]}}
+# minus-error@-2 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# minus-error@+1:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
-qc.e.lhu x11, 12(x10)
+qc.e.lhu x11, 12(x10) # minus-error:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
 
-# plus-error@+2:9 {{register must be a GPR}}
-# minus-error@+1:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lw 11, 12(x10)
+# plus-error@-1:9 {{register must be a GPR}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# plus-error@+2:12 {{too few operands for instruction}}
-# minus-error@+1:1 {{invalid instruction}}
 qc.e.lw x11
+# plus-error@-1:12 {{too few operands for instruction}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# plus-error@+2:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
-# minus-error@+1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.lw x11, 33445562212(x10)
+# plus-error@-1:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
+# minus-error@-2 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# minus-error@+1:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
-qc.e.lw x11, 12(x10)
+qc.e.lw x11, 12(x10) # minus-error:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
 
-# plus-error@+2:9 {{register must be a GPR}}
-# minus-error@+1:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.sb 11, 12(x10)
+# plus-error@-1:9 {{register must be a GPR}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# plus-error@+2:12 {{too few operands for instruction}}
-# minus-error@+1:1 {{invalid instruction}}
 qc.e.sb x11
+# plus-error@-1:12 {{too few operands for instruction}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# plus-error@+2:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
-# minus-error@+1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.sb x11, 33445562212(x10)
+# plus-error@-1:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
+# minus-error@-2 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# minus-error@+1:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
-qc.e.sb x11, 12(x10)
+qc.e.sb x11, 12(x10) # minus-error:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
 
-# plus-error@+2:9 {{register must be a GPR}}
-# minus-error@+1:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.sh 11, 12(x10)
+# plus-error@-1:9 {{register must be a GPR}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# plus-error@+2:12 {{too few operands for instruction}}
-# minus-error@+1:1 {{invalid instruction}}
 qc.e.sh x11
+# plus-error@-1:12 {{too few operands for instruction}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# plus-error@+2:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
-# minus-error@+1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.sh x11, 33445562212(x10)
+# plus-error@-1:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
+# minus-error@-2 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# minus-error@+1:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
-qc.e.sh x11, 12(x10)
+qc.e.sh x11, 12(x10) # minus-error:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
 
-# plus-error@+2:9 {{register must be a GPR}}
-# minus-error@+1:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.sw 11, 12(x10)
+# plus-error@-1:9 {{register must be a GPR}}
+# minus-error@-2:1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# plus-error@+2:12 {{too few operands for instruction}}
-# minus-error@+1:1 {{invalid instruction}}
 qc.e.sw x11
+# plus-error@-1:12 {{too few operands for instruction}}
+# minus-error@-2:1 {{invalid instruction}}
 
-# plus-error@+2:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
-# minus-error@+1 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 qc.e.sw x11, 33445562212(x10)
+# plus-error@-1:14 {{immediate must be an integer in the range [-33554432, 33554431]}}
+# minus-error@-2 {{instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension), 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
 
-# minus-error@+1:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}
-qc.e.sw x11, 12(x10)
+qc.e.sw x11, 12(x10) # minus-error:1 {{instruction requires the following: 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)}}

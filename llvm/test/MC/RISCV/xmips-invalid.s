@@ -27,8 +27,7 @@ mips.pref	8
 # feature-error@-2 {{invalid instruction}}
 # rv32-error@-3 {{too few operands for instruction}}
 
-mips.pref	8, 511(a0)
-# feature-error@-1 {{instruction requires the following: 'Xmipscbop' (MIPS hardware prefetch)}}
+mips.pref	8, 511(a0) # feature-error {{instruction requires the following: 'Xmipscbop' (MIPS hardware prefetch)}}
 
 mips.ccmov x0, x1, 0x10
 # check-error@-1 {{register must be a GPR}}
@@ -40,8 +39,7 @@ mips.ccmov x10
 # feature-error@-2 {{invalid instruction}}
 # rv32-error@-3 {{too few operands for instruction}}
 
-mips.ccmov	s0, s1, s2, s3
-# feature-error@-1 {{instruction requires the following: 'Xmipscmov' ('mips.ccmov' instruction)}}
+mips.ccmov	s0, s1, s2, s3 # feature-error {{instruction requires the following: 'Xmipscmov' ('mips.ccmov' instruction)}}
 
 mips.lwp x10, x11
 # check-error@-1 {{too few operands for instruction}}
@@ -53,11 +51,9 @@ mips.ldp x9, 0x20
 # feature-error@-2 {{instruction requires the following: 'Xmipslsp' (load and store pair instructions)}}
 # rv32-error@-3 {{instruction requires the following: RV64I Base Instruction Set}}
 
-mips.lwp x11, x12, 0(x13)
-# feature-error@-1 {{instruction requires the following: 'Xmipslsp' (load and store pair instructions)}}
+mips.lwp x11, x12, 0(x13) # feature-error {{instruction requires the following: 'Xmipslsp' (load and store pair instructions)}}
 
-mips.swp x18, x19, 8(x2)
-# feature-error@-1 {{instruction requires the following: 'Xmipslsp' (load and store pair instructions)}}
+mips.swp x18, x19, 8(x2) # feature-error {{instruction requires the following: 'Xmipslsp' (load and store pair instructions)}}
 
 mips.sdp 0x10, x3, 12(x4)
 # check-error@-1 {{register must be a GPR}}

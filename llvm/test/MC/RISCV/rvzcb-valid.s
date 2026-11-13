@@ -14,58 +14,47 @@
 
 # CHECK-ASM-AND-OBJ: c.zext.b s0
 # CHECK-ASM: encoding: [0x61,0x9c]
-# expected-error@+1 {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.zext.b s0
+c.zext.b s0 # expected-error {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.sext.b s0
 # CHECK-ASM: encoding: [0x65,0x9c]
-# expected-error@+1 {{instruction requires the following: 'Zbb' (Basic Bit-Manipulation), 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.sext.b s0
+c.sext.b s0 # expected-error {{instruction requires the following: 'Zbb' (Basic Bit-Manipulation), 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.zext.h s0
 # CHECK-ASM: encoding: [0x69,0x9c]
-# expected-error@+1 {{instruction requires the following: 'Zbb' (Basic Bit-Manipulation), 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.zext.h s0
+c.zext.h s0 # expected-error {{instruction requires the following: 'Zbb' (Basic Bit-Manipulation), 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.sext.h s0
 # CHECK-ASM: encoding: [0x6d,0x9c]
-# expected-error@+1 {{instruction requires the following: 'Zbb' (Basic Bit-Manipulation), 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.sext.h s0
+c.sext.h s0 # expected-error {{instruction requires the following: 'Zbb' (Basic Bit-Manipulation), 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.not s0
 # CHECK-ASM: encoding: [0x75,0x9c]
-# expected-error@+1 {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.not s0
+c.not s0 # expected-error {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.mul s0, s1
 # CHECK-ASM: encoding: [0x45,0x9c]
-# expected-error@+1 {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions), 'Zmmul' (Integer Multiplication)}}
-c.mul s0, s1
+c.mul s0, s1 # expected-error {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions), 'Zmmul' (Integer Multiplication)}}
 
 # CHECK-ASM-AND-OBJ: c.lbu a5, 2(a4)
 # CHECK-ASM: encoding: [0x3c,0x83]
-# expected-error@+1 {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.lbu a5, 2(a4)
+c.lbu a5, 2(a4) # expected-error {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.lhu a5, 2(a4)
 # CHECK-ASM: encoding: [0x3c,0x87]
-# expected-error@+1 {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.lhu a5, 2(a4)
+c.lhu a5, 2(a4) # expected-error {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.lh a5, 2(a4)
 # CHECK-ASM: encoding: [0x7c,0x87]
-# expected-error@+1 {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.lh a5, 2(a4)
+c.lh a5, 2(a4) # expected-error {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.sb a5, 2(a4)
 # CHECK-ASM: encoding: [0x3c,0x8b]
-# expected-error@+1 {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.sb a5, 2(a4)
+c.sb a5, 2(a4) # expected-error {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.sh a5, 2(a4)
 # CHECK-ASM: encoding: [0x3c,0x8f]
-# expected-error@+1 {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
-c.sh a5, 2(a4)
+c.sh a5, 2(a4) # expected-error {{instruction requires the following: 'Zcb' (Compressed basic bit manipulation instructions)}}
 
 # CHECK-ASM-AND-OBJ: c.mul s0, s1
 # CHECK-ASM: encoding: [0x45,0x9c]

@@ -9,6 +9,5 @@
 .Lbuf: .skip (1 << 11)
 .Lbuf_end:
 .equ CONST, .Lbuf_end - .Lbuf
-li a0, CONST
-# expected-error@-1 {{operand must be a constant 12-bit integer}}
+li a0, CONST # expected-error {{operand must be a constant 12-bit integer}}
 li a0, .Lbuf_end - .Lbuf # expected-error {{operand must be a constant 12-bit integer}}

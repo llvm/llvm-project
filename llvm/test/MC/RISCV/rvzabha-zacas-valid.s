@@ -13,48 +13,38 @@
 
 # CHECK-ASM-AND-OBJ: amocas.b a1, a3, (a5)
 # CHECK-ASM: encoding: [0xaf,0x85,0xd7,0x28]
-amocas.b a1, a3, (a5)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.b a1, a3, (a5) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.b a1, a3, (a5)
 # CHECK-ASM: encoding: [0xaf,0x85,0xd7,0x28]
-amocas.b a1, a3, 0(a5)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.b a1, a3, 0(a5) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.b zero, zero, (a5)
 # CHECK-ASM: encoding: [0x2f,0x80,0x07,0x28]
-amocas.b zero, zero, (a5)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.b zero, zero, (a5) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.b.aq zero, zero, (a5)
 # CHECK-ASM: encoding: [0x2f,0x80,0x07,0x2c]
-amocas.b.aq zero, zero, (a5)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.b.aq zero, zero, (a5) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.b.rl zero, zero, (a5)
 # CHECK-ASM: encoding: [0x2f,0x80,0x07,0x2a]
-amocas.b.rl zero, zero, (a5)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.b.rl zero, zero, (a5) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.b.aqrl zero, zero, (a5)
 # CHECK-ASM: encoding: [0x2f,0x80,0x07,0x2e]
 amocas.b.aqrl zero, zero, (a5) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 
 # CHECK-ASM-AND-OBJ: amocas.h a0, a2, (a1)
 # CHECK-ASM: encoding: [0x2f,0x95,0xc5,0x28]
-amocas.h a0, a2, (a1)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.h a0, a2, (a1) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.h a0, a2, (a1)
 # CHECK-ASM: encoding: [0x2f,0x95,0xc5,0x28]
-amocas.h a0, a2, 0(a1)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.h a0, a2, 0(a1) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.h zero, zero, (a1)
 # CHECK-ASM: encoding: [0x2f,0x90,0x05,0x28]
-amocas.h zero, zero, (a1)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.h zero, zero, (a1) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.h.aq zero, zero, (a1)
 # CHECK-ASM: encoding: [0x2f,0x90,0x05,0x2c]
-amocas.h.aq zero, zero, (a1)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.h.aq zero, zero, (a1) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.h.rl zero, zero, (a1)
 # CHECK-ASM: encoding: [0x2f,0x90,0x05,0x2a]
-amocas.h.rl zero, zero, (a1)
-# expected-error@-1 {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
+amocas.h.rl zero, zero, (a1) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}
 # CHECK-ASM-AND-OBJ: amocas.h.aqrl zero, zero, (a1)
 # CHECK-ASM: encoding: [0x2f,0x90,0x05,0x2e]
 amocas.h.aqrl zero, zero, (a1) # expected-error {{instruction requires the following: 'Zacas' (Atomic Compare-And-Swap Instructions)}}

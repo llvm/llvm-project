@@ -19,8 +19,7 @@
 # qc.cm.jt
 # CHECK-ASM-AND-OBJ: qc.cm.jt 1
 # CHECK-ASM: encoding: [0x06,0xa0]
-# expected-error@+1 {{instruction requires the following: 'Xqccmt' (Qualcomm 16-bit Table Jump)}}
-qc.cm.jt 1
+qc.cm.jt 1 # expected-error {{instruction requires the following: 'Xqccmt' (Qualcomm 16-bit Table Jump)}}
 
 # CHECK-ASM-AND-OBJ: qc.cm.jt 0
 # CHECK-ASM: encoding: [0x02,0xa0]
@@ -33,8 +32,7 @@ qc.cm.jt 31 # expected-error {{instruction requires the following: 'Xqccmt' (Qua
 # qc.cm.jalt
 # CHECK-ASM-AND-OBJ: qc.cm.jalt 32
 # CHECK-ASM: encoding: [0x82,0xa0]
-# expected-error@+1 {{instruction requires the following: 'Xqccmt' (Qualcomm 16-bit Table Jump)}}
-qc.cm.jalt 32
+qc.cm.jalt 32 # expected-error {{instruction requires the following: 'Xqccmt' (Qualcomm 16-bit Table Jump)}}
 
 # CHECK-ASM-AND-OBJ: qc.cm.jalt 255
 # CHECK-ASM: encoding: [0xfe,0xa3]

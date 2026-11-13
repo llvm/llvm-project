@@ -18,57 +18,57 @@
 
 # CHECK-ASM-AND-OBJ: sspopchk ra
 # CHECK-ASM: encoding: [0x73,0xc0,0xc0,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 sspopchk x1
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspopchk ra
 # CHECK-ASM: encoding: [0x73,0xc0,0xc0,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 sspopchk ra
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspopchk t0
 # CHECK-ASM: encoding: [0x73,0xc0,0xc2,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 sspopchk x5
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspopchk t0
 # CHECK-ASM: encoding: [0x73,0xc0,0xc2,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 sspopchk t0
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspush ra
 # CHECK-ASM: encoding: [0x73,0x40,0x10,0xce]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 sspush x1
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspush ra
 # CHECK-ASM: encoding: [0x73,0x40,0x10,0xce]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 sspush ra
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspush t0
 # CHECK-ASM: encoding: [0x73,0x40,0x50,0xce]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 sspush x5
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspush t0
 # CHECK-ASM: encoding: [0x73,0x40,0x50,0xce]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 sspush t0
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: ssrdp ra
 # CHECK-ASM: encoding: [0xf3,0x40,0xc0,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 ssrdp ra
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # sspopchk, sspush, and ssrdp share their encoding with the Zimop mop.r.28
 # and mop.rr.7 instructions, differing only in which operands are fixed to
@@ -80,63 +80,63 @@ ssrdp ra
 
 # CHECK-ASM-AND-OBJ: sspopchk ra
 # CHECK-ASM: encoding: [0x73,0xc0,0xc0,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 mop.r.28 x0, x1
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspopchk t0
 # CHECK-ASM: encoding: [0x73,0xc0,0xc2,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 mop.r.28 x0, x5
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: ssrdp ra
 # CHECK-ASM: encoding: [0xf3,0x40,0xc0,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 mop.r.28 x1, x0
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: ssrdp t0
 # CHECK-ASM: encoding: [0xf3,0x42,0xc0,0xcd]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 mop.r.28 x5, x0
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspush ra
 # CHECK-ASM: encoding: [0x73,0x40,0x10,0xce]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 mop.rr.7 x0, x0, x1
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: sspush t0
 # CHECK-ASM: encoding: [0x73,0x40,0x50,0xce]
-# no-ext-error@+2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 mop.rr.7 x0, x0, x5
+# no-ext-error@-1 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zimop' (May-Be-Operations)}}
 
 # CHECK-ASM-AND-OBJ: ssamoswap.w a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x48]
-# no-ext-error@+2 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 ssamoswap.w a4, ra, (s0)
+# no-ext-error@-1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 
 # CHECK-ASM-AND-OBJ: ssamoswap.w.aq a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x4c]
-# no-ext-error@+2 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 ssamoswap.w.aq a4, ra, (s0)
+# no-ext-error@-1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 
 # CHECK-ASM-AND-OBJ: ssamoswap.w.rl a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x4a]
-# no-ext-error@+2 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 ssamoswap.w.rl a4, ra, (s0)
+# no-ext-error@-1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 
 # CHECK-ASM-AND-OBJ: ssamoswap.w.aqrl a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x4e]
-# no-ext-error@+2 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 ssamoswap.w.aqrl a4, ra, (s0)
+# no-ext-error@-1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
+# no-ext-rv64-error@-2 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 
 .ifdef RV64
 # CHECK-ASM-AND-OBJ-RV64: ssamoswap.d a4, ra, (s0)
@@ -145,16 +145,13 @@ ssamoswap.d a4, ra, (s0) # no-ext-rv64-error {{instruction requires the followin
 
 # CHECK-ASM-AND-OBJ-RV64: ssamoswap.d.aq a4, ra, (s0)
 # CHECK-ASM-RV64: encoding: [0x2f,0x37,0x14,0x4c]
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
-ssamoswap.d.aq a4, ra, (s0)
+ssamoswap.d.aq a4, ra, (s0) # no-ext-rv64-error {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 
 # CHECK-ASM-AND-OBJ-RV64: ssamoswap.d.rl a4, ra, (s0)
 # CHECK-ASM-RV64: encoding: [0x2f,0x37,0x14,0x4a]
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
-ssamoswap.d.rl a4, ra, (s0)
+ssamoswap.d.rl a4, ra, (s0) # no-ext-rv64-error {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 
 # CHECK-ASM-AND-OBJ-RV64: ssamoswap.d.aqrl a4, ra, (s0)
 # CHECK-ASM-RV64: encoding: [0x2f,0x37,0x14,0x4e]
-# no-ext-rv64-error@+1 {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
-ssamoswap.d.aqrl a4, ra, (s0)
+ssamoswap.d.aqrl a4, ra, (s0) # no-ext-rv64-error {{instruction requires the following: 'Zicfiss' (Shadow stack)}}
 .endif
