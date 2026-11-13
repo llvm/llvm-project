@@ -2550,9 +2550,9 @@ bool SITargetLowering::isUniformLoad(const LoadSDNode *Load) const {
     return false;
 
   return MMO->getSize().hasValue() &&
-         Load->getAlign() >=
-             Align(std::min(MMO->getSize().getValue().getKnownMinValue(),
-                            uint64_t(4))) &&
+         Load->getAlign().value() >=
+             std::min(MMO->getSize().getValue().getKnownMinValue(),
+                      uint64_t(4)) &&
          (MMO->isInvariant() ||
           (Load->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
            Load->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
