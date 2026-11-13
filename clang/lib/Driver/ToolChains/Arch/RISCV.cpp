@@ -178,9 +178,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+unaligned-vector-mem");
   }
 
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mfix_sifive_mal_9174,
-                          options::OPT_mno_fix_sifive_mal_9174)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mfix_sifive_mal_9174,
+                                     options::OPT_mno_fix_sifive_mal_9174)) {
     if (A->getOption().matches(options::OPT_mfix_sifive_mal_9174))
       Features.push_back("+fix-sifive-mal-9174");
     else
