@@ -33,6 +33,10 @@ public:
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
+  std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
+
+  bool IsNilReference(ValueObject &valobj) override;
+
   /// Rust has no null literal, so null pointers print like in C.
   llvm::StringRef GetNilReferenceSummaryString() override { return "NULL"; }
 

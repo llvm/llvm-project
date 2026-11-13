@@ -12,8 +12,10 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/Demangle/Demangle.h"
 
@@ -50,6 +52,32 @@ Language *RustLanguage::CreateInstance(LanguageType language) {
 
 bool RustLanguage::IsSourceFile(StringRef file_path) const {
   return file_path.ends_with_insensitive(".rs");
+}
+
+std::unique_ptr<Language::TypeScavenger> RustLanguage::GetTypeScavenger() {
+  class RustTypeScavenger : public Language::ImageListTypeScavenger {
+  public:
+    CompilerType AdjustForInclusion(CompilerType &candidate) override {
+      LanguageType lang_type(candidate.GetMinimumLanguage());
+      if (!Language::LanguageIsC(lang_type) &&
+          !Language::LanguageIsRust(lang_type))
+        return CompilerType();
+      if (candidate.IsTypedefType())
+        return candidate.GetTypedefedType();
+      return candidate;
+    }
+  };
+
+  return std::unique_ptr<TypeScavenger>(new RustTypeScavenger());
+}
+
+bool RustLanguage::IsNilReference(ValueObject &valobj) {
+  if (!Language::LanguageIsRust(valobj.GetObjectRuntimeLanguage()) ||
+      !valobj.IsPointerType())
+    return false;
+  bool canReadValue = true;
+  bool isZero = valobj.GetValueAsUnsigned(0, &canReadValue) == 0;
+  return canReadValue && isZero;
 }
 
 Language::DemangledName
@@ -96,7 +124,10 @@ static void LoadRustFormatters(lldb::TypeCategoryImplSP rust_category_sp) {
                 summary_flags, true);
 
   SyntheticChildren::Flags synth_flags;
-  synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(false);
+  synth_flags.SetCascades(true)
+      .SetSkipPointers(false)
+      .SetSkipReferences(false)
+      .SetFrontEndWantsDereference();
 
   AddCXXSynthetic(rust_category_sp,
                   lldb_private::formatters::RustVectorSyntheticFrontEndCreator,

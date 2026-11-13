@@ -107,11 +107,13 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::Update() {
   if (!size_or_err) {
     LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
                     "{0}");
+    m_start = m_len = nullptr;
     return lldb::ChildCacheState::eRefetch;
   }
 
   m_element_size = *size_or_err;
   if (m_element_size == 0) {
+    m_start = m_len = nullptr;
     return lldb::ChildCacheState::eRefetch;
   }
 

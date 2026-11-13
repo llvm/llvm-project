@@ -1413,6 +1413,12 @@ CompilerType TypeSystemClang::CreateRecordType(
       decl->setAnonymousStructOrUnion(true);
   }
 
+  if (Language::LanguageIsRust(language)) {
+    if (!metadata)
+      metadata = ClangASTMetadata();
+    metadata->SetLanguageType(Language::GetPrimaryLanguage(language));
+  }
+
   if (metadata)
     SetMetadata(decl, *metadata);
 

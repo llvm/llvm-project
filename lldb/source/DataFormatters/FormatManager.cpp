@@ -587,6 +587,9 @@ FormatManager::GetCandidateLanguages(lldb::LanguageType lang_type) {
   case lldb::eLanguageTypeC_plus_plus_11:
   case lldb::eLanguageTypeC_plus_plus_14:
     return {lldb::eLanguageTypeC_plus_plus, lldb::eLanguageTypeObjC};
+  case lldb::eLanguageTypeRust:
+    return {lldb::eLanguageTypeRust, lldb::eLanguageTypeC_plus_plus,
+            lldb::eLanguageTypeObjC};
   default:
     return {lang_type};
   }
