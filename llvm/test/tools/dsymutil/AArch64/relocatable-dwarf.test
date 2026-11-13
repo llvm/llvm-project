@@ -1,0 +1,135 @@
+# REQUIRES: aarch64-registered-target
+
+## With -macho-relocatable-dwarf, references from one DWARF section into another
+## are section relocations whose stored value is an offset into the target
+## section, and every __DWARF section starts at address 0. Such an offset can
+## equal the object address of a symbol in the debug map; check that dsymutil
+## does not mistake these relocations for references to that symbol.
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj -macho-relocatable-dwarf \
+# RUN:   %t/t.s -o %t/t.o
+# RUN: llvm-objdump -r --section=__debug_info %t/t.o | FileCheck %s --check-prefix=RELOC
+# RUN: llvm-dwarfdump --debug-info %t/t.o | FileCheck %s --check-prefix=OBJ
+
+# RUN: dsymutil --linker classic -f -y %t/t.map -oso-prepend-path %t \
+# RUN:   -o %t/classic.dwarf 2>&1 | count 0
+# RUN: llvm-dwarfdump --debug-info %t/classic.dwarf | FileCheck %s
+
+# RUN: dsymutil --linker parallel -f -y %t/t.map -oso-prepend-path %t \
+# RUN:   -o %t/parallel.dwarf 2>&1 | count 0
+# RUN: llvm-dwarfdump --debug-info %t/parallel.dwarf | FileCheck %s
+
+## The DW_FORM_ref_addr to "int" holds 0x20, the object address of _g.
+# RELOC: ARM64_RELOC_UNSIGNED __debug_info
+# OBJ:   0x00000020: DW_TAG_base_type
+
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_name ("v")
+# CHECK-NEXT:   DW_AT_type (0x{{[0-9a-f]+}} "int")
+
+#--- t.map
+---
+triple: 'arm64-apple-darwin'
+objects:
+  - filename: t.o
+    symbols:
+      - { sym: _f, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+      - { sym: _g, objAddr: 0x20, binAddr: 0x20020, size: 0x4 }
+...
+
+#--- t.s
+	.section	__TEXT,__text,regular,pure_instructions
+	.globl	_f
+	.p2align	2
+_f:
+Lfunc_begin0:
+	nop
+	nop
+	nop
+	ret
+Lfunc_end0:
+	nop
+	nop
+	nop
+	nop
+	.globl	_g
+_g:
+	ret
+
+	.section	__DWARF,__debug_abbrev,regular,debug
+	.byte	1                               ; Abbreviation Code
+	.byte	17                              ; DW_TAG_compile_unit
+	.byte	1                               ; DW_CHILDREN_yes
+	.byte	3                               ; DW_AT_name
+	.byte	8                               ; DW_FORM_string
+	.byte	17                              ; DW_AT_low_pc
+	.byte	1                               ; DW_FORM_addr
+	.byte	18                              ; DW_AT_high_pc
+	.byte	6                               ; DW_FORM_data4
+	.byte	0                               ; EOM(1)
+	.byte	0                               ; EOM(2)
+	.byte	2                               ; Abbreviation Code
+	.byte	36                              ; DW_TAG_base_type
+	.byte	0                               ; DW_CHILDREN_no
+	.byte	3                               ; DW_AT_name
+	.byte	8                               ; DW_FORM_string
+	.byte	62                              ; DW_AT_encoding
+	.byte	11                              ; DW_FORM_data1
+	.byte	11                              ; DW_AT_byte_size
+	.byte	11                              ; DW_FORM_data1
+	.byte	0                               ; EOM(1)
+	.byte	0                               ; EOM(2)
+	.byte	3                               ; Abbreviation Code
+	.byte	46                              ; DW_TAG_subprogram
+	.byte	1                               ; DW_CHILDREN_yes
+	.byte	17                              ; DW_AT_low_pc
+	.byte	1                               ; DW_FORM_addr
+	.byte	18                              ; DW_AT_high_pc
+	.byte	6                               ; DW_FORM_data4
+	.byte	3                               ; DW_AT_name
+	.byte	8                               ; DW_FORM_string
+	.byte	0                               ; EOM(1)
+	.byte	0                               ; EOM(2)
+	.byte	4                               ; Abbreviation Code
+	.byte	52                              ; DW_TAG_variable
+	.byte	0                               ; DW_CHILDREN_no
+	.byte	3                               ; DW_AT_name
+	.byte	8                               ; DW_FORM_string
+	.byte	73                              ; DW_AT_type
+	.byte	16                              ; DW_FORM_ref_addr
+	.byte	0                               ; EOM(1)
+	.byte	0                               ; EOM(2)
+	.byte	0                               ; EOM(3)
+
+	.section	__DWARF,__debug_info,regular,debug
+Lset0 = Ldebug_info_end0-Ldebug_info_start0 ; Length of Unit
+	.long	Lset0
+Ldebug_info_start0:
+	.short	5                               ; DWARF version number
+	.byte	1                               ; DWARF Unit Type
+	.byte	8                               ; Address Size (in bytes)
+	.long	0                               ; Offset Into Abbrev. Section
+	.byte	1                               ; Abbrev [1] DW_TAG_compile_unit
+	.asciz	"test.c"                        ; DW_AT_name
+	.quad	Lfunc_begin0                    ; DW_AT_low_pc
+Lset1 = Lfunc_end0-Lfunc_begin0             ; DW_AT_high_pc
+	.long	Lset1
+Ltype_int:
+	.byte	2                               ; Abbrev [2] DW_TAG_base_type
+	.asciz	"int"                           ; DW_AT_name
+	.byte	5                               ; DW_AT_encoding
+	.byte	4                               ; DW_AT_byte_size
+	.byte	3                               ; Abbrev [3] DW_TAG_subprogram
+	.quad	Lfunc_begin0                    ; DW_AT_low_pc
+Lset2 = Lfunc_end0-Lfunc_begin0             ; DW_AT_high_pc
+	.long	Lset2
+	.asciz	"f"                             ; DW_AT_name
+	.byte	4                               ; Abbrev [4] DW_TAG_variable
+	.asciz	"v"                             ; DW_AT_name
+	.long	Ltype_int                       ; DW_AT_type
+	.byte	0                               ; End Of Children Mark
+	.byte	0                               ; End Of Children Mark
+Ldebug_info_end0:
+
+.subsections_via_symbols
