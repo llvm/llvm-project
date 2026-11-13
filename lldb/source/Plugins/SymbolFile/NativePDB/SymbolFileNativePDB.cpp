@@ -636,7 +636,7 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
       cci.m_compile_opts ? TranslateLanguage(cci.m_compile_opts->getLanguage())
                          : lldb::eLanguageTypeUnknown;
 
-  LazyBool optimized = eLazyBoolNo;
+  LazyBool optimized = eLazyBoolCalculate;
   if (cci.m_compile_opts && cci.m_compile_opts->hasOptimizations())
     optimized = eLazyBoolYes;
 
@@ -1273,6 +1273,43 @@ lldb::CompUnitSP SymbolFileNativePDB::ParseCompileUnitAtIndex(uint32_t index) {
   CompilandIndexItem &item = m_index->compilands().GetOrCreateCompiland(index);
 
   return GetOrCreateCompileUnit(item);
+}
+
+bool SymbolFileNativePDB::ParseIsOptimized(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+
+  PdbSymUid uid(comp_unit.GetID());
+  if (uid.kind() != PdbSymUidKind::Compiland)
+    return false;
+
+  CompilandIndexItem *item =
+      m_index->compilands().GetCompiland(uid.asCompiland().modi);
+  if (!item || !item->m_compile_opts)
+    return false;
+
+  // CodeView has no optimization flag for a compile unit, but the frame
+  // procedure record of each function says whether it was optimized for speed.
+  // Functions optimized for size don't get the flag.
+  //
+  // MSVC sets the flag even at /Od, so only trust LLVM, whose backend major
+  // version is always >= 1000.
+  if (item->m_compile_opts->VersionBackendMajor < 1000)
+    return false;
+
+  for (const CVSymbol &sym : item->m_debug_stream.getSymbolArray()) {
+    if (sym.kind() != S_FRAMEPROC)
+      continue;
+    FrameProcSym frame_proc(SymbolRecordKind::FrameProcSym);
+    if (llvm::Error error =
+            SymbolDeserializer::deserializeAs<FrameProcSym>(sym, frame_proc)) {
+      llvm::consumeError(std::move(error));
+      continue;
+    }
+    if ((frame_proc.Flags & FrameProcedureOptions::OptimizedForSpeed) !=
+        FrameProcedureOptions::None)
+      return true;
+  }
+  return false;
 }
 
 lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
