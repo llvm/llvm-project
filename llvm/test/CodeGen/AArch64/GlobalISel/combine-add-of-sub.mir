@@ -343,3 +343,4 @@ body:             |
     %sub:_(i32) = G_SUB %x2, %add
     $w0 = COPY %sub(i32)
     RET_ReallyLR implicit $w0
+...

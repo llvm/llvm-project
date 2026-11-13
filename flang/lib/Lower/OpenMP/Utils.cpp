@@ -32,6 +32,7 @@
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/omp-declare-variant.h>
+#include <flang/Semantics/openmp-modifiers.h>
 #include <flang/Semantics/openmp-utils.h>
 #include <flang/Semantics/scope.h>
 #include <flang/Semantics/symbol.h>
@@ -77,15 +78,21 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
-static bool
-hasUserDefinedDefaultMapper(Fortran::lower::AbstractConverter &converter,
+static const semantics::Symbol *
+getUserDefinedDefaultMapper(Fortran::lower::AbstractConverter &converter,
                             const semantics::DerivedTypeSpec &typeSpec) {
   std::string mapperName =
       typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
   if (auto *sym = converter.getCurrentScope().FindSymbol(mapperName))
-    return sym->GetUltimate().detailsIf<semantics::MapperDetails>();
+    if (sym->GetUltimate().detailsIf<semantics::MapperDetails>())
+      return &sym->GetUltimate();
+  return nullptr;
+}
 
-  return false;
+static bool
+hasUserDefinedDefaultMapper(Fortran::lower::AbstractConverter &converter,
+                            const semantics::DerivedTypeSpec &typeSpec) {
+  return getUserDefinedDefaultMapper(converter, typeSpec) != nullptr;
 }
 
 bool requiresImplicitDefaultDeclareMapper(
@@ -1200,11 +1207,15 @@ getDefaultMapperID(Fortran::lower::AbstractConverter &converter,
     mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
   }
 
-  // Make sure we don't return a mapper to self.
-  if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
-          firOpBuilder.getRegion().getParentOp()))
-    if (mapperIdName == declMapOp.getSymName())
-      return {};
+  // Make sure we don't return a mapper to self, also from an iterator body in
+  // the mapper.
+  mlir::Operation *parentOp = firOpBuilder.getRegion().getParentOp();
+  auto declMapOp =
+      mlir::dyn_cast_if_present<mlir::omp::DeclareMapperOp>(parentOp);
+  if (!declMapOp && parentOp)
+    declMapOp = parentOp->getParentOfType<mlir::omp::DeclareMapperOp>();
+  if (declMapOp && mapperIdName == declMapOp.getSymName())
+    return {};
   return mapperIdName;
 }
 
@@ -1231,6 +1242,112 @@ findMapperIfTypeMatch(Fortran::lower::AbstractConverter &converter,
   return "__implicit_mapper";
 }
 
+static bool isHostOffloadCompilation(mlir::ModuleOp module) {
+  auto offloadModule =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
+  return !offloadModule.getIsTargetDevice() &&
+         !offloadModule.getTargetTriples().empty();
+}
+
+static bool
+usesIteratorDeclareMapper(mlir::ModuleOp module, mlir::Value map,
+                          llvm::SmallPtrSetImpl<mlir::Operation *> &visited);
+
+static bool
+declareMapperUsesIterator(mlir::ModuleOp module,
+                          mlir::omp::DeclareMapperOp mapper,
+                          llvm::SmallPtrSetImpl<mlir::Operation *> &visited) {
+  if (!mapper || !visited.insert(mapper).second)
+    return false;
+  mlir::omp::DeclareMapperInfoOp info = mapper.getDeclareMapperInfo();
+  return !info.getMapIterated().empty() ||
+         llvm::any_of(info.getMapVars(), [&](mlir::Value var) {
+           return usesIteratorDeclareMapper(module, var, visited);
+         });
+}
+
+// Return true if \p map, its members, or a mapper reachable from them has map
+// entries with an iterator modifier.
+static bool
+usesIteratorDeclareMapper(mlir::ModuleOp module, mlir::Value map,
+                          llvm::SmallPtrSetImpl<mlir::Operation *> &visited) {
+  auto mapInfo = map.getDefiningOp<mlir::omp::MapInfoOp>();
+  if (!mapInfo)
+    return false;
+  if (llvm::any_of(mapInfo.getMembers(), [&](mlir::Value member) {
+        return usesIteratorDeclareMapper(module, member, visited);
+      }))
+    return true;
+  mlir::FlatSymbolRefAttr mapperId = mapInfo.getMapperIdAttr();
+  return mapperId &&
+         declareMapperUsesIterator(
+             module, module.lookupSymbol<mlir::omp::DeclareMapperOp>(mapperId),
+             visited);
+}
+
+// Return true if a DECLARE MAPPER directive of \p mapperSym has a MAP clause
+// with an iterator modifier.
+static bool declaresIteratorMap(const semantics::Symbol &mapperSym) {
+  for (const parser::OpenMPDeclarativeConstruct *decl :
+       mapperSym.get<semantics::MapperDetails>().GetDeclList()) {
+    const auto *dir = std::get_if<parser::OmpDeclareMapperDirective>(&decl->u);
+    if (!dir)
+      continue;
+    for (const parser::OmpClause &clause : dir->v.Clauses().v)
+      if (const auto *map = std::get_if<parser::OmpClause::Map>(&clause.u))
+        if (semantics::OmpGetUniqueModifier<parser::OmpIterator>(
+                semantics::OmpGetModifiers(map->v)))
+          return true;
+  }
+  return false;
+}
+
+void checkImplicitMapperComponents(Fortran::lower::AbstractConverter &converter,
+                                   mlir::Location loc,
+                                   const semantics::DerivedTypeSpec &typeSpec) {
+  mlir::ModuleOp module = converter.getModuleOp();
+  if (!isHostOffloadCompilation(module))
+    return;
+
+  llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visitedTypes;
+  llvm::SmallPtrSet<mlir::Operation *, 4> visitedMappers;
+  std::function<bool(const semantics::DerivedTypeSpec &)> skipsIteratorMapper =
+      [&](const semantics::DerivedTypeSpec &spec) -> bool {
+    if (!visitedTypes.insert(&spec).second)
+      return false;
+    for (const semantics::Symbol &component :
+         semantics::DirectComponentIterator{spec}) {
+      const semantics::DeclTypeSpec *declType = component.GetType();
+      const semantics::DerivedTypeSpec *nested =
+          declType ? declType->AsDerived() : nullptr;
+      if (!nested || semantics::IsPointer(component))
+        continue;
+      // The mapper being lowered has no map entries yet, so also check its
+      // directive.
+      if (const semantics::Symbol *mapperSym =
+              getUserDefinedDefaultMapper(converter, *nested);
+          mapperSym &&
+          (declaresIteratorMap(*mapperSym) ||
+           declareMapperUsesIterator(
+               module,
+               module.lookupSymbol<mlir::omp::DeclareMapperOp>(
+                   getDefaultMapperID(converter, converter.getFirOpBuilder(),
+                                      nested)),
+               visitedMappers)))
+        return true;
+      if (skipsIteratorMapper(*nested))
+        return true;
+    }
+    return false;
+  };
+
+  // Implicit default mappers do not yet use the default mappers declared for
+  // component types.
+  if (skipsIteratorMapper(typeSpec))
+    TODO(loc, "implicit default mapper for a type with a component whose "
+              "default mapper has an iterator modifier");
+}
+
 static mlir::FlatSymbolRefAttr
 addImplicitMapper(Fortran::lower::AbstractConverter &converter,
                   mlir::Location loc, const omp::Object &object,
@@ -1252,6 +1369,7 @@ addImplicitMapper(Fortran::lower::AbstractConverter &converter,
   if (!recordType)
     return mlir::FlatSymbolRefAttr();
 
+  checkImplicitMapperComponents(converter, loc, *typeSpec);
   return utils::openmp::getOrGenImplicitDefaultDeclareMapper(
       converter.getFirOpBuilder(), loc, recordType, mapperIdName,
       [&](std::string &mapperIdName, llvm::StringRef memberName) {
@@ -1316,6 +1434,10 @@ mlir::FlatSymbolRefAttr resolveMapperId(
           addImplicitMapper(converter, loc, object, mapperIdName,
                             /*allowGenerate=*/needsDefaultMapper,
                             enableImplicitDefaultMapperAllocatableMembers);
+    } else if (!userDefinedDefault) {
+      // These directives map the object without any mapper, so component
+      // mappers are skipped as well.
+      checkImplicitMapperComponents(converter, loc, *objectTypeSpec);
     }
   }
 
@@ -1520,6 +1642,8 @@ IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object) {
   if (!dataRef)
     return analysis;
 
+  analysis.rootSym = &dataRef->GetFirstSymbol();
+
   const auto *component = std::get_if<evaluate::Component>(&dataRef->u);
   const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
   analysis.isDerivedTypeMember =
@@ -1549,20 +1673,46 @@ IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object) {
   return analysis;
 }
 
-// Lower the array base (a for a(i)) with shape information for bounds.
-static hlfir::Entity
-getIteratorMapEntity(Fortran::lower::AbstractConverter &converter,
-                     fir::FirOpBuilder &builder, const omp::Object &object,
-                     mlir::Location loc) {
+// Lower the array base (v%a for v%a(i)) with shape information for bounds.
+static hlfir::Entity getIteratorMapEntity(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
+    const evaluate::ArrayRef &arrayRef, mlir::Location loc) {
   const semantics::Symbol *sym = object.sym();
-  assert(sym && !sym->owner().IsDerivedType() &&
-         "expected non-component symbol for iterator object");
+  assert(sym && "expected symbol for iterator object");
 
-  // Keep the same base address as ordinary map lowering.
-  mlir::Value addr =
-      Fortran::lower::getDataOperandBaseAddr(converter, builder, *sym, loc,
-                                             /*unwrapFirBox=*/false)
-          .addr;
+  mlir::Value addr;
+  if (!sym->owner().IsDerivedType()) {
+    // Keep the same base address as ordinary map lowering for non-component
+    // objects.
+    fir::factory::AddrAndBoundsInfo info =
+        Fortran::lower::getDataOperandBaseAddr(converter, builder, *sym, loc,
+                                               /*unwrapFirBox=*/false);
+    addr = info.addr;
+  } else {
+    evaluate::ExpressionAnalyzer ea{semaCtx};
+    std::optional<ExprTy> arrayBase;
+    const evaluate::NamedEntity &base = arrayRef.base();
+    // The ordinary base-address helper takes a symbol, which does not identify
+    // the containing object of a component. Lower the component base reference
+    // here, leaving its subscripts for iterator-local map bounds.
+    if (const semantics::SymbolRef *symRef = base.UnwrapSymbolRef())
+      arrayBase = ea.Designate(evaluate::DataRef{*symRef});
+    else if (const evaluate::Component *component = base.UnwrapComponent())
+      arrayBase = ea.Designate(evaluate::DataRef{*component});
+    else
+      llvm_unreachable("unexpected NamedEntity");
+
+    assert(arrayBase);
+    // Mutable-box lowering preserves allocatable and pointer descriptors.
+    fir::ExtendedValue dataExv;
+    if (semantics::IsAllocatableOrPointer(base.GetLastSymbol()))
+      dataExv = converter.genExprMutableBox(loc, *arrayBase);
+    else
+      dataExv = converter.genExprAddr(loc, *arrayBase, stmtCtx);
+    addr = fir::getBase(dataExv);
+  }
 
   // Load allocatable and pointer descriptors to access data and shape. Keep
   // the box value until bounds are built; map construction extracts its data
@@ -1665,13 +1815,13 @@ genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
   return bounds;
 }
 
-IteratorMapInfo genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
-                                   fir::FirOpBuilder &builder,
-                                   Fortran::lower::StatementContext &stmtCtx,
-                                   const omp::Object &object,
-                                   const evaluate::ArrayRef &arrayRef,
-                                   mlir::Location loc) {
-  hlfir::Entity entity = getIteratorMapEntity(converter, builder, object, loc);
+IteratorMapInfo genIteratorMapInfo(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
+    const evaluate::ArrayRef &arrayRef, mlir::Location loc) {
+  hlfir::Entity entity = getIteratorMapEntity(converter, builder, semaCtx,
+                                              stmtCtx, object, arrayRef, loc);
   return IteratorMapInfo{
       entity, genIteratorMapBounds(converter, entity, arrayRef, stmtCtx, loc)};
 }
