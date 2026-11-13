@@ -136,11 +136,14 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 
 // Base class for structured control flow ops whose regions take no inputs and
 // yield the parent's results on the way out. Users still have to define
-// `getSuccessorRegions` themselves.
-class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
+// `getSuccessorRegions` themselves, and the optional `RegionBranchOpInterface`
+// methods they list in `regionBranchMethods`.
+class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = [],
+                             list<string> regionBranchMethods = []>
     : CIR_Op<mnemonic, !listconcat([
         DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                  ["getSuccessorInputs"]>], traits)> {
+            !listconcat(["getSuccessorInputs"], regionBranchMethods)>],
+        traits)> {
   let extraClassDefinition = [{
     ValueRange $cppClass::getSuccessorInputs(
         mlir::RegionSuccessor successor) {
@@ -154,9 +157,11 @@ class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
 
 // Base class for the region-branch ops whose successors do not depend on the
 // operation: any of their regions may be entered from the parent operation, and
-// every region returns to it on exit.
-class CIR_EnterAnyRegionBranchOpBase<string mnemonic, list<Trait> traits = []>
-    : CIR_RegionBranchOpBase<mnemonic, traits> {
+// every region returns to it on exit. Subclasses may narrow which regions are
+// entered for constant operands, through `getEntrySuccessorRegions`.
+class CIR_EnterAnyRegionBranchOpBase<string mnemonic, list<Trait> traits = [],
+                                     list<string> regionBranchMethods = []>
+    : CIR_RegionBranchOpBase<mnemonic, traits, regionBranchMethods> {
   let append extraClassDefinition = [{
     void $cppClass::getSuccessorRegions(
         mlir::RegionBranchPoint point,
@@ -3404,7 +3409,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 
 def CIR_TernaryOp : CIR_EnterAnyRegionBranchOpBase<"ternary", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
-]> {
+], ["getEntrySuccessorRegions"]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
   let description = [{
     The `cir.ternary` operation represents C/C++ ternary, much like a `select`
