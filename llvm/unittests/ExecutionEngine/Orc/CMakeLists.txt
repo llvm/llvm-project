@@ -42,6 +42,7 @@ add_llvm_unittest(OrcJITTests
   MapperJITLinkMemoryManagerTest.cpp
   MemoryFlagsTest.cpp
   MemoryMapperTest.cpp
+  ObjectFileInterfaceTest.cpp
   ObjectFormatsTest.cpp
   ObjectLinkingLayerTest.cpp
   OrcCAPITest.cpp
