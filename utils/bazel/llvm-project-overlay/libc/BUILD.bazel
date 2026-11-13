@@ -5082,12 +5082,12 @@ libc_function(
     hdrs = ["src/arpa/inet/inet_addr.h"],
     deps = [
         ":__support_common",
-        ":__support_net_address",
         ":hdr_netinet_in_macros",
         ":types_in_addr_t",
         "//libc/src/__support/CPP:optional",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/net:address",
     ],
 )
 
@@ -5097,11 +5097,11 @@ libc_function(
     hdrs = ["src/arpa/inet/inet_aton.h"],
     deps = [
         ":__support_common",
-        ":__support_net_address",
         ":types_struct_in_addr",
         "//libc/src/__support/CPP:optional",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/net:address",
     ],
 )
 
@@ -5111,11 +5111,11 @@ libc_function(
     hdrs = ["src/arpa/inet/inet_ntoa.h"],
     deps = [
         ":__support_common",
-        ":__support_net_address",
         ":hdr_inet_address_macros",
         ":types_struct_in_addr",
         "//libc/src/__support/CPP:span",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/net:address",
     ],
 )
 
@@ -5126,7 +5126,6 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_libc_errno",
-        ":__support_net_address",
         ":hdr_errno_macros",
         ":hdr_sys_socket_macros",
         ":types_socklen_t",
@@ -5135,6 +5134,7 @@ libc_function(
         "//libc/src/__support/CPP:span",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/net:address",
     ],
 )
 
@@ -5145,7 +5145,6 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_libc_errno",
-        ":__support_net_address",
         ":hdr_errno_macros",
         ":hdr_stdint_proxy",
         ":hdr_sys_socket_macros",
@@ -5153,6 +5152,7 @@ libc_function(
         ":types_struct_in_addr",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/net:address",
     ],
 )
 
@@ -5573,46 +5573,6 @@ libc_support_library(
         ":shared_libc_common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/math:exp2f_integer_eval",
-    ],
-)
-
-############################### __support/net #################################
-
-libc_support_library(
-    name = "__support_net_hex",
-    hdrs = ["src/__support/net/hex.h"],
-    deps = [
-        ":__support_common",
-        ":__support_ctype_utils",
-        ":types_size_t",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/CPP:type_traits",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_net_address",
-    srcs = ["src/__support/net/address.cpp"],
-    hdrs = ["src/__support/net/address.h"],
-    deps = [
-        ":__support_common",
-        ":__support_ctype_utils",
-        ":__support_fixedvector",
-        ":__support_libc_assert",
-        ":__support_net_hex",
-        ":__support_str_to_integer",
-        ":hdr_inet_address_macros",
-        ":hdr_stdint_proxy",
-        ":string_memory_utils",
-        ":types_in_addr_t",
-        ":types_struct_in6_addr",
-        ":types_struct_in_addr",
-        "//libc/src/__support/CPP:optional",
-        "//libc/src/__support/CPP:span",
-        "//libc/src/__support/CPP:string_view",
-        "//libc/src/__support/macros:config",
     ],
 )
 
