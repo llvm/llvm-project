@@ -2190,19 +2190,21 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy,
 /// for a single slice.
 static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
                                             VectorType *Ty,
-                                            uint64_t ElementSize,
+                                            uint64_t ElementBits,
                                             const DataLayout &DL,
                                             unsigned VScale) {
-  // First validate the slice offsets.
-  uint64_t BeginOffset =
-      std::max(S.beginOffset(), P.beginOffset()) - P.beginOffset();
-  uint64_t BeginIndex = BeginOffset / ElementSize;
-  if (BeginIndex * ElementSize != BeginOffset ||
+  // First validate the slice offsets. Slices are byte-aligned, but elements
+  // may be narrower than a byte.
+  uint64_t BeginBit =
+      (std::max(S.beginOffset(), P.beginOffset()) - P.beginOffset()) * 8;
+  uint64_t BeginIndex = BeginBit / ElementBits;
+  if (BeginIndex * ElementBits != BeginBit ||
       BeginIndex >= cast<FixedVectorType>(Ty)->getNumElements())
     return false;
-  uint64_t EndOffset = std::min(S.endOffset(), P.endOffset()) - P.beginOffset();
-  uint64_t EndIndex = EndOffset / ElementSize;
-  if (EndIndex * ElementSize != EndOffset ||
+  uint64_t EndBit =
+      (std::min(S.endOffset(), P.endOffset()) - P.beginOffset()) * 8;
+  uint64_t EndIndex = EndBit / ElementBits;
+  if (EndIndex * ElementBits != EndBit ||
       EndIndex > cast<FixedVectorType>(Ty)->getNumElements())
     return false;
 
@@ -2213,7 +2215,7 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
                       : FixedVectorType::get(Ty->getElementType(), NumElements);
 
   Type *SplitIntTy =
-      Type::getIntNTy(Ty->getContext(), NumElements * ElementSize * 8);
+      Type::getIntNTy(Ty->getContext(), NumElements * ElementBits);
 
   Use *U = S.getUse();
 
@@ -2223,8 +2225,12 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
     if (!S.isSplittable())
       return false; // Skip any unsplittable intrinsics.
     if (isa<MemSetInst>(MI)) {
-      Type *SplatTy = Type::getIntNTy(Ty->getContext(), ElementSize * 8);
-      if (!canConvertValue(DL, SplatTy, Ty->getElementType(), VScale))
+      // The splatted byte pattern is converted to one element, or to the
+      // whole slice if the elements are narrower than a byte.
+      Type *SplatDstTy = ElementBits % 8 ? SliceTy : Ty->getElementType();
+      Type *SplatTy = Type::getIntNTy(
+          Ty->getContext(), DL.getTypeSizeInBits(SplatDstTy).getFixedValue());
+      if (!canConvertValue(DL, SplatTy, SplatDstTy, VScale))
         return false;
     }
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
@@ -2349,23 +2355,20 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
 
   // Find a vector type viable for promotion by iterating over all slices.
   auto *VTy = llvm::find_if(CandidateTys, [&](VectorType *VTy) -> bool {
-    uint64_t ElementSize =
+    uint64_t ElementBits =
         DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
 
-    // While the definition of LLVM vectors is bitpacked, we don't support sizes
-    // that aren't byte sized.
-    if (ElementSize % 8)
+    // Vectors are bit-packed, so elements may be narrower than a byte, but
+    // the vector as a whole must fill a whole number of bytes.
+    if (DL.getTypeSizeInBits(VTy).getFixedValue() % 8)
       return false;
-    assert((DL.getTypeSizeInBits(VTy).getFixedValue() % 8) == 0 &&
-           "vector size not a multiple of element size?");
-    ElementSize /= 8;
 
     for (const Slice &S : P)
-      if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
+      if (!isVectorPromotionViableForSlice(P, S, VTy, ElementBits, DL, VScale))
         return false;
 
     for (const Slice *S : P.splitSliceTails())
-      if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
+      if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementBits, DL, VScale))
         return false;
 
     return true;
@@ -2884,7 +2887,7 @@ class AllocaSliceRewriter : public InstVisitor<AllocaSliceRewriter, bool> {
   //     which are promotable via mem2reg.
   VectorType *VecTy;
   Type *ElementTy;
-  uint64_t ElementSize;
+  uint64_t ElementBits;
 
   // The original offset of the slice currently being rewritten relative to
   // the original alloca.
@@ -2937,13 +2940,13 @@ public:
                   : nullptr),
         VecTy(PromotableVecTy),
         ElementTy(VecTy ? VecTy->getElementType() : nullptr),
-        ElementSize(VecTy ? DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8
+        ElementBits(VecTy ? DL.getTypeSizeInBits(ElementTy).getFixedValue()
                           : 0),
         PHIUsers(PHIUsers), SelectUsers(SelectUsers),
         IRB(*NewAI.getModule(), ConstantFolder()) {
     if (VecTy) {
-      assert((DL.getTypeSizeInBits(ElementTy).getFixedValue() % 8) == 0 &&
-             "Only multiple-of-8 sized vector elements are viable");
+      assert((DL.getTypeSizeInBits(VecTy).getFixedValue() % 8) == 0 &&
+             "Only vectors of whole bytes are viable");
       ++NumVectorized;
     }
     assert((!IntTy && !VecTy) || (IntTy && !VecTy) || (!IntTy && VecTy));
@@ -3482,10 +3485,10 @@ private:
 
   unsigned getIndex(uint64_t Offset) {
     assert(VecTy && "Can only call getIndex when rewriting a vector");
-    uint64_t RelOffset = Offset - NewAllocaBeginOffset;
-    assert(RelOffset / ElementSize < UINT32_MAX && "Index out of bounds");
-    uint32_t Index = RelOffset / ElementSize;
-    assert(Index * ElementSize == RelOffset);
+    uint64_t RelBit = (Offset - NewAllocaBeginOffset) * 8;
+    assert(RelBit / ElementBits < UINT32_MAX && "Index out of bounds");
+    uint32_t Index = RelBit / ElementBits;
+    assert(Index * ElementBits == RelBit);
     return Index;
   }
 
@@ -3896,11 +3899,19 @@ private:
       assert(NumElements <= cast<FixedVectorType>(VecTy)->getNumElements() &&
              "Too many elements!");
 
-      Value *Splat = getIntegerSplat(
-          II.getValue(), DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8);
-      Splat = IRB.CreateBitPreservingCastChain(DL, Splat, ElementTy);
-      if (NumElements > 1)
-        Splat = getVectorSplat(Splat, NumElements);
+      Value *Splat;
+      if (ElementBits % 8) {
+        // A byte pattern isn't a splat of sub-byte elements, so splat the
+        // bytes the slice covers and cast them to its elements.
+        Splat = getIntegerSplat(II.getValue(), NewEndOffset - NewBeginOffset);
+        Splat = IRB.CreateBitPreservingCastChain(
+            DL, Splat, FixedVectorType::get(ElementTy, NumElements));
+      } else {
+        Splat = getIntegerSplat(II.getValue(), ElementBits / 8);
+        Splat = IRB.CreateBitPreservingCastChain(DL, Splat, ElementTy);
+        if (NumElements > 1)
+          Splat = getVectorSplat(Splat, NumElements);
+      }
 
       Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
                                          "oldload");
