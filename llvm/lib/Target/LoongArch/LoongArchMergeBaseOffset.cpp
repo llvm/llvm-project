@@ -341,10 +341,13 @@ void LoongArchMergeBaseOffsetOpt::foldOffset(
 //        |     OffsetLo12: ori voff, vreg3, 122 !                    |
 //        |     OffsetLo20: lu32i.d voff, 123       ------------------+
 //        +-> 4) Offset that has non zero bits in Hi12 bits:          |
-//              OffsetHi20: lu12i.w vreg3, 121 !                      |
-//              OffsetLo12: ori voff, vreg3, 122 !                    |
-//              OffsetLo20: lu32i.d vreg3, 123 !                      |
-//              OffsetHi12: lu52i.d voff, vrg3, 124 ------------------+
+//        |     OffsetHi20: lu12i.w vreg3, 121 !                      |
+//        |     OffsetLo12: ori voff, vreg3, 122 !                    |
+//        |     OffsetLo20: lu32i.d vreg3, 123 !                      |
+//        |     OffsetHi12: lu52i.d voff, vreg3, 124 -----------------+
+//        +-> 5) Offset that is a field shifted into place:           |
+//                          lu12i.w voff, 4                           |
+//                          slli.d voff, voff, 20   ------------------+
 //                                                                    |
 //        TailAdd: add.d  vreg4, vreg2, voff       <------------------+
 //
@@ -361,8 +364,9 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
   SmallVector<MachineInstr *, 4> Instrs;
   int64_t Offset = 0;
   int64_t Mask = -1;
+  int Shift = 0;
 
-  // This can point to one of [ORI, LU12I.W, LU32I.D, LU52I.D]:
+  // This can point to one of [ORI, LU12I.W, LU32I.D, LU52I.D, SLLI.D]:
   for (int i = 0; i < 4; i++) {
     // Handle Reg is R0.
     if (Reg == LoongArch::R0)
@@ -384,7 +388,9 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       MachineOperand ImmOp = Curr->getOperand(2);
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
         return false;
-      Offset += ImmOp.getImm();
+      const int64_t Imm = ImmOp.getImm();
+      Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
+      Mask &= ~(0x0000000000000FFFULL << Shift);
       Reg = Curr->getOperand(1).getReg();
       Instrs.push_back(Curr);
       break;
@@ -393,7 +399,8 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       MachineOperand ImmOp = Curr->getOperand(1);
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
         return false;
-      Offset += SignExtend64<32>(ImmOp.getImm() << 12) & Mask;
+      const int64_t Imm = SignExtend64<32>(ImmOp.getImm() << 12);
+      Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
       Reg = LoongArch::R0;
       Instrs.push_back(Curr);
       break;
@@ -402,8 +409,9 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       MachineOperand ImmOp = Curr->getOperand(2);
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Lo20)
         return false;
-      Offset += SignExtend64<52>(ImmOp.getImm() << 32) & Mask;
-      Mask &= ~0xFFFFFFFF00000000ULL;
+      const int64_t Imm = SignExtend64<52>(ImmOp.getImm() << 32);
+      Offset += (static_cast<uint64_t>(Imm) << Shift) & Mask;
+      Mask &= ~(0xFFFFFFFF00000000ULL << Shift);
       Reg = Curr->getOperand(1).getReg();
       Instrs.push_back(Curr);
       break;
@@ -412,8 +420,20 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
       MachineOperand ImmOp = Curr->getOperand(2);
       if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Hi12)
         return false;
-      Offset += ImmOp.getImm() << 52;
-      Mask &= ~0xFFF0000000000000ULL;
+      const int64_t Imm = ImmOp.getImm();
+      Offset += (static_cast<uint64_t>(Imm) << 52) << Shift;
+      Mask &= ~(0xFFF0000000000000ULL << Shift);
+      Reg = Curr->getOperand(1).getReg();
+      Instrs.push_back(Curr);
+      break;
+    }
+    case LoongArch::SLLI_D: {
+      MachineOperand ImmOp = Curr->getOperand(2);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !(Lo20 && Hi12))
+        return false;
+      Shift += ImmOp.getImm();
+      if (Shift >= 64)
+        return false;
       Reg = Curr->getOperand(1).getReg();
       Instrs.push_back(Curr);
       break;
@@ -423,6 +443,9 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
 
   // Can't fold if the offset is not extracted.
   if (!Offset)
+    return false;
+  // Can't fold if the current register does not reach R0.
+  if (Reg != LoongArch::R0)
     return false;
 
   foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
