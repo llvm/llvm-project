@@ -91,6 +91,12 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth) const override;
 
+  void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
+                                      KnownBits &Known,
+                                      const APInt &DemandedElts,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0) const override;
+
   unsigned computeNumSignBitsForTargetInstr(GISelValueTracking &Analysis,
                                             Register R,
                                             const APInt &DemandedElts,
