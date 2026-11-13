@@ -159,14 +159,14 @@ define dso_local void @store_atomic_half_aligned_monotonic(half %value, ptr %ptr
 
 define dso_local void @store_atomic_half_aligned_release(half %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_half_aligned_release:
-; CHECK:    stlrh w8, [x0]
+; CHECK:    stlur h0, [x0]
     store atomic half %value, ptr %ptr release, align 2
     ret void
 }
 
 define dso_local void @store_atomic_half_aligned_seq_cst(half %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_half_aligned_seq_cst:
-; CHECK:    stlrh w8, [x0]
+; CHECK:    stlur h0, [x0]
     store atomic half %value, ptr %ptr seq_cst, align 2
     ret void
 }
@@ -187,14 +187,14 @@ define dso_local void @store_atomic_bfloat_aligned_monotonic(bfloat %value, ptr 
 
 define dso_local void @store_atomic_bfloat_aligned_release(bfloat %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_bfloat_aligned_release:
-; CHECK:    stlrh w8, [x0]
+; CHECK:    stlur h0, [x0]
     store atomic bfloat %value, ptr %ptr release, align 2
     ret void
 }
 
 define dso_local void @store_atomic_bfloat_aligned_seq_cst(bfloat %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_bfloat_aligned_seq_cst:
-; CHECK:    stlrh w8, [x0]
+; CHECK:    stlur h0, [x0]
     store atomic bfloat %value, ptr %ptr seq_cst, align 2
     ret void
 }
@@ -215,14 +215,14 @@ define dso_local void @store_atomic_float_aligned_monotonic(float %value, ptr %p
 
 define dso_local void @store_atomic_float_aligned_release(float %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_float_aligned_release:
-; CHECK:    stlr w8, [x0]
+; CHECK:    stlur s0, [x0]
     store atomic float %value, ptr %ptr release, align 4
     ret void
 }
 
 define dso_local void @store_atomic_float_aligned_seq_cst(float %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_float_aligned_seq_cst:
-; CHECK:    stlr w8, [x0]
+; CHECK:    stlur s0, [x0]
     store atomic float %value, ptr %ptr seq_cst, align 4
     ret void
 }
@@ -243,14 +243,14 @@ define dso_local void @store_atomic_double_aligned_monotonic(double %value, ptr 
 
 define dso_local void @store_atomic_double_aligned_release(double %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_double_aligned_release:
-; CHECK:    stlr x8, [x0]
+; CHECK:    stlur d0, [x0]
     store atomic double %value, ptr %ptr release, align 8
     ret void
 }
 
 define dso_local void @store_atomic_double_aligned_seq_cst(double %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_double_aligned_seq_cst:
-; CHECK:    stlr x8, [x0]
+; CHECK:    stlur d0, [x0]
     store atomic double %value, ptr %ptr seq_cst, align 8
     ret void
 }
