@@ -22,7 +22,6 @@
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
@@ -214,23 +213,13 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   if (const X86Subtarget *ST = LastSubtarget.lookup(FnAttrs, M))
     return ST;
 
-  // String attributes are sorted after the enum attributes.
   SubtargetAttrs Attrs;
-  for (Attribute A : reverse(FnAttrs)) {
-    if (!A.isStringAttribute())
-      break;
-    Attribute *Dst =
-        StringSwitch<Attribute *>(A.getKindAsString())
-            .Case("target-cpu", &Attrs.CPU)
-            .Case("tune-cpu", &Attrs.TuneCPU)
-            .Case("target-features", &Attrs.FS)
-            .Case("prefer-vector-width", &Attrs.PreferVecWidth)
-            .Case("min-legal-vector-width", &Attrs.MinLegalVecWidth)
-            .Case("use-soft-float", &Attrs.SoftFloat)
-            .Default(nullptr);
-    if (Dst)
-      *Dst = A;
-  }
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.TuneCPU = FnAttrs.getAttribute("tune-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+  Attrs.PreferVecWidth = FnAttrs.getAttribute("prefer-vector-width");
+  Attrs.MinLegalVecWidth = FnAttrs.getAttribute("min-legal-vector-width");
+  Attrs.SoftFloat = FnAttrs.getAttribute("use-soft-float");
 
   if (const X86Subtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
     return ST;
