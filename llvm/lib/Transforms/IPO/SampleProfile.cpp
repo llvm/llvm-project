@@ -106,6 +106,8 @@ STATISTIC(NumMismatchedProfile,
 STATISTIC(NumMatchedProfile, "Number of functions with CFG matched profile");
 STATISTIC(NumDuplicatedInlinesite,
           "Number of inlined callsites with a partial distribution factor");
+STATISTIC(NumOrphanedRootsLoaded,
+          "Number of orphaned root profiles loaded on demand");
 
 STATISTIC(NumCSInlinedHitMinLimit,
           "Number of functions with FDO inline stopped due to min size limit");
@@ -145,6 +147,15 @@ cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
 } // namespace llvm
+
+static cl::opt<bool> PreserveDeferredInlines(
+    "sample-profile-preserve-deferred-inlines", cl::Hidden, cl::init(false),
+    cl::desc(
+        "In ThinLTO, keep profile inline decisions that pre-link defers to "
+        "post-link usable: import the local targets of deferred indirect "
+        "calls, keep the import GUIDs of a local function that pre-link "
+        "inlines away, and resolve its inlined frames from its top-level "
+        "profile in post-link."));
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
@@ -326,6 +337,12 @@ protected:
   findFunctionSamples(const Instruction &I) const override;
   std::vector<const FunctionSamples *>
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
+  const FunctionSamples *
+  findOrphanedRoot(const FunctionSamples &CallerFS, const LineLocation &Loc,
+                   const DISubprogram &SP, StringRef Name,
+                   DenseSet<StringRef> *Missing = nullptr) const;
+  void hoistImportsOfSoleCallees(Module &M);
+  bool loadOrphanedRoots(Module &M);
   void findExternalInlineCandidate(CallBase *CB, const FunctionSamples *Samples,
                                    DenseSet<GlobalValue::GUID> &InlinedGUIDs,
                                    uint64_t Threshold);
@@ -607,13 +624,136 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 
   auto it = DILocation2SampleMap.try_emplace(DIL,nullptr);
   if (it.second) {
-    if (FunctionSamples::ProfileIsCS)
+    if (FunctionSamples::ProfileIsCS) {
       it.first->second = ContextTracker->getContextSamplesFor(DIL);
-    else
+    } else {
       it.first->second = Samples->findFunctionSamples(
-          DIL, Reader->getRemapper(), &FuncNameToProfNameMap);
+          DIL, Reader->getRemapper(), &FuncNameToProfNameMap,
+          [this](const FunctionSamples &CallerFS, const LineLocation &Loc,
+                 const DISubprogram &SP, StringRef Name) {
+            return findOrphanedRoot(CallerFS, Loc, SP, Name);
+          });
+    }
   }
   return it.first->second;
+}
+
+/// Return the top-level profile of local function \p SP, inlined at \p Loc of
+/// \p CallerFS, when no other code can use it. This happens when the
+/// pre-inliner kept the function's profile top-level but ThinLTO pre-link
+/// inlined the function into its only caller and deleted it. If the reader has
+/// not loaded the profile, add the function's name to \p Missing.
+const FunctionSamples *
+SampleProfileLoader::findOrphanedRoot(const FunctionSamples &CallerFS,
+                                      const LineLocation &Loc,
+                                      const DISubprogram &SP, StringRef Name,
+                                      DenseSet<StringRef> *Missing) const {
+  if (!PreserveDeferredInlines ||
+      LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink || !SP.isLocalToUnit())
+    return nullptr;
+  StringRef Canonical = FunctionSamples::getCanonicalFnName(Name);
+  const Function *Def = SymbolMap.lookup(FunctionId(Canonical));
+  if (Def && !Def->isDeclaration())
+    return nullptr;
+  const FunctionSamples *Root = Reader->getSamplesFor(Canonical);
+  // Require this call site to account for all entries of the function, so
+  // that inlined copies at other call sites do not reuse the same samples.
+  auto Targets = CallerFS.findCallTargetMapAt(Loc);
+  if (!Targets)
+    return nullptr;
+  auto Target =
+      Targets->find(Root ? Root->getFunction() : getRepInFormat(Canonical));
+  if (Target == Targets->end())
+    return nullptr;
+  if (!Root) {
+    if (Missing)
+      Missing->insert(Canonical);
+    return nullptr;
+  }
+  if (Target->second < Root->getHeadSamples())
+    return nullptr;
+  if (FunctionSamples::ProfileIsProbeBased) {
+    const PseudoProbeDescriptor *Desc = ProbeManager->getDesc(Root->getGUID());
+    if (!Desc || ProbeManager->profileIsHashMismatched(*Desc, *Root))
+      return nullptr;
+  }
+  return Root;
+}
+
+/// Load the top-level profiles that findOrphanedRoot needs. An extbinary reader
+/// loads only the profiles of functions in \p M, so it misses those of local
+/// functions that pre-link inlined and deleted. A loaded profile can expose a
+/// deeper miss, so repeat until no new name is found.
+bool SampleProfileLoader::loadOrphanedRoots(Module &M) {
+  DenseSet<StringRef> Requested;
+  while (true) {
+    DenseSet<StringRef> Names;
+    auto Fallback = [&](const FunctionSamples &CallerFS,
+                        const LineLocation &Loc, const DISubprogram &SP,
+                        StringRef Name) {
+      return findOrphanedRoot(CallerFS, Loc, SP, Name, &Names);
+    };
+    for (const Function &F : M) {
+      const FunctionSamples *FS =
+          F.isDeclaration() ? nullptr : Reader->getSamplesFor(F);
+      if (!FS)
+        continue;
+      // The lookup depends only on the inlinee and the inline chain, not on
+      // the line of the instruction.
+      DenseSet<std::pair<const DILocation *, const DISubprogram *>> Visited;
+      for (const BasicBlock &BB : F)
+        for (const Instruction &I : BB) {
+          const DILocation *DIL = I.getDebugLoc();
+          if (!DIL || !DIL->getInlinedAt() ||
+              (FunctionSamples::ProfileIsProbeBased && !extractProbe(I)))
+            continue;
+          auto Key = std::make_pair(DIL->getInlinedAt(),
+                                    DIL->getScope()->getSubprogram());
+          if (Visited.insert(Key).second)
+            FS->findFunctionSamples(DIL, Reader->getRemapper(),
+                                    &FuncNameToProfNameMap, Fallback);
+        }
+    }
+    Names.remove_if([&](StringRef N) { return Requested.contains(N); });
+    if (Names.empty())
+      return true;
+    Requested.insert_range(Names);
+    if (std::error_code EC = Reader->read(Names)) {
+      M.getContext().diagnose(DiagnosticInfoSampleProfile(
+          Filename, "profile reading failed: " + EC.message()));
+      return false;
+    }
+    NumOrphanedRootsLoaded +=
+        count_if(Names, [&](StringRef N) { return Reader->getSamplesFor(N); });
+  }
+}
+
+/// Return the caller of \p F if \p F is a local function with a single direct
+/// call, which the pre-link inliner normally inlines and then deletes.
+static Function *getSoleCaller(Function &F) {
+  if (!F.hasLocalLinkage() || !F.hasOneUse() ||
+      F.hasFnAttribute(Attribute::NoInline))
+    return nullptr;
+  auto *CB = dyn_cast<CallBase>(F.user_back());
+  return CB && CB->getCalledFunction() == &F ? CB->getFunction() : nullptr;
+}
+
+/// The import GUIDs collected for a function that will be inlined and deleted
+/// would be deleted with it. Copy them to its callers up to one that survives.
+void SampleProfileLoader::hoistImportsOfSoleCallees(Module &M) {
+  for (Function &F : M) {
+    DenseSet<GlobalValue::GUID> Imports = F.getImportGUIDs();
+    if (Imports.empty())
+      continue;
+    SmallPtrSet<Function *, 4> Visited = {&F};
+    for (Function *Caller = getSoleCaller(F);
+         Caller && Caller->getEntryCount() && Visited.insert(Caller).second;
+         Caller = getSoleCaller(*Caller)) {
+      DenseSet<GlobalValue::GUID> Merged = Caller->getImportGUIDs();
+      Merged.insert_range(Imports);
+      Caller->setEntryCount(*Caller->getEntryCount(), &Merged);
+    }
+  }
 }
 
 /// Check whether the indirect call promotion history of \p Inst allows
@@ -854,6 +994,12 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
 void SampleProfileLoader::findExternalInlineCandidate(
     CallBase *CB, const FunctionSamples *Samples,
     DenseSet<GlobalValue::GUID> &InlinedGUIDs, uint64_t Threshold) {
+  // Normally only functions defined outside this module need import hints.
+  // The targets of a deferred indirect call are an exception: another module
+  // that imports the caller must import them too, and no direct call to them
+  // may survive to create a summary edge.
+  bool IncludeLocalTargets =
+      PreserveDeferredInlines && CB && CB->isIndirectCall();
 
   // If ExternalInlineAdvisor(ReplayInlineAdvisor) wants to inline an external
   // function make sure it's imported
@@ -883,7 +1029,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
     // Set threshold to zero to honor pre-inliner decision.
     if (UsePreInlinerDecision)
       Threshold = 0;
-    Samples->findInlinedFunctions(InlinedGUIDs, SymbolMap, Threshold);
+    Samples->findInlinedFunctions(InlinedGUIDs, SymbolMap, Threshold,
+                                  IncludeLocalTargets);
     return;
   }
 
@@ -907,20 +1054,19 @@ void SampleProfileLoader::findExternalInlineCandidate(
     if (!PreInline && CalleeSample->getHeadSamplesEstimate() < Threshold)
       continue;
 
-    Function *Func = SymbolMap.lookup(CalleeSample->getFunction());
-    // Add to the import list only when it's defined out of module.
-    if (!Func || Func->isDeclaration())
-      InlinedGUIDs.insert(CalleeSample->getGUID());
+    // A pre-inlined context can have no samples. Unlike an external one, a
+    // local definition is then not worth importing into other modules.
+    FunctionSamples::addImportGUID(
+        InlinedGUIDs, SymbolMap, CalleeSample->getFunction(),
+        IncludeLocalTargets && CalleeSample->getTotalSamples());
 
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : CalleeSample->getBodySamples())
       for (const auto &TS : BS.second.getCallTargets())
-        if (TS.second > Threshold) {
-          const Function *Callee = SymbolMap.lookup(TS.first);
-          if (!Callee || Callee->isDeclaration())
-            InlinedGUIDs.insert(TS.first.getHashCode());
-        }
+        if (TS.second > Threshold)
+          FunctionSamples::addImportGUID(InlinedGUIDs, SymbolMap, TS.first,
+                                         IncludeLocalTargets);
 
     // Import hot child context profile associted with callees. Note that this
     // may have some overlap with the call target loop above, but doing this
@@ -1971,8 +2117,6 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
                                       ProfileSummaryInfo *_PSI) {
-  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
-
   PSI = _PSI;
   if (M.getProfileSummary(/* IsCS */ false) == nullptr) {
     M.setProfileSummary(Reader->getSummary().getMD(M.getContext()),
@@ -2012,6 +2156,16 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
     }
   }
 
+  // Needs SymbolMap. Must precede matching and annotation.
+  if (PreserveDeferredInlines &&
+      LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink &&
+      Reader->getFormat() == SPF_Ext_Binary && !Reader->profileIsCS() &&
+      !loadOrphanedRoots(M))
+    return false;
+
+  // Created after all profiles are loaded, so that it covers them all.
+  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
+
   // Stale profile matching.
   if (Opts.report_profile_staleness || Opts.persist_profile_staleness ||
       SalvageStaleProfile) {
@@ -2030,6 +2184,9 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
     clearFunctionData();
     retval |= runOnFunction(*F, AM);
   }
+
+  if (PreserveDeferredInlines && LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
+    hoistImportsOfSoleCallees(M);
 
   // Account for cold calls not inlined....
   if (!FunctionSamples::ProfileIsCS)
