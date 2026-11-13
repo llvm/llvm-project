@@ -297,6 +297,7 @@ public:
   void setUsedForHeaderGuard(bool Val) { UsedForHeaderGuard = Val; }
 
   void dump() const;
+  void dump(const SourceManager *SM) const;
 
 private:
   friend class Preprocessor;
