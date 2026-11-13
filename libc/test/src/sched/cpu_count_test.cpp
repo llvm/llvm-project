@@ -19,6 +19,7 @@
 #include "hdr/sched_macros.h"
 #include "hdr/types/cpu_set_t.h"
 #include "hdr/types/pid_t.h"
+#include <sys/syscall.h>
 
 using LlvmLibcSchedCpuCountTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 

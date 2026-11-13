@@ -21,6 +21,20 @@ add_object_library(
     libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
 )
 
+if(LLVM_LIBC_FULL_BUILD)
+  add_object_library(
+    assert_fail
+    SRCS
+      assert_fail.cpp
+    DEPENDS
+      .linux_util
+      libc.src.__support.OSUtil.assert_fail_hdrs
+      libc.src.__support.OSUtil.assert_fail_utils
+      libc.src.__support.macros.config
+      libc.src.stdlib.abort_utils
+  )
+endif()
+
 add_header_library(
   auxv
   HDRS

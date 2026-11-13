@@ -8,3 +8,16 @@ add_object_library(
   DEPENDS
     libc.src.__support.macros.config
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_object_library(
+    assert_fail
+    SRCS
+      assert_fail.cpp
+    DEPENDS
+      .windows_util
+      libc.src.__support.OSUtil.assert_fail_hdrs
+      libc.src.__support.OSUtil.assert_fail_utils
+      libc.src.__support.macros.config
+  )
+endif()

@@ -2368,10 +2368,9 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_libc_assert",
+    name = "__support_libc_assert_hdrs",
     hdrs = ["src/__support/libc_assert.h"],
     deps = [
-        ":__support_common",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_hardening",
@@ -2380,9 +2379,25 @@ libc_support_library(
         ":__support_macros_properties_os",
     ] + select({
         ":full_build": [
-            ":__support_integer_to_string",
-            ":__support_osutil_exit_hdrs",
-            ":__support_osutil_io",
+            ":__support_osutil_assert_fail_hdrs",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "__support_libc_assert",
+    hdrs = ["src/__support/libc_assert.h"],
+    deps = [
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_hardening",
+        ":__support_macros_macro_utils",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_os",
+    ] + select({
+        ":full_build": [
+            ":__support_osutil_assert_fail",
         ],
         "//conditions:default": [],
     }),
@@ -4082,7 +4097,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
-        ":__support_libc_assert",
+        ":__support_libc_assert_hdrs",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_types",
@@ -5275,6 +5290,42 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_assert_fail_hdrs",
+    hdrs = ["src/__support/OSUtil/assert_fail.h"],
+    deps = [
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_assert_fail_utils",
+    hdrs = ["src/__support/OSUtil/assert_fail_utils.h"],
+    deps = [
+        ":__support_integer_to_string",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_osutil_io",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_assert_fail",
+    srcs = ["src/__support/OSUtil/linux/assert_fail.cpp"],
+    hdrs = ["src/__support/OSUtil/assert_fail.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_macros_config",
+        ":__support_osutil_assert_fail_hdrs",
+        ":__support_osutil_assert_fail_utils",
+        ":stdlib_abort_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_stat_kernel_statx_types",
     hdrs = ["src/__support/OSUtil/linux/stat/kernel_statx_types.h"],
     target_compatible_with = select({
@@ -5500,7 +5551,7 @@ libc_support_library(
     deps = [
         ":__support_cpp_atomic",
         ":__support_cpp_optional",
-        ":__support_libc_assert",
+        ":__support_libc_assert_hdrs",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_threads_identifier",
@@ -5521,7 +5572,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_optional",
-        ":__support_libc_assert",
+        ":__support_libc_assert_hdrs",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
@@ -5529,6 +5580,7 @@ libc_support_library(
         ":__support_threads_linux_futex_utils",
         ":__support_threads_sleep",
         ":__support_time",
+        ":__support_time_clock_conversion",
         ":hdr_errno_macros",
     ],
 )
@@ -5545,13 +5597,14 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
-        ":__support_libc_assert",
+        ":__support_libc_assert_hdrs",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_threads_raw_mutex",
         ":__support_threads_sleep",
         ":__support_time",
+        ":__support_time_clock_conversion",
         ":hdr_errno_macros",
     ],
 )
@@ -5767,7 +5820,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_expected",
         ":__support_error_or",
-        ":__support_libc_assert",
+        ":__support_libc_assert_hdrs",
         ":__support_macros_config",
         ":hdr_time_macros",
         ":types_clockid_t",

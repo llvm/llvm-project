@@ -320,94 +320,111 @@ TEST(LlvmLibcCheckedPtrTest, MakeUniqueForOverwriteArray) {
 
 #if !defined(NDEBUG) && LIBC_TEST_SUBPROCESS_TESTS
 
-#if defined(LIBC_FULL_BUILD) && !defined(LIBC_COPT_USE_C_ASSERT)
-#define EXPECT_ASSERT_FAILS(stmt) EXPECT_EXITS(stmt, 255)
-#else
 #define EXPECT_ASSERT_FAILS(stmt) EXPECT_DEATH(stmt, WITH_SIGNAL(-1))
-#endif
 
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedDestructionDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr = make_unique<int>(42);
-    (void)ptr;
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr = make_unique<int>(42);
+        (void)ptr;
+      },
+      WITH_SIGNAL(-1));
 }
 
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedNullptrDestructionDies) {
-  EXPECT_ASSERT_FAILS([] {
-    CheckedPtr<int> ptr = nullptr;
-    (void)ptr;
-  });
+  EXPECT_DEATH(
+      [] {
+        CheckedPtr<int> ptr = nullptr;
+        (void)ptr;
+      },
+      WITH_SIGNAL(-1));
 }
 
 TEST(LlvmLibcCheckedPtrDeathTest, MoveFromCheckedRequiresRecheckOrDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr1 = make_unique<int>(42);
-    (void)static_cast<bool>(ptr1);
-    CheckedPtr<int> ptr2(move(ptr1));
-    (void)*ptr2;
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr1 = make_unique<int>(42);
+        (void)static_cast<bool>(ptr1);
+        CheckedPtr<int> ptr2(move(ptr1));
+        (void)*ptr2;
+      },
+      WITH_SIGNAL(-1));
 }
 
 // In the tests below, the pointer is checked after the operation under test, so
 // that its destruction cannot be the thing that triggers the assertion.
 
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedDereferenceDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr = make_unique<int>(42);
-    (void)*ptr;
-    (void)static_cast<bool>(ptr);
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr = make_unique<int>(42);
+        (void)*ptr;
+        (void)static_cast<bool>(ptr);
+      },
+      WITH_SIGNAL(-1));
 }
 
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedArrowDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr = make_unique<Foo>(42);
-    (void)ptr->val;
-    (void)static_cast<bool>(ptr);
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr = make_unique<Foo>(42);
+        (void)ptr->val;
+        (void)static_cast<bool>(ptr);
+      },
+      WITH_SIGNAL(-1));
 }
 
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedArraySubscriptDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr = make_unique<int[]>(3);
-    (void)ptr[0];
-    (void)static_cast<bool>(ptr);
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr = make_unique<int[]>(3);
+        (void)ptr[0];
+        (void)static_cast<bool>(ptr);
+      },
+      WITH_SIGNAL(-1));
 }
 
 TEST(LlvmLibcCheckedPtrDeathTest, OverwritingUncheckedViaMoveAssignmentDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr1 = make_unique<int>(1);
-    auto ptr2 = make_unique<int>(2);
-    (void)static_cast<bool>(ptr2);
-    ptr1 = move(ptr2);
-    (void)static_cast<bool>(ptr1);
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr1 = make_unique<int>(1);
+        auto ptr2 = make_unique<int>(2);
+        (void)static_cast<bool>(ptr2);
+        ptr1 = move(ptr2);
+        (void)static_cast<bool>(ptr1);
+      },
+      WITH_SIGNAL(-1));
 }
 
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedTakeUniqueDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr = make_unique<int>(42);
-    (void)ptr.take_unique();
-    (void)static_cast<bool>(ptr);
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr = make_unique<int>(42);
+        (void)ptr.take_unique();
+        (void)static_cast<bool>(ptr);
+      },
+      WITH_SIGNAL(-1));
 }
 
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedGetDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr = make_unique<int>(42);
-    (void)ptr.get();
-    (void)static_cast<bool>(ptr);
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr = make_unique<int>(42);
+        (void)ptr.get();
+        (void)static_cast<bool>(ptr);
+      },
+      WITH_SIGNAL(-1));
 }
 
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedReleaseDies) {
-  EXPECT_ASSERT_FAILS([] {
-    auto ptr = make_unique<int>(42);
-    unique_ptr<int> owner(ptr.release());
-    (void)static_cast<bool>(ptr);
-  });
+  EXPECT_DEATH(
+      [] {
+        auto ptr = make_unique<int>(42);
+        unique_ptr<int> owner(ptr.release());
+        (void)static_cast<bool>(ptr);
+      },
+      WITH_SIGNAL(-1));
 }
 
+#undef EXPECT_ASSERT_FAILS
 #endif // !defined(NDEBUG) && LIBC_TEST_SUBPROCESS_TESTS
