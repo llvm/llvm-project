@@ -19,12 +19,14 @@
 // RUN: mkdir -p %t/install/bin
 // RUN: cp %clang %t/install/bin/clang
 // RUN: mkdir -p %t/install/include/c++/v1
+// RUN: touch %t/install/include/c++/v1/__config_site
 
 // Headers in (1) and in (2) -> (1) is preferred over (2)
 // RUN: rm -rf %t/symlinked1
 // RUN: mkdir -p %t/symlinked1/bin
 // RUN: ln -sf %t/install/bin/clang %t/symlinked1/bin/clang
 // RUN: mkdir -p %t/symlinked1/include/c++/v1
+// RUN: touch %t/symlinked1/include/c++/v1/__config_site
 
 // RUN: %t/symlinked1/bin/clang -### %s -no-canonical-prefixes -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
