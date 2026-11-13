@@ -257,7 +257,7 @@ public:
     using Converter = BaseConverter<T>;
     static_assert(
         Converter::StoresPointer ==
-            ASTNodeKind::getFromNodeKind<typename Converter::StoredType>()
+            ASTNodeKind::getFromNodeKind<typename Converter::BaseType>()
                 .hasPointerIdentity(),
         "hasPointerIdentity() must agree with whether DynTypedNode "
         "stores a node by pointer");
@@ -438,7 +438,7 @@ private:
   /// Converter that uses dyn_cast<T> from a stored BaseT*.
   template <typename T, typename BaseT> struct DynCastPtrConverter {
     static constexpr bool StoresPointer = true;
-    using StoredType = BaseT;
+    using BaseType = BaseT;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isBaseOf(NodeKind))
         return &getUnchecked(NodeKind, Storage);
@@ -460,7 +460,7 @@ private:
   /// Converter that stores T* (by pointer).
   template <typename T> struct PtrConverter {
     static constexpr bool StoresPointer = true;
-    using StoredType = T;
+    using BaseType = T;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind))
         return &getUnchecked(NodeKind, Storage);
@@ -482,7 +482,7 @@ private:
   /// Converter that stores T (by value).
   template <typename T> struct ValueConverter {
     static constexpr bool StoresPointer = false;
-    using StoredType = T;
+    using BaseType = T;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind))
         return reinterpret_cast<const T *>(Storage);
@@ -507,7 +507,7 @@ private:
             typename = std::enable_if_t<(sizeof(T) == sizeof(BaseT))>>
   struct DynCastValueConverter {
     static constexpr bool StoresPointer = false;
-    using StoredType = BaseT;
+    using BaseType = BaseT;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isBaseOf(NodeKind))
         return &getUnchecked(NodeKind, Storage);
