@@ -5155,20 +5155,20 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   // accurately.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   bool IsWideFixedLengthSVE =
-      Ty->getPrimitiveSizeInBits().getFixedValue() > AArch64::SVEBitsPerBlock &&
+      LT.second.getFixedSizeInBits() > AArch64::SVEBitsPerBlock &&
       ST->useSVEForFixedLengthVectors(LT.second);
-  unsigned FixedLengthSVECost =
+  unsigned WideSVEVectorPenalty =
       IsWideFixedLengthSVE
           ? ST->getCLOpts().sve_wide_vector_constant_materialization_overhead
           : 0;
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind) +
-           FixedLengthSVECost;
+           WideSVEVectorPenalty;
   unsigned VecInstCost =
       CostKind == TTI::TCK_CodeSize ? 1 : ST->getVectorInsertExtractBaseCost();
   return DemandedElts.popcount() * (Insert + Extract) * VecInstCost +
-         FixedLengthSVECost;
+         WideSVEVectorPenalty;
 }
 
 std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
