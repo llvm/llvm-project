@@ -231,18 +231,26 @@ void TestThreadInfo(bool main) {
 #endif
 
 #if SANITIZER_APPLE
-  // LSan scans this range for pointers, so it has to cover the thread's TSD,
-  // which holds the values set with pthread_setspecific.
-  pthread_key_t key;
-  ASSERT_EQ(0, pthread_key_create(&key, nullptr));
-  int marker;
-  ASSERT_EQ(0, pthread_setspecific(key, &marker));
-  bool found = false;
-  for (uptr slot = tls_begin; slot + sizeof(uptr) <= tls_end;
-       slot += sizeof(uptr))
-    found |= *reinterpret_cast<void**>(slot) == &marker;
-  EXPECT_TRUE(found);
-  ASSERT_EQ(0, pthread_key_delete(key));
+  ASSERT_LT(tls_begin, tls_end);
+  InternalMmapVector<pthread_key_t> keys;
+  for (pthread_key_t key; pthread_key_create(&key, nullptr) == 0;)
+    keys.push_back(key);
+  ASSERT_FALSE(keys.empty());
+  int marker = 0;
+  for (pthread_key_t key : keys)
+    ASSERT_EQ(0, pthread_setspecific(key, &marker));
+  void** slots = reinterpret_cast<void**>(tls_begin);
+  uptr slot_count = (tls_end - tls_begin) / sizeof(uptr);
+  uptr seen = 0;
+  for (uptr i = 0; i < slot_count; ++i) seen += slots[i] == &marker;
+  EXPECT_EQ(keys.size(), seen);
+#  if defined(__aarch64__)
+  // On arm64 the range is exactly the TSD: slot 0 holds the thread's
+  // pthread_t, and the last slot is a key's.
+  EXPECT_EQ(pthread_self(), slots[0]);
+  EXPECT_EQ(&marker, slots[slot_count - 1]);
+#  endif
+  for (pthread_key_t key : keys) ASSERT_EQ(0, pthread_key_delete(key));
 #endif
 }
 

@@ -585,7 +585,7 @@ uptr TlsBaseAddr() {
   asm("movl %%gs:0,%0" : "=r"(segbase));
 #elif defined(__aarch64__)
   asm("mrs %x0, tpidrro_el0" : "=r"(segbase));
-  segbase &= ~0x07ul;  // older kernels keep the cpu id in the low 3 bits
+  segbase &= ~0x07ul;  // macOS < 12 keeps the cpu id in the low 3 bits
 #endif
   return segbase;
 }
@@ -593,21 +593,14 @@ uptr TlsBaseAddr() {
 // The size of the tls on darwin does not appear to be well documented,
 // however the vm memory map suggests that it is 1024 uptrs in size,
 // with a size of 0x2000 bytes on x86_64 and 0x1000 bytes on i386.
-// On arm64 the base is the start of the thread-specific data (TSD) array,
-// the last member of libpthread's struct pthread_s. Its length is
-// _INTERNAL_POSIX_THREAD_KEYS_END from libpthread's src/types_internal.h:
-// 512 external + 256 internal keys on macOS, 256 + 256 on iOS-like
-// devices (not simulators).
-#  if defined(__aarch64__)
-static constexpr uptr kTsdSlots =
-    SANITIZER_IOS && !SANITIZER_IOSSIM ? 512 : 768;
-#  endif
-
+// On arm64 it is the size of the TSD array, from libpthread headers.
 uptr TlsSize() {
 #  if defined(__x86_64__) || defined(__i386__)
   return 1024 * sizeof(uptr);
+#  elif defined(__aarch64__) && SANITIZER_IOSDEVICE
+  return 512 * sizeof(uptr);
 #  elif defined(__aarch64__)
-  return kTsdSlots * sizeof(uptr);
+  return 768 * sizeof(uptr);
 #  else
   return 0;
 #  endif
