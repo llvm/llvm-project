@@ -21,7 +21,7 @@ libc_support_library(
     hdrs = ["__stack_chk_fail.h"],
     deps = [
         "//libc:hdr_stdint_proxy",
-        "//libc:stdlib_abort_utils",
         "//libc/src/__support/OSUtil:io",
+        "//libc/src/stdlib:abort_utils",
     ],
 )

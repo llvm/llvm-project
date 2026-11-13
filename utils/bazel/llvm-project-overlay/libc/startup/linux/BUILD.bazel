@@ -51,11 +51,9 @@ libc_startup_library(
     deps = [
         ":gnu_property_section",
         ":irelative_hdr",
-        "//libc:atexit",
         "//libc:config_app_h",
         "//libc:config_linux_app_h",
         "//libc:environ",
-        "//libc:exit",
         "//libc:hdr_elf_proxy",
         "//libc:hdr_link_macros",
         "//libc:hdr_pthread_macros",
@@ -76,6 +74,8 @@ libc_startup_library(
         "//libc/src/errno:program_invocation_name",
         "//libc/src/errno:program_invocation_short_name",
         "//libc/src/link:_r_debug",
+        "//libc/src/stdlib:atexit",
+        "//libc/src/stdlib:exit",
     ] + selects.with_or({
         PLATFORM_CPU_X86_64: [
             "//libc/startup/linux/x86_64:irelative",

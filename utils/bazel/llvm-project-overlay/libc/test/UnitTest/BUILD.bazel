@@ -93,9 +93,7 @@ libc_test_library(
     ] + select({
         "//libc:full_build": [
             "//libc:close",
-            "//libc:exit",
             "//libc:fork",
-            "//libc:getenv",
             "//libc:llvm_libc_macros_poll_macros",
             "//libc:llvm_libc_macros_signal_macros",
             "//libc:llvm_libc_macros_sys_wait_macros",
@@ -110,6 +108,8 @@ libc_test_library(
             "//libc/src/stdio:fflush",
             "//libc/src/stdio:stderr",
             "//libc/src/stdio:stdout",
+            "//libc/src/stdlib:exit",
+            "//libc/src/stdlib:getenv",
         ],
         "//conditions:default": [],
     }) + select({
@@ -132,7 +132,6 @@ libc_test_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:atexit",
         "//libc:bcmp",
         "//libc:bzero",
         "//libc:hdr_errno_macros",
@@ -144,6 +143,7 @@ libc_test_library(
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/macros:config",
+        "//libc/src/stdlib:atexit",
     ],
 )
 
