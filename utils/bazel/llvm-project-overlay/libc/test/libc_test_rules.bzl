@@ -52,8 +52,8 @@ def libc_test(
     """
     deps = deps + [
         "//libc:hdr_stdint_proxy",
-        "//libc:__support_macros_config",
-        "//libc:__support_libc_errno",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support:libc_errno",
         "//libc:errno",
         "//libc:func_aligned_alloc",
         "//libc:func_free",
@@ -116,7 +116,7 @@ def libc_test(
         copts = copts + libc_common_copts(),
         target_compatible_with = target_compatible_with,
         linkopts = linkopts,
-        linkstatic = 1,
+        linkstatic = True,
         tags = tags,
         **kwargs
     )
@@ -142,6 +142,6 @@ def libc_test_library(
         deps = deps + libc_common_deps(),
         copts = copts + libc_common_copts(),
         local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
-        linkstatic = 1,
+        linkstatic = True,
         **kwargs
     )

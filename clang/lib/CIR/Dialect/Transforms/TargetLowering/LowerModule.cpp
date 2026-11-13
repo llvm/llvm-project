@@ -113,9 +113,12 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     langOpts.GPURelocatableDeviceCode = loweringLangOpts.getGpuRdc();
     langOpts.OpenMP = loweringLangOpts.getOpenmp();
     langOpts.OpenMPIsTargetDevice = loweringLangOpts.getOpenmpIsTargetDevice();
+    langOpts.SYCLIsDevice = loweringLangOpts.getSyclIsDevice();
     langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
         loweringLangOpts.getClangAbiCompat()));
     langOpts.LongDoubleSize = loweringLangOpts.getLongDoubleSize();
+    langOpts.RelativeCXXABIVTables =
+        loweringLangOpts.getRelativeCxxAbiVtables();
   }
   // Some langopts are still not lowered.
   assert(!cir::MissingFeatures::lowerModuleLangOpts());

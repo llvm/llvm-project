@@ -1649,6 +1649,10 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     return true;
 
   switch (MI.getOpcode()) {
+  case AArch64::PAUTH_EPILOGUE:
+    // Keep authentication after the other epilogue instructions and close to
+    // the return, allowing them to combine into an authenticated return.
+    return true;
   case AArch64::HINT:
     // CSDB hints are scheduling barriers.
     if (MI.getOperand(0).getImm() == 0x14)

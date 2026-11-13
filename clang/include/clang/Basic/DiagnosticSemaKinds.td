@@ -385,10 +385,10 @@ def err_invalid_width_spec : Error<
 def err_invalid_complex_spec : Error<"'_Complex %0' is invalid">;
 
 def ext_auto_type_specifier : ExtWarn<
-  "'auto' type specifier is a %select{C++11|HLSL 202y}0 extension">,
+  "'auto' type specifier is %select{a C++11|an HLSL 202x}0 extension">,
   InGroup<CXX11>;
 def ext_hlsl_auto_type_specifier : ExtWarn<
-  ext_auto_type_specifier.Summary>, InGroup<HLSL202y>;
+  ext_auto_type_specifier.Summary>, InGroup<HLSL202x>;
 def warn_auto_storage_class : Warning<
   "'auto' storage class specifier is redundant and incompatible with C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
@@ -2661,6 +2661,8 @@ def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<
   "unsequenced modification and access to %0">, InGroup<Unsequenced>;
+def warn_unsequenced_use_use_volatile : Warning<
+  "unsequenced accesses to volatile qualified %0">, InGroup<Unsequenced>;
 
 def select_initialized_entity_kind : TextSubstitution<
   "%select{copying variable|copying parameter|initializing template parameter|"
@@ -3448,6 +3450,10 @@ def err_attribute_arm_za_builtin_no_za_state : Error<
   "builtin call is not valid when calling from a function without active ZA state">;
 def err_attribute_arm_zt0_builtin_no_zt0_state : Error<
   "builtin call is not valid when calling from a function without active ZT0 state">;
+def err_hlx_invalid_field : Error<
+  "aggregate objects with HLX types are not allowed">;
+def err_hlx_invalid_object : Error<
+  "global, static or variable sized objects with HLX types are not allowed">;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_sve_vector_in_non_streaming_function : Error<
@@ -7785,6 +7791,8 @@ def err_subscript_incomplete_or_sizeless_type : Error<
   "subscript of pointer to %select{incomplete|sizeless}0 type %1">;
 def err_subscript_svbool_t : Error<
   "subscript of svbool_t is not allowed">;
+def err_subscript_hlx : Error<
+  "subscript of HLX vector type is not allowed">;
 def err_dereference_incomplete_type : Error<
   "dereference of pointer to incomplete type %0">;
 def ext_gnu_subscript_void_type : Extension<
@@ -8018,6 +8026,8 @@ def ext_typecheck_indirection_through_void_pointer : ExtWarn<
   InGroup<VoidPointerDeref>;
 def err_typecheck_indirection_through_void_pointer_cpp
     : Error<"indirection not permitted on operand of type %0">;
+def err_typecheck_indirection_hlx_vectorpair_pointer
+    : Error<"indirection not permitted on HLX vector pair pointer %0">;
 def warn_indirection_through_null : Warning<
   "indirection of non-volatile null pointer will be deleted, not trap">,
   InGroup<NullDereference>;
@@ -12809,7 +12819,7 @@ def err_omp_wrong_dependency_iterator_type : Error<
 def err_omp_stmt_expr_in_non_rectangular_loop : Error<
   "statement expression is not supported in the loop %select{initializer|condition}0 of a non-rectangular loop nest">;
 def err_target_unsupported_type
-    : Error<"%0 requires %select{|%2 bit size}1 %3 %select{|return }4type support,"
+    : Error<"%0 requires %select{|%2 bit size }1%3 %select{|return }4type support,"
             " but target '%5' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;
@@ -13820,15 +13830,6 @@ def warn_riscv_attribute_interrupt_duplicate_type : Warning<
 def err_riscv_attribute_interrupt_invalid_combination : Error<
   "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 def err_riscv_builtin_invalid_twiden : Error<"RISC-V XSfmm twiden must be 1, 2 or 4">;
-// RISC-V errors
-def err_riscv_call_invalid_features : Error<
-  "call to an attributed function requires %0">;
-def err_missing_riscv_state : Error<"missing state for %0">;
-def err_unknown_riscv_state : Error<"unknown state '%0'">;
-def err_conflicting_attributes_riscv_state : Error<
-  "conflicting attribute. Description: %0">;
-def err_mutually_exclusive_attributes_riscv_state : Error<
-  "mutually exclusive attributes for state '%0'">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
@@ -13898,7 +13899,8 @@ def err_hlsl_semantic_invalid_type
             "%select{scalar|scalar or vector of up to %2 components|vector of %2 components}1 of "
             "%select{16 or 32 bit integer|32 bit integer|"
             "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
-            "32 bit unsigned integer}3 type (was %4)">;
+            "32 bit unsigned integer|bool or 32 bit integer}3 type "
+            "(was %4)">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
@@ -13909,6 +13911,13 @@ def err_hlsl_semantic_in_wrong_shader_model
 def err_hlsl_semantic_partial_explicit_indexing
     : Error<"partial explicit stage input location assignment via "
             "vk::location(X) unsupported">;
+def err_hlsl_vk_builtin_unsupported_value
+    : Error<"'%0' is not a supported value for the 'vk::builtin' attribute; "
+            "supported values are: %1">;
+def err_hlsl_vk_builtin_wrong_type
+    : Error<"'%0' builtin must be of type %1">;
+def err_hlsl_vk_builtin_wrong_stage
+    : Error<"'%0' builtin cannot be used as %1 shader %2">;
 
 def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
 def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;

@@ -201,6 +201,10 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `transparent_union`: whether the record is a union with
       `__attribute__((transparent_union))`, which is passed as its first
       member.  False, the default, is omitted from the printed form.
+    - `flexible_array_member`: from `RecordDecl::hasFlexibleArrayMember()`,
+      which is also set when the last field is a record that has one.  A
+      zero-length array is not a flexible array member.  False, the default,
+      is omitted from the printed form.
 
     Example:
     ```
@@ -224,7 +228,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     "bool":$has_trivial_dtor,
     "uint64_t":$record_align,
     "uint64_t":$unadjusted_align,
-    DefaultValuedParameter<"bool", "false">:$transparent_union
+    DefaultValuedParameter<"bool", "false">:$transparent_union,
+    DefaultValuedParameter<"bool", "false">:$flexible_array_member
   );
 
   let builders = [
@@ -233,7 +238,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
                      "uint64_t":$record_align), [{
       return $_get($_ctxt, arg_passing_kind, has_trivial_dtor, record_align,
                    /*unadjusted_align=*/record_align,
-                   /*transparent_union=*/false);
+                   /*transparent_union=*/false,
+                   /*flexible_array_member=*/false);
     }]>
   ];
 
@@ -1554,6 +1560,32 @@ def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BitIntSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BitIntSpecAttr : CIR_Attr<"BitIntSpec", "bitint_spec"> {
+  let summary = "!cir.int _BitInt data layout spec";
+  let description = [{
+    Upper bound, in bits, on the ABI alignment of a `_BitInt`. This is
+    `TargetInfo::getBitIntMaxAlign()`. `_BitInt(N)` is aligned to
+    `min(PowerOf2Ceil(N), max_align)` bits, and at least one byte.
+
+    Used as the value of the `!cir.int<u, 1, bitint>`-keyed data-layout
+    entry. The key names the `_BitInt` class. Its width is not a layout
+    input.
+
+    ```mlir
+    #dlti.dl_spec<!cir.int<u, 1, bitint> =
+        #cir.bitint_spec<max_align = 64>>
+    ```
+  }];
+  let parameters = (ins "uint32_t":$max_align);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
@@ -2726,14 +2758,17 @@ def CIR_LoweringOptionsAttr
 
     The following fields come from `LangOptions`.  Each bool field mirrors the
     like-named `LangOptions` member: `exceptions`,
-    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`, `gpu_rdc`,
-    `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
-    `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
-    `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
-    `ClangABI` gains an enumerator every Clang release (see
-    `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
-    single toolchain. `no_trapping_math` is true when
+    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`,
+    `sycl_is_device`, `gpu_rdc`, `openmp` (`LangOpts.OpenMP != 0`; only its
+    on/off state matters), and `openmp_is_target_device`. `clang_abi_compat`
+    is an `i32` mirroring `LangOptions::ClangABI`; it is an `i32` rather than
+    a CIR enum because `ClangABI` gains an enumerator every Clang release
+    (see `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine
+    within a single toolchain. `no_trapping_math` is true when
     `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
+    `relative_cxx_abi_vtables` mirrors `LangOptions::RelativeCXXABIVTables`
+    (`-fexperimental-relative-c++-abi-vtables`), which selects the layout of the
+    C++ vtables that lowering emits and reads. It is omitted when false.
 
     The following fields come from `CodeGenOptions`.
     `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
@@ -2752,9 +2787,9 @@ def CIR_LoweringOptionsAttr
     ```
     module attributes {cir.lowering_options = #cir.lowering_options<
       exceptions = false, threadsafe_statics = true, cuda = false,
-      cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
-      openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
-      long_double_size = 0, enable_noundef_attrs = false,
+      cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
+      gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+      clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false,
       no_trapping_math = true, ssp_buffer_size = 8>} { }
     ```
   }];
@@ -2766,6 +2801,7 @@ def CIR_LoweringOptionsAttr
     "bool":$cuda_is_device,
     "bool":$hip,
     "bool":$hlsl,
+    "bool":$sycl_is_device,
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
@@ -2773,14 +2809,16 @@ def CIR_LoweringOptionsAttr
     "int32_t":$long_double_size,
     "bool":$enable_noundef_attrs,
     "bool":$no_trapping_math,
-    "uint32_t":$ssp_buffer_size
+    "uint32_t":$ssp_buffer_size,
+    DefaultValuedParameter<"bool", "false">:$relative_cxx_abi_vtables
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
-               $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat, $long_double_size, $enable_noundef_attrs,
-               $no_trapping_math, $ssp_buffer_size) `>`
+               $hlsl, $sycl_is_device, $gpu_rdc, $openmp,
+               $openmp_is_target_device, $clang_abi_compat, $long_double_size,
+               $enable_noundef_attrs, $no_trapping_math,
+               $ssp_buffer_size, $relative_cxx_abi_vtables) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;
@@ -2791,9 +2829,15 @@ def CIR_LoweringOptionsAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
-  let summary = "Annotation attribute for global variables and functions";
+  let summary = "A C/C++ `annotate` attribute";
   let description = [{
-    Represents a C/C++ `__attribute__((annotate(...)))` in CIR.
+    Represents a C/C++ `__attribute__((annotate(...)))` in CIR. Global
+    variables and functions carry these in their `annotations` attribute; local
+    variables, parameters, record fields, and `__builtin_annotation` use them
+    through the `cir.var_annotation`, `cir.ptr_annotation`, and
+    `cir.annotation` operations. The source file and line of an annotation are
+    taken from the location of the operation that carries it, and its strings
+    are emitted as globals in the `llvm.metadata` section.
 
     Example C code:
     ```c

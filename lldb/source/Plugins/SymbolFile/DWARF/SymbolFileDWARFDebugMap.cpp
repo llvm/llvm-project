@@ -354,10 +354,8 @@ void SymbolFileDWARFDebugMap::InitOSO() {
       // The sibling index can't be less that or equal to the current index
       // "i"
       if (sibling_idx <= i || sibling_idx == UINT32_MAX) {
-        m_objfile_sp->GetModule()->ReportError(
-            "N_SO in symbol with UID {0} has invalid sibling in debug "
-            "map, "
-            "please file a bug and attach the binary listed in this error",
+        m_objfile_sp->GetModule()->ReportInternalError(
+            "N_SO in symbol with UID {0} has invalid sibling in debug map",
             so_symbol->GetID());
       } else {
         const Symbol *last_symbol = symtab->SymbolAtIndex(sibling_idx - 1);
@@ -371,27 +369,18 @@ void SymbolFileDWARFDebugMap::InitOSO() {
       }
     } else {
       if (oso_symbol == nullptr)
-        m_objfile_sp->GetModule()->ReportError(
-            "N_OSO symbol[{0}] can't be found, please file a bug and "
-            "attach "
-            "the binary listed in this error",
-            oso_idx);
+        m_objfile_sp->GetModule()->ReportInternalError(
+            "N_OSO symbol[{0}] can't be found", oso_idx);
       else if (so_symbol == nullptr)
-        m_objfile_sp->GetModule()->ReportError(
-            "N_SO not found for N_OSO symbol[{0}], please file a bug and "
-            "attach the binary listed in this error",
-            oso_idx);
+        m_objfile_sp->GetModule()->ReportInternalError(
+            "N_SO not found for N_OSO symbol[{0}]", oso_idx);
       else if (so_symbol->GetType() != eSymbolTypeSourceFile)
-        m_objfile_sp->GetModule()->ReportError(
-            "N_SO has incorrect symbol type ({0}) for N_OSO "
-            "symbol[{1}], "
-            "please file a bug and attach the binary listed in this error",
+        m_objfile_sp->GetModule()->ReportInternalError(
+            "N_SO has incorrect symbol type ({0}) for N_OSO symbol[{1}]",
             so_symbol->GetType(), oso_idx);
       else if (oso_symbol->GetType() != eSymbolTypeSourceFile)
-        m_objfile_sp->GetModule()->ReportError(
-            "N_OSO has incorrect symbol type ({0}) for N_OSO "
-            "symbol[{1}], "
-            "please file a bug and attach the binary listed in this error",
+        m_objfile_sp->GetModule()->ReportInternalError(
+            "N_OSO has incorrect symbol type ({0}) for N_OSO symbol[{1}]",
             oso_symbol->GetType(), oso_idx);
     }
   }

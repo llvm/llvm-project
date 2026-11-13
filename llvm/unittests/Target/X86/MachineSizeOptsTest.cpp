@@ -195,7 +195,6 @@ body:             |
 ...
 ---
 name:            f
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1(0x7ebb907a), %bb.2(0x01446f86)

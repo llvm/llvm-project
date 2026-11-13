@@ -37,3 +37,4 @@ body:             |
     %lround:_(i64) = G_LROUND %copy(f64)
     $x0 = COPY %lround
     RET_ReallyLR implicit $x0
+...

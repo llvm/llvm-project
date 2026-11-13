@@ -23,31 +23,36 @@ using scanf_core::FormatFlags;
 using scanf_core::FormatSection;
 using scanf_core::LengthModifier;
 
+bool FormatSectionMatcher::match(FormatSection actualValue) {
+  actual = actualValue;
+  return expected == actual;
+}
+
 namespace {
 
 #define IF_FLAG_SHOW_FLAG(flag_name)                                           \
   do {                                                                         \
     if ((form.flags & FormatFlags::flag_name) == FormatFlags::flag_name)       \
-      listener << "\n\t\t" << #flag_name;                                      \
+      tlog << "\n\t\t" << #flag_name;                                          \
   } while (false)
 #define CASE_LM(lm)                                                            \
   case (LengthModifier::lm):                                                   \
-    listener << #lm;                                                           \
+    tlog << #lm;                                                               \
     break
 
-void display(MatchResultListener &listener, const FormatSection &form) {
-  listener << "Raw String (len " << form.raw_string.size() << "): \"";
+void display(FormatSection form) {
+  tlog << "Raw String (len " << form.raw_string.size() << "): \"";
   for (size_t i = 0; i < form.raw_string.size(); ++i) {
-    listener << form.raw_string[i];
+    tlog << form.raw_string[i];
   }
-  listener << "\"";
+  tlog << "\"";
   if (form.has_conv) {
-    listener << "\n\tHas Conv\n\tFlags:";
+    tlog << "\n\tHas Conv\n\tFlags:";
     IF_FLAG_SHOW_FLAG(NO_WRITE);
     IF_FLAG_SHOW_FLAG(ALLOCATE);
-    listener << "\n";
-    listener << "\tmax width: " << form.max_width << "\n";
-    listener << "\tlength modifier: ";
+    tlog << "\n";
+    tlog << "\tmax width: " << form.max_width << "\n";
+    tlog << "\tlength modifier: ";
     switch (form.length_modifier) {
       CASE_LM(NONE);
       CASE_LM(l);
@@ -59,43 +64,38 @@ void display(MatchResultListener &listener, const FormatSection &form) {
       CASE_LM(t);
       CASE_LM(L);
     }
-    listener << "\n";
+    tlog << "\n";
     // If the pointer is used (NO_WRITE is not set and the conversion isn't %).
     if (((form.flags & FormatFlags::NO_WRITE) == 0) &&
         (form.conv_name != '%')) {
-      listener << "\tpointer value: "
-               << int_to_hex<uintptr_t>(
-                      reinterpret_cast<uintptr_t>(form.output_ptr))
-               << "\n";
+      tlog << "\tpointer value: "
+           << int_to_hex<uintptr_t>(
+                  reinterpret_cast<uintptr_t>(form.output_ptr))
+           << "\n";
     }
 
-    listener << "\tconversion name: " << form.conv_name << "\n";
+    tlog << "\tconversion name: " << form.conv_name << "\n";
 
     if (form.conv_name == '[') {
-      listener << "\t\t";
+      tlog << "\t\t";
       for (size_t i = 0; i < 256 /* char max */; ++i) {
         if (form.scan_set.test(i)) {
-          listener << static_cast<char>(i);
+          tlog << static_cast<char>(i);
         }
       }
-      listener << "\n\t]\n";
+      tlog << "\n\t]\n";
     }
   }
 }
 } // anonymous namespace
 
-bool FormatSectionMatcher::MatchAndExplain(
-    const FormatSection &actual, MatchResultListener *listener) const {
-  if (expected == actual)
-    return true;
-  if (!listener->IsInterested())
-    return false;
-  *listener << "expected format section: ";
-  display(*listener, expected);
-  *listener << "\nactual format section  : ";
-  display(*listener, actual);
-  *listener << '\n';
-  return false;
+void FormatSectionMatcher::explainError() {
+  tlog << "expected format section: ";
+  display(expected);
+  tlog << '\n';
+  tlog << "actual format section  : ";
+  display(actual);
+  tlog << '\n';
 }
 
 } // namespace testing

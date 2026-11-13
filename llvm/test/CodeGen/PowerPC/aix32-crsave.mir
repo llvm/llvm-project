@@ -83,3 +83,4 @@ body:             |
     ; CHECK:      $r31 = LWZ -4, $r1 :: (load (s32) from %fixed-stack.0)
     ; CHECK-NEXT: $r12 = LWZ 4, $r1
     ; CHECK-NEXT: $cr3 = MTOCRF killed $r12
+...

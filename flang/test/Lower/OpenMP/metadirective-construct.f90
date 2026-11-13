@@ -251,6 +251,34 @@ subroutine test_repeated_construct_superset_first()
   !$omp end parallel do
 end subroutine
 
+! All three candidates score 8. Neither of the first two is a subset of the
+! other, but both are strict subsets of the third.
+! CHECK-LABEL: func.func @_QPtest_repeated_construct_three_way_tie()
+! CHECK:         omp.parallel
+! CHECK:           omp.wsloop
+! CHECK:             omp.parallel
+! CHECK-NOT:           omp.taskyield
+! CHECK-NOT:           omp.taskwait
+! CHECK:               omp.barrier
+! CHECK:         return
+subroutine test_repeated_construct_three_way_tie()
+  integer :: i
+  !$omp parallel
+  !$omp do
+  do i = 1, 1
+    !$omp parallel
+      !$omp metadirective &
+      !$omp & when(construct={parallel do, parallel}: taskyield) &
+      !$omp & when(construct={parallel do}, &
+      !$omp &      implementation={vendor(score(4): llvm)}: taskwait) &
+      !$omp & when(construct={parallel do, parallel}, &
+      !$omp &      implementation={vendor(score(0): llvm)}: barrier)
+    !$omp end parallel
+  end do
+  !$omp end do
+  !$omp end parallel
+end subroutine
+
 ! The conditions differ, so neither selector is a subset and `a` is tested
 ! first.
 ! CHECK-LABEL: func.func @_QPtest_repeated_construct_conditions(

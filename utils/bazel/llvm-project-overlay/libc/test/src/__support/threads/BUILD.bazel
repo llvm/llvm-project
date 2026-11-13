@@ -14,9 +14,9 @@ libc_test(
     name = "futex_utils_test",
     srcs = ["futex_utils_test.cpp"],
     deps = [
-        "//libc:__support_cpp_optional",
-        "//libc:__support_threads_futex_utils",
         "//libc:hdr_errno_macros",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/threads:futex_utils",
     ],
 )
 
@@ -24,17 +24,17 @@ libc_test(
     name = "raw_mutex_test",
     srcs = ["linux/raw_mutex_test.cpp"],
     deps = [
-        "//libc:__support_cpp_atomic",
-        "//libc:__support_osutil_exit",
-        "//libc:__support_osutil_syscall",
-        "//libc:__support_threads_raw_mutex",
-        "//libc:__support_threads_sleep",
-        "//libc:__support_time_clock_gettime",
         "//libc:hdr_signal_macros",
         "//libc:hdr_sys_mman_macros",
         "//libc:llvm_libc_macros_time_macros",
         "//libc:mmap",
         "//libc:munmap",
+        "//libc/src/__support/CPP:atomic",
+        "//libc/src/__support/OSUtil:exit",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/threads:raw_mutex",
+        "//libc/src/__support/threads:sleep",
+        "//libc/src/__support/time:clock_gettime",
     ],
 )
 
@@ -42,8 +42,8 @@ libc_test(
     name = "raw_rwlock_test",
     srcs = ["linux/raw_rwlock_test.cpp"],
     deps = [
-        "//libc:__support_threads_raw_rwlock",
-        "//libc:__support_time_clock_gettime",
         "//libc:hdr_time_macros",
+        "//libc/src/__support/threads:raw_rwlock",
+        "//libc/src/__support/time:clock_gettime",
     ],
 )
