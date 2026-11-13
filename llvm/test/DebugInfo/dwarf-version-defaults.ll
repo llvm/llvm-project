@@ -31,7 +31,7 @@
 ; RUN: llvm-dwarfdump --debug-info %t.gnu.o | FileCheck %s --check-prefix=TLS-GNU
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -dwarf-version=5 -filetype=obj -o %t.gnu5.o
 ; RUN: llvm-dwarfdump --debug-info %t.gnu5.o | FileCheck %s --check-prefix=TLS-GNU
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -debugger-tune=lldb -filetype=obj -o %t.lldb.o
+; RUN: sed 's/!{!3}/!{!3, !19}/' %s | llc -mtriple=x86_64-linux-gnu -filetype=obj -o %t.lldb.o
 ; RUN: llvm-dwarfdump --debug-info %t.lldb.o | FileCheck %s --check-prefix=TLS-STD
 ; RUN: llc < %s -mtriple=arm64-apple-darwin -filetype=obj -o %t.darwin.o
 ; RUN: llvm-dwarfdump --debug-info %t.darwin.o | FileCheck %s --check-prefix=TLS-STD
@@ -85,3 +85,4 @@ define void @f() !dbg !17 {
 !16 = !{null}
 !17 = distinct !DISubprogram(name: "f", scope: !4, file: !4, line: 4, type: !14, scopeLine: 4, spFlags: DISPFlagDefinition, unit: !2)
 !18 = !DILocation(line: 4, scope: !17)
+!19 = !{i32 2, !"debugger-tuning", !"lldb"}

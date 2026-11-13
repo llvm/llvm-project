@@ -382,10 +382,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
                        A->TM.getTargetTriple().isOSBinFormatWasm()) &&
                       GenerateDwarfTypeUnits;
 
-  // Emit call-site-param debug info for GDB and LLDB, if the target supports
-  // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();
-
   if (DwarfOpConvert == Default)
     EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) ||
                         (tuneForLLDB() && !TT.isOSBinFormatMachO()));
