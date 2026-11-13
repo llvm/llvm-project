@@ -18,6 +18,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: GLOBAL_PREFETCH_B8 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -44,6 +45,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr0_sgpr1, $vgpr0, 0, 0, implicit $exec
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $exec = S_MOV_B64 $sgpr2_sgpr3
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -70,6 +72,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: FLAT_PREFETCH_B8 $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -96,6 +99,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32), addrspace 3)
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -122,6 +126,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 3)
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -256,6 +261,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -282,6 +288,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt, implicit $m0 :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -308,6 +315,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_vgpr1, $vgpr2, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 3), (store (s32), addrspace 1)
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -415,6 +423,7 @@ body: |
     ; XNACK-NEXT: S_WAIT_KMCNT 0
     ; XNACK-NEXT: GLOBAL_PREFETCH_B8 $vgpr0_vgpr1, 0, 0, implicit $exec
     ; XNACK-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
+    ; XNACK-NEXT: S_WAIT_XCNT 1
     ; XNACK-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -447,6 +456,7 @@ body: |
     ; XNACK-NEXT: GLOBAL_PREFETCH_B8 $vgpr2_vgpr3, 0, 0, implicit $exec
     ; XNACK-NEXT: S_WAIT_LOADCNT 0
     ; XNACK-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr4, implicit $exec
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -483,6 +493,7 @@ body: |
     ; XNACK-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
     ; XNACK-NEXT: GLOBAL_PREFETCH_B8 $vgpr2_vgpr3, 0, 0, implicit $exec
     ; XNACK-NEXT: S_WAIT_LOADCNT 0
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr4, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -518,6 +529,7 @@ body: |
     ; XNACK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr6, $vgpr2_vgpr3, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
     ; XNACK-NEXT: S_WAIT_LOADCNT 0
     ; XNACK-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr4, implicit $exec
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
@@ -555,6 +567,7 @@ body: |
     ; XNACK-NEXT: $vgpr6 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32), addrspace 3)
     ; XNACK-NEXT: S_WAIT_LOADCNT 0
     ; XNACK-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr4, implicit $exec
+    ; XNACK-NEXT: S_WAIT_XCNT 0
     ; XNACK-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     ; XNACK-NEXT: S_ENDPGM 0
     ;
