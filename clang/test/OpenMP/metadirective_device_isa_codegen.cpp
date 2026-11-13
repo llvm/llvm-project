@@ -29,4 +29,16 @@ void x86_64_device_isa_not_selected() {
 // CHECK:  @_Z3barv
 // CHECK: call void @__kmpc_end_single
 // CHECK: ret void
+
+// Both WHEN clauses score the same. The second requires more traits, but not
+// the "sse" ISA name, so the first one is not a strict subset and wins.
+void x86_64_device_isa_names_differ() {
+#pragma omp metadirective when(device = {isa("sse")} : parallel) \
+    when(device = {isa("sse2")}, user = {condition(1)} : single)
+  bar();
+}
+// CHECK-LABEL: void @_Z30x86_64_device_isa_names_differv()
+// CHECK-NOT: __kmpc_single
+// CHECK: ...) @__kmpc_fork_call{{.*}}@_Z30x86_64_device_isa_names_differv.omp_outlined
+// CHECK: ret void
 #endif
