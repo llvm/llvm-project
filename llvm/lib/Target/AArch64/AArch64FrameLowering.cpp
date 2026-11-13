@@ -2260,8 +2260,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           EmitSEHNop();
         } else {
           RTLIB::Libcall StateLC = RTLIB::SMEABI_SME_STATE;
-          const uint32_t *StateRegMask = TRI->getCallPreservedMask(
-              MF, TLI.getLibcallCallingConv(StateLC));
+          const uint32_t *StateRegMask =
+              TRI->getCallPreservedMask(MF, TLI.getLibcallCallingConv(StateLC));
           BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
               .addExternalSymbol(TLI.getLibcallName(StateLC))
               .addReg(AArch64::X0, RegState::ImplicitDefine)
@@ -2331,7 +2331,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
                 .addReg(AArch64::X0)
                 .setMIFlag(MachineInstr::FrameSetup);
           }
-  
+
           RTLIB::Libcall LC = RTLIB::SMEABI_GET_CURRENT_VG;
           const uint32_t *RegMask =
               TRI->getCallPreservedMask(MF, TLI.getLibcallCallingConv(LC));
