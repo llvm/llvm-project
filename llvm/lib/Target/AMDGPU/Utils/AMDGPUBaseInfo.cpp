@@ -320,9 +320,12 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
                   unsigned VDataDwords, unsigned VAddrDwords, bool IndexedRsrc,
                   bool IndexedSamp) {
+  assert(isUInt<8>(VDataDwords) && isUInt<8>(VAddrDwords));
+  uint8_t VDataDwordsEnc = static_cast<uint8_t>(VDataDwords);
+  uint8_t VAddrDwordsEnc = static_cast<uint8_t>(VAddrDwords);
   const MIMGInfo *Info =
-      getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwords, VAddrDwords,
-                          IndexedRsrc, IndexedSamp);
+      getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwordsEnc,
+                          VAddrDwordsEnc, IndexedRsrc, IndexedSamp);
   return Info ? Info->Opcode : -1;
 }
 
@@ -333,8 +336,10 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcode(unsigned Opc) {
 
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
   const MIMGInfo *OrigInfo = getMIMGInfo(Opc);
+  assert(isUInt<8>(NewChannels));
+  uint8_t NewChannelsEnc = static_cast<uint8_t>(NewChannels);
   const MIMGInfo *NewInfo = getMIMGOpcodeHelper(
-      OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding, NewChannels,
+      OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding, NewChannelsEnc,
       OrigInfo->VAddrDwords, OrigInfo->IndexedRsrc, OrigInfo->IndexedSamp);
   return NewInfo ? NewInfo->Opcode : -1;
 }
@@ -493,8 +498,10 @@ int getMTBUFBaseOpcode(unsigned Opc) {
 }
 
 int getMTBUFOpcode(unsigned BaseOpc, unsigned Elements) {
+  assert(isUInt<8>(Elements));
+  uint8_t ElementsEnc = static_cast<uint8_t>(Elements);
   const MTBUFInfo *Info =
-      getMTBUFInfoFromBaseOpcodeAndElements(BaseOpc, Elements);
+      getMTBUFInfoFromBaseOpcodeAndElements(BaseOpc, ElementsEnc);
   return Info ? Info->Opcode : -1;
 }
 
@@ -524,8 +531,10 @@ int getMUBUFBaseOpcode(unsigned Opc) {
 }
 
 int getMUBUFOpcode(unsigned BaseOpc, unsigned Elements) {
+  assert(isUInt<8>(Elements));
+  uint8_t ElementsEnc = static_cast<uint8_t>(Elements);
   const MUBUFInfo *Info =
-      getMUBUFInfoFromBaseOpcodeAndElements(BaseOpc, Elements);
+      getMUBUFInfoFromBaseOpcodeAndElements(BaseOpc, ElementsEnc);
   return Info ? Info->Opcode : -1;
 }
 
