@@ -2315,247 +2315,104 @@ libc_support_library(
 
 ############################### complex targets ################################
 
-libc_function(
+alias(
     name = "cimag",
-    srcs = ["src/complex/generic/cimag.cpp"],
-    hdrs = ["src/complex/cimag.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cimag",
 )
 
-libc_function(
+alias(
     name = "cimagf",
-    srcs = ["src/complex/generic/cimagf.cpp"],
-    hdrs = ["src/complex/cimagf.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cimagf",
 )
 
-libc_function(
+alias(
     name = "cimagf128",
-    srcs = ["src/complex/generic/cimagf128.cpp"],
-    hdrs = ["src/complex/cimagf128.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-        "//libc/src/__support/macros/properties:types",
-    ],
+    actual = "//libc/src/complex:cimagf128",
 )
 
-libc_function(
+alias(
     name = "cimagf16",
-    srcs = ["src/complex/generic/cimagf16.cpp"],
-    hdrs = ["src/complex/cimagf16.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-        "//libc/src/__support/macros/properties:types",
-    ],
+    actual = "//libc/src/complex:cimagf16",
 )
 
-libc_function(
+alias(
     name = "cimagl",
-    srcs = ["src/complex/generic/cimagl.cpp"],
-    hdrs = ["src/complex/cimagl.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cimagl",
 )
 
-libc_function(
+alias(
     name = "conj",
-    srcs = ["src/complex/generic/conj.cpp"],
-    hdrs = ["src/complex/conj.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:conj",
 )
 
-libc_function(
+alias(
     name = "conjf",
-    srcs = ["src/complex/generic/conjf.cpp"],
-    hdrs = ["src/complex/conjf.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:conjf",
 )
 
-libc_function(
+alias(
     name = "conjf128",
-    srcs = ["src/complex/generic/conjf128.cpp"],
-    hdrs = ["src/complex/conjf128.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-    ],
+    actual = "//libc/src/complex:conjf128",
 )
 
-libc_function(
+alias(
     name = "conjf16",
-    srcs = ["src/complex/generic/conjf16.cpp"],
-    hdrs = ["src/complex/conjf16.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-    ],
+    actual = "//libc/src/complex:conjf16",
 )
 
-libc_function(
+alias(
     name = "conjl",
-    srcs = ["src/complex/generic/conjl.cpp"],
-    hdrs = ["src/complex/conjl.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:conjl",
 )
 
-libc_function(
+alias(
     name = "cproj",
-    srcs = ["src/complex/generic/cproj.cpp"],
-    hdrs = ["src/complex/cproj.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cproj",
 )
 
-libc_function(
+alias(
     name = "cprojf",
-    srcs = ["src/complex/generic/cprojf.cpp"],
-    hdrs = ["src/complex/cprojf.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cprojf",
 )
 
-libc_function(
+alias(
     name = "cprojf128",
-    srcs = ["src/complex/generic/cprojf128.cpp"],
-    hdrs = ["src/complex/cprojf128.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-    ],
+    actual = "//libc/src/complex:cprojf128",
 )
 
-libc_function(
+alias(
     name = "cprojf16",
-    srcs = ["src/complex/generic/cprojf16.cpp"],
-    hdrs = ["src/complex/cprojf16.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-    ],
+    actual = "//libc/src/complex:cprojf16",
 )
 
-libc_function(
+alias(
     name = "cprojl",
-    srcs = ["src/complex/generic/cprojl.cpp"],
-    hdrs = ["src/complex/cprojl.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_basic_ops",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:cprojl",
 )
 
-libc_function(
+alias(
     name = "creal",
-    srcs = ["src/complex/generic/creal.cpp"],
-    hdrs = ["src/complex/creal.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:creal",
 )
 
-libc_function(
+alias(
     name = "crealf",
-    srcs = ["src/complex/generic/crealf.cpp"],
-    hdrs = ["src/complex/crealf.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:crealf",
 )
 
-libc_function(
+alias(
     name = "crealf128",
-    srcs = ["src/complex/generic/crealf128.cpp"],
-    hdrs = ["src/complex/crealf128.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-        "//libc/src/__support/macros/properties:types",
-    ],
+    actual = "//libc/src/complex:crealf128",
 )
 
-libc_function(
+alias(
     name = "crealf16",
-    srcs = ["src/complex/generic/crealf16.cpp"],
-    hdrs = ["src/complex/crealf16.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/macros/properties:complex_types",
-        "//libc/src/__support/macros/properties:types",
-    ],
+    actual = "//libc/src/complex:crealf16",
 )
 
-libc_function(
+alias(
     name = "creall",
-    srcs = ["src/complex/generic/creall.cpp"],
-    hdrs = ["src/complex/creall.h"],
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:complex_type",
-        "//libc/src/__support/CPP:bit",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/complex:creall",
 )
 
 ################################ link targets ##################################
