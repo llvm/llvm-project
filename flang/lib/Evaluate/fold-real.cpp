@@ -518,7 +518,7 @@ Expr<Type<TypeCategory::Real>> FoldOperation(
                 return Expr<Result>{
                     ComplexComponent{isImaginaryPart, std::move(operand)}};
               }})}) {
-    return *array;
+    return std::move(*array);
   }
   auto &operand{x.left()};
   if (auto value{GetScalarConstantValue<Operand>(kind, operand)}) {
