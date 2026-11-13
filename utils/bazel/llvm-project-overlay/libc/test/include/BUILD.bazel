@@ -401,7 +401,7 @@ libc_test(
     full_build_only = True,
     deps = [
         "//libc:__support_char_vector",
-        "//libc:__support_cpp_string",
         "//libc:llvm_libc_macros_sys_queue_macros",
+        "//libc/src/__support/CPP:string",
     ],
 )

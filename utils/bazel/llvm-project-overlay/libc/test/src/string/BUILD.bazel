@@ -48,9 +48,9 @@ libc_test(
     name = "stpncpy_test",
     srcs = ["stpncpy_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
         "//libc:hdr_signal_macros",
         "//libc:stpncpy",
+        "//libc/src/__support/CPP:span",
     ],
 )
 
@@ -223,12 +223,12 @@ libc_test_library(
     name = "memory_check_utils",
     hdrs = ["memory_utils/memory_check_utils.h"],
     deps = [
-        "//libc:__support_cpp_span",
         "//libc:__support_libc_assert",
         "//libc:__support_macros_config",
         "//libc:__support_macros_sanitizer",
         "//libc:hdr_stdint_proxy",
         "//libc:string_memory_utils",
+        "//libc/src/__support/CPP:span",
     ],
 )
 
@@ -267,8 +267,8 @@ libc_test(
     name = "memccpy_test",
     srcs = ["memccpy_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
         "//libc:memccpy",
+        "//libc/src/__support/CPP:span",
     ],
 )
 
@@ -312,10 +312,10 @@ libc_test(
     srcs = ["memmove_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:__support_cpp_span",
         "//libc:hdr_signal_macros",
         "//libc:memcmp",
         "//libc:memmove",
+        "//libc/src/__support/CPP:span",
         "//libc/test/UnitTest:memory_matcher",
     ],
 )

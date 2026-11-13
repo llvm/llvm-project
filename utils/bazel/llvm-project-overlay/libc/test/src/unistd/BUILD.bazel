@@ -68,7 +68,6 @@ libc_test(
     name = "ftruncate_test",
     srcs = ["ftruncate_test.cpp"],
     deps = [
-        "//libc:__support_cpp_string_view",
         "//libc:close",
         "//libc:ftruncate",
         "//libc:hdr_sys_stat_macros",
@@ -76,6 +75,7 @@ libc_test(
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
+        "//libc/src/__support/CPP:string_view",
     ],
 )
 
@@ -150,7 +150,6 @@ libc_test(
     name = "truncate_test",
     srcs = ["truncate_test.cpp"],
     deps = [
-        "//libc:__support_cpp_string_view",
         "//libc:close",
         "//libc:hdr_sys_stat_macros",
         "//libc:open",
@@ -158,6 +157,7 @@ libc_test(
         "//libc:truncate",
         "//libc:unlink",
         "//libc:write",
+        "//libc/src/__support/CPP:string_view",
     ],
 )
 

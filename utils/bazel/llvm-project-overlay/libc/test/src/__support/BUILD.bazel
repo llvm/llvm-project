@@ -65,13 +65,13 @@ libc_test(
     srcs = ["integer_to_string_test.cpp"],
     deps = [
         "//libc:__support_big_int",
-        "//libc:__support_cpp_limits",
-        "//libc:__support_cpp_span",
-        "//libc:__support_cpp_string_view",
         "//libc:__support_integer_literals",
         "//libc:__support_integer_to_string",
         "//libc:__support_macros_properties_types",
         "//libc:__support_uint128",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/CPP:string_view",
     ],
 )
 
@@ -89,11 +89,11 @@ libc_test(
     srcs = ["big_int_test.cpp"],
     deps = [
         "//libc:__support_big_int",
-        "//libc:__support_cpp_optional",
         "//libc:__support_integer_literals",
         "//libc:__support_macros_properties_types",
         "//libc:hdr_math_macros",
         "//libc:llvm_libc_macros_math_macros",
+        "//libc/src/__support/CPP:optional",
     ],
 )
 
@@ -101,8 +101,8 @@ libc_test(
     name = "fixedvector_test",
     srcs = ["fixedvector_test.cpp"],
     deps = [
-        "//libc:__support_cpp_array",
         "//libc:__support_fixedvector",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -128,11 +128,11 @@ libc_test(
     srcs = ["printf_core/parser_test.cpp"],
     deps = [
         "//libc:__support_arg_list",
-        "//libc:__support_cpp_bit",
-        "//libc:__support_cpp_string_view",
         "//libc:__support_macros_properties_types",
         "//libc:__support_printf_core_printf_core_structs",
         "//libc:__support_printf_core_printf_parser",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:string_view",
         "//libc/test/UnitTest:printf_matcher",
     ],
 )
@@ -142,10 +142,10 @@ libc_test(
     srcs = ["printf_core/writer_test.cpp"],
     deps = [
         "//libc:__support_arg_list",
-        "//libc:__support_cpp_string_view",
         "//libc:__support_printf_core_printf_core_structs",
         "//libc:__support_printf_core_printf_writer",
         "//libc:string_memory_utils",
+        "//libc/src/__support/CPP:string_view",
     ],
 )
 
@@ -154,9 +154,9 @@ libc_test(
     srcs = ["printf_core/converter_test.cpp"],
     deps = [
         "//libc:__support_arg_list",
-        "//libc:__support_cpp_string_view",
         "//libc:__support_printf_core_printf_converter",
         "//libc:__support_printf_core_printf_core_structs",
         "//libc:__support_printf_core_printf_writer",
+        "//libc/src/__support/CPP:string_view",
     ],
 )

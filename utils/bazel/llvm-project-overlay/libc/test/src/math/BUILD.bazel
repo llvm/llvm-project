@@ -184,8 +184,8 @@ math_mpfr_test(
     name = "cosf",
     hdrs = ["sdcomp26094.h"],
     deps = [
-        "//libc:__support_cpp_array",
         "//libc:__support_math_cosf",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -200,7 +200,7 @@ math_mpfr_test(
 math_mpfr_test(
     name = "coshf",
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -208,7 +208,7 @@ math_mpfr_test(
     name = "cospif",
     hdrs = ["sdcomp26094.h"],
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -308,7 +308,7 @@ math_mpfr_test(
 math_mpfr_test(
     name = "exp10m1f",
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -332,7 +332,7 @@ math_mpfr_test(
 math_mpfr_test(
     name = "exp2m1f",
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -904,7 +904,7 @@ math_mpfr_test(
     name = "nearbyint",
     hdrs = ["NearbyIntTest.h"],
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -912,8 +912,8 @@ math_mpfr_test(
     name = "nearbyintbf16",
     hdrs = ["NearbyIntTest.h"],
     deps = [
-        "//libc:__support_cpp_array",
         "//libc:__support_fputil_bfloat16",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -921,7 +921,7 @@ math_mpfr_test(
     name = "nearbyintf",
     hdrs = ["NearbyIntTest.h"],
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -929,7 +929,7 @@ math_mpfr_test(
     name = "nearbyintl",
     hdrs = ["NearbyIntTest.h"],
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -937,7 +937,7 @@ math_mpfr_test(
     name = "nearbyintf16",
     hdrs = ["NearbyIntTest.h"],
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -1100,8 +1100,8 @@ math_mpfr_test(
     name = "sinf",
     hdrs = ["sdcomp26094.h"],
     deps = [
-        "//libc:__support_cpp_array",
         "//libc:__support_math_sinf",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -1111,7 +1111,7 @@ math_mpfr_test(
     name = "sincosf",
     hdrs = ["sdcomp26094.h"],
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -1126,7 +1126,7 @@ math_mpfr_test(
 math_mpfr_test(
     name = "sinhf",
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -1141,7 +1141,7 @@ math_mpfr_test(
     name = "sinpif",
     hdrs = ["sdcomp26094.h"],
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -1149,7 +1149,7 @@ math_mpfr_test(
     name = "tanpif",
     hdrs = ["sdcomp26094.h"],
     deps = [
-        "//libc:__support_cpp_array",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
@@ -1230,8 +1230,8 @@ math_mpfr_test(
     name = "tanf",
     hdrs = ["sdcomp26094.h"],
     deps = [
-        "//libc:__support_cpp_array",
         "//libc:__support_math_tanf",
+        "//libc/src/__support/CPP:array",
     ],
 )
 
