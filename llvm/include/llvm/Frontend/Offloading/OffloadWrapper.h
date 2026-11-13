@@ -79,8 +79,10 @@ struct SYCLJITOptions {
 /// as global symbols and registers the images with the SYCL Runtime.
 /// \param Options Compiler and linker options to be encoded for the later
 ///  use by a runtime for JIT compilation. Not used for AOT.
-/// \param IsFinalizedImage True when \p Buffer holds an already finalized
-///  device image, which must not be device-linked again.
+/// \param IsFinalizedImage True when \p Buffer holds an already linked device
+///  image, e.g. from -fno-gpu-rdc or a relocatable link. It is put in
+///  .sycl_fatbin instead of .llvm.offloading, so that a later link does not
+///  link it again.
 /// \param RegistrationFunc When given, receives the function that registers the
 ///  binary with the runtime instead of it being appended to llvm.global_ctors.
 ///  A caller has to add it to that list itself.

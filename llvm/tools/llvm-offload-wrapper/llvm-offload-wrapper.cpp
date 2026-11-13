@@ -94,8 +94,6 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
       return Err;
     break;
   case llvm::object::OFK_SYCL:
-    // As clang-linker-wrapper does for -r, put the already linked device image
-    // in .sycl_fatbin instead of .llvm.offloading.
     if (Error Err = offloading::wrapSYCLBinaries(
             M, BuffersToWrap.front(), offloading::SYCLJITOptions(),
             /*IsFinalizedImage=*/Relocatable))
