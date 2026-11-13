@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include <memory>
 #include <unordered_set>
@@ -150,6 +151,7 @@ protected:
 
   // Used by SampleProfileWriter
   SampleProfileMap ProfileMap;
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
   const ContextSampleCounterMap *SampleCounters = nullptr;
 };
@@ -182,8 +184,9 @@ private:
   populateBodySamplesWithProbesForAllFunctions(const RangeSample &RangeCounter);
   void populateBoundarySamplesWithProbesForAllFunctions(
       const BranchSample &BranchCounters);
-  void
-  populateTypeSamplesForAllFunctions(const DataAccessSample &DataAccessSamples);
+  void populateTypeSamplesForAllFunctions(
+      const VTableAccessSample &VTableAccessSamples);
+  void populateDataAccessSamples(const DataAccessSample &DataAccessSamples);
   void postProcessProfiles();
   void trimColdProfiles(uint64_t ColdCntThreshold);
   bool collectFunctionsFromLLVMProfile(

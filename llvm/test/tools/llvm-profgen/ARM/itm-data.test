@@ -1,0 +1,23 @@
+; REQUIRES: opencsd, arm-registered-target
+; RUN: yaml2obj %S/Inputs/etm-opencsd.yaml -o %t.bin
+
+; Verify ITM data trace decoding generates data access profiles and ignores
+; non-address DWT packets (event counter \005\004, exception \016\017\020,
+; and data value \205\007).
+; RUN: printf "\000\000\000\000\000\200\117\000\020\000\040\115\000\115\010\005\004\016\017\020\205\007" > %t.trace
+
+; Verify sample-based data access profile generation (text and extbinary).
+; RUN: llvm-profgen --etm=%t.trace --binary=%t.bin --output=%t.prof --format=text
+; RUN: llvm-profdata show --sample %t.prof | FileCheck %s
+
+; RUN: llvm-profgen --etm=%t.trace --binary=%t.bin --output=%t.extbin.prof --format=extbinary
+; RUN: llvm-profdata show --sample %t.extbin.prof | FileCheck %s
+
+; CHECK: DataAccessProfiles:
+; CHECK-NEXT: ---
+; CHECK-NEXT: SampledRecords:
+; CHECK-NEXT:   - Symbol:          global_var
+; CHECK-NEXT:     AccessCount:     2
+; CHECK-NEXT:   - Symbol:          global_arr
+; CHECK-NEXT:     AccessCount:     1
+; CHECK-NEXT: ...

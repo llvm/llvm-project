@@ -552,6 +552,10 @@ Makes programs 10x faster by doing Special New Thing.
   which is mostly useful on Windows where configuring the system to use UTF-8 is
   more involved than setting an environment variable.
 
+* `llvm-profgen` now supports ARM Instrumentation Trace Macrocell (ITM) data
+  trace decoding using the OpenCSD library. The minimum required OpenCSD version
+  has been updated from 1.5.4 to 1.8.4.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm

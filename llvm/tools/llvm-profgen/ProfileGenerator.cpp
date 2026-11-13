@@ -11,6 +11,7 @@
 #include "Options.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Timer.h"
 #include <algorithm>
@@ -168,6 +169,8 @@ void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
     Binary->populateSymbolListFromDWARF(SymbolList);
     Writer->setProfileSymbolList(&SymbolList);
   }
+
+  Writer->setDataAccessProfData(std::move(DataAccessProfileData));
 
   if (std::error_code EC = Writer->write(ProfileMap))
     exitWithError(std::move(EC));
@@ -517,6 +520,9 @@ void ProfileGenerator::generateProfile() {
     } else {
       generateLineNumBasedProfile();
     }
+
+    const SampleCounter &SC = SampleCounters->begin()->second;
+    populateDataAccessSamples(SC.DataAccessCounter);
   }
 
   postProcessProfiles();
@@ -562,7 +568,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   populateBodySamplesForAllFunctions(SC.RangeCounter);
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
-  populateTypeSamplesForAllFunctions(SC.DataAccessCounter);
+  populateTypeSamplesForAllFunctions(SC.VTableAccessCounter);
 
   updateFunctionSamples();
 }
@@ -777,10 +783,10 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
 }
 
 void ProfileGenerator::populateTypeSamplesForAllFunctions(
-    const DataAccessSample &DataAccessSamples) {
+    const VTableAccessSample &VTableAccessSamples) {
   // For each instruction with vtable accesses, get its symbolized inline
   // stack, and add the vtable counters to the function samples.
-  for (const auto &[IpData, Count] : DataAccessSamples) {
+  for (const auto &[IpData, Count] : VTableAccessSamples) {
     uint64_t InstAddr = IpData.first;
     const SampleContextFrameVector &FrameVec =
         Binary->getCachedFrameLocationStack(InstAddr,
@@ -794,6 +800,43 @@ void ProfileGenerator::populateTypeSamplesForAllFunctions(
       FunctionProfile.addTypeSamplesAt(Loc, FunctionId(IpData.second), Count);
     }
   }
+}
+
+void ProfileGenerator::populateDataAccessSamples(
+    const DataAccessSample &DataAccessSamples) {
+  if (DataAccessSamples.empty())
+    return;
+
+  MapVector<std::string, memprof::DataAccessProfRecord, StringMap<unsigned>>
+      DataAccessRecords;
+  for (const auto &[Address, Count] : DataAccessSamples) {
+    if (Binary->addressIsCode(Address) || Binary->findFuncRange(Address))
+      continue;
+
+    DIGlobal Global = Binary->symbolizeData(Address);
+    if (Global.Name.empty() || Global.Name == DILineInfo::BadString)
+      continue;
+
+    if (Global.DeclLine == 0 && Global.Start != 0 && Global.Start != Address)
+      Global = Binary->symbolizeData(Global.Start);
+
+    memprof::DataAccessProfRecord &Record = DataAccessRecords[Global.Name];
+    Record.AccessCount += Count;
+    if (Global.DeclFile.empty() || Global.DeclFile == DILineInfo::BadString)
+      continue;
+
+    auto IsSameLocation = [&](const memprof::SourceLocation &L) {
+      return L.FileName == Global.DeclFile && L.Line == Global.DeclLine;
+    };
+    if (!llvm::any_of(Record.Locations, IsSameLocation))
+      Record.Locations.emplace_back(Global.DeclFile, Global.DeclLine);
+  }
+
+  DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  for (const auto &[SymName, Record] : DataAccessRecords)
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            SymName, Record.AccessCount, Record.Locations))
+      consumeError(std::move(E));
 }
 
 void ProfileGeneratorBase::calculateBodySamplesAndSize(
