@@ -235,12 +235,15 @@ bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
   if (!NeedsAsyncDwarfUnwindInfo) {
     const Function &F = MF.getFunction();
     const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+    const AArch64Options &CLOpts =
+        MF.getSubtarget<AArch64Subtarget>().getCLOpts();
     //  The check got "minsize" is because epilogue unwind info is not emitted
     //  (yet) for homogeneous epilogues, outlined functions, and functions
     //  outlined from.
     NeedsAsyncDwarfUnwindInfo =
         needsDwarfUnwindInfo(MF) &&
-        ((F.getUWTableKind() == UWTableKind::Async && !F.hasMinSize()) ||
+        ((F.getUWTableKind() == UWTableKind::Async &&
+          (!F.hasMinSize() || CLOpts.enable_async_unwind_for_minsize)) ||
          AFI->hasStreamingModeChanges());
   }
   return *NeedsAsyncDwarfUnwindInfo;
