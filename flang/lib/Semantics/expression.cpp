@@ -3233,7 +3233,17 @@ static std::optional<int> GetMatchingDistance(
   // Associations that the table above does not represent but that argument
   // checking accepts. They keep their infinite distance, so they do not change
   // the ranking of finite candidates.
-  auto isSupportedInfinite{[&]() { return false; }};
+  auto isSupportedInfinite{[&]() {
+    // PINNED allocations are host storage.
+    if (actualDataAttr == common::CUDADataAttr::Pinned &&
+        (!dummyDataAttr || dummyDataAttr == common::CUDADataAttr::Pinned)) {
+      return true;
+    }
+    if (dummyDataAttr == common::CUDADataAttr::Pinned && !actualDataAttr) {
+      return true;
+    }
+    return false;
+  }};
 
   if (distance == cudaInfMatchingValue && !isSupportedInfinite()) {
     return std::nullopt;
