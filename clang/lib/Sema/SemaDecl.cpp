@@ -14,7 +14,6 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
@@ -7337,7 +7336,8 @@ static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
   }
 }
 
-static void checkOracleFunctionAttr(Sema &S, FunctionDecl &FD, const Declarator &D) {
+static void checkOracleFunctionAttr(Sema &S, FunctionDecl &FD,
+                                    const Declarator &D) {
   auto *Attr = FD.getAttr<OracleFunctionAttr>();
   if (!Attr)
     return;
@@ -7351,8 +7351,7 @@ static void checkOracleFunctionAttr(Sema &S, FunctionDecl &FD, const Declarator 
   }
 
   if (FD.isExternallyVisible()) {
-    S.Diag(Attr->getLocation(),
-            diag::err_oracle_function_no_external_linkage);
+    S.Diag(Attr->getLocation(), diag::err_oracle_function_no_external_linkage);
     return;
   }
 
