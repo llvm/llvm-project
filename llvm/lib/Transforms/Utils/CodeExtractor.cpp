@@ -621,6 +621,10 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
     // If a used value is defined outside the region, it's an input.  If an
     // instruction is used outside the region, it's an output.
     for (Instruction &II : *BB) {
+      // Assumptions never add inputs. They are dropped if their operands are
+      // not available in the new function.
+      if (isa<AssumeInst>(II))
+        continue;
       for (auto &OI : II.operands()) {
         Value *V = OI;
         if (!SinkCands.count(V) &&
@@ -1400,12 +1404,13 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   // Remove @llvm.assume calls that will be moved to the new function from the
   // old function's assumption cache.
+  SmallVector<AssumeInst *> Assumes;
   for (BasicBlock *Block : Blocks) {
-    for (Instruction &I : llvm::make_early_inc_range(*Block)) {
+    for (Instruction &I : *Block) {
       if (auto *AI = dyn_cast<AssumeInst>(&I)) {
         if (AC)
           AC->unregisterAssumption(AI);
-        AI->eraseFromParent();
+        Assumes.push_back(AI);
       }
     }
   }
@@ -1417,6 +1422,17 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   // Find inputs to, outputs from the code region.
   findInputsOutputs(inputs, outputs, SinkingCands);
+
+  // Erase the originals even when kept, as a stale assumption cache may still
+  // refer to them.
+  for (AssumeInst *AI : Assumes) {
+    if (none_of(AI->operands(), [&](Value *V) {
+          return definedInCaller(Blocks, V) && !inputs.contains(V) &&
+                 !SinkingCands.contains(V);
+        }))
+      AI->clone()->insertBefore(AI->getIterator());
+    AI->eraseFromParent();
+  }
 
   // Collect objects which are inputs to the extraction region and also
   // referenced by lifetime start markers within it. The effects of these
