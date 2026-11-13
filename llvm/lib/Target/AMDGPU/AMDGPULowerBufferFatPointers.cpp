@@ -225,6 +225,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -586,7 +587,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitLoadInst(LoadInst &LI) {
           LoadInst *NewLI = IRB.CreateAlignedLoad(
               IntLeafTy, Ptr, commonAlignment(LI.getAlign(), Off), Name);
           NewLI->setVolatile(LI.isVolatile());
-          copyMetadataForLoad(*NewLI, LI);
+          copyMetadataForMemoryAccess(*NewLI, LI);
           NewLI->setAAMetadata(AATags.adjustForAccess(Off, IntLeafTy, DL));
           Value *V = NewLI;
           if (LeafTy != IntLeafTy)
@@ -1258,7 +1259,7 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
       LoadInst *NewLI = IRB.CreateAlignedLoad(
           LoadableType, NewPtr, commonAlignment(OrigLI.getAlign(), ByteOffset),
           Name + ".off." + Twine(ByteOffset));
-      copyMetadataForLoad(*NewLI, OrigLI);
+      copyMetadataForMemoryAccess(*NewLI, OrigLI);
       NewLI->setAAMetadata(
           AANodes.adjustForAccess(ByteOffset, LoadableType, DL));
       NewLI->setAtomic(OrigLI.getOrdering(), OrigLI.getSyncScopeID());

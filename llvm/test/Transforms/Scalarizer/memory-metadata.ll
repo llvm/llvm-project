@@ -9,13 +9,13 @@ target datalayout = "e-p:64:64"
 define <4 x i32> @integer_load(ptr %p) {
 ; CHECK-LABEL: define <4 x i32> @integer_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V_I0:%.*]] = load i32, ptr [[P]], align 16, !tbaa [[INT_TBAA0:![0-9]+]], !invariant.load [[META4:![0-9]+]], !alias.scope [[META5:![0-9]+]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8:![0-9]+]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    [[V_I0:%.*]] = load i32, ptr [[P]], align 16, !tbaa [[INT_TBAA0:![0-9]+]], !range [[RNG4:![0-9]+]], !invariant.load [[META5:![0-9]+]], !alias.scope [[META6:![0-9]+]], !noalias [[META6]], !nontemporal [[META9:![0-9]+]], !llvm.mem.parallel_loop_access [[META10:![0-9]+]], !invariant.group [[META5]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11:![0-9]+]], !nosanitize [[META5]], !mmra [[META12:![0-9]+]], !noalias.addrspace [[META13:![0-9]+]], !mem.cache_hint [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[P_I1:%.*]] = getelementptr i32, ptr [[P]], i32 1
-; CHECK-NEXT:    [[V_I1:%.*]] = load i32, ptr [[P_I1]], align 4, !tbaa [[INT_TBAA0]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    [[V_I1:%.*]] = load i32, ptr [[P_I1]], align 4, !tbaa [[INT_TBAA0]], !range [[RNG4]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META14]]
 ; CHECK-NEXT:    [[P_I2:%.*]] = getelementptr i32, ptr [[P]], i32 2
-; CHECK-NEXT:    [[V_I2:%.*]] = load i32, ptr [[P_I2]], align 8, !tbaa [[INT_TBAA0]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    [[V_I2:%.*]] = load i32, ptr [[P_I2]], align 8, !tbaa [[INT_TBAA0]], !range [[RNG4]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META14]]
 ; CHECK-NEXT:    [[P_I3:%.*]] = getelementptr i32, ptr [[P]], i32 3
-; CHECK-NEXT:    [[V_I3:%.*]] = load i32, ptr [[P_I3]], align 4, !tbaa [[INT_TBAA0]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    [[V_I3:%.*]] = load i32, ptr [[P_I3]], align 4, !tbaa [[INT_TBAA0]], !range [[RNG4]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META14]]
 ; CHECK-NEXT:    [[V_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[V_I0]], i64 0
 ; CHECK-NEXT:    [[V_UPTO1:%.*]] = insertelement <4 x i32> [[V_UPTO0]], i32 [[V_I1]], i64 1
 ; CHECK-NEXT:    [[V_UPTO2:%.*]] = insertelement <4 x i32> [[V_UPTO1]], i32 [[V_I2]], i64 2
@@ -24,9 +24,9 @@ define <4 x i32> @integer_load(ptr %p) {
 ;
 ; PACKED-LABEL: define <4 x i32> @integer_load(
 ; PACKED-SAME: ptr [[P:%.*]]) {
-; PACKED-NEXT:    [[V_I0:%.*]] = load <2 x i32>, ptr [[P]], align 16, !tbaa [[INT_TBAA0:![0-9]+]], !invariant.load [[META4:![0-9]+]], !alias.scope [[META5:![0-9]+]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8:![0-9]+]], !llvm.access.group [[META8]]
+; PACKED-NEXT:    [[V_I0:%.*]] = load <2 x i32>, ptr [[P]], align 16, !tbaa [[INT_TBAA0:![0-9]+]], !range [[RNG4:![0-9]+]], !invariant.load [[META5:![0-9]+]], !alias.scope [[META6:![0-9]+]], !noalias [[META6]], !nontemporal [[META9:![0-9]+]], !llvm.mem.parallel_loop_access [[META10:![0-9]+]], !invariant.group [[META5]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11:![0-9]+]], !nosanitize [[META5]], !mmra [[META12:![0-9]+]], !noalias.addrspace [[META13:![0-9]+]], !mem.cache_hint [[META14:![0-9]+]]
 ; PACKED-NEXT:    [[P_I1:%.*]] = getelementptr <2 x i32>, ptr [[P]], i32 1
-; PACKED-NEXT:    [[V_I1:%.*]] = load <2 x i32>, ptr [[P_I1]], align 8, !tbaa [[INT_TBAA0]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; PACKED-NEXT:    [[V_I1:%.*]] = load <2 x i32>, ptr [[P_I1]], align 8, !tbaa [[INT_TBAA0]], !range [[RNG4]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META14]]
 ; PACKED-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[V_I0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; PACKED-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[V_I1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; PACKED-NEXT:    [[V:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -39,13 +39,13 @@ define <4 x i32> @integer_load(ptr %p) {
 define <4 x float> @floating_load(ptr %p) {
 ; CHECK-LABEL: define <4 x float> @floating_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V_I0:%.*]] = load float, ptr [[P]], align 16, !tbaa [[FLOAT_TBAA9:![0-9]+]], !fpmath [[META11:![0-9]+]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    [[V_I0:%.*]] = load float, ptr [[P]], align 16, !tbaa [[FLOAT_TBAA16:![0-9]+]], !fpmath [[META18:![0-9]+]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !invariant.group [[META5]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !nofpclass [[META19:![0-9]+]], !mem.cache_hint [[META14]]
 ; CHECK-NEXT:    [[P_I1:%.*]] = getelementptr float, ptr [[P]], i32 1
-; CHECK-NEXT:    [[V_I1:%.*]] = load float, ptr [[P_I1]], align 4, !tbaa [[FLOAT_TBAA9]], !fpmath [[META11]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    [[V_I1:%.*]] = load float, ptr [[P_I1]], align 4, !tbaa [[FLOAT_TBAA16]], !fpmath [[META18]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !nofpclass [[META19]], !mem.cache_hint [[META14]]
 ; CHECK-NEXT:    [[P_I2:%.*]] = getelementptr float, ptr [[P]], i32 2
-; CHECK-NEXT:    [[V_I2:%.*]] = load float, ptr [[P_I2]], align 8, !tbaa [[FLOAT_TBAA9]], !fpmath [[META11]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    [[V_I2:%.*]] = load float, ptr [[P_I2]], align 8, !tbaa [[FLOAT_TBAA16]], !fpmath [[META18]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !nofpclass [[META19]], !mem.cache_hint [[META14]]
 ; CHECK-NEXT:    [[P_I3:%.*]] = getelementptr float, ptr [[P]], i32 3
-; CHECK-NEXT:    [[V_I3:%.*]] = load float, ptr [[P_I3]], align 4, !tbaa [[FLOAT_TBAA9]], !fpmath [[META11]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    [[V_I3:%.*]] = load float, ptr [[P_I3]], align 4, !tbaa [[FLOAT_TBAA16]], !fpmath [[META18]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !nofpclass [[META19]], !mem.cache_hint [[META14]]
 ; CHECK-NEXT:    [[V_UPTO0:%.*]] = insertelement <4 x float> poison, float [[V_I0]], i64 0
 ; CHECK-NEXT:    [[V_UPTO1:%.*]] = insertelement <4 x float> [[V_UPTO0]], float [[V_I1]], i64 1
 ; CHECK-NEXT:    [[V_UPTO2:%.*]] = insertelement <4 x float> [[V_UPTO1]], float [[V_I2]], i64 2
@@ -54,9 +54,9 @@ define <4 x float> @floating_load(ptr %p) {
 ;
 ; PACKED-LABEL: define <4 x float> @floating_load(
 ; PACKED-SAME: ptr [[P:%.*]]) {
-; PACKED-NEXT:    [[V_I0:%.*]] = load <2 x float>, ptr [[P]], align 16, !tbaa [[FLOAT_TBAA9:![0-9]+]], !fpmath [[META11:![0-9]+]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; PACKED-NEXT:    [[V_I0:%.*]] = load <2 x float>, ptr [[P]], align 16, !tbaa [[FLOAT_TBAA16:![0-9]+]], !fpmath [[META18:![0-9]+]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !invariant.group [[META5]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !nofpclass [[META19:![0-9]+]], !mem.cache_hint [[META14]]
 ; PACKED-NEXT:    [[P_I1:%.*]] = getelementptr <2 x float>, ptr [[P]], i32 1
-; PACKED-NEXT:    [[V_I1:%.*]] = load <2 x float>, ptr [[P_I1]], align 8, !tbaa [[FLOAT_TBAA9]], !fpmath [[META11]], !invariant.load [[META4]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; PACKED-NEXT:    [[V_I1:%.*]] = load <2 x float>, ptr [[P_I1]], align 8, !tbaa [[FLOAT_TBAA16]], !fpmath [[META18]], !invariant.load [[META5]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !noundef [[META5]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !nofpclass [[META19]], !mem.cache_hint [[META14]]
 ; PACKED-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[V_I0]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; PACKED-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[V_I1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; PACKED-NEXT:    [[V:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -70,25 +70,25 @@ define void @integer_store(ptr %p, <4 x i32> %v) {
 ; CHECK-LABEL: define void @integer_store(
 ; CHECK-SAME: ptr [[P:%.*]], <4 x i32> [[V:%.*]]) {
 ; CHECK-NEXT:    [[V_I0:%.*]] = extractelement <4 x i32> [[V]], i64 0
-; CHECK-NEXT:    store i32 [[V_I0]], ptr [[P]], align 16, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    store i32 [[V_I0]], ptr [[P]], align 16, !tbaa [[INT_TBAA0]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !invariant.group [[META5]], !llvm.access.group [[META10]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META20:![0-9]+]]
 ; CHECK-NEXT:    [[V_I1:%.*]] = extractelement <4 x i32> [[V]], i64 1
 ; CHECK-NEXT:    [[P_I1:%.*]] = getelementptr i32, ptr [[P]], i32 1
-; CHECK-NEXT:    store i32 [[V_I1]], ptr [[P_I1]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    store i32 [[V_I1]], ptr [[P_I1]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META20]]
 ; CHECK-NEXT:    [[V_I2:%.*]] = extractelement <4 x i32> [[V]], i64 2
 ; CHECK-NEXT:    [[P_I2:%.*]] = getelementptr i32, ptr [[P]], i32 2
-; CHECK-NEXT:    store i32 [[V_I2]], ptr [[P_I2]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    store i32 [[V_I2]], ptr [[P_I2]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META20]]
 ; CHECK-NEXT:    [[V_I3:%.*]] = extractelement <4 x i32> [[V]], i64 3
 ; CHECK-NEXT:    [[P_I3:%.*]] = getelementptr i32, ptr [[P]], i32 3
-; CHECK-NEXT:    store i32 [[V_I3]], ptr [[P_I3]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; CHECK-NEXT:    store i32 [[V_I3]], ptr [[P_I3]], align 4, !tbaa [[INT_TBAA0]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META20]]
 ; CHECK-NEXT:    ret void
 ;
 ; PACKED-LABEL: define void @integer_store(
 ; PACKED-SAME: ptr [[P:%.*]], <4 x i32> [[V:%.*]]) {
 ; PACKED-NEXT:    [[V_I0:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
-; PACKED-NEXT:    store <2 x i32> [[V_I0]], ptr [[P]], align 16, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; PACKED-NEXT:    store <2 x i32> [[V_I0]], ptr [[P]], align 16, !tbaa [[INT_TBAA0]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !invariant.group [[META5]], !llvm.access.group [[META10]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META20:![0-9]+]]
 ; PACKED-NEXT:    [[V_I1:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
 ; PACKED-NEXT:    [[P_I1:%.*]] = getelementptr <2 x i32>, ptr [[P]], i32 1
-; PACKED-NEXT:    store <2 x i32> [[V_I1]], ptr [[P_I1]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META5]], !noalias [[META5]], !llvm.mem.parallel_loop_access [[META8]], !llvm.access.group [[META8]]
+; PACKED-NEXT:    store <2 x i32> [[V_I1]], ptr [[P_I1]], align 8, !tbaa [[INT_TBAA0]], !alias.scope [[META6]], !noalias [[META6]], !nontemporal [[META9]], !llvm.mem.parallel_loop_access [[META10]], !llvm.access.group [[META10]], !annotation [[META11]], !nosanitize [[META5]], !mmra [[META12]], !noalias.addrspace [[META13]], !mem.cache_hint [[META20]]
 ; PACKED-NEXT:    ret void
 ;
   store <4 x i32> %v, ptr %p, align 16, !tbaa !10, !invariant.group !0, !mem.cache_hint !18, !alias.scope !6, !noalias !6, !nontemporal !1, !llvm.mem.parallel_loop_access !5, !llvm.access.group !5, !annotation !2, !nosanitize !0, !mmra !3, !noalias.addrspace !4, !test.unknown !0
@@ -126,25 +126,43 @@ define void @integer_store(ptr %p, <4 x i32> %v) {
 ; CHECK: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; CHECK: [[META3]] = !{!"root"}
-; CHECK: [[META4]] = !{}
-; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]], !"scope"}
-; CHECK: [[META7]] = distinct !{[[META7]], i1 false, !"domain"}
-; CHECK: [[META8]] = distinct !{}
-; CHECK: [[FLOAT_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-; CHECK: [[META10]] = !{!"float", [[META2]], i64 0}
-; CHECK: [[META11]] = !{float 2.500000e+00}
+; CHECK: [[RNG4]] = !{i32 0, i32 100}
+; CHECK: [[META5]] = !{}
+; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"scope"}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false, !"domain"}
+; CHECK: [[META9]] = !{i32 1}
+; CHECK: [[META10]] = distinct !{}
+; CHECK: [[META11]] = !{!"preserved memory metadata"}
+; CHECK: [[META12]] = !{!"test", !"relaxed"}
+; CHECK: [[META13]] = !{i32 5, i32 6}
+; CHECK: [[META14]] = !{i32 0, [[META15:![0-9]+]]}
+; CHECK: [[META15]] = !{!"nvvm.l1_eviction", !"last"}
+; CHECK: [[FLOAT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
+; CHECK: [[META17]] = !{!"float", [[META2]], i64 0}
+; CHECK: [[META18]] = !{float 2.500000e+00}
+; CHECK: [[META19]] = !{i32 3}
+; CHECK: [[META20]] = !{i32 1, [[META15]]}
 ;.
 ; PACKED: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; PACKED: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
 ; PACKED: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
 ; PACKED: [[META3]] = !{!"root"}
-; PACKED: [[META4]] = !{}
-; PACKED: [[META5]] = !{[[META6:![0-9]+]]}
-; PACKED: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]], !"scope"}
-; PACKED: [[META7]] = distinct !{[[META7]], i1 false, !"domain"}
-; PACKED: [[META8]] = distinct !{}
-; PACKED: [[FLOAT_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-; PACKED: [[META10]] = !{!"float", [[META2]], i64 0}
-; PACKED: [[META11]] = !{float 2.500000e+00}
+; PACKED: [[RNG4]] = !{i32 0, i32 100}
+; PACKED: [[META5]] = !{}
+; PACKED: [[META6]] = !{[[META7:![0-9]+]]}
+; PACKED: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"scope"}
+; PACKED: [[META8]] = distinct !{[[META8]], i1 false, !"domain"}
+; PACKED: [[META9]] = !{i32 1}
+; PACKED: [[META10]] = distinct !{}
+; PACKED: [[META11]] = !{!"preserved memory metadata"}
+; PACKED: [[META12]] = !{!"test", !"relaxed"}
+; PACKED: [[META13]] = !{i32 5, i32 6}
+; PACKED: [[META14]] = !{i32 0, [[META15:![0-9]+]]}
+; PACKED: [[META15]] = !{!"nvvm.l1_eviction", !"last"}
+; PACKED: [[FLOAT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
+; PACKED: [[META17]] = !{!"float", [[META2]], i64 0}
+; PACKED: [[META18]] = !{float 2.500000e+00}
+; PACKED: [[META19]] = !{i32 3}
+; PACKED: [[META20]] = !{i32 1, [[META15]]}
 ;.

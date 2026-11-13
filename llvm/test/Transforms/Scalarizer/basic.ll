@@ -209,21 +209,21 @@ define void @f4(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[DST_I1:%.*]] = getelementptr i32, ptr [[DST]], i32 1
 ; CHECK-NEXT:    [[DST_I2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
 ; CHECK-NEXT:    [[DST_I3:%.*]] = getelementptr i32, ptr [[DST]], i32 3
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[SRC]], align 16, !tbaa.struct [[TBAA_STRUCT5:![0-9]+]]
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[SRC]], align 16, !tbaa [[SET1_TBAA0]]
 ; CHECK-NEXT:    [[SRC_I1:%.*]] = getelementptr i32, ptr [[SRC]], i32 1
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[SRC_I1]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[SRC_I1]], align 4, !tbaa [[SET2_TBAA3]]
 ; CHECK-NEXT:    [[SRC_I2:%.*]] = getelementptr i32, ptr [[SRC]], i32 2
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[SRC_I2]], align 8, !tbaa.struct [[TBAA_STRUCT5]]
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[SRC_I2]], align 8, !tbaa [[SET1_TBAA0]]
 ; CHECK-NEXT:    [[SRC_I3:%.*]] = getelementptr i32, ptr [[SRC]], i32 3
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[SRC_I3]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[SRC_I3]], align 4, !tbaa [[SET2_TBAA3]]
 ; CHECK-NEXT:    [[ADD_I0:%.*]] = add i32 [[VAL_I0]], [[VAL_I0]]
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = add i32 [[VAL_I1]], [[VAL_I1]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = add i32 [[VAL_I2]], [[VAL_I2]]
 ; CHECK-NEXT:    [[ADD_I3:%.*]] = add i32 [[VAL_I3]], [[VAL_I3]]
-; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[DST]], align 16, !tbaa.struct [[TBAA_STRUCT5]]
-; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[DST_I1]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
-; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[DST_I2]], align 8, !tbaa.struct [[TBAA_STRUCT5]]
-; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[DST_I3]], align 4, !tbaa.struct [[TBAA_STRUCT5]]
+; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[DST]], align 16, !tbaa [[SET1_TBAA0]]
+; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[DST_I1]], align 4, !tbaa [[SET2_TBAA3]]
+; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[DST_I2]], align 8, !tbaa [[SET1_TBAA0]]
+; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[DST_I3]], align 4, !tbaa [[SET2_TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
   %val = load <4 x i32> , ptr %src, !tbaa.struct !5
@@ -248,21 +248,21 @@ define void @f5(i32 %count, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[THIS_DST_I1:%.*]] = getelementptr i32, ptr [[THIS_DST]], i32 1
 ; CHECK-NEXT:    [[THIS_DST_I2:%.*]] = getelementptr i32, ptr [[THIS_DST]], i32 2
 ; CHECK-NEXT:    [[THIS_DST_I3:%.*]] = getelementptr i32, ptr [[THIS_DST]], i32 3
-; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[THIS_SRC]], align 16, !llvm.access.group [[ACC_GRP6:![0-9]+]]
-; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[THIS_SRC_I1]], align 4, !llvm.access.group [[ACC_GRP6]]
-; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[THIS_SRC_I2]], align 8, !llvm.access.group [[ACC_GRP6]]
-; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[THIS_SRC_I3]], align 4, !llvm.access.group [[ACC_GRP6]]
+; CHECK-NEXT:    [[VAL_I0:%.*]] = load i32, ptr [[THIS_SRC]], align 16, !llvm.access.group [[ACC_GRP5:![0-9]+]]
+; CHECK-NEXT:    [[VAL_I1:%.*]] = load i32, ptr [[THIS_SRC_I1]], align 4, !llvm.access.group [[ACC_GRP5]]
+; CHECK-NEXT:    [[VAL_I2:%.*]] = load i32, ptr [[THIS_SRC_I2]], align 8, !llvm.access.group [[ACC_GRP5]]
+; CHECK-NEXT:    [[VAL_I3:%.*]] = load i32, ptr [[THIS_SRC_I3]], align 4, !llvm.access.group [[ACC_GRP5]]
 ; CHECK-NEXT:    [[ADD_I0:%.*]] = add i32 [[VAL_I0]], [[VAL_I0]]
 ; CHECK-NEXT:    [[ADD_I1:%.*]] = add i32 [[VAL_I1]], [[VAL_I1]]
 ; CHECK-NEXT:    [[ADD_I2:%.*]] = add i32 [[VAL_I2]], [[VAL_I2]]
 ; CHECK-NEXT:    [[ADD_I3:%.*]] = add i32 [[VAL_I3]], [[VAL_I3]]
-; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[THIS_DST]], align 16, !llvm.access.group [[ACC_GRP6]]
-; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[THIS_DST_I1]], align 4, !llvm.access.group [[ACC_GRP6]]
-; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[THIS_DST_I2]], align 8, !llvm.access.group [[ACC_GRP6]]
-; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[THIS_DST_I3]], align 4, !llvm.access.group [[ACC_GRP6]]
+; CHECK-NEXT:    store i32 [[ADD_I0]], ptr [[THIS_DST]], align 16, !llvm.access.group [[ACC_GRP5]]
+; CHECK-NEXT:    store i32 [[ADD_I1]], ptr [[THIS_DST_I1]], align 4, !llvm.access.group [[ACC_GRP5]]
+; CHECK-NEXT:    store i32 [[ADD_I2]], ptr [[THIS_DST_I2]], align 8, !llvm.access.group [[ACC_GRP5]]
+; CHECK-NEXT:    store i32 [[ADD_I3]], ptr [[THIS_DST_I3]], align 4, !llvm.access.group [[ACC_GRP5]]
 ; CHECK-NEXT:    [[NEXT_INDEX]] = add i32 [[INDEX]], -1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ne i32 [[NEXT_INDEX]], [[COUNT]]
-; CHECK-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[END:.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[END:.*]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -289,13 +289,13 @@ define <4 x float> @f6(<4 x float> %x) {
 ; CHECK-LABEL: define <4 x float> @f6(
 ; CHECK-SAME: <4 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <4 x float> [[X]], i64 0
-; CHECK-NEXT:    [[RES_I0:%.*]] = fadd float [[X_I0]], 1.000000e+00, !fpmath [[META9:![0-9]+]]
+; CHECK-NEXT:    [[RES_I0:%.*]] = fadd float [[X_I0]], 1.000000e+00, !fpmath [[META8:![0-9]+]]
 ; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <4 x float> [[X]], i64 1
-; CHECK-NEXT:    [[RES_I1:%.*]] = fadd float [[X_I1]], 2.000000e+00, !fpmath [[META9]]
+; CHECK-NEXT:    [[RES_I1:%.*]] = fadd float [[X_I1]], 2.000000e+00, !fpmath [[META8]]
 ; CHECK-NEXT:    [[X_I2:%.*]] = extractelement <4 x float> [[X]], i64 2
-; CHECK-NEXT:    [[RES_I2:%.*]] = fadd float [[X_I2]], 3.000000e+00, !fpmath [[META9]]
+; CHECK-NEXT:    [[RES_I2:%.*]] = fadd float [[X_I2]], 3.000000e+00, !fpmath [[META8]]
 ; CHECK-NEXT:    [[X_I3:%.*]] = extractelement <4 x float> [[X]], i64 3
-; CHECK-NEXT:    [[RES_I3:%.*]] = fadd float [[X_I3]], 4.000000e+00, !fpmath [[META9]]
+; CHECK-NEXT:    [[RES_I3:%.*]] = fadd float [[X_I3]], 4.000000e+00, !fpmath [[META8]]
 ; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <4 x float> poison, float [[RES_I0]], i64 0
 ; CHECK-NEXT:    [[RES_UPTO1:%.*]] = insertelement <4 x float> [[RES_UPTO0]], float [[RES_I1]], i64 1
 ; CHECK-NEXT:    [[RES_UPTO2:%.*]] = insertelement <4 x float> [[RES_UPTO1]], float [[RES_I2]], i64 2
@@ -919,9 +919,8 @@ define <2 x i8> @test_copy_trunc_flags(<2 x i32> %src) {
 ; CHECK: [[META2]] = !{!"root"}
 ; CHECK: [[SET2_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
 ; CHECK: [[META4]] = !{!"set2", [[META2]]}
-; CHECK: [[TBAA_STRUCT5]] = !{i64 0, i64 4, [[SET1_TBAA0]], i64 4, i64 4, [[SET2_TBAA3]], i64 8, i64 4, [[SET1_TBAA0]], i64 12, i64 4, [[SET2_TBAA3]]}
-; CHECK: [[ACC_GRP6]] = distinct !{}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP6]]}
-; CHECK: [[META9]] = !{float 4.000000e+00}
+; CHECK: [[ACC_GRP5]] = distinct !{}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]]}
+; CHECK: [[META7]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP5]]}
+; CHECK: [[META8]] = !{float 4.000000e+00}
 ;.

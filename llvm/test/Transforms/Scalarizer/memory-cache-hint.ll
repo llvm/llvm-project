@@ -4,9 +4,9 @@
 define <2 x i32> @split_load(ptr %p) {
 ; CHECK-LABEL: define <2 x i32> @split_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V_I0:%.*]] = load i32, ptr [[P]], align 8
+; CHECK-NEXT:    [[V_I0:%.*]] = load i32, ptr [[P]], align 8, !range [[RNG0:![0-9]+]], !mem.cache_hint [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[P_I1:%.*]] = getelementptr i32, ptr [[P]], i32 1
-; CHECK-NEXT:    [[V_I1:%.*]] = load i32, ptr [[P_I1]], align 4
+; CHECK-NEXT:    [[V_I1:%.*]] = load i32, ptr [[P_I1]], align 4, !range [[RNG0]], !mem.cache_hint [[META1]]
 ; CHECK-NEXT:    [[V_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[V_I0]], i64 0
 ; CHECK-NEXT:    [[V:%.*]] = insertelement <2 x i32> [[V_UPTO0]], i32 [[V_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
@@ -19,10 +19,10 @@ define void @split_store(ptr %p, <2 x i32> %v) {
 ; CHECK-LABEL: define void @split_store(
 ; CHECK-SAME: ptr [[P:%.*]], <2 x i32> [[V:%.*]]) {
 ; CHECK-NEXT:    [[V_I0:%.*]] = extractelement <2 x i32> [[V]], i64 0
-; CHECK-NEXT:    store i32 [[V_I0]], ptr [[P]], align 8
+; CHECK-NEXT:    store i32 [[V_I0]], ptr [[P]], align 8, !mem.cache_hint [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[V_I1:%.*]] = extractelement <2 x i32> [[V]], i64 1
 ; CHECK-NEXT:    [[P_I1:%.*]] = getelementptr i32, ptr [[P]], i32 1
-; CHECK-NEXT:    store i32 [[V_I1]], ptr [[P_I1]], align 4
+; CHECK-NEXT:    store i32 [[V_I1]], ptr [[P_I1]], align 4, !mem.cache_hint [[META3]]
 ; CHECK-NEXT:    ret void
 ;
   store <2 x i32> %v, ptr %p, align 8, !mem.cache_hint !3
@@ -33,3 +33,9 @@ define void @split_store(ptr %p, <2 x i32> %v) {
 !1 = !{!"nvvm.l1_eviction", !"last"}
 !2 = !{i32 0, i32 100}
 !3 = !{i32 1, !1}
+;.
+; CHECK: [[RNG0]] = !{i32 0, i32 100}
+; CHECK: [[META1]] = !{i32 0, [[META2:![0-9]+]]}
+; CHECK: [[META2]] = !{!"nvvm.l1_eviction", !"last"}
+; CHECK: [[META3]] = !{i32 1, [[META2]]}
+;.

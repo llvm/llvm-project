@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOCAL_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -413,24 +414,6 @@ LLVM_ABI bool removeUnreachableBlocks(Function &F,
                                       MemorySSAUpdater *MSSAU = nullptr,
                                       bool FoldInstsToUnreachable = true);
 
-/// Combine the metadata of two instructions so that K can replace J. This
-/// specifically handles the case of CSE-like transformations. Some
-/// metadata can only be kept if K dominates J. For this to be correct,
-/// K cannot be hoisted.
-///
-/// Unknown metadata is removed.
-LLVM_ABI void combineMetadataForCSE(Instruction *K, const Instruction *J,
-                                    bool DoesKMove);
-
-/// Combine metadata of two instructions, where instruction J is a memory
-/// access that has been merged into K. This will intersect alias-analysis
-/// metadata, while preserving other known metadata.
-LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
-
-/// Copy the metadata from the source instruction to the destination (the
-/// replacement for the source instruction).
-LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
-
 /// Patch the replacement so that it is not more restrictive than the value
 /// being replaced. It assumes that the replacement does not get moved from
 /// its original position.
@@ -484,20 +467,6 @@ LLVM_ABI unsigned replaceDominatedUsesWithIf(
 /// during lowering by the GC infrastructure.
 LLVM_ABI bool callsGCLeafFunction(const CallBase *Call,
                                   const TargetLibraryInfo &TLI);
-
-/// Copy a nonnull metadata node to a new load instruction.
-///
-/// This handles mapping it to range metadata if the new load is an integer
-/// load instead of a pointer load.
-LLVM_ABI void copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
-                                  LoadInst &NewLI);
-
-/// Copy a range metadata node to a new load instruction.
-///
-/// This handles mapping it to nonnull metadata if the new load is a pointer
-/// load instead of an integer load and the range doesn't cover null.
-LLVM_ABI void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
-                                MDNode *N, LoadInst &NewLI);
 
 /// Remove the debug intrinsic instructions for the given instruction.
 LLVM_ABI void dropDebugUsers(Instruction &I);

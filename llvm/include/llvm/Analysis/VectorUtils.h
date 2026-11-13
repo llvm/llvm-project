@@ -18,6 +18,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/VectorTypeUtils.h"
@@ -379,34 +380,6 @@ LLVM_ABI void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
 LLVM_ABI MapVector<Instruction *, uint64_t>
 computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
                          const TargetTransformInfo *TTI = nullptr);
-
-/// Compute the union of two access-group lists.
-///
-/// If the list contains just one access group, it is returned directly. If the
-/// list is empty, returns nullptr.
-LLVM_ABI MDNode *uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2);
-
-/// Compute the access-group list of access groups that @p Inst1 and @p Inst2
-/// are both in. If either instruction does not access memory at all, it is
-/// considered to be in every list.
-///
-/// If the list contains just one access group, it is returned directly. If the
-/// list is empty, returns nullptr.
-LLVM_ABI MDNode *intersectAccessGroups(const Instruction *Inst1,
-                                       const Instruction *Inst2);
-
-/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
-/// vectorization. It can be preserved after vectorization if the kind is one of
-/// [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath, MD_nontemporal,
-/// MD_access_group, MD_mmra].
-LLVM_ABI void getMetadataToPropagate(
-    Instruction *Inst,
-    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
-
-/// Propagate metadata that can be preserved after vectorization from \p VL to
-/// \p I, retaining only information valid for all sources and the destination.
-/// Return \p I.
-LLVM_ABI Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 
 /// Create a mask that filters the members of an interleave group where there
 /// are gaps.

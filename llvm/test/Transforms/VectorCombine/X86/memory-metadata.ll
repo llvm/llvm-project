@@ -4,7 +4,7 @@
 define <4 x float> @widen_scalar(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: define <4 x float> @widen_scalar(
 ; CHECK-SAME: ptr align 16 dereferenceable(16) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, ptr [[P]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, ptr [[P]], align 16, !nontemporal [[META0:![0-9]+]], !annotation [[META1:![0-9]+]], !nosanitize [[META2:![0-9]+]], !mmra [[META3:![0-9]+]], !noalias.addrspace [[META4:![0-9]+]], !mem.cache_hint [[META5:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %v = load float, ptr %p, align 4, !nontemporal !0, !mem.cache_hint !1, !annotation !4, !nosanitize !3, !mmra !5, !noalias.addrspace !6, !alias.scope !7, !noalias !7, !llvm.access.group !10, !nofpclass !12, !fpmath !13, !noundef !3, !invariant.load !3, !invariant.group !3, !tbaa !15
@@ -15,7 +15,7 @@ define <4 x float> @widen_scalar(ptr align 16 dereferenceable(16) %p) {
 define <4 x float> @widen_shifted_scalar(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: define <4 x float> @widen_shifted_scalar(
 ; CHECK-SAME: ptr align 16 dereferenceable(16) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P]], align 16, !nontemporal [[META0]], !annotation [[META1]], !nosanitize [[META2]], !mmra [[META3]], !noalias.addrspace [[META4]], !mem.cache_hint [[META5]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 3, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
@@ -28,7 +28,7 @@ define <4 x float> @widen_shifted_scalar(ptr align 16 dereferenceable(16) %p) {
 define <4 x i32> @widen_subvector(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: define <4 x i32> @widen_subvector(
 ; CHECK-SAME: ptr align 16 dereferenceable(16) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = load <4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <4 x i32>, ptr [[P]], align 16, !nontemporal [[META0]], !annotation [[META1]], !nosanitize [[META2]], !mmra [[META3]], !noalias.addrspace [[META4]], !mem.cache_hint [[META5]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %v = load <2 x i32>, ptr %p, align 4, !nontemporal !0, !mem.cache_hint !1, !annotation !4, !nosanitize !3, !mmra !5, !noalias.addrspace !6, !alias.scope !7, !noalias !7, !llvm.access.group !10, !range !11, !noundef !3, !invariant.load !3, !invariant.group !3, !tbaa !15
@@ -42,7 +42,7 @@ define <4 x i32> @widen_subvector(ptr align 16 dereferenceable(16) %p) {
 define <4 x i32> @shrink_load_insert(ptr align 16 dereferenceable(32) %p) {
 ; CHECK-LABEL: define <4 x i32> @shrink_load_insert(
 ; CHECK-SAME: ptr align 16 dereferenceable(32) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = load <4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <4 x i32>, ptr [[P]], align 16, !nontemporal [[META0]], !mem.cache_hint [[META5]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %v = load <8 x i32>, ptr %p, align 16, !nontemporal !0, !mem.cache_hint !1, !range !11, !noundef !3, !invariant.load !3, !alias.scope !7
@@ -70,3 +70,12 @@ define <4 x i32> @shrink_load_insert(ptr align 16 dereferenceable(32) %p) {
 !16 = !{!"omnipotent char", !17, i64 0}
 !17 = !{!"root"}
 !18 = !{i32 1, !2}
+;.
+; CHECK: [[META0]] = !{i32 1}
+; CHECK: [[META1]] = !{!"original access"}
+; CHECK: [[META2]] = !{}
+; CHECK: [[META3]] = !{!"test", !"tag"}
+; CHECK: [[META4]] = !{i32 5, i32 6}
+; CHECK: [[META5]] = !{i32 0, [[META6:![0-9]+]]}
+; CHECK: [[META6]] = !{!"nvvm.l1_eviction", !"last"}
+;.

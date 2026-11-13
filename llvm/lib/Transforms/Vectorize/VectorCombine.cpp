@@ -25,6 +25,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -359,7 +360,13 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Builder.SetInsertPoint(Load);
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
-  Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
+  auto *NewLoad = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
+  copyMetadataForMemoryAccess(
+      *NewLoad, *Load,
+      SrcPtr == Load->getPointerOperand()->stripPointerCasts()
+          ? std::optional<int64_t>(0)
+          : -int64_t(OffsetEltIndex * (ScalarSize / 8)));
+  Value *VecLd = NewLoad;
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
   replaceValue(I, *VecLd);
@@ -424,7 +431,8 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   Builder.SetInsertPoint(Load);
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
-  Value *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
+  auto *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
+  copyMetadataForMemoryAccess(*VecLd, *Load);
   replaceValue(I, *VecLd);
   ++NumVecLoad;
   return true;
@@ -2135,11 +2143,11 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
         {ConstantInt::get(GEPIdx->getType(), 0), GEPIdx});
 
     LastStore = Builder.CreateStore(InsertVal, GEP);
-    LastStore->copyMetadata(*SI);
-
-    // The new GEP may change the pointer operand, so !invariant.group cannot
-    // be transferred to the scalar store.
-    LastStore->setMetadata(LLVMContext::MD_invariant_group, nullptr);
+    std::optional<size_t> Offset;
+    if (auto *ConstIdx = dyn_cast<ConstantInt>(Idx))
+      Offset =
+          ConstIdx->getZExtValue() * DL->getTypeStoreSize(InsertVal->getType());
+    copyMetadataForMemoryAccess(*LastStore, *SI, Offset);
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
         std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
         *DL);
@@ -2306,11 +2314,10 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
         computeAlignmentAfterScalarization(LI->getAlign(), ElemType, Idx, *DL);
     NewLoad->setAlignment(ScalarOpAlignment);
 
-    if (auto *ConstIdx = dyn_cast<ConstantInt>(Idx)) {
-      size_t Offset = ConstIdx->getZExtValue() * DL->getTypeStoreSize(ElemType);
-      AAMDNodes OldAAMD = LI->getAAMetadata();
-      NewLoad->setAAMetadata(OldAAMD.adjustForAccess(Offset, ElemType, *DL));
-    }
+    std::optional<size_t> Offset;
+    if (auto *ConstIdx = dyn_cast<ConstantInt>(Idx))
+      Offset = ConstIdx->getZExtValue() * DL->getTypeStoreSize(ElemType);
+    copyMetadataForMemoryAccess(*NewLoad, *LI, Offset);
 
     replaceValue(*EI, *NewLoad, false);
   }
@@ -2377,7 +2384,7 @@ bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
   auto *ScalarLoad =
       Builder.CreateLoad(TargetScalarType, Ptr, LI->getName() + ".scalar");
   ScalarLoad->setAlignment(LI->getAlign());
-  ScalarLoad->copyMetadata(*LI);
+  copyMetadataForMemoryAccess(*ScalarLoad, *LI);
 
   // Replace all bitcast users with the scalar load.
   for (User *U : LI->users()) {
@@ -6625,6 +6632,7 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   CallInst *NewVP = Builder.CreateIntrinsicWithoutFolding(
       NewVecTy, Intrinsic::vp_load,
       {II->getMemoryPointerParam(), NewMask, NewEVL});
+  copyMetadataForMemoryAccess(*NewVP, *II);
   // Preserve the original alignment.
   NewVP->addParamAttrs(
       0, AttrBuilder(II->getContext()).addAlignmentAttr(OrigAlign));
@@ -6881,7 +6889,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       // Create new load of smaller vector.
       auto *NewLoad = cast<LoadInst>(
           Builder.CreateAlignedLoad(NewLoadTy, PtrOp, OldLoad->getAlign()));
-      NewLoad->copyMetadata(I);
+      copyMetadataForMemoryAccess(*NewLoad, *OldLoad);
 
       // Replace all uses.
       for (UseEntry &Use : NewUses) {

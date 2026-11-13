@@ -5,7 +5,7 @@ define <8 x i16> @vp_bitcast_fixed(ptr %p, i32 %evl) {
 ; CHECK-LABEL: define <8 x i16> @vp_bitcast_fixed(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[EVL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[EVL]], 2
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.vp.load.v8i16.p0(ptr align 4 [[P]], <8 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.vp.load.v8i16.p0(ptr align 4 [[P]], <8 x i1> splat (i1 true), i32 [[TMP1]]), !invariant.load [[META0:![0-9]+]], !alias.scope [[META1:![0-9]+]], !noalias [[META1]], !nontemporal [[META4:![0-9]+]], !llvm.access.group [[ACC_GRP5:![0-9]+]], !annotation [[META6:![0-9]+]], !nosanitize [[META0]], !mmra [[META7:![0-9]+]], !noalias.addrspace [[META8:![0-9]+]], !mem.cache_hint [[META9:![0-9]+]]
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %v = call <4 x i32> @llvm.vp.load(ptr align 4 %p, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i32 %evl), !nontemporal !0, !mem.cache_hint !1, !annotation !4, !nosanitize !3, !mmra !5, !noalias.addrspace !6, !alias.scope !7, !noalias !7, !llvm.access.group !10, !range !11, !invariant.load !3
@@ -17,7 +17,7 @@ define <vscale x 8 x i16> @vp_bitcast_scalable(ptr %p, i32 %evl) {
 ; CHECK-LABEL: define <vscale x 8 x i16> @vp_bitcast_scalable(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[EVL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[EVL]], 2
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr align 4 [[P]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vp.load.nxv8i16.p0(ptr align 4 [[P]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP1]]), !invariant.load [[META0]], !alias.scope [[META1]], !noalias [[META1]], !nontemporal [[META4]], !llvm.access.group [[ACC_GRP5]], !annotation [[META6]], !nosanitize [[META0]], !mmra [[META7]], !noalias.addrspace [[META8]], !mem.cache_hint [[META9]]
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %v = call <vscale x 4 x i32> @llvm.vp.load(ptr align 4 %p, <vscale x 4 x i1> splat (i1 true), i32 %evl), !nontemporal !0, !mem.cache_hint !1, !annotation !4, !nosanitize !3, !mmra !5, !noalias.addrspace !6, !alias.scope !7, !noalias !7, !llvm.access.group !10, !range !11, !invariant.load !3
@@ -45,3 +45,16 @@ define <vscale x 8 x i16> @vp_bitcast_scalable(ptr %p, i32 %evl) {
 !16 = !{!"omnipotent char", !17, i64 0}
 !17 = !{!"root"}
 !18 = !{i32 1, !2}
+;.
+; CHECK: [[META0]] = !{}
+; CHECK: [[META1]] = !{[[META2:![0-9]+]]}
+; CHECK: [[META2]] = distinct !{[[META2]], [[META3:![0-9]+]], !"scope"}
+; CHECK: [[META3]] = distinct !{[[META3]], i1 false, !"domain"}
+; CHECK: [[META4]] = !{i32 1}
+; CHECK: [[ACC_GRP5]] = distinct !{}
+; CHECK: [[META6]] = !{!"original access"}
+; CHECK: [[META7]] = !{!"test", !"tag"}
+; CHECK: [[META8]] = !{i32 5, i32 6}
+; CHECK: [[META9]] = !{i32 0, [[META10:![0-9]+]]}
+; CHECK: [[META10]] = !{!"nvvm.l1_eviction", !"last"}
+;.

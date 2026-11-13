@@ -4,7 +4,7 @@
 define void @store_bitcast(ptr %p, float %x) {
 ; CHECK-LABEL: define void @store_bitcast(
 ; CHECK-SAME: ptr [[P:%.*]], float [[X:%.*]]) {
-; CHECK-NEXT:    store float [[X]], ptr [[P]], align 4
+; CHECK-NEXT:    store float [[X]], ptr [[P]], align 4, !mem.cache_hint [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %bits = bitcast float %x to i32
@@ -15,8 +15,8 @@ define void @store_bitcast(ptr %p, float %x) {
 define void @copy_both_hints(ptr %dst, ptr %src) {
 ; CHECK-LABEL: define void @copy_both_hints(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4, !mem.cache_hint [[META2:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[DST]], align 4, !mem.cache_hint [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 4, i1 false), !mem.cache_hint !2
@@ -26,7 +26,7 @@ define void @copy_both_hints(ptr %dst, ptr %src) {
 define void @set_destination_hint(ptr %dst) {
 ; CHECK-LABEL: define void @set_destination_hint(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
-; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4, !mem.cache_hint [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 4 %dst, i8 0, i64 4, i1 false), !mem.cache_hint !3
@@ -38,7 +38,7 @@ define void @set_destination_hint(ptr %dst) {
 define <2 x i32> @speculated_masked_load(ptr dereferenceable(8) %p, <2 x i1> %mask) {
 ; CHECK-LABEL: define <2 x i32> @speculated_masked_load(
 ; CHECK-SAME: ptr dereferenceable(8) [[P:%.*]], <2 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x i32>, ptr [[P]], align 1, !invariant.load [[META0:![0-9]+]], !mem.cache_hint [[META1:![0-9]+]]
+; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x i32>, ptr [[P]], align 1, !invariant.load [[META4:![0-9]+]], !mem.cache_hint [[META5:![0-9]+]]
 ; CHECK-NEXT:    [[V:%.*]] = select <2 x i1> [[MASK]], <2 x i32> [[UNMASKEDLOAD]], <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
@@ -53,7 +53,10 @@ define <2 x i32> @speculated_masked_load(ptr dereferenceable(8) %p, <2 x i1> %ma
 !4 = !{!"nvvm.l1_eviction", !"first"}
 !6 = !{}
 ;.
-; CHECK: [[META0]] = !{}
-; CHECK: [[META1]] = !{i32 0, [[META2:![0-9]+]]}
-; CHECK: [[META2]] = !{!"nvvm.l1_eviction", !"last"}
+; CHECK: [[META0]] = !{i32 1, [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"nvvm.l1_eviction", !"last"}
+; CHECK: [[META2]] = !{i32 0, [[META3:![0-9]+]]}
+; CHECK: [[META3]] = !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[META4]] = !{}
+; CHECK: [[META5]] = !{i32 0, [[META1]]}
 ;.

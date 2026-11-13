@@ -12,7 +12,7 @@ define void @common_metadata(ptr %p, i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ [[B]], %[[RIGHT]] ], [ [[A]], %[[LEFT]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[P]], align 4, !tbaa [[INT_TBAA0:![0-9]+]], !alias.scope [[META4:![0-9]+]], !noalias [[META4]], !llvm.access.group [[ACC_GRP7:![0-9]+]]
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[P]], align 4, !tbaa [[INT_TBAA0:![0-9]+]], !alias.scope [[META4:![0-9]+]], !noalias [[META4]], !nontemporal [[META7:![0-9]+]], !llvm.access.group [[ACC_GRP8:![0-9]+]], !mem.cache_hint [[META11:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -38,7 +38,7 @@ define void @intersect_access_groups(ptr %p, i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ [[B]], %[[RIGHT]] ], [ [[A]], %[[LEFT]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[P]], align 4, !llvm.access.group [[ACC_GRP9:![0-9]+]]
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[P]], align 4, !llvm.access.group [[ACC_GRP10:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -140,7 +140,7 @@ define void @triangle_common_metadata(ptr %p, i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ [[B]], %[[THEN]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[P]], align 4, !nontemporal [[META7]], !mem.cache_hint [[META11]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -164,7 +164,7 @@ define void @merge_pointer_captures(ptr %p, i1 %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi ptr [ [[B]], %[[RIGHT]] ], [ [[A]], %[[LEFT]] ]
-; CHECK-NEXT:    store ptr [[STOREMERGE]], ptr [[P]], align 8
+; CHECK-NEXT:    store ptr [[STOREMERGE]], ptr [[P]], align 8, !captures [[META13:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -207,7 +207,11 @@ join:
 ; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
 ; CHECK: [[META6]] = distinct !{[[META6]], i1 false, !"domain"}
-; CHECK: [[ACC_GRP7]] = !{[[META8:![0-9]+]], [[ACC_GRP9]]}
-; CHECK: [[META8]] = distinct !{}
-; CHECK: [[ACC_GRP9]] = distinct !{}
+; CHECK: [[META7]] = !{i32 1}
+; CHECK: [[ACC_GRP8]] = !{[[META9:![0-9]+]], [[ACC_GRP10]]}
+; CHECK: [[META9]] = distinct !{}
+; CHECK: [[ACC_GRP10]] = distinct !{}
+; CHECK: [[META11]] = !{i32 1, [[META12:![0-9]+]]}
+; CHECK: [[META12]] = !{!"nvvm.l1_eviction", !"last"}
+; CHECK: [[META13]] = !{!"address", !"read_provenance"}
 ;.

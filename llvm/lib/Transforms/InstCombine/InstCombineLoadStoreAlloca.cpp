@@ -15,6 +15,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -610,7 +611,7 @@ LoadInst *InstCombinerImpl::combineLoadToNewType(LoadInst &LI, Type *NewTy,
 
   LoadInst *NewLoad = Builder.CreateLoad(
       NewTy, LI.getPointerOperand(), LI.getProperties(), LI.getName() + Suffix);
-  copyMetadataForLoad(*NewLoad, LI);
+  copyMetadataForMemoryAccess(*NewLoad, LI);
   return NewLoad;
 }
 
@@ -623,47 +624,8 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
          "can't fold an atomic store of requested type");
 
   Value *Ptr = SI.getPointerOperand();
-  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
-  SI.getAllMetadata(MD);
-
   StoreInst *NewStore = IC.Builder.CreateStore(V, Ptr, SI.getProperties());
-  for (const auto &MDPair : MD) {
-    unsigned ID = MDPair.first;
-    MDNode *N = MDPair.second;
-    // Note, essentially every kind of metadata should be preserved here! This
-    // routine is supposed to clone a store instruction changing *only its
-    // type*. The only metadata it makes sense to drop is metadata which is
-    // invalidated when the pointer type changes. This should essentially
-    // never be the case in LLVM, but we explicitly switch over only known
-    // metadata to be conservatively correct. If you are adding metadata to
-    // LLVM which pertains to stores, you almost certainly want to add it
-    // here.
-    switch (ID) {
-    case LLVMContext::MD_dbg:
-    case LLVMContext::MD_DIAssignID:
-    case LLVMContext::MD_tbaa:
-    case LLVMContext::MD_prof:
-    case LLVMContext::MD_fpmath:
-    case LLVMContext::MD_tbaa_struct:
-    case LLVMContext::MD_alias_scope:
-    case LLVMContext::MD_noalias:
-    case LLVMContext::MD_nontemporal:
-    case LLVMContext::MD_mem_parallel_loop_access:
-    case LLVMContext::MD_access_group:
-      // All of these directly apply.
-      NewStore->setMetadata(ID, N);
-      break;
-    case LLVMContext::MD_invariant_load:
-    case LLVMContext::MD_nonnull:
-    case LLVMContext::MD_noundef:
-    case LLVMContext::MD_range:
-    case LLVMContext::MD_align:
-    case LLVMContext::MD_dereferenceable:
-    case LLVMContext::MD_dereferenceable_or_null:
-      // These don't apply for stores.
-      break;
-    }
-  }
+  copyMetadataForMemoryAccess(*NewStore, SI);
 
   return NewStore;
 }
@@ -751,9 +713,6 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     if (NumElements == 1) {
       LoadInst *NewLoad = IC.combineLoadToNewType(LI, ST->getTypeAtIndex(0U),
                                                   ".unpack");
-      NewLoad->setAAMetadata(LI.getAAMetadata());
-      // Copy invariant metadata from parent load.
-      NewLoad->copyMetadata(LI, LLVMContext::MD_invariant_load);
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         PoisonValue::get(T), NewLoad, 0, Name));
     }
@@ -779,10 +738,8 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
           ST->getElementType(i), Ptr,
           commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue()),
           Name + ".unpack");
-      // Propagate AA metadata. It'll still be valid on the narrowed load.
-      L->setAAMetadata(LI.getAAMetadata());
-      // Copy invariant metadata from parent load.
-      L->copyMetadata(LI, LLVMContext::MD_invariant_load);
+      copyMetadataForMemoryAccess(*L, LI,
+                                  SL->getElementOffset(i).getKnownMinValue());
       V = IC.Builder.CreateInsertValue(V, L, i);
     }
 
@@ -795,7 +752,6 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     auto NumElements = AT->getNumElements();
     if (NumElements == 1) {
       LoadInst *NewLoad = IC.combineLoadToNewType(LI, ET, ".unpack");
-      NewLoad->setAAMetadata(LI.getAAMetadata());
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         PoisonValue::get(T), NewLoad, 0, Name));
     }
@@ -827,7 +783,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       auto EltAlign = commonAlignment(Align, Offset.getKnownMinValue());
       auto *L = IC.Builder.CreateAlignedLoad(AT->getElementType(), Ptr,
                                              EltAlign, Name + ".unpack");
-      L->setAAMetadata(LI.getAAMetadata());
+      copyMetadataForMemoryAccess(*L, LI, Offset.getKnownMinValue());
       V = IC.Builder.CreateInsertValue(V, L, i);
       Offset += EltSize;
     }
@@ -1392,7 +1348,8 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
       auto EltAlign =
           commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue());
       llvm::Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
-      NS->setAAMetadata(SI.getAAMetadata());
+      copyMetadataForMemoryAccess(*NS, SI,
+                                  SL->getElementOffset(i).getKnownMinValue());
     }
 
     return true;
@@ -1438,7 +1395,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
       auto EltAlign = commonAlignment(Align, Offset.getKnownMinValue());
       Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
-      NS->setAAMetadata(SI.getAAMetadata());
+      copyMetadataForMemoryAccess(*NS, SI, Offset.getKnownMinValue());
       Offset += EltSize;
     }
 
@@ -1759,17 +1716,10 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   StoreInst *NewSI =
       new StoreInst(MergedVal, SI.getOperand(1), SI.getProperties());
   InsertNewInstBefore(NewSI, BBI);
-  NewSI->setDebugLoc(MergedLoc);
+  copyMetadataForMemoryAccess(*NewSI, SI);
   NewSI->mergeDIAssignID({&SI, OtherStore});
-
-  // If the two stores had AA tags, merge them.
-  AAMDNodes AATags = SI.getAAMetadata();
-  if (AATags)
-    NewSI->setAAMetadata(AATags.merge(OtherStore->getAAMetadata()));
-
-  // If the two stores had access groups, intersect them.
-  NewSI->setMetadata(LLVMContext::MD_access_group,
-                     intersectAccessGroups(&SI, OtherStore));
+  combineMetadataForCSE(NewSI, OtherStore, /*DoesKMove=*/true);
+  NewSI->setDebugLoc(MergedLoc);
 
   // Nuke the old stores.
   eraseInstFromFunction(SI);

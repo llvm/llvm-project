@@ -18,6 +18,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/MetadataUtils.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
@@ -310,7 +311,6 @@ private:
   Scatterer scatter(Instruction *Point, Value *V, const VectorSplit &VS);
   void gather(Instruction *Op, const ValueVector &CV, const VectorSplit &VS);
   void replaceUses(Instruction *Op, Value *CV);
-  bool canTransferMetadata(unsigned Kind);
   void transferMetadataAndIRFlags(Instruction *Op, const ValueVector &CV);
   std::optional<VectorSplit> getVectorSplit(Type *Ty);
   std::optional<VectorLayout> getVectorLayout(Type *Ty, Align Alignment,
@@ -542,33 +542,16 @@ void ScalarizerVisitor::replaceUses(Instruction *Op, Value *CV) {
   }
 }
 
-// Return true if it is safe to transfer the given metadata tag from
-// vector to scalar instructions.
-bool ScalarizerVisitor::canTransferMetadata(unsigned Tag) {
-  return (Tag == LLVMContext::MD_tbaa
-          || Tag == LLVMContext::MD_fpmath
-          || Tag == LLVMContext::MD_tbaa_struct
-          || Tag == LLVMContext::MD_invariant_load
-          || Tag == LLVMContext::MD_alias_scope
-          || Tag == LLVMContext::MD_noalias
-          || Tag == LLVMContext::MD_mem_parallel_loop_access
-          || Tag == LLVMContext::MD_access_group);
-}
-
-// Transfer metadata from Op to the instructions in CV if it is known
-// to be safe to do so.
+// Transfer metadata and flags to each scalarized fragment.
 void ScalarizerVisitor::transferMetadataAndIRFlags(Instruction *Op,
                                                    const ValueVector &CV) {
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  Op->getAllMetadataOtherThanDebugLoc(MDs);
+  uint64_t Offset = 0;
   for (Value *V : CV) {
-    if (Instruction *New = dyn_cast<Instruction>(V)) {
-      for (const auto &MD : MDs)
-        if (canTransferMetadata(MD.first))
-          New->setMetadata(MD.first, MD.second);
+    if (auto *New = dyn_cast<Instruction>(V)) {
+      copyMetadataForScalarizedInstruction(*New, *Op, Offset);
       New->copyIRFlags(Op);
-      if (Op->getDebugLoc() && !New->getDebugLoc())
-        New->setDebugLoc(Op->getDebugLoc());
+      if (isa<LoadInst, StoreInst>(New))
+        Offset += Op->getDataLayout().getTypeStoreSize(getLoadStoreType(New));
     }
   }
 }
