@@ -14,6 +14,7 @@
   define void @test_occ_inc_revert_all_regions() {
     ret void
   }
+...
 ---
 name:            sink_and_inc_idx_when_skipping_small_region_1
 tracksRegLiveness: true
