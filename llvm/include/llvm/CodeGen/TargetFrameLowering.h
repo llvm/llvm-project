@@ -195,6 +195,9 @@ public:
     return false;
   }
 
+  /// Returns true if Windows CFI shrink wrapping should be enabled by default.
+  /// Explicitly enabling shrink wrapping overrides this; mandatory restrictions
+  /// should be enforced by canUseAsPrologue() or canUseAsEpilogue().
   virtual bool enableWindowsCFIShrinkWrapping(const MachineFunction &MF) const {
     return false;
   }
