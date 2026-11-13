@@ -6081,6 +6081,8 @@ def macquire_release_atomics : Flag<["-"], "macquire-release-atomics">, Group<m_
 def mno_acquire_release_atomics : Flag<["-"], "mno-acquire-release-atomics">, Group<m_wasm_Features_Group>;
 def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
 def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
+def mbranch_hinting : Flag<["-"], "mbranch-hinting">, Group<m_wasm_Features_Group>;
+def mno_branch_hinting : Flag<["-"], "mno-branch-hinting">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
 def mno_bulk_memory : Flag<["-"], "mno-bulk-memory">, Group<m_wasm_Features_Group>;
 def mbulk_memory_opt : Flag<["-"], "mbulk-memory-opt">, Group<m_wasm_Features_Group>;

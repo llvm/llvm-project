@@ -42,6 +42,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
 
   bool HasAcquireReleaseAtomics = false;
   bool HasAtomics = false;
+  bool HasBranchHinting = false;
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
@@ -111,6 +112,7 @@ public:
   bool hasAcquireReleaseAtomics() const { return HasAcquireReleaseAtomics; }
   bool hasAddr64() const { return TargetTriple.isArch64Bit(); }
   bool hasAtomics() const { return HasAtomics; }
+  bool hasBranchHinting() const { return HasBranchHinting; }
   bool hasBulkMemory() const { return HasBulkMemory; }
   bool hasBulkMemoryOpt() const { return HasBulkMemoryOpt; }
   bool hasCallIndirectOverlong() const { return HasCallIndirectOverlong; }
