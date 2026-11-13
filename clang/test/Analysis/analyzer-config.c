@@ -135,6 +135,7 @@
 // CHECK-NEXT: suppress-null-return-paths = true
 // CHECK-NEXT: track-conditions = true
 // CHECK-NEXT: track-conditions-debug = false
+// CHECK-NEXT: unitybuild-file-extensions = ""
 // CHECK-NEXT: unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes = true
 // CHECK-NEXT: unix.DynamicMemoryModeling:ModelAllocationFailure = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false

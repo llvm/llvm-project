@@ -227,6 +227,14 @@ ANALYZER_OPTION(
     "the number of nondeterministic diagnostics than "
     "\"crosscheck-with-z3-timeout-threshold\" in practice.", 3)
 
+ANALYZER_OPTION(
+    StringRef, UnityBuildFileExtensions, "unitybuild-file-extensions",
+    "Semicolon-separated file extensions (including leading dots, e.g. "
+    "'.cpp;.impl;.c') of included files whose functions are considered "
+    "analysis entry points, regardless of the including file's name. "
+    "Empty by default.",
+    "")
+
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 "report-in-main-source-file",
                 "Whether or not the diagnostic report should be always "

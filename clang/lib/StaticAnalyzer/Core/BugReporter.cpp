@@ -3297,18 +3297,21 @@ BugReporter::generateDiagnosticForConsumerMap(
 
 static PathDiagnosticCallPiece *
 getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
-                                const SourceManager &SMgr) {
+                                const SourceManager &SMgr,
+                                ArrayRef<StringRef> UnityBuildFileExtensions) {
   SourceLocation CallLoc = CP->callEnter.asLocation();
 
   // If the call is within a macro, don't do anything (for now).
   if (CallLoc.isMacroID())
     return nullptr;
 
-  assert(AnalysisManager::isInCodeFile(CallLoc, SMgr) &&
-         "The call piece should not be in a header file.");
+  assert(
+      AnalysisManager::isInCodeFile(CallLoc, SMgr, UnityBuildFileExtensions) &&
+      "The call piece should not be in a header file.");
 
   // Check if CP represents a path through a function outside of the main file.
-  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr))
+  if (!AnalysisManager::isInCodeFile(CP->callEnterWithin.asLocation(), SMgr,
+                                     UnityBuildFileExtensions))
     return CP;
 
   const PathPieces &Path = CP->path;
@@ -3318,13 +3321,15 @@ getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,
   // Check if the last piece in the callee path is a call to a function outside
   // of the main file.
   if (auto *CPInner = dyn_cast<PathDiagnosticCallPiece>(Path.back().get()))
-    return getFirstStackedCallToHeaderFile(CPInner, SMgr);
+    return getFirstStackedCallToHeaderFile(CPInner, SMgr,
+                                           UnityBuildFileExtensions);
 
   // Otherwise, the last piece is in the main file.
   return nullptr;
 }
 
-static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD) {
+static void resetDiagnosticLocationToMainFile(
+    PathDiagnostic &PD, ArrayRef<StringRef> UnityBuildFileExtensions) {
   if (PD.path.empty())
     return;
 
@@ -3335,7 +3340,7 @@ static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD) {
   // We only need to check if the report ends inside headers, if the last piece
   // is a call piece.
   if (auto *CP = dyn_cast<PathDiagnosticCallPiece>(LastP)) {
-    CP = getFirstStackedCallToHeaderFile(CP, SMgr);
+    CP = getFirstStackedCallToHeaderFile(CP, SMgr, UnityBuildFileExtensions);
     if (CP) {
       // Mark the piece.
        CP->setAsLastInMainSourceFile();
@@ -3391,7 +3396,8 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
   const AnalyzerOptions &Opts = getAnalyzerOptions();
   for (auto const &P : *Out)
     if (Opts.ShouldReportIssuesInMainSourceFile && !Opts.AnalyzeAll)
-      resetDiagnosticLocationToMainFile(*P.second);
+      resetDiagnosticLocationToMainFile(
+          *P.second, Eng.getAnalysisManager().getUnityBuildFileExtensions());
 
   return Out;
 }
