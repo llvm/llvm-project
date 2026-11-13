@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -470,21 +471,32 @@ int llvm::omp::getBestVariantMatchForContext(
   }
 
   // A strict subset of another tied variant is never best; otherwise the first
-  // one wins. Tied variants often share a few supersets, so try the ones found
-  // so far before scanning all of them.
-  SmallVector<const VariantMatchInfo *, 4> Supersets;
+  // one wins. A variant with a runtime condition can only be a subset of one
+  // with the same condition, so only those are scanned. Tied variants often
+  // share a few supersets, so try the ones found so far for the same condition
+  // first.
+  struct TiedGroup {
+    SmallVector<unsigned, 4> Idxs;
+    SmallVector<unsigned, 1> Supersets;
+  };
+  DenseMap<StringRef, TiedGroup> Groups;
+  for (unsigned Idx : BestVMIIdxs)
+    Groups[VMIs[Idx].UserCondition].Idxs.push_back(Idx);
   for (unsigned Idx : BestVMIIdxs) {
     const VariantMatchInfo &VMI = VMIs[Idx];
-    if (llvm::any_of(Supersets, [&](const VariantMatchInfo *Superset) {
-          return isStrictSubset(VMI, *Superset);
-        }))
-      continue;
-    auto *It = llvm::find_if(BestVMIIdxs, [&](unsigned OtherIdx) {
+    auto IsStrictSubsetOf = [&](unsigned OtherIdx) {
       return isStrictSubset(VMI, VMIs[OtherIdx]);
-    });
-    if (It == BestVMIIdxs.end())
+    };
+    TiedGroup &Group = Groups[VMI.UserCondition];
+    if (llvm::any_of(Group.Supersets, IsStrictSubsetOf))
+      continue;
+    // A variant without a runtime condition can be a subset of any of them.
+    ArrayRef<unsigned> Others =
+        VMI.UserCondition.empty() ? BestVMIIdxs : Group.Idxs;
+    auto *It = llvm::find_if(Others, IsStrictSubsetOf);
+    if (It == Others.end())
       return Idx;
-    Supersets.push_back(&VMIs[*It]);
+    Group.Supersets.push_back(*It);
   }
   return -1;
 }
