@@ -1941,7 +1941,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(
   bool CanHaveFlatSegmentOffsetBug =
       Subtarget->hasFlatSegmentOffsetBug() &&
       FlatVariant == FlatAddrSpace::FLAT &&
-      (AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::GLOBAL_ADDRESS);
+      (AS == AMDGPUAS::FLAT_ADDRESS || AMDGPU::isExtendedGlobalAddrSpace(AS));
 
   if (Subtarget->hasFlatInstOffsets() && !CanHaveFlatSegmentOffsetBug) {
     SDValue N0, N1;
