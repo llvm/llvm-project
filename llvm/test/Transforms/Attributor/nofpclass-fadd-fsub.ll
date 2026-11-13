@@ -812,6 +812,17 @@ define half @fadd_threshold_half(half noundef %arg) {
   ret half %add
 }
 
+; nextup(T) in half precision.
+define half @fadd_nextup_threshold_half(half noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) half @fadd_nextup_threshold_half(
+; CHECK-SAME: half noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[ARG]], 6.256100e-02
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %arg, f0x2C01
+  ret half %add
+}
+
 ; nextdown(T) in half precision.
 define half @fadd_nextdown_threshold_half(half noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nzero) half @fadd_nextdown_threshold_half(
@@ -831,6 +842,17 @@ define x86_fp80 @fadd_threshold_x86_fp80(x86_fp80 noundef %arg) {
 ; CHECK-NEXT:    ret x86_fp80 [[ADD]]
 ;
   %add = fadd x86_fp80 %arg, f0x00408000000000000000
+  ret x86_fp80 %add
+}
+
+; nextup(T) in x86_fp80 precision.
+define x86_fp80 @fadd_nextup_threshold_x86_fp80(x86_fp80 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) x86_fp80 @fadd_nextup_threshold_x86_fp80(
+; CHECK-SAME: x86_fp80 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd x86_fp80 [[ARG]], f0x00408000000000000001
+; CHECK-NEXT:    ret x86_fp80 [[ADD]]
+;
+  %add = fadd x86_fp80 %arg, f0x00408000000000000001
   ret x86_fp80 %add
 }
 
