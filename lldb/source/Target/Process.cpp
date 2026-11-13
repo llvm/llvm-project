@@ -639,7 +639,10 @@ void Process::Finalize(bool destructing) {
     std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
     m_language_runtimes.clear();
   }
-  m_instrumentation_runtimes.clear();
+  {
+    std::lock_guard<std::mutex> guard(m_instrumentation_runtimes_mutex);
+    m_instrumentation_runtimes.clear();
+  }
   m_next_event_action_up.reset();
   // Clear the last natural stop ID since it has a strong reference to this
   // process
@@ -6385,7 +6388,10 @@ void Process::DidExec() {
     std::lock_guard<std::recursive_mutex> guard(m_language_runtimes_mutex);
     m_language_runtimes.clear();
   }
-  m_instrumentation_runtimes.clear();
+  {
+    std::lock_guard<std::mutex> guard(m_instrumentation_runtimes_mutex);
+    m_instrumentation_runtimes.clear();
+  }
   m_thread_list.DiscardThreadPlans();
   m_memory_cache.Clear(true);
   m_memory_region_infos_cache.Clear();
@@ -6441,12 +6447,15 @@ void Process::ModulesDidLoad(ModuleList &module_list) {
 
   // Give the instrumentation runtimes a chance to be created before informing
   // them of the modified modules.
-  InstrumentationRuntime::ModulesDidLoad(module_list, this,
-                                         m_instrumentation_runtimes);
-  for (auto &runtime : m_instrumentation_runtimes) {
-    // A null entry means the plugin is disabled in this process.
-    if (runtime.second)
-      runtime.second->ModulesDidLoad(module_list);
+  {
+    std::lock_guard<std::mutex> guard(m_instrumentation_runtimes_mutex);
+    InstrumentationRuntime::ModulesDidLoad(module_list, this,
+                                           m_instrumentation_runtimes);
+    for (auto &runtime : m_instrumentation_runtimes) {
+      // A null entry means the plugin is disabled in this process.
+      if (runtime.second)
+        runtime.second->ModulesDidLoad(module_list);
+    }
   }
 
   // Give the language runtimes a chance to be created before informing them of
@@ -6526,6 +6535,7 @@ ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
 
 InstrumentationRuntimeSP
 Process::GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type) {
+  std::lock_guard<std::mutex> guard(m_instrumentation_runtimes_mutex);
   InstrumentationRuntimeCollection::iterator pos;
   pos = m_instrumentation_runtimes.find(type);
   if (pos == m_instrumentation_runtimes.end()) {
@@ -6537,6 +6547,8 @@ Process::GetInstrumentationRuntime(lldb::InstrumentationRuntimeType type) {
 llvm::Error
 Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
                                           bool enabled) {
+  std::lock_guard<std::mutex> guard(m_instrumentation_runtimes_mutex);
+
   if (!IsAlive())
     return llvm::createStringErrorV("process {} is not alive", GetID());
 
@@ -6555,8 +6567,11 @@ Process::SetInstrumentationRuntimeEnabled(InstrumentationRuntimeType irt,
   }
 
   // This process already has an instance of this plugin so it is already
-  // enabled.
-  if (GetInstrumentationRuntime(irt))
+  // enabled. Note the code below is basically
+  // `Process::GetInstrumentationRuntime` but we can't call it here because it
+  // tries to acquire the mutex we are already holding.
+  auto pos = m_instrumentation_runtimes.find(irt);
+  if (pos != m_instrumentation_runtimes.end() && pos->second)
     return llvm::Error::success();
 
   // There's no instance of this plugin for this process so create one. This
