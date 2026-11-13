@@ -1777,6 +1777,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FCANONICALIZE, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction({ISD::FDIV, ISD::STRICT_FDIV}, VT, Custom);
+      setOperationAction(ISD::FLDEXP, VT, Custom);
       setOperationAction({ISD::FMA, ISD::STRICT_FMA}, VT, Custom);
       setOperationAction({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT, Custom);
       setOperationAction({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT, Custom);
@@ -2257,11 +2258,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::nxv16i8,  MVT::nxv8i16, MVT::nxv4i32,  MVT::nxv2i64,
                     MVT::nxv2f16,  MVT::nxv4f16, MVT::nxv8f16,  MVT::nxv2f32,
                     MVT::nxv4f32,  MVT::nxv2f64, MVT::nxv2bf16, MVT::nxv4bf16,
-                    MVT::nxv8bf16, MVT::v4f16,   MVT::v8f16,    MVT::v4bf16,
-                    MVT::v8bf16,   MVT::v2f32,   MVT::v4f32,    MVT::v1f64,
-                    MVT::v2f64,    MVT::v8i8,    MVT::v16i8,    MVT::v4i16,
-                    MVT::v8i16,    MVT::v2i32,   MVT::v4i32,    MVT::v1i64,
-                    MVT::v2i64}) {
+                    MVT::nxv8bf16, MVT::v2f16,   MVT::v4f16,    MVT::v8f16,
+                    MVT::v2bf16,   MVT::v4bf16,  MVT::v8bf16,   MVT::v2f32,
+                    MVT::v4f32,    MVT::v1f64,   MVT::v2f64,    MVT::v8i8,
+                    MVT::v16i8,    MVT::v4i16,   MVT::v8i16,    MVT::v2i32,
+                    MVT::v4i32,    MVT::v1i64,   MVT::v2i64}) {
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
     }
@@ -8349,44 +8350,61 @@ static SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
-  SDValue X = Op.getOperand(0);
-  EVT XScalarTy = X.getValueType();
-  SDValue Exp = Op.getOperand(1);
-
+SDValue AArch64TargetLowering::LowerFLDEXP(SDValue Op,
+                                           SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  EVT XVT, ExpVT;
-  switch (Op.getSimpleValueType().SimpleTy) {
-  default:
-    return SDValue();
-  case MVT::bf16:
-  case MVT::f16:
-    X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X);
-    [[fallthrough]];
-  case MVT::f32:
-    XVT = MVT::nxv4f32;
-    ExpVT = MVT::nxv4i32;
-    break;
-  case MVT::f64:
-    XVT = MVT::nxv2f64;
-    ExpVT = MVT::nxv2i64;
-    Exp = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Exp);
-    break;
+  EVT VT = Op.getValueType();
+  SDValue X = Op.getOperand(0);
+  SDValue Exp = Op.getOperand(1);
+  EVT ExpVT = Exp.getValueType();
+
+  // FSCALE requires all elements to have the same bitwidth.
+  if (ExpVT.bitsGT(VT)) {
+    // Promote the floating-point operand.
+    EVT NewVT;
+    if (ExpVT == MVT::i32)
+      NewVT = MVT::f32;
+    else if (ExpVT == MVT::i64)
+      NewVT = MVT::f64;
+    else if (ExpVT.isVectorOf(MVT::i32))
+      NewVT = ExpVT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+    else if (ExpVT.isVectorOf(MVT::i64))
+      NewVT = ExpVT.changeVectorElementType(*DAG.getContext(), MVT::f64);
+    else
+      return SDValue();
+
+    X = DAG.getNode(ISD::FP_EXTEND, DL, NewVT, X);
+    SDValue FLDEXP = DAG.getNode(ISD::FLDEXP, DL, NewVT, X, Exp);
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, FLDEXP,
+                       DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true));
   }
 
-  SDValue VX = DAG.getInsertVectorElt(DL, DAG.getPOISON(XVT), X, 0);
-  SDValue VExp = DAG.getInsertVectorElt(DL, DAG.getPOISON(ExpVT), Exp, 0);
-  SDValue VPg = DAG.getConstant(
-      1, DL, XVT.changeVectorElementType(*DAG.getContext(), MVT::i1));
-  SDValue FScale = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, XVT,
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_fscale, DL, MVT::i64), VPg,
-      VX, VExp);
-  SDValue Final = DAG.getExtractVectorElt(DL, X.getValueType(), FScale, 0);
-  if (X.getValueType() != XScalarTy)
-    Final = DAG.getNode(ISD::FP_ROUND, DL, XScalarTy, Final,
-                        DAG.getIntPtrConstant(1, SDLoc(Op), /*isTarget=*/true));
-  return Final;
+  // FSCALE requires all elements to have the same bitwidth.
+  if (ExpVT.bitsLT(VT)) {
+    // Promote the integer operand.
+    EVT NewExpVT = ExpVT.isScalableVectorOf(MVT::i1)
+                       ? getPromotedVTForPredicate(ExpVT)
+                       : VT.changeTypeToInteger();
+    Exp = DAG.getNode(ISD::SIGN_EXTEND, DL, NewExpVT, Exp);
+    return DAG.getNode(ISD::FLDEXP, DL, VT, X, Exp);
+  }
+
+  assert(ExpVT.bitsEq(VT) && "Type mismatch!");
+
+  if (VT.isVector())
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FLDEXP_PRED);
+
+  // Lower scalar FDEXP to SVE.
+  EVT NewVT = getPackedSVEVectorVT(VT);
+  X = DAG.getInsertVectorElt(DL, DAG.getPOISON(NewVT), X, 0);
+
+  EVT NewExpVT = NewVT.changeTypeToInteger();
+  Exp = DAG.getInsertVectorElt(DL, DAG.getPOISON(NewExpVT), Exp, 0);
+
+  EVT PgVT = NewVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
+  SDValue Pg = DAG.getConstant(1, DL, PgVT);
+  SDValue FLDEXP = DAG.getNode(AArch64ISD::FLDEXP_PRED, DL, NewVT, Pg, X, Exp);
+  return DAG.getExtractVectorElt(DL, VT, FLDEXP, 0);
 }
 
 SDValue AArch64TargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
@@ -33384,11 +33402,43 @@ static void ReplaceATOMIC_LOAD_128Results(SDNode *N,
   Results.push_back(SDValue(AtomicInst, 2)); // Chain out
 }
 
+static void ReplaceMGATHERResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                                  SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  assert((VT == MVT::v2f16 || VT == MVT::v2bf16) &&
+         "Unexpected MGATHER type for expanding");
+
+  SDLoc DL(N);
+  MaskedGatherSDNode *MGT = cast<MaskedGatherSDNode>(N);
+  assert(MGT->getExtensionType() == ISD::NON_EXTLOAD &&
+         "Unexpected masked gather/scatter extension");
+  EVT MemVT = MGT->getMemoryVT();
+  EVT NewVT = VT.changeVectorElementTypeToInteger();
+  EVT NewMemVT = MemVT.changeVectorElementTypeToInteger();
+
+  // We need to replace the FP gather with an equivalent integer one and apply
+  // bitcasts to the passthru and the result to prevent entering an infinite
+  // loop where v2f16 gets widened to v4f16, but then the pointers operand gets
+  // split from v4i64 -> v2i64.
+  SDValue PassThru = DAG.getNode(ISD::BITCAST, DL, NewVT, MGT->getPassThru());
+  SDValue Ops[] = {MGT->getChain(),   PassThru,        MGT->getMask(),
+                   MGT->getBasePtr(), MGT->getIndex(), MGT->getScale()};
+  SDValue Load = DAG.getMaskedGather(
+      DAG.getVTList(NewVT, MVT::Other), NewMemVT, DL, Ops, MGT->getMemOperand(),
+      MGT->getIndexType(), MGT->getExtensionType());
+  SDValue Res = DAG.getNode(ISD::BITCAST, DL, VT, Load.getValue(0));
+  Results.push_back(Res);
+  Results.push_back(Load.getValue(1));
+}
+
 void AArch64TargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to custom expand this");
+  case ISD::MGATHER:
+    ReplaceMGATHERResults(N, Results, DAG);
+    return;
   case ISD::BITCAST:
     ReplaceBITCASTResults(N, Results, DAG);
     return;
@@ -35245,7 +35295,9 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
 
       assert(isTypeLegal(V.getValueType()) &&
              "Expected only legal fixed-width types");
-      Operands.push_back(convertToScalableVector(DAG, ContainerVT, V));
+      EVT OpContainerVT =
+          getContainerForFixedLengthVector(DAG, V.getValueType());
+      Operands.push_back(convertToScalableVector(DAG, OpContainerVT, V));
     }
 
     if (isMergePassthruOpcode(NewOp))
