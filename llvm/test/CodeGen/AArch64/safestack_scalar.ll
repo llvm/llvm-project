@@ -9,9 +9,9 @@ entry:
 
 ; CHECK-LABEL: define void @test_sve(
 ; CHECK: [[USP:%.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-; CHECK: [[USST:%.*]] = getelementptr i8, ptr [[USP]], i32 -16
+; CHECK: [[USST:%.*]] = getelementptr i8, ptr [[USP]], i64 -16
 ; CHECK: store ptr [[USST]], ptr @__safestack_unsafe_stack_ptr
-; CHECK: [[PTR:%.*]] = getelementptr i8, ptr [[USP]], i32 -16
+; CHECK: [[PTR:%.*]] = getelementptr i8, ptr [[USP]], i64 -16
 ; CHECK: load <vscale x 16 x i8>, ptr [[PTR]]
 ; CHECK: store ptr [[USP]], ptr @__safestack_unsafe_stack_ptr
 ; CHECK: ret void

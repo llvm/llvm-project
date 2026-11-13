@@ -54,14 +54,14 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.ekind == ELF32BEKind)
-      elf::scanSection1<ARM, ELF32BE>(*this, sec, shard);
+      elf::scanSection1<ELF32BE>(*this, sec, shard);
     else
-      elf::scanSection1<ARM, ELF32LE>(*this, sec, shard);
+      elf::scanSection1<ELF32LE>(*this, sec, shard);
   }
 
   DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap;
@@ -169,7 +169,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                           unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -177,7 +177,7 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
     uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = rel.r_offset;
     RelType type = rel.getType(false);
     if (type == R_ARM_NONE)
@@ -185,7 +185,7 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    int64_t addend = rs.getAddend(rel, type);
     RelExpr expr;
     switch (type) {
     case R_ARM_V4BX:
@@ -1543,8 +1543,8 @@ void ArmCmseSGSection::finalizeContents() {
 
   for (auto [i, s] : enumerate(sgVeneers)) {
     s->offset = i * s->size;
-    Defined(ctx, file, StringRef(), s->sym->binding, s->sym->stOther,
-            s->sym->type, s->offset | 1, s->size, this)
+    Defined(file, StringRef(), s->sym->binding, s->sym->stOther, s->sym->type,
+            s->offset | 1, s->size, this)
         .overwrite(*s->sym);
   }
 }
@@ -1580,7 +1580,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
-        ctx, ctx.internalFile, d->getName(), d->computeBinding(ctx),
+        ctx.internalFile, d->getName(), d->computeBinding(ctx),
         /*stOther=*/0, STT_FUNC, d->getVA(ctx), d->getSize(), nullptr));
   }
 

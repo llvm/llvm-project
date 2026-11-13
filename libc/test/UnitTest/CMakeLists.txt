@@ -103,6 +103,7 @@ add_unittest_framework_library(
     libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.functional
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
@@ -295,8 +296,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.libc_errno
     libc.src.__support.StringUtil.error_to_string
-    libc.src.errno.errno
 )
 
 add_header_library(
@@ -305,8 +306,8 @@ add_header_library(
     ErrnoCheckingTest.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.libc_errno
     libc.src.__support.macros.properties.architectures
-    libc.src.errno.errno
 )
 
 add_header_library(

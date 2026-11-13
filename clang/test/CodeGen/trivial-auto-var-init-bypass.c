@@ -2,11 +2,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s --check-prefix=ZERO
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s --check-prefix=PATTERN
 
-// A variable whose declaration is bypassed by a goto or switch is initialized
-// at each bypassing jump, since the jump re-enters the variable's scope. C uses
-// the same rule as C++ here; see CodeGenCXX/trivial-auto-var-init.cpp. Note
-// that this deliberately does not model C 6.2.4p6, under which the lifetime
-// would instead begin at entry into the enclosing block.
+// A variable whose declaration is bypassed by a goto, asm goto, or switch is
+// initialized at each bypassing jump, since the jump re-enters the variable's
+// scope. C uses the same rule as C++ here; see
+// CodeGenCXX/trivial-auto-var-init.cpp. Note that this deliberately does not
+// model C 6.2.4p6, under which the lifetime would instead begin at entry into
+// the enclosing block.
 
 void use(int *);
 
@@ -633,14 +634,200 @@ void stmt_expr_goto(void) {
 L:
   use(&x);
 }
+
+// ZERO-LABEL: define dso_local void @asm_goto_bypass(
+// ZERO-SAME: ) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2:[0-9]+]]
+// ZERO-NEXT:            to label %[[ASM_FALLTHROUGH:.*]] [label %[[SKIP:.*]]], !srcloc [[META5:![0-9]+]]
+// ZERO:       [[ASM_FALLTHROUGH]]:
+// ZERO-NEXT:    store i32 42, ptr [[X]], align 4
+// ZERO-NEXT:    br label %[[SKIP]]
+// ZERO:       [[SKIP]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    ret void
+//
+// PATTERN-LABEL: define dso_local void @asm_goto_bypass(
+// PATTERN-SAME: ) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2:[0-9]+]]
+// PATTERN-NEXT:            to label %[[ASM_FALLTHROUGH:.*]] [label %[[SKIP:.*]]], !srcloc [[META5:![0-9]+]]
+// PATTERN:       [[ASM_FALLTHROUGH]]:
+// PATTERN-NEXT:    store i32 42, ptr [[X]], align 4
+// PATTERN-NEXT:    br label %[[SKIP]]
+// PATTERN:       [[SKIP]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    ret void
+//
+void asm_goto_bypass(void) {
+  __asm__ goto("" : : : : SKIP);
+  int x = 42;
+SKIP:
+  use(&x);
+}
+
+// ZERO-LABEL: define dso_local void @asm_goto_backward_reentry(
+// ZERO-SAME: i32 noundef [[N:%.*]]) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    br label %[[L1:.*]]
+// ZERO:       [[L1]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N_ADDR]], align 4
+// ZERO-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP0]], -1
+// ZERO-NEXT:    store i32 [[DEC]], ptr [[N_ADDR]], align 4
+// ZERO-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
+// ZERO-NEXT:    br i1 [[TOBOOL]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
+// ZERO:       [[IF_THEN]]:
+// ZERO-NEXT:    br label %[[ASM_FALLTHROUGH:.*]]
+// ZERO:       [[IF_END]]:
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2]]
+// ZERO-NEXT:            to label %[[ASM_FALLTHROUGH]] [label %[[L1]]], !srcloc [[META6:![0-9]+]]
+// ZERO:       [[ASM_FALLTHROUGH]]:
+// ZERO-NEXT:    ret void
+//
+// PATTERN-LABEL: define dso_local void @asm_goto_backward_reentry(
+// PATTERN-SAME: i32 noundef [[N:%.*]]) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    br label %[[L1:.*]]
+// PATTERN:       [[L1]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N_ADDR]], align 4
+// PATTERN-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP0]], -1
+// PATTERN-NEXT:    store i32 [[DEC]], ptr [[N_ADDR]], align 4
+// PATTERN-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
+// PATTERN-NEXT:    br i1 [[TOBOOL]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
+// PATTERN:       [[IF_THEN]]:
+// PATTERN-NEXT:    br label %[[ASM_FALLTHROUGH:.*]]
+// PATTERN:       [[IF_END]]:
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2]]
+// PATTERN-NEXT:            to label %[[ASM_FALLTHROUGH]] [label %[[L1]]], !srcloc [[META6:![0-9]+]]
+// PATTERN:       [[ASM_FALLTHROUGH]]:
+// PATTERN-NEXT:    ret void
+//
+void asm_goto_backward_reentry(int n) {
+  {
+    int x;
+  L1:
+    use(&x);
+    if (!n--)
+      return;
+  }
+  __asm__ goto("" : : : : L1);
+}
+
+// ZERO-LABEL: define dso_local void @asm_goto_no_clobber_in_scope(
+// ZERO-SAME: ) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    store i32 42, ptr [[X]], align 4
+// ZERO-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2]]
+// ZERO-NEXT:            to label %[[ASM_FALLTHROUGH:.*]] [label %[[L1:.*]]], !srcloc [[META7:![0-9]+]]
+// ZERO:       [[ASM_FALLTHROUGH]]:
+// ZERO-NEXT:    br label %[[L1]]
+// ZERO:       [[L1]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    ret void
+//
+// PATTERN-LABEL: define dso_local void @asm_goto_no_clobber_in_scope(
+// PATTERN-SAME: ) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    store i32 42, ptr [[X]], align 4
+// PATTERN-NEXT:    callbr void asm sideeffect "", "!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2]]
+// PATTERN-NEXT:            to label %[[ASM_FALLTHROUGH:.*]] [label %[[L1:.*]]], !srcloc [[META7:![0-9]+]]
+// PATTERN:       [[ASM_FALLTHROUGH]]:
+// PATTERN-NEXT:    br label %[[L1]]
+// PATTERN:       [[L1]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    ret void
+//
+void asm_goto_no_clobber_in_scope(void) {
+  int x = 42;
+  __asm__ goto("" : : : : L1);
+L1:
+  use(&x);
+}
+
+// ZERO-LABEL: define dso_local void @asm_goto_with_output_bypass(
+// ZERO-SAME: ) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[OUT:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    [[X:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    store i32 0, ptr [[OUT]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR3:[0-9]+]]
+// ZERO-NEXT:            to label %[[ASM_FALLTHROUGH:.*]] [label %[[SKIP_SPLIT:.*]]], !srcloc [[META8:![0-9]+]]
+// ZERO:       [[ASM_FALLTHROUGH]]:
+// ZERO-NEXT:    store i32 [[TMP0]], ptr [[OUT]], align 4
+// ZERO-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1]]
+// ZERO-NEXT:    br label %[[SKIP:.*]]
+// ZERO:       [[SKIP]]:
+// ZERO-NEXT:    call void @use(ptr noundef [[X]])
+// ZERO-NEXT:    call void @use(ptr noundef [[OUT]])
+// ZERO-NEXT:    ret void
+// ZERO:       [[SKIP_SPLIT]]:
+// ZERO-NEXT:    store i32 [[TMP0]], ptr [[OUT]], align 4
+// ZERO-NEXT:    br label %[[SKIP]]
+//
+// PATTERN-LABEL: define dso_local void @asm_goto_with_output_bypass(
+// PATTERN-SAME: ) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[OUT:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    [[X:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[OUT]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i,~{dirflag},~{fpsr},~{flags}"() #[[ATTR3:[0-9]+]]
+// PATTERN-NEXT:            to label %[[ASM_FALLTHROUGH:.*]] [label %[[SKIP_SPLIT:.*]]], !srcloc [[META8:![0-9]+]]
+// PATTERN:       [[ASM_FALLTHROUGH]]:
+// PATTERN-NEXT:    store i32 [[TMP0]], ptr [[OUT]], align 4
+// PATTERN-NEXT:    store i32 -1431655766, ptr [[X]], align 4, !annotation [[META1]]
+// PATTERN-NEXT:    br label %[[SKIP:.*]]
+// PATTERN:       [[SKIP]]:
+// PATTERN-NEXT:    call void @use(ptr noundef [[X]])
+// PATTERN-NEXT:    call void @use(ptr noundef [[OUT]])
+// PATTERN-NEXT:    ret void
+// PATTERN:       [[SKIP_SPLIT]]:
+// PATTERN-NEXT:    store i32 [[TMP0]], ptr [[OUT]], align 4
+// PATTERN-NEXT:    br label %[[SKIP]]
+//
+void asm_goto_with_output_bypass(void) {
+  int out;
+  __asm__ goto("" : "=r"(out) : : : SKIP);
+  int x;
+SKIP:
+  use(&x);
+  use(&out);
+}
 //.
 // ZERO: [[META1]] = !{!"auto-init"}
 // ZERO: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
 // ZERO: [[META3]] = !{!"llvm.loop.mustprogress"}
 // ZERO: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]]}
+// ZERO: [[META5]] = !{i64 28156}
+// ZERO: [[META6]] = !{i64 30900}
+// ZERO: [[META7]] = !{i64 32218}
+// ZERO: [[META8]] = !{i64 34565}
 //.
 // PATTERN: [[META1]] = !{!"auto-init"}
 // PATTERN: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
 // PATTERN: [[META3]] = !{!"llvm.loop.mustprogress"}
 // PATTERN: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]]}
+// PATTERN: [[META5]] = !{i64 28156}
+// PATTERN: [[META6]] = !{i64 30900}
+// PATTERN: [[META7]] = !{i64 32218}
+// PATTERN: [[META8]] = !{i64 34565}
 //.

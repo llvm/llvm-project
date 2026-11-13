@@ -43,7 +43,6 @@ llvm::prepareForDynamicDebugging(Module *M, StringRef PromotionSuffix) {
 
   // Insert declarations into Inner that point to Outer, apply attributes to
   // Outer functions.
-  DenseMap<Function *, Function *> OuterDefToInnerDecl;
   for (Function &OuterDef : M->functions()) {
     if (OuterDef.isDeclaration())
       continue;

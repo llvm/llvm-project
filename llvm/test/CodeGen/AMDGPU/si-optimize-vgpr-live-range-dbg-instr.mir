@@ -76,11 +76,11 @@ body:             |
 
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_AND_B32_e32 1, %0, implicit $exec
-    %2:sreg_64 = V_CMP_EQ_U32_e64 1, killed %1, implicit $exec
-    %3:sreg_64 = S_XOR_B64 killed %2, -1, implicit-def dead $scc
+    %2:sreg_64 = V_CMP_EQ_U32_e64 1, %1, implicit $exec
+    %3:sreg_64 = S_XOR_B64 %2, -1, implicit-def dead $scc
     %4:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
-    %5:vreg_64 = GLOBAL_LOAD_DWORDX2 killed %4, 0, 0, implicit $exec
-    %6:sreg_64 = SI_IF killed %3, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %5:vreg_64 = GLOBAL_LOAD_DWORDX2 %4, 0, 0, implicit $exec
+    %6:sreg_64 = SI_IF %3, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
   bb.1:
@@ -94,7 +94,7 @@ body:             |
 
     %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %9:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %8, %subreg.sub1
-    FLAT_STORE_DWORDX2 %5, killed %9, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX2 %5, %9, 0, 0, implicit $exec, implicit $flat_scr
     S_BRANCH %bb.4
 
   bb.3:
@@ -102,7 +102,7 @@ body:             |
 
     %10:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %11:vreg_64 = REG_SEQUENCE %10, %subreg.sub0, %10, %subreg.sub1
-    FLAT_STORE_DWORDX2 %5, killed %11, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX2 %5, %11, 0, 0, implicit $exec, implicit $flat_scr
     S_BRANCH %bb.1
 
   bb.4:

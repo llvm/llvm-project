@@ -6,10 +6,10 @@
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=M1 %s
 ; RUN: llvm-lto2 run %t -o %t.out \
 ; RUN:   -r=%t,use_vtable,plx \
-; RUN:   -r=%t,vtable.69cc645c8be4ef4172cfb55c93f80acd,l \
-; RUN:   -r=%t,rtti_alias.69cc645c8be4ef4172cfb55c93f80acd,plx \
-; RUN:   -r=%t,rtti_alias.69cc645c8be4ef4172cfb55c93f80acd,l \
-; RUN:   -r=%t,vtable.69cc645c8be4ef4172cfb55c93f80acd,plx
+; RUN:   -r=%t,vtable.llvm.69cc645c8be4ef4172cfb55c93f80acd,l \
+; RUN:   -r=%t,rtti_alias.llvm.69cc645c8be4ef4172cfb55c93f80acd,plx \
+; RUN:   -r=%t,rtti_alias.llvm.69cc645c8be4ef4172cfb55c93f80acd,l \
+; RUN:   -r=%t,vtable.llvm.69cc645c8be4ef4172cfb55c93f80acd,plx
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
@@ -18,11 +18,11 @@ target triple = "aarch64-unknown-linux-gnu"
 @rtti_storage = private constant i8 1
 
 ; M0: @rtti_alias = internal alias i8, ptr @rtti_storage
-; M0: @rtti_alias.69cc645c8be4ef4172cfb55c93f80acd = hidden alias i8, ptr @rtti_storage
+; M0: @rtti_alias.llvm.69cc645c8be4ef4172cfb55c93f80acd = hidden alias i8, ptr @rtti_storage
 ; M0-NOT: hidden alias i8, ptr @rtti_alias{{$}}
 @rtti_alias = internal alias i8, ptr @rtti_storage
 
-; M1: @vtable = internal constant [1 x ptr] [ptr @rtti_alias.69cc645c8be4ef4172cfb55c93f80acd], !type !0
+; M1: @vtable = internal constant [1 x ptr] [ptr @rtti_alias.llvm.69cc645c8be4ef4172cfb55c93f80acd], !type !0
 @vtable = internal constant [1 x ptr] [ptr @rtti_alias], !type !0
 
 define ptr @use_vtable() {

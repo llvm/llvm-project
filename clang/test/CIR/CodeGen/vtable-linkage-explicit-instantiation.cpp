@@ -51,7 +51,7 @@ void use_key() {
 // Verify the virtual call goes through the vtable.
 // CHECK: cir.func {{.*}} @_Z3useP4BaseIiE
 // CHECK:   cir.vtable.get_vptr
-// CHECK:   cir.vtable.get_virtual_fn_addr
+// CHECK:   cir.vtable.get_virtual_fn
 
 // LLVM: @_ZTV4BaseIiE = external constant
 // LLVM: @_ZTV7KeyBaseIiE = external constant 

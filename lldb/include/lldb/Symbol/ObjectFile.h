@@ -261,6 +261,9 @@ public:
   ///     \b true if it is, \b false otherwise.
   virtual bool IsExecutable() const = 0;
 
+  /// Tells whether this object file is part of a shared cache.
+  virtual bool IsSharedCacheBinary() const { return false; }
+
   /// Returns the offset into a file at which this object resides.
   ///
   /// Some files contain many object files, and this function allows access to
@@ -691,6 +694,17 @@ public:
   /// Returns true if the object file exists only in memory.
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
+  /// Returns true if the symbol table for this in-memory object file should
+  /// not be loaded from the index cache or saved to the index cache, even
+  /// if caching of memory modules is enabled.
+  bool GetDisableMemorySymtabCaching() const {
+    return m_disable_memory_symtab_caching;
+  }
+
+  void SetDisableMemorySymtabCaching(bool disable) {
+    m_disable_memory_symtab_caching = disable;
+  }
+
   // Strip linker annotations (such as @@VERSION) from symbol names.
   virtual llvm::StringRef
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
@@ -782,6 +796,9 @@ protected:
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
+  /// Set if the symbol table for an in-memory object file should not be
+  /// loaded from the index cache.
+  bool m_disable_memory_symtab_caching;
 
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
   std::recursive_mutex m_sections_mutex;

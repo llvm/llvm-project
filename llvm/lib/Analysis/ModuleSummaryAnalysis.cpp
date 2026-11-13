@@ -53,7 +53,6 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
 #include <cassert>
@@ -65,26 +64,9 @@ using namespace llvm::memprof;
 
 #define DEBUG_TYPE "module-summary-analysis"
 
-namespace llvm {
-// This can be used to override the number of callees created from VP metadata
-// normally taken from the -icp-max-prom option with a larger amount, if useful
-// for analysis. Use a separate option so that we can control the number of
-// indirect callees for ThinLTO summary based analysis (e.g. for MemProf which
-// needs this information for a correct and not overly-conservative callsite
-// graph analysis, especially because allocation contexts may not be very
-// frequent), without affecting normal ICP.
-cl::opt<unsigned>
-    MaxSummaryIndirectEdges("module-summary-max-indirect-edges", cl::init(0),
-                            cl::Hidden,
-                            cl::desc("Max number of summary edges added from "
-                                     "indirect call profile metadata"));
-
-LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
-
-extern cl::opt<unsigned> MaxNumVTableAnnotations;
-
-extern cl::opt<bool> MemProfReportHintedSizes;
-} // namespace llvm
+unsigned llvm::getMaxSummaryIndirectEdges(const LLVMContext &C) {
+  return getAnalysisOptions(C).module_summary_max_indirect_edges;
+}
 
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
@@ -149,7 +131,8 @@ findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
     // MaxNumVTableAnnotations is the maximum number of vtables annotated on
     // the instruction.
     auto ValueDataArray = getValueProfDataFromInst(
-        *I, IPVK_VTableTarget, MaxNumVTableAnnotations, TotalCount);
+        *I, IPVK_VTableTarget, getMaxNumVTableAnnotations(I->getContext()),
+        TotalCount);
 
     for (const auto &V : ValueDataArray)
       RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
@@ -506,7 +489,8 @@ static void computeFunctionSummary(
 
         CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(
-                &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
+                &I, TotalCount, NumCandidates,
+                Opts.module_summary_max_indirect_edges);
         for (const auto &Candidate : CandidateProfileData) {
           auto &Edge =
               CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)];
@@ -635,7 +619,8 @@ static void computeFunctionSummary(
     }
   }
 
-  if (PSI->hasPartialSampleProfile() && ScalePartialSampleProfileWorkingSetSize)
+  if (PSI->hasPartialSampleProfile() &&
+      Opts.scale_partial_sample_profile_working_set_size)
     Index.addBlockCount(F.size());
 
   SmallVector<ValueInfo, 0> Refs;
@@ -733,8 +718,7 @@ static void computeFunctionSummary(
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
       // FIXME: refactor this to use the same code that inliner is using.
       // Don't try to import functions with noinline attribute.
-      F.getAttributes().hasFnAttr(Attribute::NoInline),
-      F.hasFnAttribute(Attribute::AlwaysInline),
+      F.isNoInline(), F.hasFnAttribute(Attribute::AlwaysInline),
       F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall,
       mustBeUnreachableFunction(F)};
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;

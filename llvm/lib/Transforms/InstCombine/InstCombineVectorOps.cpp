@@ -439,8 +439,8 @@ foldExtractOfStridedPointerVector(ExtractElementInst &EI,
     const APInt *C;
     APInt Offset(IdxWidth, 0);
     // m_Value may bind even when the offset is not constant, so reset it.
-    if (match(Elt, m_PtrAdd(m_Value(EltBase), m_APInt(C))))
-      Offset = C->sextOrTrunc(IdxWidth);
+    if (match(Elt, m_PtrAdd(DL, m_Value(EltBase), m_APInt(C))))
+      Offset = *C;
     else
       EltBase = Elt;
     if (I == 0)
@@ -2446,10 +2446,12 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   if (!Shuf.isSelect())
     return nullptr;
 
-  // Canonicalize to choose from operand 0 first unless operand 1 is undefined.
-  // Commuting undef to operand 0 conflicts with another canonicalization.
+  // Canonicalize to choose from operand 0 first unless operand 1 is
+  // undefined/zero. Commuting undef/zero to operand 0 conflicts with other
+  // canonicalization.
   unsigned NumElts = cast<FixedVectorType>(Shuf.getType())->getNumElements();
   if (!match(Shuf.getOperand(1), m_Undef()) &&
+      !match(Shuf.getOperand(1), m_CombineOr(m_Zero(), m_AnyZeroFP())) &&
       Shuf.getMaskValue(0) >= (int)NumElts) {
     // TODO: Can we assert that both operands of a shuffle-select are not undef
     // (otherwise, it would have been folded by instsimplify?
@@ -2660,7 +2662,9 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
                                           InstCombiner::BuilderTy &Builder) {
   auto *S0 = dyn_cast<Instruction>(Shuf.getOperand(0));
   Value *X;
-  if (!S0 || !match(S0, m_CombineOr(m_FNeg(m_Value(X)), m_FAbs(m_Value(X)))))
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (!S0 || !match(S0, m_CombineOr(m_FNegOrFSubNegZero(m_Value(X)),
+                                    m_FAbs(m_Value(X)))))
     return nullptr;
 
   bool IsFNeg = S0->getOpcode() == Instruction::FNeg;
@@ -2668,7 +2672,10 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
   // Match 2-input (binary) shuffle.
   auto *S1 = dyn_cast<Instruction>(Shuf.getOperand(1));
   Value *Y;
-  if (!S1 || !match(S1, m_CombineOr(m_FNeg(m_Value(Y)), m_FAbs(m_Value(Y)))) ||
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (!S1 ||
+      !match(S1, m_CombineOr(m_FNegOrFSubNegZero(m_Value(Y)),
+                             m_FAbs(m_Value(Y)))) ||
       S0->getOpcode() != S1->getOpcode() ||
       (!S0->hasOneUse() && !S1->hasOneUse()))
     return nullptr;
@@ -3059,6 +3066,12 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
 
   // shuffle undef, x, mask --> shuffle x, undef, mask'
   if (match(LHS, m_Undef())) {
+    SVI.commute();
+    return &SVI;
+  }
+
+  // shuffle zero, x, mask --> shuffle x, zero, mask'
+  if (match(LHS, m_CombineOr(m_Zero(), m_AnyZeroFP())) && LHS != RHS) {
     SVI.commute();
     return &SVI;
   }

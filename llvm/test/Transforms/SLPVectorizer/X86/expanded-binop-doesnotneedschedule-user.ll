@@ -12,7 +12,9 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i32> [[TMP1]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP5]] = add <2 x i32> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze <2 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP7]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5]] = add <2 x i32> [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[ADD6:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    [[TMP6]] = insertelement <2 x i32> [[TMP5]], i32 [[ADD6]], i64 0
 ; CHECK-NEXT:    br label %[[BB1]]

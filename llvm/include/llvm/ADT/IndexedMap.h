@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {
@@ -36,7 +37,7 @@ template <class Ty> struct IdentityIndex {
 } // namespace detail
 
 template <typename T, typename ToIndexT = detail::IdentityIndex<unsigned>>
-class IndexedMap {
+class LLVM_ATTRIBUTE_WARN_UNUSED IndexedMap {
   using IndexT = typename ToIndexT::argument_type;
   // Prefer SmallVector with zero inline storage over std::vector. IndexedMaps
   // can grow very large and SmallVector grows more efficiently as long as T

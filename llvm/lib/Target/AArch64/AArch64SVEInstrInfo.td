@@ -250,6 +250,13 @@ def SDT_AArch64FMA : SDTypeProfile<1, 4, [
   SDTCisSameAs<0,2>, SDTCisSameAs<0,3>, SDTCisSameAs<0,4>
 ]>;
 
+def SDT_AArch64FSCALE : SDTypeProfile<1, 3, [
+  SDTCisVec<0>,
+  SDTCisVec<1>, SDTCVecEltisVT<1,i1>,  SDTCisSameNumEltsAs<1,0>,
+  SDTCisSameAs<2,0>,
+  SDTCisVec<3>, SDTCisSameNumEltsAs<3,0>, SDTCisSameSizeAs<3,0>
+]>;
+
 // Predicated operations with the result of inactive lanes being unspecified.
 def AArch64and_u  : SDNode<"AArch64ISD::AND_U", SDT_AArch64Arith>;
 def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
@@ -300,6 +307,7 @@ defm AArch64fmaxnm_p : def_strict_fp_3op<"FMAXNM_PRED", SDT_AArch64Arith>;
 defm AArch64fmin_p   : def_strict_fp_3op<"FMIN_PRED",   SDT_AArch64Arith>;
 defm AArch64fminnm_p : def_strict_fp_3op<"FMINNM_PRED", SDT_AArch64Arith>;
 defm AArch64fmul_p   : def_strict_fp_3op<"FMUL_PRED",   SDT_AArch64Arith>;
+defm AArch64fscale_p : def_strict_fp_3op<"FLDEXP_PRED", SDT_AArch64FSCALE>;
 defm AArch64fsub_p   : def_strict_fp_3op<"FSUB_PRED",   SDT_AArch64Arith>;
 
 def AArch64fadd_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
@@ -489,6 +497,11 @@ def SDT_AArch64PTest : SDTypeProfile<1, 2, [
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def AArch64ptest_any : SDNode<"AArch64ISD::PTEST_ANY", SDT_AArch64PTest>;
 def AArch64ptest_first : SDNode<"AArch64ISD::PTEST_FIRST", SDT_AArch64PTest>;
+
+def SDT_AArch64_BRK : SDTypeProfile<1, 2, [
+  SDTCisVT<0, nxv16i1>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>
+]>;
+def AArch64brkb_z : SDNode<"AArch64ISD::BRKB_Z", SDT_AArch64_BRK>;
 
 def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3,
   [SDTCisVec<0>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0, 1>]>;
@@ -853,6 +866,17 @@ let Predicates = [HasSVE_or_SME] in {
   foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in
     def : Pat<(VT (vnot VT:$op)), (SUBR_ZI_B_PSEUDO ZPR8:$op, (i32 255), (i32 0))>;
 
+  // An all-active NOT intrinsic also produces ~op in every lane.
+  multiclass SVEAllActiveNotPat<ValueType VT, ValueType PT> {
+    def : Pat<(VT (int_aarch64_sve_not (VT srcvalue),
+                    (PT (SVEAllActive)), VT:$op)),
+              (SUBR_ZI_B_PSEUDO ZPR8:$op, (i32 255), (i32 0))>;
+  }
+  defm : SVEAllActiveNotPat<nxv16i8, nxv16i1>;
+  defm : SVEAllActiveNotPat<nxv8i16, nxv8i1>;
+  defm : SVEAllActiveNotPat<nxv4i32, nxv4i1>;
+  defm : SVEAllActiveNotPat<nxv2i64, nxv2i1>;
+
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", AArch64mad_m1, "MLA_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", AArch64msb_m1, "MLS_ZPmZZ", /*isReverseInstr*/ 1>;
   defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", AArch64mla_m1, "MAD_ZPmZZ">;
@@ -997,7 +1021,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm FMAX_ZPZI    : sve_fp_2op_i_p_zds_hfd<"FMAX_ZPmI", sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmax_p>;
   defm FMIN_ZPZI    : sve_fp_2op_i_p_zds_hfd<"FMIN_ZPmI", sve_fpimm_zero_one, fpimm0, fpimm_one, AArch64fmin_p>;
 
-  let Predicates = [HasSVE, UseExperimentalZeroingPseudos] in {
+  let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
     defm FADD_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FADD_ZPmI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fadd>;
     defm FSUB_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FSUB_ZPmI", sve_fpimm_half_one, fpimm_half, fpimm_one, int_aarch64_sve_fsub>;
     defm FMUL_ZPZI    : sve_fp_2op_i_p_zds_zeroing_hfd<"FMUL_ZPmI", sve_fpimm_half_two, fpimm_half, fpimm_two, int_aarch64_sve_fmul>;
@@ -1032,6 +1056,12 @@ let Predicates = [HasSVE_or_SME] in {
   defm FABD_ZPZZ   : sve_fp_bin_pred_hfd<"FABD_ZPmZ", AArch64fabd_p>;
   defm FMULX_ZPZZ  : sve_fp_bin_pred_hfd<"FMULX_ZPmZ", int_aarch64_sve_fmulx_u>;
   defm FDIV_ZPZZ   : sve_fp_bin_pred_hfd<"FDIV_ZPmZ", AArch64fdiv_p>;
+
+  // TODO: Create FSCALE_ZPZZ when pseudo expansion is able to handle the case
+  // when a DestructiveBinary operation reuses its second data operand.
+  def : SVE_3_Op_Pat<nxv8f16, AArch64fscale_p, nxv8i1, nxv8f16, nxv8i16, FSCALE_ZPmZ_H>;
+  def : SVE_3_Op_Pat<nxv4f32, AArch64fscale_p, nxv4i1, nxv4f32, nxv4i32, FSCALE_ZPmZ_S>;
+  def : SVE_3_Op_Pat<nxv2f64, AArch64fscale_p, nxv2i1, nxv2f64, nxv2i64, FSCALE_ZPmZ_D>;
 } // End HasSVE_or_SME
 
 let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
@@ -1273,6 +1303,12 @@ let Predicates = [HasSVE_or_SME] in {
 
   def EXT_ZZI_CONSTRUCTIVE : UnpredRegImmPseudo<EXT_ZZI, ZPR8, imm0_255>;
 
+  // We only expect AArch64ext nodes for nxv16i8 types, since the offset is
+  // adjusted to be a byte offset for other element types.
+  let AddedComplexity = 3 in
+  def : Pat<(nxv16i8 (AArch64ext nxv16i8:$Zs, nxv16i8:$Zs, (i32 imm0_255:$imm))),
+            (EXT_ZZI_CONSTRUCTIVE ZPR:$Zs, imm0_255:$imm)>;
+
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;
   defm REVH_ZPmZ : sve_int_perm_rev_revh<"revh", AArch64revh_mt>;
@@ -1315,18 +1351,9 @@ let Predicates = [HasSVE_or_SME] in {
   defm BRKA_PPzP  : sve_int_break_z<0b000, "brka",  int_aarch64_sve_brka_z>;
   defm BRKA_PPmP  : sve_int_break_m<0b001, "brka",  int_aarch64_sve_brka>;
   defm BRKAS_PPzP : sve_int_break_z<0b010, "brkas", null_frag>;
-  defm BRKB_PPzP  : sve_int_break_z<0b100, "brkb",  int_aarch64_sve_brkb_z>;
+  defm BRKB_PPzP  : sve_int_break_z<0b100, "brkb",  AArch64brkb_z>;
   defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb",  int_aarch64_sve_brkb>;
   defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs", null_frag>;
-
-  def : Pat<(nxv16i1 (mask_beforefirst PPR8:$Pn)),
-            (BRKB_PPzP (PTRUE_B 31), PPR8:$Pn)>;
-  def : Pat<(nxv8i1 (mask_beforefirst PPR8:$Pn)),
-            (BRKB_PPzP (PTRUE_H 31), PPR8:$Pn)>;
-  def : Pat<(nxv4i1 (mask_beforefirst PPR8:$Pn)),
-            (BRKB_PPzP (PTRUE_S 31), PPR8:$Pn)>;
-  def : Pat<(nxv2i1 (mask_beforefirst PPR8:$Pn)),
-            (BRKB_PPzP (PTRUE_D 31), PPR8:$Pn)>;
 
   defm PTEST_PP : sve_int_ptest<0b010000, "ptest", AArch64ptest, AArch64ptest_any, AArch64ptest_first>;
   defm PFALSE   : sve_int_pfalse<0b000000, "pfalse">;
@@ -1427,6 +1454,10 @@ let Predicates = [HasSVE_or_SME] in {
   defm : sve_ld1rq_duplane_pat<nxv8i16, v8i16, AArch64duplane128, LD1RQ_H_IMM, PTRUE_H, LD1RQ_H, am_sve_regreg_lsl1>;
   defm : sve_ld1rq_duplane_pat<nxv4i32, v4i32, AArch64duplane128, LD1RQ_W_IMM, PTRUE_S, LD1RQ_W, am_sve_regreg_lsl2>;
   defm : sve_ld1rq_duplane_pat<nxv2i64, v2i64, AArch64duplane128, LD1RQ_D_IMM, PTRUE_D, LD1RQ_D, am_sve_regreg_lsl3>;
+  defm : sve_ld1rq_duplane_pat<nxv8f16, v8f16, AArch64duplane128, LD1RQ_H_IMM, PTRUE_H, LD1RQ_H, am_sve_regreg_lsl1>;
+  defm : sve_ld1rq_duplane_pat<nxv8bf16, v8bf16, AArch64duplane128, LD1RQ_H_IMM, PTRUE_H, LD1RQ_H, am_sve_regreg_lsl1>;
+  defm : sve_ld1rq_duplane_pat<nxv4f32, v4f32, AArch64duplane128, LD1RQ_W_IMM, PTRUE_S, LD1RQ_W, am_sve_regreg_lsl2>;
+  defm : sve_ld1rq_duplane_pat<nxv2f64, v2f64, AArch64duplane128, LD1RQ_D_IMM, PTRUE_D, LD1RQ_D, am_sve_regreg_lsl3>;
 
   // continuous load with reg+reg addressing.
   defm LD1B    : sve_mem_cld_ss<0b0000, "ld1b",  Z_b, ZPR8,  GPR64NoXZRshifted8>;

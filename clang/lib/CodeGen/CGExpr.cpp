@@ -4057,6 +4057,14 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   uint16_t TypeInfo = 0;
   bool IsBitInt = false;
 
+  // isIntegerType() never holds for scoped enums, and getAs<BitIntType> can't
+  // see through the EnumType node to a __BitInt underlying type even for
+  // unscoped enums.
+  QualType BackupT = T;
+  if (const EnumType *ET = T->getAs<EnumType>())
+    if (ET->getDecl()->isComplete())
+      T = ET->getDecl()->getIntegerType();
+
   if (T->isIntegerType()) {
     TypeKind = TK_Integer;
     TypeInfo = (llvm::Log2_32(getContext().getTypeSize(T)) << 1) |
@@ -4085,8 +4093,8 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // optionally an 'aka'.
   SmallString<32> Buffer;
   CGM.getDiags().ConvertArgToString(DiagnosticsEngine::ak_qualtype,
-                                    (intptr_t)T.getAsOpaquePtr(), StringRef(),
-                                    StringRef(), {}, Buffer, {});
+                                    (intptr_t)BackupT.getAsOpaquePtr(),
+                                    StringRef(), StringRef(), {}, Buffer, {});
 
   if (IsBitInt) {
     // The Structure is: 0 to end the string, 32 bit unsigned integer in target
@@ -4115,7 +4123,7 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   CGM.getSanitizerMetadata()->disableSanitizerForGlobal(GV);
 
   // Remember the descriptor for this type.
-  CGM.setTypeDescriptorInMap(T, GV);
+  CGM.setTypeDescriptorInMap(BackupT, GV);
 
   return GV;
 }
@@ -4715,8 +4723,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     }
     if (NoMerge)
       TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-    TrapCall->setDoesNotReturn();
-    TrapCall->setDoesNotThrow();
     Builder.CreateUnreachable();
   }
 
@@ -4736,10 +4742,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
 
   if (InNoMergeAttributedStmt)
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-  if (TrapIntrinsic->doesNotThrow())
-    TrapCall->setDoesNotThrow();
   if (TrapIntrinsic->doesNotReturn()) {
-    TrapCall->setDoesNotReturn();
     Builder.CreateUnreachable();
     if (EnsureInsertPoint)
       EmitBlock(createBasicBlock());
@@ -4750,10 +4753,7 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
 }
 
 void CodeGenFunction::EmitTrapCallAndMakeUnreachable() {
-  llvm::CallInst *TrapCall =
-      EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
-  TrapCall->setDoesNotReturn();
-  TrapCall->setDoesNotThrow();
+  EmitTrapCall(llvm::Intrinsic::trap, /*EnsureInsertPoint=*/false);
   if (HaveInsertPoint()) {
     Builder.CreateUnreachable();
     Builder.ClearInsertionPoint();
@@ -4902,7 +4902,11 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
   //    p[1].a
   // p[1] will generate a DeclRefExpr and p[1].a is a MemberExpr.
   // p->b[5] is a MemberExpr example.
-  const Expr *E = ArrayBase->IgnoreImpCasts();
+  const Expr *E = ArrayBase->IgnoreParenImpCasts();
+  // In p->b[1][2], the base of [2] is the subscript p->b[1]. Step through
+  // subscripts to the member p->b.
+  while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    E = ASE->getBase()->IgnoreParenImpCasts();
   if (const auto *ME = dyn_cast<MemberExpr>(E))
     return ME->getMemberDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
 

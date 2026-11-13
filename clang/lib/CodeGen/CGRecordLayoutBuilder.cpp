@@ -215,29 +215,24 @@ CGRecordLowering::CGRecordLowering(CodeGenTypes &Types, const RecordDecl *D,
 
 void CGRecordLowering::setBitFieldInfo(
     const FieldDecl *FD, CharUnits StartOffset, llvm::Type *StorageType) {
-  CGBitFieldInfo &Info = BitFields[FD->getCanonicalDecl()];
-  Info.IsSigned = FD->getType()->isSignedIntegerOrEnumerationType();
-  Info.Offset = (unsigned)(getFieldBitOffset(FD) - Context.toBits(StartOffset));
-  Info.Size = FD->getBitWidthValue();
-  Info.StorageSize = (unsigned)DataLayout.getTypeAllocSizeInBits(StorageType);
-  Info.StorageOffset = StartOffset;
-  if (Info.Size > Info.StorageSize)
-    Info.Size = Info.StorageSize;
+  uint64_t Offset = getFieldBitOffset(FD) - Context.toBits(StartOffset);
+  uint64_t StorageSize =
+      DataLayout.getTypeAllocSizeInBits(StorageType).getFixedValue();
   // CGBitFieldInfo::MakeInfo does the same clamp
   llvm::Type *FieldType = Types.ConvertTypeForMem(FD->getType());
-  unsigned FieldTypeSize = DataLayout.getTypeAllocSizeInBits(FieldType);
-  if (Info.Size > FieldTypeSize)
-    Info.Size = FieldTypeSize;
+  uint64_t Size =
+      std::min({uint64_t(FD->getBitWidthValue()), StorageSize,
+                DataLayout.getTypeAllocSizeInBits(FieldType).getFixedValue()});
   // Reverse the bit offsets for big endian machines. Because we represent
   // a bitfield as a single large integer load, we can imagine the bits
   // counting from the most-significant-bit instead of the
   // least-significant-bit.
   if (DataLayout.isBigEndian())
-    Info.Offset = Info.StorageSize - (Info.Offset + Info.Size);
+    Offset = StorageSize - (Offset + Size);
 
-  Info.VolatileStorageSize = 0;
-  Info.VolatileOffset = 0;
-  Info.VolatileStorageOffset = CharUnits::Zero();
+  BitFields[FD->getCanonicalDecl()] = CGBitFieldInfo(
+      Offset, Size, FD->getType()->isSignedIntegerOrEnumerationType(),
+      StorageSize, StartOffset);
 }
 
 void CGRecordLowering::lower(bool NVBaseType) {
@@ -839,14 +834,12 @@ void CGRecordLowering::computeVolatileBitfields() {
 }
 
 void CGRecordLowering::accumulateVPtrs() {
+  llvm::Type *VPtrTy = Types.getCGM().GlobalsInt8PtrTy;
   if (Layout.hasOwnVFPtr())
-    Members.push_back(
-        MemberInfo(CharUnits::Zero(), MemberInfo::VFPtr,
-                   llvm::PointerType::getUnqual(Types.getLLVMContext())));
+    Members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::VFPtr, VPtrTy));
   if (Layout.hasOwnVBPtr())
     Members.push_back(
-        MemberInfo(Layout.getVBPtrOffset(), MemberInfo::VBPtr,
-                   llvm::PointerType::getUnqual(Types.getLLVMContext())));
+        MemberInfo(Layout.getVBPtrOffset(), MemberInfo::VBPtr, VPtrTy));
 }
 
 CharUnits

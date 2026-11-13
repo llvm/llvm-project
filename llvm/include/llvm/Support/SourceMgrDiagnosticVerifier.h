@@ -74,6 +74,9 @@ public:
     SourceMgr::DiagKind kind;
     /// The line number the expected diagnostic should be on.
     unsigned lineNo;
+    /// The column the expected diagnostic should be at, or 0 if any column
+    /// matches.
+    unsigned colNo = 0;
     /// The location of the expected diagnostic within the input file.
     SMLoc fileLoc;
     /// A flag indicating if the expected diagnostic has been matched yet.
@@ -89,6 +92,18 @@ public:
   /// 'expected-error').
   explicit SourceMgrDiagnosticVerifier(ArrayRef<StringRef> prefixes = {
                                            "expected"});
+
+  SourceMgrDiagnosticVerifier(const SourceMgrDiagnosticVerifier &) = delete;
+  SourceMgrDiagnosticVerifier &
+  operator=(const SourceMgrDiagnosticVerifier &) = delete;
+
+  /// Given a diagnostic kind, return a human readable string for it.
+  static StringRef getDiagKindStr(SourceMgr::DiagKind kind);
+
+  /// Prints an error to \p os without going through \p mgr's diagnostic
+  /// handler, which may be the one feeding the verifier.
+  static void printMessage(raw_ostream &os, const SourceMgr &mgr, SMLoc loc,
+                           const Twine &msg, ArrayRef<SMRange> ranges = {});
 
   /// Computes and caches the list of expected diagnostics for \p buf, if not
   /// already cached. Returns the (mutable) cached list.
@@ -107,18 +122,20 @@ public:
   }
 
   /// Matches a single actual diagnostic against the expected diagnostics
-  /// recorded for \p buf / \p lineNo, computing them first via \p
-  /// computeExpectedDiags if they haven't been already. If \p hasLoc is
-  /// false, the diagnostic has no location and is matched against the
-  /// '@unknown' list instead (\p buf / \p lineNo are ignored). If \p hasLoc
-  /// is true but \p buf is null (e.g. the diagnostic's file isn't a known
-  /// buffer), the diagnostic is matched against an empty list, i.e. it can
-  /// never match and is always unexpected. On a near miss, prints a message
-  /// through \p mgr. \p reportUnexpected controls whether near misses /
-  /// unexpected diagnostics are reported at all.
+  /// recorded for \p buf / \p lineNo / \p colNo (1-based), computing them
+  /// first via \p computeExpectedDiags if they haven't been already. If \p
+  /// hasLoc is false, the diagnostic has no location and is matched against
+  /// the '@unknown' list instead (\p buf / \p lineNo / \p colNo are
+  /// ignored). If \p hasLoc is true but \p buf is null (e.g. the
+  /// diagnostic's file isn't a known buffer), the diagnostic is matched
+  /// against an empty list, i.e. it can never match and is always unexpected.
+  /// On a near miss, prints a message through \p mgr. \p reportUnexpected
+  /// controls whether near misses / unexpected diagnostics are reported at
+  /// all.
   MatchResult process(raw_ostream &os, SourceMgr &mgr, SourceMgr::DiagKind kind,
                       bool hasLoc, const MemoryBuffer *buf, unsigned lineNo,
-                      StringRef message, bool reportUnexpected = true);
+                      unsigned colNo, StringRef message,
+                      bool reportUnexpected = true);
 
   /// Reports (through \p mgr) any expected diagnostic that was never matched
   /// by a call to \p process. Returns whether verification succeeded overall,

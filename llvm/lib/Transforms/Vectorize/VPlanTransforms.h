@@ -156,6 +156,8 @@ struct VPlanTransforms {
       OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+      const MapVector<PHINode *, ConditionalInductionDescriptor>
+          &ConditionalInductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
@@ -214,13 +216,13 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
-  /// Generate the memory runtime checks of \p RtPtrChecking as recipes and
-  /// attach the check block to \p Plan. \p VF and \p UF are used to compute
-  /// the thresholds of difference checks.
+  /// Generate the memory runtime checks of \p RtPtrChecking for \p TheLoop as
+  /// recipes and attach the check block to \p Plan. \p VF and \p UF are used
+  /// to compute the thresholds of difference checks.
   static void attachMemoryChecks(VPlan &Plan,
                                  const RuntimePointerChecking &RtPtrChecking,
-                                 ScalarEvolution &SE, ElementCount VF,
-                                 unsigned UF, DebugLoc DL,
+                                 const Loop *TheLoop, ScalarEvolution &SE,
+                                 ElementCount VF, unsigned UF,
                                  bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector
@@ -262,6 +264,17 @@ struct VPlanTransforms {
   /// element and the corresponding data vector. Return false if this attempt
   /// was unsuccessful.
   static bool handleFindLastReductions(VPlan &Plan);
+
+  /// Widens compressing memory loads/stores. Loads/stores where the pointer is
+  /// derived from a conditional induction PHI are replaced with expandloads or
+  /// compressstores respectively. The backedge value of the conditional
+  /// induction PHI is updated to increment by the number of active lanes of
+  /// the block mask.
+  /// Returns false if any memory operation could not be updated (e.g., due to
+  /// having a mask that does not match the PHI).
+  static bool widenCompressingPatterns(VPlan &Plan,
+                                       VPRecipeBuilder &RecipeBuilder,
+                                       ScalarEvolution &SE);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
@@ -501,17 +514,22 @@ struct VPlanTransforms {
   /// Attaches the alias-mask to the existing header-mask.
   static void attachAliasMaskToHeaderMask(VPlan &Plan);
 
-  /// Materializes within the \p AliasCheckVPBB block. Updates the header mask
-  /// of the loop to use the alias mask. Returns the clamped VF.
+  /// Materializes the alias mask within \p AliasCheckVPBB, which must be
+  /// dominated by the SCEV checks, as the pointer bounds of \p DiffChecks are
+  /// only valid if the SCEV predicates hold. Updates the header mask of the
+  /// loop to use the alias mask. Returns the clamped VF.
   static VPValue *materializeAliasMask(VPlan &Plan,
                                        VPBasicBlock *AliasCheckVPBB,
-                                       ArrayRef<PointerDiffInfo> DiffChecks);
+                                       ArrayRef<PointerDiffInfo> DiffChecks,
+                                       ScalarEvolution &SE);
 
   /// Materializes the alias mask within a check block before the loop. The
   /// vector loop will only be entered if the clamped VF from the alias mask
   /// is not scalar.
-  static void materializeAliasMaskCheckBlock(
-      VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
+  static void
+  materializeAliasMaskCheckBlock(VPlan &Plan,
+                                 ArrayRef<PointerDiffInfo> DiffChecks,
+                                 ScalarEvolution &SE, bool HasBranchWeights);
 
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block to VPInstructions.
   /// Recipes wrapping a SCEVAddRecExpr are kept for later IR-level expansion.

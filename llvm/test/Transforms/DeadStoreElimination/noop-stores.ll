@@ -1234,3 +1234,29 @@ then:
 end:
   ret void
 }
+
+declare ptr @opaque(ptr returned) memory(none) nounwind willreturn
+
+; The pointer operands differ, but they still refer to the same memory location.
+define void @noop_store_ptrs_mustalias(ptr %p) {
+; CHECK-LABEL: @noop_store_ptrs_mustalias(
+; CHECK-NEXT:    ret void
+;
+  %val = load i32, ptr %p
+  %q = call ptr @opaque(ptr %p)
+  store i32 %val, ptr %q
+  ret void
+}
+
+define void @noop_store_ptrs_partialalias(ptr %p) {
+; CHECK-LABEL: @noop_store_ptrs_partialalias(
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 2
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %q = getelementptr i8, ptr %p, i64 2
+  %val = load i32, ptr %q
+  store i32 %val, ptr %p
+  ret void
+}

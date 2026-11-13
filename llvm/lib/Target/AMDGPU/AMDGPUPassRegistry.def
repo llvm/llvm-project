@@ -98,7 +98,7 @@ FUNCTION_ALIAS_ANALYSIS("amdgpu-aa", AMDGPUAA())
 FUNCTION_PASS_WITH_PARAMS(
     "amdgpu-atomic-optimizer",
     "AMDGPUAtomicOptimizerPass",
-    [=](ScanOptions Strategy) {
+    [=](AMDGPU::ScanOptions Strategy) {
       return AMDGPUAtomicOptimizerPass(*this, Strategy);
     },
     parseAMDGPUAtomicOptimizerStrategy, "strategy=dpp|iterative|none")

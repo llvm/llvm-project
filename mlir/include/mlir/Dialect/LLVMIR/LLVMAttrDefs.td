@@ -21,6 +21,7 @@ class LLVM_Attr<string name, string attrMnemonic,
                 list<Trait> traits = [],
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/LLVMAttrs.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -1386,6 +1387,43 @@ def LLVM_TBAATagArrayAttr
 }
 
 //===----------------------------------------------------------------------===//
+// TBAAStructFieldAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TBAAStructFieldAttr
+    : LLVM_Attr<"TBAAStructField", "tbaa_struct_field"> {
+  let parameters = (ins
+    "uint64_t":$offset,
+    "uint64_t":$size,
+    "TBAATagAttr":$tag
+  );
+
+  let summary = "One field of an LLVM dialect tbaa.struct description";
+
+  let description = [{
+    One entry of a `!tbaa.struct` node, which describes the fields an aggregate
+    copy touches so that the copy is not treated as one opaque access. The
+    fields need not be contiguous: a gap is padding, which carries no data.
+
+    Example:
+    ```mlir
+    #field = #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #tbaa_tag>
+    ```
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+
+  // Generate mnemonic alias for the attribute.
+  let genMnemonicAlias = 1;
+}
+
+def LLVM_TBAAStructFieldArrayAttr
+    : TypedArrayAttrBase<LLVM_TBAAStructFieldAttr,
+                         LLVM_TBAAStructFieldAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
 // MMRATagAttr
 //===----------------------------------------------------------------------===//
 
@@ -1964,5 +2002,59 @@ def LLVM_AnyMDAttr : AnyAttrOf<[
     LLVM_MDNullAttr, LLVM_MDAddrSpaceCastAttr, LLVM_MDNodeAttr],
     "LLVM metadata attribute (md_string, md_const, md_global_value, md_null, "
     "md_addrspacecast, or md_node)">;
+
+//===----------------------------------------------------------------------===//
+// MemProfMIBAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_MemProfContextSizeAttr
+    : LLVM_Attr<"MemProfContextSize", "memprof_context_size"> {
+  let parameters = (ins
+    "uint64_t":$id,
+    "uint64_t":$size
+  );
+
+  let summary = "One full-context size record of a MemProf MemInfoBlock";
+
+  let description = [{
+    A `(context id, total size)` pair carried by a `!memprof` MemInfoBlock when
+    the profile was gathered with full context-size information.
+
+    Example:
+    ```mlir
+    #ctx = #llvm.memprof_context_size<id = 123456789, size = 4096>
+    ```
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LLVM_MemProfMIBAttr : LLVM_Attr<"MemProfMIB", "memprof_mib"> {
+  let parameters = (ins
+    "DenseI64ArrayAttr":$call_stack,
+    "StringAttr":$alloc_type,
+    OptionalArrayRefParameter<"MemProfContextSizeAttr">:$context_sizes
+  );
+
+  let summary = "One MemInfoBlock of LLVM dialect memprof metadata";
+
+  let description = [{
+    One MemInfoBlock of a `!memprof` node: the allocation call stack it was
+    profiled on, its allocation-type tag (`"cold"`, `"notcold"`, ...), and
+    optionally the per-context total sizes behind it. The tag is singular:
+    the LLVM verifier requires operand 1 to be the one MDString.
+
+    Example:
+    ```mlir
+    #mib = #llvm.memprof_mib<call_stack = [123456789], alloc_type = "cold">
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#memprof-metadata
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+}
 
 #endif // LLVMIR_ATTRDEFS

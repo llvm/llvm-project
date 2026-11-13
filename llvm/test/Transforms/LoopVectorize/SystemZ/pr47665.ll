@@ -9,46 +9,104 @@ define void @test(ptr noalias %p, ptr noalias %q, i40 %a) {
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[FOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[FOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 9)
 ; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 [[IV]]
+; CHECK-NEXT:    store i8 0, ptr [[Q]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE1]]
+; CHECK:       [[PRED_STORE_CONTINUE1]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF2]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 1
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 [[IV_NEXT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 2
 ; CHECK-NEXT:    store i8 0, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[IV]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 3
 ; CHECK-NEXT:    store i8 0, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[IV]], 3
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 4
 ; CHECK-NEXT:    store i8 0, ptr [[TMP11]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[IV]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[EXIT3:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 5
+; CHECK-NEXT:    store i8 0, ptr [[TMP4]], align 1
+; CHECK-NEXT:    br label %[[EXIT3]]
+; CHECK:       [[EXIT3]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
+; CHECK:       [[PRED_STORE_IF11]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 6
+; CHECK-NEXT:    store i8 0, ptr [[TMP15]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
+; CHECK:       [[PRED_STORE_CONTINUE12]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
+; CHECK:       [[PRED_STORE_IF13]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 7
+; CHECK-NEXT:    store i8 0, ptr [[TMP6]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
+; CHECK:       [[PRED_STORE_CONTINUE14]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
+; CHECK:       [[PRED_STORE_IF15]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 8
+; CHECK-NEXT:    store i8 0, ptr [[TMP7]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
+; CHECK:       [[PRED_STORE_CONTINUE16]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
+; CHECK:       [[PRED_STORE_IF17]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 9
+; CHECK-NEXT:    store i8 0, ptr [[TMP16]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
+; CHECK:       [[PRED_STORE_CONTINUE18]]:
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF19:.*]], label %[[PRED_STORE_CONTINUE20:.*]]
+; CHECK:       [[PRED_STORE_IF19]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 10
+; CHECK-NEXT:    store i8 0, ptr [[TMP9]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE20]]
+; CHECK:       [[PRED_STORE_CONTINUE20]]:
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF21:.*]], label %[[PRED_STORE_CONTINUE22:.*]]
+; CHECK:       [[PRED_STORE_IF21]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 11
+; CHECK-NEXT:    store i8 0, ptr [[TMP10]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE22]]
+; CHECK:       [[PRED_STORE_CONTINUE22]]:
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF23:.*]], label %[[PRED_STORE_CONTINUE24:.*]]
+; CHECK:       [[PRED_STORE_IF23]]:
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 12
+; CHECK-NEXT:    store i8 0, ptr [[TMP17]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE24]]
+; CHECK:       [[PRED_STORE_CONTINUE24]]:
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF25:.*]], label %[[PRED_STORE_CONTINUE26:.*]]
+; CHECK:       [[PRED_STORE_IF25]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 13
+; CHECK-NEXT:    store i8 0, ptr [[TMP12]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE26]]
+; CHECK:       [[PRED_STORE_CONTINUE26]]:
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF27:.*]], label %[[PRED_STORE_CONTINUE28:.*]]
+; CHECK:       [[PRED_STORE_IF27]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 14
+; CHECK-NEXT:    store i8 0, ptr [[TMP13]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE28]]
+; CHECK:       [[PRED_STORE_CONTINUE28]]:
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF29:.*]], label %[[PRED_STORE_CONTINUE30:.*]]
+; CHECK:       [[PRED_STORE_IF29]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 15
+; CHECK-NEXT:    store i8 0, ptr [[TMP14]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
+; CHECK:       [[PRED_STORE_CONTINUE30]]:
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK1:.*]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void

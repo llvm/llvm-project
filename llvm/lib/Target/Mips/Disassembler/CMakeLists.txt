@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMMipsDisassembler
   LINK_COMPONENTS
   MCDisassembler
   MC
+  MipsDesc
   MipsInfo
   Support
 

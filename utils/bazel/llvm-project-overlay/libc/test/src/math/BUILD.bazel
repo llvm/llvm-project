@@ -30,6 +30,13 @@ math_mpfr_test(name = "acospif")
 math_mpfr_test(name = "asin")
 
 math_mpfr_test(
+    name = "acoshbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "asinbf16",
     deps = [
         "//libc:__support_fputil_bfloat16",
@@ -206,6 +213,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "daddf128",
+    hdrs = ["AddTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
+math_mpfr_test(
     name = "daddl",
     hdrs = ["AddTest.h"],
 )
@@ -239,6 +254,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "dsubf128",
+    hdrs = ["SubTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
+math_mpfr_test(
     name = "dsubl",
     hdrs = ["SubTest.h"],
 )
@@ -266,7 +289,13 @@ math_mpfr_test(
     ],
 )
 
-math_mpfr_test(name = "exp10")
+math_mpfr_test(
+    name = "exp10",
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:__support_math_exp10_double_eval",
+    ],
+)
 
 math_mpfr_test(
     name = "exp10f",
@@ -768,19 +797,39 @@ math_mpfr_test(
     ],
 )
 
-math_mpfr_test(name = "logf")
+math_mpfr_test(
+    name = "logf",
+    deps = [
+        "//libc:__support_math_logf_double_eval",
+    ],
+)
 
 math_mpfr_test(name = "log10")
 
-math_mpfr_test(name = "log10f")
+math_mpfr_test(
+    name = "log10f",
+    deps = [
+        "//libc:__support_math_log10f_double_eval",
+    ],
+)
 
 math_mpfr_test(name = "log1p")
 
-math_mpfr_test(name = "log1pf")
+math_mpfr_test(
+    name = "log1pf",
+    deps = [
+        "//libc:__support_math_log1pf_double_eval",
+    ],
+)
 
 math_mpfr_test(name = "log2")
 
-math_mpfr_test(name = "log2f")
+math_mpfr_test(
+    name = "log2f",
+    deps = [
+        "//libc:__support_math_log2f_double_eval",
+    ],
+)
 
 math_mpfr_test(
     name = "lrint",
@@ -843,6 +892,12 @@ math_mpfr_test(
 math_mpfr_test(
     name = "modff",
     hdrs = ["ModfTest.h"],
+)
+
+math_mpfr_test(
+    name = "modff128",
+    hdrs = ["ModfTest.h"],
+    deps = ["//libc:__support_fputil_float128"],
 )
 
 math_mpfr_test(
@@ -914,6 +969,12 @@ math_mpfr_test(
 math_mpfr_test(
     name = "remquof",
     hdrs = ["RemQuoTest.h"],
+)
+
+math_mpfr_test(
+    name = "remquof128",
+    hdrs = ["RemQuoTest.h"],
+    deps = ["//libc:__support_fputil_float128"],
 )
 
 math_mpfr_test(
@@ -1029,6 +1090,13 @@ math_mpfr_test(
 math_mpfr_test(name = "sin")
 
 math_mpfr_test(
+    name = "sinbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "sinf",
     hdrs = ["sdcomp26094.h"],
     deps = [
@@ -1059,6 +1127,13 @@ math_mpfr_test(
     name = "sinhf",
     deps = [
         "//libc:__support_cpp_array",
+    ],
+)
+
+math_mpfr_test(
+    name = "sinhbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
     ],
 )
 
@@ -1254,6 +1329,11 @@ math_mpfr_test(name = "log2f16")
 math_mpfr_test(name = "log2p1f16")
 
 math_mpfr_test(name = "log10f16")
+
+math_mpfr_test(
+    name = "log10p1bf16",
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
 
 math_mpfr_test(name = "log10p1f16")
 
