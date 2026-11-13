@@ -1,0 +1,475 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "allocating_string_utils",
+    hdrs = ["allocating_string_utils.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:checked_ptr",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "utils",
+    hdrs = [
+        "string_length.h",
+        "string_utils.h",
+    ],
+    deps = [
+        "//libc:hdr_limits_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc:llvm_libc_types_size_t",
+        "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:bitset",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memchr",
+    srcs = ["memchr.cpp"],
+    hdrs = ["memchr.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_function(
+    name = "memcpy",
+    srcs = ["memcpy.cpp"],
+    hdrs = ["memcpy.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memccpy",
+    srcs = ["memccpy.cpp"],
+    hdrs = ["memccpy.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_function(
+    name = "memset",
+    srcs = ["memset.cpp"],
+    hdrs = ["memset.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memset_explicit",
+    srcs = ["memset_explicit.cpp"],
+    hdrs = ["memset_explicit.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memmove",
+    srcs = ["memmove.cpp"],
+    hdrs = ["memmove.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memmem",
+    srcs = ["memmem.cpp"],
+    hdrs = ["memmem.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "mempcpy",
+    srcs = ["mempcpy.cpp"],
+    hdrs = ["mempcpy.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memcmp",
+    srcs = ["memcmp.cpp"],
+    hdrs = ["memcmp.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:integer_operations",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memrchr",
+    srcs = ["memrchr.cpp"],
+    hdrs = ["memrchr.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_function(
+    name = "stpcpy",
+    srcs = ["stpcpy.cpp"],
+    hdrs = ["stpcpy.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "stpncpy",
+    srcs = ["stpncpy.cpp"],
+    hdrs = ["stpncpy.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strlen",
+    srcs = ["strlen.cpp"],
+    hdrs = ["strlen.h"],
+    deps = [
+        ":utils",
+        "//libc:llvm_libc_types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_function(
+    name = "strsignal",
+    srcs = ["strsignal.cpp"],
+    hdrs = ["strsignal.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/StringUtil",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strcpy",
+    srcs = ["strcpy.cpp"],
+    hdrs = ["strcpy.h"],
+    deps = [
+        ":utils",
+        "//libc:llvm_libc_types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strlcpy",
+    srcs = ["strlcpy.cpp"],
+    hdrs = ["strlcpy.h"],
+    deps = [
+        ":utils",
+        "//libc:llvm_libc_types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strncpy",
+    srcs = ["strncpy.cpp"],
+    hdrs = ["strncpy.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_function(
+    name = "strcmp",
+    srcs = ["strcmp.cpp"],
+    hdrs = ["strcmp.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strncmp",
+    srcs = ["strncmp.cpp"],
+    hdrs = ["strncmp.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strchr",
+    srcs = ["strchr.cpp"],
+    hdrs = ["strchr.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strrchr",
+    srcs = ["strrchr.cpp"],
+    hdrs = ["strrchr.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strchrnul",
+    srcs = ["strchrnul.cpp"],
+    hdrs = ["strchrnul.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strsep",
+    srcs = ["strsep.cpp"],
+    hdrs = ["strsep.h"],
+    deps = [
+        ":utils",
+        "//libc:hdr_signal_macros",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strstr",
+    srcs = ["strstr.cpp"],
+    hdrs = ["strstr.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strcasestr",
+    srcs = ["strcasestr.cpp"],
+    hdrs = ["strcasestr.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support:ctype_utils",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strcat",
+    srcs = ["strcat.cpp"],
+    hdrs = ["strcat.h"],
+    deps = [
+        ":utils",
+        "//libc:llvm_libc_types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_function(
+    name = "strlcat",
+    srcs = ["strlcat.cpp"],
+    hdrs = ["strlcat.h"],
+    deps = [
+        ":utils",
+        "//libc:llvm_libc_types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strncat",
+    srcs = ["strncat.cpp"],
+    hdrs = ["strncat.h"],
+    deps = [
+        ":utils",
+        "//libc:llvm_libc_types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_function(
+    name = "strnlen",
+    srcs = ["strnlen.cpp"],
+    hdrs = ["strnlen.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strcspn",
+    srcs = ["strcspn.cpp"],
+    hdrs = ["strcspn.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strdup",
+    srcs = ["strdup.cpp"],
+    hdrs = ["strdup.h"],
+    deps = [
+        ":allocating_string_utils",
+        "//libc:hdr_stdlib_macros",
+        "//libc:llvm_libc_types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strspn",
+    srcs = ["strspn.cpp"],
+    hdrs = ["strspn.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:bitset",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_function(
+    name = "strpbrk",
+    srcs = ["strpbrk.cpp"],
+    hdrs = ["strpbrk.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strtok",
+    srcs = ["strtok.cpp"],
+    hdrs = ["strtok.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strtok_r",
+    srcs = ["strtok_r.cpp"],
+    hdrs = ["strtok_r.h"],
+    deps = [
+        ":utils",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)

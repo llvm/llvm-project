@@ -11773,9 +11773,9 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
     auto Others = make_filter_range(VL, std::not_fn(IsRdxOp));
     if (!Others.empty() && all_of(Others, IsaPred<SelectInst>) &&
         count_if(Others, std::not_fn(IsZeroFalseSelect)) <= 1) {
-      auto It = find_if_not(Others, IsZeroFalseSelect);
-      auto *MainOp =
-          cast<Instruction>(It == Others.end() ? *Others.begin() : *It);
+      const auto *It = find_if(
+          VL, [&](Value *V) { return !IsZeroFalseSelect(V) && !IsRdxOp(V); });
+      auto *MainOp = cast<Instruction>(It == VL.end() ? *Others.begin() : *It);
       S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
     }
   }

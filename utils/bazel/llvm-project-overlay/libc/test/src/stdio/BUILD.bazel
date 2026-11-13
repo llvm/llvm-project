@@ -14,9 +14,9 @@ libc_test(
     name = "asprintf_test",
     srcs = ["asprintf_test.cpp"],
     deps = [
-        "//libc:asprintf",
-        "//libc:memset",
-        "//libc:sprintf",
+        "//libc/src/stdio:asprintf",
+        "//libc/src/stdio:sprintf",
+        "//libc/src/string:memset",
     ],
 )
 
@@ -24,11 +24,11 @@ libc_test(
     name = "sprintf_test",
     srcs = ["sprintf_test.cpp"],
     deps = [
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_printf_core_printf_config",
         "//libc:hdr_wchar_macros",
-        "//libc:sprintf",
         "//libc:types_wint_t",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/printf_core:printf_config",
+        "//libc/src/stdio:sprintf",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -37,8 +37,8 @@ libc_test(
     name = "snprintf_test",
     srcs = ["snprintf_test.cpp"],
     deps = [
-        "//libc:__support_cpp_limits",
-        "//libc:snprintf",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/stdio:snprintf",
     ],
 )
 
@@ -46,7 +46,7 @@ libc_test(
     name = "printf_test",
     srcs = ["printf_test.cpp"],
     deps = [
-        "//libc:printf",
+        "//libc/src/stdio:printf",
     ],
 )
 
@@ -54,15 +54,15 @@ libc_test(
     name = "fprintf_test",
     srcs = ["fprintf_test.cpp"],
     deps = [
-        "//libc:__support_cpp_limits",
-        "//libc:__support_macros_properties_architectures",
-        "//libc:fprintf",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/stdio:fprintf",
     ] + select({
         "//libc:full_build": [
-            "//libc:fclose",
-            "//libc:ferror",
-            "//libc:fopen",
-            "//libc:fread",
+            "//libc/src/stdio:fclose",
+            "//libc/src/stdio:ferror",
+            "//libc/src/stdio:fopen",
+            "//libc/src/stdio:fread",
         ],
         "//conditions:default": [],
     }),
@@ -72,8 +72,8 @@ libc_test(
     name = "vasprintf_test",
     srcs = ["vasprintf_test.cpp"],
     deps = [
-        "//libc:memset",
-        "//libc:vasprintf",
+        "//libc/src/stdio:vasprintf",
+        "//libc/src/string:memset",
     ],
 )
 
@@ -81,7 +81,7 @@ libc_test(
     name = "vsprintf_test",
     srcs = ["vsprintf_test.cpp"],
     deps = [
-        "//libc:vsprintf",
+        "//libc/src/stdio:vsprintf",
     ],
 )
 
@@ -89,7 +89,7 @@ libc_test(
     name = "vsnprintf_test",
     srcs = ["vsnprintf_test.cpp"],
     deps = [
-        "//libc:vsnprintf",
+        "//libc/src/stdio:vsnprintf",
     ],
 )
 
@@ -97,7 +97,7 @@ libc_test(
     name = "vprintf_test",
     srcs = ["vprintf_test.cpp"],
     deps = [
-        "//libc:vprintf",
+        "//libc/src/stdio:vprintf",
     ],
 )
 
@@ -105,13 +105,13 @@ libc_test(
     name = "vfprintf_test",
     srcs = ["vfprintf_test.cpp"],
     deps = [
-        "//libc:vfprintf",
+        "//libc/src/stdio:vfprintf",
     ] + select({
         "//libc:full_build": [
-            "//libc:fclose",
-            "//libc:ferror",
-            "//libc:fopen",
-            "//libc:fread",
+            "//libc/src/stdio:fclose",
+            "//libc/src/stdio:ferror",
+            "//libc/src/stdio:fopen",
+            "//libc/src/stdio:fread",
         ],
         "//conditions:default": [],
     }),
@@ -121,12 +121,12 @@ libc_test(
     name = "remove_test",
     srcs = ["remove_test.cpp"],
     deps = [
-        "//libc:access",
-        "//libc:close",
         "//libc:hdr_sys_stat_macros",
-        "//libc:mkdirat",
-        "//libc:open",
-        "//libc:remove",
+        "//libc/src/fcntl:open",
+        "//libc/src/stdio:remove",
+        "//libc/src/sys/stat:mkdirat",
+        "//libc/src/unistd:access",
+        "//libc/src/unistd:close",
     ],
 )
 
@@ -134,10 +134,10 @@ libc_test(
     name = "sscanf_test",
     srcs = ["sscanf_test.cpp"],
     deps = [
-        "//libc:__support_cpp_limits",
-        "//libc:__support_fputil_fp_bits",
         "//libc:hdr_stdio_macros",
-        "//libc:sscanf",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/stdio:sscanf",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -146,16 +146,16 @@ libc_test(
     name = "fscanf_test",
     srcs = ["fscanf_test.cpp"],
     deps = [
-        "//libc:__support_cpp_string_view",
-        "//libc:fscanf",
         "//libc:hdr_stdio_macros",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/stdio:fscanf",
     ] + select({
         "//libc:full_build": [
-            "//libc:fclose",
-            "//libc:feof",
-            "//libc:ferror",
-            "//libc:fopen",
-            "//libc:fwrite",
+            "//libc/src/stdio:fclose",
+            "//libc/src/stdio:feof",
+            "//libc/src/stdio:ferror",
+            "//libc/src/stdio:fopen",
+            "//libc/src/stdio:fwrite",
         ],
         "//conditions:default": [],
     }),
@@ -165,7 +165,7 @@ libc_test(
     name = "vsscanf_test",
     srcs = ["vsscanf_test.cpp"],
     deps = [
-        "//libc:vsscanf",
+        "//libc/src/stdio:vsscanf",
     ],
 )
 
@@ -173,14 +173,14 @@ libc_test(
     name = "vfscanf_test",
     srcs = ["vfscanf_test.cpp"],
     deps = [
-        "//libc:__support_cpp_string_view",
-        "//libc:vfscanf",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/stdio:vfscanf",
     ] + select({
         "//libc:full_build": [
-            "//libc:fclose",
-            "//libc:ferror",
-            "//libc:fopen",
-            "//libc:fwrite",
+            "//libc/src/stdio:fclose",
+            "//libc/src/stdio:ferror",
+            "//libc/src/stdio:fopen",
+            "//libc/src/stdio:fwrite",
         ],
         "//conditions:default": [],
     }),

@@ -1,0 +1,140 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_function")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_function(
+    name = "htonl",
+    srcs = ["htonl.cpp"],
+    hdrs = ["htonl.h"],
+    deps = [
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "htons",
+    srcs = ["htons.cpp"],
+    hdrs = ["htons.h"],
+    deps = [
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "inet_addr",
+    srcs = ["inet_addr.cpp"],
+    hdrs = ["inet_addr.h"],
+    deps = [
+        "//libc:hdr_netinet_in_macros",
+        "//libc:types_in_addr_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/net:address",
+    ],
+)
+
+libc_function(
+    name = "inet_aton",
+    srcs = ["inet_aton.cpp"],
+    hdrs = ["inet_aton.h"],
+    deps = [
+        "//libc:types_struct_in_addr",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/net:address",
+    ],
+)
+
+libc_function(
+    name = "inet_ntoa",
+    srcs = ["inet_ntoa.cpp"],
+    hdrs = ["inet_ntoa.h"],
+    deps = [
+        "//libc:hdr_inet_address_macros",
+        "//libc:types_struct_in_addr",
+        "//libc/src/__support:common",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/net:address",
+    ],
+)
+
+libc_function(
+    name = "inet_ntop",
+    srcs = ["inet_ntop.cpp"],
+    hdrs = ["inet_ntop.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:types_socklen_t",
+        "//libc:types_struct_in6_addr",
+        "//libc:types_struct_in_addr",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/net:address",
+    ],
+)
+
+libc_function(
+    name = "inet_pton",
+    srcs = ["inet_pton.cpp"],
+    hdrs = ["inet_pton.h"],
+    deps = [
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:types_struct_in6_addr",
+        "//libc:types_struct_in_addr",
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:null_check",
+        "//libc/src/__support/net:address",
+    ],
+)
+
+libc_function(
+    name = "ntohl",
+    srcs = ["ntohl.cpp"],
+    hdrs = ["ntohl.h"],
+    deps = [
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "ntohs",
+    srcs = ["ntohs.cpp"],
+    hdrs = ["ntohs.h"],
+    deps = [
+        "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+    ],
+)

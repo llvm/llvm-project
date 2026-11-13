@@ -113,6 +113,29 @@ static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
+// HLX vectors that do not fit in registers are passed on the VTCM stack.
+// CCState only tracks the scalar stack, so add a custom memory location here
+// and let assignVTCMStackOffsets set its offset.
+static bool CC_Hexagon_VTCM_Stack(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                  CCValAssign::LocInfo &LocInfo,
+                                  ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT, 0, LocVT, LocInfo));
+  return true;
+}
+
+// Assign VTCM stack offsets to the HLX arguments, in argument order, and
+// return the size of the VTCM argument area.
+static unsigned assignVTCMStackOffsets(SmallVectorImpl<CCValAssign> &ArgLocs) {
+  unsigned Size = 0;
+  for (CCValAssign &VA : ArgLocs) {
+    if (!VA.isMemLoc() || !VA.needsCustom())
+      continue;
+    VA.convertToMem(Size);
+    Size += VA.getLocVT().getStoreSize();
+  }
+  return Size;
+}
+
 #define GET_CALLING_CONV_IMPL
 #include "HexagonGenCallingConv.inc"
 
@@ -463,6 +486,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
+  unsigned NumVTCMBytes = assignVTCMStackOffsets(ArgLocs);
 
   if (CLI.IsTailCall) {
     bool StructAttrFlag = MF.getFunction().hasStructRetAttr();
@@ -487,6 +511,13 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
   SDValue StackPtr =
       DAG.getCopyFromReg(Chain, dl, HRI.getStackRegister(), PtrVT);
+  SDValue VTCMStackPtr;
+  if (NumVTCMBytes) {
+    VTCMStackPtr =
+        DAG.getCopyFromReg(Chain, dl, HRI.getVTCMStackRegister(), PtrVT);
+    MF.getInfo<HexagonMachineFunctionInfo>()->reserveVTCMCallFrame(
+        NumVTCMBytes);
+  }
 
   bool NeedsArgAlign = false;
   Align LargestAlignSeen;
@@ -522,9 +553,10 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (VA.isMemLoc()) {
       unsigned LocMemOffset = VA.getLocMemOffset();
-      SDValue MemAddr = DAG.getConstant(LocMemOffset, dl,
-                                        StackPtr.getValueType());
-      MemAddr = DAG.getNode(ISD::ADD, dl, MVT::i32, StackPtr, MemAddr);
+      SDValue BasePtr = VA.needsCustom() ? VTCMStackPtr : StackPtr;
+      SDValue MemAddr =
+          DAG.getConstant(LocMemOffset, dl, BasePtr.getValueType());
+      MemAddr = DAG.getNode(ISD::ADD, dl, MVT::i32, BasePtr, MemAddr);
       if (ArgAlign)
         LargestAlignSeen = std::max(
             LargestAlignSeen, Align(VA.getLocVT().getStoreSizeInBits() / 8));
@@ -536,8 +568,13 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       } else {
         MachinePointerInfo LocPI = MachinePointerInfo::getStack(
             DAG.getMachineFunction(), LocMemOffset);
-        SDValue S = DAG.getStore(Chain, dl, Arg, MemAddr, LocPI);
-        MemOpChains.push_back(S);
+        if (isHlxPairTy(VA.getLocVT())) {
+          splitHlxPairArgStore(DAG, dl, Chain, Arg, MemAddr, VA.getLocVT(),
+                               LocPI, MemOpChains);
+        } else {
+          SDValue S = DAG.getStore(Chain, dl, Arg, MemAddr, LocPI);
+          MemOpChains.push_back(S);
+        }
       }
       continue;
     }
@@ -863,6 +900,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon);
+  assignVTCMStackOffsets(ArgLocs);
 
   // For LLVM, in the case when returning a struct by value (>8byte),
   // the first argument is a pointer that points to the location on caller's
@@ -946,9 +984,16 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
                             ? Flags.getByValSize()
                             : VA.getLocVT().getStoreSizeInBits() / 8;
 
-      // Create the frame index object for this incoming parameter.
-      int Offset = HEXAGON_LRFP_SIZE + VA.getLocMemOffset();
+      // Create the frame index object for this incoming parameter. HLX
+      // arguments are in the caller's VTCM argument area, not on the scalar
+      // stack. Mark them NoAlloc so that the scalar frame layout skips them;
+      // computeVTCMStackOffsets moves every NoAlloc fixed object to the VTCM
+      // frame. Hexagon uses NoAlloc only for these objects.
+      int Offset = VA.needsCustom() ? VA.getLocMemOffset()
+                                    : HEXAGON_LRFP_SIZE + VA.getLocMemOffset();
       int FI = MFI.CreateFixedObject(ObjSize, Offset, true);
+      if (VA.needsCustom())
+        MFI.setStackID(FI, TargetStackID::NoAlloc);
       SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
 
       if (Flags.isByVal()) {
@@ -956,6 +1001,10 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         // location. Instead, we should generate a reference to the stack
         // location.
         InVals.push_back(FIN);
+      } else if (isHlxPairTy(VA.getValVT())) {
+        InVals.push_back(
+            splitHlxPairArgLoad(DAG, dl, Chain, FIN, VA.getValVT(),
+                                MachinePointerInfo::getFixedStack(MF, FI, 0)));
       } else {
         SDValue L = DAG.getLoad(VA.getValVT(), dl, Chain, FIN,
                                 MachinePointerInfo::getFixedStack(MF, FI, 0));

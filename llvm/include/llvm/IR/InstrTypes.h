@@ -1991,6 +1991,10 @@ public:
   LLVM_ABI bool isNoInline() const;
   void setIsNoInline() { addFnAttr(Attribute::NoInline); }
 
+  /// Return true if this is a call to an intrinsic with a volatile flag that
+  /// is set, e.g., a volatile memcpy.
+  LLVM_ABI bool isVolatile() const;
+
   LLVM_ABI MemoryEffects getMemoryEffects() const;
   LLVM_ABI void setMemoryEffects(MemoryEffects ME);
 
