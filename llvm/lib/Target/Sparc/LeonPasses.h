@@ -34,25 +34,6 @@ public:
   }
 };
 
-class LLVM_LIBRARY_VISIBILITY SparcInsertNOPLoadLegacy
-    : public MachineFunctionPass {
-public:
-  static char ID;
-
-  SparcInsertNOPLoadLegacy();
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "InsertNOPLoad: LEON erratum fix: insert a NOP instruction "
-           "after every load instruction";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
-
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPARC_LEON_PASSES_H

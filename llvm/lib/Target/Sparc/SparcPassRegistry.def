@@ -26,6 +26,5 @@ MODULE_PASS("sparc-asm-printer-end", SparcAsmPrinterEndPass())
 MACHINE_FUNCTION_PASS("sparc-asm-printer", SparcAsmPrinterPass())
 MACHINE_FUNCTION_PASS("sparc-delay-slot-filler", SparcDelaySlotFillerPass())
 MACHINE_FUNCTION_PASS("sparc-errata-workaround", SparcErrataWorkaroundPass())
-MACHINE_FUNCTION_PASS("sparc-insert-nop-load", SparcInsertNOPLoadPass())
 MACHINE_FUNCTION_PASS("sparc-isel", SparcDAGToDAGISelPass(*this, getOptLevel()))
 #undef MACHINE_FUNCTION_PASS

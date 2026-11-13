@@ -51,13 +51,6 @@ public:
 
 FunctionPass *createSparcDelaySlotFillerLegacyPass();
 
-class SparcInsertNOPLoadPass
-    : public RequiredPassInfoMixin<SparcInsertNOPLoadPass> {
-public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
-};
-
 class SparcErrataWorkaroundPass
     : public RequiredPassInfoMixin<SparcErrataWorkaroundPass> {
 public:

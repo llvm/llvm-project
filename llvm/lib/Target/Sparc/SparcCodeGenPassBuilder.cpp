@@ -57,7 +57,6 @@ void SparcCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
     addMachineFunctionPass(BranchRelaxationPass(), PMW);
 
   addMachineFunctionPass(SparcDelaySlotFillerPass(), PMW);
-  addMachineFunctionPass(SparcInsertNOPLoadPass(), PMW);
   addMachineFunctionPass(SparcErrataWorkaroundPass(), PMW);
 }
 

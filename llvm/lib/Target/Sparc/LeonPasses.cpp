@@ -302,16 +302,39 @@ static bool checkSeqTN0013(MachineBasicBlock::iterator I,
   return false;
 }
 
+// On the AT697E and AT697F, a single-word load into an odd-numbered FP register
+// followed by a double-precision operation on the enclosing register pair can
+// give a wrong result (AT697E erratum 13, AT697F erratum 1). On the UT699, a
+// single-cycle load followed by another load or store can fail.
+//
+// Inserts a NOP after any LD or LDF instruction.
+static bool insertNOPLoad(MachineBasicBlock &MBB, const TargetInstrInfo *TII) {
+  bool Modified = false;
+  for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
+    unsigned Opcode = MBBI->getOpcode();
+    if (Opcode >= SP::LDDArr && Opcode <= SP::LDrr) {
+      BuildMI(MBB, std::next(MBBI), DebugLoc(), TII->get(SP::NOP));
+      Modified = true;
+    }
+  }
+  return Modified;
+}
+
 static bool runErrataWorkaroundOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   const SparcSubtarget *ST = &MF.getSubtarget<SparcSubtarget>();
 
-  if (!(ST->fixTN0009() || ST->fixTN0010() || ST->fixTN0012() ||
-        ST->fixTN0013()))
+  if (!(ST->insertNOPLoad() || ST->fixTN0009() || ST->fixTN0010() ||
+        ST->fixTN0012() || ST->fixTN0013()))
     return false;
 
   const TargetInstrInfo *TII = ST->getInstrInfo();
   const TargetRegisterInfo *TRI = ST->getRegisterInfo();
+
+  // Done as a separate sweep so that the checks below see the inserted NOPs.
+  if (ST->insertNOPLoad())
+    for (auto &MBB : MF)
+      Changed |= insertNOPLoad(MBB, TII);
 
   if (ST->fixTN0010())
     Changed |= checkSeqTN0010First(MF.front(), TII);
@@ -341,58 +364,6 @@ PreservedAnalyses
 SparcErrataWorkaroundPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   return runErrataWorkaroundOnMachineFunction(MF)
-             ? getMachineFunctionPassPreservedAnalyses()
-                   .preserveSet<CFGAnalyses>()
-             : PreservedAnalyses::all();
-}
-
-//*****************************************************************************
-//**** InsertNOPLoad pass
-//*****************************************************************************
-// On the AT697E and AT697F, a single-word load into an odd-numbered FP register
-// followed by a double-precision operation on the enclosing register pair can
-// give a wrong result (AT697E erratum 13, AT697F erratum 1). On the UT699, a
-// single-cycle load followed by another load or store can fail.
-//
-// This pass inserts a NOP after any LD or LDF instruction.
-//
-char SparcInsertNOPLoadLegacy::ID = 0;
-
-SparcInsertNOPLoadLegacy::SparcInsertNOPLoadLegacy()
-    : MachineFunctionPass(ID) {}
-
-static bool insertNOPLoadInMachineFunction(MachineFunction &MF) {
-  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
-  if (!Subtarget->insertNOPLoad())
-    return false;
-
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = DebugLoc();
-
-  bool Modified = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
-      MachineInstr &MI = *MBBI;
-      unsigned Opcode = MI.getOpcode();
-      if (Opcode >= SP::LDDArr && Opcode <= SP::LDrr) {
-        MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-        BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
-        Modified = true;
-      }
-    }
-  }
-
-  return Modified;
-}
-
-bool SparcInsertNOPLoadLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return insertNOPLoadInMachineFunction(MF);
-}
-
-PreservedAnalyses
-SparcInsertNOPLoadPass::run(MachineFunction &MF,
-                            MachineFunctionAnalysisManager &MFAM) {
-  return insertNOPLoadInMachineFunction(MF)
              ? getMachineFunctionPassPreservedAnalyses()
                    .preserveSet<CFGAnalyses>()
              : PreservedAnalyses::all();

@@ -166,7 +166,6 @@ void SparcPassConfig::addPreEmitPass(){
     addPass(&BranchRelaxationPassID);
 
   addPass(createSparcDelaySlotFillerLegacyPass());
-  addPass(new SparcInsertNOPLoadLegacy());
   addPass(new SparcErrataWorkaroundLegacy());
 }
 
