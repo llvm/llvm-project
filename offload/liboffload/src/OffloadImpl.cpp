@@ -778,7 +778,8 @@ Error olIterateCompatibleDevices_impl(const void *ProgData, size_t ProgDataSize,
   return Error::success();
 }
 
-Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
+Error olCreateContext_impl(size_t DevicesCount,
+                           const ol_device_handle_t *Devices,
                            ol_context_handle_t *Context) {
   ol_platform_impl_t *Platform = &Devices[0]->Platform;
   llvm::SmallVector<ol_device_handle_t> DeviceList;
@@ -832,6 +833,10 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
   case OL_CONTEXT_INFO_PLATFORM:
     return Info.write<ol_platform_handle_t>(Context->Platform);
   case OL_CONTEXT_INFO_NATIVE_HANDLE: {
+    // Contexts on the host platform have no plugin context.
+    if (!Context->PluginCtx)
+      return createOffloadError(ErrorCode::UNSUPPORTED,
+                                "native context handle is not supported");
     auto HandleOrErr = Context->PluginCtx->getNativeHandle();
     if (!HandleOrErr)
       return HandleOrErr.takeError();
