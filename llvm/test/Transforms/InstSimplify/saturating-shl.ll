@@ -76,7 +76,7 @@ define <2 x i8> @ushl_0_vec(<2 x i8> %y) {
 define <2 x i8> @sshl_0_vec_poison_elt(<2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i8> @sshl_0_vec_poison_elt(
 ; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 0>
 ;
   %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 0>, <2 x i8> %y)
   ret <2 x i8> %r
@@ -88,6 +88,69 @@ define <vscale x 2 x i8> @sshl_0_scalable(<vscale x 2 x i8> %y) {
 ; CHECK-NEXT:    ret <vscale x 2 x i8> zeroinitializer
 ;
   %r = call <vscale x 2 x i8> @llvm.sshl.sat.nxv2i8(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x i8> %y)
+  ret <vscale x 2 x i8> %r
+}
+
+define i8 @ushl_umax(i8 %y) {
+; CHECK-LABEL: define i8 @ushl_umax(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i8 -1
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 -1, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_smax(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_smax(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i8 127
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 127, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_smin(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_smin(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i8 -128
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -128, i8 %y)
+  ret i8 %r
+}
+
+define <2 x i8> @ushl_umax_vec_poison_elt(<2 x i8> %y) {
+; CHECK-LABEL: define <2 x i8> @ushl_umax_vec_poison_elt(
+; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 poison>
+;
+  %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> <i8 -1, i8 poison>, <2 x i8> %y)
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @sshl_smax_vec_poison_elt(<2 x i8> %y) {
+; CHECK-LABEL: define <2 x i8> @sshl_smax_vec_poison_elt(
+; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <2 x i8> <i8 127, i8 poison>
+;
+  %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 127, i8 poison>, <2 x i8> %y)
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @sshl_smin_vec_poison_elt(<2 x i8> %y) {
+; CHECK-LABEL: define <2 x i8> @sshl_smin_vec_poison_elt(
+; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 -128>
+;
+  %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 -128>, <2 x i8> %y)
+  ret <2 x i8> %r
+}
+
+define <vscale x 2 x i8> @sshl_smax_scalable(<vscale x 2 x i8> %y) {
+; CHECK-LABEL: define <vscale x 2 x i8> @sshl_smax_scalable(
+; CHECK-SAME: <vscale x 2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <vscale x 2 x i8> splat (i8 127)
+;
+  %r = call <vscale x 2 x i8> @llvm.sshl.sat.nxv2i8(<vscale x 2 x i8> splat (i8 127), <vscale x 2 x i8> %y)
   ret <vscale x 2 x i8> %r
 }
 
@@ -183,6 +246,66 @@ define i8 @sshl_1(i8 %y) {
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %r = call i8 @llvm.sshl.sat.i8(i8 1, i8 %y)
+  ret i8 %r
+}
+
+define i8 @ushl_umax_minus_1(i8 %y) {
+; CHECK-LABEL: define i8 @ushl_umax_minus_1(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 -2, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 -2, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_smax_minus_1(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_smax_minus_1(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 126, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 126, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_smin_plus_1(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_smin_plus_1(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -127, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -127, i8 %y)
+  ret i8 %r
+}
+
+define i8 @sshl_umax(i8 %y) {
+; CHECK-LABEL: define i8 @sshl_umax(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -1, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -1, i8 %y)
+  ret i8 %r
+}
+
+define i8 @ushl_smax(i8 %y) {
+; CHECK-LABEL: define i8 @ushl_smax(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 127, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 127, i8 %y)
+  ret i8 %r
+}
+
+define i8 @ushl_smin(i8 %y) {
+; CHECK-LABEL: define i8 @ushl_smin(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 -128, i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 -128, i8 %y)
   ret i8 %r
 }
 
