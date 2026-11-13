@@ -5275,6 +5275,12 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
     return;
   }
 
+  // The mode attribute changes the width of the type, but it must not discard
+  // the qualifiers that were written on the original type:
+  // 'const int x __attribute__((mode(QI)))' still declares a const object, and
+  // the same holds for volatile, address spaces and the other qualifiers.
+  NewTy = Context.getQualifiedType(NewTy, OldTy.getQualifiers());
+
   // Install the new type.
   if (auto *TD = dyn_cast<TypedefNameDecl>(D))
     TD->setModedTypeSourceInfo(TD->getTypeSourceInfo(), NewTy);
