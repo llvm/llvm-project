@@ -43,8 +43,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      CLOpts(TM.getCLOpts()),
-      PointerSize(TM.getPointerSizeInBits(/*AS=*/0)),
+      CLOpts(TM.getCLOpts()), PointerSize(TM.getPointerSizeInBits(/*AS=*/0)),
       InstrInfo(initSubtargetDependencies(CPU, FS)), FrameLowering(*this),
       TLInfo(TM, *this), TargetTriple(TT) {
   switch (TT.getSubArch()) {
