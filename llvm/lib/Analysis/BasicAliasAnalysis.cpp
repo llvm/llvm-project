@@ -287,7 +287,7 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
   }
 }
 
-void EarliestEscapeAnalysis::insertInstruction(const Instruction *I) {
+void EarliestEscapeAnalysis::insertPotentialCapture(const Instruction *I) {
   for (const Use &U : I->operands()) {
     if (!U->getType()->isPointerTy())
       continue;
