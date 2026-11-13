@@ -1388,7 +1388,6 @@ define <2 x i16> @test_psshlr_s_u16x2(<2 x i16> %a, i32 %shamt) {
 define <2 x i16> @test_psll_s_i16x2_zero(<2 x i16> %a) {
 ; CHECK-LABEL: test_psll_s_i16x2_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pslli.h a0, a0, 0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psll.v2i16(<2 x i16> %a, i32 0)
   ret <2 x i16> %res
@@ -1397,7 +1396,6 @@ define <2 x i16> @test_psll_s_i16x2_zero(<2 x i16> %a) {
 define <2 x i16> @test_psrl_s_i16x2_zero(<2 x i16> %a) {
 ; CHECK-LABEL: test_psrl_s_i16x2_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrli.h a0, a0, 0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psrl.v2i16(<2 x i16> %a, i32 0)
   ret <2 x i16> %res
@@ -1406,7 +1404,6 @@ define <2 x i16> @test_psrl_s_i16x2_zero(<2 x i16> %a) {
 define <2 x i16> @test_psra_s_i16x2_zero(<2 x i16> %a) {
 ; CHECK-LABEL: test_psra_s_i16x2_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psrai.h a0, a0, 0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psra.v2i16(<2 x i16> %a, i32 0)
   ret <2 x i16> %res
@@ -1415,7 +1412,6 @@ define <2 x i16> @test_psra_s_i16x2_zero(<2 x i16> %a) {
 define <2 x i16> @test_pssha_s_i16x2_zero(<2 x i16> %a) {
 ; CHECK-LABEL: test_pssha_s_i16x2_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psslai.h a0, a0, 0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.pssha.v2i16.i32(<2 x i16> %a, i32 0)
   ret <2 x i16> %res
@@ -1424,7 +1420,6 @@ define <2 x i16> @test_pssha_s_i16x2_zero(<2 x i16> %a) {
 define <2 x i16> @test_psshar_s_i16x2_zero(<2 x i16> %a) {
 ; CHECK-LABEL: test_psshar_s_i16x2_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psslai.h a0, a0, 0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psshar.v2i16.i32(<2 x i16> %a, i32 0)
   ret <2 x i16> %res
@@ -1433,7 +1428,6 @@ define <2 x i16> @test_psshar_s_i16x2_zero(<2 x i16> %a) {
 define <2 x i16> @test_psshl_s_u16x2_zero(<2 x i16> %a) {
 ; CHECK-LABEL: test_psshl_s_u16x2_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psshl.hs a0, a0, zero
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psshl.v2i16.i32(<2 x i16> %a, i32 0)
   ret <2 x i16> %res
@@ -1442,7 +1436,6 @@ define <2 x i16> @test_psshl_s_u16x2_zero(<2 x i16> %a) {
 define <2 x i16> @test_psshlr_s_u16x2_zero(<2 x i16> %a) {
 ; CHECK-LABEL: test_psshlr_s_u16x2_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    psshlr.hs a0, a0, zero
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 0)
   ret <2 x i16> %res
