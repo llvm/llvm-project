@@ -73,4 +73,10 @@ contains
     !ERROR: Value of named constant 'p_rank' (rank(( flag ? ar1 : ar2 ))) cannot be computed as a constant value
     integer, parameter :: p_rank = rank((flag ? ar1 : ar2))
   end subroutine
+  subroutine c(assumed)
+    integer :: assumed(:)
+    ! An assumed-shape array might be contiguous, so this can't fold to .false.
+    !ERROR: Must be a constant value
+    logical, parameter :: p_contiguous_assumed_shape = is_contiguous((flag ? tgt(1:10:2) : assumed))
+  end subroutine
 end module

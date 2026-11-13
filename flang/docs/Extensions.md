@@ -370,6 +370,11 @@ end
   parameters (C1538) and, unless all are assumed-rank, the same rank
   (C1539), so the result doesn't depend on the condition. Flang accepts
   `kind(a + b)` in a constant expression on the same terms.
+  `IS_CONTIGUOUS` of a conditional argument can appear in a constant
+  expression too, when every consequent-arg is known to be contiguous or
+  every one is known not to be, so that the result can't depend on the
+  condition. In all of these cases, a condition can be any logical
+  expression, including a function reference, and it isn't evaluated.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
