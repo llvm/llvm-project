@@ -260,6 +260,7 @@ add_llvm_component_library(LLVMSupport
   PGOOptions.cpp
   Parallel.cpp
   PluginLoader.cpp
+  PrefixMapper.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
   IntegerInclusiveInterval.cpp
