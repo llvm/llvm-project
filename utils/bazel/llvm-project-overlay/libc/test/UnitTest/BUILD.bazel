@@ -226,12 +226,12 @@ libc_test_library(
     deps = [
         ":LibcUnitTest",
         ":string_utils",
-        "//libc:__support_printf_core_printf_config",
-        "//libc:__support_printf_core_printf_core_structs",
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support/CPP:type_traits",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/printf_core:printf_config",
+        "//libc/src/__support/printf_core:printf_core_structs",
     ],
 )
 

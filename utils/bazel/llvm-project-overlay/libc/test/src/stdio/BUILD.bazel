@@ -24,11 +24,11 @@ libc_test(
     name = "sprintf_test",
     srcs = ["sprintf_test.cpp"],
     deps = [
-        "//libc:__support_printf_core_printf_config",
         "//libc:hdr_wchar_macros",
         "//libc:sprintf",
         "//libc:types_wint_t",
         "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/printf_core:printf_config",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
