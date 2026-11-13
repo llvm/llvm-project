@@ -152,14 +152,11 @@ void __ubsan::__ubsan_handle_type_mismatch_v1_abort(TypeMismatchData *Data,
   Die();
 }
 
-void __ubsan::handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
-                                            ValueHandle Pointer,
-                                            ValueHandle Alignment,
-                                            ValueHandle Offset,
-                                            ReportOptions Opts) {
-  Location Loc = Data->Loc.acquire();
-  SourceLocation AssumptionLoc = Data->AssumptionLoc.acquire();
-
+static void
+emitAlignmentAssumptionReport(Location Loc, SourceLocation AssumptionLoc,
+                              const TypeDescriptor &Type, ValueHandle Pointer,
+                              ValueHandle Alignment, ValueHandle Offset,
+                              ReportOptions Opts) {
   ErrorType ET = ErrorType::AlignmentAssumption;
 
   if (ignoreReport(Loc.getSourceLocation(), Opts, ET))
@@ -177,12 +174,12 @@ void __ubsan::handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
   if (!Offset) {
     Diag(Loc, DL_Error, ET,
          "assumption of %0 byte alignment for pointer of type %1 failed")
-        << Alignment << Data->Type;
+        << Alignment << Type;
   } else {
     Diag(Loc, DL_Error, ET,
          "assumption of %0 byte alignment (with offset of %1 byte) for pointer "
          "of type %2 failed")
-        << Alignment << Offset << Data->Type;
+        << Alignment << Offset << Type;
   }
 
   if (!AssumptionLoc.isInvalid())
@@ -191,6 +188,17 @@ void __ubsan::handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
   Diag(Opts.FromOffload ? Loc : Location(RealPointer), DL_Note, ET,
        "%0address is %1 aligned, misalignment offset is %2 bytes")
       << (Offset ? "offset " : "") << ActualAlignment << MisAlignmentOffset;
+}
+
+void __ubsan::handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
+                                            ValueHandle Pointer,
+                                            ValueHandle Alignment,
+                                            ValueHandle Offset,
+                                            ReportOptions Opts) {
+  Location Loc = Data->Loc.acquire();
+  SourceLocation AssumptionLoc = Data->AssumptionLoc.acquire();
+  emitAlignmentAssumptionReport(Loc, AssumptionLoc, Data->Type, Pointer,
+                                Alignment, Offset, Opts);
 }
 
 void __ubsan::__ubsan_handle_alignment_assumption(AlignmentAssumptionData *Data,
@@ -205,6 +213,34 @@ void __ubsan::__ubsan_handle_alignment_assumption_abort(
     ValueHandle Offset) {
   GET_REPORT_OPTIONS(true);
   handleAlignmentAssumptionImpl(Data, Pointer, Alignment, Offset, Opts);
+  Die();
+}
+
+void __ubsan::handleReturnAlignmentAssumptionImpl(
+    ReturnAlignmentAssumptionData *Data, SourceLocation *LocPtr,
+    ValueHandle Pointer, ValueHandle Alignment, ValueHandle Offset,
+    ReportOptions Opts) {
+  if (!LocPtr)
+    UNREACHABLE("source location pointer is null!");
+
+  Location Loc = LocPtr->acquire();
+  emitAlignmentAssumptionReport(Loc, Data->AssumptionLoc, Data->Type, Pointer,
+                                Alignment, Offset, Opts);
+}
+
+void __ubsan::__ubsan_handle_return_alignment_assumption(
+    ReturnAlignmentAssumptionData *Data, SourceLocation *LocPtr,
+    ValueHandle Pointer, ValueHandle Alignment, ValueHandle Offset) {
+  GET_REPORT_OPTIONS(false);
+  handleReturnAlignmentAssumptionImpl(Data, LocPtr, Pointer, Alignment, Offset,
+                                      Opts);
+}
+void __ubsan::__ubsan_handle_return_alignment_assumption_abort(
+    ReturnAlignmentAssumptionData *Data, SourceLocation *LocPtr,
+    ValueHandle Pointer, ValueHandle Alignment, ValueHandle Offset) {
+  GET_REPORT_OPTIONS(true);
+  handleReturnAlignmentAssumptionImpl(Data, LocPtr, Pointer, Alignment, Offset,
+                                      Opts);
   Die();
 }
 
