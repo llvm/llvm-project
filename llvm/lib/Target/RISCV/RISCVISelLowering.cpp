@@ -612,7 +612,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, P64VecVTs, Custom);
       setOperationAction(ISD::SSHLSAT, {MVT::v2i32, MVT::v4i16}, Custom);
       setOperationAction(ISD::BSWAP, MVT::v4i16, Legal);
-      setOperationAction(ISD::BITREVERSE, {MVT::v4i16, MVT::v8i8}, Legal);
+      setOperationAction(ISD::BITREVERSE, MVT::v4i16, Legal);
+      setOperationAction(ISD::BITREVERSE, MVT::v8i8, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, P64VecVTs, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, P64VecVTs, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
@@ -6470,6 +6471,7 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
 
 // Match an interleave shuffle that forms a P-extension packed zip:
 //   <a0, b0, a1, b1, ...> -> zip*p/wzip*p
+//   <aN/2, bN/2, aN/2+1, bN/2+1, ...> -> zip*hp
 static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
                                          const RISCVSubtarget &Subtarget,
                                          SelectionDAG &DAG) {
@@ -6503,6 +6505,13 @@ static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
       V1 = DAG.getExtractSubvector(DL, HalfVT, V1, 0);
       V2 = DAG.getExtractSubvector(DL, HalfVT, V2, 0);
       return DAG.getNode(RISCVISD::PWZIP, DL, VT, V2, V1);
+    }
+    if (Subtarget.is64Bit()) {
+      unsigned HalfNumElts = NumElts / 2;
+      if (EvenSrc == HalfNumElts && OddSrc == NumElts + HalfNumElts)
+        return DAG.getNode(RISCVISD::PZIPH, DL, VT, V1, V2);
+      if (EvenSrc == NumElts + HalfNumElts && OddSrc == HalfNumElts)
+        return DAG.getNode(RISCVISD::PZIPH, DL, VT, V2, V1);
     }
   }
 
@@ -8549,6 +8558,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return LowerIS_FPCLASS(Op, DAG);
   case ISD::BITREVERSE: {
     MVT VT = Op.getSimpleValueType();
+    if (VT == MVT::v8i8 && !Subtarget.is64Bit() && Subtarget.hasStdExtP()) {
+      // Split into two v4i8 bitreverses, each of which fits in a GPR.
+      SDLoc DL(Op);
+      auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+      Lo = DAG.getNode(ISD::BITREVERSE, DL, MVT::v4i8, Lo);
+      Hi = DAG.getNode(ISD::BITREVERSE, DL, MVT::v4i8, Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
     if (VT.isFixedLengthVector()) {
       assert(Subtarget.hasStdExtZvbb());
       return lowerToScalableOp(Op, DAG);
@@ -12483,6 +12500,29 @@ static unsigned getRVPNarrowingOpcode(Intrinsic::ID IntNo) {
   }
 }
 
+static unsigned getRVPScalarNarrowingOpcode(Intrinsic::ID IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar narrowing intrinsic");
+  case Intrinsic::riscv_nclipu_u32:
+    return RISCVISD::NCLIPU;
+  case Intrinsic::riscv_nclipru_u32:
+    return RISCVISD::NCLIPRU;
+  case Intrinsic::riscv_nsrar_i32:
+    return RISCVISD::NSRAR;
+  case Intrinsic::riscv_nclip_i32:
+    return RISCVISD::NCLIP;
+  case Intrinsic::riscv_nclipr_i32:
+    return RISCVISD::NCLIPR;
+  }
+}
+
+static SDValue getRVPScalarNarrowingShiftAmount(SDValue ShAmt, const SDLoc &DL,
+                                                MVT VT, SelectionDAG &DAG) {
+  ShAmt = DAG.getAnyExtOrTrunc(ShAmt, DL, VT);
+  return DAG.getNode(ISD::AND, DL, VT, ShAmt, DAG.getConstant(63, DL, VT));
+}
+
 static SDValue lowerPZExt(SDValue Src, const SDLoc &DL, SelectionDAG &DAG,
                           const RISCVSubtarget &Subtarget) {
   MVT VT = Src.getSimpleValueType();
@@ -13411,6 +13451,19 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     SDValue ShAmt = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op.getOperand(2));
     return DAG.getNode(getRVPNarrowingOpcode(IntNo), DL, VT, Op.getOperand(1),
+                       ShAmt);
+  }
+  case Intrinsic::riscv_nclipu_u32:
+  case Intrinsic::riscv_nclipru_u32:
+  case Intrinsic::riscv_nsrar_i32:
+  case Intrinsic::riscv_nclip_i32:
+  case Intrinsic::riscv_nclipr_i32: {
+    assert(!Subtarget.is64Bit() &&
+           "RV64 should be handled during type legalization");
+    auto [Lo, Hi] = DAG.SplitScalar(Op.getOperand(1), DL, MVT::i32, MVT::i32);
+    SDValue ShAmt =
+        getRVPScalarNarrowingShiftAmount(Op.getOperand(2), DL, MVT::i32, DAG);
+    return DAG.getNode(getRVPScalarNarrowingOpcode(IntNo), DL, MVT::i32, Lo, Hi,
                        ShAmt);
   }
   case Intrinsic::riscv_psati:
@@ -18642,6 +18695,44 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           Opc, DL, MVT::i64, Rs1,
           DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+    case Intrinsic::riscv_nclipu_u32:
+    case Intrinsic::riscv_nclipru_u32:
+    case Intrinsic::riscv_nsrar_i32:
+    case Intrinsic::riscv_nclip_i32:
+    case Intrinsic::riscv_nclipr_i32: {
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+
+      SDValue Src = N->getOperand(1);
+      SDValue ShAmt =
+          getRVPScalarNarrowingShiftAmount(N->getOperand(2), DL, MVT::i64, DAG);
+      bool IsSigned = IntNo == Intrinsic::riscv_nsrar_i32 ||
+                      IntNo == Intrinsic::riscv_nclip_i32 ||
+                      IntNo == Intrinsic::riscv_nclipr_i32;
+      bool IsRounding = IntNo == Intrinsic::riscv_nclipru_u32 ||
+                        IntNo == Intrinsic::riscv_nsrar_i32 ||
+                        IntNo == Intrinsic::riscv_nclipr_i32;
+
+      unsigned ShiftOpc;
+      if (IsRounding) {
+        ShAmt = DAG.getNegative(ShAmt, DL, MVT::i64);
+        ShiftOpc = IsSigned ? RISCVISD::SHAR : RISCVISD::SHLR;
+      } else {
+        ShiftOpc = IsSigned ? ISD::SRA : ISD::SRL;
+      }
+      SDValue Shifted = DAG.getNode(ShiftOpc, DL, MVT::i64, Src, ShAmt);
+
+      if (IntNo == Intrinsic::riscv_nsrar_i32) {
+        Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Shifted));
+        return;
+      }
+
+      SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
+      SDValue Clipped = DAG.getNode(ClipOpc, DL, MVT::v2i32, Shifted, Zero);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Clipped, 0));
       return;
     }
     case Intrinsic::riscv_mqwacc_i64:

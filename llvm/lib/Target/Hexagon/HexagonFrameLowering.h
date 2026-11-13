@@ -168,11 +168,13 @@ private:
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
       SmallVectorImpl<Register> &NewRegs) const;
   bool expandStoreVec2(MachineBasicBlock &B, MachineBasicBlock::iterator It,
-      MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
-      SmallVectorImpl<Register> &NewRegs) const;
+                       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+                       SmallVectorImpl<Register> &NewRegs,
+                       bool IsHLX = false) const;
   bool expandLoadVec2(MachineBasicBlock &B, MachineBasicBlock::iterator It,
-      MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
-      SmallVectorImpl<Register> &NewRegs) const;
+                      MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+                      SmallVectorImpl<Register> &NewRegs,
+                      bool IsHLX = false) const;
   bool expandStoreVec(MachineBasicBlock &B, MachineBasicBlock::iterator It,
       MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
       SmallVectorImpl<Register> &NewRegs) const;

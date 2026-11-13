@@ -385,10 +385,10 @@ def err_invalid_width_spec : Error<
 def err_invalid_complex_spec : Error<"'_Complex %0' is invalid">;
 
 def ext_auto_type_specifier : ExtWarn<
-  "'auto' type specifier is a %select{C++11|HLSL 202y}0 extension">,
+  "'auto' type specifier is %select{a C++11|an HLSL 202x}0 extension">,
   InGroup<CXX11>;
 def ext_hlsl_auto_type_specifier : ExtWarn<
-  ext_auto_type_specifier.Summary>, InGroup<HLSL202y>;
+  ext_auto_type_specifier.Summary>, InGroup<HLSL202x>;
 def warn_auto_storage_class : Warning<
   "'auto' storage class specifier is redundant and incompatible with C++11">,
   InGroup<CXX11Compat>, DefaultIgnore;
@@ -2661,6 +2661,8 @@ def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<
   "unsequenced modification and access to %0">, InGroup<Unsequenced>;
+def warn_unsequenced_use_use_volatile : Warning<
+  "unsequenced accesses to volatile qualified %0">, InGroup<Unsequenced>;
 
 def select_initialized_entity_kind : TextSubstitution<
   "%select{copying variable|copying parameter|initializing template parameter|"
@@ -12817,7 +12819,7 @@ def err_omp_wrong_dependency_iterator_type : Error<
 def err_omp_stmt_expr_in_non_rectangular_loop : Error<
   "statement expression is not supported in the loop %select{initializer|condition}0 of a non-rectangular loop nest">;
 def err_target_unsupported_type
-    : Error<"%0 requires %select{|%2 bit size}1 %3 %select{|return }4type support,"
+    : Error<"%0 requires %select{|%2 bit size }1%3 %select{|return }4type support,"
             " but target '%5' does not support it">;
 def err_omp_lambda_capture_in_declare_target_not_to : Error<
   "variable captured in declare target region must appear in a to clause">;

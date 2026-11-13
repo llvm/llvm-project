@@ -52,6 +52,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* The `optnone` function attribute now implies `noinline`, and no longer
+  requires `noinline` to be present on the same function. `optnone` may now
+  be combined with `alwaysinline`, in which case `alwaysinline` takes
+  precedence and the function is inlined. Use `Function::isNoInline()` or
+  `CallBase::isNoInline()` to query whether a function or call should not be
+  inlined.
+
 * LLVM now assigns persistent print IDs to metadata nodes. Reusing these IDs
   avoids repeated module-wide scans to rebuild metadata numbering, which can
   significantly speed up debug and pass printing on large modules. Keeping
@@ -172,7 +179,13 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 
+* The verifier now rejects a `"wchar_size"` module flag whose value is not
+  positive.
+
 ### Changes to LLVM infrastructure
+
+* Removed `mc::RegisterMCTargetOptionsFlags` and `codegen::RegisterCodeGenFlags`.
+  A tool that created either now passes `mc::getToolOptions()` or `codegen::getToolOptions()` to `cl::parseCommandLineOptions`.
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
@@ -559,6 +572,15 @@ Makes programs 10x faster by doing Special New Thing.
   uncompressed after garbage collection and deduplication, even if the input
   debug sections were compressed. They are now compressed using the input
   format by default.
+
+* llvm-strings now supports the `-e` (`--encoding`) option and by default prints
+  non-ASCII strings it finds, using the system's configured character set. The
+  prior behavior can be restored by specifying `-es` (`--encoding=s`), which is
+  mostly useful on large files when the searched-for strings are known ahead of
+  time to be ASCII, as it searches faster and gives the user fewer results to
+  sift through. The `-eutf8` is also available to search for UTF-8 strings,
+  which is mostly useful on Windows where configuring the system to use UTF-8 is
+  more involved than setting an environment variable.
 
 ### Changes to LLDB
 

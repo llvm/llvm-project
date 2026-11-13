@@ -46,3 +46,4 @@ body:             |
     %mul:_(i64) = G_MUL %x, %seven
     $x0 = COPY %mul(i64)
     RET_ReallyLR implicit $x0
+...

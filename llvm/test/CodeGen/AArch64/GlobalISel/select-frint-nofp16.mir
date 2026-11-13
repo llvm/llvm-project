@@ -198,3 +198,4 @@ body:             |
     %1:fpr(<8 x f16>) = G_BUILD_VECTOR %10(f16), %11(f16), %12(f16), %13(f16), %14(f16), %15(f16), %16(f16), %17(f16)
     $q0 = COPY %1(<8 x f16>)
     RET_ReallyLR implicit $q0
+...
