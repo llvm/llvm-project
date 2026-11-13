@@ -552,8 +552,7 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
   const auto &Semantics = RHS.getSemantics();
 
   // Only handle fcNormal constants, and bail out for PPCDoubleDouble.
-  if (!RHS.isNormal() ||
-      APFloat::SemanticsToEnum(Semantics) == APFloatBase::S_PPCDoubleDouble)
+  if (!RHS.isNormal() || &Semantics == &APFloat::PPCDoubleDouble())
     return fadd(KnownLHS_, KnownFPClass(RHS), Mode);
 
   KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
