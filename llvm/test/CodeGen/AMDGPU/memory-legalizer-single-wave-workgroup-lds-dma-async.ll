@@ -40,6 +40,7 @@ define void @lds_async_dma_wg_fence_release_single32(ptr addrspace(1) inreg %g, 
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    ; wait_asyncmark(0, stages=all)
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_asynccnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-NEXT:    ds_load_b32 v1, v0

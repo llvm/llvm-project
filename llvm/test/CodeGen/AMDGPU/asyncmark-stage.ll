@@ -580,6 +580,7 @@ define amdgpu_kernel void @loop_wait_then_mark_same_stage(<4 x i32> %sd, <8 x i3
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_add_co_i32 s6, s5, 8
 ; SDAG-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS)
+; SDAG-NEXT:    s_wait_xcnt 0x0
 ; SDAG-NEXT:    s_wait_asynccnt 0x1
 ; SDAG-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s5
 ; SDAG-NEXT:    s_add_co_i32 s4, s4, 1
@@ -632,6 +633,7 @@ define amdgpu_kernel void @loop_wait_then_mark_same_stage(<4 x i32> %sd, <8 x i3
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GISEL-NEXT:    s_add_co_u32 s7, s6, 8
 ; GISEL-NEXT:    ; wait_asyncmark(1, stages=GLOBAL_LOAD_ASYNC_TO_LDS)
+; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    s_wait_asynccnt 0x1
 ; GISEL-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_mov_b32 v2, s6
 ; GISEL-NEXT:    s_add_co_i32 s5, s5, 1

@@ -302,6 +302,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaVdst_0
   ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B64 $vgpr17, $vgpr32_vgpr33, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+  ; CHECK-NEXT:   S_WAIT_XCNT 0
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_0
   ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
