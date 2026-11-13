@@ -2616,8 +2616,47 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
 
         return match_object
 
+    def _complete(
+        self,
+        cmd_line: str,
+        cursor_pos: Optional[int] = None,
+        *,
+        max_completions: int = -1,
+        exe_ctx: Optional[lldb.SBExecutionContext] = None,
+    ) -> Tuple[int, lldb.SBStringList, lldb.SBStringList]:
+        """Completes cmd_line at cursor_pos, or at its end if not given, in
+        exe_ctx if given, otherwise existing execution context.
+
+        Returns the number of completions, the matches and their
+        descriptions
+        """
+        if cursor_pos is None:
+            cursor_pos = len(cmd_line)
+        interp = self.dbg.GetCommandInterpreter()
+        match_strings = lldb.SBStringList()
+        description_strings = lldb.SBStringList()
+        if exe_ctx is None:
+            num_matches = interp.HandleCompletionWithDescriptions(
+                cmd_line,
+                cursor_pos,
+                0,
+                max_completions,
+                match_strings,
+                description_strings,
+            )
+        else:
+            num_matches = interp.HandleCompletionWithDescriptions(
+                cmd_line,
+                cursor_pos,
+                max_completions,
+                exe_ctx,
+                match_strings,
+                description_strings,
+            )
+        return num_matches, match_strings, description_strings
+
     def check_completion_with_desc(
-        self, str_input, match_desc_pairs, enforce_order=False
+        self, str_input, match_desc_pairs, enforce_order=False, exe_ctx=None
     ):
         """
         Checks that when the given input is completed at the given list of
@@ -2628,12 +2667,10 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                                  string that LLDB should generate and the second element the description.
         :param enforce_order: True iff the order in which the completions are returned by LLDB
                               should match the order of the match_desc_pairs pairs.
+        :param exe_ctx: The SBExecutionContext to complete in, instead of the selected one.
         """
-        interp = self.dbg.GetCommandInterpreter()
-        match_strings = lldb.SBStringList()
-        description_strings = lldb.SBStringList()
-        num_matches = interp.HandleCompletionWithDescriptions(
-            str_input, len(str_input), 0, -1, match_strings, description_strings
+        num_matches, match_strings, description_strings = self._complete(
+            str_input, exe_ctx=exe_ctx
         )
         self.assertEqual(len(description_strings), len(match_strings))
 
@@ -2696,14 +2733,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 )
             self.assertFalse(got_failure, error_msg)
 
-    def complete_from_to(self, str_input, patterns):
+    def complete_from_to(self, str_input, patterns, exe_ctx=None):
         """Test that the completion mechanism completes str_input to patterns,
         where patterns could be a single pattern-string or a list of
         pattern-strings.
 
         If there is only one pattern and it is exactly equal to str_input, this
         assumes that there should be no completions provided and that the result
-        should be the same as the input."""
+        should be the same as the input.
+
+        If exe_ctx is given, completes in it instead of the selected one."""
 
         # Patterns should not be None in order to proceed.
         self.assertFalse(patterns is None)
@@ -2714,11 +2753,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         if not isinstance(patterns, list):
             patterns = [patterns]
 
-        interp = self.dbg.GetCommandInterpreter()
-        match_strings = lldb.SBStringList()
-        num_matches = interp.HandleCompletion(
-            str_input, len(str_input), 0, -1, match_strings
-        )
+        num_matches, match_strings, _ = self._complete(str_input, exe_ctx=exe_ctx)
         common_match = match_strings.GetStringAtIndex(0)
         if num_matches == 0:
             compare_string = str_input
@@ -2741,25 +2776,23 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 substrs=[p],
             )
 
-    def completions_match(self, command, completions, max_completions=-1):
+    def completions_match(self, command, completions, max_completions=-1, exe_ctx=None):
         """Checks that the completions for the given command are equal to the
-        given list of completions"""
-        interp = self.dbg.GetCommandInterpreter()
-        match_strings = lldb.SBStringList()
-        interp.HandleCompletion(
-            command, len(command), 0, max_completions, match_strings
+        given list of completions. If exe_ctx is given, completes in it instead
+        of the selected one."""
+        _, match_strings, _ = self._complete(
+            command, max_completions=max_completions, exe_ctx=exe_ctx
         )
         # match_strings is a 1-indexed list, so we have to slice...
         self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"
         )
 
-    def completions_contain(self, command, completions, match=True):
+    def completions_contain(self, command, completions, match=True, exe_ctx=None):
         """Checks that the completions for the given command contain the given
-        list of completions."""
-        interp = self.dbg.GetCommandInterpreter()
-        match_strings = lldb.SBStringList()
-        interp.HandleCompletion(command, len(command), 0, -1, match_strings)
+        list of completions. If exe_ctx is given, completes in it instead of
+        the selected one."""
+        _, match_strings, _ = self._complete(command, exe_ctx=exe_ctx)
         for completion in completions:
             # match_strings is a 1-indexed list, so we have to slice...
             if match:
