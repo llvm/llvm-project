@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fopenacc -ast-dump | FileCheck %s
+// RUN: %clang_cc1 %s -fopenacc -ast-dump | FileCheck --check-prefixes=CHECK,CHECK-NOPCH %s
 
 // Test this with PCH.
 // RUN: %clang_cc1 %s -fopenacc -emit-pch -o %t %s
@@ -74,9 +74,11 @@ struct Struct {
   // CHECK: CXXRecordDecl{{.*}} implicit struct Struct
   static const int StaticMem = 5;
   // CHECK-NEXT: VarDecl {{.*}} StaticMem 'const int' static cinit
+  // CHECK-NEXT: value: Int 5
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 5
   static const int StaticMem2 = 5;
   // CHECK-NEXT: VarDecl {{.*}} StaticMem2 'const int' static cinit
+  // CHECK-NEXT: value: Int 5
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 5
   static const int StaticMemArray[5];
   // CHECK-NEXT: VarDecl {{.*}} StaticMemArray 'const int[5]' static
@@ -236,20 +238,22 @@ struct DependentStruct {
 // CHECK-NEXT: CXXRecordDecl{{.*}} struct DependentStruct
 
 // CHECK-NEXT: VarDecl{{.*}} StaticMem 'const int' 
+// CHECK-NEXT: value: Int 5
 // CHECK-NEXT: IntegerLiteral{{.*}}'int' 5
 
 // CHECK-NEXT: VarDecl{{.*}} StaticMem2 'const int' 
+// CHECK-NEXT: value: Int 5
 // CHECK-NEXT: IntegerLiteral{{.*}}'int' 5
 //
 // CHECK-NEXT: VarDecl{{.*}} StaticMemArray 'const int[5]'
-// CHECK-NEXT: value: Array size=5
-// CHECK-NEXT: filler: 5 x Int 0
+// CHECK-NOPCH-NEXT: value: Array size=5
+// CHECK-NOPCH-NEXT: filler: 5 x Int 0
 // CHECK-NEXT: InitListExpr{{.*}} 'const int[5]'
 // CHECK-NEXT: array_filler
 
 // CHECK-NEXT: VarDecl{{.*}} StaticMemArray2 'const int[5]'
-// CHECK-NEXT: value: Array size=5
-// CHECK-NEXT: filler: 5 x Int 0
+// CHECK-NOPCH-NEXT: value: Array size=5
+// CHECK-NOPCH-NEXT: filler: 5 x Int 0
 // CHECK-NEXT: InitListExpr{{.*}} 'const int[5]'
 // CHECK-NEXT: array_filler
 

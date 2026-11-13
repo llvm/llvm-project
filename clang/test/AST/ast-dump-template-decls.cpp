@@ -188,6 +188,7 @@ int unTempl<int>;
 template<>
 float unTempl<float> = 1;
 // CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 unTempl 'float'
+// CHECK-NEXT: |-value: Float 1.000000e+00
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: `-ImplicitCastExpr 0x{{[^ ]*}} <col:24> 'float' <IntegralToFloating>
@@ -213,6 +214,7 @@ int binTempl<int, U>;
 template<class U>
 float binTempl<float, U> = 1;
 // CHECK:      VarTemplatePartialSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:28> col:7 binTempl 'float'
+// CHECK-NEXT: |-value: Float 1.000000e+00
 // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:10, col:16> col:16 referenced class depth 0 index 0 U
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
@@ -232,6 +234,7 @@ int binTempl<int, int>;
 template<>
 float binTempl<float, float> = 1;
 // CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:32> col:7 binTempl 'float'
+// CHECK-NEXT: |-value: Float 1.000000e+00
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'

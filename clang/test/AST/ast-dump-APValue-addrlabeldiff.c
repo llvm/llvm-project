@@ -1,6 +1,6 @@
 // Test without serialization:
 // RUN: %clang_cc1 -std=c23 -ast-dump %s -ast-dump-filter Test -triple=i686 \
-// RUN: | FileCheck --strict-whitespace --match-full-lines %s
+// RUN: | FileCheck --check-prefixes=CHECK,CHECK-NOPCH --strict-whitespace --match-full-lines %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -std=c23 -emit-pch -o %t %s
@@ -10,7 +10,8 @@
 // RUN: | FileCheck --strict-whitespace --match-full-lines %s
 
 
-// CHECK:  |   |-value: AddrLabelDiff &&l2 - &&l1
+// CHECK:  | `-VarDecl {{.*}} ar {{.*}} constexpr cinit
+// CHECK-NOPCH-NEXT:  |   |-value: AddrLabelDiff &&l2 - &&l1
 int Test(void) {
   constexpr __INTPTR_TYPE__ ar = &&l2 - &&l1;
 l1:

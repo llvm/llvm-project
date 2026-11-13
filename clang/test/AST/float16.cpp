@@ -1,6 +1,6 @@
 // Tests without serialization:
 // RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu %s \
-// RUN: | FileCheck %s --strict-whitespace
+// RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-NOPCH --strict-whitespace
 //
 // RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu -fnative-half-type %s \
 // RUN: | FileCheck %s --check-prefix=CHECK-NATIVE --strict-whitespace
@@ -32,9 +32,12 @@ namespace {
 //CHECK:      |-NamespaceDecl
 //CHECK-NEXT: | |-VarDecl {{.*}} f1n '_Float16'
 //CHECK-NEXT: | |-VarDecl {{.*}} f2n '_Float16' cinit
+//CHECK-NEXT: | | |-value: Float 3.300000e+01
 //CHECK-NEXT: | | `-FloatingLiteral {{.*}} '_Float16' 3.300000e+01
 //CHECK-NEXT: | |-VarDecl {{.*}} arr1n '_Float16[10]'
 //CHECK-NEXT: | |-VarDecl {{.*}} arr2n '_Float16[3]' cinit
+//CHECK-NOPCH-NEXT: | | |-value: Array size=3
+//CHECK-NOPCH-NEXT: | | | `-elements: Float 1.200195e+00, Float 3.000000e+00, Float 3.000000e+04
 //CHECK-NEXT: | | `-InitListExpr {{.*}} '_Float16[3]'
 //CHECK-NEXT: | |   |-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: | |   | `-FloatingLiteral {{.*}} 'double' 1.200000e+00
@@ -53,10 +56,13 @@ _Float16 func1f(_Float16 arg);
 
 //CHECK:      |-VarDecl {{.*}} f1f '_Float16'
 //CHECK-NEXT: |-VarDecl {{.*}} f2f '_Float16' cinit
+//CHECK-NEXT: | |-value: Float 3.240625e+01
 //CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: |   `-FloatingLiteral {{.*}} 'double' 3.240000e+01
 //CHECK-NEXT: |-VarDecl {{.*}} arr1f '_Float16[10]'
 //CHECK-NEXT: |-VarDecl {{.*}} arr2f '_Float16[3]' cinit
+//CHECK-NOPCH-NEXT: | |-value: Array size=3
+//CHECK-NOPCH-NEXT: | | `-elements: Float -1.200195e+00, Float -3.000000e+00, Float -3.000000e+04
 //CHECK-NEXT: | `-InitListExpr {{.*}} '_Float16[3]'
 //CHECK-NEXT: |   |-ImplicitCastExpr {{.*}} '_Float16' <FloatingCast>
 //CHECK-NEXT: |   | `-UnaryOperator {{.*}} 'double' prefix '-'
@@ -82,6 +88,7 @@ auto C = -1.0f16 + B;
 // float, and consequently also _Float16 promotions to float:
 
 //CHECK:      -VarDecl {{.*}} used B '__fp16' cinit
+//CHECK-NEXT: | |-value: Float -9.997559e-02
 //CHECK-NEXT: | `-ImplicitCastExpr {{.*}} '__fp16' <FloatingCast>
 //CHECK-NEXT: |   `-UnaryOperator {{.*}} 'double' prefix '-'
 //CHECK-NEXT: |     `-FloatingLiteral {{.*}} 'double' 1.000000e-01
