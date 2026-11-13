@@ -183,7 +183,7 @@ define hidden void @test.shl.exact.equal() {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[K_021:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[K_021]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 1, [[K_021]]
 ; CHECK-NEXT:    [[SHR1:%.*]] = ashr exact i32 [[SHL]], 1
 ; CHECK-NEXT:    [[SHR2:%.*]] = lshr exact i32 [[SHL]], 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[K_021]], 1
@@ -213,7 +213,7 @@ define hidden void @test.shl.exact.greater() {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[K_021:%.*]] = phi i32 [ 3, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[K_021]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 1, [[K_021]]
 ; CHECK-NEXT:    [[SHR1:%.*]] = ashr exact i32 [[SHL]], 2
 ; CHECK-NEXT:    [[SHR2:%.*]] = lshr exact i32 [[SHL]], 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[K_021]], 1
@@ -243,7 +243,7 @@ define hidden void @test.shl.exact.unbound(i32 %arg) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[K_021:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[K_021]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[K_021]]
 ; CHECK-NEXT:    [[SHR1:%.*]] = ashr exact i32 [[SHL]], 2
 ; CHECK-NEXT:    [[SHR2:%.*]] = lshr exact i32 [[SHL]], 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[K_021]], 1
@@ -273,7 +273,7 @@ define hidden void @test.shl.nonexact() {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[K_021:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[K_021]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 1, [[K_021]]
 ; CHECK-NEXT:    [[SHR1:%.*]] = ashr i32 [[SHL]], 3
 ; CHECK-NEXT:    [[SHR2:%.*]] = lshr i32 [[SHL]], 3
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[K_021]], 1
@@ -459,7 +459,7 @@ define void @test_shl_bw_minus_one_nsw(ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ -1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFF:%.*]] = shl i8 [[IV]], 7
+; CHECK-NEXT:    [[OFF:%.*]] = shl nsw i8 [[IV]], 7
 ; CHECK-NEXT:    store i8 [[OFF]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 1
@@ -517,7 +517,7 @@ define void @test_shl_var_rhs_bound(ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFF:%.*]] = shl i8 3, [[IV]]
+; CHECK-NEXT:    [[OFF:%.*]] = shl nuw nsw i8 3, [[IV]]
 ; CHECK-NEXT:    store i8 [[OFF]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 6
@@ -546,7 +546,7 @@ define void @test_shl_var_rhs_nuw_only(ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OFF:%.*]] = shl i8 3, [[IV]]
+; CHECK-NEXT:    [[OFF:%.*]] = shl nuw i8 3, [[IV]]
 ; CHECK-NEXT:    store i8 [[OFF]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 7
