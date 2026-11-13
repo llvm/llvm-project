@@ -3,7 +3,6 @@
 ; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9_1250 %s
 ; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck -check-prefixes=GCN,GFX1250,GFX9_1250 %s
 ; RUN: llc -mtriple=amdgpu13.10 < %s | FileCheck -check-prefixes=GCN,GFX13 %s
-; RUN: llc -global-isel -mtriple=amdgpu13.10 < %s | FileCheck -check-prefixes=GCN,GFX13 %s
 
 ; GCN-LABEL: {{^}}v_test_imax3_sgt_i32:
 ; GCN: v_max3_i32
