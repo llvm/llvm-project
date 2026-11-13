@@ -427,7 +427,8 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
     MBBI2 = skipBackwardPastNonInstructions(MBBI2, MBB2);
     if (MBBI1 == MBB1->end() || MBBI2 == MBB2->end())
       break;
-    if (!MBBI1->isIdenticalTo(*MBBI2) ||
+    if (!MBBI1->isIdenticalTo(*MBBI2, MachineInstr::CheckDefs,
+                              MachineInstr::IgnoreBundledDebugValues) ||
         !haveSamePseudoProbeContext(*MBBI1, *MBBI2) ||
         // FIXME: This check is dubious. It's used to get around a problem where
         // people incorrectly expect inline asm directives to remain in the same
@@ -885,7 +886,9 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
 
     assert(MBBICommon != MBBIECommon &&
            "Reached BB end within common tail length!");
-    assert(MBBICommon->isIdenticalTo(*MBBI) && "Expected matching MIIs!");
+    assert(MBBICommon->isIdenticalTo(*MBBI, MachineInstr::CheckDefs,
+                                     MachineInstr::IgnoreBundledDebugValues) &&
+           "Expected matching MIIs!");
 
     // Merge MMOs from memory operations in the common block.
     if (MBBICommon->mayLoadOrStore())
@@ -917,6 +920,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
     if (!countsAsInstruction(MI))
       continue;
     DebugLoc DL = MI.getDebugLoc();
+    SmallVector<MachineInstr *, 4> MatchingMIs;
     for (unsigned int i = 0 ; i < NextCommonInsts.size() ; i++) {
       if (i == commonTailIndex)
         continue;
@@ -929,11 +933,59 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
         assert(Pos != SameTails[i].getBlock()->end() &&
             "Reached BB end within common tail");
       }
-      assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
+      assert(MI.isIdenticalTo(*Pos, MachineInstr::CheckDefs,
+                              MachineInstr::IgnoreBundledDebugValues) &&
+             "Expected matching MIIs!");
       DL = DebugLoc::getMergedLocation(DL, Pos->getDebugLoc());
+      MatchingMIs.push_back(&*Pos);
       NextCommonInsts[i] = ++Pos;
     }
     MI.setDebugLoc(DL);
+
+    if (!MI.isBundle() || llvm::all_of(MatchingMIs, [&](MachineInstr *Other) {
+          return MI.isIdenticalTo(*Other);
+        }))
+      continue;
+
+    // The executable bundle contents match, but their nested debug values do
+    // not. Move unavailable copies before the shared bundle so no path carries
+    // a stale variable location into the merged tail.
+    SmallVector<MachineInstr *, 4> UndefDebugValues;
+    auto AddUndefDebugValues = [&](MachineInstr &Bundle) {
+      auto I = std::next(Bundle.getIterator());
+      auto E = Bundle.getParent()->instr_end();
+      while (I != E && I->isBundledWithPred()) {
+        MachineInstr &BundledMI = *I++;
+        if (!BundledMI.isDebugValue())
+          continue;
+        MachineInstr *Undef = MBB->getParent()->CloneMachineInstr(&BundledMI);
+        Undef->clearFlags(MachineInstr::BundledPred |
+                          MachineInstr::BundledSucc);
+        for (MachineOperand &MO : Undef->debug_operands())
+          MO.ChangeToRegister(Register(), false);
+        assert(Undef->isUndefDebugValue() &&
+               "Expected an unavailable debug value");
+        if (llvm::any_of(UndefDebugValues, [&](MachineInstr *Existing) {
+              return Existing->isEquivalentDbgInstr(*Undef);
+            })) {
+          MBB->getParent()->deleteMachineInstr(Undef);
+          continue;
+        }
+        MBB->insert(MI.getIterator(), Undef);
+        UndefDebugValues.push_back(Undef);
+      }
+    };
+
+    AddUndefDebugValues(MI);
+    for (MachineInstr *Other : MatchingMIs)
+      AddUndefDebugValues(*Other);
+
+    for (auto I = std::next(MI.getIterator()), E = MBB->instr_end();
+         I != E && I->isBundledWithPred();) {
+      MachineInstr &BundledMI = *I++;
+      if (BundledMI.isDebugValue())
+        BundledMI.eraseFromBundle();
+    }
   }
 
   if (UpdateLiveIns) {

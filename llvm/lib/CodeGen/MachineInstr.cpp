@@ -678,6 +678,11 @@ bool MachineInstr::hasPropertyInBundle(uint64_t Mask, QueryType Type) const {
 
 bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
                                  MICheckType Check) const {
+  return isIdenticalTo(Other, Check, CheckBundleDebugInstrs);
+}
+
+bool MachineInstr::isIdenticalTo(const MachineInstr &Other, MICheckType Check,
+                                 MIBundleCheckType BundleCheck) const {
   // If opcodes or number of operands are not the same then the two
   // instructions are obviously not identical.
   if (Other.getOpcode() != getOpcode() ||
@@ -691,18 +696,24 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     assert(Other.isBundle() && "Expected that both instructions are bundles.");
     MachineBasicBlock::const_instr_iterator I1 = getIterator();
     MachineBasicBlock::const_instr_iterator I2 = Other.getIterator();
-    // Loop until we analysed the last instruction inside at least one of the
-    // bundles.
-    while (I1->isBundledWithSucc() && I2->isBundledWithSucc()) {
-      ++I1;
-      ++I2;
-      if (!I1->isIdenticalTo(*I2, Check))
+    auto Advance = [BundleCheck](auto &I) {
+      do {
+        if (!I->isBundledWithSucc())
+          return false;
+        ++I;
+      } while (BundleCheck == IgnoreBundledDebugValues && I->isDebugValue());
+      return true;
+    };
+    while (true) {
+      bool More1 = Advance(I1);
+      bool More2 = Advance(I2);
+      if (More1 != More2)
+        return false;
+      if (!More1)
+        break;
+      if (!I1->isIdenticalTo(*I2, Check, BundleCheck))
         return false;
     }
-    // If we've reached the end of just one of the two bundles, but not both,
-    // the instructions are not identical.
-    if (I1->isBundledWithSucc() || I2->isBundledWithSucc())
-      return false;
   }
 
   // Check operands to make sure they match.
