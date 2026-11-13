@@ -3675,14 +3675,8 @@ let append Predicates = [IsRV64] in {
   def : PatHorizontalMulAcc<riscv_pm2suba_x, PM2SUBA_WX, i64, v2i32>;
   def : PatHorizontalMulAcc<riscv_pm2addasu, PM2ADDASU_W, i64, v2i32>;
 
-  // 8/16/32-bit multiply low patterns
+  // 32-bit multiply low pattern
   // FIXME custom lower
-  def : Pat<(v8i8 (mul GPR:$rs1, GPR:$rs2)),
-            (PPAIRE_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2),
-                      (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
-  def : Pat<(v4i16 (mul GPR:$rs1, GPR:$rs2)),
-            (PPAIRE_H (PMUL_W_H00 GPR:$rs1, GPR:$rs2),
-                      (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
   def : Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
             (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
 
