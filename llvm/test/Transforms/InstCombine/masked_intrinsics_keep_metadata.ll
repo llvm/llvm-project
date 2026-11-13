@@ -40,6 +40,20 @@ b0:
   ret void
 }
 
+; For an { i32, float } object, only the integer field is initially read.
+; TODO: Check whether the integer TBAA tag remains valid on the unmasked load,
+; which also reads the inactive float field. Record the existing behavior.
+define <2 x i32> @unmask_integer_field_tbaa(ptr dereferenceable(8) %p) {
+; CHECK-LABEL: define <2 x i32> @unmask_integer_field_tbaa(
+; CHECK-SAME: ptr dereferenceable(8) [[P:%.*]]) {
+; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x i32>, ptr [[P]], align 1, !tbaa [[INT_TBAA3:![0-9]+]]
+; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i32> [[UNMASKEDLOAD]], i32 0, i64 1
+; CHECK-NEXT:    ret <2 x i32> [[V1]]
+;
+  %v = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %p, <2 x i1> <i1 true, i1 false>, <2 x i32> zeroinitializer), !tbaa !3
+  ret <2 x i32> %v
+}
+
 attributes #0 = { norecurse nounwind }
 
 declare <4 x i32> @llvm.masked.load.v4i1.p0(ptr, i32, <4 x i1>, <4 x i32>)
@@ -49,8 +63,13 @@ declare void @llvm.masked.store.v4i1.p0(<4 x i32>, ptr, i32, <4 x i1>)
 !1 = !{!"omnipotent char", !2, i64 0}
 !2 = !{!"Simple C/C++ TBAA"}
 
+!3 = !{!4, !4, i64 0}
+!4 = !{!"int", !1, i64 0}
+
 ;.
 ; CHECK: [[CHAR_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"omnipotent char", [[META2:![0-9]+]], i64 0}
 ; CHECK: [[META2]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+; CHECK: [[META4]] = !{!"int", [[META1]], i64 0}
 ;.
