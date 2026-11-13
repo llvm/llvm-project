@@ -16,8 +16,7 @@ define amdgpu_kernel void @load_idx_idy(ptr addrspace(4) %disp, ptr %g) {
 ; CHECK-NEXT:    s_add_u32 s0, s0, s4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, s5
 ; CHECK-NEXT:    global_load_ubyte v2, v0, s[0:1] offset:4
-; CHECK-NEXT:    v_mov_b32_e32 v0, s2
-; CHECK-NEXT:    v_mov_b32_e32 v1, s3
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v2
 ; CHECK-NEXT:    s_endpgm
