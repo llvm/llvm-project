@@ -179,14 +179,12 @@ convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
 }
 
 template <> mlir::APInt getZeroInitFromType(mlir::Type ty) {
-  if (mlir::isa<cir::BoolType>(ty))
-    return mlir::APInt::getZero(1);
-  const auto intTy = mlir::cast<cir::IntType>(ty);
+  const auto intTy = mlir::cast<mlir::IntegerType>(ty);
   return mlir::APInt::getZero(intTy.getWidth());
 }
 
 template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
-  auto fpTy = mlir::cast<cir::FPTypeInterface>(ty);
+  auto fpTy = mlir::cast<mlir::FloatType>(ty);
   return mlir::APFloat::getZero(fpTy.getFloatSemantics());
 }
 
@@ -195,11 +193,12 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
 /// \param currentDims the shpae of tensor we're going to convert to
 /// \param dimIndex the current dimension we're processing
 /// \param currentIndex the current index in the values array
+/// \param convertedElementType the lowered storage type of each element
 template <typename AttrTy, typename StorageTy>
 bool convertToDenseElementsAttrImpl(
     cir::ConstArrayAttr attr, llvm::SmallVectorImpl<StorageTy> &values,
     const llvm::SmallVectorImpl<int64_t> &currentDims, int64_t dimIndex,
-    int64_t currentIndex) {
+    int64_t currentIndex, mlir::Type convertedElementType) {
   if (auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
     if (auto arrayType = mlir::dyn_cast<cir::ArrayType>(attr.getType())) {
       for (auto element : stringAttr) {
@@ -221,8 +220,10 @@ bool convertToDenseElementsAttrImpl(
   for (auto eltAttr : arrayAttr) {
     if constexpr (std::is_same_v<StorageTy, mlir::APInt>) {
       if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(eltAttr)) {
+        unsigned bitWidth =
+            mlir::cast<mlir::IntegerType>(convertedElementType).getWidth();
         values[currentIndex++] =
-            llvm::APInt(1, static_cast<uint64_t>(boolAttr.getValue()));
+            llvm::APInt(bitWidth, static_cast<uint64_t>(boolAttr.getValue()));
         continue;
       }
     }
@@ -233,7 +234,8 @@ bool convertToDenseElementsAttrImpl(
 
     if (auto subArrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(eltAttr)) {
       convertToDenseElementsAttrImpl<AttrTy>(subArrayAttr, values, currentDims,
-                                             dimIndex, currentIndex);
+                                             dimIndex, currentIndex,
+                                             convertedElementType);
       currentIndex += elementsSizeInCurrentDim;
       continue;
     }
@@ -254,18 +256,20 @@ bool convertToDenseElementsAttrImpl(
 }
 
 template <typename AttrTy, typename StorageTy>
-std::optional<mlir::DenseElementsAttr> convertToDenseElementsAttr(
-    cir::ConstArrayAttr attr, const llvm::SmallVectorImpl<int64_t> &dims,
-    mlir::Type elementType, mlir::Type convertedElementType) {
+std::optional<mlir::DenseElementsAttr>
+convertToDenseElementsAttr(cir::ConstArrayAttr attr,
+                           const llvm::SmallVectorImpl<int64_t> &dims,
+                           mlir::Type convertedElementType) {
   unsigned vectorSize = 1;
   for (auto dim : dims)
     vectorSize *= dim;
-  auto values = llvm::SmallVector<StorageTy, 8>(
-      vectorSize, getZeroInitFromType<StorageTy>(elementType));
+  llvm::SmallVector<StorageTy> values(
+      vectorSize, getZeroInitFromType<StorageTy>(convertedElementType));
 
   if (!convertToDenseElementsAttrImpl<AttrTy>(attr, values, dims,
-                                              /*currentDim=*/0,
-                                              /*initialIndex=*/0))
+                                              /*dimIndex=*/0,
+                                              /*currentIndex=*/0,
+                                              convertedElementType))
     return std::nullopt;
 
   return mlir::DenseElementsAttr::get(
@@ -518,16 +522,19 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
     if (mlir::cast<cir::IntType>(type).isBitInt())
       return std::nullopt;
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
-        constArr, dims, type, converter->convertType(type));
+        constArr, dims, converter->convertType(type));
   }
 
-  if (mlir::isa<cir::BoolType>(type))
-    return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
-        constArr, dims, type, converter->convertType(type));
+  if (mlir::isa<cir::BoolType>(type)) {
+    mlir::Type storageType =
+        convertTypeForMemory(*converter, mlir::DataLayout(moduleOp), type);
+    return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(constArr, dims,
+                                                                 storageType);
+  }
 
   if (mlir::isa<cir::FPTypeInterface>(type))
     return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
-        constArr, dims, type, converter->convertType(type));
+        constArr, dims, converter->convertType(type));
 
   if (mlir::isa<cir::PointerType>(type)) {
     // FIXME: Pointer arrays with trailing_zeros (null-sentinel tables) fall
@@ -616,9 +623,11 @@ lowerConstRecordMemberAttr(mlir::Attribute attr,
                                   intAttr.getValue());
   }
 
-  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr))
-    return mlir::IntegerAttr::get(converter->convertType(boolAttr.getType()),
-                                  boolAttr.getValue() ? 1 : 0);
+  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr)) {
+    mlir::Type storageType = convertTypeForMemory(
+        *converter, mlir::DataLayout(moduleOp), boolAttr.getType());
+    return mlir::IntegerAttr::get(storageType, boolAttr.getValue() ? 1 : 0);
+  }
 
   if (auto fpAttr = mlir::dyn_cast<cir::FPAttr>(attr))
     return mlir::FloatAttr::get(converter->convertType(fpAttr.getType()),

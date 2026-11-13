@@ -2950,7 +2950,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     std::optional<mlir::Attribute> denseAttr;
     if (constArr &&
         (denseAttr = lowerConstArrayAttr(constArr, symbolTables, typeConverter,
-                                         preConversionTypes))) {
+                                         preConversionTypes, moduleOp))) {
       attr = denseAttr.value();
     } else {
       const mlir::Value initVal =
