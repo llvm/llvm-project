@@ -734,11 +734,10 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
     MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
-    // We need to account for the fact that in this situation the AGPRs are not
-    // transferable so there is no reason to limit them.
-    if (MaxVectorRegs > NumArchVGPRs) {
+    // Budget past the addressable VGPRs cannot be used as VGPRs, so raise the
+    // AGPR minimum to cover it.
+    if (MaxVectorRegs > NumArchVGPRs)
       MinNumAGPRs = std::max(MinNumAGPRs, MaxVectorRegs - NumArchVGPRs);
-    }
 
     MaxNumVGPRs = std::min(MaxVectorRegs - MaxNumAGPRs, NumArchVGPRs);
     MaxNumAGPRs =

@@ -513,7 +513,7 @@ define amdgpu_kernel void @num_agpr_occ4_min_4_max_4() #39 {
   call void asm sideeffect "; clobber $0","~{a4}"(), !srcloc !{i32 40}
   ret void
 }
-attributes #39 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-agpr-alloc"="4,4" }
+attributes #39 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-agpr-alloc"="4,4" }
 
 ; register budget 512, fully allocated and no warnings
 define amdgpu_kernel void @num_agpr_occ1_min_0_max_312() #40 {
