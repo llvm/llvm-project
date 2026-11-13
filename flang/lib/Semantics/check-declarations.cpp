@@ -1965,6 +1965,16 @@ void CheckHelper::CheckDerivedType(
           derivedType.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
     }
   }
+  if (const Scope *parentScope{scope->GetDerivedTypeParent()}) {
+    for (const Symbol &param : details.paramNameOrder()) {
+      if (const Symbol *inherited{parentScope->FindComponent(param.name())};
+          inherited && inherited->has<TypeParamDetails>()) {
+        SayWithDeclaration(*inherited, param.name(),
+            "Type parameter '%s' is already declared in a parent of this derived type"_err_en_US,
+            param.name());
+      }
+    }
+  }
   if (HasIntrinsicTypeName(derivedType)) { // C729
     messages_.Say("A derived type name cannot be the name of an intrinsic"
                   " type"_err_en_US);
