@@ -210,8 +210,8 @@ foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
 endforeach()
 string(STRIP "${LIBOMPTARGET_ENUM_PLUGIN_TARGETS}" LIBOMPTARGET_ENUM_PLUGIN_TARGETS)
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/Shared/Targets.def.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/Shared/Targets.def
+  ${CMAKE_CURRENT_SOURCE_DIR}/liboffload/include/Targets.def.in
+  ${CMAKE_CURRENT_BINARY_DIR}/liboffload/include/Targets.def
 )
 
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
@@ -322,6 +322,7 @@ pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
 pythonize_bool(BUILD_LIBACCTARGET)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(LIBOMPACCSUPPORT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libompaccsupport/include)
 set(LIBOMPTARGET_BINARY_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
 if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)

@@ -25,7 +25,6 @@
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
 
-#include "omptarget.h"
 
 namespace llvm {
 namespace omp {

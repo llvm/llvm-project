@@ -11,8 +11,8 @@
 #include "OpenMP/Mapping.h"
 
 #include "PluginManager.h"
+#include "Requirements.h"
 #include "Shared/Debug.h"
-#include "Shared/Requirements.h"
 #include "device.h"
 
 using namespace llvm::omp::target::debug;
