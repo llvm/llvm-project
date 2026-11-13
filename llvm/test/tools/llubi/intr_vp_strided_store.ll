@@ -27,6 +27,15 @@ define void @main() {
 
   call void @llvm.experimental.vp.strided.store(<vscale x 2 x i32> splat (i32 40), ptr @a, i64 8, <vscale x 2 x i1> splat (i1 true), i32 3)
   %after_scalable = load <8 x i32>, ptr @a, align 4
+
+  ; Lane 0 is stored to the base pointer even if the stride is poison.
+  call void @llvm.experimental.vp.strided.store(<4 x i32> splat (i32 50), ptr @a, i64 poison, <4 x i1> splat (i1 true), i32 1)
+  %after_poison_stride = load <8 x i32>, ptr @a, align 4
+
+  ; Without an align attribute only the base pointer needs the ABI alignment of
+  ; i32, so the other lanes may be misaligned.
+  call void @llvm.experimental.vp.strided.store(<4 x i32> <i32 -1, i32 0, i32 -1, i32 0>, ptr @a, i64 2, <4 x i1> splat (i1 true), i32 2)
+  %after_misaligned = load <8 x i32>, ptr @a, align 4
   ret void
 }
 ; CHECK: Entering function: main
@@ -43,5 +52,9 @@ define void @main() {
 ; CHECK-NEXT:   call void @llvm.experimental.vp.strided.store.v4i32.p0.i64(<4 x i32> poison, ptr @c, i64 4, <4 x i1> splat (i1 true), i32 0)
 ; CHECK-NEXT:   call void @llvm.experimental.vp.strided.store.nxv2i32.p0.i64(<vscale x 2 x i32> splat (i32 40), ptr @a, i64 8, <vscale x 2 x i1> splat (i1 true), i32 3)
 ; CHECK-NEXT:   %after_scalable = load <8 x i32>, ptr @a, align 4 => { i32 40, i32 23, i32 40, i32 0, i32 40, i32 12, i32 11, i32 30 }
+; CHECK-NEXT:   call void @llvm.experimental.vp.strided.store.v4i32.p0.i64(<4 x i32> splat (i32 50), ptr @a, i64 poison, <4 x i1> splat (i1 true), i32 1)
+; CHECK-NEXT:   %after_poison_stride = load <8 x i32>, ptr @a, align 4 => { i32 50, i32 23, i32 40, i32 0, i32 40, i32 12, i32 11, i32 30 }
+; CHECK-NEXT:   call void @llvm.experimental.vp.strided.store.v4i32.p0.i64(<4 x i32> <i32 -1, i32 0, i32 -1, i32 0>, ptr @a, i64 2, <4 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:   %after_misaligned = load <8 x i32>, ptr @a, align 4 => { i32 65535, i32 0, i32 40, i32 0, i32 40, i32 12, i32 11, i32 30 }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

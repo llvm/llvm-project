@@ -447,6 +447,10 @@ public:
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
                                AnyValue &AccumulatedOffset);
+  /// Sign extends or truncates the GEP index \p Idx to \p IndexBitWidth bits.
+  /// Returns poison if truncating it would violate \p Flags.
+  static AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
+                                    GEPNoWrapFlags Flags);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

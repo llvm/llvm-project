@@ -3,7 +3,7 @@
 ; RUN: not llubi --verbose --entry-function=poison_mask_lane < %s 2>&1 | FileCheck %s --check-prefix=POISON-MASK-LANE
 ; RUN: not llubi --verbose --entry-function=poison_stride < %s 2>&1 | FileCheck %s --check-prefix=POISON-STRIDE
 ; RUN: not llubi --verbose --entry-function=out_of_bounds < %s 2>&1 | FileCheck %s --check-prefix=OOB
-; RUN: not llubi --verbose --entry-function=misaligned_stride < %s 2>&1 | FileCheck %s --check-prefix=MISALIGNED-STRIDE
+; RUN: not llubi --verbose --entry-function=misaligned_base < %s 2>&1 | FileCheck %s --check-prefix=MISALIGNED-BASE
 ; RUN: not llubi --verbose --entry-function=align_attr < %s 2>&1 | FileCheck %s --check-prefix=ALIGN-ATTR
 
 @a = global [8 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7]
@@ -38,14 +38,14 @@ define void @poison_mask_lane() {
   ret void
 }
 
-; A poison stride makes every lane's pointer poison.
+; A poison stride makes every lane's pointer except lane 0's poison.
 define void @poison_stride() {
 ; POISON-STRIDE: Entering function: poison_stride
 ; POISON-STRIDE-NEXT: Stacktrace:
-; POISON-STRIDE-NEXT: #0   %r = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr @a, i64 poison, <4 x i1> splat (i1 true), i32 1) at @poison_stride <stdin>:{{[0-9]+}}
+; POISON-STRIDE-NEXT: #0   %r = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr @a, i64 poison, <4 x i1> splat (i1 true), i32 2) at @poison_stride <stdin>:{{[0-9]+}}
 ; POISON-STRIDE-NEXT: Immediate UB detected: Invalid memory access with a poison pointer.
 ; POISON-STRIDE-NEXT: error: Execution of function 'poison_stride' failed.
-  %r = call <4 x i32> @llvm.experimental.vp.strided.load(ptr @a, i64 poison, <4 x i1> splat (i1 true), i32 1)
+  %r = call <4 x i32> @llvm.experimental.vp.strided.load(ptr @a, i64 poison, <4 x i1> splat (i1 true), i32 2)
   ret void
 }
 
@@ -59,25 +59,29 @@ define void @out_of_bounds() {
   ret void
 }
 
-; Without an align attribute each lane's pointer must have the ABI alignment of
-; i32, so a stride of 2 makes lane 1's pointer poison.
-define void @misaligned_stride() {
-; MISALIGNED-STRIDE: Entering function: misaligned_stride
-; MISALIGNED-STRIDE-NEXT: Stacktrace:
-; MISALIGNED-STRIDE-NEXT: #0   %r = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr @a, i64 2, <4 x i1> splat (i1 true), i32 2) at @misaligned_stride <stdin>:{{[0-9]+}}
-; MISALIGNED-STRIDE-NEXT: Immediate UB detected: Invalid memory access with a poison pointer.
-; MISALIGNED-STRIDE-NEXT: error: Execution of function 'misaligned_stride' failed.
-  %r = call <4 x i32> @llvm.experimental.vp.strided.load(ptr @a, i64 2, <4 x i1> splat (i1 true), i32 2)
+; Without an align attribute the base pointer must have the ABI alignment of
+; i32, even though lane 0 is disabled and lane 1 is aligned.
+define void @misaligned_base() {
+; MISALIGNED-BASE: Entering function: misaligned_base
+; MISALIGNED-BASE-NEXT: %p = getelementptr i8, ptr @a, i64 2 => ptr 0x12 [@a + 2]
+; MISALIGNED-BASE-NEXT: Stacktrace:
+; MISALIGNED-BASE-NEXT: #0   %r = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr %p, i64 2, <4 x i1> <i1 false, i1 true, i1 false, i1 false>, i32 2) at @misaligned_base <stdin>:{{[0-9]+}}
+; MISALIGNED-BASE-NEXT: Immediate UB detected: Invalid memory access with a poison pointer.
+; MISALIGNED-BASE-NEXT: error: Execution of function 'misaligned_base' failed.
+  %p = getelementptr i8, ptr @a, i64 2
+  %r = call <4 x i32> @llvm.experimental.vp.strided.load(ptr %p, i64 2, <4 x i1> <i1 false, i1 true, i1 false, i1 false>, i32 2)
   ret void
 }
 
-; The align attribute on the base pointer applies to every lane's pointer.
+; The align attribute applies to the base pointer, which is misaligned here.
 define void @align_attr() {
 ; ALIGN-ATTR: Entering function: align_attr
+; ALIGN-ATTR-NEXT: %p = getelementptr i8, ptr @a, i64 2 => ptr 0x12 [@a + 2]
 ; ALIGN-ATTR-NEXT: Stacktrace:
-; ALIGN-ATTR-NEXT: #0   %r = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 8 @a, i64 4, <4 x i1> splat (i1 true), i32 2) at @align_attr <stdin>:{{[0-9]+}}
+; ALIGN-ATTR-NEXT: #0   %r = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 4 %p, i64 4, <4 x i1> splat (i1 true), i32 2) at @align_attr <stdin>:{{[0-9]+}}
 ; ALIGN-ATTR-NEXT: Immediate UB detected: Invalid memory access with a poison pointer.
 ; ALIGN-ATTR-NEXT: error: Execution of function 'align_attr' failed.
-  %r = call <4 x i32> @llvm.experimental.vp.strided.load(ptr align 8 @a, i64 4, <4 x i1> splat (i1 true), i32 2)
+  %p = getelementptr i8, ptr @a, i64 2
+  %r = call <4 x i32> @llvm.experimental.vp.strided.load(ptr align 4 %p, i64 4, <4 x i1> splat (i1 true), i32 2)
   ret void
 }

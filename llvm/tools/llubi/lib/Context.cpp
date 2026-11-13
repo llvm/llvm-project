@@ -1002,8 +1002,8 @@ AnyValue Context::computeScaledPtrAdd(const AnyValue &Ptr,
   return computePtrAdd(Ptr, ScaledOffset.asInteger(), Flags, AccumulatedOffset);
 }
 
-static AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
-                                  GEPNoWrapFlags Flags) {
+AnyValue Context::canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
+                                    GEPNoWrapFlags Flags) {
   if (Idx.isPoison())
     return AnyValue::poison();
   auto &IdxInt = Idx.asInteger();
