@@ -1,3 +1,6 @@
+; The input is intentionally invalid IR, so
+; -disable-verify is needed to get it past opt's implicit input verification; the
+; trailing explicit "verify" pass then proves globalopt produced valid IR.
 ; RUN: opt -mtriple=x86_64-pc-windows-msvc -disable-verify -passes=globalopt,verify -S < %s | FileCheck %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -disable-verify -passes=globalopt,verify -S < %s | FileCheck %s
 
