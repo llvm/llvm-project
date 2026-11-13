@@ -9,7 +9,7 @@ define { ptr, i32 } @test() personality ptr null {
 ; CHECK-NEXT:    addi a8, a1, -16
 ; CHECK-NEXT:    or a1, a8, a8
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; CHECK-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset a0, -4
 ; CHECK-NEXT:  .Ltmp0: # EH_LABEL
 ; CHECK-NEXT:    movi a2, 0
@@ -20,7 +20,7 @@ define { ptr, i32 } @test() personality ptr null {
 ; CHECK-NEXT:  # %bb.1: # %postinvoke
 ; CHECK-NEXT:  .LBB0_2: # %landingPad
 ; CHECK-NEXT:  .Ltmp2: # EH_LABEL
-; CHECK-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; CHECK-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; CHECK-NEXT:    addi a8, a1, 16
 ; CHECK-NEXT:    or a1, a8, a8
 ; CHECK-NEXT:    ret

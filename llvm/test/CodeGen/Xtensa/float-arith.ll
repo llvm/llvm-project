@@ -42,10 +42,10 @@ define float @fdiv_s(float %a, float %b) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI3_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -60,10 +60,10 @@ define float @fsqrt_s(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI4_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -96,10 +96,10 @@ define float @fmin_s(float %a, float %b) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI6_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -114,10 +114,10 @@ define float @fmax_s(float %a, float %b) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI7_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -362,10 +362,10 @@ define float @powi_f32(float %a, i32 %b) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI20_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -381,10 +381,10 @@ define float @sin_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI21_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -399,10 +399,10 @@ define float @cos_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI22_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -416,10 +416,10 @@ define float @exp_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI23_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -432,10 +432,10 @@ define float @log_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI24_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -450,10 +450,10 @@ define float @log10_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI25_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -468,10 +468,10 @@ define float @log2_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI26_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -486,10 +486,10 @@ define float @floor_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI27_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -504,10 +504,10 @@ define float @ceil_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI28_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -521,10 +521,10 @@ define float @rint_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI29_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -539,10 +539,10 @@ define float @nearbyint_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI30_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
@@ -557,10 +557,10 @@ define float @round_f32(float %a) nounwind {
 ; XTENSA:       # %bb.0:
 ; XTENSA-NEXT:    addi a8, a1, -16
 ; XTENSA-NEXT:    or a1, a8, a8
-; XTENSA-NEXT:    s32i a0, a1, 0 # 4-byte Folded Spill
+; XTENSA-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
 ; XTENSA-NEXT:    l32r a8, .LCPI31_0
 ; XTENSA-NEXT:    callx0 a8
-; XTENSA-NEXT:    l32i a0, a1, 0 # 4-byte Folded Reload
+; XTENSA-NEXT:    l32i a0, a1, 12 # 4-byte Folded Reload
 ; XTENSA-NEXT:    addi a8, a1, 16
 ; XTENSA-NEXT:    or a1, a8, a8
 ; XTENSA-NEXT:    ret
