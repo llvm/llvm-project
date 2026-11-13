@@ -377,14 +377,16 @@ void GSIStreamBuilder::addGlobalSymbol(const codeview::CVSymbol &Symbol) {
 // Serialize each public and write it.
 static Error writePublics(BinaryStreamWriter &Writer,
                           ArrayRef<BulkPublic> Publics) {
-  std::vector<uint8_t> Storage;
-  for (const BulkPublic &Pub : Publics) {
-    Storage.resize(sizeOfPublic(Pub));
-    serializePublic(Storage.data(), Pub);
-    if (Error E = Writer.writeBytes(Storage))
-      return E;
-  }
-  return Error::success();
+  if (Publics.empty())
+    return Error::success();
+
+  const BulkPublic &Last = Publics.back();
+  std::vector<uint8_t> Buffer(size_t(Last.SymOffset) + sizeOfPublic(Last));
+  parallelFor(0, Publics.size(), [&](size_t I) {
+    serializePublic(Buffer.data() + Publics[I].SymOffset, Publics[I]);
+  });
+
+  return Writer.writeBytes(Buffer);
 }
 
 static Error writeRecords(BinaryStreamWriter &Writer,
