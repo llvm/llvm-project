@@ -573,3 +573,111 @@ llvm.func @no_fold_inttoptr_ptrtoint(%ptr: !llvm.ptr) -> !llvm.ptr {
   %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
   llvm.return %1 : !llvm.ptr
 }
+
+// -----
+
+// A chain of branches to single-predecessor blocks merges into one block.
+// CHECK-LABEL: llvm.func @br_merge_single_pred_chain
+// CHECK-NOT: llvm.br
+// CHECK: %[[V:.*]] = llvm.add %{{.*}}, %{{.*}} : i32
+// CHECK: llvm.return %[[V]] : i32
+llvm.func @br_merge_single_pred_chain(%arg0 : i32) -> i32 {
+  llvm.br ^bb1
+^bb1:
+  %0 = llvm.add %arg0, %arg0 : i32
+  llvm.br ^bb2
+^bb2:
+  llvm.return %0 : i32
+}
+
+// -----
+
+// The successor has two predecessors, so the branch stays.
+// CHECK-LABEL: llvm.func @br_no_merge_multi_pred
+// CHECK: llvm.cond_br
+// CHECK: llvm.br ^bb2
+// CHECK: %[[V:.*]] = llvm.add %{{.*}}, %{{.*}} : i32
+llvm.func @br_no_merge_multi_pred(%cond : i1, %arg0 : i32) -> i32 {
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  llvm.br ^bb2
+^bb2:
+  %0 = llvm.add %arg0, %arg0 : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+// A branch to its own block stays.
+// CHECK-LABEL: llvm.func @br_no_merge_self_loop
+// CHECK: llvm.br ^bb1
+llvm.func @br_no_merge_self_loop(%arg0 : i32) -> i32 {
+  llvm.br ^bb0
+^bb0:
+  %0 = llvm.add %arg0, %arg0 : i32
+  llvm.br ^bb0
+}
+
+// -----
+
+// Block arguments of the merged block are replaced by the branch operands.
+// CHECK-LABEL: llvm.func @br_merge_block_args
+// CHECK: %[[V:.*]] = llvm.add %{{.*}}, %{{.*}} : i32
+// CHECK: llvm.return %[[V]] : i32
+llvm.func @br_merge_block_args(%arg0 : i32) -> i32 {
+  llvm.br ^bb1(%arg0 : i32)
+^bb1(%x : i32):
+  %0 = llvm.add %x, %x : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+// Merging would drop the loop annotation on the branch, so it stays.
+// CHECK-LABEL: llvm.func @br_no_merge_loop_annotation
+// CHECK: llvm.br ^bb1 loop_annotation
+llvm.func @br_no_merge_loop_annotation() {
+  llvm.br ^bb1 loop_annotation = #llvm.loop_annotation<disableNonforced = true>
+^bb1:
+  llvm.return
+}
+
+// -----
+
+// A block tag means the successor block address is taken, so it stays.
+// CHECK-LABEL: llvm.func @br_no_merge_blocktag
+// CHECK: llvm.br ^bb1
+// CHECK: llvm.blocktag
+llvm.func @br_no_merge_blocktag() {
+  llvm.br ^bb1
+^bb1:
+  llvm.blocktag <id = 1>
+  llvm.return
+}
+
+// -----
+
+// Block arguments of the merged block are replaced by the branch
+// operands, one per argument.
+// CHECK-LABEL: llvm.func @br_merge_multiple_block_args
+// CHECK-NOT: llvm.br
+// CHECK: %[[V:.*]] = llvm.add %arg0, %arg1 : i32
+// CHECK: llvm.return %[[V]] : i32
+llvm.func @br_merge_multiple_block_args(%arg0 : i32, %arg1 : i32) -> i32 {
+  llvm.br ^bb1(%arg0, %arg1 : i32, i32)
+^bb1(%x : i32, %y : i32):
+  %0 = llvm.add %x, %y : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+// A successor holding only its terminator still merges.
+// CHECK-LABEL: llvm.func @br_merge_empty_successor
+// CHECK-NOT: llvm.br
+// CHECK: llvm.return %arg0 : i32
+llvm.func @br_merge_empty_successor(%arg0 : i32) -> i32 {
+  llvm.br ^bb1
+^bb1:
+  llvm.return %arg0 : i32
+}
