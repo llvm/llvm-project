@@ -1,0 +1,41 @@
+## On ARMNT, the export RVA of a Thumb function has its low bit set. Disassemble
+## an export from the even address.
+
+# RUN: yaml2obj %s -o %t.dll
+# RUN: llvm-objdump -d --no-show-raw-insn %t.dll | FileCheck %s
+
+# CHECK:      10001000 <add3>:
+# CHECK-NEXT: 10001000: add r0, r1
+# CHECK-NEXT: 10001002: add r0, r2
+# CHECK-NEXT: 10001004: bx lr
+# CHECK-EMPTY:
+# CHECK-NEXT: 10001006 <mul2>:
+# CHECK-NEXT: 10001006: lsls r0, r0, #0x1
+# CHECK-NEXT: 10001008: bx lr
+
+--- !COFF
+OptionalHeader:
+  ImageBase:       268435456
+  SectionAlignment: 4096
+  FileAlignment:   512
+  ExportTable:
+    RelativeVirtualAddress: 8192
+    Size:            82
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARMNT
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_32BIT_MACHINE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     10
+    SectionData:     '08441044704740007047'
+    SizeOfRawData:   512
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     82
+    SectionData:     00000000000000000000000028200000010000000200000002000000342000003C200000442000006578706F7274732E646C6C000110000007100000482000004D2000000000010061646433006D756C3200
+    SizeOfRawData:   512
+symbols:         []
+...

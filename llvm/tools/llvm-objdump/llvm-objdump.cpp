@@ -2020,6 +2020,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           });
       if (Sec != SectionAddresses.begin()) {
         --Sec;
+        // The export RVA of a Thumb function has its low bit set.
+        if (COFFObj->getMachine() == COFF::IMAGE_FILE_MACHINE_ARMNT &&
+            Sec->second.isText())
+          VA &= ~1ULL;
         AllSymbols[Sec->second].emplace_back(VA, Name, ELF::STT_NOTYPE);
       } else
         AbsoluteSymbols.emplace_back(VA, Name, ELF::STT_NOTYPE);
