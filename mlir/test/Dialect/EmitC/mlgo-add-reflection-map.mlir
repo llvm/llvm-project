@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="included-field-attrs=emitc.field_ref,emitc.field_ref_2" %s | FileCheck %s '-D$QUOTE=\22'
+// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="included-field-attrs=emitc.field_ref,emitc.field_ref_2" %s -deduplicate-emitc-includes | FileCheck %s '-D$QUOTE=\22'
 
 /// Tests that a reflection map is created for fields with an attribute in the
 /// included-field-attrs option.

@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIREmitCTransforms
   Transforms.cpp
+  DeduplicateIncludes.cpp
   FormExpressions.cpp
   TypeConversions.cpp
   WrapFuncInClass.cpp

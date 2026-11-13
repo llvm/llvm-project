@@ -16,6 +16,10 @@
 
 namespace mlir {
 namespace emitc {
+/// Insert standard includes at the beginning of the module body in the order
+/// given by `headers`. Existing includes are left unchanged. Run
+/// `deduplicate-emitc-includes` after conversion to remove duplicates.
+void addStandardIncludes(ModuleOp module, ArrayRef<StringRef> headers);
 
 //===----------------------------------------------------------------------===//
 // Expression transforms

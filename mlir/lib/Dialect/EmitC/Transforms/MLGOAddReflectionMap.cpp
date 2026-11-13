@@ -39,12 +39,6 @@ struct PatternMatchListener : public RewriterBase::Listener {
   }
 };
 
-IncludeOp addHeader(OpBuilder &builder, ModuleOp module, StringRef headerName) {
-  StringAttr includeAttr = builder.getStringAttr(headerName);
-  return IncludeOp::create(builder, module.getLoc(), includeAttr,
-                           /*is_standard_include=*/builder.getUnitAttr());
-}
-
 class MLGOAddReflectionMapPass
     : public impl::MLGOAddReflectionMapPassBase<MLGOAddReflectionMapPass> {
   using MLGOAddReflectionMapPassBase::MLGOAddReflectionMapPassBase;
@@ -62,31 +56,7 @@ class MLGOAddReflectionMapPass
     if (!listener.patternApplied)
       return;
 
-    // Check if the map and/or string headers are already present
-    bool hasMapHdr = false;
-    bool hasStringHdr = false;
-    for (auto &op : *moduleOp.getBody()) {
-      IncludeOp includeOp = llvm::dyn_cast<IncludeOp>(op);
-      if (!includeOp)
-        continue;
-
-      if (includeOp.getIsStandardInclude()) {
-        auto include = includeOp.getInclude();
-
-        hasMapHdr |= include == mapLibraryHeader;
-        hasStringHdr |= include == stringLibraryHeader;
-      }
-
-      if (hasMapHdr && hasStringHdr)
-        return;
-    }
-
-    mlir::OpBuilder builder(moduleOp.getBody(), moduleOp.getBody()->begin());
-    if (!hasMapHdr)
-      addHeader(builder, moduleOp, mapLibraryHeader);
-
-    if (!hasStringHdr)
-      addHeader(builder, moduleOp, stringLibraryHeader);
+    addStandardIncludes(moduleOp, {mapLibraryHeader, stringLibraryHeader});
   }
 };
 

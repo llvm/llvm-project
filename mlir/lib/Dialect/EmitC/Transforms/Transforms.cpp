@@ -15,6 +15,12 @@
 
 namespace mlir {
 namespace emitc {
+void addStandardIncludes(ModuleOp module, ArrayRef<StringRef> headers) {
+  OpBuilder builder(module.getBody(), module.getBody()->begin());
+  for (StringRef header : headers)
+    IncludeOp::create(builder, module.getLoc(), builder.getStringAttr(header),
+                      /*is_standard_include=*/builder.getUnitAttr());
+}
 
 ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
   assert(isa<emitc::CExpressionInterface>(op) && "Expected a C expression");

@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=true" %s -split-input-file | FileCheck %s --check-prefixes=CPP,CHECK
-// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=false" %s -split-input-file | FileCheck %s --check-prefixes=NOCPP,CHECK
+// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=true" %s -split-input-file -deduplicate-emitc-includes | FileCheck %s --check-prefixes=CPP,CHECK
+// RUN: mlir-opt -convert-memref-to-emitc="lower-to-cpp=false" %s -split-input-file -deduplicate-emitc-includes | FileCheck %s --check-prefixes=NOCPP,CHECK
 
 func.func @alloc_copy(%arg0: memref<999xi32>) {
   %alloc = memref.alloc() : memref<999xi32>
