@@ -36,7 +36,7 @@ struct S2 {
 // NOSTD-VFE-LABEL: define{{.*}}s1f
 // NOBL: llvm.type.test
 // NOSTD: llvm.type.test
-// NOSTD-WPD: call i1 @llvm.type.test
+// NOSTD-WPD: call { ptr, i1 } @llvm.type.checked.load
 // NOSTD-WPD: call void @__ubsan_handle_cfi_check_fail_abort(ptr
 // NOSTD-VFE: call { ptr, i1 } @llvm.type.checked.load
 // NOSTD-VFE: call void @__ubsan_handle_cfi_check_fail_abort(ptr
