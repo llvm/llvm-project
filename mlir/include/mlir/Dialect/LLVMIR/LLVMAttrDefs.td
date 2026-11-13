@@ -989,7 +989,8 @@ def LLVM_DIEnumeratorAttr : LLVM_Attr<"DIEnumerator", "di_enumerator",
     APIntParameter<"">:$value,
     DefaultValuedParameter<"bool", "false">:$isUnsigned
   );
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat =
+      "`<` (`name` `=` $name^ `,` ` `)? custom<WidthAPInt>($value, $isUnsigned) `>`";
 }
 
 //===----------------------------------------------------------------------===//
