@@ -65945,12 +65945,17 @@ X86TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       .getInstr();
 }
 
+bool X86TargetLowering::supportKCFIOutOfLineTraps(
+    const MachineFunction & /*MF*/) const {
+  return Subtarget.is64Bit();
+}
+
 MachineInstr *
 X86TargetLowering::EmitKCFIOutOfLineTrap(MachineInstr &Check,
                                          MachineBasicBlock &TrapMBB,
                                          const TargetInstrInfo *TII) const {
   assert(Check.getOpcode() == X86::KCFI_CHECK && "Unexpected KCFI check");
-  const MIMetadata MIMD(Check);
+  MIMetadata MIMD(Check);
   Check.setDesc(TII->get(X86::KCFI_CMP));
   // Don't let the traps get merged, so that the address of one still says
   // which check failed, as it does when they're inline.

@@ -270,13 +270,15 @@ AArch64FrameLowering::getArgumentStackToRestore(MachineFunction &MF,
                                                 MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  bool IsTailCallReturn = (MBB.end() != MBBI)
-                              ? AArch64InstrInfo::isTailCallReturnInst(*MBBI)
-                              : false;
+  const MachineInstr *LastMI =
+      MBBI != MBB.end() ? &*std::prev(std::next(MBBI).getInstrIterator())
+                        : nullptr;
+  bool IsTailCallReturn =
+      LastMI ? AArch64InstrInfo::isTailCallReturnInst(*LastMI) : false;
 
   int64_t ArgumentPopSize = 0;
   if (IsTailCallReturn) {
-    MachineOperand &StackAdjust = MBBI->getOperand(1);
+    const MachineOperand &StackAdjust = LastMI->getOperand(1);
 
     // For a tail-call in a callee-pops-arguments environment, some or all of
     // the stack may actually be in use for the call's arguments, this is

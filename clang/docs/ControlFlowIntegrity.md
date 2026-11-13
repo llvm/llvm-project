@@ -331,20 +331,17 @@ enhanced security.
 
 ### `-fsanitize-kcfi-out-of-line-traps`
 
-By default (`-fno-sanitize-kcfi-out-of-line-traps`), KCFI emits the trap
-instruction inline immediately before each checked indirect call, and a check
-that passes takes a conditional branch over the trap. Consumers such as the
-Linux kernel rely on this inline layout to patch checks at boot and decode trap
-addresses.
+By default (`-fno-sanitize-kcfi-out-of-line-traps`), KCFI emits each trap
+instruction inline immediately before the indirect call, and passing checks
+branch over it. Consumers such as the Linux kernel rely on this inline layout
+to patch checks at boot.
 
-For user-space or other software that does not require inline traps,
-`-fsanitize-kcfi-out-of-line-traps` (supported on x86-64 and AArch64) moves
-each check's trap into a separate cold basic block so that a passing check
-falls through directly to the indirect call and only branches on failure. Each
-check still receives a distinct trap instruction with the call's debug location
-(and `.kcfi_traps` entry on x86-64, or register-encoding `brk` immediate on
-AArch64). Calls that are already bundled or in a basic block with an exception
-handling pad successor keep an inline trap.
+On x86-64 and AArch64, `-fsanitize-kcfi-out-of-line-traps` instead moves traps
+into cold basic blocks on a best-effort basis so passing checks fall through to
+the call and only failing checks branch. Out-of-line traps retain distinct
+debug locations (and `.kcfi_traps` entries on x86-64 or register-encoding `brk`
+immediates on AArch64); calls or functions that cannot be safely split keep
+inline traps.
 
 ## Member Function Pointer Call Checking
 

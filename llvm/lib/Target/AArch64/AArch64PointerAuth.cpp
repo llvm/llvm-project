@@ -295,7 +295,7 @@ void AArch64PointerAuthImpl::authenticateLR(
   // Note that inserting new instructions "before MBBI" and "before TI" is
   // not the same because if ShadowCallStack is enabled, its instructions
   // are placed between MBBI and TI.
-  MachineBasicBlock::iterator TI = MBB.getFirstInstrTerminator();
+  MachineBasicBlock::iterator TI = MBB.getFirstTerminator();
 
   MCSymbol *PACSym = MFnI->getSigningInstrLabel();
   auto &AFL = *static_cast<const AArch64FrameLowering *>(

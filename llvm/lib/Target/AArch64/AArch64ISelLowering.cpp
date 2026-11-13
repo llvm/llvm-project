@@ -34626,31 +34626,51 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       .getInstr();
 }
 
+bool AArch64TargetLowering::supportKCFIOutOfLineTraps(
+    const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  // Keep checks bundled inline when SpeculativeLoadHardening (uses X16 as its
+  // taint register) or XRay (PATCHABLE_TAIL_CALL precedes tail calls) is used.
+  if (F.hasFnAttribute(Attribute::SpeculativeLoadHardening) ||
+      F.hasFnAttribute("function-instrument") ||
+      F.hasFnAttribute("xray-instruction-threshold"))
+    return false;
+  // TODO: Support -fbasic-block-sections by keeping KCFI_CMP, its fallthrough
+  // call block, and KCFI_TRAP in the same section so cross-section relaxation
+  // cannot insert veneers or spill X16.
+  if (MF.hasBBSections() ||
+      MF.getTarget().getBBSectionsType() != BasicBlockSection::None)
+    return false;
+  // TODO: Support callee-pop stack-argument conventions by teaching
+  // AArch64FrameLowering::getArgumentStackToRestore to look past KCFI_CMP to
+  // the split tail-call return.
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  return AFI->getArgumentStackToRestore() == 0 &&
+         AFI->getTailCallReservedStack() == 0;
+}
+
 MachineInstr *
 AArch64TargetLowering::EmitKCFIOutOfLineTrap(MachineInstr &Check,
                                              MachineBasicBlock &TrapMBB,
                                              const TargetInstrInfo *TII) const {
   assert(Check.getOpcode() == AArch64::KCFI_CHECK && "Unexpected KCFI check");
-  const MIMetadata MIMD(Check);
+  MIMetadata MIMD(Check);
   Check.setDesc(TII->get(AArch64::KCFI_CMP));
 
-  // The trap reports the registers that the check leaves the target and the
-  // expected type in. AArch64AsmPrinter::LowerKCFI_CHECK picks them: the
-  // expected type is in W17, or in W9 if the target is in X17, and a target of
-  // XZR is in X16. They're live into the trap's block, so that a branch to it
-  // that has to be relaxed doesn't clobber them.
-  Register AddrReg = Check.getOperand(0).getReg();
-  const Register TypeReg = AddrReg == AArch64::X17 ? AArch64::W9 : AArch64::W17;
-  if (AddrReg == AArch64::XZR)
-    AddrReg = AArch64::X16;
-  TrapMBB.addLiveIn(AddrReg);
-  TrapMBB.addLiveIn(getXRegFromWReg(TypeReg));
+  // Encode the registers where AArch64::getKCFICheckRegs leaves the target and
+  // expected type in KCFI_TRAP's BRK immediate. Keep TrapMBB out of cold
+  // sections via isMBBSafeToSplitToCold, and mark the operands undef rather
+  // than live-in so intra-section branch relaxation (>1 MiB) does not spill
+  // X16, with the trade-off that such a relaxed veneer could clobber X16 before
+  // BRK executes.
+  AArch64::KCFICheckRegs Regs =
+      AArch64::getKCFICheckRegs(Check.getOperand(0).getReg());
 
   // Don't let the traps get merged, so that the address of one still says
   // which check failed, as it does when they're inline.
   BuildMI(&TrapMBB, MIMD, TII->get(AArch64::KCFI_TRAP))
-      .addReg(AddrReg)
-      .addReg(TypeReg)
+      .addReg(Regs.AddrReg, RegState::Undef)
+      .addReg(Regs.ExpectedTypeReg, RegState::Undef)
       .setMIFlag(MachineInstr::NoMerge);
   return BuildMI(*Check.getParent(), std::next(Check.getIterator()), MIMD,
                  TII->get(AArch64::Bcc))

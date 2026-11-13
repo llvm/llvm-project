@@ -1633,9 +1633,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (KcfiOutOfLineTraps) {
     if (TC.getTriple().getArch() != llvm::Triple::x86_64 &&
-        !TC.getTriple().isAArch64(64))
+        !TC.getTriple().isAArch64(64)) {
       TC.getDriver().Diag(clang::diag::err_drv_unsupported_opt_for_target)
           << "-fsanitize-kcfi-out-of-line-traps" << TC.getTriple().str();
+    }
     CmdArgs.push_back("-fsanitize-kcfi-out-of-line-traps");
   }
 

@@ -2593,9 +2593,9 @@ def KCFI_CHECK : Pseudo<
   (outs), (ins GPR64:$ptr, i32imm:$type), []>, Sched<[]>;
 }
 
-// KCFI_CHECK without the trap: it only sets Z if the type of $ptr is $type.
+// KCFI_CHECK without the trap: it sets Z if the type of $ptr is $type.
 // This gets lowered into a 16-byte instruction sequence.
-let Defs = [ X9, X16, X17, NZCV ], Size = 16 in {
+let Defs = [ X9, X16, X17, NZCV ], Size = 16, isNotDuplicable = 1 in {
 def KCFI_CMP : Pseudo<
   (outs), (ins GPR64:$ptr, i32imm:$type), []>, Sched<[]>;
 }
@@ -2603,7 +2603,7 @@ def KCFI_CMP : Pseudo<
 // The trap that the branch after a KCFI_CMP goes to if Z isn't set. It's a BRK
 // that says that the KCFI_CMP left the target of the call in $ptr and the
 // expected type in $type.
-let isTrap = 1, hasSideEffects = 1, Size = 4 in {
+let isTrap = 1, hasSideEffects = 1, Size = 4, isNotDuplicable = 1 in {
 def KCFI_TRAP : Pseudo<
   (outs), (ins GPR64:$ptr, GPR32:$type), []>, Sched<[]>;
 }

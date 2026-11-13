@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v3 -enable-post-misched -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefix=MIR
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=kcfi -enable-new-pm < %s | FileCheck %s --check-prefix=MIR
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi -enable-new-pm < %s | FileCheck %s --check-prefix=MIR
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -function-splitting=all < %s | FileCheck %s --check-prefix=SPLIT
 
 ;; With the kcfi-out-of-line-traps module flag, a KCFI check ends in a branch
@@ -87,6 +88,15 @@ define void @f3(ptr noundef %x) #0 {
 
 ;; So does one that had its memory operand unfolded.
 define void @f4() {
+; ASM-LABEL: f4:
+; ASM:         movq g@GOTPCREL(%rip), [[PTR:%r[a-z0-9]+]]
+; ASM-NEXT:    movq ([[PTR]]), [[CALLEE:%r[a-z0-9]+]]
+; ASM:         addl -4([[CALLEE]]), %r10d
+; ASM-NEXT:    jne [[TRAP:\.LBB[0-9_]+]]
+; ASM:         callq *[[CALLEE]]
+; ASM:       [[TRAP]]:
+; ASM:         ud2
+
 ; MIR-LABEL: name: f4
 ; MIR:         $r11 = MOV64rm killed renamable $rax, 1, $noreg, 0, $noreg
 ; MIR-NEXT:    KCFI_CMP $r11, 12345678, implicit-def $r10, implicit-def $r11, implicit-def $eflags
@@ -146,23 +156,26 @@ define void @f5(ptr noundef %x, ptr noundef %y) {
 declare i32 @__gxx_personality_v0(...)
 declare void @cleanup()
 
-;; A call in a block that has an EH pad successor can be an invoke, which has
-;; to stay next to the EH label that starts its try-range. It keeps an inline
-;; trap.
+;; A non-invoke call preceding another call/invoke in a block with an EH pad
+;; successor keeps an inline bundled check.
 define void @f6(ptr noundef %x) personality ptr @__gxx_personality_v0 {
 ; ASM-LABEL: f6:
 ; ASM:         addl -4(%rdi), %r10d
-; ASM-NEXT:    je [[PASS:.Ltmp[0-9]+]]
+; ASM-NEXT:    je [[PASS:\.Ltmp[0-9]+]]
 ; ASM-NEXT:  .Ltmp{{[0-9]+}}:
 ; ASM-NEXT:    ud2
 ; ASM:       [[PASS]]:
 ; ASM-NEXT:    callq *%rdi
+; ASM-NEXT:  .Ltmp{{[0-9]+}}:
+; ASM-NEXT:    callq cleanup@PLT
 
 ; MIR-LABEL: name: f6
 ; MIR:       BUNDLE{{.*}} {
 ; MIR-NEXT:    KCFI_CHECK $rdi, 12345678, implicit-def $r10, implicit-def $r11, implicit-def $eflags
 ; MIR-NEXT:    CALL64r killed $rdi, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
 ; MIR-NEXT:  }
+; MIR-NEXT:  EH_LABEL
+; MIR-NEXT:  CALL64pcrel32 target-flags(x86-plt) @cleanup
 ; MIR-NEXT:  EH_LABEL
   call void %x() [ "kcfi"(i32 12345678) ]
   invoke void @cleanup()
@@ -199,7 +212,7 @@ attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-ind
 
 !llvm.module.flags = !{!0, !1, !2}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 4, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
 !2 = !{i32 1, !"ProfileSummary", !3}
 !3 = !{!4, !5, !6, !7, !8, !9, !10, !11}
 !4 = !{!"ProfileFormat", !"InstrProf"}

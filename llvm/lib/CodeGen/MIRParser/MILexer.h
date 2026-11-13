@@ -74,6 +74,7 @@ struct MIToken {
     kw_nsw,
     kw_exact,
     kw_nofpexcept,
+    kw_nomerge,
     kw_unpredictable,
     kw_nneg,
     kw_disjoint,
