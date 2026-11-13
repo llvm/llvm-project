@@ -630,7 +630,9 @@ static void makeAccResultBackedByMemory(MLUCandidate &candidate,
     ValueRange accWriteIndices = accWrite.getIndices();
 
     auto isSafeToUseView = [&]() {
-      if (candidate.accIsZeroInit)
+      // A single register tile reads all of its input before writing.
+      if (candidate.accIsZeroInit ||
+          candidate.accType.getShape() == candidate.accRegTileType.getShape())
         return true;
       auto accMemInView = candidate.accMemIn.getDefiningOp<memref::SubViewOp>();
       if (!accMemInView)
