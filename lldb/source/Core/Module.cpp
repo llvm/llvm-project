@@ -1091,6 +1091,13 @@ bool Module::FileHasChanged() const {
   return m_file_has_changed;
 }
 
+bool Module::IsDataStale() const {
+  if (!m_extractor_sp)
+    return false;
+  DataBufferSP data_sp = m_extractor_sp->GetSharedDataBuffer();
+  return data_sp && data_sp->IsStale();
+}
+
 void Module::ReportWarningOptimization(
     std::optional<lldb::user_id_t> debugger_id) {
   llvm::StringRef file_name = GetFileSpec().GetFilename();

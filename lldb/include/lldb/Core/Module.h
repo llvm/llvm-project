@@ -862,6 +862,10 @@ public:
   // when the module first gets created.
   bool FileHasChanged() const;
 
+  // Return true if this module was created from a DataExtractor whose backing
+  // storage has gone away (see DataBuffer::IsStale).
+  bool IsDataStale() const;
+
   // SymbolFile and ObjectFile member objects should lock the
   // module mutex to avoid deadlocks.
   std::recursive_mutex &GetMutex() const { return m_mutex; }
