@@ -33,37 +33,6 @@ struct LRStartEndInfo {
   size_t Pos = 0;
 };
 
-LLVM_ABI_FOR_TEST void extractInstructionFeatures(
-    llvm::SmallVectorImpl<LRStartEndInfo> &LRPosInfo,
-    MLModelRunner *RegallocRunner, function_ref<int(SlotIndex)> GetOpcode,
-    function_ref<float(SlotIndex)> GetMBBFreq,
-    function_ref<MachineBasicBlock *(SlotIndex)> GetMBBReference,
-    const int InstructionsIndex, const int InstructionsMappingIndex,
-    const int MBBFreqIndex, const int MBBMappingIndex,
-    const SlotIndex LastIndex);
-
-LLVM_ABI_FOR_TEST void extractMBBFrequency(
-    const SlotIndex CurrentIndex, const size_t CurrentInstructionIndex,
-    std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
-    function_ref<float(SlotIndex)> GetMBBFreq,
-    MachineBasicBlock *CurrentMBBReference, MLModelRunner *RegallocRunner,
-    const int MBBFreqIndex, const int MBBMappingIndex);
-
-// This is the maximum number of interfererring ranges. That's the number of
-// distinct AllocationOrder values, which comes from MCRegisterClass::RegsSize.
-// For X86, that's 32.
-// TODO: find a way to get this, statically, in a programmatic way.
-static const int64_t MaxInterferences = 32;
-
-// Logically, we can think of the feature set given to the evaluator as a 2D
-// matrix. The rows are the features (see next). The columns correspond to the
-// interferences. We treat the candidate virt reg as an 'interference', too, as
-// its feature set is the same as that of the interferring ranges. So we'll have
-// MaxInterferences + 1 columns and by convention, we will use the last column
-// for the virt reg seeking allocation.
-static const int64_t CandidateVirtRegPos = MaxInterferences;
-static const int64_t NumberOfInterferences = CandidateVirtRegPos + 1;
-
 // The number of instructions that a specific live range might have is variable,
 // but we're passing in a single matrix of instructions and tensorflow saved
 // models only support a fixed input size, so we have to cap the number of
@@ -74,13 +43,9 @@ static const int ModelMaxSupportedInstructionCount = 300;
 
 // When extracting per-instruction features, the advisor will currently create
 // a vector of size ModelMaxSupportedInstructionCount to hold the opcodes of the
-// instructions relevant to the eviction problem, and a NumberOfInterferences *
-// ModelMaxSupportedInstructionCount matrix that maps LRs to the instructions
-// that they span.
+// instructions relevant to the eviction problem.
 static const std::vector<int64_t> InstructionsShape{
     1, ModelMaxSupportedInstructionCount};
-static const std::vector<int64_t> InstructionsMappingShape{
-    1, NumberOfInterferences, ModelMaxSupportedInstructionCount};
 
 // When extracting mappings between MBBs and individual instructions, we create
 // a vector of MBB frequencies, currently of size 100, which was a value

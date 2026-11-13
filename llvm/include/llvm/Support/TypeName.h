@@ -9,19 +9,21 @@
 #ifndef LLVM_SUPPORT_TYPENAME_H
 #define LLVM_SUPPORT_TYPENAME_H
 
+#include <cassert>
 #include <string_view>
 
 #include "llvm/ADT/StringRef.h"
 
-// Versions of GCC prior to GCC 9 don't declare __PRETTY_FUNCTION__ as constexpr
-#if defined(__clang__) || defined(_MSC_VER) ||                                 \
-    (defined(__GNUC__) && __GNUC__ >= 9)
+// Versions of GCC prior to GCC 9 don't declare __PRETTY_FUNCTION__ as
+// constexpr, and versions of MSVC prior to VS2017 15.3 (_MSC_VER 1910) don't
+// declare __FUNCSIG__ as constexpr.
+#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 9) ||              \
+    (defined(_MSC_VER) && _MSC_VER >= 1910)
 #define LLVM_GET_TYPE_NAME_CONSTEXPR constexpr
 #define LLVM_GET_TYPE_NAME_STATIC_ASSERT 1
 #else
 #define LLVM_GET_TYPE_NAME_CONSTEXPR
 #define LLVM_GET_TYPE_NAME_STATIC_ASSERT 0
-#include <cassert>
 #endif
 
 namespace llvm {
@@ -42,15 +44,18 @@ inline LLVM_GET_TYPE_NAME_CONSTEXPR StringRef getTypeName() {
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Name = __PRETTY_FUNCTION__;
 
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Key = "DesiredTypeName = ";
-  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view TemplateParamsStart =
-      Name.substr(Name.find(Key));
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view::size_type KeyPos =
+      Name.find(Key);
 #if LLVM_GET_TYPE_NAME_STATIC_ASSERT
-  static_assert(!TemplateParamsStart.empty(),
+  static_assert(KeyPos != std::string_view::npos,
                 "Unable to find the template parameter!");
 #else
-  assert(!TemplateParamsStart.empty() &&
+  assert(KeyPos != std::string_view::npos &&
          "Unable to find the template parameter!");
 #endif
+
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view TemplateParamsStart =
+      Name.substr(KeyPos);
 
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view SubstitutionKey =
       TemplateParamsStart.substr(Key.size());
@@ -69,10 +74,19 @@ inline LLVM_GET_TYPE_NAME_CONSTEXPR StringRef getTypeName() {
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Name = __FUNCSIG__;
 
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view Key = "getTypeName<";
-  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view GetTypeNameStart =
-      Name.substr(Name.find(Key));
-  static_assert(!GetTypeNameStart.empty(),
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view::size_type KeyPos =
+      Name.find(Key);
+#if LLVM_GET_TYPE_NAME_STATIC_ASSERT
+  static_assert(KeyPos != std::string_view::npos,
                 "Unable to find the template parameter!");
+#else
+  assert(KeyPos != std::string_view::npos &&
+         "Unable to find the template parameter!");
+#endif
+
+  LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view GetTypeNameStart =
+      Name.substr(KeyPos);
+
   LLVM_GET_TYPE_NAME_CONSTEXPR std::string_view SubstitutionKey =
       GetTypeNameStart.substr(Key.size());
 
@@ -95,8 +109,14 @@ inline LLVM_GET_TYPE_NAME_CONSTEXPR StringRef getTypeName() {
           : RmPrefixUnion;
 
   LLVM_GET_TYPE_NAME_CONSTEXPR auto AnglePos = RmPrefixEnum.rfind('>');
+#if LLVM_GET_TYPE_NAME_STATIC_ASSERT
   static_assert(AnglePos != std::string_view::npos,
                 "Unable to find the closing '>'!");
+#else
+  assert(AnglePos != std::string_view::npos &&
+         "Unable to find the closing '>'!");
+#endif
+
   return RmPrefixEnum.substr(0, AnglePos);
 #else
   // No known technique for statically extracting a type name on this compiler.

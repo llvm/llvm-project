@@ -15,16 +15,7 @@ class DefaultCacheLineSizeTestCase(TestBase):
     @skipUnlessTargetAndroid
     def test_cache_line_size(self):
         self.build()
-        target = self.createTestTarget()
-        self.assertTrue(target and target.IsValid(), "Target is valid")
-
-        breakpoint = target.BreakpointCreateByName("main")
-        self.assertTrue(breakpoint and breakpoint.IsValid(), "Breakpoint is valid")
-
-        # Run the program.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        _, process, _, _ = lldbutil.run_to_name_breakpoint(self, "main")
 
         # check the setting value
         self.expect(

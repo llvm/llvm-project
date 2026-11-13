@@ -5,7 +5,7 @@
 subroutine trim_test(c)
   character(*) :: c
   ! CHECK-DAG: %[[c:.*]]:2 = fir.unboxchar %[[arg0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  ! CHECK-DAG: %[[cDecl:.*]]:2 = hlfir.declare %[[c]]#0 typeparams %[[c]]#1 {{.*}}{uniq_name = "_QFtrim_testEc"}
+  ! CHECK-DAG: %[[cDecl:.*]]:2 = hlfir.declare %[[c]]#0 typeparams %[[c]]#1 {{.*}}uniq_name("_QFtrim_testEc")
   ! CHECK: %[[trimmed:.*]] = hlfir.char_trim %[[cDecl]]#0 : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
   ! CHECK: %[[trimLen:.*]] = hlfir.get_length %[[trimmed]] : (!hlfir.expr<!fir.char<1,?>>) -> index
   ! CHECK: %[[assoc:.*]]:3 = hlfir.associate %[[trimmed]] typeparams %[[trimLen]] {adapt.valuebyref}

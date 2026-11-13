@@ -48,7 +48,9 @@ static_library("LLVMHexagonCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "BitTracker.cpp",
+    "HLXExpandPseudos.cpp",
     "HexagonAggressiveRDFCopy.cpp",
+    "HexagonAlignGlobalArrays.cpp",
     "HexagonAsmPrinter.cpp",
     "HexagonBitSimplify.cpp",
     "HexagonBitTracker.cpp",
@@ -77,6 +79,7 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonISelDAGToDAG.cpp",
     "HexagonISelDAGToDAGHVX.cpp",
     "HexagonISelLowering.cpp",
+    "HexagonISelLoweringHLX.cpp",
     "HexagonISelLoweringHVX.cpp",
     "HexagonInstrInfo.cpp",
     "HexagonLiveVariables.cpp",

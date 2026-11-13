@@ -10,4 +10,4 @@
 
 #include "src/math/dsubl.h"
 
-LIST_SUB_TESTS(double, long double, LIBC_NAMESPACE::dsubl)
+LIST_SUB_TESTS(Dsubl, double, long double, LIBC_NAMESPACE::dsubl)

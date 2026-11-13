@@ -74,7 +74,7 @@ func.func @x(%arr : !fir.ref<!fir.array<?x?xf32>>) {
       %209 = arith.select %208, %207, %c0_0 : index
       %210 = arith.select %206, %205, %c0_0 : index
       %211 = fir.shape %210, %209 : (index, index) -> !fir.shape<2>
-      %212 = fir.declare %arg5(%211) {uniq_name = "_QFFaxpy_array_workdistributeEy"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
+      %212 = fir.declare %arg5(%211) uniq_name("_QFFaxpy_array_workdistributeEy") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
       %213 = fir.embox %212(%211) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
       omp.teams {
         %214 = fir.alloca !fir.box<!fir.array<?x?xf32>> {pinned}

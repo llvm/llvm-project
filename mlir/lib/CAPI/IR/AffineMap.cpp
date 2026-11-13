@@ -32,7 +32,10 @@ void mlirAffineMapPrint(MlirAffineMap affineMap, MlirStringCallback callback,
   unwrap(affineMap).print(stream);
 }
 
-void mlirAffineMapDump(MlirAffineMap affineMap) { unwrap(affineMap).dump(); }
+void mlirAffineMapDump(MlirAffineMap affineMap) {
+  unwrap(affineMap).print(llvm::errs());
+  llvm::errs() << "\n";
+}
 
 MlirAffineMap mlirAffineMapEmptyGet(MlirContext ctx) {
   return wrap(AffineMap::get(unwrap(ctx)));

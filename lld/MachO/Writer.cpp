@@ -662,6 +662,12 @@ void Writer::treatSpecialUndefineds() {
   }
 }
 
+// Give a symbol its single non-lazy pointer slot. A GOT reference and a TLV
+// reference to a thread-local both want the same value -- the address of its
+// TLV descriptor -- so one __got entry serves both, and the result no longer
+// depends on which reference the relocation scan reaches first.
+static void addNonLazyPointerEntry(Symbol *sym) { in.got->addEntry(sym); }
+
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const Relocation &r) {
   if (!sym->isLive()) {
@@ -681,17 +687,25 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     if (needsBinding(sym))
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      in.got->addEntry(sym);
+    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym)) {
+      if (usesAuthGot(isec))
+        in.authGot->addEntry(sym);
+      else
+        addNonLazyPointerEntry(sym);
+    }
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
-      in.tlvPointers->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
-    // need of rebase opcodes.
-    if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
-      addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
+    // need of rebase opcodes. Authenticated pointers are pointers, not offsets.
+    bool isAuth = relocAttrs.hasAttr(RelocAttrBits::AUTH);
+    if (isAuth ||
+        !(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
+      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend(),
+                               /*forceOutlineAuth=*/isAuth ||
+                                   getImplicitAuthInfo(isec, sym));
   }
 }
 
@@ -721,7 +735,8 @@ void Writer::scanRelocations() {
         ++it;
         // Canonicalize the referent so that later accesses in Writer won't
         // have to worry about it.
-        if (auto *referentIsec = it->referent.dyn_cast<InputSection *>())
+        if (auto *referentIsec =
+                dyn_cast_if_present<InputSection *>(it->referent))
           it->referent = referentIsec->canonical();
         continue;
       }
@@ -971,6 +986,45 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
+// __objc_stubs is synthetic, so the input section sorting in
+// sortSegmentsAndSections() does not reach its entries. Order each stub by the
+// priority of the earliest-laid-out section that calls it, which keeps the
+// stubs reached during startup together.
+static void orderObjCStubsByCallerPriority(
+    const DenseMap<const InputSection *, int> &priorities) {
+  if (priorities.empty() || !in.objcStubs->isNeeded())
+    return;
+
+  // ICF may make the prioritized section differ from the section whose
+  // relocations describe the original calls. Use the canonical section for
+  // priority lookup, but scan the original section's relocations.
+  DenseMap<const Symbol *, int> stubPriority;
+  for (const ConcatInputSection *isec : inputSections) {
+    if (!isCodeSection(isec))
+      continue;
+    const auto *priorityIsec = cast<ConcatInputSection>(isec->canonical());
+    if (priorityIsec->shouldOmitFromOutput())
+      continue;
+    auto prio = priorities.find(priorityIsec);
+    if (prio == priorities.end())
+      continue;
+    for (const Relocation &r : isec->relocs) {
+      if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
+        continue;
+      auto *stub = dyn_cast_if_present<Symbol *>(r.referent);
+      if (!stub || !ObjCStubsSection::isObjCStubSymbol(stub))
+        continue;
+      auto [it, inserted] = stubPriority.try_emplace(stub, prio->second);
+      if (!inserted)
+        it->second = std::min(it->second, prio->second);
+    }
+  }
+  if (stubPriority.empty())
+    return;
+
+  in.objcStubs->sortSymbols(stubPriority);
+}
+
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
@@ -980,6 +1034,8 @@ static void sortSegmentsAndSections() {
 
   DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
+
+  orderObjCStubsByCallerPriority(isecPriorities);
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
@@ -1261,7 +1317,6 @@ void Writer::buildFixupChains() {
   TimeTraceScope timeScope("Build fixup chains");
 
   const uint64_t pageSize = target->getPageSize();
-  constexpr uint32_t stride = 4; // for DYLD_CHAINED_PTR_64
 
   for (size_t i = 0, count = loc.size(); i < count;) {
     const OutputSegment *oseg = loc[i].isec->parent->parent;
@@ -1272,24 +1327,27 @@ void Writer::buildFixupChains() {
     while (i < count && loc[i].isec->parent->parent == oseg &&
            (loc[i].offset / pageSize) == pageIdx) {
       uint64_t offset = loc[i].offset - loc[i - 1].offset;
-
-      auto fail = [&](Twine message) {
+      if (offset < target->wordSize) {
         error(loc[i].isec->getSegName() + "," + loc[i].isec->getName() +
               ", offset " +
               Twine(loc[i].offset - loc[i].isec->parent->getSegmentOffset()) +
-              ": " + message);
-      };
-
-      if (offset < target->wordSize)
-        return fail("fixups overlap");
-      if (offset % stride != 0)
-        return fail(
-            "fixups are unaligned (offset " + Twine(offset) +
-            " is not a multiple of the stride). Re-link with -no_fixup_chains");
+              ": fixups overlap");
+        return;
+      }
 
       // The "next" field is in the same location for bind and rebase entries.
-      reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-          ->next = offset / stride;
+      uint8_t *prev = buf + loc[i - 1].offset;
+      if (config->arch() == AK_arm64e) {
+        auto *entry =
+            reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(prev);
+        entry->next = offset / ChainedFixupsSection::chainStride();
+      } else {
+        // These fixups may be only 4-byte aligned.
+        dyld_chained_ptr_64_bind entry;
+        memcpy(&entry, prev, sizeof(entry));
+        entry.next = offset / ChainedFixupsSection::chainStride();
+        memcpy(prev, &entry, sizeof(entry));
+      }
       ++i;
     }
   }
@@ -1399,7 +1457,8 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
-  in.tlvPointers = make<TlvPointerSection>();
+  if (config->arch() == AK_arm64e)
+    in.authGot = make<AuthGotSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();

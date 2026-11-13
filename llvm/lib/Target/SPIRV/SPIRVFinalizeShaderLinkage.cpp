@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVFinalizeShaderLinkage.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -76,8 +75,8 @@ private:
 
 } // namespace
 
-PreservedAnalyses SPIRVFinalizeShaderLinkage::run(Module &M,
-                                                  ModuleAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVFinalizeShaderLinkagePass::run(Module &M, ModuleAnalysisManager &AM) {
   return finalizeShaderLinkage(TM, M) ? PreservedAnalyses::none()
                                       : PreservedAnalyses::all();
 }

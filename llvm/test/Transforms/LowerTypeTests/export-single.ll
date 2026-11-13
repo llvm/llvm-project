@@ -1,6 +1,6 @@
-; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export -lowertypetests-read-summary=%S/Inputs/use-typeid1-typeid2.yaml -lowertypetests-write-summary=%t %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export \
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
-
 @foo = constant i32 42, !type !0
 
 !0 = !{i32 0, !"typeid1"}
@@ -15,3 +15,6 @@
 ; SUMMARY-NEXT:     TTRes:
 ; SUMMARY-NEXT:       Kind:            Single
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
+
+^0 = module: (path: "use.o", hash: (0, 0, 0, 0, 0))
+^1 = gv: (guid: 42, summaries: (function: (module: ^0, flags: (live: 1), insts: 1, typeIdInfo: (typeTests: (14276520915468743435)))))

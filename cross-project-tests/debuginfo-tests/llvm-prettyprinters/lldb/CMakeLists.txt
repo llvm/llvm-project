@@ -1,6 +1,12 @@
 add_library(lldb-formatter-test-settings INTERFACE)
 
-target_link_libraries(lldb-formatter-test-settings INTERFACE LLVMSupport)
+# Link the correct LLVM dependency, depending on the configuration.
+if(LLVM_LINK_LLVM_DYLIB)
+  target_link_libraries(lldb-formatter-test-settings INTERFACE LLVM)
+else()
+  target_link_libraries(lldb-formatter-test-settings INTERFACE LLVMSupport)
+endif()
+
 # Unset _FORTIFY_SOURCE since it's incompatible with -O0.
 target_compile_options(lldb-formatter-test-settings INTERFACE -g -O0 -U_FORTIFY_SOURCE)
 

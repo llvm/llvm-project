@@ -117,8 +117,39 @@ llvm.func @loop_annotation() {
 
 // CHECK: llvm.func @loop_annotation_with_locs
 llvm.func @loop_annotation_with_locs() {
-  // CHECK: llvm.br ^bb1 {loop_annotation = #[[LOOP_ANNOT]]
-  llvm.br ^bb1 {loop_annotation = #loopMD}
+  // CHECK: llvm.br ^bb1 loop_annotation = #[[LOOP_ANNOT]]
+  llvm.br ^bb1 loop_annotation = #loopMD
+^bb1:
+  llvm.return
+}
+
+// -----
+
+// CHECK-DAG: #[[ID_LOOP0:.*]] = #llvm.loop_annotation<id = distinct[[[ID0:[0-9]+]]]<>, mustProgress = true>
+// CHECK-DAG: #[[ID_LOOP1:.*]] = #llvm.loop_annotation<id = distinct[[[ID1:[0-9]+]]]<>, mustProgress = true>
+#id_loop0 = #llvm.loop_annotation<mustProgress = true, id = distinct[0]<>>
+#id_loop1 = #llvm.loop_annotation<mustProgress = true, id = distinct[1]<>>
+
+// CHECK: llvm.func @loop_annotation_with_ids
+llvm.func @loop_annotation_with_ids() {
+  // CHECK: llvm.br ^bb1 loop_annotation = #[[ID_LOOP0]]
+  llvm.br ^bb1 loop_annotation = #id_loop0
+^bb1:
+  // CHECK: llvm.br ^bb2 loop_annotation = #[[ID_LOOP1]]
+  llvm.br ^bb2 loop_annotation = #id_loop1
+^bb2:
+  llvm.return
+}
+
+// -----
+
+// CHECK: #[[ALIGN_LOOP:.*]] = #llvm.loop_annotation<mustProgress = true, align = 32>
+#align_loop = #llvm.loop_annotation<mustProgress = true, align = 32>
+
+// CHECK: llvm.func @loop_annotation_with_align
+llvm.func @loop_annotation_with_align() {
+  // CHECK: llvm.br ^bb1 loop_annotation = #[[ALIGN_LOOP]]
+  llvm.br ^bb1 loop_annotation = #align_loop
 ^bb1:
   llvm.return
 }

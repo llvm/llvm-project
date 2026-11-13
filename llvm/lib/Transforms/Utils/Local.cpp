@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -135,7 +134,6 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
                                   const TargetLibraryInfo *TLI,
                                   DomTreeUpdater *DTU) {
   Instruction *T = BB->getTerminator();
-  IRBuilder<> Builder(T);
 
   // Branch - See if we are conditional jumping on constant
   if (auto *BI = dyn_cast<CondBrInst>(T)) {
@@ -152,6 +150,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Dest1->removePredecessor(BI->getParent());
 
       // Replace the conditional branch with an unconditional one.
+      IRBuilder<> Builder(BI);
       UncondBrInst *NewBI = Builder.CreateBr(Dest1);
 
       // Transfer the metadata to the new branch instruction.
@@ -172,10 +171,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       BasicBlock *OldDest = Cond->getZExtValue() ? Dest2 : Dest1;
 
       // Let the basic block know that we are letting go of it.  Based on this,
-      // it will adjust it's PHI nodes.
+      // it will adjust its PHI nodes.
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
+      IRBuilder<> Builder(BI);
       UncondBrInst *NewBI = Builder.CreateBr(Destination);
 
       // Transfer the metadata to the new branch instruction.
@@ -255,8 +255,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       }
 
       // Otherwise, check to see if the switch only branches to one destination.
-      // We do this by reseting "TheOnlyDest" to null when we find two non-equal
-      // destinations.
+      // We do this by resetting "TheOnlyDest" to null when we find two
+      // non-equal destinations.
       if (It->getCaseSuccessor() != TheOnlyDest)
         TheOnlyDest = nullptr;
 
@@ -274,6 +274,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     // now.
     if (TheOnlyDest) {
       // Insert the new branch.
+      IRBuilder<> Builder(SI);
       Builder.CreateBr(TheOnlyDest);
       BasicBlock *BB = SI->getParent();
 
@@ -311,6 +312,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Otherwise, we can fold this switch into a conditional branch
       // instruction if it has only one non-default destination.
       auto FirstCase = *SI->case_begin();
+      IRBuilder<> Builder(SI);
       Value *Cond = Builder.CreateICmpEQ(SI->getCondition(),
           FirstCase.getCaseValue(), "cond");
 
@@ -325,6 +327,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         NewBr->setMetadata(LLVMContext::MD_prof,
                            MDBuilder(BB->getContext())
                                .createBranchWeights(CaseWeight, DefWeight));
+      } else {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewBr, DEBUG_TYPE);
       }
 
       // Update make.implicit metadata to the newly-created conditional branch.
@@ -347,6 +351,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
 
       // Insert the new branch.
+      IRBuilder<> Builder(IBI);
       Builder.CreateBr(TheOnlyDest);
 
       BasicBlock *SuccToKeep = TheOnlyDest;
@@ -407,18 +412,6 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
   return wouldInstructionBeTriviallyDead(I, TLI);
 }
 
-bool llvm::wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI) {
-  // Instructions that are "markers" and have implied meaning on code around
-  // them (without explicit uses), are not dead on unused paths.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::stacksave ||
-        II->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-        II->isLifetimeStartOrEnd())
-      return false;
-  return wouldInstructionBeTriviallyDead(I, TLI);
-}
-
 bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
                                            const TargetLibraryInfo *TLI) {
   if (I->isTerminator())
@@ -428,12 +421,6 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   // general.
   if (I->isEHPad())
     return false;
-
-  if (const DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
-    if (DLI->getLabel())
-      return false;
-    return true;
-  }
 
   if (auto *CB = dyn_cast<CallBase>(I))
     if (isRemovableAlloc(CB, TLI))
@@ -609,21 +596,13 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
   }
 }
 
-bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
-  SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(I, DPUsers);
-  for (auto *DVR : DPUsers)
-    DVR->setKillLocation();
-  return !DPUsers.empty();
-}
-
 /// areAllUsesEqual - Check whether the uses of a value are all the same.
 /// This is similar to Instruction::hasOneUse() except this will also return
 /// true when there are no uses or multiple uses that all refer to the same
 /// value.
 static bool areAllUsesEqual(Instruction *I) {
-  Value::user_iterator UI = I->user_begin();
-  Value::user_iterator UE = I->user_end();
+  Instruction::user_iterator UI = I->user_begin();
+  Instruction::user_iterator UE = I->user_end();
   if (UI == UE)
     return true;
 
@@ -862,6 +841,25 @@ static bool CanMergeValues(Value *First, Value *Second) {
   return First == Second || isa<UndefValue>(First) || isa<UndefValue>(Second);
 }
 
+/// Return true if one of \p BBPreds may branch to \p Succ. At most 16
+/// successors are inspected; beyond that, this conservatively returns true, so
+/// the check stays cheap even if a predecessor ends in a large switch.
+static bool
+mayHaveSharedPredecessor(BasicBlock *Succ,
+                         const SmallPtrSetImpl<BasicBlock *> &BBPreds) {
+  unsigned Budget = 16;
+  for (BasicBlock *Pred : BBPreds) {
+    const Instruction *TI = Pred->getTerminator();
+    unsigned NumSuccs = TI->getNumSuccessors();
+    if (NumSuccs > Budget)
+      return true;
+    Budget -= NumSuccs;
+    if (is_contained(successors(TI), Succ))
+      return true;
+  }
+  return false;
+}
+
 /// Return true if we can fold BB, an almost-empty BB ending in an unconditional
 /// branch to Succ, into Succ.
 ///
@@ -956,22 +954,13 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
   return OldVal;
 }
 
-/// Create a map from block to value for the operands of a
-/// given phi.
+/// Update a block-to-value map with the non-undef values found in a phi.
+/// Only blocks that are already in the map are updated.
 ///
-/// This function initializes the map with UndefValue for all predecessors
-/// in BBPreds, and then updates the map with concrete non-undef values
-/// found in the PHI node.
-///
-/// \param PN The phi we are collecting the map for.
-/// \param BBPreds The list of all predecessor blocks to initialize with Undef.
-/// \param IncomingValues [out] The map from block to value for this phi.
+/// \param PN The phi we are collecting the values of.
+/// \param IncomingValues [in,out] The map from block to value for this phi.
 static void gatherIncomingValuesToPhi(PHINode *PN,
-                                      const PredBlockVector &BBPreds,
                                       IncomingValueMap &IncomingValues) {
-  for (BasicBlock *Pred : BBPreds)
-    IncomingValues[Pred] = nullptr;
-
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     Value *V = PN->getIncomingValue(i);
     if (isa<UndefValue>(V))
@@ -982,6 +971,27 @@ static void gatherIncomingValuesToPhi(PHINode *PN,
     if (It != IncomingValues.end())
       It->second = V;
   }
+}
+
+/// If the incoming values of a phi at \p UndefOps are a mix of undef and
+/// poison, replace the poison values with undef.
+///
+/// \param PN The phi whose incoming values are replaced.
+/// \param UndefOps The indices of incoming values that are undef or poison.
+static void replacePoisonWithUndefIfMixed(PHINode *PN,
+                                          ArrayRef<unsigned> UndefOps) {
+  // If there are both undef and poison values incoming, then convert those
+  // values to undef. It is invalid to have different values for the same
+  // incoming block.
+  unsigned PoisonCount = count_if(UndefOps, [&](unsigned I) {
+    return isa<PoisonValue>(PN->getIncomingValue(I));
+  });
+
+  if (PoisonCount == 0 || PoisonCount == UndefOps.size())
+    return;
+
+  for (unsigned I : UndefOps)
+    PN->setIncomingValue(I, UndefValue::get(PN->getType()));
 }
 
 /// Replace the incoming undef values to a phi with the values
@@ -1016,16 +1026,7 @@ static void replaceUndefValuesInPhi(PHINode *PN,
     PN->setIncomingValue(i, It->second);
   }
 
-  // If there are both undef and poison values incoming, then convert those
-  // values to undef. It is invalid to have different values for the same
-  // incoming block.
-  unsigned PoisonCount = count_if(TrueUndefOps, [&](unsigned i) {
-    return isa<PoisonValue>(PN->getIncomingValue(i));
-  });
-  if (PoisonCount != 0 && PoisonCount != TrueUndefOps.size()) {
-    for (unsigned i : TrueUndefOps)
-      PN->setIncomingValue(i, UndefValue::get(PN->getType()));
-  }
+  replacePoisonWithUndefIfMixed(PN, TrueUndefOps);
 }
 
 // Only when they shares a single common predecessor, return true.
@@ -1097,15 +1098,21 @@ static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
 /// \param BBPreds The predecessors of BB.
 /// \param PN The phi that we are updating.
 /// \param CommonPred The common predecessor of BB and PN's BasicBlock
+/// \param HasSharedPreds Whether BB and PN's BasicBlock may share a
+/// predecessor.
 static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
                                                 const PredBlockVector &BBPreds,
                                                 PHINode *PN,
-                                                BasicBlock *CommonPred) {
+                                                BasicBlock *CommonPred,
+                                                bool HasSharedPreds) {
+  assert((HasSharedPreds || !CommonPred) && "Unexpected CommonPred!");
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
   // Map BBPreds to defined values or nullptr (representing undefined values).
   IncomingValueMap IncomingValues;
+  for (BasicBlock *Pred : BBPreds)
+    IncomingValues[Pred] = nullptr;
 
   // We are merging two blocks - BB, and the block containing PN - and
   // as a result we need to redirect edges from the predecessors of BB
@@ -1115,8 +1122,11 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // and where some of those common predecessors might have undef
   // values flowing into PN, we want to rewrite those values to be
   // consistent with the non-undef values.
+  // Without shared predecessors, PN has no incoming values from BBPreds yet.
+  if (HasSharedPreds)
+    gatherIncomingValuesToPhi(PN, IncomingValues);
 
-  gatherIncomingValuesToPhi(PN, BBPreds, IncomingValues);
+  SmallVector<unsigned> NewUndefOps;
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
@@ -1139,6 +1149,8 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
 
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
+      if (!HasSharedPreds && isa<UndefValue>(Selected))
+        NewUndefOps.push_back(PN->getNumIncomingValues());
       PN->addIncoming(Selected, PredBB);
     }
     if (CommonPred)
@@ -1156,13 +1168,18 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
 
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
+      if (!HasSharedPreds && isa<UndefValue>(Selected))
+        NewUndefOps.push_back(PN->getNumIncomingValues());
       PN->addIncoming(Selected, PredBB);
     }
     if (CommonPred)
       PN->addIncoming(OldVal, BB);
   }
 
-  replaceUndefValuesInPhi(PN, IncomingValues);
+  if (HasSharedPreds)
+    replaceUndefValuesInPhi(PN, IncomingValues);
+  else
+    replacePoisonWithUndefIfMixed(PN, NewUndefOps);
 }
 
 bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
@@ -1180,7 +1197,12 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // The single common predecessor of BB and Succ when BB cannot be killed
   BasicBlock *CommonPred = nullptr;
 
-  bool BBKillable = CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
+  // Without a predecessor shared with Succ, folding BB can't create conflicting
+  // phi entries, so the checks below can be skipped.
+  bool HasSharedPreds = mayHaveSharedPredecessor(Succ, BBPreds);
+
+  bool BBKillable =
+      !HasSharedPreds || CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
 
   // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
@@ -1225,7 +1247,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                       << " and " << Succ->getName() << " : "
                       << CommonPred->getName() << "\n");
 
-  // 'BB' and 'BB->Pred' are loop latches, bail out to presrve inner loop
+  // 'BB' and 'BB->Pred' are loop latches, bail out to preserve inner loop
   // metadata.
   //
   // FIXME: This is a stop-gap solution to preserve inner-loop metadata given
@@ -1252,7 +1274,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   //
   // CFG Before
   //
-  // BB is while.cond.exit, attached with loop metdata md2.
+  // BB is while.cond.exit, attached with loop metadata md2.
   // BB->Pred is for.body, attached with loop metadata md1.
   //
   //      entry
@@ -1277,7 +1299,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // for.body is attached with md2, and md1 is dropped.
   // If LoopSimplify runs later (as a part of loop pass), it could create
   // dedicated exits for inner-loop (essentially adding `while.cond.exit`
-  // back), but won't it won't see 'md1' nor restore it for the inner-loop.
+  // back), but it won't see 'md1' nor restore it for the inner-loop.
   //
   //       entry
   //         |
@@ -1310,8 +1332,9 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-    SmallPtrSet<BasicBlock *, 16> SuccPreds(llvm::from_range,
-                                            predecessors(Succ));
+    SmallPtrSet<BasicBlock *, 16> SuccPreds;
+    if (HasSharedPreds)
+      SuccPreds.insert_range(predecessors(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
@@ -1340,7 +1363,8 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // Loop over all of the PHI nodes in the successor of BB.
     for (BasicBlock::iterator I = Succ->begin(); isa<PHINode>(I); ++I) {
       PHINode *PN = cast<PHINode>(I);
-      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred);
+      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred,
+                                          HasSharedPreds);
     }
   }
 
@@ -1369,15 +1393,17 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
 
   if (BBKillable) {
+    // Clear the successor list of BB to match updates applying to DTU later.
+    // Run before replaceAllUsesWith() to not redundantly scan phi nodes in
+    // Succ for BB.
+    if (BB->hasTerminator())
+      BB->back().eraseFromParent();
+
     // Everything that jumped to BB now goes to Succ.
     BB->replaceAllUsesWith(Succ);
 
     if (!Succ->hasName())
       Succ->takeName(BB);
-
-    // Clear the successor list of BB to match updates applying to DTU later.
-    if (BB->hasTerminator())
-      BB->back().eraseFromParent();
 
     new UnreachableInst(BB->getContext(), BB);
     assert(succ_empty(BB) && "The successor list of BB isn't empty before "
@@ -1425,6 +1451,7 @@ EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB,
         continue;
       // A duplicate. Replace this PHI with the base PHI.
       ++NumPHICSEs;
+      PN->andIRFlags(DuplicatePN);
       DuplicatePN->replaceAllUsesWith(PN);
       ToRemove.insert(DuplicatePN);
       Changed = true;
@@ -1469,7 +1496,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     }
 
     static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
-      return LHS->isIdenticalTo(RHS);
+      return LHS->isIdenticalToWhenDefined(RHS);
     }
 
     static bool isEqual(PHINode *LHS, PHINode *RHS) {
@@ -1494,6 +1521,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     if (!Inserted.second) {
       // A duplicate. Replace this PHI with its duplicate.
       ++NumPHICSEs;
+      (*Inserted.first)->andIRFlags(PN);
       PN->replaceAllUsesWith(*Inserted.first);
       ToRemove.insert(PN);
       Changed = true;
@@ -1578,13 +1606,13 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
 
 Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                        const DataLayout &DL,
-                                       const Instruction *CxtI,
+                                       const Instruction *CtxI,
                                        AssumptionCache *AC,
                                        const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
-  KnownBits Known = computeKnownBits(V, DL, AC, CxtI, DT);
+  KnownBits Known = computeKnownBits(V, DL, AC, CtxI, DT);
   unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
@@ -1592,7 +1620,7 @@ Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
   // LLVM doesn't support alignments larger than (1 << MaxAlignmentExponent).
   TrailZ = std::min(TrailZ, +Value::MaxAlignmentExponent);
 
-  Align Alignment = Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+  Align Alignment = Align::fromLog2(std::min(Known.getBitWidth() - 1, TrailZ));
 
   if (PrefAlign && *PrefAlign > Alignment)
     Alignment = std::max(Alignment, tryEnforceAlignment(V, *PrefAlign, DL));
@@ -1729,6 +1757,9 @@ void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
   DIExpr = dropInitialDeref(DIExpr);
   Value *DV = SI->getValueOperand();
 
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
+
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
   insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
@@ -1834,12 +1865,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *APN,
 bool llvm::LowerDbgDeclare(Function &F) {
   bool Changed = false;
   DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false);
-  SmallVector<DbgDeclareInst *, 4> Dbgs;
   SmallVector<DbgVariableRecord *> DVRs;
   for (auto &FI : F) {
     for (Instruction &BI : FI) {
-      if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
-        Dbgs.push_back(DDI);
       for (DbgVariableRecord &DVR : filterDbgVars(BI.getDbgRecordRange())) {
         if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
           DVRs.push_back(&DVR);
@@ -1847,7 +1875,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     }
   }
 
-  if (Dbgs.empty() && DVRs.empty())
+  if (DVRs.empty())
     return Changed;
 
   auto LowerOne = [&](DbgVariableRecord *DDI) {
@@ -2609,7 +2637,6 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
                                        II->getCalledOperand(), Args, OpBundles);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
-  NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
 
   // If the invoke had profile metadata, try converting them for CallInst.
@@ -2874,7 +2901,7 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
         }
         if (DTU) {
           std::vector<DominatorTree::UpdateType> Updates;
-          for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+          for (const auto &I : NumPerSuccessorCases)
             if (I.second == 0)
               Updates.push_back({DominatorTree::Delete, BB, I.first});
           DTU->applyUpdates(Updates);
@@ -3042,6 +3069,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                          MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
         }
         break;
+      case LLVMContext::MD_callees:
+        // If K moves, it replaces J on J's path and must allow J's callees as
+        // well. If K does not move, its callees remain valid.
+        if (!AAOnly && DoesKMove)
+          K->setMetadata(Kind, MDNode::getMergedCalleesMetadata(KMD, JMD));
+        break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(
@@ -3130,8 +3163,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   auto *JProf = J->getMetadata(LLVMContext::MD_prof);
   auto *KProf = K->getMetadata(LLVMContext::MD_prof);
   if (!AAOnly && (JProf || KProf)) {
-    K->setMetadata(LLVMContext::MD_prof,
-                   MDNode::getMergedProfMetadata(KProf, JProf, K, J));
+    // We do not need to merge metadata if we have select instructions and the
+    // one we're keeping (K) does not move (explicitly merging would drop the
+    // information in this case). Otherwise, explicitly handle the merging.
+    if (DoesKMove || (!isa<SelectInst>(J) || !isa<SelectInst>(K)) ||
+        ProfcheckDisableMetadataFixes)
+      K->setMetadata(LLVMContext::MD_prof,
+                     MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 }
 
@@ -3176,6 +3214,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_invariant_group:
+    case LLVMContext::MD_mmra:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;
@@ -3207,7 +3246,8 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   }
 }
 
-void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
+void llvm::patchReplacementInstruction(Instruction *I, Value *Repl,
+                                       bool DoesKMove) {
   auto *ReplInst = dyn_cast<Instruction>(Repl);
   if (!ReplInst)
     return;
@@ -3247,7 +3287,7 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   // In general, GVN unifies expressions over different control-flow
   // regions, and so we need a conservative combination of the noalias
   // scopes.
-  combineMetadataForCSE(ReplInst, I, false);
+  combineMetadataForCSE(ReplInst, I, DoesKMove);
 }
 
 template <typename ShouldReplaceFn>
@@ -3355,12 +3395,7 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
   // Lib calls can be materialized by some passes, and won't be
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
-  LibFunc LF;
-  if (TLI.getLibFunc(*Call, LF)) {
-    return TLI.has(LF);
-  }
-
-  return false;
+  return TLI.has(TLI.getLibFunc(*Call));
 }
 
 void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
@@ -3453,8 +3488,8 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
       dropDebugUsers(*I);
     // RemoveDIs: drop debug-info too as the following code does.
     I->dropDbgRecords();
-    if (I->isDebugOrPseudoInst()) {
-      // Remove DbgInfo and pseudo probe Intrinsics.
+    if (isa<PseudoProbeInst>(I)) {
+      // Remove pseudo probe Intrinsics.
       II = I->eraseFromParent();
       continue;
     }
@@ -3556,7 +3591,7 @@ struct BitPart {
 /// bitnumber to bitnumber. It is the caller's responsibility to validate that
 /// the bitnumber to bitnumber mapping is correct for a bswap or bitreverse.
 ///
-/// For example, if the current subexpression if "(shl i32 %X, 24)" then we know
+/// For example, if the current subexpression is "(shl i32 %X, 24)" then we know
 /// that the expression deposits the low byte of %X into the high byte of the
 /// result and that all other bits are zero. This expression is accepted and a
 /// BitPart is returned with Provider set to %X and Provenance[24-31] set to
@@ -3570,8 +3605,8 @@ struct BitPart {
 /// provided map. To avoid unnecessary copying of BitParts, BitParts are
 /// constructed in-place in the \c BPS map. Because of this \c BPS needs to
 /// store BitParts objects, not pointers. As we need the concept of a nullptr
-/// BitParts (Value has been analyzed and the analysis failed), we an Optional
-/// type instead to provide the same functionality.
+/// BitParts (Value has been analyzed and the analysis failed), we use an
+/// Optional type instead to provide the same functionality.
 ///
 /// Because we pass around references into \c BPS, we must use a container that
 /// does not invalidate internal references (std::map instead of DenseMap).
@@ -3714,7 +3749,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BITREVERSE - most likely due to us previous matching a partial
+    // BITREVERSE - most likely due to us previously matching a partial
     // bitreverse.
     if (match(V, m_BitReverse(m_Value(X)))) {
       const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
@@ -3728,7 +3763,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BSWAP - most likely due to us previous matching a partial bswap.
+    // BSWAP - most likely due to us previously matching a partial bswap.
     if (match(V, m_BSwap(m_Value(X)))) {
       const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
                                         Depth + 1, FoundRoot);
@@ -3919,9 +3954,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
     CallInst *CI, const TargetLibraryInfo *TLI) {
   Function *F = CI->getCalledFunction();
-  LibFunc Func;
   if (F && !F->hasLocalLinkage() && F->hasName() &&
-      TLI->getLibFunc(F->getName(), Func) && TLI->hasOptimizedCodeGen(Func) &&
+      TLI->hasOptimizedCodeGen(TLI->getLibFunc(F->getName())) &&
       !F->doesNotAccessMemory())
     CI->addFnAttr(Attribute::NoBuiltin);
 }

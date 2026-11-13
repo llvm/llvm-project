@@ -4,9 +4,9 @@
 ;
 ; Check both that the name is quoted on the way out and that the result parses.
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -stop-before=greedy -o %t.mir %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -stop-before=greedy -o %t.mir %s
 ; RUN: FileCheck %s < %t.mir
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -x mir -start-before=greedy -o /dev/null %t.mir
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -x mir -start-before=greedy -o /dev/null %t.mir
 
 ; CHECK: bb.0.entry:
 ; CHECK: bb.1.", bb71":

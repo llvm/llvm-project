@@ -30,6 +30,8 @@ class StopInfoMachException : public StopInfo {
 
   bool DetermineTagMismatch();
 
+  bool DetermineCPA2Failure();
+
 public:
   // Constructors and Destructors
   StopInfoMachException(Thread &thread, uint32_t exc_type,

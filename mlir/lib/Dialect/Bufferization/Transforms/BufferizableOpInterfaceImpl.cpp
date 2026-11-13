@@ -34,14 +34,14 @@ struct AllocTensorOpInterface
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    assert(opOperand.getOperandNumber() == op->getNumOperands() - 1 &&
+    assert(&opOperand == &cast<AllocTensorOp>(op).getCopyMutable()[0] &&
            "expected copy operand");
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    assert(opOperand.getOperandNumber() == op->getNumOperands() - 1 &&
+    assert(&opOperand == &cast<AllocTensorOp>(op).getCopyMutable()[0] &&
            "expected copy operand");
     return false;
   }
@@ -59,17 +59,22 @@ struct AllocTensorOpInterface
     auto allocTensorOp = cast<AllocTensorOp>(op);
     assert(value == allocTensorOp.getResult() && "invalid value");
 
+    FailureOr<BufferLikeType> copyBufferType;
+    if (allocTensorOp.getCopy()) {
+      copyBufferType = bufferization::getBufferType(
+          allocTensorOp.getCopy(), options, state, invocationStack);
+      if (failed(copyBufferType))
+        return failure();
+    }
+
     // Compute memory space of this allocation.
     Attribute memorySpace;
     if (allocTensorOp.getMemorySpace().has_value()) {
       memorySpace = *allocTensorOp.getMemorySpace();
     } else if (allocTensorOp.getCopy()) {
-      auto copyBufferType =
-          bufferization::detail::asMemRefType(bufferization::getBufferType(
-              allocTensorOp.getCopy(), options, state, invocationStack));
-      if (failed(copyBufferType))
-        return failure();
-      memorySpace = copyBufferType->getMemorySpace();
+      // A buffer that is not a memref has no memory space to inherit.
+      if (auto copyMemRefType = dyn_cast<BaseMemRefType>(*copyBufferType))
+        memorySpace = copyMemRefType.getMemorySpace();
     } else if (auto ms = options.defaultMemorySpaceFn(
                    cast<TensorLikeType>(allocTensorOp.getType()))) {
       memorySpace = *ms;
@@ -77,8 +82,19 @@ struct AllocTensorOpInterface
       return op->emitError("could not infer memory space");
     }
 
-    return cast<BufferLikeType>(getMemRefTypeWithStaticIdentityLayout(
-        allocTensorOp.getType(), memorySpace));
+    // A copy has the shape of the memref it copies, so the sizes `bufferize`
+    // reads from that memref are the copy's dynamic sizes.
+    if (allocTensorOp.getCopy())
+      if (auto copyMemRefType = dyn_cast<MemRefType>(*copyBufferType))
+        return cast<BufferLikeType>(MemRefType::get(
+            copyMemRefType.getShape(), copyMemRefType.getElementType(),
+            MemRefLayoutAttrInterface{}, memorySpace));
+    // Any other result's buffer type is the options' choice.
+    if (auto tensorType = dyn_cast<RankedTensorType>(allocTensorOp.getType()))
+      return cast<BufferLikeType>(
+          getMemRefTypeWithStaticIdentityLayout(tensorType, memorySpace));
+    return options.unknownTypeConverterFn(allocTensorOp.getType(), memorySpace,
+                                          options);
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -109,14 +125,27 @@ struct AllocTensorOpInterface
         bufferization::getBufferType(allocTensorOp.getResult(), options, state);
     if (failed(allocType))
       return failure();
+    // TODO: The allocation hook takes a MemRefType; a buffer type that is not
+    // a memref is diagnosed rather than allocated.
+    auto memRefType = dyn_cast<MemRefType>(*allocType);
+    if (!memRefType)
+      return op->emitError() << "allocating a buffer of type " << *allocType
+                             << " is not supported";
     SmallVector<Value> dynamicDims = allocTensorOp.getDynamicSizes();
     if (allocTensorOp.getCopy()) {
       assert(dynamicDims.empty() && "expected either `copy` or `dynamicDims`");
       populateDynamicDimSizes(rewriter, loc, copyBuffer, dynamicDims);
     }
-    FailureOr<Value> alloc =
-        options.allocationFn(rewriter, loc, llvm::cast<MemRefType>(*allocType),
-                             dynamicDims, options.bufferAlignment);
+    // TODO: A result that is not a ranked tensor takes no sizes (verifier), so
+    // a buffer type with a dynamic dimension is diagnosed rather than
+    // allocated unless the op copies a value.
+    if (memRefType.getNumDynamicDims() != dynamicDims.size())
+      return op->emitError()
+             << "allocating " << memRefType
+             << " needs a size for each dynamic dimension, which the op "
+                "takes only for a ranked tensor result";
+    FailureOr<Value> alloc = options.allocationFn(
+        rewriter, loc, memRefType, dynamicDims, options.bufferAlignment);
     if (failed(alloc))
       return failure();
 

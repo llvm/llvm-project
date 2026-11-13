@@ -51,6 +51,16 @@
 // RUN: %clang -### -S -floop-interchange -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
 // CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
 // CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
+//
+// Loop interchange matches the LLVM pipeline default: on whenever the
+// optimization pipeline runs (-O1 and above), off with an explicit
+// -fno-loop-interchange.
+// RUN: %clang -c -mllvm -print-pipeline-passes -O1 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
+// RUN: %clang -c -mllvm -print-pipeline-passes -O2 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
+// RUN: %clang -c -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
+// RUN: %clang -c -fno-loop-interchange -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-OFF %s
+// INTERCHANGE-ON: loop-interchange
+// INTERCHANGE-OFF-NOT: loop-interchange
 
 // RUN: %clang -### -S -fexperimental-loop-fusion %s -o /dev/null 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
 // CHECK-FUSE-LOOPS: "-fexperimental-loop-fusion"
@@ -325,8 +335,6 @@
 // RUN: -fexpensive-optimizations                                             \
 // RUN: -fno-expensive-optimizations                                          \
 // RUN: -fno-defer-pop                                                        \
-// RUN: -fkeep-inline-functions                                               \
-// RUN: -fno-keep-inline-functions                                            \
 // RUN: -freorder-blocks                                                      \
 // RUN: -ffloat-store                                                         \
 // RUN: -fgcse                                                                \
@@ -385,8 +393,6 @@
 // CHECK-WARNING-DAG: optimization flag '-fexpensive-optimizations' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-expensive-optimizations' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-defer-pop' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fkeep-inline-functions' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fno-keep-inline-functions' is not supported
 // CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ffloat-store' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fgcse' is not supported

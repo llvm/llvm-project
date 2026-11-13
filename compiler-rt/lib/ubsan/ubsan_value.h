@@ -166,6 +166,13 @@ public:
   }
 };
 
+/// First two bytes of a TypeDescriptor: TK_Integer (0), TK_Float (1), or
+/// TK_Unknown (0xff). Used to tell FloatCastOverflowData from V2.
+inline bool looksLikeFloatCastOverflowDataV1Bytes(const u8 *Desc) {
+  u16 Kind = u16(Desc[0]) + u16(Desc[1]);
+  return Kind < 2 || Desc[0] == 0xff || Desc[1] == 0xff;
+}
+
 /// \brief An opaque handle to a value.
 typedef uptr ValueHandle;
 

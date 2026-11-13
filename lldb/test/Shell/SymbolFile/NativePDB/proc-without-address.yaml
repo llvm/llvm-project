@@ -1,0 +1,80 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t
+# RUN: lldb-test symbols --verify %t | FileCheck %s
+
+# CHECK: Found 1 compile units.
+# CHECK: The line table contains 3 entries.
+# CHECK: The symbol information is verified.
+---
+PdbStream:
+  Features:        [ VC140 ]
+DbiStream:
+  MachineType:     Amd64
+  Modules:
+    - Module:          'main.obj'
+      SourceFiles:
+        - 'C:\src\main.cpp'
+      Subsections:
+        - !Lines
+          CodeSize:        3
+          Flags:           [  ]
+          RelocOffset:     0
+          RelocSegment:    1
+          Blocks:
+            - FileName:        'C:\src\main.cpp'
+              Lines:
+                - Offset:          0
+                  LineStart:       1
+                  IsStatement:     true
+                  EndDelta:        0
+                - Offset:          2
+                  LineStart:       2
+                  IsStatement:     true
+                  EndDelta:        0
+              Columns:         []
+        - !FileChecksums
+          Checksums:
+            - FileName:        'C:\src\main.cpp'
+              Kind:            None
+              Checksum:        ''
+      Modi:
+        Records:
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrEnd:          48
+              CodeSize:        1
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    0
+              Segment:         0 # Doesn't map to a virtual address
+              Flags:           [  ]
+              DisplayName:     foo
+          - Kind:            S_END
+            ScopeEndSym:     {}
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrEnd:          96
+              CodeSize:        3
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    0
+              Segment:         1
+              Flags:           [  ]
+              DisplayName:     main
+          - Kind:            S_END
+            ScopeEndSym:     {}
+  SectionHeaders:
+    - Name:            .text
+      VirtualSize:     3
+      VirtualAddress:  4096
+      SizeOfRawData:   512
+      PointerToRawData: 1024
+      Characteristics: 1610612768
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            main
+...

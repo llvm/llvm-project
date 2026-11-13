@@ -25,6 +25,8 @@
 
 namespace llvm {
 
+class AMDGPUTargetMachine;
+
 class R600Subtarget final : public R600GenSubtargetInfo,
                             public AMDGPUSubtarget {
 
@@ -43,7 +45,7 @@ private:
 
 public:
   R600Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
-                const TargetMachine &TM);
+                const AMDGPUTargetMachine &TM);
 
   ~R600Subtarget() override;
 
@@ -139,12 +141,12 @@ public:
 
   /// \returns Minimum flat work group size supported by the subtarget.
   unsigned getMinFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMinFlatWorkGroupSize(*this);
+    return AMDGPU::getMinFlatWorkGroupSize();
   }
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
+    return AMDGPU::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given
@@ -157,7 +159,7 @@ public:
   /// \returns Minimum number of waves per execution unit supported by the
   /// subtarget.
   unsigned getMinWavesPerEU() const override {
-    return AMDGPU::IsaInfo::getMinWavesPerEU(*this);
+    return AMDGPU::getMinWavesPerEU();
   }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {

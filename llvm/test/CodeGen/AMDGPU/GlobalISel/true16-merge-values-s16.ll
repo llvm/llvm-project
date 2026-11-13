@@ -5,10 +5,10 @@
 define amdgpu_ps i48 @test_merge_values_sgpr(<3 x i16> inreg %src0, <3 x i16> inreg %src1) {
 ; GFX11-LABEL: test_merge_values_sgpr:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mov_b64 s[0:1], -1
+; GFX11-NEXT:    s_mov_b64 s[4:5], -1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
-; GFX11-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; GFX11-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
+; GFX11-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
@@ -16,10 +16,10 @@ define amdgpu_ps i48 @test_merge_values_sgpr(<3 x i16> inreg %src0, <3 x i16> in
 ;
 ; GFX12-LABEL: test_merge_values_sgpr:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b64 s[0:1], -1
+; GFX12-NEXT:    s_mov_b64 s[4:5], -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
-; GFX12-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; GFX12-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
+; GFX12-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s2

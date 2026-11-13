@@ -22,7 +22,25 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("mutex") mutex {
+// The glibc and Bionic implementation of pthreads implements
+// pthread_mutex_destroy as nop for regular mutexes. Additionally, Win32
+// mutexes have no destroy mechanism.
+//
+// This optimization can't be performed on Apple platforms, where
+// pthread_mutex_destroy can allow the kernel to release resources.
+// See https://llvm.org/D64298 for details.
+//
+// clang-format off
+#  if (_LIBCPP_HAS_THREAD_API_PTHREAD && (defined(__GLIBC__) || defined(__BIONIC__))) ||                                \
+      (_LIBCPP_HAS_THREAD_API_C11 && defined(__Fuchsia__)) ||                                                          \
+       _LIBCPP_HAS_THREAD_API_WIN32
+// clang-format on
+#    define _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION 1
+#  else
+#    define _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION 0
+#  endif
+
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("mutex") _LIBCPP_WARN_UNUSED mutex {
   __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
 
 public:

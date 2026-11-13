@@ -1,7 +1,5 @@
 // RUN: mlir-opt --raise-scf-to-affine --split-input-file %s | FileCheck %s
 
-// XFAIL: mlir-expensive-checks
-
 // CHECK-LABEL: @constant_step
 // CHECK-SAME:  %[[ARR:.*]]: memref<?xi32>, %[[LB:.*]]: index, %[[UB:.*]]: index
 // CHECK:         affine.for %[[IV:.*]] = %[[LB]] to %[[UB]] step 3 {
@@ -150,6 +148,46 @@ func.func @constant_step_non_rectangular_nest() {
     }
   }
 
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @inner_not_raised_when_enclosing_loop_stuck
+// CHECK:           affine.for %{{.*}} = 0 to 4 {
+// CHECK:             memref.load
+// CHECK:             scf.for
+// CHECK:               affine.max
+// CHECK:               affine.min
+// CHECK:               scf.for
+// CHECK:                 func.call @some_func
+// CHECK-NOT:         affine.for
+
+#lbs = affine_map<(i)[K, N] -> (0, K - i)>
+#ubs = affine_map<(i)[K, N] -> (K, N - i)>
+
+func.func private @some_func(%i: index, %j: index)
+
+func.func @inner_not_raised_when_enclosing_loop_stuck(%mem: memref<?xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  %P = arith.constant 4 : index
+  %N = arith.constant 10 : index
+  %K = arith.constant 3 : index
+
+  scf.for %p = %c0 to %P step %c1 {
+    // %bad is neither top-level nor an affine quantity, so the middle loop can
+    // never be raised and %i never becomes a valid affine dimension.
+    %bad = memref.load %mem[%p] : memref<?xindex>
+    scf.for %i = %c0 to %bad step %c1 {
+      %lb = affine.max #lbs(%i)[%K, %N]
+      %ub = affine.min #ubs(%i)[%K, %N]
+      scf.for %j = %lb to %ub step %c1 {
+        func.call @some_func(%i, %j) : (index, index) -> ()
+      }
+    }
+  }
   return
 }
 

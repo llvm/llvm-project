@@ -398,8 +398,9 @@ config("compiler_defaults") {
   }
 
   if (use_tsan) {
-    assert(is_clang && current_os == "linux",
-           "tsan only supported on Linux/Clang")
+    assert(is_clang && (current_os == "ios" || current_os == "linux" ||
+                            current_os == "mac"),
+           "tsan only supported on Linux/Clang, macOS/Clang")
     cflags += [ "-fsanitize=thread" ]
     ldflags += [ "-fsanitize=thread" ]
   }
@@ -459,6 +460,13 @@ config("zdefs") {
 config("thin_archive") {
   if (current_os != "ios" && current_os != "mac" && current_os != "win") {
     arflags = [ "-T" ]
+  }
+}
+
+# Executables that load plugins or need symbols must remove this config.
+config("no_exported_symbols") {
+  if (current_os == "mac") {
+    ldflags = [ "-Wl,-no_exported_symbols" ]
   }
 }
 

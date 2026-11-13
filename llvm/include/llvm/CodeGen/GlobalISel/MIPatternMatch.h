@@ -20,6 +20,8 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/InstrTypes.h"
+#include <tuple>
+#include <utility>
 
 namespace llvm {
 namespace MIPatternMatch {
@@ -48,26 +50,12 @@ template <typename SubPatternT> struct OneUse_match {
   OneUse_match(const SubPatternT &SP) : SubPat(SP) {}
 
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    return MRI.hasOneUse(Reg) && SubPat.match(MRI, Reg);
-  }
-};
-
-template <typename SubPat>
-inline OneUse_match<SubPat> m_OneUse(const SubPat &SP) {
-  return SP;
-}
-
-template <typename SubPatternT> struct OneNonDBGUse_match {
-  SubPatternT SubPat;
-  OneNonDBGUse_match(const SubPatternT &SP) : SubPat(SP) {}
-
-  bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return MRI.hasOneNonDBGUse(Reg) && SubPat.match(MRI, Reg);
   }
 };
 
 template <typename SubPat>
-inline OneNonDBGUse_match<SubPat> m_OneNonDBGUse(const SubPat &SP) {
+inline OneUse_match<SubPat> m_OneUse(const SubPat &SP) {
   return SP;
 }
 
@@ -92,7 +80,7 @@ template <typename ConstT> struct ConstantMatch {
   ConstantMatch(ConstT &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     if (auto MaybeCst = matchConstant<ConstT>(Reg, MRI)) {
-      CR = *MaybeCst;
+      CR = std::move(*MaybeCst);
       return true;
     }
     return false;
@@ -127,12 +115,12 @@ template <typename ConstT> struct ICstOrSplatMatch {
   ICstOrSplatMatch(ConstT &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     if (auto MaybeCst = matchConstant<ConstT>(Reg, MRI)) {
-      CR = *MaybeCst;
+      CR = std::move(*MaybeCst);
       return true;
     }
 
     if (auto MaybeCstSplat = matchConstantSplat<ConstT>(Reg, MRI)) {
-      CR = *MaybeCstSplat;
+      CR = std::move(*MaybeCstSplat);
       return true;
     }
 
@@ -214,14 +202,9 @@ struct SpecificConstantMatch {
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
-    if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
-      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
-        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
-      else
-        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
-
-      return APInt::isSameValue(MatchedVal, RequestedVal);
-    }
+    if (mi_match(Reg, MRI, m_ICst(MatchedVal)))
+      return APInt::isSameValue(MatchedVal, RequestedVal,
+                                /*SignedCompare=*/true);
     return false;
   }
 };
@@ -298,12 +281,7 @@ struct SpecificConstantOrSplatMatch {
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
     if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
-      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
-        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
-      else
-        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
-
-      if (APInt::isSameValue(MatchedVal, RequestedVal))
+      if (APInt::isSameValue(MatchedVal, RequestedVal, /*SignedCompare=*/true))
         return true;
     }
     return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
@@ -585,8 +563,8 @@ inline GConstantBitsMatch m_GConstantOrFConstantBits(APInt &Bits) {
   return {Bits};
 }
 
-/// Match a load of type \p Class, binding its pointer operand (like IR's
-/// m_Load), and optionally the instruction and/or its MachineMemOperand.
+/// Match a load of type \p Class, matching its pointer operand and optionally
+/// binding the instruction and/or its MachineMemOperand.
 template <typename Class, typename PtrP> struct LoadOp_match {
   PtrP Ptr;
   Class **InstOut = nullptr;
@@ -598,9 +576,10 @@ template <typename Class, typename PtrP> struct LoadOp_match {
   LoadOp_match(Class *&Inst, const PtrP &Ptr, MMORef MMO)
       : Ptr(Ptr), InstOut(&Inst), MMOOut(&MMO.MMO) {}
 
-  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     MachineInstr *TmpMI;
-    if (!mi_match(Reg, MRI, m_MInstr(TmpMI)))
+    if (!mi_match(Op, MRI, m_MInstr(TmpMI)))
       return false;
     auto *Load = dyn_cast<Class>(TmpMI);
     if (!Load || !Ptr.match(MRI, Load->getPointerReg()))
@@ -636,6 +615,24 @@ inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr, MMORef MMO) {
   return LoadOp_match<GLoad, PtrP>(Ptr, MMO);
 }
 
+inline LoadOp_match<GSExtLoad, operand_type_match>
+m_GSExtLoad(GSExtLoad *&Inst) {
+  return {Inst, m_Reg()};
+}
+inline LoadOp_match<GZExtLoad, operand_type_match>
+m_GZExtLoad(GZExtLoad *&Inst) {
+  return {Inst, m_Reg()};
+}
+
+inline LoadOp_match<GSExtLoad, operand_type_match> m_GSExtLoad(GSExtLoad *&Inst,
+                                                               MMORef MMO) {
+  return {Inst, m_Reg(), MMO};
+}
+inline LoadOp_match<GZExtLoad, operand_type_match> m_GZExtLoad(GZExtLoad *&Inst,
+                                                               MMORef MMO) {
+  return {Inst, m_Reg(), MMO};
+}
+
 /// Instruction binders for ops with no operand-form matcher (constant-immediate
 /// or variadic-source ops).
 inline GInstrBind<GUnmerge> m_GUnmerge(GUnmerge *&Inst) { return Inst; }
@@ -645,6 +642,50 @@ inline GInstrBind<GBuildVector> m_GBuildVector(GBuildVector *&Inst) {
 }
 inline GInstrBind<GConcatVectors> m_GConcatVectors(GConcatVectors *&Inst) {
   return Inst;
+}
+
+/// Binds the defining instruction of \p Reg if it is a GIntrinsic (any of the
+/// four G_INTRINSIC* opcodes).
+inline GInstrBind<GIntrinsic> m_GIntrinsic(GIntrinsic *&Inst) { return Inst; }
+inline GInstrBind<const GIntrinsic> m_GIntrinsic(const GIntrinsic *&Inst) {
+  return Inst;
+}
+
+/// Matches a GIntrinsic with a specific intrinsic ID and optionally, matchers
+/// for its leading arguments.
+template <Intrinsic::ID IntrID, typename... OpMatchers>
+struct GIntrinsic_match {
+  std::tuple<OpMatchers...> Operands;
+
+  GIntrinsic_match(const OpMatchers &...Ops) : Operands(Ops...) {}
+
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (!mi_match(Op, MRI, m_MInstr(TmpMI)))
+      return false;
+    auto *GI = dyn_cast<GIntrinsic>(TmpMI);
+    if (!GI || !GI->is(IntrID))
+      return false;
+    return matchOperands(MRI, *GI, std::index_sequence_for<OpMatchers...>{});
+  }
+
+private:
+  template <size_t... Is>
+  bool matchOperands(const MachineRegisterInfo &MRI, GIntrinsic &GI,
+                     std::index_sequence<Is...>) {
+    // Intrinsic arguments follow the ID operand.
+    unsigned FirstArg = GI.getNumExplicitDefs() + 1;
+    return (std::get<Is>(Operands).match(
+                MRI, GI.getOperand(FirstArg + Is).getReg()) &&
+            ...);
+  }
+};
+
+template <Intrinsic::ID IntrID, typename... OpMatchers>
+inline GIntrinsic_match<IntrID, OpMatchers...>
+m_GIntrinsic(const OpMatchers &...Ops) {
+  return GIntrinsic_match<IntrID, OpMatchers...>(Ops...);
 }
 
 /// Matches a G_SHUFFLE_VECTOR, binding its two source operands and its mask.
@@ -711,6 +752,8 @@ struct BinaryOp_match {
     const MachineInstr *TmpMI;
     if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
+        if ((TmpMI->getFlags() & Flags) != Flags)
+          return false;
         if ((!L.match(MRI, TmpMI->getOperand(1).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(2).getReg())) &&
             // NOTE: When trying the alternative operand ordering
@@ -720,8 +763,6 @@ struct BinaryOp_match {
             // expected.
             (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(1).getReg())))
-          return false;
-        if ((TmpMI->getFlags() & Flags) != Flags)
           return false;
         if (FlagsOut)
           *FlagsOut = TmpMI->getFlags();

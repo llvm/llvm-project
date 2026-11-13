@@ -198,7 +198,7 @@ void llvm::moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
                                           ScalarEvolution &SE) {
   for (Instruction &I :
        llvm::make_early_inc_range(llvm::drop_begin(llvm::reverse(FromBB)))) {
-    BasicBlock::iterator MovePos = ToBB.getFirstNonPHIOrDbg();
+    BasicBlock::iterator MovePos = ToBB.getFirstNonPHIOrPseudoProbe();
 
     if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI)) {
       // Update SCEV to ensure it remains valid throughout the function.

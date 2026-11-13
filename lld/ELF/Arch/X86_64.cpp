@@ -53,7 +53,7 @@ public:
   bool relaxOnce(int pass) const override;
   void relaxCFIJumpTables() const override;
   void applyBranchToBranchOpt() const override;
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override;
@@ -642,7 +642,7 @@ RelType X86_64::getDynRel(RelType type) const {
   return R_X86_64_NONE;
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                              unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -651,13 +651,13 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
     uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = rel.r_offset;
     RelType type = rel.getType(false);
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    int64_t addend = rs.getAddend(rel, type);
     RelExpr expr;
     // Relocation types that only need a RelExpr set `expr` and break out of
     // the switch to reach rs.process(). Types that need special handling
@@ -773,9 +773,9 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
 void X86_64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.is64)
-    elf::scanSection1<X86_64, ELF64LE>(*this, sec, shard);
+    elf::scanSection1<ELF64LE>(*this, sec, shard);
   else // ilp32
-    elf::scanSection1<X86_64, ELF32LE>(*this, sec, shard);
+    elf::scanSection1<ELF32LE>(*this, sec, shard);
 }
 
 static bool isPltOff64Tls(const uint8_t *loc) {
@@ -866,6 +866,7 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
       memcpy(loc - 3, inst, sizeof(inst));
       // Both code sequences are PC relatives, but since we are moving the
       // constant forward by 9 bytes we have to subtract the value by 9.
+      checkInt(ctx, loc, val - 9, 32, rel);
       write32le(loc + 9, val - 9);
       return;
     }
@@ -885,6 +886,7 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
 
     // Both code sequences are PC relatives, but since we are moving the
     // constant forward by 8 bytes we have to subtract the value by 8.
+    checkInt(ctx, loc, val - 8, 32, rel);
     write32le(loc + 8, val - 8);
   } else if (rel.type == R_X86_64_GOTPC32_TLSDESC ||
              rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC) {
@@ -899,6 +901,7 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
       return;
     }
     loc[-2] = 0x8b;
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
   }
 }

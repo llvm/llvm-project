@@ -22,7 +22,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 
 using namespace llvm;
@@ -227,6 +226,8 @@ createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
 
 static MCTargetStreamer *
 createNullTargetStreamer(MCStreamer &S) {
+  if (S.getContext().getTargetTriple().isOSzOS())
+    return new SystemZTargetzOSStreamer(S);
   return new SystemZTargetStreamer(S);
 }
 

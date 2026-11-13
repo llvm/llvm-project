@@ -287,7 +287,7 @@ func.func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
 
 // -----
 
-func.func @fold_masked_vector_transfer_read_with_subview(
+func.func @fold_vector_transfer_read_with_subview_with_mask(
     %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>>,
     %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
     %arg6 : index, %mask : vector<4xi1>) -> vector<4xf32> {
@@ -300,7 +300,7 @@ func.func @fold_masked_vector_transfer_read_with_subview(
   return %1 : vector<4xf32>
 }
 //   CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
-//       CHECK: func @fold_masked_vector_transfer_read_with_subview
+//       CHECK: func @fold_vector_transfer_read_with_subview_with_mask
 //  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32, strided<[?, ?], offset: ?>>
 //  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: index
 //  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index
@@ -312,6 +312,39 @@ func.func @fold_masked_vector_transfer_read_with_subview(
 //   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG1]], %[[ARG5]]]
 //   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
 //       CHECK:    vector.transfer_read %[[ARG0]][%[[IDX0]], %[[IDX1]]], %{{.*}}, %[[MASK]] {{.*}} : memref<?x?xf32
+
+// -----
+
+// Same as @fold_masked_vector_transfer_read_with_subview, but masked with
+// `vector.mask`. Checks that the new indices are created outside the mask
+// region.
+func.func @fold_transfer_read_with_subview_masked(
+    %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>>,
+    %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
+    %arg6 : index, %mask : vector<4xi1>) -> vector<4xf32> {
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %arg0[%arg1, %arg2] [%arg3, %arg4] [1, 1]
+      : memref<?x?xf32, strided<[?, ?], offset: ?>> to
+        memref<?x?xf32, strided<[?, ?], offset: ?>>
+  %1 = vector.mask %mask {
+    vector.transfer_read %0[%arg5, %arg6], %cst {in_bounds = [true]}
+        : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32>
+  } : vector<4xi1> -> vector<4xf32>
+  return %1 : vector<4xf32>
+}
+//   CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+//       CHECK: func @fold_transfer_read_with_subview_masked
+//  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32, strided<[?, ?], offset: ?>>
+//  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG3:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG4:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG5:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[ARG6:[a-zA-Z0-9]+]]: index
+//  CHECK-SAME:    %[[MASK:[a-zA-Z0-9]+]]: vector<4xi1>
+//   CHECK-DAG:    %[[IDX0:.+]] = affine.apply #[[MAP1]]()[%[[ARG1]], %[[ARG5]]]
+//   CHECK-DAG:    %[[IDX1:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[ARG6]]]
+//       CHECK:    vector.mask %[[MASK]] { vector.transfer_read %[[ARG0]][%[[IDX0]], %[[IDX1]]], %{{.*}} {in_bounds = [true]} : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
 
 // -----
 
@@ -743,7 +776,7 @@ func.func @fold_vector_load_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
-  %1 = vector.load %0[%arg1, %c0] {nontemporal = true} : memref<4x8xf32>, vector<8xf32>
+  %1 = vector.load %0[%arg1, %c0] nontemporal = true : memref<4x8xf32>, vector<8xf32>
   return %1 : vector<8xf32>
 }
 
@@ -752,7 +785,7 @@ func.func @fold_vector_load_expand_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
-//       CHECK:   vector.load %[[ARG0]][%[[IDX]]] {nontemporal = true}
+//       CHECK:   vector.load %[[ARG0]][%[[IDX]]] nontemporal = true
 
 // -----
 
@@ -870,7 +903,7 @@ func.func @fold_vector_store_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index, %val : vector<8xf32>) {
   %c0 = arith.constant 0 : index
   %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
-  vector.store %val, %0[%arg1, %c0] {nontemporal = true} : memref<4x8xf32>, vector<8xf32>
+  vector.store %val, %0[%arg1, %c0] nontemporal = true : memref<4x8xf32>, vector<8xf32>
   return
 }
 
@@ -879,7 +912,7 @@ func.func @fold_vector_store_expand_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[C0:.*]] = arith.constant 0
 //       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
-//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]]] {nontemporal = true}
+//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]]] nontemporal = true
 
 // -----
 
@@ -1062,6 +1095,29 @@ func.func @fold_vector_transfer_read_expand_shape(
 
 // -----
 
+// Same as @fold_vector_transfer_read_expand_shape, but masked with
+// `vector.mask`. Checks that the new index is created outside the mask region
+// and isn't marked `disjoint`.
+func.func @fold_vector_transfer_read_expand_shape_masked(
+  %arg0 : memref<32xf32>, %arg1 : index, %mask : vector<8xi1>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
+  %1 = vector.mask %mask { vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true]} : memref<4x8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_transfer_read_expand_shape_masked
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[MASK:[a-zA-Z0-9_]+]]: vector<8xi1>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[PAD:.*]] = ub.poison : f32
+//       CHECK:   %[[IDX:.*]] = affine.linearize_index [%[[ARG1]], %[[C0]]] by (4, 8)
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_read %[[ARG0]][%[[IDX]]], %[[PAD]] {in_bounds = [true]} : memref<32xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+
+// -----
+
 func.func @fold_vector_transfer_read_expand_shape_non_identity(
   %arg0 : memref<32x32xf32>, %arg1 : index, %arg2 : index) -> vector<8x8xf32> {
   %c0 = arith.constant 0 : index
@@ -1146,7 +1202,7 @@ func.func @fold_memref_load_collapse_shape(
 func.func @fold_vector_load_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index) -> vector<8xf32> {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
-  %1 = vector.load %0[%arg1] {nontemporal = true} : memref<32xf32>, vector<8xf32>
+  %1 = vector.load %0[%arg1] nontemporal = true : memref<32xf32>, vector<8xf32>
   return %1 : vector<8xf32>
 }
 
@@ -1154,7 +1210,7 @@ func.func @fold_vector_load_collapse_shape(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
-//       CHECK:   vector.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+//       CHECK:   vector.load %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] nontemporal = true
 
 // -----
 
@@ -1193,7 +1249,7 @@ func.func @fold_memref_store_collapse_shape(
 func.func @fold_vector_store_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index, %val : vector<8xf32>) {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
-  vector.store %val, %0[%arg1] {nontemporal = true} : memref<32xf32>, vector<8xf32>
+  vector.store %val, %0[%arg1] nontemporal = true : memref<32xf32>, vector<8xf32>
   return
 }
 
@@ -1201,7 +1257,7 @@ func.func @fold_vector_store_collapse_shape(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x8xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
-//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] {nontemporal = true}
+//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1] nontemporal = true
 
 // -----
 
@@ -1254,6 +1310,29 @@ func.func @fold_collapse_shape_transfer_read(
 //       CHECK:   %[[PAD:.*]] = ub.poison : f32
 //       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4, 4)
 //       CHECK:   vector.transfer_read %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1, %[[C0]]], %[[PAD]] {in_bounds = [true]}
+
+// -----
+
+// Same as @fold_collapse_shape_transfer_read, but masked with `vector.mask`.
+// Checks that the new indices are created outside the mask region and that the
+// outer bound isn't assumed.
+func.func @fold_collapse_shape_transfer_read_masked(
+    %arg0 : memref<4x4x8xf32>, %arg1 : index, %mask : vector<8xi1>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = ub.poison : f32
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<4x4x8xf32> into memref<16x8xf32>
+  %1 = vector.mask %mask { vector.transfer_read %0[%arg1, %c0], %pad {in_bounds = [true]} : memref<16x8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_collapse_shape_transfer_read_masked
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x4x8xf32>
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:    %[[MASK:[a-zA-Z0-9_]+]]: vector<8xi1>
+//       CHECK:   %[[C0:.*]] = arith.constant 0
+//       CHECK:   %[[PAD:.*]] = ub.poison : f32
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (4) : index, index
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_read %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1, %[[C0]]], %[[PAD]] {in_bounds = [true]} : memref<4x4x8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
 
 // -----
 

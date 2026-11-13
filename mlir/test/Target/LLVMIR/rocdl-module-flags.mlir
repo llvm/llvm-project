@@ -45,3 +45,32 @@ module {
 // CHECK-LABEL: define void @generic_oob_relaxed()
 // CHECK: !llvm.module.flags = !{![[GENERIC_BUFFER_RELAXED:[0-9]+]]
 // CHECK-DAG: ![[GENERIC_BUFFER_RELAXED]] = !{i32 7, !"amdgpu.buffer.oob.mode", i32 1}
+
+// -----
+
+module attributes {rocdl.xnack = true, rocdl.sramecc = false} {
+  llvm.func @xnack_on_sramecc_off() {
+    llvm.return
+  }
+}
+
+// CHECK-LABEL: define void @xnack_on_sramecc_off()
+// CHECK: !llvm.module.flags = !{![[SRAMECC_OFF:[0-9]+]], ![[XNACK_ON:[0-9]+]]
+// CHECK-DAG: ![[SRAMECC_OFF]] = !{i32 1, !"amdgpu.sramecc", i32 0}
+// CHECK-DAG: ![[XNACK_ON]] = !{i32 1, !"amdgpu.xnack", i32 1}
+
+// -----
+
+// An unmentioned setting stays unmentioned: the backend reads that as "either",
+// which is not the same as the feature being disabled.
+
+module attributes {rocdl.xnack = false} {
+  llvm.func @xnack_off_sramecc_any() {
+    llvm.return
+  }
+}
+
+// CHECK-LABEL: define void @xnack_off_sramecc_any()
+// CHECK: !llvm.module.flags = !{![[XNACK_OFF:[0-9]+]]
+// CHECK-DAG: ![[XNACK_OFF]] = !{i32 1, !"amdgpu.xnack", i32 0}
+// CHECK-NOT: amdgpu.sramecc

@@ -8,7 +8,6 @@
 ///
 /// \file
 /// This file provides a LoopVectorizationPlanner class.
-/// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// LoopVectorizationPlanner - drives the vectorization process after having
 /// passed Legality checks.
 /// The planner builds and optimizes the Vectorization Plans which record the
@@ -25,9 +24,11 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
+#include <optional>
 
 namespace {
 class GeneratedRTChecks;
@@ -35,6 +36,7 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
@@ -42,21 +44,20 @@ class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 class LoopVectorizeHints;
 class RecurrenceDescriptor;
-class LoopVersioning;
 class OptimizationRemarkEmitter;
 class TargetLibraryInfo;
-class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
-
-extern cl::opt<bool> EnableVPlanNativePath;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<bool> PreferInLoopReductions;
+struct VectorizeOptions;
 
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
-std::optional<unsigned> getMaxVScale(const Function &F,
-                                     const TargetTransformInfo &TTI);
+std::optional<unsigned> getMaxVScale(const Function &F);
+
+/// \return The upper bound for the runtime value of \p EC, or std::nullopt
+/// if the upper bound is unknown.
+std::optional<uint64_t>
+getMaxRuntimeElementCount(ElementCount EC, const Function &F);
 
 // Utility functions that are used by different vectorization classes
 namespace LoopVectorizationUtils {
@@ -95,46 +96,53 @@ void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
 
 } // namespace LoopVectorizationUtils
 
-/// VPlan-based builder utility analogous to IRBuilder.
-class VPBuilder {
+/// Default inserter for VPBuilderBase, inserting \p R before \p It.
+struct VPBuilderDefaultInserter {
+  void insertHelper(VPRecipeBase *R, VPBasicBlock::iterator It) {
+    R->insertBefore(It);
+  }
+};
+
+/// VPlan-based builder utility similar to IRBuilder. Recipes are inserted via
+/// \p InserterTy.
+template <typename InserterTy> class VPBuilderBase : public InserterTy {
 private:
   class VPInsertPoint {
-    VPBasicBlock *Block = nullptr;
-    VPBasicBlock::iterator Point;
+    VPBasicBlock::iterator Iterator;
 
   public:
     /// Creates a new insertion point which doesn't point to anything.
     VPInsertPoint() = default;
 
-    /// Creates a new insertion point to insert at \p Point in \p Block.
-    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Point)
-        : Block(Block), Point(Point) {}
+    /// Creates a new insertion point to insert before \p Iterator.
+    VPInsertPoint(VPBasicBlock::iterator Iterator) : Iterator(Iterator) {}
 
     /// Creates a new insertion point to insert before \p R.
-    VPInsertPoint(VPRecipeBase *R)
-        : Block(R->getParent()), Point(R->getIterator()) {}
+    VPInsertPoint(VPRecipeBase *R) : Iterator(R->getIterator()) {}
 
     /// Creates a new insertion point to insert at the end of \p Block.
-    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Point(Block->end()) {}
+    VPInsertPoint(VPBasicBlock *Block) : Iterator(Block->end()) {}
 
     /// Returns true if this insert point is set.
-    operator bool() const { return Block; }
+    operator bool() const { return Iterator.isValid(); }
 
-    VPBasicBlock *getBlock() const { return Block; }
+    VPBasicBlock *getBlock() const {
+      return Iterator.isValid() ? Iterator.getNodeParent() : nullptr;
+    }
+    VPBasicBlock::iterator getIterator() const { return Iterator; }
 
     operator VPRecipeBase *() const {
-      return Point == Block->end() ? nullptr : &*Point;
+      return Iterator == getBlock()->end() ? nullptr : &*Iterator;
     }
-
-    template <typename T> void insert(T &R) { return Block->insert(R, Point); }
   };
 
   VPInsertPoint InsertPt;
 
-  /// Insert \p VPI in BB at InsertPt if BB is set.
+protected:
+  /// Insert \p R at InsertPt if InsertPt is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (InsertPt)
-      InsertPt.insert(R);
+      InserterTy::insertHelper(R, InsertPt.getIterator());
     return R;
   }
 
@@ -152,18 +160,19 @@ public:
     return *InsertPt.getBlock()->getPlan();
   }
 
-  VPBuilder() = default;
-  VPBuilder(const VPInsertPoint &IP) : InsertPt(IP) {}
-  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
-      : InsertPt(TheBB, IP) {}
+  VPBuilderBase() = default;
+  VPBuilderBase(const VPInsertPoint &IP) : InsertPt(IP) {}
+  VPBuilderBase(InserterTy Inserter) : InserterTy(Inserter) {}
 
   /// Get the recipe at the current insert point or nullptr if the insert point
   /// is the end of the block.
   VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
-  /// Create a VPBuilder to insert after \p R.
-  static VPBuilder getToInsertAfter(VPRecipeBase *R) {
-    return {R->getParent(), std::next(R->getIterator())};
+  VPBasicBlock *getInsertBlock() const { return InsertPt.getBlock(); }
+
+  /// Create a builder to insert after \p R.
+  static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
+    return VPBuilderBase(std::next(R->getIterator()));
   }
 
   /// Sets the current insert point to a previously-saved location.
@@ -174,14 +183,10 @@ public:
     assert(IP && "Attempting to set a null insert point");
     InsertPt = IP;
   }
-  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    assert(TheBB && "Attempting to set a null insert point");
-    InsertPt = VPInsertPoint(TheBB, IP);
-  }
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    InsertPt.insert(R);
+    InserterTy::insertHelper(R, InsertPt.getIterator());
     return R;
   }
 
@@ -192,10 +197,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "",
-                              Type *ResultTy = nullptr) {
-    VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
+                              const Twine &Name = "", Type *ResultTy = nullptr,
+                              const VPIRAttributes &Attrs = {}) {
+    VPInstruction *NewVPInst = tryInsertInstruction(new VPInstruction(
+        Opcode, Operands, Flags, MD, DL, Name, ResultTy, Attrs));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -215,8 +220,8 @@ public:
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Operands, ResultTy, Flags, {}, DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, Flags, {}, DL, Name, ResultTy));
   }
 
   VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
@@ -299,13 +304,18 @@ public:
     return createNaryOp(VPInstruction::LogicalOr, {LHS, RHS}, DL, Name);
   }
 
+  /// Create a select of \p TrueVal and \p FalseVal based on \p Cond, using the
+  /// default flags for the result type, unless \p Flags is set.
   VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
                               VPValue *FalseVal,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "",
-                              const VPIRFlags &Flags = {}) {
-    return tryInsertInstruction(new VPInstruction(
-        Instruction::Select, {Cond, TrueVal, FalseVal}, Flags, {}, DL, Name));
+                              std::optional<VPIRFlags> Flags = std::nullopt) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
+                          Flags.value_or(VPIRFlags::getDefaultFlags(
+                              Instruction::Select, TrueVal->getScalarType())),
+                          {}, DL, Name));
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
@@ -335,7 +345,16 @@ public:
   /// result, then select between \p TrueVal and \p FalseVal.
   VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
                                       VPValue *FalseVal,
-                                      DebugLoc DL = DebugLoc::getUnknown());
+                                      DebugLoc DL = DebugLoc::getUnknown()) {
+    assert(ChainOp->getScalarType()->isIntegerTy(1) &&
+           "ChainOp must be i1 for AnyOf reduction");
+    VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                    FastMathFlags());
+    auto *OrReduce = createNaryOp(VPInstruction::ComputeReductionResult,
+                                  {ChainOp}, Flags, DL);
+    auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
+    return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
+  }
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
@@ -359,12 +378,18 @@ public:
                           GEPNoWrapFlags::none(), {}, DL, Name));
   }
 
+  /// Create a phi with \p IncomingValues, using the default flags for the
+  /// result type, unless \p Flags is set.
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "", const VPIRFlags &Flags = {},
+                         const Twine &Name = "",
+                         std::optional<VPIRFlags> Flags = std::nullopt,
                          Type *ResultTy = nullptr) {
-    return tryInsertInstruction(
-        new VPPhi(IncomingValues, Flags, DL, Name, ResultTy));
+    Type *ScalarTy = ResultTy ? ResultTy : IncomingValues[0]->getScalarType();
+    return tryInsertInstruction(new VPPhi(
+        IncomingValues,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Instruction::PHI, ScalarTy)),
+        DL, Name, ResultTy));
   }
 
   VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
@@ -402,39 +427,26 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
-  VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
-                                          DebugLoc DL,
-                                          const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Instruction::Load, Addr, ResultTy, {}, Metadata, DL));
-  }
-
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
+                                  std::optional<VPIRFlags> Flags = std::nullopt,
                                   const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Op, ResultTy, VPIRFlags::getDefaultFlags(Opcode), Metadata,
-        DL));
-  }
-
-  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                  Type *ResultTy, DebugLoc DL,
-                                  const VPIRFlags &Flags,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
+    return tryInsertInstruction(new VPInstruction(
+        Opcode, Op, Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)),
+        Metadata, DL, "", ResultTy));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
   /// result type \p ResultTy
   VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
                                        ArrayRef<VPValue *> Operands,
-                                       Type *ResultTy, DebugLoc DL) {
+                                       Type *ResultTy, DebugLoc DL,
+                                       const Twine &Name = "") {
     VPlan &Plan = getPlan();
     SmallVector<VPValue *, 2> Ops(Operands);
     Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
-    return tryInsertInstruction(new VPInstructionWithType(
-        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
+    return tryInsertInstruction(new VPInstruction(VPInstruction::Intrinsic, Ops,
+                                                  {}, {}, DL, Name, ResultTy));
   }
 
   /// Create a scalar llvm.vscale call.
@@ -465,32 +477,37 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
+  VPInstruction *createFreeze(VPValue *Op, DebugLoc DL = DebugLoc::getUnknown(),
+                              const Twine &Name = "") {
+    return createNaryOp(Instruction::Freeze, Op, DL, Name);
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
+    assert(Op->getScalarType() != ResultTy &&
+           "must not create a no-op cast recipe");
     return tryInsertInstruction(new VPWidenCastRecipe(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
 
   /// Create a single-scalar recipe with \p Opcode and \p Operands without
   /// inserting it.
-  static VPSingleDefRecipe *createSingleScalarOp(unsigned Opcode,
-                                                 ArrayRef<VPValue *> Operands,
-                                                 VPValue *Mask,
-                                                 const VPIRFlags &Flags,
-                                                 const VPIRMetadata &Metadata,
-                                                 DebugLoc DL, Instruction *UV) {
+  static VPSingleDefRecipe *
+  createSingleScalarOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                       VPValue *Mask, const VPIRFlags &Flags,
+                       const VPIRMetadata &Metadata, DebugLoc DL,
+                       Type *ResultTy, Instruction *UV) {
     if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
-      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
-                                       Metadata, DL, UV->getName(), UV);
+      auto *VPI = new VPInstruction(Opcode, Operands, Flags, Metadata, DL,
+                                    UV->getName(), ResultTy);
+      VPI->setUnderlyingValue(UV);
+      return VPI;
     }
-    return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
-                                 Flags, Metadata, DL);
+    auto *RepR = new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true,
+                                       Mask, Flags, Metadata, DL);
+    assert(RepR->getScalarType() == ResultTy && "unexpected result type");
+    return RepR;
   }
 
   VPScalarIVStepsRecipe *
@@ -517,7 +534,25 @@ public:
   /// with element type \p SourceElementTy.
   VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
                                                     Type *SourceElementTy,
-                                                    bool Reverse, DebugLoc DL);
+                                                    bool Reverse, DebugLoc DL) {
+    VPlan &Plan = getPlan();
+    GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
+    if (Reverse) {
+      // When folding the tail, we may compute an address that we don't in the
+      // original scalar loop: drop the GEP no-wrap flags in this case.
+      // Otherwise preserve existing flags without no-unsigned-wrap, as we will
+      // emit negative indices.
+      GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
+                                        ? GEPNoWrapFlags::none()
+                                        : Flags.withoutNoUnsignedWrap();
+      return tryInsertInstruction(
+          new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), SourceElementTy,
+                                       /*Stride=*/-1, ReverseFlags, DL));
+    }
+    Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+    VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+    return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
+  }
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
@@ -530,21 +565,22 @@ public:
   /// be null).
   VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
                                      VPValue *Mask, bool Consecutive,
+                                     Align Alignment,
                                      const VPIRMetadata &Metadata,
                                      DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+    return tryInsertInstruction(new VPWidenLoadRecipe(
+        Load, Addr, Mask, Consecutive, Alignment, Metadata, DL));
   }
 
   /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with
   /// \p Mask (may be null).
   VPWidenStoreRecipe *createWidenStore(StoreInst &Store, VPValue *Addr,
                                        VPValue *StoredVal, VPValue *Mask,
-                                       bool Consecutive,
+                                       bool Consecutive, Align Alignment,
                                        const VPIRMetadata &Metadata,
                                        DebugLoc DL) {
     return tryInsertInstruction(new VPWidenStoreRecipe(
-        Store, Addr, StoredVal, Mask, Consecutive, Metadata, DL));
+        Store, Addr, StoredVal, Mask, Consecutive, Alignment, Metadata, DL));
   }
 
   //===--------------------------------------------------------------------===//
@@ -554,11 +590,11 @@ public:
   /// RAII object that stores the current insertion point and restores it when
   /// the object is destroyed.
   class InsertPointGuard {
-    VPBuilder &Builder;
+    VPBuilderBase &Builder;
     VPInsertPoint InsertPt;
 
   public:
-    InsertPointGuard(VPBuilder &B) : Builder(B), InsertPt(B.InsertPt) {}
+    InsertPointGuard(VPBuilderBase &B) : Builder(B), InsertPt(B.InsertPt) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
@@ -595,14 +631,6 @@ struct VectorizationFactor {
   static VectorizationFactor Disabled() {
     return {ElementCount::getFixed(1), 0, 0};
   }
-
-  bool operator==(const VectorizationFactor &rhs) const {
-    return Width == rhs.Width && Cost == rhs.Cost;
-  }
-
-  bool operator!=(const VectorizationFactor &rhs) const {
-    return !(*this == rhs);
-  }
 };
 
 /// A class that represents two vectorization factors (initialized with 0 by
@@ -631,24 +659,37 @@ struct FixedScalableVFPair {
 
   /// \return true if either fixed- or scalable VF is non-zero.
   explicit operator bool() const { return FixedVF || ScalableVF; }
-
-  /// \return true if either fixed- or scalable VF is a valid vector VF.
-  bool hasVector() const { return FixedVF.isVector() || ScalableVF.isVector(); }
 };
 
 /// Holds state needed to make cost decisions before computing costs per-VF,
 /// including the maximum VFs.
 class VFSelectionContext {
+  using VectorKind = TargetTransformInfo::VectorKind;
   /// \return True if maximizing vector bandwidth is enabled by the target or
   /// user options, for the given register kind (scalable or fixed-width).
-  bool useMaxBandwidth(bool IsScalable) const;
+  bool useMaxBandwidth(VectorKind Kind, Type *ElementTy = nullptr) const;
+  bool useMaxBandwidth(bool IsScalable, Type *ElementTy = nullptr) const {
+    return useMaxBandwidth(
+        IsScalable ? VectorKind::Scalable : VectorKind::FixedWidth, ElementTy);
+  }
+
+  struct TypeWidths {
+    unsigned SmallestTypeForMaxBandwidth;
+    unsigned SmallestType;
+    unsigned WidestType;
+  };
+
+  /// \return The size (in bits) of the of the types used to determine the
+  /// possible VFs. That is the widest type in the loop and the smallest type
+  /// the target wants to maximize vector bandwidth for. We ignore values that
+  /// remain scalar such as 64 bit loop indices.
+  TypeWidths getTypeWidthsForVFSelection() const;
 
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
   ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
-                                       unsigned SmallestType,
-                                       unsigned WidestType,
+                                       const TypeWidths &TyWidths,
                                        ElementCount MaxSafeVF, unsigned UserIC,
                                        bool FoldTailByMasking,
                                        bool RequiresScalarEpilogue);
@@ -672,6 +713,7 @@ class VFSelectionContext {
   /// return the value returned by the corresponding TTI method.
   void initializeVScaleForTuning();
 
+  const VectorizeOptions &Opts;
   const TargetTransformInfo &TTI;
   const LoopVectorizationLegality *Legal;
   const Loop *TheLoop;
@@ -698,12 +740,6 @@ class VFSelectionContext {
   /// collectInLoopReductions.
   SmallPtrSet<PHINode *, 4> InLoopReductions;
 
-  /// A Map of inloop reduction operations and their immediate chain operand.
-  /// FIXME: This can be removed once reductions can be costed correctly in
-  /// VPlan. This was added to allow quick lookup of the inloop operations.
-  /// Set by collectInLoopReductions.
-  DenseMap<Instruction *, Instruction *> InLoopReductionImmediateChains;
-
   /// Maximum safe number of elements to be processed per vector iteration,
   /// which do not prevent store-load forwarding and are safe with regard to the
   /// memory dependencies. Required for EVL-based vectorization, where this
@@ -724,14 +760,15 @@ public:
   /// or profile information.
   const bool OptForSize;
 
-  VFSelectionContext(const TargetTransformInfo &TTI,
+  VFSelectionContext(const VectorizeOptions &Opts,
+                     const TargetTransformInfo &TTI,
                      const LoopVectorizationLegality *Legal,
                      const Loop *TheLoop, const Function &F,
                      PredicatedScalarEvolution &PSE, DemandedBits *DB,
                      OptimizationRemarkEmitter *ORE,
                      const LoopVectorizeHints *Hints, bool OptForSize)
-      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), DB(DB),
-        ORE(ORE), Hints(Hints),
+      : Opts(Opts), TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE),
+        DB(DB), ORE(ORE), Hints(Hints),
         CostKind(F.hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput),
         OptForSize(OptForSize) {
     initializeVScaleForTuning();
@@ -739,6 +776,8 @@ public:
 
   /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
+  const VectorizeOptions &getOpts() const { return Opts; }
 
   const TargetTransformInfo &getTTI() const { return TTI; }
 
@@ -750,6 +789,10 @@ public:
   /// \return The vectorization hints for the loop being analyzed.
   const LoopVectorizeHints &getHints() const { return *Hints; }
 
+  /// Returns true if epilogue vectorization is considered profitable for a
+  /// main loop with vectorization factor \p VF and interleave count \p IC.
+  bool isEpilogueVectorizationProfitable(ElementCount VF, unsigned IC) const;
+
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
 
@@ -759,11 +802,6 @@ public:
   /// Collect element types in the loop that need widening.
   void collectElementTypesForWidening(
       const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
-
-  /// \return The size (in bits) of the smallest and widest types in the code
-  /// that need to be vectorized. We ignore values that remain scalar such as
-  /// 64 bit loop indices.
-  std::pair<unsigned, unsigned> getSmallestAndWidestTypes() const;
 
   /// \return An upper bound for the vectorization factors for both
   /// fixed and scalable vectorization, where the minimum-known number of
@@ -797,14 +835,14 @@ public:
   bool isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy, Align Alignment,
                                 unsigned AddressSpace) const;
 
-  /// Returns true if the target machine can represent \p V as a masked gather
-  /// or scatter operation.
-  bool isLegalGatherOrScatter(Value *V, ElementCount VF) const;
+  /// Returns true if the target machine supports a gather (if \p IsLoad)
+  /// or scatter of scalar type \p ScalarTy with \p Alignment for vectorization
+  /// factor \p VF.
+  bool isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy, Align Alignment,
+                              ElementCount VF) const;
 
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.
-  /// InLoopReductionImmediateChains is filled with each in-loop reduction
-  /// operation and its immediate chain operand for use during cost modelling.
   void collectInLoopReductions();
 
   /// Returns true if the Phi is part of an inloop reduction.
@@ -815,12 +853,6 @@ public:
   /// Returns the set of in-loop reduction PHIs.
   const SmallPtrSetImpl<PHINode *> &getInLoopReductions() const {
     return InLoopReductions;
-  }
-
-  /// Returns the immediate chain operand of in-loop reduction operation \p I,
-  /// or nullptr if \p I is not an in-loop reduction operation.
-  Instruction *getInLoopReductionImmediateChain(Instruction *I) const {
-    return InLoopReductionImmediateChains.lookup(I);
   }
 
   /// Check whether vectorization would require runtime checks. When optimizing
@@ -845,6 +877,8 @@ public:
 /// Planner drives the vectorization process after having passed
 /// Legality checks.
 class LoopVectorizationPlanner {
+  const VectorizeOptions &Opts;
+
   /// The loop that we evaluate.
   Loop *OrigLoop;
 
@@ -863,18 +897,20 @@ class LoopVectorizationPlanner {
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
-  /// The profitability analysis.
-  LoopVectorizationCostModel &CM;
+  /// The profitability analysis. Cleared after making cost based decisions.
+  /// This instance should never be used in any function that takes an explicit
+  /// PlanCM reference, since that instance overrides this one.
+  std::unique_ptr<LoopVectorizationCostModel> CM;
 
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
 
-  /// The interleaved access analysis.
-  InterleavedAccessInfo &IAI;
-
   PredicatedScalarEvolution &PSE;
 
   OptimizationRemarkEmitter *ORE;
+
+  /// Lazily fetch BranchProbabilityInfo, independent of BlockFrequencyInfo.
+  std::function<const BranchProbabilityInfo &()> GetBPI;
 
   SmallVector<VPlanPtr, 4> VPlans;
 
@@ -884,7 +920,8 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
-  /// Computes the cost of \p Plan for vectorization factor \p VF.
+  /// Computes the cost of \p Plan for vectorization factor \p VF, using
+  /// \p PlanCM as the cost model.
   ///
   /// The current implementation requires access to the
   /// LoopVectorizationLegality to handle inductions and reductions, which is
@@ -892,7 +929,8 @@ class LoopVectorizationPlanner {
   ///
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
+  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU,
+                       LoopVectorizationCostModel &PlanCM) const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid
@@ -904,11 +942,30 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel &CM, VFSelectionContext &Config,
-      InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      OptimizationRemarkEmitter *ORE)
-      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), ORE(ORE) {}
+      std::unique_ptr<LoopVectorizationCostModel> CM,
+      VFSelectionContext &Config, PredicatedScalarEvolution &PSE,
+      OptimizationRemarkEmitter *ORE,
+      std::function<const BranchProbabilityInfo &()> GetBPI);
+
+  ~LoopVectorizationPlanner();
+
+  /// Return the cost model. Must not be called after clearCostModel().
+  LoopVectorizationCostModel &getCostModel() {
+    assert(CM && "Cost model has already been cleared");
+    return *CM;
+  }
+
+  /// Destroy the cost model.
+  void clearCostModel();
+
+  /// Return true if there is at least one VPlan for a vector VF
+  bool hasVectorPlan() const {
+    return any_of(
+        VPlans, [&](const VPlanPtr &Plan) { return !Plan->hasScalarVFOnly(); });
+  }
+
+  /// Returns true if there is at least one VPlan.
+  bool hasAPlan() const { return !VPlans.empty(); }
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -932,10 +989,14 @@ public:
                                  InstructionCost LoopCost);
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
-  /// according to the best selected \p VF and  \p UF.
+  /// according to the best selected \p VF and \p UF. \p HasRuntimeChecks is
+  /// used to decide whether runtime unrolling of the scalar loop is disabled.
   ///
   /// TODO: \p EpilogueVecKind should be removed once the re-use issue has been
   /// fixed.
+  ///
+  /// When vectorizing the main loop, \p TrackedBlocks are updated to the
+  /// VPIRBasicBlocks wrapping the blocks generated for them.
   ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
@@ -947,9 +1008,10 @@ public:
   };
   DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-              InnerLoopVectorizer &LB, DominatorTree *DT,
+              bool HasRuntimeChecks,
               EpilogueVectorizationKind EpilogueVecKind =
-                  EpilogueVectorizationKind::None);
+                  EpilogueVectorizationKind::None,
+              MutableArrayRef<VPBasicBlock *> TrackedBlocks = {});
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -972,20 +1034,29 @@ public:
   /// \return A VPlan for the most profitable epilogue vectorization, with its
   /// VF narrowed to the chosen factor. The returned plan is a duplicate.
   /// Returns nullptr if epilogue vectorization is not supported or not
-  /// profitable for the loop.
-  std::unique_ptr<VPlan>
-  selectBestEpiloguePlan(VPlan &MainPlan, ElementCount MainLoopVF, unsigned IC);
+  /// profitable for the loop. \p ScalarEpilogueAllowed indicates whether the
+  /// epilogue lowering policy permits creating a scalar epilogue at all.
+  std::unique_ptr<VPlan> selectBestEpiloguePlan(VPlan &MainPlan,
+                                                ElementCount MainLoopVF,
+                                                unsigned IC,
+                                                bool ScalarEpilogueAllowed);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
 
   /// Create a check to \p Plan to see if the vector loop should be executed
-  /// based on its trip count.
+  /// based on its trip count. When \p TailFoldedEpilogue is true, the
+  /// tail-folded vector epilogue executes all iterations not executed by
+  /// the main vector loop, so the check never needs to branch to the scalar
+  /// loop.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
-                                ElementCount MinProfitableTripCount) const;
+                                ElementCount MinProfitableTripCount,
+                                bool TailFoldedEpilogue) const;
 
-  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  /// Attach the runtime checks of \p RTChecks to \p Plan. \p VF and \p UF are
+  /// used to compute the thresholds of difference checks.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           ElementCount VF, unsigned UF,
                            bool HasBranchWeights) const;
 
   /// Update loop metadata and profile info for both the scalar remainder loop
@@ -1005,10 +1076,15 @@ public:
       bool DisableRuntimeUnroll, bool UnrollVectorizedLoop);
 
 private:
+  /// Build VPlan for the forced epilogue VF. If vectorization and tail-folding
+  /// should be avoided up-front, no tail-folded plans are generated.
+  bool planForEpilogueTF();
+
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
-  /// be built.
-  VPlanPtr tryToBuildVPlan1();
+  /// be built. \p PlanCM is the cost model to use for decisions made while
+  /// building the plan.
+  VPlanPtr tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM);
 
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
@@ -1017,21 +1093,25 @@ private:
   /// can be built for the input range, set the largest included VF to the
   /// maximum VF for which no plan could be built. Each VPlan is built starting
   /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
-  /// original scalar loop.
-  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
+  /// original scalar loop. \p PlanCM is the cost model used for legality
+  /// and widening decisions while building the plan.
+  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range,
+                           LoopVectorizationCostModel &PlanCM);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
-  /// when it checked if it is legal to vectorize the loop.
-  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
+  /// when it checked if it is legal to vectorize the loop. \p PlanCM is
+  /// the cost model to build these VPlans.
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF,
+                   LoopVectorizationCostModel &PlanCM);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
   /// folding tail, to feed ComputeReductionResult with the last or penultimate
-  /// iteration values according to the header mask.
-  void addReductionResultComputation(VPlanPtr &Plan,
-                                     VPRecipeBuilder &RecipeBuilder,
-                                     ElementCount MinVF);
+  /// iteration values according to the header mask. \p PlanCM is the cost
+  /// model used to build \p Plan.
+  void addReductionResultComputation(VPlanPtr &Plan, ElementCount MinVF,
+                                     LoopVectorizationCostModel &PlanCM);
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
@@ -1050,16 +1130,6 @@ private:
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
   bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;
 };
-
-/// A helper function that returns true if the given type is irregular. The
-/// type is irregular if its allocated size doesn't equal the store size of an
-/// element of the corresponding vector type.
-inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
-  // Determine if an array of N elements of type Ty is "bitcast compatible"
-  // with a <N x Ty> vector.
-  // This is only true if there is no padding between the array elements.
-  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
-}
 
 } // namespace llvm
 

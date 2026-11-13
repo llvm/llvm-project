@@ -4,7 +4,6 @@
 
 ---
 name: rotl_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -19,7 +18,7 @@ body: |
     ; CHECK-NEXT: [[CONST_I32_2:%[0-9]+]]:i32 = CONST_I32 255, implicit-def dead $arguments
     ; CHECK-NEXT: [[AND_I32_:%[0-9]+]]:i32 = AND_I32 [[ARGUMENT_i32_]], [[CONST_I32_2]], implicit-def dead $arguments
     ; CHECK-NEXT: [[SHR_U_I32_:%[0-9]+]]:i32 = SHR_U_I32 [[AND_I32_]], [[CONST_I32_1]], implicit-def dead $arguments
-    ; CHECK-NEXT: [[OR_I32_:%[0-9]+]]:i32 = disjoint OR_I32 [[SHL_I32_]], [[SHR_U_I32_]], implicit-def dead $arguments
+    ; CHECK-NEXT: [[OR_I32_:%[0-9]+]]:i32 = OR_I32 [[SHL_I32_]], [[SHR_U_I32_]], implicit-def dead $arguments
     ; CHECK-NEXT: RETURN [[OR_I32_]], implicit-def $arguments
     %2:i32(i32) = ARGUMENT_i32 0, implicit $arguments
     %0:_(i8) = G_TRUNC %2(i32)
@@ -31,7 +30,6 @@ body: |
 ...
 ---
 name: rotlv_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -50,7 +48,7 @@ body: |
     ; CHECK-NEXT: [[CONST_I32_2:%[0-9]+]]:i32 = CONST_I32 255, implicit-def dead $arguments
     ; CHECK-NEXT: [[AND_I32_2:%[0-9]+]]:i32 = AND_I32 [[ARGUMENT_i32_]], [[CONST_I32_2]], implicit-def dead $arguments
     ; CHECK-NEXT: [[SHR_U_I32_:%[0-9]+]]:i32 = SHR_U_I32 [[AND_I32_2]], [[AND_I32_1]], implicit-def dead $arguments
-    ; CHECK-NEXT: [[OR_I32_:%[0-9]+]]:i32 = disjoint OR_I32 [[SHL_I32_]], [[SHR_U_I32_]], implicit-def dead $arguments
+    ; CHECK-NEXT: [[OR_I32_:%[0-9]+]]:i32 = OR_I32 [[SHL_I32_]], [[SHR_U_I32_]], implicit-def dead $arguments
     ; CHECK-NEXT: RETURN [[OR_I32_]], implicit-def $arguments
     %2:i32(i32) = ARGUMENT_i32 0, implicit $arguments
     %0:_(i8) = G_TRUNC %2(i32)
@@ -63,7 +61,6 @@ body: |
 ...
 ---
 name: rotl_i16
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -78,7 +75,7 @@ body: |
     ; CHECK-NEXT: [[CONST_I32_2:%[0-9]+]]:i32 = CONST_I32 65535, implicit-def dead $arguments
     ; CHECK-NEXT: [[AND_I32_:%[0-9]+]]:i32 = AND_I32 [[ARGUMENT_i32_]], [[CONST_I32_2]], implicit-def dead $arguments
     ; CHECK-NEXT: [[SHR_U_I32_:%[0-9]+]]:i32 = SHR_U_I32 [[AND_I32_]], [[CONST_I32_1]], implicit-def dead $arguments
-    ; CHECK-NEXT: [[OR_I32_:%[0-9]+]]:i32 = disjoint OR_I32 [[SHL_I32_]], [[SHR_U_I32_]], implicit-def dead $arguments
+    ; CHECK-NEXT: [[OR_I32_:%[0-9]+]]:i32 = OR_I32 [[SHL_I32_]], [[SHR_U_I32_]], implicit-def dead $arguments
     ; CHECK-NEXT: RETURN [[OR_I32_]], implicit-def $arguments
     %2:i32(i32) = ARGUMENT_i32 0, implicit $arguments
     %0:_(i16) = G_TRUNC %2(i32)
@@ -90,7 +87,6 @@ body: |
 ...
 ---
 name: rotlv_i16
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -109,7 +105,7 @@ body: |
     ; CHECK-NEXT: [[CONST_I32_2:%[0-9]+]]:i32 = CONST_I32 65535, implicit-def dead $arguments
     ; CHECK-NEXT: [[AND_I32_2:%[0-9]+]]:i32 = AND_I32 [[ARGUMENT_i32_]], [[CONST_I32_2]], implicit-def dead $arguments
     ; CHECK-NEXT: [[SHR_U_I32_:%[0-9]+]]:i32 = SHR_U_I32 [[AND_I32_2]], [[AND_I32_1]], implicit-def dead $arguments
-    ; CHECK-NEXT: [[OR_I32_:%[0-9]+]]:i32 = disjoint OR_I32 [[SHL_I32_]], [[SHR_U_I32_]], implicit-def dead $arguments
+    ; CHECK-NEXT: [[OR_I32_:%[0-9]+]]:i32 = OR_I32 [[SHL_I32_]], [[SHR_U_I32_]], implicit-def dead $arguments
     ; CHECK-NEXT: RETURN [[OR_I32_]], implicit-def $arguments
     %2:i32(i32) = ARGUMENT_i32 0, implicit $arguments
     %0:_(i16) = G_TRUNC %2(i32)
@@ -122,7 +118,6 @@ body: |
 ...
 ---
 name: rotl_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -142,7 +137,6 @@ body: |
 ...
 ---
 name: rotlv_i32
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -162,7 +156,6 @@ body: |
 ...
 ---
 name: rotl_i32_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -182,7 +175,6 @@ body: |
 ...
 ---
 name: rotlv_i32_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -205,7 +197,6 @@ body: |
 ...
 ---
 name: rotl_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -225,7 +216,6 @@ body: |
 ...
 ---
 name: rotlv_i64
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -245,7 +235,6 @@ body: |
 ...
 ---
 name: rotl_i64_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments
@@ -267,7 +256,6 @@ body: |
 ...
 ---
 name: rotlv_i64_i8
-tracksRegLiveness: true
 body: |
   bb.1.entry:
     liveins: $arguments

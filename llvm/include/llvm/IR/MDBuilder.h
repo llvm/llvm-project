@@ -98,12 +98,11 @@ public:
   /// Return metadata specifying that a branch or switch is unpredictable.
   LLVM_ABI MDNode *createUnpredictable();
 
-  /// Return metadata containing the entry \p Count for a function, a boolean
-  /// \Synthetic indicating whether the counts were synthetized, and the
+  /// Return metadata containing the entry \p Count for a function and the
   /// GUIDs stored in \p Imports that need to be imported for sample PGO, to
   /// enable the same inlines as the profiled optimized binary
   LLVM_ABI MDNode *
-  createFunctionEntryCount(uint64_t Count, bool Synthetic,
+  createFunctionEntryCount(uint64_t Count,
                            const DenseSet<GlobalValue::GUID> *Imports);
 
   /// Return metadata containing the section prefix for a global object.
@@ -182,12 +181,13 @@ public:
     return createAnonymousAARoot();
   }
 
-  /// Return metadata appropriate for an alias scope domain node.
+  /// Return metadata appropriate for an alias scope domain node, described by
+  /// \p Description, whose scopes are disjoint if \p DisjointScopes is set.
   /// Each returned node is distinct from all other metadata and will never
   /// be identified (uniqued) with anything else.
-  MDNode *createAnonymousAliasScopeDomain(StringRef Name = StringRef()) {
-    return createAnonymousAARoot(Name);
-  }
+  LLVM_ABI MDNode *
+  createAnonymousAliasScopeDomain(StringRef Description = StringRef(),
+                                  bool DisjointScopes = false);
 
   /// Return metadata appropriate for an alias scope root node.
   /// Each returned node is distinct from all other metadata and will never
@@ -203,9 +203,10 @@ public:
   LLVM_ABI MDNode *createTBAARoot(StringRef Name);
 
   /// Return metadata appropriate for an alias scope domain node with
-  /// the given name. This may be identified (uniqued) with other roots with
-  /// the same name.
-  LLVM_ABI MDNode *createAliasScopeDomain(StringRef Name);
+  /// the given name, whose scopes are disjoint if \p DisjointScopes is set.
+  /// This may be identified (uniqued) with other roots with the same name.
+  LLVM_ABI MDNode *createAliasScopeDomain(StringRef Name,
+                                          bool DisjointScopes = false);
 
   /// Return metadata appropriate for an alias scope node with
   /// the given name. This may be identified (uniqued) with other scopes with

@@ -30,20 +30,20 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @shuffle3_f16(<8 x half> %src) {
 ; CHECKFP16-LABEL: shuffle3_f16:
 ; CHECKFP16:       @ %bb.0: @ %entry
-; CHECKFP16-NEXT:    vmov q1, q0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q0[7]
-; CHECKFP16-NEXT:    vmov.16 q0[2], r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q1[6]
-; CHECKFP16-NEXT:    vmov.16 q0[3], r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q1[3]
-; CHECKFP16-NEXT:    vmov.16 q0[4], r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q1[1]
-; CHECKFP16-NEXT:    vmov.16 q0[5], r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q1[2]
-; CHECKFP16-NEXT:    vmov.16 q0[6], r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q1[0]
-; CHECKFP16-NEXT:    vmov.16 q0[7], r0
-; CHECKFP16-NEXT:    vmov.f32 s0, s6
+; CHECKFP16-NEXT:    vmov.16 q1[2], r0
+; CHECKFP16-NEXT:    vmov.u16 r0, q0[6]
+; CHECKFP16-NEXT:    vmov.16 q1[3], r0
+; CHECKFP16-NEXT:    vmov.u16 r0, q0[3]
+; CHECKFP16-NEXT:    vmov.16 q1[4], r0
+; CHECKFP16-NEXT:    vmov.u16 r0, q0[1]
+; CHECKFP16-NEXT:    vmov.16 q1[5], r0
+; CHECKFP16-NEXT:    vmov.u16 r0, q0[2]
+; CHECKFP16-NEXT:    vmov.16 q1[6], r0
+; CHECKFP16-NEXT:    vmov.u16 r0, q0[0]
+; CHECKFP16-NEXT:    vmov.16 q1[7], r0
+; CHECKFP16-NEXT:    vmov.f32 s4, s2
+; CHECKFP16-NEXT:    vmov q0, q1
 ; CHECKFP16-NEXT:    bx lr
 ;
 ; CHECKFP-LABEL: shuffle3_f16:
@@ -334,7 +334,7 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    vmov.f32 s0, s28
 ; CHECKFP16-NEXT:    vmov.u16 r6, q1[3]
 ; CHECKFP16-NEXT:    vmov.f32 s1, s29
-; CHECKFP16-NEXT:    vmov q5, q1
+; CHECKFP16-NEXT:    vmov q4, q1
 ; CHECKFP16-NEXT:    vmov.f32 s2, s30
 ; CHECKFP16-NEXT:    vstrw.32 q2, [sp, #48] @ 16-byte Spill
 ; CHECKFP16-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
@@ -345,25 +345,25 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    vmov.u16 r0, q1[0]
 ; CHECKFP16-NEXT:    vmov.16 q0[2], r0
 ; CHECKFP16-NEXT:    vmov.16 q0[3], r6
-; CHECKFP16-NEXT:    vmov.f32 s2, s23
+; CHECKFP16-NEXT:    vmov.f32 s2, s19
 ; CHECKFP16-NEXT:    vmov.u16 r0, q0[0]
 ; CHECKFP16-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r4, r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q6[1]
-; CHECKFP16-NEXT:    vmov.16 q4[0], r0
+; CHECKFP16-NEXT:    vmov.16 q5[0], r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q6[4]
-; CHECKFP16-NEXT:    vmov.16 q4[1], r0
+; CHECKFP16-NEXT:    vmov.16 q5[1], r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q6[7]
-; CHECKFP16-NEXT:    vmov.16 q4[2], r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q5[2]
-; CHECKFP16-NEXT:    vmov.16 q4[3], r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q5[5]
-; CHECKFP16-NEXT:    vmov.16 q4[4], r0
+; CHECKFP16-NEXT:    vmov.16 q5[2], r0
+; CHECKFP16-NEXT:    vmov.u16 r0, q4[2]
+; CHECKFP16-NEXT:    vmov.16 q5[3], r0
+; CHECKFP16-NEXT:    vmov.u16 r0, q4[5]
+; CHECKFP16-NEXT:    vmov.16 q5[4], r0
 ; CHECKFP16-NEXT:    mov r0, r7
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r7, r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q4[0]
+; CHECKFP16-NEXT:    vmov.u16 r0, q5[0]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r1, r0
 ; CHECKFP16-NEXT:    mov r0, r7
@@ -393,11 +393,11 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    bl __aeabi_f2h
 ; CHECKFP16-NEXT:    vldrw.u32 q6, [sp] @ 16-byte Reload
 ; CHECKFP16-NEXT:    mov r5, r0
-; CHECKFP16-NEXT:    vmov.16 q5[0], r4
+; CHECKFP16-NEXT:    vmov.16 q4[0], r4
 ; CHECKFP16-NEXT:    vmov.u16 r0, q6[1]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r4, r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q4[1]
+; CHECKFP16-NEXT:    vmov.u16 r0, q5[1]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r7, r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q7[1]
@@ -409,11 +409,11 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    mov r1, r4
 ; CHECKFP16-NEXT:    bl __aeabi_fadd
 ; CHECKFP16-NEXT:    bl __aeabi_f2h
-; CHECKFP16-NEXT:    vmov.16 q5[1], r0
+; CHECKFP16-NEXT:    vmov.16 q4[1], r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q6[2]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r4, r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q4[2]
+; CHECKFP16-NEXT:    vmov.u16 r0, q5[2]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r7, r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q7[2]
@@ -425,8 +425,8 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    mov r1, r4
 ; CHECKFP16-NEXT:    bl __aeabi_fadd
 ; CHECKFP16-NEXT:    bl __aeabi_f2h
-; CHECKFP16-NEXT:    vmov.16 q5[2], r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q4[3]
+; CHECKFP16-NEXT:    vmov.16 q4[2], r0
+; CHECKFP16-NEXT:    vmov.u16 r0, q5[3]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r4, r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q7[3]
@@ -443,14 +443,14 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    mov r1, r6
 ; CHECKFP16-NEXT:    bl __aeabi_fadd
 ; CHECKFP16-NEXT:    bl __aeabi_f2h
-; CHECKFP16-NEXT:    vmov.16 q5[3], r0
+; CHECKFP16-NEXT:    vmov.16 q4[3], r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q6[4]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r4, r0
 ; CHECKFP16-NEXT:    mov r0, r8
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r6, r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q4[4]
+; CHECKFP16-NEXT:    vmov.u16 r0, q5[4]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r1, r0
 ; CHECKFP16-NEXT:    mov r0, r6
@@ -461,13 +461,13 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    bl __aeabi_fadd
 ; CHECKFP16-NEXT:    bl __aeabi_f2h
 ; CHECKFP16-NEXT:    vldrw.u32 q0, [sp, #48] @ 16-byte Reload
-; CHECKFP16-NEXT:    vmov.16 q5[4], r0
+; CHECKFP16-NEXT:    vmov.16 q4[4], r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q0[4]
 ; CHECKFP16-NEXT:    vmov.u16 r4, q0[7]
-; CHECKFP16-NEXT:    vmov.16 q4[6], r0
-; CHECKFP16-NEXT:    vmov.16 q4[7], r4
-; CHECKFP16-NEXT:    vmov.f32 s18, s0
-; CHECKFP16-NEXT:    vmov.u16 r0, q4[5]
+; CHECKFP16-NEXT:    vmov.16 q5[6], r0
+; CHECKFP16-NEXT:    vmov.16 q5[7], r4
+; CHECKFP16-NEXT:    vmov.f32 s22, s0
+; CHECKFP16-NEXT:    vmov.u16 r0, q5[5]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    vldrw.u32 q6, [sp, #16] @ 16-byte Reload
 ; CHECKFP16-NEXT:    mov r6, r0
@@ -483,18 +483,18 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    mov r1, r6
 ; CHECKFP16-NEXT:    bl __aeabi_fadd
 ; CHECKFP16-NEXT:    bl __aeabi_f2h
-; CHECKFP16-NEXT:    vmov.16 q5[5], r0
+; CHECKFP16-NEXT:    vmov.16 q4[5], r0
 ; CHECKFP16-NEXT:    mov r0, r5
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r5, r0
-; CHECKFP16-NEXT:    vmov.u16 r0, q4[6]
+; CHECKFP16-NEXT:    vmov.u16 r0, q5[6]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r1, r0
 ; CHECKFP16-NEXT:    mov r0, r5
 ; CHECKFP16-NEXT:    bl __aeabi_fadd
 ; CHECKFP16-NEXT:    bl __aeabi_f2h
 ; CHECKFP16-NEXT:    vldrw.u32 q0, [sp, #32] @ 16-byte Reload
-; CHECKFP16-NEXT:    vmov.16 q5[6], r0
+; CHECKFP16-NEXT:    vmov.16 q4[6], r0
 ; CHECKFP16-NEXT:    vmov.u16 r0, q0[7]
 ; CHECKFP16-NEXT:    bl __aeabi_h2f
 ; CHECKFP16-NEXT:    mov r5, r0
@@ -512,8 +512,8 @@ define arm_aapcs_vfpcc <8 x half> @shuffle3step_f16(<32 x half> %src) {
 ; CHECKFP16-NEXT:    mov r0, r5
 ; CHECKFP16-NEXT:    bl __aeabi_fadd
 ; CHECKFP16-NEXT:    bl __aeabi_f2h
-; CHECKFP16-NEXT:    vmov.16 q5[7], r0
-; CHECKFP16-NEXT:    vmov q0, q5
+; CHECKFP16-NEXT:    vmov.16 q4[7], r0
+; CHECKFP16-NEXT:    vmov q0, q4
 ; CHECKFP16-NEXT:    add sp, #64
 ; CHECKFP16-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECKFP16-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
@@ -944,12 +944,12 @@ define arm_aapcs_vfpcc <8 x half> @shuffle4step_f16(<32 x half> %src) {
 ; CHECKFP-NEXT:    vins.f16 s21, s3
 ; CHECKFP-NEXT:    vins.f16 s0, s2
 ; CHECKFP-NEXT:    vmov.f32 s24, s1
-; CHECKFP-NEXT:    vmov.f32 s26, s9
 ; CHECKFP-NEXT:    vmov.f32 s25, s5
+; CHECKFP-NEXT:    vmov.f32 s26, s9
 ; CHECKFP-NEXT:    vmov.f32 s27, s13
-; CHECKFP-NEXT:    vmov.f32 s2, s8
-; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
 ; CHECKFP-NEXT:    vmov.f32 s1, s4
+; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
+; CHECKFP-NEXT:    vmov.f32 s2, s8
 ; CHECKFP-NEXT:    vmov.f32 s3, s12
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q5
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q4

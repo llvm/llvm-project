@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -33,7 +34,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -55,6 +55,7 @@ using namespace llvm;
 
 namespace {
 class NVVMReflect {
+  const NVPTXOptions &CLOpts;
   // Map from reflect function call arguments to the value to replace the call
   // with. Should include __CUDA_FTZ and __CUDA_ARCH values.
   StringMap<unsigned> ReflectMap;
@@ -65,17 +66,18 @@ class NVVMReflect {
 public:
   // __CUDA_FTZ is assigned in `runOnModule` by checking nvvm-reflect-ftz module
   // metadata.
-  explicit NVVMReflect(unsigned SmVersion)
-      : ReflectMap({{CUDA_ARCH_NAME, SmVersion * 10}}) {}
+  NVVMReflect(unsigned SmVersion, const NVPTXOptions &CLOpts)
+      : CLOpts(CLOpts), ReflectMap({{CUDA_ARCH_NAME, SmVersion * 10}}) {}
   bool runOnModule(Module &M);
 };
 
 class NVVMReflectLegacyPass : public ModulePass {
-  NVVMReflect Impl;
+  unsigned SmVersion;
 
 public:
   static char ID;
-  NVVMReflectLegacyPass(unsigned SmVersion) : ModulePass(ID), Impl(SmVersion) {}
+  NVVMReflectLegacyPass(unsigned SmVersion)
+      : ModulePass(ID), SmVersion(SmVersion) {}
   bool runOnModule(Module &M) override;
 };
 } // namespace
@@ -84,23 +86,10 @@ ModulePass *llvm::createNVVMReflectPass(unsigned SmVersion) {
   return new NVVMReflectLegacyPass(SmVersion);
 }
 
-static cl::opt<bool>
-    NVVMReflectEnabled("nvvm-reflect-enable", cl::init(true), cl::Hidden,
-                       cl::desc("NVVM reflection, enabled by default"));
-
 char NVVMReflectLegacyPass::ID = 0;
 INITIALIZE_PASS(NVVMReflectLegacyPass, "nvvm-reflect",
                 "Replace occurrences of __nvvm_reflect() calls with 0/1", false,
                 false)
-
-// Allow users to specify additional key/value pairs to reflect. These key/value
-// pairs are the last to be added to the ReflectMap, and therefore will take
-// precedence over initial values (i.e. __CUDA_FTZ from module medadata and
-// __CUDA_ARCH from SmVersion).
-static cl::list<std::string> ReflectList(
-    "nvvm-reflect-add", cl::value_desc("name=<int>"), cl::Hidden,
-    cl::desc("A key=value pair. Replace __nvvm_reflect(name) with value."),
-    cl::ValueRequired);
 
 // Set the ReflectMap with, first, the value of __CUDA_FTZ from module metadata,
 // and then the key/value pairs from the command line.
@@ -109,7 +98,7 @@ void NVVMReflect::populateReflectMap(Module &M) {
           M.getModuleFlag(CUDA_FTZ_MODULE_NAME)))
     ReflectMap[CUDA_FTZ_NAME] = Flag->getSExtValue();
 
-  for (StringRef Option : ReflectList) {
+  for (StringRef Option : CLOpts.nvvm_reflect_add) {
     LLVM_DEBUG(dbgs() << "ReflectOption : " << Option << "\n");
     auto [Name, Val] = Option.split('=');
     if (Name.empty())
@@ -199,7 +188,7 @@ void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
 
   ReplaceInstructionWithConst(Call, NewValue);
 
-  auto &DL = Call->getModule()->getDataLayout();
+  auto &DL = Call->getDataLayout();
   while (!Worklist.empty()) {
     auto *I = Worklist.pop_back_val();
     if (Constant *C = ConstantFoldInstruction(I, DL)) {
@@ -213,7 +202,7 @@ void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
 }
 
 bool NVVMReflect::runOnModule(Module &M) {
-  if (!NVVMReflectEnabled)
+  if (!CLOpts.nvvm_reflect_enable)
     return false;
   populateReflectMap(M);
   bool Changed = false;
@@ -225,10 +214,11 @@ bool NVVMReflect::runOnModule(Module &M) {
 }
 
 bool NVVMReflectLegacyPass::runOnModule(Module &M) {
-  return Impl.runOnModule(M);
+  return NVVMReflect(SmVersion, getNVPTXOptions(M)).runOnModule(M);
 }
 
 PreservedAnalyses NVVMReflectPass::run(Module &M, ModuleAnalysisManager &AM) {
-  return NVVMReflect(SmVersion).runOnModule(M) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  return NVVMReflect(SmVersion, getNVPTXOptions(M)).runOnModule(M)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }

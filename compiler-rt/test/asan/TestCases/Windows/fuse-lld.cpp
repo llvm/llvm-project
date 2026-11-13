@@ -2,7 +2,7 @@
 //
 // REQUIRES: lld-available
 //
-// RUN: %clangxx_asan -O2 %s -o %t.exe -g -gcodeview -fuse-ld=lld -Wl,-debug
+// RUN: %clangxx_asan %if target={{.*-windows-gnu}} %{ -gcodeview -gcolumn-info -Wl,--pdb= -Wl,-S %} %else %{ -g -gcodeview -Wl,-debug %} -O2 %s -o %t.exe -fuse-ld=lld
 // RUN: not %run %t.exe 2>&1 | FileCheck %s
 
 #include <stdlib.h>

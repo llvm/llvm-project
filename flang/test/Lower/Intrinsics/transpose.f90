@@ -5,7 +5,7 @@
 subroutine transpose_test(mat)
    real :: mat(2,3)
    call bar_transpose_test(transpose(mat))
-! CHECK: %[[matDecl:.*]]:2 = hlfir.declare %[[mat]](%{{.*}}) {{.*}}{uniq_name = "_QFtranspose_testEmat"}
+! CHECK: %[[matDecl:.*]]:2 = hlfir.declare %[[mat]](%{{.*}}) {{.*}}uniq_name("_QFtranspose_testEmat")
 ! CHECK: %[[result:.*]] = hlfir.transpose %[[matDecl]]#0 : (!fir.ref<!fir.array<2x3xf32>>) -> !hlfir.expr<3x2xf32>
 ! CHECK: %[[shape:.*]] = hlfir.shape_of %[[result]] : (!hlfir.expr<3x2xf32>) -> !fir.shape<2>
 ! CHECK: %[[assoc:.*]]:3 = hlfir.associate %[[result]](%[[shape]]) {adapt.valuebyref}

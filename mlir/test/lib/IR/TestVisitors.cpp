@@ -251,7 +251,7 @@ static void testBlockAndRegionWalkers(Operation *op) {
 
   llvm::outs() << "Invoke block pre-order visits on blocks\n";
   op->walk([&](Operation *op) {
-    if (!op->hasAttr("walk_blocks"))
+    if (!op->hasDiscardableAttr("walk_blocks"))
       return;
     for (Region &region : op->getRegions()) {
       for (Block &block : region.getBlocks()) {
@@ -262,7 +262,7 @@ static void testBlockAndRegionWalkers(Operation *op) {
 
   llvm::outs() << "Invoke block post-order visits on blocks\n";
   op->walk([&](Operation *op) {
-    if (!op->hasAttr("walk_blocks"))
+    if (!op->hasDiscardableAttr("walk_blocks"))
       return;
     for (Region &region : op->getRegions()) {
       for (Block &block : region.getBlocks()) {
@@ -273,7 +273,7 @@ static void testBlockAndRegionWalkers(Operation *op) {
 
   llvm::outs() << "Invoke region pre-order visits on region\n";
   op->walk([&](Operation *op) {
-    if (!op->hasAttr("walk_regions"))
+    if (!op->hasDiscardableAttr("walk_regions"))
       return;
     for (Region &region : op->getRegions()) {
       region.walk<WalkOrder::PreOrder>(regionPure);
@@ -282,7 +282,7 @@ static void testBlockAndRegionWalkers(Operation *op) {
 
   llvm::outs() << "Invoke region post-order visits on region\n";
   op->walk([&](Operation *op) {
-    if (!op->hasAttr("walk_regions"))
+    if (!op->hasDiscardableAttr("walk_regions"))
       return;
     for (Region &region : op->getRegions()) {
       region.walk<WalkOrder::PostOrder>(regionPure);

@@ -41,15 +41,15 @@ Register createLaneMaskReg(MachineRegisterInfo *MRI,
 
 class PhiLoweringHelper {
 public:
-  PhiLoweringHelper(MachineFunction *MF, MachineDominatorTree *DT,
-                    MachinePostDominatorTree *PDT);
+  PhiLoweringHelper(MachineFunction &MF, MachineDominatorTree &DT,
+                    MachinePostDominatorTree &PDT);
   virtual ~PhiLoweringHelper() = default;
 
 protected:
   bool IsWave32 = false;
-  MachineFunction *MF = nullptr;
-  MachineDominatorTree *DT = nullptr;
-  MachinePostDominatorTree *PDT = nullptr;
+  MachineFunction &MF;
+  MachineDominatorTree &DT;
+  MachinePostDominatorTree &PDT;
   MachineRegisterInfo *MRI = nullptr;
   const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;

@@ -19,8 +19,8 @@
 #ifndef LLVM_C_TARGETMACHINE_H
 #define LLVM_C_TARGETMACHINE_H
 
+#include "llvm-c/Core.h"
 #include "llvm-c/ExternC.h"
-#include "llvm-c/Target.h"
 #include "llvm-c/Types.h"
 #include "llvm-c/Visibility.h"
 

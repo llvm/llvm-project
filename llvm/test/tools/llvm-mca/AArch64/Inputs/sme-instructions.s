@@ -34,6 +34,7 @@ udot z0.s, z0.h, z0.h
 udot z0.s, z0.h, z0.h[0]
 sqcvtn z0.h, { z0.s, z1.s }
 sqcvtun z0.h, { z0.s, z1.s }
+sqrshrun z0.h, { z0.s, z1.s }, #16
 uqcvtn z0.h, { z0.s, z1.s }
 whilege { p0.h, p1.h }, x0, x0
 whilegt { p0.h, p1.h }, x0, x0
@@ -50,6 +51,7 @@ bfmlslb z0.s, z1.h, z2.h
 bfmlslt z0.s, z1.h, z2.h
 fclamp z0.s, z1.s, z2.s
 fdot z0.s, z1.h, z2.h
+flogb z0.s, p0/m, z1.s
 revd z0.q, p0/m, z0.q
 rprfm #0, x0, [x0]
 sclamp z0.s, z1.s, z2.s

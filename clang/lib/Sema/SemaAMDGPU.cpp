@@ -25,8 +25,10 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <cstdint>
 #include <utility>
 
@@ -34,7 +36,8 @@ namespace clang {
 
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
 
-bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
+bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
+                                                unsigned BuiltinID,
                                                 CallExpr *TheCall) {
   const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   assert(FD && "AMDGPU builtins should not be used outside of a function");
@@ -152,11 +155,36 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return Diag(ScopeExpr->getExprLoc(), diag::err_expr_not_string_literal)
              << ScopeExpr->getType();
 
+    // Reject any string that is not a valid synchronization scope name.
+    std::optional<std::string> ScopeName =
+        ScopeExpr->tryEvaluateString(getASTContext());
+    const llvm::Triple &TT = TI.getTriple();
+    if (ScopeName && !llvm::parseAtomicScopeIRString(TT, *ScopeName)) {
+      return Diag(ScopeExpr->getExprLoc(), diag::err_invalid_sync_scope)
+             << *ScopeName << ScopeExpr->getSourceRange();
+    }
+
     return false;
   }
   case AMDGPU::BI__builtin_amdgcn_s_setreg:
     return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
                                            /*High=*/UINT16_MAX);
+  case AMDGPU::BI__builtin_amdgcn_flat_prefetch:
+  case AMDGPU::BI__builtin_amdgcn_global_prefetch: {
+    // Only th (bits 0-2, not 7), scope (bits 3-4) and nv (bit 5) may be set.
+    llvm::APSInt CPol;
+    if (SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/1, /*Low=*/0,
+                                        /*High=*/63) ||
+        SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/1, CPol))
+      return true;
+    if ((CPol.getZExtValue() & 0x7) != 0x7)
+      return false;
+    Expr *ArgExpr = TheCall->getArg(1);
+    SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                       diag::err_amdgcn_prefetch_reserved_th)
+        << ArgExpr->getSourceRange();
+    return true;
+  }
   case AMDGPU::BI__builtin_amdgcn_s_wait_event: {
     llvm::APSInt Result;
     if (SemaRef.BuiltinConstantArg(TheCall, 0, Result))
@@ -202,9 +230,40 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_bf6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_bf16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f16_fp6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_bf6:
+  case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_fp6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case AMDGPU::BI__builtin_amdgcn_asyncmark:
+  case AMDGPU::BI__builtin_amdgcn_wait_asyncmark: {
+    bool IsMark = BuiltinID == AMDGPU::BI__builtin_amdgcn_asyncmark;
+
+    // Check the sequence length limit is a constant.
+    llvm::APSInt NumMarks;
+    if (!IsMark && SemaRef.BuiltinConstantArg(TheCall, 0, NumMarks))
+      return true;
+
+    // The stage mask names the stages to act on, so every combination of known
+    // stage bits is meaningful, including none of them: the zero mask names
+    // every stage.
+    unsigned MaskArgNum = IsMark ? 0 : 1;
+    return SemaRef.BuiltinConstantArgRange(
+        TheCall, MaskArgNum, 0,
+        llvm::to_underlying(llvm::AMDGPU::AsyncStages::ALL));
+  }
+  case AMDGPU::BI__builtin_amdgcn_av_load_b8:
+  case AMDGPU::BI__builtin_amdgcn_av_load_b16:
+  case AMDGPU::BI__builtin_amdgcn_av_load_b32:
+  case AMDGPU::BI__builtin_amdgcn_av_load_b64:
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
     return checkAVLoadStore(TheCall, /*IsStore=*/false);
+  case AMDGPU::BI__builtin_amdgcn_av_store_b8:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b16:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b32:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b64:
   case AMDGPU::BI__builtin_amdgcn_av_store_b128:
     return checkAVLoadStore(TheCall, /*IsStore=*/true);
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:

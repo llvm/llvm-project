@@ -17,31 +17,16 @@ class SymbolContextAPITestCase(TestBase):
             "main.c", '// Find the line number of function "c" here.'
         )
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureAll(
+        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr24778"
+    )
     def test(self):
         """Exercise SBSymbolContext API extensively."""
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName("c", exe)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
-        )
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Frame #0 should be on self.line.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
-        )
+        _, _, thread, _ = lldbutil.run_to_name_breakpoint(self, "c", bkpt_module=exe)
         frame0 = thread.GetFrameAtIndex(0)
         self.assertEqual(frame0.GetLineEntry().GetLine(), self.line)
 

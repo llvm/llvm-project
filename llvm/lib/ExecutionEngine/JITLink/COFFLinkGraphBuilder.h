@@ -72,7 +72,7 @@ protected:
 
   Block *getGraphBlock(COFFSectionIndex SecIndex) const {
     if (SecIndex <= 0 ||
-        SecIndex >= static_cast<COFFSectionIndex>(GraphSymbols.size()))
+        SecIndex >= static_cast<COFFSectionIndex>(GraphBlocks.size()))
       return nullptr;
     return GraphBlocks[SecIndex];
   }
@@ -166,8 +166,6 @@ private:
   static uint64_t getSectionSize(const object::COFFObjectFile &Obj,
                                  const object::coff_section *Section);
   static bool isComdatSection(const object::coff_section *Section);
-  static unsigned getPointerSize(const object::COFFObjectFile &Obj);
-  static llvm::endianness getEndianness(const object::COFFObjectFile &Obj);
   static StringRef getDLLImportStubPrefix() { return "__imp_"; }
   static StringRef getDirectiveSectionName() { return ".drectve"; }
   StringRef getCOFFSectionName(COFFSectionIndex SectionIndex,

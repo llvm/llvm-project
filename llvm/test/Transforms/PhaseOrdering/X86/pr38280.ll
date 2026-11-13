@@ -32,7 +32,7 @@ define void @apply_delta(ptr nocapture noundef %dst, ptr nocapture noundef reado
 ; CHECK-NEXT:    [[DST_ADDR_130:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY4]] ], [ [[DST_ADDR_0_LCSSA]], [[WHILE_COND3_PREHEADER]] ]
 ; CHECK-NEXT:    [[SRC_ADDR_129:%.*]] = phi ptr [ [[INCDEC_PTR8:%.*]], [[WHILE_BODY4]] ], [ [[SRC_ADDR_0_LCSSA]], [[WHILE_COND3_PREHEADER]] ]
 ; CHECK-NEXT:    [[COUNT_ADDR_128:%.*]] = phi i64 [ [[DEC:%.*]], [[WHILE_BODY4]] ], [ [[COUNT_ADDR_0_LCSSA]], [[WHILE_COND3_PREHEADER]] ]
-; CHECK-NEXT:    [[DEC]] = add i64 [[COUNT_ADDR_128]], -1
+; CHECK-NEXT:    [[DEC]] = add nsw i64 [[COUNT_ADDR_128]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[SRC_ADDR_129]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DST_ADDR_130]], i64 [[NEG_OFFS]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1

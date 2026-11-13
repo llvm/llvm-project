@@ -188,7 +188,7 @@ define void @ptrtoint_of_gep(ptr %in, ptr %out0) {
 ; X64-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
 ; X64-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %in_adj to i64
-; X64-NEXT:    --> (42 + (ptrtoaddr ptr %in to i64)) U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_gep
 ;
 ; X32-LABEL: 'ptrtoint_of_gep'
@@ -218,7 +218,7 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X64-NEXT:    %i7 = getelementptr inbounds i32, ptr %in, i64 %i6
 ; X64-NEXT:    --> {%in,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + %in) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i8 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> {(ptrtoaddr ptr %in to i64),+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + (ptrtoaddr ptr %in to i64)) LoopDispositions: { %loop: Computable }
+; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; X64-NEXT:    %i9 = add nuw nsw i64 %i6, 1
 ; X64-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i32 %count to i64) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrec
@@ -270,7 +270,7 @@ define void @ptrtoint_of_umax(ptr %in0, ptr %in1, ptr %out0) {
 ; X64-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X64-NEXT:    --> (%in0 umax %in1) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X64-NEXT:    --> ((ptrtoaddr ptr %in0 to i64) umax (ptrtoaddr ptr %in1 to i64)) U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_umax
 ;
 ; X32-LABEL: 'ptrtoint_of_umax'
@@ -294,7 +294,7 @@ define void @ptrtoint_of_smax(ptr %in0, ptr %in1, ptr %out0) {
 ; X64-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X64-NEXT:    --> (%in0 smax %in1) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X64-NEXT:    --> ((ptrtoaddr ptr %in0 to i64) smax (ptrtoaddr ptr %in1 to i64)) U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_smax
 ;
 ; X32-LABEL: 'ptrtoint_of_smax'
@@ -318,7 +318,7 @@ define void @ptrtoint_of_umin(ptr %in0, ptr %in1, ptr %out0) {
 ; X64-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X64-NEXT:    --> (%in0 umin %in1) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X64-NEXT:    --> ((ptrtoaddr ptr %in0 to i64) umin (ptrtoaddr ptr %in1 to i64)) U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_umin
 ;
 ; X32-LABEL: 'ptrtoint_of_umin'
@@ -342,7 +342,7 @@ define void @ptrtoint_of_smin(ptr %in0, ptr %in1, ptr %out0) {
 ; X64-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X64-NEXT:    --> (%in0 smin %in1) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X64-NEXT:    --> ((ptrtoaddr ptr %in0 to i64) smin (ptrtoaddr ptr %in1 to i64)) U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_smin
 ;
 ; X32-LABEL: 'ptrtoint_of_smin'
@@ -374,7 +374,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    %i8 = load i8, ptr %i7, align 1
 ; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + (ptrtoaddr ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i10 = sub i64 %i9, %i4
 ; X64-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,-1) S: [0,-1) Exits: (-1 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
@@ -451,7 +451,7 @@ define void @pr46786_c26_char_cmp_ops_swapped(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    %i8 = load i8, ptr %i7, align 1
 ; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + (ptrtoaddr ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i10 = sub i64 %i9, %i4
 ; X64-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,-1) S: [0,-1) Exits: (-1 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
@@ -531,11 +531,11 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    %i4 = ptrtoint ptr %arg to i64
 ; X64-NEXT:    --> %i4 U: full-set S: full-set
 ; X64-NEXT:    %i7 = phi ptr [ %arg, %bb3 ], [ %i15, %bb6 ]
-; X64-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) /u 4))<nuw> + %arg)<u nuw> LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i8 = load i32, ptr %i7, align 4
 ; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) /u 4))<nuw> + (ptrtoaddr ptr %arg to i64)) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i10 = sub i64 %i9, %i4
 ; X64-NEXT:    --> {0,+,4}<nuw><%bb6> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) /u 4))<nuw> LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i11 = ashr exact i64 %i10, 2
@@ -559,7 +559,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i4 = ptrtoint ptr %arg to i64
 ; X32-NEXT:    --> %i4 U: [0,4294967296) S: [0,4294967296)
 ; X32-NEXT:    %i7 = phi ptr [ %arg, %bb3 ], [ %i15, %bb6 ]
-; X32-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) /u 4))<nuw> + %arg)<u nuw> LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i8 = load i32, ptr %i7, align 4
 ; X32-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i9 = ptrtoint ptr %i7 to i64
@@ -680,13 +680,21 @@ bb14:                                             ; preds = %bb
 }
 
 define i64 @ptrtoint_signbits(i1 %c) {
-; CHECK-LABEL: 'ptrtoint_signbits'
-; CHECK-NEXT:  Classifying expressions for: @ptrtoint_signbits
-; CHECK-NEXT:    %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
-; CHECK-NEXT:    --> %p U: [-1,1) S: [-1,1)
-; CHECK-NEXT:    %a = ptrtoint ptr %p to i64
-; CHECK-NEXT:    --> %a U: full-set S: full-set
-; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_signbits
+; X64-LABEL: 'ptrtoint_signbits'
+; X64-NEXT:  Classifying expressions for: @ptrtoint_signbits
+; X64-NEXT:    %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
+; X64-NEXT:    --> %p U: [-1,1) S: [-1,1)
+; X64-NEXT:    %a = ptrtoint ptr %p to i64
+; X64-NEXT:    --> %a U: full-set S: full-set
+; X64-NEXT:  Determining loop execution counts for: @ptrtoint_signbits
+;
+; X32-LABEL: 'ptrtoint_signbits'
+; X32-NEXT:  Classifying expressions for: @ptrtoint_signbits
+; X32-NEXT:    %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
+; X32-NEXT:    --> %p U: [-1,1) S: [-1,1)
+; X32-NEXT:    %a = ptrtoint ptr %p to i64
+; X32-NEXT:    --> %a U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:  Determining loop execution counts for: @ptrtoint_signbits
 ;
   %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
   %a = ptrtoint ptr %p to i64
@@ -694,26 +702,47 @@ define i64 @ptrtoint_signbits(i1 %c) {
 }
 
 define void @ptrtoint_iv_start(ptr %arg, ptr %dst) {
-; CHECK-LABEL: 'ptrtoint_iv_start_no_cancel'
-; CHECK-NEXT:  Classifying expressions for: @ptrtoint_iv_start_no_cancel
-; CHECK-NEXT:    %start = ptrtoint ptr %arg to i64
-; CHECK-NEXT:    --> %start U: full-set S: full-set
-; CHECK-NEXT:    %p = phi ptr [ %arg, %entry ], [ %p.next, %loop ]
-; CHECK-NEXT:    --> {%arg,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %pi = phi i64 [ %start, %entry ], [ %pi.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %cur = ptrtoint ptr %p to i64
-; CHECK-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %off = sub i64 %cur, %pi
-; CHECK-NEXT:    --> ((-1 * %start) + (ptrtoaddr ptr %arg to i64)) U: full-set S: full-set Exits: ((-1 * %start) + (ptrtoaddr ptr %arg to i64)) LoopDispositions: { %loop: Invariant }
-; CHECK-NEXT:    %p.next = getelementptr i8, ptr %p, i64 8
-; CHECK-NEXT:    --> {(8 + %arg),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %pi.next = add i64 %pi, 8
-; CHECK-NEXT:    --> {(8 + %start),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_iv_start_no_cancel
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; X64-LABEL: 'ptrtoint_iv_start'
+; X64-NEXT:  Classifying expressions for: @ptrtoint_iv_start
+; X64-NEXT:    %start = ptrtoint ptr %arg to i64
+; X64-NEXT:    --> %start U: full-set S: full-set
+; X64-NEXT:    %p = phi ptr [ %arg, %entry ], [ %p.next, %loop ]
+; X64-NEXT:    --> {%arg,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %pi = phi i64 [ %start, %entry ], [ %pi.next, %loop ]
+; X64-NEXT:    --> {%start,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %cur = ptrtoint ptr %p to i64
+; X64-NEXT:    --> %cur U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    %off = sub i64 %cur, %pi
+; X64-NEXT:    --> ((-1 * %start) + (ptrtoaddr ptr %arg to i64)) U: full-set S: full-set Exits: ((-1 * %start) + (ptrtoaddr ptr %arg to i64)) LoopDispositions: { %loop: Invariant }
+; X64-NEXT:    %p.next = getelementptr i8, ptr %p, i64 8
+; X64-NEXT:    --> {(8 + %arg),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %pi.next = add i64 %pi, 8
+; X64-NEXT:    --> {(8 + %start),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:  Determining loop execution counts for: @ptrtoint_iv_start
+; X64-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; X64-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; X64-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+; X32-LABEL: 'ptrtoint_iv_start'
+; X32-NEXT:  Classifying expressions for: @ptrtoint_iv_start
+; X32-NEXT:    %start = ptrtoint ptr %arg to i64
+; X32-NEXT:    --> %start U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    %p = phi ptr [ %arg, %entry ], [ %p.next, %loop ]
+; X32-NEXT:    --> {%arg,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X32-NEXT:    %pi = phi i64 [ %start, %entry ], [ %pi.next, %loop ]
+; X32-NEXT:    --> {%start,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X32-NEXT:    %cur = ptrtoint ptr %p to i64
+; X32-NEXT:    --> %cur U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %off = sub i64 %cur, %pi
+; X32-NEXT:    --> ({(-1 * %start)<nsw>,+,-8}<%loop> + %cur) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %p.next = getelementptr i8, ptr %p, i64 8
+; X32-NEXT:    --> {(8 + %arg),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X32-NEXT:    %pi.next = add i64 %pi, 8
+; X32-NEXT:    --> {(8 + %start)<nuw><nsw>,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X32-NEXT:  Determining loop execution counts for: @ptrtoint_iv_start
+; X32-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; X32-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; X32-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %start = ptrtoint ptr %arg to i64

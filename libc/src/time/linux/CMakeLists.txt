@@ -33,6 +33,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  clock_nanosleep
+  SRCS
+    clock_nanosleep.cpp
+  HDRS
+    ../clock_nanosleep.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clock_nanosleep
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   nanosleep
   SRCS
     nanosleep.cpp
@@ -41,6 +55,22 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.struct_timespec
     libc.src.__support.OSUtil.linux.syscall_wrappers.nanosleep
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  clock_getres
+  SRCS
+    clock_getres.cpp
+  HDRS
+    ../clock_getres.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clock_getres
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
@@ -71,4 +101,118 @@ add_entrypoint_object(
     libc.hdr.types.struct_timespec
     libc.src.__support.time.clock_settime
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  timer_create
+  SRCS
+    timer_create.cpp
+  HDRS
+    ../timer_create.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_sigevent
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_create
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  timer_delete
+  SRCS
+    timer_delete.cpp
+  HDRS
+    ../timer_delete.h
+  DEPENDS
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_delete
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  timer_getoverrun
+  SRCS
+    timer_getoverrun.cpp
+  HDRS
+    ../timer_getoverrun.h
+  DEPENDS
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_getoverrun
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  timer_gettime
+  SRCS
+    timer_gettime.cpp
+  HDRS
+    ../timer_gettime.h
+  DEPENDS
+    libc.hdr.types.struct_itimerspec
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_gettime
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  timer_settime
+  SRCS
+    timer_settime.cpp
+  HDRS
+    ../timer_settime.h
+  DEPENDS
+    libc.hdr.types.struct_itimerspec
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_settime
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  tz_variables
+  SRCS
+    tz_variables.cpp
+  HDRS
+    ../tz_variables.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  tzset
+  SRCS
+    tzset.cpp
+  HDRS
+    ../tzset.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  clock_getcpuclockid
+  SRCS
+    clock_getcpuclockid.cpp
+  HDRS
+    ../clock_getcpuclockid.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clock_getres
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )

@@ -54,19 +54,19 @@ const DenseMap<Directive, StringRef> &Expected60() {
   return Names;
 }
 
-class VersionTest : public testing::TestWithParam<unsigned> {
+class VersionTest : public testing::TestWithParam<Version> {
 public:
   void SetUp() override {
-    Version = GetParam();
+    V = GetParam();
 
-    if (Version < 60)
+    if (V < 60)
       KindToName = &Expected52();
     else
       KindToName = &Expected60();
   }
 
   const DenseMap<Directive, StringRef> *KindToName;
-  unsigned Version;
+  Version V;
 };
 
 INSTANTIATE_TEST_SUITE_P(OpenMPDirectiveNames, VersionTest,
@@ -74,7 +74,7 @@ INSTANTIATE_TEST_SUITE_P(OpenMPDirectiveNames, VersionTest,
 
 TEST_P(VersionTest, DirectiveName) {
   for (auto [Kind, Name] : *KindToName)
-    ASSERT_EQ(Name, getOpenMPDirectiveName(Kind, Version));
+    ASSERT_EQ(Name, getOpenMPDirectiveName(Kind, V));
 }
 
 TEST(OpenMPDirectiveNames, DirectiveKind52) {
@@ -82,7 +82,7 @@ TEST(OpenMPDirectiveNames, DirectiveKind52) {
     auto [K, R] = getOpenMPDirectiveKindAndVersions(Name);
     ASSERT_EQ(K, Kind);
     // Expect the name to be valid in 5.2, but not in 6.0.
-    EXPECT_TRUE(52 <= R.Max && R.Max < 60);
+    EXPECT_TRUE(R.Max >= 52 && R.Max < 60);
   }
 }
 
@@ -91,6 +91,6 @@ TEST(OpenMPDirectiveNames, DirectiveKind60) {
     auto [K, R] = getOpenMPDirectiveKindAndVersions(Name);
     ASSERT_EQ(K, Kind);
     // Expect the name to be valid in 6.0 and later.
-    EXPECT_TRUE(60 <= R.Min);
+    EXPECT_TRUE(R.Min >= 60);
   }
 }

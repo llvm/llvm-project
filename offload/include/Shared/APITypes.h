@@ -15,6 +15,7 @@
 #define OMPTARGET_SHARED_API_TYPES_H
 
 #include "Environment.h"
+#include "OffloadAPI.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,6 +24,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <utility>
 
 extern "C" {
 
@@ -33,12 +35,6 @@ struct __tgt_device_image {
   llvm::offloading::EntryTy
       *EntriesBegin; // Begin of table with all target entries
   llvm::offloading::EntryTy *EntriesEnd; // End of table (non inclusive)
-};
-
-struct __tgt_device_info {
-  void *Context = nullptr;
-  void *Device = nullptr;
-  void *Platform = nullptr;
 };
 
 /// This struct is a record of all the host code that may be offloaded to a
@@ -59,33 +55,7 @@ struct __tgt_target_table {
       *EntriesEnd; // End of the table with all the entries (non inclusive)
 };
 
-/// This struct contains a handle to a loaded binary in the plugin device.
-struct __tgt_device_binary {
-  uintptr_t handle;
-};
-
 // clang-format on
-
-/// This struct contains information exchanged between different asynchronous
-/// operations for device-dependent optimization and potential synchronization
-struct __tgt_async_info {
-  // A pointer to a queue-like structure where offloading operations are issued.
-  // We assume to use this structure to do synchronization. In CUDA backend, it
-  // is CUstream.
-  void *Queue = nullptr;
-
-  /// A collection of allocations that are associated with this stream and that
-  /// should be freed after finalization.
-  llvm::SmallVector<void *, 2> AssociatedAllocations;
-
-  /// Mutex to guard access to AssociatedAllocations and the Queue.
-  std::mutex Mutex;
-
-  /// The kernel launch environment used to issue a kernel. Stored here to
-  /// ensure it is a valid location while the transfer to the device is
-  /// happening.
-  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
-};
 
 /// This struct contains all of the arguments to a target kernel region launch.
 struct KernelArgsTy {

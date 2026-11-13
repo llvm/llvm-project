@@ -4,7 +4,7 @@
 ; Make sure that we set the branch probability for the newly created
 ; basic block.
 
-define void @foo(i1 %cond1, i1 %cond2) !prof !0 !PGOFuncName !1 {
+define void @foo(i1 %cond1, i1 %cond2) !prof !0 {
 entry:
   br i1 %cond1, label %bb.f1, label %bb.f2, !prof !2
 
@@ -45,7 +45,6 @@ declare void @f3()
 declare void @f4()
 
 !0 = !{!"function_entry_count", i64 15985}
-!1 = !{!"foo.cpp:foo"}
 !2 = !{!"branch_weights", i32 0, i32 36865}
 !3 = !{!"branch_weights", i32 35058, i32 1807}
 !4 = !{!"branch_weights", i32 1807, i32 35058}

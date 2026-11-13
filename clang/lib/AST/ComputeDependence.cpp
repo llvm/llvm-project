@@ -905,9 +905,7 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
 
 ExprDependence clang::computeDependence(DependentTemplateIdExpr *E) {
   auto D = ExprDependence::TypeValueInstantiation;
-  if (E->getTemplateName().getDependence() &
-      TemplateNameDependence::UnexpandedPack)
-    D |= ExprDependence::UnexpandedPack;
+  D |= toExprDependence(E->getTemplateName().getDependence());
   D |= getDependenceInExpr(E->getNameInfo());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
@@ -957,7 +955,7 @@ ExprDependence clang::computeDependence(ConceptSpecializationExpr *E,
   ExprDependence D =
       ValueDependent ? ExprDependence::Value : ExprDependence::None;
   auto Res = D | toExprDependence(TA);
-  if(!ValueDependent && E->getSatisfaction().ContainsErrors)
+  if (!ValueDependent && E->getSatisfaction().containsErrors())
     Res |= ExprDependence::Error;
   return Res;
 }

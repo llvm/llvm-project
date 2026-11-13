@@ -12,6 +12,7 @@
 
 #ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSINSTPRINTER_H
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSINSTPRINTER_H
+#include "MipsMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
@@ -83,8 +84,11 @@ public:
   getMnemonic(const MCInst &MI) const override;
   void printInstruction(const MCInst *MI, uint64_t Address,
                         const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(MCRegister Reg);
+  static const char *getRegisterName(MCRegister Reg,
+                                     unsigned AltIdx = Mips::NoRegAltName);
 
+  void printCOP0Operand(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
@@ -98,6 +102,9 @@ public:
 private:
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  template <unsigned FromEnd>
+  void printOperandFromEnd(const MCInst *MI, int OpNo,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printJumpOperand(const MCInst *MI, unsigned OpNo,
                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
@@ -107,8 +114,6 @@ private:
                  raw_ostream &O);
   void printMemOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
                        raw_ostream &O);
-  void printMemOperandEA(const MCInst *MI, int opNum,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printFCCOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
                        raw_ostream &O);
   void printSHFMask(const MCInst *MI, int opNum, raw_ostream &O);

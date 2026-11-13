@@ -19,8 +19,8 @@ end subroutine standalone_distribute
 
 
 ! CHECK-LABEL: func.func @_QPstandalone_distribute() {
-! CHECK:         %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFstandalone_distributeEi"}
-! CHECK:         %[[VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFstandalone_distributeEsimple_var"}
+! CHECK:         %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFstandalone_distributeEi")
+! CHECK:         %[[VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFstandalone_distributeEsimple_var")
 ! CHECK:         omp.teams {
 ! CHECK:           omp.distribute
 ! CHECK-SAME:        private(@[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %[[VAR_ARG:[^,]+]],

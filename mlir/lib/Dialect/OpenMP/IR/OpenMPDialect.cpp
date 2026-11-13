@@ -17,7 +17,6 @@
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
@@ -30,7 +29,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
@@ -344,6 +342,48 @@ void OpenMPDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// Dialect operation attribute verification
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyDeclareTargetAttr(Operation *op, Attribute attr) {
+  if (!isa<DeclareTargetInterface>(op))
+    return op->emitError() << "omp.declare_target can only be applied to "
+                              "DeclareTargetInterface ops";
+
+  auto declareTargetAttr = dyn_cast<DeclareTargetAttr>(attr);
+  if (!declareTargetAttr)
+    return op->emitError()
+           << "omp.declare_target must be an #omp.declaretarget attribute";
+
+  if (isa<mlir::FunctionOpInterface>(op)) {
+    if (declareTargetAttr.getAutomap())
+      return op->emitOpError()
+             << "omp.declare_target 'automap' is not valid on functions";
+
+    // TODO: Disallow the `local` clause (OpenMP 6.0).
+    if (declareTargetAttr.getCaptureClause() ==
+        mlir::omp::DeclareTargetCaptureClause::link)
+      return op->emitOpError()
+             << "omp.declare_target 'link' is not valid on functions";
+  } else {
+    // TODO: Disallow the `indirect` clause (OpenMP 5.1).
+    if (declareTargetAttr.getImplicit())
+      return op->emitOpError()
+             << "omp.declare_target 'implicit' is only valid on functions";
+  }
+  return success();
+}
+
+LogicalResult
+OpenMPDialect::verifyOperationAttribute(Operation *op,
+                                        NamedAttribute attribute) {
+  if (attribute.getName() == "omp.declare_target")
+    return verifyDeclareTargetAttr(op, attribute.getValue());
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Parser and printer for Allocate Clause
 //===----------------------------------------------------------------------===//
 
@@ -429,7 +469,8 @@ static ParseResult parseLinearClause(
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearVars,
     SmallVectorImpl<Type> &linearTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars,
-    SmallVectorImpl<Type> &linearStepTypes, ArrayAttr &linearModifiers) {
+    SmallVectorImpl<Type> &linearStepTypes, ArrayAttr &linearModifiers,
+    ArrayAttr &linearSyms) {
   SmallVector<Attribute> modifiers;
   auto result = parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand var;
@@ -475,11 +516,12 @@ static ParseResult parseLinearClause(
   return success();
 }
 
-/// Print Linear Clause
+/// Print Linear Clause. `linearSyms` is only used by ops with a region, which
+/// print the linear clause with their entry block arguments.
 static void printLinearClause(OpAsmPrinter &p, Operation *op,
                               ValueRange linearVars, TypeRange linearTypes,
                               ValueRange linearStepVars, TypeRange stepVarTypes,
-                              ArrayAttr linearModifiers) {
+                              ArrayAttr linearModifiers, ArrayAttr linearSyms) {
   size_t linearVarsSize = linearVars.size();
   for (unsigned i = 0; i < linearVarsSize; ++i) {
     if (i != 0)
@@ -680,6 +722,10 @@ static LogicalResult verifyAllocateClause(
       return op->emitError()
              << "type mismatch between allocate variable and private variable "
                 "at index "
+             << privateIndex;
+    if (allocateVar != privateVar)
+      return op->emitError()
+             << "allocate variable does not match private variable at index "
              << privateIndex;
 
     if (!privateSyms ||
@@ -1226,15 +1272,32 @@ struct PrivateParseArgs {
         mapIndices(mapIndices) {}
 };
 
+struct LinearParseArgs {
+  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars;
+  SmallVectorImpl<Type> &types;
+  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &stepVars;
+  SmallVectorImpl<Type> &stepTypes;
+  ArrayAttr &varTypes;
+  ArrayAttr &modifiers;
+  ArrayAttr &syms;
+  LinearParseArgs(SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars,
+                  SmallVectorImpl<Type> &types,
+                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &stepVars,
+                  SmallVectorImpl<Type> &stepTypes, ArrayAttr &varTypes,
+                  ArrayAttr &modifiers, ArrayAttr &syms)
+      : vars(vars), types(types), stepVars(stepVars), stepTypes(stepTypes),
+        varTypes(varTypes), modifiers(modifiers), syms(syms) {}
+};
+
 struct ReductionParseArgs {
   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars;
   SmallVectorImpl<Type> &types;
   DenseBoolArrayAttr &byref;
   ArrayAttr &syms;
-  ReductionModifierAttr *modifier;
+  ArrayAttr *modifier;
   ReductionParseArgs(SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars,
                      SmallVectorImpl<Type> &types, DenseBoolArrayAttr &byref,
-                     ArrayAttr &syms, ReductionModifierAttr *mod = nullptr)
+                     ArrayAttr &syms, ArrayAttr *mod = nullptr)
       : vars(vars), types(types), byref(byref), syms(syms), modifier(mod) {}
 };
 
@@ -1242,6 +1305,7 @@ struct AllRegionParseArgs {
   std::optional<MapParseArgs> hasDeviceAddrArgs;
   std::optional<MapParseArgs> hostEvalArgs;
   std::optional<ReductionParseArgs> inReductionArgs;
+  std::optional<LinearParseArgs> linearArgs;
   std::optional<MapParseArgs> mapArgs;
   std::optional<PrivateParseArgs> privateArgs;
   std::optional<ReductionParseArgs> reductionArgs;
@@ -1261,8 +1325,7 @@ static ParseResult parseClauseWithRegionArgs(
     SmallVectorImpl<Type> &types,
     SmallVectorImpl<OpAsmParser::Argument> &regionPrivateArgs,
     ArrayAttr *symbols = nullptr, DenseI64ArrayAttr *mapIndices = nullptr,
-    DenseBoolArrayAttr *byref = nullptr,
-    ReductionModifierAttr *modifier = nullptr,
+    DenseBoolArrayAttr *byref = nullptr, ArrayAttr *modifier = nullptr,
     UnitAttr *needsBarrier = nullptr) {
   SmallVector<SymbolRefAttr> symbolVec;
   SmallVector<int64_t> mapIndicesVec;
@@ -1272,21 +1335,19 @@ static ParseResult parseClauseWithRegionArgs(
   if (parser.parseLParen())
     return failure();
 
-  if (modifier && succeeded(parser.parseOptionalKeyword("mod"))) {
-    StringRef enumStr;
-    if (parser.parseColon() || parser.parseKeyword(&enumStr) ||
-        parser.parseComma())
-      return failure();
-    std::optional<ReductionModifier> enumValue =
-        symbolizeReductionModifier(enumStr);
-    if (!enumValue.has_value())
-      return failure();
-    *modifier = ReductionModifierAttr::get(parser.getContext(), *enumValue);
-    if (!*modifier)
-      return failure();
-  }
-
-  if (parser.parseCommaSeparatedList([&]() {
+  SmallVector<Attribute> modifiers;
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        if (modifier) {
+          ReductionModifier mod = ReductionModifier::defaultmod;
+          if (succeeded(parser.parseOptionalKeyword("task")))
+            mod = ReductionModifier::task;
+          else if (succeeded(parser.parseOptionalKeyword("inscan")))
+            mod = ReductionModifier::inscan;
+          else if (succeeded(parser.parseOptionalKeyword("defaultmod")))
+            mod = ReductionModifier::defaultmod;
+          modifiers.push_back(
+              ReductionModifierAttr::get(parser.getContext(), mod));
+        }
         if (byref)
           isByRefVec.push_back(
               parser.parseOptionalKeyword("byref").succeeded());
@@ -1314,16 +1375,16 @@ static ParseResult parseClauseWithRegionArgs(
       }))
     return failure();
 
-  if (parser.parseColon())
-    return failure();
-
-  if (parser.parseCommaSeparatedList([&]() {
-        if (parser.parseType(types.emplace_back()))
-          return failure();
-
-        return success();
+  if (parser.parseColon() || parser.parseCommaSeparatedList([&]() {
+        return parser.parseType(types.emplace_back());
       }))
     return failure();
+
+  if (llvm::any_of(modifiers, [](Attribute attr) {
+        return cast<ReductionModifierAttr>(attr).getValue() !=
+               ReductionModifier::defaultmod;
+      }))
+    *modifier = ArrayAttr::get(parser.getContext(), modifiers);
 
   if (operands.size() != types.size())
     return failure();
@@ -1407,6 +1468,63 @@ static ParseResult parseBlockArgClause(
   return success();
 }
 
+/// linear-entry := [modifier `(`] symbol ssa-id `->` ssa-id `:` type `=`
+///                 ssa-id `:` type [`)`]
+static ParseResult parseBlockArgClause(
+    OpAsmParser &parser,
+    llvm::SmallVectorImpl<OpAsmParser::Argument> &entryBlockArgs,
+    StringRef keyword, std::optional<LinearParseArgs> linearArgs) {
+  if (!linearArgs || failed(parser.parseOptionalKeyword(keyword)))
+    return success();
+
+  MLIRContext *ctx = parser.getContext();
+  SmallVector<Attribute> syms, modifiers;
+  if (parser.parseLParen() ||
+      parser.parseCommaSeparatedList([&]() -> ParseResult {
+        std::optional<LinearModifier> modifier;
+        if (succeeded(parser.parseOptionalKeyword("val")))
+          modifier = LinearModifier::val;
+        else if (succeeded(parser.parseOptionalKeyword("ref")))
+          modifier = LinearModifier::ref;
+        else if (succeeded(parser.parseOptionalKeyword("uval")))
+          modifier = LinearModifier::uval;
+        if (modifier && parser.parseLParen())
+          return failure();
+
+        SymbolRefAttr sym;
+        OpAsmParser::Argument &arg = entryBlockArgs.emplace_back();
+        if (parser.parseAttribute(sym) ||
+            parser.parseOperand(linearArgs->vars.emplace_back()) ||
+            parser.parseArrow() || parser.parseArgument(arg) ||
+            parser.parseColonType(linearArgs->types.emplace_back()) ||
+            parser.parseEqual() ||
+            parser.parseOperand(linearArgs->stepVars.emplace_back()) ||
+            parser.parseColonType(linearArgs->stepTypes.emplace_back()))
+          return failure();
+        arg.type = linearArgs->types.back();
+
+        if (modifier && parser.parseRParen())
+          return failure();
+
+        syms.push_back(sym);
+        modifiers.push_back(
+            modifier ? Attribute(LinearModifierAttr::get(ctx, *modifier))
+                     : Attribute(UnitAttr::get(ctx)));
+        return success();
+      }) ||
+      parser.parseRParen())
+    return failure();
+
+  linearArgs->syms = ArrayAttr::get(ctx, syms);
+  linearArgs->modifiers = ArrayAttr::get(ctx, modifiers);
+
+  if (succeeded(parser.parseOptionalKeyword("linear_var_types")) &&
+      (parser.parseLParen() || parser.parseAttribute(linearArgs->varTypes) ||
+       parser.parseRParen()))
+    return failure();
+  return success();
+}
+
 static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
                                        AllRegionParseArgs args) {
   llvm::SmallVector<OpAsmParser::Argument> entryBlockArgs;
@@ -1425,6 +1543,11 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
                                  args.inReductionArgs)))
     return parser.emitError(parser.getCurrentLocation())
            << "invalid `in_reduction` format";
+
+  if (failed(parseBlockArgClause(parser, entryBlockArgs, "linear",
+                                 args.linearArgs)))
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid `linear` format";
 
   if (failed(parseBlockArgClause(parser, entryBlockArgs, "map_entries",
                                  args.mapArgs)))
@@ -1504,7 +1627,7 @@ static ParseResult parseInReductionPrivateReductionRegion(
     DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
-    UnitAttr &privateNeedsBarrier, ReductionModifierAttr &reductionMod,
+    UnitAttr &privateNeedsBarrier, ArrayAttr &reductionMods,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &reductionVars,
     SmallVectorImpl<Type> &reductionTypes, DenseBoolArrayAttr &reductionByref,
     ArrayAttr &reductionSyms) {
@@ -1514,7 +1637,7 @@ static ParseResult parseInReductionPrivateReductionRegion(
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
-                             reductionSyms, &reductionMod);
+                             reductionSyms, &reductionMods);
   return parseBlockArgRegion(parser, region, args);
 }
 
@@ -1533,7 +1656,7 @@ static ParseResult parsePrivateReductionRegion(
     OpAsmParser &parser, Region &region,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
-    UnitAttr &privateNeedsBarrier, ReductionModifierAttr &reductionMod,
+    UnitAttr &privateNeedsBarrier, ArrayAttr &reductionMods,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &reductionVars,
     SmallVectorImpl<Type> &reductionTypes, DenseBoolArrayAttr &reductionByref,
     ArrayAttr &reductionSyms) {
@@ -1541,7 +1664,31 @@ static ParseResult parsePrivateReductionRegion(
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
-                             reductionSyms, &reductionMod);
+                             reductionSyms, &reductionMods);
+  return parseBlockArgRegion(parser, region, args);
+}
+
+static ParseResult parseLinearPrivateReductionRegion(
+    OpAsmParser &parser, Region &region,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearVars,
+    SmallVectorImpl<Type> &linearTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars,
+    SmallVectorImpl<Type> &linearStepTypes, ArrayAttr &linearVarTypes,
+    ArrayAttr &linearModifiers, ArrayAttr &linearSyms,
+    llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
+    llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
+    UnitAttr &privateNeedsBarrier, ArrayAttr &reductionMods,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &reductionVars,
+    SmallVectorImpl<Type> &reductionTypes, DenseBoolArrayAttr &reductionByref,
+    ArrayAttr &reductionSyms) {
+  AllRegionParseArgs args;
+  args.linearArgs.emplace(linearVars, linearTypes, linearStepVars,
+                          linearStepTypes, linearVarTypes, linearModifiers,
+                          linearSyms);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier);
+  args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
+                             reductionSyms, &reductionMods);
   return parseBlockArgRegion(parser, region, args);
 }
 
@@ -1589,20 +1736,35 @@ struct PrivatePrintArgs {
       : vars(vars), types(types), syms(syms), needsBarrier(needsBarrier),
         mapIndices(mapIndices) {}
 };
+struct LinearPrintArgs {
+  ValueRange vars;
+  TypeRange types;
+  ValueRange stepVars;
+  TypeRange stepTypes;
+  ArrayAttr varTypes;
+  ArrayAttr modifiers;
+  ArrayAttr syms;
+  LinearPrintArgs(ValueRange vars, TypeRange types, ValueRange stepVars,
+                  TypeRange stepTypes, ArrayAttr varTypes, ArrayAttr modifiers,
+                  ArrayAttr syms)
+      : vars(vars), types(types), stepVars(stepVars), stepTypes(stepTypes),
+        varTypes(varTypes), modifiers(modifiers), syms(syms) {}
+};
 struct ReductionPrintArgs {
   ValueRange vars;
   TypeRange types;
   DenseBoolArrayAttr byref;
   ArrayAttr syms;
-  ReductionModifierAttr modifier;
+  ArrayAttr modifier;
   ReductionPrintArgs(ValueRange vars, TypeRange types, DenseBoolArrayAttr byref,
-                     ArrayAttr syms, ReductionModifierAttr mod = nullptr)
+                     ArrayAttr syms, ArrayAttr mod = nullptr)
       : vars(vars), types(types), byref(byref), syms(syms), modifier(mod) {}
 };
 struct AllRegionPrintArgs {
   std::optional<MapPrintArgs> hasDeviceAddrArgs;
   std::optional<MapPrintArgs> hostEvalArgs;
   std::optional<ReductionPrintArgs> inReductionArgs;
+  std::optional<LinearPrintArgs> linearArgs;
   std::optional<MapPrintArgs> mapArgs;
   std::optional<PrivatePrintArgs> privateArgs;
   std::optional<ReductionPrintArgs> reductionArgs;
@@ -1616,15 +1778,12 @@ static void printClauseWithRegionArgs(
     OpAsmPrinter &p, MLIRContext *ctx, StringRef clauseName,
     ValueRange argsSubrange, ValueRange operands, TypeRange types,
     ArrayAttr symbols = nullptr, DenseI64ArrayAttr mapIndices = nullptr,
-    DenseBoolArrayAttr byref = nullptr,
-    ReductionModifierAttr modifier = nullptr, UnitAttr needsBarrier = nullptr) {
+    DenseBoolArrayAttr byref = nullptr, ArrayAttr modifier = nullptr,
+    UnitAttr needsBarrier = nullptr) {
   if (argsSubrange.empty())
     return;
 
   p << clauseName << "(";
-
-  if (modifier)
-    p << "mod: " << stringifyReductionModifier(modifier.getValue()) << ", ";
 
   if (!symbols) {
     llvm::SmallVector<Attribute> values(operands.size(), nullptr);
@@ -1641,21 +1800,27 @@ static void printClauseWithRegionArgs(
     byref = DenseBoolArrayAttr::get(ctx, values);
   }
 
-  llvm::interleaveComma(llvm::zip_equal(operands, argsSubrange, symbols,
-                                        mapIndices.asArrayRef(),
-                                        byref.asArrayRef()),
-                        p, [&p](auto t) {
-                          auto [op, arg, sym, map, isByRef] = t;
-                          if (isByRef)
-                            p << "byref ";
-                          if (sym)
-                            p << sym << " ";
-
-                          p << op << " -> " << arg;
-
-                          if (map != -1)
-                            p << " [map_idx=" << map << "]";
-                        });
+  unsigned index = 0;
+  llvm::interleaveComma(
+      llvm::zip_equal(operands, argsSubrange, symbols, mapIndices.asArrayRef(),
+                      byref.asArrayRef()),
+      p, [&](auto t) {
+        auto [op, arg, sym, map, isByRef] = t;
+        if (modifier) {
+          ReductionModifier mod =
+              cast<ReductionModifierAttr>(modifier[index]).getValue();
+          if (mod != ReductionModifier::defaultmod)
+            p << stringifyReductionModifier(mod) << " ";
+        }
+        ++index;
+        if (isByRef)
+          p << "byref ";
+        if (sym)
+          p << sym << " ";
+        p << op << " -> " << arg;
+        if (map != -1)
+          p << " [map_idx=" << map << "]";
+      });
   p << " : ";
   llvm::interleaveComma(types, p);
   p << ") ";
@@ -1693,6 +1858,35 @@ printBlockArgClause(OpAsmPrinter &p, MLIRContext *ctx, StringRef clauseName,
                               reductionArgs->byref, reductionArgs->modifier);
 }
 
+static void printBlockArgClause(OpAsmPrinter &p, MLIRContext *ctx,
+                                StringRef clauseName, ValueRange argsSubrange,
+                                std::optional<LinearPrintArgs> linearArgs) {
+  if (!linearArgs || argsSubrange.empty())
+    return;
+
+  p << clauseName << "(";
+  for (auto [i, var] : llvm::enumerate(linearArgs->vars)) {
+    if (i != 0)
+      p << ", ";
+    auto modifier =
+        linearArgs->modifiers
+            ? dyn_cast_if_present<LinearModifierAttr>(linearArgs->modifiers[i])
+            : nullptr;
+    if (modifier)
+      p << stringifyLinearModifier(modifier.getValue()) << "(";
+    if (linearArgs->syms)
+      p << linearArgs->syms[i] << " ";
+    p << var << " -> " << argsSubrange[i] << " : " << linearArgs->types[i]
+      << " = " << linearArgs->stepVars[i] << " : " << linearArgs->stepTypes[i];
+    if (modifier)
+      p << ")";
+  }
+  p << ") ";
+
+  if (linearArgs->varTypes)
+    p << "linear_var_types(" << linearArgs->varTypes << ") ";
+}
+
 static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
                                 const AllRegionPrintArgs &args) {
   auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op);
@@ -1705,6 +1899,8 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
                       args.hostEvalArgs);
   printBlockArgClause(p, ctx, "in_reduction", iface.getInReductionBlockArgs(),
                       args.inReductionArgs);
+  printBlockArgClause(p, ctx, "linear", iface.getLinearBlockArgs(),
+                      args.linearArgs);
   printBlockArgClause(p, ctx, "map_entries", iface.getMapBlockArgs(),
                       args.mapArgs);
   printBlockArgClause(p, ctx, "private", iface.getPrivateBlockArgs(),
@@ -1762,9 +1958,8 @@ static void printInReductionPrivateReductionRegion(
     TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
     ArrayAttr inReductionSyms, ValueRange privateVars, TypeRange privateTypes,
     ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
-    ReductionModifierAttr reductionMod, ValueRange reductionVars,
-    TypeRange reductionTypes, DenseBoolArrayAttr reductionByref,
-    ArrayAttr reductionSyms) {
+    ArrayAttr reductionMods, ValueRange reductionVars, TypeRange reductionTypes,
+    DenseBoolArrayAttr reductionByref, ArrayAttr reductionSyms) {
   AllRegionPrintArgs args;
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
@@ -1772,7 +1967,7 @@ static void printInReductionPrivateReductionRegion(
                            privateNeedsBarrier,
                            /*mapIndices=*/nullptr);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
-                             reductionSyms, reductionMod);
+                             reductionSyms, reductionMods);
   printBlockArgRegion(p, op, region, args);
 }
 
@@ -1790,15 +1985,34 @@ static void printPrivateRegion(OpAsmPrinter &p, Operation *op, Region &region,
 static void printPrivateReductionRegion(
     OpAsmPrinter &p, Operation *op, Region &region, ValueRange privateVars,
     TypeRange privateTypes, ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
-    ReductionModifierAttr reductionMod, ValueRange reductionVars,
-    TypeRange reductionTypes, DenseBoolArrayAttr reductionByref,
-    ArrayAttr reductionSyms) {
+    ArrayAttr reductionMods, ValueRange reductionVars, TypeRange reductionTypes,
+    DenseBoolArrayAttr reductionByref, ArrayAttr reductionSyms) {
   AllRegionPrintArgs args;
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier,
                            /*mapIndices=*/nullptr);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
-                             reductionSyms, reductionMod);
+                             reductionSyms, reductionMods);
+  printBlockArgRegion(p, op, region, args);
+}
+
+static void printLinearPrivateReductionRegion(
+    OpAsmPrinter &p, Operation *op, Region &region, ValueRange linearVars,
+    TypeRange linearTypes, ValueRange linearStepVars, TypeRange linearStepTypes,
+    ArrayAttr linearVarTypes, ArrayAttr linearModifiers, ArrayAttr linearSyms,
+    ValueRange privateVars, TypeRange privateTypes, ArrayAttr privateSyms,
+    UnitAttr privateNeedsBarrier, ArrayAttr reductionMods,
+    ValueRange reductionVars, TypeRange reductionTypes,
+    DenseBoolArrayAttr reductionByref, ArrayAttr reductionSyms) {
+  AllRegionPrintArgs args;
+  args.linearArgs.emplace(linearVars, linearTypes, linearStepVars,
+                          linearStepTypes, linearVarTypes, linearModifiers,
+                          linearSyms);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier,
+                           /*mapIndices=*/nullptr);
+  args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
+                             reductionSyms, reductionMods);
   printBlockArgRegion(p, op, region, args);
 }
 
@@ -1876,11 +2090,24 @@ static void printSplitIteratedList(OpAsmPrinter &p, ValueRange iteratedVars,
     emit(plainVars[i], plainTypes[i], printPrefixForPlain);
 }
 
+/// Verify the per-variable modifier list has one entry per reduction variable.
+static LogicalResult verifyReductionModifiers(Operation *op,
+                                              OperandRange reductionVars,
+                                              ArrayAttr reductionMods) {
+  if (reductionMods && reductionMods.size() != reductionVars.size())
+    return op->emitOpError(
+        "expected as many reduction modifiers as reduction variables");
+  return success();
+}
+
 /// Verifies Reduction Clause
 static LogicalResult
 verifyReductionVarList(Operation *op, std::optional<ArrayAttr> reductionSyms,
                        OperandRange reductionVars,
-                       std::optional<ArrayRef<bool>> reductionByref) {
+                       std::optional<ArrayRef<bool>> reductionByref,
+                       ArrayAttr reductionMods = nullptr) {
+  if (failed(verifyReductionModifiers(op, reductionVars, reductionMods)))
+    return failure();
   if (!reductionVars.empty()) {
     if (!reductionSyms || reductionSyms->size() != reductionVars.size())
       return op->emitOpError()
@@ -2298,6 +2525,9 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "is_device_ptr")
       mapTypeBits |= ClauseMapFlags::is_device_ptr;
 
+    if (mapTypeMod == "target_param")
+      mapTypeBits |= ClauseMapFlags::target_param;
+
     return success();
   };
 
@@ -2329,6 +2559,8 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("close");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::present))
     mapTypeStrs.push_back("present");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::target_param))
+    mapTypeStrs.push_back("target_param");
 
   // special handling of to/from/tofrom/delete and release/alloc, release +
   // alloc are the abscense of one of the other flags, whereas tofrom requires
@@ -2562,10 +2794,11 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
                                   "'omp.iterator' ops";
 
     // Check that the iterator body yields a value defined by omp.map.info.
-    auto yieldOp =
-        cast<mlir::omp::YieldOp>(iterOp.getRegion().front().getTerminator());
+    mlir::omp::YieldOp yieldOp = iterOp.getYieldOp();
     auto yieldedMapInfo =
-        yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
+        yieldOp && yieldOp.getNumOperands() == 1
+            ? yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>()
+            : nullptr;
     if (!yieldedMapInfo)
       return op->emitOpError() << "'map_iterated' iterator body must yield "
                                   "a value defined by 'omp.map.info'";
@@ -2958,9 +3191,10 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                     /*allocate_private_indices=*/nullptr, /*if_expr=*/nullptr,
                     /*num_threads_vars=*/ValueRange(),
                     /*private_vars=*/ValueRange(),
-                    /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
+                    /*private_syms=*/nullptr, /*private_needs_barrier=*/false,
                     /*proc_bind_kind=*/nullptr,
-                    /*reduction_mod =*/nullptr, /*reduction_vars=*/ValueRange(),
+                    /*reduction_mods =*/nullptr,
+                    /*reduction_vars=*/ValueRange(),
                     /*reduction_byref=*/nullptr, /*reduction_syms=*/nullptr);
   state.addAttributes(attributes);
 }
@@ -2974,7 +3208,8 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                     clauses.ifExpr, clauses.numThreadsVars, clauses.privateVars,
                     makeArrayAttr(ctx, clauses.privateSyms),
                     clauses.privateNeedsBarrier, clauses.procBindKind,
-                    clauses.reductionMod, clauses.reductionVars,
+                    makeArrayAttr(ctx, clauses.reductionMods),
+                    clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                     makeArrayAttr(ctx, clauses.reductionSyms));
 }
@@ -3011,14 +3246,48 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
     if (privatizerType && (varType != privatizerType))
       return op.emitError()
              << "type mismatch between a "
-             << (privatizerOp.getDataSharingType() ==
-                         DataSharingClauseType::Private
-                     ? "private"
-                     : "firstprivate")
+             << stringifyDataSharingClauseType(
+                    privatizerOp.getDataSharingType())
              << " variable and its privatizer op, var type: " << varType
              << " vs. privatizer op type: " << privatizerType;
+
+    if (privatizerOp.getDataSharingType() == DataSharingClauseType::Linear)
+      return op.emitError() << "`linear` privatizer '" << privateSym
+                            << "' can only be used in a `linear` clause";
   }
 
+  return success();
+}
+
+/// Verifies that each linear variable has a `linear` privatizer.
+template <typename OpType>
+static LogicalResult verifyLinearSyms(OpType op) {
+  OperandRange linearVars = op.getLinearVars();
+  std::optional<ArrayAttr> linearSyms = op.getLinearSyms();
+  if (linearVars.empty() && (!linearSyms || linearSyms->empty()))
+    return success();
+
+  if (!linearSyms || linearSyms->size() != linearVars.size())
+    return op.emitOpError()
+           << "expected as many linear privatizers as linear variables";
+
+  for (auto [var, sym] : llvm::zip_equal(linearVars, *linearSyms)) {
+    auto symRef = cast<SymbolRefAttr>(sym);
+    auto privatizer =
+        SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(op, symRef);
+    if (!privatizer)
+      return op.emitOpError() << "failed to lookup privatizer op with symbol: '"
+                              << symRef << "'";
+    if (privatizer.getDataSharingType() != DataSharingClauseType::Linear)
+      return op.emitOpError() << "privatizer '" << symRef
+                              << "' of a linear variable must be `linear`";
+    Type argType = privatizer.getArgType();
+    if (argType && argType != var.getType())
+      return op.emitOpError()
+             << "type mismatch between a linear variable and its privatizer "
+                "op, var type: "
+             << var.getType() << " vs. privatizer op type: " << argType;
+  }
   return success();
 }
 
@@ -3033,7 +3302,7 @@ LogicalResult ParallelOp::verify() {
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
-                                getReductionByref());
+                                getReductionByref(), getReductionModsAttr());
 }
 
 LogicalResult ParallelOp::verifyRegions() {
@@ -3088,8 +3357,8 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
       clauses.dynGroupprivateAccessGroup, clauses.dynGroupprivateFallback,
       clauses.dynGroupprivateSize, clauses.ifExpr, clauses.numTeamsLower,
       clauses.numTeamsUpperVars, /*private_vars=*/{}, /*private_syms=*/nullptr,
-      /*private_needs_barrier=*/nullptr, clauses.reductionMod,
-      clauses.reductionVars,
+      /*private_needs_barrier=*/false,
+      makeArrayAttr(ctx, clauses.reductionMods), clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars);
 }
@@ -3149,7 +3418,7 @@ LogicalResult TeamsOp::verify() {
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
-                                getReductionByref());
+                                getReductionByref(), getReductionModsAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3177,9 +3446,12 @@ void SectionsOp::build(OpBuilder &builder, OperationState &state,
                     makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
                     clauses.nowait, /*private_vars=*/{},
                     /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
-                    clauses.reductionMod, clauses.reductionVars,
+                    /*private_assume_bounded_recipe_effects=*/nullptr,
+                    makeArrayAttr(ctx, clauses.reductionMods),
+                    clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                    makeArrayAttr(ctx, clauses.reductionSyms));
+                    makeArrayAttr(ctx, clauses.reductionSyms),
+                    /*reduction_assume_bounded_recipe_effects=*/nullptr);
 }
 
 LogicalResult SectionsOp::verify() {
@@ -3193,7 +3465,7 @@ LogicalResult SectionsOp::verify() {
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
-                                getReductionByref());
+                                getReductionByref(), getReductionModsAttr());
 }
 
 LogicalResult SectionsOp::verifyRegions() {
@@ -3207,6 +3479,88 @@ LogicalResult SectionsOp::verifyRegions() {
   return success();
 }
 
+/// Add arbitrary read, write, allocate, and free effects.
+static void addUnknownMemoryEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
+  effects.emplace_back(MemoryEffects::Allocate::get());
+  effects.emplace_back(MemoryEffects::Free::get());
+}
+
+/// Privatisation may read the original as a mold or firstprivate copy source.
+/// Any lastprivate copy-back is explicit in the nested operations.
+static void getPrivatisationEffects(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  auto iface = dyn_cast<BlockArgOpenMPOpInterface>(op);
+
+  OperandRange sourceVars = iface.getPrivateVars();
+  for (OpOperand &source :
+       MutableArrayRef(sourceVars.getBase(), sourceVars.size()))
+    effects.emplace_back(MemoryEffects::Read::get(), &source);
+  for (BlockArgument priv : iface.getPrivateBlockArgs()) {
+    effects.emplace_back(MemoryEffects::Write::get(), priv);
+    effects.emplace_back(MemoryEffects::Allocate::get(), priv);
+    effects.emplace_back(MemoryEffects::Free::get(), priv);
+  }
+}
+
+/// Reductions initialise private accumulators and combine them into the
+/// original variables. Account for reduction and in_reduction clauses.
+static void
+getReductionEffects(Operation *op,
+                    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  auto iface = dyn_cast<BlockArgOpenMPOpInterface>(op);
+
+  auto addEffects = [&](OperandRange sourceVars,
+                        ArrayRef<BlockArgument> privateArgs) {
+    for (OpOperand &source :
+         MutableArrayRef(sourceVars.getBase(), sourceVars.size())) {
+      effects.emplace_back(MemoryEffects::Read::get(), &source);
+      effects.emplace_back(MemoryEffects::Write::get(), &source);
+    }
+
+    for (BlockArgument priv : privateArgs) {
+      effects.emplace_back(MemoryEffects::Allocate::get(), priv);
+      effects.emplace_back(MemoryEffects::Free::get(), priv);
+      effects.emplace_back(MemoryEffects::Read::get(), priv);
+      effects.emplace_back(MemoryEffects::Write::get(), priv);
+    }
+  };
+
+  addEffects(iface.getReductionVars(), iface.getReductionBlockArgs());
+  addEffects(iface.getInReductionVars(), iface.getInReductionBlockArgs());
+}
+
+static void getBarrierEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
+}
+
+void SectionsOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // The presence of the nowait clause eliminates the implicit barrier at the
+  // end of a sections construct
+  if (!getNowait()) {
+    getBarrierEffects(effects);
+  }
+
+  bool hasUnknownRecipeEffects =
+      (!getPrivateVars().empty() && !getPrivateAssumeBoundedRecipeEffects()) ||
+      (!getReductionVars().empty() &&
+       !getReductionAssumeBoundedRecipeEffects());
+
+  if (hasUnknownRecipeEffects) {
+    addUnknownMemoryEffects(effects);
+  } else {
+    getPrivatisationEffects(*this, effects);
+    getReductionEffects(*this, effects);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
@@ -3214,29 +3568,30 @@ LogicalResult SectionsOp::verifyRegions() {
 void ScopeOp::build(OpBuilder &builder, OperationState &state,
                     const ScopeOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  ScopeOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                 makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
-                 makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
-                 clauses.nowait, clauses.privateVars,
-                 makeArrayAttr(ctx, clauses.privateSyms),
-                 clauses.privateNeedsBarrier, clauses.reductionMod,
-                 clauses.reductionVars,
-                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                 makeArrayAttr(ctx, clauses.reductionSyms));
+  ScopeOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+      clauses.nowait, clauses.privateVars,
+      makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
+      makeArrayAttr(ctx, clauses.reductionMods), clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms));
 }
 
 LogicalResult ScopeOp::verify() {
   if (failed(verifyAllocateClause(
           getOperation(), getAllocateVars(), getAllocatorVars(),
           getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
-          getPrivateVars(), getPrivateSymsAttr())))
+          getPrivateVars(), getPrivateSymsAttr(),
+          /*requirePrivateIndices=*/true)))
     return failure();
 
   if (failed(verifyPrivateVarList(*this)))
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
-                                getReductionByref());
+                                getReductionByref(), getReductionModsAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3247,13 +3602,15 @@ void SingleOp::build(OpBuilder &builder, OperationState &state,
                      const SingleOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
-  SingleOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                  makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
-                  makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
-                  clauses.copyprivateVars,
-                  makeArrayAttr(ctx, clauses.copyprivateSyms), clauses.nowait,
-                  /*private_vars=*/{}, /*private_syms=*/nullptr,
-                  /*private_needs_barrier=*/nullptr);
+  SingleOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+      clauses.copyprivateVars, makeArrayAttr(ctx, clauses.copyprivateSyms),
+      /*copyprivate_assume_bounded_recipe_effects=*/nullptr, clauses.nowait,
+      /*private_vars=*/{}, /*private_syms=*/nullptr,
+      /*private_needs_barrier=*/nullptr,
+      /*private_assume_bounded_recipe_effects=*/nullptr);
 }
 
 LogicalResult SingleOp::verify() {
@@ -3265,6 +3622,34 @@ LogicalResult SingleOp::verify() {
 
   return verifyCopyprivateVarList(*this, getCopyprivateVars(),
                                   getCopyprivateSyms());
+}
+
+void SingleOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // The presence of the nowait clause eliminates the implicit barrier at the
+  // end of a single construct.
+  if (!getNowait()) {
+    getBarrierEffects(effects);
+  }
+
+  bool hasUnknownRecipeEffects =
+      (!getPrivateVars().empty() && !getPrivateAssumeBoundedRecipeEffects()) ||
+      (!getCopyprivateVars().empty() &&
+       !getCopyprivateAssumeBoundedRecipeEffects());
+  if (hasUnknownRecipeEffects) {
+    addUnknownMemoryEffects(effects);
+  } else {
+    getPrivatisationEffects(*this, effects);
+    // The unknown executing thread supplies the value and the other threads
+    // receive it, so each copyprivate operand may be both read and written.
+    OperandRange copyprivateVars = getCopyprivateVars();
+    for (OpOperand &variable :
+         MutableArrayRef(copyprivateVars.getBase(), copyprivateVars.size())) {
+      effects.emplace_back(MemoryEffects::Read::get(), &variable);
+      effects.emplace_back(MemoryEffects::Write::get(), &variable);
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3425,7 +3810,8 @@ void LoopOp::build(OpBuilder &builder, OperationState &state,
   LoopOp::build(builder, state, clauses.bindKind, clauses.privateVars,
                 makeArrayAttr(ctx, clauses.privateSyms),
                 clauses.privateNeedsBarrier, clauses.order, clauses.orderMod,
-                clauses.reductionMod, clauses.reductionVars,
+                makeArrayAttr(ctx, clauses.reductionMods),
+                clauses.reductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                 makeArrayAttr(ctx, clauses.reductionSyms));
 }
@@ -3435,7 +3821,7 @@ LogicalResult LoopOp::verify() {
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
-                                getReductionByref());
+                                getReductionByref(), getReductionModsAttr());
 }
 
 LogicalResult LoopOp::verifyRegions() {
@@ -3457,10 +3843,11 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
         /*allocate_private_indices=*/nullptr,
         /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
         /*linear_var_types*/ nullptr, /*linear_modifiers=*/nullptr,
-        /*nowait=*/false, /*order=*/nullptr, /*order_mod=*/nullptr,
+        /*linear_syms=*/nullptr, /*nowait=*/false, /*order=*/nullptr,
+        /*order_mod=*/nullptr,
         /*ordered=*/nullptr, /*private_vars=*/{}, /*private_syms=*/nullptr,
         /*private_needs_barrier=*/false,
-        /*reduction_mod=*/nullptr, /*reduction_vars=*/ValueRange(),
+        /*reduction_mods=*/nullptr, /*reduction_vars=*/ValueRange(),
         /*reduction_byref=*/nullptr,
         /*reduction_syms=*/nullptr, /*schedule_kind=*/nullptr,
         /*schedule_chunk=*/nullptr, /*schedule_mod=*/nullptr,
@@ -3476,10 +3863,11 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
       makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
       makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
       clauses.linearVars, clauses.linearStepVars, clauses.linearVarTypes,
-      clauses.linearModifiers, clauses.nowait, clauses.order, clauses.orderMod,
-      clauses.ordered, clauses.privateVars,
-      makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
-      clauses.reductionMod, clauses.reductionVars,
+      clauses.linearModifiers, makeArrayAttr(ctx, clauses.linearSyms),
+      clauses.nowait, clauses.order, clauses.orderMod, clauses.ordered,
+      clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
+      clauses.privateNeedsBarrier, makeArrayAttr(ctx, clauses.reductionMods),
+      clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.scheduleKind,
       clauses.scheduleChunk, clauses.scheduleMod, clauses.scheduleSimd);
@@ -3499,11 +3887,11 @@ LogicalResult WsloopOp::verify() {
       getLinearVarTypes().value().size() != getLinearVars().size())
     return emitError() << "Ill-formed type attributes for linear variables";
 
-  if (failed(verifyPrivateVarList(*this)))
+  if (failed(verifyLinearSyms(*this)) || failed(verifyPrivateVarList(*this)))
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
-                                getReductionByref());
+                                getReductionByref(), getReductionModsAttr());
 }
 
 LogicalResult WsloopOp::verifyRegions() {
@@ -3538,20 +3926,25 @@ LogicalResult WsloopOp::verifyRegions() {
 void SimdOp::build(OpBuilder &builder, OperationState &state,
                    const SimdOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  SimdOp::build(builder, state, clauses.alignedVars,
-                makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
-                clauses.linearVars, clauses.linearStepVars,
-                clauses.linearVarTypes, clauses.linearModifiers,
-                clauses.nontemporalVars, clauses.order, clauses.orderMod,
-                clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
-                clauses.privateNeedsBarrier, clauses.reductionMod,
-                clauses.reductionVars,
-                makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                makeArrayAttr(ctx, clauses.reductionSyms), clauses.safelen,
-                clauses.simdlen);
+  SimdOp::build(
+      builder, state, clauses.alignedVars,
+      makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
+      clauses.linearVars, clauses.linearStepVars, clauses.linearVarTypes,
+      clauses.linearModifiers, makeArrayAttr(ctx, clauses.linearSyms),
+      clauses.nontemporalVars, clauses.order, clauses.orderMod,
+      clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
+      clauses.privateNeedsBarrier, makeArrayAttr(ctx, clauses.reductionMods),
+      clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.safelen,
+      clauses.simdlen);
 }
 
 LogicalResult SimdOp::verify() {
+  if (failed(verifyReductionModifiers(*this, getReductionVars(),
+                                      getReductionModsAttr())))
+    return failure();
+
   if (getSimdlen().has_value() && getSafelen().has_value() &&
       getSimdlen().value() > getSafelen().value())
     return emitOpError()
@@ -3602,6 +3995,9 @@ LogicalResult SimdOp::verify() {
   if (getLinearVars().size() &&
       getLinearVarTypes().value().size() != getLinearVars().size())
     return emitError() << "Ill-formed type attributes for linear variables";
+
+  if (failed(verifyLinearSyms(*this)))
+    return failure();
 
   llvm::DenseSet<Value> privateVars(llvm::from_range, getPrivateVars());
   llvm::DenseSet<Value> reductionVars(llvm::from_range, getReductionVars());
@@ -3796,19 +4192,20 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(
-      builder, state, clauses.iterated, clauses.affinityVars,
-      clauses.allocateVars, clauses.allocatorVars,
-      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
-      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
-      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-      makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
-      clauses.final, clauses.ifExpr, clauses.inReductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
-      clauses.priority, /*private_vars=*/clauses.privateVars,
-      /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
-      clauses.privateNeedsBarrier, clauses.untied, clauses.eventHandle);
+  TaskOp::build(builder, state, clauses.iterated, clauses.affinityVars,
+                clauses.allocateVars, clauses.allocatorVars,
+                makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+                makeArrayAttr(ctx, clauses.dependIteratedKinds),
+                clauses.dependIterated, clauses.final, clauses.ifExpr,
+                clauses.inReductionVars,
+                makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+                makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
+                clauses.priority, /*private_vars=*/clauses.privateVars,
+                /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
+                clauses.privateNeedsBarrier, clauses.threadset, clauses.untied,
+                clauses.eventHandle);
 }
 
 LogicalResult TaskOp::verify() {
@@ -3844,7 +4241,8 @@ void TaskgroupOp::build(OpBuilder &builder, OperationState &state,
                      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
                      clauses.taskReductionVars,
                      makeDenseBoolArrayAttr(ctx, clauses.taskReductionByref),
-                     makeArrayAttr(ctx, clauses.taskReductionSyms));
+                     makeArrayAttr(ctx, clauses.taskReductionSyms),
+                     /*task_reduction_assume_bounded_recipe_effects=*/nullptr);
 }
 
 LogicalResult TaskgroupOp::verify() {
@@ -3856,6 +4254,48 @@ LogicalResult TaskgroupOp::verify() {
   return verifyReductionVarList(*this, getTaskReductionSyms(),
                                 getTaskReductionVars(),
                                 getTaskReductionByref());
+}
+
+static void getTaskReductionEffects(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  auto iface = dyn_cast<BlockArgOpenMPOpInterface>(op);
+  auto taskVars = iface.getTaskReductionVars();
+  for (auto &source : MutableArrayRef(taskVars.getBase(), taskVars.size())) {
+    effects.emplace_back(MemoryEffects::Read::get(), &source);
+    effects.emplace_back(MemoryEffects::Write::get(), &source);
+  }
+
+  for (BlockArgument arg : iface.getTaskReductionBlockArgs()) {
+    effects.emplace_back(MemoryEffects::Read::get(), arg);
+    effects.emplace_back(MemoryEffects::Write::get(), arg);
+  }
+
+  // The task_reduction clause does not necessarily allocate or free private
+  // accumulators. We avoid attaching an allocate effect to these accumulators
+  // as this would incorrectly imply they are fresh storage.
+  if (!taskVars.empty()) {
+    effects.emplace_back(MemoryEffects::Allocate::get());
+    effects.emplace_back(MemoryEffects::Free::get());
+  }
+}
+
+static void getTaskSchedulingPointEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
+}
+
+void TaskgroupOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getTaskSchedulingPointEffects(effects);
+
+  if (!getTaskReductionVars().empty() &&
+      !getTaskReductionAssumeBoundedRecipeEffects())
+    addUnknownMemoryEffects(effects);
+  else
+    getTaskReductionEffects(*this, effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3876,9 +4316,11 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
       clauses.nogroup, clauses.numTasksMod, clauses.numTasks, clauses.priority,
       /*private_vars=*/clauses.privateVars,
       /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
-      clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
+      clauses.privateNeedsBarrier, makeArrayAttr(ctx, clauses.reductionMods),
+      clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadset,
+      clauses.untied);
   state.addAttribute("omp.combined", UnitAttr::get(ctx));
 }
 
@@ -3899,7 +4341,8 @@ LogicalResult TaskloopContextOp::verify() {
     return failure();
 
   if (failed(verifyReductionVarList(*this, getReductionSyms(),
-                                    getReductionVars(), getReductionByref())) ||
+                                    getReductionVars(), getReductionByref(),
+                                    getReductionModsAttr())) ||
       failed(verifyReductionVarList(*this, getInReductionSyms(),
                                     getInReductionVars(),
                                     getInReductionByref())))
@@ -4284,7 +4727,13 @@ LogicalResult NewCliOp::verify() {
   OpOperand *gen = nullptr;
   OpOperand *cons = nullptr;
   for (mlir::OpOperand &use : cli.getUses()) {
-    auto op = cast<mlir::omp::LoopTransformationInterface>(use.getOwner());
+    auto op = dyn_cast<mlir::omp::LoopTransformationInterface>(use.getOwner());
+    if (!op) {
+      InFlightDiagnostic error =
+          emitOpError("CLI must only be used by loop transformations");
+      error.attachNote(use.getOwner()->getLoc()).append("invalid use here:");
+      return error;
+    }
 
     unsigned opnum = use.getOperandNumber();
     if (op.isGeneratee(opnum)) {
@@ -4364,7 +4813,7 @@ void CanonicalLoopOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 mlir::ParseResult CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
@@ -4452,7 +4901,7 @@ void UnrollHeuristicOp::build(::mlir::OpBuilder &odsBuilder,
 void UnrollHeuristicOp::print(OpAsmPrinter &p) {
   p << '(' << getApplyee() << ')';
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 mlir::ParseResult UnrollHeuristicOp::parse(::mlir::OpAsmParser &parser,
@@ -4505,7 +4954,7 @@ void UnrollFullOp::build(::mlir::OpBuilder &odsBuilder,
 void UnrollFullOp::print(OpAsmPrinter &p) {
   p << '(' << getApplyee() << ')';
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 mlir::ParseResult UnrollFullOp::parse(::mlir::OpAsmParser &parser,
@@ -4576,7 +5025,10 @@ void UnrollPartialOp::build(::mlir::OpBuilder &odsBuilder,
 void UnrollPartialOp::print(OpAsmPrinter &p) {
   p << '(' << getApplyee() << ')';
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+  attrs.emplace_back(getUnrollFactorAttrName(), getUnrollFactorAttr());
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
 }
 
 mlir::ParseResult UnrollPartialOp::parse(::mlir::OpAsmParser &parser,
@@ -4821,11 +5273,37 @@ std::pair<unsigned, unsigned> FuseOp::getGenerateesODSOperandIndexAndLength() {
 
 void CriticalDeclareOp::build(OpBuilder &builder, OperationState &state,
                               const CriticalDeclareOperands &clauses) {
-  CriticalDeclareOp::build(builder, state, clauses.symName, clauses.hint);
+  CriticalDeclareOp::build(builder, state, clauses.symName,
+                           clauses.symVisibility, clauses.hint);
 }
 
 LogicalResult CriticalDeclareOp::verify() {
   return verifySynchronizationHint(*this, getHint());
+}
+
+LogicalResult CriticalOp::verify() {
+  SymbolRefAttr currentName = getNameAttr();
+
+  CriticalOp parentCritical = (*this)->getParentOfType<CriticalOp>();
+
+  while (parentCritical) {
+    SymbolRefAttr parentName = parentCritical.getNameAttr();
+
+    if (currentName == parentName) {
+      if (currentName) {
+        return emitOpError() << "cannot be nested inside another omp.critical "
+                                "region with the same name ("
+                             << currentName << ")";
+      } else {
+        return emitOpError() << "cannot be nested inside another unnamed "
+                                "omp.critical region";
+      }
+    }
+
+    parentCritical = parentCritical->getParentOfType<CriticalOp>();
+  }
+
+  return success();
 }
 
 LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -4931,7 +5409,7 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
       /*depend_vars=*/clauses.dependVars,
       /*depend_iterated_kinds=*/makeArrayAttr(ctx, clauses.dependIteratedKinds),
       /*depend_iterated=*/ValueRange(clauses.dependIterated),
-      /*nowait=*/nullptr);
+      /*nowait=*/clauses.nowait);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4944,7 +5422,7 @@ LogicalResult AtomicReadOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -4970,7 +5448,7 @@ LogicalResult AtomicWriteOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -5010,7 +5488,7 @@ LogicalResult AtomicUpdateOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -5064,12 +5542,13 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
   if (verifyRegionsCommon().failed())
     return mlir::failure();
 
-  if (getFirstOp()->getAttr("hint") || getSecondOp()->getAttr("hint"))
+  if (getFirstOp()->getInherentAttr("hint").value_or(Attribute{}) ||
+      getSecondOp()->getInherentAttr("hint").value_or(Attribute{}))
     return emitOpError(
         "operations inside capture region must not have hint clause");
 
-  if (getFirstOp()->getAttr("memory_order") ||
-      getSecondOp()->getAttr("memory_order"))
+  if (getFirstOp()->getInherentAttr("memory_order").value_or(Attribute{}) ||
+      getSecondOp()->getInherentAttr("memory_order").value_or(Attribute{}))
     return emitOpError(
         "operations inside capture region must not have memory_order clause");
   return success();
@@ -5241,15 +5720,15 @@ void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                             TypeRange /*result_types*/, StringAttr symName,
                             TypeAttr type) {
   PrivateClauseOp::build(
-      odsBuilder, odsState, symName, type,
+      odsBuilder, odsState, symName, /*sym_visibility=*/nullptr, type,
       DataSharingClauseTypeAttr::get(odsBuilder.getContext(),
                                      DataSharingClauseType::Private));
 }
 
 LogicalResult PrivateClauseOp::verifyRegions() {
   Type argType = getArgType();
-  auto verifyTerminator = [&](Operation *terminator,
-                              bool yieldsValue) -> LogicalResult {
+  auto verifyTerminator = [&](Operation *terminator, bool yieldsValue,
+                              bool yieldsAnyType) -> LogicalResult {
     if (!terminator->getBlock()->getSuccessors().empty())
       return success();
 
@@ -5268,12 +5747,17 @@ LogicalResult PrivateClauseOp::verifyRegions() {
              << "Did not expect any values to be yielded.";
     }
 
-    if (yieldedTypes.size() == 1 && yieldedTypes.front() == argType)
+    if (yieldedTypes.size() == 1 &&
+        (yieldsAnyType || yieldedTypes.front() == argType))
       return success();
 
     auto error = mlir::emitError(yieldOp.getLoc())
-                 << "Invalid yielded value. Expected type: " << argType
-                 << ", got: ";
+                 << "Invalid yielded value. Expected ";
+    if (yieldsAnyType)
+      error << "a single value";
+    else
+      error << "type: " << argType;
+    error << ", got: ";
 
     if (yieldedTypes.empty())
       error << "None";
@@ -5284,8 +5768,8 @@ LogicalResult PrivateClauseOp::verifyRegions() {
   };
 
   auto verifyRegion = [&](Region &region, unsigned expectedNumArgs,
-                          StringRef regionName,
-                          bool yieldsValue) -> LogicalResult {
+                          StringRef regionName, bool yieldsValue,
+                          bool yieldsAnyType = false) -> LogicalResult {
     assert(!region.empty());
 
     if (region.getNumArguments() != expectedNumArgs)
@@ -5298,7 +5782,8 @@ LogicalResult PrivateClauseOp::verifyRegions() {
       if (!block.mightHaveTerminator())
         continue;
 
-      if (failed(verifyTerminator(block.getTerminator(), yieldsValue)))
+      if (failed(verifyTerminator(block.getTerminator(), yieldsValue,
+                                  yieldsAnyType)))
         return failure();
     }
 
@@ -5332,6 +5817,19 @@ LogicalResult PrivateClauseOp::verifyRegions() {
                           /*yieldsValue=*/true)))
     return failure();
 
+  if (dsType == DataSharingClauseType::Linear && !getCopyRegion().empty())
+    return emitError("`linear` clauses do not require a `copy` region.");
+
+  if (!getDataAddressRegion().empty()) {
+    if (dsType != DataSharingClauseType::Linear)
+      return emitError(
+          "only `linear` clauses can have a `data_address` region.");
+    if (failed(verifyRegion(getDataAddressRegion(), /*expectedNumArgs=*/1,
+                            "data_address", /*yieldsValue=*/true,
+                            /*yieldsAnyType=*/true)))
+      return failure();
+  }
+
   if (!getDeallocRegion().empty() &&
       failed(verifyRegion(getDeallocRegion(), /*expectedNumArgs=*/1, "dealloc",
                           /*yieldsValue=*/false)))
@@ -5350,6 +5848,16 @@ void MaskedOp::build(OpBuilder &builder, OperationState &state,
 }
 
 //===----------------------------------------------------------------------===//
+// Spec 5.2: Dispatch construct (7.6)
+//===----------------------------------------------------------------------===//
+
+void DispatchOp::build(OpBuilder &builder, OperationState &state,
+                       const DispatchOperands &clauses) {
+  DispatchOp::build(builder, state, clauses.nocontext, clauses.novariants,
+                    clauses.nowait);
+}
+
+//===----------------------------------------------------------------------===//
 // Spec 5.2: Scan construct (5.6)
 //===----------------------------------------------------------------------===//
 
@@ -5363,15 +5871,11 @@ LogicalResult ScanOp::verify() {
     return emitError(
         "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected");
   if (WsloopOp parentWsLoopOp = (*this)->getParentOfType<WsloopOp>()) {
-    if (parentWsLoopOp.getReductionModAttr() &&
-        parentWsLoopOp.getReductionModAttr().getValue() ==
-            ReductionModifier::inscan)
+    if (parentWsLoopOp.hasReductionModifier(ReductionModifier::inscan))
       return success();
   }
   if (SimdOp parentSimdOp = (*this)->getParentOfType<SimdOp>()) {
-    if (parentSimdOp.getReductionModAttr() &&
-        parentSimdOp.getReductionModAttr().getValue() ==
-            ReductionModifier::inscan)
+    if (parentSimdOp.hasReductionModifier(ReductionModifier::inscan))
       return success();
   }
   return emitError("SCAN directive needs to be enclosed within a parent "
@@ -5483,18 +5987,21 @@ LogicalResult DeclareSimdOp::verify() {
                                    /*isDeclareSimd=*/true)))
     return failure();
 
+  if (getLinearSyms())
+    return emitOpError("linear privatizers are not allowed");
+
   return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
 }
 
 void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           const DeclareSimdOperands &clauses) {
   MLIRContext *ctx = odsBuilder.getContext();
-  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
-                       makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
-                       clauses.linearVars, clauses.linearStepVars,
-                       clauses.linearVarTypes, clauses.linearModifiers,
-                       clauses.notinbranch, clauses.simdlen,
-                       clauses.uniformVars);
+  DeclareSimdOp::build(
+      odsBuilder, odsState, clauses.alignedVars,
+      makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
+      clauses.linearVars, clauses.linearStepVars, clauses.linearVarTypes,
+      clauses.linearModifiers, makeArrayAttr(ctx, clauses.linearSyms),
+      clauses.notinbranch, clauses.simdlen, clauses.uniformVars);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5648,40 +6155,49 @@ static void printIteratorHeader(OpAsmPrinter &p, Operation *op, Region &region,
                 /*printBlockTerminators=*/true);
 }
 
+YieldOp IteratorOp::getYieldOp() {
+  YieldOp yield;
+  for (Block &block : getRegion()) {
+    auto blockYield =
+        dyn_cast_if_present<YieldOp>(block.empty() ? nullptr : &block.back());
+    if (!blockYield)
+      continue;
+    if (yield)
+      return {};
+    yield = blockYield;
+  }
+  return yield;
+}
+
 LogicalResult IteratorOp::verify() {
   auto iteratedTy = llvm::dyn_cast<omp::IteratedType>(getIterated().getType());
   if (!iteratedTy)
     return emitOpError() << "result must be omp.iterated<entry_ty>";
 
-  for (auto [lb, ub, step] : llvm::zip_equal(
-           getLoopLowerBounds(), getLoopUpperBounds(), getLoopSteps())) {
-    if (matchPattern(step, m_Zero()))
-      return emitOpError() << "loop step must not be zero";
+  Block::BlockArgListType ivs = getRegion().front().getArguments();
+  if (getLoopLowerBounds().size() != ivs.size())
+    return emitOpError() << "number of range arguments and IVs do not match";
 
-    IntegerAttr lbAttr;
-    IntegerAttr ubAttr;
-    IntegerAttr stepAttr;
-    if (!matchPattern(lb, m_Constant(&lbAttr)) ||
-        !matchPattern(ub, m_Constant(&ubAttr)) ||
-        !matchPattern(step, m_Constant(&stepAttr)))
-      continue;
-
-    const APInt &lbVal = lbAttr.getValue();
-    const APInt &ubVal = ubAttr.getValue();
-    const APInt &stepVal = stepAttr.getValue();
-    if (stepVal.isStrictlyPositive() && lbVal.sgt(ubVal))
-      return emitOpError() << "positive loop step requires lower bound to be "
-                              "less than or equal to upper bound";
-    if (stepVal.isNegative() && lbVal.slt(ubVal))
-      return emitOpError() << "negative loop step requires lower bound to be "
-                              "greater than or equal to upper bound";
+  for (auto [lb, iv] : llvm::zip_equal(getLoopLowerBounds(), ivs)) {
+    if (lb.getType() != iv.getType())
+      return emitOpError()
+             << "range argument type does not match corresponding IV type";
   }
 
-  Block &b = getRegion().front();
-  auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());
+  for (Value step : getLoopSteps()) {
+    if (matchPattern(step, m_Zero()))
+      return emitOpError() << "loop step must not be zero";
+  }
 
-  if (!yield)
+  YieldOp yield = getYieldOp();
+  if (!yield) {
+    bool hasYield = llvm::any_of(getRegion(), [](Block &block) {
+      return !block.empty() && isa<YieldOp>(block.back());
+    });
+    if (hasYield)
+      return emitOpError() << "region must contain exactly one omp.yield";
     return emitOpError() << "region must be terminated by omp.yield";
+  }
 
   if (yield.getNumOperands() != 1)
     return emitOpError()
@@ -5695,6 +6211,17 @@ LogicalResult IteratorOp::verify() {
                          << ") does not match omp.yield operand type ("
                          << yieldedTy << ")";
 
+  return success();
+}
+
+LogicalResult IteratorOp::verifyRegions() {
+  // Translation routes only the omp.yield block back to the iterator loop.
+  for (Block &block : getRegion()) {
+    Operation *terminator = block.getTerminator();
+    if (block.getNumSuccessors() == 0 && !isa<YieldOp>(terminator))
+      return mlir::emitError(terminator->getLoc())
+             << "expected exit block terminator to be an `omp.yield` op.";
+  }
   return success();
 }
 

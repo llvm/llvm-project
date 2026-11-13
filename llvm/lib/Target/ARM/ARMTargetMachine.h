@@ -27,9 +27,6 @@
 namespace llvm {
 
 class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
-public:
-  ARM::ARMABI TargetABI;
-
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
@@ -57,6 +54,11 @@ public:
   /// explicit -target-abi=aapcs16 forces the hard-float ABI.
   FloatABI::ABIType getFloatABI(const Module &M) const;
 
+  /// Returns the ABI in effect for \p M: the "target-abi" module flag if
+  /// present, otherwise the legacy -target-abi option; falling back to the
+  /// TargetMachine-level ABI computed at construction.
+  ARM::ARMABI getEffectiveABI(const Module &M) const;
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   // Pass Pipeline Configuration
@@ -68,21 +70,6 @@ public:
     return TLOF.get();
   }
 
-  bool isAPCS_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_APCS;
-  }
-
-  bool isAAPCS_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
-  bool isAAPCS16_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
   MachineFunctionInfo *
@@ -90,7 +77,8 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
   }

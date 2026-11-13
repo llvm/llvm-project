@@ -23,7 +23,7 @@ struct CtorDtor {
 // LLVM-BOTH-DAG: @_ZTH6tls_cd = alias void (), ptr @__tls_init
 
 // Wrappers & aliases.
-// CIR:       cir.global internal tls_model = <tls_dyn> @__tls_guard = #cir.int<0> : !s8i {alignment = 1 : i64}
+// CIR:       cir.global internal tls_model = tls_dyn @__tls_guard = #cir.int<0> : !s8i align(1)
 // CIR-LABEL: cir.func comdat weak_odr private hidden @_ZTW19tls_cd_dyn_not_used() -> !cir.ptr<!rec_CtorDtor> {
 // CIR: cir.call @_ZTH19tls_cd_dyn_not_used() : () -> ()
 // CIR: %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn_not_used : !cir.ptr<!rec_CtorDtor>
@@ -48,7 +48,7 @@ struct CtorDtor {
 // CIR: cir.return %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor>
 // CIR: cir.func @_ZTH6tls_cd() alias(@__tls_init)
 
-// CIR-LABEL: cir.func internal private @__tls_init() {
+// CIR-LABEL: cir.func internal private @__tls_init(){{.*}} {
 // CIR: %[[GET_GUARD:.*]] = cir.get_global thread_local @__tls_guard : !cir.ptr<!s8i>
 // CIR: %[[LOAD_GUARD:.*]] = cir.load align(1) %[[GET_GUARD]] : !cir.ptr<!s8i>, !s8i
 // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
@@ -63,31 +63,31 @@ struct CtorDtor {
 // CIR:  }
 // CIR:  cir.return
 
-// LLVM: define weak_odr hidden ptr @_ZTW19tls_cd_dyn_not_used() {
+// LLVM: define weak_odr hidden ptr @_ZTW19tls_cd_dyn_not_used() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH19tls_cd_dyn_not_used()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn_not_used)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_ref() {
+// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_ref() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH10tls_cd_ref()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_ref)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_dyn() {
+// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_dyn() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH10tls_cd_dyn()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW6tls_cd() {
+// LLVM: define weak_odr hidden ptr @_ZTW6tls_cd() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH6tls_cd()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define internal void @__tls_init() {
+// LLVM: define internal void @__tls_init() #{{[0-9]+}} {
 // LLVM:   %[[GET_GUARD:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @__tls_guard)
 // LLVM:   %[[LOAD_GUARD:.*]] = load i8, ptr %[[GET_GUARD]], align 1
 // LLVM:   %[[IS_UNINIT:.*]] = icmp eq i8 %[[LOAD_GUARD]], 0
@@ -100,21 +100,21 @@ struct CtorDtor {
 // LLVM:   call void @[[TLS_CD_DYN_NOT_USED_INIT:.*]]()
 
 thread_local CtorDtor tls_cd = 5;
-// CIR-BEFORE-LPP: cir.global external tls_model = <tls_dyn> tls_refs = <"_ZTW6tls_cd", "_ZTH6tls_cd"> @tls_cd = #cir.const_record<{#cir.int<5> : !s32i}> : !rec_CtorDtor dtor {
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW6tls_cd", "_ZTH6tls_cd"> @tls_cd = #cir.const_record<{#cir.int<5> : !s32i}> : !rec_CtorDtor dtor {
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN8CtorDtorD1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_CtorDtor>) -> ()
 // CIR-BEFORE-LPP: }
-// CIR: cir.global external tls_model = <tls_dyn> tls_refs = <"_ZTW6tls_cd", "_ZTH6tls_cd"> @tls_cd = #cir.const_record<{#cir.int<5> : !s32i}> : !rec_CtorDtor
-// CIR: cir.func internal private @[[TLS_CD_INIT]]() {
+// CIR: cir.global external tls_model = tls_dyn @tls_cd = #cir.const_record<{#cir.int<5> : !s32i}> : !rec_CtorDtor
+// CIR: cir.func internal private @[[TLS_CD_INIT]](){{.*}} {
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd : !cir.ptr<!rec_CtorDtor>
 // CIR:   %[[GET_DTOR:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   cir.return
 //
-// LLVM: define internal void @[[TLS_CD_INIT]]() {
+// LLVM: define internal void @[[TLS_CD_INIT]]() #{{[0-9]+}} {
 // OGCG: define internal void @[[TLS_CD_INIT:.*]]() {{.*}}{
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd)
 // LLVM:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
@@ -122,7 +122,7 @@ thread_local CtorDtor tls_cd = 5;
 // LLVM-BOTH:   ret void
 
 thread_local CtorDtor tls_cd_dyn = get_i();
-// CIR-BEFORE-LPP:  cir.global external tls_model = <tls_dyn> tls_refs = <"_ZTW10tls_cd_dyn", "_ZTH10tls_cd_dyn"> @tls_cd_dyn = ctor : !rec_CtorDtor {
+// CIR-BEFORE-LPP:  cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10tls_cd_dyn", "_ZTH10tls_cd_dyn"> @tls_cd_dyn = #cir.zero : !rec_CtorDtor ctor {
 // CIR-BEFORE-LPP:    %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:    %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR-BEFORE-LPP:    cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]]) : (!cir.ptr<!rec_CtorDtor>
@@ -130,8 +130,8 @@ thread_local CtorDtor tls_cd_dyn = get_i();
 // CIR-BEFORE-LPP:    %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:    cir.call @_ZN8CtorDtorD1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_CtorDtor>) -> ()
 // CIR-BEFORE-LPP:  }
-// CIR: cir.global external tls_model = <tls_dyn> tls_refs = <"_ZTW10tls_cd_dyn", "_ZTH10tls_cd_dyn"> @tls_cd_dyn = #cir.zero : !rec_CtorDtor
-// CIR: cir.func internal private @[[TLS_CD_DYN_INIT]]() {
+// CIR: cir.global external tls_model = tls_dyn @tls_cd_dyn = #cir.zero : !rec_CtorDtor
+// CIR: cir.func internal private @[[TLS_CD_DYN_INIT]](){{.*}} {
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn : !cir.ptr<!rec_CtorDtor>
 // CIR:   %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR:   cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]])
@@ -139,11 +139,11 @@ thread_local CtorDtor tls_cd_dyn = get_i();
 // CIR:   %[[GET_DTOR:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i 
+// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i 
 // CIR:   cir.return
 //
-// LLVM: define internal void @[[TLS_CD_DYN_INIT]]() {
+// LLVM: define internal void @[[TLS_CD_DYN_INIT]]() #{{[0-9]+}} {
 // OGCG: define internal void @[[TLS_CD_DYN_INIT:.*]]() {{.*}} {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn)
 // LLVM-BOTH:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
@@ -155,19 +155,19 @@ thread_local CtorDtor tls_cd_dyn = get_i();
 // LLVM-BOTH:   ret void
 
 thread_local CtorDtor &tls_cd_ref = tls_cd_dyn;
-// CIR-BEFORE-LPP: cir.global external tls_model = <tls_dyn> tls_refs = <"_ZTW10tls_cd_ref", "_ZTH10tls_cd_ref"> @tls_cd_ref = ctor : !cir.ptr<!rec_CtorDtor> {
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10tls_cd_ref", "_ZTH10tls_cd_ref"> @tls_cd_ref = #cir.ptr<null> : !cir.ptr<!rec_CtorDtor> ctor {
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_ref : !cir.ptr<!cir.ptr<!rec_CtorDtor>>
 // CIR-BEFORE-LPP:   %[[CALL:.*]] = cir.get_global thread_local @tls_cd_dyn : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:   cir.store {{.*}}%[[CALL]], %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor>, !cir.ptr<!cir.ptr<!rec_CtorDtor>>
 // CIR-BEFORE-LPP: }
-// CIR: cir.global external tls_model = <tls_dyn> tls_refs = <"_ZTW10tls_cd_ref", "_ZTH10tls_cd_ref"> @tls_cd_ref = #cir.ptr<null> : !cir.ptr<!rec_CtorDtor>
-// CIR: cir.func internal private @[[TLS_CD_REF_INIT]]() {
+// CIR: cir.global external tls_model = tls_dyn @tls_cd_ref = #cir.ptr<null> : !cir.ptr<!rec_CtorDtor>
+// CIR: cir.func internal private @[[TLS_CD_REF_INIT]](){{.*}} {
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_ref : !cir.ptr<!cir.ptr<!rec_CtorDtor>>
 // CIR:   %[[GET_DYN:.*]] = cir.call @_ZTW10tls_cd_dyn() : () -> !cir.ptr<!rec_CtorDtor>
 // CIR:   cir.store align(8) %[[GET_DYN]], %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor>, !cir.ptr<!cir.ptr<!rec_CtorDtor>>
 // CIR:   cir.return
 //
-// LLVM: define internal void @[[TLS_CD_REF_INIT]]() {
+// LLVM: define internal void @[[TLS_CD_REF_INIT]]() #{{[0-9]+}} {
 // OGCG: define internal void @[[TLS_CD_REF_INIT:.*]]() {{.*}} {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_ref)
 // LLVM-BOTH:   %[[CALL:.*]] = call ptr @_ZTW10tls_cd_dyn()
@@ -182,7 +182,7 @@ thread_local CtorDtor &tls_cd_ref = tls_cd_dyn;
 // OGCG: }
 
 thread_local CtorDtor tls_cd_dyn_not_used = get_i();
-// CIR-BEFORE-LPP: cir.global external tls_model = <tls_dyn> tls_refs = <"_ZTW19tls_cd_dyn_not_used", "_ZTH19tls_cd_dyn_not_used"> @tls_cd_dyn_not_used = ctor : !rec_CtorDtor {
+// CIR-BEFORE-LPP: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW19tls_cd_dyn_not_used", "_ZTH19tls_cd_dyn_not_used"> @tls_cd_dyn_not_used = #cir.zero : !rec_CtorDtor ctor {
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn_not_used : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:   %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR-BEFORE-LPP:   cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]])
@@ -190,8 +190,8 @@ thread_local CtorDtor tls_cd_dyn_not_used = get_i();
 // CIR-BEFORE-LPP:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn_not_used : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN8CtorDtorD1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_CtorDtor>) -> ()
 // CIR-BEFORE-LPP: }
-// CIR: cir.global external tls_model = <tls_dyn> tls_refs = <"_ZTW19tls_cd_dyn_not_used", "_ZTH19tls_cd_dyn_not_used"> @tls_cd_dyn_not_used = #cir.zero : !rec_CtorDtor
-// CIR: cir.func internal private @[[TLS_CD_DYN_NOT_USED_INIT]]() {
+// CIR: cir.global external tls_model = tls_dyn @tls_cd_dyn_not_used = #cir.zero : !rec_CtorDtor
+// CIR: cir.func internal private @[[TLS_CD_DYN_NOT_USED_INIT]](){{.*}} {
 // CIR:   %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn_not_used : !cir.ptr<!rec_CtorDtor>
 // CIR:   %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR:   cir.call @_ZN8CtorDtorC1Ei(%[[GET_GLOB]], %[[CALL]])
@@ -199,11 +199,11 @@ thread_local CtorDtor tls_cd_dyn_not_used = get_i();
 // CIR:   %[[GET_DTOR:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   cir.return
 //
-// LLVM: define internal void @[[TLS_CD_DYN_NOT_USED_INIT]]() {
+// LLVM: define internal void @[[TLS_CD_DYN_NOT_USED_INIT]]() #{{[0-9]+}} {
 // OGCG: define internal void @[[TLS_CD_DYN_NOT_USED_INIT:.*]]() {{.*}} {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn_not_used)
 // LLVM-BOTH:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()

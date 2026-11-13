@@ -12,6 +12,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -29,10 +30,10 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
@@ -127,7 +128,7 @@ public:
   ///     multiple architectures).
   Module(
       const FileSpec &file_spec, const ArchSpec &arch,
-      ConstString object_name = ConstString(), lldb::offset_t object_offset = 0,
+      std::string object_name = std::string(), lldb::offset_t object_offset = 0,
       const llvm::sys::TimePoint<> &object_mod_time = llvm::sys::TimePoint<>());
 
   Module(const ModuleSpec &module_spec);
@@ -522,7 +523,7 @@ public:
 
   lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
-  ConstString GetObjectName() const;
+  llvm::StringRef GetObjectName() const;
 
   std::optional<lldb::addr_t> GetMemoryModuleAddress() const {
     return m_memory_module_addr;
@@ -596,11 +597,16 @@ public:
   /// enable the ObjectFile plugins to read the header of the object file
   /// without going back to the process.
   ///
+  /// If \a disable_memory_symtab_caching is true, the symbol table for the
+  /// object file will not be loaded from or saved to the index cache, even if
+  /// caching of memory modules is enabled.
+  ///
   /// \return
   ///     The object file loaded from memory or nullptr, if the operation
   ///     failed (see the `error` for more information in that case).
   ObjectFile *GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                   lldb::addr_t header_addr, Status &error,
+                                  bool disable_memory_symtab_caching,
                                   size_t size_to_read = 512);
 
   /// Get the module's symbol file
@@ -628,6 +634,14 @@ public:
   /// Like GetSymtab, but the returned handle holds the Module mutex for its
   /// lifetime.
   LockedPtr<Symtab> GetSymtabLocked(bool can_create = true);
+
+  /// Get a bitmask of lldb::SymtabState flags describing the object file's
+  /// symbol table state.
+  ///
+  /// This does not cause the symbol table to be created. If it hasn't been
+  /// created yet, or no state has been recorded for it, lldb::eSymtabStateNone
+  /// is returned.
+  uint32_t GetSymtabState();
 
   /// Get a reference to the UUID value contained in this object.
   ///
@@ -783,7 +797,7 @@ public:
       const FileSpec &file_spec, uint32_t line, bool check_inlines,
       lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
-  void SetFileSpecAndObjectName(const FileSpec &file, ConstString object_name);
+  void SetFileSpecAndObjectName(const FileSpec &file, std::string object_name);
 
   bool GetIsDynamicLinkEditor();
 
@@ -954,8 +968,9 @@ public:
     /// \param[in] lang_type
     ///     The language to create lookups for. If eLanguageTypeUnknown is
     ///     passed, creates one LookupInfo for each language plugin currently
-    ///     available in LLDB. If a specific language is provided, creates only
-    ///     a single LookupInfo for that language.
+    ///     available in LLDB, except for full-name lookups that would repeat
+    ///     the lookup of another language. If a specific language is provided,
+    ///     creates only a single LookupInfo for that language.
     ///
     /// \param[in] lookup_name_override
     ///     Manually override the name used for lookup. This parameter is
@@ -983,7 +998,13 @@ public:
 
     void Prune(SymbolContextList &sc_list, size_t start_idx) const;
 
+    /// Returns true if this lookup equals \p other in everything but the
+    /// language.
+    bool EqualsIgnoringLanguage(const LookupInfo &other) const;
+
   protected:
+    // When adding a member, also compare it in EqualsIgnoringLanguage().
+
     /// What the user originally typed
     ConstString m_name;
 
@@ -1002,7 +1023,7 @@ public:
     bool m_match_name_after_lookup = false;
 
   private:
-    LookupInfo(ConstString name, ConstString lookup_name,
+    LookupInfo(ConstString name, ConstString lookup_name_override,
                lldb::FunctionNameType name_type_mask,
                lldb::LanguageType lang_type);
   };
@@ -1037,17 +1058,33 @@ public:
   /// differentiate these different files.
   std::string GetCacheKey();
 
+  enum LLDBIndexType {
+    eLLDBIndexTypeSymtab,
+    eLLDBIndexTypeDwarfIndex,
+    eLLDBIndexTypeMemoryModuleSymtab
+  };
+
   /// Get the global index file cache.
   ///
   /// LLDB can cache data for a module between runs. This cache directory can be
-  /// used to stored data that previously was manually created each time you debug.
-  /// Examples include debug information indexes, symbol tables, symbol table
-  /// indexes, and more.
+  /// used to stored data that previously was manually created each time you
+  /// debug. Examples include debug information indexes, symbol tables, memory
+  /// module headerbytes, and more.
+  ///
+  /// The argument provided indicates the type of file that is being
+  /// read/written to in DataFileCache, and the user's settings for that
+  /// type of file will be consulted to decide whether it should be cached
+  /// or not.
+  ///
+  /// \param[in] type
+  ///     The type of file this code will read/write into the DataFileCache.
   ///
   /// \returns
-  ///   If caching is enabled in the lldb settings, return a pointer to the data
-  ///   file cache. If caching is not enabled, return NULL.
-  static DataFileCache *GetIndexCache();
+  ///   If lldb settings have caching enabled for this type of file, return
+  ///   a pointer to the data file cache. If caching is not enabled,
+  ///   return nullptr.
+  static DataFileCache *GetIndexCache(LLDBIndexType type);
+
 protected:
   // Member Variables
   mutable std::recursive_mutex m_mutex; ///< A mutex to keep this object happy
@@ -1069,7 +1106,7 @@ protected:
   FileSpec m_symfile_spec;   ///< If this path is valid, then this is the file
                              /// that _will_ be used as the symbol file for this
                              /// module
-  ConstString m_object_name; ///< The name an object within this module that is
+  std::string m_object_name; ///< The name an object within this module that is
                              /// selected, or empty of the module is represented
                              /// by \a m_file.
   std::optional<lldb::addr_t>
@@ -1105,7 +1142,7 @@ protected:
 
   /// Directories registered via AddPrefixMapSearchDir, searched lazily on the
   /// first call to RemapSourceFile or FindSourceFile. Cleared after searching.
-  llvm::DenseSet<ConstString> m_prefix_map_search_dirs;
+  llvm::StringSet<> m_prefix_map_search_dirs;
 
   /// Search each registered directory upward for compilation-prefix-map.json
   /// and apply any found mappings to m_source_mappings. Called at most once.
@@ -1137,11 +1174,8 @@ protected:
 
   StatisticsMap m_symbol_locator_duration_map;
 
-  /// A set of hashes of all warnings and errors, to avoid reporting them
-  /// multiple times to the same Debugger.
-  llvm::DenseMap<llvm::stable_hash, std::unique_ptr<std::once_flag>>
-      m_shown_diagnostics;
-  std::recursive_mutex m_diagnostic_mutex;
+  /// Hashes of the warnings and errors already reported, to report each once.
+  ThreadSafeDenseSet<llvm::stable_hash> m_shown_diagnostics;
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,
                                         std::vector<uint32_t> &symbol_indexes,
@@ -1167,7 +1201,8 @@ private:
   void ReportWarning(const llvm::formatv_object_base &payload);
   void ReportError(const llvm::formatv_object_base &payload);
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
-  std::once_flag *GetDiagnosticOnceFlag(llvm::StringRef msg);
+  /// Returns true the first time \p msg is passed.
+  bool ShouldReportDiagnostic(llvm::StringRef msg);
 };
 
 } // namespace lldb_private

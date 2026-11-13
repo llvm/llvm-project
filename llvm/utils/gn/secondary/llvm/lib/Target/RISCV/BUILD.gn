@@ -79,6 +79,16 @@ tablegen("RISCVGenRegisterBank") {
   td_file = "RISCV.td"
 }
 
+tablegen("RISCVOptions") {
+  visibility = [
+    ":LLVMRISCVCodeGen",
+    "//llvm/tools/llvm-exegesis/lib/RISCV",
+    "//llvm/unittests/Target/RISCV:RISCVTests",
+  ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "RISCVOptions.td"
+}
+
 tablegen("RISCVGenSDNodeInfo") {
   visibility = [ ":LLVMRISCVCodeGen" ]
   args = [ "-gen-sd-node-info" ]
@@ -97,6 +107,7 @@ static_library("LLVMRISCVCodeGen") {
     ":RISCVGenPreLegalizeGICombiner",
     ":RISCVGenRegisterBank",
     ":RISCVGenSDNodeInfo",
+    ":RISCVOptions",
 
     # See https://reviews.llvm.org/D69130
     "AsmParser:RISCVGenAsmMatcher",
@@ -109,6 +120,7 @@ static_library("LLVMRISCVCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
@@ -131,8 +143,11 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVCodeGenPrepare.cpp",
     "RISCVConstantPoolValue.cpp",
     "RISCVDeadRegisterDefinitions.cpp",
-    "RISCVExpandAtomicPseudoInsts.cpp",
-    "RISCVExpandPseudoInsts.cpp",
+    "RISCVExpandPseudoAtomics.cpp",
+    "RISCVExpandPseudoBase.cpp",
+    "RISCVExpandPseudoPostRA.cpp",
+    "RISCVExpandPseudoPreEmit.cpp",
+    "RISCVExpandPseudoPreRA.cpp",
     "RISCVFoldMemOffset.cpp",
     "RISCVFrameLowering.cpp",
     "RISCVGatherScatterLowering.cpp",
@@ -153,7 +168,6 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVMergeBaseOffset.cpp",
     "RISCVMoveMerger.cpp",
     "RISCVOptWInstrs.cpp",
-    "RISCVPostRAExpandPseudoInsts.cpp",
     "RISCVPromoteConstant.cpp",
     "RISCVPushPopOptimizer.cpp",
     "RISCVQCRelaxMarking.cpp",

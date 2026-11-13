@@ -7,6 +7,7 @@
 ---
 
 name:            wb_storecnt
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: wb_storecnt
   ; CHECK: bb.0:
@@ -49,6 +50,7 @@ body:             |
 ---
 
 name:            wbinv_storecnt
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: wbinv_storecnt
   ; CHECK: bb.0:
@@ -91,6 +93,7 @@ body:             |
 ---
 
 name:            inv_loadcnt
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: inv_loadcnt
   ; CHECK: bb.0:
@@ -110,6 +113,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   GLOBAL_INV 16, implicit $exec
   ; CHECK-NEXT:   S_WAIT_LOADCNT 0
+  ; CHECK-NEXT:   S_WAIT_STORECNT 0
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR renamable $vgpr0, renamable $vgpr1, renamable $sgpr2_sgpr3, 0, 16, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.1, implicit killed $scc
   ; CHECK-NEXT: {{  $}}

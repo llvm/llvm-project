@@ -29,20 +29,21 @@
 
 ; CHECK-SPIRV: %[[#int:]] = OpTypeInt 32 0
 ;; Constants below correspond to the SPIR-V spec
-; CHECK-SPIRV: %[[#RelaxedMemSem:]] = OpConstantNull %[[#int]]
-; CHECK-SPIRV: %[[#WorkgroupScope:]] = OpConstant %[[#int]] 2{{$}}
+; CHECK-SPIRV-DAG: %[[#WorkgroupScope:]] = OpConstant %[[#int]] 2{{$}}
 ; CHECK-SPIRV-DAG: %[[#DeviceScope:]] = OpConstant %[[#int]] 1{{$}}
-; CHECK-SPIRV-DAG: %[[#ReleaseMemSem:]] = OpConstant %[[#int]] 4{{$}}
-; CHECK-SPIRV-DAG: %[[#AcqRelMemSem:]] = OpConstant %[[#int]] 8{{$}}
+; CHECK-SPIRV-DAG: %[[#RelaxedMemSem:]] = OpConstant %[[#int]] 768
+; CHECK-SPIRV-DAG: %[[#AcquireMemSem:]] = OpConstant %[[#int]] 770
+; CHECK-SPIRV-DAG: %[[#ReleaseMemSem:]] = OpConstant %[[#int]] 772
+; CHECK-SPIRV-DAG: %[[#AcqRelMemSem:]] = OpConstant %[[#int]] 776
 
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#AcqRelMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#AcqRelMemSem]] %[[#RelaxedMemSem]]
-; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#WorkgroupScope]]
-; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#WorkgroupScope]]
-; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#ReleaseMemSem]] %[[#WorkgroupScope]]
-; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#ReleaseMemSem]] %[[#WorkgroupScope]]
+; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#AcquireMemSem]]
+; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#AcquireMemSem]]
+; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#ReleaseMemSem]] %[[#AcquireMemSem]]
+; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#ReleaseMemSem]] %[[#AcquireMemSem]]
 
 define dso_local spir_kernel void @testAtomicCompareExchangeExplicit_cl20(ptr addrspace(1) noundef %object, ptr addrspace(1) noundef %expected, i32 noundef %desired) local_unnamed_addr {
 entry:

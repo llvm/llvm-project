@@ -72,7 +72,7 @@ entry:
 define void @_GLOBAL__I_b() {
 enter:
   %val = call i32 @TheAnswerToLifeTheUniverseAndEverything()
-  %p2 = call ptr @llvm.strip.invariant.group.p0(ptr @tmp4)
+  %p2 = call ptr @llvm.launder.invariant.group.p0(ptr @tmp4)
   store i32 %val, ptr %p2
   ret void
 }
@@ -98,6 +98,5 @@ enter:
 declare void @changeTmp3ValAndCallBarrierInside()
 
 declare ptr @llvm.launder.invariant.group(ptr)
-declare ptr @llvm.strip.invariant.group.p0(ptr)
 
 !0 = !{}

@@ -34,6 +34,7 @@ enum Value {
   ScalableVector = 2,
   WasmLocal = 3,
   ScalablePredicateVector = 4,
+  AvrAlign = 5,
   NoAlloc = 255
 };
 }

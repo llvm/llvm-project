@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=ve -verify-machineinstrs -run-pass peephole-opt -o - %s | FileCheck %s
+# RUN: llc -mtriple=ve -run-pass peephole-opt -o - %s | FileCheck %s
 
 ---
 ## Ensure fold immediate as simm7 at rhs

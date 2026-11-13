@@ -61,6 +61,16 @@ private:
   uint64_t computeUniqueTailCallPath(BinaryFunction *From, BinaryFunction *To,
                                      SmallVectorImpl<uint64_t> &UniquePath);
 
+  // Compute a unique tail call path from the source function to the target
+  // function as above, with no functions visited before, and cache the result.
+  // A single path found is checked to be the only one.
+  uint64_t searchUniqueTailCallPath(BinaryFunction *From, BinaryFunction *To,
+                                    SmallVectorImpl<uint64_t> &UniquePath);
+
+  // Return whether there is a tail call path to the target function other than
+  // the one through the tail calls in `Path`, from the function of its first.
+  bool hasOtherTailCallPath(ArrayRef<uint64_t> Path, BinaryFunction *To);
+
   ProfiledBinary *Binary;
 
   // A map of call instructions to their target addresses. This is first
@@ -92,7 +102,9 @@ private:
 
   DenseSet<BinaryFunction *> Visiting;
 
-  uint32_t CurSearchingDepth = 0;
+  // Number of tail call paths to the target found by the current search, which
+  // stops once it finds more than one.
+  uint64_t NumFoundPaths = 0;
 
 #if LLVM_ENABLE_STATS
   DenseSet<std::pair<uint64_t, uint64_t>> ReachableViaUniquePaths;

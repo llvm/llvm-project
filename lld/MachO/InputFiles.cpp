@@ -65,6 +65,7 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -188,7 +189,14 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   uint32_t cpuType;
   std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
 
-  if (hdr->cputype != cpuType) {
+  // arm64 and arm64e are ABI incompatible. arm64e.x1 has the arm64e ABI but
+  // needs a newer CPU, so neither takes it.
+  uint32_t subtype = hdr->cpusubtype & ~CPU_SUBTYPE_MASK;
+  bool isArm64e = subtype == CPU_SUBTYPE_ARM64E;
+  if (hdr->cputype != cpuType ||
+      (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
+       (subtype == CPU_SUBTYPE_ARM64E_X1 ||
+        isArm64e != (config->arch() == AK_arm64e)))) {
     Architecture arch =
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
     auto msg = config->errorForArchMismatch
@@ -504,6 +512,18 @@ static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
   return d;
 }
 
+namespace {
+// The in-object form of the target of an ARM64_RELOC_AUTHENTICATED_POINTER.
+struct AuthEmbeddedPointer {
+  uint64_t addend : 32;
+  uint64_t diversity : 16;
+  uint64_t addrDiv : 1;
+  uint64_t key : 2;
+  uint64_t reserved : 12;
+  uint64_t auth : 1;
+};
+} // namespace
+
 template <class SectionHeader>
 static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
                                    relocation_info rel) {
@@ -528,6 +548,14 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
   if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
     error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
                   " bytes"));
+  }
+  if (valid && relocAttrs.hasAttr(RelocAttrBits::AUTH)) {
+    auto ptr = bit_cast<AuthEmbeddedPointer>(
+        read64le(file->mb.getBufferStart() + sec.offset + rel.r_address));
+    if (!ptr.auth)
+      error(message("requires bit 63 to be set"));
+    if (ptr.reserved)
+      error(message("requires bits 51..62 to be zero"));
   }
   return valid;
 }
@@ -588,9 +616,18 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
     r.offset = relInfo.r_address;
+
+    if (target->hasAttr(relInfo.r_type, RelocAttrBits::AUTH)) {
+      auto ptr = bit_cast<AuthEmbeddedPointer>(
+          read64le(buf + sec.offset + relInfo.r_address));
+      r.setAuthInfo({static_cast<uint16_t>(ptr.diversity),
+                     static_cast<PtrAuthKey>(ptr.key),
+                     static_cast<bool>(ptr.addrDiv)});
+    }
+
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
-      r.addend = isSubtrahend ? 0 : totalAddend;
+      r.setAddend(isSubtrahend ? 0 : totalAddend);
     } else {
       assert(!isSubtrahend);
       const SectionHeader &referentSecHead =
@@ -612,7 +649,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       }
       r.referent = findContainingSubsection(*sections[relInfo.r_symbolnum - 1],
                                             &referentOffset);
-      r.addend = referentOffset;
+      r.setAddend(referentOffset);
     }
 
     // Find the subsection that this relocation belongs to.
@@ -643,15 +680,18 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
              relInfo.r_address == minuendInfo.r_address);
       Relocation p;
       p.type = minuendInfo.r_type;
+      p.pcrel = minuendInfo.r_pcrel;
+      p.length = minuendInfo.r_length;
+      p.offset = r.offset;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
-        p.addend = totalAddend;
+        p.setAddend(totalAddend);
       } else {
         uint64_t referentOffset =
             totalAddend - sectionHeaders[minuendInfo.r_symbolnum - 1].addr;
         p.referent = findContainingSubsection(
             *sections[minuendInfo.r_symbolnum - 1], &referentOffset);
-        p.addend = referentOffset;
+        p.setAddend(referentOffset);
       }
       subsec->relocs.push_back(p);
     }
@@ -906,9 +946,23 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
         return !(nList[lhs].n_desc & N_WEAK_DEF) && (nList[rhs].n_desc & N_WEAK_DEF);
       return nList[lhs].n_value < nList[rhs].n_value;
     });
+    size_t sameAddrGroupIdx = 0;
+    bool sameAddrHasRegularSymbol = false;
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
       const uint32_t symIndex = symbolIndices[j];
       const NList &sym = nList[symIndex];
+      // An ordinary symbol establishes an atom boundary for every symbol at
+      // its address, even when a local alt entry precedes it in the nlist.
+      if (j == sameAddrGroupIdx) {
+        sameAddrHasRegularSymbol = false;
+        while (sameAddrGroupIdx < symbolIndices.size()) {
+          const NList &sameAddrSym = nList[symbolIndices[sameAddrGroupIdx]];
+          if (sameAddrSym.n_value != sym.n_value)
+            break;
+          sameAddrHasRegularSymbol |= !(sameAddrSym.n_desc & N_ALT_ENTRY);
+          ++sameAddrGroupIdx;
+        }
+      }
       StringRef name = getSymName(sym);
       Subsection &subsec = subsections.back();
       InputSection *isec = subsec.isec;
@@ -919,15 +973,18 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
           j + 1 < symbolIndices.size()
               ? nList[symbolIndices[j + 1]].n_value - sym.n_value
               : isec->data.size() - symbolOffset;
+      const bool isInteriorAltEntry =
+          (sym.n_desc & N_ALT_ENTRY) && !sameAddrHasRegularSymbol;
       // There are 4 cases where we do not need to create a new subsection:
       //   1. If the input file does not use subsections-via-symbols.
       //   2. Multiple symbols at the same address only induce one subsection.
       //      (The symbolOffset == 0 check covers both this case as well as
       //      the first loop iteration.)
-      //   3. Alternative entry points do not induce new subsections.
+      //   3. Alternative entry points without a coincident ordinary symbol do
+      //      not induce new subsections.
       //   4. If we have a literal section (e.g. __cstring and __literal4).
-      if (!subsectionsViaSymbols || symbolOffset == 0 ||
-          sym.n_desc & N_ALT_ENTRY || !isa<ConcatInputSection>(isec)) {
+      if (!subsectionsViaSymbols || symbolOffset == 0 || isInteriorAltEntry ||
+          !isa<ConcatInputSection>(isec)) {
         isec->hasAltEntry = symbolOffset != 0;
         symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
                                           symbolSize, forceHidden);
@@ -1015,6 +1072,11 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
   }
 }
 
+static bool isUnwindSection(const Section &sec) {
+  return sec.name == section_names::compactUnwind ||
+         sec.name == section_names::ehFrame;
+}
+
 template <class LP> void ObjFile::parse() {
   using Header = typename LP::mach_header;
   using SegmentCommand = typename LP::segment_command;
@@ -1051,13 +1113,20 @@ template <class LP> void ObjFile::parse() {
                           c->nsyms);
     const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
     bool subsectionsViaSymbols = hdr->flags & MH_SUBSECTIONS_VIA_SYMBOLS;
+    if (config->warnMissingSubsectionsViaSymbols && !subsectionsViaSymbols &&
+        !sectionHeaders.empty())
+      warn(toString(this) + ": missing MH_SUBSECTIONS_VIA_SYMBOLS");
     parseSymbols<LP>(sectionHeaders, nList, strtab, subsectionsViaSymbols);
   }
 
   // The relocations may refer to the symbols, so we parse them after we have
   // parsed all the symbols.
+  //
+  // Parse sections that are consumed by registerCompactUnwind() and
+  // registerEhFrames() immediately. The rest can be deferred to be done in
+  // parallel.
   for (size_t i = 0, n = sections.size(); i < n; ++i)
-    if (!sections[i]->subsections.empty())
+    if (!sections[i]->subsections.empty() && isUnwindSection(*sections[i]))
       parseRelocations(sectionHeaders, sectionHeaders[i], *sections[i]);
 
   parseDebugInfo();
@@ -1134,6 +1203,41 @@ void ObjFile::parseDebugInfo() {
   compileUnit = it != units.end() ? it->get() : nullptr;
 }
 
+template <class LP> void ObjFile::parseDeferredRelocationsImpl() {
+  using Header = typename LP::mach_header;
+  using SegmentCommand = typename LP::segment_command;
+  using SectionHeader = typename LP::section;
+
+  auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+  const load_command *cmd = findCommand(hdr, LP::segmentLCType);
+  if (!cmd)
+    return;
+  auto *c = reinterpret_cast<const SegmentCommand *>(cmd);
+  ArrayRef<SectionHeader> sectionHeaders{
+      reinterpret_cast<const SectionHeader *>(c + 1), c->nsects};
+
+  // Mirroring section filter in parse() since we already parsed unwind
+  // sections.
+  for (size_t i = 0, n = sections.size(); i < n; ++i)
+    if (!sections[i]->subsections.empty() && !isUnwindSection(*sections[i]))
+      parseRelocations(sectionHeaders, sectionHeaders[i], *sections[i]);
+}
+
+void ObjFile::parseDeferredRelocations() {
+  if (target->wordSize == 8)
+    parseDeferredRelocationsImpl<LP64>();
+  else
+    parseDeferredRelocationsImpl<ILP32>();
+}
+
+void macho::parseDeferredRelocations() {
+  TimeTraceScope timeScope("Parse relocations");
+  parallelForEach(inputFiles, [](InputFile *file) {
+    if (auto *objFile = dyn_cast<ObjFile>(file))
+      objFile->parseDeferredRelocations();
+  });
+}
+
 ArrayRef<data_in_code_entry> ObjFile::getDataInCode() const {
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const load_command *cmd = findCommand(buf, LC_DATA_IN_CODE);
@@ -1193,8 +1297,8 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         ++it;
         continue;
       }
-      uint64_t add = r.addend;
-      if (auto *sym = cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>())) {
+      uint64_t add = r.getAddend();
+      if (auto *sym = cast_or_null<Defined>(dyn_cast<Symbol *>(r.referent))) {
         // Check whether the symbol defined in this file is the prevailing one.
         // Skip if it is e.g. a weak def that didn't prevail.
         if (sym->getFile() != this) {
@@ -1205,7 +1309,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         referentIsec = cast<ConcatInputSection>(sym->isec());
       } else {
         referentIsec =
-            cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
+            cast<ConcatInputSection>(dyn_cast<InputSection *>(r.referent));
       }
       // Unwind info lives in __DATA, and finalization of __TEXT will occur
       // before finalization of __DATA. Moreover, the finalization of unwind
@@ -1391,17 +1495,18 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
   // addend.
   auto *pcSym = cast<Defined>(cast<macho::Symbol *>(subtrahend.referent));
-  Defined *target =
-      cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
+  Defined *target = cast_or_null<Defined>(
+      dyn_cast_if_present<macho::Symbol *>(minuend.referent));
   if (!pcSym) {
     auto *targetIsec =
         cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));
-    target = findSymbolAtOffset(targetIsec, minuend.addend);
+    target = findSymbolAtOffset(targetIsec, minuend.getAddend());
   }
   if (Invert)
     std::swap(pcSym, target);
   if (pcSym->isec() == isec) {
-    if (pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
+    if (pcSym->value - (Invert ? -1 : 1) * minuend.getAddend() !=
+        subtrahend.offset)
       fatal("invalid FDE relocation in __eh_frame");
   } else {
     // Ensure the pcReloc points to a symbol within the current EH frame.
@@ -1413,7 +1518,7 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
     Relocation &pcReloc = Invert ? minuend : subtrahend;
     pcReloc.referent = isec->symbols[0];
     assert(isec->symbols[0]->value == 0);
-    minuend.addend = pcReloc.offset * (Invert ? 1LL : -1LL);
+    minuend.setAddend(pcReloc.offset * (Invert ? 1LL : -1LL));
   }
   return target;
 }

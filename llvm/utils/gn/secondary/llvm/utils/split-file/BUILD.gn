@@ -1,4 +1,15 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":split-file" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("split-file") {
-  deps = [ "//llvm/lib/Support" ]
+  deps = [
+    ":Opts",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
   sources = [ "split-file.cpp" ]
 }

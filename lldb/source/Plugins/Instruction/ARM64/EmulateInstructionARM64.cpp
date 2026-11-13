@@ -19,7 +19,7 @@
 
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "Plugins/Process/Utility/ARMUtils.h"
-#include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Register/Arch/lldb-arm64-register-enums.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -40,7 +40,7 @@
 
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
-#include "Plugins/Process/Utility/RegisterInfos_arm64.h"
+#include "Register/Arch/RegisterInfos_arm64.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MathExtras.h"
@@ -356,8 +356,18 @@ EmulateInstructionARM64::GetOpcodeForInstruction(const uint32_t opcode) {
        &EmulateInstructionARM64::EmulateLDRSTRImm<AddrMode_OFF>,
        "LDR|STR <Bt|Ht|St|Dt|Qt>, [<Xn|SP>{, #<pimm>}]"},
 
-      {0xfc000000, 0x14000000, No_VFP, &EmulateInstructionARM64::EmulateB,
+      // A register-to-register MOV is an alias of ORR <Rd>, ZR, <Rm>, so these
+      // pin Rn to ZR, the shift type to LSL and the shift amount to 0, leaving
+      // only Rm and Rd free. The wider ORR family is deliberately not decoded.
+      {0xffe0ffe0, 0x2a0003e0, No_VFP,
+       &EmulateInstructionARM64::EmulateMOVRegister, "MOV <Wd>, <Wm>"},
+      {0xffe0ffe0, 0xaa0003e0, No_VFP,
+       &EmulateInstructionARM64::EmulateMOVRegister, "MOV <Xd>, <Xm>"},
+
+      {0xfc000000, 0x14000000, No_VFP, &EmulateInstructionARM64::EmulateBOrBl,
        "B <label>"},
+      {0xfc000000, 0x94000000, No_VFP, &EmulateInstructionARM64::EmulateBOrBl,
+       "BL <label>"},
       {0xff000010, 0x54000000, No_VFP, &EmulateInstructionARM64::EmulateBcond,
        "B.<cond> <label>"},
       {0x7f000000, 0x34000000, No_VFP, &EmulateInstructionARM64::EmulateCBZ,
@@ -1082,7 +1092,7 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
   return true;
 }
 
-bool EmulateInstructionARM64::EmulateB(const uint32_t opcode) {
+bool EmulateInstructionARM64::EmulateBOrBl(const uint32_t opcode) {
 #if 0
     // ARM64 pseudo code...
     if branch_type == BranchType_CALL then X[30] = PC[] + 4;
@@ -1219,4 +1229,52 @@ bool EmulateInstructionARM64::EmulateTBZ(const uint32_t opcode) {
       return false;
   }
   return true;
+}
+
+bool EmulateInstructionARM64::EmulateMOVRegister(const uint32_t opcode) {
+#if 0
+    integer d = UInt(Rd);
+    integer m = UInt(Rm);
+    integer datasize = if sf == '1' then 64 else 32;
+    bits(datasize) result = X[m];
+    X[d] = ZeroExtend(result, 64);
+#endif
+  uint32_t d = Bits32(opcode, 4, 0);
+  uint32_t m = Bits32(opcode, 20, 16);
+  bool sf = BitIsSet(opcode, 31);
+
+  // Register 31 is xzr, writes to it are discarded.
+  if (d == 31)
+    return true;
+
+  uint64_t source_value;
+  EmulateInstruction::Context context;
+  // xzr always reads as 0.
+  if (m == 31) {
+    source_value = 0;
+    context.type = EmulateInstruction::eContextImmediate;
+    context.SetNoArgs();
+  } else {
+    std::optional<RegisterInfo> source_reg =
+        GetRegisterInfo(eRegisterKindLLDB, m);
+    if (!source_reg)
+      return false;
+    bool success;
+    source_value = ReadRegisterUnsigned(*source_reg, 0, &success);
+    if (!success)
+      return false;
+
+    context.type = EmulateInstruction::eContextRegisterPlusOffset;
+    context.SetRegisterPlusOffset(*source_reg, 0);
+  }
+
+  std::optional<RegisterInfo> dest_reg = GetRegisterInfo(eRegisterKindLLDB, d);
+  if (!dest_reg)
+    return false;
+
+  // If sf is not set, clear the top 32 bits.
+  if (!sf)
+    source_value &= 0xFFFFFFFF;
+
+  return WriteRegisterUnsigned(context, *dest_reg, source_value);
 }

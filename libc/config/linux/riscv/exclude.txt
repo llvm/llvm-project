@@ -8,6 +8,10 @@ if(NOT HAVE_SYS_FACCESSAT2)
 endif()
 if(LIBC_TARGET_ARCHITECTURE_IS_RISCV32)
   list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS
+    # Kernel semid64_ds on 32-bit architectures uses 32-bit aligned time fields
+    # after 36-byte ipc64_perm, whereas userspace struct semid_ds uses 8-byte
+    # aligned 64-bit time_t, requiring userspace struct translation.
+    libc.src.sys.sem.semctl
     libc.src.time.clock_settime
   )
 endif()

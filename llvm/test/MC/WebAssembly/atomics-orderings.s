@@ -1,8 +1,8 @@
-# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+atomics,+relaxed-atomics < %s | FileCheck %s
-# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+atomics,+relaxed-atomics %s -filetype=obj -o - | llvm-objdump --mattr=+atomics,+relaxed-atomics --no-print-imm-hex -d - | FileCheck %s --check-prefix=DISASM
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+atomics,+acquire-release-atomics < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+atomics,+acquire-release-atomics %s -filetype=obj -o - | llvm-objdump --mattr=+atomics,+acquire-release-atomics --no-print-imm-hex -d - | FileCheck %s --check-prefix=DISASM
 # Ensure we can disassemble even when not explicitly enabling the feature in the disassembler.
 # In that case we will print nothing instead of "seqcst" but will still print "acqrel"
-# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+atomics,+relaxed-atomics %s -filetype=obj -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=DISASM-NOATTR
+# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+atomics,+acquire-release-atomics %s -filetype=obj -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=DISASM-NOATTR
 
 .section .text.main,"",@
 main:

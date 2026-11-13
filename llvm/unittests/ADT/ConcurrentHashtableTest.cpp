@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ConcurrentHashtable.h"
+#include "llvm/ADT/StringMapEntry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
@@ -86,6 +87,30 @@ TEST(ConcurrentHashTableTest, AddStringEntries) {
 
     EXPECT_TRUE(StatisticString.find("Overall number of entries = 3\n") !=
                 std::string::npos);
+  });
+}
+
+TEST(ConcurrentHashTableTest, KeyReturnedByValue) {
+  // StringMapEntry::getKey returns a StringRef by value.
+  using Entry = StringMapEntry<EmptyStringSetTag>;
+  PerThreadBumpPtrAllocator Allocator;
+  ConcurrentHashTableByPtr<StringRef, Entry, PerThreadBumpPtrAllocator>
+      HashTable(Allocator, 10);
+
+  parallel::TaskGroup tg;
+
+  tg.spawn([&]() {
+    std::pair<Entry *, bool> res1 = HashTable.insert("1");
+    EXPECT_EQ(res1.first->getKey(), "1");
+    EXPECT_TRUE(res1.second);
+
+    std::pair<Entry *, bool> res2 = HashTable.insert("2");
+    EXPECT_EQ(res2.first->getKey(), "2");
+    EXPECT_TRUE(res2.second);
+
+    std::pair<Entry *, bool> res3 = HashTable.insert("1");
+    EXPECT_FALSE(res3.second);
+    EXPECT_EQ(res1.first, res3.first);
   });
 }
 

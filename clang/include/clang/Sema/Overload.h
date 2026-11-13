@@ -210,6 +210,9 @@ class Sema;
     /// HLSL matrix splat from scalar or boolean type.
     ICK_HLSL_Matrix_Splat,
 
+    /// HLSL packed type conversion to and from uint
+    ICK_HLSL_Packed_Type_Conversion,
+
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
   };
@@ -594,7 +597,10 @@ class Sema;
   public:
     void init(FailureKind K, Expr *From, QualType To) {
       init(K, From->getType(), To);
-      FromExpr = From;
+      // We may have on-stack OpaqueValueExpr when building an initialization
+      // sequence, and tracking type only is sufficient for diagnostics.
+      if (!isa<OpaqueValueExpr>(From))
+        FromExpr = From;
     }
 
     void init(FailureKind K, QualType From, QualType To) {
@@ -606,11 +612,6 @@ class Sema;
 
     QualType getFromType() const { return QualType::getFromOpaquePtr(FromTy); }
     QualType getToType() const { return QualType::getFromOpaquePtr(ToTy); }
-
-    void setFromExpr(Expr *E) {
-      FromExpr = E;
-      setFromType(E->getType());
-    }
 
     void setFromType(QualType T) { FromTy = T.getAsOpaquePtr(); }
     void setToType(QualType T) { ToTy = T.getAsOpaquePtr(); }
@@ -1375,9 +1376,13 @@ class Sema;
     void clear(CandidateSetKind CSK);
 
     using iterator = SmallVectorImpl<OverloadCandidate>::iterator;
+    using const_iterator = SmallVectorImpl<OverloadCandidate>::const_iterator;
 
     iterator begin() { return Candidates.begin(); }
     iterator end() { return Candidates.end(); }
+
+    const_iterator begin() const { return Candidates.begin(); }
+    const_iterator end() const { return Candidates.end(); }
 
     size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
 

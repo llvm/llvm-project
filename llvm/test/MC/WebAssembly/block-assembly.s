@@ -7,7 +7,7 @@
 block_branch_test:
   .functype  block_branch_test () -> ()
 
-  # Block input paramter / return tests
+  # Block input parameter / return tests
 
   i32.const 0
   block (i32) -> (i32)

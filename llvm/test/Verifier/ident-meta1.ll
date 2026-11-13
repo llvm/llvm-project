@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 ; Verify that llvm.ident is properly structured.
 ; llvm.ident takes a list of metadata entries.
 ; Each metadata entry can have only one string.
@@ -8,5 +8,5 @@
 !1 = !{!"string1", !"string2"}
 ; CHECK: assembly parsed, but does not verify as correct!
 ; CHECK-NEXT: incorrect number of operands in llvm.ident metadata
-; CHECK-NEXT: !1
+; CHECK-NEXT: !{{[0-9]+}}
 

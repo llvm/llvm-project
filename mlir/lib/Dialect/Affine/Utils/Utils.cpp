@@ -312,7 +312,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   operandMap.clear();
   b.setInsertionPointAfter(hoistOverOp);
   // We'll set an attribute to identify this op in a clone of this sub-tree.
-  ifOp->setAttr(idForIfOp, b.getBoolAttr(true));
+  ifOp->setDiscardableAttr(idForIfOp, b.getBoolAttr(true));
   hoistOverOpClone = b.clone(*hoistOverOp, operandMap);
 
   // Promote the 'then' block of the original affine.if in the then version.
@@ -327,7 +327,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   // Find the clone of the original affine.if op in the else version.
   AffineIfOp ifCloneInElse;
   hoistOverOpClone->walk([&](AffineIfOp ifClone) {
-    if (!ifClone->getAttr(idForIfOp))
+    if (!ifClone->getDiscardableAttr(idForIfOp))
       return WalkResult::advance();
     ifCloneInElse = ifClone;
     return WalkResult::interrupt();
@@ -580,22 +580,11 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
 
   // Construct the new upper bound value map.
   AffineMap oldLbMap = op.getLowerBoundMap();
-  // The upper bound can have multiple results. To use
-  // AffineValueMap::difference, we need to have the same number of results in
-  // both lower and upper bound maps. So, we just create a value map for the
-  // lower bound with the only available lower bound result repeated to pad up
-  // to the number of upper bound results.
-  SmallVector<AffineExpr> lbExprs(op.getUpperBoundMap().getNumResults(),
-                                  op.getLowerBoundMap().getResult(0));
   AffineValueMap lbMap(oldLbMap, op.getLowerBoundOperands());
-  AffineMap paddedLbMap =
-      AffineMap::get(oldLbMap.getNumDims(), oldLbMap.getNumSymbols(), lbExprs,
-                     op.getContext());
-  AffineValueMap paddedLbValueMap(paddedLbMap, op.getLowerBoundOperands());
   AffineValueMap ubValueMap(op.getUpperBoundMap(), op.getUpperBoundOperands());
   AffineValueMap newUbValueMap;
-  // Compute the `upper bound - lower bound`.
-  AffineValueMap::difference(ubValueMap, paddedLbValueMap, &newUbValueMap);
+  // Subtract the single lower bound from each upper bound.
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbMap, &newUbValueMap);
   (void)newUbValueMap.canonicalize();
 
   // Scale down the upper bound value map by the loop step.
@@ -842,10 +831,8 @@ static void forwardStoreToLoad(
   // to replace the load, if any.
   Operation *lastWriteStoreOp = nullptr;
 
-  for (auto *user : loadOp.getMemRef().getUsers()) {
-    auto storeOp = dyn_cast<AffineWriteOpInterface>(user);
-    if (!storeOp)
-      continue;
+  for (auto storeOp : llvm::make_isa_range<AffineWriteOpInterface>(
+           loadOp.getMemRef().getUsers())) {
     MemRefAccess srcAccess(storeOp);
     MemRefAccess destAccess(loadOp);
 
@@ -916,12 +903,9 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
                             PostDominanceInfo &postDominanceInfo,
                             llvm::function_ref<bool(Value, Value)> mayAlias) {
 
-  for (Operation *user : writeA.getMemRef().getUsers()) {
-    // Only consider writing operations.
-    auto writeB = dyn_cast<AffineWriteOpInterface>(user);
-    if (!writeB)
-      continue;
-
+  // Only consider writing operations.
+  for (auto writeB : llvm::make_isa_range<AffineWriteOpInterface>(
+           writeA.getMemRef().getUsers())) {
     // The operations must be distinct.
     if (writeB == writeA)
       continue;
@@ -1298,17 +1282,16 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
 
   // Add attribute for 'newMap', other Attributes do not change.
   auto newMapAttr = AffineMapAttr::get(newMap);
-  for (auto namedAttr : op->getAttrs()) {
-    if (affMapAccInterface &&
-        namedAttr.getName() ==
-            affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef).getName())
-      state.attributes.push_back({namedAttr.getName(), newMapAttr});
-    else
-      state.attributes.push_back(namedAttr);
-  }
+  state.addAttributes(op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
 
   // Create the new operation.
   auto *repOp = builder.create(state);
+  if (affMapAccInterface) {
+    StringAttr mapAttrName =
+        affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef).getName();
+    repOp->setInherentAttr(mapAttrName, newMapAttr);
+  }
   op->replaceAllUsesWith(repOp);
   op->erase();
 

@@ -14,6 +14,7 @@
 #include "ScheduleDAGSDNodes.h"
 #include "InstrEmitter.h"
 #include "SDNodeDbgValue.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -38,14 +39,6 @@ using namespace llvm;
 #define DEBUG_TYPE "pre-RA-sched"
 
 STATISTIC(LoadsClustered, "Number of loads clustered together");
-
-// This allows the latency-based scheduler to notice high latency instructions
-// without a target itinerary. The choice of number here has more to do with
-// balancing scheduler heuristics than with the actual machine latency.
-static cl::opt<int> HighLatencyCycles(
-    "sched-high-latency-cycles", cl::Hidden, cl::init(10),
-    cl::desc("Roughly estimate the number of cycles that 'long latency' "
-             "instructions take for targets with no itinerary"));
 
 ScheduleDAGSDNodes::ScheduleDAGSDNodes(MachineFunction &mf)
     : ScheduleDAG(mf), InstrItins(mf.getSubtarget().getInstrItineraryData()) {}
@@ -340,8 +333,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
   SUnits.reserve(NumNodes * 2);
 
   // Add all nodes in depth first order.
-  SmallVector<SDNode*, 64> Worklist;
-  SmallPtrSet<SDNode*, 32> Visited;
+  SmallVector<SDNode *, 64> Worklist;
   Worklist.push_back(DAG->getRoot().getNode());
   DAG->getRoot().getNode()->setSchedulerWorklistVisited(true);
 
@@ -465,11 +457,18 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
     for (SDNode *N = SU.getNode(); N; N = N->getGluedNode()) {
       if (N->isMachineOpcode() &&
           !TII->get(N->getMachineOpcode()).implicit_defs().empty()) {
+        const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
         SU.hasPhysRegClobbers = true;
+        // Results beyond the explicit defs are physical register defs, unless
+        // the target models variadic results as virtual registers. This must
+        // match InstrEmitter::EmitMachineNode.
+        bool HasVRegVariadicDefs = !MF.getTarget().usesPhysRegsForValues() &&
+                                   MCID.isVariadic() &&
+                                   MCID.variadicOpsAreDefs();
         unsigned NumUsed = InstrEmitter::CountResults(N);
         while (NumUsed != 0 && !N->hasAnyUseOfValue(NumUsed - 1))
           --NumUsed;    // Skip over unused values at the end.
-        if (NumUsed > TII->get(N->getMachineOpcode()).getNumDefs())
+        if (!HasVRegVariadicDefs && NumUsed > MCID.getNumDefs())
           SU.hasPhysRegDefs = true;
       }
 
@@ -630,7 +629,7 @@ void ScheduleDAGSDNodes::computeLatency(SUnit *SU) {
   if (!InstrItins || InstrItins->isEmpty()) {
     if (N && N->isMachineOpcode() &&
         TII->isHighLatencyDef(N->getMachineOpcode()))
-      SU->Latency = HighLatencyCycles;
+      SU->Latency = DAG->getSelectionDAGOptions().sched_high_latency_cycles;
     else
       SU->Latency = 1;
     return;
@@ -840,6 +839,25 @@ EmitPhysRegCopy(SUnit *SU, SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
   }
 }
 
+/// Mark physreg defs dead on \p MI, emitted for a cloned node \p SU. All copies
+/// share one SDNode, so InstrEmitter can't tell which copy lost its users. A
+/// live def of an expensive-to-copy physreg is carried on a scheduler edge by
+/// some copy, so it is dead if \p SU has no such edge.
+static void markClonedNodeDeadDefs(const SUnit &SU, MachineInstr &MI,
+                                   const TargetRegisterInfo *TRI) {
+  for (MachineOperand &MO : MI.implicit_operands()) {
+    if (!MO.isReg() || !MO.isDef() || MO.isDead())
+      continue;
+    Register Reg = MO.getReg();
+    if (!TRI->getMinimalPhysRegClass(Reg)->expensiveOrImpossibleToCopy())
+      continue;
+    if (none_of(SU.Succs, [=](const SDep &Succ) {
+          return Succ.isAssignedRegDep() && Succ.getReg() == Reg;
+        }))
+      MO.setIsDead();
+  }
+}
+
 /// EmitSchedule - Emit the machine code in scheduled order. Return the new
 /// InsertPos and MachineBasicBlock that contains this insertion
 /// point. ScheduleDAGSDNodes holds a BB pointer for convenience, but this does
@@ -969,6 +987,9 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       if (NewInsn && NewInsn->isCall())
         NewInsn->setHeapAllocMarker(MF, MD);
     }
+
+    if (NewInsn && SU->OrigNode->isCloned)
+      markClonedNodeDeadDefs(*SU, *NewInsn, TRI);
   }
 
   // Insert all the dbg_values which have not already been inserted in source

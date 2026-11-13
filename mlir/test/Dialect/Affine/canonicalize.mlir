@@ -1,8 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence top-down=0" | FileCheck %s --check-prefix=CHECK-BOTTOM-UP
 
-// XFAIL: mlir-expensive-checks
-
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0 - 1)>
@@ -459,6 +457,63 @@ func.func @constant_fold_bounds(%N : index) {
     "foo"(%k, %c3) : (index, index) -> ()
   }
   return
+}
+
+// -----
+
+// Regression tests for https://github.com/llvm/llvm-project/issues/229706:
+// constant folding must not fold affine expressions whose result would
+// overflow int64_t.
+
+// CHECK: #[[$MAP:.*]] = affine_map<() -> (9223372036854775807 + 1)>
+// CHECK-LABEL: func @for_bound_add_overflow
+// CHECK: affine.for %{{.*}} = 0 to #[[$MAP]]() {
+func.func @for_bound_add_overflow(%m: memref<32xf32>) {
+  %max = arith.constant 9223372036854775807 : index
+  %cst = arith.constant 1.0 : f32
+  affine.for %j = 0 to affine_map<(d0) -> (d0 + 1)>(%max) {
+    affine.store %cst, %m[%j] : memref<32xf32>
+  }
+  return
+}
+
+// -----
+
+// CHECK: #[[$MAP:.*]] = affine_map<() -> (9223372036854775807 + 1)>
+// CHECK-LABEL: func @apply_add_overflow
+// CHECK: %[[RES:.+]] = affine.apply #[[$MAP]]()
+// CHECK: return %[[RES]]
+func.func @apply_add_overflow() -> index {
+  %max = arith.constant 9223372036854775807 : index
+  %0 = affine.apply affine_map<(d0) -> (d0 + 1)>(%max)
+  return %0 : index
+}
+
+// -----
+
+// CHECK: #[[$MAP:.*]] = affine_map<() -> (9223372036854775807 * 2)>
+// CHECK-LABEL: func @apply_mul_overflow
+// CHECK: %[[RES:.+]] = affine.apply #[[$MAP]]()
+// CHECK: return %[[RES]]
+func.func @apply_mul_overflow() -> index {
+  %max = arith.constant 9223372036854775807 : index
+  %0 = affine.apply affine_map<(d0) -> (d0 * 2)>(%max)
+  return %0 : index
+}
+
+// -----
+
+// CHECK-DAG: #[[$FLOOR:.*]] = affine_map<() -> (-9223372036854775808 floordiv -1)>
+// CHECK-DAG: #[[$CEIL:.*]] = affine_map<() -> (-9223372036854775808 ceildiv -1)>
+// CHECK-LABEL: func @apply_div_overflow
+// CHECK: %[[FLOOR_RES:.+]] = affine.apply #[[$FLOOR]]()
+// CHECK: %[[CEIL_RES:.+]] = affine.apply #[[$CEIL]]()
+// CHECK: return %[[FLOOR_RES]], %[[CEIL_RES]]
+func.func @apply_div_overflow() -> (index, index) {
+  %min = arith.constant -9223372036854775808 : index
+  %0 = affine.apply affine_map<(d0) -> (d0 floordiv -1)>(%min)
+  %1 = affine.apply affine_map<(d0) -> (d0 ceildiv -1)>(%min)
+  return %0, %1 : index, index
 }
 
 // -----
@@ -1881,6 +1936,27 @@ func.func @split_delinearize_empty_linearize_basis(%arg0: index) -> (index, inde
 
 // -----
 
+// A split that consumes an entire bounded delinearization basis would lose the
+// contribution of earlier linearization inputs to the first result.
+// CHECK-LABEL: func @dont_split_fully_consumed_bounded_basis
+// CHECK-SAME:    (%[[A:.+]]: index, %[[B:.+]]: index)
+// CHECK:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[A]], %[[B]]] by (2, 4) : index
+// CHECK:         %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 2) : index, index
+// CHECK:         return %[[DELIN]]#0, %[[DELIN]]#1
+// CHECK-BOTTOM-UP-LABEL: func @dont_split_fully_consumed_bounded_basis
+// CHECK-BOTTOM-UP-SAME:    (%[[A:.+]]: index, %[[B:.+]]: index)
+// CHECK-BOTTOM-UP:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[A]], %[[B]]] by (2, 4) : index
+// CHECK-BOTTOM-UP:         %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 2) : index, index
+// CHECK-BOTTOM-UP:         return %[[DELIN]]#0, %[[DELIN]]#1
+func.func @dont_split_fully_consumed_bounded_basis(%a: index, %b: index)
+    -> (index, index) {
+  %0 = affine.linearize_index disjoint [%a, %b] by (2, 4) : index
+  %1:2 = affine.delinearize_index %0 into (2, 2) : index, index
+  return %1#0, %1#1 : index, index
+}
+
+// -----
+
 // CHECK-LABEL: @linearize_unit_basis_disjoint
 // CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
 // CHECK: %[[ret:.+]] = affine.linearize_index disjoint [%[[arg0]], %[[arg2]]] by (3, %[[arg3]]) : index
@@ -2633,4 +2709,40 @@ func.func @compose_into_access_keeps_alignment(%memref: memref<100xi32>, %i: ind
   // CHECK-BOTTOM-UP: affine.store {{.*}} {alignment = 16 : i64}
   affine.store %val, %memref[%idx] { alignment = 16 } : memref<100xi32>
   return
+}
+
+// -----
+
+// Check that canonicalizing an affine expression with addition overflow
+// does not crash.
+
+// CHECK-LABEL: func.func @index_boundary_add
+// CHECK: affine.load %{{.*}}[-9223372036854775808, -9223372036854775808 - 1] : memref<64x64xf32>
+
+func.func @index_boundary_add() -> f32 {
+  %large = arith.constant 9223372036854775807 : i64
+  %idx = arith.index_cast %large : i64 to index
+  %c1 = arith.constant 1 : index
+  %r = arith.addi %idx, %c1 : index
+  %A = memref.alloc() : memref<64x64xf32>
+  %0 = affine.load %A[%r, %r - 1] : memref<64x64xf32>
+  return %0 : f32
+}
+
+// -----
+
+// Check that canonicalizing an affine expression with multiplication overflow
+// does not crash.
+
+// CHECK-LABEL: func.func @index_boundary_mul
+// CHECK: affine.load %{{.*}}[-9223372036854775808, -9223372036854775808 * 2] : memref<64x64xf32>
+
+func.func @index_boundary_mul() -> f32 {
+  %large = arith.constant 9223372036854775807 : i64
+  %idx = arith.index_cast %large : i64 to index
+  %c1 = arith.constant 1 : index
+  %r = arith.addi %idx, %c1 : index
+  %A = memref.alloc() : memref<64x64xf32>
+  %0 = affine.load %A[%r, %r * 2] : memref<64x64xf32>
+  return %0 : f32
 }

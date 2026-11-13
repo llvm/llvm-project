@@ -12,17 +12,28 @@
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/ArchSpec.h"
 
+#include <optional>
+#include <string>
+#include <utility>
+
 namespace lldb_private {
 namespace lldb_server {
 
-/// A minimal, always-stopped fake process that serves a GDB remote connection
-/// for the mock accelerator plugin, letting the client connect a second
-/// (accelerator) target without any real hardware.
+/// A minimal fake process that serves a GDB remote connection for the mock
+/// accelerator plugin, letting the client connect a second (accelerator)
+/// target without any real hardware.
 class ProcessMockAccelerator : public NativeProcessProtocol {
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:
-    using NativeProcessProtocol::Manager::Manager;
+    Manager(MainLoop &mainloop, ArchSpec arch,
+            std::string dynamic_loader_library_path,
+            std::optional<uint64_t> native_memory_address,
+            std::optional<uint64_t> native_memory_size)
+        : NativeProcessProtocol::Manager(mainloop), m_arch(std::move(arch)),
+          m_dynamic_loader_library_path(std::move(dynamic_loader_library_path)),
+          m_native_memory_address(native_memory_address),
+          m_native_memory_size(native_memory_size) {}
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Launch(ProcessLaunchInfo &launch_info,
@@ -30,9 +41,28 @@ public:
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
+
+    Extension GetSupportedExtensions() const override {
+      return Extension::address_spaces | Extension::lldb_settings;
+    }
+
+  private:
+    ArchSpec m_arch;
+    std::string m_dynamic_loader_library_path;
+    std::optional<uint64_t> m_native_memory_address;
+    std::optional<uint64_t> m_native_memory_size;
   };
 
-  ProcessMockAccelerator(lldb::pid_t pid, NativeDelegate &delegate);
+  ProcessMockAccelerator(lldb::pid_t pid, MainLoop &main_loop, ArchSpec arch,
+                         std::string dynamic_loader_library_path,
+                         std::optional<uint64_t> native_memory_address,
+                         std::optional<uint64_t> native_memory_size,
+                         NativeDelegate &delegate);
+
+  void HandleNativeProcessExit(const WaitStatus &exit_status);
+  void SetStopReasonOnResume(lldb::StopReason reason) {
+    m_stop_reason_on_resume = reason;
+  }
 
   Status Resume(const ResumeActionList &resume_actions) override;
   Status Halt() override;
@@ -42,8 +72,8 @@ public:
 
   Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       size_t &bytes_written) override;
 
   lldb::addr_t GetSharedLibraryInfoAddress() override;
   size_t UpdateThreads() override;
@@ -60,8 +90,19 @@ public:
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
+  std::vector<AddressSpaceInfo> GetAddressSpaces() override;
+
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args) override;
+
 private:
-  mutable ArchSpec m_arch;
+  MainLoop &m_main_loop;
+  ArchSpec m_arch;
+  std::string m_dynamic_loader_library_path;
+  std::optional<uint64_t> m_native_memory_address;
+  std::optional<uint64_t> m_native_memory_size;
+  std::optional<lldb::StopReason> m_stop_reason_on_resume;
 };
 
 } // namespace lldb_server

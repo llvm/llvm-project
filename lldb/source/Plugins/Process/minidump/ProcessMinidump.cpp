@@ -314,12 +314,9 @@ bool ProcessMinidump::IsAlive() { return true; }
 
 bool ProcessMinidump::WarnBeforeDetach() const { return false; }
 
-size_t ProcessMinidump::ReadMemory(const ProcessAddress &process_addr,
-                                   void *buf, size_t size, Status &error) {
-  lldb::addr_t addr = process_addr.GetValue();
-  // Don't allow the caching that lldb_private::Process::ReadMemory does since
-  // we have it all cached in our dump file anyway.
-  return DoReadMemory(addr, buf, size, error);
+bool ProcessMinidump::ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+  // The dump file is already a local copy of this memory.
+  return false;
 }
 
 size_t ProcessMinidump::DoReadMemory(const ProcessAddress &process_addr,
@@ -578,13 +575,13 @@ void ProcessMinidump::ReadModuleList() {
 
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, load_addr, load_size);
-      // If we haven't loaded a main executable yet, set the first module to be
-      // main executable
-      if (!GetTarget().GetExecutableModule())
-        GetTarget().SetExecutableModule(module_sp);
-      else
-        GetTarget().GetImages().Append(module_sp, true /* notify */);
+      GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
+
+    // The first module a minidump lists is the main executable.
+    if (module == filtered_modules.front() &&
+        !GetTarget().GetExecutableModule())
+      GetTarget().MarkExecutableModule(module_sp);
 
     bool load_addr_changed = false;
     module_sp->SetLoadAddress(GetTarget(), load_addr, false,
