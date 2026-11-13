@@ -3,7 +3,9 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-eh.cir
 // RUN: FileCheck --input-file=%t-eh.cir %s -check-prefixes=CIR,CIR-EH
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -O1 -fclangir -emit-cir %s -o %t-O1.cir
-// RUN: FileCheck --input-file=%t-O1.cir %s -check-prefix=CIR-O1
+// RUN: FileCheck --input-file=%t-O1.cir %s -check-prefixes=CIR-O1,CIR-O1-NOEH
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -O1 -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-O1-eh.cir
+// RUN: FileCheck --input-file=%t-O1-eh.cir %s -check-prefixes=CIR-O1,CIR-O1-EH
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
@@ -42,10 +44,8 @@ struct TrivialTask {
 Task promise_dtor() { co_return; }
 
 // The promise's destructor is not scoped to initial_suspend, where the promise
-// is constructed, and runs only in destroy. With exceptions, the destructors
-// and the deallocation are nested cleanup scopes there, so that an exception
-// from a destructor still destroys the rest of the coroutine state and frees
-// the frame.
+// is constructed, and runs only in destroy. The destructor does not throw, so
+// destroy is a plain sequence with exceptions as well.
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z12promise_dtorv(
 // CIR:         %[[PROMISE:.*]] = cir.alloca "__promise"
@@ -57,16 +57,7 @@ Task promise_dtor() { co_return; }
 // CIR:         }, body : {
 // CIR-NOT:       cir.call @_ZN4Task12promise_typeD1Ev
 // CIR:         }, destroy : {
-// CIR-NOEH-NEXT: cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
-// CIR-EH-NEXT:   cir.cleanup.scope {
-// CIR-EH-NEXT:     cir.cleanup.scope {
-// CIR-EH-NEXT:       cir.yield
-// CIR-EH-NEXT:     } cleanup all {
-// CIR-EH-NEXT:       cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
-// CIR-EH-NEXT:       cir.yield
-// CIR-EH-NEXT:     }
-// CIR-EH-NEXT:     cir.yield
-// CIR-EH-NEXT:   } cleanup all {
+// CIR-NEXT:      cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
 // CIR-NEXT:      %[[MEM:.*]] = cir.coro.intrinsic.free
 // CIR-NOT:       cir.call @_ZN4Task12promise_typeD1Ev
 // CIR:           cir.call @_ZdlPvm(%[[MEM]],
@@ -92,9 +83,7 @@ TrivialTask param_dtor(Dtor p) {
 // CIR:         cir.coroutine initialSuspend : {
 // CIR-NOT:       cir.call @_ZN4DtorD1Ev
 // CIR:         }, destroy : {
-// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[P]])
-// CIR-EH:            cir.call @_ZN4DtorD1Ev(%[[P]])
-// CIR-EH:        } cleanup all {
+// CIR-NEXT:      cir.call @_ZN4DtorD1Ev(%[[P]])
 // CIR-NEXT:      cir.coro.intrinsic.free
 // CIR-NOT:       cir.call @_ZN4DtorD1Ev
 // CIR:         }, exit : {
@@ -141,30 +130,9 @@ Task promise_and_params(Dtor a, int i, Dtor b) {
 // CIR-NEXT:      cir.co_return
 // CIR-NOT:       cir.call {{@_ZN4DtorD1Ev|@_ZN4Task12promise_typeD1Ev}}
 // CIR:         }, destroy : {
-// CIR-NOEH-NEXT: cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
-// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[B]])
-// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[A]])
-// CIR-EH-NEXT:   cir.cleanup.scope {
-// CIR-EH-NEXT:     cir.cleanup.scope {
-// CIR-EH-NEXT:       cir.cleanup.scope {
-// CIR-EH-NEXT:         cir.cleanup.scope {
-// CIR-EH-NEXT:           cir.yield
-// CIR-EH-NEXT:         } cleanup all {
-// CIR-EH-NEXT:           cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
-// CIR-EH-NEXT:           cir.yield
-// CIR-EH-NEXT:         }
-// CIR-EH-NEXT:         cir.yield
-// CIR-EH-NEXT:       } cleanup all {
-// CIR-EH-NEXT:         cir.call @_ZN4DtorD1Ev(%[[B]])
-// CIR-EH-NEXT:         cir.yield
-// CIR-EH-NEXT:       }
-// CIR-EH-NEXT:       cir.yield
-// CIR-EH-NEXT:     } cleanup all {
-// CIR-EH-NEXT:       cir.call @_ZN4DtorD1Ev(%[[A]])
-// CIR-EH-NEXT:       cir.yield
-// CIR-EH-NEXT:     }
-// CIR-EH-NEXT:     cir.yield
-// CIR-EH-NEXT:   } cleanup all {
+// CIR-NEXT:      cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
+// CIR-NEXT:      cir.call @_ZN4DtorD1Ev(%[[B]])
+// CIR-NEXT:      cir.call @_ZN4DtorD1Ev(%[[A]])
 // CIR-NEXT:      cir.coro.intrinsic.free
 // CIR-NOT:       cir.call {{@_ZN4DtorD1Ev|@_ZN4Task12promise_typeD1Ev}}
 // CIR:         }, exit : {
@@ -225,11 +193,8 @@ PreviewTask promise_preview(Dtor d) { co_return; }
 // CIR:         cir.coroutine initialSuspend : {
 // CIR-NEXT:      cir.call @_ZN11PreviewTask12promise_typeC1ER4Dtor(%[[PROMISE]], %[[D]])
 // CIR:         }, destroy : {
-// CIR-NOEH-NEXT: cir.call @_ZN11PreviewTask12promise_typeD1Ev(%[[PROMISE]])
-// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[D]])
-// CIR-EH:            cir.call @_ZN11PreviewTask12promise_typeD1Ev(%[[PROMISE]])
-// CIR-EH:            cir.call @_ZN4DtorD1Ev(%[[D]])
-// CIR-EH:        } cleanup all {
+// CIR-NEXT:      cir.call @_ZN11PreviewTask12promise_typeD1Ev(%[[PROMISE]])
+// CIR-NEXT:      cir.call @_ZN4DtorD1Ev(%[[D]])
 // CIR-NEXT:      cir.coro.intrinsic.free
 
 // A temporary in a parameter copy's or the promise's initializer is still
@@ -286,11 +251,8 @@ TmpTask init_temporaries(TmpMove m) { co_return; }
 // CIR-NOT:         cir.cleanup.scope
 // CIR:             cir.await(init,
 // CIR:           }, destroy : {
-// CIR-NOEH-NEXT:   cir.call @_ZN7TmpTask12promise_typeD1Ev(%[[PROMISE]])
-// CIR-NOEH-NEXT:   cir.call @_ZN7TmpMoveD1Ev(%[[M]])
-// CIR-EH:              cir.call @_ZN7TmpTask12promise_typeD1Ev(%[[PROMISE]])
-// CIR-EH:              cir.call @_ZN7TmpMoveD1Ev(%[[M]])
-// CIR-EH:          } cleanup all {
+// CIR-NEXT:        cir.call @_ZN7TmpTask12promise_typeD1Ev(%[[PROMISE]])
+// CIR-NEXT:        cir.call @_ZN7TmpMoveD1Ev(%[[M]])
 // CIR-NEXT:        cir.coro.intrinsic.free
 // CIR-NOT:         cir.call @_ZN3TmpD1Ev
 // CIR:           }, exit : {
@@ -404,8 +366,7 @@ TrivialTask cond_param_temporary(CondMove m) { co_return; }
 // CIR-NEXT:        cir.call @_ZN7CondTmpD1Ev(%[[TMP]])
 // CIR:         cir.coroutine initialSuspend : {
 // CIR:         }, destroy : {
-// CIR-NOEH-NEXT: cir.call @_ZN8CondMoveD1Ev(%[[M]])
-// CIR-EH:            cir.call @_ZN8CondMoveD1Ev(%[[M]])
+// CIR-NEXT:      cir.call @_ZN8CondMoveD1Ev(%[[M]])
 // CIR-NOT:       cir.call @_ZN7CondTmpD1Ev
 // CIR:         }, exit : {
 
@@ -434,11 +395,8 @@ ValueTask no_final_await(Dtor p) {
 // CIR:         }, finalSuspend : {
 // CIR-NEXT:      cir.yield
 // CIR-NEXT:    }, destroy : {
-// CIR-NOEH-NEXT: cir.call @_ZN9ValueTask12promise_typeD1Ev(%[[PROMISE]])
-// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[P]])
-// CIR-EH:            cir.call @_ZN9ValueTask12promise_typeD1Ev(%[[PROMISE]])
-// CIR-EH:            cir.call @_ZN4DtorD1Ev(%[[P]])
-// CIR-EH:        } cleanup all {
+// CIR-NEXT:      cir.call @_ZN9ValueTask12promise_typeD1Ev(%[[PROMISE]])
+// CIR-NEXT:      cir.call @_ZN4DtorD1Ev(%[[P]])
 // CIR-NEXT:      cir.coro.intrinsic.free
 
 // A member coroutine copies its by-value parameters, but not *this.
@@ -451,11 +409,8 @@ Task S::member(Dtor d) { co_return; }
 // CIR:         %[[D:.*]] = cir.alloca "d"
 // CIR:         %[[PROMISE:.*]] = cir.alloca "__promise"
 // CIR:         }, destroy : {
-// CIR-NOEH-NEXT: cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
-// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[D]])
-// CIR-EH:            cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
-// CIR-EH:            cir.call @_ZN4DtorD1Ev(%[[D]])
-// CIR-EH:        } cleanup all {
+// CIR-NEXT:      cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
+// CIR-NEXT:      cir.call @_ZN4DtorD1Ev(%[[D]])
 // CIR-NEXT:      cir.coro.intrinsic.free
 
 // An exception from get_return_object() propagates to the caller before the
@@ -482,18 +437,18 @@ ThrowingGROTask eh_before_body(Dtor p) { co_return; }
 // CIR-NEXT:      cir.call @_ZN15ThrowingGROTask12promise_type17get_return_objectEv(
 // CIR-NOT:       cir.call @_ZN4DtorD1Ev
 // CIR:         }, destroy : {
-// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[P]])
-// CIR-EH:            cir.call @_ZN4DtorD1Ev(%[[P]])
+// CIR-NEXT:      cir.call @_ZN4DtorD1Ev(%[[P]])
 
 // OGCG-LABEL: define {{.*}} @_Z14eh_before_body4Dtor(
 // OGCG:         %[[P_COPY:.+]] = alloca %struct.Dtor
 // OGCG:       coro.cleanup:
 // OGCG:         call void @_ZN4DtorD1Ev(ptr {{[^,]*}} %[[P_COPY]])
 
-// An exception from a destructor in destroy still destroys the objects
-// constructed before it and frees the frame, like the cleanups of classic
-// CodeGen. In a noexcept coroutine such an exception terminates, so the
-// destructors and the deallocation stay a plain sequence, as without
+// If a destructor in destroy may throw, the destructors and the deallocation
+// are nested cleanup scopes, like the cleanups of classic CodeGen, so that an
+// exception from a destructor still destroys the objects constructed before it
+// and frees the frame. In a noexcept coroutine such an exception terminates, so
+// the destructors and the deallocation stay a plain sequence, as without
 // exceptions.
 struct ThrowingDtorTask {
   struct promise_type {
@@ -533,6 +488,46 @@ ThrowingDtorTask destroy_throws(Dtor p) { co_return; }
 // CIR:           cir.call @_ZdlPvm(%[[MEM]],
 // CIR:         }, exit : {
 
+// At -O1, the lifetime ends of the promise and of the parameter copy are
+// nested cleanup scopes as well.
+
+// CIR-O1-LABEL: cir.func coroutine {{.*}} @_Z14destroy_throws4Dtor(
+// CIR-O1:         %[[P:.*]] = cir.alloca "p"
+// CIR-O1:         %[[PROMISE:.*]] = cir.alloca "__promise"
+// CIR-O1:         }, destroy : {
+// CIR-O1-NOEH-NEXT: cir.call @_ZN16ThrowingDtorTask12promise_typeD1Ev(%[[PROMISE]])
+// CIR-O1-NOEH-NEXT: cir.lifetime.end %[[PROMISE]]
+// CIR-O1-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[P]])
+// CIR-O1-NOEH-NEXT: cir.lifetime.end %[[P]]
+// CIR-O1-EH-NEXT:   cir.cleanup.scope {
+// CIR-O1-EH-NEXT:     cir.cleanup.scope {
+// CIR-O1-EH-NEXT:       cir.cleanup.scope {
+// CIR-O1-EH-NEXT:         cir.cleanup.scope {
+// CIR-O1-EH-NEXT:           cir.cleanup.scope {
+// CIR-O1-EH-NEXT:             cir.yield
+// CIR-O1-EH-NEXT:           } cleanup all {
+// CIR-O1-EH-NEXT:             cir.call @_ZN16ThrowingDtorTask12promise_typeD1Ev(%[[PROMISE]])
+// CIR-O1-EH-NEXT:             cir.yield
+// CIR-O1-EH-NEXT:           }
+// CIR-O1-EH-NEXT:           cir.yield
+// CIR-O1-EH-NEXT:         } cleanup all {
+// CIR-O1-EH-NEXT:           cir.lifetime.end %[[PROMISE]]
+// CIR-O1-EH-NEXT:           cir.yield
+// CIR-O1-EH-NEXT:         }
+// CIR-O1-EH-NEXT:         cir.yield
+// CIR-O1-EH-NEXT:       } cleanup all {
+// CIR-O1-EH-NEXT:         cir.call @_ZN4DtorD1Ev(%[[P]])
+// CIR-O1-EH-NEXT:         cir.yield
+// CIR-O1-EH-NEXT:       }
+// CIR-O1-EH-NEXT:       cir.yield
+// CIR-O1-EH-NEXT:     } cleanup all {
+// CIR-O1-EH-NEXT:       cir.lifetime.end %[[P]]
+// CIR-O1-EH-NEXT:       cir.yield
+// CIR-O1-EH-NEXT:     }
+// CIR-O1-EH-NEXT:     cir.yield
+// CIR-O1-EH-NEXT:   } cleanup all {
+// CIR-O1-NEXT:      cir.coro.intrinsic.free
+
 // OGCG-EH-LABEL: define {{.*}} @_Z14destroy_throws4Dtor(
 // OGCG-EH:       coro.cleanup:
 // OGCG-EH-NEXT:    invoke void @_ZN16ThrowingDtorTask12promise_typeD1Ev(
@@ -548,3 +543,63 @@ ThrowingDtorTask destroy_throws_noexcept(Dtor p) noexcept { co_return; }
 // CIR-NEXT:      cir.call @_ZN16ThrowingDtorTask12promise_typeD1Ev(
 // CIR-NEXT:      cir.call @_ZN4DtorD1Ev(
 // CIR-NEXT:      cir.coro.intrinsic.free
+
+// A parameter copy's destructor that may throw nests the destructors too. If
+// it throws, the parameter copies constructed before it are still destroyed and
+// the frame is freed.
+struct ThrowingDtor {
+  ~ThrowingDtor() noexcept(false);
+};
+
+Task param_destroy_throws(Dtor a, ThrowingDtor b, Dtor c) { co_return; }
+
+// CIR-LABEL: cir.func coroutine {{.*}} @_Z20param_destroy_throws4Dtor12ThrowingDtorS_(
+// CIR-DAG:     %[[A:.*]] = cir.alloca "a"
+// CIR-DAG:     %[[B:.*]] = cir.alloca "b"
+// CIR-DAG:     %[[C:.*]] = cir.alloca "c"
+// CIR-DAG:     %[[PROMISE:.*]] = cir.alloca "__promise"
+// CIR:         }, destroy : {
+// CIR-NOEH-NEXT: cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
+// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[C]])
+// CIR-NOEH-NEXT: cir.call @_ZN12ThrowingDtorD1Ev(%[[B]])
+// CIR-NOEH-NEXT: cir.call @_ZN4DtorD1Ev(%[[A]])
+// CIR-EH-NEXT:   cir.cleanup.scope {
+// CIR-EH-NEXT:     cir.cleanup.scope {
+// CIR-EH-NEXT:       cir.cleanup.scope {
+// CIR-EH-NEXT:         cir.cleanup.scope {
+// CIR-EH-NEXT:           cir.cleanup.scope {
+// CIR-EH-NEXT:             cir.yield
+// CIR-EH-NEXT:           } cleanup all {
+// CIR-EH-NEXT:             cir.call @_ZN4Task12promise_typeD1Ev(%[[PROMISE]])
+// CIR-EH-NEXT:             cir.yield
+// CIR-EH-NEXT:           }
+// CIR-EH-NEXT:           cir.yield
+// CIR-EH-NEXT:         } cleanup all {
+// CIR-EH-NEXT:           cir.call @_ZN4DtorD1Ev(%[[C]])
+// CIR-EH-NEXT:           cir.yield
+// CIR-EH-NEXT:         }
+// CIR-EH-NEXT:         cir.yield
+// CIR-EH-NEXT:       } cleanup all {
+// CIR-EH-NEXT:         cir.call @_ZN12ThrowingDtorD1Ev(%[[B]])
+// CIR-EH-NEXT:         cir.yield
+// CIR-EH-NEXT:       }
+// CIR-EH-NEXT:       cir.yield
+// CIR-EH-NEXT:     } cleanup all {
+// CIR-EH-NEXT:       cir.call @_ZN4DtorD1Ev(%[[A]])
+// CIR-EH-NEXT:       cir.yield
+// CIR-EH-NEXT:     }
+// CIR-EH-NEXT:     cir.yield
+// CIR-EH-NEXT:   } cleanup all {
+// CIR-NEXT:      %[[MEM:.*]] = cir.coro.intrinsic.free
+// CIR:           cir.call @_ZdlPvm(%[[MEM]],
+// CIR:         }, exit : {
+
+// OGCG-EH-LABEL: define {{.*}} @_Z20param_destroy_throws4Dtor12ThrowingDtorS_(
+// OGCG-EH:         %[[A_COPY:.+]] = alloca %struct.Dtor
+// OGCG-EH:         %[[B_COPY:.+]] = alloca %struct.ThrowingDtor
+// OGCG-EH:       coro.cleanup:
+// OGCG-EH:         invoke void @_ZN12ThrowingDtorD1Ev(ptr {{[^,]*}} %[[B_COPY]])
+// OGCG-EH-NEXT:            to label %{{.*}} unwind label %[[LPAD:.*]]
+// OGCG-EH:       [[LPAD]]:
+// OGCG-EH:         call void @_ZN4DtorD1Ev(ptr {{[^,]*}} %[[A_COPY]])
+// OGCG-EH:         call ptr @llvm.coro.free(

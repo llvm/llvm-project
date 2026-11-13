@@ -128,8 +128,15 @@ public:
   }
 };
 
-/// Owns a copy of a cleanup and its metadata so they remain valid after the
-/// EH stack entry is popped.
+/// Owns a copy of a cleanup and its metadata so they remain valid after the EH
+/// stack entry is popped.
+///
+/// Every popped cleanup is copied, so the copy must not allocate memory in the
+/// common case. It goes into \c data, which holds cleanups of up to 8 pointers
+/// on the stack. A SavedCleanup is normally a local variable, so its inline
+/// storage, and with it the copy, lives on the stack. Only a larger cleanup
+/// falls back to the heap. SavedCleanups are trivially copyable, meaning a
+/// bitwise copy will be performed.
 class SavedCleanup {
   struct alignas(EHScopeStack::ScopeStackAlignment) StorageUnit {
     char bytes[EHScopeStack::ScopeStackAlignment];
@@ -930,6 +937,8 @@ void CIRGenFunction::emitCapturedCleanups(EHScopeStack::stable_iterator depth,
 void CIRGenFunction::emitCapturedCleanupsAsScopes(
     EHScopeStack::stable_iterator depth, mlir::Location loc) {
   // Copy the captured cleanups off the EH stack, the last captured one first.
+  // Unlike popCleanupBlock, this is not on a hot path, so the copies may live
+  // on the heap.
   llvm::SmallVector<SavedCleanup> captured;
   while (ehStack.stable_begin() != depth) {
     assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");

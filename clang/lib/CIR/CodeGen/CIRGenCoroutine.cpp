@@ -415,12 +415,12 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
 
     assert(!cir::MissingFeatures::coroUnwindRegion());
     CapturedCleanups frameCleanups(*this, /*active=*/true);
-    // Whether the promise or a parameter copy has a destructor.
-    bool frameHasDestructors = false;
+    // Whether the destructor of the promise or of a parameter copy may throw.
+    bool frameDestructorMayThrow = false;
     auto emitFrameObject = [&](const VarDecl &var) {
       emitAutoVarDeclWithCapturedCleanups(var, frameCleanups);
-      if (var.needsDestruction(getContext()) != QualType::DK_none)
-        frameHasDestructors = true;
+      if (destructorMayThrow(var.getType()))
+        frameDestructorMayThrow = true;
     };
 
     // Create parameter copies. We do it before creating a promise, since an
@@ -590,15 +590,16 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       return mlir::success();
     };
 
-    // Destroy the promise and the parameter copies, then free the frame. If an
-    // exception can leave the coroutine, emit them like classic CodeGen's
-    // cleanups: the deallocation is the cleanup of an outer cir.cleanup.scope,
-    // and each destructor has its own nested one, the first constructed object
-    // outermost. An exception from one of the destructors then still destroys
-    // the objects constructed before it and frees the frame.
+    // Destroy the promise and the parameter copies, then free the frame. If one
+    // of the destructors may throw an exception that can leave the coroutine,
+    // emit them like classic CodeGen's cleanups: the deallocation is the
+    // cleanup of an outer cir.cleanup.scope, and each destructor has its own
+    // nested one, the first constructed object outermost. An exception from one
+    // of the destructors then still destroys the objects constructed before it
+    // and frees the frame.
     auto destroyBuilder = [&]() -> mlir::LogicalResult {
       if (!getLangOpts().Exceptions || inEHSpecTerminateScope() ||
-          !frameHasDestructors) {
+          !frameDestructorMayThrow) {
         frameCleanups.emitIntoCleanupRegion(openCurlyLoc);
         if (emitDeallocate().failed())
           return mlir::failure();

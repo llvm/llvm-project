@@ -485,7 +485,7 @@ public:
 };
 } // namespace
 
-static bool destructorMayThrow(QualType type) {
+bool CIRGenFunction::destructorMayThrow(QualType type) {
   const CXXRecordDecl *rd =
       type->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
   if (!rd || rd->hasTrivialDestructor())
@@ -517,6 +517,20 @@ void CIRGenFunction::emitLoopConditionVariable(
     cgm.errorNYI(d.getSourceRange(),
                  "emitLoopConditionVariable: OpenCL local address space");
 
+  // The loop's cleanup region destroys the variable first, then the
+  // temporaries in reverse order of construction. A throw would skip the
+  // remaining destructors because CFG flattening does not yet support EH paths
+  // in loop cleanup regions.
+  if (getLangOpts().Exceptions && !extendedTemporaries.empty() &&
+      ((d.needsDestruction(getContext()) != QualType::DK_none &&
+        destructorMayThrow(d.getType())) ||
+       (extendedTemporaries.size() > 1 &&
+        llvm::any_of(extendedTemporaries, destructorMayThrow))))
+    cgm.errorNYI(d.getSourceRange(),
+                 "loop condition variable cleanup with a potentially-throwing "
+                 "destructor before another destructor");
+
+  // The loop's cleanup region covers the initialization of the variable.
   emitAutoVarDeclWithCapturedCleanups(d, condCleanup,
                                       /*guardDestruction=*/true,
                                       extendedTemporaries);
@@ -534,25 +548,15 @@ void CIRGenFunction::emitAutoVarDeclWithCapturedCleanups(
     return emitAutoVarAlloca(d);
   }();
 
-  // If the cleanup region covers initialization, guard destruction so it
-  // cannot run when the initializer throws. Reset the flag each iteration. The
-  // temporaries that the initializer lifetime-extends are destroyed with the
-  // variable ([class.temporary]p6), so capture their cleanups under the same
-  // flag.
+  // If the cleanup region covers initialization, guard destruction with an
+  // active flag so that it cannot run when the initializer throws. The flag is
+  // cleared each time control reaches the declaration and set once the
+  // variable is constructed. The temporaries that the initializer
+  // lifetime-extends are destroyed with the variable ([class.temporary]p6), so
+  // capture their cleanups under the same flag.
   bool needsCleanup =
       guardDestruction && d.needsDestruction(getContext()) != QualType::DK_none;
   bool extendsTemporaries = !extendedTemporaries.empty();
-
-  // Destroy the variable first, then the temporaries in reverse order of
-  // construction. A throw would skip the remaining destructors because CFG
-  // flattening does not yet support EH paths in loop cleanup regions.
-  if (getLangOpts().Exceptions && extendsTemporaries &&
-      ((needsCleanup && destructorMayThrow(d.getType())) ||
-       (extendedTemporaries.size() > 1 &&
-        llvm::any_of(extendedTemporaries, destructorMayThrow))))
-    cgm.errorNYI(d.getSourceRange(),
-                 "loop condition variable cleanup with a potentially-throwing "
-                 "destructor before another destructor");
 
   Address activeFlag = Address::invalid();
   if (needsCleanup || extendsTemporaries) {
@@ -578,19 +582,20 @@ void CIRGenFunction::emitAutoVarDeclWithCapturedCleanups(
          "initializer left cleanups that cannot be captured");
 
   // Only lifetime-extended cleanups remain after initialization. If the AST
-  // walk found no extended temporaries, these cleanups are uncaptured and wrap
-  // cir.condition in cir.cleanup.scope (e.g. for initializer-list array
-  // fillers).
+  // walk found no extended temporaries (e.g. for initializer-list array
+  // fillers), these cleanups are uncaptured and would wrap the code that
+  // follows the declaration, such as a loop's cir.condition, in a
+  // cir.cleanup.scope.
   if (!extendsTemporaries && ehStack.stable_begin() != initDepth) {
     cgm.errorNYI(d.getSourceRange(),
-                 "loop condition variable whose initializer leaves uncaptured "
-                 "cleanups");
+                 "variable with captured cleanups whose initializer leaves "
+                 "uncaptured cleanups");
     popCleanupBlocks(initDepth);
   }
 #ifndef NDEBUG
   for (auto it = ehStack.begin(), ie = ehStack.find(initDepth); it != ie; ++it)
     assert(!cast<EHCleanupScope>(*it).getCleanupScopeOp() &&
-           "loop condition variable initializer left an uncaptured cleanup");
+           "variable initializer left an uncaptured cleanup");
 #endif
 
   if (activeFlag.isValid()) {

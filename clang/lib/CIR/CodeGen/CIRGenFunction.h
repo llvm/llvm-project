@@ -206,12 +206,12 @@ public:
   cir::CleanupScopeOp currentFullExprCleanupScope = nullptr;
 
   /// Set by emitAutoVarDeclWithCapturedCleanups while it emits the initializer
-  /// of a loop condition variable that lifetime-extends temporaries with a
-  /// destructor.
+  /// of a variable, such as a loop condition variable, that lifetime-extends
+  /// temporaries with a destructor.
   /// The cleanups of the temporaries that \c extendingDecl extends are
-  /// captured by \c cleanups for the loop's cleanup region and guarded by
-  /// \c activeFlag, instead of opening cir.cleanup.scope operations around the
-  /// cir.condition.
+  /// captured by \c cleanups, e.g. for the loop's cleanup region, and guarded
+  /// by \c activeFlag, instead of opening cir.cleanup.scope operations around
+  /// the code that follows the declaration.
   struct LifetimeExtensionCapture {
     const clang::ValueDecl *extendingDecl;
     CapturedCleanups *cleanups;
@@ -1999,6 +1999,10 @@ public:
   /// the variable \p d, which has automatic storage duration, lifetime-extends.
   static llvm::SmallVector<QualType, 2>
   getLifetimeExtendedTemporariesWithDestructor(const clang::VarDecl &d);
+
+  /// Whether destroying an object of type \p type, or its elements if it is an
+  /// array, may throw an exception.
+  static bool destructorMayThrow(QualType type);
 
   /// Emit \p d with captured cleanups. Set \p guardDestruction if the cleanup
   /// region covers initialization. Otherwise it must be reached only after
