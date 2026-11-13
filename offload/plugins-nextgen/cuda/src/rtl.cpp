@@ -309,14 +309,14 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
 
     if (FormerPrimaryCtxIsActive) {
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+      INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
            "The primary context is active, no change to its flags\n");
       if ((FormerPrimaryCtxFlags & CU_CTX_SCHED_MASK) !=
           CU_CTX_SCHED_BLOCKING_SYNC)
-        INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+        INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
              "Warning: The current flags are not CU_CTX_SCHED_BLOCKING_SYNC\n");
     } else {
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+      INFO(1, OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
            "The primary context is inactive, set its flags to "
            "CU_CTX_SCHED_BLOCKING_SYNC\n");
       Res = cuDevicePrimaryCtxSetFlags(Device, CU_CTX_SCHED_BLOCKING_SYNC);

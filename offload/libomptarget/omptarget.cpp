@@ -93,7 +93,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
     break;
   case OffloadPolicy::MANDATORY:
     if (!Success) {
-      if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE) {
+      if (INFO_VERBOSITY(OMP_INFOTYPE_DUMP_TABLE)) {
         auto ExclusiveDevicesAccessor = PM->getExclusiveDevicesAccessor();
         for (auto &Device : PM->devices(ExclusiveDevicesAccessor))
           dumpTargetPointerMappings(Loc, Device);
@@ -137,7 +137,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
       FATAL_MESSAGE0(
           1, "failure of target construct while offloading is mandatory");
     } else {
-      if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE) {
+      if (INFO_VERBOSITY(OMP_INFOTYPE_DUMP_TABLE)) {
         auto ExclusiveDevicesAccessor = PM->getExclusiveDevicesAccessor();
         for (auto &Device : PM->devices(ExclusiveDevicesAccessor))
           dumpTargetPointerMappings(Loc, Device);
@@ -707,10 +707,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
     // Check if variable can be used on the device:
     bool IsStructMember = ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF;
-    if (getInfoLevel() & OMP_INFOTYPE_EMPTY_MAPPING && ArgTypes[I] != 0 &&
+    if (INFO_VERBOSITY(OMP_INFOTYPE_EMPTY_MAPPING) && ArgTypes[I] != 0 &&
         !IsStructMember && !IsImplicit && !TPR.isPresent() &&
         !TPR.isContained() && !TPR.isHostPointer())
-      INFO(OMP_INFOTYPE_EMPTY_MAPPING, Device.DeviceID,
+      INFO(1, OMP_INFOTYPE_EMPTY_MAPPING, Device.DeviceID,
            "variable %s does not have a valid device counterpart\n",
            (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
   }
@@ -1401,9 +1401,10 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                   << " to its original value "
                   << static_cast<const void *>(ShadowPtr.TgtPtrContent.data());
             }
-            Ret = Device.submitData(ShadowPtr.TgtPtrAddr,
-                                    ShadowPtr.TgtPtrContent.data(),
-                                    ShadowPtr.PtrSize, AsyncInfo);
+            Ret = Device.submitData(
+                ShadowPtr.TgtPtrAddr, ShadowPtr.TgtPtrContent.data(),
+                ShadowPtr.PtrSize, AsyncInfo, TPR.getEntry(),
+                /*HDTTMapPtr=*/nullptr, Loc);
             if (Ret != OFFLOAD_SUCCESS) {
               REPORT() << "Copying data to device failed.";
               return OFFLOAD_FAIL;

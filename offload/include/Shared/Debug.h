@@ -45,7 +45,7 @@
 #endif
 
 #include <atomic>
-#include <cstdarg>
+#include <cstdio>
 #include <mutex>
 #include <string>
 
@@ -144,22 +144,38 @@ inline uint32_t getInfoLevel() { return getInfoLevelInternal().load(); }
     fprintf(_stdDst, __VA_ARGS__);                                             \
   } while (0)
 
-/// Emit a message giving the user extra information about the runtime if
-#define INFO(_flags, _id, ...)                                                 \
+#define INFO_VERBOSITY(_flags)                                                 \
+  ::llvm::offload::debug::infoVerbosity(GETNAME(TARGET_NAME), (_flags))
+
+/// Emit a message giving the user extra information about the runtime.
+/// In OMPTARGET_DEBUG builds, messages selected by LIBOMPTARGET_DEBUG go to the
+/// debug stream instead of the "info:" output.
+#ifdef OMPTARGET_DEBUG
+#define INFO(_level, _flags, _id, ...)                                         \
   do {                                                                         \
-    if (::llvm::offload::debug::isDebugEnabled()) {                            \
-      INFO_DEBUG_INT(_flags, _id, __VA_ARGS__);                                \
-    } else if (getInfoLevel() & _flags) {                                      \
+    const char *_infoType = ::llvm::offload::debug::infoTypeName(_flags);      \
+    uint32_t _infoLevel = (_level);                                            \
+    if (::llvm::offload::debug::shouldPrintDebug(GETNAME(TARGET_NAME),         \
+                                                 _infoType, _infoLevel))       \
+      ODBG_STREAM(::llvm::offload::debug::dbgs(), _infoType, (_level))         \
+          << ::llvm::offload::debug::formatInfoMessage(__VA_ARGS__);           \
+    else if (::getInfoLevel() & (_flags))                                      \
       INFO_MESSAGE(_id, __VA_ARGS__);                                          \
-    }                                                                          \
   } while (false)
+#else
+#define INFO(_level, _flags, _id, ...)                                         \
+  do {                                                                         \
+    if (INFO_VERBOSITY(_flags) >= (_level))                                    \
+      INFO_MESSAGE(_id, __VA_ARGS__);                                          \
+  } while (false)
+#endif
 
 #define DUMP_INFO(toStdOut, _flags, _id, ...)                                  \
   do {                                                                         \
     if (toStdOut) {                                                            \
       INFO_MESSAGE_TO(stdout, _id, __VA_ARGS__);                               \
     } else {                                                                   \
-      INFO(_flags, _id, __VA_ARGS__);                                          \
+      INFO(1, _flags, _id, __VA_ARGS__);                                       \
     }                                                                          \
   } while (false)
 
@@ -267,8 +283,6 @@ public:
 /// dbgs - Return the debug stream for offload debugging (just llvm::errs()).
 [[maybe_unused]] static llvm::raw_ostream &dbgs() { return llvm::errs(); }
 
-#ifdef OMPTARGET_DEBUG
-
 struct DebugFilter {
   StringRef Type;
   uint32_t Level;
@@ -299,7 +313,8 @@ struct DebugSettings {
 }
 
 [[maybe_unused]] static DebugSettings &getDebugSettings() {
-  static DebugSettings Settings;
+  // Never destroyed: it is still queried during runtime teardown at exit.
+  static DebugSettings &Settings = *new DebugSettings();
   static std::once_flag Flag{};
   std::call_once(Flag, []() {
     // Eventually, we probably should allow the upper layers to set
@@ -374,17 +389,18 @@ shouldPrintDebug(const char *Component, const char *Type, uint32_t &Level) {
     return false;
   }
 
+  bool Matched = false;
   for (const auto &DT : Settings.IncludeFilters) {
     if (DT.Level < Level)
       continue;
     if (DT.Type.equals_insensitive("all") || DT.Type.equals_insensitive(Type) ||
         DT.Type.equals_insensitive(Component)) {
       Level = DT.Level;
-      return true;
+      Matched = true;
     }
   }
 
-  return false;
+  return Matched;
 }
 
 /// Compute the prefix for the debug log in the form of:
@@ -409,6 +425,52 @@ static inline raw_ostream &operator<<(raw_ostream &Os,
   odbg_ostream &Dbg = static_cast<odbg_ostream &>(Os);
   Dbg.shouldMute(Filter);
   return Dbg;
+}
+
+[[maybe_unused]] static const char *infoTypeName(uint32_t Flag) {
+  switch (Flag) {
+  case OMP_INFOTYPE_KERNEL_ARGS:
+    return "KernelArgs";
+  case OMP_INFOTYPE_MAPPING_EXISTS:
+    return "MappingExists";
+  case OMP_INFOTYPE_DUMP_TABLE:
+    return "DumpTable";
+  case OMP_INFOTYPE_MAPPING_CHANGED:
+    return "MappingChanged";
+  case OMP_INFOTYPE_PLUGIN_KERNEL:
+    return "PluginKernel";
+  case OMP_INFOTYPE_DATA_TRANSFER:
+    return "DataCopy";
+  case OMP_INFOTYPE_EMPTY_MAPPING:
+    return "EmptyMapping";
+  default:
+    return "all";
+  }
+}
+
+enum InfoLevel : uint32_t { IL_Summary = 1, IL_Detailed = 2, IL_Full = 3 };
+
+/// Highest verbosity any matching filter grants; 0 if not selected.
+[[maybe_unused]] static uint32_t infoVerbosity(const char *Component,
+                                               uint32_t Flags) {
+  if (::getInfoLevel() & Flags)
+    return IL_Full;
+  if (!isDebugEnabled())
+    return 0;
+  uint32_t Level = IL_Summary;
+  return shouldPrintDebug(Component, infoTypeName(Flags), Level) ? Level : 0;
+}
+
+#ifdef OMPTARGET_DEBUG
+
+// Without arguments the message is printed as-is: llvm::format would trip
+// -Wformat-security.
+[[maybe_unused]] static StringRef formatInfoMessage(const char *Msg) {
+  return Msg;
+}
+template <typename... Ts>
+static auto formatInfoMessage(const char *Fmt, const Ts &...Vals) {
+  return ::llvm::format(Fmt, Vals...);
 }
 
 #define ODBG_BASE(Stream, Component, Prefix, Type, Level)                      \
@@ -546,8 +608,6 @@ template <typename LambdaTy> struct LambdaIf : public LambdaHelper<LambdaTy> {
 
 #else
 
-inline bool isDebugEnabled() { return false; }
-
 #define ODBG_NULL                                                              \
   for (bool _c = false; _c; _c = false)                                        \
   ::llvm::nulls()
@@ -635,68 +695,11 @@ static inline odbg_ostream reportErrorStream() {
 }
 
 #ifdef OMPTARGET_DEBUG
-// Deprecated debug print macros
-[[maybe_unused]] static std::string formatToStr(const char *format, ...) {
-  va_list args;
-  va_start(args, format);
-  size_t len = std::vsnprintf(NULL, 0, format, args);
-  va_end(args);
-  llvm::SmallVector<char, 128> vec(len + 1);
-  va_start(args, format);
-  std::vsnprintf(&vec[0], len + 1, format, args);
-  va_end(args);
-  return &vec[0];
-}
-
-// helper macro to support old DP and REPORT macros with printf syntax
-#define FORMAT_TO_STR(Format, ...)                                             \
-  ::llvm::omp::target::debug::formatToStr(Format __VA_OPT__(, ) __VA_ARGS__)
-
-template <uint32_t InfoId> static constexpr const char *InfoIdToODT() {
-  constexpr auto getId = []() {
-    switch (InfoId) {
-    case OMP_INFOTYPE_KERNEL_ARGS:
-      return "KernelArgs";
-    case OMP_INFOTYPE_MAPPING_EXISTS:
-      return "MappingExists";
-    case OMP_INFOTYPE_DUMP_TABLE:
-      return "DumpTable";
-    case OMP_INFOTYPE_MAPPING_CHANGED:
-      return "MappingChanged";
-    case OMP_INFOTYPE_PLUGIN_KERNEL:
-      return "PluginKernel";
-    case OMP_INFOTYPE_DATA_TRANSFER:
-      return "DataTransfer";
-    case OMP_INFOTYPE_EMPTY_MAPPING:
-      return "EmptyMapping";
-    case OMP_INFOTYPE_ALL:
-      return "Default";
-    }
-    return static_cast<const char *>(nullptr);
-  };
-
-  constexpr const char *result = getId();
-  static_assert(result != nullptr, "Unknown InfoId being used");
-  return result;
-}
-
-// Transform the INFO id to the corresponding debug type and print the message
-#define INFO_DEBUG_INT(_flags, _id, ...)                                       \
-  ODBG(::llvm::omp::target::debug::InfoIdToODT<_flags>())                      \
-      << FORMAT_TO_STR(__VA_ARGS__);
-
 // Define default format for pointers
 static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
   Os << ::llvm::format(DPxMOD, DPxPTR(Ptr));
   return Os;
 }
-
-#else
-
-#define INFO_DEBUG_INT(_flags, _id, ...)                                       \
-  {                                                                            \
-  }
-
 #endif // OMPTARGET_DEBUG
 
 // New REPORT macro in the same style as ODBG
