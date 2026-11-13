@@ -6,18 +6,17 @@ define void @foo(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr nocap
 ; CHECK-LLC-LABEL: foo:
 ; CHECK-LLC:       # %bb.0: # %entry
 ; CHECK-LLC-NEXT:    lu12i.w $a3, -1
-; CHECK-LLC-NEXT:    lu12i.w $a4, 1
 ; CHECK-LLC-NEXT:    .p2align 4, , 16
 ; CHECK-LLC-NEXT:  .LBB0_1: # %for.body
 ; CHECK-LLC-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-LLC-NEXT:    add.d $a5, $a0, $a3
-; CHECK-LLC-NEXT:    ldx.w $a5, $a5, $a4
-; CHECK-LLC-NEXT:    add.d $a6, $a1, $a3
-; CHECK-LLC-NEXT:    ldx.w $a6, $a6, $a4
-; CHECK-LLC-NEXT:    add.d $a5, $a6, $a5
-; CHECK-LLC-NEXT:    add.d $a6, $a2, $a3
+; CHECK-LLC-NEXT:    add.d $a4, $a0, $a3
+; CHECK-LLC-NEXT:    ldptr.w $a4, $a4, 4096
+; CHECK-LLC-NEXT:    add.d $a5, $a1, $a3
+; CHECK-LLC-NEXT:    ldptr.w $a5, $a5, 4096
+; CHECK-LLC-NEXT:    add.d $a4, $a5, $a4
+; CHECK-LLC-NEXT:    add.d $a5, $a2, $a3
 ; CHECK-LLC-NEXT:    addi.d $a3, $a3, 4
-; CHECK-LLC-NEXT:    stptr.w $a5, $a6, 4096
+; CHECK-LLC-NEXT:    stptr.w $a4, $a5, 4096
 ; CHECK-LLC-NEXT:    bnez $a3, .LBB0_1
 ; CHECK-LLC-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-LLC-NEXT:    ret
