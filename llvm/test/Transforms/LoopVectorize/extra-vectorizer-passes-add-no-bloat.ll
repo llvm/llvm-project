@@ -117,16 +117,19 @@ exit:
 ; WITHOUT-LABEL: define void @nested_loop_inner_vectorized(
 ;
 ; Verify the inner loop is vectorized.
-; WITHOUT: vector.body:
+; Verify there is only one vectorized copy of the inner loop.
+; WITHOUT: {{^vector\.body.*:}}
 ; WITHOUT: add <{{[0-9]+}} x i8>
 ; WITHOUT: store <{{[0-9]+}} x i8>
 ;
-; Verify there is only ONE outer loop increment (no excessive unrolling).
-; WITHOUT-COUNT-1: %y.next = add nuw i64 %{{.*}}, 1
+; WITHOUT-NOT: {{^vector\.body.*:}}
 ;
 ; WITHOUT: ret void
 
 ; WITH-LABEL: define void @nested_loop_inner_vectorized(
+; FIXME: SimpleLoopUnswitch duplicates the vectorized inner loop below.
+; WITH: {{^vector\.body.*:}}
+; WITH-NOT: {{^vector\.body.*:}}
 ; WITH: ret void
 
 ; WITHOUT-LABEL: define void @ass_shift_bitmap_c(
@@ -134,8 +137,6 @@ exit:
 ; WITHOUT: ret void
 
 ; WITH-LABEL: define void @ass_shift_bitmap_c(
+; WITH: {{^vector\.body.*:}}
+; WITH-NOT: {{^vector\.body.*:}}
 ; WITH: ret void
-;
-; With extra passes enabled, the functions should still compile and be correct.
-; FIXME: Currently this causes excessive code bloat due to outer loop unrolling.
-; Once fixed, add checks to verify no excessive unrolling occurs.
