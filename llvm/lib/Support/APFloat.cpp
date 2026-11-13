@@ -83,6 +83,7 @@ unsigned int IEEEFloat::partCountForSemantic(APFloatBase::Semantics S) {
     return 2;
   case APFloatBase::S_PPCDoubleDouble:
     assert(false);
+    [[fallthrough]];
   default:
     return 1;
   }
