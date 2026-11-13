@@ -6726,6 +6726,10 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
       return Op0;
   }
 
+  FastMathFlags InnerFMF;
+  if (auto *FPOp = dyn_cast<FPMathOperator>(Op0))
+    InnerFMF = FPOp->getFastMathFlags();
+
   Value *X;
   switch (IID) {
   case Intrinsic::fabs: {
@@ -6763,31 +6767,31 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
   }
   case Intrinsic::exp:
     // exp(log(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (FMF.allowReassoc() && InnerFMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp2:
     // exp2(log2(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (FMF.allowReassoc() && InnerFMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp10:
     // exp10(log10(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (FMF.allowReassoc() && InnerFMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log10>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log:
     // log(exp(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (FMF.allowReassoc() && InnerFMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log2:
     // log2(exp2(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (FMF.allowReassoc() && InnerFMF.allowReassoc() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(2.0), m_Value(X)))))
@@ -6796,7 +6800,7 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
   case Intrinsic::log10:
     // log10(pow(10.0, x)) -> x
     // log10(exp10(x)) -> x
-    if (FMF.allowReassoc() &&
+    if (FMF.allowReassoc() && InnerFMF.allowReassoc() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp10>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
