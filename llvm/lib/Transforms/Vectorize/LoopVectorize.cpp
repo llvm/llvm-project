@@ -5152,6 +5152,8 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
               *CM);
 
   LLVM_DEBUG(printPlans(dbgs()));
+  // Compute costs for each VPlan:
+  computeVPlanCosts(*CM);
 }
 
 bool LoopVectorizationPlanner::planForEpilogueTF() {
@@ -5427,32 +5429,12 @@ LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
   return Cost;
 }
 
-std::pair<VectorizationFactor, VPlan *>
-LoopVectorizationPlanner::computeBestVF() {
+void LoopVectorizationPlanner::computeVPlanCosts(
+    LoopVectorizationCostModel &PlanCM) {
   if (VPlans.empty())
-    return {VectorizationFactor::Disabled(), nullptr};
-  // If there is a single VPlan with a single VF, return it directly.
-  VPlan &FirstPlan = *VPlans[0];
+    return;
 
-  ElementCount UserVF = Config.getHints().getWidth();
-  if (VPlans.size() == 1) {
-    // For outer loops, the plan has a single vector VF determined by the
-    // heuristic.
-    assert((FirstPlan.hasScalarVFOnly() || hasPlanWithVF(UserVF) ||
-            FirstPlan.isOuterLoop()) &&
-           "must have a single scalar VF, UserVF or an outer loop");
-    return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
-  }
-
-  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF() && VPlans.size() == 2) {
-    assert(VPlans[0]->getSingleVF() == UserVF &&
-           "expected second plan to be for the forced UserVF");
-    assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
-           "expected first plan to be for the forced epilogue VF");
-    return {VectorizationFactor(UserVF, 0, 0), VPlans[0].get()};
-  }
-
-  LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
+  LLVM_DEBUG(dbgs() << "LV: Computing costs of vplans using cost kind: "
                     << (Config.CostKind == TTI::TCK_RecipThroughput
                             ? "Reciprocal Throughput\n"
                         : Config.CostKind == TTI::TCK_Latency
@@ -5462,26 +5444,19 @@ LoopVectorizationPlanner::computeBestVF() {
                             ? "Code Size and Latency\n"
                             : "Unknown\n"));
 
+  VPlan &FirstPlan = *VPlans[0];
   ElementCount ScalarVF = ElementCount::getFixed(1);
   assert(FirstPlan.hasVF(ScalarVF) &&
          "More than a single plan/VF w/o any plan having scalar VF");
 
   // TODO: Compute scalar cost using VPlan-based cost model.
-  InstructionCost ScalarCost = CM->expectedCost(ScalarVF);
+  InstructionCost ScalarCost = PlanCM.expectedCost(ScalarVF);
   LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ScalarCost << ".\n");
   VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
-  VectorizationFactor BestFactor = ScalarFactor;
+  FeasibleVFs.push_back(ScalarFactor);
 
   bool ForceVectorization =
       Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
-  if (ForceVectorization) {
-    // Ignore scalar width, because the user explicitly wants vectorization.
-    // Initialize cost to max so that VF = 2 is, at least, chosen during cost
-    // evaluation.
-    BestFactor.Cost = InstructionCost::getMax();
-  }
-
-  VPlan *PlanForBestVF = &FirstPlan;
   ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
 
   for (auto &P : VPlans) {
@@ -5526,20 +5501,80 @@ LoopVectorizationPlanner::computeBestVF() {
       }
 
       InstructionCost Cost =
-          cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr, *CM);
+          cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr, PlanCM);
+      if (!Cost.isValid())
+        continue;
+
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
-
-      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
-        BestFactor = CurrentFactor;
-        PlanForBestVF = P.get();
-      }
-
-      // If profitable add it to ProfitableVF list.
-      if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
-        ProfitableVFs.push_back(CurrentFactor);
+      FeasibleVFs.push_back(CurrentFactor);
     }
   }
+}
 
+std::pair<VectorizationFactor, VPlan *>
+LoopVectorizationPlanner::selectBestVF() {
+  if (VPlans.empty())
+    return {VectorizationFactor::Disabled(), nullptr};
+
+  // If there is a single VPlan with a single VF, return it directly.
+  VPlan &FirstPlan = *VPlans[0];
+
+  ElementCount UserVF = Config.getHints().getWidth();
+  if (VPlans.size() == 1) {
+    // For outer loops, the plan has a single vector VF determined by the
+    // heuristic.
+    assert((FirstPlan.hasScalarVFOnly() || FirstPlan.getSingleVF() == UserVF ||
+            FirstPlan.isOuterLoop()) &&
+           "must have a single scalar VF, UserVF or an outer loop");
+    return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
+  }
+
+  if (VPlans.size() == 2 && hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
+    assert(VPlans[0]->getSingleVF() == UserVF &&
+           "expected first plan to be for the forced UserVF");
+    assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
+           "expected second plan to be for the forced epilogue VF");
+    return {VectorizationFactor(UserVF, 0, 0), VPlans[0].get()};
+  }
+
+  assert(!FeasibleVFs.empty() &&
+         "Expected to have at least 1 non-scalar VF with a valid cost");
+  VectorizationFactor ScalarFactor = FeasibleVFs[0];
+  assert(ScalarFactor.Width.isScalar() &&
+         "Expect first feasible VF to be the scalar one");
+
+  assert(FirstPlan.hasVF(ScalarFactor.Width) &&
+         "Expected the first vplan to contain the scalar VF");
+
+  VPlan *PlanForBestVF = &FirstPlan;
+  VectorizationFactor BestFactor = ScalarFactor;
+  if (Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled) {
+    // Ignore scalar width, because the user explicitly wants vectorization.
+    // Initialize cost to max so that VF = 2 is, at least, chosen during cost
+    // evaluation.
+    BestFactor.Cost = InstructionCost::getMax();
+  }
+
+  for (auto &CurrentFactor : FeasibleVFs) {
+    if (CurrentFactor.Width.isScalar())
+      continue;
+
+    VPlan &CurrentPlan = getPlanFor(CurrentFactor.Width);
+
+    if (isMoreProfitable(CurrentFactor, BestFactor,
+                         CurrentPlan.hasScalarTail())) {
+      BestFactor = CurrentFactor;
+      PlanForBestVF = &CurrentPlan;
+    }
+
+    // If profitable add it to ProfitableVF list.
+    if (isMoreProfitable(CurrentFactor, ScalarFactor,
+                         CurrentPlan.hasScalarTail()))
+      ProfitableVFs.push_back(CurrentFactor);
+  }
+
+  // FeasibleVFs is not needed anymore.
+  FeasibleVFs.clear();
   VPlan &BestPlan = *PlanForBestVF;
 
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
@@ -7625,7 +7660,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
-  auto [VF, BestPlanPtr] = LVP.computeBestVF();
+  auto [VF, BestPlanPtr] = LVP.selectBestVF();
   unsigned IC = 1;
 
   // For VPlan build stress testing of outer loops, bail after plan
