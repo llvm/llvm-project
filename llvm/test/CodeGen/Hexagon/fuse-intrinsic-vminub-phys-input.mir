@@ -33,3 +33,4 @@ body: |
     $d0 = A2_combinew $r0, $r1
     %1:predregs = C2_cmpgtup $d0, $d1
     PS_jmpret $r31, implicit-def $pc
+...

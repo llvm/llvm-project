@@ -20,53 +20,25 @@
 
 #if TEST_STD_VER < 14
 
-#  ifdef __cpp_lib_counting_scope
-#    error "__cpp_lib_counting_scope should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_execution
 #    error "__cpp_lib_execution should not be defined before c++17"
 #  endif
 
-#  ifdef __cpp_lib_parallel_scheduler
-#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_senders
 #    error "__cpp_lib_senders should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_task
-#    error "__cpp_lib_task should not be defined before c++26"
 #  endif
 
 #elif TEST_STD_VER == 14
 
-#  ifdef __cpp_lib_counting_scope
-#    error "__cpp_lib_counting_scope should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_execution
 #    error "__cpp_lib_execution should not be defined before c++17"
-#  endif
-
-#  ifdef __cpp_lib_parallel_scheduler
-#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_senders
 #    error "__cpp_lib_senders should not be defined before c++26"
 #  endif
 
-#  ifdef __cpp_lib_task
-#    error "__cpp_lib_task should not be defined before c++26"
-#  endif
-
 #elif TEST_STD_VER == 17
-
-#  ifdef __cpp_lib_counting_scope
-#    error "__cpp_lib_counting_scope should not be defined before c++26"
-#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_execution
@@ -81,23 +53,11 @@
 #    endif
 #  endif
 
-#  ifdef __cpp_lib_parallel_scheduler
-#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_senders
 #    error "__cpp_lib_senders should not be defined before c++26"
 #  endif
 
-#  ifdef __cpp_lib_task
-#    error "__cpp_lib_task should not be defined before c++26"
-#  endif
-
 #elif TEST_STD_VER == 20
-
-#  ifdef __cpp_lib_counting_scope
-#    error "__cpp_lib_counting_scope should not be defined before c++26"
-#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_execution
@@ -112,23 +72,11 @@
 #    endif
 #  endif
 
-#  ifdef __cpp_lib_parallel_scheduler
-#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_senders
 #    error "__cpp_lib_senders should not be defined before c++26"
 #  endif
 
-#  ifdef __cpp_lib_task
-#    error "__cpp_lib_task should not be defined before c++26"
-#  endif
-
 #elif TEST_STD_VER == 23
-
-#  ifdef __cpp_lib_counting_scope
-#    error "__cpp_lib_counting_scope should not be defined before c++26"
-#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_execution
@@ -143,32 +91,11 @@
 #    endif
 #  endif
 
-#  ifdef __cpp_lib_parallel_scheduler
-#    error "__cpp_lib_parallel_scheduler should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_senders
 #    error "__cpp_lib_senders should not be defined before c++26"
 #  endif
 
-#  ifdef __cpp_lib_task
-#    error "__cpp_lib_task should not be defined before c++26"
-#  endif
-
 #elif TEST_STD_VER == 26
-
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_counting_scope
-#      error "__cpp_lib_counting_scope should be defined in c++26"
-#    endif
-#    if __cpp_lib_counting_scope != 202506L
-#      error "__cpp_lib_counting_scope should have the value 202506L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_counting_scope
-#      error "__cpp_lib_counting_scope should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_execution
@@ -180,19 +107,6 @@
 #  else
 #    ifdef __cpp_lib_execution
 #      error "__cpp_lib_execution should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_parallel_scheduler
-#      error "__cpp_lib_parallel_scheduler should be defined in c++26"
-#    endif
-#    if __cpp_lib_parallel_scheduler != 202506L
-#      error "__cpp_lib_parallel_scheduler should have the value 202506L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_parallel_scheduler
-#      error "__cpp_lib_parallel_scheduler should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -209,33 +123,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_task
-#      error "__cpp_lib_task should be defined in c++26"
-#    endif
-#    if __cpp_lib_task != 202506L
-#      error "__cpp_lib_task should have the value 202506L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_task
-#      error "__cpp_lib_task should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
 #elif TEST_STD_VER > 26
-
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_counting_scope
-#      error "__cpp_lib_counting_scope should be defined in c++29"
-#    endif
-#    if __cpp_lib_counting_scope != 202506L
-#      error "__cpp_lib_counting_scope should have the value 202506L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_counting_scope
-#      error "__cpp_lib_counting_scope should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_execution
@@ -251,19 +139,6 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_parallel_scheduler
-#      error "__cpp_lib_parallel_scheduler should be defined in c++29"
-#    endif
-#    if __cpp_lib_parallel_scheduler != 202506L
-#      error "__cpp_lib_parallel_scheduler should have the value 202506L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_parallel_scheduler
-#      error "__cpp_lib_parallel_scheduler should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
-#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_senders
 #      error "__cpp_lib_senders should be defined in c++29"
 #    endif
@@ -273,19 +148,6 @@
 #  else
 #    ifdef __cpp_lib_senders
 #      error "__cpp_lib_senders should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_task
-#      error "__cpp_lib_task should be defined in c++29"
-#    endif
-#    if __cpp_lib_task != 202506L
-#      error "__cpp_lib_task should have the value 202506L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_task
-#      error "__cpp_lib_task should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 

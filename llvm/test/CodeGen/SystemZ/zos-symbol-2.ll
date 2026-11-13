@@ -15,7 +15,7 @@ entry:
 
 ; Check the global CSECT definition
 ; CHECK:      stdin#C CSECT
-; CHECK-NEXT: C_CODE64 CATTR ALIGN(3),FILL(0),READONLY,RMODE(64)
+; CHECK-NEXT: C_CODE64 CATTR ALIGN(3),FILL(0),RENT,READONLY,RMODE(64)
 
 ; Check the attributes on the function
 ; CHECK:       ENTRY calc

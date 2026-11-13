@@ -11,14 +11,16 @@ binary_alias(
 """
 
 def _binary_alias_impl(ctx):
+    out = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.symlink(
         target_file = ctx.executable.binary,
-        output = ctx.outputs.executable,
+        output = out,
         is_executable = True,
     )
 
     return [DefaultInfo(
-        executable = ctx.outputs.executable,
+        files = depset([out]),
+        executable = out,
         runfiles = ctx.attr.binary[DefaultInfo].default_runfiles,
     )]
 
