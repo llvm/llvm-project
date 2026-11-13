@@ -1187,6 +1187,31 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+// Lower SELECT with a scalar condition and a predicate-vector result.
+// Such a vector cannot be promoted to a vector of i32 the way the wider vector
+// types are, because v2i1/v4i1/v8i1 are only 2/4/8 bits wide.
+SDValue HexagonTargetLowering::LowerBoolVectorSelect(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  MVT ResTy = ty(Op);
+  if (ResTy != MVT::v2i1 && ResTy != MVT::v4i1 && ResTy != MVT::v8i1)
+    return SDValue();
+
+  const SDLoc &dl(Op);
+  // Each of these vectors occupies all 8 bits of a predicate register, with
+  // every element repeated over 8/NumElts of them (see extractVectorPred).
+  // The condition is a scalar, so the same source is picked for every element
+  // and the whole 8-bit pattern can be selected at once -- no per-element mask
+  // arithmetic is needed here, unlike in LowerBUILD_VECTOR.  Move both
+  // predicates into general-purpose registers, select there, and move the
+  // result back, as insertVectorPred does.
+  SDValue T =
+      getInstr(Hexagon::C2_tfrpr, dl, MVT::i32, {Op.getOperand(1)}, DAG);
+  SDValue F =
+      getInstr(Hexagon::C2_tfrpr, dl, MVT::i32, {Op.getOperand(2)}, DAG);
+  SDValue S = DAG.getSelect(dl, MVT::i32, Op.getOperand(0), T, F);
+  return getInstr(Hexagon::C2_tfrrp, dl, ResTy, {S}, DAG);
+}
+
 SDValue
 HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   EVT ValTy = Op.getValueType();
@@ -1749,11 +1774,21 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setTruncStoreAction(VT, TargetVT, Expand);
     }
 
-    // Normalize all inputs to SELECT to be vectors of i32.
+    // Normalize inputs to SELECT to be vectors of i32 if the vector is an
+    // exact, non-zero multiple of 32 bits wide. For anything narrower the
+    // element count below truncates to zero and MVT::getVectorVT would
+    // build an invalid type. The types that actually reach this are the
+    // vXi1 predicate vectors (v2i1/v4i1/v8i1); they are given a Custom
+    // action further down.
     if (VT.getVectorElementType() != MVT::i32) {
-      MVT VT32 = MVT::getVectorVT(MVT::i32, VT.getSizeInBits()/32);
-      setOperationAction(ISD::SELECT, VT, Promote);
-      AddPromotedToType(ISD::SELECT, VT, VT32);
+      unsigned Width = VT.getSizeInBits();
+      if (Width >= 32 && Width % 32 == 0) {
+        MVT VT32 = MVT::getVectorVT(MVT::i32, VT.getSizeInBits()/32);
+        setOperationAction(ISD::SELECT, VT, Promote);
+        AddPromotedToType(ISD::SELECT, VT, VT32);
+      } else {
+        setOperationAction(ISD::SELECT, VT, Expand);
+      }
     }
     setOperationAction(ISD::SRA, VT, Custom);
     setOperationAction(ISD::SHL, VT, Custom);
@@ -1797,6 +1832,10 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SPLAT_VECTOR, NativeVT, Legal);
       setOperationAction(ISD::BSWAP,        NativeVT, Legal);
       setOperationAction(ISD::BITREVERSE,   NativeVT, Legal);
+    } else {
+      // A predicate vector is too narrow to promote SELECT to a vector of i32
+      // (see above), so lower it directly.
+      setOperationAction(ISD::SELECT, NativeVT, Custom);
     }
   }
 
@@ -3457,6 +3496,7 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::DYNAMIC_STACKALLOC:   return LowerDYNAMIC_STACKALLOC(Op, DAG);
     case ISD::SETCC:                return LowerSETCC(Op, DAG);
     case ISD::VSELECT:              return LowerVSELECT(Op, DAG);
+    case ISD::SELECT:               return LowerBoolVectorSelect(Op, DAG);
     case ISD::INTRINSIC_WO_CHAIN:   return LowerINTRINSIC_WO_CHAIN(Op, DAG);
     case ISD::INTRINSIC_VOID:       return LowerINTRINSIC_VOID(Op, DAG);
     // INTRINSIC_W_CHAIN is marked Custom only so HLX memory intrinsics can be

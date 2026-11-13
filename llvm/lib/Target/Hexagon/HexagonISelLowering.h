@@ -150,6 +150,7 @@ public:
 
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBoolVectorSelect(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG& DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
