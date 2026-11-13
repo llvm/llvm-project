@@ -973,21 +973,6 @@ Defined *SymbolTable::addImportThunk(StringRef name, DefinedImportData *id,
   return nullptr;
 }
 
-void SymbolTable::addLibcall(StringRef name) {
-  Symbol *sym = findUnderscore(name);
-  if (!sym)
-    return;
-
-  if (auto *l = dyn_cast<LazyArchive>(sym)) {
-    MemoryBufferRef mb = l->getMemberBuffer();
-    if (isBitcode(mb))
-      addUndefined(sym->getName());
-  } else if (LazyObject *o = dyn_cast<LazyObject>(sym)) {
-    if (isBitcode(o->file->mb))
-      addUndefined(sym->getName());
-  }
-}
-
 Symbol *SymbolTable::find(StringRef name) const {
   return symMap.lookup(CachedHashStringRef(name));
 }
@@ -1469,9 +1454,9 @@ std::string SymbolTable::printSymbol(Symbol *sym) const {
   return name;
 }
 
-void SymbolTable::compileBitcodeFiles() {
+bool SymbolTable::compileBitcodeFiles() {
   if (bitcodeFileInstances.empty())
-    return;
+    return false;
 
   // Collect the bitcode library functions that are not safe to call because
   // they were not yet brought in the link. (Such symbols are lazy.)
@@ -1504,11 +1489,55 @@ void SymbolTable::compileBitcodeFiles() {
       lto->add(*f);
   }
 
-  for (InputFile *newObj : lto->compile()) {
+  std::vector<InputFile *> newObjs = lto->compile();
+
+  // Code generation can introduce calls to library functions that are not in
+  // the bitcode symbol tables. If one of them is defined in an archive member
+  // that is bitcode, the member cannot be added after code generation. Find
+  // them in the code that was just generated, add the members and generate the
+  // code again, rather than adding every member that could be needed up front.
+  SmallVector<StringRef> needed;
+  for (InputFile *newObj : newObjs) {
+    auto coffObj = llvm::object::COFFObjectFile::create(newObj->mb);
+    if (!coffObj) {
+      consumeError(coffObj.takeError());
+      continue;
+    }
+    auto *obj = cast<llvm::object::COFFObjectFile>(coffObj->get());
+    for (const auto &s : obj->symbols()) {
+      COFFSymbolRef sym = obj->getCOFFSymbol(s);
+      if (!sym.isExternal() || !sym.isUndefined())
+        continue;
+      Expected<StringRef> nameOrErr = obj->getSymbolName(sym);
+      if (!nameOrErr) {
+        consumeError(nameOrErr.takeError());
+        continue;
+      }
+      StringRef name = *nameOrErr;
+      Symbol *def = find(name);
+      bool bitcodeMember = false;
+      if (auto *l = dyn_cast_or_null<LazyArchive>(def))
+        bitcodeMember = isBitcode(l->getMemberBuffer());
+      else if (auto *o = dyn_cast_or_null<LazyObject>(def))
+        bitcodeMember = isBitcode(o->file->mb);
+      if (bitcodeMember)
+        needed.push_back(def->getName());
+    }
+  }
+  if (!needed.empty()) {
+    lto->restore();
+    lto.reset();
+    for (StringRef name : needed)
+      addUndefined(name);
+    return true;
+  }
+
+  for (InputFile *newObj : newObjs) {
     ObjFile *obj = cast<ObjFile>(newObj);
     obj->parse();
     ctx.objFileInstances.push_back(obj);
   }
+  return false;
 }
 
 void SymbolTable::waitForLTOCleanup() {

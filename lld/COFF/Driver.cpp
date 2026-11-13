@@ -2749,18 +2749,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       });
 
       ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
-        // If any inputs are bitcode files, the LTO code generator may create
-        // references to library functions that are not explicit in the bitcode
-        // file's symbol table. If any of those library functions are defined in
-        // a bitcode file in an archive member, we need to arrange to use LTO to
-        // compile those archive members by adding them to the link beforehand.
-        if (!symtab.bitcodeFileInstances.empty()) {
-          llvm::Triple TT(
-              symtab.bitcodeFileInstances.front()->obj->getTargetTriple());
-          for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
-            symtab.addLibcall(s);
-        }
-
         // Windows specific -- if __load_config_used can be resolved, resolve
         // it.
         if (symtab.findUnderscore("_load_config_used"))
@@ -2839,8 +2827,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
+  // Code generation can bring in archive members that are bitcode, in which
+  // case it is done again with them included.
+  for (bool again = true; again;) {
+    again = false;
+    ctx.forEachSymtab(
+        [&](SymbolTable &symtab) { again |= symtab.compileBitcodeFiles(); });
+    if (again)
+      run();
+  }
   ltoCompilationDone = true;
-  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
 
   ctx.forEachSymtab([&](SymbolTable &symtab) {
     if (Defined *d =
