@@ -1,5 +1,6 @@
 // RUN: llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s
 // RUN: not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DERR_DUPLICATE_NAME 2>&1 | FileCheck %s --check-prefix=ERR-DUPLICATE-NAME
+// RUN: not llvm-tblgen -gen-asm-matcher -I %p/../../include %s -DERR_SHADOWED 2>&1 | FileCheck %s --check-prefix=ERR-SHADOWED
 
 include "llvm/Target/Target.td"
 
@@ -99,6 +100,15 @@ def BadRC : RegisterClass<"Arch", [i64], 64, (add R0_Y, R0)> {
   let CoerceFromRegClass = GPR;
 }
 // ERR-DUPLICATE-NAME: error: RegisterClass 'BadRC' with CoerceFromRegClass contains multiple registers named 'r0'
+#endif
+
+/// MatchRegisterName returns R0 rather than R0_Y for "r0", so R0_Y is never
+/// parsed and can't be coerced from.
+#ifdef ERR_SHADOWED
+def BadRC : RegisterClass<"Arch", [i32], 32, (add R0, R1)> {
+  let CoerceFromRegClass = YGPR;
+}
+// ERR-SHADOWED: error: RegisterClass 'BadRC' cannot coerce from 'R0_Y' since MatchRegisterName returns 'R0' for 'r0'
 #endif
 
 // CHECK-LABEL: static MCRegister convertToVRM4(MCRegister Reg) {
