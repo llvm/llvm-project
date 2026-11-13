@@ -9,6 +9,7 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -38,6 +39,8 @@ TEST_F(LanguageTest, ForEachFindsLateRegisteredPlugin) {
 
   ASSERT_TRUE(PluginManager::RegisterPlugin("mock-language", "",
                                             MockLanguage::CreateInstance));
+  llvm::scope_exit cleanup{
+      [] { PluginManager::UnregisterPlugin(MockLanguage::CreateInstance); }};
   bool found = false;
   Language::ForEach([&](Language *language) {
     if (language->GetPluginName() == "mock-language")
@@ -45,12 +48,13 @@ TEST_F(LanguageTest, ForEachFindsLateRegisteredPlugin) {
     return IterationAction::Continue;
   });
   EXPECT_TRUE(found);
-  PluginManager::UnregisterPlugin(MockLanguage::CreateInstance);
 }
 
 TEST_F(LanguageTest, FindPluginSkipsUnregisteredPlugin) {
   ASSERT_TRUE(PluginManager::RegisterPlugin("mock-language", "",
                                             MockLanguage::CreateInstance));
+  llvm::scope_exit cleanup{
+      [] { PluginManager::UnregisterPlugin(MockLanguage::CreateInstance); }};
   Language *language = Language::FindPlugin(eLanguageTypeAda83);
   ASSERT_NE(language, nullptr);
   EXPECT_EQ(language->GetPluginName(), "mock-language");
@@ -62,12 +66,13 @@ TEST_F(LanguageTest, FindPluginSkipsUnregisteredPlugin) {
   ASSERT_TRUE(PluginManager::RegisterPlugin("mock-language", "",
                                             MockLanguage::CreateInstance));
   EXPECT_EQ(Language::FindPlugin(eLanguageTypeAda83), language);
-  PluginManager::UnregisterPlugin(MockLanguage::CreateInstance);
 }
 
 TEST_F(LanguageTest, FindPluginSkipsDisabledPlugin) {
   ASSERT_TRUE(PluginManager::RegisterPlugin("mock-language", "",
                                             MockLanguage::CreateInstance));
+  llvm::scope_exit cleanup{
+      [] { PluginManager::UnregisterPlugin(MockLanguage::CreateInstance); }};
   Language *language = Language::FindPlugin(eLanguageTypeAda83);
   ASSERT_NE(language, nullptr);
 
@@ -76,7 +81,6 @@ TEST_F(LanguageTest, FindPluginSkipsDisabledPlugin) {
 
   ASSERT_TRUE(PluginManager::SetLanguagePluginEnabled("mock-language", true));
   EXPECT_EQ(Language::FindPlugin(eLanguageTypeAda83), language);
-  PluginManager::UnregisterPlugin(MockLanguage::CreateInstance);
 }
 
 TEST_F(LanguageTest, SourceLanguage_GetDescription) {

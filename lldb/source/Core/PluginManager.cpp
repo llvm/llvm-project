@@ -962,30 +962,17 @@ class LanguageInstanceCache {
 public:
   Language *Get(lldb::LanguageType language) {
     std::lock_guard<std::mutex> guard(m_mutex);
-    auto it = m_active.find(language);
-    if (it != m_active.end())
-      return it->second;
-    return Create(language, GetLanguageInstances().GetCreateCallbacks());
+    return Lookup(language);
   }
 
   std::vector<Language *> GetAll() {
     std::lock_guard<std::mutex> guard(m_mutex);
-    if (!m_complete) {
-      llvm::SmallVector<LanguageCreateInstance> create_callbacks =
-          GetLanguageInstances().GetCreateCallbacks();
-      for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes;
-           ++lang) {
-        auto language = static_cast<lldb::LanguageType>(lang);
-        if (!m_active.count(language))
-          Create(language, create_callbacks);
-      }
-      m_complete = true;
-    }
-
     std::vector<Language *> instances;
-    instances.reserve(m_active.size());
-    for (const auto &entry : m_active)
-      instances.push_back(entry.second);
+    for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes;
+         ++lang) {
+      if (Language *instance = Lookup(static_cast<lldb::LanguageType>(lang)))
+        instances.push_back(instance);
+    }
     return instances;
   }
 
@@ -994,37 +981,35 @@ public:
   void Invalidate() {
     std::lock_guard<std::mutex> guard(m_mutex);
     m_active.clear();
-    m_complete = false;
   }
 
 private:
-  /// Returns the instance of the first plugin in \p create_callbacks that
-  /// supports \p language. The caller must hold m_mutex.
-  Language *Create(lldb::LanguageType language,
-                   llvm::ArrayRef<LanguageCreateInstance> create_callbacks) {
-    for (LanguageCreateInstance create_callback : create_callbacks) {
-      auto key = std::make_pair(create_callback, language);
-      auto it = m_created.find(key);
-      Language *instance =
-          it != m_created.end() ? it->second : create_callback(language);
-      if (!instance)
-        continue;
-      m_created[key] = instance;
-      m_active[language] = instance;
-      return instance;
+  /// Returns the instance of the first enabled plugin that supports
+  /// \p language, or nullptr. The caller must hold m_mutex.
+  Language *Lookup(lldb::LanguageType language) {
+    auto [active, inserted] = m_active.try_emplace(language, nullptr);
+    if (!inserted)
+      return active->second;
+    for (LanguageCreateInstance create_callback :
+         GetLanguageInstances().GetCreateCallbacks()) {
+      auto [created, is_new] =
+          m_created.try_emplace({create_callback, language}, nullptr);
+      if (is_new)
+        created->second = create_callback(language);
+      if (created->second)
+        return active->second = created->second;
     }
     return nullptr;
   }
 
   std::mutex m_mutex;
-  /// The instance of the enabled plugin that supports each language.
+  /// The instance of the first enabled plugin that supports each language,
+  /// or nullptr if none does.
   std::map<lldb::LanguageType, Language *> m_active;
-  /// Whether m_active has an entry for every language that an enabled plugin
-  /// supports.
-  bool m_complete = false;
-  /// Every instance that a plugin created, so that a plugin that is
-  /// unregistered and registered again, or disabled and enabled again,
-  /// gets the same instances.
+  /// The result of every create callback for every language, so that each
+  /// callback is called once per language and a plugin that is registered or
+  /// enabled again gets the same instances. This assumes that a create
+  /// callback's result only depends on the language.
   std::map<std::pair<LanguageCreateInstance, lldb::LanguageType>, Language *>
       m_created;
 };
