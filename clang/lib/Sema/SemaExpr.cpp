@@ -5195,6 +5195,7 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   }
 
   // If the base is a matrix type, try to create a new MatrixSubscriptExpr.
+  // TODO: Add cooperative-matrix single-index subscripting support.
   if (base->getType()->isMatrixType()) {
     if (CheckAndReportCommaError(ArgExprs.front()))
       return ExprError();

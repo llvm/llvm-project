@@ -2188,6 +2188,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     break;
   }
 
+  // TODO: Add CodeGen lowering for CoopMatrixCast to SPIR-V-friendly LLVM IR.
   case Type::CooperativeMatrix: {
     const auto *MT = cast<CooperativeMatrixType>(T);
     TypeInfo ElementInfo = getTypeInfo(MT->getElementType());

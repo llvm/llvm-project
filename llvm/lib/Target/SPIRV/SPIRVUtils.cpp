@@ -552,6 +552,7 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
          Name == "__translate_sampler_initializer";
 }
 
+// TODO: Add support for demangling cooperative matrix builtins.
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
   bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
