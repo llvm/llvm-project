@@ -100,11 +100,17 @@ static CFloat128ComplexType CMPLXF128(CFloat128Type r, CFloat128Type i) {
 
 /* RTNAME(SumComplex4) calls RTNAME(CppSumComplex4) with the same arguments
  * and converts the members of its C++ complex result to C _Complex.
+ *
+ * The C++ functions store their result through the first argument and return
+ * void, so they must be declared that way here. Declaring them as returning
+ * the struct changes the call's signature on targets that return structs
+ * through a hidden pointer argument: on WebAssembly the linker then sees two
+ * different function types for one name and replaces the call with a trap.
  */
 
 #define CPP_NAME(name) Cpp##name
 #define ADAPT_REDUCTION(name, cComplex, cpptype, cmplxMacro, ARGS, ARG_NAMES) \
-  struct cpptype RTNAME(CPP_NAME(name))(struct cpptype *, ARGS); \
+  void RTNAME(CPP_NAME(name))(struct cpptype *, ARGS); \
   cComplex RTNAME(name)(ARGS) { \
     struct cpptype result; \
     RTNAME(CPP_NAME(name))(&result, ARG_NAMES); \

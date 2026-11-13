@@ -56,9 +56,8 @@ CFloat128ComplexType RTNAME(ProductComplex16)(REDUCTION_ARGS);
 
 #define DOT_PRODUCT_ARGS \
   const struct CppDescriptor *x, const struct CppDescriptor *y, \
-      const char *source, int line, int dim /*=0*/, \
-      const struct CppDescriptor *mask /*=NULL*/
-#define DOT_PRODUCT_ARG_NAMES x, y, source, line, dim, mask
+      const char *source, int line
+#define DOT_PRODUCT_ARG_NAMES x, y, source, line
 
 float_Complex_t RTNAME(DotProductComplex2)(DOT_PRODUCT_ARGS);
 float_Complex_t RTNAME(DotProductComplex3)(DOT_PRODUCT_ARGS);
@@ -70,12 +69,11 @@ CFloat128ComplexType RTNAME(DotProductComplex16)(DOT_PRODUCT_ARGS);
 #endif
 
 #define REDUCE_ARGS(T, OP) \
-  OP operation, const struct CppDescriptor *x, const struct CppDescriptor *y, \
-      const char *source, int line, int dim /*=0*/, \
-      const struct CppDescriptor *mask /*=NULL*/, const T *identity /*=NULL*/, \
-      _Bool ordered /*=true*/
+  const struct CppDescriptor *array, OP operation, const char *source, \
+      int line, int dim /*=0*/, const struct CppDescriptor *mask /*=NULL*/, \
+      const T *identity /*=NULL*/, _Bool ordered /*=true*/
 #define REDUCE_ARG_NAMES \
-  operation, x, y, source, line, dim, mask, identity, ordered
+  array, operation, source, line, dim, mask, identity, ordered
 
 typedef float_Complex_t (*float_Complex_t_ref_op)(
     const float_Complex_t *, const float_Complex_t *);
@@ -122,12 +120,12 @@ CFloat128ComplexType RTNAME(ReduceComplex16Value)(
 #endif
 
 #define REDUCE_DIM_ARGS(T, OP) \
-  struct CppDescriptor *result, OP operation, const struct CppDescriptor *x, \
-      const struct CppDescriptor *y, const char *source, int line, int dim, \
+  struct CppDescriptor *result, const struct CppDescriptor *array, \
+      OP operation, const char *source, int line, int dim, \
       const struct CppDescriptor *mask /*=NULL*/, const T *identity /*=NULL*/, \
       _Bool ordered /*=true*/
 #define REDUCE_DIM_ARG_NAMES \
-  result, operation, x, y, source, line, dim, mask, identity, ordered
+  result, array, operation, source, line, dim, mask, identity, ordered
 
 void RTNAME(ReduceComplex2DimRef)(
     REDUCE_DIM_ARGS(float_Complex_t, float_Complex_t_ref_op));
