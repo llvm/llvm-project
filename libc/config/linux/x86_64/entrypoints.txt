@@ -275,7 +275,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
-    libc.src.stdlib.strfromf128
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -657,6 +656,13 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   )
 endif()
 
+if (LIBC_TYPES_HAS_NATIVE_FLOAT128)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h _Float128 entrypoints
+    libc.src.stdlib.strfromf128
+  )
+endif()
+
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
     libc.src.complex.cabs
@@ -737,6 +743,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
+    libc.src.math.dsubf128
     libc.src.math.dsubl
     libc.src.math.erff
     libc.src.math.exp
@@ -1160,7 +1167,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
-    libc.src.math.dsubf128
     libc.src.math.faddf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128

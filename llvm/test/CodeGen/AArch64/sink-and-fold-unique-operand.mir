@@ -20,12 +20,6 @@
 ...
 ---
 name:            f
-registers:
-  - { id: 0, class: gpr32, preferred-register: '', flags: [  ] }
-  - { id: 1, class: gpr64, preferred-register: '', flags: [  ] }
-  - { id: 2, class: gpr64all, preferred-register: '', flags: [  ] }
-  - { id: 3, class: gpr64common, preferred-register: '', flags: [  ] }
-  - { id: 4, class: gpr32, preferred-register: '', flags: [  ] }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
 body:             |

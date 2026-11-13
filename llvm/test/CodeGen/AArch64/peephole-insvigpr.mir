@@ -52,25 +52,6 @@
 ...
 ---
 name:            insert_vec_v6i64_uaddlv_from_v4i32
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: fpr128, preferred-register: '' }
-  - { id: 2, class: fpr64, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr128, preferred-register: '' }
-  - { id: 5, class: gpr64, preferred-register: '' }
-  - { id: 6, class: fpr128, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
-  - { id: 8, class: fpr64, preferred-register: '' }
-  - { id: 9, class: fpr128, preferred-register: '' }
-  - { id: 10, class: fpr128, preferred-register: '' }
-  - { id: 11, class: fpr128, preferred-register: '' }
-  - { id: 12, class: fpr64, preferred-register: '' }
-  - { id: 13, class: fpr128, preferred-register: '' }
-  - { id: 14, class: fpr128, preferred-register: '' }
-  - { id: 15, class: fpr128, preferred-register: '' }
-  - { id: 16, class: gpr64all, preferred-register: '' }
-  - { id: 17, class: fpr64, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
 body:             |
@@ -121,19 +102,6 @@ body:             |
 ...
 ---
 name:            insert_vec_v2i32_uaddlv_from_v8i16
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: fpr128, preferred-register: '' }
-  - { id: 2, class: fpr32, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr128, preferred-register: '' }
-  - { id: 5, class: gpr32, preferred-register: '' }
-  - { id: 6, class: fpr64, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
-  - { id: 9, class: fpr128, preferred-register: '' }
-  - { id: 10, class: fpr64, preferred-register: '' }
-  - { id: 11, class: fpr64, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
 body:             |
@@ -175,21 +143,6 @@ body:             |
 ...
 ---
 name:            insert_vec_v8i16_uaddlv_from_v8i16
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: fpr128, preferred-register: '' }
-  - { id: 2, class: fpr32, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr128, preferred-register: '' }
-  - { id: 5, class: gpr32, preferred-register: '' }
-  - { id: 6, class: fpr64, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
-  - { id: 9, class: fpr128, preferred-register: '' }
-  - { id: 10, class: fpr64, preferred-register: '' }
-  - { id: 11, class: fpr128, preferred-register: '' }
-  - { id: 12, class: fpr128, preferred-register: '' }
-  - { id: 13, class: gpr32, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
 body:             |
@@ -243,25 +196,6 @@ body:             |
 ...
 ---
 name:            insert_vec_v16i8_uaddlv_from_v4i32
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: fpr128, preferred-register: '' }
-  - { id: 2, class: fpr64, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr128, preferred-register: '' }
-  - { id: 5, class: gpr64all, preferred-register: '' }
-  - { id: 6, class: gpr32, preferred-register: '' }
-  - { id: 7, class: fpr64, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
-  - { id: 9, class: fpr128, preferred-register: '' }
-  - { id: 10, class: fpr128, preferred-register: '' }
-  - { id: 11, class: fpr64, preferred-register: '' }
-  - { id: 12, class: fpr64, preferred-register: '' }
-  - { id: 13, class: fpr64, preferred-register: '' }
-  - { id: 14, class: fpr64, preferred-register: '' }
-  - { id: 15, class: fpr128, preferred-register: '' }
-  - { id: 16, class: fpr128, preferred-register: '' }
-  - { id: 17, class: fpr128, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
 body:             |
@@ -319,16 +253,6 @@ body:             |
 ...
 ---
 name:            insert_vec_v2i32_uaddlv_from_v8i16_nz_index
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: fpr128, preferred-register: '' }
-  - { id: 2, class: fpr32, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr128, preferred-register: '' }
-  - { id: 5, class: gpr32, preferred-register: '' }
-  - { id: 6, class: fpr128, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
 body:             |
@@ -362,15 +286,6 @@ body:             |
 ...
 ---
 name:            insert_vec_from_gpr
-registers:
-  - { id: 0, class: gpr32, preferred-register: '' }
-  - { id: 1, class: gpr64common, preferred-register: '' }
-  - { id: 2, class: gpr64, preferred-register: '' }
-  - { id: 3, class: gpr64all, preferred-register: '' }
-  - { id: 4, class: gpr64common, preferred-register: '' }
-  - { id: 5, class: gpr64common, preferred-register: '' }
-  - { id: 6, class: fpr128, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -413,17 +328,6 @@ body:             |
 ---
 name:            fadd
 alignment:       4
-registers:
-  - { id: 0, class: fpr64, preferred-register: '' }
-  - { id: 1, class: fpr64, preferred-register: '' }
-  - { id: 2, class: fpr64, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr64, preferred-register: '' }
-  - { id: 5, class: fpr128, preferred-register: '' }
-  - { id: 6, class: fpr128, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
-  - { id: 9, class: fpr128, preferred-register: '' }
 liveins:
   - { reg: '$d0', virtual-reg: '%0' }
   - { reg: '$d1', virtual-reg: '%1' }
@@ -461,24 +365,6 @@ body:             |
 ...
 ---
 name:            asm
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: fpr64, preferred-register: '' }
-  - { id: 2, class: gpr64all, preferred-register: '' }
-  - { id: 3, class: gpr64sp, preferred-register: '' }
-  - { id: 4, class: fpr128, preferred-register: '' }
-  - { id: 5, class: fpr64, preferred-register: '' }
-  - { id: 6, class: fpr128, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
-  - { id: 9, class: fpr128, preferred-register: '' }
-  - { id: 10, class: fpr128, preferred-register: '' }
-  - { id: 11, class: fpr64, preferred-register: '' }
-  - { id: 12, class: fpr64, preferred-register: '' }
-  - { id: 13, class: fpr128, preferred-register: '' }
-  - { id: 14, class: fpr128, preferred-register: '' }
-  - { id: 15, class: gpr32all, preferred-register: '' }
-  - { id: 16, class: fpr32, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
 body:             |
@@ -491,13 +377,13 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[DEF]]
-    ; CHECK-NEXT: INLINEASM &"ldr ${0:s}, $1", mayload attdialect, regdef:FPR64, def %1, mem:m, [[COPY1]]
+    ; CHECK-NEXT: INLINEASM &"ldr ${0:s}, $1", mayload attdialect, regdef:FPR64, def %3, mem:m, [[COPY1]]
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY2]], %subreg.dsub
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], %1, %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], %3, %subreg.dsub
     ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
     ; CHECK-NEXT: [[TBLv8i8One:%[0-9]+]]:fpr64 = TBLv8i8One [[INSvi64lane]], [[DEF3]]
@@ -509,7 +395,7 @@ body:             |
     %0:gpr64common = COPY $x0
     %2:gpr64all = IMPLICIT_DEF
     %3:gpr64sp = COPY %2
-    INLINEASM &"ldr ${0:s}, $1", mayload attdialect, regdef:FPR64, def %1, mem:m, %3
+    INLINEASM &"ldr ${0:s}, $1", mayload attdialect, regdef:FPR64, def %1:fpr64, mem:m, %3
     %4:fpr128 = MOVIv2d_ns 0
     %5:fpr64 = COPY %4.dsub
     %7:fpr128 = IMPLICIT_DEF
@@ -524,19 +410,9 @@ body:             |
     %16:fpr32 = COPY %13.ssub
     STRSui %16, %0, 0 :: (store (s32) into %ir.hist)
     RET_ReallyLR
-
+...
 ---
 name:            insert_vec_from_gpr64_zero_high
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: gpr64common, preferred-register: '' }
-  - { id: 2, class: fpr64, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr128, preferred-register: '' }
-  - { id: 5, class: fpr64, preferred-register: '' }
-  - { id: 6, class: fpr128, preferred-register: '' }
-  - { id: 7, class: fpr128, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -547,16 +423,16 @@ body:             |
     ; CHECK-LABEL: name: insert_vec_from_gpr64_zero_high
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PTR:%[0-9]+]]:gpr64common = COPY $x0
-    ; CHECK-NEXT: [[VAL:%[0-9]+]]:gpr64common = COPY $x1
-    ; CHECK-NEXT: [[GPR:%[0-9]+]]:gpr64 = COPY [[VAL]]
-    ; CHECK-NEXT: [[FMOV:%[0-9]+]]:fpr64 = FMOVXDr [[GPR]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[FMOVXDr:%[0-9]+]]:fpr64 = FMOVXDr [[COPY2]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_LOW:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[FMOV]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[FMOVXDr]], %subreg.dsub
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_ZERO:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVID]], %subreg.dsub
-    ; CHECK-NEXT: STRQui [[INSERT_LOW]], [[PTR]], 0 :: (store (s128) into %ir.dst, align 8)
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[MOVID]], %subreg.dsub
+    ; CHECK-NEXT: STRQui [[INSERT_SUBREG]], [[COPY]], 0 :: (store (s128) into %ir.dst, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:gpr64common = COPY $x1

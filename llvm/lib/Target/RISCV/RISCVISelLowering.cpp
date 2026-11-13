@@ -12500,6 +12500,29 @@ static unsigned getRVPNarrowingOpcode(Intrinsic::ID IntNo) {
   }
 }
 
+static unsigned getRVPScalarNarrowingOpcode(Intrinsic::ID IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar narrowing intrinsic");
+  case Intrinsic::riscv_nclipu_u32:
+    return RISCVISD::NCLIPU;
+  case Intrinsic::riscv_nclipru_u32:
+    return RISCVISD::NCLIPRU;
+  case Intrinsic::riscv_nsrar_i32:
+    return RISCVISD::NSRAR;
+  case Intrinsic::riscv_nclip_i32:
+    return RISCVISD::NCLIP;
+  case Intrinsic::riscv_nclipr_i32:
+    return RISCVISD::NCLIPR;
+  }
+}
+
+static SDValue getRVPScalarNarrowingShiftAmount(SDValue ShAmt, const SDLoc &DL,
+                                                MVT VT, SelectionDAG &DAG) {
+  ShAmt = DAG.getAnyExtOrTrunc(ShAmt, DL, VT);
+  return DAG.getNode(ISD::AND, DL, VT, ShAmt, DAG.getConstant(63, DL, VT));
+}
+
 static SDValue lowerPZExt(SDValue Src, const SDLoc &DL, SelectionDAG &DAG,
                           const RISCVSubtarget &Subtarget) {
   MVT VT = Src.getSimpleValueType();
@@ -12771,9 +12794,10 @@ static SDValue lowerRV32HorizontalMul64(unsigned IntNo, SDValue Rs1,
   };
 
   if (Rs1.getSimpleValueType() == MVT::v2i16) {
+    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
     SDValue Res =
-        DAG.getNode(getRVPHorizontalMulOpcode(IntNo), DL, MVT::v2i32, Rs1, Rs2);
-    return DAG.getBitcast(MVT::i64, Res);
+        DAG.getNode(getRVPHorizontalMulOpcode(IntNo), DL, VTs, Rs1, Rs2);
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Res, Res.getValue(1));
   }
 
   if (Rs1.getSimpleValueType() == MVT::v4i16) {
@@ -12796,9 +12820,10 @@ static SDValue lowerRV32HorizontalMul64(unsigned IntNo, SDValue Rs1,
       AccOpc = RISCVISD::PM2WADDASU;
       break;
     }
-    SDValue Acc = DAG.getNode(MulOpc, DL, MVT::v2i32, Rs1Lo, Rs2Lo);
-    Acc = DAG.getNode(AccOpc, DL, MVT::v2i32, Acc, Rs1Hi, Rs2Hi);
-    return DAG.getBitcast(MVT::i64, Acc);
+    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
+    SDValue Acc = DAG.getNode(MulOpc, DL, VTs, Rs1Lo, Rs2Lo);
+    Acc = DAG.getNode(AccOpc, DL, VTs, Acc, Acc.getValue(1), Rs1Hi, Rs2Hi);
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Acc, Acc.getValue(1));
   }
 
   assert(Rs1.getSimpleValueType() == MVT::v2i32 &&
@@ -13428,6 +13453,19 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     SDValue ShAmt = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op.getOperand(2));
     return DAG.getNode(getRVPNarrowingOpcode(IntNo), DL, VT, Op.getOperand(1),
+                       ShAmt);
+  }
+  case Intrinsic::riscv_nclipu_u32:
+  case Intrinsic::riscv_nclipru_u32:
+  case Intrinsic::riscv_nsrar_i32:
+  case Intrinsic::riscv_nclip_i32:
+  case Intrinsic::riscv_nclipr_i32: {
+    assert(!Subtarget.is64Bit() &&
+           "RV64 should be handled during type legalization");
+    auto [Lo, Hi] = DAG.SplitScalar(Op.getOperand(1), DL, MVT::i32, MVT::i32);
+    SDValue ShAmt =
+        getRVPScalarNarrowingShiftAmount(Op.getOperand(2), DL, MVT::i32, DAG);
+    return DAG.getNode(getRVPScalarNarrowingOpcode(IntNo), DL, MVT::i32, Lo, Hi,
                        ShAmt);
   }
   case Intrinsic::riscv_psati:
@@ -18229,10 +18267,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Rs2 = N->getOperand(3);
       auto [RdLo, RdHi] =
           DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
-      SDValue Rd = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, RdLo, RdHi);
-      SDValue Res = DAG.getNode(getRVPHorizontalMulAccOpcode(IntNo), DL,
-                                MVT::v2i32, Rd, Rs1, Rs2);
-      Results.push_back(DAG.getBitcast(MVT::i64, Res));
+      SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
+      SDValue Res = DAG.getNode(getRVPHorizontalMulAccOpcode(IntNo), DL, VTs,
+                                {RdLo, RdHi, Rs1, Rs2});
+      Results.push_back(
+          DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Res, Res.getValue(1)));
       return;
     }
 
@@ -18353,14 +18392,15 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
       auto [RdLo, RdHi] =
           DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
-      SDValue Rd = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, RdLo, RdHi);
       unsigned AccOpc = IntNo == Intrinsic::riscv_pm4addau ? RISCVISD::PM2WADDAU
                         : IntNo == Intrinsic::riscv_pm4addasu
                             ? RISCVISD::PM2WADDASU
                             : RISCVISD::PM2WADDA;
-      SDValue Acc = DAG.getNode(AccOpc, DL, MVT::v2i32, Rd, Rs1Lo, Rs2Lo);
-      Acc = DAG.getNode(AccOpc, DL, MVT::v2i32, Acc, Rs1Hi, Rs2Hi);
-      Results.push_back(DAG.getBitcast(MVT::i64, Acc));
+      SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
+      SDValue Acc = DAG.getNode(AccOpc, DL, VTs, {RdLo, RdHi, Rs1Lo, Rs2Lo});
+      Acc = DAG.getNode(AccOpc, DL, VTs, {Acc, Acc.getValue(1), Rs1Hi, Rs2Hi});
+      Results.push_back(
+          DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Acc, Acc.getValue(1)));
       return;
     }
 
@@ -18659,6 +18699,44 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           Opc, DL, MVT::i64, Rs1,
           DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+    case Intrinsic::riscv_nclipu_u32:
+    case Intrinsic::riscv_nclipru_u32:
+    case Intrinsic::riscv_nsrar_i32:
+    case Intrinsic::riscv_nclip_i32:
+    case Intrinsic::riscv_nclipr_i32: {
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+
+      SDValue Src = N->getOperand(1);
+      SDValue ShAmt =
+          getRVPScalarNarrowingShiftAmount(N->getOperand(2), DL, MVT::i64, DAG);
+      bool IsSigned = IntNo == Intrinsic::riscv_nsrar_i32 ||
+                      IntNo == Intrinsic::riscv_nclip_i32 ||
+                      IntNo == Intrinsic::riscv_nclipr_i32;
+      bool IsRounding = IntNo == Intrinsic::riscv_nclipru_u32 ||
+                        IntNo == Intrinsic::riscv_nsrar_i32 ||
+                        IntNo == Intrinsic::riscv_nclipr_i32;
+
+      unsigned ShiftOpc;
+      if (IsRounding) {
+        ShAmt = DAG.getNegative(ShAmt, DL, MVT::i64);
+        ShiftOpc = IsSigned ? RISCVISD::SHAR : RISCVISD::SHLR;
+      } else {
+        ShiftOpc = IsSigned ? ISD::SRA : ISD::SRL;
+      }
+      SDValue Shifted = DAG.getNode(ShiftOpc, DL, MVT::i64, Src, ShAmt);
+
+      if (IntNo == Intrinsic::riscv_nsrar_i32) {
+        Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Shifted));
+        return;
+      }
+
+      SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
+      SDValue Clipped = DAG.getNode(ClipOpc, DL, MVT::v2i32, Shifted, Zero);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Clipped, 0));
       return;
     }
     case Intrinsic::riscv_mqwacc_i64:
@@ -31198,8 +31276,8 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
     // Mark RVV intrinsic as supported.
     if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID())) {
-      // GISel doesn't support tuple types yet. It also doesn't suport returning
-      // a struct containing a scalable vector like vleff.
+      // GISel doesn't support tuple types yet. It also doesn't support
+      // returning a struct containing a scalable vector like vleff.
       if (Inst.getType()->isRISCVVectorTupleTy() ||
           Inst.getType()->isStructTy())
         return true;

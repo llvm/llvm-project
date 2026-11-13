@@ -442,6 +442,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   separated from surrounding arguments by whitespace. Quoted arguments can no
   longer be split across multiple lines using a backslash.
 
+- `clang-dxc -spirv` without `-fspv-extension` now enables the SPIR-V
+  extensions that DXC implements, as `-fspv-extension=DXC` does, instead of all
+  extensions. `-fspv-extension=all` restores the previous behavior.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -825,6 +829,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   the no- prefix in the diagnostic and spelling suggestion.
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
+
+- `-Wunsequenced` now diagnoses unsequenced volatile accesses.
 
 ### Improvements to Clang's time-trace
 
