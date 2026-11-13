@@ -1227,6 +1227,15 @@ ELFObjectFile<ELFT>::ELFObjectFile(ELFObjectFile<ELFT> &&Other)
 
 template <class ELFT>
 basic_symbol_iterator ELFObjectFile<ELFT>::symbol_begin() const {
+  if (DotSymtabSec && (DotSymtabSec->sh_flags & ELF::SHF_COMPRESSED)) {
+    auto SymsOrErr = EF.symbols(DotSymtabSec);
+    if (!SymsOrErr) {
+      consumeError(SymsOrErr.takeError());
+      return basic_symbol_iterator(SymbolRef(toDRI(DotSymtabSec, 0), this));
+    }
+    DataRefImpl Sym = toDRI(DotSymtabSec, SymsOrErr->size() >= 1 ? 1 : 0);
+    return basic_symbol_iterator(SymbolRef(Sym, this));
+  }
   DataRefImpl Sym =
       toDRI(DotSymtabSec,
             DotSymtabSec && DotSymtabSec->sh_size >= sizeof(Elf_Sym) ? 1 : 0);
@@ -1238,6 +1247,15 @@ basic_symbol_iterator ELFObjectFile<ELFT>::symbol_end() const {
   const Elf_Shdr *SymTab = DotSymtabSec;
   if (!SymTab)
     return symbol_begin();
+  if (SymTab->sh_flags & ELF::SHF_COMPRESSED) {
+    auto SymsOrErr = EF.symbols(SymTab);
+    if (!SymsOrErr) {
+      consumeError(SymsOrErr.takeError());
+      return symbol_begin();
+    }
+    DataRefImpl Sym = toDRI(SymTab, SymsOrErr->size());
+    return basic_symbol_iterator(SymbolRef(Sym, this));
+  }
   DataRefImpl Sym = toDRI(SymTab, SymTab->sh_size / sizeof(Elf_Sym));
   return basic_symbol_iterator(SymbolRef(Sym, this));
 }

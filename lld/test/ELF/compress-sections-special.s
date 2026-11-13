@@ -10,8 +10,8 @@
 # CHECK-NEXT: .shstrtab  STRTAB   0000000000000000 [[#%x,]] [[#%x,]] 00     0 0  1
 # CHECK-NEXT: .strtab    STRTAB   0000000000000000 [[#%x,]] [[#%x,]] 00  C  0 0  1
 
-## TODO Add compressed SHT_STRTAB/SHT_SYMTAB support to llvm-readelf
-# CHECK:      warning: {{.*}}: unable to get the string table for the SHT_SYMTAB section: SHT_STRTAB string table section
+# CHECK:      Symbol table '.symtab' contains 8 entries:
+# CHECK:      _start
 
 # CHECK:      Hex dump of section '.strtab':
 # CHECK-NEXT: 01000000 00000000 5c000000 00000000

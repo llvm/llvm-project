@@ -859,6 +859,28 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
 }
 
 template <class ELFT>
+Expected<ArrayRef<uint8_t>>
+ELFFile<ELFT>::getDecompressedSectionContents(const Elf_Shdr &Sec) const {
+  if (!(Sec.sh_flags & llvm::ELF::SHF_COMPRESSED))
+    return getSectionContents(Sec);
+  auto It = DecompressedSections.find(&Sec);
+  if (It != DecompressedSections.end())
+    return It->second;
+
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  auto DecompressorOrErr = Decompressor::create("", toStringRef(*ContentsOrErr),
+                                                isLE(), ELFT::Is64Bits);
+  if (!DecompressorOrErr)
+    return DecompressorOrErr.takeError();
+  std::vector<uint8_t> Buf(DecompressorOrErr->getDecompressedSize());
+  if (Error Err = DecompressorOrErr->decompress(Buf))
+    return std::move(Err);
+  return DecompressedSections.try_emplace(&Sec, std::move(Buf)).first->second;
+}
+
+template <class ELFT>
 Expected<std::vector<BBAddrMap>>
 ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec,
                                std::vector<PGOAnalysisMap> *PGOAnalyses) const {
