@@ -24,9 +24,12 @@ let Namespace = "Arch" in {
   def V3 : Register<"v3">;
   def V4 : Register<"v4">;
   def V5 : Register<"v5">;
+  def V6 : Register<"v6">;
+  def V7 : Register<"v7">;
   def V0M2 : Register<"v0">;
   def V2M2 : Register<"v2">;
   def V4M2 : Register<"v4">;
+  def V6M2 : Register<"v6">;
   def V0M4 : Register<"v0">;
   def V4M4 : Register<"v4">;
 }
@@ -44,8 +47,9 @@ def YGPR : RegisterClass<"Arch", [i64], 64, (add R0_Y, R1_Y)> {
 /// Only the even/4-aligned registers in VR have counterparts in VRM2/VRM4.
 /// V0M4 interleaves between V0M2 and V2M2 in enum order, so VRM2 falls back to
 /// a switch while VRM4 uses strided arithmetic.
-def VR : RegisterClass<"Arch", [v2i32], 64, (add V0, V1, V2, V3, V4, V5)>;
-def VRM2 : RegisterClass<"Arch", [v4i32], 128, (add V0M2, V2M2, V4M2)> {
+def VR : RegisterClass<"Arch", [v2i32], 64,
+                       (add V0, V1, V2, V3, V4, V5, V6, V7)>;
+def VRM2 : RegisterClass<"Arch", [v4i32], 128, (add V0M2, V2M2, V4M2, V6M2)> {
   let CoerceFromRegClass = VR;
 }
 def VRM4 : RegisterClass<"Arch", [v8i32], 256, (add V0M4, V4M4)> {
@@ -108,6 +112,7 @@ def BadRC : RegisterClass<"Arch", [i64], 64, (add R0_Y, R0)> {
 // CHECK-NEXT:    case Arch::V0: return Arch::V0M2;
 // CHECK-NEXT:    case Arch::V2: return Arch::V2M2;
 // CHECK-NEXT:    case Arch::V4: return Arch::V4M2;
+// CHECK-NEXT:    case Arch::V6: return Arch::V6M2;
 // CHECK-NEXT:    default: llvm_unreachable("unexpected register");
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
