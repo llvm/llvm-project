@@ -6778,10 +6778,17 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone()));
+      VPValue *Start = PhiR->getStartValue();
+      // Constant start values fold into the start vector. With VF 1, seeding
+      // each part with the identity can let SLP vectorize the loop anyway.
+      if (TTI.preferReductionStartAfterLoop() && MinVF.isVector() &&
+          !isa<VPConstant>(Start) &&
+          vputils::createReductionStartOp(FinalReductionResult, Start))
+        Start = Iden;
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
-      VPValue *StartV = PHBuilder.createNaryOp(
-          VPInstruction::ReductionStartVector,
-          {PhiR->getStartValue(), Iden, ScaleFactorVPV}, *PhiR);
+      VPValue *StartV =
+          PHBuilder.createNaryOp(VPInstruction::ReductionStartVector,
+                                 {Start, Iden, ScaleFactorVPV}, *PhiR);
       PhiR->setOperand(0, StartV);
     }
   }
@@ -7351,11 +7358,19 @@ static void preparePlanForEpilogueVectorLoop(
                  "(or negative zero)");
 
           Sub->setOperand(0, ResumeVPV);
+        } else if (VPInstruction *StartOp =
+                       vputils::findReductionStartOp(RdxResult)) {
+          StartOp->setOperand(1, ResumeVPV);
         } else {
+          // The original start may be a constant, but the resume value is not.
+          VPValue *NewStartV = ResumeVPV;
+          if (Config.getTTI().preferReductionStartAfterLoop() &&
+              vputils::createReductionStartOp(RdxResult, ResumeVPV))
+            NewStartV = VPI->getOperand(1);
           // The start vector may be shared by multiple reductions, so create
-          // a new one using the resume.
+          // a new one.
           auto *NewStart = cast<VPInstruction>(VPI->clone());
-          NewStart->setOperand(0, ResumeVPV);
+          NewStart->setOperand(0, NewStartV);
           NewStart->insertBefore(VPI);
           ReductionPhi->setStartValue(NewStart);
         }

@@ -5765,6 +5765,12 @@ static void updatePartialReductionPhiAndResult(VPlan &Plan,
   // Replace reduction_result by 'sub (startval, reductionresult)'.
   VPInstruction *RdxResult = vputils::findComputeReductionResult(Phi);
   assert(RdxResult && "Could not find reduction result");
+  // Fold the start op, if any, into the subtraction.
+  if (VPInstruction *StartOp = vputils::findReductionStartOp(RdxResult)) {
+    OldStartValue = StartOp->getOperand(1);
+    StartOp->replaceAllUsesWith(RdxResult);
+    StartOp->eraseFromParent();
+  }
 
   VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
   unsigned SubOpc = RK == RecurKind::FSub ? Instruction::BinaryOps::FSub
@@ -5920,7 +5926,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       // Check if the compute-reduction-result is used by a sunk store.
       // TODO: Also form partial reductions in those cases.
       if (auto *RdxResult = vputils::findComputeReductionResult(RedPhiR)) {
-        if (any_of(RdxResult->users(), [](VPUser *U) {
+        VPValue *Result = RdxResult;
+        if (VPInstruction *StartOp = vputils::findReductionStartOp(RdxResult))
+          Result = StartOp;
+        if (any_of(Result->users(), [](VPUser *U) {
               auto *RepR = dyn_cast<VPReplicateRecipe>(U);
               return RepR && RepR->getOpcode() == Instruction::Store;
             })) {

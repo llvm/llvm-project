@@ -884,6 +884,39 @@ VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
   return findSingleUser<VPInstruction::ComputeReductionResult>(SelR);
 }
 
+static unsigned getReductionStartOpcode(RecurKind RK) {
+  // The lanes of a sub reduction hold negated sums: add the start value.
+  if (RecurrenceDescriptor::isSubRecurrenceKind(RK))
+    return RK == RecurKind::Sub ? Instruction::Add : Instruction::FAdd;
+  return RecurrenceDescriptor::getOpcode(RK);
+}
+
+VPInstruction *vputils::createReductionStartOp(VPInstruction *RdxResult,
+                                               VPValue *Start) {
+  if (RdxResult->getOpcode() != VPInstruction::ComputeReductionResult ||
+      RdxResult->isReductionInLoop() ||
+      RdxResult->getScalarType() != Start->getScalarType())
+    return nullptr;
+  RecurKind RK = RdxResult->getRecurKind();
+  unsigned Opc = getReductionStartOpcode(RK);
+  VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)
+                        ? VPIRFlags(RdxResult->getFastMathFlagsOrNone())
+                        : VPIRFlags::getDefaultFlags(Opc);
+  VPInstruction *StartOp = VPBuilder::getToInsertAfter(RdxResult).createNaryOp(
+      Opc, {RdxResult, Start}, Flags, RdxResult->getDebugLoc(), "rdx.start");
+  RdxResult->replaceUsesWithIf(StartOp, not_equal_to(StartOp));
+  return StartOp;
+}
+
+VPInstruction *vputils::findReductionStartOp(VPInstruction *RdxResult) {
+  auto *StartOp = dyn_cast_or_null<VPInstruction>(RdxResult->getSingleUser());
+  if (StartOp && StartOp->getOperand(0) == RdxResult &&
+      StartOp->getOpcode() ==
+          getReductionStartOpcode(RdxResult->getRecurKind()))
+    return StartOp;
+  return nullptr;
+}
+
 bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   SmallPtrSet<const VPValue *, 4> Seen;
   SmallVector<const VPValue *> WorkList = {V};

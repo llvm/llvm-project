@@ -181,6 +181,15 @@ bool isUsedByLoadStoreAddress(const VPValue *V);
 /// inserted for predicated reductions or tail folding.
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
+/// Applies \p Start to the reduction result \p RdxResult after the loop and
+/// replaces the other users of \p RdxResult with it, for a reduction seeded
+/// with the identity. Returns nullptr for in-loop reductions and reductions
+/// performed in a narrower type.
+VPInstruction *createReductionStartOp(VPInstruction *RdxResult, VPValue *Start);
+
+/// Returns the op created by createReductionStartOp for \p RdxResult, if any.
+VPInstruction *findReductionStartOp(VPInstruction *RdxResult);
+
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
 
