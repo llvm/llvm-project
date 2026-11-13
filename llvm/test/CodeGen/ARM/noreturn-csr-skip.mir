@@ -24,7 +24,7 @@ body: |
   bb.0:
     $r4 = IMPLICIT_DEF
     tBX_RET 14, $noreg
----
+...
 ---
 # This function may return. Check that $r4 is saved and restored.
 # CHECK-LABEL: name: ret
@@ -35,7 +35,7 @@ body: |
   bb.0:
     $r4 = IMPLICIT_DEF
     tBX_RET 14, $noreg
----
+...
 ---
 # This function needs correct unwind tables anyway. Check that $r4 is saved and
 # restored.
@@ -47,7 +47,7 @@ body: |
   bb.0:
     $r4 = IMPLICIT_DEF
     tBX_RET 14, $noreg
----
+...
 ---
 # This function does not return. We need not save any CSR, but
 # other stack adjustments in the prologue are still necessary.
@@ -62,4 +62,4 @@ body: |
   bb.0:
     $r4 = IMPLICIT_DEF
     tBX_RET 14, $noreg
----
+...
