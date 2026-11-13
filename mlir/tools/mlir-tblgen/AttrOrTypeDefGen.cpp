@@ -10,6 +10,7 @@
 #include "CppGenUtilities.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
@@ -321,7 +322,8 @@ static std::string formatExtraDefinitions(const AttrOrTypeDef &def) {
     extraDefinitions.push_back(*extraDef);
   }
   FmtContext ctx = FmtContext().addSubst("cppClass", def.getCppClassName());
-  return tgfmt(llvm::join(extraDefinitions, "\n"), &ctx).str();
+  return tgfmtOrFatal(FmtOrigin::at(def.getLoc(), "attribute/type template"),
+                      llvm::join(extraDefinitions, "\n"), ctx);
 }
 
 void DefGen::emitTopLevelDeclarations() {
@@ -401,7 +403,11 @@ void DefGen::emitInvariantsVerifierImpl() {
     FmtContext ctx;
     // Note: Skip over the first method parameter (`emitError`).
     ctx.withSelf(builderParams[it.index() + 1].getName());
-    std::string condition = tgfmt(constraint->getConditionTemplate(), &ctx);
+    std::string condition =
+        tgfmtOrFatal(FmtOrigin::at(constraint->getDef().getLoc(),
+                                   "parameter constraint predicate")
+                         .withUse(def.getLoc(), "attribute/type verifier"),
+                     constraint->getConditionTemplate(), ctx);
     verifier->body() << formatv(patternParameterVerificationCode, condition,
                                 param.getName(), constraint->getSummary())
                      << "\n";
@@ -416,12 +422,17 @@ void DefGen::emitInvariantsVerifierImpl() {
     }
     for (const Trait &trait : def.getTraits()) {
       if (auto *t = dyn_cast<PredTrait>(&trait)) {
-        verifier->body() << tgfmt(
+        verifier->body() << tgfmtOrFatal(
+            FmtOrigin::at(def.getLoc(), "attribute/type template"),
             "if (!($0)) {\n"
             "  emitError() << \"failed to verify that $1\";\n"
             "  return ::mlir::failure();\n"
             "}\n",
-            &traitCtx, tgfmt(t->getPredTemplate(), &traitCtx), t->getSummary());
+            traitCtx,
+            tgfmtOrFatal(FmtOrigin::at(t->getDef().getLoc(), "trait predicate")
+                             .withUse(def.getLoc(), "attribute/type verifier"),
+                         t->getPredTemplate(), traitCtx),
+            t->getSummary());
       }
     }
   }
@@ -619,7 +630,9 @@ void DefGen::emitCustomBuilder(const AttrOrTypeBuilder &builder) {
   ctx.addSubst("_get", "Base::get");
   if (!builder.hasInferredContextParameter())
     ctx.addSubst("_ctxt", "context");
-  std::string bodyStr = tgfmt(*builder.getBody(), &ctx);
+  std::string bodyStr =
+      tgfmtOrFatal(FmtOrigin::at(def.getLoc(), "attribute/type template"),
+                   *builder.getBody(), ctx);
   m->body().indent().getStream().printReindented(bodyStr);
 }
 
@@ -660,7 +673,8 @@ void DefGen::emitCheckedCustomBuilder(const AttrOrTypeBuilder &builder) {
     ctx.addSubst("_ctxt", "context");
   std::string bodyStr = replaceInStr(builder.getBody()->str(), "$_get(",
                                      "Base::getChecked(emitError, ");
-  bodyStr = tgfmt(bodyStr, &ctx);
+  bodyStr = tgfmtOrFatal(FmtOrigin::at(def.getLoc(), "attribute/type template"),
+                         bodyStr, ctx);
   m->body().indent().getStream().printReindented(bodyStr);
 }
 
@@ -762,7 +776,8 @@ void DefGen::emitEquals() {
   const auto eachFn = [&](auto it) {
     FmtContext ctx({{"_lhs", it.value().getName()},
                     {"_rhs", strfmt("std::get<{0}>(tblgenKey)", it.index())}});
-    body << tgfmt(it.value().getComparator(), &ctx);
+    body << tgfmtOrFatal(FmtOrigin::at(def.getLoc(), "attribute/type template"),
+                         it.value().getComparator(), ctx);
   };
   llvm::interleave(llvm::enumerate(params), body, eachFn, ") && (");
 }
@@ -797,7 +812,10 @@ void DefGen::emitConstruct() {
     for (auto &param : params) {
       if (std::optional<StringRef> allocCode = param.getAllocator()) {
         ctx.withSelf(param.getName()).addSubst("_dst", param.getName());
-        body << tgfmt(*allocCode, &ctx) << '\n';
+        body << tgfmtOrFatal(
+                    FmtOrigin::at(def.getLoc(), "attribute/type template"),
+                    *allocCode, ctx)
+             << '\n';
       }
     }
     auto scope =
@@ -1337,7 +1355,9 @@ return ({3});
   for (Constraint constr : constraints) {
     FmtContext ctx;
     ctx.withSelf(selfName);
-    std::string condition = tgfmt(constr.getConditionTemplate(), &ctx);
+    std::string condition = tgfmtOrFatal(
+        FmtOrigin::at(constr.getDef().getLoc(), "constraint predicate"),
+        constr.getConditionTemplate(), ctx);
     os << strfmt(constraintDef, *constr.getCppFunctionName(), parameterTypeName,
                  selfName, condition);
   }

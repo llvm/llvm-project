@@ -2145,10 +2145,10 @@ def MixedVResultOp3 : TEST_PatternOp<"mixed_variadic_out3",
     OpBuilder<(ins "::mlir::IntegerAttr":$count),
     [{
       auto i32Type = $_builder.getIntegerType(32);
-      $_state.addTypes(i32Type); // $output1
+      $_state.addTypes(i32Type); // $$output1
       SmallVector<Type, 4> types(count.getInt(), i32Type);
-      $_state.addTypes(types); // $output2
-      $_state.addTypes(types); // $output3
+      $_state.addTypes(types); // $$output2
+      $_state.addTypes(types); // $$output3
       $_state.addAttribute("count", count);
     }]>
   ];

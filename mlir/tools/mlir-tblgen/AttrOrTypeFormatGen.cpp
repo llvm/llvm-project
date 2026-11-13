@@ -10,6 +10,7 @@
 #include "FormatGen.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -58,18 +59,22 @@ public:
   StringRef getName() const { return param.getName(); }
 
   /// Return the code to check whether the parameter is present.
-  auto genIsPresent(FmtContext &ctx, const Twine &self) const {
+  auto genIsPresent(const FmtOrigin &origin, const FmtContext &baseCtx,
+                    const Twine &self) const {
+    // Comparator-only bindings must not escape into the next parameter.
+    FmtContext ctx(baseCtx);
     assert(isOptional() && "cannot guard on a mandatory parameter");
-    std::string valueStr = tgfmt(*param.getDefaultValue(), &ctx).str();
+    std::string valueStr = tgfmtOrFatal(origin, *param.getDefaultValue(), ctx);
     ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
-    return tgfmt(getParam().getComparator(), &ctx);
+    return tgfmtOrFatal(origin, getParam().getComparator(), ctx);
   }
 
   /// Generate the code to check whether the parameter should be printed.
-  MethodBody &genPrintGuard(FmtContext &ctx, MethodBody &os) const {
+  MethodBody &genPrintGuard(const FmtOrigin &origin, const FmtContext &ctx,
+                            MethodBody &os) const {
     assert(isOptional() && "cannot guard on a mandatory parameter");
     std::string self = param.getAccessorName() + "()";
-    return os << "!(" << genIsPresent(ctx, self) << ")";
+    return os << "!(" << genIsPresent(origin, ctx, self) << ")";
   }
 
 private:
@@ -182,7 +187,6 @@ public:
     return llvm::any_of(getElements(), formatIsOptional);
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -241,6 +245,10 @@ public:
   void genPrinter(MethodBody &os);
 
 private:
+  FmtOrigin getFmtOrigin() const {
+    return FmtOrigin::at(def.getLoc(), "attribute/type assembly format");
+  }
+
   /// Generate the parser code for a specific format element.
   void genElementParser(FormatElement *el, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for a literal.
@@ -315,7 +323,8 @@ private:
 /// Generate a special-case "parser" for an attribute's self type parameter. The
 /// self type parameter has special handling in the assembly format in that it
 /// is derived from the optional trailing colon type after the attribute.
-static void genAttrSelfTypeParser(MethodBody &os, const FmtContext &ctx,
+static void genAttrSelfTypeParser(const FmtOrigin &origin, MethodBody &os,
+                                  const FmtContext &ctx,
                                   const AttributeSelfTypeParameter &param) {
   // "Parser" for an attribute self type parameter that checks the
   // optionally-parsed trailing colon type.
@@ -339,9 +348,10 @@ if ($_type) {
   return {};
 })";
 
-  os << tgfmt(selfTypeParser, &ctx, param.getCppStorageType(), param.getName());
+  os << tgfmtOrFatal(origin, selfTypeParser, ctx, param.getCppStorageType(),
+                     param.getName());
   if (!param.isOptional())
-    os << tgfmt(selfTypeRequired, &ctx);
+    os << tgfmtOrFatal(origin, selfTypeRequired, ctx);
   os << "\n";
 }
 
@@ -357,9 +367,10 @@ void DefFormat::genParser(MethodBody &os) {
 
   // Store the initial location of the parser.
   ctx.addSubst("_loc", "odsLoc");
-  os << tgfmt("::llvm::SMLoc $_loc = $_parser.getCurrentLocation();\n"
-              "(void) $_loc;\n",
-              &ctx);
+  os << tgfmtOrFatal(getFmtOrigin(),
+                     "::llvm::SMLoc $_loc = $_parser.getCurrentLocation();\n"
+                     "(void) $_loc;\n",
+                     ctx);
 
   // Declare variables to store all of the parameters. Allocated parameters
   // such as `ArrayRef` and `StringRef` must provide a `storageType`. Store
@@ -370,7 +381,7 @@ void DefFormat::genParser(MethodBody &os) {
     os << formatv("::mlir::FailureOr<{0}> _result_{1};\n",
                   param.getCppStorageType(), param.getName());
     if (auto *selfTypeParam = dyn_cast<AttributeSelfTypeParameter>(&param))
-      genAttrSelfTypeParser(os, ctx, *selfTypeParam);
+      genAttrSelfTypeParser(getFmtOrigin(), os, ctx, *selfTypeParam);
   }
 
   // Generate call to each parameter parser.
@@ -388,11 +399,13 @@ void DefFormat::genParser(MethodBody &os) {
   // Generate call to the attribute or type builder. Use the checked getter
   // if one was generated.
   if (def.genVerifyDecl() || def.genVerifyInvariantsImpl()) {
-    os << tgfmt("return $_parser.getChecked<$0>($_loc, $_parser.getContext()",
-                &ctx, def.getCppClassName());
+    os << tgfmtOrFatal(
+        getFmtOrigin(),
+        "return $_parser.getChecked<$0>($_loc, $_parser.getContext()", ctx,
+        def.getCppClassName());
   } else {
-    os << tgfmt("return $0::get($_parser.getContext()", &ctx,
-                def.getCppClassName());
+    os << tgfmtOrFatal(getFmtOrigin(), "return $0::get($_parser.getContext()",
+                       ctx, def.getCppClassName());
   }
   for (const AttrOrTypeParameter &param : params) {
     os << ",\n    ";
@@ -400,13 +413,14 @@ void DefFormat::genParser(MethodBody &os) {
     llvm::raw_string_ostream selfOs(paramSelfStr);
     if (std::optional<StringRef> defaultValue = param.getDefaultValue()) {
       selfOs << formatv("(_result_{0}.value_or(", param.getName())
-             << tgfmt(*defaultValue, &ctx) << "))";
+             << tgfmtOrFatal(getFmtOrigin(), *defaultValue, ctx) << "))";
     } else {
       selfOs << formatv("(*_result_{0})", param.getName());
     }
     ctx.addSubst(param.getName(), selfOs.str());
     os << param.getCppType() << "("
-       << tgfmt(param.getConvertFromStorage(), &ctx.withSelf(selfOs.str()))
+       << tgfmtOrFatal(getFmtOrigin(), param.getConvertFromStorage(),
+                       ctx.withSelf(selfOs.str()))
        << ")";
   }
   os << ");";
@@ -435,7 +449,7 @@ void DefFormat::genElementParser(FormatElement *el, FmtContext &ctx,
 void DefFormat::genLiteralParser(StringRef value, FmtContext &ctx,
                                  MethodBody &os, bool isOptional) {
   os << "// Parse literal '" << value << "'\n";
-  os << tgfmt("if ($_parser.parse", &ctx);
+  os << tgfmtOrFatal(getFmtOrigin(), "if ($_parser.parse", ctx);
   if (isOptional)
     os << "Optional";
   if (value.front() == '_' || isalpha(value.front())) {
@@ -497,10 +511,11 @@ void DefFormat::genVariableParser(ParameterElement *el, FmtContext &ctx,
       }
     }
   }
-  os << formatv(variableParser, param.getName(),
-                tgfmt(parser, &ctx, param.getCppStorageType()),
-                tgfmt(parserErrorStr, &ctx), def.getName(), param.getCppType(),
-                dialectLoading);
+  os << formatv(
+      variableParser, param.getName(),
+      tgfmtOrFatal(getFmtOrigin(), parser, ctx, param.getCppStorageType()),
+      tgfmtOrFatal(getFmtOrigin(), parserErrorStr, ctx), def.getName(),
+      param.getCppType(), dialectLoading);
 }
 
 void DefFormat::genStructParameterParser(ParameterElement *el, FmtContext &ctx,
@@ -518,10 +533,12 @@ void DefFormat::genStructParameterParser(ParameterElement *el, FmtContext &ctx,
   llvm::raw_string_ostream parserOS(parser);
   parserOS << "[&]() -> ::mlir::FailureOr<" << param.getCppStorageType()
            << "> {\n  auto odsEnumValue = "
-           << tgfmt(defaultParameterParser, &ctx, enumType)
+           << tgfmtOrFatal(getFmtOrigin(), defaultParameterParser, ctx,
+                           enumType)
            << ";\n  if (::mlir::failed(odsEnumValue))\n"
               "    return ::mlir::failure();\n  return "
-           << param.getCppStorageType() << "::get(" << tgfmt("$_ctxt", &ctx)
+           << param.getCppStorageType() << "::get("
+           << tgfmtOrFatal(getFmtOrigin(), "$_ctxt", ctx)
            << ", *odsEnumValue);\n}()";
   genVariableParser(el, ctx, os, parserOS.str());
 }
@@ -558,7 +575,8 @@ void DefFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
     if (el->isOptional()) {
       os << formatv("if (::mlir::succeeded(_result_{0}) && !({1})) {{\n",
                     el->getName(),
-                    el->genIsPresent(ctx, "(*_result_" + el->getName() + ")"));
+                    el->genIsPresent(getFmtOrigin(), ctx,
+                                     "(*_result_" + el->getName() + ")"));
       os.indent();
     }
     if (it <= lastReqIt) {
@@ -682,7 +700,8 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
     os.unindent() << "} else ";
     // Print the check for duplicate or unknown parameter.
   }
-  os.getStream().printReindented(strfmt(loopEnd, tgfmt(parserErrorStr, &ctx)));
+  os.getStream().printReindented(
+      strfmt(loopEnd, tgfmtOrFatal(getFmtOrigin(), parserErrorStr, ctx)));
   os << "return true;\n";
   os.unindent() << "};\n";
 
@@ -692,17 +711,18 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
   if (numOptional) {
     // If the struct itself is optional, pull out the first iteration.
     if (numOptional == el->getNumElements()) {
-      os.getStream().printReindented(tgfmt(optionalStructFirst, &ctx).str());
+      os.getStream().printReindented(
+          tgfmtOrFatal(getFmtOrigin(), optionalStructFirst, ctx));
       os.indent();
     } else {
       os << "do {\n";
     }
   } else {
     os.getStream().printReindented(
-        tgfmt(loopHeader, &ctx, el->getNumElements()).str());
+        tgfmtOrFatal(getFmtOrigin(), loopHeader, ctx, el->getNumElements()));
   }
   os.indent();
-  os.getStream().printReindented(tgfmt(loopStart, &ctx).str());
+  os.getStream().printReindented(tgfmtOrFatal(getFmtOrigin(), loopStart, ctx));
   os.unindent();
 
   // Print the loop terminator. For optional parameters, we have to check that
@@ -713,13 +733,15 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
       os << "}\n";
       os.unindent() << "}\n";
     } else {
-      os << tgfmt("} while(!$_parser.parseOptionalComma());\n", &ctx);
+      os << tgfmtOrFatal(getFmtOrigin(),
+                         "} while(!$_parser.parseOptionalComma());\n", ctx);
       for (FormatElement *arg : el->getElements()) {
         ParameterElement *param = getEncapsulatedParameterElement(arg);
         if (param->isOptional())
           continue;
         os.getStream().printReindented(
-            strfmt(checkParam, param->getName(), tgfmt(parserErrorStr, &ctx)));
+            strfmt(checkParam, param->getName(),
+                   tgfmtOrFatal(getFmtOrigin(), parserErrorStr, ctx)));
       }
     }
   } else {
@@ -741,9 +763,12 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
   // Bound variables are passed directly to the parser as `FailureOr<T> &`.
   // Referenced variables are passed as `T`. The custom parser fails if it
   // returns failure or if any of the required parameters failed.
-  os << tgfmt("auto odsCustomLoc = $_parser.getCurrentLocation();\n", &ctx);
+  os << tgfmtOrFatal(getFmtOrigin(),
+                     "auto odsCustomLoc = $_parser.getCurrentLocation();\n",
+                     ctx);
   os << "(void)odsCustomLoc;\n";
-  os << tgfmt("auto odsCustomResult = parse$0($_parser", &ctx, el->getName());
+  os << tgfmtOrFatal(getFmtOrigin(), "auto odsCustomResult = parse$0($_parser",
+                     ctx, el->getName());
   os.indent();
   for (FormatElement *arg : el->getElements()) {
     os << ",\n";
@@ -753,7 +778,8 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
     else if (auto *ref = dyn_cast<RefDirective>(arg))
       os << "*_result_" << cast<ParameterElement>(ref->getArg())->getName();
     else
-      os << tgfmt(cast<StringElement>(arg)->getValue(), &ctx);
+      os << tgfmtOrFatal(getFmtOrigin(), cast<StringElement>(arg)->getValue(),
+                         ctx);
   }
   os.unindent() << ");\n";
   if (isOptional) {
@@ -767,7 +793,8 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
       if (param->isOptional())
         continue;
       os << formatv("if (::mlir::failed(_result_{0})) {{\n", param->getName());
-      os.indent() << tgfmt("$_parser.emitError(odsCustomLoc, ", &ctx)
+      os.indent() << tgfmtOrFatal(getFmtOrigin(),
+                                  "$_parser.emitError(odsCustomLoc, ", ctx)
                   << "\"custom parser failed to parse parameter '"
                   << param->getName() << "'\");\n";
       os << "return " << (isOptional ? "::mlir::failure()" : "{}") << ";\n";
@@ -878,8 +905,8 @@ void DefFormat::genLiteralPrinter(StringRef value, FmtContext &ctx,
   // Don't insert a space before certain punctuation.
   bool needSpace =
       shouldEmitSpace && shouldEmitSpaceBefore(value, lastWasPunctuation);
-  os << tgfmt("$_printer$0 << \"$1\";\n", &ctx, needSpace ? " << ' '" : "",
-              value);
+  os << tgfmtOrFatal(getFmtOrigin(), "$_printer$0 << \"$1\";\n", ctx,
+                     needSpace ? " << ' '" : "", value);
 
   // Update the flags.
   shouldEmitSpace =
@@ -899,24 +926,24 @@ void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
   // Guard the printer on the presence of optional parameters and that they
   // aren't equal to their default values (if they have one).
   if (el->isOptional() && !skipGuard) {
-    el->genPrintGuard(ctx, os << "if (") << ") {\n";
+    el->genPrintGuard(getFmtOrigin(), ctx, os << "if (") << ") {\n";
     os.indent();
   }
 
   // Insert a space before the next parameter, if necessary.
   if (shouldEmitSpace || !lastWasPunctuation)
-    os << tgfmt("$_printer << ' ';\n", &ctx);
+    os << tgfmtOrFatal(getFmtOrigin(), "$_printer << ' ';\n", ctx);
   shouldEmitSpace = true;
   lastWasPunctuation = false;
 
   if (printerOverride)
-    os << tgfmt(*printerOverride, &ctx) << ";\n";
+    os << tgfmtOrFatal(getFmtOrigin(), *printerOverride, ctx) << ";\n";
   else if (el->shouldBeQualified())
-    os << tgfmt(qualifiedParameterPrinter, &ctx) << ";\n";
+    os << tgfmtOrFatal(getFmtOrigin(), qualifiedParameterPrinter, ctx) << ";\n";
   else if (auto printer = param.getPrinter())
-    os << tgfmt(*printer, &ctx) << ";\n";
+    os << tgfmtOrFatal(getFmtOrigin(), *printer, ctx) << ";\n";
   else
-    os << tgfmt(defaultParameterPrinter, &ctx) << ";\n";
+    os << tgfmtOrFatal(getFmtOrigin(), defaultParameterPrinter, ctx) << ";\n";
 
   if (el->isOptional() && !skipGuard)
     os.unindent() << "}\n";
@@ -935,14 +962,15 @@ void DefFormat::genStructParameterPrinter(ParameterElement *el, FmtContext &ctx,
 
 /// Generate code to guard printing on the presence of any optional parameters.
 template <typename ParameterRange>
-static void guardOnAny(FmtContext &ctx, MethodBody &os, ParameterRange &&params,
-                       bool inverted = false) {
+static void guardOnAny(const FmtOrigin &origin, FmtContext &ctx, MethodBody &os,
+                       ParameterRange &&params, bool inverted = false) {
   os << "if (";
   if (inverted)
     os << "!(";
   llvm::interleave(
       params, os,
-      [&](ParameterElement *param) { param->genPrintGuard(ctx, os); }, " || ");
+      [&](ParameterElement *param) { param->genPrintGuard(origin, ctx, os); },
+      " || ");
   if (inverted)
     os << ")";
   os << ") {\n";
@@ -952,9 +980,10 @@ static void guardOnAny(FmtContext &ctx, MethodBody &os, ParameterRange &&params,
 /// Generate code to guard printing on the presence of any optional format
 /// elements.
 template <typename FormatElemRange>
-static void guardOnAnyOptional(FmtContext &ctx, MethodBody &os,
-                               FormatElemRange &&args, bool inverted = false) {
-  guardOnAny(ctx, os,
+static void guardOnAnyOptional(const FmtOrigin &origin, FmtContext &ctx,
+                               MethodBody &os, FormatElemRange &&args,
+                               bool inverted = false) {
+  guardOnAny(origin, ctx, os,
              llvm::make_filter_range(
                  llvm::map_range(args, getEncapsulatedParameterElement),
                  [](ParameterElement *param) { return param->isOptional(); }),
@@ -969,8 +998,8 @@ void DefFormat::genCommaSeparatedPrinter(
   if (shouldEmitSpace || !lastWasPunctuation) {
     bool allOptional = llvm::all_of(args, formatIsOptional);
     if (allOptional)
-      guardOnAnyOptional(ctx, os, args);
-    os << tgfmt("$_printer << ' ';\n", &ctx);
+      guardOnAnyOptional(getFmtOrigin(), ctx, os, args);
+    os << tgfmtOrFatal(getFmtOrigin(), "$_printer << ' ';\n", ctx);
     if (allOptional)
       os.unindent() << "}\n";
   }
@@ -982,10 +1011,11 @@ void DefFormat::genCommaSeparatedPrinter(
     for (FormatElement *arg : args) {
       ParameterElement *param = getEncapsulatedParameterElement(arg);
       if (param->isOptional()) {
-        param->genPrintGuard(ctx, os << "if (") << ") {\n";
+        param->genPrintGuard(getFmtOrigin(), ctx, os << "if (") << ") {\n";
         os.indent();
       }
-      os << tgfmt("if (!_firstPrinted) $_printer << \", \";\n", &ctx);
+      os << tgfmtOrFatal(getFmtOrigin(),
+                         "if (!_firstPrinted) $_printer << \", \";\n", ctx);
       os << "_firstPrinted = false;\n";
       extra(arg);
       shouldEmitSpace = false;
@@ -1029,18 +1059,19 @@ void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
       elems, ctx, os,
       [&](FormatElement *arg) {
         ParameterElement *param = getEncapsulatedParameterElement(arg);
-        os << tgfmt("$_printer << \"$0 = \";\n", &ctx, param->getName());
+        os << tgfmtOrFatal(getFmtOrigin(), "$_printer << \"$0 = \";\n", ctx,
+                           param->getName());
         auto *paramEl = dyn_cast<ParameterElement>(arg);
         if (paramEl && needsStructBrackets(paramEl) &&
             elemIdx + 1 < elems.size())
-          os << tgfmt("$_printer << \"[\";\n", &ctx);
+          os << tgfmtOrFatal(getFmtOrigin(), "$_printer << \"[\";\n", ctx);
       },
       /*stripEnumAttrs=*/true,
       [&](FormatElement *arg) {
         auto *paramEl = dyn_cast<ParameterElement>(arg);
         if (paramEl && needsStructBrackets(paramEl) &&
             elemIdx + 1 < elems.size())
-          os << tgfmt("$_printer << \"]\";\n", &ctx);
+          os << tgfmtOrFatal(getFmtOrigin(), "$_printer << \"]\";\n", ctx);
         ++elemIdx;
       });
 }
@@ -1049,11 +1080,11 @@ void DefFormat::genCustomPrinter(CustomDirective *el, FmtContext &ctx,
                                  MethodBody &os) {
   // Insert a space before the custom directive, if necessary.
   if (shouldEmitSpace || !lastWasPunctuation)
-    os << tgfmt("$_printer << ' ';\n", &ctx);
+    os << tgfmtOrFatal(getFmtOrigin(), "$_printer << ' ';\n", ctx);
   shouldEmitSpace = true;
   lastWasPunctuation = false;
 
-  os << tgfmt("print$0($_printer", &ctx, el->getName());
+  os << tgfmtOrFatal(getFmtOrigin(), "print$0($_printer", ctx, el->getName());
   os.indent();
   for (FormatElement *arg : el->getElements()) {
     os << ",\n";
@@ -1063,7 +1094,8 @@ void DefFormat::genCustomPrinter(CustomDirective *el, FmtContext &ctx,
       os << cast<ParameterElement>(ref->getArg())->getParam().getAccessorName()
          << "()";
     } else {
-      os << tgfmt(cast<StringElement>(arg)->getValue(), &ctx);
+      os << tgfmtOrFatal(getFmtOrigin(), cast<StringElement>(arg)->getValue(),
+                         ctx);
     }
   }
   os.unindent() << ");\n";
@@ -1073,14 +1105,18 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                         MethodBody &os) {
   FormatElement *anchor = el->getAnchor();
   if (auto *param = dyn_cast<ParameterElement>(anchor)) {
-    guardOnAny(ctx, os, llvm::ArrayRef(param), el->isInverted());
+    guardOnAny(getFmtOrigin(), ctx, os, llvm::ArrayRef(param),
+               el->isInverted());
   } else if (auto *params = dyn_cast<ParamsDirective>(anchor)) {
-    guardOnAny(ctx, os, params->getElements(), el->isInverted());
+    guardOnAny(getFmtOrigin(), ctx, os, params->getElements(),
+               el->isInverted());
   } else if (auto *strct = dyn_cast<StructDirective>(anchor)) {
-    guardOnAnyOptional(ctx, os, strct->getElements(), el->isInverted());
+    guardOnAnyOptional(getFmtOrigin(), ctx, os, strct->getElements(),
+                       el->isInverted());
   } else {
     auto *custom = cast<CustomDirective>(anchor);
-    guardOnAnyOptional(ctx, os, custom->getElements(), el->isInverted());
+    guardOnAnyOptional(getFmtOrigin(), ctx, os, custom->getElements(),
+                       el->isInverted());
   }
   // Generate the printer for the contained elements.
   {
@@ -1099,9 +1135,10 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
 void DefFormat::genWhitespacePrinter(WhitespaceElement *el, FmtContext &ctx,
                                      MethodBody &os) {
   if (el->getValue() == "\\n") {
-    os << tgfmt("$_printer.printNewline();\n", &ctx);
+    os << tgfmtOrFatal(getFmtOrigin(), "$_printer.printNewline();\n", ctx);
   } else if (!el->getValue().empty()) {
-    os << tgfmt("$_printer << \"$0\";\n", &ctx, el->getValue());
+    os << tgfmtOrFatal(getFmtOrigin(), "$_printer << \"$0\";\n", ctx,
+                       el->getValue());
   } else {
     lastWasPunctuation = true;
   }

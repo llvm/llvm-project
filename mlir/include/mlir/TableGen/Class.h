@@ -37,8 +37,6 @@
 
 namespace mlir {
 namespace tblgen {
-class FmtObjectBase;
-
 /// This class contains a single method parameter for a C++ function.
 class MethodParameter {
 public:
@@ -480,7 +478,6 @@ private:
   /// The list of member initializers.
   SmallVector<MemberInitializer> initializers;
 };
-
 } // namespace tblgen
 } // namespace mlir
 
@@ -502,7 +499,6 @@ operator|=(mlir::tblgen::Method::Properties &lhs,
 
 namespace mlir {
 namespace tblgen {
-
 template <typename ParamT>
 void Method::addTemplateParam(ParamT param) {
   // Templates imply inline.
@@ -896,7 +892,6 @@ protected:
   /// An optional list of class template parameters.
   SetVector<std::string, SmallVector<std::string>, StringSet<>> templateParams;
 };
-
 } // namespace tblgen
 } // namespace mlir
 

@@ -32,12 +32,21 @@ namespace mlir {
 namespace tblgen {
 class Constraint;
 class DagLeaf;
+class Operator;
+class Property;
 
 /// Consume every error payload, print all messages, then terminate through
 /// TableGen's fatal cleanup path. The caller origin is appended after any
 /// context already attached by inner helpers. Requires a non-success error.
 [[noreturn]] void reportFatalFmtError(llvm::Error error,
                                       const FmtOrigin &callerOrigin);
+
+/// Anchor a constraint template at its definition and retain the operation use.
+/// Synthesized properties without a definition use the operation location.
+FmtOrigin getConstraintFmtOrigin(const Constraint &constraint,
+                                 const Operator &op, StringRef purpose);
+FmtOrigin getConstraintFmtOrigin(const Property &property, const Operator &op,
+                                 StringRef purpose);
 
 /// Eager formatting at a TableGen diagnostic boundary. User-authored templates
 /// should supply their definition origin and any known use-site context.
@@ -286,10 +295,20 @@ std::string stringify(T &&t) {
 ///   "failed to verify {{foo}}"
 /// into:
 ///   "failed to verify " << bar
-/// where bar is the result of evaluating 'tgfmt("foo", &ctx)' at compile
-/// time.
+/// where bar is the result of formatting "foo" with ctx during code generation.
 std::string buildErrorStreamingString(
     StringRef message, const FmtContext &ctx,
+    ErrorStreamType errorStreamType = ErrorStreamType::InString);
+
+/// Checked summary formatting. Failed templates and offsets refer to the
+/// escaped expression segment, not the whole original summary.
+llvm::Expected<std::string> buildErrorStreamingStringChecked(
+    StringRef message, const FmtContext &ctx,
+    ErrorStreamType errorStreamType = ErrorStreamType::InString);
+
+/// Format a summary at a source-aware TableGen diagnostic boundary.
+std::string buildErrorStreamingStringOrFatal(
+    const FmtOrigin &origin, StringRef message, const FmtContext &ctx,
     ErrorStreamType errorStreamType = ErrorStreamType::InString);
 } // namespace tblgen
 } // namespace mlir

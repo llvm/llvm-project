@@ -1564,6 +1564,10 @@ is used. They serve as "hooks" to the enclosing environment. This includes
     replaced by the operand/result's type. E.g., for `F32` in `F32:$operand`,
     its `$_self` will be expanded as `operand(...).getType()`.
 
+The available substitutions depend on the template's use. See
+[Diagnose template substitutions](#diagnose-template-substitutions) for error
+reporting and escaping literal dollars.
+
 TODO: Reconsider the leading symbol for special placeholders. Eventually we want
 to allow referencing operand/result `$-name`s; such `$-name`s can start with
 underscore.
@@ -1967,6 +1971,92 @@ mlir-tblgen --gen-op-interface-defs -I /path/to/mlir/include /path/to/input/td/f
 # To see op interface documentation
 mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/file
 ```
+
+### Diagnose template substitutions
+
+ODS C++ templates use named substitutions such as `$_self` and `$_op`. The
+available substitutions depend on where the template is expanded. For example,
+`$_self` denotes a value in an attribute or type constraint, but is unavailable
+in an operation trait predicate. Write `$$` to emit a literal dollar, including
+inside C++ strings and comments.
+
+A missing substitution produces a TableGen error identifying the template's
+source, with its use site as a note when available. The diagnostic includes the
+template, failed occurrences, and the names of the available substitutions.
+Byte offsets refer to the displayed template, not positions in the `.td` source.
+For example:
+
+```text
+BadTraits.td:12:5: error: cannot substitute '$_self' while formatting trait predicate: missing named binding
+note: template: ($_self)
+note: failed occurrence starts at template byte offset 1
+Ops.td:24:1: note: while expanding operation verifier
+note: available named substitutions: $_op
+note: no positional substitutions were supplied
+```
+
+### Format templates in a generator
+
+`mlir/TableGen/Format.h` provides `tgfmt(template, ctx, values...)` and its
+array form `tgfmtv(template, ctx, values)`. Both take a `const FmtContext &`,
+validate all placeholders before rendering positional values, and return an
+`llvm::Expected<std::string>` that owns its result or error. Use `FmtContext{}`
+for positional-only formatting. Check an inner result before passing its string
+to another formatting call:
+
+```cpp
+llvm::Expected<std::string> formatVerifier(StringRef predicate,
+                                          const FmtContext &ctx) {
+  auto condition = tgfmt(predicate, ctx);
+  if (!condition)
+    return condition.takeError();
+  return tgfmt("if (!($0)) return failure();", ctx, *condition);
+}
+```
+
+Register named substitutions without the leading `$`. Builtin setters such as
+`withSelf(value)` and `withBuilder(value)` register `_self` and `_builder` in the
+same map as `addSubst`; the last registration wins. Positional indices are decimal
+(`$010` denotes index 10). `$N...` expands the remaining positional arguments,
+with commas between them; `N` must be less than the argument count. Replacement
+text is emitted literally without recursive expansion.
+
+At a generator boundary that terminates on invalid input, use `tgfmtOrFatal` or
+`tgfmtvOrFatal` from `mlir/TableGen/CodeGenHelpers.h`. Supply the template's
+source and purpose with a `FmtOrigin`; attach the enclosing operation as a use
+site. For a synthesized template without a definition, use the enclosing
+operation's location:
+
+```cpp
+FmtContext ctx;
+ctx.addSubst("_op", "getOperation()");
+FmtOrigin origin = FmtOrigin::at(trait.getDef().getLoc(), "trait predicate")
+                       .withUse(op.getLoc(), "operation verifier");
+os << tgfmtOrFatal(origin, trait.getPredTemplate(), ctx);
+```
+
+Recoverable helpers can attach source context with
+`addFmtOrigin(result.takeError(), origin)` and propagate the typed `FmtError`.
+The error owns the template, failed occurrences, and a sorted snapshot of named
+bindings. `getFmtDiagnostics` renders messages for a caller's diagnostic system.
+Source-manager buffers must remain alive until those messages are emitted.
+`FmtContext::printBindings` and `FmtError::printBindings` log names and escaped
+replacement values; the error prints its snapshot even if the context changes.
+
+A speculative probe can consume a formatting error and choose another emission
+path. Check the template with the full context when it is emitted:
+
+```cpp
+auto probe = tgfmt(predicate, restrictedCtx);
+if (!probe) {
+  llvm::consumeError(probe.takeError());
+  return false;
+}
+```
+
+Constraint summaries can contain `{{...}}` C++ expressions. These expressions
+are formatted after C++ string escaping. Their diagnostics identify the failing
+segment as an "escaped summary expression", with offsets within that segment.
 
 ## Appendix
 

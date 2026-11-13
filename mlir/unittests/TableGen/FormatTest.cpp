@@ -500,3 +500,52 @@ TEST(FormatTest, FatalFormattingPreservesUnrelatedErrors) {
       ::testing::ExitedWithCode(1), "unrelated failure");
 }
 #endif
+
+TEST(FormatTest, ReferenceOverloadsReturnCheckedOwnedResults) {
+  FmtContext ctx({{"name", "value"}});
+  auto result = tgfmt("$name $0", ctx, 42);
+  ASSERT_TRUE(static_cast<bool>(result));
+  ctx.addSubst("name", "changed");
+  EXPECT_EQ(*result, "value 42");
+  std::string values[] = {"zero", "one"};
+  auto arrayResult = tgfmtv("$1 $name", ctx, values);
+  ASSERT_TRUE(static_cast<bool>(arrayResult));
+  EXPECT_EQ(*arrayResult, "one changed");
+  auto error = takeFormatError(tgfmt("$absent", ctx));
+  ASSERT_TRUE(error);
+  EXPECT_EQ(error->getIssues()[0].placeholder, "$absent");
+  error = takeFormatError(tgfmtv("$2", ctx, values));
+  ASSERT_TRUE(error);
+  EXPECT_EQ(error->getIssues()[0].kind, FmtIssueKind::PositionalOutOfRange);
+}
+
+TEST(FormatTest, CheckedSummaryPreservesStreamingAndLiteralDollars) {
+  FmtContext ctx({{"_self", "value"}});
+  auto plain = buildErrorStreamingStringChecked("literal $text", ctx);
+  ASSERT_TRUE(static_cast<bool>(plain));
+  EXPECT_EQ(*plain, "literal $text");
+  for (ErrorStreamType type :
+       {ErrorStreamType::InString, ErrorStreamType::InsideOpError}) {
+    auto result =
+        buildErrorStreamingStringChecked("before {{$_self}} after", ctx, type);
+    ASSERT_TRUE(static_cast<bool>(result));
+    EXPECT_EQ(*result, type == ErrorStreamType::InString
+                           ? "before \" << value << \" after"
+                           : "before \") << value << (\" after");
+  }
+}
+
+TEST(FormatTest, SummaryErrorRetainsEscapedSegmentAndBindingSnapshot) {
+  FmtContext ctx({{"_self", "value"}});
+  auto error = takeFormatError(buildErrorStreamingStringChecked(
+      R"(before {{"quoted" + \path + $missing}} after)", ctx));
+  ASSERT_TRUE(error);
+  EXPECT_EQ(error->getTemplate(), R"(\"quoted\" + \\path + $missing)");
+  EXPECT_EQ(error->getIssues()[0].offset,
+            error->getTemplate().find("$missing"));
+  ASSERT_EQ(error->getOrigins().size(), 1u);
+  EXPECT_EQ(error->getOrigins()[0].getDefinition().description,
+            "escaped summary expression");
+  ctx.withSelf("changed");
+  EXPECT_EQ(error->getBindings()[0].replacement, "value");
+}

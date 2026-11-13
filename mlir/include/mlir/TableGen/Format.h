@@ -373,16 +373,36 @@ inline FmtStrVecObject tgfmtv(StringRef fmt, const FmtContext *ctx,
 /// results own their text; neither result nor error borrows the input template,
 /// context, or arguments.
 template <typename... Ts>
+llvm::Expected<std::string> tgfmt(StringRef fmt, const FmtContext &ctx,
+                                  Ts &&...vals) {
+  using ParamTuple = decltype(std::make_tuple(
+      llvm::support::detail::FormatFunctor<Ts>(std::forward<Ts>(vals))...));
+  return FmtObject<ParamTuple>(
+             fmt, &ctx,
+             std::make_tuple(llvm::support::detail::FormatFunctor<Ts>(
+                 std::forward<Ts>(vals))...))
+      .strChecked();
+}
+
+/// Checked array form, with the same validation and ownership as tgfmt.
+inline llvm::Expected<std::string> tgfmtv(StringRef fmt, const FmtContext &ctx,
+                                          ArrayRef<std::string> params) {
+  return FmtStrVecObject(fmt, &ctx, params).strChecked();
+}
+
+/// Alias for the reference-taking tgfmt overload, with the same placeholder
+/// validation and FmtError conditions documented above.
+template <typename... Ts>
 llvm::Expected<std::string> tgfmtChecked(StringRef fmt, const FmtContext &ctx,
                                          Ts &&...vals) {
-  return tgfmt(fmt, &ctx, std::forward<Ts>(vals)...).strChecked();
+  return tgfmt(fmt, ctx, std::forward<Ts>(vals)...);
 }
 
 /// Array form of tgfmtChecked, with the same validation and ownership.
 inline llvm::Expected<std::string> tgfmtvChecked(StringRef fmt,
                                                  const FmtContext &ctx,
                                                  ArrayRef<std::string> params) {
-  return tgfmtv(fmt, &ctx, params).strChecked();
+  return tgfmtv(fmt, ctx, params);
 }
 } // namespace tblgen
 } // namespace mlir

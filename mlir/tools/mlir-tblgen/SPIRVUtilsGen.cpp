@@ -48,9 +48,11 @@ using llvm::StringRef;
 using mlir::tblgen::Attribute;
 using mlir::tblgen::EnumCase;
 using mlir::tblgen::EnumInfo;
+using mlir::tblgen::FmtOrigin;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
 using mlir::tblgen::Operator;
+using mlir::tblgen::tgfmtOrFatal;
 
 //===----------------------------------------------------------------------===//
 // Availability Wrapper Class
@@ -1395,9 +1397,10 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
            << avail.getMergeInstancePreparation()
            << "\n    "
            // Merge this instance.
-           << std::string(
-                  tgfmt(avail.getMergeActionCode(),
-                        &fctx.addSubst("instance", avail.getMergeInstance())))
+           << tgfmtOrFatal(
+                  FmtOrigin::at(srcOp.getLoc(), "SPIR-V availability template"),
+                  avail.getMergeActionCode(),
+                  fctx.addSubst("instance", avail.getMergeInstance()))
            << ";\n  }\n";
       }
 
@@ -1449,8 +1452,10 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
          // TODO` here once ODS supports
          // dialect-specific contents so that we can use not implementing the
          // availability interface as indication of no requirements.
-         << std::string(tgfmt(caseSpecs.front().second.getMergeActionCode(),
-                              &fctx.addSubst("instance", "*tblgen_instance")))
+         << tgfmtOrFatal(
+                FmtOrigin::at(srcOp.getLoc(), "SPIR-V availability template"),
+                caseSpecs.front().second.getMergeActionCode(),
+                fctx.addSubst("instance", "*tblgen_instance"))
          << ";\n";
       os << "  }\n";
     }
