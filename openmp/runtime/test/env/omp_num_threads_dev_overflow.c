@@ -4,6 +4,7 @@
 // RUN:   OMP_NUM_THREADS_DEV_000000000001=10 \
 // RUN:   OMP_NUM_THREADS_DEV0=30 OMP_NUM_THREADS_ALLEY=40 \
 // RUN:   OMP_NUM_THREADS_ALL=4 \
+// RUN:   env -u OMP_NUM_THREADS \
 // RUN:   %libomp-run 2>&1 | FileCheck %s
 //
 // (a) `_DEV_<huge>` rejected with a warning;
