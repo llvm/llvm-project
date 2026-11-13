@@ -863,6 +863,17 @@ TEST_F(OpenMPContextTest, UserConditionInStrictSubset) {
   E.UserCondition = "a";
   EXPECT_EQ(Best(D, E), 0);
   EXPECT_EQ(Best(E, D), 0);
+
+  // The key also stands for a condition left out of a superset's traits, as
+  // for a WHEN clause that omits its directive.
+  VariantMatchInfo F;
+  F.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  F.addTrait(TraitProperty::device_kind_host, "");
+  F.UserCondition = "a";
+  EXPECT_EQ(Best(E, F), 1);
+  EXPECT_EQ(Best(F, E), 0);
+  F.UserCondition = "b";
+  EXPECT_EQ(Best(E, F), 0);
 }
 
 TEST_F(OpenMPContextTest, ISANamesInStrictSubset) {

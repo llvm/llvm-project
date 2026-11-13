@@ -2650,9 +2650,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
       llvm::omp::VariantMatchInfo rawVMI;
       std::optional<DynamicUserCondition> dynamicCondition{
           MakeVariantMatchInfo(rawVMI, *ctxSel, context)};
-      // An omitted directive is ranked without its condition, except for its
-      // unguarded match_any candidate below.
-      if (dynamicCondition && isExplicit)
+      if (dynamicCondition)
         rawVMI.UserCondition = getConditionKey(*dynamicCondition);
       if (llvm::any_of(
               rawVMI.ConstructTraits, [](llvm::omp::TraitProperty property) {
@@ -2727,9 +2725,6 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
             addConditionTraitForRanking(conditionTrueVMI);
             result.candidates.push_back({spec, std::move(conditionTrueVMI),
                 isExplicit, dynamicCondition});
-          } else {
-            // The key was only set above for an explicit directive.
-            staticVMI.UserCondition = getConditionKey(*dynamicCondition);
           }
           result.candidates.push_back({spec, std::move(staticVMI), isExplicit});
           continue;
@@ -2737,7 +2732,10 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
 
         llvm::omp::VariantMatchInfo rankingVMI{staticVMI};
         // Preserve the existing lowering behavior for an omitted directive:
-        // do not let its runtime condition raise the implicit NOTHING rank.
+        // do not let its runtime condition raise the implicit NOTHING rank. If
+        // its static traits match, it keeps the condition's key, so the
+        // strict-subset check still sees the condition, as for an explicit
+        // NOTHING.
         if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
           rankingVMI = llvm::omp::VariantMatchInfo();
         else if (isExplicit)

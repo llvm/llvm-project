@@ -160,6 +160,12 @@ static bool isOrderedSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
   return true;
 }
 
+static bool isUserConditionTrait(TraitProperty Property) {
+  return Property == TraitProperty::user_condition_true ||
+         Property == TraitProperty::user_condition_false ||
+         Property == TraitProperty::user_condition_unknown;
+}
+
 static bool hasUserConditionTrait(const VariantMatchInfo &VMI) {
   for (TraitProperty Property :
        {TraitProperty::user_condition_true, TraitProperty::user_condition_false,
@@ -183,13 +189,17 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   // is strict.
   if (countTraits(VMI0) > countTraits(VMI1))
     return false;
-  for (unsigned Bit : VMI0.RequiredTraits.set_bits())
-    if (!VMI1.RequiredTraits.test(Bit))
-      return false;
   // Different runtime conditions share a trait, so compare them as well.
-  if ((!VMI0.UserCondition.empty() || hasUserConditionTrait(VMI0)) &&
+  bool HasRuntimeCondition = !VMI0.UserCondition.empty();
+  if ((HasRuntimeCondition || hasUserConditionTrait(VMI0)) &&
       VMI0.UserCondition != VMI1.UserCondition)
     return false;
+  // The same key also stands for a condition left out of VMI1's traits.
+  bool IsConditionLeftOut = HasRuntimeCondition && !hasUserConditionTrait(VMI1);
+  for (unsigned Bit : VMI0.RequiredTraits.set_bits())
+    if (!VMI1.RequiredTraits.test(Bit) &&
+        !(IsConditionLeftOut && isUserConditionTrait(TraitProperty(Bit))))
+      return false;
   // Different ISA names share a trait, so compare them as well.
   if (!llvm::all_of(VMI0.ISATraits,
                     [&](const VariantMatchInfo::ISATrait &Trait) {
