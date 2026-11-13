@@ -137,8 +137,6 @@ def isLongDoubleWide : RuntimeLibcallAvailability<
 
 // The l-suffixed sincos exists only when hasSinCos and the long double type
 // matches the width.
-def isLongDoubleX87AndHasSinCos : RuntimeLibcallAvailability<
-  (all_of IsLongDoubleX87, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleF128AndHasSinCos : RuntimeLibcallAvailability<
   (all_of IsLongDoubleF128, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
 def isLongDoubleWideAndHasSinCos : RuntimeLibcallAvailability<
@@ -3874,8 +3872,7 @@ def X86Libm : LibcallLibrary<"libm",
   (add X86_F128_Libcalls,
        LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>,
        // frexpl/ldexpl are available on Windows too.
-       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>,
-       LibcallImpls<(add sincosl), isLongDoubleX87AndHasSinCos>), isX86>;
+       LibcallImpls<(add frexpl, ldexpl), isLongDoubleWide>), isX86>;
 
 def X86SystemLibrary
     : SystemRuntimeLibrary<isX86,
@@ -3884,8 +3881,6 @@ def X86SystemLibrary
 
 def : LibraryExclusion<"compiler-rt", isX86,
   !listconcat(WindowsDivRemMulLibcallOverrides, [__powitf2_f128])>;
-// x86 has no fp128 sincosl, only the x87 one.
-def : LibraryExclusion<"libm", isX86, [sincosl]>;
 def : LibraryExclusion<"libc", isX86, !listconcat(MemChkLibcalls, [bzero])>;
 
 //===----------------------------------------------------------------------===//
