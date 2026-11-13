@@ -18,6 +18,8 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
 
+#include <cassert>
+
 namespace Fortran::utils::openmp {
 std::string getCanonicalDefaultDeclareMapperName(fir::RecordType recordType) {
   auto appendKinds = [](std::string &name, llvm::ArrayRef<std::int64_t> kinds) {
@@ -164,14 +166,27 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
   return loadOp.getResult();
 }
 
-void cloneOrMapRegionOutsiders(
-    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp) {
+void cloneOrMapRegionOutsiders(fir::FirOpBuilder &firOpBuilder,
+    mlir::omp::TargetOp targetOp, RegionOutsiderHandling handling) {
   mlir::Region &region = targetOp.getRegion();
   mlir::Block *entryBlock = &region.getBlocks().front();
+
+  auto replace = [handling, entryBlock, &region](mlir::OpOperand &use) {
+    switch (handling) {
+    case RegionOutsiderHandling::CloneOrMap:
+      return use.getOwner()->getBlock() == entryBlock;
+      break;
+    case RegionOutsiderHandling::CloneOnly:
+      return region.findAncestorOpInRegion(*use.getOwner()) != nullptr;
+      break;
+    }
+    llvm_unreachable("unknown target region outsider repair mode");
+  };
 
   llvm::SetVector<mlir::Value> valuesDefinedAbove;
   mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
   while (!valuesDefinedAbove.empty()) {
+    bool madeProgress = false;
     for (mlir::Value val : valuesDefinedAbove) {
       mlir::Operation *valOp = val.getDefiningOp();
 
@@ -184,23 +199,26 @@ void cloneOrMapRegionOutsiders(
           !mlir::isa<fir::BoxDimsOp>(valOp)) {
         mlir::Operation *clonedOp = valOp->clone();
         entryBlock->push_front(clonedOp);
-
-        auto replace = [entryBlock](mlir::OpOperand &use) {
-          return use.getOwner()->getBlock() == entryBlock;
-        };
+        madeProgress = true;
 
         valOp->getResults().replaceUsesWithIf(clonedOp->getResults(), replace);
         valOp->replaceUsesWithIf(clonedOp, replace);
-      } else {
+      } else if (handling == RegionOutsiderHandling::CloneOrMap) {
         mlir::Value mappedTemp = mapTemporaryValue(firOpBuilder, targetOp, val,
             /*name=*/{});
-        val.replaceUsesWithIf(mappedTemp, [entryBlock](mlir::OpOperand &use) {
-          return use.getOwner()->getBlock() == entryBlock;
-        });
+        madeProgress = true;
+        val.replaceUsesWithIf(mappedTemp, replace);
       }
     }
     valuesDefinedAbove.clear();
     mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
+
+    if (handling != RegionOutsiderHandling::CloneOrMap &&
+        !valuesDefinedAbove.empty() && !madeProgress) {
+      llvm_unreachable(
+          "failed to clone all values used in the target region but defined "
+          "above it");
+    }
   }
 }
 
