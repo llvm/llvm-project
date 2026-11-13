@@ -125,10 +125,16 @@ void updateMemoryEffects(Function *F, MemoryEffects NewEffects) {
 }
 
 bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
-  // Shaders have no kernel arguments. Only Intel GPUs take the memory as a
-  // kernel argument, which their runtime knows to set.
+  // Shaders have no kernel arguments, so the pass is disabled.
+  // It is only used for OpenCL runtime, because OpenCL has no API
+  // to size extern workgroup array. Runtimes can check global
+  // variable `__spirv_dynamic_local_memory_present` to check
+  // if module contains the additional SLM argument.
+  // UnknownOS implies OpenCL
+  // https://llvm.org/docs/SPIRVUsage.html#target-triples.
   if (TM.getSubtargetImpl()->isShader() ||
-      M.getTargetTriple().getVendor() != Triple::Intel)
+      (M.getTargetTriple().getOS() != Triple::UnknownOS &&
+       M.getTargetTriple().getOS() != Triple::OpenCL))
     return false;
 
   SmallVector<GlobalVariable *> DynMems;
