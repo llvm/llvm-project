@@ -1,0 +1,100 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "file_io_result",
+    hdrs = ["file_io_result.h"],
+    deps = [
+        "//libc:__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "file",
+    srcs = [
+        "file.cpp",
+    ],
+    hdrs = [
+        "file.h",
+        "file_mode.h",
+    ],
+    deps = [
+        ":file_io_result",
+        "//libc:__support_alloc_checker",
+        "//libc:__support_error_or",
+        "//libc:__support_macros_attributes",
+        "//libc:__support_macros_config",
+        "//libc:__support_macros_properties_architectures",
+        "//libc:__support_threads_mutex",
+        "//libc:__support_wchar_character_converter",
+        "//libc:__support_wchar_mbstate",
+        "//libc:__support_wchar_wcrtomb",
+        "//libc:func_aligned_alloc",
+        "//libc:func_free",
+        "//libc:func_malloc",
+        "//libc:func_realloc",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc:hdr_stdio_macros",
+        "//libc:hdr_wchar_macros",
+        "//libc:llvm_libc_types_off_t",
+        "//libc:string_memory_utils",
+        "//libc:types_char32_t",
+        "//libc:types_char8_t",
+        "//libc:types_off_t",
+        "//libc:types_wchar_t",
+        "//libc:types_wint_t",
+        "//libc/src/__support/CPP:new",
+        "//libc/src/__support/CPP:span",
+    ],
+)
+
+libc_support_library(
+    name = "platform_file",
+    srcs = [
+        "linux/file.cpp",
+    ],
+    hdrs = [
+        "linux/file.h",
+        "linux/file_flags.h",
+    ],
+    deps = [
+        ":file",
+        "//libc:__support_alloc_checker",
+        "//libc:__support_common",
+        "//libc:__support_error_or",
+        "//libc:__support_macros_attributes",
+        "//libc:__support_macros_config",
+        "//libc:__support_osutil_linux_syscall_wrappers_close",
+        "//libc:__support_osutil_linux_syscall_wrappers_dup3",
+        "//libc:__support_osutil_linux_syscall_wrappers_fcntl",
+        "//libc:__support_osutil_linux_syscall_wrappers_lseek",
+        "//libc:__support_osutil_linux_syscall_wrappers_open",
+        "//libc:__support_osutil_linux_syscall_wrappers_read",
+        "//libc:__support_osutil_linux_syscall_wrappers_write",
+        "//libc:func_free",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_fcntl_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc:hdr_stdio_macros",
+        "//libc:hdr_sys_stat_macros",
+        "//libc:types_mode_t",
+        "//libc:types_off_t",
+        "//libc/src/__support/CPP:new",
+        "//libc/src/__support/CPP:type_traits",
+    ],
+)
