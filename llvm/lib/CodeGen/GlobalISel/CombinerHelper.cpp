@@ -8552,8 +8552,11 @@ Register CombinerHelper::simplifyMultipleUseDemandedBits(
   assert(DefMI && "Expected a definition in generic SSA MIR");
   unsigned Opcode = DefMI->getOpcode();
   if (Lane && Opcode == TargetOpcode::G_BITCAST) {
-    // Only the lane caller can adapt the replacement's element type. Merely
-    // looking through a bitcast is not a simplification.
+    // Look through an element-preserving vector bitcast. The replacement we
+    // find will have the source's element type but this is only okay in lane
+    // mode because the unmerge caller re-bitcasts the extracted lane to the
+    // original type. Don't return Src itself if nothing deeper simplifies as
+    // stripping the bitcast alone saves nothing
     Register Src = DefMI->getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
     if (!SrcTy.isFixedVector() ||
@@ -8708,6 +8711,11 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
         LLT NewSrcTy = MRI.getType(NewSrc);
         LLT EltTy = NewSrcTy.getElementType();
         auto *BV = getOpcodeDef<GBuildVector>(NewSrc, MRI);
+        // For a G_BUILD_VECTOR, reuse the selected scalar operand directly;
+        // otherwise, we need a new unmerge. If its element type differs from
+        // the original result type, we also need a bitcast. After legalization,
+        // require each new operation to be legal when legality info is
+        // available.
         if ((BV || isPreLegalize() || !LI ||
              isLegal({TargetOpcode::G_UNMERGE_VALUES, {EltTy, NewSrcTy}})) &&
             (EltTy == OpTy || isPreLegalize() || !LI ||
@@ -8870,6 +8878,10 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
         bool IsLShr = *SrcShAmt > *ShAmt;
         unsigned NewOpc = IsLShr ? TargetOpcode::G_LSHR : TargetOpcode::G_SHL;
         unsigned NewAmt = IsLShr ? *SrcShAmt - *ShAmt : *ShAmt - *SrcShAmt;
+        // A zero net shift reuses X directly. Otherwise, the new amount must
+        // fit the outer shift's amount type, which may differ from the inner
+        // one. Require a single-use inner op so it can be removed, and check
+        // legality before creating the replacement shift.
         if (NewAmt == 0 ||
             (APInt(32, NewAmt).isIntN(AmtTy.getScalarSizeInBits()) &&
              MRI.hasOneNonDBGUse(SrcMI->getOperand(0).getReg()) &&

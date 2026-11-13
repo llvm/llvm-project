@@ -106,3 +106,44 @@ body: |
     $vgpr0 = COPY %r0(i32)
     $vgpr1 = COPY %r1(i32)
 ...
+
+# A demanded lane of a constant splat is still recognized as constant. Each
+# scale use can bypass the exponent mask independently, for either lane.
+---
+name: vector_lane_constant_splat
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: vector_lane_constant_splat
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(<2 x f16>) = COPY $vgpr0
+    ; CHECK-NEXT: %b:_(<2 x f16>) = COPY $vgpr1
+    ; CHECK-NEXT: %p:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %old:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %load:_(<2 x i32>) = G_LOAD %p(p1) :: (load (<2 x i32>), addrspace 1)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES %load(<2 x i32>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[UV]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[UV1]](i32)
+    ; CHECK-NEXT: %r0:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.cvt.scalef32.pk.fp4.f16), %old(i32), %a(<2 x f16>), [[BITCAST]](f32), 0
+    ; CHECK-NEXT: %r1:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.cvt.scalef32.pk.fp4.f16), %old(i32), %b(<2 x f16>), [[BITCAST1]](f32), 0
+    ; CHECK-NEXT: $vgpr0 = COPY %r0(i32)
+    ; CHECK-NEXT: $vgpr1 = COPY %r1(i32)
+    %a:_(<2 x f16>) = COPY $vgpr0
+    %b:_(<2 x f16>) = COPY $vgpr1
+    %p:_(p1) = COPY $vgpr2_vgpr3
+    %old:_(i32) = G_CONSTANT i32 0
+    %exp:_(i32) = G_CONSTANT i32 2139095040
+    %mask:_(<2 x i32>) = G_BUILD_VECTOR %exp(i32), %exp(i32)
+    %load:_(<2 x i32>) = G_LOAD %p(p1) :: (load (<2 x i32>), addrspace 1)
+    %and:_(<2 x i32>) = G_AND %load, %mask
+    %cast:_(<2 x f32>) = G_BITCAST %and(<2 x i32>)
+    %s0:_(f32), %s1:_(f32) = G_UNMERGE_VALUES %cast(<2 x f32>)
+    %r0:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.cvt.scalef32.pk.fp4.f16), %old(i32), %a(<2 x f16>), %s0(f32), 0
+    %r1:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.cvt.scalef32.pk.fp4.f16), %old(i32), %b(<2 x f16>), %s1(f32), 0
+    $vgpr0 = COPY %r0(i32)
+    $vgpr1 = COPY %r1(i32)
+...
