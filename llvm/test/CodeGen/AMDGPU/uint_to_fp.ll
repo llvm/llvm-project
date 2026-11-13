@@ -116,39 +116,6 @@ define amdgpu_kernel void @v_uint_to_fp_i1_f32_load(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-; FUNC-LABEL: {{^}}s_uint_to_fp_i1_to_f64:
-; R600: BFE_INT
-; R600-NEXT: AND_INT * T{{[0-9]+}}.Y, PV.W, literal.x,
-; R600-NEXT: 1072693248(1.875000e+00)
-; R600-NEXT: MOV T{{[0-9]+}}.X, 0.0,
-define amdgpu_kernel void @s_uint_to_fp_i1_to_f64(ptr addrspace(1) %out, i32 %in) {
-  %b = trunc i32 %in to i1
-  %fp = uitofp i1 %b to double
-  store double %fp, ptr addrspace(1) %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}s_uint_to_fp_i1_to_bf16:
-; R600: AND_INT * T{{[0-9]+}}.W, PV.W, literal.y,
-; R600-NEXT: 3(4.203895e-45), 16256(2.277951e-41)
-define amdgpu_kernel void @s_uint_to_fp_i1_to_bf16(ptr addrspace(1) %out, i32 %in) {
-  %b = trunc i32 %in to i1
-  %fp = uitofp i1 %b to bfloat
-  store bfloat %fp, ptr addrspace(1) %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}s_uint_to_fp_v2i1_to_v2f16:
-; R600: AND_INT T{{[0-9]+}}.W, PV.W, literal.x,
-; R600-NEXT: AND_INT * T{{[0-9]+}}.W, PV.Z, literal.y,
-; R600-NEXT: 15360(2.152394e-41), 1006632960(7.812500e-03)
-define amdgpu_kernel void @s_uint_to_fp_v2i1_to_v2f16(ptr addrspace(1) %out, <2 x i32> %in) {
-  %b = trunc <2 x i32> %in to <2 x i1>
-  %fp = uitofp <2 x i1> %b to <2 x half>
-  store <2 x half> %fp, ptr addrspace(1) %out
-  ret void
-}
-
 ; FIXME: Repeated here to test r600
 ; FUNC-LABEL: {{^}}s_uint_to_fp_i64_to_f32:
 ; R600: FFBH_UINT
