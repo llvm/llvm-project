@@ -45,9 +45,9 @@ public:
   // optimization; flushing shortly after the worklist is populated means its
   // entries are likely still in cache.
   virtual void flush(size_t shard) = 0;
+  virtual void addLiveSupport(ConcatInputSection *isec, size_t shard) = 0;
   // Flushes all the shards into `nextLevel` before doing the marking.
-  virtual void
-  markTransitively(ArrayRef<ConcatInputSection *> liveSupport) = 0;
+  virtual void markTransitively() = 0;
   virtual ~MarkLive() = default;
 };
 
@@ -89,7 +89,9 @@ public:
       std::conditional_t<RecordWhyLive, WhyLiveEntry, InputSection>;
   using Worklist = SmallVector<WorklistEntry *, 0>;
 
-  MarkLiveImpl() : shards(parallel::getThreadCount()) {}
+  MarkLiveImpl()
+      : shards(parallel::getThreadCount()),
+        liveSupportShards(parallel::getThreadCount()) {}
   void enqueue(InputSection *isec, uint64_t off, size_t shard) override {
     enqueue(isec, off, nullptr, shards[shard]);
   }
@@ -97,7 +99,10 @@ public:
     addSym(s, nullptr, shards[shard]);
   }
   void flush(size_t shard) override;
-  void markTransitively(ArrayRef<ConcatInputSection *> liveSupport) override;
+  void addLiveSupport(ConcatInputSection *isec, size_t shard) override {
+    liveSupportShards[shard].push_back(isec);
+  }
+  void markTransitively() override;
 
 private:
   // Several threads call these at once, each passing its own worklist to
@@ -116,6 +121,7 @@ private:
   WorklistEntry *makeEntry(InputSection *, const WorklistEntry *prev) const;
 
   std::vector<Worklist> shards;
+  std::vector<SmallVector<ConcatInputSection *, 0>> liveSupportShards;
   std::mutex nextLevelMutex;
   // Sections that have been marked live and that the next level of drain() will
   // visit. Literal sections cannot contain references to other sections, so we
@@ -284,10 +290,12 @@ void MarkLiveImpl<RecordWhyLive>::flush(size_t shard) {
 }
 
 template <bool RecordWhyLive>
-void MarkLiveImpl<RecordWhyLive>::markTransitively(
-    ArrayRef<ConcatInputSection *> liveSupport) {
+void MarkLiveImpl<RecordWhyLive>::markTransitively() {
   for (size_t shard = 0; shard != shards.size(); ++shard)
     flush(shard);
+  SmallVector<ConcatInputSection *, 0> liveSupport;
+  for (SmallVector<ConcatInputSection *, 0> &s : liveSupportShards)
+    liveSupport.append(s);
   do {
     // Mark things reachable from GC roots as live.
     drain();
@@ -295,7 +303,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively(
     // S_ATTR_LIVE_SUPPORT sections are live if they point _to_ a live
     // section. Process them in a second pass.
     parallelForChunks(
-        liveSupport, 256,
+        ArrayRef(liveSupport), 256,
         [&](size_t shard, ArrayRef<ConcatInputSection *> chunk) {
           for (ConcatInputSection *isec : chunk) {
             if (isec->isLive(0))
@@ -396,18 +404,12 @@ void markLive() {
   if (auto *stubBinder =
           dyn_cast_or_null<DylibSymbol>(symtab->find("dyld_stub_binder")))
     marker->addSym(stubBinder);
-  // S_ATTR_LIVE_SUPPORT sections are rescanned after every drain, but most
-  // links have few or none, so collect them here rather than filtering all of
-  // inputSections each time. Their order only affects which live referent
-  // -why_live reports, which is deterministic only with --threads=1 anyway.
-  std::vector<SmallVector<ConcatInputSection *, 0>> liveSupportShards(
-      parallel::getThreadCount());
   parallelForChunks(
       ArrayRef(inputSections), 256,
       [&](size_t shard, ArrayRef<ConcatInputSection *> chunk) {
         for (ConcatInputSection *isec : chunk) {
           if (isec->getFlags() & S_ATTR_LIVE_SUPPORT)
-            liveSupportShards[shard].push_back(isec);
+            marker->addLiveSupport(isec, shard);
 
           // Sections marked no_dead_strip
           if (isec->getFlags() & S_ATTR_NO_DEAD_STRIP) {
@@ -429,10 +431,7 @@ void markLive() {
   for (ConcatInputSection *isec : in.initOffsets->inputs())
     marker->enqueue(isec, 0);
 
-  SmallVector<ConcatInputSection *, 0> liveSupport;
-  for (SmallVector<ConcatInputSection *, 0> &shard : liveSupportShards)
-    liveSupport.append(shard.begin(), shard.end());
-  marker->markTransitively(liveSupport);
+  marker->markTransitively();
 }
 
 } // namespace lld::macho
