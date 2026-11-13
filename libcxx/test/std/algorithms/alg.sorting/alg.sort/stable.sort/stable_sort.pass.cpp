@@ -200,6 +200,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
     std::vector<T> vec(150, T(3));
     getGlobalMemCounter()->throw_after = 0;
     std::stable_sort(vec.begin(), vec.end());
+    // The failure is still pending if std::stable_sort didn't allocate, which it doesn't have to.
+    getGlobalMemCounter()->throw_after = MemCounter::never_throw_value;
   }
 #endif
 
