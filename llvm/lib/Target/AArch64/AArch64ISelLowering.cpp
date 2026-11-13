@@ -18286,15 +18286,19 @@ static SDValue getReductionSDNode(unsigned Op, SDLoc DL, SDValue ScalarOp,
 static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
                                       SDLoc DL, SelectionDAG &DAG) {
   unsigned ScalarOpcode;
+  unsigned EquivArithReduceOpcode;
   switch (Opcode) {
   case ISD::VECREDUCE_AND:
     ScalarOpcode = ISD::AND;
+    EquivArithReduceOpcode = ISD::VECREDUCE_UMIN;
     break;
   case ISD::VECREDUCE_OR:
     ScalarOpcode = ISD::OR;
+    EquivArithReduceOpcode = ISD::VECREDUCE_UMAX;
     break;
   case ISD::VECREDUCE_XOR:
     ScalarOpcode = ISD::XOR;
+    EquivArithReduceOpcode = ISD::VECREDUCE_ADD;
     break;
   default:
     llvm_unreachable("Expected bitwise vector reduction");
@@ -18348,22 +18352,14 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
       Extended = DAG.getBitcast(MVT::v4i32, Extended);
       ExtendedVT = MVT::i32;
     }
-    switch (ScalarOpcode) {
-    case ISD::AND:
-      Result = DAG.getNode(ISD::VECREDUCE_UMIN, DL, ExtendedVT, Extended);
-      break;
-    case ISD::OR:
-      Result = DAG.getNode(ISD::VECREDUCE_UMAX, DL, ExtendedVT, Extended);
-      break;
-    case ISD::XOR:
-      Result = DAG.getNode(ISD::VECREDUCE_ADD, DL, ExtendedVT, Extended);
-      break;
-    default:
-      llvm_unreachable("Unexpected Opcode");
-    }
 
+    Result = DAG.getNode(EquivArithReduceOpcode, DL, ExtendedVT, Extended);
     Result = DAG.getAnyExtOrTrunc(Result, DL, MVT::i1);
   } else {
+    // Canonicalise boolean reductions to arthmetic reductions.
+    if (DAG.ComputeNumSignBits(Vec) == VecVT.getScalarSizeInBits())
+      return DAG.getNode(EquivArithReduceOpcode, DL, VT, Vec);
+
     // Iteratively split the vector in half and combine using the bitwise
     // operation until it fits in a 64 bit register.
     while (VecVT.getSizeInBits() > 64) {

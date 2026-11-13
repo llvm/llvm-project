@@ -5427,10 +5427,14 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     }
     Tmp = std::numeric_limits<unsigned>::max();
     if (DemandedVal) {
-      // TODO - handle implicit truncation of inserted elements.
-      if (InVal.getScalarValueSizeInBits() != VTBits)
-        break;
       Tmp2 = ComputeNumSignBits(InVal, Depth + 1);
+      if (InVal.getScalarValueSizeInBits() != VTBits) {
+        unsigned DiscardedBits = InVal.getScalarValueSizeInBits() - VTBits;
+        // TODO - Signal the real most-significant-bit to ComputeNumSignBits.
+        if (Tmp2 <= DiscardedBits)
+          break;
+        Tmp2 -= DiscardedBits;
+      }
       Tmp = std::min(Tmp, Tmp2);
     }
     if (!!DemandedVecElts) {
