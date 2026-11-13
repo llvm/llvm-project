@@ -83,6 +83,7 @@ private:
   /// Bitset of libcalls a module may emit a call to.
   LibcallImplBitset AvailableLibcallImpls;
 
+  unsigned WCharSize;
   LongDoubleFormat LongDoubleFmt;
 
 public:
@@ -93,7 +94,7 @@ public:
   LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::Default,
-      FloatABI::ABIType FloatABI = FloatABI::Default,
+      unsigned WCharSize = 0, FloatABI::ABIType FloatABI = FloatABI::Default,
       std::optional<LongDoubleFormat> LDblFormat = std::nullopt,
       StringRef ABIName = "", VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
