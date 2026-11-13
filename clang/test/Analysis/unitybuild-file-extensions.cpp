@@ -14,6 +14,8 @@
 // RUN:                    -verify=expected,impl-only %t/main.cpp
 
 //--- foo.cpp
+#include "nested.h"
+
 int includedCppFunction(int x) {
   if (x == 0)
     return 1 / x; // all-extensions-warning{{Division by zero}}
@@ -23,6 +25,17 @@ int includedCppFunction(int x) {
 // This bug is found through the call from main.cpp, even by the default run.
 int calledIncludedCppFunction(int x) {
   return 1 / x; // expected-warning{{Division by zero}}
+}
+
+//--- nested.h
+#include "nested.cpp"
+
+//--- nested.cpp
+// main.cpp includes this file through foo.cpp and nested.h.
+int nestedCppFunction(int x) {
+  if (x == 0)
+    return 1 / x; // all-extensions-warning{{Division by zero}}
+  return 0;
 }
 
 //--- header.h
