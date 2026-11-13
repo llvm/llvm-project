@@ -1676,6 +1676,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   captured by copy when a nested construct has `default(firstprivate)` or
   `default(private)`, which could silently lose writes such as the result of
   a reduction on the nested construct.
+- Fixed a crash when analyzing an OpenMP `ordered` directive with a `depend` or
+  `doacross` clause inside a loop whose `ordered` clause argument has a
+  bit-width other than 32 bits (such as `int` on 16-bit targets or `long long`).
+  (#GH235971)
 
 ### SYCL Support
 
