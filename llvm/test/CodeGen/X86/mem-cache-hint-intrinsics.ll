@@ -11,10 +11,10 @@ define i32 @target_memory_intrinsic(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY [[COPY]]
   ; CHECK-NEXT:   LOCK_BTS32m [[COPY1]], 1, $noreg, 0, $noreg, 1, implicit-def $eflags :: (volatile load store (s32) on %ir.p, align 32)
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
-  ; CHECK-NEXT:   [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
+  ; CHECK-NEXT:   [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
   ; CHECK-NEXT:   [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[MOVZX32rr8_]], [[MOVZX32rr8_]], implicit-def dead $eflags
   ; CHECK-NEXT:   $eax = COPY [[ADD32rr]]
   ; CHECK-NEXT:   RET64 implicit $eax
