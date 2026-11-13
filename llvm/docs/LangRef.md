@@ -1320,11 +1320,17 @@ that affect how values are passed to/from functions, like `zeroext`,
 additional optimization guarantees, like `noalias`, `nonnull` and
 `dereferenceable`.
 
-ABI attributes must be specified *both* at the function declaration/definition
-and call-site, otherwise the behavior may be undefined. ABI attributes cannot
-be safely dropped. Optimization attributes do not have to match between
-call-site and function: The intersection of their implied semantics applies.
-Optimization attributes can also be freely dropped.
+Optimization attributes do not have to match between call-site and function:
+The intersection of their implied semantics applies. Optimization attributes
+can also be freely dropped.
+
+ABI attributes should usually match between the function declaration/definition
+and the call-site, and can usually not be safely dropped. Similar to a mismatch
+in function types, a mismatch in ABI attributes between caller and callee will
+often result in undefined behavior, but can be well-defined if the effective
+ABI after lowering is compatible. Whether this is the case depends on unstable,
+target-specific lowering details, so the use of matching function types and ABI
+attributes is recommended.
 
 If an integer argument to a function is not marked signext/zeroext/noext, the
 kind of extension used is target-specific. Some targets depend for
@@ -1333,15 +1339,18 @@ correctness on the kind of extension to be explicitly specified.
 Currently, only the following parameter attributes are defined:
 
 `zeroext`
-:   This indicates to the code generator that the parameter or return
-    value should be zero-extended to the extent required by the target's
-    ABI by the caller (for a parameter) or the callee (for a return value).
+:   On a call-site argument or function return value, this indicates to the
+    code generator that the value should be zero-extended to the extent
+    required by the target's ABI. On a function argument or call-site return
+    value it indicates that the value is assumed to be zero-extended to that
+    extent, otherwise the behavior is undefined.
 
 `signext`
-:   This indicates to the code generator that the parameter or return
-    value should be sign-extended to the extent required by the target's
-    ABI (which is usually 32-bits) by the caller (for a parameter) or
-    the callee (for a return value).
+:   On a call-site argument or function return value, this indicates to the
+    code generator that the value should be sign-extended to the extent
+    required by the target's ABI. On a function argument or call-site return
+    value it indicates that the value is assumed to be sign-extended to that
+    extent, otherwise the behavior is undefined.
 
 `noext`
 :   This indicates to the code generator that the parameter or return
