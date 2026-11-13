@@ -710,12 +710,13 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
 
   ParsedAttributes DeclAttrs(AttrFactory);
   ParsedAttributes DeclSpecAttrs(AttrFactory);
-  // GNU attributes are applied to the declaration specification while the
-  // standard attributes are applied to the declaration.  We parse the two
-  // attribute sets into different containters so we can apply them during
+  // GNU and Microsoft attributes apply to the declaration specification,
+  // while standard attributes apply to the declaration. We parse the two
+  // attribute sets into different containers so we can apply them during
   // the regular parsing process.
   while (MaybeParseCXX11Attributes(DeclAttrs) ||
-         MaybeParseGNUAttributes(DeclSpecAttrs))
+         MaybeParseGNUAttributes(DeclSpecAttrs) ||
+         MaybeParseMicrosoftDeclSpecs(DeclSpecAttrs))
     ;
 
   Result = ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
