@@ -305,8 +305,8 @@ define i32 @sub_sve_vscale2(i32 %arg) vscale_range(2,2) {
   ret i32 poison
 }
 
-define void @shl() {
-; COMMON-LABEL: 'shl'
+define void @shlsat() {
+; COMMON-LABEL: 'shlsat'
 ; COMMON-NEXT:  Cost Model: Found costs of 6 for: %I64 = call i64 @llvm.sshl.sat.i64(i64 poison, i64 poison)
 ; COMMON-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.sshl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; COMMON-NEXT:  Cost Model: Found costs of 12 for: %V4I64 = call <4 x i64> @llvm.sshl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -360,8 +360,8 @@ define void @shl() {
   ret void
 }
 
-define void @shl_sve_vscale2() vscale_range(2,2) {
-; BASE-LABEL: 'shl_sve_vscale2'
+define void @shlsat_sve_vscale2() vscale_range(2,2) {
+; BASE-LABEL: 'shlsat_sve_vscale2'
 ; BASE-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.sshl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; BASE-NEXT:  Cost Model: Found costs of 12 for: %V4I64 = call <4 x i64> @llvm.sshl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
 ; BASE-NEXT:  Cost Model: Found costs of 24 for: %V8I64 = call <8 x i64> @llvm.sshl.sat.v8i64(<8 x i64> poison, <8 x i64> poison)
@@ -382,7 +382,7 @@ define void @shl_sve_vscale2() vscale_range(2,2) {
 ; BASE-NEXT:  Cost Model: Found costs of 24 for: %V64I8 = call <64 x i8> @llvm.sshl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; SVE-LABEL: 'shl_sve_vscale2'
+; SVE-LABEL: 'shlsat_sve_vscale2'
 ; SVE-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.sshl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; SVE-NEXT:  Cost Model: Found costs of 164 for: %V4I64 = call <4 x i64> @llvm.sshl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
 ; SVE-NEXT:  Cost Model: Found costs of 328 for: %V8I64 = call <8 x i64> @llvm.sshl.sat.v8i64(<8 x i64> poison, <8 x i64> poison)
@@ -428,8 +428,8 @@ define void @shl_sve_vscale2() vscale_range(2,2) {
   ret void
 }
 
-define void @shl_scalable() {
-; BASE-LABEL: 'shl_scalable'
+define void @shlsat_scalable() {
+; BASE-LABEL: 'shlsat_scalable'
 ; BASE-NEXT:  Cost Model: Found costs of Invalid for: %NXV2I64 = call <vscale x 2 x i64> @llvm.sshl.sat.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; BASE-NEXT:  Cost Model: Found costs of Invalid for: %NXV4I64 = call <vscale x 4 x i64> @llvm.sshl.sat.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
 ; BASE-NEXT:  Cost Model: Found costs of Invalid for: %NXV2I32 = call <vscale x 2 x i32> @llvm.sshl.sat.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> poison)
@@ -446,7 +446,7 @@ define void @shl_scalable() {
 ; BASE-NEXT:  Cost Model: Found costs of Invalid for: %NXV32I8 = call <vscale x 32 x i8> @llvm.sshl.sat.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
 ; BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; SVE-LABEL: 'shl_scalable'
+; SVE-LABEL: 'shlsat_scalable'
 ; SVE-NEXT:  Cost Model: Found costs of 6 for: %NXV2I64 = call <vscale x 2 x i64> @llvm.sshl.sat.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
 ; SVE-NEXT:  Cost Model: Found costs of 12 for: %NXV4I64 = call <vscale x 4 x i64> @llvm.sshl.sat.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
 ; SVE-NEXT:  Cost Model: Found costs of 6 for: %NXV2I32 = call <vscale x 2 x i32> @llvm.sshl.sat.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> poison)

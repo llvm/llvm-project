@@ -518,8 +518,8 @@ define i32 @sub(i32 %arg) {
   ret i32 undef
 }
 
-define void @shl() {
-; SSE2-LABEL: 'shl'
+define void @shlsat() {
+; SSE2-LABEL: 'shlsat'
 ; SSE2-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:19 Lat:19 SizeLat:23 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:38 Lat:38 SizeLat:46 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -538,7 +538,7 @@ define void @shl() {
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:124 CodeSize:232 Lat:212 SizeLat:252 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; SSSE3-LABEL: 'shl'
+; SSSE3-LABEL: 'shlsat'
 ; SSSE3-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:19 Lat:19 SizeLat:23 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:38 Lat:38 SizeLat:46 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -557,7 +557,7 @@ define void @shl() {
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:124 CodeSize:232 Lat:212 SizeLat:252 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; SSE42-LABEL: 'shl'
+; SSE42-LABEL: 'shlsat'
 ; SSE42-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:13 Lat:17 SizeLat:19 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:26 Lat:34 SizeLat:38 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -576,7 +576,7 @@ define void @shl() {
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:140 CodeSize:152 Lat:220 SizeLat:200 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; AVX1-LABEL: 'shl'
+; AVX1-LABEL: 'shlsat'
 ; AVX1-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:11 Lat:13 SizeLat:17 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:29 Lat:20 SizeLat:39 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -595,7 +595,7 @@ define void @shl() {
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:106 CodeSize:132 Lat:102 SizeLat:186 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; AVX2-LABEL: 'shl'
+; AVX2-LABEL: 'shlsat'
 ; AVX2-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:11 SizeLat:7 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:5 Lat:12 SizeLat:9 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -614,7 +614,7 @@ define void @shl() {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:52 Lat:114 SizeLat:102 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; AVX512F-LABEL: 'shl'
+; AVX512F-LABEL: 'shlsat'
 ; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -633,7 +633,7 @@ define void @shl() {
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:67 Lat:48 SizeLat:79 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; AVX512BW-LABEL: 'shl'
+; AVX512BW-LABEL: 'shlsat'
 ; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of 4 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -652,7 +652,7 @@ define void @shl() {
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:30 Lat:48 SizeLat:35 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; AVX512DQ-LABEL: 'shl'
+; AVX512DQ-LABEL: 'shlsat'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 4 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 4 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -671,7 +671,7 @@ define void @shl() {
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:67 Lat:48 SizeLat:79 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; SLM-LABEL: 'shl'
+; SLM-LABEL: 'shlsat'
 ; SLM-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:13 Lat:22 SizeLat:20 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:26 Lat:44 SizeLat:40 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -690,7 +690,7 @@ define void @shl() {
 ; SLM-NEXT:  Cost Model: Found costs of RThru:148 CodeSize:152 Lat:228 SizeLat:204 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; GLM-LABEL: 'shl'
+; GLM-LABEL: 'shlsat'
 ; GLM-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:13 Lat:17 SizeLat:19 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:26 Lat:34 SizeLat:38 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
@@ -709,7 +709,7 @@ define void @shl() {
 ; GLM-NEXT:  Cost Model: Found costs of RThru:140 CodeSize:152 Lat:220 SizeLat:200 for: %V64I8 = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> poison, <64 x i8> poison)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-; BTVER2-LABEL: 'shl'
+; BTVER2-LABEL: 'shlsat'
 ; BTVER2-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
 ; BTVER2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:11 Lat:13 SizeLat:17 for: %V2I64 = call <2 x i64> @llvm.ushl.sat.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; BTVER2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:29 Lat:20 SizeLat:39 for: %V4I64 = call <4 x i64> @llvm.ushl.sat.v4i64(<4 x i64> poison, <4 x i64> poison)
