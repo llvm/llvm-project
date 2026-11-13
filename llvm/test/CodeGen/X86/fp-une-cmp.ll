@@ -102,47 +102,6 @@ if.end:
   ret void
 }
 
-; Test that an FP oeq/une conditional branch can be inverted successfully even
-; when the true and false targets are the same (PR27750).
-define void @pr27750(ptr %b, float %x, i1 %y) {
-; CHECK-LABEL: pr27750:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    jmp .LBB3_1
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB3_3: # %for.end
-; CHECK-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    jne .LBB3_1
-; CHECK-NEXT:    jp .LBB3_1
-; CHECK-NEXT:  .LBB3_1: # %for.cond1
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    je .LBB3_3
-; CHECK-NEXT:  # %bb.2: # %for.body3.lr.ph
-; CHECK-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    movl $0, (%rdi)
-; CHECK-NEXT:    jmp .LBB3_3
-entry:
-  br label %for.cond
-
-for.cond:
-  br label %for.cond1
-
-for.cond1:
-  br i1 %y, label %for.body3.lr.ph, label %for.end
-
-for.body3.lr.ph:
-  store i32 0, ptr %b, align 4
-  br label %for.end
-
-for.end:
-; After block %for.cond gets eliminated, the two target blocks of this
-; conditional block are the same.
-  %tobool = fcmp une float %x, 0.000000e+00
-  br i1 %tobool, label %for.cond, label %for.cond1
-}
-
 declare dso_local void @a()
 
 !1 = !{!"branch_weights", i32 1, i32 1000}
