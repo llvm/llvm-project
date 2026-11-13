@@ -172,6 +172,6 @@ void f(int m) {
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTBOUND_TID__ADDR]], align 8, !dbg [[DBG72]]
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[M_ADDR]], align 8, !dbg [[DBG72]]
 // CHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[CEN_ADDR]], align 8, !dbg [[DBG72]]
-// CHECK1-NEXT:    call void @_Z1fi.omp_outlined_debug__(ptr [[TMP3]], ptr [[TMP4]], ptr [[TMP5]], i64 [[TMP1]], ptr [[TMP6]]) #[[ATTR3:[0-9]+]], !dbg [[DBG72]]
+// CHECK1-NEXT:    call void @_Z1fi.omp_outlined_debug__(ptr noundef [[TMP3]], ptr noundef [[TMP4]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP5]], i64 noundef [[TMP1]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP6]]) #[[ATTR3:[0-9]+]], !dbg [[DBG72]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG72]]
 //

@@ -50,6 +50,8 @@ class OMPDeclareReductionDecl;
 
 namespace CodeGen {
 class Address;
+class CallArgList;
+class CGFunctionInfo;
 class CodeGenFunction;
 class CodeGenModule;
 
@@ -1590,6 +1592,14 @@ public:
   emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
                            llvm::FunctionCallee OutlinedFn,
                            ArrayRef<llvm::Value *> Args = {}) const;
+
+  /// Emits call of the outlined function \p OutlinedFn, defined with \p FnInfo,
+  /// passing \p Args in their original types through the regular call lowering
+  /// so that the target ABI (coercion, expansion, indirection) is applied.
+  void emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                llvm::Function *OutlinedFn,
+                                const CGFunctionInfo &FnInfo,
+                                const CallArgList &Args) const;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.

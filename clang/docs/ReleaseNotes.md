@@ -818,6 +818,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 - Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
+- Fixed a crash, and on some targets a miscompile, when a variable captured by copy in an OpenMP region
+  compiled with debug information has a type that the target ABI does not pass as a single value of that
+  type, such as `_Complex int` on PowerPC64 (two registers) and SystemZ (indirectly) or `_BitInt(33)` on
+  x86-64 (widened to 64 bits). (#GH147288)
 - Fixed a bug where a bit-field accessed as the result of a statement expression
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)

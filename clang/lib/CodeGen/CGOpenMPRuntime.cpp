@@ -12736,6 +12736,23 @@ void CGOpenMPRuntime::emitOutlinedFunctionCall(
   emitCall(CGF, Loc, OutlinedFn, Args);
 }
 
+void CGOpenMPRuntime::emitOutlinedFunctionCall(CodeGenFunction &CGF,
+                                               SourceLocation Loc,
+                                               llvm::Function *OutlinedFn,
+                                               const CGFunctionInfo &FnInfo,
+                                               const CallArgList &Args) const {
+  assert(Loc.isValid() && "Outlined function call location must be valid.");
+  assert(Args.size() == FnInfo.arg_size() &&
+         "Outlined function argument count mismatch.");
+  auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
+  llvm::CallBase *Call = nullptr;
+  CGF.EmitCall(FnInfo, CGCallee::forDirect(OutlinedFn), ReturnValueSlot(), Args,
+               &Call);
+  // As in emitCall(): the call does not unwind if the callee does not.
+  if (OutlinedFn->doesNotThrow())
+    Call->setDoesNotThrow();
+}
+
 void CGOpenMPRuntime::emitFunctionProlog(CodeGenFunction &CGF, const Decl *D) {
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD))

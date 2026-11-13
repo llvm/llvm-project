@@ -915,6 +915,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
                      Out.str(), Loc, !NeedWrapperFunction && IsDeviceKernel);
   llvm::Function *F = emitOutlinedFunctionPrologue(
       *this, WrapperArgs, WrapperLocalAddrs, WrapperVLASizes, CXXThisValue, FO);
+  const CGFunctionInfo &FnInfo = *CurFnInfo;
   CodeGenFunction::OMPPrivateScope LocalScope(*this);
   for (const auto &LocalAddrPair : WrapperLocalAddrs) {
     if (LocalAddrPair.second.first) {
@@ -936,34 +937,33 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
   WrapperF->removeFromParent();
   F->getParent()->getFunctionList().insertAfter(F->getIterator(), WrapperF);
 
-  llvm::SmallVector<llvm::Value *, 4> CallArgs;
-  auto *PI = F->arg_begin();
-  for (const auto *Arg : Args) {
-    llvm::Value *CallArg;
+  // Pass the arguments in their original types through the regular call
+  // lowering: the ABI may coerce, extend, expand or pass them indirectly.
+  CallArgList CallArgs;
+  for (auto [Arg, ArgInfo] : llvm::zip_equal(Args, FnInfo.arguments())) {
+    RValue CallArg;
     auto I = LocalAddrs.find(Arg);
     if (I != LocalAddrs.end()) {
       LValue LV = WrapperCGF.MakeAddrLValue(
           I->second.second,
           I->second.first ? I->second.first->getType() : Arg->getType(),
           AlignmentSource::Decl);
-      if (LV.getType()->isAnyComplexType())
-        LV.setAddress(LV.getAddress().withElementType(PI->getType()));
-      CallArg = WrapperCGF.EmitLoadOfScalar(LV, S.getBeginLoc());
+      assert(!hasAggregateEvaluationKind(LV.getType()) &&
+             "Variables captured by copy have scalar or complex type.");
+      CallArg = WrapperCGF.EmitLoadOfAnyValue(LV, AggValueSlot::ignored(),
+                                              S.getBeginLoc());
+    } else if (auto EI = VLASizes.find(Arg); EI != VLASizes.end()) {
+      CallArg = RValue::get(EI->second.second);
     } else {
-      auto EI = VLASizes.find(Arg);
-      if (EI != VLASizes.end()) {
-        CallArg = EI->second.second;
-      } else {
-        LValue LV =
-            WrapperCGF.MakeAddrLValue(WrapperCGF.GetAddrOfLocalVar(Arg),
-                                      Arg->getType(), AlignmentSource::Decl);
-        CallArg = WrapperCGF.EmitLoadOfScalar(LV, S.getBeginLoc());
-      }
+      LValue LV =
+          WrapperCGF.MakeAddrLValue(WrapperCGF.GetAddrOfLocalVar(Arg),
+                                    Arg->getType(), AlignmentSource::Decl);
+      CallArg = RValue::get(WrapperCGF.EmitLoadOfScalar(LV, S.getBeginLoc()));
     }
-    CallArgs.emplace_back(WrapperCGF.EmitFromMemory(CallArg, Arg->getType()));
-    ++PI;
+    CallArgs.add(CallArg, ArgInfo.type);
   }
-  CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, Loc, F, CallArgs);
+  CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, Loc, F, FnInfo,
+                                                  CallArgs);
   WrapperCGF.FinishFunction();
   return WrapperF;
 }
@@ -975,7 +975,6 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
       CapturedStmtInfo &&
       "CapturedStmtInfo should be set when generating the captured function");
   const CapturedDecl *CD = S.getCapturedDecl();
-  const RecordDecl *RD = S.getCapturedRecordDecl();
   StringRef FunctionName = CapturedStmtInfo->getHelperName();
   bool NeedWrapperFunction =
       getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo();
@@ -999,6 +998,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
   llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
   llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
   llvm::Function *F;
+  const CGFunctionInfo *FnInfo = nullptr;
 
   if (NeedWrapperFunction) {
     SmallString<256> Buffer;
@@ -1010,6 +1010,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
                        /*IsDeviceKernel=*/false);
     F = emitOutlinedFunctionPrologue(*this, Args, LocalAddrs, VLASizes,
                                      CXXThisValue, FO);
+    FnInfo = CurFnInfo;
   } else {
     llvm::Value *ContextV = nullptr;
     F = emitOutlinedFunctionPrologueAggregate(*this, Args, LocalAddrs, VLASizes,
@@ -1059,36 +1060,30 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
   WrapperF->removeFromParent();
   F->getParent()->getFunctionList().insertAfter(F->getIterator(), WrapperF);
 
-  llvm::Align PtrAlign = CGM.getDataLayout().getPointerABIAlignment(0);
-  llvm::SmallVector<llvm::Value *, 16> CallArgs;
+  // The runtime passes an array of pointers to the arguments: the captured
+  // fields first, then the implicit parameters (dyn_ptr).
   assert(CD->getContextParamPosition() == 0 &&
          "Expected context param at position 0 for target regions");
-  assert(RD->getNumFields() + 1 == F->getNumOperands() &&
-         "Argument count mismatch");
-
-  for (auto [FD, InnerParam, SlotIdx] : llvm::zip(
-           RD->fields(), F->args(), llvm::seq<unsigned>(RD->getNumFields()))) {
+  llvm::Align PtrAlign = CGM.getDataLayout().getPointerABIAlignment(0);
+  CharUnits SlotAlign = CharUnits::fromQuantity(PtrAlign.value());
+  CallArgList CallArgs;
+  for (auto [Arg, ArgInfo, SlotIdx] : llvm::zip_equal(
+           Args, FnInfo->arguments(), llvm::seq<unsigned>(Args.size()))) {
     llvm::Value *SlotPtr = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
         WrapperCGF.Builder.getPtrTy(), WrapperContextV, SlotIdx);
     llvm::Value *Slot = WrapperCGF.Builder.CreateAlignedLoad(
         WrapperCGF.Builder.getPtrTy(), SlotPtr, PtrAlign);
-    llvm::Value *Val = WrapperCGF.Builder.CreateAlignedLoad(
-        InnerParam.getType(), Slot, PtrAlign, InnerParam.getName());
-    CallArgs.push_back(Val);
+    QualType ArgTy = Arg->getType();
+    LValue LV = WrapperCGF.MakeAddrLValue(
+        Address(Slot, WrapperCGF.ConvertTypeForMem(ArgTy), SlotAlign), ArgTy,
+        AlignmentSource::Decl);
+    CallArgs.add(
+        WrapperCGF.EmitLoadOfAnyValue(LV, AggValueSlot::ignored(), Loc),
+        ArgInfo.type);
   }
 
-  // Handle the load from the implicit dyn_ptr at the end of the __context.
-  unsigned SlotIdx = RD->getNumFields();
-  auto InnerParam = F->arg_begin() + SlotIdx;
-  llvm::Value *SlotPtr = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
-      WrapperCGF.Builder.getPtrTy(), WrapperContextV, SlotIdx);
-  llvm::Value *Slot = WrapperCGF.Builder.CreateAlignedLoad(
-      WrapperCGF.Builder.getPtrTy(), SlotPtr, PtrAlign);
-  llvm::Value *Val = WrapperCGF.Builder.CreateAlignedLoad(
-      InnerParam->getType(), Slot, PtrAlign, InnerParam->getName());
-  CallArgs.push_back(Val);
-
-  CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, Loc, F, CallArgs);
+  CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, Loc, F, *FnInfo,
+                                                  CallArgs);
   WrapperCGF.FinishFunction();
   return WrapperF;
 }
