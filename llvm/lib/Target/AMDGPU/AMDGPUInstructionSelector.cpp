@@ -223,23 +223,67 @@ bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   MachineBasicBlock *BB = I.getParent();
   Register VCCReg = I.getOperand(1).getReg();
-  MachineInstr *Cmp;
+  Register DstReg = I.getOperand(0).getReg();
 
-  // Set SCC as a side effect with S_CMP or S_OR.
-  if (STI.hasScalarCompareEq64()) {
-    unsigned CmpOpc =
-        STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
-    Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc)).addReg(VCCReg).addImm(0);
-  } else {
-    Register DeadDst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
-    Cmp = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_OR_B64), DeadDst)
-              .addReg(VCCReg)
-              .addReg(VCCReg);
+  // Set SCC as a side effect with S_CMP or S_OR, before InsertPt.
+  auto EmitSCCDef = [&](MachineBasicBlock::iterator InsertPt) {
+    MachineInstr *Cmp;
+    if (STI.hasScalarCompareEq64()) {
+      unsigned CmpOpc =
+          STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
+      Cmp =
+          BuildMI(*BB, InsertPt, DL, TII.get(CmpOpc)).addReg(VCCReg).addImm(0);
+    } else {
+      Register DeadDst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+      Cmp = BuildMI(*BB, InsertPt, DL, TII.get(AMDGPU::S_OR_B64), DeadDst)
+                .addReg(VCCReg)
+                .addReg(VCCReg);
+    }
+    constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
+  };
+
+  // Users were selected before I and read the result through
+  // "$scc = COPY DstReg". Replace those copies in this block with the
+  // conversion instead of saving SCC to an SGPR.
+  auto IsSCCRestore = [&](const MachineInstr &MI) {
+    return MI.isCopy() && MI.getParent() == BB &&
+           MI.getOperand(0).getReg() == AMDGPU::SCC &&
+           MI.getOperand(1).getReg() == DstReg;
+  };
+
+  // Bounds the walk at the last restore.
+  unsigned NumRestores =
+      count_if(MRI->use_nodbg_instructions(DstReg), IsSCCRestore);
+  // True while SCC holds the result.
+  bool SCCValid = false;
+  // Restores past the limit keep the saved SCC.
+  constexpr unsigned MaxInstScan = 64;
+  unsigned NumInst = 0;
+  for (auto It = std::next(MachineBasicBlock::iterator(I)); NumRestores;) {
+    MachineInstr &MI = *It++;
+    if (!MI.isDebugInstr() && ++NumInst > MaxInstScan)
+      break;
+    if (IsSCCRestore(MI)) {
+      // Reconvert only if SCC changed since the last conversion.
+      if (!SCCValid)
+        EmitSCCDef(MI);
+      SCCValid = true;
+      MI.eraseFromParent();
+      --NumRestores;
+    } else if (MI.modifiesRegister(AMDGPU::SCC, &TRI)) {
+      SCCValid = false;
+    }
   }
 
-  constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI);
+  // No users left, so the original conversion is not needed.
+  if (MRI->use_nodbg_empty(DstReg)) {
+    salvageDebugInfo(*MRI, I);
+    I.eraseFromParent();
+    return true;
+  }
 
-  Register DstReg = I.getOperand(0).getReg();
+  // The remaining users need the result saved in DstReg.
+  EmitSCCDef(I.getIterator());
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(AMDGPU::SCC);
 
   I.eraseFromParent();
@@ -562,9 +606,47 @@ bool AMDGPUInstructionSelector::selectG_UADDO_USUBO_UADDE_USUBE(
     .add(I.getOperand(2))
     .add(I.getOperand(3));
 
-  if (MRI->use_nodbg_empty(Dst1Reg)) {
+  bool CarryUsed = !MRI->use_nodbg_empty(Dst1Reg);
+  // Users were selected before I and read the carry through
+  // "$scc = COPY Dst1Reg". Without a carry-in, replace those copies in this
+  // block with the add, into a dead result, instead of saving SCC to an SGPR.
+  if (!HasCarryIn) {
+    auto IsSCCRestore = [&](const MachineInstr &MI) {
+      return MI.isCopy() && MI.getParent() == BB &&
+             MI.getOperand(0).getReg() == AMDGPU::SCC &&
+             MI.getOperand(1).getReg() == Dst1Reg;
+    };
+    unsigned NumRestores =
+        count_if(MRI->use_nodbg_instructions(Dst1Reg), IsSCCRestore);
+    // True while SCC holds the carry, as it does right after CarryInst.
+    bool SCCValid = true;
+    // Restores past the limit keep the saved carry.
+    constexpr unsigned MaxInstScan = 64;
+    unsigned NumInst = 0;
+    for (auto It = std::next(MachineBasicBlock::iterator(I)); NumRestores;) {
+      MachineInstr &MI = *It++;
+      if (!MI.isDebugInstr() && ++NumInst > MaxInstScan)
+        break;
+      if (IsSCCRestore(MI)) {
+        if (!SCCValid) {
+          Register DeadDst =
+              MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          BuildMI(*BB, MI, DL, TII.get(NoCarryOpc), DeadDst)
+              .add(I.getOperand(2))
+              .add(I.getOperand(3));
+        }
+        SCCValid = true;
+        MI.eraseFromParent();
+        --NumRestores;
+      } else if (MI.modifiesRegister(AMDGPU::SCC, &TRI)) {
+        SCCValid = false;
+      }
+    }
+  }
+
+  if (!CarryUsed) {
     CarryInst.setOperandDead(3); // Dead scc
-  } else {
+  } else if (!MRI->use_nodbg_empty(Dst1Reg)) {
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst1Reg)
       .addReg(AMDGPU::SCC);
     if (!MRI->getRegClassOrNull(Dst1Reg))

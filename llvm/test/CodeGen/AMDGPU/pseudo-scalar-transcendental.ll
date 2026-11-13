@@ -151,13 +151,12 @@ define amdgpu_cs float @v_s_log_f32(float inreg %src) {
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
 ; GCN-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GCN-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GCN-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GCN-GISEL-NEXT:    s_lshl_b32 s2, s2, 5
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-GISEL-NEXT:    s_lshl_b32 s1, s1, 5
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-GISEL-NEXT:    v_ldexp_f32 v0, s0, v0
 ; GCN-GISEL-NEXT:    v_log_f32_e32 v0, v0
-; GCN-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GCN-GISEL-NEXT:    s_cselect_b32 s0, 0x42000000, 0
 ; GCN-GISEL-NEXT:    v_subrev_f32_e32 v0, s0, v0
 ; GCN-GISEL-NEXT:    ; return to shader part epilog
@@ -574,33 +573,32 @@ define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 0x4f800000
 ; GCN-GISEL-NEXT:    v_mul_f32_e32 v0, s0, v0
+; GCN-GISEL-NEXT:    v_readfirstlane_b32 s1, v0
 ; GCN-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GCN-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-GISEL-NEXT:    s_cselect_b32 s0, s2, s0
-; GCN-GISEL-NEXT:    v_sqrt_f32_e32 v0, s0
-; GCN-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GCN-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-GISEL-NEXT:    s_add_i32 s3, s2, -1
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-GISEL-NEXT:    s_add_i32 s4, s2, 1
-; GCN-GISEL-NEXT:    v_fma_f32 v1, -v1, v0, s0
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, s4
-; GCN-GISEL-NEXT:    v_fma_f32 v0, -v2, v0, s0
-; GCN-GISEL-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
-; GCN-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GCN-GISEL-NEXT:    s_cselect_b32 s2, s3, s2
-; GCN-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GCN-GISEL-NEXT:    s_cselect_b32 s2, s4, s2
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 0x37800000
-; GCN-GISEL-NEXT:    v_mul_f32_e32 v0, s2, v0
+; GCN-GISEL-NEXT:    s_cselect_b32 s2, s1, s0
+; GCN-GISEL-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-GISEL-NEXT:    v_readfirstlane_b32 s3, v0
+; GCN-GISEL-NEXT:    s_add_i32 s4, s3, -1
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-GISEL-NEXT:    s_add_i32 s5, s3, 1
+; GCN-GISEL-NEXT:    v_fma_f32 v1, -v1, v0, s2
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, s5
+; GCN-GISEL-NEXT:    v_fma_f32 v0, -v2, v0, s2
+; GCN-GISEL-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v1
+; GCN-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GCN-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v0
+; GCN-GISEL-NEXT:    s_cselect_b32 s3, s4, s3
+; GCN-GISEL-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GCN-GISEL-NEXT:    s_cselect_b32 s0, s5, s3
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 0x37800000
+; GCN-GISEL-NEXT:    v_mul_f32_e32 v0, s0, v0
+; GCN-GISEL-NEXT:    v_readfirstlane_b32 s1, v0
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 0x260
-; GCN-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
-; GCN-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s0, v0
-; GCN-GISEL-NEXT:    s_cselect_b32 s1, s3, s2
 ; GCN-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GCN-GISEL-NEXT:    s_cselect_b32 s0, s0, s1
+; GCN-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
+; GCN-GISEL-NEXT:    s_cselect_b32 s0, s1, s0
+; GCN-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
+; GCN-GISEL-NEXT:    s_cselect_b32 s0, s2, s0
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-GISEL-NEXT:    ; return to shader part epilog
   %result = call float @llvm.sqrt.f32(float %src)
@@ -702,13 +700,12 @@ define amdgpu_cs float @srcmods_abs_f32(float inreg %src) {
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e64 s[2:3], |s0|, v0
 ; GCN-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GCN-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GCN-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GCN-GISEL-NEXT:    s_lshl_b32 s2, s2, 5
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-GISEL-NEXT:    s_lshl_b32 s1, s1, 5
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-GISEL-NEXT:    v_ldexp_f32 v0, |s0|, v0
 ; GCN-GISEL-NEXT:    v_log_f32_e32 v0, v0
-; GCN-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GCN-GISEL-NEXT:    s_cselect_b32 s0, 0x42000000, 0
 ; GCN-GISEL-NEXT:    v_subrev_f32_e32 v0, s0, v0
 ; GCN-GISEL-NEXT:    ; return to shader part epilog
@@ -760,13 +757,12 @@ define amdgpu_cs float @srcmods_neg_f32(float inreg %src) {
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e64 s[2:3], -s0, v0
 ; GCN-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GCN-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GCN-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GCN-GISEL-NEXT:    s_lshl_b32 s2, s2, 5
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-GISEL-NEXT:    s_lshl_b32 s1, s1, 5
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, s1
 ; GCN-GISEL-NEXT:    v_ldexp_f32 v0, -s0, v0
 ; GCN-GISEL-NEXT:    v_log_f32_e32 v0, v0
-; GCN-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GCN-GISEL-NEXT:    s_cselect_b32 s0, 0x42000000, 0
 ; GCN-GISEL-NEXT:    v_subrev_f32_e32 v0, s0, v0
 ; GCN-GISEL-NEXT:    ; return to shader part epilog

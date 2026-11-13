@@ -20,38 +20,33 @@ body: |
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX6-NEXT: [[S_SUB_U32_:%[0-9]+]]:sreg_32 = S_SUB_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GFX6-NEXT: $scc = COPY [[COPY2]]
     ; GFX6-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[S_SUB_U32_]], implicit [[S_CSELECT_B32_]]
+    ;
     ; GFX8-LABEL: name: usubo_s32_s1_sss
     ; GFX8: liveins: $sgpr0, $sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX8-NEXT: [[S_SUB_U32_:%[0-9]+]]:sreg_32 = S_SUB_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GFX8-NEXT: $scc = COPY [[COPY2]]
     ; GFX8-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[S_SUB_U32_]], implicit [[S_CSELECT_B32_]]
+    ;
     ; GFX9-LABEL: name: usubo_s32_s1_sss
     ; GFX9: liveins: $sgpr0, $sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9-NEXT: [[S_SUB_U32_:%[0-9]+]]:sreg_32 = S_SUB_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GFX9-NEXT: $scc = COPY [[COPY2]]
     ; GFX9-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_SUB_U32_]], implicit [[S_CSELECT_B32_]]
+    ;
     ; GFX10-LABEL: name: usubo_s32_s1_sss
     ; GFX10: liveins: $sgpr0, $sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX10-NEXT: [[S_SUB_U32_:%[0-9]+]]:sreg_32 = S_SUB_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GFX10-NEXT: $scc = COPY [[COPY2]]
     ; GFX10-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[S_SUB_U32_]], implicit [[S_CSELECT_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
@@ -78,6 +73,7 @@ body: |
     ; GFX6-NEXT: [[V_SUB_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUB_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_SUB_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GFX6-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX8-LABEL: name: usubo_s32_s1_vvv
     ; GFX8: liveins: $vgpr0, $vgpr1
     ; GFX8-NEXT: {{  $}}
@@ -86,6 +82,7 @@ body: |
     ; GFX8-NEXT: [[V_SUB_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUB_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_SUB_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GFX8-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX9-LABEL: name: usubo_s32_s1_vvv
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -94,6 +91,7 @@ body: |
     ; GFX9-NEXT: [[V_SUB_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUB_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_SUB_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GFX9-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX10-LABEL: name: usubo_s32_s1_vvv
     ; GFX10: liveins: $vgpr0, $vgpr1
     ; GFX10-NEXT: {{  $}}
@@ -128,6 +126,7 @@ body: |
     ; GFX6-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GFX6-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_1]], 0, [[V_MOV_B32_e32_]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX8-LABEL: name: usubo_s32_s1_vsv
     ; GFX8: liveins: $sgpr0, $vgpr0
     ; GFX8-NEXT: {{  $}}
@@ -138,6 +137,7 @@ body: |
     ; GFX8-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GFX8-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_1]], 0, [[V_MOV_B32_e32_]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX9-LABEL: name: usubo_s32_s1_vsv
     ; GFX9: liveins: $sgpr0, $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -148,6 +148,7 @@ body: |
     ; GFX9-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GFX9-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_1]], 0, [[V_MOV_B32_e32_]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX10-LABEL: name: usubo_s32_s1_vsv
     ; GFX10: liveins: $sgpr0, $vgpr0
     ; GFX10-NEXT: {{  $}}
@@ -186,6 +187,7 @@ body: |
     ; GFX6-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GFX6-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_1]], 0, [[V_MOV_B32_e32_]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX8-LABEL: name: usubo_s32_s1_vvs
     ; GFX8: liveins: $sgpr0, $vgpr0
     ; GFX8-NEXT: {{  $}}
@@ -196,6 +198,7 @@ body: |
     ; GFX8-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GFX8-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_1]], 0, [[V_MOV_B32_e32_]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX9-LABEL: name: usubo_s32_s1_vvs
     ; GFX9: liveins: $sgpr0, $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -206,6 +209,7 @@ body: |
     ; GFX9-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GFX9-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_1]], 0, [[V_MOV_B32_e32_]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; GFX10-LABEL: name: usubo_s32_s1_vvs
     ; GFX10: liveins: $sgpr0, $vgpr0
     ; GFX10-NEXT: {{  $}}

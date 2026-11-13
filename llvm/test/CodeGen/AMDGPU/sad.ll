@@ -179,10 +179,9 @@ define amdgpu_kernel void @v_sad_u32_pat2(ptr addrspace(1) %out, i32 %a, i32 %b,
 ; GFX7-GISEL-NEXT:    s_load_dword s4, s[4:5], 0xd
 ; GFX7-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-GISEL-NEXT:    s_sub_u32 s5, s3, s2
-; GFX7-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX7-GISEL-NEXT:    s_sub_i32 s3, s2, s3
-; GFX7-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX7-GISEL-NEXT:    s_cselect_b32 s3, s3, s5
+; GFX7-GISEL-NEXT:    s_sub_i32 s6, s2, s3
+; GFX7-GISEL-NEXT:    s_sub_u32 s2, s3, s2
+; GFX7-GISEL-NEXT:    s_cselect_b32 s3, s6, s5
 ; GFX7-GISEL-NEXT:    s_add_i32 s3, s3, s4
 ; GFX7-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v0, s3
@@ -220,10 +219,9 @@ define amdgpu_kernel void @v_sad_u32_pat2(ptr addrspace(1) %out, i32 %a, i32 %b,
 ; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-5-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s3, s1, s0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s0, s0, s1
-; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s0, s0, s3
+; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s6, s0, s1
+; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s0, s1, s0
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s0, s6, s3
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s0, s0, s2
 ; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v0, s0
@@ -684,19 +682,18 @@ define amdgpu_kernel void @v_sad_u32_multi_use_sub_pat2(ptr addrspace(1) %out, i
 ; GFX7-GISEL:       ; %bb.0:
 ; GFX7-GISEL-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GFX7-GISEL-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GFX7-GISEL-NEXT:    s_mov_b32 s14, -1
 ; GFX7-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX7-GISEL-NEXT:    s_load_dword s4, s[4:5], 0xd
+; GFX7-GISEL-NEXT:    s_mov_b32 s14, -1
 ; GFX7-GISEL-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GFX7-GISEL-NEXT:    s_add_u32 s12, s12, s11
 ; GFX7-GISEL-NEXT:    s_addc_u32 s13, s13, 0
 ; GFX7-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-GISEL-NEXT:    s_sub_u32 s5, s3, s2
-; GFX7-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX7-GISEL-NEXT:    s_sub_i32 s2, s2, s3
-; GFX7-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX7-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX7-GISEL-NEXT:    s_cselect_b32 s2, s2, s5
+; GFX7-GISEL-NEXT:    s_sub_i32 s6, s2, s3
+; GFX7-GISEL-NEXT:    s_sub_u32 s2, s3, s2
+; GFX7-GISEL-NEXT:    s_cselect_b32 s2, s6, s5
+; GFX7-GISEL-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-GISEL-NEXT:    s_add_i32 s2, s2, s4
 ; GFX7-GISEL-NEXT:    buffer_store_dword v0, v0, s[12:15], 0 offen
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -739,13 +736,12 @@ define amdgpu_kernel void @v_sad_u32_multi_use_sub_pat2(ptr addrspace(1) %out, i
 ; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-5-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s3, s1, s0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s0, s0, s1
-; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s1, s0, s3
+; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s6, s0, s1
+; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s0, s1, s0
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s0, s6, s3
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-5-GISEL-NEXT:    s_add_co_i32 s1, s1, s2
-; GFX12-5-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-5-GISEL-NEXT:    s_add_co_i32 s0, s0, s2
+; GFX12-5-GISEL-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s0
 ; GFX12-5-GISEL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; GFX12-5-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-5-GISEL-NEXT:    global_store_b32 v2, v1, s[4:5]
@@ -791,18 +787,17 @@ define amdgpu_kernel void @v_sad_u32_multi_use_select_pat2(ptr addrspace(1) %out
 ; GFX7-GISEL:       ; %bb.0:
 ; GFX7-GISEL-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GFX7-GISEL-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GFX7-GISEL-NEXT:    s_mov_b32 s14, -1
 ; GFX7-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX7-GISEL-NEXT:    s_load_dword s4, s[4:5], 0xd
+; GFX7-GISEL-NEXT:    s_mov_b32 s14, -1
 ; GFX7-GISEL-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GFX7-GISEL-NEXT:    s_add_u32 s12, s12, s11
 ; GFX7-GISEL-NEXT:    s_addc_u32 s13, s13, 0
 ; GFX7-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-GISEL-NEXT:    s_sub_u32 s5, s3, s2
-; GFX7-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX7-GISEL-NEXT:    s_sub_i32 s2, s2, s3
-; GFX7-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX7-GISEL-NEXT:    s_cselect_b32 s2, s2, s5
+; GFX7-GISEL-NEXT:    s_sub_i32 s6, s2, s3
+; GFX7-GISEL-NEXT:    s_sub_u32 s2, s3, s2
+; GFX7-GISEL-NEXT:    s_cselect_b32 s2, s6, s5
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX7-GISEL-NEXT:    s_add_i32 s2, s2, s4
 ; GFX7-GISEL-NEXT:    buffer_store_dword v0, v0, s[12:15], 0 offen
@@ -846,10 +841,9 @@ define amdgpu_kernel void @v_sad_u32_multi_use_select_pat2(ptr addrspace(1) %out
 ; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-5-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s3, s1, s0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s0, s0, s1
-; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s0, s0, s3
+; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s6, s0, s1
+; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s0, s1, s0
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s0, s6, s3
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s1, s0, s2
 ; GFX12-5-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -1748,11 +1742,10 @@ define amdgpu_kernel void @v_sad_u32_mismatched_operands_pat2(ptr addrspace(1) %
 ; GFX7-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
 ; GFX7-GISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX7-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-GISEL-NEXT:    s_sub_u32 s1, s1, s0
-; GFX7-GISEL-NEXT:    s_cselect_b32 s7, 1, 0
-; GFX7-GISEL-NEXT:    s_sub_i32 s0, s0, s3
-; GFX7-GISEL-NEXT:    s_cmp_lg_u32 s7, 0
-; GFX7-GISEL-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX7-GISEL-NEXT:    s_sub_u32 s7, s1, s0
+; GFX7-GISEL-NEXT:    s_sub_i32 s3, s0, s3
+; GFX7-GISEL-NEXT:    s_sub_u32 s0, s1, s0
+; GFX7-GISEL-NEXT:    s_cselect_b32 s0, s3, s7
 ; GFX7-GISEL-NEXT:    s_add_i32 s0, s0, s2
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-GISEL-NEXT:    s_mov_b32 s7, 0xf000
@@ -1786,11 +1779,10 @@ define amdgpu_kernel void @v_sad_u32_mismatched_operands_pat2(ptr addrspace(1) %
 ; GFX12-5-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24 nv
 ; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s1, s1, s0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s0, s0, s3
-; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX12-5-GISEL-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s6, s1, s0
+; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s3, s0, s3
+; GFX12-5-GISEL-NEXT:    s_sub_co_u32 s0, s1, s0
+; GFX12-5-GISEL-NEXT:    s_cselect_b32 s0, s3, s6
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s0, s0, s2
 ; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v0, s0

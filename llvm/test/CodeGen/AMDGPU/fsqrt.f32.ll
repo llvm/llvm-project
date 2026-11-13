@@ -709,33 +709,32 @@ define amdgpu_ps i32 @s_sqrt_f32(float inreg %x) {
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x4f800000
 ; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s0, v0
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s1, v0
 ; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s1, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s1, s0
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s3
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 1, 0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-IEEE-NEXT:    s_add_i32 s5, s4, -1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s5
-; GISEL-IEEE-NEXT:    s_add_i32 s6, s4, 1
-; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s3
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s6
-; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s3
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s0, s6, s4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s0, v0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s1, v0
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x260
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s2, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s3, v0
 ; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s1, s0
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s2
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v0
+; GISEL-IEEE-NEXT:    s_add_i32 s4, s3, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s4
+; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s2
+; GISEL-IEEE-NEXT:    s_add_i32 s5, s3, 1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s5
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v1
+; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s2
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s4, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s5, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s3, v0
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x260
 ; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s0, s3, s2
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s4, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s0, s2, s3
 ; GISEL-IEEE-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-DAZ-LABEL: s_sqrt_f32:
@@ -768,8 +767,8 @@ define amdgpu_ps i32 @s_sqrt_f32(float inreg %x) {
 ; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, 0x4f800000
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s0, v0
-; GISEL-DAZ-NEXT:    s_or_b64 s[2:3], vcc, vcc
 ; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s1, v0
+; GISEL-DAZ-NEXT:    s_or_b64 s[2:3], vcc, vcc
 ; GISEL-DAZ-NEXT:    s_cselect_b32 s2, s1, s0
 ; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s2
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s2, v0
@@ -826,33 +825,32 @@ define amdgpu_ps i32 @s_sqrt_f32_ninf(float inreg %x) {
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x4f800000
 ; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s0, v0
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s1, v0
 ; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s1, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s1, s0
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s3
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 1, 0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-IEEE-NEXT:    s_add_i32 s5, s4, -1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s5
-; GISEL-IEEE-NEXT:    s_add_i32 s6, s4, 1
-; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s3
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s6
-; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s3
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s0, s6, s4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s0, v0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s1, v0
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x260
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s2, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s3, v0
 ; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s1, s0
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s2
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v0
+; GISEL-IEEE-NEXT:    s_add_i32 s4, s3, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s4
+; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s2
+; GISEL-IEEE-NEXT:    s_add_i32 s5, s3, 1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s5
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v1
+; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s2
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s4, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s5, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s3, v0
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x260
 ; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s0, s3, s2
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s2, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s4, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s0, s2, s3
 ; GISEL-IEEE-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-DAZ-LABEL: s_sqrt_f32_ninf:
@@ -885,8 +883,8 @@ define amdgpu_ps i32 @s_sqrt_f32_ninf(float inreg %x) {
 ; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, 0x4f800000
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s0, v0
-; GISEL-DAZ-NEXT:    s_or_b64 s[2:3], vcc, vcc
 ; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s1, v0
+; GISEL-DAZ-NEXT:    s_or_b64 s[2:3], vcc, vcc
 ; GISEL-DAZ-NEXT:    s_cselect_b32 s2, s1, s0
 ; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s2
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s2, v0
@@ -3998,49 +3996,47 @@ define amdgpu_kernel void @elim_redun_check_neg0(ptr addrspace(1) %out, float %i
 ;
 ; GISEL-IEEE-LABEL: elim_redun_check_neg0:
 ; GISEL-IEEE:       ; %bb.0: ; %entry
-; GISEL-IEEE-NEXT:    s_load_dword s6, s[4:5], 0xb
+; GISEL-IEEE-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
+; GISEL-IEEE-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
 ; GISEL-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s6, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s0, s6
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s8
-; GISEL-IEEE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, 1, 0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-IEEE-NEXT:    s_add_i32 s5, s4, -1
-; GISEL-IEEE-NEXT:    s_add_i32 s9, s4, 1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s5
-; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s8
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s9
-; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s8
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s9, s4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s2, v0
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s2, v1
 ; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s3, s2
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s3
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s6, v0
+; GISEL-IEEE-NEXT:    s_add_i32 s7, s6, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s7
+; GISEL-IEEE-NEXT:    s_add_i32 s8, s6, 1
+; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s8
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v1
+; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s7, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s8, s6
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s6, v0
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s7, v0
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x260
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s7, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s8, v0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s3, v0
 ; GISEL-IEEE-NEXT:    v_bfrev_b32_e32 v0, 1
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s3, s2
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s8, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-IEEE-NEXT:    s_mov_b32 s2, -1
-; GISEL-IEEE-NEXT:    s_mov_b32 s3, 0xf000
-; GISEL-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-IEEE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s7, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s3, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s0, 0x7fc00000, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-IEEE-NEXT:    s_mov_b32 s6, -1
+; GISEL-IEEE-NEXT:    s_mov_b32 s7, 0xf000
+; GISEL-IEEE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GISEL-IEEE-NEXT:    s_endpgm
 ;
 ; SDAG-DAZ-LABEL: elim_redun_check_neg0:
@@ -4081,9 +4077,9 @@ define amdgpu_kernel void @elim_redun_check_neg0(ptr addrspace(1) %out, float %i
 ; GISEL-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s6, v1
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s2, v0
 ; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s0, s6
+; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s2, s6
 ; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s7
 ; GISEL-DAZ-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s7, v0
@@ -4152,48 +4148,46 @@ define amdgpu_kernel void @elim_redun_check_pos0(ptr addrspace(1) %out, float %i
 ;
 ; GISEL-IEEE-LABEL: elim_redun_check_pos0:
 ; GISEL-IEEE:       ; %bb.0: ; %entry
-; GISEL-IEEE-NEXT:    s_load_dword s6, s[4:5], 0xb
+; GISEL-IEEE-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
+; GISEL-IEEE-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
 ; GISEL-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s6, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s0, s6
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s8
-; GISEL-IEEE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, 1, 0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-IEEE-NEXT:    s_add_i32 s5, s4, -1
-; GISEL-IEEE-NEXT:    s_add_i32 s9, s4, 1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s5
-; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s8
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s9
-; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s8
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s9, s4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s2, v0
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s2, v1
 ; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s3, s2
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s3
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s6, v0
+; GISEL-IEEE-NEXT:    s_add_i32 s7, s6, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s7
+; GISEL-IEEE-NEXT:    s_add_i32 s8, s6, 1
+; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s8
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v1
+; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s7, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s8, s6
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s6, v0
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s7, v0
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x260
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s7, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s8, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s3, s2
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[2:3], s6, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s8, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-IEEE-NEXT:    s_mov_b32 s2, -1
-; GISEL-IEEE-NEXT:    s_mov_b32 s3, 0xf000
-; GISEL-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-IEEE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s3, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s7, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s2, 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s3, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s0, 0x7fc00000, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-IEEE-NEXT:    s_mov_b32 s6, -1
+; GISEL-IEEE-NEXT:    s_mov_b32 s7, 0xf000
+; GISEL-IEEE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GISEL-IEEE-NEXT:    s_endpgm
 ;
 ; SDAG-DAZ-LABEL: elim_redun_check_pos0:
@@ -4234,9 +4228,9 @@ define amdgpu_kernel void @elim_redun_check_pos0(ptr addrspace(1) %out, float %i
 ; GISEL-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s6, v1
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s2, v0
 ; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s0, s6
+; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s2, s6
 ; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s7
 ; GISEL-DAZ-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s7, v0
@@ -4304,49 +4298,47 @@ define amdgpu_kernel void @elim_redun_check_ult(ptr addrspace(1) %out, float %in
 ;
 ; GISEL-IEEE-LABEL: elim_redun_check_ult:
 ; GISEL-IEEE:       ; %bb.0: ; %entry
-; GISEL-IEEE-NEXT:    s_load_dword s6, s[4:5], 0xb
+; GISEL-IEEE-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
+; GISEL-IEEE-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
 ; GISEL-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s6, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s0, s6
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s8
-; GISEL-IEEE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, 1, 0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-IEEE-NEXT:    s_add_i32 s5, s4, -1
-; GISEL-IEEE-NEXT:    s_add_i32 s9, s4, 1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s5
-; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s8
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s9
-; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s8
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s9, s4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s2, v0
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s2, v1
 ; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s3, s2
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s3
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s6, v0
+; GISEL-IEEE-NEXT:    s_add_i32 s7, s6, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s7
+; GISEL-IEEE-NEXT:    s_add_i32 s8, s6, 1
+; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, s8
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v1
+; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v2, v0, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s7, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s8, s6
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x37800000
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s6, v0
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s7, v0
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0x260
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s7, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s8, v0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s3, v0
 ; GISEL-IEEE-NEXT:    v_bfrev_b32_e32 v0, 1
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s3, s2
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_nge_f32_e32 vcc, s6, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s8, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s4
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-IEEE-NEXT:    s_mov_b32 s2, -1
-; GISEL-IEEE-NEXT:    s_mov_b32 s3, 0xf000
-; GISEL-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-IEEE-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s7, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_nge_f32_e32 vcc, s2, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s3, s6
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s0, 0x7fc00000, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-IEEE-NEXT:    s_mov_b32 s6, -1
+; GISEL-IEEE-NEXT:    s_mov_b32 s7, 0xf000
+; GISEL-IEEE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GISEL-IEEE-NEXT:    s_endpgm
 ;
 ; SDAG-DAZ-LABEL: elim_redun_check_ult:
@@ -4387,9 +4379,9 @@ define amdgpu_kernel void @elim_redun_check_ult(ptr addrspace(1) %out, float %in
 ; GISEL-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s6, v1
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s2, v0
 ; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s0, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s0, s6
+; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s2, s6
 ; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s7
 ; GISEL-DAZ-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s7, v0
@@ -4476,82 +4468,76 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ;
 ; GISEL-IEEE-LABEL: elim_redun_check_v2:
 ; GISEL-IEEE:       ; %bb.0: ; %entry
-; GISEL-IEEE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GISEL-IEEE-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
 ; GISEL-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v2, s2, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v2
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, s4, s2
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v2, s7
-; GISEL-IEEE-NEXT:    s_cselect_b32 s6, 1, 0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s8, v2
-; GISEL-IEEE-NEXT:    s_add_i32 s9, s8, -1
-; GISEL-IEEE-NEXT:    s_add_i32 s10, s8, 1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, s9
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, s10
-; GISEL-IEEE-NEXT:    v_fma_f32 v3, -v3, v2, s7
-; GISEL-IEEE-NEXT:    v_fma_f32 v2, -v4, v2, s7
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v3
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v2
-; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s9, s8
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s10, s8
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v2, s6, v1
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s2, v2
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s2, s6
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v2, s2
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v2
+; GISEL-IEEE-NEXT:    s_add_i32 s8, s3, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, s8
+; GISEL-IEEE-NEXT:    s_add_i32 s9, s3, 1
+; GISEL-IEEE-NEXT:    v_fma_f32 v3, -v3, v2, s2
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, s9
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v3
+; GISEL-IEEE-NEXT:    v_fma_f32 v2, -v4, v2, s2
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v2
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s8, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s9, s3
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x37800000
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v3, s4, v2
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s5, v3
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v3, s3, v2
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s8, v3
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, 0x260
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s6, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s7, v3
-; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s7, s6
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s3, v1
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s4, s3
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s8
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, 1, 0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s2, v3
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s8, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s7, v0
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s7, v1
+; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s2, s3
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s2, v0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s2, s7
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s2
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v0
+; GISEL-IEEE-NEXT:    s_add_i32 s9, s3, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s9
+; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s2
+; GISEL-IEEE-NEXT:    s_add_i32 s10, s3, 1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, s10
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v1
+; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v4, v0, s2
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s9, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s10, s3
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s3, v2
 ; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s9, v0
-; GISEL-IEEE-NEXT:    s_add_i32 s10, s9, -1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s10
-; GISEL-IEEE-NEXT:    s_add_i32 s11, s9, 1
-; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s8
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, s11
-; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v4, v0, s8
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s9, s10, s9
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s11, s9
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s4, v2
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s5, v0
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s7, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s8, v3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s2, v3
 ; GISEL-IEEE-NEXT:    v_bfrev_b32_e32 v0, 1
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, s8, s7
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, 1, 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s9, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s9, s2, s3
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s7, v0
 ; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 1, 0
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s6
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 0x7fc00000, s7
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s8
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 0x7fc00000, s9
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s3
-; GISEL-IEEE-NEXT:    s_mov_b32 s2, -1
-; GISEL-IEEE-NEXT:    s_mov_b32 s3, 0xf000
-; GISEL-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GISEL-IEEE-NEXT:    s_mov_b32 s6, -1
+; GISEL-IEEE-NEXT:    s_mov_b32 s7, 0xf000
+; GISEL-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GISEL-IEEE-NEXT:    s_endpgm
 ;
 ; SDAG-DAZ-LABEL: elim_redun_check_v2:
@@ -4602,67 +4588,63 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ;
 ; GISEL-DAZ-LABEL: elim_redun_check_v2:
 ; GISEL-DAZ:       ; %bb.0: ; %entry
-; GISEL-DAZ-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GISEL-DAZ-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, 0x4f800000
 ; GISEL-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GISEL-DAZ-NEXT:    v_mul_f32_e32 v2, s2, v1
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s4, v2
-; GISEL-DAZ-NEXT:    s_cselect_b32 s6, s4, s2
-; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v2, s6
-; GISEL-DAZ-NEXT:    v_mul_f32_e32 v3, s6, v2
+; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; GISEL-DAZ-NEXT:    v_mul_f32_e32 v2, s6, v1
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s2, v2
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, s2, s6
+; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v2, s2
+; GISEL-DAZ-NEXT:    v_mul_f32_e32 v3, s2, v2
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v2, 0.5, v2
 ; GISEL-DAZ-NEXT:    v_fma_f32 v4, -v2, v3, 0.5
 ; GISEL-DAZ-NEXT:    v_fma_f32 v3, v3, v4, v3
 ; GISEL-DAZ-NEXT:    v_fma_f32 v2, v2, v4, v2
-; GISEL-DAZ-NEXT:    v_fma_f32 v4, -v3, v3, s6
+; GISEL-DAZ-NEXT:    v_fma_f32 v4, -v3, v3, s2
 ; GISEL-DAZ-NEXT:    v_fma_f32 v2, v4, v2, v3
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s4, v2
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s0, v2
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v2, 0x37800000, v2
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s5, v2
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s1, v2
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v2, 0x260
-; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, s6, v2
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s5, s4
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s6, s6, s7
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s3, v1
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s4, s3
-; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s7
-; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, s7, v2
-; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s7, v0
+; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, s2, v2
+; GISEL-DAZ-NEXT:    s_cselect_b32 s3, s1, s0
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s7, v0
+; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s7, v1
+; GISEL-DAZ-NEXT:    s_cselect_b32 s8, s2, s3
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s2, v0
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, s2, s7
+; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s2
+; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, s2, v2
+; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s2, v0
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, 0.5, v0
 ; GISEL-DAZ-NEXT:    v_fma_f32 v3, -v0, v1, 0.5
 ; GISEL-DAZ-NEXT:    v_fma_f32 v1, v1, v3, v1
 ; GISEL-DAZ-NEXT:    v_fma_f32 v0, v0, v3, v0
-; GISEL-DAZ-NEXT:    v_fma_f32 v3, -v1, v1, s7
+; GISEL-DAZ-NEXT:    v_fma_f32 v3, -v1, v1, s2
 ; GISEL-DAZ-NEXT:    v_fma_f32 v0, v3, v0, v1
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, 0x37800000, v0
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s5, v0
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s1, v0
 ; GISEL-DAZ-NEXT:    v_bfrev_b32_e32 v0, 1
-; GISEL-DAZ-NEXT:    s_cselect_b32 s8, s5, s4
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s7, s8
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s4, 1, 0
+; GISEL-DAZ-NEXT:    s_cselect_b32 s3, s1, s0
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; GISEL-DAZ-NEXT:    s_cselect_b32 s9, s2, s3
+; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e64 s[0:1], s7, v0
 ; GISEL-DAZ-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 1, 0
-; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 0x7fc00000, s6
-; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 0x7fc00000, s7
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 0x7fc00000, s8
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 0x7fc00000, s9
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, s3
-; GISEL-DAZ-NEXT:    s_mov_b32 s2, -1
-; GISEL-DAZ-NEXT:    s_mov_b32 s3, 0xf000
-; GISEL-DAZ-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GISEL-DAZ-NEXT:    s_mov_b32 s6, -1
+; GISEL-DAZ-NEXT:    s_mov_b32 s7, 0xf000
+; GISEL-DAZ-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GISEL-DAZ-NEXT:    s_endpgm
 entry:
   %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %in)
@@ -4723,82 +4705,76 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 ;
 ; GISEL-IEEE-LABEL: elim_redun_check_v2_ult:
 ; GISEL-IEEE:       ; %bb.0: ; %entry
-; GISEL-IEEE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GISEL-IEEE-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
 ; GISEL-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v2, s2, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v2
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, s4, s2
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v2, s7
-; GISEL-IEEE-NEXT:    s_cselect_b32 s6, 1, 0
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s8, v2
-; GISEL-IEEE-NEXT:    s_add_i32 s9, s8, -1
-; GISEL-IEEE-NEXT:    s_add_i32 s10, s8, 1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, s9
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, s10
-; GISEL-IEEE-NEXT:    v_fma_f32 v3, -v3, v2, s7
-; GISEL-IEEE-NEXT:    v_fma_f32 v2, -v4, v2, s7
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v3
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v2
-; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s9, s8
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s10, s8
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v2, s6, v1
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s2, v2
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s2, s6
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v2, s2
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v2
+; GISEL-IEEE-NEXT:    s_add_i32 s8, s3, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, s8
+; GISEL-IEEE-NEXT:    s_add_i32 s9, s3, 1
+; GISEL-IEEE-NEXT:    v_fma_f32 v3, -v3, v2, s2
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, s9
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v3
+; GISEL-IEEE-NEXT:    v_fma_f32 v2, -v4, v2, s2
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v2
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s8, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s9, s3
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x37800000
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v3, s4, v2
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s5, v3
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v3, s3, v2
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s8, v3
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, 0x260
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s6, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s7, v3
-; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s6, s7, s6
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s3, v1
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s4, s3
-; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s8
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, 1, 0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s2, v3
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s8, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s7, v0
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s7, v1
+; GISEL-IEEE-NEXT:    s_cselect_b32 s8, s2, s3
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s2, v0
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, s2, s7
+; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, s2
+; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s3, v0
+; GISEL-IEEE-NEXT:    s_add_i32 s9, s3, -1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s9
+; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s2
+; GISEL-IEEE-NEXT:    s_add_i32 s10, s3, 1
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, s10
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 s[0:1], 0, v1
+; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v4, v0, s2
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], 0, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s9, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s10, s3
+; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s3, v2
 ; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s9, v0
-; GISEL-IEEE-NEXT:    s_add_i32 s10, s9, -1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s10
-; GISEL-IEEE-NEXT:    s_add_i32 s11, s9, 1
-; GISEL-IEEE-NEXT:    v_fma_f32 v1, -v1, v0, s8
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, s11
-; GISEL-IEEE-NEXT:    v_fma_f32 v0, -v4, v0, s8
-; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s9, s10, s9
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, s11, s9
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, s4, v2
-; GISEL-IEEE-NEXT:    v_readfirstlane_b32 s5, v0
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s7, 0
-; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s8, v3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, s2, v3
 ; GISEL-IEEE-NEXT:    v_bfrev_b32_e32 v0, 1
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, s5, s4
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_nge_f32_e32 vcc, s2, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s7, s8, s7
-; GISEL-IEEE-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-IEEE-NEXT:    v_cmp_nge_f32_e32 vcc, s3, v0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s4, 1, 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, s9, s3
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-IEEE-NEXT:    v_cmp_nge_f32_e32 vcc, s6, v0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s9, s2, s3
+; GISEL-IEEE-NEXT:    v_cmp_nge_f32_e64 s[0:1], s7, v0
 ; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 1, 0
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s6
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 0x7fc00000, s7
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s8
+; GISEL-IEEE-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 0x7fc00000, s9
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s3
-; GISEL-IEEE-NEXT:    s_mov_b32 s2, -1
-; GISEL-IEEE-NEXT:    s_mov_b32 s3, 0xf000
-; GISEL-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GISEL-IEEE-NEXT:    s_mov_b32 s6, -1
+; GISEL-IEEE-NEXT:    s_mov_b32 s7, 0xf000
+; GISEL-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GISEL-IEEE-NEXT:    s_endpgm
 ;
 ; SDAG-DAZ-LABEL: elim_redun_check_v2_ult:
@@ -4849,67 +4825,63 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 ;
 ; GISEL-DAZ-LABEL: elim_redun_check_v2_ult:
 ; GISEL-DAZ:       ; %bb.0: ; %entry
-; GISEL-DAZ-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GISEL-DAZ-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, 0x4f800000
 ; GISEL-DAZ-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; GISEL-DAZ-NEXT:    v_mul_f32_e32 v2, s2, v1
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s4, v2
-; GISEL-DAZ-NEXT:    s_cselect_b32 s6, s4, s2
-; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v2, s6
-; GISEL-DAZ-NEXT:    v_mul_f32_e32 v3, s6, v2
+; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v0
+; GISEL-DAZ-NEXT:    v_mul_f32_e32 v2, s6, v1
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s2, v2
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, s2, s6
+; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v2, s2
+; GISEL-DAZ-NEXT:    v_mul_f32_e32 v3, s2, v2
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v2, 0.5, v2
 ; GISEL-DAZ-NEXT:    v_fma_f32 v4, -v2, v3, 0.5
 ; GISEL-DAZ-NEXT:    v_fma_f32 v3, v3, v4, v3
 ; GISEL-DAZ-NEXT:    v_fma_f32 v2, v2, v4, v2
-; GISEL-DAZ-NEXT:    v_fma_f32 v4, -v3, v3, s6
+; GISEL-DAZ-NEXT:    v_fma_f32 v4, -v3, v3, s2
 ; GISEL-DAZ-NEXT:    v_fma_f32 v2, v4, v2, v3
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s4, v2
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s0, v2
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v2, 0x37800000, v2
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s5, v2
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s1, v2
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v2, 0x260
-; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, s6, v2
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s5, s4
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s6, s6, s7
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s3, v1
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s4, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s4, s3
-; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s7
-; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, s7, v2
-; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s7, v0
+; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, s2, v2
+; GISEL-DAZ-NEXT:    s_cselect_b32 s3, s1, s0
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s7, v0
+; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, s7, v1
+; GISEL-DAZ-NEXT:    s_cselect_b32 s8, s2, s3
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s2, v0
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, s2, s7
+; GISEL-DAZ-NEXT:    v_rsq_f32_e32 v0, s2
+; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, s2, v2
+; GISEL-DAZ-NEXT:    v_mul_f32_e32 v1, s2, v0
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, 0.5, v0
 ; GISEL-DAZ-NEXT:    v_fma_f32 v3, -v0, v1, 0.5
 ; GISEL-DAZ-NEXT:    v_fma_f32 v1, v1, v3, v1
 ; GISEL-DAZ-NEXT:    v_fma_f32 v0, v0, v3, v0
-; GISEL-DAZ-NEXT:    v_fma_f32 v3, -v1, v1, s7
+; GISEL-DAZ-NEXT:    v_fma_f32 v3, -v1, v1, s2
 ; GISEL-DAZ-NEXT:    v_fma_f32 v0, v3, v0, v1
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-DAZ-NEXT:    v_mul_f32_e32 v0, 0x37800000, v0
-; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s5, v0
+; GISEL-DAZ-NEXT:    v_readfirstlane_b32 s1, v0
 ; GISEL-DAZ-NEXT:    v_bfrev_b32_e32 v0, 1
-; GISEL-DAZ-NEXT:    s_cselect_b32 s8, s5, s4
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_cmp_nge_f32_e32 vcc, s2, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s7, s7, s8
-; GISEL-DAZ-NEXT:    s_or_b64 s[4:5], vcc, vcc
-; GISEL-DAZ-NEXT:    v_cmp_nge_f32_e32 vcc, s3, v0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s4, 1, 0
+; GISEL-DAZ-NEXT:    s_cselect_b32 s3, s1, s0
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GISEL-DAZ-NEXT:    v_cmp_nge_f32_e32 vcc, s6, v0
+; GISEL-DAZ-NEXT:    s_cselect_b32 s9, s2, s3
+; GISEL-DAZ-NEXT:    v_cmp_nge_f32_e64 s[0:1], s7, v0
 ; GISEL-DAZ-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 1, 0
-; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 0x7fc00000, s6
-; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 0x7fc00000, s7
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 0x7fc00000, s8
+; GISEL-DAZ-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
+; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 0x7fc00000, s9
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, s3
-; GISEL-DAZ-NEXT:    s_mov_b32 s2, -1
-; GISEL-DAZ-NEXT:    s_mov_b32 s3, 0xf000
-; GISEL-DAZ-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GISEL-DAZ-NEXT:    s_mov_b32 s6, -1
+; GISEL-DAZ-NEXT:    s_mov_b32 s7, 0xf000
+; GISEL-DAZ-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GISEL-DAZ-NEXT:    s_endpgm
 entry:
   %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %in)

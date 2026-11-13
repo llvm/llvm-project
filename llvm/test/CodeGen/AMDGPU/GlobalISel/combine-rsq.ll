@@ -8,7 +8,6 @@ define amdgpu_cs float @div_sqrt(float inreg %arg1) {
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s1, s0, 0xf800000
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s1, 0
-; GCN-NEXT:    s_cselect_b32 s1, 1, 0
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
@@ -46,27 +45,26 @@ define amdgpu_cs float @sqrt_div(float inreg %arg1) {
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cselect_b32 s1, s1, s0
-; GCN-NEXT:    v_sqrt_f32_e32 v0, s1
+; GCN-NEXT:    s_cselect_b32 s2, s1, s0
+; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
 ; GCN-NEXT:    s_add_i32 s4, s3, -1
 ; GCN-NEXT:    s_add_i32 s5, s3, 1
-; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s1
-; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s1
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
-; GCN-NEXT:    v_cmp_lt_f32_e64 s0, 0, v0
-; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
-; GCN-NEXT:    s_cselect_b32 s3, s4, s3
+; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s2
+; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s2
+; GCN-NEXT:    v_cmp_ge_f32_e64 s0, 0, v1
+; GCN-NEXT:    v_cmp_lt_f32_e64 s1, 0, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    v_cmp_class_f32_e64 s4, s1, 0x260
-; GCN-NEXT:    s_cselect_b32 s0, s5, s3
-; GCN-NEXT:    s_cmp_lg_u32 s2, 0
+; GCN-NEXT:    s_cselect_b32 s0, s4, s3
+; GCN-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-NEXT:    v_cmp_class_f32_e64 s3, s2, 0x260
+; GCN-NEXT:    s_cselect_b32 s0, s5, s0
+; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
 ; GCN-NEXT:    v_mul_f32_e64 v0, s0, 0x37800000
-; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    v_readfirstlane_b32 s1, v0
 ; GCN-NEXT:    s_cselect_b32 s0, s1, s0
+; GCN-NEXT:    s_cmp_lg_u32 s3, 0
+; GCN-NEXT:    s_cselect_b32 s0, s2, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:
@@ -82,7 +80,6 @@ define amdgpu_cs float @rcp_sqrt(float inreg %arg1) {
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s1, s0, 0xf800000
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s1, 0
-; GCN-NEXT:    s_cselect_b32 s1, 1, 0
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
@@ -120,27 +117,26 @@ define amdgpu_cs float @sqrt_rcp(float inreg %arg1) {
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cselect_b32 s1, s1, s0
-; GCN-NEXT:    v_sqrt_f32_e32 v0, s1
+; GCN-NEXT:    s_cselect_b32 s2, s1, s0
+; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
 ; GCN-NEXT:    s_add_i32 s4, s3, -1
 ; GCN-NEXT:    s_add_i32 s5, s3, 1
-; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s1
-; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s1
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
-; GCN-NEXT:    v_cmp_lt_f32_e64 s0, 0, v0
-; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
-; GCN-NEXT:    s_cselect_b32 s3, s4, s3
+; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s2
+; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s2
+; GCN-NEXT:    v_cmp_ge_f32_e64 s0, 0, v1
+; GCN-NEXT:    v_cmp_lt_f32_e64 s1, 0, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    v_cmp_class_f32_e64 s4, s1, 0x260
-; GCN-NEXT:    s_cselect_b32 s0, s5, s3
-; GCN-NEXT:    s_cmp_lg_u32 s2, 0
+; GCN-NEXT:    s_cselect_b32 s0, s4, s3
+; GCN-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-NEXT:    v_cmp_class_f32_e64 s3, s2, 0x260
+; GCN-NEXT:    s_cselect_b32 s0, s5, s0
+; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
 ; GCN-NEXT:    v_mul_f32_e64 v0, s0, 0x37800000
-; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    v_readfirstlane_b32 s1, v0
 ; GCN-NEXT:    s_cselect_b32 s0, s1, s0
+; GCN-NEXT:    s_cmp_lg_u32 s3, 0
+; GCN-NEXT:    s_cselect_b32 s0, s2, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:
@@ -156,7 +152,6 @@ define amdgpu_cs float @div_sqrt_contract(float inreg %arg1) {
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s1, s0, 0xf800000
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s1, 0
-; GCN-NEXT:    s_cselect_b32 s1, 1, 0
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
@@ -194,27 +189,26 @@ define amdgpu_cs float @sqrt_div_contract(float inreg %arg1) {
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cselect_b32 s1, s1, s0
-; GCN-NEXT:    v_sqrt_f32_e32 v0, s1
+; GCN-NEXT:    s_cselect_b32 s2, s1, s0
+; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
 ; GCN-NEXT:    s_add_i32 s4, s3, -1
 ; GCN-NEXT:    s_add_i32 s5, s3, 1
-; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s1
-; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s1
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
-; GCN-NEXT:    v_cmp_lt_f32_e64 s0, 0, v0
-; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
-; GCN-NEXT:    s_cselect_b32 s3, s4, s3
+; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s2
+; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s2
+; GCN-NEXT:    v_cmp_ge_f32_e64 s0, 0, v1
+; GCN-NEXT:    v_cmp_lt_f32_e64 s1, 0, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    v_cmp_class_f32_e64 s4, s1, 0x260
-; GCN-NEXT:    s_cselect_b32 s0, s5, s3
-; GCN-NEXT:    s_cmp_lg_u32 s2, 0
+; GCN-NEXT:    s_cselect_b32 s0, s4, s3
+; GCN-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-NEXT:    v_cmp_class_f32_e64 s3, s2, 0x260
+; GCN-NEXT:    s_cselect_b32 s0, s5, s0
+; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
 ; GCN-NEXT:    v_mul_f32_e64 v0, s0, 0x37800000
-; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    v_readfirstlane_b32 s1, v0
 ; GCN-NEXT:    s_cselect_b32 s0, s1, s0
+; GCN-NEXT:    s_cmp_lg_u32 s3, 0
+; GCN-NEXT:    s_cselect_b32 s0, s2, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:
@@ -230,7 +224,6 @@ define amdgpu_cs float @rcp_sqrt_contract(float inreg %arg1) {
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s1, s0, 0xf800000
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s1, 0
-; GCN-NEXT:    s_cselect_b32 s1, 1, 0
 ; GCN-NEXT:    s_cselect_b32 s2, s2, s0
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
@@ -268,27 +261,26 @@ define amdgpu_cs float @sqrt_rcp_contract(float inreg %arg1) {
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cselect_b32 s1, s1, s0
-; GCN-NEXT:    v_sqrt_f32_e32 v0, s1
+; GCN-NEXT:    s_cselect_b32 s2, s1, s0
+; GCN-NEXT:    v_sqrt_f32_e32 v0, s2
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v0
 ; GCN-NEXT:    s_add_i32 s4, s3, -1
 ; GCN-NEXT:    s_add_i32 s5, s3, 1
-; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s1
-; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s1
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
-; GCN-NEXT:    v_cmp_lt_f32_e64 s0, 0, v0
-; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
-; GCN-NEXT:    s_cselect_b32 s3, s4, s3
+; GCN-NEXT:    v_fma_f32 v1, -s4, v0, s2
+; GCN-NEXT:    v_fma_f32 v0, -s5, v0, s2
+; GCN-NEXT:    v_cmp_ge_f32_e64 s0, 0, v1
+; GCN-NEXT:    v_cmp_lt_f32_e64 s1, 0, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    v_cmp_class_f32_e64 s4, s1, 0x260
-; GCN-NEXT:    s_cselect_b32 s0, s5, s3
-; GCN-NEXT:    s_cmp_lg_u32 s2, 0
+; GCN-NEXT:    s_cselect_b32 s0, s4, s3
+; GCN-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-NEXT:    v_cmp_class_f32_e64 s3, s2, 0x260
+; GCN-NEXT:    s_cselect_b32 s0, s5, s0
+; GCN-NEXT:    s_cmp_lg_u32 vcc_lo, 0
 ; GCN-NEXT:    v_mul_f32_e64 v0, s0, 0x37800000
-; GCN-NEXT:    v_readfirstlane_b32 s3, v0
-; GCN-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    v_readfirstlane_b32 s1, v0
 ; GCN-NEXT:    s_cselect_b32 s0, s1, s0
+; GCN-NEXT:    s_cmp_lg_u32 s3, 0
+; GCN-NEXT:    s_cselect_b32 s0, s2, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    ; return to shader part epilog
 .entry:

@@ -675,15 +675,15 @@ define i64 @test_s_signed_i64_f32(float inreg %f) nounwind {
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v0, 0xdf000000
 ; GFX7-GI-NEXT:    s_subb_u32 s7, s7, s4
 ; GFX7-GI-NEXT:    v_cmp_nge_f32_e32 vcc, s16, v0
-; GFX7-GI-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v0, 0x5effffff
 ; GFX7-GI-NEXT:    s_mov_b32 s4, 0
 ; GFX7-GI-NEXT:    s_brev_b32 s5, 1
+; GFX7-GI-NEXT:    s_or_b64 s[8:9], vcc, vcc
 ; GFX7-GI-NEXT:    v_cmp_gt_f32_e32 vcc, s16, v0
 ; GFX7-GI-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[6:7]
-; GFX7-GI-NEXT:    s_or_b64 s[6:7], vcc, vcc
 ; GFX7-GI-NEXT:    s_mov_b32 s6, -1
 ; GFX7-GI-NEXT:    s_brev_b32 s7, -2
+; GFX7-GI-NEXT:    s_or_b64 s[8:9], vcc, vcc
 ; GFX7-GI-NEXT:    s_cselect_b64 s[4:5], s[6:7], s[4:5]
 ; GFX7-GI-NEXT:    v_cmp_u_f32_e64 s[6:7], s16, s16
 ; GFX7-GI-NEXT:    s_or_b64 s[6:7], s[6:7], s[6:7]
