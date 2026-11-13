@@ -46,7 +46,8 @@ public:
   // entries are likely still in cache.
   virtual void flush(size_t shard) = 0;
   // Flushes all the shards into `nextLevel` before doing the marking.
-  virtual void markTransitively() = 0;
+  virtual void
+  markTransitively(ArrayRef<ConcatInputSection *> liveSupport) = 0;
   virtual ~MarkLive() = default;
 };
 
@@ -96,7 +97,7 @@ public:
     addSym(s, nullptr, shards[shard]);
   }
   void flush(size_t shard) override;
-  void markTransitively() override;
+  void markTransitively(ArrayRef<ConcatInputSection *> liveSupport) override;
 
 private:
   // Several threads call these at once, each passing its own worklist to
@@ -283,7 +284,8 @@ void MarkLiveImpl<RecordWhyLive>::flush(size_t shard) {
 }
 
 template <bool RecordWhyLive>
-void MarkLiveImpl<RecordWhyLive>::markTransitively() {
+void MarkLiveImpl<RecordWhyLive>::markTransitively(
+    ArrayRef<ConcatInputSection *> liveSupport) {
   for (size_t shard = 0; shard != shards.size(); ++shard)
     flush(shard);
   do {
@@ -293,12 +295,10 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
     // S_ATTR_LIVE_SUPPORT sections are live if they point _to_ a live
     // section. Process them in a second pass.
     parallelForChunks(
-        ArrayRef(inputSections), 256,
+        liveSupport, 256,
         [&](size_t shard, ArrayRef<ConcatInputSection *> chunk) {
           for (ConcatInputSection *isec : chunk) {
-            // FIXME: Check if copying all S_ATTR_LIVE_SUPPORT sections into a
-            // separate vector and only walking that here is faster.
-            if (!(isec->getFlags() & S_ATTR_LIVE_SUPPORT) || isec->isLive(0))
+            if (isec->isLive(0))
               continue;
 
             for (const Relocation &r : isec->relocs) {
@@ -396,10 +396,19 @@ void markLive() {
   if (auto *stubBinder =
           dyn_cast_or_null<DylibSymbol>(symtab->find("dyld_stub_binder")))
     marker->addSym(stubBinder);
+  // S_ATTR_LIVE_SUPPORT sections are rescanned after every drain, but most
+  // links have few or none, so collect them here rather than filtering all of
+  // inputSections each time. Their order only affects which live referent
+  // -why_live reports, which is deterministic only with --threads=1 anyway.
+  std::vector<SmallVector<ConcatInputSection *, 0>> liveSupportShards(
+      parallel::getThreadCount());
   parallelForChunks(
       ArrayRef(inputSections), 256,
       [&](size_t shard, ArrayRef<ConcatInputSection *> chunk) {
         for (ConcatInputSection *isec : chunk) {
+          if (isec->getFlags() & S_ATTR_LIVE_SUPPORT)
+            liveSupportShards[shard].push_back(isec);
+
           // Sections marked no_dead_strip
           if (isec->getFlags() & S_ATTR_NO_DEAD_STRIP) {
             marker->enqueue(isec, 0, shard);
@@ -420,7 +429,10 @@ void markLive() {
   for (ConcatInputSection *isec : in.initOffsets->inputs())
     marker->enqueue(isec, 0);
 
-  marker->markTransitively();
+  SmallVector<ConcatInputSection *, 0> liveSupport;
+  for (SmallVector<ConcatInputSection *, 0> &shard : liveSupportShards)
+    liveSupport.append(shard.begin(), shard.end());
+  marker->markTransitively(liveSupport);
 }
 
 } // namespace lld::macho
