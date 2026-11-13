@@ -32,29 +32,29 @@
 // CHECK:           %[[EXTRACT_2:.*]] = vector.extract %[[RHS]][0] : vector<[8]xf32> from vector<4x[8]xf32>
 // CHECK:           %[[SCALABLE_2:.*]] = vector.scalable.extract %[[EXTRACT_2]][0] : vector<[4]xf32> from vector<[8]xf32>
 // CHECK:           %[[SCALABLE_3:.*]] = vector.scalable.extract %[[EXTRACT_2]][4] : vector<[4]xf32> from vector<[8]xf32>
-// CHECK:           %[[FMLA_0:.*]] = arm_sve.fmla %[[ACC_0]], %[[LHS_BCAST]], %[[SCALABLE_2]], %[[CONSTANT_3]] : vector<[4]xf32> to vector<[4]xf32>
-// CHECK:           %[[FMLA_1:.*]] = arm_sve.fmla %[[ACC_1]], %[[LHS_BCAST]], %[[SCALABLE_3]], %[[CONSTANT_3]] : vector<[4]xf32> to vector<[4]xf32>
+// CHECK:           %[[FMLA_0:.*]] = arm_sve.fmla %[[ACC_0]], %[[SCALABLE_2]], %[[LHS_BCAST]], %[[CONSTANT_3]] : vector<[4]xf32> to vector<[4]xf32>
+// CHECK:           %[[FMLA_1:.*]] = arm_sve.fmla %[[ACC_1]], %[[SCALABLE_3]], %[[LHS_BCAST]], %[[CONSTANT_3]] : vector<[4]xf32> to vector<[4]xf32>
 
 /// FMLA: Lane 1
 // CHECK:           %[[EXTRACT_3:.*]] = vector.extract %[[RHS]][1] : vector<[8]xf32> from vector<4x[8]xf32>
 // CHECK:           %[[SCALABLE_4:.*]] = vector.scalable.extract %[[EXTRACT_3]][0] : vector<[4]xf32> from vector<[8]xf32>
 // CHECK:           %[[SCALABLE_5:.*]] = vector.scalable.extract %[[EXTRACT_3]][4] : vector<[4]xf32> from vector<[8]xf32>
-// CHECK:           %[[FMLA_2:.*]] = arm_sve.fmla %[[FMLA_0]], %[[LHS_BCAST]], %[[SCALABLE_4]], %[[CONSTANT_2]] : vector<[4]xf32> to vector<[4]xf32>
-// CHECK:           %[[FMLA_3:.*]] = arm_sve.fmla %[[FMLA_1]], %[[LHS_BCAST]], %[[SCALABLE_5]], %[[CONSTANT_2]] : vector<[4]xf32> to vector<[4]xf32>
+// CHECK:           %[[FMLA_2:.*]] = arm_sve.fmla %[[FMLA_0]], %[[SCALABLE_4]], %[[LHS_BCAST]], %[[CONSTANT_2]] : vector<[4]xf32> to vector<[4]xf32>
+// CHECK:           %[[FMLA_3:.*]] = arm_sve.fmla %[[FMLA_1]], %[[SCALABLE_5]], %[[LHS_BCAST]], %[[CONSTANT_2]] : vector<[4]xf32> to vector<[4]xf32>
 
 /// FMLA: Lane 2
 // CHECK:           %[[EXTRACT_4:.*]] = vector.extract %[[RHS]][2] : vector<[8]xf32> from vector<4x[8]xf32>
 // CHECK:           %[[SCALABLE_6:.*]] = vector.scalable.extract %[[EXTRACT_4]][0] : vector<[4]xf32> from vector<[8]xf32>
 // CHECK:           %[[SCALABLE_7:.*]] = vector.scalable.extract %[[EXTRACT_4]][4] : vector<[4]xf32> from vector<[8]xf32>
-// CHECK:           %[[FMLA_4:.*]] = arm_sve.fmla %[[FMLA_2]], %[[LHS_BCAST]], %[[SCALABLE_6]], %[[CONSTANT_1]] : vector<[4]xf32> to vector<[4]xf32>
-// CHECK:           %[[FMLA_5:.*]] = arm_sve.fmla %[[FMLA_3]], %[[LHS_BCAST]], %[[SCALABLE_7]], %[[CONSTANT_1]] : vector<[4]xf32> to vector<[4]xf32>
+// CHECK:           %[[FMLA_4:.*]] = arm_sve.fmla %[[FMLA_2]], %[[SCALABLE_6]], %[[LHS_BCAST]], %[[CONSTANT_1]] : vector<[4]xf32> to vector<[4]xf32>
+// CHECK:           %[[FMLA_5:.*]] = arm_sve.fmla %[[FMLA_3]], %[[SCALABLE_7]], %[[LHS_BCAST]], %[[CONSTANT_1]] : vector<[4]xf32> to vector<[4]xf32>
 
 /// FMLA: Lane 3
 // CHECK:           %[[EXTRACT_5:.*]] = vector.extract %[[RHS]][3] : vector<[8]xf32> from vector<4x[8]xf32>
 // CHECK:           %[[SCALABLE_8:.*]] = vector.scalable.extract %[[EXTRACT_5]][0] : vector<[4]xf32> from vector<[8]xf32>
 // CHECK:           %[[SCALABLE_9:.*]] = vector.scalable.extract %[[EXTRACT_5]][4] : vector<[4]xf32> from vector<[8]xf32>
-// CHECK:           %[[FMLA_6:.*]] = arm_sve.fmla %[[FMLA_4]], %[[LHS_BCAST]], %[[SCALABLE_8]], %[[CONSTANT_0]] : vector<[4]xf32> to vector<[4]xf32>
-// CHECK:           %[[FMLA_7:.*]] = arm_sve.fmla %[[FMLA_5]], %[[LHS_BCAST]], %[[SCALABLE_9]], %[[CONSTANT_0]] : vector<[4]xf32> to vector<[4]xf32>
+// CHECK:           %[[FMLA_6:.*]] = arm_sve.fmla %[[FMLA_4]], %[[SCALABLE_8]], %[[LHS_BCAST]], %[[CONSTANT_0]] : vector<[4]xf32> to vector<[4]xf32>
+// CHECK:           %[[FMLA_7:.*]] = arm_sve.fmla %[[FMLA_5]], %[[SCALABLE_9]], %[[LHS_BCAST]], %[[CONSTANT_0]] : vector<[4]xf32> to vector<[4]xf32>
 
 /// Store the result back
 // CHECK:           %[[SCALABLE_10:.*]] = vector.scalable.insert %[[FMLA_6]], %[[EXTRACT_1]][0] : vector<[4]xf32> into vector<[8]xf32>

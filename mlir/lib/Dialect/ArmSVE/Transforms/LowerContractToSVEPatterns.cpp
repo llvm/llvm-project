@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements lowering patterns from vector.contract to operations
-// that map to instructions from the SVE FEAT_I8MM and FEAT_BF16 extensions.
+// that map to instructions from the SVE ISA, including matrix-multiplication
+// extensions: FEAT_I8MM and FEAT_BF16.
 //
 // TODO: There may be opportunities to unify this with a similar pattern
 // for Neon. See:
@@ -624,7 +625,8 @@ static LogicalResult matchIndexed(vector::ContractionOp op,
   auto k = rhsType.getDimSize(0);
 
   if (rhsType.getScalableDims()[0] || !rhsType.getScalableDims()[1] ||
-      lhsType.getDimSize(1) != k || k != 4 || m != 1 || n != 8)
+      lhsType.isScalable() || lhsType.getDimSize(1) != k || k != 4 || m != 1 ||
+      n != 8)
     return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
   // Check that output element type is Float32.
@@ -652,10 +654,13 @@ static LogicalResult matchIndexed(vector::ContractionOp op,
 /// It is lowered to a sequence of indexed FMLAs, one per reduction dimension
 /// (pseudo-code illustration):
 ///
-///   %acc += fmla %acc, %rhs, %lhs[0]
-///   %acc += fmla %acc, %rhs, %lhs[1]
-///   %acc += fmla %acc, %rhs, %lhs[2]
-///   %acc += fmla %acc, %rhs, %lhs[3]
+///   %acc = fmla %acc, %rhs, %lhs[0]
+///   %acc = fmla %acc, %rhs, %lhs[1]
+///   %acc = fmla %acc, %rhs, %lhs[2]
+///   %acc = fmla %acc, %rhs, %lhs[3]
+///
+/// Note that the relative order of `%rhs` and `%lhs` is reversed to match the
+/// SVE Op semantics.
 ///
 /// The actual output is a bit more complex - input vectors
 /// (e.g. vector<[8]xf32>) are broken down into valid SVE vectors (e.g.
@@ -711,11 +716,14 @@ public:
       auto rhs1 = vector::ScalableExtractOp::create(rewriter, loc, legalType,
                                                     rhsRow, 4);
 
-      acc0 = arm_sve::FmlaOp::create(rewriter, loc, legalType, acc0,
-                                     lhsScalable, rhs0, lane)
+      // FMLAs - note that the LHS and RHS operands from vector.contract are
+      // passed in the reverse order:
+      //    %acc = fmla %acc, %rhs, %lhs[0]
+      acc0 = arm_sve::FmlaOp::create(rewriter, loc, legalType, acc0, rhs0,
+                                     lhsScalable, lane)
                  .getResult();
-      acc1 = arm_sve::FmlaOp::create(rewriter, loc, legalType, acc1,
-                                     lhsScalable, rhs1, lane)
+      acc1 = arm_sve::FmlaOp::create(rewriter, loc, legalType, acc1, rhs1,
+                                     lhsScalable, lane)
                  .getResult();
     }
 
