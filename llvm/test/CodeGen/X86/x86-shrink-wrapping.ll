@@ -1555,4 +1555,137 @@ define void @infiniteLoopNoSuccessor() #5 {
 
 declare void @somethingElse(...)
 
+; Check that we can push the restore point outside a loop with multiple exiting
+; blocks when save is outside the loop and restore starts inside the loop.
+define i32 @loopInfoRestoreOutsideLoopMultiExit(i32 %cond, i32 %N) nounwind {
+; ENABLE-LABEL: loopInfoRestoreOutsideLoopMultiExit:
+; ENABLE:       ## %bb.0: ## %entry
+; ENABLE-NEXT:    pushq %rbx
+; ENABLE-NEXT:    testl %edi, %edi
+; ENABLE-NEXT:    je LBB18_5
+; ENABLE-NEXT:  ## %bb.1: ## %if.then
+; ENABLE-NEXT:    ## InlineAsm Start
+; ENABLE-NEXT:    nop
+; ENABLE-NEXT:    ## InlineAsm End
+; ENABLE-NEXT:    xorl %eax, %eax
+; ENABLE-NEXT:    movl $10, %ecx
+; ENABLE-NEXT:    .p2align 4
+; ENABLE-NEXT:  LBB18_2: ## %for.body
+; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
+; ENABLE-NEXT:    movl %eax, %edx
+; ENABLE-NEXT:    ## InlineAsm Start
+; ENABLE-NEXT:    movl $1, %eax
+; ENABLE-NEXT:    ## InlineAsm End
+; ENABLE-NEXT:    addl %edx, %eax
+; ENABLE-NEXT:    cmpl %esi, %eax
+; ENABLE-NEXT:    jg LBB18_4
+; ENABLE-NEXT:  ## %bb.3: ## %for.latch
+; ENABLE-NEXT:    ## in Loop: Header=BB18_2 Depth=1
+; ENABLE-NEXT:    decl %ecx
+; ENABLE-NEXT:    jne LBB18_2
+; ENABLE-NEXT:  LBB18_4: ## %for.end
+; ENABLE-NEXT:    shll $3, %eax
+; ENABLE-NEXT:    cmpl $101, %eax
+; ENABLE-NEXT:    jl LBB18_8
+; ENABLE-NEXT:  LBB18_7: ## %if.clamp
+; ENABLE-NEXT:    ## InlineAsm Start
+; ENABLE-NEXT:    nop
+; ENABLE-NEXT:    ## InlineAsm End
+; ENABLE-NEXT:    movl $100, %eax
+; ENABLE-NEXT:  LBB18_8: ## %ret
+; ENABLE-NEXT:    popq %rbx
+; ENABLE-NEXT:    retq
+; ENABLE-NEXT:  LBB18_5: ## %if.else
+; ENABLE-NEXT:    addl %esi, %esi
+; ENABLE-NEXT:    movl %esi, %eax
+; ENABLE-NEXT:    cmpl $101, %eax
+; ENABLE-NEXT:    jge LBB18_7
+; ENABLE-NEXT:    jmp LBB18_8
+;
+; DISABLE-LABEL: loopInfoRestoreOutsideLoopMultiExit:
+; DISABLE:       ## %bb.0: ## %entry
+; DISABLE-NEXT:    pushq %rbx
+; DISABLE-NEXT:    testl %edi, %edi
+; DISABLE-NEXT:    je LBB18_5
+; DISABLE-NEXT:  ## %bb.1: ## %if.then
+; DISABLE-NEXT:    ## InlineAsm Start
+; DISABLE-NEXT:    nop
+; DISABLE-NEXT:    ## InlineAsm End
+; DISABLE-NEXT:    xorl %eax, %eax
+; DISABLE-NEXT:    movl $10, %ecx
+; DISABLE-NEXT:    .p2align 4
+; DISABLE-NEXT:  LBB18_2: ## %for.body
+; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
+; DISABLE-NEXT:    movl %eax, %edx
+; DISABLE-NEXT:    ## InlineAsm Start
+; DISABLE-NEXT:    movl $1, %eax
+; DISABLE-NEXT:    ## InlineAsm End
+; DISABLE-NEXT:    addl %edx, %eax
+; DISABLE-NEXT:    cmpl %esi, %eax
+; DISABLE-NEXT:    jg LBB18_4
+; DISABLE-NEXT:  ## %bb.3: ## %for.latch
+; DISABLE-NEXT:    ## in Loop: Header=BB18_2 Depth=1
+; DISABLE-NEXT:    decl %ecx
+; DISABLE-NEXT:    jne LBB18_2
+; DISABLE-NEXT:  LBB18_4: ## %for.end
+; DISABLE-NEXT:    shll $3, %eax
+; DISABLE-NEXT:    cmpl $101, %eax
+; DISABLE-NEXT:    jl LBB18_8
+; DISABLE-NEXT:  LBB18_7: ## %if.clamp
+; DISABLE-NEXT:    ## InlineAsm Start
+; DISABLE-NEXT:    nop
+; DISABLE-NEXT:    ## InlineAsm End
+; DISABLE-NEXT:    movl $100, %eax
+; DISABLE-NEXT:  LBB18_8: ## %ret
+; DISABLE-NEXT:    popq %rbx
+; DISABLE-NEXT:    retq
+; DISABLE-NEXT:  LBB18_5: ## %if.else
+; DISABLE-NEXT:    addl %esi, %esi
+; DISABLE-NEXT:    movl %esi, %eax
+; DISABLE-NEXT:    cmpl $101, %eax
+; DISABLE-NEXT:    jge LBB18_7
+; DISABLE-NEXT:    jmp LBB18_8
+entry:
+  %tobool = icmp eq i32 %cond, 0
+  br i1 %tobool, label %if.else, label %if.then
+
+if.then:                                          ; preds = %entry
+  tail call void asm "nop", "~{ebx}"()
+  br label %for.body
+
+for.body:                                         ; preds = %for.latch, %if.then
+  %i.05 = phi i32 [ 0, %if.then ], [ %inc, %for.latch ]
+  %sum.04 = phi i32 [ 0, %if.then ], [ %add, %for.latch ]
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
+  %add = add nsw i32 %call, %sum.04
+  %early = icmp sgt i32 %add, %N
+  br i1 %early, label %for.end, label %for.latch
+
+for.latch:                                        ; preds = %for.body
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond = icmp eq i32 %inc, 10
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %for.latch
+  %shl = shl i32 %add, 3
+  br label %if.end
+
+if.else:                                          ; preds = %entry
+  %mul = shl nsw i32 %N, 1
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %for.end
+  %sum.1 = phi i32 [ %shl, %for.end ], [ %mul, %if.else ]
+  %cmp = icmp sgt i32 %sum.1, 100
+  br i1 %cmp, label %if.clamp, label %ret
+
+if.clamp:                                         ; preds = %if.end
+  tail call void asm "nop", ""()
+  br label %ret
+
+ret:                                              ; preds = %if.clamp, %if.end
+  %res = phi i32 [ 100, %if.clamp ], [ %sum.1, %if.end ]
+  ret i32 %res
+}
+
 attributes #5 = { nounwind "frame-pointer"="non-leaf" }
