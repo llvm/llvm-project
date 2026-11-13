@@ -2444,6 +2444,14 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-machine-sink-split=0");
 
+  // Let debuggers find the caller's HLX vector stack pointer.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+      A && !A->getOption().matches(options::OPT_g0) &&
+      !A->getOption().matches(options::OPT_ggdb0)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-hexagon-save-parent-vsp");
+  }
+
   addQFloatBackendArg(getToolChain().getDriver(), Args, CmdArgs);
 }
 
