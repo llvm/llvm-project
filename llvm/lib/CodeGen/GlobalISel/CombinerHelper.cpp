@@ -7227,16 +7227,19 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
       !mi_match(RHS, MRI, m_MInstr(RHSDef)))
     return false;
 
-  if (!getIConstantVRegVal(LHS, MRI)) {
-    // Skip commuting if LHS is not a constant. But, LHS may be a
-    // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
-    // have a constant on the RHS.
+  if (!isConstantOrConstantVector(*LHSDef, MRI, /*AllowFP=*/false,
+                                  /*AllowOpaqueConstants=*/false)) {
+    // Skip commuting if LHS is not a constant or a vector of constants. But,
+    // LHS may be a G_CONSTANT_FOLD_BARRIER. If so we commute as long as we
+    // don't already have a constant on the RHS.
     if (LHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER)
       return false;
   }
-  // Commute as long as RHS is not a constant or G_CONSTANT_FOLD_BARRIER.
+  // Commute as long as RHS is not a constant, a vector of constants or
+  // G_CONSTANT_FOLD_BARRIER.
   return RHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
-         !getIConstantVRegVal(RHS, MRI);
+         !isConstantOrConstantVector(*RHSDef, MRI, /*AllowFP=*/false,
+                                     /*AllowOpaqueConstants=*/false);
 }
 
 bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) const {
