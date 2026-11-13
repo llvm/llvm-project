@@ -50,13 +50,13 @@ entry:
 
 !0 = !{i32 8, !"PIC Level", i32 2}
 !1 = !{i32 7, !"PIE Level", i32 2}
-!2 = !{i32 1, !"Large Data Threshold", i64 0}
+!2 = !{i32 9, !"Large Data Threshold", i64 0}
 
 ;--- medium.ll
-!3 = !{i32 1, !"Code Model", i32 3}
+!3 = !{i32 9, !"Code Model", i32 3}
 
 ;--- large.ll
-!3 = !{i32 1, !"Code Model", i32 4}
+!3 = !{i32 9, !"Code Model", i32 4}
 
 ;--- ref.ll
 @_GLOBAL_OFFSET_TABLE_ = external global [0 x i8]
