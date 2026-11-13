@@ -38,12 +38,12 @@
 #include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Parallel.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Parallel.h"
 #include <algorithm>
-#include <atomic>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1187,37 +1187,30 @@ void elf::scanRelocations(Ctx &ctx) {
   // copy relocations, etc. Note that relocations for non-alloc sections are
   // directly processed by InputSection::relocateNonAlloc.
 
-  size_t numFiles = ctx.objectFiles.size();
-  std::atomic<size_t> next{0};
   // MIPS modifies MipsGotSection during relocation scanning, which is not
   // suitable for parallelism.
-  size_t numWorkers = ctx.arg.emachine == EM_MIPS
-                          ? 1
-                          : std::min<size_t>(ctx.arg.threadCount, numFiles + 1);
-  parallelFor(0, numWorkers, [&](unsigned shard) {
-    // Tasks claim work items off a shared counter: item 0 scans special
-    // sections (claimed first since .eh_frame is large) while item i scans
-    // ctx.objectFiles[i - 1].
-    for (size_t i;
-         (i = next.fetch_add(1, std::memory_order_relaxed)) <= numFiles;) {
-      if (i != 0) {
-        for (InputSectionBase *s : ctx.objectFiles[i - 1]->getSections())
-          if (s && s->kind() == SectionBase::Regular && s->isLive() &&
-              (s->flags & SHF_ALLOC) &&
-              !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))
-            ctx.target->scanSection(*s, shard);
-        continue;
-      }
-      RelocScan scanner(ctx, nullptr, shard);
-      for (EhInputSection *sec : ctx.in.ehFrame->sections)
-        scanner.scanEhSection(*sec);
-      ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
-      if (armExidx && armExidx->isLive())
-        for (InputSection *sec : armExidx->exidxSections)
-          if (sec->isLive())
-            ctx.target->scanSection(*sec, shard);
-    }
-  });
+  size_t numWorkers = ctx.arg.emachine == EM_MIPS ? 1 : ctx.arg.threadCount;
+  // Item 0 scans special sections (claimed first since .eh_frame is large)
+  // while item i scans ctx.objectFiles[i - 1].
+  parallelForSharded(
+      numWorkers, ctx.objectFiles.size() + 1, [&](size_t shard, size_t i) {
+        if (i != 0) {
+          for (InputSectionBase *s : ctx.objectFiles[i - 1]->getSections())
+            if (s && s->kind() == SectionBase::Regular && s->isLive() &&
+                (s->flags & SHF_ALLOC) &&
+                !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))
+              ctx.target->scanSection(*s, shard);
+          return;
+        }
+        RelocScan scanner(ctx, nullptr, shard);
+        for (EhInputSection *sec : ctx.in.ehFrame->sections)
+          scanner.scanEhSection(*sec);
+        ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
+        if (armExidx && armExidx->isLive())
+          for (InputSection *sec : armExidx->exidxSections)
+            if (sec->isLive())
+              ctx.target->scanSection(*sec, shard);
+      });
 }
 
 RelocationBaseSection &elf::getIRelativeSection(Ctx &ctx) {

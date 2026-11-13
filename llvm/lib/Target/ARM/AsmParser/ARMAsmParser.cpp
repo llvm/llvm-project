@@ -7825,6 +7825,14 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                          /*Writeback*/ true, MnemonicOpsEndInd))
       return true;
     break;
+  case ARM::t2STRi12:
+  case ARM::t2STRi8:
+  case ARM::t2STRs:
+    // Rt == PC is UNPREDICTABLE.
+    if (Inst.getOperand(0).getReg() == ARM::PC)
+      return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
+                   "operand must be a register in range [r0, r14]");
+    break;
   case ARM::STR_PRE_IMM:
   case ARM::STR_PRE_REG:
   case ARM::t2STR_PRE:
