@@ -3002,13 +3002,13 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":__signal_utils",
         ":types_struct_sigaction",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil:exit",
         "//libc/src/__support/OSUtil:linux_sigmask",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:raise",
         "//libc/src/__support/macros:config",
+        "//libc/src/signal:__signal_utils",
     ],
 )
 
@@ -4321,106 +4321,24 @@ alias(
     actual = "//libc/src/poll",
 )
 
-libc_support_library(
-    name = "__restore_rt",
-    srcs = ["src/signal/linux/__restore.cpp"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/macros:config",
-    ],
-)
-
-libc_support_library(
-    name = "__signal_utils",
-    hdrs = ["src/signal/linux/signal_utils.h"],
-    full_build_only = True,
-    # Only compatible with full build mode on Linux. Overlay mode has header
-    # conflicts with system headers (e.g. sa_handler macro in glibc).
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__restore_rt",
-        ":hdr_signal_macros",
-        ":types_siginfo_t",
-        ":types_sigset_t",
-        ":types_size_t",
-        ":types_struct_sigaction",
-        "//libc/src/__support:common",
-        "//libc/src/__support:error_or",
-        "//libc/src/__support/OSUtil:linux_sigmask",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil:vdso",
-        "//libc/src/__support/macros:config",
-        "//libc/src/__support/threads:raw_rwlock",
-    ],
-)
-
-libc_function(
+alias(
     name = "kill",
-    srcs = ["src/signal/linux/kill.cpp"],
-    hdrs = ["src/signal/kill.h"],
-    deps = [
-        ":types_pid_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:kill",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/signal:kill",
 )
 
-libc_function(
+alias(
     name = "sigaction",
-    srcs = ["src/signal/linux/sigaction.cpp"],
-    hdrs = ["src/signal/sigaction.h"],
-    # Full-build only, since it depends on __signal_utils.
-    full_build_only = True,
-    deps = [
-        ":__signal_utils",
-        ":types_struct_sigaction",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/signal:sigaction",
 )
 
-libc_function(
+alias(
     name = "sigaltstack",
-    srcs = ["src/signal/linux/sigaltstack.cpp"],
-    hdrs = ["src/signal/sigaltstack.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_errno_macros",
-        ":hdr_signal_macros",
-        ":types_stack_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:sigaltstack",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/signal:sigaltstack",
 )
 
-libc_function(
+alias(
     name = "signal",
-    srcs = ["src/signal/linux/signal.cpp"],
-    hdrs = ["src/signal/signal.h"],
-    # Full-build only, since it depends on sigaction.
-    full_build_only = True,
-    deps = [
-        ":hdr_signal_macros",
-        ":sigaction",
-        "//libc/src/__support:common",
-        "//libc/src/__support/macros:config",
-    ],
+    actual = "//libc/src/signal",
 )
 
 libc_function(
