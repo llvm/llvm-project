@@ -344,10 +344,6 @@
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
 #  endif
 
-#  ifdef __cpp_lib_define_static
-#    error "__cpp_lib_define_static should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_destroying_delete
 #    error "__cpp_lib_destroying_delete should not be defined before c++20"
 #  endif
@@ -920,10 +916,6 @@
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
 #  endif
 
-#  ifdef __cpp_lib_reflection
-#    error "__cpp_lib_reflection should not be defined before c++26"
-#  endif
-
 #  ifdef __cpp_lib_remove_cvref
 #    error "__cpp_lib_remove_cvref should not be defined before c++20"
 #  endif
@@ -1494,10 +1486,6 @@
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_define_static
-#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_destroying_delete
@@ -2109,10 +2097,6 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_reflection
-#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_remove_cvref
@@ -2754,10 +2738,6 @@
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_define_static
-#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_destroying_delete
@@ -3471,10 +3451,6 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_reflection
-#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_remove_cvref
@@ -4278,10 +4254,6 @@
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_define_static
-#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
@@ -5097,10 +5069,6 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_reflection
-#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_remove_cvref
@@ -6000,10 +5968,6 @@
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
 #    error "__cpp_lib_default_template_type_for_algorithm_values should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_define_static
-#    error "__cpp_lib_define_static should not be defined before c++26"
 #  endif
 
 #  if defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
@@ -6963,10 +6927,6 @@
 
 #  ifdef __cpp_lib_reference_wrapper
 #    error "__cpp_lib_reference_wrapper should not be defined before c++26"
-#  endif
-
-#  ifdef __cpp_lib_reflection
-#    error "__cpp_lib_reflection should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_remove_cvref
@@ -8084,19 +8044,6 @@
 #  else
 #    ifdef __cpp_lib_default_template_type_for_algorithm_values
 #      error "__cpp_lib_default_template_type_for_algorithm_values should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_define_static
-#      error "__cpp_lib_define_static should be defined in c++26"
-#    endif
-#    if __cpp_lib_define_static != 202506L
-#      error "__cpp_lib_define_static should have the value 202506L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_define_static
-#      error "__cpp_lib_define_static should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -9500,19 +9447,6 @@
 #    error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_reflection
-#      error "__cpp_lib_reflection should be defined in c++26"
-#    endif
-#    if __cpp_lib_reflection != 202506L
-#      error "__cpp_lib_reflection should have the value 202506L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_reflection
-#      error "__cpp_lib_reflection should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
 #  ifndef __cpp_lib_remove_cvref
 #    error "__cpp_lib_remove_cvref should be defined in c++26"
 #  endif
@@ -10709,19 +10643,6 @@
 #  else
 #    ifdef __cpp_lib_default_template_type_for_algorithm_values
 #      error "__cpp_lib_default_template_type_for_algorithm_values should not be defined because it is unimplemented in libc++!"
-#    endif
-#  endif
-
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_define_static
-#      error "__cpp_lib_define_static should be defined in c++29"
-#    endif
-#    if __cpp_lib_define_static != 202506L
-#      error "__cpp_lib_define_static should have the value 202506L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_define_static
-#      error "__cpp_lib_define_static should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
@@ -12150,19 +12071,6 @@
 #  endif
 #  if __cpp_lib_reference_wrapper != 202403L
 #    error "__cpp_lib_reference_wrapper should have the value 202403L in c++29"
-#  endif
-
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_reflection
-#      error "__cpp_lib_reflection should be defined in c++29"
-#    endif
-#    if __cpp_lib_reflection != 202506L
-#      error "__cpp_lib_reflection should have the value 202506L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_reflection
-#      error "__cpp_lib_reflection should not be defined because it is unimplemented in libc++!"
-#    endif
 #  endif
 
 #  ifndef __cpp_lib_remove_cvref

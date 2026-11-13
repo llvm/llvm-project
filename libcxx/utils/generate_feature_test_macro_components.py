@@ -604,12 +604,6 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
-            "name": "__cpp_lib_define_static",
-            "values": {"c++26": 202506},
-            "headers": ["meta"],
-            "unimplemented": True,
-        },
-        {
             "name": "__cpp_lib_destroying_delete",
             "values": {"c++20": 201806},
             "headers": ["new"],
@@ -1522,16 +1516,6 @@ feature_test_macros = [
             "name": "__cpp_lib_reference_wrapper",
             "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
             "headers": ["functional"],
-        },
-        {
-            "name": "__cpp_lib_reflection",
-            "values": {
-                "c++26": 202506,  # P2996R13 Reflection for C++26 (library support)
-                #                 # P3560R2 Error Handling in Reflection
-                # "c++26": 202603,  # P3795R2 Miscellaneous Reflection Cleanup
-            },
-            "headers": ["meta"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_remove_cvref",
