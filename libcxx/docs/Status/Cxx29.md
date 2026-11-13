@@ -5,9 +5,6 @@
 ```{include} ../Helpers/Styles.md
 ```
 
-```{contents}
-:local: true
-```
 
 ## Overview
 
