@@ -4437,22 +4437,9 @@ alias(
 
 ############################# sys/utsname targets ##############################
 
-libc_function(
+alias(
     name = "uname",
-    srcs = ["src/sys/utsname/linux/uname.cpp"],
-    hdrs = ["src/sys/utsname/uname.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":types_struct_utsname",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:uname",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/utsname:uname",
 )
 
 ############################## sys/epoll targets ###############################
