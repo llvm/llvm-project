@@ -180,8 +180,7 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
   // Track whether each result is invalidated, by its index in ResultsList. The
   // Invalidator lets results recursively query their dependencies.
   using ResultState = typename Invalidator::ResultState;
-  SmallVector<ResultState, 32> States(ResultsList.size(),
-                                      ResultState::Unknown);
+  SmallVector<ResultState, 32> States(ResultsList.size(), ResultState::Unknown);
   Invalidator Inv(IR, ResultsList, States);
   bool AnyInvalidated = false;
   for (size_t Idx = 0, E = ResultsList.size(); Idx != E; ++Idx)
