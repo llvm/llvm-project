@@ -97,11 +97,15 @@ SmallVector<IntTy> extractFromIntegerArrayAttr(Attribute attr) {
 }
 
 /// Given a value, try to extract a constant Attribute. If this fails, return
-/// the original value.
-OpFoldResult getAsOpFoldResult(Value val);
+/// the original value. If `onlyIntegerConstant` is set, only integer constants
+/// are extracted. For other constants, the original value is returned.
+OpFoldResult getAsOpFoldResult(Value val, bool onlyIntegerConstant = false);
 /// Given an array of values, try to extract a constant Attribute from each
-/// value. If this fails, return the original value.
-SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values);
+/// value. If this fails, return the original value. If `onlyIntegerConstant` is
+/// set, only integer constants are extracted. For other constants, the original
+/// value is returned.
+SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values,
+                                            bool onlyIntegerConstant = false);
 /// Convert `arrayAttr` to a vector of OpFoldResult.
 SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr);
 

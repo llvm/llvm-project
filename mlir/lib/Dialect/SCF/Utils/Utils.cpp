@@ -912,7 +912,8 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
                                        ArrayRef<Value> values) {
   assert(!values.empty() && "unexpected empty list");
   if (getType(values.front()).isIndex()) {
-    SmallVector<OpFoldResult> ofrs = getAsOpFoldResult(values);
+    SmallVector<OpFoldResult> ofrs =
+        getAsOpFoldResult(values, /*onlyIntegerConstant=*/true);
     OpFoldResult product = getProductOfIndexes(rewriter, loc, ofrs);
     return getValueOrCreateConstantIndexOp(rewriter, loc, product);
   }
@@ -1011,16 +1012,6 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   for (auto loop : loops) {
     if (auto step = getConstantIntValue(loop.getStep())) {
       if (step.value() == 0) {
-        return failure();
-      }
-    }
-
-    // Bail out if the upper bound is a non-integer constant such as ub.poison
-    // since computing the coalesced upper bound below assumes integer
-    // constants, and such a loop has no meaningful trip count anyway.
-    if (auto ub = loop.getUpperBound()) {
-      if (matchPattern(ub, m_Constant()) &&
-          !getConstantIntValue(ub).has_value()) {
         return failure();
       }
     }

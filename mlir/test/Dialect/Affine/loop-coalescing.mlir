@@ -466,22 +466,30 @@ func.func @no_coalesce_zero_step(%lb: index, %ub: index) {
 // -----
 
 // Regression test for https://github.com/llvm/llvm-project/issues/226067:
-// coalescing must bail out instead of crashing when a loop's upper bound is a
-// non-integer constant such as ub.poison.
+// coalescing must not crash when a loop's upper bound is a non-integer
+// constant such as ub.poison. The poison value must be kept as an SSA value
+// instead of being folded into an attribute.
 
-// CHECK-LABEL: @no_coalesce_poison_upper_bound
-func.func @no_coalesce_poison_upper_bound() {
+// CHECK-LABEL: @coalesce_poison_upper_bound
+func.func @coalesce_poison_upper_bound() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c42 = arith.constant 42 : index
   %c56 = arith.constant 56 : index
+  // CHECK: %[[poison:.*]] = ub.poison : index
   %poison = ub.poison : index
-  // CHECK: scf.for
-  // CHECK: scf.for
-  // CHECK: scf.for
+  // The new upper bound is the product of the original ones.
+  // CHECK: %[[ub:.*]] = affine.apply {{.*}}()[%[[poison]]]
+  // CHECK: scf.for %[[i:.*]] = %{{.*}} to %[[ub]] step %{{.*}}
   scf.for %i = %c0 to %c42 step %c1 {
+    // Inner loops must have been removed.
+    // CHECK-NOT: scf.for
+
+    // Reconstruct original IVs from the linearized one.
+    // CHECK: %[[delinearize:.+]]:3 = affine.delinearize_index %[[i]] into (42, 56, %[[poison]])
     scf.for %j = %c0 to %c56 step %c1 {
       scf.for %k = %c0 to %poison step %c1 {
+        // CHECK: "use"(%[[delinearize]]#0, %[[delinearize]]#1, %[[delinearize]]#2)
         "use"(%i, %j, %k) : (index, index, index) -> ()
       }
     }
