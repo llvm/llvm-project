@@ -859,6 +859,23 @@ subroutine test_omitted_directive_match_any_unconditional(flag)
   !$omp & when(implementation={vendor(llvm), extension(match_any)}: barrier)
 end subroutine
 
+! Both WHEN clauses score 5, and the second also matches through `vendor(llvm)`
+! when `a` is false. The ISA names differ, so neither selector is a strict
+! subset of the other and TASKWAIT is always selected.
+! CHECK-LABEL: func.func @_QPtest_isa_names_match_any(
+! CHECK-NOT:     {{fir.if|omp.taskyield}}
+! CHECK:         omp.taskwait
+! CHECK-NOT:     {{fir.if|omp.taskyield}}
+! CHECK:         return
+subroutine test_isa_names_match_any(a)
+  logical, intent(in) :: a
+  !$omp metadirective &
+  !$omp & when(device={isa("sse4")}, &
+  !$omp &      implementation={vendor(llvm), extension(match_any)}: taskwait) &
+  !$omp & when(user={condition(a)}, device={isa("avx")}, &
+  !$omp &      implementation={vendor(llvm), extension(match_any)}: taskyield)
+end subroutine
+
 ! Constant conditions are compared by truth value, whatever their kind.
 ! CHECK-LABEL: func.func @_QPtest_constant_condition_kinds(
 ! CHECK-NOT:     omp.taskyield
