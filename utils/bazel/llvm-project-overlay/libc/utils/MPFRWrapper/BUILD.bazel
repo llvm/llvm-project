@@ -50,8 +50,8 @@ libc_test_library(
     ),
     deps = [
         ":mpfr_impl",
-        "//libc:__support_common",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:common",
         "//libc/src/__support/CPP:string",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/CPP:type_traits",
@@ -80,9 +80,9 @@ libc_test_library(
     deps = [
         ":mp_common",
         ":mpfr_impl",
-        "//libc:__support_common",
         "//libc:hdr_math_macros",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:common",
         "//libc/src/__support/CPP:array",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:bitset",

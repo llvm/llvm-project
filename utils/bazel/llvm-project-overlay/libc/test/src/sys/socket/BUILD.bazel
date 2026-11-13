@@ -14,7 +14,6 @@ libc_test_library(
     name = "socket_test_support",
     hdrs = ["linux/socket_test_support.h"],
     deps = [
-        "//libc:__support_common",
         "//libc:chdir",
         "//libc:close",
         "//libc:fchdir",
@@ -26,6 +25,7 @@ libc_test_library(
         "//libc:types_size_t",
         "//libc:types_socklen_t",
         "//libc:types_struct_sockaddr_un",
+        "//libc/src/__support:common",
         "//libc/src/__support/CPP:string_view",
         "//libc/test/UnitTest:LibcUnitTest",
     ],

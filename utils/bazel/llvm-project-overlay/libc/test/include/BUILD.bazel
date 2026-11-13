@@ -400,8 +400,8 @@ libc_test(
     srcs = ["sys/queue_test.cpp"],
     full_build_only = True,
     deps = [
-        "//libc:__support_char_vector",
         "//libc:llvm_libc_macros_sys_queue_macros",
+        "//libc/src/__support:char_vector",
         "//libc/src/__support/CPP:string",
     ],
 )

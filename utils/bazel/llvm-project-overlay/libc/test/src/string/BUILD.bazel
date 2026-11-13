@@ -223,9 +223,9 @@ libc_test_library(
     name = "memory_check_utils",
     hdrs = ["memory_utils/memory_check_utils.h"],
     deps = [
-        "//libc:__support_libc_assert",
         "//libc:hdr_stdint_proxy",
         "//libc:string_memory_utils",
+        "//libc/src/__support:libc_assert",
         "//libc/src/__support/CPP:span",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:sanitizer",

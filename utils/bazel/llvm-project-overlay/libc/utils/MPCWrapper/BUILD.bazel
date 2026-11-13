@@ -55,9 +55,9 @@ libc_test_library(
     }),
     deps = [
         ":mpc_impl",
-        "//libc:__support_complex_type",
         "//libc:hdr_math_macros",
         "//libc:hdr_stdint_proxy",
+        "//libc/src/__support:complex_type",
         "//libc/src/__support/CPP:array",
         "//libc/src/__support/CPP:stringstream",
         "//libc/src/__support/CPP:type_traits",

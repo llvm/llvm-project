@@ -1180,7 +1180,7 @@ math_mpfr_test(
     name = "sqrtf128",
     hdrs = ["SqrtTest.h"],
     deps = [
-        "//libc:__support_integer_literals",
+        "//libc/src/__support:integer_literals",
         "//libc/src/__support/FPUtil:float128",
     ],
 )

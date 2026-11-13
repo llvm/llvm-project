@@ -53,7 +53,7 @@ def libc_test(
     deps = deps + [
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support/macros:config",
-        "//libc:__support_libc_errno",
+        "//libc/src/__support:libc_errno",
         "//libc:errno",
         "//libc:func_aligned_alloc",
         "//libc:func_free",

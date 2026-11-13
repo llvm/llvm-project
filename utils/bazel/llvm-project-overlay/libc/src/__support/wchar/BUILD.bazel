@@ -19,9 +19,9 @@ libc_support_library(
     name = "mbstate",
     hdrs = ["mbstate.h"],
     deps = [
-        "//libc:__support_common",
         "//libc:hdr_stdint_proxy",
         "//libc:types_char32_t",
+        "//libc/src/__support:common",
     ],
 )
 
@@ -30,13 +30,13 @@ libc_support_library(
     hdrs = ["character_converter.h"],
     deps = [
         ":mbstate",
-        "//libc:__support_common",
-        "//libc:__support_error_or",
-        "//libc:__support_math_extras",
         "//libc:hdr_errno_macros",
         "//libc:types_char32_t",
         "//libc:types_char8_t",
         "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support:math_extras",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:type_traits",
         "//libc/src/__support/macros/properties:types",
@@ -49,13 +49,13 @@ libc_support_library(
     deps = [
         ":character_converter",
         ":mbstate",
-        "//libc:__support_common",
-        "//libc:__support_error_or",
-        "//libc:__support_libc_assert",
         "//libc:hdr_errno_macros",
         "//libc:types_char32_t",
         "//libc:types_size_t",
         "//libc:types_wchar_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
+        "//libc/src/__support:libc_assert",
         "//libc/src/__support/macros:null_check",
     ],
 )
@@ -66,11 +66,11 @@ libc_support_library(
     deps = [
         ":character_converter",
         ":mbstate",
-        "//libc:__support_common",
-        "//libc:__support_error_or",
         "//libc:types_char32_t",
         "//libc:types_char8_t",
         "//libc:types_size_t",
+        "//libc/src/__support:common",
+        "//libc/src/__support:error_or",
         "//libc/src/__support/CPP:type_traits",
     ],
 )

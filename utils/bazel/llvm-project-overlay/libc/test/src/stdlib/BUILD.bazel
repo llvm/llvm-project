@@ -143,9 +143,6 @@ libc_test(
     name = "realpath_test",
     srcs = ["realpath_test.cpp"],
     deps = [
-        "//libc:__support_c_string",
-        "//libc:__support_fixedvector",
-        "//libc:__support_libc_assert",
         "//libc:chdir",
         "//libc:close",
         "//libc:getcwd",
@@ -160,6 +157,9 @@ libc_test(
         "//libc:symlinkat",
         "//libc:types_size_t",
         "//libc:unlinkat",
+        "//libc/src/__support:c_string",
+        "//libc/src/__support:fixedvector",
+        "//libc/src/__support:libc_assert",
         "//libc/src/__support/CPP:string",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/CPP:utility",
@@ -250,8 +250,8 @@ libc_test_library(
     name = "strtol_test_helper",
     hdrs = ["StrtolTest.h"],
     deps = [
-        "//libc:__support_ctype_utils",
         "//libc:hdr_errno_macros",
+        "//libc/src/__support:ctype_utils",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/CPP:type_traits",
         "//libc/src/__support/macros/properties:architectures",
@@ -319,8 +319,8 @@ libc_test(
     name = "strtold_test",
     srcs = ["strtold_test.cpp"],
     deps = [
-        "//libc:__support_uint128",
         "//libc:strtold",
+        "//libc/src/__support:uint128",
         "//libc/src/__support/FPUtil:fp_bits",
     ],
 )

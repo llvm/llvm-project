@@ -26,7 +26,7 @@ libc_test(
     name = "bit_test",
     srcs = ["bit_test.cpp"],
     deps = [
-        "//libc:__support_big_int",
+        "//libc/src/__support:big_int",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/macros/properties:types",
     ],
@@ -58,7 +58,7 @@ libc_test(
     name = "limits_test",
     srcs = ["limits_test.cpp"],
     deps = [
-        "//libc:__support_big_int",
+        "//libc/src/__support:big_int",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/macros/properties:types",
     ],
