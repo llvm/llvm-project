@@ -37,6 +37,7 @@
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/is_convertible.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cvref.h>
@@ -222,13 +223,14 @@ struct __fn {
             class _Dist     = range_difference_t<_Range>>
     requires(!__is_empty_view<_RawRange> && random_access_range<_RawRange> && sized_range<_RawRange> &&
              __is_passthrough_specialization<_RawRange>)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __rng, _Np&& __n) const
-      noexcept(noexcept(__passthrough_type_t<_RawRange>(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __rng, _Np&& __n) const noexcept(
+      (__is_std_string_view<_RawRange> && is_nothrow_convertible_v<_Np, const _Dist&>) ||
+      noexcept(__passthrough_type_t<_RawRange>(
           ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)), ranges::end(__rng))))
-          -> decltype(__passthrough_type_t<_RawRange>(
-              // Note: deliberately not forwarding `__rng` to guard against double moves.
-              ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)),
-              ranges::end(__rng))) {
+      -> decltype(__passthrough_type_t<_RawRange>(
+          // Note: deliberately not forwarding `__rng` to guard against double moves.
+          ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)),
+          ranges::end(__rng))) {
     return __passthrough_type_t<_RawRange>(
         ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)), ranges::end(__rng));
   }
