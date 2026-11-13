@@ -38,11 +38,21 @@ int main(int argc, char **argv) {
   assert(__msan_test_shadow(dst + 4, 1) == 0);
   assert(strcmp(dst, "abc") == 0);
 
-  char zero_dst[8] = "";
-  __msan_poison(zero_dst + 1, 1);
+  char zero_dst[8];
+  __msan_poison(zero_dst, sizeof(zero_dst));
 
   assert(call_strlcpy(zero_dst, "abc", 0) == 3);
-  assert(__msan_test_shadow(zero_dst + 1, 1) == 0);
+  assert(__msan_test_shadow(zero_dst, sizeof(zero_dst)) == 0);
+
+  assert(call_strlcat(zero_dst, "abc", 0) == 3);
+  assert(__msan_test_shadow(zero_dst, sizeof(zero_dst)) == 0);
+
+  char unterm_dst[8];
+  memcpy(unterm_dst, "abcd", 4);
+  __msan_poison(unterm_dst + 4, 4);
+  assert(call_strlcat(unterm_dst, "ef", 4) == 6);
+  assert(__msan_test_shadow(unterm_dst, 4) == -1);
+  assert(__msan_test_shadow(unterm_dst + 4, 4) == 0);
 
   return 0;
 }
