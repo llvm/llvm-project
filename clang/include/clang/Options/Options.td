@@ -7414,6 +7414,10 @@ def mfix_gr712rc : Flag<["-"], "mfix-gr712rc">, Group<m_sparc_Features_Group>,
   HelpText<"Enable workarounds for GR712RC errata">;
 def mfix_ut700 : Flag<["-"], "mfix-ut700">, Group<m_sparc_Features_Group>,
   HelpText<"Enable workarounds for UT700 errata">;
+def mapp_regs : Flag<["-"], "mapp-regs">, Group<m_sparc_Features_Group>,
+  HelpText<"Allow use of the G2, G3 and G4 registers (default)">;
+def mno_app_regs : Flag<["-"], "mno-app-regs">, Group<m_sparc_Features_Group>,
+  HelpText<"Reserve the G2, G3 and G4 registers">;
 foreach i = 1 ... 7 in
   def ffixed_g#i : Flag<["-"], "ffixed-g"#i>, Group<m_sparc_Features_Group>,
     HelpText<"Reserve the G"#i#" register (SPARC only)">;
