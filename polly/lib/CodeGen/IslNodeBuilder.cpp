@@ -74,9 +74,6 @@
 using namespace llvm;
 using namespace polly;
 
-// Declared in LoopGenerators.cpp
-extern llvm::cl::opt<bool> PollyVectorizeMetadata;
-
 #define DEBUG_TYPE "polly-codegen"
 
 STATISTIC(VersionedScops, "Number of SCoPs that required versioning.");
