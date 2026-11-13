@@ -16,6 +16,9 @@ namespace AMDGPU {
 enum Fixups {
   /// 16-bit PC relative fixup for SOPP branch instructions.
   fixup_si_sopp_br = FirstTargetFixupKind,
+  /// 24-bit PC-relative byte offset for s_prefetch_inst_pc_rel.
+  /// The value is relative to the next instruction (PC + 8).
+  fixup_si_smem_pcrel,
 
   // Marker
   LastTargetFixupKind,

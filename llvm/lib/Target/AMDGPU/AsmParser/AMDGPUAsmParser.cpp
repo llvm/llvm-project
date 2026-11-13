@@ -231,6 +231,12 @@ public:
     return isExpr() && Expr && isa<MCSymbolRefExpr>(Expr);
   }
 
+  bool hasSymbolSpecifier() const {
+    return isSymbolRefExpr() &&
+           AMDGPU::getSpecifier(cast<MCSymbolRefExpr>(Expr)) !=
+               AMDGPUMCExpr::S_None;
+  }
+
   bool isImm() const override { return Kind == Immediate; }
 
   bool isInlinableImm(MVT type) const;
@@ -742,6 +748,8 @@ public:
   bool isExpr() const { return Kind == Expression; }
 
   bool isSOPPBrTarget() const { return isExpr() || isImm(); }
+
+  bool isSMEMOffsetPCRel() const { return isExpr() || isImm(); }
 
   bool isSWaitCnt() const;
   bool isDepCtr() const;
@@ -1719,6 +1727,7 @@ public:
   ParseStatus parseInterpSlot(OperandVector &Operands);
   ParseStatus parseInterpAttr(OperandVector &Operands);
   ParseStatus parseSOPPBrTarget(OperandVector &Operands);
+  ParseStatus parseSMEMOffsetPCRel(OperandVector &Operands);
   ParseStatus parseBoolReg(OperandVector &Operands);
 
   bool parseSwizzleOperand(int64_t &Op, const unsigned MinVal,
@@ -9357,6 +9366,21 @@ ParseStatus AMDGPUAsmParser::parseSOPPBrTarget(OperandVector &Operands) {
     Error(Loc, "expected a 16-bit signed jump offset");
   }
 
+  return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseSMEMOffsetPCRel(OperandVector &Operands) {
+  if (isRegister() || isModifier())
+    return ParseStatus::NoMatch;
+  if (!parseExpr(Operands))
+    return ParseStatus::Failure;
+  AMDGPUOperand &Opr = ((AMDGPUOperand &)*Operands[Operands.size() - 1]);
+  assert(Opr.isImm() || Opr.isExpr());
+  // Numeric operands are the encoded offset and are range-checked later.
+  // Labels are resolved by fixup_si_smem_pcrel.
+  if (Opr.isExpr() && (!Opr.isSymbolRefExpr() || Opr.hasSymbolSpecifier()))
+    Error(Opr.getStartLoc(),
+          "expected an absolute expression or an unqualified label");
   return ParseStatus::Success;
 }
 

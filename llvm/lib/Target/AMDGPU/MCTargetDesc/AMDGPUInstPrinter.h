@@ -57,6 +57,8 @@ private:
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMEMOffset(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSMEMOffsetPCRel(const MCInst *MI, unsigned OpNo,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printCPol(const MCInst *MI, unsigned OpNo,
