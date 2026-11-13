@@ -374,6 +374,8 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitMERGE_VALUES(SDNode *N);
     SDValue visitADD(SDNode *N);
     SDValue visitADDLike(SDNode *N);
+    SDValue visitADDLikeTail(SDNode *N, SDValue N0, SDValue N1, EVT VT,
+                             const SDLoc &DL);
     SDValue visitADDLikeCommutative(SDValue N0, SDValue N1, const SDLoc &DL);
     SDValue visitPTRADD(SDNode *N);
     SDValue visitSUB(SDNode *N);
@@ -2923,6 +2925,20 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   EVT VT = N0.getValueType();
   SDLoc DL(N);
 
+  // Most scalar adds only have operands with these opcodes or a non-zero
+  // constant RHS, which none of the folds up to visitADDLikeTail match. Folds
+  // that do, also in callees like foldBinOpIntoSelect, must go in the tail.
+  auto SkipsEarlyFolds = [](SDValue V) {
+    return is_contained({ISD::CopyFromReg, ISD::LOAD, ISD::FrameIndex,
+                         ISD::SETCC, ISD::SHL, ISD::MUL, ISD::ZERO_EXTEND,
+                         ISD::TRUNCATE},
+                        V.getOpcode());
+  };
+  auto *N1C = dyn_cast<ConstantSDNode>(N1);
+  if (!VT.isVector() && SkipsEarlyFolds(N0) &&
+      (N1C ? !N1C->isZero() : SkipsEarlyFolds(N1)))
+    return visitADDLikeTail(N, N0, N1, VT, DL);
+
   // fold (add x, undef) -> undef
   if (N0.isUndef())
     return N0;
@@ -3113,6 +3129,12 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
                          N0.getOperand(1));
   }
 
+  return visitADDLikeTail(N, N0, N1, VT, DL);
+}
+
+/// The folds of visitADDLike that are tried for all operands.
+SDValue DAGCombiner::visitADDLikeTail(SDNode *N, SDValue N0, SDValue N1, EVT VT,
+                                      const SDLoc &DL) {
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
@@ -3161,6 +3183,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
   // Fold add(mul(add(A, CA), CM), CB) -> add(mul(A, CM), CM*CA+CB).
   // This can help if the inner add has multiple uses.
+  SDValue A, B;
   APInt CM, CA;
   if (ConstantSDNode *CB = dyn_cast<ConstantSDNode>(N1)) {
     if (VT.getScalarSizeInBits() <= 64) {
