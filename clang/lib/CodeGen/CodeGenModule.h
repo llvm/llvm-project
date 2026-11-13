@@ -366,6 +366,8 @@ private:
   /// An invalid attribute means that the defaults were computed but no
   /// target-features attribute needs to be emitted.
   std::optional<llvm::Attribute> DefaultTargetFeatures;
+  /// Canonical vscale range for targets without per-function ranges.
+  std::optional<llvm::Attribute> DefaultVScaleRange;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
@@ -915,6 +917,7 @@ public:
   }
   const TargetInfo &getTarget() const { return Target; }
   const llvm::Triple &getTriple() const { return Target.getTriple(); }
+  llvm::Attribute getDefaultVScaleRange();
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const Decl &D, llvm::GlobalObject &GO);
 
