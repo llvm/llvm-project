@@ -252,25 +252,12 @@ void GotoTargets::addAddressTakenLabels() {
     return;
   addedAddressTakenLabels = true;
   mlir::StringAttr funcName = func.getSymNameAttr();
-  auto addFromAttr = [&](mlir::Attribute attr) {
-    attr.walk(
-        [&](BlockAddrInfoAttr info) {
-          if (info.getFunc().getAttr() == funcName)
-            targets.insert(info.getLabel());
-        },
-        [&](BlockAddrDiffAttr diff) {
-          if (diff.getFunc().getAttr() == funcName) {
-            targets.insert(diff.getLhsLabel());
-            targets.insert(diff.getRhsLabel());
-          }
-        });
-  };
   auto addFromOp = [&](mlir::Operation *op) {
-    if (auto blockAddr = mlir::dyn_cast<BlockAddressOp>(op))
-      targets.insert(blockAddr.getBlockAddrInfo().getLabel());
-    else if (mlir::isa<ConstantOp, GlobalOp>(op))
-      for (mlir::NamedAttribute attr : op->getAttrs())
-        addFromAttr(attr.getValue());
+    walkBlockAddressLabels(
+        op, [&](mlir::StringAttr labelFunc, mlir::StringAttr label) {
+          if (labelFunc == funcName)
+            targets.insert(label);
+        });
   };
   // As in the CFG, addresses taken in static initializers count too.
   func.getBody().walk(addFromOp);
