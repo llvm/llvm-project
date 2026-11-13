@@ -126,7 +126,7 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
     Option<"noStructConversion", "no-struct-conversion",
            "bool", /*default=*/"false",
            "Disable target-specific conversion of derived type value.">,
-    Option<"filterHostFunctions", "filter-host-functions", "bool",
+    Option<"skipHostABIConversion", "skip-host-abi-conversion", "bool",
            /*default=*/"false",
            "Avoid target ABI rewriting for host-only code in an OpenMP "
            "device module when host function filtering will remove it.">

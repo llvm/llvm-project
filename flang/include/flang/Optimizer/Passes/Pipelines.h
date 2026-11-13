@@ -103,7 +103,7 @@ void addMemoryAllocationOpt(mlir::PassManager &pm);
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 
 void addTargetRewritePass(mlir::PassManager &pm,
-                          bool filterHostFunctions = false);
+                          bool skipHostABIConversion = false);
 
 mlir::LLVM::DIEmissionKind
 getEmissionKind(llvm::codegenoptions::DebugInfoKind kind);

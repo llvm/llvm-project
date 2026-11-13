@@ -20,6 +20,17 @@ subroutine host_only(x)
   print *, abs(x)
 end subroutine
 
+subroutine host_associated(x)
+  complex(16) :: x
+  call internal_proc(x)
+contains
+  subroutine internal_proc(y)
+    complex(16), value :: y
+    complex(16) :: z
+    z = x + y
+  end subroutine
+end subroutine
+
 subroutine mixed(x, y)
   complex(16) :: x
   complex(8) :: y

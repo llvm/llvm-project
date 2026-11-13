@@ -31,6 +31,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -101,6 +102,10 @@ public:
     symbolTables = std::make_shared<mlir::SymbolTableCollection>();
     deviceUsedRecipes.clear();
     recipesBeingChecked.clear();
+    auto offloadModule =
+        mlir::dyn_cast<mlir::omp::OffloadModuleInterface>(*mod);
+    skipHostABI = skipHostABIConversion && offloadModule &&
+                  offloadModule.getIsTargetDevice();
     if (!forcedTargetTriple.empty())
       fir::setTargetTriple(mod, forcedTargetTriple);
 
@@ -860,10 +865,7 @@ public:
   }
 
   bool needsTargetABI(mlir::Operation *op) {
-    auto offloadModule =
-        mlir::dyn_cast<mlir::omp::OffloadModuleInterface>(*getModule());
-    if (!filterHostFunctions || !offloadModule ||
-        !offloadModule.getIsTargetDevice())
+    if (!skipHostABI)
       return true;
 
     if (mlir::isa<mlir::gpu::LaunchFuncOp>(op) ||
@@ -883,11 +885,11 @@ public:
         return true;
     }
 
-    if (!mlir::isa<mlir::func::FuncOp>(op)) {
+    if (!mlir::isa<mlir::FunctionOpInterface>(op)) {
       if (op->getParentOfType<mlir::omp::TargetOp>())
         return true;
-      if (auto func = op->getParentOfType<mlir::func::FuncOp>())
-        op = func;
+      if (auto func = op->getParentOfType<mlir::FunctionOpInterface>())
+        op = func.getOperation();
       else
         return isDeviceUsedRecipe(op);
     }
@@ -922,13 +924,28 @@ public:
 
     bool deviceUsed = false;
     for (mlir::Operation *user : recipeUsers->getUsers(op)) {
+      if (auto target = mlir::dyn_cast<mlir::omp::TargetOp>(user)) {
+        if (auto privateSyms = target.getPrivateSymsAttr()) {
+          for (mlir::Attribute attr : privateSyms) {
+            auto symbol = mlir::dyn_cast<mlir::SymbolRefAttr>(attr);
+            if (symbol &&
+                symbolTables->lookupNearestSymbolFrom(target, symbol) == op) {
+              deviceUsed = true;
+              break;
+            }
+          }
+        }
+        if (deviceUsed)
+          break;
+      }
+
       if (user->getParentOfType<mlir::omp::TargetOp>()) {
         deviceUsed = true;
         break;
       }
 
       mlir::Operation *parent = user;
-      while (parent && !mlir::isa<mlir::func::FuncOp>(parent) &&
+      while (parent && !mlir::isa<mlir::FunctionOpInterface>(parent) &&
              !mlir::isa<mlir::accomp::RecipeInterface>(parent))
         parent = parent->getParentOp();
 
@@ -1002,6 +1019,8 @@ public:
   /// the immediately subsequent target code gen.
   template <typename ReturnOpTy, typename FuncOpTy>
   void convertSignature(FuncOpTy func) {
+    // Host-only internal procedures may have host-association arguments, but
+    // their ABI is discarded by function filtering and must not be rewritten.
     if (!needsTargetABI(func))
       return;
     auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
@@ -1554,5 +1573,6 @@ private:
   std::shared_ptr<mlir::SymbolUserMap> recipeUsers;
   llvm::DenseMap<mlir::Operation *, bool> deviceUsedRecipes;
   llvm::SmallPtrSet<mlir::Operation *, 4> recipesBeingChecked;
+  bool skipHostABI = false;
 };
 } // namespace

@@ -56,9 +56,9 @@ void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
                        [&]() { return fir::createCodeGenRewrite(options); });
 }
 
-void addTargetRewritePass(mlir::PassManager &pm, bool filterHostFunctions) {
+void addTargetRewritePass(mlir::PassManager &pm, bool skipHostABIConversion) {
   fir::TargetRewritePassOptions options;
-  options.filterHostFunctions = filterHostFunctions;
+  options.skipHostABIConversion = skipHostABIConversion;
   addPassConditionally(pm, disableTargetRewrite,
                        [&]() { return fir::createTargetRewritePass(options); });
 }
