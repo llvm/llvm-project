@@ -55,36 +55,58 @@ namespace Covariant {
 }
 
 namespace Covariant2 {
-  struct A {
-  };
-  struct B : A {
-  };
-  struct C : A {
-  };
-  struct D :  B, C {
-  };
+  struct NonZeroOffset { int padding = 123; };
 
-  // Check that we apply a proper adjustment for a covariant return type.
+  struct A {};
+  struct B : NonZeroOffset, A {};
+  struct C : NonZeroOffset, A {};
+  struct D : B, C {};
+
   struct Covariant1 {
     D d;
     virtual const A *f() const;
   };
-
-  template<typename T>
   struct Covariant2 : Covariant1 {
-    virtual const T *f() const;
+    virtual const C *f() const;
   };
-
-  template<typename T>
-  struct Covariant3 : Covariant2<T> {
+  struct Covariant3 : Covariant2 {
     constexpr virtual const D *f() const { return &this->d; }
   };
 
-  constexpr       Covariant3<C>  cc;
-  constexpr const Covariant1    *cc1 = &cc;
+  constexpr Covariant3 cc;
+  constexpr const Covariant1 *cc1 = &cc;
 
-  // LHS static type is A*.
-  static_assert(cc1->f() == (C*)&cc.d); // expected-error {{static assertion failed}}
+  static_assert(cc1->f() == (C*)&cc.d);
+}
+
+namespace Covariant3 {
+  struct NonZeroOffset { int padding = 123; };
+
+  struct A {};
+  struct B : NonZeroOffset, A {};
+  struct C : NonZeroOffset, A {};
+  struct D : B, C {};
+  struct E : D {};
+
+  struct Covariant1 {
+    E e;
+    virtual const A *f() const;
+  };
+  struct Covariant2 : Covariant1 {
+    virtual const C *f() const;
+  };
+  struct Covariant3 : Covariant2 {
+    virtual const D *f() const;
+  };
+
+  struct Covariant4 : Covariant3 {
+    constexpr virtual const E *f() const { return &this->e; }
+  };
+
+  constexpr Covariant4 cc;
+  constexpr const Covariant1 *cc1 = &cc;
+
+  static_assert(cc1->f() == (C*)&cc.e);
 }
 
 namespace DtorOrder {

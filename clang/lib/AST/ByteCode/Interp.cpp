@@ -2579,13 +2579,44 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
                                          OverriderPointeeType))
       return true;
 
-    // We've called Overrider above, but calling code expects us to return what
-    // InitialFunction returned. According to the rules for covariant return
-    // types, what InitialFunction returns needs to be a base class of what
-    // Overrider returns. So, we need to do an upcast here.
+    // See, the base cast from the return value of InitialFunction to that of
+    // Overrider might be ambiguous due to mutliple inheritance. HOWEVER, this
+    // ambiguity can be cleared up by looking at the return values for all the
+    // overriding functions in the base path from InitialFunction to Overrider.
+    // This is all terrible and slow, but if you use this, you get what you
+    // deserve.
+
+    CXXBasePaths Paths(/*FindAmbiguities=*/true);
+    Overrider->getParent()->isDerivedFrom(InitialFunction->getParent(), Paths);
+
+    // The path of the parent classes of the virtual methods should not be
+    // ambiguous.
+    if (std::distance(Paths.begin(), Paths.end()) != 1)
+      return false;
+
+    // Calling Overrider above returned a pointer of type OverriderPointeeType.
+    const RecordDecl *CurPtrType = OverriderPointeeType->getAsRecordDecl();
+
+    CXXBasePath Path = *Paths.begin();
+    for (const CXXBasePathElement &Elem : llvm::drop_begin(Path)) {
+      const CXXMethodDecl *FuncInThisBase =
+          InitialFunction->getCorrespondingMethodDeclaredInClass(
+              Elem.Class, /*MayBeBase=*/false);
+
+      QualType FuncReturnTy = FuncInThisBase->getReturnType()->getPointeeType();
+      unsigned Offset = S.getContext().collectBaseOffset(
+          FuncReturnTy->getAsRecordDecl(), CurPtrType);
+
+      if (!GetPtrBasePop(S, OpPC, Offset, /*IsNullOK=*/true))
+        return false;
+
+      CurPtrType = FuncReturnTy->getAsRecordDecl();
+    }
+
+    // The path above does not include the final step to InitialFunction's
+    // parent class. Do it here.
     unsigned Offset = S.getContext().collectBaseOffset(
-        InitialPointeeType->getAsRecordDecl(),
-        OverriderPointeeType->getAsRecordDecl());
+        InitialPointeeType->getAsRecordDecl(), CurPtrType);
     return GetPtrBasePop(S, OpPC, Offset, /*IsNullOK=*/true);
   }
 
