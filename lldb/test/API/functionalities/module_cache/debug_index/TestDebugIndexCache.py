@@ -93,12 +93,14 @@ class DebugIndexCacheTestcase(TestBase):
         self.assertFalse(module_stats["debugInfoIndexLoadedFromCache"])
         self.assertTrue(module_stats["debugInfoIndexSavedToCache"])
         self.assertFalse(module_stats["symbolTableLoadedFromCache"])
+        self.assertTrue(module_stats["symbolTableParsedFromObjectFile"])
         self.assertTrue(module_stats["symbolTableSavedToCache"])
         # Verify the top level stats track how many things were loaded or saved
         # to the cache.
         self.assertEqual(stats["totalDebugInfoIndexLoadedFromCache"], 0)
         self.assertEqual(stats["totalDebugInfoIndexSavedToCache"], 1)
         self.assertEqual(stats["totalSymbolTablesLoadedFromCache"], 0)
+        self.assertEqual(stats["totalSymbolTablesParsedFromObjectFile"], 1)
         self.assertEqual(stats["totalSymbolTablesSavedToCache"], 1)
 
     @no_debug_info_test
@@ -142,10 +144,61 @@ class DebugIndexCacheTestcase(TestBase):
         self.assertFalse(module_stats["debugInfoIndexLoadedFromCache"])
         self.assertFalse(module_stats["debugInfoIndexSavedToCache"])
         self.assertFalse(module_stats["symbolTableLoadedFromCache"])
+        self.assertTrue(module_stats["symbolTableParsedFromObjectFile"])
         self.assertFalse(module_stats["symbolTableSavedToCache"])
         # Verify the top level stats track how many things were loaded or saved
         # to the cache.
         self.assertEqual(stats["totalDebugInfoIndexLoadedFromCache"], 0)
         self.assertEqual(stats["totalDebugInfoIndexSavedToCache"], 0)
         self.assertEqual(stats["totalSymbolTablesLoadedFromCache"], 0)
+        self.assertEqual(stats["totalSymbolTablesParsedFromObjectFile"], 1)
         self.assertEqual(stats["totalSymbolTablesSavedToCache"], 0)
+
+    @no_debug_info_test
+    def test_with_caching_enabled_symtab_state(self):
+        """
+        Test that SBModule.GetSymtabState() reports that the symbol table was
+        parsed from the object file the first time, and loaded from the index
+        cache when a new module is created for the same file.
+
+        The index cache path is fixed on first use within a process, so this
+        test doesn't look for cache files in its own build directory.
+        """
+        self.enable_lldb_index_cache()
+        src_dir = self.getSourceDir()
+        yaml_path = os.path.join(src_dir, "exe.yaml")
+        obj_path = self.getBuildArtifact("main.o")
+        self.yaml2obj(yaml_path, obj_path)
+
+        target = self.dbg.CreateTarget(obj_path)
+        self.assertTrue(target, VALID_TARGET)
+        module = target.GetModuleAtIndex(0)
+        self.assertTrue(module.IsValid())
+        module.GetNumSymbols()
+        self.assertEqual(
+            module.GetSymtabState(),
+            lldb.eSymtabStateParsedFromObjectFile | lldb.eSymtabStateSavedToCache,
+        )
+        self.expect("image list -F -b", patterns=[r"\] FW main\.o"])
+
+        # Release the module so the next target creates a new one that loads
+        # its symbol table from the cache.
+        del module
+        self.dbg.DeleteTarget(target)
+        del target
+        lldb.SBModule.GarbageCollectAllocatedModules()
+
+        target = self.dbg.CreateTarget(obj_path)
+        self.assertTrue(target, VALID_TARGET)
+        module = target.GetModuleAtIndex(0)
+        self.assertTrue(module.IsValid())
+        module.GetNumSymbols()
+        self.assertEqual(module.GetSymtabState(), lldb.eSymtabStateLoadedFromCache)
+        self.expect("image list -F -b", patterns=[r"\] C main\.o"])
+
+        stats = self.get_stats()
+        module_stats = stats["modules"][0]
+        self.assertTrue(module_stats["symbolTableLoadedFromCache"])
+        self.assertFalse(module_stats["symbolTableParsedFromObjectFile"])
+        self.assertEqual(stats["totalSymbolTablesLoadedFromCache"], 1)
+        self.assertEqual(stats["totalSymbolTablesParsedFromObjectFile"], 0)

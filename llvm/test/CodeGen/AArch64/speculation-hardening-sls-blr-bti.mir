@@ -29,7 +29,6 @@
 ---
 name:            fn
 exposesReturnsTwice: true
-tracksRegLiveness: true
 fixedStack:      []
 stack:
   - { id: 0, name: fnptr, type: default, offset: -8, size: 8, alignment: 8,

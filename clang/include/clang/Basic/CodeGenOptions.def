@@ -129,6 +129,9 @@ CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0, Benign)
 
 CODEGENOPT(EmitSFrameUnwind, 1, 0, Benign) ///< Set when -sframe is enabled.
 
+/// Set when -grelocatable-dwarf is enabled.
+CODEGENOPT(MachORelocatableDwarf, 1, 0, Benign)
+
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0, Benign)
 

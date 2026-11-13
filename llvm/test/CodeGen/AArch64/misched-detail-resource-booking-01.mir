@@ -36,7 +36,6 @@
 ---
 name:            umull_and_v8i32
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }

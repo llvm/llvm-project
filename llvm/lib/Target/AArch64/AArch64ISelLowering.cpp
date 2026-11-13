@@ -7556,8 +7556,8 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
 
   // Lower fixed length gather to a scalable equivalent.
   if (VT.isFixedLengthVector()) {
-    assert(Subtarget->useSVEForFixedLengthVectors() &&
-           "Cannot lower when not using SVE for fixed vectors!");
+    assert(Subtarget->isSVEorStreamingSVEAvailable() &&
+           "Cannot lower when SVE is unavailable!");
 
     // NOTE: Handle floating-point as if integer then bitcast the result.
     EVT DataVT = VT.changeVectorElementTypeToInteger();
@@ -7645,8 +7645,8 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
 
   // Lower fixed length scatter to a scalable equivalent.
   if (VT.isFixedLengthVector()) {
-    assert(Subtarget->useSVEForFixedLengthVectors() &&
-           "Cannot lower when not using SVE for fixed vectors!");
+    assert(Subtarget->isSVEorStreamingSVEAvailable() &&
+           "Cannot lower when SVE is unavailable!");
 
     // Once bitcast we treat floating-point scatters as if integer.
     if (VT.isFloatingPoint()) {
@@ -8081,8 +8081,7 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
   assert(StoreNode->getMemoryVT() == MVT::i128);
   assert(StoreNode->isVolatile() || StoreNode->isAtomic());
 
-  bool IsStoreRelease =
-      StoreNode->getMergedOrdering() == AtomicOrdering::Release;
+  bool IsStoreRelease = isReleaseOrStronger(StoreNode->getMergedOrdering());
   if (StoreNode->isAtomic())
     assert((Subtarget->hasFeature(AArch64::FeatureLSE2) &&
             Subtarget->hasFeature(AArch64::FeatureRCPC3) && IsStoreRelease) ||
@@ -9582,13 +9581,21 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       // For NON_EXTLOAD, generic code in getLoad assert(ValVT == MemVT)
       ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
       MVT MemVT = VA.getValVT();
+      MVT LoadVT = VA.getLocVT();
 
       switch (VA.getLocInfo()) {
       default:
         break;
       case CCValAssign::Trunc:
+        MemVT = VA.getLocVT();
+        break;
       case CCValAssign::BCvt:
         MemVT = VA.getLocVT();
+        if (Ins[i].isOrigArg() && Ins[i].ArgVT.isVector() &&
+            Ins[i].ArgVT.getSizeInBits() < VA.getValVT().getSizeInBits()) {
+          MemVT = VA.getValVT();
+          LoadVT = MemVT;
+        }
         break;
       case CCValAssign::Indirect:
         assert(
@@ -9607,8 +9614,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         break;
       }
 
-      ArgValue = DAG.getExtLoad(ExtType, DL, VA.getLocVT(), Chain, FIN, PtrInfo,
-                                MemVT);
+      ArgValue =
+          DAG.getExtLoad(ExtType, DL, LoadVT, Chain, FIN, PtrInfo, MemVT);
     }
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
@@ -20099,6 +20106,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                                 UseScalable, LdTy, PtrTy);
 
   IRBuilder<> Builder(LI);
+  Builder.disableGEPCanonicalization();
   Value *Pred = nullptr;
   if (UseScalable)
     Pred =
@@ -20179,6 +20187,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
                                                  UseScalable, StTy, PtrTy);
 
   IRBuilder<> Builder(SI);
+  Builder.disableGEPCanonicalization();
 
   Value *BaseAddr = SI->getPointerOperand();
   Value *Pred = nullptr;
@@ -28659,14 +28668,20 @@ static SDValue performLegalizedInterleavedStoreCombine(
     return SDValue();
 
   EVT SubVecTy = Interleave->getValueType(0);
-  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+  bool IsScalable = SubVecTy.isScalableVector();
+  bool UseSVE = IsScalable || Subtarget.useSVEForFixedLengthVectors(SubVecTy);
+  if (UseSVE) {
+    if (!isPackedVectorType(SubVecTy, DAG))
+      return SDValue();
+  } else if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector()) {
     return SDValue();
+  }
 
   SmallVector<StoreSDNode *, 4> Stores(NumParts, nullptr);
   for (SDUse &Use : Interleave->uses()) {
     unsigned ResNo = Use.getResNo();
     auto *Store = dyn_cast<StoreSDNode>(Use.getUser());
-    if (Stores[ResNo] || !Store)
+    if (Stores[ResNo] || !Store || !ISD::isNormalStore(Store))
       return SDValue();
     Stores[ResNo] = Store;
   }
@@ -28675,7 +28690,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
     return SDValue();
 
   StoreSDNode *BaseStore = Stores[0];
-  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  TypeSize Bytes = SubVecTy.getStoreSize();
   for (auto [Idx, Store] : enumerate(Stores)) {
     if (!DAG.areNonVolatileConsecutiveStores(Store, BaseStore, Bytes, Idx))
       return SDValue();
@@ -28689,7 +28704,7 @@ static SDValue performLegalizedInterleavedStoreCombine(
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(BaseStore->getMemOperand(), 0, NumParts * Bytes);
   SmallVector<SDValue, 8> Ops = {BaseStore->getChain()};
-  if (Subtarget.isNeonAvailable()) {
+  if (!UseSVE) {
     static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::aarch64_neon_st2,
                                                    Intrinsic::aarch64_neon_st3,
                                                    Intrinsic::aarch64_neon_st4};
@@ -28701,11 +28716,13 @@ static SDValue performLegalizedInterleavedStoreCombine(
     static constexpr Intrinsic::ID SVEStores[] = {Intrinsic::aarch64_sve_st2,
                                                   Intrinsic::aarch64_sve_st3,
                                                   Intrinsic::aarch64_sve_st4};
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SubVecTy);
+    EVT ContainerVT =
+        IsScalable ? SubVecTy : getContainerForFixedLengthVector(DAG, SubVecTy);
     Ops.push_back(DAG.getConstant(SVEStores[NumParts - 2], DL, MVT::i32));
     for (SDValue V : Interleave->op_values())
-      Ops.push_back(convertToScalableVector(DAG, ContainerVT, V));
-    Ops.push_back(getPredicateForFixedLengthVector(DAG, DL, SubVecTy));
+      Ops.push_back(IsScalable ? V
+                               : convertToScalableVector(DAG, ContainerVT, V));
+    Ops.push_back(getPredicateForVector(DAG, DL, SubVecTy));
     Ops.push_back(BaseStore->getBasePtr());
   }
   SDValue NewStore = DAG.getMemIntrinsicNode(
@@ -31897,19 +31914,25 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
     return SDValue();
 
   EVT SubVecTy = N->getValueType(0);
-  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+  bool IsScalable = SubVecTy.isScalableVector();
+  bool UseSVE = IsScalable || Subtarget.useSVEForFixedLengthVectors(SubVecTy);
+  if (UseSVE) {
+    if (!isPackedVectorType(SubVecTy, DAG))
+      return SDValue();
+  } else if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector()) {
     return SDValue();
+  }
 
   SmallVector<LoadSDNode *, 4> Loads;
   for (const SDValue &Operand : N->op_values()) {
     auto *Load = dyn_cast<LoadSDNode>(Operand);
-    if (!Load || !Operand.hasOneUse())
+    if (!Load || !Operand.hasOneUse() || !ISD::isNormalLoad(Load))
       return SDValue();
     Loads.push_back(Load);
   }
 
   LoadSDNode *BaseLoad = Loads[0];
-  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  TypeSize Bytes = SubVecTy.getStoreSize();
   for (auto [Idx, Load] : enumerate(Loads)) {
     if (!DAG.areNonVolatileConsecutiveLoads(Load, BaseLoad, Bytes, Idx))
       return SDValue();
@@ -31925,7 +31948,7 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
 
   SmallVector<SDValue, 4> ResOps;
   SDValue NewLoad;
-  if (Subtarget.isNeonAvailable()) {
+  if (!UseSVE) {
     static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::aarch64_neon_ld2,
                                                   Intrinsic::aarch64_neon_ld3,
                                                   Intrinsic::aarch64_neon_ld4};
@@ -31944,10 +31967,11 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
     static constexpr Intrinsic::ID SVELoads[] = {
         Intrinsic::aarch64_sve_ld2_sret, Intrinsic::aarch64_sve_ld3_sret,
         Intrinsic::aarch64_sve_ld4_sret};
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SubVecTy);
+    EVT ContainerVT =
+        IsScalable ? SubVecTy : getContainerForFixedLengthVector(DAG, SubVecTy);
     SmallVector<EVT, 5> ResVTs(NumParts, ContainerVT);
     ResVTs.push_back(MVT::Other);
-    SDValue Pred = getPredicateForFixedLengthVector(DAG, DL, SubVecTy);
+    SDValue Pred = getPredicateForVector(DAG, DL, SubVecTy);
     NewLoad = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(ResVTs),
         {BaseLoad->getChain(),
@@ -31956,8 +31980,9 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
         MemVT, MMO);
 
     for (unsigned I = 0; I != NumParts; ++I)
-      ResOps.push_back(
-          convertFromScalableVector(DAG, SubVecTy, NewLoad.getValue(I)));
+      ResOps.push_back(IsScalable ? NewLoad.getValue(I)
+                                  : convertFromScalableVector(
+                                        DAG, SubVecTy, NewLoad.getValue(I)));
   }
 
   // Replace uses of the original chain result with the new chain result.
@@ -32016,15 +32041,21 @@ static SDValue performVectorDeinterleaveCombine(
   if (isDeinterleave4ForWideningUToFP(N))
     return SDValue();
 
-  SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
+  bool UseFixedSVE =
+      !IsScalable && Subtarget.useSVEForFixedLengthVectors(SubVecTy);
+  EVT LoadVT =
+      UseFixedSVE ? getContainerForFixedLengthVector(DAG, SubVecTy) : SubVecTy;
+  SmallVector<EVT, 5> ResVTs(NumParts, LoadVT);
   ResVTs.push_back(MVT::Other);
   SDVTList ResVTList = DAG.getVTList(ResVTs);
 
   SDValue Res;
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
-  if (IsScalable) {
+  if (IsScalable || UseFixedSVE) {
     SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
+      if (UseFixedSVE)
+        return SDValue();
       // Bail out if the masked load has an unexpected number of uses, since we
       // want to avoid a situation where we have both deinterleaving loads and
       // normal loads in the same block. Also, discard masked loads that are
@@ -32050,8 +32081,7 @@ static SDValue performVectorDeinterleaveCombine(
           !ISD::isNormalLoad(Load) || !Load->getOffset().isUndef())
         return SDValue();
 
-      EVT PredVT = SubVecTy.changeVectorElementType(*DAG.getContext(), MVT::i1);
-      Pred = DAG.getConstant(1, DL, PredVT);
+      Pred = getPredicateForVector(DAG, DL, SubVecTy);
       Chain = Load->getChain();
       BasePtr = Load->getBasePtr();
     }
@@ -32095,7 +32125,9 @@ static SDValue performVectorDeinterleaveCombine(
   }
   SmallVector<SDValue, 4> ResOps(NumParts);
   for (unsigned Idx = 0; Idx < NumParts; ++Idx)
-    ResOps[Idx] = Res.getValue(Idx);
+    ResOps[Idx] = UseFixedSVE ? convertFromScalableVector(DAG, SubVecTy,
+                                                          Res.getValue(Idx))
+                              : Res.getValue(Idx);
   // Replace uses of the original chain result with the new chain result.
   DAG.ReplaceAllUsesOfValueWith(WideVec.getValue(1),
                                 SDValue(Res.getNode(), NumParts));
@@ -33703,7 +33735,7 @@ bool AArch64TargetLowering::isOpSuitableForRCPC3(const Instruction *I) const {
   if (auto SI = dyn_cast<StoreInst>(I))
     return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
            SI->getAlign() >= Align(16) &&
-           SI->getOrdering() == AtomicOrdering::Release;
+           isReleaseOrStronger(SI->getOrdering());
 
   return false;
 }
@@ -34180,14 +34212,12 @@ void AArch64TargetLowering::insertSSPDeclarations(
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::Win64);
       F->addParamAttr(0, Attribute::AttrKind::InReg);

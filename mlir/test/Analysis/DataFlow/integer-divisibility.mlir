@@ -176,3 +176,57 @@ func.func @divui_zero_divisor() -> index {
   %1 = "test.int_divisibility"(%0) : (index) -> index
   return %1 : index
 }
+
+// -----
+
+// The lower bound first has divisibility 8, then gcd(8, 12) = 4.
+// The IV must be revisited when the lower bound changes.
+// CHECK-LABEL: @scf_for_changing_lower_bound
+func.func @scf_for_changing_lower_bound(%cond: i1) {
+  %c8 = arith.constant 8 : index
+  %c12 = arith.constant 12 : index
+  %c16 = arith.constant 16 : index
+  %c64 = arith.constant 64 : index
+  %lb = scf.if %cond -> index {
+    scf.yield %c8 : index
+  } else {
+    %late = scf.execute_region -> index {
+      scf.yield %c12 : index
+    }
+    scf.yield %late : index
+  }
+  // CHECK: divisibility = "udiv = 4, sdiv = 4"
+  %bound = "test.int_divisibility"(%lb) : (index) -> index
+  scf.for %iv = %lb to %c64 step %c16 {
+    // CHECK: divisibility = "udiv = 4, sdiv = 4"
+    %checked = "test.int_divisibility"(%iv) : (index) -> index
+  }
+  return
+}
+
+// -----
+
+// The step first has divisibility 8, then gcd(8, 12) = 4.
+// The IV must be revisited when the step changes.
+// CHECK-LABEL: @scf_for_changing_step
+func.func @scf_for_changing_step(%cond: i1) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c12 = arith.constant 12 : index
+  %c64 = arith.constant 64 : index
+  %step = scf.if %cond -> index {
+    scf.yield %c8 : index
+  } else {
+    %late = scf.execute_region -> index {
+      scf.yield %c12 : index
+    }
+    scf.yield %late : index
+  }
+  // CHECK: divisibility = "udiv = 4, sdiv = 4"
+  %bound = "test.int_divisibility"(%step) : (index) -> index
+  scf.for %iv = %c0 to %c64 step %step {
+    // CHECK: divisibility = "udiv = 4, sdiv = 4"
+    %checked = "test.int_divisibility"(%iv) : (index) -> index
+  }
+  return
+}

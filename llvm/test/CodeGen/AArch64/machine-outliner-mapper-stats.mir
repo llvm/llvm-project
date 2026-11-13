@@ -9,7 +9,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |
@@ -23,3 +22,4 @@ body:             |
     DBG_VALUE $x0, 0
     DBG_VALUE $x0, 0
     RET undef $lr
+...

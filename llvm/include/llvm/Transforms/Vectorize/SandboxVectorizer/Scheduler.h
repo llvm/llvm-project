@@ -320,7 +320,6 @@ class Scheduler {
   /// The BB that we are currently scheduling.
   BasicBlock *ScheduledBB = nullptr;
   /// The IDs of the callbacks we register with Sandbox IR.
-  std::optional<Context::CallbackID> EraseInstrCB;
   std::optional<Context::CallbackID> MoveInstrCB;
   std::optional<Context::CallbackID> SetUseCB;
   /// Called by DependencyGraph::notifyCreateInstr(), and not directly by the
@@ -380,11 +379,6 @@ class Scheduler {
 public:
   Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)
       : DAG(Dir, AA, Ctx, this), Ctx(Ctx), Dir(Dir) {
-    // NOTE: The scheduler's callback depends on the DAG's callback running
-    // before it and updating the DAG accordingly.
-    EraseInstrCB = Ctx.registerEraseInstrCallback(
-        [this](Instruction *I) { notifyEraseInstr(I); },
-        /*BeforeCB=*/DAG.getEraseInstrCB());
     MoveInstrCB = Ctx.registerMoveInstrCallback(
         [this](Instruction *I, const BBIterator &To) {
           notifyMoveInstr(I, To);
@@ -393,8 +387,6 @@ public:
         [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
   }
   ~Scheduler() {
-    if (EraseInstrCB)
-      Ctx.unregisterEraseInstrCallback(*EraseInstrCB);
     if (MoveInstrCB)
       Ctx.unregisterMoveInstrCallback(*MoveInstrCB);
     if (SetUseCB)
