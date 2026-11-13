@@ -1,5 +1,5 @@
-; RUN: opt -03 -extra-vectorizer-passes=false -S %s 2>&1 | FileCheck %s --check-prefix=WITHOUT
-; RUN: opt -03 -extra-vectorizer-passes -S %s 2>&1 | FileCheck %s --check-prefix=WITH
+; RUN: opt -O3 -extra-vectorizer-passes=false -S %s 2>&1 | FileCheck %s --check-prefix=WITHOUT
+; RUN: opt -O3 -extra-vectorizer-passes -S %s 2>&1 | FileCheck %s --check-prefix=WITH
 ;
 ; This test checks that -extra-vectorizer-passes does not cause excessive
 ; outer loop unrolling that duplicates vectorized inner loops without
