@@ -45,6 +45,7 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   for (const auto &Feature : Features) {
     if (Feature == "+altivec") {
       HasAltivec = true;
+      HasFloat128 = !getTriple().isOSAIX();
     } else if (Feature == "+vsx") {
       HasVSX = true;
     } else if (Feature == "+power8-vector") {
@@ -53,8 +54,6 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasP8Crypto = true;
     } else if (Feature == "+htm") {
       HasHTM = true;
-    } else if (Feature == "+float128") {
-      HasFloat128 = !getTriple().isOSAIX();
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
     } else if (Feature == "+power10-vector") {
@@ -466,7 +465,6 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 // - if we've explicitly turned off vsx and turned on any of:
 //   - power8-vector
 //   - direct-move
-//   - float128
 //   - power9-vector
 //   - paired-vector-memops
 //   - mma
@@ -495,7 +493,6 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
     Found |=
         FindVSXSubfeature("+power8-vector", "-mpower8-vector", "-msoft-float");
     Found |= FindVSXSubfeature("+direct-move", "-mdirect-move", "-msoft-float");
-    Found |= FindVSXSubfeature("+float128", "-mfloat128", "-msoft-float");
     Found |=
         FindVSXSubfeature("+power9-vector", "-mpower9-vector", "-msoft-float");
     Found |= FindVSXSubfeature("+paired-vector-memops",
@@ -522,7 +519,6 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
 
   Found = FindVSXSubfeature("+power8-vector", "-mpower8-vector", "-mno-vsx");
   Found |= FindVSXSubfeature("+direct-move", "-mdirect-move", "-mno-vsx");
-  Found |= FindVSXSubfeature("+float128", "-mfloat128", "-mno-vsx");
   Found |= FindVSXSubfeature("+power9-vector", "-mpower9-vector", "-mno-vsx");
   Found |= FindVSXSubfeature("+paired-vector-memops", "-mpaired-vector-memops",
                              "-mno-vsx");
@@ -547,13 +543,6 @@ bool PPCTargetInfo::initFeatureMap(
 
   if (!ppcUserFeaturesCheck(Diags, FeaturesVec))
     return false;
-
-  if (!(ArchDefs & ArchDefinePwr7) && (ArchDefs & ArchDefinePpcgr) &&
-      llvm::is_contained(FeaturesVec, "+float128")) {
-    // We have __float128 on PPC but not pre-VSX targets.
-    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128" << CPU;
-    return false;
-  }
 
   if (!(ArchDefs & ArchDefinePwr10)) {
     if (llvm::is_contained(FeaturesVec, "+mma")) {
@@ -613,7 +602,6 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("power8-vector", HasP8Vector)
       .Case("crypto", HasP8Crypto)
       .Case("htm", HasHTM)
-      .Case("float128", HasFloat128)
       .Case("power9-vector", HasP9Vector)
       .Case("power10-vector", HasP10Vector)
       .Case("pcrelative-memops", HasPCRelativeMemops)
@@ -639,7 +627,6 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
                              .Case("power9-vector", true)
                              .Case("paired-vector-memops", true)
                              .Case("power10-vector", true)
-                             .Case("float128", true)
                              .Case("mma", true)
                              .Default(false);
     if (FeatureHasVSX)
@@ -663,9 +650,8 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
       if (Name != "vsx")
         Features["altivec"] = Features["crypto"] = false;
       Features["vsx"] = Features["direct-move"] = Features["power8-vector"] =
-          Features["float128"] = Features["power9-vector"] =
-              Features["paired-vector-memops"] = Features["mma"] =
-                  Features["power10-vector"] = false;
+          Features["power9-vector"] = Features["paired-vector-memops"] =
+              Features["mma"] = Features["power10-vector"] = false;
     }
     if (Name == "power8-vector")
       Features["power9-vector"] = Features["paired-vector-memops"] =
@@ -885,6 +871,9 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()
                            : &llvm::APFloat::PPCDoubleDouble();
+  if (LongDoubleFormat == &llvm::APFloat::IEEEquad() && !HasFloat128)
+    Diags.Report(diag::err_opt_not_valid_without_opt) << "-mabi=ieeelongdouble"
+                                                      << "-maltivec";
   Opts.IEEE128 = 1;
   if (getTriple().isOSAIX() && Opts.EnableAIXQuadwordAtomicsABI &&
       HasQuadwordAtomics)
