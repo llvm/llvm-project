@@ -205,3 +205,91 @@ define <2 x i8> @ushl_partial_oob_rhs(<2 x i8> %x) {
   %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> %x, <2 x i8> <i8 8, i8 1>)
   ret <2 x i8> %r
 }
+
+define i1 @ushl_icmp_op0_known(i8 %y) {
+; CHECK-LABEL: define i1 @ushl_icmp_op0_known(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 3, i8 %y)
+  %c = icmp uge i8 %r, 3
+  ret i1 %c
+}
+
+define i1 @ushl_icmp_op0_unknown(i8 %y) {
+; CHECK-LABEL: define i1 @ushl_icmp_op0_unknown(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 3, i8 [[Y]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[R]], 3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 3, i8 %y)
+  %c = icmp ugt i8 %r, 3
+  ret i1 %c
+}
+
+define i1 @sshl_icmp_op0_pos_known(i8 %y) {
+; CHECK-LABEL: define i1 @sshl_icmp_op0_pos_known(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 3, i8 %y)
+  %c = icmp sge i8 %r, 3
+  ret i1 %c
+}
+
+define i1 @sshl_icmp_op0_pos_unknown(i8 %y) {
+; CHECK-LABEL: define i1 @sshl_icmp_op0_pos_unknown(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 3, i8 [[Y]])
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[R]], 3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 3, i8 %y)
+  %c = icmp sgt i8 %r, 3
+  ret i1 %c
+}
+
+define i1 @sshl_icmp_op0_neg_known(i8 %y) {
+; CHECK-LABEL: define i1 @sshl_icmp_op0_neg_known(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -3, i8 %y)
+  %c = icmp sle i8 %r, -3
+  ret i1 %c
+}
+
+define i1 @sshl_icmp_op0_neg_unknown(i8 %y) {
+; CHECK-LABEL: define i1 @sshl_icmp_op0_neg_unknown(
+; CHECK-SAME: i8 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -3, i8 [[Y]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[R]], -3
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = call i8 @llvm.sshl.sat.i8(i8 -3, i8 %y)
+  %c = icmp slt i8 %r, -3
+  ret i1 %c
+}
+
+define <2 x i1> @ushl_icmp_op0_splat_known(<2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @ushl_icmp_op0_splat_known(
+; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> splat (i8 3), <2 x i8> %y)
+  %c = icmp uge <2 x i8> %r, splat (i8 3)
+  ret <2 x i1> %c
+}
+
+define i1 @ushl_icmp_op1_unknown(i8 %x) {
+; CHECK-LABEL: define i1 @ushl_icmp_op1_unknown(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[X]], i8 3)
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[R]], 1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = call i8 @llvm.ushl.sat.i8(i8 %x, i8 3)
+  %c = icmp uge i8 %r, 1
+  ret i1 %c
+}

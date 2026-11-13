@@ -7842,10 +7842,12 @@ void ConstantMaskOp::build(OpBuilder &builder, OperationState &result,
                            VectorType type, ConstantMaskKind kind) {
   assert(kind == ConstantMaskKind::AllTrue ||
          kind == ConstantMaskKind::AllFalse);
-  build(builder, result, type,
-        kind == ConstantMaskKind::AllTrue
-            ? type.getShape()
-            : SmallVector<int64_t>(type.getRank(), 0));
+  auto maskDimSizes = llvm::to_vector(type.getShape());
+  if (maskDimSizes.empty())
+    maskDimSizes.push_back(1);
+  if (kind == ConstantMaskKind::AllFalse)
+    maskDimSizes.assign(maskDimSizes.size(), 0);
+  build(builder, result, type, maskDimSizes);
 }
 
 LogicalResult ConstantMaskOp::verify() {

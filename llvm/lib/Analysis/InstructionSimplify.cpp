@@ -7762,9 +7762,11 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
 static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
                                   const SimplifyQuery &Q) {
   auto *F = Call->getCalledFunction();
-  if (!F || !canConstantFoldCallTo(Call, F, Q.TLI))
+  if (!F)
     return nullptr;
 
+  // Check for constant arguments before querying canConstantFoldCallTo.
+  // Checking arguments is cheaper than TLI classification and attribute checks.
   SmallVector<Constant *, 4> ConstantArgs;
   ConstantArgs.reserve(Args.size());
   for (Value *Arg : Args) {
@@ -7776,6 +7778,10 @@ static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
     }
     ConstantArgs.push_back(C);
   }
+
+  // Check if this is a known library function that we know how to fold.
+  if (!canConstantFoldCallTo(Call, F, Q.TLI))
+    return nullptr;
 
   return ConstantFoldCall(Call, F, ConstantArgs, Q.TLI);
 }
