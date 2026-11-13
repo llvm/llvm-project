@@ -130,24 +130,14 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
 
     // Check validity of memory ordering as per C11 / C++11's memory model.
     // Only fence needs check. Atomic dec/inc allow all memory orders.
-    if (!llvm::isValidAtomicOrderingCABI(Ord))
-      return Diag(OrderExpr->getBeginLoc(),
-                  diag::warn_atomic_op_has_invalid_memory_order)
-             << 0 << OrderExpr->getSourceRange();
-    switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
-    case llvm::AtomicOrderingCABI::relaxed:
-    case llvm::AtomicOrderingCABI::consume:
-      if (IsFence)
-        return Diag(OrderExpr->getBeginLoc(),
-                    diag::warn_atomic_op_has_invalid_memory_order)
-               << 0 << OrderExpr->getSourceRange();
-      break;
-    case llvm::AtomicOrderingCABI::acquire:
-    case llvm::AtomicOrderingCABI::release:
-    case llvm::AtomicOrderingCABI::acq_rel:
-    case llvm::AtomicOrderingCABI::seq_cst:
-      break;
-    }
+    // An invalid ordering is not ill-formed despite being UB, so only emit a
+    // warning.
+    if (!llvm::isValidAtomicOrderingCABI(Ord) ||
+        (IsFence && (Ord == (uint64_t)llvm::AtomicOrderingCABI::relaxed ||
+                     Ord == (uint64_t)llvm::AtomicOrderingCABI::consume)))
+      Diag(OrderExpr->getBeginLoc(),
+           diag::warn_atomic_op_has_invalid_memory_order)
+          << 0 << OrderExpr->getSourceRange();
 
     Expr::EvalResult ScopeResult;
     // Check that sync scope is a constant literal
@@ -512,7 +502,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   }
 }
 
-bool SemaAMDGPU::checkAtomicOrderingCABIArg(Expr *E, bool MayLoad,
+void SemaAMDGPU::checkAtomicOrderingCABIArg(Expr *E, bool MayLoad,
                                             bool MayStore) {
   Expr::EvalResult AtomicOrdArgRes;
   if (!E->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
@@ -520,17 +510,18 @@ bool SemaAMDGPU::checkAtomicOrderingCABIArg(Expr *E, bool MayLoad,
   auto Ord =
       llvm::AtomicOrderingCABI(AtomicOrdArgRes.Val.getInt().getZExtValue());
 
-  // Atomic ordering cannot be acq_rel in any case, acquire for stores or
-  // release for loads.
+  // Atomic ordering cannot be acq_rel in any case, acquire/consume for stores
+  // or release for loads.
+  // An invalid ordering is not ill-formed despite being UB, so only emit a
+  // warning.
   if (!llvm::isValidAtomicOrderingCABI((unsigned)Ord) ||
       (!(MayLoad && MayStore) && (Ord == llvm::AtomicOrderingCABI::acq_rel)) ||
-      (!MayLoad && Ord == llvm::AtomicOrderingCABI::acquire) ||
+      (!MayLoad && (Ord == llvm::AtomicOrderingCABI::acquire ||
+                    Ord == llvm::AtomicOrderingCABI::consume)) ||
       (!MayStore && Ord == llvm::AtomicOrderingCABI::release)) {
-    return Diag(E->getBeginLoc(), diag::warn_atomic_op_has_invalid_memory_order)
-           << 0 << E->getSourceRange();
+    Diag(E->getBeginLoc(), diag::warn_atomic_op_has_invalid_memory_order)
+        << 0 << E->getSourceRange();
   }
-
-  return false;
 }
 
 // Check that the first argument to TheCall is a global or generic pointer.
@@ -581,9 +572,7 @@ bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
     return false;
 
   // Check atomic ordering
-  Fail |=
-      checkAtomicOrderingCABIArg(TheCall->getArg(IsStore ? 2 : 1),
-                                 /*MayLoad=*/!IsStore, /*MayStore=*/IsStore);
+  checkAtomicOrderingCABIArg(AO, /*MayLoad=*/!IsStore, /*MayStore=*/IsStore);
 
   // Last argument is the syncscope as a string literal.
   if (!isa<StringLiteral>(Scope->IgnoreParenImpCasts())) {
@@ -602,10 +591,8 @@ bool SemaAMDGPU::checkAtomicMonitorLoad(CallExpr *TheCall) {
   if (AO->isValueDependent() || Scope->isValueDependent())
     return false;
 
-  bool Fail = checkAtomicOrderingCABIArg(AO, /*MayLoad=*/true,
-                                         /*MayStore=*/false);
-  Fail |= checkScopeAsInt(*this, Scope);
-  return Fail;
+  checkAtomicOrderingCABIArg(AO, /*MayLoad=*/true, /*MayStore=*/false);
+  return checkScopeAsInt(*this, Scope);
 }
 
 bool SemaAMDGPU::checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,

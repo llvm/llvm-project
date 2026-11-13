@@ -395,9 +395,35 @@ static inline StringRef mapScopeToSPIRV(const llvm::Triple &TargetTriple,
   return AMDGCNScope;
 }
 
+/// Sema only warns about atomic orderings that are invalid for an operation.
+/// \returns \p AO if it is a valid C ABI ordering for an operation that \p
+/// MayLoad and/or \p MayStore, and relaxed otherwise.
+static llvm::AtomicOrderingCABI
+sanitizeCABIAtomicOrdering(uint64_t AO, bool MayLoad, bool MayStore) {
+  if (!llvm::isValidAtomicOrderingCABI(AO))
+    return llvm::AtomicOrderingCABI::relaxed;
+
+  auto Ord = static_cast<llvm::AtomicOrderingCABI>(AO);
+  switch (Ord) {
+  case llvm::AtomicOrderingCABI::relaxed:
+  case llvm::AtomicOrderingCABI::seq_cst:
+    return Ord;
+  case llvm::AtomicOrderingCABI::consume:
+  case llvm::AtomicOrderingCABI::acquire:
+    return MayLoad ? Ord : llvm::AtomicOrderingCABI::relaxed;
+  case llvm::AtomicOrderingCABI::release:
+    return MayStore ? Ord : llvm::AtomicOrderingCABI::relaxed;
+  case llvm::AtomicOrderingCABI::acq_rel:
+    return (MayLoad && MayStore) ? Ord : llvm::AtomicOrderingCABI::relaxed;
+  }
+  llvm_unreachable("Unknown AtomicOrderingCABI enum");
+}
+
 static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
-  // Map C11/C++11 memory ordering to LLVM memory ordering
-  assert(llvm::isValidAtomicOrderingCABI(AO));
+  // Map C11/C++11 memory ordering to LLVM memory ordering.
+  // Invalid orderings are lowered as relaxed (monotonic).
+  if (!llvm::isValidAtomicOrderingCABI(AO))
+    return llvm::AtomicOrdering::Monotonic;
   switch (static_cast<llvm::AtomicOrderingCABI>(AO)) {
   case llvm::AtomicOrderingCABI::acquire:
   case llvm::AtomicOrderingCABI::consume:
@@ -997,11 +1023,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     auto *AOExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(1)));
     auto *ScopeExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
-    llvm::AtomicOrdering AO = mapCABIAtomicOrdering(AOExpr->getZExtValue());
+    llvm::AtomicOrderingCABI CABIAO = sanitizeCABIAtomicOrdering(
+        AOExpr->getZExtValue(), /*MayLoad=*/true, /*MayStore=*/false);
+    llvm::AtomicOrdering AO = mapCABIAtomicOrdering((unsigned)CABIAO);
 
     llvm::Value *ScopeMD = emitScopeMD(*this, ScopeExpr->getZExtValue(), AO);
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
-    return Builder.CreateCall(F, {Addr, AOExpr, ScopeMD});
+    return Builder.CreateCall(
+        F, {Addr, Builder.getInt32((unsigned)CABIAO), ScopeMD});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
@@ -1041,33 +1070,48 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B: {
     Intrinsic::ID IID;
+    bool IsStore = false;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
       IID = Intrinsic::amdgcn_cooperative_atomic_load_32x4B;
       break;
     case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
       IID = Intrinsic::amdgcn_cooperative_atomic_store_32x4B;
+      IsStore = true;
       break;
     case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
       IID = Intrinsic::amdgcn_cooperative_atomic_load_16x8B;
       break;
     case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
       IID = Intrinsic::amdgcn_cooperative_atomic_store_16x8B;
+      IsStore = true;
       break;
     case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
       IID = Intrinsic::amdgcn_cooperative_atomic_load_8x16B;
       break;
     case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
       IID = Intrinsic::amdgcn_cooperative_atomic_store_8x16B;
+      IsStore = true;
       break;
     }
 
     LLVMContext &Ctx = CGM.getLLVMContext();
     SmallVector<Value *, 5> Args;
-    // last argument is a MD string
+    // last argument is a MD string, and the argument before that is the atomic
+    // ordering.
     const unsigned ScopeArg = E->getNumArgs() - 1;
-    for (unsigned i = 0; i != ScopeArg; ++i)
-      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    const unsigned AOArg = ScopeArg - 1;
+    for (unsigned I = 0; I != ScopeArg; ++I) {
+      Value *Arg = EmitScalarExpr(E->getArg(I));
+      if (I == AOArg) {
+        // Sanitize the atomic ordering argument.
+        uint64_t CABIAO = cast<llvm::ConstantInt>(Arg)->getZExtValue();
+        Arg = Builder.getInt32(
+            (unsigned)sanitizeCABIAtomicOrdering(CABIAO, /*MayLoad=*/!IsStore,
+                                                 /*MayStore=*/IsStore));
+      }
+      Args.push_back(Arg);
+    }
     StringRef Arg = cast<StringLiteral>(E->getArg(ScopeArg)->IgnoreParenCasts())
                         ->getString();
     llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Arg)});
@@ -1998,8 +2042,15 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, { Src0, Src1, Src2 });
   }
   case AMDGPU::BI__builtin_amdgcn_fence: {
-    ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),
-                            EmitScalarExpr(E->getArg(1)), AO, SSID);
+    Value *Order = EmitScalarExpr(E->getArg(0));
+    // Sema only warns about invalid orderings. Like __atomic_thread_fence,
+    // don't emit anything for a relaxed or invalid ordering.
+    uint64_t Ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
+    if (!llvm::isValidAtomicOrderingCABI(Ord) ||
+        Ord == (uint64_t)llvm::AtomicOrderingCABI::relaxed)
+      return llvm::PoisonValue::get(VoidTy);
+
+    ProcessOrderScopeAMDGCN(Order, EmitScalarExpr(E->getArg(1)), AO, SSID);
     FenceInst *Fence = Builder.CreateFence(AO, SSID);
     if (E->getNumArgs() > 2)
       AddAMDGPUFenceAddressSpaceMMRA(Fence, E);
