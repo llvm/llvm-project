@@ -1149,6 +1149,7 @@ private:
   SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
   SDValue WidenVecOp_VECTOR_SHUFFLE_VAR(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
+  SDValue WidenVecOp_PARTIAL_REDUCE_MLA(SDNode *N);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.

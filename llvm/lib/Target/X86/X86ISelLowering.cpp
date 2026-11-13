@@ -2868,7 +2868,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::VECREDUCE_OR,
                        ISD::VECREDUCE_XOR,
                        ISD::VECREDUCE_MUL,
-                       ISD::PARTIAL_REDUCE_SMLA,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::FP_TO_SINT,
@@ -64321,24 +64320,6 @@ static SDValue FixupMMXIntrinsicTypes(SDNode *N, SelectionDAG &DAG) {
   }
   return SDValue();
 }
-
-// The generic combines only check the partial reduction types after one step
-// of type legalization, so without VNNI they can form an i16 SMLA whose inputs
-// still need widening (<4 x i16> inputs with a <4 x i32> accumulator). The
-// type legalizer can't widen those inputs, so expand the partial reduction.
-static SDValue combinePARTIAL_REDUCE_SMLA(SDNode *N, SelectionDAG &DAG,
-                                          const X86Subtarget &Subtarget) {
-  if (Subtarget.hasVNNI() || Subtarget.hasAVXVNNI())
-    return SDValue();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT InVT = N->getOperand(1).getValueType();
-  if (InVT.getScalarType() != MVT::i16 ||
-      TLI.getTypeAction(*DAG.getContext(), InVT) !=
-          TargetLowering::TypeWidenVector)
-    return SDValue();
-  return TLI.expandPartialReduceMLA(N, DAG);
-}
-
 static SDValue combineINTRINSIC_WO_CHAIN(SDNode *N, SelectionDAG &DAG,
                                          TargetLowering::DAGCombinerInfo &DCI) {
   if (!DCI.isBeforeLegalize())
@@ -64603,8 +64584,6 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PCLMULQDQ:   return combinePCLMULQDQ(N, DAG, DCI);
   case ISD::INTRINSIC_WO_CHAIN:  return combineINTRINSIC_WO_CHAIN(N, DAG, DCI);
   case ISD::INTRINSIC_W_CHAIN:  return combineINTRINSIC_W_CHAIN(N, DAG, DCI);
-  case ISD::PARTIAL_REDUCE_SMLA:
-    return combinePARTIAL_REDUCE_SMLA(N, DAG, Subtarget);
   case ISD::INTRINSIC_VOID:  return combineINTRINSIC_VOID(N, DAG, DCI);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT: return combineFP_TO_xINT_SAT(N, DAG, Subtarget);
