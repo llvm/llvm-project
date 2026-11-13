@@ -323,8 +323,6 @@
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu -r \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL,SYCL-REL
 
-// -r removes .llvm.offloading from the -o file, but the registration code
-// refers to the device image, so the image goes in .sycl_fatbin instead.
 // SYCL-NOREL: @.sycl_offloading.binary = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".llvm.offloading"
 //   SYCL-REL: @.sycl_offloading.binary = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".sycl_fatbin"
 
