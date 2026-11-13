@@ -16,11 +16,11 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYTYPEUTILITIES_H
 
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
-#include "WasmAddressSpaces.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 
 namespace llvm {
 
