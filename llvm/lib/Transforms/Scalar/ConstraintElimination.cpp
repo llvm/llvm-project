@@ -370,7 +370,7 @@ struct Decomposition {
   /// Returns std::nullopt if a coefficient overflows, i.e. the decomposition is
   /// invalid.
   [[nodiscard]] std::optional<Decomposition>
-  substitute(Value *Variable, Value *Replacement, ConstraintInfo &Info);
+  substitute(Value *Variable, Value *Replacement, ConstraintInfo &Info) const;
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value
@@ -637,9 +637,9 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   return true;
 }
 
-std::optional<Decomposition> Decomposition::substitute(Value *Variable,
-                                                       Value *Replacement,
-                                                       ConstraintInfo &Info) {
+std::optional<Decomposition>
+Decomposition::substitute(Value *Variable, Value *Replacement,
+                          ConstraintInfo &Info) const {
   Decomposition Result(Offset);
   int64_t Coefficient = 0;
   for (const DecompEntry &E : Vars) {
@@ -668,7 +668,7 @@ enum class SignedBound { Upper, Lower };
 /// fact that the value of \p D is monotonic in it: for an upper bound on a
 /// maximum, both sides must be in range, while for a lower bound only one side
 /// must be.
-static bool isKnownWithinSignedRange(Decomposition D, SignedBound Bound,
+static bool isKnownWithinSignedRange(const Decomposition &D, SignedBound Bound,
                                      Type *Ty, ConstraintInfo &Info,
                                      unsigned Depth) {
   if (Depth != 0) {
