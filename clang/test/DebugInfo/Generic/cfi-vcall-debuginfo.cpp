@@ -16,23 +16,26 @@ struct S {
 };
 
 // WPD-LABEL: define hidden void @checked(
-// WPD-SAME: ptr noundef [[S:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] !guid [[META13:![0-9]+]] {
+// WPD-SAME: ptr noundef [[S:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG9:![0-9]+]] !guid [[META16:![0-9]+]] {
 // WPD-NEXT:  [[ENTRY:.*:]]
 // WPD-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
 // WPD-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
-// WPD-NEXT:      #dbg_declare(ptr [[S_ADDR]], [[META14:![0-9]+]], !DIExpression(), [[META15:![0-9]+]])
-// WPD-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !dbg [[DBG16:![0-9]+]]
-// WPD-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8, !dbg [[DBG17:![0-9]+]]
-// WPD-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS1S"), !dbg [[DBG18:![0-9]+]], !nosanitize [[META12:![0-9]+]]
-// WPD-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !dbg [[DBG18]], !nosanitize [[META12]]
-// WPD-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !dbg [[DBG18]], !prof [[PROF22:![0-9]+]], !nosanitize [[META12]]
+// WPD-NEXT:      #dbg_declare(ptr [[S_ADDR]], [[META17:![0-9]+]], !DIExpression(), [[META18:![0-9]+]])
+// WPD-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !dbg [[DBG19:![0-9]+]]
+// WPD-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8, !dbg [[DBG20:![0-9]+]]
+// WPD-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS1S"), !dbg [[DBG21:![0-9]+]], !nosanitize [[META15:![0-9]+]]
+// WPD-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !dbg [[DBG21]], !nosanitize [[META15]]
+// WPD-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !dbg [[DBG21]], !nosanitize [[META15]]
+// WPD-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !dbg [[DBG21]], !prof [[PROF25:![0-9]+]], !nosanitize [[META15]]
 // WPD:       [[HANDLER_CFI_CHECK_FAIL]]:
-// WPD-NEXT:    call void @__ubsan_handle_cfi_check_fail() #[[ATTR3:[0-9]+]], !dbg [[DBG18]], !nosanitize [[META12]]
-// WPD-NEXT:    br label %[[CONT]], !dbg [[DBG18]], !nosanitize [[META12]]
+// WPD-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !dbg [[DBG21]], !nosanitize [[META15]]
+// WPD-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !dbg [[DBG21]], !nosanitize [[META15]]
+// WPD-NEXT:    call void @__ubsan_handle_cfi_check_fail(ptr @anon.f7bcfe50d3057283bb357af6240bedc0.1, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR4:[0-9]+]], !dbg [[DBG21]], !nosanitize [[META15]]
+// WPD-NEXT:    br label %[[CONT]], !dbg [[DBG21]], !nosanitize [[META15]]
 // WPD:       [[CONT]]:
-// WPD-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !dbg [[DBG18]], !nosanitize [[META12]]
-// WPD-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]), !dbg [[DBG17]]
-// WPD-NEXT:    ret void, !dbg [[DBG23:![0-9]+]]
+// WPD-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !dbg [[DBG21]], !nosanitize [[META15]]
+// WPD-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]), !dbg [[DBG20]]
+// WPD-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
 //
 // NOWPD-LABEL: define hidden void @checked(
 // NOWPD-SAME: ptr noundef [[S:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG8:![0-9]+]] !guid [[META15:![0-9]+]] {
@@ -61,18 +64,17 @@ extern "C" void checked(S *s) {
 }
 
 // WPD-LABEL: define hidden void @unchecked(
-// WPD-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] !dbg [[DBG24:![0-9]+]] !guid [[META25:![0-9]+]] {
+// WPD-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] !dbg [[DBG27:![0-9]+]] !guid [[META28:![0-9]+]] {
 // WPD-NEXT:  [[ENTRY:.*:]]
 // WPD-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
 // WPD-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
-// WPD-NEXT:      #dbg_declare(ptr [[S_ADDR]], [[META26:![0-9]+]], !DIExpression(), [[META27:![0-9]+]])
-// WPD-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !dbg [[DBG28:![0-9]+]]
-// WPD-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8, !dbg [[DBG29:![0-9]+]]
-// WPD-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS1S"), !dbg [[DBG30:![0-9]+]], !nosanitize [[META12]]
-// WPD-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !dbg [[DBG30]], !nosanitize [[META12]]
-// WPD-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !dbg [[DBG30]], !nosanitize [[META12]]
-// WPD-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]), !dbg [[DBG29]]
-// WPD-NEXT:    ret void, !dbg [[DBG31:![0-9]+]]
+// WPD-NEXT:      #dbg_declare(ptr [[S_ADDR]], [[META29:![0-9]+]], !DIExpression(), [[META30:![0-9]+]])
+// WPD-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !dbg [[DBG31:![0-9]+]]
+// WPD-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8, !dbg [[DBG32:![0-9]+]]
+// WPD-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS1S"), !dbg [[DBG32]]
+// WPD-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !dbg [[DBG32]]
+// WPD-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]), !dbg [[DBG32]]
+// WPD-NEXT:    ret void, !dbg [[DBG33:![0-9]+]]
 //
 // NOWPD-LABEL: define hidden void @unchecked(
 // NOWPD-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] !dbg [[DBG26:![0-9]+]] !guid [[META27:![0-9]+]] {
@@ -91,38 +93,37 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void unchecked(S *s) {
   s->f();
 }
 //.
-// WPD: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// WPD: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
-// WPD: [[DBG6]] = distinct !DISubprogram(name: "checked", scope: [[META7:![0-9]+]], file: [[META7]], line: 59, type: [[META8:![0-9]+]], scopeLine: 59, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META12]])
-// WPD: [[META7]] = !DIFile(filename: "{{.*}}cfi-vcall-debuginfo.cpp", directory: {{.*}})
-// WPD: [[META8]] = !DISubroutineType(types: [[META9:![0-9]+]])
-// WPD: [[META9]] = !{null, [[META10:![0-9]+]]}
-// WPD: [[META10]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META11:![0-9]+]], size: 64)
-// WPD: [[META11]] = !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: [[META7]], line: 14, size: 64, flags: DIFlagFwdDecl | DIFlagNonTrivial)
-// WPD: [[META12]] = !{}
-// WPD: [[META13]] = !{i64 9020075254552892215}
-// WPD: [[META14]] = !DILocalVariable(name: "s", arg: 1, scope: [[DBG6]], file: [[META7]], line: 59, type: [[META10]])
-// WPD: [[META15]] = !DILocation(line: 59, column: 28, scope: [[DBG6]])
-// WPD: [[DBG16]] = !DILocation(line: 60, column: 3, scope: [[DBG6]])
-// WPD: [[DBG17]] = !DILocation(line: 60, column: 6, scope: [[DBG6]])
-// WPD: [[DBG18]] = !DILocation(line: 0, scope: [[META19:![0-9]+]], inlinedAt: [[DBG17]])
-// WPD: [[META19]] = distinct !DISubprogram(name: "__ubsan_check_cfi_vcall", scope: [[META20:![0-9]+]], file: [[META20]], type: [[META21:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
-// WPD: [[META20]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
-// WPD: [[META21]] = !DISubroutineType(types: null)
-// WPD: [[PROF22]] = !{!"branch_weights", i32 1048575, i32 1}
-// WPD: [[DBG23]] = !DILocation(line: 61, column: 1, scope: [[DBG6]])
-// WPD: [[DBG24]] = distinct !DISubprogram(name: "unchecked", scope: [[META7]], file: [[META7]], line: 90, type: [[META8]], scopeLine: 90, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META12]])
-// WPD: [[META25]] = !{i64 6260720745251443117}
-// WPD: [[META26]] = !DILocalVariable(name: "s", arg: 1, scope: [[DBG24]], file: [[META7]], line: 90, type: [[META10]])
-// WPD: [[META27]] = !DILocation(line: 90, column: 72, scope: [[DBG24]])
-// WPD: [[DBG28]] = !DILocation(line: 91, column: 3, scope: [[DBG24]])
-// WPD: [[DBG29]] = !DILocation(line: 91, column: 6, scope: [[DBG24]])
-// WPD: [[DBG30]] = !DILocation(line: 0, scope: [[META19]], inlinedAt: [[DBG29]])
-// WPD: [[DBG31]] = !DILocation(line: 92, column: 1, scope: [[DBG24]])
+// WPD: [[META3:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META4:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+// WPD: [[META4]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// WPD: [[DBG9]] = distinct !DISubprogram(name: "checked", scope: [[META10:![0-9]+]], file: [[META10]], line: 62, type: [[META11:![0-9]+]], scopeLine: 62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META15]])
+// WPD: [[META10]] = !DIFile(filename: "{{.*}}cfi-vcall-debuginfo.cpp", directory: {{.*}})
+// WPD: [[META11]] = !DISubroutineType(types: [[META12:![0-9]+]])
+// WPD: [[META12]] = !{null, [[META13:![0-9]+]]}
+// WPD: [[META13]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META14:![0-9]+]], size: 64)
+// WPD: [[META14]] = !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: [[META10]], line: 14, size: 64, flags: DIFlagFwdDecl | DIFlagNonTrivial)
+// WPD: [[META15]] = !{}
+// WPD: [[META16]] = !{i64 9020075254552892215}
+// WPD: [[META17]] = !DILocalVariable(name: "s", arg: 1, scope: [[DBG9]], file: [[META10]], line: 62, type: [[META13]])
+// WPD: [[META18]] = !DILocation(line: 62, column: 28, scope: [[DBG9]])
+// WPD: [[DBG19]] = !DILocation(line: 63, column: 3, scope: [[DBG9]])
+// WPD: [[DBG20]] = !DILocation(line: 63, column: 6, scope: [[DBG9]])
+// WPD: [[DBG21]] = !DILocation(line: 0, scope: [[META22:![0-9]+]], inlinedAt: [[DBG20]])
+// WPD: [[META22]] = distinct !DISubprogram(name: "__ubsan_check_cfi_vcall", scope: [[META23:![0-9]+]], file: [[META23]], type: [[META24:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+// WPD: [[META23]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+// WPD: [[META24]] = !DISubroutineType(types: null)
+// WPD: [[PROF25]] = !{!"branch_weights", i32 1048575, i32 1}
+// WPD: [[DBG26]] = !DILocation(line: 64, column: 1, scope: [[DBG9]])
+// WPD: [[DBG27]] = distinct !DISubprogram(name: "unchecked", scope: [[META10]], file: [[META10]], line: 92, type: [[META11]], scopeLine: 92, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META15]])
+// WPD: [[META28]] = !{i64 6260720745251443117}
+// WPD: [[META29]] = !DILocalVariable(name: "s", arg: 1, scope: [[DBG27]], file: [[META10]], line: 92, type: [[META13]])
+// WPD: [[META30]] = !DILocation(line: 92, column: 72, scope: [[DBG27]])
+// WPD: [[DBG31]] = !DILocation(line: 93, column: 3, scope: [[DBG27]])
+// WPD: [[DBG32]] = !DILocation(line: 93, column: 6, scope: [[DBG27]])
+// WPD: [[DBG33]] = !DILocation(line: 94, column: 1, scope: [[DBG27]])
 //.
 // NOWPD: [[META3:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META4:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 // NOWPD: [[META4]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
-// NOWPD: [[DBG8]] = distinct !DISubprogram(name: "checked", scope: [[META9:![0-9]+]], file: [[META9]], line: 59, type: [[META10:![0-9]+]], scopeLine: 59, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META14]])
+// NOWPD: [[DBG8]] = distinct !DISubprogram(name: "checked", scope: [[META9:![0-9]+]], file: [[META9]], line: 62, type: [[META10:![0-9]+]], scopeLine: 62, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META14]])
 // NOWPD: [[META9]] = !DIFile(filename: "{{.*}}cfi-vcall-debuginfo.cpp", directory: {{.*}})
 // NOWPD: [[META10]] = !DISubroutineType(types: [[META11:![0-9]+]])
 // NOWPD: [[META11]] = !{null, [[META12:![0-9]+]]}
@@ -130,21 +131,21 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void unchecked(S *s) {
 // NOWPD: [[META13]] = !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: [[META9]], line: 14, size: 64, flags: DIFlagFwdDecl | DIFlagNonTrivial)
 // NOWPD: [[META14]] = !{}
 // NOWPD: [[META15]] = !{i64 9020075254552892215}
-// NOWPD: [[META16]] = !DILocalVariable(name: "s", arg: 1, scope: [[DBG8]], file: [[META9]], line: 59, type: [[META12]])
-// NOWPD: [[META17]] = !DILocation(line: 59, column: 28, scope: [[DBG8]])
-// NOWPD: [[DBG18]] = !DILocation(line: 60, column: 3, scope: [[DBG8]])
-// NOWPD: [[DBG19]] = !DILocation(line: 60, column: 6, scope: [[DBG8]])
+// NOWPD: [[META16]] = !DILocalVariable(name: "s", arg: 1, scope: [[DBG8]], file: [[META9]], line: 62, type: [[META12]])
+// NOWPD: [[META17]] = !DILocation(line: 62, column: 28, scope: [[DBG8]])
+// NOWPD: [[DBG18]] = !DILocation(line: 63, column: 3, scope: [[DBG8]])
+// NOWPD: [[DBG19]] = !DILocation(line: 63, column: 6, scope: [[DBG8]])
 // NOWPD: [[DBG20]] = !DILocation(line: 0, scope: [[META21:![0-9]+]], inlinedAt: [[DBG19]])
 // NOWPD: [[META21]] = distinct !DISubprogram(name: "__ubsan_check_cfi_vcall", scope: [[META22:![0-9]+]], file: [[META22]], type: [[META23:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
 // NOWPD: [[META22]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
 // NOWPD: [[META23]] = !DISubroutineType(types: null)
 // NOWPD: [[PROF24]] = !{!"branch_weights", i32 1048575, i32 1}
-// NOWPD: [[DBG25]] = !DILocation(line: 61, column: 1, scope: [[DBG8]])
-// NOWPD: [[DBG26]] = distinct !DISubprogram(name: "unchecked", scope: [[META9]], file: [[META9]], line: 90, type: [[META10]], scopeLine: 90, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META14]])
+// NOWPD: [[DBG25]] = !DILocation(line: 64, column: 1, scope: [[DBG8]])
+// NOWPD: [[DBG26]] = distinct !DISubprogram(name: "unchecked", scope: [[META9]], file: [[META9]], line: 92, type: [[META10]], scopeLine: 92, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META3]], retainedNodes: [[META14]])
 // NOWPD: [[META27]] = !{i64 6260720745251443117}
-// NOWPD: [[META28]] = !DILocalVariable(name: "s", arg: 1, scope: [[DBG26]], file: [[META9]], line: 90, type: [[META12]])
-// NOWPD: [[META29]] = !DILocation(line: 90, column: 72, scope: [[DBG26]])
-// NOWPD: [[DBG30]] = !DILocation(line: 91, column: 3, scope: [[DBG26]])
-// NOWPD: [[DBG31]] = !DILocation(line: 91, column: 6, scope: [[DBG26]])
-// NOWPD: [[DBG32]] = !DILocation(line: 92, column: 1, scope: [[DBG26]])
+// NOWPD: [[META28]] = !DILocalVariable(name: "s", arg: 1, scope: [[DBG26]], file: [[META9]], line: 92, type: [[META12]])
+// NOWPD: [[META29]] = !DILocation(line: 92, column: 72, scope: [[DBG26]])
+// NOWPD: [[DBG30]] = !DILocation(line: 93, column: 3, scope: [[DBG26]])
+// NOWPD: [[DBG31]] = !DILocation(line: 93, column: 6, scope: [[DBG26]])
+// NOWPD: [[DBG32]] = !DILocation(line: 94, column: 1, scope: [[DBG26]])
 //.
