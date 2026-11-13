@@ -87,9 +87,9 @@ libc_support_library(
     hdrs = ["char_vector.h"],
     deps = [
         ":common",
-        "//libc:func_free",
-        "//libc:func_malloc",
-        "//libc:func_realloc",
+        "//libc/hdr/func:free",
+        "//libc/hdr/func:malloc",
+        "//libc/hdr/func:realloc",
         "//libc/src/__support/macros:config",
     ],
 )
@@ -357,8 +357,8 @@ libc_support_library(
     hdrs = ["alloc-checker.h"],
     deps = [
         ":common",
-        "//libc:func_aligned_alloc",
-        "//libc:func_malloc",
+        "//libc/hdr/func:aligned_alloc",
+        "//libc/hdr/func:malloc",
         "//libc/hdr/types:size_t",
         "//libc/src/__support/CPP:new",
         "//libc/src/__support/macros:config",

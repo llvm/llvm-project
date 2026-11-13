@@ -55,10 +55,10 @@ def libc_test(
         "//libc/src/__support/macros:config",
         "//libc/src/__support:libc_errno",
         "//libc/src/errno",
-        "//libc:func_aligned_alloc",
-        "//libc:func_free",
-        "//libc:func_malloc",
-        "//libc:func_realloc",
+        "//libc/hdr/func:aligned_alloc",
+        "//libc/hdr/func:free",
+        "//libc/hdr/func:malloc",
+        "//libc/hdr/func:realloc",
     ] + select({
         "//libc:full_build": [
             "//libc/startup/linux:crt1_library",

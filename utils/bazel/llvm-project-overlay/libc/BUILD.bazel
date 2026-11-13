@@ -1175,55 +1175,6 @@ libc_support_library(
     hdrs = ["hdr/link_macros.h"],
 )
 
-############################ Type Proxy Header Files ###########################
-
-libc_support_library(
-    name = "func_aligned_alloc",
-    hdrs = ["hdr/func/aligned_alloc.h"],
-    deps = select({
-        ":full_build": [
-            "//libc/hdr/types:size_t",
-            "//libc/src/__support:common",
-        ],
-        "//conditions:default": [":hdr_stdlib_overlay"],
-    }),
-)
-
-libc_support_library(
-    name = "func_free",
-    hdrs = ["hdr/func/free.h"],
-    deps = select({
-        ":full_build": [
-            "//libc/src/__support:common",
-        ],
-        "//conditions:default": [":hdr_stdlib_overlay"],
-    }),
-)
-
-libc_support_library(
-    name = "func_malloc",
-    hdrs = ["hdr/func/malloc.h"],
-    deps = select({
-        ":full_build": [
-            "//libc/hdr/types:size_t",
-            "//libc/src/__support:common",
-        ],
-        "//conditions:default": [":hdr_stdlib_overlay"],
-    }),
-)
-
-libc_support_library(
-    name = "func_realloc",
-    hdrs = ["hdr/func/realloc.h"],
-    deps = select({
-        ":full_build": [
-            "//libc/hdr/types:size_t",
-            "//libc/src/__support:common",
-        ],
-        "//conditions:default": [":hdr_stdlib_overlay"],
-    }),
-)
-
 ############################### Support libraries ##############################
 
 alias(
