@@ -507,6 +507,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Fixed `-Wheader-guard` warnings pointing at `if` instead of the macro name
+  in `#if !defined(...)` header guards.
+
 - Fixed a false-positive `-Wimplicit-fallthrough` warning when
   consecutive switch labels share a body and are annotated with
   attributes like `[[unlikely]]`. (#GH230802)
