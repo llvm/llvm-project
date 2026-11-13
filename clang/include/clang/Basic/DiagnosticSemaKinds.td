@@ -9907,6 +9907,9 @@ def note_cuda_device_builtin_surftex_should_be_template_class : Note<
 
 def err_hip_invalid_args_builtin_mangled_name : Error<
     "invalid argument: symbol must be a device-side function or global variable">;
+def err_amdgpu_printf_nonconst_fmt_with_ptr_arg
+    : Error<"AMDGPU printf requires a constant format string when pointer "
+            "arguments are passed">;
 
 def warn_hip_omp_target_directives : Warning<
   "HIP does not support OpenMP target directives; directive has been ignored">,
