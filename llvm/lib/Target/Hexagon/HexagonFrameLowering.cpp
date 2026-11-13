@@ -778,6 +778,9 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
       auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
       for (int i = HMFI.getFirstNamedArgFrameIndex(),
                e = HMFI.getLastNamedArgFrameIndex(); i >= e; --i) {
+        // HLX arguments are on the VTCM stack.
+        if (MFI.getStackID(i) == TargetStackID::NoAlloc)
+          continue;
         uint64_t ObjSize = MFI.getObjectSize(i);
         Align ObjAlign = MFI.getObjectAlign(i);
 
@@ -1845,6 +1848,16 @@ void HexagonFrameLowering::computeVTCMStackOffsets(MachineFunction &MF) const {
   const int64_t HlxLRSize = HRI.getSpillSize(Hexagon::HlxLRRegClass);
   const int64_t HlxLLRSize = HRI.getSpillSize(Hexagon::HlxLLRRegClass);
 
+  // Incoming HLX stack arguments are just above the VTCM frame. NoAlloc
+  // fixed objects are incoming HLX stack arguments (see LowerFormalArguments).
+  for (int I = MFI.getObjectIndexBegin(); I != 0; ++I) {
+    if (MFI.getStackID(I) != TargetStackID::NoAlloc)
+      continue;
+    HMFI.moveToVTCMStack(I, VTCMFrameInfo.CreateFixedObject(
+                                MFI.getObjectSize(I), MFI.getObjectOffset(I),
+                                /*IsImmutable=*/true));
+  }
+
   int64_t Offset = 0;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
     bool IsHlxSpill =
@@ -1869,7 +1882,9 @@ void HexagonFrameLowering::computeVTCMStackOffsets(MachineFunction &MF) const {
     HMFI.moveToVTCMStack(I, VTCMIndex);
     MFI.RemoveStackObject(I);
   }
-  VTCMFrameInfo.setStackSize(Offset);
+  // Outgoing HLX stack arguments are stored at VSP+0 and up, below the
+  // objects above.
+  VTCMFrameInfo.setStackSize(Offset + HMFI.getMaxVTCMCallFrameSize());
 }
 
 void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
