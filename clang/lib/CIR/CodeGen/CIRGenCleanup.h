@@ -20,6 +20,7 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/CodeGenUtils/EHPersonality.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace clang::CIRGen {
 
@@ -116,6 +117,11 @@ class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
   /// Cleanup scope op that represent the current scope in CIR
   cir::CleanupScopeOp cleanupScopeOp;
 
+  /// An alloca that only the cleanup reads, such as the end of the
+  /// initialized part of an array. If the cleanup is popped without being
+  /// emitted, the alloca and the operations that use it are erased.
+  mlir::Operation *auxAlloca = nullptr;
+
 public:
   /// Gets the size required for a lazy cleanup scope with the given
   /// cleanup-data requirements.
@@ -195,7 +201,24 @@ public:
     return (scope->getKind() == Cleanup);
   }
 
-  void markEmitted() {}
+  void setAuxAlloca(mlir::Operation *alloca) { auxAlloca = alloca; }
+
+  void eraseAuxAlloca() {
+    if (!auxAlloca)
+      return;
+    llvm::SetVector<mlir::Operation *> ops;
+    ops.insert(auxAlloca);
+    for (size_t i = 0; i < ops.size(); ++i)
+      for (mlir::Operation *user : ops[i]->getUsers())
+        ops.insert(user);
+    for (mlir::Operation *op : llvm::reverse(ops)) {
+      op->dropAllUses();
+      op->erase();
+    }
+    auxAlloca = nullptr;
+  }
+
+  void markEmitted() { auxAlloca = nullptr; }
 };
 
 /// A non-stable pointer into the scope stack.

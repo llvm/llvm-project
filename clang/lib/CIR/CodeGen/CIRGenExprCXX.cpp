@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
@@ -1168,12 +1169,16 @@ void CIRGenFunction::emitNewArrayInitializer(
     CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     if (dtorKind) {
       mlir::Location loc = cgm.getLoc(init->getSourceRange());
+      Address endOfInitAlloca = Address::invalid();
       endOfInit = createTempAlloca(beginPtr.getType(), getPointerAlign(), loc,
-                                   "arrayinit.endOfInit");
+                                   "arrayinit.endOfInit",
+                                   /*arraySize=*/nullptr, &endOfInitAlloca);
       pushIrregularPartialArrayCleanup(
           beginPtr.getPointer(), endOfInit, elementType,
           beginPtr.getAlignment().alignmentOfArrayElement(elementSize),
           getDestroyer(dtorKind));
+      cast<EHCleanupScope>(*ehStack.find(ehStack.stable_begin()))
+          .setAuxAlloca(endOfInitAlloca.getPointer().getDefiningOp());
     }
 
     CharUnits startAlign = curPtr.getAlignment();
