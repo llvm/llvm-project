@@ -107,7 +107,8 @@ void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
 
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateVectorReductionToContractPatterns(patterns);
+  vector::populateVectorReductionToContractPatterns(patterns, /*benefit=*/1,
+                                                    getAllowFastMathFlagLoss());
 }
 
 void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(

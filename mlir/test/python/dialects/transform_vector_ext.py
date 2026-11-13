@@ -77,6 +77,9 @@ def configurable_patterns():
     # CHECK: transform.apply_patterns.vector.flatten_vector_transfer_ops
     # CHECK-SAME: target_vector_bitwidth = 1
     vector.ApplyFlattenVectorTransferOpsPatternsOp(target_vector_bitwidth=1)
+    # CHECK: transform.apply_patterns.vector.reduction_to_contract
+    # CHECK-SAME: allow_fast_math_flag_loss = false
+    vector.ApplyVectorReductionToContractPatternsOp(allow_fast_math_flag_loss=False)
 
 
 @run_apply_patterns
