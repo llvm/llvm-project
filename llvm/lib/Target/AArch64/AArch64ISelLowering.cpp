@@ -22472,11 +22472,7 @@ static SDValue performSVEDeinterleaveExtendCombine(
   SDValue VectorExtend = Deinterleave.getOperand(0);
   SDValue UunpkHi = Deinterleave.getOperand(1);
 
-  bool IsSupportedVectorExtendOpcode =
-      VectorExtend.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
-      VectorExtend.getOpcode() == AArch64ISD::UUNPKLO;
-
-  if (!IsSupportedVectorExtendOpcode ||
+  if (VectorExtend.getOpcode() != AArch64ISD::UUNPKLO ||
       UunpkHi.getOpcode() != AArch64ISD::UUNPKHI)
     return SDValue();
 
