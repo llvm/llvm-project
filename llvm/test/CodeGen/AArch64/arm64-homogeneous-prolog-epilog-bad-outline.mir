@@ -35,5 +35,6 @@ body:             |
   bb.1:
     liveins: $w0, $x16
     TCRETURNri killed renamable $x16, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0
+...
 # CHECK: _OUTLINED_FUNCTION_PROLOG_FRAME16_x30x29x19x20:
 # CHECK-NOT: _OUTLINED_FUNCTION_EPILOG_x30x29x19x20:

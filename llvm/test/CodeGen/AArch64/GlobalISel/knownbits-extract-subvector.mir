@@ -91,7 +91,6 @@ body: |
     %4:_(<vscale x 2 x i16>) = G_EXTRACT_SUBVECTOR %3, 0
 ...
 ---
----
 # computeNumSignBits: sign bits propagate through extract subvector
 # Tests both lower and upper half extraction
 name: ExtractSubvector_Sext

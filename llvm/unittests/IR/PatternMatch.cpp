@@ -2757,6 +2757,7 @@ TEST_F(PatternMatchTest, PtrAdd) {
   Constant *Null = Constant::getNullValue(PtrTy);
   Constant *Offset = ConstantInt::get(IdxTy, 42);
   Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
+  IRB.disableGEPCanonicalization();
   Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
   Value *PtrAddConst = ConstantExpr::getPtrAdd(Null, Offset);
 

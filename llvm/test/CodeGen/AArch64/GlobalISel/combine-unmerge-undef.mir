@@ -67,3 +67,4 @@ body:             |
     %14:_(i16) = G_IMPLICIT_DEF
     %15:_(<8 x i16>) = G_BUILD_VECTOR %30(i16), %31(i16), %32(i16), %33(i16), %14(i16), %14(i16), %14(i16), %14(i16)
     RET_ReallyLR implicit %15
+...

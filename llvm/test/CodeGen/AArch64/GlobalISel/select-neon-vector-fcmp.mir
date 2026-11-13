@@ -184,3 +184,4 @@ body:             |
     %fcmp:fpr(<2 x i64>) = G_FCMGT %zero_vec(<2 x f64>), %lhs
     $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0
+...

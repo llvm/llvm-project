@@ -323,3 +323,4 @@ body:             |
     STRWui $wzr, $x0, 0 :: (store (s32))
     STURWi $wzr, $x0, -4 :: (store (s32))
     RET undef $lr
+...

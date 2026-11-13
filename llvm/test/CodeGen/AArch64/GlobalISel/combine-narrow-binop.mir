@@ -158,3 +158,4 @@ body:             |
     %res:_(<2 x i64>) = G_XOR %lhs, %rhs
     %small:_(<2 x i16>) = G_TRUNC %res(<2 x i64>)
     $w0 = COPY %small(<2 x i16>)
+...

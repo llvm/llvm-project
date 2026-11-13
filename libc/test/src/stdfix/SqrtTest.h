@@ -20,7 +20,6 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/fixed_point/fx_rep.h"
-#include "src/__support/fixed_point/sqrt.h"
 
 template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
 

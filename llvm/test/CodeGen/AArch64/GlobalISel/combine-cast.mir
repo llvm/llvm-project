@@ -278,3 +278,4 @@ body:             |
     %0:_(<2 x i64>) = G_IMPLICIT_DEF
     %1:_(<2 x p0>) = G_INTTOPTR %0(<2 x i64>)
     $q0 = COPY %1(<2 x p0>)
+...

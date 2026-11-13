@@ -4,12 +4,6 @@
 
 ---
 name:            test_fmamk_reg_imm_f16
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: vgpr_32 }
-  - { id: 4, class: vgpr_32 }
 body:             |
   bb.0:
 
@@ -19,22 +13,16 @@ body:             |
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub0
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
     ; GFX11-NEXT: [[V_FMA_F16_gfx9_fake16_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_fake16_e64 0, [[COPY1]], 0, [[V_MOV_B32_e32_]], 0, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0.sub1
-    %2 = COPY %0.sub0
-    %3 = V_MOV_B32_e32 1078523331, implicit $exec
-    %4 = V_FMAC_F16_fake16_e64 0, %2, 0, %3, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = COPY %0.sub1
+    %2:vgpr_32 = COPY %0.sub0
+    %3:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
+    %4:vgpr_32 = V_FMAC_F16_fake16_e64 0, %2, 0, %3, 0, %1, 0, 0, implicit $mode, implicit $exec
 
 ...
 
 ---
 name:            test_fmaak_f16
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: vgpr_32 }
-  - { id: 4, class: vgpr_32 }
 body:             |
   bb.0:
 
@@ -44,11 +32,11 @@ body:             |
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DEF]].sub1
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
     ; GFX11-NEXT: [[V_FMA_F16_gfx9_fake16_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F16_gfx9_fake16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[V_MOV_B32_e32_]], 0, 0, 0, implicit $mode, implicit $exec
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0.sub0
-    %2 = COPY %0.sub1
-    %3 = V_MOV_B32_e32 1078523331, implicit $exec
-    %4 = V_FMAC_F16_fake16_e64 0, %1, 0, %2, 0, %3, 0, 0, implicit $mode, implicit $exec
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = COPY %0.sub0
+    %2:vgpr_32 = COPY %0.sub1
+    %3:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
+    %4:vgpr_32 = V_FMAC_F16_fake16_e64 0, %1, 0, %2, 0, %3, 0, 0, implicit $mode, implicit $exec
 ...
 
 ---
