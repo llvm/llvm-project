@@ -190,6 +190,10 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
         IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
             *Add, F, false, true);
+        // Give the backend a chance to resolve PC-relative fixups that
+        // encode the distance to the referenced label.
+        if (!IsResolved)
+          IsResolved = getBackend().mayResolvePcRelFixup(F, Fixup, *Add);
       }
     } else {
       IsResolved = Target.isAbsolute();
