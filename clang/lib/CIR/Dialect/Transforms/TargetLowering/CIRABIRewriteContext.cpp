@@ -1309,6 +1309,11 @@ insertArgCoercion(mlir::FunctionOpInterface funcOp,
         flattenOps.insert(fieldPtr);
         auto storeOp = cir::StoreOp::create(
             builder, loc, entry.getArgument(blockArgIdx + f), fieldPtr);
+        // A packed slot can be less aligned than the field's own type.
+        uint64_t fieldAlign =
+            llvm::MinAlign(slot.getAlignment(), flatTy.getElementOffset(dl, f));
+        if (fieldAlign < dl.getTypeABIAlignment(fieldTy))
+          storeOp.setAlignment(fieldAlign);
         flattenOps.insert(storeOp);
       }
 
