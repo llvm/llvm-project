@@ -45,7 +45,7 @@ def riscv_fmv_x_signexth
 def GPRAsFPR16 : AsmOperandClass {
   let Name = "GPRAsFPR16";
   let PredicateMethod = "isGPRForFP";
-  let PredicatePassSubtarget = true;
+  let PredicateUsesSubtarget = true;
   let RenderMethod = "addGPRAsFPR16Operands";
   let DiagnosticString = "register must be a GPR when used as an FP operand";
 }
