@@ -3302,9 +3302,9 @@ bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
   Register NotEqualReg = ResVReg;
 
   if (isVectorType(InputType)) {
-    NotEqualReg = IsBoolTy ? InputRegister : createTempVReg(SpvBoolTy);
     const unsigned NumElts = GR.getScalarOrVectorComponentCount(InputType);
     SpvBoolTy = GR.getOrCreateSPIRVVectorType(SpvBoolTy, NumElts, I, TII);
+    NotEqualReg = IsBoolTy ? InputRegister : createTempVReg(SpvBoolTy);
   }
 
   if (!IsBoolTy) {
