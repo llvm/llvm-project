@@ -17625,11 +17625,10 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    orl %esi, %edi
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movl 116(%esp,%edx), %esi
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movl %esi, %eax
-; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movl %ebx, %ecx
+; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movb %bl, %cl
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    shrl %cl, %eax
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movl 120(%esp,%edx), %edx
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    leal (%edx,%edx), %ebp
-; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    movb %ch, %cl
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    shll %cl, %ebp
 ; X86-NO-SHLD-NO-BMI2-SSE2-NEXT:    orl %eax, %ebp

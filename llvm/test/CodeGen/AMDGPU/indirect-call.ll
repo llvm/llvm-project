@@ -686,18 +686,6 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) #0 {
 ; GCN-NEXT:    v_readfirstlane_b32 s17, v1
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
 ; GCN-NEXT:    s_and_saveexec_b64 s[36:37], vcc
-; GCN-NEXT:    v_readlane_b32 s4, v41, 2
-; GCN-NEXT:    v_readlane_b32 s6, v41, 4
-; GCN-NEXT:    v_readlane_b32 s8, v41, 6
-; GCN-NEXT:    v_readlane_b32 s10, v41, 8
-; GCN-NEXT:    v_readlane_b32 s5, v41, 3
-; GCN-NEXT:    v_readlane_b32 s7, v41, 5
-; GCN-NEXT:    v_readlane_b32 s9, v41, 7
-; GCN-NEXT:    v_readlane_b32 s11, v41, 9
-; GCN-NEXT:    v_readlane_b32 s12, v41, 10
-; GCN-NEXT:    v_readlane_b32 s13, v41, 11
-; GCN-NEXT:    v_readlane_b32 s14, v41, 12
-; GCN-NEXT:    v_readlane_b32 s15, v41, 13
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    v_readlane_b32 s4, v41, 2
 ; GCN-NEXT:    v_readlane_b32 s6, v41, 4
@@ -780,18 +768,6 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) #0 {
 ; GISEL-NEXT:    v_readfirstlane_b32 s17, v1
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, s[16:17], v[0:1]
 ; GISEL-NEXT:    s_and_saveexec_b64 s[36:37], vcc
-; GISEL-NEXT:    v_readlane_b32 s4, v41, 2
-; GISEL-NEXT:    v_readlane_b32 s6, v41, 4
-; GISEL-NEXT:    v_readlane_b32 s8, v41, 6
-; GISEL-NEXT:    v_readlane_b32 s10, v41, 8
-; GISEL-NEXT:    v_readlane_b32 s5, v41, 3
-; GISEL-NEXT:    v_readlane_b32 s7, v41, 5
-; GISEL-NEXT:    v_readlane_b32 s9, v41, 7
-; GISEL-NEXT:    v_readlane_b32 s11, v41, 9
-; GISEL-NEXT:    v_readlane_b32 s12, v41, 10
-; GISEL-NEXT:    v_readlane_b32 s13, v41, 11
-; GISEL-NEXT:    v_readlane_b32 s14, v41, 12
-; GISEL-NEXT:    v_readlane_b32 s15, v41, 13
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GISEL-NEXT:    v_readlane_b32 s4, v41, 2
 ; GISEL-NEXT:    v_readlane_b32 s6, v41, 4
@@ -1004,7 +980,6 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, ptr %fptr) #0 {
 ; GCN-NEXT:    v_readfirstlane_b32 s7, v2
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[1:2]
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2

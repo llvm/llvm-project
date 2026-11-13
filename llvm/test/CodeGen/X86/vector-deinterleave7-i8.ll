@@ -14192,7 +14192,6 @@ define void @load_i8_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX-NEXT:    vpinsrb $3, %esi, %xmm2, %xmm2
 ; AVX-NEXT:    vpextrb $15, %xmm7, %esi
 ; AVX-NEXT:    vpinsrb $4, %esi, %xmm2, %xmm2
-; AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
 ; AVX-NEXT:    vpextrb $6, %xmm5, %esi
 ; AVX-NEXT:    vpinsrb $5, %esi, %xmm2, %xmm2
 ; AVX-NEXT:    vpextrb $13, %xmm5, %esi
@@ -15340,7 +15339,6 @@ define void @load_i8_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-NEXT:    vpinsrb $3, %esi, %xmm2, %xmm2
 ; AVX2-NEXT:    vpextrb $15, %xmm7, %esi
 ; AVX2-NEXT:    vpinsrb $4, %esi, %xmm2, %xmm2
-; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
 ; AVX2-NEXT:    vpextrb $6, %xmm5, %esi
 ; AVX2-NEXT:    vpinsrb $5, %esi, %xmm2, %xmm2
 ; AVX2-NEXT:    vpextrb $13, %xmm5, %esi

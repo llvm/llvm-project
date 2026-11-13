@@ -174,6 +174,12 @@ public:
     return Virt2StackSlotMap[virtReg];
   }
 
+  /// Forget the stack slot of \p virtReg, e.g. because the slot was removed.
+  void clearStackSlot(Register virtReg) {
+    assert(virtReg.isVirtual());
+    Virt2StackSlotMap[virtReg] = NO_STACK_SLOT;
+  }
+
   /// create a mapping for the specifed virtual register to
   /// the next available stack slot
   LLVM_ABI int assignVirt2StackSlot(Register virtReg);
