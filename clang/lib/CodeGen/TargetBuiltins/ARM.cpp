@@ -6893,6 +6893,43 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_st4lane, Tys),
                         Ops, "");
   }
+  case NEON::BI__builtin_neon_vstnq_s8_x2:
+  case NEON::BI__builtin_neon_vstnq_s16_x2:
+  case NEON::BI__builtin_neon_vstnq_s32_x2:
+  case NEON::BI__builtin_neon_vstnq_s64_x2:
+  case NEON::BI__builtin_neon_vstnq_u8_x2:
+  case NEON::BI__builtin_neon_vstnq_u16_x2:
+  case NEON::BI__builtin_neon_vstnq_u32_x2:
+  case NEON::BI__builtin_neon_vstnq_u64_x2:
+  case NEON::BI__builtin_neon_vstnq_mf8_x2:
+  case NEON::BI__builtin_neon_vstnq_f16_x2:
+  case NEON::BI__builtin_neon_vstnq_bf16_x2:
+  case NEON::BI__builtin_neon_vstnq_f32_x2:
+  case NEON::BI__builtin_neon_vstnq_f64_x2: {
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());
+    llvm::Type *Tys[2] = {VTy, Ops[2]->getType()};
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_vstnq_x2, Tys),
+                        Ops, "");
+  }
+  case NEON::BI__builtin_neon_vldnq_s8_x2:
+  case NEON::BI__builtin_neon_vldnq_s16_x2:
+  case NEON::BI__builtin_neon_vldnq_s32_x2:
+  case NEON::BI__builtin_neon_vldnq_s64_x2:
+  case NEON::BI__builtin_neon_vldnq_u8_x2:
+  case NEON::BI__builtin_neon_vldnq_u16_x2:
+  case NEON::BI__builtin_neon_vldnq_u32_x2:
+  case NEON::BI__builtin_neon_vldnq_u64_x2:
+  case NEON::BI__builtin_neon_vldnq_mf8_x2:
+  case NEON::BI__builtin_neon_vldnq_f16_x2:
+  case NEON::BI__builtin_neon_vldnq_bf16_x2:
+  case NEON::BI__builtin_neon_vldnq_f32_x2:
+  case NEON::BI__builtin_neon_vldnq_f64_x2: {
+    llvm::Type *Tys[2] = {VTy, Ops[1]->getType()};
+    Ops[1] = Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::aarch64_neon_vldnq_x2, Tys), Ops[1],
+        "vldnq_x2");
+    return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
+  }
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v: {
     Ops[1] = Builder.CreateBitCast(Ops[1], Ty);

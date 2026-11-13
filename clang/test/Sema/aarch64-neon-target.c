@@ -47,6 +47,12 @@ void f16mm(float16x8_t v8f16) {
   vmmlaq_f16(v8f16, v8f16, v8f16);
 }
 
+__attribute__((target("fp-armv8"), always_inline))
+void fp_armv8(int8_t *ptr, int8x16x2_t val) {
+  vldnq_s8_x2(ptr);
+  vstnq_s8_x2(ptr, val);
+}
+
 __attribute__((target("f16f32mm")))
 void f16f32mm(float32x4_t v4f32, float16x8_t v8f16) {
   vmmlaq_f32_f16(v4f32, v8f16, v8f16);
@@ -76,7 +82,7 @@ void test_v85(float32x4_t v4f32) {
   vrnd32xq_f32(v4f32);
 }
 
-void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, float16x8_t v8f16, float64x2_t v2f64, bfloat16x4_t v4bf16, __bf16 bf16, poly64_t poly64, poly64x2_t poly64x2) {
+void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, int8x16x2_t v16i8x2, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, float16x8_t v8f16, float64x2_t v2f64, bfloat16x4_t v4bf16, __bf16 bf16, poly64_t poly64, poly64x2_t poly64x2, int8_t* ptr) {
   // dotprod
   vdot_u32(v2i32, v8i8, v8i8); // expected-error {{always_inline function 'vdot_u32' requires target feature 'dotprod'}}
   vdot_laneq_u32(v2i32, v8i8, v16i8, 1); // expected-error {{always_inline function 'vdot_u32' requires target feature 'dotprod'}}
@@ -85,6 +91,9 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   vrnd_f16(v4f16); // expected-error {{always_inline function 'vrnd_f16' requires target feature 'fullfp16'}}
   vmaxnm_f16(v4f16, v4f16); // expected-error {{always_inline function 'vmaxnm_f16' requires target feature 'fullfp16'}}
   vrndi_f16(v4f16); // expected-error {{always_inline function 'vrndi_f16' requires target feature 'fullfp16'}}
+  // fp_armv8
+  vldnq_s8_x2(ptr); // expected-error {{'__builtin_neon_vldnq_s8_x2' needs target feature fp-armv8}}
+  vstnq_s8_x2(ptr, v16i8x2); // expected-error {{'__builtin_neon_vstnq_s8_x2' needs target feature fp-armv8}}
   // fp16fml depends on fp-armv8
   vfmlal_low_f16(v2f32, v4f16, v4f16); // expected-error {{always_inline function 'vfmlal_low_f16' requires target feature 'fp-armv8'}}
   // i8mm

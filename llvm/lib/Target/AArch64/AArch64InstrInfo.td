@@ -3975,6 +3975,15 @@ defm LDNPD : LoadPairNoAlloc<0b01, 1, FPR64Op, simm7s8, "ldnp">;
 defm LDNPQ : LoadPairNoAlloc<0b10, 1, FPR128Op, simm7s16, "ldnp">;
 }
 
+multiclass LoadPairPats<ValueType VecTy, Intrinsic OpNode, Instruction Inst> {
+  def : Pat<([VecTy, VecTy] (OpNode  (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset))),
+            ([VecTy, VecTy] (Inst GPR64sp:$Rn, simm7s16:$offset))>;
+}
+
+foreach VecTy = [v16i8, v8i16, v4i32, v2i64, v8f16, v8bf16, v4f32, v2f64] in {
+  defm : LoadPairPats<VecTy, int_aarch64_neon_vldnq_x2, LDNPQi>;
+}
+
 def : Pat<(AArch64ldp (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (LDPXi GPR64sp:$Rn, simm7s8:$offset)>;
 
@@ -4875,6 +4884,15 @@ let Predicates = [HasFPARMv8] in {
 defm STNPS : StorePairNoAlloc<0b00, 1, FPR32Op, simm7s4, "stnp">;
 defm STNPD : StorePairNoAlloc<0b01, 1, FPR64Op, simm7s8, "stnp">;
 defm STNPQ : StorePairNoAlloc<0b10, 1, FPR128Op, simm7s16, "stnp">;
+}
+
+multiclass StorePairPats<ValueType VecTy, Intrinsic OpNode, Instruction Inst> {
+  def : Pat<(OpNode (VecTy FPR128:$Rt1), (VecTy FPR128:$Rt2), (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
+            (Inst FPR128:$Rt1, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
+}
+
+foreach VecTy = [v16i8, v8i16, v4i32, v2i64, v8f16, v8bf16, v4f32, v2f64] in {
+  defm : StorePairPats<VecTy, int_aarch64_neon_vstnq_x2, STNPQi>;
 }
 
 // Armv9.6-a Load/store pair (FEAT_LSUI)
