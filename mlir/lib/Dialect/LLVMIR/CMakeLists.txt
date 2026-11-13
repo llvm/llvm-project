@@ -2,7 +2,6 @@ add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
   IR/LLVMOps.cpp
-  IR/NVVMOps.cpp
   IR/ROCDLOps.cpp
   )
 
@@ -63,26 +62,26 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRSupport
   )
 
-set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)
-foreach(index RANGE 7)
-  set(NVVM_SHARDED_SRC NVVMOps.${index}.cpp)
-  list(APPEND NVVM_SHARDED_SRCS ${NVVM_SHARDED_SRC})
-  mlir_src_sharder(${NVVM_SHARDED_SRC}
-    -op-shard-index=${index})
-endforeach()
-add_public_tablegen_target(MLIRNVVMOpsShardGen)
-
 add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMAttributes.cpp
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
   IR/NVVMRequiresSMTraits.cpp
-  ${NVVM_SHARDED_SRCS}
+  IR/NVVMArithOps.cpp
+  IR/NVVMConvertOps.cpp
+  IR/NVVMIndexSRegOps.cpp
+  IR/NVVMMemoryOps.cpp
+  IR/NVVMMiscOps.cpp
+  IR/NVVMMiscSRegOps.cpp
+  IR/NVVMMmaOps.cpp
+  IR/NVVMSyncOps.cpp
+  IR/NVVMTcgenOps.cpp
+  IR/NVVMWarpOps.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
-  # Cache the operation declarations shared by all source shards. Keep this
+  # Cache the operation declarations shared by all source files. Keep this
   # specialized PCH local rather than making downstream libraries reuse it.
   DISABLE_PCH_REUSE
   PRECOMPILE_HEADERS
@@ -92,7 +91,6 @@ add_mlir_dialect_library(MLIRNVVMDialect
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRNVVMOpsIncGen
-  MLIRNVVMOpsShardGen
   MLIRNVVMConversionsIncGen
   MLIRBasicPtxBuilderInterfaceIncGen
   MLIRNVVMRequiresSMTraitsIncGen

@@ -6,8 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the NVVM IR dialect in MLIR, containing NVVM operations and
-// NVVM specific extensions to the LLVM type system.
+// This file declares the NVVM IR dialect in MLIR with all its ops, attributes
+// and enums. The NVVM dialect only contains GPU specific additions on top of
+// the general LLVM dialect.
+//
+// Prefer the narrower headers: this umbrella header only exists for
+// compatibility. Including all ops of the NVVM dialect is expensive to compile,
+// so include this header only if most of the headers below are needed anyway.
+// Otherwise include:
+//  - NVVMDialectDecl.h for the dialect, NVVMAttributes.h for its attributes
+//    and enums, and NVVMRequiresSMTraits.h for its traits,
+//  - NVVM<Partition>Ops.h for the ops of an op partition, e.g.
+//    NVVMIndexSRegOps.h for `nvvm.read.ptx.sreg.tid.x` and NVVMMmaOps.h for
+//    `nvvm.mma.sync`.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,34 +28,21 @@
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMIntrinsicLowering.h"
 #include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
-namespace mlir {
-namespace NVVM {
-// Shared memory has 128-bit alignment
-constexpr int kSharedMemoryAlignmentBit = 128;
-
-/// A pair type of LLVM's Intrinsic ID and args (which are llvm values).
-/// This type is returned by the getIntrinsicIDAndArgs() methods.
-using IDArgPair =
-    std::pair<llvm::Intrinsic::ID, llvm::SmallVector<llvm::Value *>>;
-
-/// Return the element type and number of elements associated with a wmma matrix
-/// of given chracteristics. This matches the logic in IntrinsicsNVVM.td
-/// WMMA_REGS structure.
-std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
-                                             mlir::NVVM::MMAFrag frag, int nRow,
-                                             int nCol,
-                                             mlir::MLIRContext *context);
-} // namespace NVVM
-namespace LLVM {
-class ModuleTranslation;
-} // namespace LLVM
-} // namespace mlir
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOps.h.inc"
+///// Ops /////
+#include "mlir/Dialect/LLVMIR/NVVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMConvertOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMIndexSRegOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMiscOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMiscSRegOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMmaOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMSyncOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMTcgenOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMWarpOps.h"
 
 #endif /* MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_ */
