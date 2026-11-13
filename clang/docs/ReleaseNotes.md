@@ -826,6 +826,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
+- Fixed an issue where diagnostics for failed constant expressions could report modified parameter
+  values instead of the original argument values at the constexpr function call site. (#GH107554)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

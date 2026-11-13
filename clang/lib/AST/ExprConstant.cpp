@@ -512,6 +512,11 @@ namespace {
     /// Index - The call index of this call.
     unsigned Index;
 
+    /// The values of the parameters at the beginning of this call.
+    /// Used to describe the constexpr call in diagnostics, since the
+    /// parameter values may be modified during constant evaluation.
+    llvm::SmallVector<APValue, 4> OriginalArgs;
+
     /// The stack of integers for tracking version numbers for temporaries.
     SmallVector<unsigned, 2> TempVersionStack = {1};
     unsigned CurTempVersion = TempVersionStack.back();
@@ -1292,6 +1297,17 @@ CallStackFrame::CallStackFrame(EvalInfo &Info, SourceRange CallRange,
       Index(Info.NextCallIndex++) {
   Info.CurrentCall = this;
   ++Info.CallStackDepth;
+  // Save the original argument values before executing
+  // the callee. The parameter slots may be modified
+  // during constant evaluation.
+  if (Arguments) {
+    for (const ParmVarDecl *Param : Callee->parameters()) {
+      if (const APValue *V = Info.getParamSlot(Arguments, Param))
+        OriginalArgs.push_back(*V);
+      else
+        OriginalArgs.emplace_back();
+    }
+  }
 }
 
 CallStackFrame::~CallStackFrame() {
@@ -1976,12 +1992,16 @@ void CallStackFrame::describe(raw_ostream &Out) const {
   }
 
   Out << '(';
-
+  unsigned ArgIndex = ExplicitInstanceParam;
   llvm::ListSeparator Comma;
   for (const ParmVarDecl *Param :
        Callee->parameters().slice(ExplicitInstanceParam)) {
     Out << Comma;
-    const APValue *V = Info.getParamSlot(Arguments, Param);
+    const APValue *V = nullptr;
+
+    if (ArgIndex < OriginalArgs.size() && !OriginalArgs[ArgIndex].isAbsent())
+      V = &OriginalArgs[ArgIndex];
+    ++ArgIndex;
     if (V)
       V->printPretty(Out, Info.Ctx, Param->getType());
     else
