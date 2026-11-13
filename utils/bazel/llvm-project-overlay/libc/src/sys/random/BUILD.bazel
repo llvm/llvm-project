@@ -20,8 +20,8 @@ libc_function(
     srcs = ["linux/getrandom.cpp"],
     hdrs = ["getrandom.h"],
     deps = [
-        "//libc:types_size_t",
-        "//libc:types_ssize_t",
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:ssize_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support:libc_errno",

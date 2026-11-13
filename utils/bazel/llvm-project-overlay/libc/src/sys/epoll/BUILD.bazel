@@ -59,7 +59,7 @@ libc_function(
     }),
     deps = [
         "//libc:hdr_sys_epoll_macros",
-        "//libc:types_struct_epoll_event",
+        "//libc/hdr/types:struct_epoll_event",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_ctl",
@@ -77,8 +77,8 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:types_sigset_t",
-        "//libc:types_struct_epoll_event",
+        "//libc/hdr/types:sigset_t",
+        "//libc/hdr/types:struct_epoll_event",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_pwait",
@@ -97,9 +97,9 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:types_sigset_t",
-        "//libc:types_struct_epoll_event",
-        "//libc:types_struct_timespec",
+        "//libc/hdr/types:sigset_t",
+        "//libc/hdr/types:struct_epoll_event",
+        "//libc/hdr/types:struct_timespec",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_pwait2",
@@ -118,7 +118,7 @@ libc_function(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:types_struct_epoll_event",
+        "//libc/hdr/types:struct_epoll_event",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:epoll_wait",

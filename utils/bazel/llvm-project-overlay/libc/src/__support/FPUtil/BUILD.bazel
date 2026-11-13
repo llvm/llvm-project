@@ -156,7 +156,7 @@ libc_support_library(
         "//libc:hdr_fenv_macros",
         "//libc:hdr_math_macros",
         "//libc:hdr_stdint_proxy",
-        "//libc:types_fenv_t",
+        "//libc/hdr/types:fenv_t",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:type_traits",

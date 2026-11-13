@@ -25,7 +25,7 @@ libc_test(
     srcs = ["sprintf_test.cpp"],
     deps = [
         "//libc:hdr_wchar_macros",
-        "//libc:types_wint_t",
+        "//libc/hdr/types:wint_t",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/printf_core:printf_config",
         "//libc/src/stdio:sprintf",

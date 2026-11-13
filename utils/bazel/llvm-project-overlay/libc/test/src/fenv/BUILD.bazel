@@ -71,7 +71,7 @@ libc_test(
     deps = [
         "//libc:hdr_fenv_macros",
         "//libc:hdr_signal_macros",
-        "//libc:types_fenv_t",
+        "//libc/hdr/types:fenv_t",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros/properties:architectures",
@@ -88,7 +88,7 @@ libc_test(
     ],
     deps = [
         "//libc:hdr_fenv_macros",
-        "//libc:types_fexcept_t",
+        "//libc/hdr/types:fexcept_t",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/fenv:fegetexceptflag",
         "//libc/src/fenv:fesetexceptflag",
@@ -136,7 +136,7 @@ libc_test(
     ],
     deps = [
         "//libc:hdr_fenv_macros",
-        "//libc:types_fenv_t",
+        "//libc/hdr/types:fenv_t",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/fenv:feupdateenv",
         "//libc/test/UnitTest:fp_test_helpers",
@@ -151,7 +151,7 @@ libc_test(
     ],
     deps = [
         "//libc:hdr_fenv_macros",
-        "//libc:types_fenv_t",
+        "//libc/hdr/types:fenv_t",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/macros/properties:os",
         "//libc/src/fenv:fegetenv",

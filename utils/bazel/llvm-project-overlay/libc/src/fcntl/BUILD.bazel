@@ -25,7 +25,7 @@ libc_function(
     }),
     deps = [
         "//libc:hdr_fcntl_macros",
-        "//libc:types_mode_t",
+        "//libc/hdr/types:mode_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
@@ -61,7 +61,7 @@ libc_function(
     }),
     deps = [
         "//libc:hdr_fcntl_macros",
-        "//libc:types_mode_t",
+        "//libc/hdr/types:mode_t",
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:openat",

@@ -20,7 +20,7 @@ libc_support_library(
     srcs = ["linux/stdin.cpp"],
     hdrs = ["stdin.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:common",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
@@ -33,7 +33,7 @@ libc_support_library(
     srcs = ["linux/stdout.cpp"],
     hdrs = ["stdout.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:common",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
@@ -46,7 +46,7 @@ libc_support_library(
     srcs = ["linux/stderr.cpp"],
     hdrs = ["stderr.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:common",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
@@ -62,7 +62,7 @@ libc_support_library(
         ":stderr",
         ":stdin",
         ":stdout",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:error_or",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
@@ -77,7 +77,7 @@ libc_function(
     deps = [
         ":fflush_internal",
         "//libc:hdr_stdio_macros",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support:libc_errno",
@@ -91,7 +91,7 @@ libc_function(
     srcs = ["generic/fclose.cpp"],
     hdrs = ["fclose.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
@@ -104,7 +104,7 @@ libc_function(
     srcs = ["generic/fopen.cpp"],
     hdrs = ["fopen.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
@@ -118,7 +118,7 @@ libc_function(
     srcs = ["generic/fread.cpp"],
     hdrs = ["fread.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
@@ -131,7 +131,7 @@ libc_function(
     srcs = ["generic/fwrite.cpp"],
     hdrs = ["fwrite.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
@@ -144,7 +144,7 @@ libc_function(
     srcs = ["generic/feof.cpp"],
     hdrs = ["feof.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
         "//libc/src/__support/macros:config",
@@ -156,7 +156,7 @@ libc_function(
     srcs = ["generic/ferror.cpp"],
     hdrs = ["ferror.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support/File:file",
         "//libc/src/__support/File:platform_file",
         "//libc/src/__support/macros:config",
@@ -219,7 +219,7 @@ libc_function(
     hdrs = ["printf.h"],
     deps = [
         ":stdout",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/File:file",
@@ -236,7 +236,7 @@ libc_function(
     srcs = ["generic/fprintf.cpp"],
     hdrs = ["fprintf.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/File:file",
@@ -303,7 +303,7 @@ libc_function(
     hdrs = ["vprintf.h"],
     deps = [
         ":stdout",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/File:file",
@@ -320,7 +320,7 @@ libc_function(
     srcs = ["generic/vfprintf.cpp"],
     hdrs = ["vfprintf.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/File:file",
@@ -368,7 +368,7 @@ libc_support_library(
     name = "scanf_reader",
     hdrs = ["scanf_core/reader.h"],
     deps = [
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
@@ -429,7 +429,7 @@ libc_support_library(
     deps = [
         ":scanf_main",
         ":scanf_reader",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/File:file",
         "//libc/src/__support/macros:attributes",
@@ -445,7 +445,7 @@ libc_function(
     deps = [
         ":stdin",
         ":vfscanf_internal",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/File:file",
         "//libc/src/__support/macros:config",
@@ -459,7 +459,7 @@ libc_function(
     deps = [
         ":stdin",
         ":vfscanf_internal",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/File:file",
         "//libc/src/__support/macros:config",
@@ -472,7 +472,7 @@ libc_function(
     hdrs = ["fscanf.h"],
     deps = [
         ":vfscanf_internal",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/File:file",
         "//libc/src/__support/macros:config",
@@ -485,7 +485,7 @@ libc_function(
     hdrs = ["vfscanf.h"],
     deps = [
         ":vfscanf_internal",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/File:file",
         "//libc/src/__support/macros:config",
@@ -500,7 +500,7 @@ libc_function(
         ":scanf_main",
         ":scanf_string_reader",
         "//libc:hdr_stdio_macros",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/File:file",
@@ -516,7 +516,7 @@ libc_function(
         ":scanf_main",
         ":scanf_string_reader",
         "//libc:hdr_stdio_macros",
-        "//libc:types_FILE",
+        "//libc/hdr/types:FILE",
         "//libc/src/__support:arg_list",
         "//libc/src/__support/CPP:limits",
         "//libc/src/__support/File:file",

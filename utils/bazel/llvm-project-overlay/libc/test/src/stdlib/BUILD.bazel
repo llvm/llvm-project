@@ -39,7 +39,7 @@ libc_test(
     srcs = ["div_test.cpp"],
     deps = [
         ":div_test_helper",
-        "//libc:types_div_t",
+        "//libc/hdr/types:div_t",
         "//libc/src/stdlib:div",
     ],
 )
@@ -49,7 +49,7 @@ libc_test(
     srcs = ["ldiv_test.cpp"],
     deps = [
         ":div_test_helper",
-        "//libc:types_ldiv_t",
+        "//libc/hdr/types:ldiv_t",
         "//libc/src/stdlib:ldiv",
     ],
 )
@@ -59,7 +59,7 @@ libc_test(
     srcs = ["lldiv_test.cpp"],
     deps = [
         ":div_test_helper",
-        "//libc:types_lldiv_t",
+        "//libc/hdr/types:lldiv_t",
         "//libc/src/stdlib:lldiv",
     ],
 )
@@ -114,7 +114,7 @@ libc_test(
     name = "bsearch_test",
     srcs = ["bsearch_test.cpp"],
     deps = [
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/stdlib:bsearch",
     ],
 )
@@ -133,7 +133,7 @@ libc_test(
     srcs = ["quick_sort_test.cpp"],
     deps = [
         ":qsort_test_helper",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/stdlib:qsort",
         "//libc/src/stdlib:qsort_util",
     ],
@@ -145,7 +145,7 @@ libc_test(
     deps = [
         "//libc:hdr_errno_macros",
         "//libc:hdr_limits_macros",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:c_string",
         "//libc/src/__support:fixedvector",
         "//libc/src/__support:libc_assert",
@@ -172,7 +172,7 @@ libc_test(
     srcs = ["heap_sort_test.cpp"],
     deps = [
         ":qsort_test_helper",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/stdlib:qsort",
         "//libc/src/stdlib:qsort_util",
     ],
@@ -191,7 +191,7 @@ libc_test(
     srcs = ["qsort_r_test.cpp"],
     deps = [
         ":qsort_r_test_helper",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/stdlib:qsort_r",
     ],
 )

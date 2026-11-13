@@ -1,0 +1,517 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "atexithandler_t",
+    hdrs = ["atexithandler_t.h"],
+    # Only compatible with full build mode. atexit is not available in overlay mode.
+    full_build_only = True,
+)
+
+libc_support_library(
+    name = "clockid_t",
+    hdrs = ["clockid_t.h"],
+)
+
+libc_support_library(
+    name = "clock_t",
+    hdrs = ["clock_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_clock_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "cpu_set_t",
+    hdrs = ["cpu_set_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_cpu_set_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "div_t",
+    hdrs = ["div_t.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "fenv_t",
+    hdrs = ["fenv_t.h"],
+)
+
+libc_support_library(
+    name = "fexcept_t",
+    hdrs = ["fexcept_t.h"],
+)
+
+libc_support_library(
+    name = "ldiv_t",
+    hdrs = ["ldiv_t.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "lldiv_t",
+    hdrs = ["lldiv_t.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_stdlib_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_link_map",
+    hdrs = ["struct_link_map.h"],
+)
+
+libc_support_library(
+    name = "struct_r_debug",
+    hdrs = ["struct_r_debug.h"],
+)
+
+libc_support_library(
+    name = "struct_sched_param",
+    hdrs = ["struct_sched_param.h"],
+)
+
+libc_support_library(
+    name = "mode_t",
+    hdrs = ["mode_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_mode_t"],
+        "//conditions:default": ["//libc:hdr_fcntl_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "sigset_t",
+    hdrs = ["sigset_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_sigset_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "siginfo_t",
+    hdrs = ["siginfo_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_siginfo_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "stack_t",
+    hdrs = ["stack_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_stack_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "struct_sigaction",
+    hdrs = ["struct_sigaction.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_sigaction"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "nfds_t",
+    hdrs = ["nfds_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_nfds_t"],
+        "//conditions:default": ["//libc:hdr_poll_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_pollfd",
+    hdrs = ["struct_pollfd.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_pollfd"],
+        "//conditions:default": ["//libc:hdr_poll_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "size_t",
+    hdrs = ["size_t.h"],
+)
+
+libc_support_library(
+    name = "struct_epoll_event",
+    hdrs = ["struct_epoll_event.h"],
+)
+
+libc_support_library(
+    name = "struct_f_owner_ex",
+    hdrs = ["struct_f_owner_ex.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_fcntl_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_flock",
+    hdrs = ["struct_flock.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_fcntl_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_flock64",
+    hdrs = ["struct_flock64.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_fcntl_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_stat",
+    hdrs = ["struct_stat.h"],
+)
+
+libc_support_library(
+    name = "struct_timespec",
+    hdrs = ["struct_timespec.h"],
+)
+
+libc_support_library(
+    name = "suseconds_t",
+    hdrs = ["suseconds_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_suseconds_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "struct_itimerspec",
+    hdrs = ["struct_itimerspec.h"],
+)
+
+libc_support_library(
+    name = "time_t",
+    hdrs = ["time_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_time_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "struct_timeval",
+    hdrs = ["struct_timeval.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_timeval"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "struct_rusage",
+    hdrs = ["struct_rusage.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_rusage"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "struct_rlimit",
+    hdrs = ["struct_rlimit.h"],
+)
+
+libc_support_library(
+    name = "struct_sembuf",
+    hdrs = ["struct_sembuf.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_sembuf"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "struct_semid_ds",
+    hdrs = ["struct_semid_ds.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_semid_ds"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "struct_seminfo",
+    hdrs = ["struct_seminfo.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_seminfo"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "struct_sysinfo",
+    hdrs = ["struct_sysinfo.h"],
+)
+
+libc_support_library(
+    name = "struct_utsname",
+    hdrs = ["struct_utsname.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_utsname"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "key_t",
+    hdrs = ["key_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_key_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "pid_t",
+    hdrs = ["pid_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_pid_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "gid_t",
+    hdrs = ["gid_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_gid_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "uid_t",
+    hdrs = ["uid_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_uid_t"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "off_t",
+    hdrs = ["off_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_off_t"],
+        "//conditions:default": ["//libc:hdr_stdio_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "FILE",
+    hdrs = ["FILE.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_FILE"],
+        "//conditions:default": ["//libc:hdr_stdio_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "ssize_t",
+    hdrs = ["ssize_t.h"],
+)
+
+libc_support_library(
+    name = "sa_family_t",
+    hdrs = ["sa_family_t.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "socklen_t",
+    hdrs = ["socklen_t.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "in_addr_t",
+    hdrs = ["in_addr_t.h"],
+)
+
+libc_support_library(
+    name = "struct_in_addr",
+    hdrs = ["struct_in_addr.h"],
+)
+
+libc_support_library(
+    name = "struct_in6_addr",
+    hdrs = ["struct_in6_addr.h"],
+)
+
+libc_support_library(
+    name = "struct_sockaddr",
+    hdrs = ["struct_sockaddr.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_sockaddr_in",
+    hdrs = ["struct_sockaddr_in.h"],
+)
+
+libc_support_library(
+    name = "struct_sockaddr_in6",
+    hdrs = ["struct_sockaddr_in6.h"],
+)
+
+libc_support_library(
+    name = "struct_sockaddr_storage",
+    hdrs = ["struct_sockaddr_storage.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_sockaddr_un",
+    hdrs = ["struct_sockaddr_un.h"],
+)
+
+libc_support_library(
+    name = "struct_linger",
+    hdrs = ["struct_linger.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_iovec",
+    hdrs = ["struct_iovec.h"],
+)
+
+libc_support_library(
+    name = "struct_mmsghdr",
+    hdrs = ["struct_mmsghdr.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_msghdr",
+    hdrs = ["struct_msghdr.h"],
+    deps = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct_cmsghdr",
+    hdrs = ["struct_cmsghdr.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_struct_cmsghdr"],
+        "//conditions:default": ["//libc:hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "struct___pthread_cleanup_frame",
+    hdrs = ["struct___pthread_cleanup_frame.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = ["//libc:llvm_libc_types_struct___pthread_cleanup_frame"],
+)
+
+libc_support_library(
+    name = "wchar_t",
+    hdrs = ["wchar_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_wchar_t"],
+        "//conditions:default": ["//libc:hdr_wchar_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "wctype_t",
+    hdrs = ["wctype_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_wctype_t"],
+        "//conditions:default": ["//libc:hdr_wctype_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "wint_t",
+    hdrs = ["wint_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_wint_t"],
+        "//conditions:default": ["//libc:hdr_wchar_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "char32_t",
+    hdrs = ["char32_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_char32_t"],
+        "//conditions:default": ["//libc:hdr_uchar_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "char8_t",
+    hdrs = ["char8_t.h"],
+    deps = select({
+        "//libc:full_build": ["//libc:llvm_libc_types_char8_t"],
+        "//conditions:default": ["//libc:hdr_uchar_overlay"],
+    }),
+)

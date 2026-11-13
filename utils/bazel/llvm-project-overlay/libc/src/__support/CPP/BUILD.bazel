@@ -29,7 +29,7 @@ libc_support_library(
     hdrs = ["iterator.h"],
     deps = [
         ":type_traits",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
     ],
@@ -276,7 +276,7 @@ libc_support_library(
     ],
     deps = [
         ":type_traits",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
     ],
@@ -290,7 +290,7 @@ libc_support_library(
         ":nullptr_t",
         ":type_traits",
         ":utility",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:libc_assert",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",

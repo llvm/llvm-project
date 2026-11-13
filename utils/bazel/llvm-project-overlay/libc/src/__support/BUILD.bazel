@@ -359,7 +359,7 @@ libc_support_library(
         ":common",
         "//libc:func_aligned_alloc",
         "//libc:func_malloc",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support/CPP:new",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros/properties:os",
@@ -372,7 +372,7 @@ libc_support_library(
     deps = [
         ":alloc_checker",
         ":libc_assert",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support/CPP:nullptr_t",
         "//libc/src/__support/CPP:type_traits",
         "//libc/src/__support/CPP:unique_ptr",
@@ -398,8 +398,8 @@ libc_support_library(
     name = "wctype_utils",
     hdrs = ["wctype_utils.h"],
     deps = [
-        "//libc:types_wchar_t",
-        "//libc:types_wctype_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/hdr/types:wctype_t",
         "//libc/src/__support/CPP:array",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/CPP:string_view",

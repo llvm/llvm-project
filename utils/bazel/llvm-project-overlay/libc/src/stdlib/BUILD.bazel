@@ -52,7 +52,7 @@ libc_function(
     full_build_only = True,
     deps = [
         ":exit_handler",
-        "//libc:types_atexithandler_t",
+        "//libc/hdr/types:atexithandler_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
@@ -112,7 +112,7 @@ libc_function(
     srcs = ["div.cpp"],
     hdrs = ["div.h"],
     deps = [
-        "//libc:types_div_t",
+        "//libc/hdr/types:div_t",
         "//libc/src/__support:common",
         "//libc/src/__support:integer_operations",
         "//libc/src/__support/macros:config",
@@ -124,7 +124,7 @@ libc_function(
     srcs = ["ldiv.cpp"],
     hdrs = ["ldiv.h"],
     deps = [
-        "//libc:types_ldiv_t",
+        "//libc/hdr/types:ldiv_t",
         "//libc/src/__support:common",
         "//libc/src/__support:integer_operations",
         "//libc/src/__support/macros:config",
@@ -136,7 +136,7 @@ libc_function(
     srcs = ["lldiv.cpp"],
     hdrs = ["lldiv.h"],
     deps = [
-        "//libc:types_lldiv_t",
+        "//libc/hdr/types:lldiv_t",
         "//libc/src/__support:common",
         "//libc/src/__support:integer_operations",
         "//libc/src/__support/macros:config",
@@ -229,7 +229,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//libc:types_struct_sigaction",
+        "//libc/hdr/types:struct_sigaction",
         "//libc/src/__support:common",
         "//libc/src/__support/OSUtil:exit",
         "//libc/src/__support/OSUtil:linux_sigmask",
@@ -257,7 +257,7 @@ libc_support_library(
     hdrs = ["environ_internal.h"],
     deps = [
         "//libc:config_app_h",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:checked_ptr",
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:new",
@@ -309,7 +309,7 @@ libc_function(
     deps = [
         ":qsort_util",
         "//libc:hdr_stdint_proxy",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
     ],
@@ -322,7 +322,7 @@ libc_function(
     deps = [
         ":qsort_util",
         "//libc:hdr_stdint_proxy",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
     ],
@@ -361,8 +361,8 @@ libc_function(
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_limits_macros",
         "//libc:hdr_sys_stat_macros",
-        "//libc:types_mode_t",
-        "//libc:types_size_t",
+        "//libc/hdr/types:mode_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support:error_or",
         "//libc/src/__support:libc_errno",
@@ -394,7 +394,7 @@ libc_support_library(
     name = "str_from_util",
     hdrs = ["str_from_util.h"],
     deps = [
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support:str_to_integer",
         "//libc/src/__support/CPP:limits",
@@ -413,7 +413,7 @@ libc_function(
     hdrs = ["strfromf.h"],
     deps = [
         ":str_from_util",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support/macros:config",
     ],
 )
@@ -425,7 +425,7 @@ libc_function(
     deps = [
         ":str_from_util",
         "//libc:llvm_libc_types_float128",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support/macros:config",
     ],
 )
@@ -436,7 +436,7 @@ libc_function(
     hdrs = ["strfromd.h"],
     deps = [
         ":str_from_util",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support/macros:config",
     ],
 )
@@ -447,7 +447,7 @@ libc_function(
     hdrs = ["strfroml.h"],
     deps = [
         ":str_from_util",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support/macros:config",
     ],
 )

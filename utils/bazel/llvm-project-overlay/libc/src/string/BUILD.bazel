@@ -36,7 +36,7 @@ libc_support_library(
         "//libc:hdr_limits_macros",
         "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_types_size_t",
-        "//libc:types_size_t",
+        "//libc/hdr/types:size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:bitset",
         "//libc/src/__support/CPP:type_traits",
