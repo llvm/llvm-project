@@ -533,7 +533,8 @@ define i64 @fcvt_l_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    srli a0, a0, 16
 ; CHECK32-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK32-D-NEXT:    call __extendhfsf2
-; CHECK32-D-NEXT:    call __fixsfdi
+; CHECK32-D-NEXT:    fcvt.w.s a0, fa0, rtz
+; CHECK32-D-NEXT:    srai a1, a0, 31
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
@@ -613,7 +614,8 @@ define i64 @fcvt_lu_h(half %a) nounwind strictfp {
 ; CHECK32-D-NEXT:    srli a0, a0, 16
 ; CHECK32-D-NEXT:    fmv.w.x fa0, a0
 ; CHECK32-D-NEXT:    call __extendhfsf2
-; CHECK32-D-NEXT:    call __fixunssfdi
+; CHECK32-D-NEXT:    fcvt.w.s a0, fa0, rtz
+; CHECK32-D-NEXT:    li a1, 0
 ; CHECK32-D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-D-NEXT:    addi sp, sp, 16
 ; CHECK32-D-NEXT:    ret
