@@ -734,6 +734,12 @@ class SVE_Shift_DupImm_Any_Predicate_Pat<ValueType vt, SDPatternOperator op,
 : Pat<(vt (op (pt (SVEAnyPredicate)), vt:$Rn, (vt (splat_vector (it (cast i32:$imm)))))),
       (inst $Rn, i32:$imm)>;
 
+class SVE_Log_DupImm_Any_Pred_Pat<ValueType vt, SDPatternOperator op,
+                                         ValueType pt, ZPRRegOp zprty, ValueType it,
+                                         ComplexPattern cast, Instruction inst>
+: Pat<(vt (op (pt (SVEAnyPredicate)), (vt zprty:$Rn), (vt (splat_vector (it (cast i64:$imm)))))),
+      (inst $Rn, i64:$imm)>;
+
 class SVE_2_Op_Imm_Pat_Zero<ValueType vt, SDPatternOperator op, ValueType pt,
                             ValueType it, ComplexPattern cpx, Instruction inst>
 : Pat<(vt (op pt:$Pg, (vselect pt:$Pg, vt:$Op1, (SVEDup0)),
@@ -805,6 +811,22 @@ class VSelectUnpredOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOper
   ], [{
     return N->getOpcode() != ISD::VSELECT || N->getOperand(1).hasOneUse();
   }]>;
+// Same as above with a commutative operation
+class VSelectCommUnpredOrPassthruPatFrags<SDPatternOperator intrinsic, SDPatternOperator sdnode>
+: PatFrags<(ops node:$Pg, node:$Op1, node:$Op2), [
+    (intrinsic node:$Pg, node:$Op1, node:$Op2),
+    (intrinsic node:$Pg, node:$Op2, node:$Op1),
+    (vselect node:$Pg, (sdnode node:$Op1, node:$Op2), node:$Op1),
+    (vselect node:$Pg, (sdnode node:$Op2, node:$Op1), node:$Op1)
+  ], [{
+    return N->getOpcode() != ISD::VSELECT || N->getOperand(1).hasOneUse();
+  }]>;
+
+// Match `op` with either data operand order, keeping the predicate unchanged.
+class PredicatedCommutativeBinOpPatFrags<SDPatternOperator op>
+  : PatFrags<(ops node:$pg, node:$a, node:$b),
+            [(op node:$pg, node:$a, node:$b),
+             (op node:$pg, node:$b, node:$a)]>;
 
 //
 // Pseudo -> Instruction mappings
@@ -2187,6 +2209,13 @@ multiclass sve_int_log_imm_bic<SDPatternOperator op> {
   def : SVE_1_Op_Imm_Log_Pat<nxv8i16, op, ZPR16, i32, SVELogicalImm16NotPat, !cast<Instruction>("AND_ZI_PSEUDO")>;
   def : SVE_1_Op_Imm_Log_Pat<nxv4i32, op, ZPR32, i32, SVELogicalImm32NotPat, !cast<Instruction>("AND_ZI_PSEUDO")>;
   def : SVE_1_Op_Imm_Log_Pat<nxv2i64, op, ZPR64, i64, SVELogicalImm64NotPat, !cast<Instruction>("AND_ZI_PSEUDO")>;
+}
+
+multiclass sve_log_dupimm_any_pred<SDPatternOperator op, Instruction inst> {
+  def : SVE_Log_DupImm_Any_Pred_Pat<nxv16i8, op, nxv16i1, ZPR8, i32, SVELogicalImm8Pat, inst>;
+  def : SVE_Log_DupImm_Any_Pred_Pat<nxv8i16, op, nxv8i1, ZPR16, i32, SVELogicalImm16Pat, inst>;
+  def : SVE_Log_DupImm_Any_Pred_Pat<nxv4i32, op, nxv4i1, ZPR32, i32, SVELogicalImm32Pat, inst>;
+  def : SVE_Log_DupImm_Any_Pred_Pat<nxv2i64, op, nxv2i1, ZPR64, i64, SVELogicalImm64Pat, inst>;
 }
 
 class sve_int_dup_mask_imm<string asm>

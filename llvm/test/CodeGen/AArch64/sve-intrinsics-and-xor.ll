@@ -6,8 +6,7 @@
 define <vscale x 4 x i32> @and_eor_u(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: and_eor_u:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z1.d, z0.d, z1.d
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %eor = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   %and = and <vscale x 4 x i32> %a, %eor
@@ -17,8 +16,7 @@ define <vscale x 4 x i32> @and_eor_u(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %
 define <vscale x 4 x i32> @and_u_eor_u(<vscale x 4 x i1> %pg1, <vscale x 4 x i1> %pg2, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: and_u_eor_u:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z1.d, z0.d, z1.d
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %eor = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> %pg1, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   %and = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg2, <vscale x 4 x i32> %a, <vscale x 4 x i32> %eor)
@@ -28,8 +26,7 @@ define <vscale x 4 x i32> @and_u_eor_u(<vscale x 4 x i1> %pg1, <vscale x 4 x i1>
 define <vscale x 4 x i32> @and_u_xor(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: and_u_xor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z1.d, z0.d, z1.d
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %xor = xor <vscale x 4 x i32> %a, %b
   %and = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %xor)
@@ -39,9 +36,7 @@ define <vscale x 4 x i32> @and_u_xor(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %
 define <vscale x 4 x i32> @and_u_eor_m(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: and_u_eor_m:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    eor z2.s, p0/m, z2.s, z1.s
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %eor = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   %and = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %eor)
@@ -51,8 +46,7 @@ define <vscale x 4 x i32> @and_u_eor_m(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 define <vscale x 4 x i32> @and_u_eor_m_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: and_u_eor_m_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z1.s, p0/m, z1.s, z0.s
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %eor = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %a)
   %and = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %eor)
@@ -83,13 +77,20 @@ define <vscale x 4 x i32> @and_eor_m(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %
   ret <vscale x 4 x i32> %and
 }
 
+define <vscale x 4 x i32> @and_u_eor_z(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: and_u_eor_z:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %eor = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.z.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+  %and = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %eor)
+  ret <vscale x 4 x i32> %and
+}
+
 define <vscale x 4 x i32> @and_u_eor_m_all_active(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: and_u_eor_m_all_active:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    eor z2.s, p0/m, z2.s, z1.s
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %eor = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   %and = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %eor)
@@ -166,11 +167,20 @@ define <vscale x 4 x i32> @and_m_eor_m_all_active(<vscale x 4 x i1> %pg, <vscale
   ret <vscale x 4 x i32> %and
 }
 
+define <vscale x 4 x i32> @and_u_eor_z_all_active(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: and_u_eor_z_all_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %eor = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.z.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+  %and = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %eor)
+  ret <vscale x 4 x i32> %and
+}
+
 define <vscale x 16 x i8> @and_u_xor_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: and_u_xor_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor z1.d, z0.d, z1.d
-; CHECK-NEXT:    and z0.d, z0.d, z1.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %xor = xor <vscale x 16 x i8> %a, %b
   %and = tail call <vscale x 16 x i8> @llvm.aarch64.sve.and.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %xor)
@@ -218,6 +228,7 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1>, <v
 declare <vscale x 2 x i64> @llvm.aarch64.sve.and.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.eor.z.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; SME: {{.*}}
 ; SVE: {{.*}}
