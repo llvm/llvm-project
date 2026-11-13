@@ -1419,6 +1419,9 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   // instead of widening %1 to the register class of %0 simply do:
   //     %1 = instr
   const TargetRegisterClass *NewRC = CP.getNewRC();
+  // If DstReg is narrowed below, the subregister of SrcReg that DstReg now
+  // corresponds to.
+  unsigned NarrowedIdx = 0;
   if (DstIdx != 0) {
     MachineOperand &DefMO = NewMI.getOperand(0);
     if (DefMO.getSubReg() == DstIdx) {
@@ -1440,6 +1443,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
           }
         }
 
+        NarrowedIdx = DstIdx;
         DstIdx = 0;
         DefMO.setIsUndef(false); // Only subregs can have def+undef.
       }
@@ -1718,10 +1722,17 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
          llvm::make_early_inc_range(MRI->use_operands(SrcReg))) {
       MachineInstr *UseMI = UseMO.getParent();
       if (UseMI->isDebugInstr()) {
-        if (DstReg.isPhysical())
+        if (DstReg.isPhysical()) {
           UseMO.substPhysReg(DstReg, *TRI);
-        else
-          UseMO.setReg(DstReg);
+        } else {
+          UseMO.substVirtReg(DstReg, SrcIdx, *TRI);
+          if (NarrowedIdx) {
+            // DstReg only holds the NarrowedIdx subregister of SrcReg.
+            if (UseMO.getSubReg() != NarrowedIdx)
+              UseMO.setReg(Register());
+            UseMO.setSubReg(0);
+          }
+        }
         // Move the debug value directly after the def of the rematerialized
         // value in DstReg.
         MBB->splice(std::next(NewMI.getIterator()), UseMI->getParent(), UseMI);
