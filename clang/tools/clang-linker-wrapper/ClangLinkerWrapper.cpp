@@ -826,10 +826,8 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
   case OFK_SYCL: {
     // TODO: fill these options once the Driver supports them.
     offloading::SYCLJITOptions Options;
-    // With -r, .llvm.offloading is removed from the output after the link,
-    // and the device image is already linked. A finalized image goes in
-    // .sycl_fatbin instead, so the registration code can still refer to it and
-    // a later link through clang-linker-wrapper does not link it again.
+    // -r removes .llvm.offloading from the output, so put the device image in
+    // .sycl_fatbin instead.
     if (Error Err = offloading::wrapSYCLBinaries(
             M, BuffersToWrap.front(), Options,
             /*IsFinalizedImage=*/Args.hasArg(OPT_relocatable)))
