@@ -112,8 +112,9 @@ body:             |
     ; ALL-LABEL: name: anyext_s64_from_s1
     ; ALL: [[COPY:%[0-9]+]]:gr64_with_sub_8bit = COPY $rdi
     ; ALL: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[COPY1]], %subreg.sub_8bit
-    ; ALL: $rax = COPY [[SUBREG_TO_REG]]
+    ; ALL: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; ALL: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_8bit
+    ; ALL: $rax = COPY [[INSERT_SUBREG]]
     ; ALL: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(s1) = G_TRUNC %0(s64)
