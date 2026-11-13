@@ -8,12 +8,14 @@ load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
 load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary")
+load(":dylib.bzl", "llvm_dylib_deps")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":instrumentor.bzl", "INSTRUMENTOR_RUNTIME_HELPER")
 load(":targets.bzl", "llvm_targets")
@@ -52,6 +54,19 @@ bool_flag(
 config_setting(
     name = "libunwind_eh_frame_registration_enabled",
     flag_values = {":use_libunwind_for_eh_frame_registration": "true"},
+)
+
+# Link tools against the :LLVM shared library instead of statically, like
+# CMake's LLVM_LINK_LLVM_DYLIB. Usage:
+#   bazel build --@llvm-project//llvm:link_llvm_dylib=true @llvm-project//lld
+bool_flag(
+    name = "link_llvm_dylib",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "link_llvm_dylib_enabled",
+    flag_values = {":link_llvm_dylib": "true"},
 )
 
 exports_files([
@@ -4676,6 +4691,134 @@ cc_library(
     ],
 )
 
+# The equivalent of CMake's libLLVM: every component, minus TableGen and the
+# testonly libraries (FuzzMutate and the testing libraries). Tools link against
+# it when :link_llvm_dylib is set; see llvm_dylib_deps(). Direct deps are
+# whole-archived, so every component must be listed here rather than reached
+# transitively.
+cc_shared_library(
+    name = "LLVM",
+    exports_filter = [
+        "//llvm:__subpackages__",
+        "//third-party:__subpackages__",
+        "@libxml2//:__subpackages__",
+        "@llvm_zlib//:__subpackages__",
+        "@llvm_zstd//:__subpackages__",
+    ],
+    tags = ["manual"],
+    user_link_flags = select({
+        # llvm/tools/llvm-shlib/CMakeLists.txt sets this if the linker supports it, matching here.
+        "@platforms//os:linux": ["-Wl,-Bsymbolic-functions"],
+        "//conditions:default": [],
+    }) + select({
+        # //third-party:libxml2 links the system libxml2 with a linkopt alone,
+        # and cc_shared_library drops a dependency's linker input that has no
+        # library in it, so the flag has to be repeated here.
+        "//third-party:llvm_libxml2_auto_macos": ["-lxml2"],
+        "//third-party:llvm_libxml2_system": ["-lxml2"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":ABI",
+        ":AggressiveInstCombine",
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
+        ":AllTargetsDisassemblers",
+        ":AllTargetsMCAs",
+        ":Analysis",
+        ":AsmParser",
+        ":BinaryFormat",
+        ":BitReader",
+        ":BitWriter",
+        ":BitstreamReader",
+        ":CFGuard",
+        ":CGData",
+        ":CodeGen",
+        ":CodeGenTypes",
+        ":Core",
+        ":Coroutines",
+        ":Coverage",
+        ":DTLTO",
+        ":DWARFCFIChecker",
+        ":DWARFLinker",
+        ":DWARFLinkerBase",
+        ":DWARFLinkerParallel",
+        ":DWP",
+        ":DebugInfoBTF",
+        ":DebugInfoCodeView",
+        ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
+        ":DebugInfoGSYM",
+        ":DebugInfoLogicalView",
+        ":DebugInfoMSF",
+        ":DebugInfoPDB",
+        ":Debuginfod",
+        ":DlltoolDriver",
+        ":ExecutionEngine",
+        ":FileCheckLib",
+        ":FrontendAtomic",
+        ":FrontendDirective",
+        ":FrontendDriver",
+        ":FrontendHLSL",
+        ":FrontendOffloading",
+        ":FrontendOpenACC",
+        ":FrontendOpenMP",
+        ":HTTP",
+        ":HipStdPar",
+        ":IPO",
+        ":IRPrinter",
+        ":IRReader",
+        ":InstCombine",
+        ":Instrumentation",
+        ":InterfaceStub",
+        ":Interpreter",
+        ":JITLink",
+        ":LTO",
+        ":LibDriver",
+        ":LineEditor",
+        ":Linker",
+        ":MC",
+        ":MCA",
+        ":MCDisassembler",
+        ":MCJIT",
+        ":MCParser",
+        ":ObjCARC",
+        ":ObjCopy",
+        ":Object",
+        ":ObjectYAML",
+        ":Option",
+        ":OrcDebugging",
+        ":OrcJIT",
+        ":OrcShared",
+        ":OrcTargetProcess",
+        ":PPCTargetParser",
+        ":Passes",
+        ":Plugins",
+        ":ProfileData",
+        ":Remarks",
+        ":SandboxIR",
+        ":Scalar",
+        ":Symbolize",
+        ":Target",
+        ":Telemetry",
+        ":TextAPI",
+        ":TextAPIBinaryReader",
+        ":TransformUtils",
+        ":Vectorize",
+        ":WindowsDriver",
+        ":WindowsManifest",
+        ":XRay",
+        ":remark_linker",
+    ] + [
+        ":" + target["name"] + suffix
+        for target in llvm_target_lib_list
+        for suffix in [
+            "Info",
+            "UtilsAndDesc",
+        ]
+    ],
+)
+
 cc_library(
     name = "pass_registry_def",
     copts = llvm_copts,
@@ -5498,6 +5641,7 @@ cc_binary(
     name = "llc",
     srcs = ["tools/llc/llc.cpp"],
     copts = llvm_copts,
+    dynamic_deps = llvm_dylib_deps(),
     stamp = 0,
     deps = [
         ":Support",
@@ -5621,6 +5765,7 @@ cc_binary(
         "tools/llvm-as/*.cpp",
     ]),
     copts = llvm_copts,
+    dynamic_deps = llvm_dylib_deps(),
     stamp = 0,
     deps = [
         ":Analysis",
@@ -5885,6 +6030,7 @@ cc_binary(
         "tools/llvm-dis/*.cpp",
     ]),
     copts = llvm_copts,
+    dynamic_deps = llvm_dylib_deps(),
     stamp = 0,
     deps = [
         ":Analysis",
@@ -7093,6 +7239,7 @@ cc_library(
 
 cc_binary(
     name = "opt",
+    dynamic_deps = llvm_dylib_deps(),
     stamp = 0,
     deps = [":opt-driver"],
 )

@@ -7,6 +7,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
+load(":dylib.bzl", "llvm_dylib_deps")
 
 # Mapping from every tool to the cc_library that implements the tool's entrypoint.
 _TOOLS = {
@@ -155,6 +156,7 @@ def llvm_driver_cc_binary(
         name,
         needs_posix_utility_signal_handling = False,
         deps = None,
+        dynamic_deps = None,
         **kwargs):
     """cc_binary wrapper for binaries using the llvm-driver template."""
     init_llvm_args = ""
@@ -171,9 +173,13 @@ def llvm_driver_cc_binary(
         template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
     )
     deps = deps or []
+
+    if dynamic_deps == None:
+        dynamic_deps = llvm_dylib_deps()
     cc_binary(
         name = name,
         srcs = [name + "-driver.cpp"],
+        dynamic_deps = dynamic_deps,
         deps = deps + ["//llvm:Support"],
         **kwargs
     )
