@@ -31,10 +31,12 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::jitlink;
 
-TEST(JITLinkGenericTest, FailedLookupWithGraphOwnedPool) {
-  // The graph holds the only reference to its SymbolStringPool, so the pool is
-  // destroyed along with the graph when the link fails inside lookup. Check
-  // that no SymbolStringPtrs outlive the pool.
+namespace {
+
+/// Build a graph containing a single data block that points to an external
+/// symbol "E", so that linking it will issue a lookup. The graph holds the
+/// only reference to its SymbolStringPool.
+std::unique_ptr<LinkGraph> makeGraphWithOneExternal() {
   auto G = std::make_unique<LinkGraph>(
       "foo", std::make_shared<orc::SymbolStringPool>(),
       Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
@@ -50,12 +52,37 @@ TEST(JITLinkGenericTest, FailedLookupWithGraphOwnedPool) {
   auto &E = G->addExternalSymbol("E", 0, false);
   B.addEdge(x86_64::Pointer64, 0, E, 0);
 
+  return G;
+}
+
+} // end anonymous namespace
+
+TEST(JITLinkGenericTest, FailedLookupWithGraphOwnedPool) {
+  // The graph holds the only reference to its SymbolStringPool, so the pool is
+  // destroyed along with the graph when the link fails inside lookup. Check
+  // that no SymbolStringPtrs outlive the pool.
   Error Err = Error::success();
   auto Ctx = makeMockContext(
       JoinErrorsInto(Err), defaultMemMgrSetup,
       [](MockJITLinkContext &Ctx) { Ctx.Lookup = lookupErrorOut; });
 
-  link_MachO_x86_64(std::move(G), std::move(Ctx));
+  link_MachO_x86_64(makeGraphWithOneExternal(), std::move(Ctx));
 
   EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage("Lookup failed"));
+}
+
+TEST(JITLinkGenericTest, SuccessfulLookupWithGraphOwnedPool) {
+  // The graph holds the only reference to its SymbolStringPool. Lookup and
+  // finalization both complete synchronously, so the link completes (and the
+  // graph and pool are destroyed) before linkPhase3 returns. Check that no
+  // SymbolStringPtrs from the lookup result outlive the pool.
+  Error Err = Error::success();
+  auto Ctx = makeMockContext(JoinErrorsInto(Err), defaultMemMgrSetup,
+                             [](MockJITLinkContext &Ctx) {
+                               Ctx.Lookup = lookupResolveEverythingToNull;
+                             });
+
+  link_MachO_x86_64(makeGraphWithOneExternal(), std::move(Ctx));
+
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
 }
