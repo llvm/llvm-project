@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes=lowertypetests -lowertypetests-summary-action=export \
-; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t %s | FileCheck %s
-; RUN: FileCheck --check-prefix=SUMMARY %s < %t
+; RUN:   -lowertypetests-read-summary=%s -lowertypetests-write-summary=%t.out %s | FileCheck %s
+; RUN: FileCheck --check-prefix=SUMMARY %s < %t.out
 @foo = constant i32 42, !type !0
 
 !0 = !{i32 0, !"typeid1"}
