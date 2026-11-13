@@ -11,6 +11,8 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "clang/AST/RecordLayout.h"
+#include "llvm/Demangle/MicrosoftDemangle.h"
+#include "llvm/Demangle/MicrosoftDemangleNodes.h"
 
 #include <deque>
 #include <mutex>
@@ -75,30 +77,27 @@ TypeAndOrName MicrosoftABIRuntime::GetTypeInfo(
   if (!vtable_info.addr.IsSectionOffset() || !vtable_info.symbol)
     return {};
 
-  // See if we have cached info for this type already
+  // See if we have cached info for this type already.
   TypeAndOrName type_info = GetDynamicTypeInfo(vtable_info.addr);
   if (type_info)
     return type_info;
 
   Log *log = GetLog(LLDBLog::Object);
-  llvm::StringRef symbol_name =
-      vtable_info.symbol->GetMangled().GetDemangledName().GetStringRef();
+  Mangled &mangled = vtable_info.symbol->GetMangled();
+  llvm::StringRef symbol_name = mangled.GetDemangledName().GetStringRef();
   if (!SplitVTableComponents(symbol_name, vtable_components)) {
     LLDB_LOG(log, "{0:x16}: '{1}' is not a valid vtable symbol",
              in_value.GetPointerValue().address, symbol_name);
     return {};
   }
 
-  llvm::StringRef class_name = StripDemangledVTableSuffix(symbol_name);
-
-  type_info.SetName(class_name);
   bool any_found = false;
-  TypeSP type_sp = LookupTypeByName(
-      class_name, vtable_info.symbol->CalculateSymbolContextModule(),
-      any_found);
+  auto [type_sp, class_name] = LookupTypeByMangled(
+      mangled, vtable_info.symbol->CalculateSymbolContextModule(), any_found);
   if (!any_found)
     return TypeAndOrName(); // Type is not dynamic.
 
+  type_info.SetName(class_name);
   if (type_sp) {
     LLDB_LOG(log,
              "static-type = '{0}' has dynamic type: uid={1:x}, type-name='{2}'",
@@ -420,4 +419,80 @@ std::optional<int64_t> MicrosoftABIRuntime::GetOffsetToTopFromAST(
   }
 
   return offset;
+}
+
+std::pair<lldb::TypeSP, ConstString> MicrosoftABIRuntime::LookupTypeByMangled(
+    Mangled &mangled, lldb::ModuleSP preferred_module, bool &any_found) {
+  using namespace llvm::ms_demangle;
+
+  llvm::StringRef preferred_name = mangled.GetDemangledName().GetStringRef();
+  llvm::StringRef class_name = StripDemangledVTableSuffix(preferred_name);
+
+  bool has_nested_template = class_name.contains(">>");
+  bool has_typename_list = class_name.contains(", ");
+
+  if (!has_nested_template && !has_typename_list) {
+    TypeSP type_sp = LookupTypeByName(class_name, preferred_module, any_found);
+    if (any_found)
+      return {type_sp, ConstString(class_name)};
+  }
+
+  Log *log = GetLog(LLDBLog::Object);
+
+  Demangler demangler;
+  std::string_view mangled_name = mangled.GetMangledName().GetStringRef();
+  SymbolNode *root = demangler.parse(mangled_name);
+  if (!mangled_name.empty() || !root) {
+    // This shouldn't happen, because we should have demangled this name
+    // already.
+    LLDB_LOG(log,
+             "failed to demangle '{0}' but it worked before and returned '{1}'",
+             mangled.GetMangledName(), preferred_name);
+    return {};
+  }
+
+  auto *special = llvm::dyn_cast_or_null<SpecialTableSymbolNode>(root);
+  if (!special || !special->Name) {
+    // FIXME: Handle C++ 20 module names.
+    LLDB_LOG(log, "'{0}' top level is not a special table name (it is {1})",
+             mangled.GetMangledName(), llvm::to_underlying(special->kind()));
+    return {};
+  }
+
+  if (!special->Name || !special->Name->Components ||
+      special->Name->Components->Count == 0) {
+    LLDB_LOG(log, "unexpected vftable name '{0}'", mangled.GetMangledName());
+    return {};
+  }
+  // The last component is "`vftable'" which we don't want to include when
+  // searching.
+  special->Name->Components->Count -= 1;
+
+  OutputBuffer buffer;
+
+  // We need to match the way the compiler spelled the types when it put them
+  // into the TPI stream. For PDB, it does not insert spaces between template
+  // arguments and nested closing braces have a space in-between.
+  OutputFlags flags = OutputFlags(OF_CompactTemplateLists |
+                                  OF_SplitTemplateClosers | OF_NoTagSpecifier);
+
+  special->Name->output(buffer, flags);
+  TypeSP type_sp =
+      LookupTypeByName(llvm::StringRef(buffer), preferred_module, any_found);
+  if (any_found)
+    return {type_sp, ConstString(llvm::StringRef(buffer))};
+
+  if (!has_typename_list)
+    return {};
+
+  // DWARF has spaces between template parameters, so try again but with spaces.
+  buffer.setCurrentPosition(0);
+  flags = OutputFlags(flags & ~OF_CompactTemplateLists);
+  special->Name->output(buffer, flags);
+  type_sp =
+      LookupTypeByName(llvm::StringRef(buffer), preferred_module, any_found);
+  if (any_found)
+    return {type_sp, ConstString(llvm::StringRef(buffer))};
+
+  return {};
 }
