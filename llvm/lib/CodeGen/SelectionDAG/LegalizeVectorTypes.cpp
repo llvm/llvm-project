@@ -3277,9 +3277,8 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
 
   auto &&IsConstant = [](const SDValue &N) {
     APInt SplatValue;
-    return N.getResNo() == 0 &&
-           (ISD::isConstantSplatVector(N, SplatValue) ||
-            ISD::isBuildVectorOfConstantSDNodes(N));
+    return N.getResNo() == 0 && (ISD::isConstantSplatVector(N, SplatValue) ||
+                                 ISD::isBuildVectorOfConstantSDNodes(N));
   };
   auto &&BuildVector = [NewElts, &DAG = DAG, NewVT, &DL](SDValue &Input1,
                                                          SDValue &Input2,
@@ -7382,8 +7381,7 @@ static inline bool isSETCCorConvertedSETCC(SDValue N) {
     return isSETCCorConvertedSETCC(N.getOperand(0)) &&
            isSETCCorConvertedSETCC(N.getOperand(1));
 
-  return (isSETCCOp(N.getOpcode()) ||
-          ISD::isBuildVectorOfConstantSDNodes(N));
+  return (isSETCCOp(N.getOpcode()) || ISD::isBuildVectorOfConstantSDNodes(N));
 }
 #endif
 
