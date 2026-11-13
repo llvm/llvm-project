@@ -887,6 +887,15 @@ TEST_F(OpenMPContextTest, ISANamesInStrictSubset) {
   EXPECT_EQ(Best(SSE, AVX), 0);
   EXPECT_EQ(Best(AVX, SSE), 0);
 
+  // A runtime condition left out of the traits is counted the same way.
+  VariantMatchInfo AVXWithCondition;
+  AVXWithCondition.addTrait(TraitProperty::device_isa___ANY, "avx");
+  AVXWithCondition.addTrait(TraitProperty::implementation_vendor_llvm, "",
+                            &Four);
+  AVXWithCondition.UserCondition = "a";
+  EXPECT_EQ(Best(SSE, AVXWithCondition), 0);
+  EXPECT_EQ(Best(AVXWithCondition, SSE), 0);
+
   // With all of SSE's ISA names, AVX is a strict superset.
   AVX.addTrait(TraitProperty::device_isa___ANY, "sse");
   EXPECT_EQ(Best(SSE, AVX), 1);
