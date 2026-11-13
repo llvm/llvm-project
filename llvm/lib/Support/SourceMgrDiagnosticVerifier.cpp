@@ -39,8 +39,8 @@ SourceMgrDiagnosticVerifier::getDiagKindStr(SourceMgr::DiagKind kind) {
 bool SourceMgrDiagnosticVerifier::ExpectedDiag::emitError(
     raw_ostream &os, SourceMgr &mgr, const Twine &msg) const {
   if (fileLoc.isValid()) {
-    SMRange range(fileLoc, SMLoc::getFromPointer(fileLoc.getPointer() +
-                                                 substring.size()));
+    // Highlight the whole directive, up to and including the closing '}}'.
+    SMRange range(fileLoc, SMLoc::getFromPointer(substring.end() + 2));
     printMessage(os, mgr, fileLoc, msg, range);
   } else {
     printMessage(os, mgr, fileLoc, msg);
