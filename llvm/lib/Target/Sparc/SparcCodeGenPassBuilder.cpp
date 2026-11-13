@@ -57,9 +57,6 @@ void SparcCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
     addMachineFunctionPass(BranchRelaxationPass(), PMW);
 
   addMachineFunctionPass(SparcDelaySlotFillerPass(), PMW);
-  addMachineFunctionPass(SparcInsertNOPLoadPass(), PMW);
-  addMachineFunctionPass(SparcDetectRoundChangePass(), PMW);
-  addMachineFunctionPass(SparcFixAllFDIVSQRTPass(), PMW);
   addMachineFunctionPass(SparcErrataWorkaroundPass(), PMW);
 }
 
@@ -68,7 +65,7 @@ void SparcCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
 }
 
 void SparcCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(SparcAsmPrinterPass(), PMW, /*Force=*/true);
+  addMachineFunctionPass(SparcAsmPrinterPass(), PMW);
 }
 
 void SparcCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {

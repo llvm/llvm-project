@@ -2425,6 +2425,7 @@ StandardInstrumentations::StandardInstrumentations(
       PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Opts, Context), PreservedCFGChecker(Opts),
       PrintChangedIR(Opts, PrintChanged == ChangePrinter::Verbose),
+      PseudoProbeVerification(Context),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||

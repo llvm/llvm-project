@@ -5,7 +5,6 @@
 # CHECK-LABEL: name: test1
 # CHECK-NOT: COPY $xzr
 name:            test1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -32,7 +31,6 @@ body:             |
 # CHECK-LABEL: name: test2
 # CHECK-NOT: COPY $xzr
 name:            test2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -59,7 +57,6 @@ body:             |
 # CHECK-LABEL: name: test3
 # CHECK: COPY $xzr
 name:            test3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -87,7 +84,6 @@ body:             |
 # CHECK-LABEL: name: test4
 # CHECK: COPY $xzr
 name:            test4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -115,7 +111,6 @@ body:             |
 # CHECK-LABEL: name: test5
 # CHECK: COPY $xzr
 name:            test5
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -143,7 +138,6 @@ body:             |
 # CHECK-LABEL: name: test6
 # CHECK-NOT: COPY $xzr
 name:            test6
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -171,7 +165,6 @@ body:             |
 # CHECK-LABEL: name: test7
 # CHECK: COPY $xzr
 name:            test7
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -202,7 +195,6 @@ body:             |
 # CHECK: x0 = COPY $xzr
 # CHECK: x1 = COPY $xzr
 name:            test8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -234,7 +226,6 @@ body:             |
 # CHECK: x0 = COPY $xzr
 # CHECK-NEXT: B %bb.3
 name:            test9
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -268,7 +259,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: MOVi32imm
 name:            test10
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1
@@ -294,7 +284,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: MOVi32imm
 name:            test11
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -320,7 +309,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: MOVi32imm
 name:            test12
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -346,7 +334,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: MOVi32imm
 name:            test13
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1
@@ -369,7 +356,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: MOVi32imm
 name:            test14
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1, $x2
@@ -394,7 +380,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: MOVi32imm
 name:            test15
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1, $x2
@@ -419,7 +404,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: MOVi32imm
 name:            test16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1
@@ -443,7 +427,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: MOVi32imm
 name:            test17
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1
@@ -468,7 +451,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: MOVi64imm
 name:            test18
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -493,7 +475,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: MOVi32imm
 name:            test19
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1
@@ -519,7 +500,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: MOVi64imm
 name:            test20
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -545,7 +525,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: MOVi32imm
 name:            test21
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -569,7 +548,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: MOVi64imm
 name:            test22
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1
@@ -592,7 +570,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: MOVi32imm
 name:            test23
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1

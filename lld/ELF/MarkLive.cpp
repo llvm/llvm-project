@@ -28,6 +28,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/Strings.h"
+#include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Parallel.h"
@@ -66,6 +67,8 @@ private:
                LiveReason reason);
   void markSymbol(Symbol *sym, StringRef reason);
   void mark();
+  void visit(InputSection &sec, int depth,
+             SmallVector<InputSection *, 0> &localQueue);
   void markParallel();
 
   template <class RelTy>
@@ -90,24 +93,13 @@ private:
 };
 } // namespace
 
-template <class ELFT>
-static uint64_t getAddend(Ctx &ctx, InputSectionBase &sec,
-                          const typename ELFT::Rel &rel) {
-  return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
-                                       rel.getType(ctx.arg.isMips64EL));
-}
-
-template <class ELFT>
-static uint64_t getAddend(Ctx &, InputSectionBase &sec,
-                          const typename ELFT::Rela &rel) {
-  return rel.r_addend;
-}
-
-// Currently, we assume all input CREL relocations have an explicit addend.
-template <class ELFT>
-static uint64_t getAddend(Ctx &, InputSectionBase &sec,
-                          const typename ELFT::Crel &rel) {
-  return rel.r_addend;
+template <class RelTy>
+static int64_t getAddend(Ctx &ctx, InputSectionBase &sec, const RelTy &rel) {
+  if constexpr (RelTy::HasAddend)
+    return rel.r_addend;
+  else
+    return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
+                                         rel.getType(ctx.arg.isMips64EL));
 }
 
 template <class ELFT, bool TrackWhyLive>
@@ -143,7 +135,7 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
       if constexpr (std::is_same_v<RelTy, Relocation>)
         offset += rel.addend;
       else
-        offset += getAddend<ELFT>(ctx, sec, rel);
+        offset += getAddend(ctx, sec, rel);
       // Skip out-of-bounds offsets to avoid an assertion failure in
       // getSectionPiece.
       if (auto *ms = dyn_cast<MergeInputSection>(relSec);
@@ -392,9 +384,9 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
     markSymbol(ctx.symtab->find(s), "undefined command line flag");
   for (StringRef s : ctx.script->referencedSymbols)
     markSymbol(ctx.symtab->find(s), "referenced by linker script");
-  for (auto [symName, _] : ctx.symtab->cmseSymMap) {
-    markSymbol(ctx.symtab->cmseSymMap[symName].sym, "ARM CMSE symbol");
-    markSymbol(ctx.symtab->cmseSymMap[symName].acleSeSym, "ARM CMSE symbol");
+  for (auto &[_, entry] : ctx.symtab->cmseSymMap) {
+    markSymbol(entry.sym, "ARM CMSE symbol");
+    markSymbol(entry.acleSeSym, "ARM CMSE symbol");
   }
 
   // Mark .eh_frame sections as live because there are usually no relocations
@@ -464,7 +456,10 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
     }
   }
 
-  mark();
+  if constexpr (TrackWhyLive)
+    mark();
+  else
+    markParallel();
 
   if (TrackWhyLive) {
     const auto handleSym = [&](Symbol *sym) {
@@ -489,10 +484,6 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
 
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::mark() {
-  if constexpr (!TrackWhyLive) {
-    markParallel();
-    return;
-  }
   while (!queue.empty()) {
     InputSectionBase &sec = *queue.pop_back_val();
 
@@ -515,42 +506,50 @@ void MarkLive<ELFT, TrackWhyLive>::mark() {
   }
 }
 
-// Helper function for markParallel. Walk all GC edges from sec, marking
-// everything that needs to be live. Call fn(target section, offset) for each
-// edge, which will mark the section live and handle further processing of edges
-// from that section.
-template <class ELFT, class Fn>
-static void processSectionEdges(
-    Ctx &ctx, InputSectionBase &sec,
-    const DenseMap<StringRef, SmallVector<InputSectionBase *, 0>>
-        &cNamedSections,
-    Fn fn) {
+// Mark the sections that sec references and push the newly marked ones into
+// into localQueue.
+template <class ELFT, bool TrackWhyLive>
+void MarkLive<ELFT, TrackWhyLive>::visit(
+    InputSection &sec, int depth, SmallVector<InputSection *, 0> &localQueue) {
+  auto mark = [&](InputSectionBase *target) {
+    auto &part = utils::atomicRef(target->partition);
+    // Optimistic load-then-exchange avoids expensive atomic RMW on
+    // already-visited sections.
+    if (part.load(std::memory_order_relaxed) != 0 ||
+        part.exchange(1, std::memory_order_relaxed) != 0)
+      return;
+    if (auto *s = dyn_cast<InputSection>(target)) {
+      if (depth < 3)
+        visit(*s, depth + 1, localQueue);
+      else
+        localQueue.push_back(s);
+    }
+  };
   auto resolveEdge = [&](const auto &rel) {
     Symbol &sym = sec.file->getRelocTargetSym(rel);
     if (!sym.hasFlag(USED))
       sym.setFlags(USED);
     if (auto *d = dyn_cast<Defined>(&sym)) {
-      if (auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section)) {
+      auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section);
+      if (!relSec)
+        return;
+      if (auto *ms = dyn_cast<MergeInputSection>(relSec)) {
         uint64_t offset = d->value;
         if (d->isSection()) {
-          offset += getAddend<ELFT>(ctx, sec, rel);
-          if (auto *ms = dyn_cast<MergeInputSection>(relSec);
-              ms && offset >= ms->content().size())
+          offset += getAddend(ctx, sec, rel);
+          if (offset >= ms->content().size())
             return;
         }
-        if (auto *ms = dyn_cast<MergeInputSection>(relSec)) {
-          auto &piece = ms->getSectionPiece(offset);
-          auto *word =
-              reinterpret_cast<std::atomic<uint32_t> *>(&piece.inputOff + 1);
-          constexpr uint32_t liveBit = sys::IsBigEndianHost ? (1U << 31) : 1U;
-          word->fetch_or(liveBit, std::memory_order_relaxed);
-        }
-        fn(relSec, offset);
+        auto &piece = ms->getSectionPiece(offset);
+        auto &word = utils::atomicRef(*(&piece.inputOff + 1));
+        constexpr uint32_t liveBit = sys::IsBigEndianHost ? (1U << 31) : 1U;
+        word.fetch_or(liveBit, std::memory_order_relaxed);
       }
+      mark(relSec);
       return;
     }
     for (InputSectionBase *csec : cNamedSections.lookup(sym.getName()))
-      fn(csec, 0);
+      mark(csec);
   };
   const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
   for (const typename ELFT::Rel &rel : rels.rels)
@@ -560,9 +559,9 @@ static void processSectionEdges(
   for (const typename ELFT::Crel &rel : rels.crels)
     resolveEdge(rel);
   for (InputSectionBase *isec : sec.dependentSections)
-    fn(isec, 0);
+    mark(isec);
   if (sec.nextInSectionGroup)
-    fn(sec.nextInSectionGroup, 0);
+    mark(sec.nextInSectionGroup);
 }
 
 // Parallel mark using level-synchronized BFS with depth-limited inline
@@ -571,28 +570,6 @@ static void processSectionEdges(
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   const size_t numThreads = parallel::getThreadCount();
-  auto visit = [&](InputSection &sec, int depth,
-                   SmallVector<InputSection *, 0> &localQueue,
-                   auto &self) -> void {
-    processSectionEdges<ELFT>(
-        ctx, sec, cNamedSections,
-        [&](InputSectionBase *target, uint64_t offset) {
-          auto &part =
-              reinterpret_cast<std::atomic<uint8_t> &>(target->partition);
-          // Optimistic load-then-exchange avoids expensive atomic
-          // RMW on already-visited sections.
-          if (part.load(std::memory_order_relaxed) != 0 ||
-              part.exchange(1, std::memory_order_relaxed) != 0)
-            return;
-          if (auto *s = dyn_cast<InputSection>(target)) {
-            if (depth < 3)
-              self(*s, depth + 1, localQueue, self);
-            else
-              localQueue.push_back(s);
-          }
-        });
-  };
-
   while (!queue.empty()) {
     auto queues =
         std::make_unique<SmallVector<InputSection *, 0>[]>(numThreads);
@@ -601,7 +578,7 @@ void MarkLive<ELFT, TrackWhyLive>::markParallel() {
     std::atomic<ptrdiff_t> next{ptrdiff_t(queue.size())};
     parallelFor(0, numThreads, [&](size_t shard) {
       for (ptrdiff_t i; (i = next.fetch_sub(1, std::memory_order_relaxed)) > 0;)
-        visit(*queue[i - 1], 0, queues[shard], visit);
+        visit(*queue[i - 1], 0, queues[shard]);
     });
     queue.clear();
     for (size_t t = 0; t < numThreads; ++t)

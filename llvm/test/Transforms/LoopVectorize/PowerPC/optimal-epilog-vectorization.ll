@@ -22,13 +22,13 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-TWO-CHECK:       [[VECTOR_BODY]]:
 ; VF-TWO-CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF-TWO-CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[BB]], i64 [[INDEX]]
-; VF-TWO-CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 4
-; VF-TWO-CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 8
-; VF-TWO-CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 12
-; VF-TWO-CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 16
-; VF-TWO-CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 20
-; VF-TWO-CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 24
-; VF-TWO-CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 28
+; VF-TWO-CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
+; VF-TWO-CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 32
+; VF-TWO-CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 48
+; VF-TWO-CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 64
+; VF-TWO-CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 80
+; VF-TWO-CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 96
+; VF-TWO-CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 112
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP17]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x float>, ptr [[TMP18]], align 4
@@ -38,13 +38,13 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP22]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP23]], align 4
 ; VF-TWO-CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[CC]], i64 [[INDEX]]
-; VF-TWO-CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 4
-; VF-TWO-CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 8
-; VF-TWO-CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 12
-; VF-TWO-CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 16
-; VF-TWO-CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 20
-; VF-TWO-CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 24
-; VF-TWO-CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 28
+; VF-TWO-CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 16
+; VF-TWO-CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 32
+; VF-TWO-CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 48
+; VF-TWO-CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 64
+; VF-TWO-CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 80
+; VF-TWO-CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 96
+; VF-TWO-CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 112
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP24]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP33]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP34]], align 4
@@ -62,13 +62,13 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-TWO-CHECK-NEXT:    [[TMP46:%.*]] = fadd fast <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD15]]
 ; VF-TWO-CHECK-NEXT:    [[TMP47:%.*]] = fadd fast <4 x float> [[WIDE_LOAD8]], [[WIDE_LOAD16]]
 ; VF-TWO-CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds float, ptr [[AA]], i64 [[INDEX]]
-; VF-TWO-CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 4
-; VF-TWO-CHECK-NEXT:    [[TMP58:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 8
-; VF-TWO-CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 12
-; VF-TWO-CHECK-NEXT:    [[TMP60:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 16
-; VF-TWO-CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 20
-; VF-TWO-CHECK-NEXT:    [[TMP62:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 24
-; VF-TWO-CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 28
+; VF-TWO-CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 16
+; VF-TWO-CHECK-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 32
+; VF-TWO-CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 48
+; VF-TWO-CHECK-NEXT:    [[TMP60:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 64
+; VF-TWO-CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 80
+; VF-TWO-CHECK-NEXT:    [[TMP62:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 96
+; VF-TWO-CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 112
 ; VF-TWO-CHECK-NEXT:    store <4 x float> [[TMP40]], ptr [[TMP48]], align 4
 ; VF-TWO-CHECK-NEXT:    store <4 x float> [[TMP41]], ptr [[TMP57]], align 4
 ; VF-TWO-CHECK-NEXT:    store <4 x float> [[TMP42]], ptr [[TMP58]], align 4
@@ -124,13 +124,13 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-FOUR-CHECK:       [[VECTOR_BODY]]:
 ; VF-FOUR-CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF-FOUR-CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[BB]], i64 [[INDEX]]
-; VF-FOUR-CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 4
-; VF-FOUR-CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 8
-; VF-FOUR-CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 12
-; VF-FOUR-CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 16
-; VF-FOUR-CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 20
-; VF-FOUR-CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 24
-; VF-FOUR-CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i64 28
+; VF-FOUR-CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
+; VF-FOUR-CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 32
+; VF-FOUR-CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 48
+; VF-FOUR-CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 64
+; VF-FOUR-CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 80
+; VF-FOUR-CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 96
+; VF-FOUR-CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 112
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP17]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x float>, ptr [[TMP18]], align 4
@@ -140,13 +140,13 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP22]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP23]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[CC]], i64 [[INDEX]]
-; VF-FOUR-CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 4
-; VF-FOUR-CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 8
-; VF-FOUR-CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 12
-; VF-FOUR-CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 16
-; VF-FOUR-CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 20
-; VF-FOUR-CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 24
-; VF-FOUR-CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 28
+; VF-FOUR-CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 16
+; VF-FOUR-CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 32
+; VF-FOUR-CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 48
+; VF-FOUR-CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 64
+; VF-FOUR-CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 80
+; VF-FOUR-CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 96
+; VF-FOUR-CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i64 112
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP24]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP33]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP34]], align 4
@@ -164,13 +164,13 @@ define void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 %N) {
 ; VF-FOUR-CHECK-NEXT:    [[TMP46:%.*]] = fadd fast <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD15]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP47:%.*]] = fadd fast <4 x float> [[WIDE_LOAD8]], [[WIDE_LOAD16]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds float, ptr [[AA]], i64 [[INDEX]]
-; VF-FOUR-CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 4
-; VF-FOUR-CHECK-NEXT:    [[TMP58:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 8
-; VF-FOUR-CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 12
-; VF-FOUR-CHECK-NEXT:    [[TMP60:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 16
-; VF-FOUR-CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 20
-; VF-FOUR-CHECK-NEXT:    [[TMP62:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 24
-; VF-FOUR-CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 28
+; VF-FOUR-CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 16
+; VF-FOUR-CHECK-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 32
+; VF-FOUR-CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 48
+; VF-FOUR-CHECK-NEXT:    [[TMP60:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 64
+; VF-FOUR-CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 80
+; VF-FOUR-CHECK-NEXT:    [[TMP62:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 96
+; VF-FOUR-CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 112
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP40]], ptr [[TMP48]], align 4
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP41]], ptr [[TMP57]], align 4
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP42]], ptr [[TMP58]], align 4
@@ -262,14 +262,14 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP24]], [[N]]
 ; VF-TWO-CHECK-NEXT:    [[TMP40:%.*]] = sext i32 [[TMP32]] to i64
 ; VF-TWO-CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP40]]
-; VF-TWO-CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -3
-; VF-TWO-CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -7
-; VF-TWO-CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -11
-; VF-TWO-CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -15
-; VF-TWO-CHECK-NEXT:    [[TMP65:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -19
-; VF-TWO-CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -23
-; VF-TWO-CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -27
-; VF-TWO-CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -31
+; VF-TWO-CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -12
+; VF-TWO-CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -28
+; VF-TWO-CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -44
+; VF-TWO-CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -60
+; VF-TWO-CHECK-NEXT:    [[TMP65:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -76
+; VF-TWO-CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -92
+; VF-TWO-CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -108
+; VF-TWO-CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -124
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP57]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP59]], align 4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP61]], align 4
@@ -295,13 +295,13 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP78:%.*]] = shufflevector <4 x float> [[TMP27]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-TWO-CHECK-NEXT:    [[TMP79:%.*]] = shufflevector <4 x float> [[TMP28]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-TWO-CHECK-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; VF-TWO-CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 4
-; VF-TWO-CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 8
-; VF-TWO-CHECK-NEXT:    [[TMP91:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 12
-; VF-TWO-CHECK-NEXT:    [[TMP92:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 16
-; VF-TWO-CHECK-NEXT:    [[TMP93:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 20
-; VF-TWO-CHECK-NEXT:    [[TMP94:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 24
-; VF-TWO-CHECK-NEXT:    [[TMP95:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 28
+; VF-TWO-CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 16
+; VF-TWO-CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 32
+; VF-TWO-CHECK-NEXT:    [[TMP91:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 48
+; VF-TWO-CHECK-NEXT:    [[TMP92:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 64
+; VF-TWO-CHECK-NEXT:    [[TMP93:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 80
+; VF-TWO-CHECK-NEXT:    [[TMP94:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 96
+; VF-TWO-CHECK-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 112
 ; VF-TWO-CHECK-NEXT:    store <4 x float> [[TMP72]], ptr [[TMP80]], align 4
 ; VF-TWO-CHECK-NEXT:    store <4 x float> [[TMP73]], ptr [[TMP89]], align 4
 ; VF-TWO-CHECK-NEXT:    store <4 x float> [[TMP74]], ptr [[TMP90]], align 4
@@ -332,7 +332,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP100:%.*]] = add i32 [[TMP99]], [[N]]
 ; VF-TWO-CHECK-NEXT:    [[TMP101:%.*]] = sext i32 [[TMP100]] to i64
 ; VF-TWO-CHECK-NEXT:    [[TMP102:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP101]]
-; VF-TWO-CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds float, ptr [[TMP102]], i64 -1
+; VF-TWO-CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds i8, ptr [[TMP102]], i64 -4
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <2 x float>, ptr [[TMP104]], align 4
 ; VF-TWO-CHECK-NEXT:    [[TMP45:%.*]] = fadd fast <2 x float> [[WIDE_LOAD23]], splat (float 1.000000e+00)
 ; VF-TWO-CHECK-NEXT:    [[TMP105:%.*]] = shufflevector <2 x float> [[TMP45]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
@@ -376,14 +376,14 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP24]], [[N]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP40:%.*]] = sext i32 [[TMP32]] to i64
 ; VF-FOUR-CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP40]]
-; VF-FOUR-CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -3
-; VF-FOUR-CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -7
-; VF-FOUR-CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -11
-; VF-FOUR-CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -15
-; VF-FOUR-CHECK-NEXT:    [[TMP65:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -19
-; VF-FOUR-CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -23
-; VF-FOUR-CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -27
-; VF-FOUR-CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds float, ptr [[TMP48]], i64 -31
+; VF-FOUR-CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -12
+; VF-FOUR-CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -28
+; VF-FOUR-CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -44
+; VF-FOUR-CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -60
+; VF-FOUR-CHECK-NEXT:    [[TMP65:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -76
+; VF-FOUR-CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -92
+; VF-FOUR-CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -108
+; VF-FOUR-CHECK-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i8, ptr [[TMP48]], i64 -124
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP57]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP59]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP61]], align 4
@@ -409,13 +409,13 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[TMP78:%.*]] = shufflevector <4 x float> [[TMP27]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-FOUR-CHECK-NEXT:    [[TMP79:%.*]] = shufflevector <4 x float> [[TMP28]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; VF-FOUR-CHECK-NEXT:    [[TMP80:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; VF-FOUR-CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 4
-; VF-FOUR-CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 8
-; VF-FOUR-CHECK-NEXT:    [[TMP91:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 12
-; VF-FOUR-CHECK-NEXT:    [[TMP92:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 16
-; VF-FOUR-CHECK-NEXT:    [[TMP93:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 20
-; VF-FOUR-CHECK-NEXT:    [[TMP94:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 24
-; VF-FOUR-CHECK-NEXT:    [[TMP95:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 28
+; VF-FOUR-CHECK-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 16
+; VF-FOUR-CHECK-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 32
+; VF-FOUR-CHECK-NEXT:    [[TMP91:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 48
+; VF-FOUR-CHECK-NEXT:    [[TMP92:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 64
+; VF-FOUR-CHECK-NEXT:    [[TMP93:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 80
+; VF-FOUR-CHECK-NEXT:    [[TMP94:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 96
+; VF-FOUR-CHECK-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i8, ptr [[TMP80]], i64 112
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP72]], ptr [[TMP80]], align 4
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP73]], ptr [[TMP89]], align 4
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP74]], ptr [[TMP90]], align 4
@@ -446,7 +446,7 @@ define void @f2(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; VF-FOUR-CHECK-NEXT:    [[TMP100:%.*]] = add i32 [[TMP99]], [[N]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP101:%.*]] = sext i32 [[TMP100]] to i64
 ; VF-FOUR-CHECK-NEXT:    [[TMP102:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP101]]
-; VF-FOUR-CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds float, ptr [[TMP102]], i64 -3
+; VF-FOUR-CHECK-NEXT:    [[TMP104:%.*]] = getelementptr inbounds i8, ptr [[TMP102]], i64 -12
 ; VF-FOUR-CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <4 x float>, ptr [[TMP104]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[TMP45:%.*]] = fadd fast <4 x float> [[WIDE_LOAD23]], splat (float 1.000000e+00)
 ; VF-FOUR-CHECK-NEXT:    [[TMP105:%.*]] = shufflevector <4 x float> [[TMP45]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>

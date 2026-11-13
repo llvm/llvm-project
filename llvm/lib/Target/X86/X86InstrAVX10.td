@@ -83,7 +83,7 @@ multiclass avx10_minmax_packed_base<string OpStr, X86VectorVTInfo VTI, SDNode Op
 }
 
 multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
-  let Uses = []<Register>, mayRaiseFPException = 0 in
+  let Predicates = [HasAVX10_2], Uses = []<Register>, mayRaiseFPException = 0 in
     defm Zrrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info512, (outs VTI.info512.RC:$dst),
                                 (ins VTI.info512.RC:$src1, VTI.info512.RC:$src2, i32u8imm:$src3), OpStr,
                                 "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",

@@ -134,7 +134,6 @@ Error RecordReplayTy::emitInstanceReport() {
   *OutStream << "Total Instances: " << OrderedInstances.size() << "\n";
   *OutStream << "JSON Filename, Kernel Name, Time (ns), Occurrences:\n";
 
-  SmallString<128> Filename;
   for (const auto *Inst : OrderedInstances)
     *OutStream
         << getFilename(*Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()

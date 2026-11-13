@@ -2265,10 +2265,17 @@ public:
                                   const LibcallLoweringInfo &Libcalls) const;
 
 protected:
-  Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                            bool UseTLS) const;
+  Value *
+  getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
+                                     const LibcallLoweringInfo &Libcalls) const;
 
 public:
+  /// Emits a call to the libcall returning the address of the unsafe stack
+  /// pointer. Returns nullptr if the libcall is unavailable.
+  Value *
+  getSafeStackPointerAddressCall(IRBuilderBase &IRB,
+                                 const LibcallLoweringInfo &Libcalls) const;
+
   /// Returns the target-specific address of the unsafe stack pointer.
   virtual Value *
   getSafeStackPointerLocation(IRBuilderBase &IRB,

@@ -1617,6 +1617,10 @@ public:
         SmallDenseMap<const BasicBlock *, LoopGuards> &IncomingGuards,
         unsigned Depth);
 
+    /// Like rewrite(Expr), but look up rewrites with \p Lookup if set.
+    const SCEV *rewrite(const SCEV *Expr,
+                        function_ref<const SCEV *(const SCEV *)> Lookup) const;
+
   public:
     /// Return loop guards for loop \p L, which are collected on first use.
     static LoopGuards collectOnDemand(const Loop *L, ScalarEvolution &SE) {

@@ -690,10 +690,9 @@ define void @test10() {
 ; CHECK:       right:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 -1, undef
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], [[LATCH]] ]
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ false, [[LATCH]] ]
 ; CHECK-NEXT:    call void @use(i1 [[CMP_LCSSA]])
 ; CHECK-NEXT:    ret void
 ;
