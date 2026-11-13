@@ -5866,8 +5866,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                   II->getType()->getScalarType()->getFltSemantics())
             : DenormalMode::getDynamic();
 
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
       Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, getMinMaxKind(IID),
-                                       Mode);
+                                       Mode, HasNSZ);
       break;
     }
     case Intrinsic::canonicalize: {
