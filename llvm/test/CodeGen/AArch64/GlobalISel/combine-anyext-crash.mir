@@ -19,10 +19,6 @@
 name:            test_anyext_crash
 alignment:       4
 legalized:       false
-registers:       
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
 body:             |
   bb.1:
    ; Check we don't crash due to trying to legalize a dead instruction.
@@ -30,13 +26,13 @@ body:             |
    ; CHECK-LABEL: bb.1:
     successors: %bb.2
   
-    %0(i16) = G_CONSTANT i16 0
+    %0:_(i16) = G_CONSTANT i16 0
   
   bb.2:
     successors: %bb.2
   
-    %1(i8) = G_TRUNC %0(i16)
-    %2(f64) = G_UITOFP %1(i8)
+    %1:_(i8) = G_TRUNC %0(i16)
+    %2:_(f64) = G_UITOFP %1(i8)
     G_BR %bb.2
 
 ...
