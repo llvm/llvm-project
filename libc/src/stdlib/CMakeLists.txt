@@ -78,6 +78,18 @@ add_entrypoint_object(
     .environ_internal
 )
 
+add_entrypoint_object(
+  getsubopt
+  SRCS
+    getsubopt.cpp
+  HDRS
+    getsubopt.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
 # GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
 set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
