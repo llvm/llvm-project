@@ -76,7 +76,7 @@ define <2 x i8> @ushl_0_vec(<2 x i8> %y) {
 define <2 x i8> @sshl_0_vec_poison_elt(<2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i8> @sshl_0_vec_poison_elt(
 ; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 0>
 ;
   %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 0>, <2 x i8> %y)
   ret <2 x i8> %r

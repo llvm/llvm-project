@@ -7319,7 +7319,7 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return Op0;
     // 0 << Y -> 0
     if (match(Op0, m_Zero()))
-      return Constant::getNullValue(ReturnType);
+      return Op0;
     if (IID == Intrinsic::ushl_sat) {
       // -1 u<< Y -> -1
       if (match(Op0, m_AllOnes()))
