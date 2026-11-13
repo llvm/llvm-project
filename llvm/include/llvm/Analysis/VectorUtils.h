@@ -403,14 +403,9 @@ LLVM_ABI void getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
 
-/// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
-/// MD_nontemporal, MD_access_group, MD_mmra].
-/// For K in Kinds, we get the MDNode for K from each of the
-/// elements of VL, compute their "intersection" (i.e., the most generic
-/// metadata value that covers all of the individual values), and set I's
-/// metadata for M equal to the intersection value.
-///
-/// This function always sets a (possibly null) value for each K in Kinds.
+/// Propagate metadata that can be preserved after vectorization from \p VL to
+/// \p I, retaining only information valid for all sources and the destination.
+/// Return \p I.
 LLVM_ABI Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 
 /// Create a mask that filters the members of an interleave group where there

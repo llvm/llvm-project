@@ -2,10 +2,9 @@
 ; RUN: opt < %s -passes=load-store-vectorizer -S -mtriple=nvptx64-nvidia-cuda -mcpu=sm_100 -mattr=+ptx88 | FileCheck %s --implicit-check-not=mem.cache_hint
 
 define i32 @load_identical_hints(ptr addrspace(1) %p) {
-;
 ; CHECK-LABEL: define i32 @load_identical_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[P]], align 8, !mem.cache_hint [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[Y2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[X1]], [[Y2]]
@@ -19,7 +18,6 @@ define i32 @load_identical_hints(ptr addrspace(1) %p) {
 }
 
 define i32 @load_missing_hint(ptr addrspace(1) %p) {
-;
 ; CHECK-LABEL: define i32 @load_missing_hint(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[P]], align 8
@@ -36,7 +34,6 @@ define i32 @load_missing_hint(ptr addrspace(1) %p) {
 }
 
 define i32 @load_conflicting_hints(ptr addrspace(1) %p) {
-;
 ; CHECK-LABEL: define i32 @load_conflicting_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[P]], align 8
@@ -53,12 +50,11 @@ define i32 @load_conflicting_hints(ptr addrspace(1) %p) {
 }
 
 define void @store_identical_hints(ptr addrspace(1) %p, i32 %x, i32 %y) {
-;
 ; CHECK-LABEL: define void @store_identical_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y]], i64 1
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr addrspace(1) [[P]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr addrspace(1) [[P]], align 8, !mem.cache_hint [[META2:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr i32, ptr addrspace(1) %p, i64 1
@@ -68,7 +64,6 @@ define void @store_identical_hints(ptr addrspace(1) %p, i32 %x, i32 %y) {
 }
 
 define void @store_missing_hint(ptr addrspace(1) %p, i32 %x, i32 %y) {
-;
 ; CHECK-LABEL: define void @store_missing_hint(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
@@ -83,7 +78,6 @@ define void @store_missing_hint(ptr addrspace(1) %p, i32 %x, i32 %y) {
 }
 
 define void @store_conflicting_hints(ptr addrspace(1) %p, i32 %x, i32 %y) {
-;
 ; CHECK-LABEL: define void @store_conflicting_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
@@ -98,7 +92,6 @@ define void @store_conflicting_hints(ptr addrspace(1) %p, i32 %x, i32 %y) {
 }
 
 define i32 @load_missing_first_hint(ptr addrspace(1) %p) {
-;
 ; CHECK-LABEL: define i32 @load_missing_first_hint(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[P]], align 8
@@ -115,7 +108,6 @@ define i32 @load_missing_first_hint(ptr addrspace(1) %p) {
 }
 
 define void @store_missing_first_hint(ptr addrspace(1) %p, i32 %x, i32 %y) {
-;
 ; CHECK-LABEL: define void @store_missing_first_hint(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
@@ -131,10 +123,9 @@ define void @store_missing_first_hint(ptr addrspace(1) %p, i32 %x, i32 %y) {
 
 ; Leave element 2 inactive in the resulting masked access.
 define i32 @masked_load_identical_hints(ptr addrspace(1) %p) {
-;
 ; CHECK-LABEL: define i32 @masked_load_identical_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1) align 16 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1) align 16 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison), !mem.cache_hint [[META0]]
 ; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[GAPFILL3:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
@@ -155,7 +146,6 @@ define i32 @masked_load_identical_hints(ptr addrspace(1) %p) {
 
 ; Leave element 2 inactive in the resulting masked access.
 define i32 @masked_load_missing_first_hints(ptr addrspace(1) %p) {
-;
 ; CHECK-LABEL: define i32 @masked_load_missing_first_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1) align 16 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison)
@@ -179,7 +169,6 @@ define i32 @masked_load_missing_first_hints(ptr addrspace(1) %p) {
 
 ; Leave element 2 inactive in the resulting masked access.
 define i32 @masked_load_missing_last_hints(ptr addrspace(1) %p) {
-;
 ; CHECK-LABEL: define i32 @masked_load_missing_last_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1) align 16 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison)
@@ -203,7 +192,6 @@ define i32 @masked_load_missing_last_hints(ptr addrspace(1) %p) {
 
 ; Leave element 2 inactive in the resulting masked access.
 define i32 @masked_load_conflicting_hints(ptr addrspace(1) %p) {
-;
 ; CHECK-LABEL: define i32 @masked_load_conflicting_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1) align 16 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i32> poison)
@@ -227,14 +215,13 @@ define i32 @masked_load_conflicting_hints(ptr addrspace(1) %p) {
 
 ; Leave element 2 inactive in the resulting masked access.
 define void @masked_store_identical_hints(ptr addrspace(1) %p, i64 %x, i64 %y, i64 %z) {
-;
 ; CHECK-LABEL: define void @masked_store_identical_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 poison, i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[Z]], i64 3
-; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p1(<4 x i64> [[TMP4]], ptr addrspace(1) align 32 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p1(<4 x i64> [[TMP4]], ptr addrspace(1) align 32 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>), !mem.cache_hint [[META2]]
 ; CHECK-NEXT:    ret void
 ;
   %p1 = getelementptr i64, ptr addrspace(1) %p, i64 1
@@ -247,7 +234,6 @@ define void @masked_store_identical_hints(ptr addrspace(1) %p, i64 %x, i64 %y, i
 
 ; Leave element 2 inactive in the resulting masked access.
 define void @masked_store_missing_first_hints(ptr addrspace(1) %p, i64 %x, i64 %y, i64 %z) {
-;
 ; CHECK-LABEL: define void @masked_store_missing_first_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
@@ -267,7 +253,6 @@ define void @masked_store_missing_first_hints(ptr addrspace(1) %p, i64 %x, i64 %
 
 ; Leave element 2 inactive in the resulting masked access.
 define void @masked_store_missing_last_hints(ptr addrspace(1) %p, i64 %x, i64 %y, i64 %z) {
-;
 ; CHECK-LABEL: define void @masked_store_missing_last_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
@@ -287,7 +272,6 @@ define void @masked_store_missing_last_hints(ptr addrspace(1) %p, i64 %x, i64 %y
 
 ; Leave element 2 inactive in the resulting masked access.
 define void @masked_store_conflicting_hints(ptr addrspace(1) %p, i64 %x, i64 %y, i64 %z) {
-;
 ; CHECK-LABEL: define void @masked_store_conflicting_hints(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
@@ -311,3 +295,8 @@ define void @masked_store_conflicting_hints(ptr addrspace(1) %p, i64 %x, i64 %y,
 !3 = !{i32 1, !5}
 !4 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_cache_hint", i64 1508705875169116160}
 !5 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_cache_hint", i64 1364590687093260288}
+;.
+; CHECK: [[META0]] = !{i32 0, [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_cache_hint", i64 1508705875169116160}
+; CHECK: [[META2]] = !{i32 1, [[META1]]}
+;.

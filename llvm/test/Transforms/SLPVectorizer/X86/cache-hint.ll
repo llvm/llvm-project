@@ -2,10 +2,9 @@
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=x86_64-unknown-linux-gnu -mcpu=znver4 < %s | FileCheck %s --implicit-check-not=mem.cache_hint
 
 define void @load_identical_hints(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @load_identical_hints(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8, !mem.cache_hint [[META0:![0-9]+]]
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[DST]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -19,7 +18,6 @@ define void @load_identical_hints(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @load_missing_first_hint(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @load_missing_first_hint(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8
@@ -36,7 +34,6 @@ define void @load_missing_first_hint(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @load_missing_last_hint(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @load_missing_last_hint(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8
@@ -53,7 +50,6 @@ define void @load_missing_last_hint(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @load_conflicting_hints(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @load_conflicting_hints(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8
@@ -70,11 +66,10 @@ define void @load_conflicting_hints(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @store_identical_hints(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @store_identical_hints(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[DST]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[DST]], align 8, !mem.cache_hint [[META2:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %src1 = getelementptr inbounds double, ptr %src, i64 1
@@ -87,7 +82,6 @@ define void @store_identical_hints(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @store_missing_first_hint(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @store_missing_first_hint(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8
@@ -104,7 +98,6 @@ define void @store_missing_first_hint(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @store_missing_last_hint(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @store_missing_last_hint(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8
@@ -121,7 +114,6 @@ define void @store_missing_last_hint(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @store_conflicting_hints(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @store_conflicting_hints(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC]], align 8
@@ -138,14 +130,13 @@ define void @store_conflicting_hints(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @gather_identical_hints(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @gather_identical_hints(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x ptr> poison, ptr [[SRC]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x ptr> [[TMP1]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, <8 x ptr> [[TMP2]], <8 x i64> <i64 0, i64 3, i64 7, i64 11, i64 18, i64 21, i64 27, i64 32>
 ; CHECK-NEXT:    [[DST0:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 [[TMP3]], <8 x i1> splat (i1 true), <8 x double> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 [[TMP3]], <8 x i1> splat (i1 true), <8 x double> poison), !mem.cache_hint [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <8 x double> [[TMP4]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    store <8 x double> [[TMP5]], ptr [[DST0]], align 8
 ; CHECK-NEXT:    ret void
@@ -194,13 +185,12 @@ define void @gather_identical_hints(ptr noalias %src, ptr noalias %dst) {
 }
 
 define void @masked_store_identical_hints(ptr noalias %src, ptr noalias %dst) {
-;
 ; CHECK-LABEL: define void @masked_store_identical_hints(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[V:%.*]] = load <8 x i32>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[DST0:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[V]], <8 x i32> poison, <15 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7>
-; CHECK-NEXT:    call void @llvm.masked.store.v15i32.p0(<15 x i32> [[TMP1]], ptr align 4 [[DST0]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.store.v15i32.p0(<15 x i32> [[TMP1]], ptr align 4 [[DST0]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>), !mem.cache_hint [[META2]]
 ; CHECK-NEXT:    ret void
 ;
   %v = load <8 x i32>, ptr %src, align 4
@@ -237,3 +227,8 @@ define void @masked_store_identical_hints(ptr noalias %src, ptr noalias %dst) {
 !3 = !{i32 1, !5}
 !4 = !{!"nvvm.l1_eviction", !"last"}
 !5 = !{!"nvvm.l1_eviction", !"first"}
+;.
+; CHECK: [[META0]] = !{i32 0, [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"nvvm.l1_eviction", !"last"}
+; CHECK: [[META2]] = !{i32 1, [[META1]]}
+;.
