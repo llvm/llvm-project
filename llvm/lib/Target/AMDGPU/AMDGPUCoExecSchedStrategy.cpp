@@ -122,9 +122,14 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_gfx940_vcd:
-    // GFX9 Shader Programming Guide lists those SMFMAC separately, but for
-    // intended purposes here all those instructions are the same. This comment
-    // is to simplify reverse mapping to the SPG.
+    Res.TotalWindow = 8;
+    allowCoExec(Res, CoExecMask::SALU, 1);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
+    allowCoExec(Res, CoExecMask::WMMA, 4);
+    allowCoExec(Res, CoExecMask::PK_F32, 7);
+    return Res;
+
+  // SMFMAC, 4-cycle occupancy, 8-cycle window.
   case V_SMFMAC_F32_16X16X64_BF16_e64:
   case V_SMFMAC_F32_16X16X64_BF16_gfx940:
   case V_SMFMAC_I32_16X16X128_I8_e64:
@@ -141,7 +146,8 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   case V_SMFMAC_F32_16X16X64_F16_gfx940:
     Res.TotalWindow = 8;
     allowCoExec(Res, CoExecMask::SALU, 1);
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
+    allowCoExec(Res, CoExecMask::VALU, 3);
     allowCoExec(Res, CoExecMask::WMMA, 4);
     allowCoExec(Res, CoExecMask::PK_F32, 7);
     return Res;
@@ -357,7 +363,7 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   case V_SMFMAC_F32_32X32X32_F16_gfx940:
     Res.TotalWindow = 12;
     allowCoExec(Res, CoExecMask::SALU, 1);
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 4);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 3);
     allowCoExec(Res, CoExecMask::WMMA, 9);
     allowCoExec(Res, CoExecMask::PK_F32, 11);
     return Res;
@@ -368,7 +374,7 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   case V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
   case V_MFMA_F64_16X16X4F64_vgprcd_e64:
     Res.TotalWindow = 19;
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::SALU | CoExecMask::VMEM, 0);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::SALU | CoExecMask::VMEM, 1);
     allowCoExec(Res, CoExecMask::WMMA | CoExecMask::VALU | CoExecMask::PK_F32,
                 18);
     return Res;
