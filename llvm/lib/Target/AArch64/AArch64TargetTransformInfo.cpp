@@ -4212,6 +4212,16 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
           DstLT.second.getScalarSizeInBits() != 1)))
       return 0;
 
+    // A load can target the register bank of the bitcast result directly. A
+    // vector with promoted elements is extended after the load, as for a
+    // vector load.
+    if (CCH == TTI::CastContextHint::Normal &&
+        SrcIsFloatOrVec != DstIsFloatOrVec)
+      return SrcIsFloatOrVec || DstLT.second.getScalarSizeInBits() ==
+                                    Dst->getScalarSizeInBits()
+                 ? 0
+                 : 1;
+
     return std::max(SrcLT.first, DstLT.first) *
            (CostKind == TTI::TCK_CodeSize
                 ? 1
