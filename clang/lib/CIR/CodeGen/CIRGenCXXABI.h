@@ -31,10 +31,6 @@ protected:
 
   virtual bool requiresArrayCookie(const CXXNewExpr *e);
 
-  virtual bool constructorsAndDestructorsReturnThis() const {
-    return cgm.getCodeGenOpts().CtorDtorReturnThis;
-  }
-
 public:
   // TODO(cir): make this protected when target-specific CIRGenCXXABIs are
   // implemented.
@@ -329,13 +325,7 @@ public:
   ///
   /// There currently is no way to indicate if a destructor returns 'this' when
   /// called virtually, and CIR generation does not support this case.
-  virtual bool hasThisReturn(clang::GlobalDecl gd) const {
-    if (isa<CXXConstructorDecl>(gd.getDecl()) ||
-        (isa<CXXDestructorDecl>(gd.getDecl()) &&
-         gd.getDtorType() != Dtor_Deleting))
-      return constructorsAndDestructorsReturnThis();
-    return false;
-  }
+  virtual bool hasThisReturn(clang::GlobalDecl gd) const { return false; }
 
   virtual bool hasMostDerivedReturn(clang::GlobalDecl gd) const {
     return false;

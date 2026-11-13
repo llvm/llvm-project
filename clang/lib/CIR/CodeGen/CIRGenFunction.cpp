@@ -287,6 +287,23 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   symbolTable.insert(var, addrVal);
 }
 
+void CIRGenFunction::emitVarAnnotations(const VarDecl *d, mlir::Value addr) {
+  assert(d->hasAttr<AnnotateAttr>() && "no annotate attribute");
+  for (const auto *attr : d->specific_attrs<AnnotateAttr>())
+    cir::VarAnnotationOp::create(builder, getLoc(d->getLocation()), addr,
+                                 cgm.emitAnnotateAttr(attr));
+}
+
+Address CIRGenFunction::emitFieldAnnotations(const FieldDecl *field,
+                                             Address addr) {
+  assert(field->hasAttr<AnnotateAttr>() && "no annotate attribute");
+  mlir::Value ptr = addr.getPointer();
+  for (const auto *attr : field->specific_attrs<AnnotateAttr>())
+    ptr = cir::PtrAnnotationOp::create(builder, getLoc(field->getLocation()),
+                                       ptr, cgm.emitAnnotateAttr(attr));
+  return addr.withPointer(ptr);
+}
+
 void CIRGenFunction::LexicalScope::cleanup() {
   CIRGenBuilderTy &builder = cgf.builder;
   LexicalScope *localScope = cgf.curLexScope;
@@ -528,6 +545,9 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal,
                                           addr.getPointer());
+
+    if (paramVar->hasAttr<AnnotateAttr>())
+      emitVarAnnotations(paramVar, addr.getPointer());
   }
   assert(builder.getInsertionBlock() && "Should be valid");
 }
@@ -1084,7 +1104,7 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
   if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
-      retTy = md->getThisType();
+      cgm.errorNYI(fd->getSourceRange(), "this return");
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "most derived return");
     cgm.getCXXABI().buildThisParam(*this, args);
