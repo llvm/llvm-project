@@ -4,10 +4,10 @@
 ; non-unique resource access, compilation must terminate before pointer
 ; lowering encounters the select.
 
+; CHECK: error: Resource access is not guaranteed to map to a unique global resource
 ; CHECK: note: At resource access:  %value = load float, ptr %ptr, align 4
 ; CHECK-DAG: note: Uses resource handle:  %handle0 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr @BufferA.str)
 ; CHECK-DAG: note: Uses resource handle:  %handle1 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 0, i32 1, i32 1, i32 0, ptr @BufferB.str)
-; CHECK: LLVM ERROR: Resource access is not guaranteed to map to a unique global resource
 ; CHECK-NOT: Unhandled instruction - pointer escaped
 
 @BufferA.str = internal unnamed_addr constant [8 x i8] c"BufferA\00"

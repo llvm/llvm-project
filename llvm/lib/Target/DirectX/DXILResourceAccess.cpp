@@ -40,10 +40,17 @@
 
 using namespace llvm;
 
-[[noreturn]] static void
-diagnoseNonUniqueResourceAccess(Instruction *I,
-                                ArrayRef<IntrinsicInst *> Handles) {
+static void diagnoseNonUniqueResourceAccess(Instruction *I,
+                                            ArrayRef<IntrinsicInst *> Handles) {
   LLVMContext &Context = I->getContext();
+  const char *Msg =
+      "Resource access is not guaranteed to map to a unique global resource";
+  if (I->getDebugLoc())
+    Context.diagnose(
+        DiagnosticInfoUnsupported(*I->getFunction(), Msg, I->getDebugLoc()));
+  else
+    Context.diagnose(DiagnosticInfoGeneric(Msg, DS_Error));
+
   std::string InstStr;
   raw_string_ostream InstOS(InstStr);
   I->print(InstOS);
@@ -57,9 +64,6 @@ diagnoseNonUniqueResourceAccess(Instruction *I,
     Context.diagnose(DiagnosticInfoGeneric(
         "Uses resource handle:" + Twine(HandleStr), DS_Note));
   }
-  report_fatal_error(
-      "Resource access is not guaranteed to map to a unique global resource",
-      /*gen_crash_diag=*/false);
 }
 
 static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
