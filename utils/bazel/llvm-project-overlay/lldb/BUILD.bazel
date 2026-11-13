@@ -12,6 +12,7 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "objc_lib
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "FALLBACK_PLUGINS", "OBJCPP_COPTS")
+load("//llvm:dylib.bzl", "llvm_dylib_deps", "shared_libraries")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
@@ -799,6 +800,7 @@ cc_binary(
         ],
         "//conditions:default": [],
     }),
+    dynamic_deps = llvm_dylib_deps(),
     linkopts = select({
         "@platforms//os:linux": [
             "-Wl,--export-dynamic-symbol-list=$(location :gen_exports_file_linux)",
@@ -821,6 +823,13 @@ cc_binary(
 cc_import(
     name = "liblldb.wrapper",
     shared_library = "lldb{}".format(PACKAGE_VERSION),
+    deps = [":liblldb_dynamic_deps"],
+)
+
+# The shared libraries liblldb is linked against, for its dependents.
+shared_libraries(
+    name = "liblldb_dynamic_deps",
+    deps = llvm_dylib_deps(),
 )
 
 gentbl_cc_library(
@@ -846,6 +855,7 @@ cc_binary(
         "tools/driver/*.cpp",
         "tools/driver/*.h",
     ]),
+    dynamic_deps = llvm_dylib_deps(),
     deps = [
         ":Headers",
         ":liblldb.wrapper",
@@ -1102,6 +1112,7 @@ cc_binary(
     additional_linker_inputs = [
         ":lldb-dap-plist",
     ],
+    dynamic_deps = llvm_dylib_deps(),
     includes = ["tools/lldb-dap"],
     linkopts = select({
         "@platforms//os:macos": [
@@ -1140,6 +1151,7 @@ cc_binary(
     additional_linker_inputs = [
         ":lldb-mcp-plist",
     ],
+    dynamic_deps = llvm_dylib_deps(),
     includes = ["tools/lldb-mcp"],
     linkopts = select({
         "@platforms//os:macos": [
