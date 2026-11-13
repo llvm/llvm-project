@@ -289,8 +289,8 @@
 /openmp @mjklemm @TerryLWilmarth
 
 # Offloading runtime
-/offload/plugins-nextgen/common @jhuber6
-/offload/plugins-nextgen/amdgpu @jhuber6
+/offload/liboffload/plugins/common @jhuber6
+/offload/liboffload/plugins/amdgpu @jhuber6
 /openmp/device/ @jhuber6
 
 # GPU headers and tools

@@ -4,11 +4,11 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$")
 endif()
 
 # Create the library and add the default arguments.
-add_target_library(omptarget.rtl.host ${machine})
+add_target_library(LLVMOffloadPlugin.host ${machine})
 
-target_sources(omptarget.rtl.host PRIVATE src/rtl.cpp)
+target_sources(LLVMOffloadPlugin.host PRIVATE src/rtl.cpp)
 
-target_include_directories(omptarget.rtl.host PRIVATE
+target_include_directories(LLVMOffloadPlugin.host PRIVATE
                            ${LIBOMPTARGET_INCLUDE_DIR})
 
 # Define the target specific triples and ELF machine values.

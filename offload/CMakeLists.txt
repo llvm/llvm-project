@@ -366,8 +366,6 @@ function(offload_tablegen ofn)
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
 endfunction()
 
-# Build offloading plugins and device RTLs if they are available.
-add_subdirectory(plugins-nextgen)
 add_subdirectory(tools)
 add_subdirectory(docs)
 
