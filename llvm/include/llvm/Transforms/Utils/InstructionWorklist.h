@@ -108,14 +108,18 @@ public:
       push(cast<Instruction>(U));
   }
 
-  /// Should be called *after* decrementing the use-count on V.
-  void handleUseCountDecrement(Value *V) {
+  /// Should be called *after* decrementing the use-count on V. Also revisits
+  /// up to \p SingleUseWalkLimit users along V's chain of single-use users.
+  void handleUseCountDecrement(Value *V, unsigned SingleUseWalkLimit = 1) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       add(I);
       // Many folds have one-use limitations. If there's only one use left,
       // revisit that use.
-      if (I->hasOneUse())
-        add(cast<Instruction>(*I->user_begin()));
+      Instruction *Cur = I;
+      for (unsigned N = 0; N != SingleUseWalkLimit && Cur->hasOneUse(); ++N) {
+        Cur = cast<Instruction>(*Cur->user_begin());
+        add(Cur);
+      }
     }
   }
 
