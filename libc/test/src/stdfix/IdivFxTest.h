@@ -16,10 +16,8 @@
 
 #include "test/UnitTest/Test.h"
 
-#include "src/__support/fixed_point/fx_rep.h"
-#include "src/__support/macros/sanitizer.h"
-
 #include "hdr/signal_macros.h"
+#include "src/__support/fixed_point/fx_rep.h"
 
 template <typename T, typename XType>
 class IdivFxTest : public LIBC_NAMESPACE::testing::Test {

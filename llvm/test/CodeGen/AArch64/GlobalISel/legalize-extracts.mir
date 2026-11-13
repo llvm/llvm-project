@@ -358,3 +358,4 @@ body: |
     %extract:_(i32) = G_EXTRACT %val, 1
     $w0 = COPY %extract
     RET_ReallyLR implicit $w0
+...

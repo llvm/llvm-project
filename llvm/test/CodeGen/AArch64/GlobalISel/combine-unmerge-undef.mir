@@ -3,7 +3,6 @@
 ---
 name:            non-vector-src
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0
@@ -32,13 +31,12 @@ body:             |
 ---
 name:            v2-src
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $q0
+    liveins: $q0, $x0
 
     ; CHECK-LABEL: name: v2-src
-    ; CHECK: liveins: $q0
+    ; CHECK: liveins: $q0, $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x i32>) = G_IMPLICIT_DEF
@@ -53,13 +51,12 @@ body:             |
 ---
 name:            v4-src
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $q0
+    liveins: $q0, $x0
 
     ; CHECK-LABEL: name: v4-src
-    ; CHECK: liveins: $q0
+    ; CHECK: liveins: $q0, $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x i16>) = G_IMPLICIT_DEF
@@ -70,3 +67,4 @@ body:             |
     %14:_(i16) = G_IMPLICIT_DEF
     %15:_(<8 x i16>) = G_BUILD_VECTOR %30(i16), %31(i16), %32(i16), %33(i16), %14(i16), %14(i16), %14(i16), %14(i16)
     RET_ReallyLR implicit %15
+...

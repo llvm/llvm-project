@@ -1063,8 +1063,9 @@ class KernelScopeInfo {
       if (Ctx) {
         MCSymbol *const Sym =
             Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
-                                         VgprIndexUnusedMin);
+        int totalVGPR =
+            getTotalNumVGPRs(isGFX90A(*MSTI), std::max(AgprIndexUnusedMin, 0),
+                             VgprIndexUnusedMin);
         Sym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
@@ -1085,8 +1086,9 @@ class KernelScopeInfo {
         // Also update vgpr_count (dependent on agpr_count for gfx908/gfx90a)
         MCSymbol *const vSym =
             Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
-        int totalVGPR = getTotalNumVGPRs(isGFX90A(*MSTI), AgprIndexUnusedMin,
-                                         VgprIndexUnusedMin);
+        int totalVGPR =
+            getTotalNumVGPRs(isGFX90A(*MSTI), std::max(AgprIndexUnusedMin, 0),
+                             VgprIndexUnusedMin);
         vSym->setVariableValue(MCConstantExpr::create(totalVGPR, *Ctx));
       }
     }
@@ -1363,6 +1365,10 @@ public:
 
   bool hasGloballyAddressableScratch() const {
     return getFeatureBits()[AMDGPU::FeatureGloballyAddressableScratch];
+  }
+
+  bool hasScaleOffset() const {
+    return getFeatureBits()[AMDGPU::FeatureScaleOffset];
   }
 
   bool hasCacheFillSize() const {
@@ -5347,19 +5353,18 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     }
   }
 
-  if (!isGFX1250Plus()) {
-    if (CPol & CPol::SCAL) {
-      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
-      StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
-      Error(S, "scale_offset is not supported on this GPU");
-    }
-    if (CPol & CPol::NV) {
-      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
-      StringRef CStr(S.getPointer());
-      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
-      Error(S, "nv is not supported on this GPU");
-    }
+  if (!hasScaleOffset() && (CPol & CPol::SCAL)) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
+    Error(S, "scale_offset is not supported on this GPU");
+  }
+
+  if (!isGFX1250Plus() && (CPol & CPol::NV)) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
+    Error(S, "nv is not supported on this GPU");
   }
 
   if ((CPol & CPol::SCAL) && !supportsScaleOffset(MII, Inst.getOpcode())) {

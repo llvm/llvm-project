@@ -159,8 +159,24 @@ class MemoryEffects<ModRefInfo mr = ModRef> {
 
 def UnknownMemory : MemoryEffects;
 def NoMemory : MemoryEffects<NoModRef>;
+def ArgMemOnly : MemoryEffects<NoModRef> { let ArgMem = ModRef; }
+def ArgMemReadOnly : MemoryEffects<NoModRef> { let ArgMem = Ref; }
 def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
+def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
+  let ArgMem = Mod;
+  let ErrnoMem = Mod;
+}
+
 def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
+def InaccessibleOrErrnoMem : MemoryEffects<NoModRef> {
+  let InaccessibleMem = ModRef;
+  let ErrnoMem = ModRef;
+}
+
+def InaccessibleOrArgMem : MemoryEffects<NoModRef> {
+  let ArgMem = ModRef;
+  let InaccessibleMem = ModRef;
+}
 
 class ValueAttr<list<AttrProperty> props, string expr>
     : Attr<"", IntersectPreserve, props> {
@@ -224,7 +240,7 @@ class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
 }
 
 // TODO: NoCallback probably unsafe in general
-defvar MathFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+defvar CommonFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
 
 multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
                              list<FuncArgType> ArgTypes = [],
@@ -233,7 +249,7 @@ multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
                              list<FuncArgType> paramPointeeTypes = []> {
   defvar VT = !cast<VectorFuncArgType>(suffix);
   def _#suffix : RuntimeLibcall<RetType, ArgTypes> {
-    let FnAttrs = MathFnAttrs;
+    let FnAttrs = CommonFnAttrs;
     let Memory = memory;
     let ParamAttrs = paramAttrs;
     let ParamPointeeTypes = paramPointeeTypes;
