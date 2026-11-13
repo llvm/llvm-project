@@ -19208,8 +19208,9 @@ CreateNewDecl:
 
   // If this is a specialization of a member class (of a class template),
   // check the specialization.
+  bool InvalidMemberSpecialization = false;
   if (isMemberSpecialization && CheckMemberSpecialization(New, Previous))
-    Invalid = true;
+    Invalid = InvalidMemberSpecialization = true;
 
   // If we're declaring or defining a tag in function prototype scope in C,
   // note that this type can only be used within the function and add it to
@@ -19266,7 +19267,11 @@ CreateNewDecl:
 
   if (TUK == TagUseKind::Definition) {
     if (!SkipBody || !SkipBody->ShouldSkip) {
-      New->startDefinition();
+      // An invalid member specialization of a class that already has a
+      // definition must not start a second one.
+      if (!InvalidMemberSpecialization || !PrevDecl ||
+          !PrevDecl->getDefinition())
+        New->startDefinition();
     } else {
       New->setCompleteDefinition();
       New->demoteThisDefinitionToDeclaration();
