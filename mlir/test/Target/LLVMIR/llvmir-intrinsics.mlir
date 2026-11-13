@@ -985,10 +985,11 @@ llvm.func @coro_suspend(%arg0 : i1) {
 }
 
 // CHECK-LABEL: @coro_end
-llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
+llvm.func @coro_end(%arg0: !llvm.ptr) {
   %none = llvm.mlir.none : token
   // CHECK: call void @llvm.coro.end
-  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, token) -> !llvm.void
+  %zero = llvm.mlir.constant(0 : i1) : i1
+  llvm.intr.coro.end %arg0, %zero, %none : (!llvm.ptr, i1, token) -> !llvm.void
   llvm.return
 }
 
@@ -2162,7 +2163,7 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare i32 @llvm.coro.size.i32()
 // CHECK-DAG: declare token @llvm.coro.save(ptr)
 // CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
-// CHECK-DAG: declare void @llvm.coro.end(ptr, i1, token)
+// CHECK-DAG: declare void @llvm.coro.end(ptr, i1 immarg, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr readonly captures(none))
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
 // CHECK-DAG: declare ptr @llvm.coro.promise(ptr captures(none), i32, i1)

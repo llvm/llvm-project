@@ -271,10 +271,13 @@ def aaddu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def asub_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def asubu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 
+// Scalar Shift-Add
+def ssh1sadd_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+
 // Scalar Comparison
-def mseq : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
-def mslt : RISCVBuiltin<"uint32_t(int32_t, int32_t)">;
-def msltu : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mseq_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def mslt_i32 : RISCVBuiltin<"uint32_t(int32_t, int32_t)">;
+def msltu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 
 // Scalar Saturation
 def sati_i32 : RISCVBuiltin<"int32_t(int32_t, _Constant unsigned int)">;

@@ -80,6 +80,54 @@ uint64_t test_slx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
 uint64_t test_srx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
   return __riscv_srx_64(rd, rs1, shamt);
 }
+
+// RV64-LABEL: test_zip8p_64:
+// RV64:        zip8p{{[[:space:]]}}
+uint64_t test_zip8p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip8p_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_zip16p_64:
+// RV64:        zip16p{{[[:space:]]}}
+uint64_t test_zip16p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip16p_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_zip8hp_64:
+// RV64:        zip8hp{{[[:space:]]}}
+uint64_t test_zip8hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip8hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_zip16hp_64:
+// RV64:        zip16hp{{[[:space:]]}}
+uint64_t test_zip16hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip16hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_unzip8p_64:
+// RV64:        unzip8p{{[[:space:]]}}
+uint64_t test_unzip8p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip8p_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_unzip16p_64:
+// RV64:        unzip16p{{[[:space:]]}}
+uint64_t test_unzip16p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip16p_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_unzip8hp_64:
+// RV64:        unzip8hp{{[[:space:]]}}
+uint64_t test_unzip8hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip8hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_unzip16hp_64:
+// RV64:        unzip16hp{{[[:space:]]}}
+uint64_t test_unzip16hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip16hp_64(rs1, rs2);
+}
 #endif
 
 // Scalar averaging addition and subtraction
@@ -5872,8 +5920,7 @@ int16x4_t test_pset_i16_i16x4(int16x4_t v, int16_t e) {
 }
 
 // CHECK-LABEL: test_pset_u16_u16x4:
-// RV32:         srli{{[[:space:]]}}
-// RV32-NEXT     pack{{[[:space:]]}}
+// RV32:         ppaireo.h
 // RV64:         lui
 // RV64-NEXT:    slli{{[[:space:]]}}
 // RV64-NEXT:    slli{{[[:space:]]}}
@@ -6599,6 +6646,13 @@ int32x2_t test_pslidedownx_i32x2(int32x2_t rd, int32x2_t rs1, unsigned rs2) {
 // RV64:         srx
 uint32x2_t test_pslidedownx_u32x2(uint32x2_t rd, uint32x2_t rs1, unsigned rs2) {
   return __riscv_pslidedownx_u32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_ssh1sadd_i32:
+// RV32:        ssh1sadd{{[[:space:]]}}
+// RV64:        pssh1sadd.w{{[[:space:]]}}
+int32_t test_ssh1sadd_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_ssh1sadd_i32(rs1, rs2);
 }
 
 // Scalar Comparison

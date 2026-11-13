@@ -3094,7 +3094,6 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   assert(LogicOpcode == TargetOpcode::G_AND ||
          LogicOpcode == TargetOpcode::G_OR ||
          LogicOpcode == TargetOpcode::G_XOR);
-  MachineIRBuilder MIB(MI);
   Register Dst = MI.getOperand(0).getReg();
   Register LHSReg = MI.getOperand(1).getReg();
   Register RHSReg = MI.getOperand(2).getReg();

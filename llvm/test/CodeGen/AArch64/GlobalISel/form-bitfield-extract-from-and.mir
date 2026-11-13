@@ -288,3 +288,4 @@ body:             |
     %and:_(i64) = G_AND %shift, %mask
     $x0 = COPY %and
     RET_ReallyLR implicit $x0
+...

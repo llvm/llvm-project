@@ -1677,9 +1677,21 @@ define void @merge_wusers_v8i8(<8 x i8> %a, i8 %x, ptr %p) nounwind {
   ret void
 }
 
-declare i32 @llvm.riscv.mseq(i32, i32)
-declare i32 @llvm.riscv.mslt(i32, i32)
-declare i32 @llvm.riscv.msltu(i32, i32)
+declare i32 @llvm.riscv.ssh1sadd.i32(i32, i32)
+
+define signext i32 @ssh1sadd_intrinsic_i32(i32 signext %a, i32 signext %b) nounwind {
+; CHECK-LABEL: ssh1sadd_intrinsic_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssh1sadd.w a0, a0, a1
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.ssh1sadd.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+declare i32 @llvm.riscv.mseq.u32(i32, i32)
+declare i32 @llvm.riscv.mslt.i32(i32, i32)
+declare i32 @llvm.riscv.msltu.u32(i32, i32)
 
 define signext i32 @mseq_i32_sext(i32 signext %a, i32 signext %b) nounwind {
 ; CHECK-LABEL: mseq_i32_sext:
@@ -1687,7 +1699,7 @@ define signext i32 @mseq_i32_sext(i32 signext %a, i32 signext %b) nounwind {
 ; CHECK-NEXT:    pmseq.w a0, a0, a1
 ; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    ret
-  %r = call i32 @llvm.riscv.mseq(i32 %a, i32 %b)
+  %r = call i32 @llvm.riscv.mseq.u32(i32 %a, i32 %b)
   ret i32 %r
 }
 
@@ -1697,7 +1709,7 @@ define signext i32 @mslt_i32_sext(i32 signext %a, i32 signext %b) nounwind {
 ; CHECK-NEXT:    pmslt.w a0, a0, a1
 ; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    ret
-  %r = call i32 @llvm.riscv.mslt(i32 %a, i32 %b)
+  %r = call i32 @llvm.riscv.mslt.i32(i32 %a, i32 %b)
   ret i32 %r
 }
 
@@ -1707,6 +1719,6 @@ define signext i32 @msltu_i32_sext(i32 signext %a, i32 signext %b) nounwind {
 ; CHECK-NEXT:    pmsltu.w a0, a0, a1
 ; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    ret
-  %r = call i32 @llvm.riscv.msltu(i32 %a, i32 %b)
+  %r = call i32 @llvm.riscv.msltu.u32(i32 %a, i32 %b)
   ret i32 %r
 }
