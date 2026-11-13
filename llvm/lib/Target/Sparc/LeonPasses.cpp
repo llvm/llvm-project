@@ -331,7 +331,6 @@ static bool runErrataWorkaroundOnMachineFunction(MachineFunction &MF) {
   const TargetInstrInfo *TII = ST->getInstrInfo();
   const TargetRegisterInfo *TRI = ST->getRegisterInfo();
 
-  // Done as a separate sweep so that the checks below see the inserted NOPs.
   if (ST->insertNOPLoad())
     for (auto &MBB : MF)
       Changed |= insertNOPLoad(MBB, TII);

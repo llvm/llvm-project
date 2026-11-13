@@ -2059,11 +2059,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
     }
 
-    if (Subtarget->fixAllFDIVSQRT()) {
-      setOperationAction(ISD::STRICT_FDIV, MVT::f32, Promote);
-      setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Promote);
-    }
-
     if (Subtarget->hasNoFMULS())
       setOperationAction(ISD::STRICT_FMUL, MVT::f32, Promote);
   }
