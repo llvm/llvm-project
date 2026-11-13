@@ -13,7 +13,7 @@
 #ifndef MLIR_UNITTEST_DIALECT_LLVMIR_LLVMTESTBASE_H
 #define MLIR_UNITTEST_DIALECT_LLVMIR_LLVMTESTBASE_H
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/MLIRContext.h"
 #include "gtest/gtest.h"
 

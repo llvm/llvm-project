@@ -14,7 +14,7 @@
 #ifndef MLIR_CONVERSION_LLVMCOMMON_LOWERFUNCTIONDISCARDABLESTOLLVM_H
 #define MLIR_CONVERSION_LLVMCOMMON_LOWERFUNCTIONDISCARDABLESTOLLVM_H
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 

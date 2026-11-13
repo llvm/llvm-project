@@ -11,9 +11,13 @@
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/IR/SymbolTable.h"
 #include <type_traits>
+
+namespace mlir::LLVM {
+class ConstantOp;
+} // namespace mlir::LLVM
 
 namespace fir {
 

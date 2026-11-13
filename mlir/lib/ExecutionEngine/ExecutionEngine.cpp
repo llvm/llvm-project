@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Target/LLVMIR/Export.h"

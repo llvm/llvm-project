@@ -23,7 +23,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/io-api.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 
 namespace fir {
 #define GEN_PASS_DEF_SETRUNTIMECALLATTRIBUTES

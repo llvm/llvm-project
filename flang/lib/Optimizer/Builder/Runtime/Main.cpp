@@ -17,6 +17,7 @@
 #include "flang/Runtime/exceptions.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 
 using namespace Fortran::runtime;
 

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 

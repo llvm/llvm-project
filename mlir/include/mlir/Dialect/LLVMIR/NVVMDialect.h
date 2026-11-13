@@ -15,7 +15,7 @@
 #define MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
 #include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 #include "mlir/IR/OpDefinition.h"

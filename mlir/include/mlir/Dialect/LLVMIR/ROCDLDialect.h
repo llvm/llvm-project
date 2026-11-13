@@ -22,7 +22,8 @@
 #ifndef MLIR_DIALECT_LLVMIR_ROCDLDIALECT_H_
 #define MLIR_DIALECT_LLVMIR_ROCDLDIALECT_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialectDecl.h"
 
 #include "mlir/Dialect/LLVMIR/ROCDLOpsEnums.h.inc"
