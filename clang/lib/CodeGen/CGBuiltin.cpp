@@ -4970,7 +4970,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BIcoop_mat_init: {
     const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
-    auto Init = EmitScalarExpr(E->getArg(0));
+    auto Init = EmitScalarExpr(E->getArg(1));
     auto *RetType = getTargetExtType(CGM, MTy);
     // Set function type.
     llvm::FunctionType *FTy =

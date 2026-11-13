@@ -17813,10 +17813,18 @@ ExprResult Sema::BuiltinCoopMatrixScalarUnaryOp(CallExpr *TheCall,
 }
 
 ExprResult Sema::BuiltinCoopMatInit(CallExpr *TheCall, ExprResult CallResult) {
-  if (checkArgCount(TheCall, 1))
+  if (checkArgCount(TheCall, 2))
     return ExprError();
 
-  Expr *Arg = TheCall->getArg(0);
+  Expr *RetValRef = TheCall->getArg(0);
+  Expr *Arg = TheCall->getArg(1);
+
+  auto *MTy = RetValRef->getType()->getAs<CooperativeMatrixType>();
+  if (!MTy) {
+    Diag(RetValRef->getBeginLoc(), diag::err_invalid_coopmat_arg);
+    return ExprError();
+  }
+  TheCall->setType(RetValRef->getType());
 
   // Defer validation for dependent arguments.
   if (Arg->isTypeDependent())

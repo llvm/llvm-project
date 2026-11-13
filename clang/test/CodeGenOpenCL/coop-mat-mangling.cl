@@ -101,13 +101,13 @@ kernel void test_load_local(__local float *ptr) {
 // Must produce distinct mangled function names.
 kernel void test_store_global(__global float *ptr) {
     MatF_16x16_A a;
-    a = coop_mat_init(0.0f);
+    a = coop_mat_init(a, 0.0f);
     coop_mat_store(ptr, a, ROW_MAJOR, 16);
     (void)a;
 }
 kernel void test_store_local(__local float *ptr) {
     MatF_16x16_A a;
-    a = coop_mat_init(0.0f);
+    a = coop_mat_init(a, 0.0f);
     coop_mat_store(ptr, a, ROW_MAJOR, 16);
     (void)a;
 }
