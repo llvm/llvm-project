@@ -20484,7 +20484,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
   // Fold X/Sqrt(X) -> Sqrt(X). For zero and positive infinity, the division
   // produces NaN while the square root does not, so ignoring signed zeros is
-  // not sufficient. With nnan these cases produce poison instead.
+  // not sufficient. With nnan on the division these cases produce poison
+  // instead, so neither nsz nor ninf is required.
   if (Flags.hasNoNaNs() && Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))
       return N1;
