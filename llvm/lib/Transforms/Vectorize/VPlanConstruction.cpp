@@ -1624,6 +1624,14 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
   for (const auto &[A, B] : Checks) {
     auto [AStart, AEnd, AStride] = GroupToBounds[A];
     auto [BStart, BEnd, BStride] = GroupToBounds[B];
+    // Compare B's bounds in A's address space, see addRuntimeChecks.
+    Type *PtrTy = AStart->getScalarType();
+    if (BStart->getScalarType() != PtrTy) {
+      BStart = Builder.createScalarCast(Instruction::AddrSpaceCast, BStart,
+                                        PtrTy, DL);
+      BEnd =
+          Builder.createScalarCast(Instruction::AddrSpaceCast, BEnd, PtrTy, DL);
+    }
     VPValue *Bound0 =
         Builder.createICmp(CmpInst::ICMP_ULT, AStart, BEnd, DL, "bound0");
     VPValue *Bound1 =
