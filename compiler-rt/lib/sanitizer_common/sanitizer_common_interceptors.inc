@@ -7738,14 +7738,20 @@ INTERCEPTOR(SIZE_T, strlcpy, char *dst, char *src, SIZE_T size) {
 INTERCEPTOR(SIZE_T, strlcat, char *dst, char *src, SIZE_T size) {
   void *ctx;
   SIZE_T len = 0;
+  SIZE_T srclen = 0;
   COMMON_INTERCEPTOR_ENTER(ctx, strlcat, dst, src, size);
-  // src is checked in the strlcpy() interceptor
   if (dst && size > 0) {
     len = internal_strnlen(dst, size);
     COMMON_INTERCEPTOR_READ_RANGE(ctx, dst, Min(len + 1, size));
   }
-  // Reuse the rest of the code in the strlcpy() interceptor
-  return WRAP(strlcpy)(dst + len, src, size - len) + len;
+  if (src) {
+    srclen = internal_strlen(src);
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, src, srclen + 1);
+  }
+  if (dst && src && len < size)
+    COMMON_INTERCEPTOR_COPY_STRING(ctx, dst + len, src,
+                                   Min(srclen, size - len - 1));
+  return REAL(strlcat)(dst, src, size);
 }
 #define INIT_STRLCPY \
   COMMON_INTERCEPT_FUNCTION(strlcpy); \
