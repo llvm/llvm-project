@@ -20917,8 +20917,9 @@ unsigned SITargetLowering::getMaxPermittedBytesForAlignment(
     MachineBasicBlock *MBB) const {
   // GFX950: Limit padding to 4 bytes (one s_nop) for blocks where an 8-byte
   // instruction could be split by the 32-byte fetch window boundary.
-  // See getPrefLoopAlignment() for context.
-  if (needsFetchWindowAlignment(*MBB))
+  // See getPrefLoopAlignment() for context. A larger, user requested alignment
+  // keeps the default limit.
+  if (MBB->getAlignment() <= Align(32) && needsFetchWindowAlignment(*MBB))
     return 4;
   return TargetLowering::getMaxPermittedBytesForAlignment(MBB);
 }

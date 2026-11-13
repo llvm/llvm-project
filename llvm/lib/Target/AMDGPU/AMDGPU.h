@@ -640,6 +640,9 @@ extern char &GCNRewritePartialRegUsesID;
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
+void initializeAMDGPUFetchWindowPlacementPass(PassRegistry &);
+extern char &AMDGPUFetchWindowPlacementID;
+
 class AMDGPURewriteAGPRCopyMFMAPass
     : public OptionalPassInfoMixin<AMDGPURewriteAGPRCopyMFMAPass> {
 public:
