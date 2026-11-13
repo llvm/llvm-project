@@ -471,3 +471,89 @@ entry:
   store float %add3, ptr %s3
   ret void
 }
+
+define void @shl_mul_copyable(ptr %p, ptr %s) {
+; CHECK-LABEL: @shl_mul_copyable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i16> [[TMP0]], <i16 5, i16 8, i16 2, i16 512>
+; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[S:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr i16, ptr %p, i64 1
+  %p2 = getelementptr i16, ptr %p, i64 2
+  %p3 = getelementptr i16, ptr %p, i64 3
+
+  %l0 = load i16, ptr %p
+  %l1 = load i16, ptr %p1
+  %l2 = load i16, ptr %p2
+  %l3 = load i16, ptr %p3
+
+  %mul0 = mul i16 %l0, 5
+  %mul1 = shl i16 %l1, 3
+  %mul2 = mul i16 %l2, 2
+  %mul3 = shl i16 %l3, 9
+
+  %s1 = getelementptr i16, ptr %s, i64 1
+  %s2 = getelementptr i16, ptr %s, i64 2
+  %s3 = getelementptr i16, ptr %s, i64 3
+
+  store i16 %mul0, ptr %s
+  store i16 %mul1, ptr %s1
+  store i16 %mul2, ptr %s2
+  store i16 %mul3, ptr %s3
+  ret void
+}
+
+define <4 x i32> @lshr_udiv_alt_opc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
+; CHECK-LABEL: @lshr_udiv_alt_opc(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[R2:%.*]] = udiv i32 [[D:%.*]], 2
+; CHECK-NEXT:    [[R3:%.*]] = add i32 [[E:%.*]], [[F:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[R2]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x i32> [[I2]], i32 [[R3]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[I3]]
+;
+  %r0 = add i32 %a, %b
+  %r1 = lshr i32 %c, 1
+  %r2 = udiv i32 %d, 2
+  %r3 = add i32 %e, %f
+  %i0 = insertelement <4 x i32> poison, i32 %r0, i32 0
+  %i1 = insertelement <4 x i32> %i0, i32 %r1, i32 1
+  %i2 = insertelement <4 x i32> %i1, i32 %r2, i32 2
+  %i3 = insertelement <4 x i32> %i2, i32 %r3, i32 3
+  ret <4 x i32> %i3
+}
+
+define <4 x i32> @lshr_udiv_main_opc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
+; CHECK-LABEL: @lshr_udiv_main_opc(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> <i32 1, i32 poison>, i32 [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[R2:%.*]] = udiv i32 [[D:%.*]], 2
+; CHECK-NEXT:    [[R3:%.*]] = add i32 [[E:%.*]], [[F:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[R2]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x i32> [[I2]], i32 [[R3]], i32 3
+; CHECK-NEXT:    ret <4 x i32> [[I3]]
+;
+  %r0 = lshr i32 %c, 1
+  %r1 = add i32 %a, %b
+  %r2 = udiv i32 %d, 2
+  %r3 = add i32 %e, %f
+  %i0 = insertelement <4 x i32> poison, i32 %r0, i32 0
+  %i1 = insertelement <4 x i32> %i0, i32 %r1, i32 1
+  %i2 = insertelement <4 x i32> %i1, i32 %r2, i32 2
+  %i3 = insertelement <4 x i32> %i2, i32 %r3, i32 3
+  ret <4 x i32> %i3
+}

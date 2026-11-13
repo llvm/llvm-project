@@ -9,11 +9,11 @@ subroutine target_map_to()
 
     allocate(derived%scalar)
 
-!CHECK: %[[SCALAR_DATA:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("") -> !fir.llvm_ptr<!fir.ref<i32>>
+!CHECK: %[[SCALAR_DATA:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("derived%scalar") -> !fir.llvm_ptr<!fir.ref<i32>>
 !CHECK: %[[SCALAR_DESC:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(always, to) capture(ByRef) name("derived%scalar") -> !fir.ref<!fir.box<!fir.heap<i32>>>
 !CHECK: %[[SCALAR_DESC_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("derived%scalar") -> !fir.ref<!fir.box<!fir.heap<i32>>>
 
-!CHECK: %[[DTYPE_DATA:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>>, !fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>) map_clauses(storage) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>, !fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>) name("") -> !fir.llvm_ptr<!fir.ref<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>
+!CHECK: %[[DTYPE_DATA:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>>, !fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>) map_clauses(storage) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>, !fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>) name("derived") -> !fir.llvm_ptr<!fir.ref<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>
 !CHECK: %[[DTYPE_DESC:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>>, !fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>) map_clauses(always, to) capture(ByRef) members({{.*}} : !fir.llvm_ptr<!fir.ref<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>, !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.llvm_ptr<!fir.ref<i32>>) name("derived") -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>>
 !CHECK: %[[DTYPE_DESC_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>>, !fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>, !fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>) name("derived") -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtarget_map_toTdtype{scalar:!fir.box<!fir.heap<i32>>}>>>>
 
@@ -33,7 +33,7 @@ subroutine update_map_to()
 
     allocate(derived%scalar)
 
-!CHECK: %[[SCALAR_DATA:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("") -> !fir.llvm_ptr<!fir.ref<i32>>
+!CHECK: %[[SCALAR_DATA:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("derived%scalar") -> !fir.llvm_ptr<!fir.ref<i32>>
 !CHECK: %[[SCALAR_DESC:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(to) capture(ByRef) members{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>) name("derived%scalar") -> !fir.heap<i32>
 !CHECK: %[[SCALAR_DESC_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("derived%scalar") -> !fir.heap<i32>
 

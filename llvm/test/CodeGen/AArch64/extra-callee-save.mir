@@ -7,7 +7,6 @@ name: big_stack
 # CHECK: frame-setup STPXi killed $x20, killed $x19
 # CHECK: $sp = frame-setup SUBXri $sp, 8, 12
 # CHECK-NOT: frame-setup SUBXri $sp, 16, 0
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', size: 32761, alignment: 8 }
 body: |

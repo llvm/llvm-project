@@ -187,11 +187,29 @@ add_header_macro(
 )
 
 add_header_macro(
+  ifaddrs
+  ../libc/include/ifaddrs.yaml
+  ifaddrs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_ifaddrs
+)
+
+add_header_macro(
   libgen
   ../libc/include/libgen.yaml
   libgen.h
   DEPENDS
     .llvm_libc_common_h
+)
+
+add_header_macro(
+  libintl
+  ../libc/include/libintl.yaml
+  libintl.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.locale_t
 )
 
 add_header_macro(
@@ -209,6 +227,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.malloc_macros
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_mallinfo2
 )
 
 add_header_macro(
@@ -448,6 +468,7 @@ add_header_macro(
     .llvm-libc-types.tss_t
     .llvm-libc-types.tss_dtor_t
     .llvm-libc-types.struct_timespec
+    .time
 )
 
 add_header_macro(
@@ -517,6 +538,7 @@ add_header_macro(
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
     .llvm-libc-types.errno_t
+    .llvm-libc-types.fpos_t
     .llvm-libc-types.off_t
     .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
@@ -576,6 +598,22 @@ add_header_macro(
 )
 
 add_header_macro(
+  sched
+  ../libc/include/sched.yaml
+  sched.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sched_macros
+    .llvm-libc-types.cpu_set_t
+    .llvm-libc-types.pid_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_sched_param
+    # Needed according to posix standard
+    .llvm-libc-types.time_t
+    .llvm-libc-types.struct_timespec
+)
+
+add_header_macro(
   pthread
   ../libc/include/pthread.yaml
   pthread.h
@@ -603,6 +641,8 @@ add_header_macro(
     .llvm-libc-types.pthread_id_np_t
     .llvm-libc-types.struct_timespec
     .llvm_libc_common_h
+    .sched
+    .time
 )
 
 add_header_macro(
@@ -616,7 +656,7 @@ add_header_macro(
     .llvm_libc_common_h
 )
 
-if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+if(LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_ANY_RISCV)
   add_header_macro(
     ucontext
     ../libc/include/ucontext.yaml
@@ -637,22 +677,6 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
       .ucontext
   )
 endif()
-
-add_header_macro(
-  sched
-  ../libc/include/sched.yaml
-  sched.h
-  DEPENDS
-    .llvm_libc_common_h
-    .llvm-libc-macros.sched_macros
-    .llvm-libc-types.cpu_set_t
-    .llvm-libc-types.pid_t
-    .llvm-libc-types.size_t
-    .llvm-libc-types.struct_sched_param
-    # Needed according to posix standard
-    .llvm-libc-types.time_t
-    .llvm-libc-types.struct_timespec
-)
 
 add_header_macro(
   semaphore
@@ -680,6 +704,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  elf
+  ../libc/include/elf.yaml
+  elf.h
+  DEPENDS
+    .llvm-libc-proxy.elf_proxy
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   link
   ../libc/include/link.yaml
   link.h
@@ -690,15 +723,7 @@ add_header_macro(
     .llvm-libc-types.struct_link_map
     .llvm-libc-types.struct_r_debug
     .llvm-libc-types.__dl_iterate_phdr_callback_t
-)
-
-add_header_macro(
-  elf
-  ../libc/include/elf.yaml
-  elf.h
-  DEPENDS
-    .llvm-libc-proxy.elf_proxy
-    .llvm_libc_common_h
+    .elf
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -729,6 +754,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_eventfd
+  ../libc/include/sys/eventfd.yaml
+  sys/eventfd.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_eventfd_macros
+    .llvm-libc-types.eventfd_t
+)
+
+add_header_macro(
   sys_file
   ../libc/include/sys/file.yaml
   sys/file.h
@@ -745,6 +780,17 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-macros.sys_ioctl_macros
     .llvm-libc-types.struct_winsize
+)
+
+add_header_macro(
+  sys_inotify
+  ../libc/include/sys/inotify.yaml
+  sys/inotify.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_inotify_macros
+    .llvm-libc-types.struct_inotify_event
+    .stdint
 )
 
 add_header_macro(
@@ -898,6 +944,7 @@ add_header_macro(
     .llvm-libc-types.struct_semid_ds
     .llvm-libc-types.struct_sembuf
     .llvm-libc-types.struct_seminfo
+    .sys_ipc
 )
 
 add_header_macro(
@@ -909,6 +956,23 @@ add_header_macro(
     .llvm-libc-types.off_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_shm
+  ../libc/include/sys/shm.yaml
+  sys/shm.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_shm_macros
+    .llvm-libc-types.key_t
+    .llvm-libc-types.pid_t
+    .llvm-libc-types.shmatt_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_shmid_ds
+    .llvm-libc-types.time_t
+    .stdint
+    .sys_ipc
 )
 
 add_header_macro(
@@ -1057,8 +1121,9 @@ add_header_macro(
   sys/uio.h
   DEPENDS
     .llvm_libc_common_h
-    .llvm-libc-types.struct_iovec
+    .llvm-libc-types.pid_t
     .llvm-libc-types.ssize_t
+    .llvm-libc-types.struct_iovec
 )
 
 add_header_macro(
@@ -1097,6 +1162,8 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
     .llvm-libc-types.siginfo_t
+    .llvm-libc-types.id_t
+    .llvm-libc-types.idtype_t
 )
 
 add_header_macro(
@@ -1113,6 +1180,15 @@ add_header_macro(
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
 
 add_header_macro(
+  net_ethernet
+  ../libc/include/net/ethernet.yaml
+  net/ethernet.h
+  DEPENDS
+    .llvm-libc-types.struct_ether_addr
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   net_if
   ../libc/include/net/if.yaml
   net/if.h
@@ -1125,6 +1201,15 @@ add_header_macro(
 
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_ether
+  ../libc/include/netinet/ether.yaml
+  netinet/ether.h
+  DEPENDS
+    .llvm-libc-types.struct_ether_addr
+    .llvm_libc_common_h
+)
 
 add_header_macro(
   netinet_in
@@ -1157,6 +1242,7 @@ add_header_macro(
   ../libc/include/netinet/tcp.yaml
   netinet/tcp.h
   DEPENDS
+    .llvm-libc-macros.netinet_tcp_macros
     .llvm_libc_common_h
 )
 
@@ -1197,6 +1283,7 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.speed_t
     .llvm-libc-types.struct_termios
+    .llvm-libc-types.struct_winsize
     .llvm-libc-types.tcflag_t
 )
 

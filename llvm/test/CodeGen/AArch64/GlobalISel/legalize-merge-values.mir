@@ -3,6 +3,7 @@
 
 ---
 name:            test_merge_s4
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_merge_s4
@@ -23,6 +24,7 @@ body: |
 ...
 ---
 name:            test_merge_s16_s8
+tracksRegLiveness: false
 body: |
   bb.0:
 

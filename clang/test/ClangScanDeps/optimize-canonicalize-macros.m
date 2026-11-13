@@ -11,6 +11,8 @@
 // This tests that we have two scanning module variants.
 // RUN: find %t/module-cache -name "*.pcm" | wc -l | grep 2
 
+// XFAIL: system-zos
+
 // Verify that there are only two variants and that the expected merges have
 // happened.
 
@@ -25,6 +27,8 @@
 // CHECK-NOT:          "K"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],
@@ -40,6 +44,8 @@
 // CHECK:              "K"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],

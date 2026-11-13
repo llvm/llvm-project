@@ -14,15 +14,15 @@
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-static cl::opt<bool> PPCDisableNonVolatileCR(
-    "ppc-disable-non-volatile-cr",
-    cl::desc("Disable the use of non-volatile CR register fields"),
-    cl::init(false), cl::Hidden);
+static cl::opt<bool> PPCEnableNonVolatileCR(
+    "ppc-non-volatile-cr",
+    cl::desc("Enable the use of non-volatile CR register fields"),
+    cl::init(true), cl::Hidden);
 
 void PPCFunctionInfo::anchor() {}
 PPCFunctionInfo::PPCFunctionInfo(const Function &F,
                                  const TargetSubtargetInfo *STI)
-    : DisableNonVolatileCR(PPCDisableNonVolatileCR) {}
+    : DisableNonVolatileCR(!PPCEnableNonVolatileCR) {}
 
 MachineFunctionInfo *
 PPCFunctionInfo::clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

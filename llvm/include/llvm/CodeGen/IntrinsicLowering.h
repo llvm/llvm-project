@@ -38,10 +38,6 @@ public:
   /// _after_ the call instruction and the call is deleted. The caller must
   /// be capable of handling this kind of change.
   LLVM_ABI void LowerIntrinsicCall(CallInst *CI);
-
-  /// Try to replace a call instruction with a call to a bswap intrinsic. Return
-  /// false if the call is not a simple integer bswap.
-  LLVM_ABI static bool LowerToByteSwap(CallInst *CI);
 };
 }
 

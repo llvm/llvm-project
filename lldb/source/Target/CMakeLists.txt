@@ -57,6 +57,8 @@ add_lldb_library(lldbTarget
   SystemRuntime.cpp
   Target.cpp
   TargetAPIMutex.cpp
+  TargetGroup.cpp
+  TargetGroupList.cpp
   TargetList.cpp
   Thread.cpp
   ThreadCollection.cpp
@@ -104,6 +106,7 @@ add_lldb_library(lldbTarget
     lldbSymbol
     lldbUtility
     lldbValueObject
+    lldbVersion
     lldbPluginProcessUtility
   )
 

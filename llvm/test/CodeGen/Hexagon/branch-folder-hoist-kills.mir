@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=hexagon -run-pass branch-folder -run-pass if-converter -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass branch-folder -run-pass if-converter %s -o - | FileCheck %s
 
 # The hoisting of common instructions from successors could cause registers
 # to no longer be live-in in the successor blocks. The liveness was updated
@@ -28,7 +28,6 @@
 
 ---
 name: fred
-tracksRegLiveness: true
 
 body: |
   bb.0:

@@ -2340,13 +2340,14 @@ TEST(CommandLineTest, HelpWithEmptyCategory) {
 // Records the arguments it is handed. -library-int takes a separate value and
 // rejects "bad".
 struct TestLibrary final : cl::LibraryOptions {
-  std::vector<std::string> Args;
+  mutable std::vector<std::string> Args;
   void forEachOption(
       function_ref<void(StringRef, StringRef, StringRef)> Fn) const override {
     Fn("library-flag", "", "A flag");
     Fn("library-int", " <int>", "");
   }
-  Error parse(ArrayRef<const char *> Argv, unsigned &Consumed) override {
+  Error parse(void *, ArrayRef<const char *> Argv, unsigned &Consumed,
+              BumpPtrAllocator &) const override {
     Consumed = 1;
     Args.push_back(Argv[0]);
     if (StringRef(Argv[0]).ltrim('-') != "library-int")
@@ -2359,7 +2360,10 @@ struct TestLibrary final : cl::LibraryOptions {
       return createStringError("bad value");
     return Error::success();
   }
-  void reset() override { Args.clear(); }
+  void *global() const override { return &Args; }
+  const void *getDefault() const override { return nullptr; }
+  void *copyDefault(BumpPtrAllocator &) const override { return nullptr; }
+  void reset() const override { Args.clear(); }
 };
 
 TEST(CommandLineTest, LibraryOptions) {

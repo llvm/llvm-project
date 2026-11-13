@@ -1,4 +1,4 @@
-//===-- lib/Support/Flags.cpp ---------------------------------*- C++ -*-===//
+//===-- lib/Support/Flags.cpp -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,3 +18,9 @@ llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
     llvm::cl::desc("For partially supported constructs, emit private/local "
                    "variables as clauses/specifiers on MLIR ops."),
     llvm::cl::init(false));
+
+llvm::cl::opt<bool> enableImplicitDefaultMapperAllocatableMembers(
+    "enable-implicit-default-mapper-allocatable-members",
+    llvm::cl::desc("Emit implicit mappers for implicit allocatable member "
+                   "mapping in derived types for specification compliance"),
+    llvm::cl::init(true));

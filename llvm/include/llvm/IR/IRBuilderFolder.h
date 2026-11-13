@@ -24,8 +24,10 @@ namespace llvm {
 
 /// IRBuilderFolder - Interface for constant folding in IRBuilder.
 class LLVM_ABI IRBuilderFolder {
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+
 public:
-  virtual ~IRBuilderFolder();
+  virtual ~IRBuilderFolder() = default;
 
   //===--------------------------------------------------------------------===//
   // Value-based folders.

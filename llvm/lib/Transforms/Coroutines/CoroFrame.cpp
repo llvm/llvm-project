@@ -855,7 +855,7 @@ static void buildFrameLayout(Function &F, const DominatorTree &DT,
   if (Shape.ABI == coro::ABI::Switch && PromiseAlloca) {
     // We assume that no alias will be create before CoroBegin.
     FrameData.Allocas.emplace_back(
-        PromiseAlloca, DenseMap<Instruction *, std::optional<APInt>>{},
+        PromiseAlloca, SmallMapVector<Instruction *, std::optional<APInt>, 4>{},
         hasAccessingPromiseBeforeCB(DT, Shape));
   }
   // Create an entry for every spilled value.
@@ -943,14 +943,13 @@ static Type *extractByvalIfArgument(Value *MaybeArgument) {
 static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
                                  Type *ByValTy, const coro::Shape &Shape,
                                  const FrameDataInfo &FrameData) {
-  LLVMContext &Ctx = Shape.CoroBegin->getContext();
   uint64_t Offset = FrameData.getOffset(Def);
 
   Value *G = Shape.FramePtr;
   if (Offset != 0) {
-    auto *OffsetVal = ConstantInt::get(Type::getInt64Ty(Ctx), Offset);
-    G = Builder.CreateInBoundsPtrAdd(G, OffsetVal,
-                                     Def->getName() + Twine(".spill.addr"));
+    G = Builder.CreatePtrAddWithUnsignedOffset(
+        G, Offset, Def->getName() + Twine(".spill.addr"),
+        GEPNoWrapFlags::inBounds());
   }
   auto SpillAlignment = Align(FrameData.getAlign(Def));
 
@@ -970,10 +969,9 @@ static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
 static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
                                       IRBuilder<> &Builder, coro::Shape &Shape,
                                       Value *Orig) {
-  LLVMContext &Ctx = Shape.CoroBegin->getContext();
   uint64_t Offset = FrameData.getOffset(Orig);
-  auto *OffsetVal = ConstantInt::get(Type::getInt64Ty(Ctx), Offset);
-  Value *Ptr = Builder.CreateInBoundsPtrAdd(Shape.FramePtr, OffsetVal);
+  Value *Ptr = Builder.CreatePtrAddWithUnsignedOffset(
+      Shape.FramePtr, Offset, "", GEPNoWrapFlags::inBounds());
 
   if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
     if (FrameData.getDynamicAlign(Orig) != 0) {
@@ -1065,7 +1063,7 @@ static void handleAccessBeforeCoroBegin(const FrameDataInfo &FrameData,
 static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   LLVMContext &C = Shape.CoroBegin->getContext();
   Function *F = Shape.CoroBegin->getFunction();
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(*F->getParent());
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
@@ -1264,10 +1262,13 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     for (const auto &Alias : A.Aliases) {
       auto *FramePtr =
           createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
-      auto &Value = *Alias.second;
-      auto ITy = IntegerType::get(C, Value.getBitWidth());
-      auto *AliasPtr =
-          Builder.CreateInBoundsPtrAdd(FramePtr, ConstantInt::get(ITy, Value));
+      auto &Offset = *Alias.second;
+      auto ITy = IntegerType::get(C, Offset.getBitWidth());
+      Value *AliasPtr =
+          Builder.CreateInBoundsPtrAdd(FramePtr, ConstantInt::get(ITy, Offset));
+      if (auto *CI = dyn_cast<CastInst>(Alias.first);
+          CI && !CI->getType()->isPtrOrPtrVectorTy())
+        AliasPtr = Builder.CreateCast(CI->getOpcode(), AliasPtr, CI->getType());
       Alias.first->replaceUsesWithIf(
           AliasPtr, [&](Use &U) { return DT.dominates(Shape.CoroBegin, U); });
     }
@@ -1637,7 +1638,8 @@ static Value *emitSetAndGetSwiftErrorValueAround(Instruction *Call,
     Builder.SetInsertPoint(Call->getNextNode());
   } else {
     auto Invoke = cast<InvokeInst>(Call);
-    Builder.SetInsertPoint(Invoke->getNormalDest()->getFirstNonPHIOrDbg());
+    Builder.SetInsertPoint(
+        Invoke->getNormalDest()->getFirstNonPHIOrPseudoProbe());
   }
 
   // Get the current swifterror value and store it to the alloca.
@@ -1678,7 +1680,7 @@ static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
 static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
                                         coro::Shape &Shape,
                              SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
-  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrPseudoProbe());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
   auto ValueTy = PointerType::getUnqual(F.getContext());
@@ -1830,11 +1832,10 @@ static std::optional<std::pair<Value &, DIExpression &>>
 salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
                      bool UseEntryValue, Function *F, Value *Storage,
                      DIExpression *Expr, bool SkipOutermostLoad) {
-  IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
   while (isa<IntrinsicInst>(InsertPt))
     ++InsertPt;
-  Builder.SetInsertPoint(InsertPt);
+  IRBuilder<> Builder(InsertPt);
 
   while (auto *Inst = dyn_cast_or_null<Instruction>(Storage)) {
     if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {

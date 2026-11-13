@@ -76,53 +76,6 @@ using namespace llvm;
 #define DEBUG_TYPE "amdgpu-next-use-analysis"
 
 //==============================================================================
-// Options etc
-//==============================================================================
-namespace {
-
-cl::opt<bool>
-    DistanceCacheEnabled("amdgpu-next-use-analysis-distance-cache",
-                         cl::init(true), cl::Hidden,
-                         cl::desc("Enable live-reg-use distance cache"));
-
-cl::opt<std::string>
-    DumpNextUseDistanceAsJson("amdgpu-next-use-analysis-dump-distance-as-json",
-                              cl::Hidden);
-
-cl::opt<bool> DumpNextUseDistanceDefToUse(
-    "amdgpu-next-use-analysis-dump-distance-def-to-use", cl::init(false),
-    cl::Hidden);
-
-cl::opt<bool>
-    DumpNextUseDistanceVerbose("amdgpu-next-use-analysis-dump-distance-verbose",
-                               cl::init(false), cl::Hidden);
-
-// 'graphics' and 'compute' modes arose due to initial competing implementations
-// of next-use analysis that emphasized different types of workloads. This
-// implementation is a compromise that combines aspects of both. Over time, the
-// hope is we will be able to remove some of these differences and settle on a
-// more unified implementation.
-cl::opt<std::string>
-    ConfigPresetOpt("amdgpu-next-use-analysis-config", cl::Hidden,
-                    cl::init("graphics"),
-                    cl::desc("Config preset: 'graphics' or 'compute'"));
-
-cl::opt<bool> ConfigCountPhisOpt(
-    "amdgpu-next-use-analysis-count-phis", cl::Hidden,
-    cl::desc("Count PHI instructions toward distance and block size"));
-cl::opt<bool> ConfigForwardOnlyOpt(
-    "amdgpu-next-use-analysis-forward-only", cl::Hidden,
-    cl::desc("Restrict inter-block distances to forward-reachable paths"));
-cl::opt<bool> ConfigPreciseUseModelingOpt(
-    "amdgpu-next-use-analysis-precise-use-modeling", cl::Hidden,
-    cl::desc("Model PHI uses via incoming edge block with loop-aware "
-             "reachability filtering"));
-cl::opt<bool> ConfigPromoteToPreheaderOpt(
-    "amdgpu-next-use-analysis-use-preheader-model", cl::Hidden,
-    cl::desc("Promote loop-entry and inner-loop uses to the loop preheader"));
-} // namespace
-
-//==============================================================================
 // LiveRegUse - Represents a live register use with its distance. Used for
 // tracking and sorting register uses by distance.
 //==============================================================================
@@ -139,10 +92,6 @@ struct LiveRegUse : public UseDistancePair {
 
   Register getReg() const { return Use->getReg(); }
   unsigned getSubReg() const { return Use->getSubReg(); }
-  LaneBitmask getLaneMask(const SIRegisterInfo *TRI) const {
-    return TRI->getSubRegIndexLaneMask(Use->getSubReg());
-  }
-
   bool isCloserThan(const LiveRegUse &X) const {
     if (Dist < X.Dist)
       return true;
@@ -267,6 +216,7 @@ public:
   static constexpr bool InstrInvariant = false;
 
 private:
+  const AMDGPUOptions &CLOpts;
   const MachineFunction *MF = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -505,16 +455,6 @@ private:
     return NonConstThis->initializePathInfo(MutablePaths[P], P, EK, Reachable);
   }
 
-  std::pair<PathInfo *, bool> maybeInitializePathInfo(Path P, EdgeKind EK,
-                                                      bool Reachable) const {
-    auto *NonConstThis = const_cast<AMDGPUNextUseAnalysisImpl *>(this);
-    auto &MutablePaths = NonConstThis->Paths;
-    auto [I, Inserted] = MutablePaths.try_emplace(P);
-    if (Inserted)
-      NonConstThis->initializePathInfo(I->second, P, EK, Reachable);
-    return {&I->second, Inserted};
-  }
-
   bool initializePathInfoForwardReachable(const MachineBasicBlock *From,
                                           const MachineBasicBlock *To,
                                           bool Value) const {
@@ -671,14 +611,9 @@ private:
   InstrIdTy calcSize(const MachineBasicBlock *BB) const {
     InstrIdTy Size = BB->size();
     if (!Cfg.CountPhis)
-      Size -= std::distance(BB->begin(), BB->getFirstNonPHI());
+      Size -= static_cast<InstrIdTy>(
+          std::distance(BB->begin(), BB->getFirstNonPHI()));
     return Size;
-  }
-
-  NextUseDistance calcWeightedSize(const MachineBasicBlock *From,
-                                   const MachineBasicBlock *To) const {
-    return NextUseDistance::fromSize(getSize(From),
-                                     getRelativeLoopDepth(From, To));
   }
 
   // Return the loop depth of 'From' relative to 'To'.
@@ -1006,11 +941,6 @@ private:
         return false;
     }
     return false;
-  }
-
-  unsigned getRelativeLoopDepth(const MachineBasicBlock *From,
-                                const MachineBasicBlock *To) const {
-    return pathInfoFor(From, To).RelativeLoopDepth;
   }
 
   NextUseDistance getShortestPath(const MachineBasicBlock *From,
@@ -1606,18 +1536,6 @@ private:
   // Debug/Developer Helpers
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 private:
-  /// Goes over all MBB pairs in \p MF, calculates the shortest path between
-  /// them.
-  void populatePathTable() {
-    for (const MachineBasicBlock &MBB1 : *MF) {
-      for (const MachineBasicBlock &MBB2 : *MF) {
-        if (&MBB1 == &MBB2)
-          continue;
-        getShortestPath(&MBB1, &MBB2);
-      }
-    }
-  }
-
   void printPaths(raw_ostream &OS) const {
     OS << "\n---------------- Paths --------------- {\n";
     for (const auto &[P, PI] : Paths) {
@@ -1630,18 +1548,6 @@ private:
   }
 
   LLVM_DUMP_METHOD void dumpPaths() const { printPaths(dbgs()); }
-
-  // Legacy alias kept for existing call sites.
-  void dumpShortestPaths() const {
-    for (const auto &P : Paths) {
-      const MachineBasicBlock *From = P.first.src();
-      const MachineBasicBlock *To = P.first.dst();
-      std::optional<NextUseDistance> Dist = P.second.ShortestDistance;
-      dbgs() << "From: " << printMBBReference(*From)
-             << "-> To:" << printMBBReference(*To) << " = "
-             << Dist.value_or(-1).fmt() << "\n";
-    }
-  }
 
   void printInterBlockDistances(raw_ostream &OS) const {
     using MBBPair = std::pair<unsigned, unsigned>;
@@ -1756,7 +1662,7 @@ private:
   std::pair<const LaneBitmaskToUseMap *, const LiveRegToUseMapElem *>
   findCachedLiveRegUse(Register Reg, LaneBitmask LaneMask,
                        const MachineInstr &MI, const InstrIdTy LastDelta) {
-    if (!DistanceCacheEnabled)
+    if (!CLOpts.next_use_analysis_distance_cache)
       return {nullptr, nullptr};
 
     ++DistanceCacheMisses; // Assume miss
@@ -1782,7 +1688,7 @@ private:
 
   void cacheLiveRegUse(const MachineInstr &MI, Register Reg, LaneBitmask Mask,
                        LiveRegUse U, bool MIDependent) {
-    if (!DistanceCacheEnabled)
+    if (!CLOpts.next_use_analysis_distance_cache)
       return;
 
     auto I = PendingCachedDistances.try_emplace(Reg).first;
@@ -1791,7 +1697,7 @@ private:
   }
 
   void updateCachedLiveRegUses(const MachineInstr &MI) {
-    if (!DistanceCacheEnabled)
+    if (!CLOpts.next_use_analysis_distance_cache)
       return;
 
     CachedDistancesMI = &MI;
@@ -2104,8 +2010,9 @@ public:
   }
 };
 
-AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
-    const MachineFunction *MF, const MachineLoopInfo *ML) {
+AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(const MachineFunction *MF,
+                                                     const MachineLoopInfo *ML)
+    : CLOpts(MF->getSubtarget<GCNSubtarget>().getCLOpts()) {
 
   this->MF = MF;
   this->MLI = ML;
@@ -2117,19 +2024,18 @@ AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
 
   // FIXME: Hopefully we will soon converge on a single way of calculating
   // next-use distance and remove these presets.
-  if (ConfigPresetOpt == "compute")
+  if (CLOpts.next_use_analysis_config == "compute")
     Cfg = AMDGPUNextUseAnalysis::Config::Compute();
   else
     Cfg = AMDGPUNextUseAnalysis::Config::Graphics();
 
-  if (ConfigCountPhisOpt.getNumOccurrences())
-    Cfg.CountPhis = ConfigCountPhisOpt;
-  if (ConfigForwardOnlyOpt.getNumOccurrences())
-    Cfg.ForwardOnly = ConfigForwardOnlyOpt;
-  if (ConfigPreciseUseModelingOpt.getNumOccurrences())
-    Cfg.PreciseUseModeling = ConfigPreciseUseModelingOpt;
-  if (ConfigPromoteToPreheaderOpt.getNumOccurrences())
-    Cfg.PromoteToPreheader = ConfigPromoteToPreheaderOpt;
+  Cfg.CountPhis = valueOr(CLOpts.next_use_analysis_count_phis, Cfg.CountPhis);
+  Cfg.ForwardOnly =
+      valueOr(CLOpts.next_use_analysis_forward_only, Cfg.ForwardOnly);
+  Cfg.PreciseUseModeling = valueOr(
+      CLOpts.next_use_analysis_precise_use_modeling, Cfg.PreciseUseModeling);
+  Cfg.PromoteToPreheader = valueOr(CLOpts.next_use_analysis_use_preheader_model,
+                                   Cfg.PromoteToPreheader);
 
   initializeTables();
 }
@@ -2298,10 +2204,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUNextUseAnalysisLegacyPass, DEBUG_TYPE,
                     "Next Use Analysis", false, true)
 
-FunctionPass *llvm::createAMDGPUNextUseAnalysisLegacyPass() {
-  return new AMDGPUNextUseAnalysisLegacyPass();
-}
-
 //------------------------------------------------------------------------------
 // New Pass Manager Analysis Pass
 //------------------------------------------------------------------------------
@@ -2318,19 +2220,20 @@ AMDGPUNextUseAnalysisPass::run(MachineFunction &MF,
 // AMDGPUNextUseAnalysisPrinterLegacyPass
 //==============================================================================
 namespace {
-void printInstrMember(json::OStream &J, ModuleSlotTracker &MST,
-                      const MachineInstr &MI,
+void printInstrMember(const AMDGPUOptions &CLOpts, json::OStream &J,
+                      ModuleSlotTracker &MST, const MachineInstr &MI,
                       const AMDGPUNextUseAnalysisImpl &NUA) {
   printStringAttr(J, "instr", MI, MST);
-  if (DumpNextUseDistanceVerbose)
+  if (CLOpts.next_use_analysis_dump_distance_verbose)
     NUA.printVerboseInstrFields(J, MI);
 }
 
 void printDistances(
-    json::OStream &J, const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI,
+    const AMDGPUOptions &CLOpts, json::OStream &J,
+    const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI,
     ModuleSlotTracker &MST,
     const DenseMap<const MachineOperand *, UseDistancePair> &Uses) {
-  if (!DumpNextUseDistanceVerbose)
+  if (!CLOpts.next_use_analysis_dump_distance_verbose)
     return;
 
   // Sorting isn't necessary for the purposes of JSON, but it reduces
@@ -2356,9 +2259,10 @@ void printDistances(
   J.attributeEnd();
 }
 
-void printFurthestUse(json::OStream &J, const MachineRegisterInfo &MRI,
-                      const SIRegisterInfo &TRI, ModuleSlotTracker &MST,
-                      const LiveRegUse F, bool Subreg = false) {
+void printFurthestUse(const AMDGPUOptions &CLOpts, json::OStream &J,
+                      const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI,
+                      ModuleSlotTracker &MST, const LiveRegUse F,
+                      bool Subreg = false) {
   J.attributeBegin(Subreg ? "furthest-subreg" : "furthest");
   J.objectBegin();
 
@@ -2367,7 +2271,7 @@ void printFurthestUse(json::OStream &J, const MachineRegisterInfo &MRI,
         J, "register",
         printReg(F.getReg(), &TRI, Subreg ? F.getSubReg() : 0, &MRI));
 
-    if (DumpNextUseDistanceVerbose) {
+    if (CLOpts.next_use_analysis_dump_distance_verbose) {
       printStringAttr(J, "use", [&](raw_ostream &OS) { OS << (*F.Use); });
       printStringAttr(J, "use-mi", *F.Use->getParent(), MST);
     }
@@ -2414,12 +2318,13 @@ void printDistanceFromDefToUse(json::OStream &J, const MachineFunction &MF,
 void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
                                  const AMDGPUNextUseAnalysis &NUA,
                                  const AMDGPUNextUseAnalysisImpl &NUAImpl,
-                                 const LiveIntervals &LIS) {
+                                 LiveIntervals &LIS) {
   using UseDistancePair = AMDGPUNextUseAnalysis::UseDistancePair;
   const Function &F = MF.getFunction();
   const Module *M = F.getParent();
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const AMDGPUOptions &CLOpts = ST.getCLOpts();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -2451,17 +2356,33 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
         RPTracker.reset(MI, MBB.end());
       RPTracker.advance();
 
+      // Report distance for every register live at MI including the ones
+      // that the tracker retired. Add their live-in lanes back.
+      GCNRPTracker::LiveRegSet LiveAtMI = RPTracker.getLiveRegs();
+      if (!MI.isDebugInstr() && !MI.isPHI()) {
+        SlotIndex BaseIdx = LIS.getInstructionIndex(MI).getBaseIndex();
+        for (const MachineOperand &MO : MI.all_uses()) {
+          Register Reg = MO.getReg();
+          if (!Reg.isVirtual() || !MO.readsReg())
+            continue;
+          LaneBitmask Mask = getLiveLaneMask(Reg, BaseIdx, LIS, MRI);
+          assert(Mask.any() && "read register not live at its use");
+          LiveAtMI[Reg] |= Mask;
+        }
+      }
+
       UseDistancePair Furthest;
       UseDistancePair FurthestSubreg;
       RelevantUses.clear();
-      NUA.getNextUseDistances(RPTracker.getLiveRegs(), MI, Furthest,
-                              &FurthestSubreg, &RelevantUses);
+      NUA.getNextUseDistances(LiveAtMI, MI, Furthest, &FurthestSubreg,
+                              &RelevantUses);
 
       J.objectBegin();
-      printInstrMember(J, MST, MI, NUAImpl);
-      printDistances(J, MRI, TRI, MST, RelevantUses);
-      printFurthestUse(J, MRI, TRI, MST, Furthest);
-      printFurthestUse(J, MRI, TRI, MST, FurthestSubreg, /*Subreg*/ true);
+      printInstrMember(CLOpts, J, MST, MI, NUAImpl);
+      printDistances(CLOpts, J, MRI, TRI, MST, RelevantUses);
+      printFurthestUse(CLOpts, J, MRI, TRI, MST, Furthest);
+      printFurthestUse(CLOpts, J, MRI, TRI, MST, FurthestSubreg,
+                       /*Subreg*/ true);
       J.objectEnd();
 
       PrevMI = &MI;
@@ -2474,13 +2395,14 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
   J.objectEnd();
   J.attributeEnd();
 
-  if (DumpNextUseDistanceVerbose || DumpNextUseDistanceDefToUse)
+  if (CLOpts.next_use_analysis_dump_distance_verbose ||
+      CLOpts.next_use_analysis_dump_distance_def_to_use)
     printDistanceFromDefToUse(J, MF, NUA, TRI, MRI);
 
-  if (DumpNextUseDistanceVerbose)
+  if (CLOpts.next_use_analysis_dump_distance_verbose)
     NUAImpl.printPaths(J, MST);
 
-  if (DistanceCacheEnabled) {
+  if (CLOpts.next_use_analysis_distance_cache) {
     J.attributeBegin("metrics");
     J.objectBegin();
     {
@@ -2501,9 +2423,10 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
 void printAsJson(raw_ostream &FallbackOS, TimerGroup &JsonTimerGroup,
                  Timer &JsonTimer, const MachineFunction &MF,
                  const AMDGPUNextUseAnalysis &NUA,
-                 const AMDGPUNextUseAnalysisImpl &NUAImpl,
-                 const LiveIntervals &LIS) {
-  std::string FN = DumpNextUseDistanceAsJson;
+                 const AMDGPUNextUseAnalysisImpl &NUAImpl, LiveIntervals &LIS) {
+  std::optional<StringRef> FN = MF.getSubtarget<GCNSubtarget>()
+                                    .getCLOpts()
+                                    .next_use_analysis_dump_distance_as_json;
 
   auto dump = [&](raw_ostream &OS) {
     json::OStream J(OS, 2);
@@ -2521,13 +2444,13 @@ void printAsJson(raw_ostream &FallbackOS, TimerGroup &JsonTimerGroup,
     J.objectEnd();
   };
 
-  if (!DumpNextUseDistanceAsJson.getNumOccurrences()) {
+  if (!FN) {
     dump(FallbackOS);
-  } else if (FN.empty() || FN == "-") {
+  } else if (FN->empty() || *FN == "-") {
     dump(outs());
   } else {
     std::error_code EC;
-    ToolOutputFile OutF(FN, EC, sys::fs::OF_None);
+    ToolOutputFile OutF(*FN, EC, sys::fs::OF_None);
     dump(OutF.os());
     OutF.keep();
   }
@@ -2551,7 +2474,7 @@ bool AMDGPUNextUseAnalysisPrinterLegacyPass::runOnMachineFunction(
   Timer JsonTimer("json", "Total time spent generating json", JsonTimerGroup);
   JsonTimer.startTimer();
 
-  const LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   const AMDGPUNextUseAnalysis &NUA =
       getAnalysis<AMDGPUNextUseAnalysisLegacyPass>().getNextUseAnalysis();
 
@@ -2584,10 +2507,6 @@ INITIALIZE_PASS_END(AMDGPUNextUseAnalysisPrinterLegacyPass,
                     "amdgpu-next-use-printer",
                     "AMDGPU Next Use Analysis Printer", false, false)
 
-FunctionPass *llvm::createAMDGPUNextUseAnalysisPrinterLegacyPass() {
-  return new AMDGPUNextUseAnalysisPrinterLegacyPass();
-}
-
 //------------------------------------------------------------------------------
 // New Pass Manager Printer Pass
 //------------------------------------------------------------------------------
@@ -2600,7 +2519,7 @@ AMDGPUNextUseAnalysisPrinterPass::run(MachineFunction &MF,
   Timer JsonTimer("json", "Total time spent generating json", JsonTimerGroup);
   JsonTimer.startTimer();
 
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   const AMDGPUNextUseAnalysis &NUA =
       MFAM.getResult<AMDGPUNextUseAnalysisPass>(MF);
 

@@ -35,6 +35,39 @@ func.func @private_parallel_levels() {
 
 // -----
 
+// Ownership par_dims can be narrower than the active dimensions the kernel
+// indexes the storage by, e.g. a vector reduction temporary allocated inside a
+// gang loop. The storage is replicated across both.
+
+// CHECK-LABEL: func.func @private_active_wider_than_par_dims
+// CHECK: %[[PRIV:.*]] = acc.privatize
+// CHECK: acc.map_info varPtr(%[[PRIV]] : !acc.private_type<memref<8xi32>>)
+// CHECK-SAME: mapFlags(private,gang_private,vector_private)
+func.func @private_active_wider_than_par_dims() {
+  %priv = acc.privatize par_dims(#acc<par_dims[thread_x]>)
+      {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+      : () -> !acc.private_type<memref<8xi32>>
+  return
+}
+
+// -----
+
+// Without par_dims the storage is not replicated per level, even when the op
+// has active dimensions.
+
+// CHECK-LABEL: func.func @private_active_without_par_dims
+// CHECK: %[[PRIV:.*]] = acc.privatize
+// CHECK: acc.map_info varPtr(%[[PRIV]] : !acc.private_type<memref<8xi32>>)
+// CHECK-SAME: mapFlags(private)
+func.func @private_active_without_par_dims() {
+  %priv = acc.privatize
+      {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+      : () -> !acc.private_type<memref<8xi32>>
+  return
+}
+
+// -----
+
 // Privatized storage need not name any parallel dimension - storage promoted to
 // shared memory is private without being replicated per level. Such a
 // privatization carries no par_dims at all, not an empty one.

@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - -enable-cse-in-legalizer=1 | FileCheck %s
 ---
 name:            test_cse_in_legalizer
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_cse_in_legalizer
@@ -19,3 +20,4 @@ body:             |
     %2:_(i8) = G_TRUNC %0(i64)
     %20:_(i32) = G_ZEXT %2(i8)
     $w0 = COPY %20(i32)
+...

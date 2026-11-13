@@ -12,7 +12,6 @@
 ---
 name:            swp
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64common }
   - { id: 1, class: gpr32 }
@@ -24,10 +23,10 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: swp
-    ; CHECK: {{[0-9]+}}:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic (s32) on %ir.addr)
+    ; CHECK: {{[0-9]+}}:gpr32 = SWPW %1, %0 :: (volatile load store monotonic (s32) on %ir.addr)
     %0:gpr64common = COPY $x0
     %1:gpr32 = MOVi32imm 1
-    %2:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic (s32) on %ir.addr)
+    %2:gpr32 = SWPW %1, %0 :: (volatile load store monotonic (s32) on %ir.addr)
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 ...

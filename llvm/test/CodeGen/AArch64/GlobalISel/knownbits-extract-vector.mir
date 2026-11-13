@@ -3,6 +3,7 @@
 
 ---
 name: all_knownbits_const_idx
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @all_knownbits_const_idx
@@ -19,6 +20,7 @@ body: |
 ...
 ---
 name: all_knownbits
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @all_knownbits
@@ -35,6 +37,7 @@ body: |
 ...
 ---
 name: no_knownbits_const_idx
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @no_knownbits_const_idx
@@ -47,6 +50,7 @@ body: |
 ...
 ---
 name: no_knownbits
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @no_knownbits
@@ -59,6 +63,7 @@ body: |
 ...
 ---
 name: zext_const_idx
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @zext_const_idx
@@ -73,6 +78,7 @@ body: |
 ...
 ---
 name: zext
+tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -88,6 +94,7 @@ body: |
 ...
 ---
 name: sext_const_idx
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @sext_const_idx
@@ -102,6 +109,7 @@ body: |
 ...
 ---
 name: sext
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @sext
@@ -118,6 +126,7 @@ body: |
 # Verifies known bit computation bails if return type differs from vector
 # element type. Without bailing, the 8 lowest bits of %4 would be known.
 name: bail_on_different_return_type
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @bail_on_different_return_type
@@ -131,11 +140,22 @@ body: |
     %2:_(<2 x i8>) = G_BUILD_VECTOR %0, %1
     %idx:_(i64) = G_CONSTANT i64 1
     %3:_(i16) = G_EXTRACT_VECTOR_ELT %2, %idx
+...
 ---
 # computeNumSignBits: sign bits propagate through G_EXTRACT_VECTOR_ELT
 name: signbits_known_idx
+tracksRegLiveness: false
 body: |
   bb.0:
+  ; CHECK-LABEL: name: @signbits_known_idx
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
+  ; CHECK-NEXT: %5:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %6:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000010 SignBits:62 IsKnownNeverZero:1
+  ; CHECK-NEXT: %7:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
     %0:_(i8) = COPY $b0
     %1:_(i16) = G_SEXT %0
     %2:_(i16) = COPY $h1
@@ -148,6 +168,7 @@ body: |
 ---
 # computeNumSignBits: unknown index demands all elements
 name: signbits_unknown_idx
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @signbits_unknown_idx
@@ -165,6 +186,7 @@ body: |
 ---
 # computeNumSignBits: out of bounds constant index falls back to demanding all
 name: signbits_out_of_bounds_idx
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @signbits_out_of_bounds_idx
@@ -182,6 +204,7 @@ body: |
 ---
 # computeNumSignBits: scalable vector demands whole source
 name: signbits_scalable
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @signbits_scalable

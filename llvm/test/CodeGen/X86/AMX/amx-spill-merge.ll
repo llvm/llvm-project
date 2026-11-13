@@ -8,10 +8,9 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-LABEL: test_api:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $2120, %rsp # imm = 0x848
+; CHECK-NEXT:    subq $2112, %rsp # imm = 0x840
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -65,14 +64,14 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    tilestored %tmm5, 1088(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    tdpbssd %tmm3, %tmm2, %tmm5
 ; CHECK-NEXT:    tilestored %tmm5, 64(%rsp,%rax) # 1024-byte Folded Spill
-; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg (%rsp)
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tileloadd 64(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
-; CHECK-NEXT:    tilestored %tmm6, (%r14,%r15)
+; CHECK-NEXT:    movl $32, %eax
+; CHECK-NEXT:    tilestored %tmm6, (%r14,%rax)
 ; CHECK-NEXT:  .LBB0_3: # %exit
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %ecx
@@ -83,10 +82,9 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    tdpbssd %tmm4, %tmm6, %tmm5
 ; CHECK-NEXT:    movl $buf+2048, %eax
 ; CHECK-NEXT:    tilestored %tmm5, (%rax,%rcx)
-; CHECK-NEXT:    addq $2120, %rsp # imm = 0x848
+; CHECK-NEXT:    addq $2112, %rsp # imm = 0x840
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    retq
@@ -94,11 +92,10 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; EGPR-LABEL: test_api:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    pushq %rbp # encoding: [0x55]
-; EGPR-NEXT:    pushq %r15 # encoding: [0x41,0x57]
 ; EGPR-NEXT:    pushq %r14 # encoding: [0x41,0x56]
 ; EGPR-NEXT:    pushq %rbx # encoding: [0x53]
-; EGPR-NEXT:    subq $2120, %rsp # encoding: [0x48,0x81,0xec,0x48,0x08,0x00,0x00]
-; EGPR-NEXT:    # imm = 0x848
+; EGPR-NEXT:    subq $2112, %rsp # encoding: [0x48,0x81,0xec,0x40,0x08,0x00,0x00]
+; EGPR-NEXT:    # imm = 0x840
 ; EGPR-NEXT:    movl %esi, %ebx # encoding: [0x89,0xf3]
 ; EGPR-NEXT:    movl %edi, %ebp # encoding: [0x89,0xfd]
 ; EGPR-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x57,0xc0]
@@ -165,7 +162,6 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; EGPR-NEXT:    tdpbssd %tmm3, %tmm2, %tmm5 # encoding: [0xc4,0xe2,0x63,0x5e,0xea]
 ; EGPR-NEXT:    tilestored %tmm5, 64(%rsp,%rax) # 1024-byte Folded Spill
 ; EGPR-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x6c,0x04,0x40]
-; EGPR-NEXT:    movl $32, %r15d # encoding: [0x41,0xbf,0x20,0x00,0x00,0x00]
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; EGPR-NEXT:    callq foo # encoding: [0xe8,A,A,A,A]
@@ -174,7 +170,8 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; EGPR-NEXT:    movabsq $64, %rax # encoding: [0x48,0xb8,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 ; EGPR-NEXT:    tileloadd 64(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
 ; EGPR-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7b,0x4b,0x74,0x04,0x40]
-; EGPR-NEXT:    tilestored %tmm6, (%r14,%r15) # EVEX TO VEX Compression encoding: [0xc4,0x82,0x7a,0x4b,0x34,0x3e]
+; EGPR-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
+; EGPR-NEXT:    tilestored %tmm6, (%r14,%rax) # EVEX TO VEX Compression encoding: [0xc4,0xc2,0x7a,0x4b,0x34,0x06]
 ; EGPR-NEXT:  .LBB0_3: # %exit
 ; EGPR-NEXT:    movl $buf, %eax # encoding: [0xb8,A,A,A,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: buf, kind: FK_Data_4
@@ -188,11 +185,10 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; EGPR-NEXT:    movl $buf+2048, %eax # encoding: [0xb8,A,A,A,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: buf+2048, kind: FK_Data_4
 ; EGPR-NEXT:    tilestored %tmm5, (%rax,%rcx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x2c,0x08]
-; EGPR-NEXT:    addq $2120, %rsp # encoding: [0x48,0x81,0xc4,0x48,0x08,0x00,0x00]
-; EGPR-NEXT:    # imm = 0x848
+; EGPR-NEXT:    addq $2112, %rsp # encoding: [0x48,0x81,0xc4,0x40,0x08,0x00,0x00]
+; EGPR-NEXT:    # imm = 0x840
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
 ; EGPR-NEXT:    popq %r14 # encoding: [0x41,0x5e]
-; EGPR-NEXT:    popq %r15 # encoding: [0x41,0x5f]
 ; EGPR-NEXT:    popq %rbp # encoding: [0x5d]
 ; EGPR-NEXT:    tilerelease # encoding: [0xc4,0xe2,0x78,0x49,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]

@@ -129,6 +129,15 @@ HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF,
   return Empty;
 }
 
+// Returns true if MF takes HLX arguments or returns an HLX type.
+static bool hasHLXSignature(const MachineFunction &MF) {
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  const Function &F = MF.getFunction();
+  return HST.isTypeForHLX(F.getReturnType()) ||
+         any_of(F.args(), [&HST](const Argument &A) {
+           return HST.isTypeForHLX(A.getType());
+         });
+}
 
 const MCPhysReg *
 HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -149,13 +158,18 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   bool HasEHReturn = MF->getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
 
+  if (hasHLXSignature(*MF))
+    return HasEHReturn ? HexagonCSR_HLX_EH_SaveList : HexagonCSR_HLX_SaveList;
   return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
 }
-
 
 const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
       const MachineFunction &MF, CallingConv::ID) const {
   return HexagonCSR_RegMask;
+}
+
+const uint32_t *HexagonRegisterInfo::getHLXCallPreservedMask() const {
+  return HexagonCSR_HLX_RegMask;
 }
 
 BitVector
@@ -215,14 +229,14 @@ HexagonRegisterInfo::getBaseReservedRegs(const MachineFunction &MF) const {
   Reserved.set(Hexagon::PC);          // C9
   Reserved.set(Hexagon::UGP);         // C10
   Reserved.set(Hexagon::GP);          // C11
-  Reserved.set(Hexagon::CS0);         // C12
-  Reserved.set(Hexagon::CS1);         // C13
   Reserved.set(Hexagon::UPCYCLELO);   // C14
   Reserved.set(Hexagon::UPCYCLEHI);   // C15
   Reserved.set(Hexagon::FRAMELIMIT);  // C16
   Reserved.set(Hexagon::FRAMEKEY);    // C17
   Reserved.set(Hexagon::PKTCOUNTLO);  // C18
   Reserved.set(Hexagon::PKTCOUNTHI);  // C19
+  Reserved.set(Hexagon::VFRAMELIMIT); // C28
+  Reserved.set(Hexagon::VSP);         // C29
   Reserved.set(Hexagon::UTIMERLO);    // C30
   Reserved.set(Hexagon::UTIMERHI);    // C31
   // Out of the control registers, only C8 is explicitly defined in
@@ -277,6 +291,14 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Add the offset from the instruction.
   int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
 
+  if (BP == Hexagon::VSP) {
+    auto &MRI = MF.getRegInfo();
+    Register VSPCopy = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_tfrcrr), VSPCopy)
+        .addReg(BP);
+    BP = VSPCopy;
+  }
+
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
     case Hexagon::PS_fia:
@@ -290,7 +312,7 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       break;
   }
 
-  if (!HII.isValidOffset(Opc, RealOffset, this)) {
+  if (!HII.isValidOffset(Opc, RealOffset)) {
     // If the offset is not valid, calculate the address in a temporary
     // register and use it with offset 0.
     int InstOffset = 0;
@@ -466,6 +488,9 @@ Register HexagonRegisterInfo::getStackRegister() const {
   return Hexagon::R29;
 }
 
+Register HexagonRegisterInfo::getVTCMStackRegister() const {
+  return Hexagon::VSP;
+}
 
 unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       const TargetRegisterClass &RC, unsigned GenIdx) const {
@@ -478,8 +503,10 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
   switch (RC.getID()) {
     case Hexagon::CtrRegs64RegClassID:
     case Hexagon::DoubleRegsRegClassID:
+    case Hexagon::CircRegsRegClassID:
       return ISub[GenIdx];
     case Hexagon::HvxWRRegClassID:
+    case Hexagon::HlxLLRRegClassID:
       return VSub[GenIdx];
     case Hexagon::HvxVQRRegClassID:
       return WSub[GenIdx];

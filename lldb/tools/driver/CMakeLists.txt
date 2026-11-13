@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
+llvm_tablegen(Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBOptionsTableGen)
 
 if(APPLE)
@@ -29,9 +29,9 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 set(LLDB_DRIVER_LINK_LIBS
-  liblldb
   lldbHost
   lldbUtility
+  liblldb
 )
 
 add_lldb_tool(lldb
@@ -57,7 +57,7 @@ lldb_prevent_liblldb_symbol_interposition(lldb)
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb
+  lldb_add_rpaths(lldb
     BUILD_RPATH
       "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
     INSTALL_RPATH

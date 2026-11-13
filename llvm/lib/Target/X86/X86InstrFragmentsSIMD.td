@@ -466,12 +466,13 @@ def X86pmuldq  : SDNode<"X86ISD::PMULDQ",
 
 // SSE4A Extraction and Insertion.
 def X86extrqi : SDNode<"X86ISD::EXTRQI",
-                  SDTypeProfile<1, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0,1>,
-                                       SDTCisVT<2, i8>, SDTCisVT<3, i8>]>>;
+                  SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<0>,
+                                       SDTCisSameAs<0,1>, SDTCisVT<2, i8>,
+                                       SDTCisVT<3, i8>]>>;
 def X86insertqi : SDNode<"X86ISD::INSERTQI",
-                    SDTypeProfile<1, 4, [SDTCisVT<0, v2i64>, SDTCisSameAs<0,1>,
-                                         SDTCisSameAs<1,2>, SDTCisVT<3, i8>,
-                                         SDTCisVT<4, i8>]>>;
+                    SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisInt<0>,
+                                         SDTCisSameAs<0,1>, SDTCisSameAs<1,2>,
+                                         SDTCisVT<3, i8>, SDTCisVT<4, i8>]>>;
 
 // Specific shuffle nodes - At some point ISD::VECTOR_SHUFFLE will always get
 // translated into one of the target nodes below during lowering.
@@ -1813,14 +1814,14 @@ def X86pcmpgtm : PatFrag<(ops node:$src1, node:$src2),
                          (setcc node:$src1, node:$src2, SETGT)>;
 
 def X86pcmpm_imm : SDNodeXForm<setcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   uint8_t SSECC = X86::getVPCMPImmForCond(CC);
   return getI8Imm(SSECC, SDLoc(N));
 }]>;
 
 // Swapped operand version of the above.
 def X86pcmpm_imm_commute : SDNodeXForm<setcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   uint8_t SSECC = X86::getVPCMPImmForCond(CC);
   SSECC = X86::getSwappedVPCMPImm(SSECC);
   return getI8Imm(SSECC, SDLoc(N));
@@ -1828,25 +1829,25 @@ def X86pcmpm_imm_commute : SDNodeXForm<setcc, [{
 
 def X86pcmpm : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                        (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   return !ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
 def X86pcmpm_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                           (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   return N->hasOneUse() && !ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
 def X86pcmpum : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                         (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   return ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 
 def X86pcmpum_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                            (setcc node:$src1, node:$src2, node:$cc), [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(2);
   return N->hasOneUse() && ISD::isUnsignedIntSetCC(CC);
 }], X86pcmpm_imm>;
 

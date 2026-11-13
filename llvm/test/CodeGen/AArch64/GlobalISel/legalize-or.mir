@@ -3,6 +3,7 @@
 
 ---
 name:            test_scalar_or_small
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -27,6 +28,7 @@ body: |
 
 ---
 name:            test_big_scalar_power_of_2
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -60,7 +62,6 @@ body: |
 ...
 ---
 name:            test_i318_or
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -105,6 +106,7 @@ body:             |
 ...
 ---
 name:            test_vector_or_v16s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_or_v16s16
@@ -125,6 +127,7 @@ body:             |
 ...
 ---
 name:            test_vector_or_v32s8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_or_v32s8
@@ -145,7 +148,6 @@ body:             |
 ...
 ---
 name:            or_v2s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -175,7 +177,6 @@ body:             |
 ...
 ---
 name:            or_v3s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $b0, $b1, $b2
@@ -213,7 +214,6 @@ body:             |
 ...
 ---
 name:            or_v4s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -243,7 +243,6 @@ body:             |
 ...
 ---
 name:            or_v8s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -273,7 +272,6 @@ body:             |
 ...
 ---
 name:            or_v16s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3

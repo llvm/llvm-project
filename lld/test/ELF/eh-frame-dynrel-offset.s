@@ -16,19 +16,19 @@
 
 # CHECK:      .eh_frame         PROGBITS        {{0*}}[[#%x,EH:]]
 # CHECK:      {{0*}}[[#%x,EH+0x12]] {{.*}} R_X86_64_RELATIVE
-# CHECK-NEXT: {{0*}}[[#%x,EH+0x7a]] {{.*}} R_X86_64_RELATIVE
-# CHECK-NEXT: {{0*}}[[#%x,EH+0x46]] {{.*}} R_X86_64_64 {{.*}} ext1 + 10
-# CHECK-NEXT: {{0*}}[[#%x,EH+0xae]] {{.*}} R_X86_64_64 {{.*}} ext2 + 20
+# CHECK-NEXT: {{0*}}[[#%x,EH+0x52]] {{.*}} R_X86_64_RELATIVE
+# CHECK-NEXT: {{0*}}[[#%x,EH+0x32]] {{.*}} R_X86_64_64 {{.*}} ext1 + 10
+# CHECK-NEXT: {{0*}}[[#%x,EH+0x72]] {{.*}} R_X86_64_64 {{.*}} ext2 + 20
 
 ## .relr.dyn stores the offsets separately from .rela.dyn.
 # RUN: ld.lld -shared -z pack-relative-relocs a.o b.o -o relr
 # RUN: llvm-readelf -S -r relr | FileCheck %s --check-prefix=RELR --implicit-check-not=R_X86_64
 
 # RELR:      .eh_frame         PROGBITS        {{0*}}[[#%x,EH:]]
-# RELR:      {{0*}}[[#%x,EH+0x46]] {{.*}} R_X86_64_64 {{.*}} ext1 + 10
-# RELR-NEXT: {{0*}}[[#%x,EH+0xae]] {{.*}} R_X86_64_64 {{.*}} ext2 + 20
+# RELR:      {{0*}}[[#%x,EH+0x32]] {{.*}} R_X86_64_64 {{.*}} ext1 + 10
+# RELR-NEXT: {{0*}}[[#%x,EH+0x72]] {{.*}} R_X86_64_64 {{.*}} ext2 + 20
 # RELR:      0000: {{.*}} {{0*}}[[#%x,EH+0x12]]
-# RELR-NEXT: 0001: {{.*}} {{0*}}[[#%x,EH+0x7a]]
+# RELR-NEXT: 0001: {{.*}} {{0*}}[[#%x,EH+0x52]]
 
 #--- a.s
 .set pers1, ext1+0x10

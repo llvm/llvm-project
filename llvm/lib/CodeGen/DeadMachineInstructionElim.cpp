@@ -57,12 +57,18 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
 };
 } // namespace
 
 PreservedAnalyses
 DeadMachineInstructionElimPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
+
   if (!DeadMachineInstructionElimImpl().runImpl(MF))
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
@@ -122,6 +128,14 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(
         ++NumDeletes;
         continue;
       }
+
+      for (MachineOperand &MO : MI.all_defs()) {
+        Register Reg = MO.getReg();
+        if (Reg.isPhysical() && !MO.isDead() && !MRI->isReserved(Reg) &&
+            LivePhysRegs.available(Reg))
+          MO.setIsDead();
+      }
+
       LivePhysRegs.stepBackward(MI);
     }
   }

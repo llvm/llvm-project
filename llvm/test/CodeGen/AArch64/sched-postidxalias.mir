@@ -26,7 +26,6 @@
 ...
 ---
 name:            post
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr64common, preferred-register: '' }
   - { id: 1, class: gpr32, preferred-register: '' }

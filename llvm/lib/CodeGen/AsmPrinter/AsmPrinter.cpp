@@ -178,6 +178,13 @@ static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
              "unnecessary for some PGOAnalysisMap features."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> BBAddrMapEmitFuncGUID(
+    "basic-block-address-map-emit-func-guid",
+    cl::desc("Emit the function GUID in the SHT_LLVM_BB_ADDR_MAP section for "
+             "functions with local linkage. This allows identifying them "
+             "without relying on their (possibly non-unique) symbol names."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
@@ -426,6 +433,20 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
     auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
     return MLIWrapper ? &MLIWrapper->getLI() : nullptr;
   };
+  GetMBPI = [this](MachineFunction &MF) {
+    return &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  };
+  GetMBFI = [this](MachineFunction &MF) {
+    return &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+  };
+  GetMBHI = [this](MachineFunction &MF) {
+    return &getAnalysis<MachineBlockHashInfo>().getMBHI();
+  };
+  GetBBSPR = [this](MachineFunction &MF) {
+    auto *BBSPRPass =
+        getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
+    return BBSPRPass ? &BBSPRPass->getBBSPR() : nullptr;
+  };
   BeginGCAssembly = [this](Module &M) {
     GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
     assert(MI && "AsmPrinter didn't require GCModuleInfo?");
@@ -521,14 +542,10 @@ bool AsmPrinter::doInitialization(Module &M) {
   HasSplitStack = false;
   HasNoSplitStack = false;
   DbgInfoAvailable = !M.debug_compile_units().empty();
+  ModuleExceptionModel = M.getExceptionModel();
   const Triple &Target = M.getTargetTriple();
 
   AddrLabelSymbols = nullptr;
-
-  // Initialize TargetLoweringObjectFile.
-  TM.getObjFileLowering()->Initialize(OutContext, TM);
-
-  TM.getObjFileLowering()->getModuleMetadata(M);
 
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional
@@ -618,9 +635,10 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI.doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    // On Windows targets, emit minimal CodeView compiler info even when debug
-    // info is disabled.
-    if ((Target.isOSWindows() || (Target.isUEFI() && EmitCodeView)) &&
+    // On Windows and UEFI targets, emit minimal CodeView compiler info even
+    // when debug info is disabled. UEFI follows the MSVC toolchain
+    // conventions, so it is treated the same way as Windows here.
+    if ((Target.isOSWindows() || Target.isUEFI()) &&
         M.getNamedMetadata("llvm.dbg.cu"))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
@@ -634,7 +652,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (M.getNamedMetadata(PseudoProbeDescMetadataName))
     PP = std::make_unique<PseudoProbeHandler>(this);
 
-  switch (MAI.getExceptionHandlingType()) {
+  switch (ModuleExceptionModel) {
   case ExceptionHandling::None:
     // We may want to emit CFI for debug.
     [[fallthrough]];
@@ -649,7 +667,7 @@ bool AsmPrinter::doInitialization(Module &M) {
       if (ModuleCFISection == CFISection::EH)
         break;
     }
-    assert(MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI ||
+    assert(ModuleExceptionModel == ExceptionHandling::DwarfCFI ||
            usesCFIWithoutEH() || ModuleCFISection != CFISection::EH);
     break;
   default:
@@ -657,7 +675,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   }
 
   EHStreamer *ES = nullptr;
-  switch (MAI.getExceptionHandlingType()) {
+  switch (ModuleExceptionModel) {
   case ExceptionHandling::Default:
     llvm_unreachable("should have resolved exception model kind");
   case ExceptionHandling::None:
@@ -1408,11 +1426,11 @@ AsmPrinter::getFunctionCFISectionType(const Function &F) const {
   if (F.isDeclarationForLinker())
     return CFISection::None;
 
-  if (MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI &&
+  if (ModuleExceptionModel == ExceptionHandling::DwarfCFI &&
       F.needsUnwindTableEntry())
     return CFISection::EH;
 
-  if (MAI.usesCFIWithoutEH() && F.hasUWTable())
+  if (MAI.usesCFIWithoutEH(ModuleExceptionModel) && F.hasUWTable())
     return CFISection::EH;
 
   if (hasDebugInfo() || TM.Options.ForceDwarfFrameSection)
@@ -1426,19 +1444,15 @@ AsmPrinter::getFunctionCFISectionType(const MachineFunction &MF) const {
   return getFunctionCFISectionType(MF.getFunction());
 }
 
-bool AsmPrinter::needsSEHMoves() {
-  return MAI.usesWindowsCFI() && MF->getFunction().needsUnwindTableEntry();
-}
-
 bool AsmPrinter::usesCFIWithoutEH() const {
-  return MAI.usesCFIWithoutEH() && ModuleCFISection != CFISection::None;
+  return MAI.usesCFIWithoutEH(ModuleExceptionModel) &&
+         ModuleCFISection != CFISection::None;
 }
 
 void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
-  ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
   if (!usesCFIWithoutEH() &&
-      ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
-      ExceptionHandlingType != ExceptionHandling::ARM)
+      ModuleExceptionModel != ExceptionHandling::DwarfCFI &&
+      ModuleExceptionModel != ExceptionHandling::ARM)
     return;
 
   if (getFunctionCFISectionType(*MF) == CFISection::None)
@@ -1505,6 +1519,11 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
   bool BrProbEnabled =
       AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::BrProb));
   bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
+  // Only emit the GUID for functions with local linkage, whose symbol names
+  // may not be unique across translation units. Other functions can be
+  // identified by their symbol names.
+  bool FuncGUIDEnabled =
+      BBAddrMapEmitFuncGUID && MF.getFunction().hasLocalLinkage();
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
@@ -1514,7 +1533,7 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
-          shouldEmitBBHash(), PostLinkCfgEnabled};
+          shouldEmitBBHash(), PostLinkCfgEnabled, FuncGUIDEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1523,10 +1542,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
   bool HasCalls = !CurrentFnCallsiteEndSymbols.empty();
 
-  const BasicBlockSectionsProfileReader *BBSPR = nullptr;
-  if (auto *BBSPRPass =
-          getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
-    BBSPR = &BBSPRPass->getBBSPR();
+  const BasicBlockSectionsProfileReader *BBSPR = GetBBSPR(*this->MF);
   const CFGProfile *FuncCFGProfile = nullptr;
   if (BBSPR)
     FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
@@ -1542,6 +1558,12 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls,
                                       FuncCFGProfile);
   OutStreamer->emitInt16(Features.encode());
+  if (Features.FuncGUID) {
+    // Use the GUID assigned by AssignGUIDPass if available. Otherwise, compute
+    // it from the source file name and the function name.
+    OutStreamer->AddComment("function GUID");
+    OutStreamer->emitInt64(MF.getFunction().getGUIDOrFallback());
+  }
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
     OutStreamer->AddComment("number of basic block ranges");
@@ -1582,8 +1604,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       PrevMBBEndSymbol = MBBSymbol;
     }
 
-    auto MBHI =
-        Features.BBHash ? &getAnalysis<MachineBlockHashInfo>() : nullptr;
+    const MachineBlockHashInfoResult *MBHI =
+        Features.BBHash ? GetMBHI(*this->MF) : nullptr;
 
     if (!Features.OmitBBEntries) {
       OutStreamer->AddComment("BB id");
@@ -1630,13 +1652,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(MaybeEntryCount ? *MaybeEntryCount : 0);
     }
     const MachineBlockFrequencyInfo *MBFI =
-        Features.BBFreq
-            ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
-            : nullptr;
+        Features.BBFreq ? GetMBFI(*this->MF) : nullptr;
     const MachineBranchProbabilityInfo *MBPI =
-        Features.BrProb
-            ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI()
-            : nullptr;
+        Features.BrProb ? GetMBPI(*this->MF) : nullptr;
 
     if (Features.BBFreq || Features.BrProb) {
       for (const MachineBasicBlock &MBB : MF) {
@@ -1999,7 +2017,8 @@ void AsmPrinter::handleCallsiteForCallgraph(
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() && "This method is meant for call instructions only.");
-  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const MachineOperand &CalleeOperand = TII->getCalleeOperand(MI);
   if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
     // Handle direct calls.
     MCSymbol *CalleeSymbol = nullptr;
@@ -2846,8 +2865,9 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
     return;
 
   SmallString<128> Filename = *RS.getFilename();
-  sys::fs::make_absolute(Filename);
   assert(!Filename.empty() && "The filename can't be empty.");
+  assert((Filename == "-" || sys::path::is_absolute(Filename)) &&
+         "The remarks filename must be absolute.");
 
   std::string Buf;
   raw_string_ostream OS(Buf);
@@ -3017,6 +3037,31 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   TLOF.emitModuleMetadata(*OutStreamer, M);
 
+  // Emit raw section data from llvm.raw.sections metadata. Each operand is
+  // a tuple of {section_name, alignment, flags, data}.
+  if (const NamedMDNode *RawSections =
+          M.getNamedMetadata("llvm.raw.sections")) {
+    for (const MDNode *Op : RawSections->operands()) {
+      auto *SectionName = cast<MDString>(Op->getOperand(0));
+      auto *AlignCI = mdconst::extract<ConstantInt>(Op->getOperand(1));
+      auto *Data = cast<MDString>(Op->getOperand(3));
+
+      MCSection *Section = TLOF.getNamedSection(SectionName->getString(),
+                                                SectionKind::getMetadata());
+      if (!Section) {
+        M.getContext().emitError("llvm.raw.sections entry '" +
+                                 SectionName->getString() +
+                                 "' is not supported on this target");
+        continue;
+      }
+      OutStreamer->pushSection();
+      OutStreamer->switchSection(Section);
+      OutStreamer->emitValueToAlignment(Align(AlignCI->getZExtValue()));
+      OutStreamer->emitBytes(Data->getString());
+      OutStreamer->popSection();
+    }
+  }
+
   if (Target.isOSBinFormatELF()) {
     MachineModuleInfoELF &MMIELF = MMI->getObjFileInfo<MachineModuleInfoELF>();
 
@@ -3175,7 +3220,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   if (S)
     OutStreamer->switchSection(S);
 
-  if (TM.Options.EmitAddrsig) {
+  if (TM.Options.EmitAddrsig && MAI.hasAddrsigDirective()) {
     // Emit address-significance attributes for all globals.
     OutStreamer->emitAddrsig();
     for (const GlobalValue &GV : M.global_values()) {
@@ -4608,6 +4653,8 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   }
 
   if (isa<ConstantPointerNull>(CV)) {
+    if (isa<VectorType>(CV->getType()))
+      return emitGlobalConstantVector(DL, CV, AP, AliasList);
     AP.OutStreamer->emitIntValue(0, Size);
     return;
   }
@@ -4912,7 +4959,7 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   }
 
   if (MBB.isEHContTarget() &&
-      MAI.getExceptionHandlingType() == ExceptionHandling::WinEH) {
+      ModuleExceptionModel == ExceptionHandling::WinEH) {
     OutStreamer->emitLabel(MBB.getEHContSymbol());
   }
 
@@ -5357,13 +5404,22 @@ void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
 
 namespace llvm {
 namespace {
+FunctionAnalysisManager &getFAM(Module &M, ModuleAnalysisManager &MAM) {
+  return MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+}
+
+FunctionAnalysisManager &getFAM(MachineFunctionAnalysisManager &MFAM,
+                                MachineFunction &MF) {
+  return MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+      .getManager();
+}
+
 MachineFunctionAnalysisManager &getMFAM(Module &M, ModuleAnalysisManager &MAM,
                                         MachineFunction &MF) {
-  FunctionAnalysisManager &FAM =
-      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   MachineFunctionAnalysisManager &MFAM =
-      FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(
-             MF.getFunction())
+      getFAM(M, MAM)
+          .getResult<MachineFunctionAnalysisManagerFunctionProxy>(
+              MF.getFunction())
           .getManager();
   return MFAM;
 }
@@ -5383,6 +5439,20 @@ void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
   };
   AsmPrinter.GetMLI = [&MAM, &M](MachineFunction &MF) {
     return &getMFAM(M, MAM, MF).getResult<MachineLoopAnalysis>(MF);
+  };
+  AsmPrinter.GetMBPI = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF).getResult<MachineBranchProbabilityAnalysis>(MF);
+  };
+  AsmPrinter.GetMBFI = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF).getResult<MachineBlockFrequencyAnalysis>(MF);
+  };
+  AsmPrinter.GetMBHI = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF).getResult<MachineBlockHashInfoAnalysis>(MF);
+  };
+  AsmPrinter.GetBBSPR = [&MAM, &M](MachineFunction &MF) {
+    return getFAM(M, MAM)
+        .getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(
+            MF.getFunction());
   };
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
@@ -5410,6 +5480,20 @@ void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
   };
   AsmPrinter.GetMLI = [&MFAM](MachineFunction &MF) {
     return &MFAM.getResult<MachineLoopAnalysis>(MF);
+  };
+  AsmPrinter.GetMBPI = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  };
+  AsmPrinter.GetMBFI = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  };
+  AsmPrinter.GetMBHI = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineBlockHashInfoAnalysis>(MF);
+  };
+  AsmPrinter.GetBBSPR = [&MFAM](MachineFunction &MF) {
+    return getFAM(MFAM, MF)
+        .getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(
+            MF.getFunction());
   };
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};

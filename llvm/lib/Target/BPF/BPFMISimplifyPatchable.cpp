@@ -312,26 +312,26 @@ void BPFMISimplifyPatchableImpl::processInst(MachineRegisterInfo *MRI,
   if (DisableCOREOptimization)
     return;
 
-  if (Opcode == BPF::ADD_rr) {
-    // If the struct offset is greater than INT16_MAX, skip optimization.
-    StringRef AccessPattern = GVal->getName();
-    size_t FirstDollar = AccessPattern.find_first_of('$');
-    size_t FirstColon = AccessPattern.find_first_of(':');
-    size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
-    StringRef PatchImmStr =
-        AccessPattern.substr(SecondColon + 1, FirstDollar - SecondColon);
-    int PatchImm = std::stoll(std::string(PatchImmStr));
-    if (PatchImm <= INT16_MAX)
+  switch (Opcode) {
+  case BPF::ADD_rr: {
+    auto Reloc = BPFCoreSharedInfo::AmaRelocation::decode(GVal->getName());
+    // libbpf only patches memory offsets in the range [0, INT16_MAX].
+    if (Reloc.PatchImm >= 0 && Reloc.PatchImm <= INT16_MAX)
       checkADDrr(MRI, Inst, RelocOpNo, GVal);
-    return;
+    break;
   }
-
-  if (Opcode == BPF::SLL_rr)
+  case BPF::SLL_rr:
     checkShift(MRI, Inst, RelocOpNo, GVal, BPF::SLL_ri);
-  else if (Opcode == BPF::SRA_rr)
+    break;
+  case BPF::SRA_rr:
     checkShift(MRI, Inst, RelocOpNo, GVal, BPF::SRA_ri);
-  else if (Opcode == BPF::SRL_rr)
+    break;
+  case BPF::SRL_rr:
     checkShift(MRI, Inst, RelocOpNo, GVal, BPF::SRL_ri);
+    break;
+  default:
+    break;
+  }
 }
 
 /// Remove unneeded Load instructions.

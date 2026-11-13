@@ -28,6 +28,7 @@ include "mlir/IR/EnumAttr.td"
 class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
     : TypeDef<CIR_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRTypes.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -36,7 +37,8 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def CIR_IntType : CIR_Type<"Int", "int", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
@@ -86,6 +88,13 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     }
     bool isUnsignedFundamental() const {
       return isFundamentalUIntType(*this);
+    }
+
+    /// Key of the data-layout entry that carries
+    /// TargetInfo::getBitIntMaxAlign(), in bits. The width is not a layout
+    /// input. Every _BitInt reads this one entry.
+    static IntType getBitIntMaxAlignKey(mlir::MLIRContext *ctx) {
+      return get(ctx, /*width=*/1, /*isSigned=*/false, /*isBitInt=*/true);
     }
 
     /// Returns a minimum bitwidth of cir::IntType
@@ -263,7 +272,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
     space attribute that specifies the address space of the pointer. If not
     specified, the pointer is assumed to be in the default address space.
 
-    The `!cir.ptr` type can point to any type, including fundamental types,
+    The `!cir.ptr` type can point to any CIR type, including fundamental types,
     records, arrays, vectors, functions, and other pointers. It can also point
     to incomplete types, such as incomplete records.
 
@@ -279,7 +288,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   }];
 
   let parameters = (ins
-    "mlir::Type":$pointee,
+    CIR_DialectType:$pointee,
     OptionalParameter<
         "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
   );
@@ -355,7 +364,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member", [
     containing record.
   }];
 
-  let parameters = (ins "mlir::Type":$member_ty,
+  let parameters = (ins CIR_DialectType:$member_ty,
                         "cir::RecordType":$class_ty);
 
   let builders = [
@@ -389,8 +398,8 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     This type will be the element type of the 'vptr' member of structures that
     require a vtable pointer. The `cir.vtable.address_point` operation returns
     this type. The `cir.vtable.get_vptr` operations returns a pointer to this
-    type. This pointer may be passed to the `cir.vtable.get_virtual_fn_addr`
-    operation to get the address of a virtual function pointer.
+    type. This pointer may be passed to the `cir.vtable.get_virtual_fn`
+    operation to get a virtual function pointer.
 
     The pointer may also be cast to other pointer types in order to perform
     pointer arithmetic based on information encoded in the AST layout to get
@@ -456,7 +465,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
     `!cir.array` represents C/C++ constant arrays.
   }];
 
-  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+  let parameters = (ins CIR_ArrayElementType:$elementType, "uint64_t":$size);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
@@ -478,7 +487,7 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 }
 
 //===----------------------------------------------------------------------===//
-// VectorType (fixed size)
+// VectorType
 //===----------------------------------------------------------------------===//
 
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
@@ -488,8 +497,9 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let summary = "CIR vector type";
   let description = [{
     The `!cir.vector` type represents a one-dimensional vector.
-    It takes three parameters: the element type, the number of elements and the
-    scalability flag (optional, defaults to `false`).
+    It takes two parameters: the element type and an element count, which
+    records both the known minimum number of elements and whether the vector is
+    scalable.
 
     Syntax:
 
@@ -509,6 +519,11 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     !cir.vector<2 x !cir.float>
     ```
 
+    A fixed-length vector of `!cir.bool` is packed one bit per element, and its
+    size is rounded up to a power of two of at least one byte, so
+    `!cir.vector<4 x !cir.bool>` occupies one byte and
+    `!cir.vector<17 x !cir.bool>` occupies four.
+
     Scalable vectors are indicated by enclosing size in square brackets.
 
     Example:
@@ -519,18 +534,38 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
   let parameters = (ins
     CIR_VectorElementType:$element_type,
-    "uint64_t":$size,
-    OptionalParameter<"bool">:$is_scalable
+    "llvm::ElementCount":$size
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$size, CArg<"bool",
-      "false">:$is_scalable
+      "mlir::Type":$element_type, "llvm::ElementCount":$size
     ), [{
-        return $_get(element_type.getContext(), element_type, size, is_scalable);
+        return $_get(element_type.getContext(), element_type, size);
     }]>,
   ];
+
+  let extraClassDeclaration = [{
+    /// Return the size of a fixed-width vector.
+    uint64_t getFixedSize() const { return getSize().getFixedValue(); }
+
+    /// Return whether this vector is scalable.
+    bool isScalable() const { return getSize().isScalable(); }
+
+    /// Return a fixed-width vector with the given element type and size.
+    static VectorType getFixed(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getFixed(size));
+    }
+
+    /// Return a scalable vector with the given element type and minimum size.
+    static VectorType getScalable(mlir::Type elementType, uint64_t size) {
+      return get(elementType, llvm::ElementCount::getScalable(size));
+    }
+
+    /// The width of the integer a vector of `!cir.bool` is stored as: one bit
+    /// per element, at least a byte.
+    uint64_t getBoolStorageWidth() const;
+  }];
 
   let extraClassDefinition = [{
     bool $cppClass::isSized() const {
@@ -578,20 +613,20 @@ def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
 
   let parameters = (ins
     CIR_MatrixElementType:$element_type,
-    "uint64_t":$row_num,
-    "uint64_t":$column_num
+    "uint64_t":$num_rows,
+    "uint64_t":$num_columns
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "uint64_t":$row_num, "uint64_t":$column_num
+      "mlir::Type":$element_type, "uint64_t":$num_rows, "uint64_t":$num_columns
     ), [{
-        return $_get(element_type.getContext(), element_type, row_num, column_num);
+        return $_get(element_type.getContext(), element_type, num_rows, num_columns);
     }]>,
   ];
 
   let assemblyFormat = [{
-    `<` $row_num `x` $column_num `x` $element_type `>`
+    `<` $num_rows `x` $num_columns `x` $element_type `>`
   }];
 
   let genVerifyDecl = 1;
@@ -962,7 +997,15 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.member_kinds, key.is_class);
+    }
 
     bool isClass() const { return getIsClass(); }
     bool isStruct() const { return !getIsClass(); }
@@ -1053,9 +1096,10 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
      - Anonymous: no name and a known body.
 
     Padded unions carry an explicit tail-padding type to ensure the LLVM struct
-    that models the union has the correct byte size.  That slot is separate
-    from the per-member kinds described by `CIR_RecordMemberKind`, which say
-    what each variant holds.  The parser rejects a mark on that slot.
+    that models the union has the correct byte size.  The padding type is
+    `!u8i` or an array of `!u8i`.  That slot is separate from the
+    per-member kinds described by `CIR_RecordMemberKind`, which say what each
+    variant holds.  The parser rejects a mark on that slot.
 
     Examples:
 
@@ -1121,7 +1165,15 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
   ];
 
   let extraClassDeclaration = [{
-    using Base::verifyInvariants;
+    /// Verifies a storage key, as sub-element replacement rebuilds from one.
+    /// It is a template because the storage class is incomplete here.
+    template <typename StorageKey>
+    static llvm::LogicalResult
+    verifyInvariants(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                     const StorageKey &key) {
+      return verifyInvariants(emitError, key.members, key.name, key.incomplete,
+                              key.packed, key.padding, key.member_kinds);
+    }
 
     bool isUnion() const { return true; }
     bool isComplete() const { return !isIncomplete(); }

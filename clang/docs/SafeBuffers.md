@@ -61,7 +61,7 @@ acting as "hardened custom containers" to replace raw pointers.
 However, such approach would be very unergonomic in C, and safety guarantees
 will be lower due to lack of good encapsulation technology. A better approach
 to bounds safety for non-C++ programs,
-[-fbounds-safety](BoundsSafety.md),
+[-fbounds-safety](BoundsSafety/index.md),
 is currently in development.
 
 Technically, safety guarantees cannot be provided without hardening
@@ -352,6 +352,11 @@ There are a few natural reasons to use this pragma:
   will never follow the programming model (such as plain C code that will
   never be converted to C++) or with the code that simply haven't been converted
   yet.
+
+- In `main(int argc, char **argv)`, where the function signature is fixed by the
+  language standard and `argv` cannot be changed to a `std::span`. Warnings on
+  `main`'s `argv` parameter can also be selectively suppressed via the
+  `-Wno-unsafe-buffer-usage-main-argv` compiler flag.
 
 Interoperation with unsafe code may require a lot of suppressions.
 You are encouraged to introduce "unsafe wrapper functions" for various unsafe

@@ -464,7 +464,7 @@ inputs (a1, b1) and (a2, b2). The basic-block vectorizer may combine these
 into vector operations.
 
 ```c++
-void foo(int a1, int a2, int b1, int b2, int *A) {
+void foo(float a1, float a2, float b1, float b2, float *A) {
   A[0] = a1*(a1 + b1);
   A[1] = a2*(a2 + b2);
   A[2] = a1*(a1 + b1);

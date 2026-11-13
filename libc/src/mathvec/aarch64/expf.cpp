@@ -14,8 +14,10 @@
 #include "src/mathvec/expf.h"
 #include "arm_neon.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/mathvec/expf_utils.h"
 #include "src/mathvec/aarch64/common.h"
+#include "src/mathvec/abi_prefix.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -45,7 +47,8 @@ static constexpr expf_data EXPF_DATA = {
     mathvec::EXP_MANTISSA,                       // mantissa
 };
 
-LIBC_INLINE static float64x2_t exp_lookup(uint64x2_t u, const expf_data &data) {
+LIBC_INLINE LIBC_VECTOR_PCS static float64x2_t
+exp_lookup(uint64x2_t u, const expf_data &data) {
   // The low 6 bits of u index the 64 element mantissa table.
   uint64x2_t vidx_mask = MAKE_SPLAT_VECTOR(data.idx_mask, u64);
   uint64_t idx0 = vgetq_lane_u64(u & vidx_mask, 0);
@@ -66,8 +69,8 @@ LIBC_INLINE static float64x2_t exp_lookup(uint64x2_t u, const expf_data &data) {
   return vreinterpretq_f64_u64(result);
 }
 
-LIBC_INLINE static float64x2_t inline_exp(float64x2_t x,
-                                          const expf_data &data) {
+LIBC_INLINE LIBC_VECTOR_PCS static float64x2_t
+inline_exp(float64x2_t x, const expf_data &data) {
   float64x2_t vshift = MAKE_SPLAT_VECTOR(data.shift, f64);
   float64x2_t vinv_ln2 = MAKE_SPLAT_VECTOR(data.inv_ln2, f64);
   float64x2_t z = vfmaq_f64(vshift, x, vinv_ln2);
@@ -97,7 +100,7 @@ LIBC_INLINE static float64x2_t inline_exp(float64x2_t x,
 }
 
 LLVM_LIBC_FUNCTION(AdvSIMDFP32Vector, expf, (AdvSIMDFP32Vector x),
-                   "_ZGVnN4v_expf") {
+                   LIBC_VFABI_FLOAT_SYMBOL(expf)) {
   const expf_data &data = *PTR_BARRIER(&EXPF_DATA);
 
   // Splits into an upper and lower half for double-precision computation.

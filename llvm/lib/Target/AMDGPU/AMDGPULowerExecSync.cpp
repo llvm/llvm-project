@@ -127,7 +127,7 @@ static bool lowerExecSyncGlobalVariables(Module &M, GVUsesInfoTy &GVUsesInfo) {
     unsigned Offset;
     if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
       unsigned BarrierScope = ExtTy->getIntParameter(0);
-      unsigned BarCnt = GV->getGlobalSize(DL) / 16;
+      unsigned BarCnt = getNumNamedBarriersDeclared(DL, *GV);
 
       unsigned BarID = allocateExecSyncID(KernelBarrierIDs, Kernels,
                                           BarrierScope, NumBarScopes, BarCnt);
@@ -188,7 +188,7 @@ static bool handleNamedBarriersForObjectLinking(Module &M) {
          "modules with named barriers should have a unique ID");
   for (auto &[V, Funcs] : BarrierToFuncs) {
     if (V->hasLocalLinkage())
-      V->setName("__amdgpu_named_barrier." + V->getName() + ModuleId);
+      V->setName("__amdgpu_named_barrier." + V->getName() + "." + ModuleId);
     else if (!V->getName().starts_with("__amdgpu_named_barrier"))
       V->setName("__amdgpu_named_barrier." + V->getName());
     V->setInitializer(nullptr);

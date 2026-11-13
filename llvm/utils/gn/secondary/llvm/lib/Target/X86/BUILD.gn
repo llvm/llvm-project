@@ -149,6 +149,7 @@ static_library("LLVMX86CodeGen") {
     "X86FastISel.cpp",
     "X86FastPreTileConfig.cpp",
     "X86FastTileConfig.cpp",
+    "X86FenceNonTemporalStores.cpp",
     "X86FixupBWInsts.cpp",
     "X86FixupInstTuning.cpp",
     "X86FixupLEAs.cpp",

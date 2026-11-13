@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=prolog-epilog -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -7,7 +7,6 @@
 ...
 ---
 name:            ScavengeForFrameWithoutOffset
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, offset: 0, size: 32, alignment: 8 }
 body:             |

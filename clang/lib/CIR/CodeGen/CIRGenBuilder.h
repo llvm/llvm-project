@@ -203,9 +203,12 @@ public:
         getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
-  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
-                               mlir::Value src, mlir::Value len) {
-    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  cir::MemMoveOp createMemMove(mlir::Location loc, Address dst, Address src,
+                               mlir::Value len) {
+    return cir::MemMoveOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
@@ -465,9 +468,8 @@ public:
 
   mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
                                   bool vtableUseRelativeLayout) {
-    // TODO(cir): consider address space here.
-    assert(!cir::MissingFeatures::addressSpace());
-    cir::PointerType destTy = getVoidPtrTy();
+    auto srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
+    cir::PointerType destTy = getVoidPtrTy(srcPtrTy.getAddrSpace());
     return cir::DynamicCastOp::create(
         *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
         cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
@@ -482,7 +484,7 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    auto ptrTy = getPointerTo(destType);
+    auto ptrTy = getPointerTo(destType, addr.getAddressSpace());
     auto baseAddr =
         cir::BaseClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
                                      mlir::APInt(64, offset), assumeNotNull);
@@ -495,7 +497,7 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    cir::PointerType ptrTy = getPointerTo(destType);
+    cir::PointerType ptrTy = getPointerTo(destType, addr.getAddressSpace());
     auto derivedAddr =
         cir::DerivedClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
                                         mlir::APInt(64, offset), assumeNotNull);
@@ -618,7 +620,8 @@ public:
 
   using CIRBaseBuilderTy::createGetMember;
   Address createGetMember(mlir::Location loc, Address base,
-                          llvm::StringRef name, unsigned index) {
+                          llvm::StringRef name, unsigned index,
+                          const cir::CIRDataLayout &layout) {
     auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
 
     assert(index < recordTy.getMembers().size() &&
@@ -626,11 +629,8 @@ public:
     mlir::Type memberTy = recordTy.getMembers()[index];
     mlir::Type memberPtrTy = getPointerTo(memberTy, base.getAddressSpace());
 
-    auto moduleOp =
-        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
-    mlir::DataLayout layout(moduleOp);
-    auto memberOffset =
-        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+    auto memberOffset = CharUnits::fromQuantity(
+        recordTy.getElementOffset(layout.layout, index));
 
     mlir::Value memberPtr =
         createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);
@@ -643,22 +643,27 @@ public:
                                                   mlir::Value objectPtr,
                                                   mlir::Value memberPtr) {
     auto memberPtrTy = mlir::cast<cir::DataMemberType>(memberPtr.getType());
+    auto objectPtrTy = mlir::cast<cir::PointerType>(objectPtr.getType());
 
-    // TODO(cir): consider address space.
-    assert(!cir::MissingFeatures::addressSpace());
-    cir::PointerType resultTy = getPointerTo(memberPtrTy.getMemberTy());
+    // The member lives in the same address space as the object.
+    cir::PointerType resultTy =
+        getPointerTo(memberPtrTy.getMemberTy(), objectPtrTy.getAddrSpace());
 
     return cir::GetRuntimeMemberOp::create(*this, loc, resultTy, objectPtr,
                                            memberPtr);
   }
 
-  /// Create a cir.ptr_stride operation to get access to an array element.
-  /// \p idx is the index of the element to access, \p shouldDecay is true if
-  /// the result should decay to a pointer to the element type.
-  mlir::Value getArrayElement(mlir::Location arrayLocBegin,
-                              mlir::Location arrayLocEnd, mlir::Value arrayPtr,
-                              mlir::Type eltTy, mlir::Value idx,
-                              bool shouldDecay);
+  /// Create a cir.get_element or cir.ptr_stride operation to get access to an
+  /// array element.  \p idx is the index of the element to access,
+  /// \p shouldDecay is true if the result should decay to a pointer to the
+  /// element type.  \p flags are set on the cir.get_element emitted when
+  /// \p shouldDecay is true and \p arrayPtr points to the array type
+  /// \p eltTy, and are dropped when a cir.ptr_stride is emitted.
+  mlir::Value
+  getArrayElement(mlir::Location arrayLocBegin, mlir::Location arrayLocEnd,
+                  mlir::Value arrayPtr, mlir::Type eltTy, mlir::Value idx,
+                  bool shouldDecay,
+                  cir::PtrOffsetFlags flags = cir::PtrOffsetFlags::None);
 
   /// Returns a decayed pointer to the first element of the array
   /// pointed to by \p arrayPtr.
@@ -676,7 +681,7 @@ public:
   // caller must describe the address with a byte offset, using a
   // GlobalOffsetAttr, instead.
   [[nodiscard]] bool computeGlobalViewIndicesFromFlatOffset(
-      int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+      int64_t offset, mlir::Type ty, const cir::CIRDataLayout &layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 
   // Convert high-level indices (e.g. from GlobalViewAttr) to byte offset.
@@ -802,7 +807,7 @@ public:
                    llvm::ArrayRef<mlir::Attribute> maskAttrs) {
     auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
     auto resultTy =
-        cir::VectorType::get(vecType.getElementType(), maskAttrs.size());
+        cir::VectorType::getFixed(vecType.getElementType(), maskAttrs.size());
     return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
                                      getArrayAttr(maskAttrs));
   }
@@ -826,6 +831,26 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixExtractOp createMatrixExtract(mlir::Location loc,
+                                           mlir::Value matrix,
+                                           mlir::Value rowIdx,
+                                           mlir::Value columnIdx) {
+    return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
+  cir::MatrixExtractRowOp createMatrixExtractRow(mlir::Location loc,
+                                                 mlir::Value matrix,
+                                                 mlir::Value rowIdx) {
+    return cir::MatrixExtractRowOp::create(*this, loc, matrix, rowIdx);
+  }
+
+  cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,
+                                         mlir::Value matrix, mlir::Value rowIdx,
+                                         mlir::Value columnIdx) {
+    return cir::MatrixInsertOp::create(*this, loc, value, matrix, rowIdx,
+                                       columnIdx);
+  }
+
   cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
                                                            mlir::Type resultTy,
                                                            mlir::Value value,
@@ -835,11 +860,22 @@ public:
                                                 stride, isVolatile);
   }
 
+  /// Multiply an MxK matrix by a KxN matrix, producing an MxN matrix.
+  cir::MatrixMultiplyOp createMatrixMultiply(mlir::Location loc,
+                                             mlir::Value lhs, mlir::Value rhs) {
+    auto lhsTy = mlir::cast<cir::MatrixType>(lhs.getType());
+    auto rhsTy = mlir::cast<cir::MatrixType>(rhs.getType());
+    auto resultTy = cir::MatrixType::get(
+        lhsTy.getElementType(), lhsTy.getNumRows(), rhsTy.getNumColumns());
+    return cir::MatrixMultiplyOp::create(*this, loc, resultTy, lhs, rhs);
+  }
+
   cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
                                                mlir::Value matrix) {
     auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
-    auto resultTy = cir::MatrixType::get(
-        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    auto resultTy =
+        cir::MatrixType::get(inputTy.getElementType(), inputTy.getNumColumns(),
+                             inputTy.getNumRows());
     return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
   }
 
@@ -850,6 +886,20 @@ public:
                                                              bool isVolatile) {
     return cir::MatrixColumnMajorStoreOp::create(*this, loc, matrix, data,
                                                  stride, isVolatile);
+  }
+
+  std::pair<mlir::Value, mlir::Value>
+  splatMatrixOpOperandsIfNecessary(mlir::Location loc, mlir::Value lhs,
+                                   mlir::Value rhs) {
+    assert(mlir::isa<cir::MatrixType>(lhs.getType()) ||
+           mlir::isa<cir::MatrixType>(rhs.getType()));
+
+    if (!mlir::isa<cir::MatrixType>(lhs.getType()))
+      lhs = cir::VecSplatOp::create(*this, loc, rhs.getType(), lhs);
+    else if (!mlir::isa<cir::MatrixType>(rhs.getType()))
+      rhs = cir::VecSplatOp::create(*this, loc, lhs.getType(), rhs);
+
+    return {lhs, rhs};
   }
 
   template <typename... Operands>
@@ -870,6 +920,14 @@ public:
                *this, loc, this->getStringAttr(str), resTy,
                std::forward<Operands>(op)..., fastmath)
         .getResult();
+  }
+
+  /// Converts \p src to \p dstTy, saturating at its bounds. The signedness of
+  /// \p dstTy selects between fptosi.sat and fptoui.sat.
+  mlir::Value createFPToIntSat(mlir::Location loc, mlir::Value src,
+                               cir::IntType dstTy) {
+    return emitIntrinsicCallOp(
+        loc, dstTy.isSigned() ? "fptosi.sat" : "fptoui.sat", dstTy, src);
   }
 };
 

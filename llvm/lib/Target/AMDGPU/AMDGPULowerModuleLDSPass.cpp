@@ -197,7 +197,6 @@
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Support/raw_ostream.h"
@@ -212,25 +211,6 @@ using namespace llvm;
 using namespace AMDGPU;
 
 namespace {
-
-cl::opt<bool> SuperAlignLDSGlobals(
-    "amdgpu-super-align-lds-globals",
-    cl::desc("Increase alignment of LDS if it is not on align boundary"),
-    cl::init(true), cl::Hidden);
-
-enum class LoweringKind { module, table, kernel, hybrid };
-cl::opt<LoweringKind> LoweringKindLoc(
-    "amdgpu-lower-module-lds-strategy",
-    cl::desc("Specify lowering strategy for function LDS access:"), cl::Hidden,
-    cl::init(LoweringKind::hybrid),
-    cl::values(
-        clEnumValN(LoweringKind::table, "table", "Lower via table lookup"),
-        clEnumValN(LoweringKind::module, "module", "Lower via module struct"),
-        clEnumValN(
-            LoweringKind::kernel, "kernel",
-            "Lower variables reachable from one kernel, otherwise abort"),
-        clEnumValN(LoweringKind::hybrid, "hybrid",
-                   "Lower via mixture of above strategies")));
 
 template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
   llvm::sort(V, [](const auto *L, const auto *R) {
@@ -402,7 +382,8 @@ public:
       GlobalVariable *LookupTable) {
 
     LLVMContext &Ctx = M.getContext();
-    IRBuilder<> Builder(Ctx);
+    IRBuilder<> Builder(M);
+    Builder.disableGEPCanonicalization();
     Type *I32 = Type::getInt32Ty(Ctx);
 
     for (size_t Index = 0; Index < ModuleScopeVariables.size(); Index++) {
@@ -517,7 +498,7 @@ public:
     // block to spare deduplicating it later.
     auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
     if (Inserted) {
-      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrAlloca();
       IRBuilder<> Builder(&*InsertAt);
 
       It->second = Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {});
@@ -556,7 +537,7 @@ public:
 
       // Annotate the kernels with their order in this vector
       LLVMContext &Ctx = M->getContext();
-      IRBuilder<> Builder(Ctx);
+      IRBuilder<> Builder(*M);
 
       if (OrderedKernels.size() > UINT32_MAX) {
         // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
@@ -574,16 +555,17 @@ public:
     return OrderedKernels;
   }
 
-  static void partitionVariablesIntoIndirectStrategies(
+  void partitionVariablesIntoIndirectStrategies(
       Module &M, GVUsesInfoTy const &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly,
       DenseSet<GlobalVariable *> &ModuleScopeVariables,
       DenseSet<GlobalVariable *> &TableLookupVariables,
       DenseSet<GlobalVariable *> &KernelAccessVariables,
       DenseSet<GlobalVariable *> &DynamicVariables) {
+    LDSLoweringKind LoweringKind = TM.getCLOpts().lower_module_lds_strategy;
 
     GlobalVariable *HybridModuleRoot =
-        LoweringKindLoc != LoweringKind::hybrid
+        LoweringKind != LDSLoweringKind::hybrid
             ? nullptr
             : chooseBestVariableForModuleStrategy(
                   M.getDataLayout(), LDSToKernelsThatNeedToAccessItIndirectly);
@@ -607,16 +589,16 @@ public:
         continue;
       }
 
-      switch (LoweringKindLoc) {
-      case LoweringKind::module:
+      switch (LoweringKind) {
+      case LDSLoweringKind::module:
         ModuleScopeVariables.insert(GV);
         break;
 
-      case LoweringKind::table:
+      case LDSLoweringKind::table:
         TableLookupVariables.insert(GV);
         break;
 
-      case LoweringKind::kernel:
+      case LDSLoweringKind::kernel:
         if (K.second.size() == 1) {
           KernelAccessVariables.insert(GV);
         } else {
@@ -627,7 +609,7 @@ public:
         }
         break;
 
-      case LoweringKind::hybrid: {
+      case LDSLoweringKind::hybrid: {
         if (GV == HybridModuleRoot) {
           assert(K.second.size() != 1);
           ModuleScopeVariables.insert(GV);
@@ -855,7 +837,7 @@ public:
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS;
     if (!KernelsThatIndirectlyAllocateDynamicLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
+      IRBuilder<> Builder(M);
       Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
 
       std::vector<Constant *> newDynamicLDS;
@@ -969,7 +951,7 @@ public:
 
       std::string StructName =
           F->hasLocalLinkage()
-              ? ("__amdgpu_lds." + F->getName() + ModuleId).str()
+              ? ("__amdgpu_lds." + F->getName() + "." + ModuleId).str()
               : ("__amdgpu_lds." + F->getName()).str();
       LDSVariableReplacement Replacement =
           createLDSVariableReplacement(M, StructName, FuncScopeVars);
@@ -993,7 +975,7 @@ public:
     // different TUs). Pack them into a single per-module struct with a
     // module-unique name so the linker treats them as one allocation unit.
     if (!InternalMultiUserVars.empty()) {
-      std::string StructName = "__amdgpu_lds.__internal" + ModuleId;
+      std::string StructName = "__amdgpu_lds.__internal." + ModuleId;
       LDSVariableReplacement Replacement =
           createLDSVariableReplacement(M, StructName, InternalMultiUserVars);
 
@@ -1138,9 +1120,6 @@ public:
                                       KernelsThatIndirectlyAllocateDynamicLDS);
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-      LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
-
       // The order must be consistent between lookup table and accesses to
       // lookup table
       auto TableLookupVariablesOrdered =
@@ -1261,10 +1240,10 @@ private:
 
   // Increase the alignment of LDS globals if necessary to maximise the chance
   // that we can use aligned LDS instructions to access them.
-  static bool superAlignLDSGlobals(Module &M) {
+  bool superAlignLDSGlobals(Module &M) {
     const DataLayout &DL = M.getDataLayout();
     bool Changed = false;
-    if (!SuperAlignLDSGlobals) {
+    if (!TM.getCLOpts().super_align_lds_globals) {
       return Changed;
     }
 
@@ -1467,8 +1446,6 @@ private:
     if (!MaxDepth || (A == 1 && !AliasScope))
       return;
 
-    ScopedNoAliasAAResult ScopedNoAlias;
-
     for (User *U : Ptr->users()) {
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
@@ -1498,8 +1475,8 @@ private:
           // these aliases set to preserve existing aliasing information.
 
           SmallPtrSet<const MDNode *, 16> ExistingDomains, LDSDomains;
-          ScopedNoAlias.collectScopedDomains(NA, ExistingDomains);
-          ScopedNoAlias.collectScopedDomains(NoAlias, LDSDomains);
+          ScopedNoAliasAAResult::collectScopedDomains(NA, ExistingDomains);
+          ScopedNoAliasAAResult::collectScopedDomains(NoAlias, LDSDomains);
           auto Intersection = set_intersection(ExistingDomains, LDSDomains);
           if (Intersection.empty()) {
             NA = NA ? MDNode::concatenate(NA, NoAlias) : NoAlias;

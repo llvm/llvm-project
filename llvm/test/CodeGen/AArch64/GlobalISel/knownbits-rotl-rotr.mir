@@ -3,6 +3,7 @@
 
 ---
 name:            Cst
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Cst
@@ -15,6 +16,7 @@ body:             |
 ...
 ---
 name:            CstBig
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstBig
@@ -27,6 +29,7 @@ body:             |
 ...
 ---
 name:            CstSext
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstSext
@@ -43,6 +46,7 @@ body:             |
 ...
 ---
 name:            CstSextBig
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstSextBig
@@ -59,6 +63,7 @@ body:             |
 ...
 ---
 name:            ScalarVar
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarVar
@@ -71,6 +76,7 @@ body:             |
 ...
 ---
 name:            ScalarCst
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ScalarCst
@@ -83,6 +89,7 @@ body:             |
 ...
 ---
 name:            VectorVar
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorVar
@@ -95,6 +102,7 @@ body:             |
 ...
 ---
 name:            VectorSimple
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorSimple
@@ -111,6 +119,7 @@ body:             |
 ...
 ---
 name:            VectorCst
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst
@@ -125,6 +134,7 @@ body:             |
 ...
 ---
 name:            VectorCst36
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst36
@@ -142,6 +152,7 @@ body:             |
 
 ---
 name:            VectorCst3unknown
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst3unknown
@@ -158,6 +169,7 @@ body:             |
 ...
 ---
 name:            VectorSext
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorSext
@@ -178,6 +190,7 @@ body:             |
 ...
 ---
 name:            VectorSextBig
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorSextBig
@@ -198,6 +211,7 @@ body:             |
 ...
 ---
 name:            ROTRless
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ROTRless
@@ -212,6 +226,7 @@ body:             |
 ...
 ---
 name:            ROTReq
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ROTReq
@@ -226,6 +241,7 @@ body:             |
 ...
 ---
 name:            ROTRmore
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ROTRmore
@@ -240,6 +256,7 @@ body:             |
 ...
 ---
 name:            ROTLless
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ROTLless
@@ -254,6 +271,7 @@ body:             |
 ...
 ---
 name:            ROTLeq
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ROTLeq
@@ -268,6 +286,7 @@ body:             |
 ...
 ---
 name:            ROTLmore
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ROTLmore
@@ -282,6 +301,7 @@ body:             |
 ...
 ---
 name:            SignBitsThroughZext
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @SignBitsThroughZext
@@ -300,6 +320,7 @@ body:             |
 ...
 ---
 name:            ROTRCanonicalize
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @ROTRCanonicalize
@@ -312,6 +333,7 @@ body:             |
 ...
 ---
 name:            RotateAllOnesUnknownAmtROTR
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @RotateAllOnesUnknownAmtROTR
@@ -324,6 +346,7 @@ body:             |
 ...
 ---
 name:            RotateAllZerosUnknownAmtROTL
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @RotateAllZerosUnknownAmtROTL

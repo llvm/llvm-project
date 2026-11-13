@@ -59,7 +59,7 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   # the use of -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded.
   get_fq_target_name(freelist_heap_fuzz freelist_heap_fuzz_target_name)
   get_fq_target_name(freelist_heap_rotation_fuzz
-                     freelist_heap_rotation_fuzz_target_name)
+    freelist_heap_rotation_fuzz_target_name)
   set_target_properties(
     ${freelist_heap_fuzz_target_name}
     ${freelist_heap_rotation_fuzz_target_name}

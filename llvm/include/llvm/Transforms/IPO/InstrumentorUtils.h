@@ -38,10 +38,12 @@ struct InstrumentorIRBuilderTy {
   /// Construct an IR builder for the module \p M.
   InstrumentorIRBuilderTy(Module &M)
       : M(M), Ctx(M.getContext()),
-        IRB(Ctx, ConstantFolder(),
+        IRB(M, ConstantFolder(),
             // Save the inserted instructions in a structure.
             IRBuilderCallbackInserter(
-                [&](Instruction *I) { NewInsts[I] = Epoch; })) {}
+                [&](Instruction *I) { NewInsts[I] = Epoch; })) {
+    IRB.disableGEPCanonicalization();
+  }
 
   /// Destroy the IR builder and remove all erasable instructions cached during
   /// the process of instrumenting.

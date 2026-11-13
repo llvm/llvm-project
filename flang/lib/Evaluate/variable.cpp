@@ -22,12 +22,12 @@ namespace Fortran::evaluate {
 
 // Constructors, accessors, mutators
 
-Triplet::Triplet() : stride_{Expr<SubscriptInteger>{1}} {}
+Triplet::Triplet() : stride_{MakeSubscriptIntExpr(1)} {}
 
 Triplet::Triplet(std::optional<Expr<SubscriptInteger>> &&l,
     std::optional<Expr<SubscriptInteger>> &&u,
     std::optional<Expr<SubscriptInteger>> &&s)
-    : stride_{s ? std::move(*s) : Expr<SubscriptInteger>{1}} {
+    : stride_{s ? std::move(*s) : MakeSubscriptIntExpr(1)} {
   if (l) {
     lower_.emplace(std::move(*l));
   }
@@ -71,7 +71,7 @@ CoarrayRef::CoarrayRef(
     DataRef &&base, std::vector<Expr<SubscriptInteger>> &&css)
     : base_{std::move(base)}, cosubscript_(std::move(css)) {}
 
-std::optional<Expr<SomeInteger>> CoarrayRef::stat() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> CoarrayRef::stat() const {
   if (stat_) {
     return stat_.value().value();
   } else {
@@ -95,7 +95,7 @@ std::optional<Expr<SomeType>> CoarrayRef::notify() const {
   }
 }
 
-CoarrayRef &CoarrayRef::set_stat(Expr<SomeInteger> &&v) {
+CoarrayRef &CoarrayRef::set_stat(Expr<Type<TypeCategory::Integer>> &&v) {
   CHECK(IsVariable(v));
   stat_.emplace(std::move(v));
   return *this;
@@ -133,7 +133,7 @@ Expr<SubscriptInteger> Substring::lower() const {
   if (lower_) {
     return lower_.value().value();
   } else {
-    return AsExpr(Constant<SubscriptInteger>{1});
+    return MakeSubscriptIntExpr(1);
   }
 }
 
@@ -151,7 +151,7 @@ std::optional<Expr<SubscriptInteger>> Substring::upper() const {
             [](const DataRef &dataRef) { return dataRef.LEN(); },
             [](const StaticDataObject::Pointer &object)
                 -> std::optional<Expr<SubscriptInteger>> {
-              return AsExpr(Constant<SubscriptInteger>{object->data().size()});
+              return MakeSubscriptIntExpr(object->data().size());
             },
         },
         parent_);
@@ -163,7 +163,8 @@ Substring &Substring::set_upper(Expr<SubscriptInteger> &&expr) {
   return *this;
 }
 
-std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
+std::optional<Expr<Type<TypeCategory::Character>>> Substring::Fold(
+    FoldingContext &context) {
   if (!upper_) {
     upper_ = upper();
     if (!upper_) {
@@ -176,7 +177,7 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
     return std::nullopt;
   }
   if (!lower_) {
-    lower_ = AsExpr(Constant<SubscriptInteger>{1});
+    lower_ = MakeSubscriptIntExpr(1);
   }
   lower_.value() = evaluate::Fold(context, std::move(lower_.value().value()));
   std::optional<ConstantSubscript> lbi{ToInt64(lower_.value().value())};
@@ -186,40 +187,36 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
   if (*lbi > *ubi) { // empty result; canonicalize
     *lbi = 1;
     *ubi = 0;
-    lower_ = AsExpr(Constant<SubscriptInteger>{*lbi});
-    upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
+    lower_ = MakeSubscriptIntExpr(*lbi);
+    upper_ = MakeSubscriptIntExpr(*ubi);
   }
   std::optional<ConstantSubscript> length;
-  std::optional<Expr<SomeCharacter>> strings; // a Constant<Character>
+  std::optional<Expr<Type<TypeCategory::Character>>>
+      strings; // a Constant<Character>
   if (const auto *literal{std::get_if<StaticDataObject::Pointer>(&parent_)}) {
     length = (*literal)->data().size();
     if (auto str{(*literal)->AsString()}) {
-      strings =
-          Expr<SomeCharacter>(Expr<Ascii>(Constant<Ascii>{std::move(*str)}));
+      strings = Expr<Type<TypeCategory::Character>>(MakeAsciiExpr(*str));
     }
   } else if (const auto *dataRef{std::get_if<DataRef>(&parent_)}) {
     if (auto expr{AsGenericExpr(DataRef{*dataRef})}) {
       auto folded{evaluate::Fold(context, std::move(*expr))};
       if (IsActuallyConstant(folded)) {
-        if (const auto *value{UnwrapExpr<Expr<SomeCharacter>>(folded)}) {
+        if (const auto *value{
+                UnwrapExpr<Expr<Type<TypeCategory::Character>>>(folded)}) {
           strings = *value;
         }
       }
     }
   }
-  std::optional<Expr<SomeCharacter>> result;
+  std::optional<Expr<Type<TypeCategory::Character>>> result;
   if (strings) {
-    result = common::visit(
-        [&](const auto &expr) -> std::optional<Expr<SomeCharacter>> {
-          using Type = typename std::decay_t<decltype(expr)>::Result;
-          if (const auto *cc{std::get_if<Constant<Type>>(&expr.u)}) {
-            if (auto substr{cc->Substring(*lbi, *ubi)}) {
-              return Expr<SomeCharacter>{Expr<Type>{*substr}};
-            }
-          }
-          return std::nullopt;
-        },
-        strings->u);
+    if (const auto *cc{std::get_if<Constant<Type<TypeCategory::Character>>>(
+            &strings->u)}) {
+      if (auto substr{cc->Substring(*lbi, *ubi)}) {
+        result = Expr<Type<TypeCategory::Character>>{*substr};
+      }
+    }
   }
   if (!result) { // error cases
     if (*lbi < 1) {
@@ -227,7 +224,7 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
           "Lower bound (%jd) on substring is less than one"_warn_en_US,
           static_cast<std::intmax_t>(*lbi));
       *lbi = 1;
-      lower_ = AsExpr(Constant<SubscriptInteger>{1});
+      lower_ = MakeSubscriptIntExpr(1);
     }
     if (length && *ubi > *length) {
       context.Warn(common::UsageWarning::Bounds,
@@ -235,7 +232,7 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
           static_cast<std::intmax_t>(*ubi),
           static_cast<std::intmax_t>(*length));
       *ubi = *length;
-      upper_ = AsExpr(Constant<SubscriptInteger>{*ubi});
+      upper_ = MakeSubscriptIntExpr(*ubi);
     }
   }
   return result;
@@ -263,7 +260,8 @@ DescriptorInquiry::DescriptorInquiry(NamedEntity &&base, Field field, int dim)
 static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
   if (const auto *assoc{ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(assoc->expr())}) {
+    if (const auto *chExpr{
+            UnwrapExpr<Expr<Type<TypeCategory::Character>>>(assoc->expr())}) {
       return chExpr->LEN();
     }
   }
@@ -283,11 +281,11 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
     }
     if (len) {
       if (auto constLen{ToInt64(*len)}) {
-        return Expr<SubscriptInteger>{std::max<std::int64_t>(*constLen, 0)};
+        return MakeSubscriptIntExpr(std::max<std::int64_t>(*constLen, 0));
       } else if (ultimate.owner().IsDerivedType() ||
           IsScopeInvariantExpr(*len)) {
         return AsExpr(Extremum<SubscriptInteger>{
-            Ordering::Greater, Expr<SubscriptInteger>{0}, std::move(*len)});
+            Ordering::Greater, MakeSubscriptIntExpr(0), std::move(*len)});
       }
     }
   }
@@ -304,7 +302,7 @@ std::optional<Expr<SubscriptInteger>> BaseObject::LEN() const {
           [](const Symbol &symbol) { return SymbolLEN(symbol); },
           [](const StaticDataObject::Pointer &object)
               -> std::optional<Expr<SubscriptInteger>> {
-            return AsExpr(Constant<SubscriptInteger>{object->data().size()});
+            return MakeSubscriptIntExpr(object->data().size());
           },
       },
       u);
@@ -336,9 +334,9 @@ std::optional<Expr<SubscriptInteger>> DataRef::LEN() const {
 
 std::optional<Expr<SubscriptInteger>> Substring::LEN() const {
   if (auto top{upper()}) {
-    return AsExpr(Extremum<SubscriptInteger>{Ordering::Greater,
-        AsExpr(Constant<SubscriptInteger>{0}),
-        *std::move(top) - lower() + AsExpr(Constant<SubscriptInteger>{1})});
+    return AsExpr(
+        Extremum<SubscriptInteger>{Ordering::Greater, MakeSubscriptIntExpr(0),
+            *std::move(top) - lower() + MakeSubscriptIntExpr(1)});
   } else {
     return std::nullopt;
   }
@@ -648,16 +646,16 @@ template <typename T> const Symbol *Designator<T>::GetLastSymbol() const {
 template <typename T>
 std::optional<DynamicType> Designator<T>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
-    return Result::GetType();
+    return DynamicType{Result::category, kind()};
   }
   if constexpr (Result::category == TypeCategory::Character) {
     if (std::holds_alternative<Substring>(u)) {
       if (auto len{LEN()}) {
         if (auto n{ToInt64(*len)}) {
-          return DynamicType{T::kind, *n};
+          return DynamicType{kind(), *n};
         }
       }
-      return DynamicType{TypeCategory::Character, T::kind};
+      return DynamicType{TypeCategory::Character, kind()};
     }
   }
   if (const Symbol * symbol{GetLastSymbol()}) {
@@ -756,7 +754,7 @@ bool ProcedureRef::operator==(const ProcedureRef &that) const {
 }
 template <typename T>
 bool Designator<T>::operator==(const Designator<T> &that) const {
-  return TestVariableEquality(*this, that);
+  return kind() == that.kind() && TestVariableEquality(*this, that);
 }
 bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
   return field_ == that.field_ && base_ == that.base_ &&

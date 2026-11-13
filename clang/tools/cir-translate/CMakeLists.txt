@@ -1,23 +1,19 @@
 include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
-include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
+include_directories(${LLVM_BINARY_DIR}/tools/mlir/include)
 
 add_clang_tool(cir-translate
   cir-translate.cpp
 )
 
-clang_target_link_libraries(cir-translate
-  PRIVATE
-  clangCIR
-  clangCIRLoweringDirectToLLVM
-  CIRRegisterAllDialects
-  MLIRCIR
-  MLIRCIRTransforms
-)
-
 target_link_libraries(cir-translate
   PRIVATE
+  CIRRegisterAllDialects
+  clangCIR
+  clangCIRLoweringDirectToLLVM
   MLIRAnalysis
   MLIRBuiltinToLLVMIRTranslation
+  MLIRCIR
+  MLIRCIRTransforms
   MLIRDialect
   MLIRDLTIDialect
   MLIRFuncDialect
@@ -25,12 +21,12 @@ target_link_libraries(cir-translate
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
-  MLIRTargetLLVMIRExport
   MLIROptLib
   MLIRParser
   MLIRPass
+  MLIRSupport
+  MLIRTargetLLVMIRExport
   MLIRTransforms
   MLIRTransformUtils
   MLIRTranslateLib
-  MLIRSupport
 )

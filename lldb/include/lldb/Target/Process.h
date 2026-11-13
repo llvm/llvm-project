@@ -53,6 +53,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Policy.h"
 #include "lldb/Utility/ProcessAddress.h"
@@ -374,6 +375,7 @@ class Process : public std::enable_shared_from_this<Process>,
   friend class Target;
   friend class ThreadList;
   friend class MemoryCache;
+  friend class ThreadPlanSingleThreadTimeout;
 
 public:
   /// Broadcaster event bits definitions.
@@ -1612,13 +1614,15 @@ public:
   /// This function will read memory from the current process's address space
   /// and remove any traps that may have been inserted into the memory.
   ///
-  /// This function is not meant to be overridden by Process subclasses, the
-  /// subclasses should implement Process::DoReadMemory(const ProcessAddress &,
-  /// void *, size_t, Status &).
+  /// Process subclasses implement Process::DoReadMemory(const ProcessAddress &,
+  /// void *, size_t, Status &) instead of this function, and override
+  /// Process::ShouldUseMemoryCache to keep their reads out of the memory cache.
   ///
-  /// \param[in] vm_addr
+  /// \param[in] process_addr
   ///     A virtual load address that indicates where to start reading
-  ///     memory from.
+  ///     memory from. It does not need to be fixed: this function removes any
+  ///     non-address bits (see Process::FixAnyAddress) before the address
+  ///     reaches Process::DoReadMemory.
   ///
   /// \param[out] buf
   ///     A byte buffer that is at least \a size bytes long that
@@ -1631,16 +1635,16 @@ public:
   ///     An error that indicates the success or failure of this
   ///     operation. If error indicates success (error.Success()),
   ///     then the value returned can be trusted, otherwise zero
-  ///     will be returned.
+  ///     will be returned. Any previous contents of \a error are cleared.
   ///
   /// \return
   ///     The number of bytes that were actually read into \a buf. If
   ///     the returned number is greater than zero, yet less than \a
   ///     size, then this function will get called again with \a
-  ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
+  ///     process_addr, \a buf, and \a size updated appropriately. Zero is
   ///     returned in the case of an error.
-  virtual size_t ReadMemory(const ProcessAddress &process_addr, void *buf,
-                            size_t size, Status &error);
+  size_t ReadMemory(const ProcessAddress &process_addr, void *buf, size_t size,
+                    Status &error);
 
   /// Read from multiple memory ranges and write the results into buffer.
   ///
@@ -2668,10 +2672,27 @@ void PruneThreadPlans();
   ///     assumed to be valid and will be managed by the newly created
   ///     connection.
   ///
+  /// \param[in] secondary_fd A descriptor for the secondary side of that same
+  ///     terminal as file_descriptor. This is used to keep the terminal (and
+  ///     its output buffer alive). The process takes ownership of it and keeps
+  ///     it open until it stops monitoring fd.
+  ///
+  ///     Pass std::nullopt if fd is not a pseudo terminal or no such
+  ///     descriptor is available.
+  ///
   /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
   /// \see lldb_private::IOHandlerProcessSTDIO
   /// \see lldb_private::ConnectionFileDescriptor
-  void SetSTDIOFileDescriptor(int file_descriptor);
+  void SetSTDIOFileDescriptor(int file_descriptor,
+                              std::optional<int> secondary_fd = std::nullopt);
+
+#if !defined(_WIN32)
+  /// Associates the primary side of \a pty with the process' STDIO handling.
+  /// The process takes ownership of both of \a pty's descriptors.
+  ///
+  /// \see SetSTDIOFileDescriptor()
+  void SetSTDIOPseudoTerminal(PseudoTerminal &pty);
+#endif
 
   // Add a permanent region of memory that should never be read or written to.
   // This can be used to ensure that memory reads or writes to certain areas of
@@ -2999,15 +3020,25 @@ protected:
   virtual bool DoUpdateThreadList(ThreadList &old_thread_list,
                                   ThreadList &new_thread_list) = 0;
 
+  /// Whether ReadMemory should serve reads of \a process_addr out of the
+  /// memory cache.
+  virtual bool ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+    return true;
+  }
+
   /// Actually do the reading of memory from a process.
   ///
   /// Subclasses must override this function and can return fewer bytes than
   /// requested when memory requests are too large. This class will break up
   /// the memory requests and keep advancing the arguments along as needed.
   ///
-  /// \param[in] vm_addr
-  ///     A virtual load address that indicates where to start reading
-  ///     memory from.
+  /// \param[in] process_addr
+  ///     A fixed virtual load address that indicates where to start reading
+  ///     memory from. Unlike the address passed to ReadMemory, which may
+  ///     carry non-address bits, ReadMemory has already removed them (see
+  ///     Process::FixAnyAddress) before calling this function. The exception
+  ///     is an address in a non-default address space, which is passed
+  ///     through unchanged.
   ///
   /// \param[in] size
   ///     The number of bytes to read.
@@ -3020,7 +3051,8 @@ protected:
   ///     An error that indicates the success or failure of this
   ///     operation. If error indicates success (error.Success()),
   ///     then the value returned can be trusted, otherwise zero
-  ///     will be returned.
+  ///     will be returned. ReadMemory clears \a error before calling this
+  ///     function.
   ///
   /// \return
   ///     The number of bytes that were actually read into \a buf.
@@ -3525,6 +3557,9 @@ protected:
   mutable std::mutex m_process_input_reader_mutex;
   ThreadedCommunication m_stdio_communication;
   std::recursive_mutex m_stdio_communication_mutex;
+  /// The secondary side of the pseudo terminal the inferior uses for stdio.
+  /// std::nullopt if no pseudo terminal is open.
+  Guarded<std::optional<int>, std::mutex> m_stdio_secondary_fd;
   bool m_stdin_forward; /// Remember if stdin must be forwarded to remote debug
                         /// server
   std::string m_stdout_data;
@@ -3687,6 +3722,15 @@ protected:
 
   static void STDIOReadThreadBytesReceived(void *baton, const void *src,
                                            size_t src_len);
+
+  /// Stop monitoring the process' stdio.
+  ///
+  /// \param drain
+  ///     Whether to read any remaining stdio buffers before.
+  void StopSTDIOMonitoring(bool drain);
+
+  /// Close m_stdio_secondary_fd if it is still open.
+  void CloseSTDIOSecondaryFileDescriptor();
 
   bool PushProcessIOHandler();
 

@@ -35,14 +35,7 @@ define amdgpu_ps bfloat @fcanonicalize_bf16_v(bfloat %src) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX1250-NEXT:    v_bfe_u32 v1, v0, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v2, 0x400000, v0
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-NEXT:    v_add3_u32 v1, v1, v0, 0x7fff
-; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc_lo
-; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call bfloat @llvm.canonicalize.bf16(bfloat %src)
   ret bfloat %result
@@ -91,16 +84,8 @@ define amdgpu_ps bfloat @fcanonicalize_bf16_s(bfloat inreg %src) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX1250-NEXT:    v_max_num_f32_e64 v0, s0, s0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, s0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_bfe_u32 s1, s0, 0x10010
-; GFX1250-NEXT:    s_or_b32 s2, s0, 0x400000
-; GFX1250-NEXT:    s_add_co_i32 s1, s1, s0
-; GFX1250-NEXT:    s_addk_co_i32 s1, 0x7fff
-; GFX1250-NEXT:    s_cmp_u_f32 s0, 0
-; GFX1250-NEXT:    s_cselect_b32 s0, s2, s1
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call bfloat @llvm.canonicalize.bf16(bfloat %src)
@@ -232,9 +217,6 @@ define amdgpu_ps <2 x bfloat> @fcanonicalize_v2bf16_s(<2 x bfloat> inreg %src) {
   %result = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %src)
   ret <2 x bfloat> %result
 }
-
-declare bfloat @llvm.canonicalize.bf16(bfloat)
-declare <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat>)
 
 define amdgpu_ps <3 x bfloat> @fcanonicalize_v3bf16_vv(<3 x bfloat> %a) {
 ; GFX9-LABEL: fcanonicalize_v3bf16_vv:

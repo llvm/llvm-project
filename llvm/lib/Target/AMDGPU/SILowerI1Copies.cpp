@@ -573,10 +573,8 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
     mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
     Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
-    if (NewReg != DstReg) {
-      replaceDstReg(NewReg, DstReg, &MBB);
-      MI->eraseFromParent();
-    }
+    replaceDstReg(NewReg, DstReg, &MBB);
+    MI->eraseFromParent();
 
     Incomings.clear();
   }
@@ -665,7 +663,7 @@ bool AMDGPU::PhiLoweringHelper::isConstantLaneMask(Register Reg,
                                                    bool &Val) const {
   const MachineInstr *MI;
   for (;;) {
-    MI = MRI->getUniqueVRegDef(Reg);
+    MI = MRI->getVRegDef(Reg);
     if (MI->getOpcode() == AMDGPU::IMPLICIT_DEF)
       return true;
 
@@ -763,7 +761,7 @@ void Vreg1LoweringHelper::collectIncomingValuesFromPhi(
     assert(i + 1 < MI->getNumOperands());
     Register IncomingReg = MI->getOperand(i).getReg();
     MachineBasicBlock *IncomingMBB = MI->getOperand(i + 1).getMBB();
-    MachineInstr *IncomingDef = MRI->getUniqueVRegDef(IncomingReg);
+    MachineInstr *IncomingDef = MRI->getVRegDef(IncomingReg);
 
     if (IncomingDef->getOpcode() == AMDGPU::COPY) {
       IncomingReg = IncomingDef->getOperand(1).getReg();

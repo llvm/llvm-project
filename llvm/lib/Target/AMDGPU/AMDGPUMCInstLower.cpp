@@ -30,6 +30,7 @@
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -375,15 +376,25 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     if (MI->getOpcode() == AMDGPU::ASYNCMARK) {
-      if (isVerbose())
-        OutStreamer->emitRawComment(" asyncmark");
+      if (isVerbose()) {
+        std::string Comment;
+        raw_string_ostream OS(Comment);
+        OS << " asyncmark(stages="
+           << AMDGPU::asyncStagesFromMaskOperand(MI->getOperand(0).getImm())
+           << ')';
+        OutStreamer->emitRawComment(Comment);
+      }
       return;
     }
 
     if (MI->getOpcode() == AMDGPU::WAIT_ASYNCMARK) {
       if (isVerbose()) {
-        OutStreamer->emitRawComment(" wait_asyncmark(" +
-                                    Twine(MI->getOperand(0).getImm()) + ")");
+        std::string Comment;
+        raw_string_ostream OS(Comment);
+        OS << " wait_asyncmark(" << MI->getOperand(0).getImm() << ", stages="
+           << AMDGPU::asyncStagesFromMaskOperand(MI->getOperand(1).getImm())
+           << ')';
+        OutStreamer->emitRawComment(Comment);
       }
       return;
     }
@@ -451,7 +462,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     if (isVerbose() && (MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
                         (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-                         STI.has1024AddressableVGPRs()))) {
+                         STI.hasVGPRMSBs()))) {
       std::optional<unsigned> V;
       if (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32)
         V = AMDGPU::convertSetRegImmToVgprMSBs(*MI,

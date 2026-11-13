@@ -78,6 +78,9 @@ public:
   /// \return true if and only if the queue is in order.
   bool isInOrder() const { return MIsInOrder; }
 
+  /// \return the property list this queue was constructed with.
+  const property_list &getPropList() const { return MPropList; }
+
   /// Waits for completion of all commands submitted to this queue.
   void wait();
 
@@ -167,7 +170,7 @@ public:
   /// \param NumBytes is a number of bytes to be prefetched.
   /// \param DepEvents is a vector of dependencies for the operation.
   /// \return an event impl object that represents the status of the operation.
-  EventImplPtr prefetch(void *Ptr, std::size_t NumBytes,
+  EventImplPtr prefetch(const void *Ptr, std::size_t NumBytes,
                         const std::vector<EventImplPtr> &DepEvents);
 
 private:

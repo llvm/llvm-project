@@ -173,6 +173,9 @@ class SPIRVLegalizePointerCastImpl {
     auto *DVT = dyn_cast<FixedVectorType>(ToTy);
     if (SVT && DVT)
       return true;
+    if (SVT && (ToTy->isIntegerTy() || ToTy->isFloatingPointTy()) &&
+        ToTy->getPrimitiveSizeInBits() == SVT->getPrimitiveSizeInBits())
+      return true;
     auto *SAT = dyn_cast<ArrayType>(FromTy);
     if (SAT && DVT) {
       if (SAT->getElementType() == DVT->getElementType())
@@ -236,12 +239,14 @@ class SPIRVLegalizePointerCastImpl {
       Value *Handle = ResourcePtr->getOperand(0);
       Value *BaseOffset = ResourcePtr->getOperand(1);
       Value *NewOffset;
-      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
+      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset)) {
         NewOffset =
             ConstantInt::get(CI->getType(), CI->getZExtValue() + ByteOffset);
-      else
+      } else {
         NewOffset = B.CreateAdd(
             BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
+        buildAssignType(B, NewOffset->getType(), NewOffset);
+      }
       SmallVector<OperandBundleDef> OpBundles;
       ResourcePtr->getOperandBundlesAsDefs(OpBundles);
       CallInst *ResourcePtrAtOffset = B.CreateCall(
@@ -445,6 +450,15 @@ class SPIRVLegalizePointerCastImpl {
       LI->setAlignment(IllegalLoad->getAlign());
       buildAssignType(B, ElementType, LI);
       return LI;
+    }
+    if (SVT && !DVT) {
+      LoadInst *LI = B.CreateLoad(CurrentTy, GEP);
+      LI->setAlignment(IllegalLoad->getAlign());
+      buildAssignType(B, CurrentTy, LI);
+      Value *Result = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                        {ElementType, CurrentTy}, {LI});
+      buildAssignType(B, ElementType, Result);
+      return Result;
     }
     if (SVT && DVT)
       return loadVectorFromVector(B, SVT, DVT, GEP, IllegalLoad->getAlign());
@@ -698,7 +712,6 @@ class SPIRVLegalizePointerCastImpl {
       Src =
           B.CreateIntrinsic(Intrinsic::spv_bitcast, {DstType, SrcType}, {Src});
       buildAssignType(B, DstType, Src);
-      SrcType = DstType;
 
       StoreInst *SI = B.CreateStore(Src, Dst);
       SI->setAlignment(Alignment);
@@ -748,6 +761,14 @@ class SPIRVLegalizePointerCastImpl {
       SI->setAlignment(Alignment);
       return;
     }
+    if (DVT && !SVT) {
+      Value *Result = B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                                        {CurrentTy, Src->getType()}, {Src});
+      buildAssignType(B, CurrentTy, Result);
+      StoreInst *SI = B.CreateStore(Result, GEP);
+      SI->setAlignment(Alignment);
+      return;
+    }
     if (DVT && SVT) {
       storeVectorFromVector(B, Src, GEP, Alignment);
       return;
@@ -777,7 +798,7 @@ class SPIRVLegalizePointerCastImpl {
     Value *CastedOperand = II;
     Value *OriginalOperand = II->getOperand(0);
 
-    IRBuilder<> B(II->getContext());
+    IRBuilder<> B(*II->getModule());
     std::vector<Value *> Users;
     for (Use &U : II->uses())
       Users.push_back(U.getUser());

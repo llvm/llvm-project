@@ -804,12 +804,10 @@ define i1 @or_cmp_ne(i32 %x) {
 define i1 @not_pow2(i8 %x) {
 ; CHECK-LABEL: not_pow2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andb $8, %al
 ; CHECK-NEXT:    testb $3, %dil
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    shrb $3, %al
-; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    shrb $3, %dil
+; CHECK-NEXT:    andb %dil, %al
 ; CHECK-NEXT:    retq
   %a1 = and i8 %x, 3
   %a2 = and i8 %x, 8
@@ -823,7 +821,7 @@ define i1 @diff_vars(i8 %x, i8 %y) {
 ; CHECK-LABEL: diff_vars:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    andb $8, %al
+; CHECK-NEXT:    andb $4, %dil
 ; CHECK-NEXT:    shrb $2, %dil
 ; CHECK-NEXT:    shrb $3, %al
 ; CHECK-NEXT:    andb %dil, %al
@@ -842,7 +840,6 @@ define i1 @nonzero_rhs(i8 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    andb $4, %al
-; CHECK-NEXT:    andb $8, %dil
 ; CHECK-NEXT:    cmpb $1, %al
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    shrb $3, %dil
@@ -859,12 +856,10 @@ define i1 @nonzero_rhs(i8 %x) {
 define i1 @mixed_cc(i8 %x) {
 ; CHECK-LABEL: mixed_cc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andb $8, %al
 ; CHECK-NEXT:    testb $4, %dil
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    shrb $3, %al
-; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    shrb $3, %dil
+; CHECK-NEXT:    andb %dil, %al
 ; CHECK-NEXT:    retq
   %a1 = and i8 %x, 4
   %a2 = and i8 %x, 8

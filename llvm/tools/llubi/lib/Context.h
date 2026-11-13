@@ -298,11 +298,6 @@ class Context {
 
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
-  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
-  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
-                               const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -387,6 +382,12 @@ public:
   /// calling resetNoncacheableConstantBuffer after all references are dropped.
   const MaterializedConstant *getConstantValue(Constant *C);
   void resetNoncacheableConstantBuffer();
+  /// Returns true if an object of \p Size bytes in address space \p AS is
+  /// larger than the largest signed integer that fits into the index type.
+  /// Creating such an object is undefined behavior.
+  bool exceedsMaxObjectSize(uint64_t Size, unsigned AS) const {
+    return !isUIntN(DL.getIndexSizeInBits(AS) - 1, Size);
+  }
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
@@ -415,11 +416,20 @@ public:
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
   /// flushed according to the options.
   /// If \p ContainsUndefinedBits is provided, it will be set to true when there
-  /// are poison or undef bits in the value (i.e., padding bits are ignored).
+  /// are poison or undef bits in the value or in the padding bits that poison
+  /// value bits.
   AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
                      bool *ContainsUndefinedBits = nullptr);
-  /// Convert a value to byte sequence. Padding bits are set to zero.
+  /// Convert a value to byte sequence. If every non-padding bit in the padding
+  /// byte is poison, the padding bits are poison; otherwise, they are zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
+  /// Read the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Src as a
+  /// value of type \p Ty. The bit range must be within \p Src.
+  AnyValue extractBits(const ByteValue &Src, uint32_t OffsetInBits, Type *Ty);
+  /// Overwrite the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Base
+  /// with \p Val. The bit range must be within \p Base.
+  void insertBits(ByteValue &Base, uint32_t OffsetInBits, const AnyValue &Val,
+                  Type *Ty);
   /// Direct memory load without checks.
   AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
                 bool *ContainsUndefinedBits = nullptr);
@@ -434,6 +444,11 @@ public:
 
   AnyValue computeGEP(GEPOperator &GEP,
                       function_ref<const AnyValue &(Value *V)> GetValue);
+  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
+  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
+                               const APInt &Scale, GEPNoWrapFlags Flags,
+                               AnyValue &AccumulatedOffset);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

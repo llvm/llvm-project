@@ -30,7 +30,11 @@ let Definition = "modulelist", Path = "symbols" in {
   def EnableLLDBIndexCache: Property<"enable-lldb-index-cache", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.">;
+    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.  Modules read out of memory are cached (enabled by default) via the symbols.enable-lldb-index-cache-memory-modules setting.">;
+  def EnableLLDBIndexCacheMemoryModules: Property<"enable-lldb-index-cache-memory-modules", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Enable symbol table caching for memory-read binaries. LLDB can cache the symbol table memory-read binaries, for improved performance in subsequent debug sessions.">;
   def LLDBIndexCachePath: Property<"lldb-index-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -51,6 +55,10 @@ let Definition = "modulelist", Path = "symbols" in {
     Global,
     DefaultFalse,
     Desc<"Enable on demand symbol loading in LLDB. LLDB will load debug info on demand for each module based on various conditions (e.g. matched breakpoint, resolved stack frame addresses and matched global variables/function symbols in symbol table) to improve performance. Please refer to docs/use/ondemand.rst for details.">;
+  def DemangledNameInfoCacheSize: Property<"demangled-name-info-cache-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<4096>,
+    Desc<"The maximum number of formatted function names to cache. A value of 0 disables the cache.">;
 }
 
 let Definition = "diagnostics", Path = "diagnostics" in {
@@ -58,6 +66,10 @@ let Definition = "diagnostics", Path = "diagnostics" in {
     Global,
     DefaultFalse,
     Desc<"When enabled, a diagnostics bundle also collects the main executable, its symbol file, and the core file (when debugging one) to help reproduce the bug. These files can be large and may contain sensitive data (a core file captures process memory), so this is off by default.">;
+  def SuggestBugReport: Property<"suggest-bugreport", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Follow errors that may be bugs in LLDB with a note suggesting the 'bugreport' command.">;
 }
 
 #ifndef NDEBUG

@@ -3,9 +3,9 @@
 ; REQUIRES: amdgpu-registered-target
 ; REQUIRES: x86-registered-target
 
-; RUN: llc -mtriple=aarch64-linux-gnu  -O0 -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=AARCH64
-; RUN: llc -mtriple=amdgpu6.00--mesa-mesa3d -O0 -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=AMDGPU
-; RUN: llc -mtriple=x86_64-linux-gnu   -O0 -stop-after=ir-translator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=X86
+; RUN: llc -mtriple=aarch64-linux-gnu  -O0 -stop-after=ir-translator -global-isel %s -o - 2>&1 | FileCheck %s --check-prefix=AARCH64
+; RUN: llc -mtriple=amdgpu6.00--mesa-mesa3d -O0 -stop-after=ir-translator -global-isel %s -o - 2>&1 | FileCheck %s --check-prefix=AMDGPU
+; RUN: llc -mtriple=x86_64-linux-gnu   -O0 -stop-after=ir-translator -global-isel %s -o - 2>&1 | FileCheck %s --check-prefix=X86
 
 ; IRTranslator handling of LLVM IR's byte type (bN), constants and loads /
 ; stores of byte values, and bitcasts to/from byte types. Byte values are
@@ -912,7 +912,8 @@ define half @bytecast_b16_to_half(b16 %b) {
   ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; AMDGPU-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
   ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
-  ; AMDGPU-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](f16)
+  ; AMDGPU-NEXT:   [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[BITCAST]](f16)
+  ; AMDGPU-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
   ; AMDGPU-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0
   ;

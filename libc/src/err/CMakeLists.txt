@@ -14,9 +14,7 @@ add_object_library(
   HDRS
     report.h
   DEPENDS
-    libc.hdr.errno_macros
     libc.src.__support.arg_list
-    libc.src.__support.libc_errno
     libc.src.__support.OSUtil.osutil
     libc.src.__support.StringUtil.error_to_string
     libc.src.__support.printf_core.printf_main

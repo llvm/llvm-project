@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -dwarf-version=5 \
-# RUN:   -filetype=obj -start-after=livedebugvalues -o - %s \
+# RUN:   -filetype=obj -start-after=live-debug-values -o - %s \
 # RUN:   | llvm-dwarfdump - | FileCheck %s
 
 # A displacement cannot be folded into an address pool entry, which is keyed on
@@ -94,7 +94,6 @@ body:             |
 ---
 name:            globaladdr_offset_loclist
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2

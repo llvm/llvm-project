@@ -6,12 +6,14 @@ static_library("X86") {
     "//bolt/lib/Utils",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
+    "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target/X86/MCTargetDesc",
   ]
   sources = [
     "X86MCPlusBuilder.cpp",
     "X86MCSymbolizer.cpp",
+    "X86RelocationHandler.cpp",
   ]
 
   # This target reaches into the internal headers of LLVM's X86 library.

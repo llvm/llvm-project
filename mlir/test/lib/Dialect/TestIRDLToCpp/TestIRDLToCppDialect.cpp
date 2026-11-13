@@ -36,7 +36,7 @@
 namespace test {
 using namespace mlir;
 struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(mlir::test_irdl_to_cpp::BeefOp op, OpAdaptor adaptor,
@@ -57,7 +57,7 @@ struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
 
 struct TestRegionConversion
     : public OpConversionPattern<test_irdl_to_cpp::ConditionalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(mlir::test_irdl_to_cpp::ConditionalOp op, OpAdaptor adaptor,

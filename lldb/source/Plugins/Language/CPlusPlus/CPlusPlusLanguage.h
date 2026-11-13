@@ -89,6 +89,13 @@ public:
 
   bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
+  DemangledName DemangleSymbol(ConstString mangled,
+                               Mangled::ManglingScheme scheme,
+                               const DemangleOptions &options) const override;
+
+  std::unique_ptr<MangledNameParser>
+  CreateMangledNameParser(Mangled::ManglingScheme scheme) const override;
+
   bool DemangledNameContainsPath(llvm::StringRef path,
                                  ConstString demangled) const override;
 
@@ -232,6 +239,8 @@ public:
   llvm::StringRef GetInstanceName() override { return "this"; }
 
   FormatEntity::Entry GetFunctionNameFormat() const override;
+
+  std::string GetVersionInfo() const override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }

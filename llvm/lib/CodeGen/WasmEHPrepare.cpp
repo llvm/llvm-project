@@ -1,4 +1,4 @@
-//===-- WasmEHPrepare - Prepare excepton handling for WebAssembly --------===//
+//===-- WasmEHPrepare - Prepare exception handling for WebAssembly --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,11 +25,12 @@
 //   catchpad ...
 //   exn = wasm.catch(WebAssembly::CPP_EXCEPTION);
 //   // Only add below in case it's not a single catch (...)
+//   wasm_lpad_context = _Unwind_GetWasmLPadContext();
 //   wasm.landingpad.index(index);
-//   __wasm_lpad_context.lpad_index = index;
-//   __wasm_lpad_context.lsda = wasm.lsda();
+//   wasm_lpad_context->lpad_index = index;
+//   wasm_lpad_context->lsda = wasm.lsda();
 //   personality_fn(exn);
-//   selector = __wasm_lpad_context.selector;
+//   selector = wasm_lpad_context->selector;
 //   ...
 //
 //
@@ -58,7 +59,7 @@
 //   uintptr_t lsda;
 //   uintptr_t selector;
 // };
-// struct _Unwind_LandingPadContext __wasm_lpad_context = ...;
+// struct _Unwind_LandingPadContext *_Unwind_GetWasmLPadContext(void);
 //
 // We pass a landing pad index, and the address of LSDA for the current function
 // to the personality function, and we retrieve the selector after it returns.
@@ -66,6 +67,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/WasmEHPrepare.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WasmEHInfo.h"
@@ -86,6 +88,7 @@ class WasmEHPrepareImpl {
   friend class WasmEHPrepare;
 
   Type *LPadContextTy = nullptr; // type of 'struct _Unwind_LandingPadContext'
+  const RTLIB::RuntimeLibcallsInfo *RTLCI = nullptr;
 
   Function *ThrowF = nullptr;       // wasm.throw() intrinsic
   Function *LPadIndexF = nullptr;   // wasm.landingpad.index() intrinsic
@@ -94,7 +97,7 @@ class WasmEHPrepareImpl {
   Function *CatchF = nullptr;       // wasm.catch() intrinsic
   Function *GetSelectorF = nullptr; // wasm.get.ehselector() intrinsic
   FunctionCallee PersonalityF = nullptr;
-  FunctionCallee GetWasmLPadContextF =
+  Function *GetWasmLPadContextF =
       nullptr; // _Unwind_GetWasmLPadContext() wrapper
 
   bool prepareThrows(Function &F);
@@ -103,7 +106,9 @@ class WasmEHPrepareImpl {
 
 public:
   WasmEHPrepareImpl() = default;
-  WasmEHPrepareImpl(Type *LPadContextTy_) : LPadContextTy(LPadContextTy_) {}
+  WasmEHPrepareImpl(Type *LPadContextTy_,
+                    const RTLIB::RuntimeLibcallsInfo &RTLCI_)
+      : LPadContextTy(LPadContextTy_), RTLCI(&RTLCI_) {}
   bool runOnFunction(Function &F);
 };
 
@@ -115,7 +120,15 @@ public:
 
   WasmEHPrepare() : FunctionPass(ID) {}
   bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override { return P.runOnFunction(F); }
+  bool runOnFunction(Function &F) override {
+    P.RTLCI =
+        &getAnalysis<RuntimeLibraryInfoWrapper>().getRTLCI(*F.getParent());
+    return P.runOnFunction(F);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<RuntimeLibraryInfoWrapper>();
+  }
 
   StringRef getPassName() const override {
     return "WebAssembly Exception handling preparation";
@@ -125,13 +138,22 @@ public:
 } // end anonymous namespace
 
 PreservedAnalyses WasmEHPreparePass::run(Function &F,
-                                         FunctionAnalysisManager &) {
+                                         FunctionAnalysisManager &FAM) {
   auto &Context = F.getContext();
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  const RTLIB::RuntimeLibcallsInfo *RTLCI =
+      MAMProxy.getCachedResult<RuntimeLibraryAnalysis>(*F.getParent());
+  if (!RTLCI) {
+    Context.emitError("'" + RuntimeLibraryAnalysis::name() +
+                      "' analysis required");
+    return PreservedAnalyses::all();
+  }
+
   auto *I32Ty = Type::getInt32Ty(Context);
   auto *PtrTy = PointerType::get(Context, 0);
   auto *LPadContextTy =
       StructType::get(I32Ty /*lpad_index*/, PtrTy /*lsda*/, I32Ty /*selector*/);
-  WasmEHPrepareImpl P(LPadContextTy);
+  WasmEHPrepareImpl P(LPadContextTy, *RTLCI);
   bool Changed = P.runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses ::all();
 }
@@ -139,13 +161,14 @@ PreservedAnalyses WasmEHPreparePass::run(Function &F,
 char WasmEHPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(WasmEHPrepare, DEBUG_TYPE,
                       "Prepare WebAssembly exceptions", false, false)
+INITIALIZE_PASS_DEPENDENCY(RuntimeLibraryInfoWrapper)
 INITIALIZE_PASS_END(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",
                     false, false)
 
 FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
 
 bool WasmEHPrepare::doInitialization(Module &M) {
-  IRBuilder<> IRB(M.getContext());
+  IRBuilder<> IRB(M);
   P.LPadContextTy = StructType::get(IRB.getInt32Ty(), // lpad_index
                                     IRB.getPtrTy(),   // lsda
                                     IRB.getInt32Ty()  // selector
@@ -168,6 +191,9 @@ static void eraseDeadBBsAndChildren(const Container &BBs) {
 }
 
 bool WasmEHPrepareImpl::runOnFunction(Function &F) {
+  if (F.getParent()->getExceptionModel() != ExceptionHandling::Wasm)
+    return false;
+
   bool Changed = false;
   Changed |= prepareThrows(F);
   Changed |= prepareEHPads(F);
@@ -176,7 +202,7 @@ bool WasmEHPrepareImpl::runOnFunction(Function &F) {
 
 bool WasmEHPrepareImpl::prepareThrows(Function &F) {
   Module &M = *F.getParent();
-  IRBuilder<> IRB(F.getContext());
+  IRBuilder<> IRB(M);
   bool Changed = false;
 
   // wasm.throw() intinsic, which will be lowered to wasm 'throw' instruction.
@@ -229,6 +255,13 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   }
   assert(F.hasPersonalityFn() && "Personality function not found");
 
+  RTLIB::LibcallImpl GetWasmLPadContextImpl =
+      RTLIB::impl__Unwind_GetWasmLPadContext;
+  if (!RTLCI->isAvailable(GetWasmLPadContextImpl)) {
+    Ctx.emitError("no libcall available for wasm landing pad context");
+    return false;
+  }
+
   // wasm.landingpad.index() intrinsic, which is to specify landingpad index
   LPadIndexF =
       Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_landingpad_index);
@@ -254,9 +287,11 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   if (Function *F = dyn_cast<Function>(PersonalityF.getCallee()))
     F->setDoesNotThrow();
 
-  StringRef UnwindGetWasmLPadContextName =
-      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-          RTLIB::impl__Unwind_GetWasmLPadContext);
+  auto [UnwindGetWasmLPadContextType, UnwindGetWasmLPadContextAttrs] =
+      RTLCI->getFunctionTy(Ctx, M.getTargetTriple(), M.getDataLayout(),
+                           GetWasmLPadContextImpl);
+  assert(UnwindGetWasmLPadContextType &&
+         "missing signature for _Unwind_GetWasmLPadContext");
 
   // _Unwind_GetWasmLPadContext() wrapper function
   //
@@ -265,12 +300,14 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   // cannot, in general, access the `__wasm_lpad_context` directly here because,
   // when the cooperative multithreading feature is enabled, direct,
   // cross-library access to thread local variables is not supported.
-  auto *UnwindGetWasmLPadContextType =
-      FunctionType::get(PointerType::getUnqual(Ctx), {}, false);
-  GetWasmLPadContextF = M.getOrInsertFunction(UnwindGetWasmLPadContextName,
-                                              UnwindGetWasmLPadContextType);
-  if (Function *F = dyn_cast<Function>(GetWasmLPadContextF.getCallee()))
-    F->setDoesNotThrow();
+  GetWasmLPadContextF = cast<Function>(
+      M.getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+                                GetWasmLPadContextImpl),
+                            UnwindGetWasmLPadContextType,
+                            UnwindGetWasmLPadContextAttrs)
+          .getCallee());
+  GetWasmLPadContextF->setCallingConv(
+      RTLCI->getLibcallImplCallingConv(GetWasmLPadContextImpl));
 
   unsigned Index = 0;
   for (auto *BB : CatchPads) {
@@ -297,6 +334,7 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
                                      unsigned Index) {
   assert(BB->isEHPad() && "BB is not an EHPad!");
   IRBuilder<> IRB(BB->getFirstInsertionPt());
+  IRB.disableGEPCanonicalization();
 
   auto *FPI = cast<FuncletPadInst>(BB->getFirstNonPHIIt());
   Instruction *GetExnCI = nullptr, *GetSelectorCI = nullptr;
@@ -338,8 +376,10 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   }
   IRB.SetInsertPoint(CatchCI->getNextNode());
 
-  Instruction *LPadContext =
+  // Pseudocode: wasm_lpad_context = _Unwind_GetWasmLPadContext();
+  CallInst *LPadContext =
       IRB.CreateCall(GetWasmLPadContextF, {}, OperandBundleDef("funclet", FPI));
+  LPadContext->setCallingConv(GetWasmLPadContextF->getCallingConv());
 
   Value *LPadIndexField = LPadContext;
   Value *LSDAField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContext,
@@ -352,13 +392,13 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   // Pseudocode: wasm.landingpad.index(Index);
   IRB.CreateCall(LPadIndexF, {FPI, IRB.getInt32(Index)});
 
-  // Pseudocode: __wasm_lpad_context.lpad_index = index;
+  // Pseudocode: wasm_lpad_context->lpad_index = index;
   IRB.CreateStore(IRB.getInt32(Index), LPadIndexField);
 
   // TODO Sometimes storing the LSDA address every time is not necessary, in
   // case it is already set in a dominating EH pad and there is no function call
   // between from that EH pad to here. Consider optimizing those cases.
-  // Pseudocode: __wasm_lpad_context.lsda = wasm.lsda();
+  // Pseudocode: wasm_lpad_context->lsda = wasm.lsda();
   IRB.CreateStore(IRB.CreateCall(LSDAF), LSDAField);
 
   // Pseudocode: personality_fn(exn);
@@ -366,12 +406,12 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
       IRB.CreateCall(PersonalityF, CatchCI, OperandBundleDef("funclet", FPI));
   PersCI->setDoesNotThrow();
 
-  // Pseudocode: int selector = __wasm_lpad_context.selector;
+  // Pseudocode: int selector = wasm_lpad_context->selector;
   Instruction *Selector =
       IRB.CreateLoad(IRB.getInt32Ty(), SelectorField, "selector");
 
   // Replace the return value from wasm.get.ehselector() with the selector value
-  // loaded from __wasm_lpad_context.selector.
+  // loaded from wasm_lpad_context->selector.
   assert(GetSelectorCI && "wasm.get.ehselector() call does not exist");
   GetSelectorCI->replaceAllUsesWith(Selector);
   GetSelectorCI->eraseFromParent();

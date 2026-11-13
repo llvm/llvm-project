@@ -141,9 +141,11 @@ int main(int Argc, char **Argv) {
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
+  LLVMContext Context;
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
-  cl::ParseCommandLineOptions(
-      Argc, Argv,
+  cl::parseCommandLineOptions(
+      Context.getLibraryOptions(), codegen::getToolOptions(),
+      ArrayRef(Argv, Argc),
       "LLVM automatic testcase reducer.\n"
       "See https://llvm.org/docs/CommandGuide/llvm-reduce.html for more "
       "information.\n");
@@ -188,7 +190,6 @@ int main(int Argc, char **Argv) {
   if (!PreserveDebugEnvironment)
     disableEnvironmentDebugFeatures();
 
-  LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
 
   auto [OriginalProgram, InputIsBitcode] =

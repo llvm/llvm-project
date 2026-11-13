@@ -12,6 +12,7 @@
 #include <optional>
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
 
@@ -578,6 +579,9 @@ Process::~Process() {
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p Process::~Process()", static_cast<void *>(this));
   StopPrivateStateThread();
+
+  // Close the secondary to make sure the pty is not retained.
+  CloseSTDIOSecondaryFileDescriptor();
 
   // ThreadList::Clear() will try to acquire this process's mutex, so
   // explicitly clear the thread list here to ensure that the mutex is not
@@ -2122,9 +2126,10 @@ size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
     return DoReadMemory(process_addr, buf, size, error);
   }
 
-  lldb::addr_t addr = process_addr.GetValue();
-  if (ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
+  const lldb::addr_t addr = FixAnyAddress(process_addr.GetValue());
+
+  if (!ShouldUseMemoryCache(addr))
+    return DoReadMemory(addr, buf, size, error);
 
   if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
@@ -2815,14 +2820,22 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
 
   Status error;
   std::unique_ptr<Progress> progress_up;
-  // Reading an ObjectFile from a local corefile is very fast,
-  // only print a progress update if we're reading from a
-  // live session which might go over gdb remote serial protocol.
-  if (IsLiveDebugSession())
+  bool disable_memory_symtab_caching;
+  if (IsLiveDebugSession()) {
+    // Reading an ObjectFile from a local corefile is very fast,
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
     progress_up = std::make_unique<Progress>("Reading binary from memory",
                                              file_spec.GetFilename().str());
+    // Allow caching of memory-read modules in a live process.
+    disable_memory_symtab_caching = false;
+  } else {
+    // This is a corefile target; no memory-read module caching.
+    disable_memory_symtab_caching = true;
+  }
 
   if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
+                                     disable_memory_symtab_caching,
                                      size_to_read))
     return module_sp;
 
@@ -3256,6 +3269,17 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_os_up.reset();
   GetTarget().ClearAllLoadedSections();
 
+  // StartPrivateStateThread does nothing if the thread is already running, so
+  // publish the state ourselves.
+  auto start_private_state_thread = [this] {
+    if (PrivateStateThreadIsRunning()) {
+      SetPublicState(lldb::eStateAttaching, /*restarted=*/false);
+      SetPublicRunLockToRunning();
+    } else {
+      StartPrivateStateThread(lldb::eStateAttaching, true);
+    }
+  };
+
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
   if (attach_pid == LLDB_INVALID_PROCESS_ID) {
@@ -3283,7 +3307,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
           } else {
             SetNextEventAction(new Process::AttachCompletionHandler(
                 this, attach_info.GetResumeCount()));
-            StartPrivateStateThread(lldb::eStateAttaching, true);
+            start_private_state_thread();
             if (!m_current_private_state_thread_sp) {
               // We are not going to get any further here.  The only way
               // this could fail is if we can't start a host thread, and we're
@@ -3346,7 +3370,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
         SetNextEventAction(new Process::AttachCompletionHandler(
             this, attach_info.GetResumeCount()));
 
-        StartPrivateStateThread(lldb::eStateAttaching, true);
+        start_private_state_thread();
         if (!m_current_private_state_thread_sp) {
           // We are not going to get any further here.  The only way this
           // could fail is if we can't start a host thread, so we're pretty much
@@ -3889,9 +3913,9 @@ Status Process::DestroyImpl(bool force_kill) {
       DidDestroy();
       StopPrivateStateThread();
     }
-    m_stdio_communication.StopReadThread();
-    m_stdio_communication.Disconnect();
-    m_stdin_forward = false;
+    // Not draining: We are tearing the process down, so we don't care about its
+    // remaining output as no one could read it.
+    StopSTDIOMonitoring(/*drain=*/false);
 
     {
       std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
@@ -3960,10 +3984,9 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
   case eStateDetached:
   case eStateExited:
   case eStateUnloaded:
-    m_stdio_communication.SynchronizeWithReadThread();
-    m_stdio_communication.StopReadThread();
-    m_stdio_communication.Disconnect();
-    m_stdin_forward = false;
+    // The inferior is gone, so this is our last chance to pick up whatever it
+    // wrote before it went away.
+    StopSTDIOMonitoring(/*drain=*/true);
 
     [[fallthrough]];
   case eStateConnected:
@@ -4276,6 +4299,16 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
   const StateType new_state =
       Process::ProcessEventData::GetStateFromEvent(event_sp.get());
 
+#ifdef LLDB_SIMULATE_SLOW_STOPS
+  // Simulate a slow machine that takes a long time to process an internal
+  // stop, so that ThreadPlanSingleThreadTimeout's 10ms timer fires while we
+  // are still in here.  This is helpful for diagnosing problems in
+  // the thread plans - particular the interaction with the
+  // ThreadPlanSingleThreadTimeout.
+  if (StateIsStoppedState(new_state, /*must_exist=*/true))
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#endif
+  
   // First check to see if anybody wants a shot at this event:
   if (m_next_event_action_up) {
     NextEventAction::EventActionResult action_result =
@@ -4995,7 +5028,13 @@ void Process::STDIOReadThreadBytesReceived(void *baton, const void *src,
   process->AppendSTDOUT(static_cast<const char *>(src), src_len);
 }
 
-void Process::SetSTDIOFileDescriptor(int fd) {
+void Process::SetSTDIOFileDescriptor(int fd, std::optional<int> secondary_fd) {
+  {
+    auto stdio_secondary_fd = m_stdio_secondary_fd.Lock();
+    assert(!*stdio_secondary_fd && "process stdio is already set up");
+    *stdio_secondary_fd = secondary_fd;
+  }
+
   // First set up the Read Thread for reading/handling process I/O
   m_stdio_communication.SetConnection(
       std::make_unique<ConnectionFileDescriptor>(fd, true));
@@ -5011,7 +5050,46 @@ void Process::SetSTDIOFileDescriptor(int fd) {
         m_process_input_reader =
             std::make_shared<IOHandlerProcessSTDIO>(this, fd);
     }
+  } else {
+    // Nobody is going to read the primary side, so there is no point in keeping
+    // the terminal alive.
+    CloseSTDIOSecondaryFileDescriptor();
   }
+}
+
+#if !defined(_WIN32)
+void Process::SetSTDIOPseudoTerminal(PseudoTerminal &pty) {
+  // Take a descriptor for the secondary side so it is kept alive.
+  if (llvm::Error err = pty.OpenSecondary(O_RDWR | O_NOCTTY | O_CLOEXEC))
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
+                   "failed to open the secondary side of the inferior's "
+                   "terminal: {0}");
+
+  std::optional<int> secondary_fd;
+  if (int fd = pty.ReleaseSecondaryFileDescriptor();
+      fd != PseudoTerminal::invalid_fd)
+    secondary_fd = fd;
+  SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor(), secondary_fd);
+}
+#endif
+
+void Process::StopSTDIOMonitoring(bool drain) {
+  if (drain) {
+    // Collect everything the inferior has written.
+    m_stdio_communication.SynchronizeWithReadThread();
+  }
+
+  // Nothing is left to read, so let go of the terminal.
+  CloseSTDIOSecondaryFileDescriptor();
+
+  m_stdio_communication.StopReadThread();
+  m_stdio_communication.Disconnect();
+  m_stdin_forward = false;
+}
+
+void Process::CloseSTDIOSecondaryFileDescriptor() {
+  if (std::optional<int> fd = std::exchange(*m_stdio_secondary_fd.Lock(), {}))
+    llvm::sys::Process::SafelyCloseFileDescriptor(*fd);
 }
 
 bool Process::ProcessIOHandlerIsActive() {

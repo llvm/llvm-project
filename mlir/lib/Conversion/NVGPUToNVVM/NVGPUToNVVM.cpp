@@ -319,9 +319,9 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
 static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
   Type elType = getElementTypeOrSelf(t);
   if (elType.isInteger(8))
-    return NVVM::MMATypes::s8;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u8 : NVVM::MMATypes::s8;
   if (elType.isInteger(4))
-    return NVVM::MMATypes::s4;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u4 : NVVM::MMATypes::s4;
   if (elType.isF16())
     return NVVM::MMATypes::f16;
   if (elType.isBF16())
@@ -864,7 +864,8 @@ struct NVGPUMBarrierArriveLowering
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier, Value{});
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(
+        op, barrier, /*count=*/Value{}, /*multicastMask=*/Value{});
     return success();
   }
 };
@@ -922,10 +923,8 @@ struct NVGPUMBarrierArriveExpectTxLowering
                        adaptor.getMbarId(), rewriter);
     Value txcount = truncToI32(b, adaptor.getTxcount());
     NVVM::MBarrierArriveExpectTxOp::create(
-        rewriter, op->getLoc(), barrier, txcount, // barrier and txcount
-        NVVM::MemScopeKind::CTA,                  // default scope is CTA
-        false,                                    // relaxed-semantics is false
-        adaptor.getPredicate());
+        rewriter, op->getLoc(), barrier, txcount, /*multicastMask=*/Value{},
+        NVVM::MemScopeKind::CTA, /*relaxed=*/false, adaptor.getPredicate());
     rewriter.eraseOp(op);
     return success();
   }
@@ -1207,7 +1206,7 @@ struct NVGPUWarpgroupMmaOpLowering
   /// This is a helper class to generate required NVVM Ops for warp-group level
   /// matrix multiplication.
   /// When the given GEMM shape is larger than the shape of
-  /// a wgmma instrution in PTX, it can generate multiple NVVM::WgmmaMmaAsyncOp
+  /// a wgmma instruction in PTX, it can generate multiple NVVM::WgmmaMmaAsyncOp
   /// Op(s), group and execute them asynchronously. The class also handles
   /// waiting for completion and iterates through WarpgroupMatrixDescriptor to
   /// create descriptors for each instruction.
