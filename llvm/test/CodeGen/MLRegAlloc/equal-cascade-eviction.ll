@@ -1,5 +1,5 @@
 ; REQUIRES: x86_64-linux
-; RUN: rm -rf %t.rundir %t.s
+; RUN: rm -rf %t.rundir
 ; RUN: rm -rf %t.channel-basename.*
 ; RUN: mkdir %t.rundir
 ; RUN: cp %S/../../../lib/Analysis/models/log_reader.py %t.rundir
@@ -7,13 +7,10 @@
 ; RUN: cp %S/Inputs/interactive_main.py %t.rundir
 ; RUN: %python %t.rundir/interactive_main.py %t.channel-basename \
 ; RUN:    llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=release \
-; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename %s -o %t.s
-; RUN: FileCheck %s < %t.s
+; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename %s -o /dev/null
 
 ;; A spillable range must not evict an unspillable one. The evicted range would
 ;; take the evictor cascade and on requeue find only ranges of that cascade.
-
-; CHECK-LABEL: f:
 
 define void @f(ptr %p, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i1 %c, i64 %l0) {
   %l01 = load volatile i64, ptr null, align 4

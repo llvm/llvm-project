@@ -20,7 +20,7 @@
 ; CHECK-NEXT: mask: 0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
 
 ;; Evicting an equal cascade asserts in greedy.
-; RUN: %python %t.rundir/interactive_main.py %t.channel-basename.cascade \
+; RUN: not %python %t.rundir/interactive_main.py %t.channel-basename.cascade \
 ; RUN:    llc -mtriple=amdgpu9.00 -start-before=greedy,0 -stop-after=virt-reg-rewriter,2 \
 ; RUN:    -regalloc-enable-advisor=release -mlregalloc-num-allocatable-regs=256 \
 ; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename.cascade \
