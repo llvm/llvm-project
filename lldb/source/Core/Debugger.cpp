@@ -51,6 +51,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/AnsiTerminal.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
@@ -291,6 +292,14 @@ void TestingProperties::AppendSafeAutoLoadPaths(FileSpec path) {
 FileSpecList TestingProperties::GetSafeAutoLoadPaths() const {
   const uint32_t idx = ePropertySafeAutoloadPaths;
   return GetPropertyAtIndexAs<FileSpecList>(idx, {});
+}
+
+bool TestingProperties::IsTrustedAutoLoadModule(
+    llvm::StringRef module_name) const {
+  Args names;
+  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyTrustedAutoloadModules,
+                                            names);
+  return llvm::is_contained(names.GetArgumentArrayRef(), module_name);
 }
 #endif
 
@@ -2176,6 +2185,15 @@ ProcessSP Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
     if (pop_process_io_handler)
       process_sp->PopProcessIOHandler();
+
+    // Debug scripts found while the process ran can be offered now that the
+    // terminal is free.
+    if (got_state_changed &&
+        StateIsStoppedState(
+            Process::ProcessEventData::GetStateFromEvent(event_sp.get()),
+            /*must_exist=*/true) &&
+        !Process::ProcessEventData::GetRestartedFromEvent(event_sp.get()))
+      process_sp->GetTarget().OfferPendingScriptingResources();
   }
   return process_sp;
 }

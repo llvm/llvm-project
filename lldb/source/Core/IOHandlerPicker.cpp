@@ -73,10 +73,12 @@ static bool IsCSIParameterOrIntermediateByte(char c) {
   return c >= 0x20 && c <= 0x3f;
 }
 
-/// Falls back to the size in bytes when columnWidth() can't measure \a str.
+/// Ignores ANSI escape codes, and falls back to the size in bytes when
+/// columnWidth() can't measure \a str.
 static size_t GetColumnWidth(llvm::StringRef str) {
-  int width = llvm::sys::locale::columnWidth(str);
-  return width < 0 ? str.size() : width;
+  std::string stripped = ansi::StripAnsiTerminalCodes(str);
+  int width = llvm::sys::locale::columnWidth(stripped);
+  return width < 0 ? stripped.size() : width;
 }
 
 IOHandlerPicker::IOHandlerPicker(Debugger &debugger, llvm::StringRef header,
@@ -708,6 +710,8 @@ void IOHandlerPicker::Run() {
   if (!GetIsRealTerminal() || m_items.empty() || !EnterRawMode()) {
     m_result.was_canceled = true;
     SetIsDone(true);
+    if (m_done_callback)
+      m_done_callback(m_result);
     return;
   }
 
@@ -744,6 +748,8 @@ void IOHandlerPicker::Run() {
   GetOutputStreamFileSP()->Lock()
       << ANSI_CSI_ENABLE_AUTO_WRAP ANSI_CSI_SHOW_CURSOR;
   RestoreTerminalMode();
+  if (m_done_callback)
+    m_done_callback(m_result);
 }
 
 void IOHandlerPicker::Cancel() {

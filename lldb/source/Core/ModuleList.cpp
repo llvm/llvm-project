@@ -12,6 +12,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
@@ -1397,7 +1398,13 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
   if (!feedback_stream.Empty())
     debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
-  const bool trusted = platform_sp->IsSymbolFileTrusted(module);
+  bool trusted = platform_sp->IsSymbolFileTrusted(module);
+#ifndef NDEBUG
+  // Tests can't sign a symbol file.
+  trusted |=
+      TestingProperties::GetGlobalTestingProperties().IsTrustedAutoLoadModule(
+          module.GetFileSpec().GetFileNameStrippingExtension());
+#endif
 
   for (const auto &[scripting_fspec, load_style] : file_specs) {
     if (load_style == eLoadScriptFromSymFileFalse)
@@ -1416,6 +1423,14 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
         break;
       LLVM_FALLTHROUGH;
     case eLoadScriptFromSymFileWarn:
+      // In an interactive session, the user picks the scripts to load from a
+      // list once the process stops.
+      if (debugger.GetCommandInterpreter().IsInteractive()) {
+        target.AddPendingScriptingResource(
+            {module.GetFileSpec().GetFilename().str(), scripting_fspec,
+             trusted});
+        continue;
+      }
       debugger.ReportWarning(
           llvm::formatv(
               // clang-format off

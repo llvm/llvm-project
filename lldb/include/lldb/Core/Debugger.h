@@ -86,6 +86,9 @@ struct TestingProperties : public Properties {
   /// Appends a path to the testing.safe-auto-load-paths setting.
   void AppendSafeAutoLoadPaths(FileSpec path);
 
+  /// Whether testing.trusted-auto-load-modules lists \a module_name.
+  bool IsTrustedAutoLoadModule(llvm::StringRef module_name) const;
+
 private:
   friend Target;
 

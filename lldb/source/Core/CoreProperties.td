@@ -79,6 +79,11 @@ let Definition = "testing", Path = "testing" in {
                           DefaultStringValue<"">,
                           Desc<"List of paths that LLDB will automatically "
                                "load scripting resources from.">;
+  def TrustedAutoloadModules
+      : Property<"trusted-auto-load-modules", "Array">,
+        ElementType<"String">,
+        Desc<"Used for testing LLDB only. Names of modules, without their "
+             "extension, whose debug scripts count as trusted.">;
 }
 #endif
 

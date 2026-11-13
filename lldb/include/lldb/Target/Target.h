@@ -12,6 +12,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -47,6 +48,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -1263,6 +1265,22 @@ public:
                                                    continue_on_error);
   }
 
+  /// A debug script from one of the target's modules, which the user has to
+  /// approve before it runs.
+  struct PendingScriptingResource {
+    std::string module_name;
+    FileSpec path;
+    bool trusted;
+  };
+
+  /// Queue \a resource for OfferPendingScriptingResources(). Each script is
+  /// only ever offered once, so this returns false if it was already queued.
+  bool AddPendingScriptingResource(PendingScriptingResource resource);
+
+  /// Let the user pick which of the queued debug scripts to load. Called when
+  /// the process stops, since the process reads the terminal while it runs.
+  void OfferPendingScriptingResources();
+
   /// Get accessor for the images for this process.
   ///
   /// Each process has a notion of a main executable that is the file
@@ -2174,6 +2192,11 @@ protected:
   lldb::SearchFilterSP m_search_filter_sp;
   PathMappingList m_image_search_paths;
   TypeSystemMap m_scratch_type_system_map;
+
+  std::mutex m_pending_scripting_resources_mutex;
+  std::vector<PendingScriptingResource> m_pending_scripting_resources;
+  /// Scripts that were queued, so that they are only offered once.
+  llvm::DenseSet<FileSpec> m_queued_scripting_resources;
 
   /// Map of scripted frame provider descriptors for this target.
   /// Keys are the provider descriptor IDs, values are the descriptors.

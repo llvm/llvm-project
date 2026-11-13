@@ -19,6 +19,7 @@
 #include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/IOHandlerPicker.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -45,6 +46,7 @@
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValues.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -2018,6 +2020,70 @@ void Target::SymbolsDidLoad(ModuleList &module_list) {
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
     BroadcastEvent(eBroadcastBitSymbolsLoaded, data_sp);
   }
+}
+
+bool Target::AddPendingScriptingResource(PendingScriptingResource resource) {
+  std::lock_guard<std::mutex> guard(m_pending_scripting_resources_mutex);
+  if (!m_queued_scripting_resources.insert(resource.path).second)
+    return false;
+  m_pending_scripting_resources.push_back(std::move(resource));
+  return true;
+}
+
+void Target::OfferPendingScriptingResources() {
+  std::vector<PendingScriptingResource> pending;
+  {
+    std::lock_guard<std::mutex> guard(m_pending_scripting_resources_mutex);
+    pending.swap(m_pending_scripting_resources);
+  }
+  if (pending.empty())
+    return;
+
+  Debugger &debugger = GetDebugger();
+  llvm::SmallVector<PickerItem, 0> items;
+  for (const PendingScriptingResource &resource : pending) {
+    std::string status = resource.trusted ? "trusted" : "untrusted";
+    // Only reset the foreground color, since the picker draws the dialog in
+    // reverse video.
+    if (resource.trusted && debugger.GetUseColor())
+      status = ANSI_ESCAPE1(ANSI_FG_COLOR_GREEN) + status + ANSI_ESCAPE1(39);
+    PickerItem item;
+    item.values = {resource.path.GetFilename().str(), resource.module_name,
+                   status, resource.path.GetPath()};
+    item.initially_selected = resource.trusted;
+    items.push_back(std::move(item));
+  }
+
+  auto picker_sp = std::make_shared<IOHandlerPicker>(
+      debugger, "Select debug scripts to load:",
+      llvm::SmallVector<PickerColumnName>{"NAME", "MODULE", "STATUS", "PATH"},
+      std::move(items), PickerMode::MultiSelect);
+  // The process's event handler calls this, so the picker runs on the
+  // thread that reads the terminal, and loads the scripts once it closes.
+  TargetWP target_wp = shared_from_this();
+  picker_sp->SetDoneCallback(
+      [target_wp, pending = std::move(pending)](const PickerResult &picked) {
+        TargetSP target_sp = target_wp.lock();
+        if (!target_sp || picked.was_canceled)
+          return;
+        Debugger &debugger = target_sp->GetDebugger();
+        ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
+        if (!script_interpreter)
+          return;
+        for (size_t index : picked.selected_indices) {
+          const FileSpec &path = pending[index].path;
+          Status error;
+          LoadScriptOptions options;
+          if (!script_interpreter->LoadScriptingModule(
+                  path.GetPath().c_str(), options, error, /*module_sp=*/nullptr,
+                  /*extra_path=*/{}, target_sp))
+            debugger.ReportError(llvm::formatv("unable to load '{0}': {1}",
+                                               path.GetPath(), error)
+                                     .str(),
+                                 debugger.GetID());
+        }
+      });
+  debugger.RunIOHandlerAsync(picker_sp);
 }
 
 void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {

@@ -68,6 +68,13 @@ public:
     m_preview_callback = std::move(callback);
   }
 
+  /// Called with the result once the picker closes, on the thread that ran
+  /// it. Lets the caller act on the result after RunIOHandlerAsync().
+  using DoneCallback = std::function<void(const PickerResult &result)>;
+  void SetDoneCallback(DoneCallback callback) {
+    m_done_callback = std::move(callback);
+  }
+
   /// Show a single-select picker and return the index of the chosen item, or
   /// std::nullopt if the user canceled or the input isn't a terminal.
   static std::optional<size_t>
@@ -177,6 +184,7 @@ private:
   size_t m_preview_height = 0;
 
   PreviewCallback m_preview_callback;
+  DoneCallback m_done_callback;
   /// Index into m_items of the item m_preview_lines is for.
   std::optional<size_t> m_preview_item;
   llvm::SmallVector<std::string> m_preview_lines;
