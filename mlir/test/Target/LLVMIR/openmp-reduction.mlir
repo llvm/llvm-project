@@ -699,3 +699,49 @@ llvm.func @wsloop_simd_reduction(%lb : i64, %ub : i64, %step : i64) {
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]
 // CHECK: fadd float
+
+// -----
+
+// nowait with an atomic region: only the non-atomic branch calls
+// __kmpc_end_reduce_nowait, and no barrier is emitted.
+
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+
+// CHECK-LABEL: define void @wsloop_atomic_reduction_nowait(
+// CHECK-NOT:   @__kmpc_barrier
+// CHECK:       call i32 @__kmpc_reduce_nowait(
+// CHECK:       reduce.switch.nonatomic:
+// CHECK:       call void @__kmpc_end_reduce_nowait(
+// CHECK:       reduce.switch.atomic:
+// CHECK:       atomicrmw fadd
+// CHECK-NOT:   call void @__kmpc_end_reduce_nowait(
+// CHECK-NOT:   @__kmpc_barrier
+// CHECK:       {{^}}}
+llvm.func @wsloop_atomic_reduction_nowait(%sum: !llvm.ptr, %lb: i64, %ub: i64, %step: i64) {
+  omp.wsloop nowait reduction(@add_f32 %sum -> %private : !llvm.ptr) {
+    omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
+      %1 = llvm.mlir.constant(2.0 : f32) : f32
+      %2 = llvm.load %private : !llvm.ptr -> f32
+      %3 = llvm.fadd %1, %2 : f32
+      llvm.store %3, %private : f32, !llvm.ptr
+      omp.yield
+    }
+  }
+  llvm.return
+}

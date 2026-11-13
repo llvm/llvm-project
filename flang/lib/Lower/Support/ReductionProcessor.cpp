@@ -217,20 +217,32 @@ ReductionProcessor::findUserDefinedReductionForIntrinsic(
   return details && details->SupportsType(*type) ? &ultimate : nullptr;
 }
 
+// VOLATILE given to a use- or host-associated name sits on that association
+// link, not on the ultimate symbol.
+static bool isVolatileInAssociationChain(const semantics::Symbol &symbol) {
+  const semantics::Symbol *sym = &symbol;
+  while (true) {
+    if (sym->attrs().test(semantics::Attr::VOLATILE))
+      return true;
+    if (const auto *use = sym->detailsIf<semantics::UseDetails>())
+      sym = &use->symbol();
+    else if (const auto *host = sym->detailsIf<semantics::HostAssocDetails>())
+      sym = &host->symbol();
+    else
+      return false;
+  }
+}
+
 std::string
 ReductionProcessor::getReductionName(llvm::StringRef name,
                                      const fir::KindMapping &kindMap,
                                      mlir::Type ty, bool isByRef) {
-  // Volatile reductions must get their own declaration, distinct from the
-  // non-volatile one for the same operator/element type. The two would
-  // otherwise deduplicate to the same name (e.g. add_reduction_f32), but the
-  // non-volatile declaration's atomic region is typed with a non-volatile
-  // reference (!fir.ref<f32>) while the volatile operand is !fir.ref<f32,
-  // volatile>; sharing that declaration fails verification. A separate name
-  // keeps the volatile declaration apart and (being left non-atomic) safe.
+  // A volatile by-value operand cannot share the declaration whose atomic
+  // region takes a non-volatile reference; by-ref reductions have no atomic
+  // region and share one.
   // Check volatility before unwrapping the reference, which drops the flag.
   llvm::StringRef volatileAddition{""};
-  if (fir::isa_volatile_type(ty))
+  if (!isByRef && fir::isa_volatile_type(ty))
     volatileAddition = "_volatile";
 
   ty = fir::unwrapRefType(ty);
@@ -732,15 +744,17 @@ getAtomicReductionBinOp(ReductionProcessor::ReductionIdentifier redId,
   using BinOp = mlir::LLVM::AtomicBinOp;
   const bool isInt = mlir::isa<mlir::IntegerType>(valTy);
   const bool isFloat = mlir::isa<mlir::FloatType>(valTy);
-  // Restrict to widths llvm.atomicrmw lowers cleanly on common targets:
-  // integer 8/16/32/64 and float 32/64 (skips i128, f16/f80/f128, etc.).
+  // Restrict to integer 8/16/32 and float 32, which atomicrmw lowers cleanly.
+  // Wider types are excluded: storage association or dummy-argument aliasing
+  // can leave them only 4-byte aligned, and a misaligned atomicrmw can span a
+  // cache line (a split lock on x86).
   if (isInt) {
     unsigned w = valTy.getIntOrFloatBitWidth();
-    if (w != 8 && w != 16 && w != 32 && w != 64)
+    if (w != 8 && w != 16 && w != 32)
       return std::nullopt;
   } else if (isFloat) {
     unsigned w = valTy.getIntOrFloatBitWidth();
-    if (w != 32 && w != 64)
+    if (w != 32)
       return std::nullopt;
   }
   switch (redId) {
@@ -1557,7 +1571,10 @@ bool ReductionProcessor::processReductionArguments(
     assert(fir::isa_ref_type(symVal.getType()) &&
            "reduction input var is passed by reference");
     mlir::Type elementType = fir::dyn_cast_ptrEleTy(symVal.getType());
-    const bool symIsVolatile = fir::isa_volatile_type(symVal.getType());
+    // The lowered type can lose the volatile qualifier (e.g. a VOLATILE
+    // EQUIVALENCE member), so also check the symbol.
+    const bool symIsVolatile = fir::isa_volatile_type(symVal.getType()) ||
+                               isVolatileInAssociationChain(*symbol);
     mlir::Type refTy = fir::ReferenceType::get(elementType, symIsVolatile);
 
     reductionVars.push_back(
@@ -1573,6 +1590,13 @@ bool ReductionProcessor::processReductionArguments(
   unsigned idx = 0;
   for (auto [symVal, isByRef] : llvm::zip(reductionVars, reduceVarByRef)) {
     auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
+    // Volatile and non-volatile by-ref operands share one declaration, whose
+    // alloc region yields a non-volatile reference, so always build it from
+    // the non-volatile type.
+    if (isByRef && fir::isa_volatile_type(redType))
+      redType = mlir::cast<fir::ReferenceType>(fir::ReferenceType::get(
+          fir::updateTypeWithVolatility(fir::unwrapRefType(redType),
+                                        /*isVolatile=*/false)));
     const auto &kindMap = builder.getKindMap();
     std::string reductionName;
     ReductionIdentifier redId;
