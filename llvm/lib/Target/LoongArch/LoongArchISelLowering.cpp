@@ -7026,8 +7026,7 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
            checkBitcastSrcVectorSize(Src.getOperand(1), Size, Depth + 1) &&
            checkBitcastSrcVectorSize(Src.getOperand(2), Size, Depth + 1);
   case ISD::BUILD_VECTOR:
-    return ISD::isBuildVectorAllZeros(Src) ||
-           ISD::isBuildVectorAllOnes(Src);
+    return ISD::isBuildVectorAllZeros(Src) || ISD::isBuildVectorAllOnes(Src);
   }
   return false;
 }

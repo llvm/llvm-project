@@ -8246,8 +8246,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
       Vec);
 
   // compact fills with 0s, so if our passthru is all 0s, do nothing here.
-  if (Passthru.isUndef() ||
-      ISD::isConstantSplatVectorAllZeros(Passthru))
+  if (Passthru.isUndef() || ISD::isConstantSplatVectorAllZeros(Passthru))
     return Compressed;
 
   SDValue CntActive = DAG.getNode(
@@ -26952,8 +26951,7 @@ static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG,
 
     if (MLD->isUnindexed() && MLD->getExtensionType() != ISD::SEXTLOAD &&
         SDValue(MLD, 0).hasOneUse() && Mask->getOpcode() == AArch64ISD::PTRUE &&
-        (MLD->getPassThru()->isUndef() ||
-         isZerosVector(MLD->getPassThru()))) {
+        (MLD->getPassThru()->isUndef() || isZerosVector(MLD->getPassThru()))) {
       unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
       unsigned PgPattern = Mask->getConstantOperandVal(0);
       EVT VT = N->getValueType(0);
@@ -30126,16 +30124,14 @@ static SDValue performSETCCCombine(SDNode *N,
   // splat(1) across all the NEON types during isel.
   APInt SplatLHSVal;
   if (CmpVT.isInteger() && Cond == ISD::SETGT &&
-      ISD::isConstantSplatVector(LHS, SplatLHSVal) &&
-      SplatLHSVal.isOne())
+      ISD::isConstantSplatVector(LHS, SplatLHSVal) && SplatLHSVal.isOne())
     return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, CmpVT), RHS, ISD::SETGE);
 
   // Fold setcc(and(X, Y), 0, seteq) --> NOT(AArch64ISD::CMTST(X, Y)).
   // SETNE will have been legalized to SETEQ by this point.
   // The NOT folds away when the result feeds a BSP.
   if (DCI.isAfterLegalizeDAG() && CmpVT.isFixedLengthVector() &&
-      Cond == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
-      isZerosVector(RHS)) {
+      Cond == ISD::SETEQ && LHS.getOpcode() == ISD::AND && isZerosVector(RHS)) {
     SDValue CMTSTNode = DAG.getNode(AArch64ISD::CMTST, DL, CmpVT,
                                     LHS.getOperand(0), LHS.getOperand(1));
     return DAG.getNOT(DL, CMTSTNode, CmpVT);

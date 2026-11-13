@@ -2927,8 +2927,7 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
       if (!ISD::isConstantSplatVector(RHS, MaskVal))
         std::swap(LHS, RHS);
 
-      if (ISD::isConstantSplatVector(RHS, MaskVal) &&
-          MaskVal == MaskBits)
+      if (ISD::isConstantSplatVector(RHS, MaskVal) && MaskVal == MaskBits)
         MaskOp = LHS;
     } else {
       if (!isa<ConstantSDNode>(RHS.getNode()))

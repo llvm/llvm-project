@@ -14213,8 +14213,7 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 
   SDValue LastWriteVal;
   APInt PassthruSplatVal;
-  bool IsSplatPassthru =
-      ISD::isConstantSplatVector(Passthru, PassthruSplatVal);
+  bool IsSplatPassthru = ISD::isConstantSplatVector(Passthru, PassthruSplatVal);
 
   if (IsSplatPassthru) {
     // As we do not know which position we wrote to last, we cannot simply

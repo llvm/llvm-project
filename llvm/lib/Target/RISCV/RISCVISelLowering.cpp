@@ -4578,8 +4578,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // For very small build_vectors, use a single scalar insert of a constant.
   // TODO: Base this on constant rematerialization cost, not size.
   const unsigned EltBitSize = VT.getScalarSizeInBits();
-  if (VT.getSizeInBits() <= 32 &&
-      ISD::isBuildVectorOfConstantSDNodes(Op)) {
+  if (VT.getSizeInBits() <= 32 && ISD::isBuildVectorOfConstantSDNodes(Op)) {
     MVT ViaIntVT = MVT::getIntegerVT(VT.getSizeInBits());
     assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32) &&
            "Unexpected sequence type");
@@ -11411,8 +11410,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
       SDValue ScalableOnes = Xor.getOperand(1);
       if (ScalableOnes.getOpcode() == ISD::INSERT_SUBVECTOR &&
           ScalableOnes.getOperand(0).isUndef() &&
-          ISD::isConstantSplatVectorAllOnes(
-              ScalableOnes.getOperand(1))) {
+          ISD::isConstantSplatVectorAllOnes(ScalableOnes.getOperand(1))) {
         CC = Xor.getOperand(0);
         std::swap(SplatZero, SplatTrueVal);
       }

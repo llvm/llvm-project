@@ -7751,9 +7751,9 @@ bool SelectionDAG::isUndef(unsigned Opcode, ArrayRef<SDValue> Ops) {
       return true;
 
     return ISD::isBuildVectorOfConstantSDNodes(Divisor) &&
-           llvm::any_of(Divisor->op_values(),
-                        [](SDValue V) { return V.isUndef() ||
-                                        isNullConstant(V); });
+           llvm::any_of(Divisor->op_values(), [](SDValue V) {
+             return V.isUndef() || isNullConstant(V);
+           });
     // TODO: Handle signed overflow.
   }
   // TODO: Handle oversized shifts.

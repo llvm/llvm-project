@@ -10820,8 +10820,7 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
                                     m_UMin(m_Value(Op0), m_Specific(N1)),
                                     m_UMax(m_Value(Op0), m_Specific(N1)))))) {
 
-    if (isa<ConstantSDNode>(N1) ||
-        ISD::isBuildVectorOfConstantSDNodes(N1)) {
+    if (isa<ConstantSDNode>(N1) || ISD::isBuildVectorOfConstantSDNodes(N1)) {
       // For vectors, only optimize when the constant is zero or all-ones to
       // avoid generating more instructions
       if (VT.isVector()) {
@@ -14708,8 +14707,7 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   if (Cond.getOpcode() == ISD::SETCC &&
       Cond.getOperand(2) == DAG.getCondCode(ISD::SETGT) &&
       Cond.getOperand(0).getValueType() == VT && VT.isSimple() &&
-      ISD::isConstantSplatVector(TVal, TValAPInt) &&
-      TValAPInt.isOne() &&
+      ISD::isConstantSplatVector(TVal, TValAPInt) && TValAPInt.isOne() &&
       ISD::isConstantSplatVectorAllOnes(Cond.getOperand(1)) &&
       ISD::isConstantSplatVectorAllOnes(FVal) &&
       !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
@@ -15412,7 +15410,7 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const SDLoc &DL,
   // fold (aext (build_vector AllConstants) -> (build_vector AllConstants)
   EVT SVT = VT.getScalarType();
   if (!(VT.isVector() && (!LegalTypes || TLI.isTypeLegal(SVT)) &&
-      ISD::isBuildVectorOfConstantSDNodes(N0)))
+        ISD::isBuildVectorOfConstantSDNodes(N0)))
     return SDValue();
 
   // We can fold this node into a build_vector.
@@ -18466,8 +18464,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
     auto IsFreeBitcast = [VT](SDValue V) {
       return (V.getOpcode() == ISD::BITCAST &&
               V.getOperand(0).getValueType() == VT) ||
-             (ISD::isBuildVectorOfConstantSDNodes(V) &&
-              V->hasOneUse());
+             (ISD::isBuildVectorOfConstantSDNodes(V) && V->hasOneUse());
     };
     if (IsFreeBitcast(N0.getOperand(0)) && IsFreeBitcast(N0.getOperand(1)))
       return DAG.getNode(N0.getOpcode(), SDLoc(N), VT,
@@ -31268,8 +31265,7 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N, const SDLoc &DL) {
   auto ConcatWithConstantOrUndef = [](SDValue Concat) {
     return Concat.getOpcode() == ISD::CONCAT_VECTORS &&
            all_of(drop_begin(Concat->ops()), [](const SDValue &Op) {
-             return Op.isUndef() ||
-                    ISD::isBuildVectorOfConstantSDNodes(Op);
+             return Op.isUndef() || ISD::isBuildVectorOfConstantSDNodes(Op);
            });
   };
 
