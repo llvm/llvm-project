@@ -15586,6 +15586,11 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     if (!SE.DT.isReachableFromEntry(InBlock))
       return {nullptr, scCouldNotCompute};
 
+    // Skip backedges into the phi's block. Evaluating them may query the range
+    // of that loop's own AddRecs.
+    if (SE.DT.dominates(Phi.getParent(), InBlock))
+      return {nullptr, scCouldNotCompute};
+
     auto [G, Inserted] = IncomingGuards.try_emplace(InBlock, LoopGuards(SE));
     if (Inserted)
       collectFromBlock(SE, G->second, Phi.getParent(), InBlock, VisitedBlocks,
