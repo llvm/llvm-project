@@ -445,6 +445,14 @@ func.func @tensor_desc_invalid_rank_1(%src: memref<24x32xf32>) {
 }
 
 // -----
+func.func @tensor_desc_dynamic_shape(%src: memref<24x32xf32>) {
+  %0 = xegpu.create_nd_tdesc %src : memref<24x32xf32> ->
+      // expected-error@+1 {{expected static shape}}
+      !xegpu.tensor_desc<?xf32, #xegpu.layout<inst_data = [8]>>
+  return
+}
+
+// -----
 func.func @tensor_desc_1D_invalid_map_layout(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src : memref<24x32xf32> ->
       // expected-error@+1 {{expected layout rank to match tensor rank}}
