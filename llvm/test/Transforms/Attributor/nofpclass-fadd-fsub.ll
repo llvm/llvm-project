@@ -662,6 +662,17 @@ define float @fadd_psub(float noundef %arg) {
   ret float %add
 }
 
+; Positive subnormal + largest positive subnormal >= smallest positive normal.
+define float @fadd_psub_max(float nofpclass(nan inf zero nsub norm) %arg) {
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @fadd_psub_max(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x007FFFFF
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x007FFFFF
+  ret float %add
+}
+
 ; Smallest negative float subnormal in magnitude: -2^-149.
 define float @fadd_nsub(float noundef %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_nsub(
