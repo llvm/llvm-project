@@ -678,28 +678,28 @@ llvm::SmallVector<FallOffResult>
 cir::analyzeFallOff(mlir::ModuleOp module,
                     llvm::function_ref<bool(FuncOp)> filter) {
   llvm::TimeTraceScope timeScope("CIRFallOffAnalysis");
-  auto accept = [&](FuncOp func) {
-    return !func.getBody().empty() && (!filter || filter(func));
-  };
-  llvm::SmallVector<FallOffResult> results;
-  mlir::MLIRContext *context = module.getContext();
-  if (!context->isMultithreadingEnabled()) {
-    for (FuncOp func : module.getOps<FuncOp>())
-      if (accept(func))
-        results.push_back({func, analyzeFallOff(func)});
-    return results;
-  }
-
-  // Filtering costs about as much as analyzing the few functions that pass,
-  // so both run in parallel; each task writes only its own slot.
   llvm::SmallVector<FuncOp> funcs;
   for (FuncOp func : module.getOps<FuncOp>())
-    funcs.push_back(func);
+    if (!func.getBody().empty())
+      funcs.push_back(func);
+
+  // Waking the thread pool costs about as much as analyzing a thousand
+  // functions, so smaller modules stay on this thread. Otherwise each task
+  // takes every `numTasks`-th function, spreading out costly ones; the filter
+  // runs in the tasks too, as it costs about as much as the analysis.
+  constexpr size_t minFuncsForThreads = 1024;
+  constexpr size_t funcsPerTask = 64;
+  size_t numTasks = funcs.size() < minFuncsForThreads
+                        ? 1
+                        : llvm::divideCeil(funcs.size(), funcsPerTask);
   llvm::SmallVector<std::optional<FallOffKind>> kinds(funcs.size());
-  mlir::parallelFor(context, 0, funcs.size(), [&](size_t i) {
-    if (accept(funcs[i]))
-      kinds[i] = analyzeFallOff(funcs[i]);
+  mlir::parallelFor(module.getContext(), 0, numTasks, [&](size_t task) {
+    for (size_t i = task; i < funcs.size(); i += numTasks)
+      if (!filter || filter(funcs[i]))
+        kinds[i] = analyzeFallOff(funcs[i]);
   });
+
+  llvm::SmallVector<FallOffResult> results;
   for (auto [func, kind] : llvm::zip_equal(funcs, kinds))
     if (kind)
       results.push_back({func, *kind});
