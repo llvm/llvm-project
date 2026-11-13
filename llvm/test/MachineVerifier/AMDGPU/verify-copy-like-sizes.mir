@@ -1,0 +1,105 @@
+# RUN: not --crash llc -mtriple=amdgpu9.00 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX9 --implicit-check-not="Bad machine code"
+# RUN: not --crash llc -mtriple=amdgpu11.00 -mattr=+real-true16 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GFX11 --implicit-check-not="Bad machine code"
+
+---
+name: copy_phi_sizes
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:sreg_64 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vreg_64 = IMPLICIT_DEF
+    %4:vreg_128 = IMPLICIT_DEF
+    %5:vgpr_16 = IMPLICIT_DEF
+    %6:sreg_64(s64) = IMPLICIT_DEF
+    ; CHECK: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:sreg_32 = COPY {{%[0-9]+}}:sreg_64
+    %7:sreg_32 = COPY %1
+    ; CHECK: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vgpr_32 = COPY {{%[0-9]+}}.sub0_sub1:vreg_128
+    %8:vgpr_32 = COPY %4.sub0_sub1
+    %9:vgpr_32 = COPY %4.sub3
+    ; CHECK: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:sreg_64(s64) = COPY {{%[0-9]+}}.sub0:sreg_64(s64)
+    %10:sreg_64(s64) = COPY %6.sub0(s64)
+    ; CHECK: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:sreg_64 = COPY {{%[0-9]+}}.sub0:sreg_64(s64)
+    %11:sreg_64 = COPY %6.sub0(s64)
+    $scc = COPY %0
+    $scc = COPY %1
+    %12:sreg_32 = COPY $scc
+    ; CHECK: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; CHECK: - instruction: $scc = COPY {{%[0-9]+}}:vreg_128
+    $scc = COPY %4
+    ; CHECK: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; CHECK: - instruction: $vcc = COPY {{%[0-9]+}}:vgpr_32
+    $vcc = COPY %2
+    %13:vreg_1 = COPY %0
+    %14:vreg_1 = COPY %2
+    %15:vgpr_32 = COPY %13
+    ; GFX11: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; GFX11: - instruction: {{%[0-9]+}}:vreg_1 = COPY {{%[0-9]+}}:sreg_64
+    %16:vreg_1 = COPY %1
+    ; CHECK: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vreg_1 = COPY {{%[0-9]+}}:vreg_64
+    %17:vreg_1 = COPY %3
+    ; GFX9: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; GFX9: - instruction: {{%[0-9]+}}:vgpr_16 = COPY {{%[0-9]+}}:sreg_32
+    %18:vgpr_16 = COPY %0
+    ; GFX9: *** Bad machine code: COPY operands have mismatched sizes ***
+    ; GFX9: - instruction: {{%[0-9]+}}:vgpr_32 = COPY {{%[0-9]+}}:vgpr_16
+    %19:vgpr_32 = COPY %5
+    %36:vgpr_32 = COPY %0
+    %37:vgpr_32_lo128 = COPY %2
+    %38:agpr_32 = COPY %2
+    %39:sreg_32_xm0 = COPY %0
+    %41:_(s32) = COPY %2
+    %42:_(s32) = COPY %41
+    %43:vgpr_32 = COPY %42
+    S_BRANCH %bb.1
+
+  bb.1:
+    ; CHECK: *** Bad machine code: PHI operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vreg_64 = PHI {{%[0-9]+}}:vgpr_32, %bb.0
+    %20:vreg_64 = PHI %2, %bb.0
+    ; CHECK: *** Bad machine code: PHI operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:sreg_32(s32) = PHI {{%[0-9]+}}:sreg_64(s64), %bb.0
+    %21:sreg_32(s32) = PHI %6(s64), %bb.0
+    ; GFX11: *** Bad machine code: PHI operands have mismatched sizes ***
+    ; GFX11: - instruction: {{%[0-9]+}}:vreg_1 = PHI {{%[0-9]+}}:sreg_64, %bb.0
+    %22:vreg_1 = PHI %1, %bb.0
+    ; GFX9: *** Bad machine code: PHI operands have mismatched sizes ***
+    ; GFX9: - instruction: {{%[0-9]+}}:vgpr_16 = PHI {{%[0-9]+}}:sreg_32, %bb.0
+    %23:vgpr_16 = PHI %0, %bb.0
+    ; CHECK: *** Bad machine code: PHI operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vgpr_32 = PHI {{%[0-9]+}}.lo16:vgpr_32, %bb.0
+    %24:vgpr_32 = PHI %2.lo16, %bb.0
+    %40:sreg_32_xm0 = PHI %0, %bb.0
+    %25:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %2, %subreg.sub1
+    %26:vreg_128 = REG_SEQUENCE %3, %subreg.sub0_sub1, %3, %subreg.sub2_sub3
+    ; CHECK: *** Bad machine code: REG_SEQUENCE source does not match its subregister index ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vreg_64 = REG_SEQUENCE {{%[0-9]+}}:vreg_64, %subreg.sub0, {{%[0-9]+}}:vgpr_32, %subreg.sub1
+    %27:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1
+    ; CHECK: *** Bad machine code: REG_SEQUENCE source does not match its subregister index ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vreg_128 = REG_SEQUENCE {{%[0-9]+}}:vreg_128, %subreg.sub0_sub1, {{%[0-9]+}}:vreg_64, %subreg.sub2_sub3
+    %28:vreg_128 = REG_SEQUENCE %4, %subreg.sub0_sub1, %3, %subreg.sub2_sub3
+
+    %29:vgpr_32 = EXTRACT_SUBREG %4, %subreg.sub0
+    %30:vreg_64 = EXTRACT_SUBREG %4, %subreg.sub0_sub1
+    ; CHECK: *** Bad machine code: EXTRACT_SUBREG result does not match its subregister index ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vreg_64 = EXTRACT_SUBREG {{%[0-9]+}}:vreg_128, %subreg.sub0
+    %31:vreg_64 = EXTRACT_SUBREG %4, %subreg.sub0
+
+    %32:vreg_64 = SUBREG_TO_REG %2, %subreg.sub0
+    ; CHECK: *** Bad machine code: SUBREG_TO_REG source does not match its subregister index ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vreg_64 = SUBREG_TO_REG {{%[0-9]+}}:vreg_64, %subreg.sub0
+    %33:vreg_64 = SUBREG_TO_REG %3, %subreg.sub0
+
+    %34:vreg_64 = INSERT_SUBREG %3, %2, %subreg.sub0
+    ; CHECK: *** Bad machine code: INSERT_SUBREG operands have mismatched sizes ***
+    ; CHECK: - instruction: {{%[0-9]+}}:vreg_64 = INSERT_SUBREG {{%[0-9]+}}:vreg_128(tied-def 0), {{%[0-9]+}}:vgpr_32, %subreg.sub0
+    %35:vreg_64 = INSERT_SUBREG %4, %2, %subreg.sub0
+
+    S_ENDPGM 0, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %14, implicit %15, implicit %16, implicit %17, implicit %18, implicit %19, implicit %20, implicit %21, implicit %22, implicit %23, implicit %24, implicit %25, implicit %26, implicit %27, implicit %28, implicit %29, implicit %30, implicit %31, implicit %32, implicit %33, implicit %34, implicit %35, implicit %36, implicit %37, implicit %38, implicit %39, implicit %40
+...
