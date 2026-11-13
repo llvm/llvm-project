@@ -43,11 +43,6 @@ class LiveIntervalCalc : public LiveRangeCalc {
 public:
   LiveIntervalCalc() = default;
 
-  /// createDeadDefs - Create a dead def in LI for every def operand of Reg.
-  /// Each instruction defining Reg gets a new VNInfo with a corresponding
-  /// minimal live range.
-  LLVM_ABI void createDeadDefs(LiveRange &LR, Register Reg);
-
   /// Extend the live range of @p LR to reach all uses of Reg.
   ///
   /// All uses must be jointly dominated by existing liveness.  PHI-defs are
