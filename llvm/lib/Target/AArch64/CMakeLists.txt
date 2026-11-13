@@ -63,6 +63,7 @@ add_llvm_target(AArch64CodeGen
   AArch64ExpandPseudoInsts.cpp
   AArch64FalkorHWPFFix.cpp
   AArch64FastISel.cpp
+  AArch64HotpatchPadding.cpp
   AArch64A53Fix835769.cpp
   AArch64FrameLowering.cpp
   AArch64CompressJumpTables.cpp

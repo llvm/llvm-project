@@ -914,8 +914,7 @@ void CodeViewDebug::emitCompilerInformation() {
   // it.
   auto *HotpatchFlag =
       mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("ms-hotpatch"));
-  if ((HotpatchFlag && HotpatchFlag->isOne()) || Arch == ArchType::thumb ||
-      Arch == ArchType::aarch64) {
+  if ((HotpatchFlag && HotpatchFlag->isOne()) || Arch == ArchType::thumb) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
   }
 

@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple aarch64 -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -fpatchable-function-entry=1 -o - | FileCheck --check-prefixes=CHECK,OPT %s
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -fms-hotpatch -o - | FileCheck --check-prefixes=HOTPATCH %s
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -emit-llvm %s -fms-hotpatch -o - | FileCheck --check-prefixes=HOTPATCH %s
 
 // CHECK: define{{.*}} void @f0() #0
 __attribute__((patchable_function_entry(0))) void f0(void) {}
