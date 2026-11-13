@@ -9336,8 +9336,16 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
 
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
   auto BC = TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false);
-  if (TLI.preferSelectsOverBooleanArithmetic(
-          getApproximateEVTForLLT(SrcTy, Ctx)) ||
+  EVT SrcVT = getApproximateEVTForLLT(SrcTy, Ctx);
+  EVT BoolVT = TLI.getSetCCResultType(MIRBuilder.getDataLayout(), Ctx, SrcVT);
+  // Scalar integer promotion can still benefit from selects. Keep arithmetic
+  // for split inputs and illegal vectors, where selects can increase code size.
+  bool IsLegalOrPromoted =
+      TLI.isTypeLegal(SrcVT) ||
+      (SrcTy.isScalar() &&
+       TLI.getTypeAction(Ctx, SrcVT) == TargetLowering::TypePromoteInteger);
+  if (TLI.preferSelectsOverBooleanArithmetic(SrcVT) ||
+      (BoolVT.getScalarSizeInBits() == 1 && IsLegalOrPromoted) ||
       BC == TargetLowering::UndefinedBooleanContent) {
     auto One = MIRBuilder.buildConstant(DstTy, 1);
     auto SelectZeroOrOne = MIRBuilder.buildSelect(DstTy, IsGT, One, Zero);
