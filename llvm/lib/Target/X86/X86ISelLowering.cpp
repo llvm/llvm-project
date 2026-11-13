@@ -24590,10 +24590,9 @@ static SDValue LowerIntVSETCC_AVX512(SDValue Op, const SDLoc &dl,
   // Split/fallback to AVX2 lowering and then trunc the result to vXi1.
   if (OpVT.getScalarSizeInBits() < 32 && !Subtarget.hasBWI()) {
     if (OpVT.is512BitVector())
-      return splitVSETCC(VT, Op0, Op1, SetCCOpcode, DAG, dl);
+      return splitVSETCC(VT, Op0, Op1, CC, DAG, dl);
 
-    return truncateAVX512SetCCNoBWI(VT, OpVT, Op0, Op1, SetCCOpcode, dl, DAG,
-                                    Subtarget);
+    return truncateAVX512SetCCNoBWI(VT, OpVT, Op0, Op1, CC, dl, DAG, Subtarget);
   }
 
   // Prefer a compare against zero over splat(±1), which becomes a
