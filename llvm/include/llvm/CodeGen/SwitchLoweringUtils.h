@@ -20,6 +20,7 @@ namespace llvm {
 
 class BlockFrequencyInfo;
 class ConstantInt;
+class Function;
 class FunctionLoweringInfo;
 class MachineBasicBlock;
 class ProfileSummaryInfo;
@@ -244,6 +245,10 @@ LLVM_ABI uint64_t getJumpTableRange(const CaseClusterVector &Clusters,
 /// Return the number of cases within a range.
 LLVM_ABI uint64_t getJumpTableNumCases(
     const SmallVectorImpl<unsigned> &TotalCases, unsigned First, unsigned Last);
+
+/// Return true if jump tables in \p F must keep their range check even when
+/// the default destination of the switch is unreachable.
+LLVM_ABI bool keepJumpTableRangeCheck(const Function &F);
 
 struct SwitchWorkListItem {
   MachineBasicBlock *MBB = nullptr;

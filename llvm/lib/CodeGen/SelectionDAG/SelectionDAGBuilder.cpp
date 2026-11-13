@@ -12814,26 +12814,10 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
 
         // If the default clause is unreachable, propagate that knowledge into
         // JTH->FallthroughUnreachable which will use it to suppress the range
-        // check.
-        //
-        // However, don't do this if we're doing branch target enforcement
-        // (e.g. Arm BTI, or the cf-protection-branch module flag used by
-        // RISC-V Zicfilp and X86 IBT), because a table branch _without_ a
-        // range check can be a tempting JOP gadget - out-of-bounds inputs
-        // that are impossible in correct execution become possible again if
-        // an attacker can influence the control flow. So if an attacker
-        // doesn't already have a branch target enforcement bypass available,
-        // we don't want them to be able to get one out of this table branch.
-        if (FallthroughUnreachable) {
-          Function &CurFunc = CurMF->getFunction();
-          bool HasCFBranch = false;
-          if (auto *CFBranch = mdconst::extract_or_null<ConstantInt>(
-                  CurFunc.getParent()->getModuleFlag("cf-protection-branch")))
-            HasCFBranch = !CFBranch->isZero();
-          if (!HasCFBranch &&
-              !CurFunc.hasFnAttribute("branch-target-enforcement"))
-            JTH->FallthroughUnreachable = true;
-        }
+        // check, unless branch target enforcement needs the check.
+        if (FallthroughUnreachable &&
+            !keepJumpTableRangeCheck(CurMF->getFunction()))
+          JTH->FallthroughUnreachable = true;
 
         if (!JTH->FallthroughUnreachable)
           addSuccessorWithProb(CurMBB, Fallthrough, FallthroughProb);

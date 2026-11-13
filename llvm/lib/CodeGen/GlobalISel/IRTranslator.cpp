@@ -1817,7 +1817,9 @@ bool IRTranslatorImpl::lowerJumpTableWorkItem(
     }
   }
 
-  if (FallthroughUnreachable)
+  // If the default clause is unreachable, the range check can be skipped,
+  // unless branch target enforcement needs it.
+  if (FallthroughUnreachable && !keepJumpTableRangeCheck(CurMF->getFunction()))
     JTH->FallthroughUnreachable = true;
 
   if (!JTH->FallthroughUnreachable)
