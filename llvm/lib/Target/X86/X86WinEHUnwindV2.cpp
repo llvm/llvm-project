@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -371,6 +372,14 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
   // with the V3 layout.
   if (requireWinX64UnwindV3(MF))
     return false;
+
+  // Tail calls that change the stack argument size use an exit sequence that
+  // only classic (V1) unwind info can describe. Where V2 is required, frame
+  // lowering has already reported an error.
+  if (MF.getInfo<X86MachineFunctionInfo>()->getTCReturnAddrDelta() != 0) {
+    FailsUnwindV2Criteria++;
+    return false;
+  }
 
   // Requested changes.
   SmallVector<FrameInfo> FrameInfos;

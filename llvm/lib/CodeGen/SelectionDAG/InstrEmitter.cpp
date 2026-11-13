@@ -56,8 +56,8 @@ unsigned InstrEmitter::CountResults(SDNode *Node) {
 /// Compute the number of actual operands that will go into the resulting
 /// MachineInstr.
 ///
-/// Also count physreg RegisterSDNode and RegisterMaskSDNode operands preceding
-/// the chain and glue. These operands may be implicit on the machine instr.
+/// Also count RegisterSDNode and RegisterMaskSDNode operands preceding the
+/// chain and glue. These operands may be implicit on the machine instr.
 static unsigned countOperands(SDNode *Node, unsigned NumExpUses,
                               unsigned &NumImpUses) {
   unsigned N = Node->getNumOperands();
@@ -71,11 +71,9 @@ static unsigned countOperands(SDNode *Node, unsigned NumExpUses,
   // Count RegisterSDNode and RegisterMaskSDNode operands for NumImpUses.
   NumImpUses = N - NumExpUses;
   for (unsigned I = N; I > NumExpUses; --I) {
-    if (isa<RegisterMaskSDNode>(Node->getOperand(I - 1)))
+    if (isa<RegisterMaskSDNode>(Node->getOperand(I - 1)) ||
+        isa<RegisterSDNode>(Node->getOperand(I - 1)))
       continue;
-    if (RegisterSDNode *RN = dyn_cast<RegisterSDNode>(Node->getOperand(I - 1)))
-      if (RN->getReg().isPhysical())
-        continue;
     NumImpUses = N - I;
     break;
   }

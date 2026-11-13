@@ -1,0 +1,343 @@
+# RUN: llc -mtriple=x86_64-unknown-windows-msvc -run-pass=prolog-epilog -o - %s | FileCheck %s
+
+# A store with no memory operand to a fixed object below the return address
+# (as for the UnwindHelp slot of a C++ function) is not a store over the
+# caller's return address, whether the function returns normally or tail calls.
+# Only a tail call that needs more argument space is scanned for such stores, so
+# an object overlapping the return address slot (as made by
+# llvm.addressofreturnaddress) is left alone in a function that returns.
+
+# CHECK-LABEL: name: r
+# CHECK:       MOV64mi32 $rsp, 1, $noreg, {{[0-9]+}}, $noreg, -2
+# CHECK:       SEH_BeginEpilogue
+# CHECK-LABEL: name: q
+# CHECK:       MOV64mi32 $rsp, 1, $noreg, {{[0-9]+}}, $noreg, -2
+# CHECK-NOT:   frame-destroy MOV64mi32
+# CHECK:       SEH_BeginEpilogue
+# CHECK-LABEL: name: f
+# CHECK:       MOV64mi32 $rsp, 1, $noreg, {{[0-9]+}}, $noreg, -2
+# CHECK:       SEH_BeginEpilogue
+
+--- |
+  target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-windows-msvc"
+
+  declare swifttailcc void @callee(ptr swiftasync, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+  define void @r() {
+    ret void
+  }
+
+  define void @q() {
+    ret void
+  }
+
+  define swifttailcc void @f(ptr swiftasync %ctx, ptr %a, ptr %b, ptr %c, ptr %d) {
+    %next = load ptr, ptr %b, align 8
+    musttail call swifttailcc void @callee(ptr swiftasync %next, ptr %a, ptr %b, ptr %c, ptr %d, ptr %a, ptr %ctx, ptr %b, ptr %c, ptr %d, ptr %a)
+    ret void
+  }
+...
+---
+name:            f
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r14', virtual-reg: '' }
+  - { reg: '$rcx', virtual-reg: '' }
+  - { reg: '$rdx', virtual-reg: '' }
+  - { reg: '$r8', virtual-reg: '' }
+  - { reg: '$r9', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  framePointerPolicy: none
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     true
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:
+  - { id: 0, type: default, offset: 24, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, type: default, offset: 16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 3, type: default, offset: 0, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 4, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 5, type: default, offset: -16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 6, type: default, offset: -56, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 7, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $rcx, $rdx, $r8, $r9, $r14
+
+    MOV64mi32 %fixed-stack.5, 1, $noreg, 0, $noreg, -2
+    TCRETURNdi64 @callee, -48, csr_win64_swifttail, implicit $rsp, implicit $ssp, implicit $r14, implicit $rcx, implicit $rdx, implicit $r8, implicit $r9
+...
+---
+name:            r
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r14', virtual-reg: '' }
+  - { reg: '$rcx', virtual-reg: '' }
+  - { reg: '$rdx', virtual-reg: '' }
+  - { reg: '$r8', virtual-reg: '' }
+  - { reg: '$r9', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  framePointerPolicy: none
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     true
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:
+  - { id: 0, type: default, offset: 24, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, type: default, offset: 16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 3, type: default, offset: 0, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 4, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 5, type: default, offset: -16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 6, type: default, offset: -56, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 7, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $rcx, $rdx, $r8, $r9, $r14
+
+    MOV64mi32 %fixed-stack.5, 1, $noreg, 0, $noreg, -2
+    RET64
+...
+---
+name:            q
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r14', virtual-reg: '' }
+  - { reg: '$rcx', virtual-reg: '' }
+  - { reg: '$rdx', virtual-reg: '' }
+  - { reg: '$r8', virtual-reg: '' }
+  - { reg: '$r9', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  framePointerPolicy: none
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     true
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:
+  - { id: 0, type: default, offset: 24, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, type: default, offset: 16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 3, type: default, offset: 0, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 4, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 5, type: default, offset: -16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 6, type: default, offset: -56, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 7, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $rcx, $rdx, $r8, $r9, $r14
+
+    MOV64mi32 %fixed-stack.4, 1, $noreg, 0, $noreg, -2
+    RET64
+...

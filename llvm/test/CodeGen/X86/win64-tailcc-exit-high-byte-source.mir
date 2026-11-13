@@ -1,0 +1,126 @@
+# RUN: llc -mtriple=x86_64-unknown-windows-msvc -run-pass=prolog-epilog -o - %s | FileCheck %s
+
+# A store over the caller's return address whose source is a high-byte register
+# (ah) is sunk to just before the epilogue. The register is redefined before
+# then, so the value is copied first, to another high-byte register: only those
+# can be the destination of a copy from ah (the copy is encoded without a REX
+# prefix), and the store reads the copy.
+
+# CHECK-LABEL: name: f
+# CHECK:       $[[TMP:[cd]h]] = MOV8rr_NOREX $ah
+# CHECK-NEXT:  $ax = MOV16ri 0
+# CHECK-NEXT:  frame-destroy MOV8mr $rsp, 1, $noreg, {{[0-9]+}}, $noreg, $[[TMP]] :: (volatile store (s8) into %fixed-stack.3)
+# CHECK-NEXT:  SEH_BeginEpilogue
+
+--- |
+  target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-windows-msvc"
+
+  declare swifttailcc void @callee(ptr swiftasync, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+  define swifttailcc void @f(ptr swiftasync %ctx, ptr %a, ptr %b, ptr %c, ptr %d) {
+    %next = load ptr, ptr %b, align 8
+    musttail call swifttailcc void @callee(ptr swiftasync %next, ptr %a, ptr %b, ptr %c, ptr %d, ptr %a, ptr %ctx, ptr %b, ptr %c, ptr %d, ptr %a)
+    ret void
+  }
+...
+---
+name:            f
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$rax', virtual-reg: '' }
+  - { reg: '$r8', virtual-reg: '' }
+  - { reg: '$r9', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  framePointerPolicy: none
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     true
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:
+  - { id: 0, type: default, offset: 24, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, type: default, offset: 16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 2, type: default, offset: 8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 3, type: default, offset: 0, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 4, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 5, type: default, offset: -16, size: 8, alignment: 16, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 6, type: default, offset: -56, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 7, type: default, offset: -8, size: 8, alignment: 8, stack-id: default, 
+      isImmutable: false, isAliased: false, callee-saved-register: '', 
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $rax, $r8, $r9
+
+    MOV8mr %fixed-stack.4, 1, $noreg, 0, $noreg, $ah :: (volatile store (s8) into %fixed-stack.4)
+    $ax = MOV16ri 0
+    TCRETURNdi64 @callee, -48, csr_win64, implicit $rsp, implicit $ssp, implicit $r8, implicit $r9, implicit $ax
+...
