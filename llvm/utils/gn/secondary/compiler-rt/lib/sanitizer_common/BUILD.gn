@@ -121,6 +121,8 @@ source_set("sources") {
     "sanitizer_range.h",
     "sanitizer_redefine_builtins.h",
     "sanitizer_report_decorator.h",
+    "sanitizer_report_receiver.cpp",
+    "sanitizer_report_receiver.h",
     "sanitizer_ring_buffer.h",
     "sanitizer_solaris.cpp",
     "sanitizer_stack_store.cpp",
