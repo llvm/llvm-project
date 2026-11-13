@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <algorithm>
+#include <set>
 #include <variant>
 
 using namespace Fortran::parser::literals;
@@ -1229,32 +1230,75 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
   return symbolVectors;
 }
 
-static semantics::UnorderedSymbolSet CollectUniqueCUDADeviceSymbols(
+// Collect the symbols that are referenced inside the subscripts of an
+// expression. CollectCudaSymbols leaves them out because a subscript is not
+// the data that a designator designates, but a device symbol in a subscript is
+// still a reference to a device object, as in a(idx(1)) where idx is device.
+struct CollectCudaSubscriptSymbolsHelper
+    : public SetTraverse<CollectCudaSubscriptSymbolsHelper,
+          semantics::UnorderedSymbolSet> {
+  using Base = SetTraverse<CollectCudaSubscriptSymbolsHelper,
+      semantics::UnorderedSymbolSet>;
+  CollectCudaSubscriptSymbolsHelper(bool inSubscript = false)
+      : Base{*this}, inSubscript_{inSubscript} {}
+  using Base::operator();
+  semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
+    if (inSubscript_) {
+      return {symbol.GetUltimate()};
+    }
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const Subscript &subscript) const {
+    return CollectCudaSubscriptSymbolsHelper{true}(subscript.u);
+  }
+  semantics::UnorderedSymbolSet operator()(const DescriptorInquiry &) const {
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const ProcedureRef &) const {
+    return {};
+  }
+
+private:
+  bool inSubscript_;
+};
+
+// A device object is identified by the CUDA symbol that designates it and by
+// the base object it is taken from, so that x%d and y%d are two objects while
+// a(1) and a(2), or m(1)%d and m(2)%d, are the same one.
+using CUDADeviceObject = std::pair<const Symbol *, const Symbol *>;
+
+static std::set<CUDADeviceObject> CollectUniqueCUDADeviceObjects(
     const Expr<SomeType> &expr) {
   std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
-  semantics::UnorderedSymbolSet symbols;
+  std::set<CUDADeviceObject> objects;
   semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
   for (const auto &symbolVector : symbolVectors) {
     for (const auto &sym : symbolVector) {
       if (cudaSymbols.find(sym) != cudaSymbols.end()) {
         if (IsCUDADeviceSymbol(*sym)) {
-          symbols.insert(sym);
+          objects.emplace(
+              &sym->GetUltimate(), &symbolVector.back()->GetUltimate());
           break;
         }
       }
     }
   }
-  return symbols;
+  for (const Symbol &sym : CollectCudaSubscriptSymbolsHelper{}(expr)) {
+    if (IsCUDADeviceSymbol(sym)) {
+      objects.emplace(&sym, &sym);
+    }
+  }
+  return objects;
 }
 
 int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
-  return CollectUniqueCUDADeviceSymbols(expr).size();
+  return CollectUniqueCUDADeviceObjects(expr).size();
 }
 
 int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr) {
   int count{0};
-  for (const Symbol &sym : CollectUniqueCUDADeviceSymbols(expr)) {
-    if (IsCUDAManagedOrUnifiedSymbol(sym)) {
+  for (const CUDADeviceObject &object : CollectUniqueCUDADeviceObjects(expr)) {
+    if (IsCUDAManagedOrUnifiedSymbol(*object.first)) {
       ++count;
     }
   }
