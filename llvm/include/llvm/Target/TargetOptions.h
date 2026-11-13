@@ -106,13 +106,14 @@ public:
         UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
         TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
         EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
-        EmitStackSizeSection(false), EnableMachineOutliner(false),
-        EnableStaticDataPartitioning(false), EnableDefaultMachineVerifier(true),
-        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
-        EmitCallSiteInfo(false), EnableDebugEntryValues(false),
-        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
-        XRayFunctionIndex(true), DebugStrictDwarf(false), JMCInstrument(false),
-        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+        PicDataIsTextRelative(true), EmitStackSizeSection(false),
+        EnableMachineOutliner(false), EnableStaticDataPartitioning(false),
+        EnableDefaultMachineVerifier(true), EmitAddrsig(false),
+        BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
+        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
+        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
+        DebugStrictDwarf(false), JMCInstrument(false), EnableCFIFixup(false),
+        MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(false) {}
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
@@ -194,6 +195,10 @@ public:
 
   /// This flag enables InterProcedural Register Allocation (IPRA).
   unsigned EnableIPRA : 1;
+
+  /// Assume that PIC data segments are text-relative when selecting
+  /// target-specific data addressing forms.
+  unsigned PicDataIsTextRelative : 1;
 
   /// Emit section containing metadata on function stack sizes.
   unsigned EmitStackSizeSection : 1;

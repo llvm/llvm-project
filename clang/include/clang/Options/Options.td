@@ -4519,8 +4519,14 @@ def fpcc_struct_return : Flag<["-"], "fpcc-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Override the default ABI to return all structs on the stack">;
 def fpch_preprocess : Flag<["-"], "fpch-preprocess">, Group<f_Group>;
-defm pic_data_is_text_relative : SimpleMFlag<"pic-data-is-text-relative",
-     "Assume", "Don't assume", " data segments are relative to text segment">;
+defm pic_data_is_text_relative
+    : BoolMOption<
+          "pic-data-is-text-relative",
+          CodeGenOpts<"PicDataIsTextRelative">, DefaultTrue,
+          PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                  "Assume data segments are relative to text segment">,
+          NegFlag<SetFalse, [], [ClangOption, CC1Option],
+                  "Don't assume data segments are relative to text segment">>;
 def fdirect_access_external_data : Flag<["-"], "fdirect-access-external-data">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Don't use GOT indirection to reference external data symbols">;

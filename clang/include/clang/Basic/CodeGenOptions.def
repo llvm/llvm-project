@@ -452,6 +452,9 @@ CODEGENOPT(DiagnosticsWithHotness, 1, 0, Benign)
 /// Whether to use direct access relocations (instead of GOT) to reference external data symbols.
 CODEGENOPT(DirectAccessExternalData, 1, 0, Benign)
 
+/// Whether ARM PIC data references may use text-relative addressing.
+CODEGENOPT(PicDataIsTextRelative, 1, 1, Benign)
+
 /// Whether we should use the undefined behaviour optimization for control flow
 /// paths that reach the end of a function without executing a required return.
 CODEGENOPT(StrictReturn, 1, 1, Benign)

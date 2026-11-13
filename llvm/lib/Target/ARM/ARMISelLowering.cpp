@@ -3700,10 +3700,27 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
       return V;
 
   if (isPositionIndependent()) {
-    SDValue G = DAG.getTargetGlobalAddress(
-        GV, dl, PtrVT, 0, GV->isDSOLocal() ? 0 : ARMII::MO_GOT);
+    if (Subtarget->useStaticBaseForPicData(GV)) {
+      MachineFunction &MF = DAG.getMachineFunction();
+      ARMConstantPoolValue *CPV =
+          ARMConstantPoolConstant::Create(GV, ARMCP::GOT);
+      SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
+      CPAddr = DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, CPAddr);
+      SDValue GOTOffset = DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), CPAddr,
+                                      MachinePointerInfo::getConstantPool(MF));
+      Register SBReg =
+          MF.addLiveIn(ARM::R9, getRegClassFor(PtrVT.getSimpleVT()));
+      SDValue SB = DAG.getCopyFromReg(DAG.getEntryNode(), dl, SBReg, PtrVT);
+      SDValue GOTEntry = DAG.getNode(ISD::ADD, dl, PtrVT, SB, GOTOffset);
+      return DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), GOTEntry,
+                         MachinePointerInfo::getGOT(MF));
+    }
+
+    bool UseGOT = Subtarget->isGVInGOT(GV);
+    SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                           UseGOT ? ARMII::MO_GOT : 0);
     SDValue Result = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVT, G);
-    if (!GV->isDSOLocal())
+    if (UseGOT)
       Result =
           DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Result,
                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));

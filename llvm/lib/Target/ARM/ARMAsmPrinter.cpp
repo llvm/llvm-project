@@ -719,7 +719,10 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitTargetAttributes(STI);
 
   // RW data addressing.
-  if (isPositionIndependent()) {
+  if (STI.isPicDataStaticBase()) {
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RW_data,
+                      ARMBuildAttrs::AddressRWSBRel);
+  } else if (isPositionIndependent()) {
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_RW_data,
                       ARMBuildAttrs::AddressRWPCRel);
   } else if (STI.isRWPI()) {
@@ -878,7 +881,7 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // We currently do not support using R9 as the TLS pointer.
-  if (STI.isRWPI())
+  if (STI.isRWPI() || STI.isPicDataStaticBase())
     ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_R9_use,
                       ARMBuildAttrs::R9IsSB);
   else if (STI.isR9Reserved())
@@ -913,6 +916,8 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
     return ARM::S_None;
   case ARMCP::TLSGD:
     return ARM::S_TLSGD;
+  case ARMCP::GOT:
+    return ARM::S_GOT;
   case ARMCP::TPOFF:
     return ARM::S_TPOFF;
   case ARMCP::GOTTPOFF:

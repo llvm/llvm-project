@@ -5983,8 +5983,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         D.Diag(diag::err_drv_argument_only_allowed_with)
             << "-mno-pic-data-is-text-relative"
             << "-fpic/-fpie";
+      if ((Triple.isARM() || Triple.isThumb()) &&
+          Args.hasArg(options::OPT_ffixed_r9))
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << "-mno-pic-data-is-text-relative"
+            << "-ffixed-r9";
     }
-    if (!Triple.isSystemZ())
+    if (!Triple.isSystemZ() && !Triple.isARM() && !Triple.isThumb())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << (NoPICDataIsTextRelative ? "-mno-pic-data-is-text-relative"
                                       : "-mpic-data-is-text-relative")
@@ -6018,8 +6023,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(PICLevel == 1 ? "1" : "2");
     if (IsPIE)
       CmdArgs.push_back("-pic-is-pie");
-    if (NoPICDataIsTextRelative)
+    if (NoPICDataIsTextRelative && Triple.isSystemZ())
       CmdArgs.push_back("-mcmodel=medium");
+    if (LastPICDataRelArg && (Triple.isARM() || Triple.isThumb()))
+      LastPICDataRelArg->render(Args, CmdArgs);
   }
 
   if (RelocationModel == llvm::Reloc::ROPI ||

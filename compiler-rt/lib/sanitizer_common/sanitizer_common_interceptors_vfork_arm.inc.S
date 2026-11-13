@@ -17,8 +17,13 @@ ASM_WRAPPER_NAME(vfork):
         // Call real vfork. This may return twice. User code that runs between the first and the second return
         // may clobber the stack frame of the interceptor; that's why it does not have a frame.
         ldr     r0, .LCPI0_0
+#if defined(__ARM_PIC_DATA_STATIC_BASE)
+        ldr     r0, [r9, r0]
+        ldr     r0, [r0]
+#else
 .LPC0_0:
         ldr     r0, [pc, r0]
+#endif
         mov     lr, pc
         bx      r0
 
@@ -39,7 +44,11 @@ ASM_WRAPPER_NAME(vfork):
         mov     pc, lr
 
 .LCPI0_0:
+#if defined(__ARM_PIC_DATA_STATIC_BASE)
+        .long   _ZN14__interception10real_vforkE(GOT)
+#else
         .long   _ZN14__interception10real_vforkE - (.LPC0_0+8)
+#endif
 
 ASM_SIZE(vfork)
 
