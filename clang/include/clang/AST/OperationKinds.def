@@ -185,6 +185,7 @@ CAST_OPERATION(ToVoid)
 /// CK_MatrixCast - A cast between matrix types of the same dimensions.
 CAST_OPERATION(MatrixCast)
 
+// TODO: Add CodeGen lowering for CoopMatrixCast to SPIR-V-friendly LLVM IR.
 /// CK_CoopMatrixCast - A cast between compatible cooperative matrix types.
 CAST_OPERATION(CoopMatrixCast)
 
