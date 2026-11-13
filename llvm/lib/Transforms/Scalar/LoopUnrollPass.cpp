@@ -96,31 +96,13 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   const ScalarOptions &Opts = getScalarOptions(*L);
   TargetTransformInfo::UnrollingPreferences UP;
 
-  // Set up the defaults
+  // Set up the defaults that depend on options. All other fields use the
+  // default member initializers of UnrollingPreferences.
   UP.Threshold = OptLevel > 2 ? Opts.unroll_threshold_aggressive
                               : Opts.unroll_threshold_default;
-  UP.MaxPercentThresholdBoost = 400;
   UP.OptSizeThreshold = Opts.unroll_optsize_threshold;
-  UP.PartialThreshold = 150;
   UP.PartialOptSizeThreshold = Opts.unroll_optsize_threshold;
-  UP.DefaultUnrollRuntimeCount = 8;
-  UP.MaxCount = std::numeric_limits<unsigned>::max();
-  UP.MaxUpperBound = 8;
-  UP.FullUnrollMaxCount = std::numeric_limits<unsigned>::max();
-  UP.BEInsns = 2;
-  UP.Partial = false;
-  UP.Runtime = false;
-  UP.AllowRemainder = true;
-  UP.UnrollRemainder = false;
-  UP.AllowExpensiveTripCount = false;
-  UP.Force = false;
-  UP.UpperBound = false;
-  UP.UnrollAndJam = false;
-  UP.UnrollAndJamInnerLoopThreshold = 60;
-  UP.MaxIterationsCountToAnalyze = 10;
   UP.SCEVExpansionBudget = SCEVCheapExpansionBudget;
-  UP.RuntimeUnrollMultiExit = false;
-  UP.AddAdditionalAccumulators = false;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP, &ORE);
