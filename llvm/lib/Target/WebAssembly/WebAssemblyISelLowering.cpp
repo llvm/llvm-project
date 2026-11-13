@@ -4137,7 +4137,7 @@ static SDValue performMinMaxF128Combine(SDNode *N, SelectionDAG &DAG) {
   }
 }
 
-static SDValue performNarrowCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performNarrowCombine(SDNode *N) {
   if (N->getOperand(0).getOpcode() == WebAssemblyISD::EXTEND_LOW_U &&
       N->getOperand(1).getOpcode() == WebAssemblyISD::EXTEND_HIGH_U &&
       N->getOperand(0)->getOperand(0) == N->getOperand(1)->getOperand(0))
@@ -4191,6 +4191,6 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMAXIMUMNUM:
     return performMinMaxF128Combine(N, DCI.DAG);
   case WebAssemblyISD::NARROW_U:
-    return performNarrowCombine(N, DCI.DAG);
+    return performNarrowCombine(N);
   }
 }
