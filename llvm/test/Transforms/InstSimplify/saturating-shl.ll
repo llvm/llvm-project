@@ -94,8 +94,7 @@ define <vscale x 2 x i8> @sshl_0_scalable(<vscale x 2 x i8> %y) {
 define i8 @ushl_umax(i8 %y) {
 ; CHECK-LABEL: define i8 @ushl_umax(
 ; CHECK-SAME: i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 -1, i8 [[Y]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %r = call i8 @llvm.ushl.sat.i8(i8 -1, i8 %y)
   ret i8 %r
@@ -104,8 +103,7 @@ define i8 @ushl_umax(i8 %y) {
 define i8 @sshl_smax(i8 %y) {
 ; CHECK-LABEL: define i8 @sshl_smax(
 ; CHECK-SAME: i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 127, i8 [[Y]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 127
 ;
   %r = call i8 @llvm.sshl.sat.i8(i8 127, i8 %y)
   ret i8 %r
@@ -114,8 +112,7 @@ define i8 @sshl_smax(i8 %y) {
 define i8 @sshl_smin(i8 %y) {
 ; CHECK-LABEL: define i8 @sshl_smin(
 ; CHECK-SAME: i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -128, i8 [[Y]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %r = call i8 @llvm.sshl.sat.i8(i8 -128, i8 %y)
   ret i8 %r
@@ -124,8 +121,7 @@ define i8 @sshl_smin(i8 %y) {
 define <2 x i8> @ushl_umax_vec_poison_elt(<2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i8> @ushl_umax_vec_poison_elt(
 ; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> <i8 -1, i8 poison>, <2 x i8> [[Y]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 poison>
 ;
   %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> <i8 -1, i8 poison>, <2 x i8> %y)
   ret <2 x i8> %r
@@ -134,8 +130,7 @@ define <2 x i8> @ushl_umax_vec_poison_elt(<2 x i8> %y) {
 define <2 x i8> @sshl_smax_vec_poison_elt(<2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i8> @sshl_smax_vec_poison_elt(
 ; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 127, i8 poison>, <2 x i8> [[Y]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 127, i8 poison>
 ;
   %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 127, i8 poison>, <2 x i8> %y)
   ret <2 x i8> %r
@@ -144,8 +139,7 @@ define <2 x i8> @sshl_smax_vec_poison_elt(<2 x i8> %y) {
 define <2 x i8> @sshl_smin_vec_poison_elt(<2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i8> @sshl_smin_vec_poison_elt(
 ; CHECK-SAME: <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 -128>, <2 x i8> [[Y]])
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 -128>
 ;
   %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 -128>, <2 x i8> %y)
   ret <2 x i8> %r
@@ -154,8 +148,7 @@ define <2 x i8> @sshl_smin_vec_poison_elt(<2 x i8> %y) {
 define <vscale x 2 x i8> @sshl_smax_scalable(<vscale x 2 x i8> %y) {
 ; CHECK-LABEL: define <vscale x 2 x i8> @sshl_smax_scalable(
 ; CHECK-SAME: <vscale x 2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i8> @llvm.sshl.sat.nxv2i8(<vscale x 2 x i8> splat (i8 127), <vscale x 2 x i8> [[Y]])
-; CHECK-NEXT:    ret <vscale x 2 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i8> splat (i8 127)
 ;
   %r = call <vscale x 2 x i8> @llvm.sshl.sat.nxv2i8(<vscale x 2 x i8> splat (i8 127), <vscale x 2 x i8> %y)
   ret <vscale x 2 x i8> %r
