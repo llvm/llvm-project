@@ -1145,7 +1145,7 @@ static unsigned map_from_llvmDWARFsourcelanguage(LLVMDWARFSourceLanguage lang) {
 }
 
 template <typename DIT> DIT *unwrapDI(LLVMMetadataRef Ref) {
-  return (DIT *)(Ref ? unwrap<MDNode>(Ref) : nullptr);
+  return cast_if_present<DIT>(unwrap(Ref));
 }
 
 static DINode::DIFlags map_from_llvmDIFlags(LLVMDIFlags Flags) {
@@ -1765,7 +1765,9 @@ LLVMDIBuilderCreateArtificialType(LLVMDIBuilderRef Builder,
 }
 
 uint16_t LLVMGetDINodeTag(LLVMMetadataRef MD) {
-  return unwrapDI<DINode>(MD)->getTag();
+  if (auto *Node = dyn_cast<DINode>(unwrap(MD)))
+    return Node->getTag();
+  return 0;
 }
 
 const char *LLVMDITypeGetName(LLVMMetadataRef DType, size_t *Length) {
