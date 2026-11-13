@@ -21,6 +21,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -360,6 +361,19 @@ public:
     /// inline asm operand flag.
     unsigned getNumOperandRegisters() const {
       return Bitfield::get<NumOperands>(Storage);
+    }
+
+    /// The largest number of operands that a flag can describe.
+    static constexpr unsigned getMaxNumOperandRegisters() {
+      return maskTrailingOnes<unsigned>(NumOperands::Bits);
+    }
+
+    /// Set the number of operands that follow the flag. (The MIR parser reads
+    /// the count last, so it can't pass it to the constructor.)
+    void setNumOperandRegisters(unsigned NumOps) {
+      assert(NumOps <= getMaxNumOperandRegisters() &&
+             "Too many operands for a flag");
+      Bitfield::set<NumOperands>(Storage, NumOps);
     }
 
     /// isUseOperandTiedToDef - Return true if the flag of the inline asm

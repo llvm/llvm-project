@@ -87,7 +87,7 @@ define i64 @multireg() {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $eax, implicit-def $edx, imm, %bb.2
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef ops:2, implicit-def $eax, implicit-def $edx, imm, %bb.2
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $eax
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edx
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
