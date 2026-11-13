@@ -923,6 +923,24 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    if (!SrcVT.isFixedLengthVector() || !CIdx)
+      break;
+
+    APInt DemandedSrcElts =
+        APInt::getOneBitSet(SrcVT.getVectorNumElements(), CIdx->getZExtValue());
+    // Integer extracts may implicitly any-extend the vector element.
+    APInt DemandedSrcBits =
+        DemandedBits.zextOrTrunc(SrcVT.getScalarSizeInBits());
+    if (SDValue V = SimplifyMultipleUseDemandedBits(
+            Src, DemandedSrcBits, DemandedSrcElts, DAG, Depth + 1))
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Op), VT, V,
+                         Op.getOperand(1));
+    break;
+  }
   case ISD::SCALAR_TO_VECTOR: {
     if (!VT.isScalableVector() && !DemandedElts[0])
       return DAG.getPOISON(VT);
