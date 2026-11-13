@@ -944,6 +944,346 @@ define i32 @zext_fptrunc_fma_f16(float %x, float %y, float %z) {
   ret i32 %zext
 }
 
+; The high 16 bits of the shift result are known zero, so the true16 zext can
+; reuse them instead of emitting v_cvt_u32_u16.
+define i32 @mul_i16_zext_i32_hi16_zero(i32 %x) {
+; GFX8-LABEL: mul_i16_zext_i32_hi16_zero:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX8-NEXT:    v_mul_lo_u16_e32 v0, 3, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9ALL-LABEL: mul_i16_zext_i32_hi16_zero:
+; GFX9ALL:       ; %bb.0:
+; GFX9ALL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9ALL-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX9ALL-NEXT:    v_mul_lo_u16_e32 v0, 3, v0
+; GFX9ALL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: mul_i16_zext_i32_hi16_zero:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX10-NEXT:    v_mul_lo_u16 v0, v0, 3
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: mul_i16_zext_i32_hi16_zero:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, 3
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: mul_i16_zext_i32_hi16_zero:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, 3
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %shr = lshr i32 %x, 17
+  %trunc = trunc i32 %shr to i16
+  %mul = mul i16 %trunc, 3
+  %zext = zext i16 %mul to i32
+  ret i32 %zext
+}
+
+define i32 @sub_i16_zext_i32_hi16_zero(i32 %x, i16 %y) {
+; GFX8-LABEL: sub_i16_zext_i32_hi16_zero:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 19, v0
+; GFX8-NEXT:    v_sub_u16_e32 v0, v1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9ALL-LABEL: sub_i16_zext_i32_hi16_zero:
+; GFX9ALL:       ; %bb.0:
+; GFX9ALL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9ALL-NEXT:    v_lshrrev_b32_e32 v0, 19, v0
+; GFX9ALL-NEXT:    v_sub_u16_e32 v0, v1, v0
+; GFX9ALL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: sub_i16_zext_i32_hi16_zero:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 19, v0
+; GFX10-NEXT:    v_sub_nc_u16 v0, v1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: sub_i16_zext_i32_hi16_zero:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 19, v0
+; GFX11-TRUE16-NEXT:    v_sub_nc_u16 v0.l, v1.l, v0.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: sub_i16_zext_i32_hi16_zero:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 19, v0
+; GFX11-FAKE16-NEXT:    v_sub_nc_u16 v0, v1, v0
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %shr = lshr i32 %x, 19
+  %trunc = trunc i32 %shr to i16
+  %sub = sub i16 %y, %trunc
+  %zext = zext i16 %sub to i32
+  ret i32 %zext
+}
+
+define i64 @mul_i16_zext_i64_hi16_zero(i32 %x) {
+; GFX8-LABEL: mul_i16_zext_i64_hi16_zero:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX8-NEXT:    v_mul_lo_u16_e32 v0, 3, v0
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9ALL-LABEL: mul_i16_zext_i64_hi16_zero:
+; GFX9ALL:       ; %bb.0:
+; GFX9ALL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9ALL-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX9ALL-NEXT:    v_mul_lo_u16_e32 v0, 3, v0
+; GFX9ALL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9ALL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: mul_i16_zext_i64_hi16_zero:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mul_lo_u16 v0, v0, 3
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: mul_i16_zext_i64_hi16_zero:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, 3
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: mul_i16_zext_i64_hi16_zero:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, 3
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %shr = lshr i32 %x, 17
+  %trunc = trunc i32 %shr to i16
+  %mul = mul i16 %trunc, 3
+  %zext = zext i16 %mul to i64
+  ret i64 %zext
+}
+
+; Reduced from https://github.com/llvm/llvm-project/issues/229485:
+; (x & 0xffff) / 3 * 3 after InstCombine and CorrelatedValuePropagation.
+define i32 @urem_sub_i16_zext_i32(i32 %x) {
+; GFX8-LABEL: urem_sub_i16_zext_i32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0xaaab
+; GFX8-NEXT:    v_mul_u32_u24_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX8-NEXT:    v_mul_lo_u16_e32 v0, 3, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9ALL-LABEL: urem_sub_i16_zext_i32:
+; GFX9ALL:       ; %bb.0:
+; GFX9ALL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9ALL-NEXT:    s_mov_b32 s4, 0xaaab
+; GFX9ALL-NEXT:    v_mul_u32_u24_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX9ALL-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX9ALL-NEXT:    v_mul_lo_u16_e32 v0, 3, v0
+; GFX9ALL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: urem_sub_i16_zext_i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0xaaab
+; GFX10-NEXT:    v_mul_u32_u24_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX10-NEXT:    v_mul_lo_u16 v0, v0, 3
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: urem_sub_i16_zext_i32:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-TRUE16-NEXT:    v_mul_u32_u24_e32 v0, 0xaaab, v0
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, 3
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: urem_sub_i16_zext_i32:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    v_mul_u32_u24_e32 v0, 0xaaab, v0
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-FAKE16-NEXT:    v_mul_lo_u16 v0, v0, 3
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %trunc = trunc i32 %x to i16
+  %rem = urem i16 %trunc, 3
+  %sub = sub nuw i16 %trunc, %rem
+  %zext = zext i16 %sub to i32
+  ret i32 %zext
+}
+
+; The truncate has multiple uses, but the shift result is only read through
+; its low half.
+define i32 @add_mul_i16_zext_i32_hi16_zero_trunc_multi_use(i32 %x, i16 %y) {
+; GFX8-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX8-NEXT:    v_add_u16_e32 v1, v0, v1
+; GFX8-NEXT:    v_mul_lo_u16_e32 v0, v1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9ALL-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX9ALL:       ; %bb.0:
+; GFX9ALL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9ALL-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX9ALL-NEXT:    v_add_u16_e32 v1, v0, v1
+; GFX9ALL-NEXT:    v_mul_lo_u16_e32 v0, v1, v0
+; GFX9ALL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX10-NEXT:    v_add_nc_u16 v1, v0, v1
+; GFX10-NEXT:    v_mul_lo_u16 v0, v1, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v1.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v1.l, v0.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: add_mul_i16_zext_i32_hi16_zero_trunc_multi_use:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-FAKE16-NEXT:    v_add_nc_u16 v1, v0, v1
+; GFX11-FAKE16-NEXT:    v_mul_lo_u16 v0, v1, v0
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %shr = lshr i32 %x, 17
+  %trunc = trunc i32 %shr to i16
+  %add = add i16 %trunc, %y
+  %mul = mul i16 %add, %trunc
+  %zext = zext i16 %mul to i32
+  ret i32 %zext
+}
+
+; Negative test: the truncate of a 16-bit shift is selected as a free hi16 read,
+; so there is no 32-bit source with a known-zero high half.
+define i32 @add_i16_zext_i32_extract_hi(i32 %x, i16 %y) {
+; GFX8-LABEL: add_i16_zext_i32_extract_hi:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_add_u16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9ALL-LABEL: add_i16_zext_i32_extract_hi:
+; GFX9ALL:       ; %bb.0:
+; GFX9ALL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9ALL-NEXT:    v_add_u16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9ALL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: add_i16_zext_i32_extract_hi:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_add_nc_u16 v0, v0, v1 op_sel:[1,0,0]
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: add_i16_zext_i32_extract_hi:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.h, v1.l
+; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: add_i16_zext_i32_extract_hi:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_add_nc_u16 v0, v0, v1 op_sel:[1,0,0]
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %shr = lshr i32 %x, 16
+  %trunc = trunc i32 %shr to i16
+  %add = add i16 %trunc, %y
+  %zext = zext i16 %add to i32
+  ret i32 %zext
+}
+
+; Negative test: the shift result has another use, so its low half stays live.
+define i32 @mul_i16_zext_i32_hi16_zero_multi_use(i32 %x) {
+; GFX8-LABEL: mul_i16_zext_i32_hi16_zero_multi_use:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX8-NEXT:    v_mul_lo_u16_e32 v1, 3, v0
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9ALL-LABEL: mul_i16_zext_i32_hi16_zero_multi_use:
+; GFX9ALL:       ; %bb.0:
+; GFX9ALL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9ALL-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX9ALL-NEXT:    v_mul_lo_u16_e32 v1, 3, v0
+; GFX9ALL-NEXT:    v_add_u32_e32 v0, v1, v0
+; GFX9ALL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: mul_i16_zext_i32_hi16_zero_multi_use:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX10-NEXT:    v_mul_lo_u16 v1, v0, 3
+; GFX10-NEXT:    v_add_nc_u32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: mul_i16_zext_i32_hi16_zero_multi_use:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 17, v0
+; GFX11-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v1.l, 3
+; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: mul_i16_zext_i32_hi16_zero_multi_use:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 17, v0
+; GFX11-FAKE16-NEXT:    v_mul_lo_u16 v1, v0, 3
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX11-FAKE16-NEXT:    v_add_nc_u32_e32 v0, v1, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+  %shr = lshr i32 %x, 17
+  %trunc = trunc i32 %shr to i16
+  %mul = mul i16 %trunc, 3
+  %zext = zext i16 %mul to i32
+  %res = add i32 %zext, %shr
+  ret i32 %res
+}
+
 declare half @llvm.amdgcn.div.fixup.f16(half, half, half)
 declare half @llvm.fma.f16(half, half, half)
 declare float @llvm.fma.f32(float, float, float)

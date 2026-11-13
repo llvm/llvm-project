@@ -257,6 +257,8 @@ public:
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
+  bool isHi16KnownZero(Register Reg) const;
+  bool tryFoldZExtKnownZeroHi16(MachineInstr &MI) const;
   bool tryFoldAndExec(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
@@ -2045,6 +2047,117 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   return true;
 }
 
+// Return true if the high 16 bits of the 32-bit VGPR Reg are known to be zero.
+bool SIFoldOperandsImpl::isHi16KnownZero(Register Reg) const {
+  MachineInstr *Def = MRI->getVRegDef(Reg);
+  if (!Def)
+    return false;
+
+  if (std::optional<ANDMaskResult> And = getANDMaskRegOperand(*Def))
+    return isUInt<16>(And->Mask);
+
+  switch (Def->getOpcode()) {
+  case AMDGPU::V_LSHRREV_B32_e32:
+  case AMDGPU::V_LSHRREV_B32_e64: {
+    std::optional<int64_t> Amt = TII->getImmOrMaterializedImm(
+        *MRI, *TII->getNamedOperand(*Def, AMDGPU::OpName::src0));
+    return Amt && (*Amt & 31) >= 16;
+  }
+  case AMDGPU::V_BFE_U32_e64: {
+    std::optional<int64_t> Width = TII->getImmOrMaterializedImm(
+        *MRI, *TII->getNamedOperand(*Def, AMDGPU::OpName::src2));
+    return Width && (*Width & 31) <= 16;
+  }
+  default:
+    return false;
+  }
+}
+
+// On real true16, zero-extend a 16-bit VALU result without an instruction when
+// the result is computed from the low half of a 32-bit VGPR whose high half is
+// known zero. Building the result from that high half lets the register
+// coalescer assign the 16-bit result and the 32-bit source to the same VGPR.
+//
+// For example:
+//   %x:vgpr_32 = V_LSHRREV_B32_e64 17, %a
+//   %v:vgpr_16 = V_MUL_LO_U16_t16_e64 0, %x.lo16, 0, 3, 0
+//   %d:vgpr_32 = V_CVT_U32_U16_t16_e64 0, %v, 0
+// =>
+//   %d:vgpr_32 = REG_SEQUENCE %v, %subreg.lo16, %x.hi16, %subreg.hi16
+//
+// Every use of %x must read only its low half, otherwise %x stays live across
+// the def of %v and the two cannot share a register.
+// Folds only ALU producers of 16-bit results.
+bool SIFoldOperandsImpl::tryFoldZExtKnownZeroHi16(MachineInstr &MI) const {
+  if (MI.getOpcode() != AMDGPU::V_CVT_U32_U16_t16_e64 ||
+      !ST->useRealTrue16Insts())
+    return false;
+
+  if (TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() != 0)
+    return false;
+  if (const MachineOperand *OpSel =
+          TII->getNamedOperand(MI, AMDGPU::OpName::op_sel);
+      OpSel && OpSel->getImm() != 0)
+    return false;
+
+  const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+  if (!Src0->isReg() || !Src0->getReg().isVirtual() || Src0->getSubReg())
+    return false;
+  Register Src = Src0->getReg();
+
+  // src0 also accepts a 32-bit SGPR, which cannot fill a lo16 subregister.
+  const TargetRegisterClass *SrcRC = MRI->getRegClass(Src);
+  if (!TRI->isVGPRClass(SrcRC) || TRI->getRegSizeInBits(*SrcRC) != 16)
+    return false;
+
+  MachineInstr *SrcDef = MRI->getVRegDef(Src);
+  if (!SrcDef || !SIInstrFlags::isVALU(*SrcDef))
+    return false;
+
+  for (const MachineOperand &MO : SrcDef->uses()) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
+      continue;
+
+    Register X = MO.getReg();
+    unsigned SubReg = MO.getSubReg();
+    if (!SubReg) {
+      MachineInstr *Copy = MRI->getVRegDef(X);
+      if (!Copy || !Copy->isCopy())
+        continue;
+      const MachineOperand &CopySrc = Copy->getOperand(1);
+      if (!CopySrc.getReg().isVirtual())
+        continue;
+      X = CopySrc.getReg();
+      SubReg = CopySrc.getSubReg();
+    }
+    if (SubReg != AMDGPU::lo16)
+      continue;
+
+    const TargetRegisterClass *XRC = MRI->getRegClass(X);
+    if (!TRI->isVGPRClass(XRC) || TRI->getRegSizeInBits(*XRC) != 32)
+      continue;
+
+    if (!all_of(MRI->use_nodbg_operands(X), [](const MachineOperand &Use) {
+          return Use.getSubReg() == AMDGPU::lo16;
+        }))
+      continue;
+
+    if (!isHi16KnownZero(X))
+      continue;
+
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+            TII->get(AMDGPU::REG_SEQUENCE), MI.getOperand(0).getReg())
+        .addReg(Src)
+        .addImm(AMDGPU::lo16)
+        .addReg(X, {}, AMDGPU::hi16)
+        .addImm(AMDGPU::hi16);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 /// Remove S_AND of a lane mask with EXEC, when the lane mask is already known
 /// to have 0 in the bits of all inactive lanes.
 ///
@@ -3287,6 +3400,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
       }
 
       if (tryFoldRedundantAND(MI)) {
+        Changed = true;
+        continue;
+      }
+
+      if (tryFoldZExtKnownZeroHi16(MI)) {
         Changed = true;
         continue;
       }
