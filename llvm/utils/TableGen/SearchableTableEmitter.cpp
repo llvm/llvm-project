@@ -514,9 +514,10 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
            << ");\n";
         OS << "      if (" << CmpVar << " < 0) return true;\n";
         OS << "      if (" << CmpVar << " > 0) return false;\n";
-      } else if (Field.Enum) {
+      } else if (Field.Enum || isa<BitRecTy>(Field.RecType)) {
         // Explicitly cast to unsigned, because the signedness of enums is
-        // compiler-dependent.
+        // compiler-dependent. Bit fields are emitted as bool; cast them too to
+        // avoid MSVC warning C4804 ("unsafe use of type 'bool' in operation").
         OS << "      if ((unsigned)LHS." << Field.Name << " < (unsigned)RHS."
            << Field.Name << ")\n";
         OS << "        return true;\n";

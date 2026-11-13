@@ -69,6 +69,8 @@ def ATable : GenericTable {
 // CHECK:   return &BTable[Idx->_index];
 // CHECK: }
 // CHECK: const BTypeName *lookupBTableByNameAndFlag(StringRef Name, bool Flag) {
+// CHECK:   if ((unsigned)LHS.Flag < (unsigned)RHS.Flag)
+// CHECK:   if ((unsigned)LHS.Flag > (unsigned)RHS.Flag)
 // CHECK:   return &BTable[Idx->_index];
 // CHECK: }
 
