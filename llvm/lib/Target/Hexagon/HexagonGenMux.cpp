@@ -176,7 +176,8 @@ void HexagonGenMux::buildMaps(MachineBasicBlock &B, InstrIndexMap &I2X,
     I2X.insert(std::make_pair(&MI, Index));
     Defs.reset();
     Uses.reset();
-    getDefsUses(&MI, Defs, Uses);
+    if (!MI.isDebugInstr())
+      getDefsUses(&MI, Defs, Uses);
     DUM.insert(std::make_pair(Index, DefUseInfo(Defs, Uses)));
     Index++;
   }
@@ -324,6 +325,10 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 
     MachineBasicBlock &B = *MX.At->getParent();
     const DebugLoc &DL = B.findDebugLoc(MX.At);
+    // Only when the mux takes Def2's place do values in the gap precede it.
+    // Call before the mux is created.
+    if (&*MX.At == MX.Def2)
+      HII->moveDependentDebugValues(*MX.Def1, *MX.Def2);
     auto NewMux = BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR)
                       .addReg(MX.PredR)
                       .add(*MX.SrcT)
