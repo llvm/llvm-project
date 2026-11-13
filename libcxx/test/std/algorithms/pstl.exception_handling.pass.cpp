@@ -265,6 +265,16 @@ int main(int, char**) {
         auto unary  = maybe_throw(tokens[5], [](int x) -> int { return x * 2; });
         auto binary = maybe_throw(tokens[5], [](int x, int y) -> int { return x * y; });
 
+        // exclusive_scan(first, last, result, init)
+        assert_non_throwing([=, &policy] {
+          (void)std::exclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest), val);
+        });
+
+        // exclusive_scan(first, last, result, init, binary)
+        assert_non_throwing([=, &policy] {
+          (void)std::exclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest), val, binary);
+        });
+
         // inclusive_scan(first, last, result)
         assert_non_throwing([=, &policy] {
           (void)std::inclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest));
@@ -278,6 +288,12 @@ int main(int, char**) {
         // inclusive_scan(first, last, result, binary, init)
         assert_non_throwing([=, &policy] {
           (void)std::inclusive_scan(policy, std::move(first1), std::move(last1), std::move(dest), binary, val);
+        });
+
+        // transform_exclusive_scan(first, last, result, init, binary, unary)
+        assert_non_throwing([=, &policy] {
+          (void)std::transform_exclusive_scan(
+              policy, std::move(first1), std::move(last1), std::move(dest), val, binary, unary);
         });
 
         // transform_inclusive_scan(first, last, result, binary, unary)

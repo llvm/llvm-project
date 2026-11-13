@@ -34,6 +34,7 @@
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__memory/uninitialized_algorithms.h>
+#include <__numeric/transform_exclusive_scan.h>
 #include <__numeric/transform_inclusive_scan.h>
 #include <__numeric/transform_reduce.h>
 #include <__optional/optional.h>
@@ -256,6 +257,32 @@ struct __transform_binary<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__first2),
         std::move(__outit),
         std::forward<_BinaryOperation>(__op));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __transform_exclusive_scan<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _Tp,
+            class _BinaryOperation,
+            class _UnaryOperation>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first,
+      _ForwardIterator1 __last,
+      _ForwardIterator2 __result,
+      _Tp __init,
+      _BinaryOperation __reduce,
+      _UnaryOperation __transform) const noexcept {
+    return std::transform_exclusive_scan(
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::move(__init),
+        std::move(__reduce),
+        std::move(__transform));
   }
 };
 

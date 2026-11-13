@@ -62,11 +62,11 @@ namespace __pstl {
 // This backend implements all the PSTL algorithms based on the following basis operations:
 //
 // find_end family
-// ------------------
+// ---------------
 // No other algorithms based on find_end
 //
 // is_heap_until family
-// --------------
+// --------------------
 // - is_heap
 //
 // find_if family
@@ -80,11 +80,11 @@ namespace __pstl {
 // - find_first_of
 //
 // min_element family
-// ---------------
+// ------------------
 // - max_element
 //
 // minmax_element family
-// -------------------
+// ---------------------
 // No other algorithms based on minmax_element
 //
 // mismatch family
@@ -118,15 +118,15 @@ namespace __pstl {
 // No other algorithms based on merge
 //
 // reverse family
-// ------------
+// --------------
 // No other algorithms based on reverse
 //
 // search family
-// ------------
+// -------------
 // No other algorithms based on search
 //
 // search_n family
-// ------------------
+// ---------------
 // No other algorithms based on search_n
 //
 // stable_sort family
@@ -134,7 +134,7 @@ namespace __pstl {
 // - sort
 //
 // swap_ranges family
-// ------------
+// ------------------
 // No other algorithms based on swap_ranges
 //
 // transform_reduce and transform_reduce_binary family
@@ -157,11 +157,11 @@ namespace __pstl {
 // - rotate_copy
 //
 // uninitialized_copy family
-// -------------------------------------
+// -------------------------
 // - uninitialized_copy_n
 //
 // uninitialized_move family
-// -------------------------------------
+// -------------------------
 // - uninitialized_move_n
 //
 // transform_inclusive_scan_init family
@@ -169,6 +169,10 @@ namespace __pstl {
 // - __inclusive_scan
 // - __inclusive_scan_init
 // - __transform_inclusive_scan
+//
+// transform_exclusive_scan family
+// -------------------------------
+// - __exclusive_scan
 //
 
 //////////////////////////////////////////////////////////////
@@ -1043,6 +1047,32 @@ struct __transform_inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
             std::move(__init));
     }
     return __result;
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// transform_exclusive_scan family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __exclusive_scan<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Tp, class _BinaryOperation>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first,
+             _ForwardIterator1 __last,
+             _ForwardIterator2 __result,
+             _Tp __init,
+             _BinaryOperation __reduce) const noexcept {
+    using _TransformExclusiveScan = __dispatch<__transform_exclusive_scan, __current_configuration, _ExecutionPolicy>;
+    return _TransformExclusiveScan()(
+        __policy,
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::move(__init),
+        std::move(__reduce),
+        __identity{});
   }
 };
 
