@@ -47,9 +47,6 @@ STATISTIC(NumInstructionMappingsCreated,
 STATISTIC(NumInstructionMappingsAccessed,
           "Number of instruction mappings dynamically accessed");
 
-const unsigned RegisterBankInfo::DefaultMappingID = UINT_MAX;
-const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
-
 //------------------------------------------------------------------------------
 // RegisterBankInfo implementation.
 //------------------------------------------------------------------------------
