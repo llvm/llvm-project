@@ -21944,8 +21944,26 @@ bool ARMTargetLowering::shouldInsertFencesForAtomic(
 }
 
 bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
+  if (Subtarget->isTargetFuchsia())
+    return TargetLowering::useLoadStackGuardNode(M);
   // ROPI/RWPI are not supported currently.
   return !Subtarget->isROPI() && !Subtarget->isRWPI();
+}
+
+Value *
+ARMTargetLowering::getIRStackGuard(IRBuilderBase &IRB,
+                                   const LibcallLoweringInfo &Libcalls) const {
+  // Fuchsia provides a fixed TLS slot for the stack cookie.
+  // <zircon/tls.h> defines ZX_TLS_STACK_GUARD_OFFSET with this value.
+  if (Subtarget->isTargetFuchsia()) {
+    Module *M = IRB.getModule();
+    Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::thread_pointer, IRB.getPtrTy());
+    return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
+                                  IRB.CreateCall(ThreadPointerFunc), -0x10);
+  }
+
+  return TargetLowering::getIRStackGuard(IRB, Libcalls);
 }
 
 void ARMTargetLowering::insertSSPDeclarations(
