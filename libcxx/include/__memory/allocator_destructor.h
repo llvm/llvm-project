@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__memory/allocator_traits.h>
+#include <__memory/unique_ptr.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,9 +32,20 @@ private:
   size_type __s_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __allocator_destructor(_Alloc& __a, size_type __s) _NOEXCEPT : __alloc_(__a), __s_(__s) {}
-  _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) _NOEXCEPT { __alloc_traits::deallocate(__alloc_, __p, __s_); }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 __allocator_destructor(_Alloc& __a, size_type __s) _NOEXCEPT
+      : __alloc_(__a),
+        __s_(__s) {}
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void operator()(pointer __p) _NOEXCEPT {
+    __alloc_traits::deallocate(__alloc_, __p, __s_);
+  }
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __count() const _NOEXCEPT { return __s_; }
 };
+
+template <class _Alloc>
+using __unique_allocation =
+    unique_ptr<typename allocator_traits<_Alloc>::value_type[], __allocator_destructor<_Alloc> >;
 
 _LIBCPP_END_NAMESPACE_STD
 
