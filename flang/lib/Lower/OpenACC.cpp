@@ -6001,6 +6001,13 @@ void Fortran::lower::genOpenACCDoVariableFinalValue(
   mlir::Value var = converter.getSymbolAddress(sym);
   if (!var || !fir::isa_integer(fir::unwrapRefType(var.getType())))
     return;
+  // The iterations of an independent loop without a copy of the variable
+  // share it: none of them is owed the value.
+  for (auto loop = accLoop->getParentOfType<mlir::acc::LoopOp>(); loop;
+       loop = loop->getParentOfType<mlir::acc::LoopOp>())
+    if (loop.hasIndependent() &&
+        !loop.getRegion().isAncestor(var.getParentRegion()))
+      return;
 
   // The variable is incremented once per iteration. The bounds are converted
   // to its kind and the value is computed in the index type, as for a DO loop

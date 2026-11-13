@@ -216,23 +216,41 @@ end subroutine
 ! CHECK: fir.store %{{.*}} to %[[K]]#0 : !fir.ref<i32>
 ! CHECK: } inclusiveUpperbound(array<i1: true>) independent
 
-! An alias reads the variable: it has no copy.
-subroutine equivalenced(a, kout, n)
-  integer :: n, a(n), kout(n), i, k, j
+! An alias reads the variable.
+subroutine equivalenced(n, r)
+  integer :: n, r, k, j
   equivalence (k, j)
-  !$acc parallel loop
-  do i = 1, n
-    do k = 1, a(i)
-    end do
-    kout(i) = j
+  !$acc serial copyout(r)
+  do k = 1, n
   end do
+  r = j
+  !$acc end serial
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPequivalenced(
 ! CHECK: %[[K:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFequivalencedEk")
-! CHECK: acc.loop combined(parallel) private(%{{[0-9]+}} : !fir.ref<i32>) control(
-! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
+! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK: fir.store %{{.*}} to %[[K]]#0 : !fir.ptr<i32>
+
+! The iterations of the vector loop share the dummy argument: it is not
+! assigned.
+subroutine shared_in_parallel_loop(a, n, m, k)
+  !$acc routine vector
+  integer :: n, m, a(m, n), i, k
+  !$acc loop vector
+  do i = 1, n
+    do k = 1, a(1, i)
+      a(k, i) = 0
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPshared_in_parallel_loop(
+! CHECK: %[[K:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFshared_in_parallel_loopEk")
+! CHECK: acc.loop vector private(%{{[0-9]+}} : !fir.ref<i32>) control(
+! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
+! CHECK-NOT: fir.store {{.*}} to %[[K]]#0
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
 
 ! The iterations of a seq loop do not get a copy: the variable is assigned.
 subroutine seq_loop(a, kout, n)
