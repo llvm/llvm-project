@@ -926,6 +926,11 @@ public:
   LLVM_ABI bool matchZextOfTrunc(const MachineOperand &MO,
                                  BuildFnTy &MatchInfo) const;
 
+  /// Fold an FP extension/truncation of an exact integer-to-FP conversion.
+  LLVM_ABI bool matchIntToFPToFP(const MachineInstr &MI,
+                                 const MachineInstr &IntToFP,
+                                 BuildFnTy &MatchInfo) const;
+
   /// Combine zext nneg to sext.
   LLVM_ABI bool matchNonNegZext(const MachineOperand &MO,
                                 BuildFnTy &MatchInfo) const;
@@ -1063,6 +1068,10 @@ public:
 
   LLVM_ABI bool matchCanonicalizeICmp(const MachineInstr &MI,
                                       BuildFnTy &MatchInfo) const;
+  /// Fold an integer-to-FP comparison with an integral constant.
+  LLVM_ABI bool matchFCmpIntToFP(const MachineInstr &MI,
+                                 BuildFnTy &MatchInfo) const;
+
   LLVM_ABI bool matchCanonicalizeFCmp(const MachineInstr &MI,
                                       BuildFnTy &MatchInfo) const;
 

@@ -93,6 +93,26 @@ KnownBits GISelValueTracking::getKnownBits(Register R,
   return Known;
 }
 
+bool GISelValueTracking::isKnownExactIntToFP(Register R,
+                                             const fltSemantics &Sem,
+                                             bool IsSigned, unsigned Depth) {
+  LLT Ty = MRI.getType(R);
+  KnownBits Known(Ty.getScalarSizeInBits());
+  if (llvm::isKnownExactIntToFP(Known, Sem, IsSigned))
+    return true;
+  if (Depth >= getMaxDepth())
+    return false;
+
+  APInt DemandedElts =
+      Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
+  Known = getKnownBits(R, DemandedElts, Depth);
+  if (llvm::isKnownExactIntToFP(Known, Sem, IsSigned))
+    return true;
+  return IsSigned &&
+         llvm::isKnownExactIntToFP(Known, Sem, IsSigned,
+                                   computeNumSignBits(R, DemandedElts, Depth));
+}
+
 bool GISelValueTracking::signBitIsZero(Register R) {
   LLT Ty = MRI.getType(R);
   unsigned BitWidth = Ty.getScalarSizeInBits();

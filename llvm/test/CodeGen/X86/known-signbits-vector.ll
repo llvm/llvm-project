@@ -197,9 +197,8 @@ define float @signbits_ashr_shl_extract_sitofp(<2 x i64> %a0) nounwind {
 ; X86-NEXT:    vpsrad $29, %xmm0, %xmm0
 ; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
 ; X86-NEXT:    vpsllq $20, %xmm0, %xmm0
-; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X86-NEXT:    vmovss %xmm0, (%esp)
-; X86-NEXT:    flds (%esp)
+; X86-NEXT:    vmovd %xmm0, (%esp)
+; X86-NEXT:    fildl (%esp)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;

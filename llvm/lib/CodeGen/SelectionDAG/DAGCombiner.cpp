@@ -440,6 +440,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitSELECT(SDNode *N);
     SDValue visitVSELECT(SDNode *N);
     SDValue visitSELECT_CC(SDNode *N);
+    SDValue foldIntToFPSetCC(SDNode *N);
     SDValue visitSETCC(SDNode *N);
     SDValue visitSETCCCARRY(SDNode *N);
     SDValue visitSIGN_EXTEND(SDNode *N);
@@ -474,6 +475,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitFP_TO_UINT(SDNode *N);
     SDValue visitFP_TO_INT_SAT(SDNode *N);
     SDValue visitXROUND(SDNode *N);
+    SDValue foldIntToFPToFP(SDNode *N);
     SDValue visitFP_ROUND(SDNode *N);
     SDValue visitFP_EXTEND(SDNode *N);
     SDValue visitFNEG(SDNode *N);
@@ -15131,6 +15133,100 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   return SimplifySelectCC(DL, N0, N1, N2, N3, CC);
 }
 
+SDValue DAGCombiner::foldIntToFPSetCC(SDNode *N) {
+  SDValue Cast = N->getOperand(0);
+  unsigned Opcode = Cast.getOpcode();
+  if (Opcode != ISD::SINT_TO_FP && Opcode != ISD::UINT_TO_FP)
+    return SDValue();
+  auto *C = isConstOrConstSplatFP(N->getOperand(1));
+  if (!C || !Cast.hasOneUse())
+    return SDValue();
+
+  bool IsSigned = Opcode == ISD::SINT_TO_FP;
+  SDValue Src = Cast.getOperand(0);
+  // Let the existing FP-to-int-to-FP combine eliminate the integer conversion.
+  if (Src.getOpcode() == ISD::FP_TO_SINT || Src.getOpcode() == ISD::FP_TO_UINT)
+    return SDValue();
+  EVT SrcVT = Src.getValueType();
+  if (LegalTypes && getSetCCResultType(SrcVT) != N->getValueType(0))
+    return SDValue();
+  APSInt IntC(SrcVT.getScalarSizeInBits(), !IsSigned);
+  bool IsExact;
+  const APFloat &FPC = C->getValueAPF();
+  if (FPC.convertToInteger(IntC, APFloat::rmTowardZero, &IsExact) !=
+          APFloat::opOK ||
+      !IsExact)
+    return SDValue();
+
+  ISD::CondCode CC;
+  switch (N->getOperandCondCode(2)) {
+  default:
+    return SDValue();
+  case ISD::SETOEQ:
+  case ISD::SETUEQ:
+  case ISD::SETEQ:
+    CC = ISD::SETEQ;
+    break;
+  case ISD::SETONE:
+  case ISD::SETUNE:
+  case ISD::SETNE:
+    CC = ISD::SETNE;
+    break;
+  case ISD::SETOGT:
+  case ISD::SETUGT:
+  case ISD::SETGT:
+    CC = IsSigned ? ISD::SETGT : ISD::SETUGT;
+    break;
+  case ISD::SETOGE:
+  case ISD::SETUGE:
+  case ISD::SETGE:
+    CC = IsSigned ? ISD::SETGE : ISD::SETUGE;
+    break;
+  case ISD::SETOLT:
+  case ISD::SETULT:
+  case ISD::SETLT:
+    CC = IsSigned ? ISD::SETLT : ISD::SETULT;
+    break;
+  case ISD::SETOLE:
+  case ISD::SETULE:
+  case ISD::SETLE:
+    CC = IsSigned ? ISD::SETLE : ISD::SETULE;
+    break;
+  }
+  if (!hasOperation(ISD::SETCC, SrcVT) ||
+      (LegalOperations &&
+       (!SrcVT.isSimple() ||
+        !TLI.isCondCodeLegalOrCustom(CC, SrcVT.getSimpleVT()) ||
+        TLI.getBooleanContents(SrcVT) !=
+            TLI.getBooleanContents(Cast.getValueType()))))
+    return SDValue();
+
+  const fltSemantics &Sem = FPC.getSemantics();
+  const APInt &Value = IntC;
+  auto IsExactInt = [&](const APInt &V) {
+    return isKnownExactIntToFP(KnownBits::makeConstant(V), Sem, IsSigned);
+  };
+  // Rounding is monotone. If the neighboring integers stay exact, no other
+  // integer can round to C or cross it, even if the entire source is inexact.
+  bool Min = IsSigned ? Value.isMinSignedValue() : Value.isMinValue();
+  bool Max = IsSigned ? Value.isMaxSignedValue() : Value.isMaxValue();
+  bool CanFold =
+      (Min || IsExactInt(Value - 1)) && (Max || IsExactInt(Value + 1));
+  if (!CanFold) {
+    KnownBits Known = DAG.computeKnownBits(Src);
+    CanFold = isKnownExactIntToFP(Known, Sem, IsSigned);
+    if (!CanFold && IsSigned)
+      CanFold = isKnownExactIntToFP(Known, Sem, /*IsSigned=*/true,
+                                    DAG.ComputeNumSignBits(Src));
+  }
+  if (!CanFold)
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getSetCC(DL, N->getValueType(0), Src,
+                      DAG.getConstant(Value, DL, SrcVT), CC);
+}
+
 SDValue DAGCombiner::visitSETCC(SDNode *N) {
   // setcc is very commonly used as an argument to brcond or cond_loop. This
   // pattern also lend itself to numerous combines and, as a result, it is
@@ -15159,6 +15255,9 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
     }
     return Combined;
   }
+
+  if (SDValue Folded = foldIntToFPSetCC(N))
+    return Folded;
 
   // Optimize
   //    1) (icmp eq/ne (and X, C0), (shift X, C1))
@@ -21068,6 +21167,37 @@ SDValue DAGCombiner::visitXROUND(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::foldIntToFPToFP(SDNode *N) {
+  SDValue IntToFP = N->getOperand(0);
+  unsigned Opcode = IntToFP.getOpcode();
+  if ((Opcode != ISD::SINT_TO_FP && Opcode != ISD::UINT_TO_FP) ||
+      !IntToFP.hasOneUse())
+    return SDValue();
+
+  SDValue Src = IntToFP.getOperand(0);
+  if (!hasOperation(Opcode, Src.getValueType()))
+    return SDValue();
+
+  const fltSemantics &Sem = IntToFP.getValueType().getFltSemantics();
+  bool IsSigned = Opcode == ISD::SINT_TO_FP;
+  KnownBits Known(Src.getScalarValueSizeInBits());
+  bool IsExact = isKnownExactIntToFP(Known, Sem, IsSigned);
+  if (!IsExact) {
+    Known = DAG.computeKnownBits(Src);
+    IsExact = isKnownExactIntToFP(Known, Sem, IsSigned);
+    if (!IsExact && IsSigned)
+      IsExact = isKnownExactIntToFP(Known, Sem, /*IsSigned=*/true,
+                                    DAG.ComputeNumSignBits(Src));
+  }
+  if (!IsExact)
+    return SDValue();
+
+  // An exact first conversion cannot introduce double rounding. Convert the
+  // integer directly to the final FP type for either extension or rounding.
+  return DAG.getNode(Opcode, SDLoc(N), N->getValueType(0), Src,
+                     N->getFlags() & IntToFP->getFlags());
+}
+
 SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -21128,6 +21258,9 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     AddToWorklist(Tmp.getNode());
     return DAG.getNode(ISD::FCOPYSIGN, DL, VT, Tmp, N0.getOperand(1));
   }
+
+  if (SDValue Cast = foldIntToFPToFP(N))
+    return Cast;
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
@@ -21223,6 +21356,9 @@ SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
   }
+
+  if (SDValue Cast = foldIntToFPToFP(N))
+    return Cast;
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;

@@ -225,6 +225,24 @@ LLVM_ABI unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
                                      bool UseInstrInfo = true,
                                      unsigned Depth = 0);
 
+/// Return true if every integer described by Known can be represented exactly
+/// and finitely in Sem. IsSigned specifies how to interpret the integer bits.
+/// NumSignBits is an optional lower bound on the number of replicated sign
+/// bits, including the sign bit itself; it is ignored for unsigned inputs. This
+/// allows callers to supply sign-bit correlations that KnownBits cannot
+/// represent. Supports IEEE-like formats and x87 extended precision; returns
+/// false for other floating-point semantics.
+LLVM_ABI bool isKnownExactIntToFP(const KnownBits &Known,
+                                  const fltSemantics &Sem, bool IsSigned,
+                                  unsigned NumSignBits = 1);
+
+/// Return true if the integer scalar or every lane of the integer vector V is
+/// known to be exactly and finitely representable in Sem. Uses both known bits
+/// and, for signed inputs, ComputeNumSignBits. False means unknown.
+LLVM_ABI bool isKnownExactIntToFP(const Value *V, const fltSemantics &Sem,
+                                  bool IsSigned, const SimplifyQuery &SQ,
+                                  unsigned Depth = 0);
+
 /// Get the upper bound on bit size for this Value \p Op as a signed integer.
 /// i.e.  x == sext(trunc(x to MaxSignificantBits) to bitwidth(x)).
 /// Similar to the APInt::getSignificantBits function.

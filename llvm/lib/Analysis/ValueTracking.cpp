@@ -371,6 +371,72 @@ unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
       V, SimplifyQuery(DL, DT, AC, safeCtxI(V, CtxI), UseInstrInfo), Depth);
 }
 
+static bool supportsExactIntToFP(const fltSemantics &Sem) {
+  return APFloat::isIEEELikeFP(Sem) || &Sem == &APFloat::x87DoubleExtended();
+}
+
+bool llvm::isKnownExactIntToFP(const KnownBits &Known, const fltSemantics &Sem,
+                               bool IsSigned, unsigned NumSignBits) {
+  assert(!Known.hasConflict() && "Conflicting known bits");
+  assert(NumSignBits > 0 && NumSignBits <= Known.getBitWidth() &&
+         "Invalid number of sign bits");
+  if (!supportsExactIntToFP(Sem))
+    return false;
+
+  APInt MaxMagnitude;
+  if (IsSigned) {
+    // Interpret the magnitudes as unsigned, including abs(INT_MIN).
+    MaxMagnitude = APIntOps::umax(Known.getSignedMinValue().abs(),
+                                  Known.getSignedMaxValue().abs());
+    APInt SignBound = APInt::getOneBitSet(Known.getBitWidth(),
+                                          Known.getBitWidth() - NumSignBits);
+    MaxMagnitude = APIntOps::umin(MaxMagnitude, SignBound);
+  } else {
+    MaxMagnitude = Known.getMaxValue();
+  }
+  if (MaxMagnitude.isZero())
+    return true;
+
+  // All multiples of 2^TrailingZeros with magnitude at most
+  // 2^(Precision + TrailingZeros) are exact. The inclusive endpoint matters for
+  // signed ranges such as [-2^24, 2^24-1] when converting to float.
+  unsigned MagnitudeBits = MaxMagnitude.ceilLogBase2();
+  unsigned TrailingZeros = Known.countMinTrailingZeros();
+  unsigned Precision = APFloat::semanticsPrecision(Sem);
+  if (MagnitudeBits > TrailingZeros &&
+      MagnitudeBits - TrailingZeros > Precision)
+    return false;
+
+  // Significand precision alone does not rule out overflow, e.g. 65536 -> half.
+  APFloat Bound(Sem);
+  return Bound.convertFromAPInt(MaxMagnitude, /*IsSigned=*/false,
+                                APFloat::rmNearestTiesToEven) == APFloat::opOK;
+}
+
+bool llvm::isKnownExactIntToFP(const Value *V, const fltSemantics &Sem,
+                               bool IsSigned, const SimplifyQuery &SQ,
+                               unsigned Depth) {
+  assert(V->getType()->isIntOrIntVectorTy() && "Expected an integer type");
+  if (!supportsExactIntToFP(Sem))
+    return false;
+
+  // Avoid dataflow analysis when every value of the source type is exact.
+  KnownBits Known(V->getType()->getScalarSizeInBits());
+  if (isKnownExactIntToFP(Known, Sem, IsSigned))
+    return true;
+
+  computeKnownBits(V, Known, SQ, Depth);
+  if (isKnownExactIntToFP(Known, Sem, IsSigned))
+    return true;
+  if (!IsSigned)
+    return false;
+
+  // An arithmetic shift can replicate an unknown sign bit. Neither those high
+  // bits nor the sign bit need be individually known to be zero or one.
+  return isKnownExactIntToFP(Known, Sem, IsSigned,
+                             ::ComputeNumSignBits(V, SQ, Depth));
+}
+
 unsigned llvm::ComputeMaxSignificantBits(const Value *V, const DataLayout &DL,
                                          AssumptionCache *AC,
                                          const Instruction *CtxI,

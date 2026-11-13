@@ -3060,7 +3060,26 @@ class integer_of_opcode<Instruction castOpcode> : GICombineRule <
 
 def integer_of_truncate : integer_of_opcode<G_TRUNC>;
 
+// An exact integer-to-FP conversion followed by an FP cast can convert
+// directly to the final FP type without introducing double rounding.
+class int_to_fp_to_fp<Instruction IntToFP, Instruction FPCast> : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (IntToFP $fp, $src):$IntToFPInst,
+         (FPCast $dst, $fp):$root,
+         [{ return Helper.matchIntToFPToFP(*${root}, *${IntToFPInst},
+                                           ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+def sitofp_fpext : int_to_fp_to_fp<G_SITOFP, G_FPEXT>;
+def uitofp_fpext : int_to_fp_to_fp<G_UITOFP, G_FPEXT>;
+def sitofp_fptrunc : int_to_fp_to_fp<G_SITOFP, G_FPTRUNC>;
+def uitofp_fptrunc : int_to_fp_to_fp<G_UITOFP, G_FPTRUNC>;
+
 def cast_of_cast_combines: GICombineGroup<[
+  sitofp_fpext,
+  uitofp_fpext,
+  sitofp_fptrunc,
+  uitofp_fptrunc,
   truncate_of_zext,
   truncate_of_sext,
   truncate_of_anyext,
@@ -3101,7 +3120,14 @@ def canonicalize_fcmp : GICombineRule<
          [{ return Helper.matchCanonicalizeFCmp(*${cmp}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${cmp}, ${matchinfo}); }])>;
 
+def fcmp_int_to_fp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (G_FCMP $dst, $pred, $lhs, $rhs):$root,
+         [{ return Helper.matchFCmpIntToFP(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def cmp_combines: GICombineGroup<[
+  fcmp_int_to_fp,
   canonicalize_icmp,
   canonicalize_fcmp,
   icmp_to_true_false_known_bits,
