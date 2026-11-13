@@ -10052,10 +10052,11 @@ for a distributed ThinLTO backend via clang's "`-fthinlto-index=<>`" flag
 (this part is not yet implemented, use llvm-as to create a bitcode object
 before feeding into thin link tools for now).
 
-There are currently 3 types of summary entries in the LLVM assembly:
+Summary entries in the LLVM assembly include
 {ref}`module paths<module_path_summary>`,
-{ref}`global values<gv_summary>`, and
-{ref}`type identifiers<typeid_summary>`.
+{ref}`global values<gv_summary>`,
+{ref}`type identifiers<typeid_summary>`, and
+{ref}`CFI function lists<cfi_functions_summary>`.
 
 (module_path_summary)=
 
@@ -10386,6 +10387,28 @@ is `UniformRetVal` (indicates the uniform return value), or
 `UniqueRetVal` (holds the return value associated with the unique vtable
 (0 or 1)). The `byte` and `bit` fields are only used if the target does
 not support the use of absolute symbols to store constants.
+
+(cfi_functions_summary)=
+
+### CFI Function Summary Entries
+
+The `cfiFunctionDefs` and `cfiFunctionDecls` summary entries record the names
+of functions with
+[Control Flow Integrity](https://clang.llvm.org/docs/ControlFlowIntegrity.html)
+jump table entries, along with the GUIDs that ThinLTO uses for them. These
+entries are generated during the thin link and are only present in a combined
+summary index.
+
+Example:
+
+```text
+^4 = cfiFunctionDefs: ((guid: 14740650423002898831, name: "f"), (guid: 16617365750458309383, name: "f_dso_local"))
+^5 = cfiFunctionDecls: ((guid: 13146401226427987378, name: "g"), (guid: 13146401226427987378, name: "g.llvm.123"))
+```
+
+`cfiFunctionDefs` lists functions defined in the linked bitcode modules, and
+`cfiFunctionDecls` lists external functions declared by them. Multiple function
+names may share the same ThinLTO `guid`.
 
 (intrinsicglobalvariables)=
 
