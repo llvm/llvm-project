@@ -37,13 +37,6 @@ struct DynamicEntries {
   std::vector<uint64_t> NeededLibNames;
   // Symbol table:
   uint64_t DynSymAddr = 0;
-  // Hash tables:
-  std::optional<uint64_t> ElfHash;
-  std::optional<uint64_t> GnuHash;
-  // Version tables:
-  std::optional<uint64_t> VerSym;
-  std::optional<uint64_t> VerDef;
-  std::optional<uint64_t> VerDefNum;
 };
 
 /// This initializes an ELF file header with information specific to a binary
@@ -668,21 +661,6 @@ static Error populateDynamic(DynamicEntries &Dyn,
     case DT_SYMTAB:
       Dyn.DynSymAddr = Entry.d_un.d_ptr;
       FoundDynSym = true;
-      break;
-    case DT_HASH:
-      Dyn.ElfHash = Entry.d_un.d_ptr;
-      break;
-    case DT_GNU_HASH:
-      Dyn.GnuHash = Entry.d_un.d_ptr;
-      break;
-    case DT_VERSYM:
-      Dyn.VerSym = Entry.d_un.d_ptr;
-      break;
-    case DT_VERDEF:
-      Dyn.VerDef = Entry.d_un.d_ptr;
-      break;
-    case DT_VERDEFNUM:
-      Dyn.VerDefNum = Entry.d_un.d_val;
       break;
     }
   }
