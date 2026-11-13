@@ -208,6 +208,12 @@ enum class TensormapFillMode : uint8_t {
   OOB_NAN_FILL = 1,
 };
 
+enum class TensormapAllocClass : uint8_t {
+  SMALL = 0,
+  LARGE = 1,
+  SAME = 2,
+};
+
 // In-memory layout of an mbarrier object, as selected by the layout operand of
 // the llvm.nvvm.mbarrier.init and llvm.nvvm.mbarrier.check_layout intrinsics.
 enum class MBarrierLayout : uint8_t {
@@ -244,6 +250,8 @@ LLVM_ABI void printTensormapSwizzleAtomicity(raw_ostream &OS,
                                              const Constant *ImmArgVal);
 LLVM_ABI void printTensormapFillMode(raw_ostream &OS,
                                      const Constant *ImmArgVal);
+LLVM_ABI void printTensormapAllocClass(raw_ostream &OS,
+                                       const Constant *ImmArgVal);
 LLVM_ABI void printFPRoundingMode(raw_ostream &OS, const Constant *ImmArgVal);
 
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {

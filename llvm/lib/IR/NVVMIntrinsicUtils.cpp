@@ -211,3 +211,16 @@ void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {
     return;
   }
 }
+
+void nvvm::printTensormapAllocClass(raw_ostream &OS,
+                                    const Constant *ImmArgVal) {
+  static constexpr StringRef TensormapAllocClasses[] = {"small", "large",
+                                                        "same"};
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    if (Val <= static_cast<uint64_t>(nvvm::TensormapAllocClass::SAME)) {
+      OS << TensormapAllocClasses[Val];
+      return;
+    }
+  }
+}

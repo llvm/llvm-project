@@ -4243,9 +4243,15 @@ foreach space = ["tensor", "shared"] in {
 // tensormap.replace intrinsics
 //
 
+def int_nvvm_tensormap_replace_global_address :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i64_ty, llvm_i32_ty],
+    [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>, DefaultValue<0>>,
+     Range<ArgIndex<2>, 0, 3>,
+     ArgInfo<ArgIndex<2>, [ArgName<"alloc_class">,
+                           ImmArgPrinter<"printTensormapAllocClass">]>]>;
+
 let IntrProperties = [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>] in {
-  def int_nvvm_tensormap_replace_global_address :
-    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i64_ty], []>;
   def int_nvvm_tensormap_replace_rank :
     DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], []>;
 }
@@ -4290,6 +4296,16 @@ def int_nvvm_tensormap_replace_fill_mode :
      Range<ArgIndex<1>, 0, 2>,
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
+def int_nvvm_tensormap_replace_alloc_class :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty],
+    [IntrArgMemOnly, IntrWriteMem, ImmArg<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+     Range<ArgIndex<1>, 0, 2>,
+     ArgInfo<ArgIndex<1>, [ArgName<"alloc_class">,
+                           ImmArgPrinter<"printTensormapAllocClass">]>]>;
+
+def int_nvvm_tensormap_query_alloc_class_large :
+  DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_anyptr_ty],
+    [IntrArgMemOnly, IntrReadMem, NoCapture<ArgIndex<0>>]>;
 
 //
 // spcompress intrinsics
