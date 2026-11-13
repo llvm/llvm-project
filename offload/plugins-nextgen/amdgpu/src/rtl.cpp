@@ -684,8 +684,7 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(MemoryManager && "Invalid memory manager");
     assert(PtrStorage && "Invalid pointer storage");
 
-    auto PtrStorageOrErr =
-        MemoryManager->allocate(Size, nullptr, /*Alignment=*/0);
+    auto PtrStorageOrErr = MemoryManager->allocate(Size, /*Alignment=*/0);
     if (!PtrStorageOrErr)
       return PtrStorageOrErr.takeError();
 
@@ -709,7 +708,7 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 private:
   /// Allocation callback that will be called once the memory manager does not
   /// have more previously allocated buffers.
-  Expected<void *> allocate(size_t Size, void *HstPtr, ol_alloc_type_t Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment) override;
 
   /// Deallocation callback that will be called by the memory manager.
@@ -1016,10 +1015,13 @@ struct AMDGPUQueueTy {
   }
 
   /// Returns the number of streams, this queue is currently assigned to.
-  bool getUserCount() const { return NumUsers; }
+  uint32_t getUserCount() const { return NumUsers; }
 
   /// Returns if the underlying HSA queue is initialized.
   bool isInitialized() { return Queue != nullptr; }
+
+  /// Returns the underlying HSA queue.
+  hsa_queue_t *getHsaQueue() const { return Queue; }
 
   /// Decrement user count of the queue object.
   void removeUser() { --NumUsers; }
@@ -2964,7 +2966,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, ol_alloc_type_t Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment) override;
 
   /// Deallocate memory on the device or related to the device.
@@ -3380,6 +3382,19 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         TgtPtr, PatternPtr, PinnedPtr, PatternSize, PinnedMemoryManager,
         /*ProfilerSpecificData=*/nullptr, /*ProfilerPtr=*/nullptr,
         Size / PatternSize);
+  }
+
+  /// The HSA queue that \p AsyncInfo's stream is bound to.  A stream is bound
+  /// to a queue when it is first needed, so this binds one if necessary.
+  /// Several streams can share an HSA queue.
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override {
+    AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+    AMDGPUStreamTy *Stream = nullptr;
+    Error Err = getStream(AsyncInfoWrapper, Stream);
+    AsyncInfoWrapper.finalize(Err);
+    if (Err)
+      return std::move(Err);
+    return Stream->getQueue()->getHsaQueue();
   }
 
   Expected<void *> getNativeHandle() override {
@@ -4812,7 +4827,7 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   return Plugin::error(getOffloadErrorCode(ResultCode), ErrFmt, Args..., Desc);
 }
 
-Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
+Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size,
                                                  ol_alloc_type_t Kind,
                                                  size_t Alignment) {
   // Allocate memory from the pool.
@@ -4834,8 +4849,7 @@ Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
   return Ptr;
 }
 
-Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
-                                          ol_alloc_type_t Kind,
+Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, ol_alloc_type_t Kind,
                                           size_t Alignment) {
   if (Size == 0)
     return nullptr;

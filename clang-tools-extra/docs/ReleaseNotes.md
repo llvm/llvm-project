@@ -243,9 +243,15 @@ infrastructure are described first, followed by tool-specific sections.
   lambda closure types used as template arguments.
 
 - Improved {doc}`bugprone-unchecked-optional-access
-  <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false
-  positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
-  value or returned by `bsl::make_optional`.
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check:
+
+  - Fixed false positives on `bsl::optional` and `bdlb::NullableValue`
+    constructed from a value or returned by `bsl::make_optional`.
+
+  - Added the {option}`BoolSolverModel` option to allow use of a "Simple"
+    Boolean model that avoids relying on a SAT solver. Previously, only SAT was
+    available. This leads to faster analysis, but the trade-off is more false
+    positives (when has value checks involve correlated variables or ORs).
 
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing

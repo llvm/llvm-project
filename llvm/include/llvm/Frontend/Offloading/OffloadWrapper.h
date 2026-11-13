@@ -30,6 +30,17 @@ wrapOpenMPBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
                    EntryArrayTy EntryArray, llvm::StringRef Suffix = "",
                    bool Relocatable = false);
 
+/// Wraps the input device images into the module \p M as global symbols and
+/// registers the images with the OpenACC Offloading runtime libacctarget.
+/// \param EntryArray Optional pair pointing to the begin and end of the
+/// `__tgt_offload_entry` array.
+/// \param Relocatable Indicate if we need to change the offloading section to
+/// create a relocatable object.
+LLVM_ABI llvm::Error
+wrapOpenACCBinaries(llvm::Module &M,
+                    llvm::ArrayRef<llvm::ArrayRef<char>> Images,
+                    EntryArrayTy EntryArray, bool Relocatable = false);
+
 /// Wraps the input fatbinary image into the module \p M as global symbols and
 /// registers the images with the CUDA runtime.
 /// \param EntryArray Optional pair pointing to the begin and end of the
