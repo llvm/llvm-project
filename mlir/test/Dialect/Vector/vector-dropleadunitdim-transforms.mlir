@@ -262,6 +262,58 @@ func.func @cast_away_contraction_leading_one_dims_to_dot_product(%arg0: vector<6
 
 // -----
 
+// The unit dim d0 is leading in the rhs but in the middle of the acc: dropped too.
+
+// CHECK-DAG: #[[$MAP_LHS:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-DAG: #[[$MAP_RHS:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[$MAP_ACC:.*]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+
+// CHECK-LABEL: func.func @cast_away_contraction_unit_dim_in_acc_middle
+//  CHECK-SAME:   %[[LHS:.*]]: vector<1x12xf32>, %[[RHS:.*]]: vector<1x1x8xf32>, %[[ACC:.*]]: vector<12x1x8xf32>
+//       CHECK:   %[[RHS_SC:.+]] = vector.shape_cast %[[RHS]] : vector<1x1x8xf32> to vector<1x8xf32>
+//       CHECK:   %[[ACC_SC:.+]] = vector.shape_cast %[[ACC]] : vector<12x1x8xf32> to vector<12x8xf32>
+//       CHECK:   %[[R:.+]] = vector.contract {indexing_maps = [#[[$MAP_LHS]], #[[$MAP_RHS]], #[[$MAP_ACC]]],
+//  CHECK-SAME:     iterator_types = ["reduction", "parallel", "parallel"], kind = #vector.kind<add>}
+//  CHECK-SAME:     %[[LHS]], %[[RHS_SC]], %[[ACC_SC]] : vector<1x12xf32>, vector<1x8xf32> into vector<12x8xf32>
+//       CHECK:   %[[RES:.+]] = vector.shape_cast %[[R]] : vector<12x8xf32> to vector<12x1x8xf32>
+//       CHECK:   return %[[RES]] : vector<12x1x8xf32>
+func.func @cast_away_contraction_unit_dim_in_acc_middle(%lhs: vector<1x12xf32>, %rhs: vector<1x1x8xf32>, %acc: vector<12x1x8xf32>) -> vector<12x1x8xf32> {
+  %0 = vector.contract {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d1, d2)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d2, d0, d3)>], iterator_types = ["parallel", "reduction", "parallel", "parallel"], kind = #vector.kind<add>} %lhs, %rhs, %acc : vector<1x12xf32>, vector<1x1x8xf32> into vector<12x1x8xf32>
+  return %0 : vector<12x1x8xf32>
+}
+
+// -----
+
+// A masked case. The unit dim d1 is leading in the rhs but in the middle of the acc: dropped too.
+
+// CHECK-LABEL: func.func @cast_away_contraction_unit_dim_in_acc_middle_under_mask
+//  CHECK-SAME:   %[[LHS:.*]]: vector<1x12xf32>, %[[RHS:.*]]: vector<1x1x8xf32>, %[[ACC:.*]]: vector<12x1x8xf32>, %[[MASK:.*]]: vector<12x1x1x8xi1>
+//       CHECK:   %[[MASK_SC:.+]] = vector.shape_cast %[[MASK]] : vector<12x1x1x8xi1> to vector<12x1x8xi1>
+//       CHECK:   %[[R:.+]] = vector.mask %[[MASK_SC]] { vector.contract {{.*}} iterator_types = ["parallel", "reduction", "parallel"]
+//  CHECK-SAME:     : vector<1x12xf32>, vector<1x8xf32> into vector<12x8xf32> } : vector<12x1x8xi1> -> vector<12x8xf32>
+//       CHECK:   %[[RES:.+]] = vector.shape_cast %[[R]] : vector<12x8xf32> to vector<12x1x8xf32>
+func.func @cast_away_contraction_unit_dim_in_acc_middle_under_mask(%lhs: vector<1x12xf32>, %rhs: vector<1x1x8xf32>, %acc: vector<12x1x8xf32>, %mask: vector<12x1x1x8xi1>) -> vector<12x1x8xf32> {
+  %0 = vector.mask %mask {
+    vector.contract {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d2, d0)>, affine_map<(d0, d1, d2, d3) -> (d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>], iterator_types = ["parallel", "parallel", "reduction", "parallel"], kind = #vector.kind<add>} %lhs, %rhs, %acc : vector<1x12xf32>, vector<1x1x8xf32> into vector<12x1x8xf32>
+  } : vector<12x1x1x8xi1> -> vector<12x1x8xf32>
+  return %0 : vector<12x1x8xf32>
+}
+
+// -----
+
+// A middle dim that is not of size 1 is kept.
+
+// CHECK-LABEL: func.func @cast_away_contraction_non_unit_dim_in_acc_middle
+//   CHECK-NOT:   vector.shape_cast
+//       CHECK:   vector.contract {{.*}} iterator_types = ["parallel", "reduction", "parallel", "parallel"]
+//  CHECK-SAME:     : vector<1x12xf32>, vector<2x1x8xf32> into vector<12x2x8xf32>
+func.func @cast_away_contraction_non_unit_dim_in_acc_middle(%lhs: vector<1x12xf32>, %rhs: vector<2x1x8xf32>, %acc: vector<12x2x8xf32>) -> vector<12x2x8xf32> {
+  %0 = vector.contract {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d1, d2)>, affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>, affine_map<(d0, d1, d2, d3) -> (d2, d0, d3)>], iterator_types = ["parallel", "reduction", "parallel", "parallel"], kind = #vector.kind<add>} %lhs, %rhs, %acc : vector<1x12xf32>, vector<2x1x8xf32> into vector<12x2x8xf32>
+  return %0 : vector<12x2x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @cast_away_extract_strided_slice_leading_one_dims
 func.func @cast_away_extract_strided_slice_leading_one_dims(%arg0: vector<1x8x8xf16>) -> vector<1x1x8xf16> {
   // CHECK:     %[[SRC:.+]] = vector.shape_cast %{{.*}} : vector<1x8x8xf16> to vector<8x8xf16>
