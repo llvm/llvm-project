@@ -23,6 +23,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/xxhash.h"
 
@@ -514,7 +515,8 @@ void GotSection::writeTo(uint8_t *buf) const {
   } else {
     for (const auto &[i, entry] : llvm::enumerate(entries))
       if (auto *defined = dyn_cast<Defined>(entry))
-        write64le(&buf[i * target->wordSize], defined->getVA());
+        writeAddress(&buf[i * target->wordSize], defined->getVA(),
+                     target->p2WordSize);
   }
 }
 
@@ -978,17 +980,46 @@ void ObjCSelRefsHelper::initialize() {
       continue;
     if (isec->getName() != section_names::objcSelrefs)
       continue;
-    // We expect a single relocation per selref entry to __objc_methname that
-    // might be aggregated.
-    assert(isec->relocs.size() == 1);
-    auto Reloc = isec->relocs[0];
-    if (const auto *sym = dyn_cast_if_present<Symbol *>(Reloc.referent)) {
-      if (const auto *d = dyn_cast<Defined>(sym)) {
-        auto *cisec = cast<CStringInputSection>(d->isec());
-        auto methname = cisec->getStringRefAtOffset(d->value);
-        methnameToSelref[CachedHashStringRef(methname)] = isec;
-      }
+    // An aggregated or ambiguous selref is not a single reusable pointer.
+    if (isec->data.size() != target->wordSize || isec->relocs.size() != 1)
+      continue;
+    const Relocation &r = isec->relocs[0];
+    // A signed (arm64e) selref does not hold a plain SEL, so neither ObjC stubs
+    // nor relative method-list names can load it directly.
+    if (r.offset != 0 || r.pcrel || r.length != target->p2WordSize ||
+        !target->hasAttr(r.type, RelocAttrBits::UNSIGNED) ||
+        target->hasAttr(r.type, RelocAttrBits::AUTH) || r.getAuthInfo())
+      continue;
+    InputSection *referent = nullptr;
+    uint64_t value = 0;
+    if (const auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
+      const auto *d = dyn_cast<Defined>(sym);
+      if (!d || needsBinding(d))
+        continue;
+      referent = d->isec();
+      value = d->value;
+    } else {
+      referent = dyn_cast_if_present<InputSection *>(r.referent);
     }
+    auto *strings = dyn_cast_or_null<CStringInputSection>(referent);
+    int64_t offset;
+    if (!strings || strings->getName() != section_names::objcMethname ||
+        value > INT64_MAX ||
+        llvm::AddOverflow(static_cast<int64_t>(value), r.getAddend(), offset) ||
+        offset < 0 || static_cast<uint64_t>(offset) >= strings->data.size() ||
+        strings->getStringPiece(offset).inSecOff !=
+            static_cast<uint64_t>(offset))
+      continue;
+    // Symbol relocations use symbol VA + addend; distinct literal pieces can
+    // move independently. A cross-piece addend must not be keyed as the
+    // separately translated target piece. Section relocations do translate it.
+    if (isa<Symbol *>(r.referent) && (value >= strings->data.size() ||
+                                      strings->getStringPiece(value).inSecOff !=
+                                          static_cast<uint64_t>(offset)))
+      continue;
+    // Key the actual whole-string target, never the symbol before its addend.
+    StringRef methname = strings->getStringRefAtOffset(offset);
+    methnameToSelref[CachedHashStringRef(methname)] = isec;
   }
 }
 
@@ -999,7 +1030,7 @@ ConcatInputSection *ObjCSelRefsHelper::makeSelRef(StringRef methname) {
 
   size_t wordSize = target->wordSize;
   uint8_t *selrefData = bAlloc().Allocate<uint8_t>(wordSize);
-  write64le(selrefData, methnameOffset);
+  writeAddress(selrefData, methnameOffset, target->p2WordSize);
   ConcatInputSection *objcSelref =
       makeSyntheticInputSection(segment_names::data, section_names::objcSelrefs,
                                 S_LITERAL_POINTERS | S_ATTR_NO_DEAD_STRIP,
@@ -1007,7 +1038,8 @@ ConcatInputSection *ObjCSelRefsHelper::makeSelRef(StringRef methname) {
                                 /*align=*/wordSize);
   assert(objcSelref->live);
   objcSelref->relocs.push_back({/*type=*/target->unsignedRelocType,
-                                /*pcrel=*/false, /*length=*/3,
+                                /*pcrel=*/false,
+                                /*length=*/target->p2WordSize,
                                 /*offset=*/0,
                                 /*addend=*/static_cast<int64_t>(methnameOffset),
                                 /*referent=*/in.objcMethnameSection->isec});
@@ -1251,10 +1283,11 @@ void LazyPointerSection::writeTo(uint8_t *buf) const {
         uint64_t stubHelperOffset =
             target->stubHelperHeaderSize +
             dysym->stubsHelperIndex * target->stubHelperEntrySize;
-        write64le(buf + off, in.stubHelper->addr + stubHelperOffset);
+        writeAddress(buf + off, in.stubHelper->addr + stubHelperOffset,
+                     target->p2WordSize);
       }
     } else {
-      write64le(buf + off, sym->getVA());
+      writeAddress(buf + off, sym->getVA(), target->p2WordSize);
     }
     off += target->wordSize;
   }
@@ -2392,6 +2425,18 @@ ObjCMethListSection::ObjCMethListSection()
 // their method names. The selrefs will be needed later by ::writeTo. We need to
 // create them early on here to ensure they are processed correctly by the lld
 // pipeline.
+const Relocation *
+ObjCMethListSection::getMethodRelocAt(const ConcatInputSection *isec,
+                                      uint32_t offset) const {
+  auto [it, inserted] = methodRelocations.try_emplace(isec);
+  if (inserted) {
+    it->second.reserve(isec->relocs.size());
+    for (const Relocation &r : isec->relocs)
+      it->second.try_emplace(r.offset, &r);
+  }
+  return it->second.lookup(offset);
+}
+
 void ObjCMethListSection::setUp() {
   llvm::erase_if(inputs, [](const ConcatInputSection *isec) {
     return isec->shouldOmitFromOutput();
@@ -2405,7 +2450,7 @@ void ObjCMethListSection::setUp() {
 
     // Loop through all methods, and ensure a selref for each of them exists.
     while (methodNameOff < isec->data.size()) {
-      const Relocation *reloc = isec->getRelocAt(methodNameOff);
+      const Relocation *reloc = getMethodRelocAt(isec, methodNameOff);
       assert(reloc && "Relocation expected at method list name slot");
 
       StringRef methname = reloc->getReferentString();
@@ -2508,10 +2553,11 @@ bool ObjCMethListSection::isMethodList(const ConcatInputSection *isec) {
 void ObjCMethListSection::writeRelativeOffsetForIsec(
     const ConcatInputSection *isec, uint8_t *buf, uint32_t &inSecOff,
     uint32_t &outSecOff, bool useSelRef) const {
-  const Relocation *reloc = isec->getRelocAt(inSecOff);
+  const Relocation *reloc = getMethodRelocAt(isec, inSecOff);
   assert(reloc && "Relocation expected at __objc_methlist Offset");
 
-  uint32_t symVA = 0;
+  uint64_t symVA = 0;
+  int64_t addend = 0;
   if (useSelRef) {
     StringRef methname = reloc->getReferentString();
     ConcatInputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
@@ -2524,13 +2570,39 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     auto *def = dyn_cast_or_null<Defined>(sym);
     assert(def && "Expected all syms in __objc_methlist to be defined");
     symVA = def->getVA();
+    addend = reloc->getAddend();
   } else {
-    auto *isec = cast<InputSection *>(reloc->referent);
-    symVA = isec->getVA(reloc->getAddend());
+    // A section referent may have been folded by ICF; use the survivor.
+    auto *referent = cast<InputSection *>(reloc->referent);
+    // Literal pieces can move independently during deduplication; getVA must
+    // translate the original input offset rather than adding it after folding.
+    symVA = referent->canonical()->getVA(reloc->getAddend());
   }
 
-  uint32_t currentVA = isec->getVA() + outSecOff;
-  uint32_t delta = symVA - currentVA;
+  uint64_t currentVA = isec->getVA() + outSecOff;
+  uint32_t delta;
+  if (target->wordSize == 8) {
+    // LP64 fields decode signed 32-bit offsets. Do not silently truncate a
+    // far target (or an overflowing symbol-plus-addend) into another address.
+    uint64_t amount = addend >= 0 ? uint64_t(addend) : -uint64_t(addend);
+    bool overflow = addend >= 0 ? amount > UINT64_MAX - symVA : amount > symVA;
+    uint64_t adjustedVA = addend >= 0 ? symVA + amount : symVA - amount;
+    uint64_t distance = adjustedVA >= currentVA ? adjustedVA - currentVA
+                                                : currentVA - adjustedVA;
+    uint64_t limit =
+        adjustedVA >= currentVA ? uint64_t(INT32_MAX) : uint64_t(INT32_MAX) + 1;
+    if (overflow || distance > limit) {
+      error(isec->getLocation(inSecOff) +
+            ": ObjC method-list relative offset out of range; use "
+            "-no_objc_relative_method_lists");
+      delta = 0;
+    } else {
+      delta = uint32_t(adjustedVA - currentVA);
+    }
+  } else {
+    // arm64_32 uses the intended modulo-2^32 pointer arithmetic.
+    delta = uint32_t(symVA + addend - currentVA);
+  }
   write32le(buf + outSecOff, delta);
 
   // Move one pointer forward in the absolute method list
@@ -2574,7 +2646,20 @@ ObjCMethListSection::writeRelativeMethodList(const ConcatInputSection *isec,
     writeRelativeOffsetForIsec(isec, buf, inSecOff, outSecOff, true);
     // Write the type of the method
     writeRelativeOffsetForIsec(isec, buf, inSecOff, outSecOff, false);
-    // Write reference to the selector of the method
+    // Protocol method descriptions have no IMP: encode it as a zero offset,
+    // which the runtime treats as null. Metadata discovery only accepts a
+    // missing IMP relocation for protocol lists, over zero bytes.
+    if (!getMethodRelocAt(isec, inSecOff)) {
+      assert(config->enableObjCProtocolRelativeMethodLists &&
+             llvm::all_of(isec->data.slice(inSecOff, target->wordSize),
+                          [](uint8_t b) { return b == 0; }) &&
+             "Expected a null protocol IMP in ObjC method list");
+      write32le(buf + outSecOff, 0);
+      inSecOff += target->wordSize;
+      outSecOff += relativeOffsetSize;
+      continue;
+    }
+    // Write the implementation offset.
     writeRelativeOffsetForIsec(isec, buf, inSecOff, outSecOff, false);
   }
 

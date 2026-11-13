@@ -78,6 +78,12 @@ def no_deduplicate_strings: Flag<["--"], "no-deduplicate-strings">,
 def dead_strip_duplicates: Flag<["--"], "dead-strip-duplicates">,
     HelpText<"Do not error on duplicate symbols that will be dead stripped.">,
     Group<grp_lld>;
+def objc_method_list_metadata_discovery: Flag<["--"], "objc-method-list-metadata-discovery">,
+    HelpText<"Find ObjC method lists to emit as relative by following ObjC metadata instead of symbol names (experimental)">,
+    Group<grp_lld>;
+def enable_objc_protocol_relative_method_lists: Flag<["--"], "enable-objc-protocol-relative-method-lists">,
+    HelpText<"Also emit ObjC protocol method lists as relative. Requires --objc-method-list-metadata-discovery">,
+    Group<grp_lld>;
 defm strip_swift_force_load: BB<"strip-swift-force-load",
   "Strip the swift FORCE_LOAD sections containing fixups",
   "Do not strip the the swift FORCE_LOAD sections (default)">, Group<grp_lld>;

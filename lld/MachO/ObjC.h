@@ -37,6 +37,8 @@ constexpr const char categoryProtocols[] = "__OBJC_CATEGORY_PROTOCOLS_$_";
 // Check for duplicate method names within related categories / classes.
 void checkCategories();
 void mergeCategories();
+// Find method lists for relative encoding by walking ObjC metadata.
+void collectMethodLists();
 
 void doCleanup();
 } // namespace objc
