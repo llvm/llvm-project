@@ -21,8 +21,13 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 
+#include <algorithm>
+#include <cwchar>
+#include <iterator>
 #include <pathcch.h>
 #include <string>
+#include <tuple>
+#include <vector>
 
 namespace lldb_private {
 
@@ -67,6 +72,106 @@ std::string ExeRelativeCandidate() {
 }
 #endif // ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+/// PEP 514 tag suffix for installs matching this process' architecture.
+const wchar_t *RegistryTagSuffix() {
+#if defined(_M_ARM64) || defined(__aarch64__)
+  return L"-arm64";
+#elif defined(_M_X64) || defined(__x86_64__)
+  return L"";
+#elif defined(_M_IX86) || defined(__i386__)
+  return L"-32";
+#else
+  return nullptr;
+#endif
+}
+
+struct RegisteredInstall {
+  unsigned long major;
+  unsigned long minor;
+  std::wstring install_path;
+};
+
+void CollectRegisteredInstalls(HKEY root, REGSAM view, const wchar_t *suffix,
+                               std::vector<RegisteredInstall> &installs) {
+  HKEY core;
+  if (::RegOpenKeyExW(root, L"Software\\Python\\PythonCore", 0, KEY_READ | view,
+                      &core) != ERROR_SUCCESS)
+    return;
+
+  wchar_t tag[256];
+  for (DWORD i = 0;; ++i) {
+    DWORD tag_len = std::size(tag);
+    LONG status = ::RegEnumKeyExW(core, i, tag, &tag_len, nullptr, nullptr,
+                                  nullptr, nullptr);
+    if (status == ERROR_NO_MORE_ITEMS)
+      break;
+    if (status != ERROR_SUCCESS)
+      continue;
+
+    wchar_t *end;
+    unsigned long major = wcstoul(tag, &end, 10);
+    if (end == tag || *end != L'.')
+      continue;
+    wchar_t *minor_start = end + 1;
+    unsigned long minor = wcstoul(minor_start, &end, 10);
+    if (end == minor_start || wcscmp(end, suffix) != 0)
+      continue;
+
+    std::wstring tag_key = std::wstring(tag) + L"\\InstallPath";
+    DWORD size = 0;
+    if (::RegGetValueW(core, tag_key.c_str(), nullptr, RRF_RT_REG_SZ, nullptr,
+                       nullptr, &size) != ERROR_SUCCESS ||
+        size == 0)
+      continue;
+    std::wstring path(size / sizeof(wchar_t), L'\0');
+    if (::RegGetValueW(core, tag_key.c_str(), nullptr, RRF_RT_REG_SZ, nullptr,
+                       path.data(), &size) != ERROR_SUCCESS)
+      continue;
+    path.resize(wcslen(path.c_str()));
+    if (!path.empty())
+      installs.push_back({major, minor, std::move(path)});
+  }
+  ::RegCloseKey(core);
+}
+
+/// Runtime DLLs of the Python installs registered per PEP 514, which is
+/// where the py launcher finds interpreters that are not on PATH. Newest
+/// version first.
+std::vector<std::string> RegisteredInstallCandidates() {
+  std::vector<std::string> candidates;
+  const wchar_t *suffix = RegistryTagSuffix();
+  if (!suffix)
+    return candidates;
+
+  std::vector<RegisteredInstall> installs;
+  CollectRegisteredInstalls(HKEY_CURRENT_USER, 0, suffix, installs);
+  CollectRegisteredInstalls(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY, suffix,
+                            installs);
+  CollectRegisteredInstalls(HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY, suffix,
+                            installs);
+  std::stable_sort(installs.begin(), installs.end(),
+                   [](const RegisteredInstall &a, const RegisteredInstall &b) {
+                     return std::tie(a.major, a.minor) >
+                            std::tie(b.major, b.minor);
+                   });
+
+  for (const RegisteredInstall &install : installs) {
+    std::string dir;
+    if (!llvm::convertWideToUTF8(install.install_path, dir))
+      continue;
+    llvm::SmallString<MAX_PATH> path(dir);
+    llvm::sys::path::append(path, LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME);
+    if (!llvm::sys::fs::exists(path))
+      continue;
+    if (std::find(candidates.begin(), candidates.end(), path.str()) ==
+        candidates.end())
+      candidates.emplace_back(path.str());
+  }
+  return candidates;
+}
+#endif // ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+
 } // namespace
 
 void ForEachPythonRuntimeCandidate(
@@ -83,6 +188,12 @@ void ForEachPythonRuntimeCandidate(
   std::string exe_relative = ExeRelativeCandidate();
   if (!exe_relative.empty() && callback(exe_relative.c_str()))
     return;
+#endif
+
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+  for (const std::string &candidate : RegisteredInstallCandidates())
+    if (callback(candidate.c_str()))
+      return;
 #endif
 }
 
