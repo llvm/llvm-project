@@ -153,7 +153,9 @@ public:
   /// belongs to already exists. A dialect creates the incomplete type, calls
   /// this, reads the body (a nested reference back to this same entry then
   /// resolves to the incomplete type rather than re-entering it), and then
-  /// completes it.
+  /// completes it. Unlike tryStartCyclicParse, which returns a guard and
+  /// fails a nested parse of the same type, this publishes the type so
+  /// nested reads succeed with the incomplete instance.
   ///
   /// Contract for the dialect: call this before reading any nested entry
   /// that may refer back, and return the published instance as the read

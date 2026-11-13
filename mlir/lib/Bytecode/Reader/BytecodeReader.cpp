@@ -1022,6 +1022,14 @@ private:
                                  StringRef entryType, uint64_t index,
                                  uint64_t depth);
 
+  /// Drain the worklist, resolving entries and retrying deferred ones after
+  /// their dependencies. Shared by the slow path and by the completion of
+  /// entries that were only answered with a partial.
+  LogicalResult
+  drainWorklist(std::deque<std::pair<uint64_t, EntryKind>> &worklist,
+                llvm::DenseSet<std::pair<uint64_t, EntryKind>> &inWorklist,
+                uint64_t depth);
+
   /// Parse an entry using the given reader that was encoded using the textual
   /// assembly format.
   template <typename T>
@@ -1181,6 +1189,10 @@ public:
     if (depth > maxAttrTypeDepth) {
       if (Type type = attrTypeReader.getTypeOrSentinel(index)) {
         result = type;
+        return success();
+      }
+      if (Type partial = attrTypeReader.getPartialType(index)) {
+        result = partial;
         return success();
       }
       attrTypeReader.addDeferredParsing(index, AttrTypeReader::EntryKind::Type);
@@ -1490,51 +1502,7 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
   for (auto entry : llvm::reverse(deferredWorklist))
     addToWorklistFront(entry);
 
-  // Drain the worklist, resolving entries and retrying deferred ones after
-  // their dependencies. Shared by the slow path and, below, by the completion
-  // of entries that were only answered with a partial.
-  auto drainWorklist = [&]() -> LogicalResult {
-    while (!worklist.empty()) {
-      auto [currentIndex, entryKind] = worklist.front();
-      worklist.pop_front();
-
-      // Clear the deferred worklist before parsing to capture any new entries.
-      deferredWorklist.clear();
-
-      if (entryKind == EntryKind::Type) {
-        Type result;
-        if (succeeded(readType(currentIndex, result, depth,
-                               /*allowPartial=*/false))) {
-          inWorklist.erase({currentIndex, entryKind});
-          continue;
-        }
-      } else {
-        assert(entryKind == EntryKind::Attribute && "Unexpected entry kind");
-        Attribute result;
-        if (succeeded(readAttribute(currentIndex, result, depth))) {
-          inWorklist.erase({currentIndex, entryKind});
-          continue;
-        }
-      }
-
-      if (deferredWorklist.empty()) {
-        // Parsing failed with no deferred entries which implies an error.
-        return failure();
-      }
-
-      // Move this entry to the back to retry after dependencies.
-      worklist.emplace_back(currentIndex, entryKind);
-
-      // Add dependencies to the front (in reverse so they maintain order).
-      for (auto entry : llvm::reverse(deferredWorklist))
-        addToWorklistFront(entry);
-
-      deferredWorklist.clear();
-    }
-    return success();
-  };
-
-  if (failed(drainWorklist()))
+  if (failed(drainWorklist(worklist, inWorklist, depth)))
     return T();
 
   // An entry that was answered with a partial has not necessarily been
@@ -1555,11 +1523,57 @@ T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
     }
     if (!seeded)
       break;
-    if (failed(drainWorklist()))
+    if (failed(drainWorklist(worklist, inWorklist, depth)))
       return T();
   }
 
   return entries[index].entry;
+}
+
+LogicalResult AttrTypeReader::drainWorklist(
+    std::deque<std::pair<uint64_t, EntryKind>> &worklist,
+    llvm::DenseSet<std::pair<uint64_t, EntryKind>> &inWorklist,
+    uint64_t depth) {
+  while (!worklist.empty()) {
+    auto [currentIndex, entryKind] = worklist.front();
+    worklist.pop_front();
+
+    // Clear the deferred worklist before parsing to capture any new entries.
+    deferredWorklist.clear();
+
+    if (entryKind == EntryKind::Type) {
+      Type result;
+      if (succeeded(readType(currentIndex, result, depth,
+                             /*allowPartial=*/false))) {
+        inWorklist.erase({currentIndex, entryKind});
+        continue;
+      }
+    } else {
+      assert(entryKind == EntryKind::Attribute && "Unexpected entry kind");
+      Attribute result;
+      if (succeeded(readAttribute(currentIndex, result, depth))) {
+        inWorklist.erase({currentIndex, entryKind});
+        continue;
+      }
+    }
+
+    if (deferredWorklist.empty()) {
+      // Parsing failed with no deferred entries which implies an error.
+      return failure();
+    }
+
+    // Move this entry to the back to retry after dependencies.
+    worklist.emplace_back(currentIndex, entryKind);
+
+    // Add dependencies to the front (in reverse so they maintain order).
+    for (auto entry : llvm::reverse(deferredWorklist)) {
+      if (inWorklist.insert(entry).second)
+        worklist.push_front(entry);
+    }
+
+    deferredWorklist.clear();
+  }
+  return success();
 }
 
 LogicalResult DialectReader::tryStartCyclicRead(Type type) {
@@ -1587,11 +1601,12 @@ LogicalResult AttrTypeReader::readEntry(SmallVectorImpl<Entry<T>> &entries,
   // that a reference back to it (which is how a self-referential record is
   // encoded) resolves instead of re-entering this entry.
   if constexpr (std::is_same_v<T, Type>) {
-    if (allowPartial)
+    if (allowPartial) {
       if (Type partial = getPartialType(index)) {
         result = partial;
         return success();
       }
+    }
   }
 
   // If the entry hasn't been resolved, try to parse it.
@@ -1672,6 +1687,19 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
     entry.entry = entry.dialect->interface->readType(dialectReader);
   else
     entry.entry = entry.dialect->interface->readAttribute(dialectReader);
+
+  if constexpr (std::is_same_v<T, Type>) {
+    // A dialect that published a partial must return that same instance:
+    // consumers may already hold it. Anything else is a contract violation,
+    // not a type that can complete in place.
+    if (Type partial = getPartialType(index)) {
+      if (entry.entry && entry.entry != partial) {
+        return reader.emitError("dialect '", entry.dialect->name,
+                                "' returned a different type than the one "
+                                "published with tryStartCyclicRead");
+      }
+    }
+  }
 
   return success(!!entry.entry);
 }

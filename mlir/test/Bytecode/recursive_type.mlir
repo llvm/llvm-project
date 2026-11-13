@@ -20,6 +20,9 @@
 // CHECK-DAG: ![[$A:[^ ]+]] = !test.test_rec_alias<a, ![[$B]]>
 // CHECK-DAG: ![[$X:[^ ]+]] = !test.test_rec_alias<x, tuple<tuple<tuple<tuple<tuple<i32>>>>>>
 // CHECK-DAG: ![[$ROOT:[^ ]+]] = !test.test_rec_alias<root, tuple<![[$X]], i32>>
+// CHECK-DAG: ![[$D:[^ ]+]] = !test.test_rec_alias<d, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<d>>>>>>>>
+// CHECK-DAG: ![[$DATTR:[^ ]+]] = !test.test_rec_alias<dattr, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dattr>>>>>>>>
+// CHECK-DAG: ![[$DFUNC:[^ ]+]] = !test.test_rec_alias<dfunc, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dfunc>>>>>>>>
 
 // CHECK-LABEL: @roundtrip
 func.func @roundtrip() {
@@ -50,6 +53,20 @@ func.func @roundtrip() {
   // A second use of an already-resolved type.
   // CHECK: ![[$PLAIN]]
   "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<plain, i32>
+
+  // A self-reference through six tuples: one past the depth limit, so the
+  // reference back is read through the depth branch, not the nested path.
+  // CHECK: ![[$D]]
+  "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<d, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<d>>>>>>>>
+
+  // The same record first reached from an attribute: the type entry is
+  // read while parsing the attribute entry.
+  // CHECK: ![[$DATTR]]
+  "test.dummy_op_for_roundtrip"() {test_attr = !test.test_rec_alias<dattr, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dattr>>>>>>>>} : () -> ()
+
+  // The same record first reached from a function type.
+  // CHECK: ![[$DFUNC]]
+  "test.dummy_op_for_roundtrip"() : () -> ((!test.test_rec_alias<dfunc, tuple<tuple<tuple<tuple<tuple<tuple<!test.test_rec_alias<dfunc>>>>>>>>) -> i32)
 
   return
 }
