@@ -155,7 +155,7 @@ int ignore_result_assign() {
 // LLVM:         store i32 123, ptr %[[I_PTR]]
 // LLVM:         store i32 123, ptr %[[J_PTR]]
 // LLVM:         store i32 5, ptr %[[I_PTR]]
-// LLVM:         %[[GEP:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_PTR]], i32 0, i64 5
+// LLVM:         %[[GEP:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_PTR]], i64 0, i64 5
 // LLVM:         %[[ARR_VAL:.*]] = load i32, ptr %[[GEP]]
 // LLVM:         store i32 %[[ARR_VAL]], ptr %[[J_PTR]]
 // LLVM:         store ptr null, ptr %[[Q_PTR]]

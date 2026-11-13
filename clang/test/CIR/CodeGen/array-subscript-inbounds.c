@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fwrapv-pointer -fclangir -emit-cir %s -o %t-wrapv.cir
 // RUN: FileCheck --check-prefix=WRAPV-CIR --input-file=%t-wrapv.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fwrapv-pointer -fclangir -emit-llvm %s -o %t-wrapv-cir.ll
-// RUN: FileCheck --check-prefixes=WRAPV-LLVM,WRAPV-LLVMCIR --input-file=%t-wrapv-cir.ll %s
+// RUN: FileCheck --check-prefix=WRAPV-LLVM --input-file=%t-wrapv-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fwrapv-pointer -emit-llvm %s -o %t-wrapv.ll
-// RUN: FileCheck --check-prefixes=WRAPV-LLVM,WRAPV-OGCG --input-file=%t-wrapv.ll %s
+// RUN: FileCheck --check-prefix=WRAPV-LLVM --input-file=%t-wrapv.ll %s
 
 int signed_index(int i) {
   int a[4] = {0};
@@ -24,10 +24,7 @@ int signed_index(int i) {
 // LLVM-LABEL: define dso_local i32 @signed_index(
 // LLVM:         %[[A:.*]] = alloca [4 x i32], align 16
 // LLVM:         %[[IDX:.*]] = sext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds [4 x i32], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[IDX]]
+// LLVM:         getelementptr inbounds [4 x i32], ptr %[[A]], i64 0, i64 %[[IDX]]
 
 // WRAPV-CIR-LABEL: cir.func {{.*}} @signed_index(
 // WRAPV-CIR:         cir.get_element %{{.*}}[%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
@@ -35,10 +32,7 @@ int signed_index(int i) {
 // WRAPV-LLVM-LABEL: define dso_local i32 @signed_index(
 // WRAPV-LLVM:         %[[A:.*]] = alloca [4 x i32], align 16
 // WRAPV-LLVM:         %[[IDX:.*]] = sext i32 %{{.*}} to i64
-// WRAPV-LLVM:         getelementptr [4 x i32], ptr %[[A]],
-// WRAPV-LLVMCIR-SAME:   i32 0,
-// WRAPV-OGCG-SAME:      i64 0,
-// WRAPV-LLVM-SAME:      i64 %[[IDX]]
+// WRAPV-LLVM:         getelementptr [4 x i32], ptr %[[A]], i64 0, i64 %[[IDX]]
 
 int unsigned_index(unsigned u) {
   int a[4] = {0};
@@ -53,10 +47,7 @@ int unsigned_index(unsigned u) {
 // LLVM-LABEL: define dso_local i32 @unsigned_index(
 // LLVM:         %[[A:.*]] = alloca [4 x i32], align 16
 // LLVM:         %[[IDX:.*]] = zext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[IDX]]
+// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[A]], i64 0, i64 %[[IDX]]
 
 // WRAPV-CIR-LABEL: cir.func {{.*}} @unsigned_index(
 // WRAPV-CIR:         cir.get_element %{{.*}}[%{{.*}} : !u64i] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
@@ -64,10 +55,7 @@ int unsigned_index(unsigned u) {
 // WRAPV-LLVM-LABEL: define dso_local i32 @unsigned_index(
 // WRAPV-LLVM:         %[[A:.*]] = alloca [4 x i32], align 16
 // WRAPV-LLVM:         %[[IDX:.*]] = zext i32 %{{.*}} to i64
-// WRAPV-LLVM:         getelementptr [4 x i32], ptr %[[A]],
-// WRAPV-LLVMCIR-SAME:   i32 0,
-// WRAPV-OGCG-SAME:      i64 0,
-// WRAPV-LLVM-SAME:      i64 %[[IDX]]
+// WRAPV-LLVM:         getelementptr [4 x i32], ptr %[[A]], i64 0, i64 %[[IDX]]
 
 int constant_index(void) {
   int a[4] = {0};
@@ -81,10 +69,7 @@ int constant_index(void) {
 
 // LLVM-LABEL: define dso_local i32 @constant_index(
 // LLVM:         %[[A:.*]] = alloca [4 x i32], align 16
-// LLVM:         getelementptr inbounds [4 x i32], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 1
+// LLVM:         getelementptr inbounds [4 x i32], ptr %[[A]], i64 0, i64 1
 
 int unsigned_constant_index(void) {
   int a[4] = {0};
@@ -98,10 +83,7 @@ int unsigned_constant_index(void) {
 
 // LLVM-LABEL: define dso_local i32 @unsigned_constant_index(
 // LLVM:         %[[A:.*]] = alloca [4 x i32], align 16
-// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 1
+// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[A]], i64 0, i64 1
 
 enum SignedIdx { NegOne = -1, SZero, SOne };
 enum UnsignedIdx { UZero, UOne };
@@ -121,15 +103,9 @@ int enum_index(enum SignedIdx s, enum UnsignedIdx u) {
 // LLVM-LABEL: define dso_local i32 @enum_index(
 // LLVM:         %[[A:.*]] = alloca [4 x i32], align 16
 // LLVM:         %[[S:.*]] = sext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds [4 x i32], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[S]]
+// LLVM:         getelementptr inbounds [4 x i32], ptr %[[A]], i64 0, i64 %[[S]]
 // LLVM:         %[[U:.*]] = zext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[U]]
+// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[A]], i64 0, i64 %[[U]]
 
 int reversed_subscript(int i, unsigned u) {
   int a[4] = {0};
@@ -146,15 +122,9 @@ int reversed_subscript(int i, unsigned u) {
 // LLVM-LABEL: define dso_local i32 @reversed_subscript(
 // LLVM:         %[[A:.*]] = alloca [4 x i32], align 16
 // LLVM:         %[[I:.*]] = sext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds [4 x i32], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[I]]
+// LLVM:         getelementptr inbounds [4 x i32], ptr %[[A]], i64 0, i64 %[[I]]
 // LLVM:         %[[U:.*]] = zext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[U]]
+// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[A]], i64 0, i64 %[[U]]
 
 int two_dimensions(int i, unsigned j) {
   int a[3][4] = {{0}};
@@ -171,15 +141,9 @@ int two_dimensions(int i, unsigned j) {
 // LLVM-LABEL: define dso_local i32 @two_dimensions(
 // LLVM:         %[[A:.*]] = alloca [3 x [4 x i32]], align 16
 // LLVM:         %[[I:.*]] = sext i32 %{{.*}} to i64
-// LLVM:         %[[ROW:.*]] = getelementptr inbounds [3 x [4 x i32]], ptr %[[A]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[I]]
+// LLVM:         %[[ROW:.*]] = getelementptr inbounds [3 x [4 x i32]], ptr %[[A]], i64 0, i64 %[[I]]
 // LLVM:         %[[J:.*]] = zext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[ROW]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[J]]
+// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %[[ROW]], i64 0, i64 %[[J]]
 
 int pointer_to_2d(int (*p)[3][4], int i, int j) { return (*p)[i][j]; }
 
@@ -188,8 +152,8 @@ int pointer_to_2d(int (*p)[3][4], int i, int j) { return (*p)[i][j]; }
 // CIR:         cir.get_element inbounds %[[ROW]][%{{.*}} : !s64i] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
 
 // LLVM-LABEL: define dso_local i32 @pointer_to_2d(
-// LLVM:         %[[ROW:.*]] = getelementptr inbounds [3 x [4 x i32]], ptr
-// LLVM:         getelementptr inbounds [4 x i32], ptr %[[ROW]],
+// LLVM:         %[[ROW:.*]] = getelementptr inbounds [3 x [4 x i32]], ptr %{{.*}}, i64 0, i64 %{{.*}}
+// LLVM:         getelementptr inbounds [4 x i32], ptr %[[ROW]], i64 0, i64 %{{.*}}
 
 struct Flex {
   int n;
@@ -206,10 +170,7 @@ int flexible_member(struct Flex *s, int i) { return s->a[i]; }
 // LLVM-LABEL: define dso_local i32 @flexible_member(
 // LLVM:         %[[MEMBER:.*]] = getelementptr inbounds nuw %struct.Flex, ptr %{{.*}}, i32 0, i32 1
 // LLVM:         %[[IDX:.*]] = sext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds [0 x i32], ptr %[[MEMBER]],
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[IDX]]
+// LLVM:         getelementptr inbounds [0 x i32], ptr %[[MEMBER]], i64 0, i64 %[[IDX]]
 
 static const int debruijn[32] = {
     0,  1,  28, 2,  29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4,  8,
@@ -226,7 +187,4 @@ int count_trailing_zeros(unsigned x) {
 
 // LLVM-LABEL: define dso_local i32 @count_trailing_zeros(
 // LLVM:         %[[IDX:.*]] = zext i32 %{{.*}} to i64
-// LLVM:         getelementptr inbounds nuw [32 x i32], ptr @debruijn,
-// LLVMCIR-SAME:   i32 0,
-// OGCG-SAME:      i64 0,
-// LLVM-SAME:      i64 %[[IDX]]
+// LLVM:         getelementptr inbounds nuw [32 x i32], ptr @debruijn, i64 0, i64 %[[IDX]]

@@ -100,13 +100,9 @@ _BitInt(129) local_arr(void) {
 // LLVM-SAME: ptr{{.*}}%[[RET_ARG:.*]])
 // LLVM: %[[ARR:.*]] = alloca [2 x [24 x i8]], align 16
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[ARR]], ptr align 16 @__const.local_arr.arr, i64 48, i1 false)
-// LLVM: %[[GET_ELT_ONE:.*]] = getelementptr inbounds [2 x [24 x i8]], ptr %[[ARR]],
-// CIRONLY-SAME: i32 0, i64 1
-// OGCG-SAME: i64 0, i64 1
+// LLVM: %[[GET_ELT_ONE:.*]] = getelementptr inbounds [2 x [24 x i8]], ptr %[[ARR]], i64 0, i64 1
 // LLVM: store i192 3, ptr %[[GET_ELT_ONE]], align 8
-// LLVM: %[[GET_ELT_ZERO:.*]] = getelementptr inbounds [2 x [24 x i8]], ptr %[[ARR]],
-// CIRONLY-SAME: i32 0, i64 0
-// OGCG-SAME: i64 0, i64 0
+// LLVM: %[[GET_ELT_ZERO:.*]] = getelementptr inbounds [2 x [24 x i8]], ptr %[[ARR]], i64 0, i64 0
 // LLVM: %[[LOAD_ELT_ZERO:.*]] = load i192, ptr %[[GET_ELT_ZERO]], align 16
 // LLVM: %[[TRUNC_ELT:.*]] = trunc i192 %[[LOAD_ELT_ZERO]] to i129
 // LLVM: %[[EXT_ELT:.*]] = sext i129 %[[TRUNC_ELT]] to i192

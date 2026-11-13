@@ -2305,10 +2305,13 @@ mlir::LogicalResult CIRToLLVMGetElementOpLowering::matchAndRewrite(
                          adaptor.getBase().getType(),
                          dyn_cast<cir::IntType>(op.getOperand(1).getType()));
 
-    // Since the base address is a pointer to an aggregate, the first
-    // offset is always zero. The second offset tell us which member it
-    // will access.
-    std::array<mlir::LLVM::GEPArg, 2> offset{0, index};
+    // Since the base address is a pointer to an array, the first index is
+    // always zero, and the second one selects the element.  The zero takes the
+    // element index's type, because a raw constant GEP index is always
+    // translated as i32.
+    mlir::Value zero = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                                      index.getType(), 0);
+    std::array<mlir::LLVM::GEPArg, 2> offset = {zero, index};
     mlir::LLVM::GEPNoWrapFlags flags = mlir::LLVM::GEPNoWrapFlags::none;
     if (op.getInBounds())
       flags |= mlir::LLVM::GEPNoWrapFlags::inbounds;

@@ -53,7 +53,7 @@ void pass_global_array() {
 // CIR-NEXT:    %{{.*}} = cir.load align(4) %[[ELEM]] : !cir.ptr<!s32i>, !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @_Z18index_global_arrayi
-// LLVM:         %[[GEP:.*]] = getelementptr inbounds [10 x i32], ptr addrspacecast (ptr addrspace(1) @globalArr to ptr), i32 0, i64 %{{.*}}
+// LLVM:         %[[GEP:.*]] = getelementptr inbounds [10 x i32], ptr addrspacecast (ptr addrspace(1) @globalArr to ptr), i64 0, i64 %{{.*}}
 // LLVM-NEXT:    %{{.*}} = load i32, ptr %[[GEP]], align 4
 
 // OGCG-LABEL: define{{.*}} i32 @_Z18index_global_arrayi
