@@ -861,12 +861,12 @@ func.func @parallel_loop_annotation_2d(%arg0 : index, %arg1 : index, %arg2 : ind
 // CHECK: #[[UNROLL:.*]] = #llvm.loop_unroll<disable = true>
 // CHECK: #[[ANNOTATION:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL]]>
 // CHECK: func.func @loop_annotation_value_dialect
-// CHECK: cf.br {{.*}} {test.annotation = #[[ANNOTATION]], test.extra = #[[UNROLL]], test.unrelated = #llvm.linkage<internal>}
+// CHECK: cf.br {{.*}} {test.annotation = #[[ANNOTATION]], test.extra = #[[UNROLL]], test.linkage = #llvm.linkage<internal>}
 // CHECK-NOT: llvm.unrelated
 // CHECK: return
 #annotation = #llvm.loop_annotation<unroll = <disable = true>>
 func.func @loop_annotation_value_dialect(%lb : index, %ub : index, %step : index) {
   scf.for %i = %lb to %ub step %step {
-  } {test.annotation = #annotation, test.extra = #llvm.loop_unroll<disable = true>, test.unrelated = #llvm.linkage<internal>, llvm.unrelated = 42 : i32}
+  } {test.annotation = #annotation, test.extra = #llvm.loop_unroll<disable = true>, test.linkage = #llvm.linkage<internal>, llvm.unrelated = 42 : i32}
   return
 }
