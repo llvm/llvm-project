@@ -348,11 +348,16 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
       dwarf::toStringRef(find(DieEntry, dwarf::DW_AT_LLVM_include_path));
   if (!Path.ends_with(".swiftinterface"))
     return;
+  // Undo prefix mapping before comparing against the SDK and toolchain.
+  std::string RemappedPath = File.remapPath(Path);
+  Path = RemappedPath;
   // Don't track interfaces that are part of the SDK.
   StringRef SysRoot =
       dwarf::toStringRef(find(DieEntry, dwarf::DW_AT_LLVM_sysroot));
   if (SysRoot.empty())
     SysRoot = getSysRoot();
+  std::string RemappedSysRoot = File.remapPath(SysRoot);
+  SysRoot = RemappedSysRoot;
   if (!SysRoot.empty() && Path.starts_with(SysRoot))
     return;
   // Don't track interfaces that are part of the toolchain.
@@ -371,10 +376,9 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
 
     // The prepend path is applied later when copying.
     SmallString<128> ResolvedPath;
-    if (sys::path::is_relative(Path))
-      sys::path::append(
-          ResolvedPath,
-          dwarf::toString(getUnitDIE().find(dwarf::DW_AT_comp_dir), ""));
+    if (!isPathAbsoluteOnWindowsOrPosix(Path))
+      ResolvedPath = File.remapPath(
+          dwarf::toStringRef(getUnitDIE().find(dwarf::DW_AT_comp_dir)));
     sys::path::append(ResolvedPath, Path);
 
     // Stage the entry. It will be merged into the shared
@@ -1965,6 +1969,7 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
 
       std::string FileName = *Name;
       if (isPathAbsoluteOnWindowsOrPosix(FileName)) {
+        FileName = File.remapPath(FileName);
         FileNamesCache::iterator FileData =
             FileNames
                 .insert({FileIdx,
@@ -2020,7 +2025,7 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
           FileNames
               .insert({FileIdx,
                        std::make_unique<std::pair<std::string, std::string>>(
-                           std::string(FilePath), std::move(FileName))})
+                           File.remapPath(FilePath), std::move(FileName))})
               .first;
       return {{StringRef(FileData->second->first),
                StringRef(FileData->second->second)}};
