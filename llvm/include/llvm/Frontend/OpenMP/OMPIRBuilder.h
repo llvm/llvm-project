@@ -517,6 +517,18 @@ private:
   OffloadEntriesDeviceGlobalVarTy OffloadEntriesDeviceGlobalVar;
 };
 
+namespace omp {
+/// Hints attached to atomicrmw instructions emitted for atomic constructs.
+struct AtomicControl {
+  /// The atomic may flush denormals.
+  bool IgnoreDenormalMode = false;
+  /// X may be in fine-grained memory.
+  bool FineGrainedMemory = true;
+  /// X may be in remote memory.
+  bool RemoteMemory = true;
+};
+} // namespace omp
+
 /// An interface to create LLVM-IR for OpenMP directives.
 ///
 /// Each OpenMP directive has a corresponding public generator method.
@@ -4108,6 +4120,7 @@ private:
   /// \param IsXBinopExpr true if \a X is Left H.S. in Right H.S. part of the
   ///                     update expression, false otherwise.
   ///                     (e.g. true for X = X BinOp Expr)
+  /// \param AC          Hints for the generated atomicrmw instruction.
   ///
   /// \returns A pair of the old value of X before the update, and the value
   ///          used for the update.
@@ -4115,8 +4128,7 @@ private:
   emitAtomicUpdate(InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
                    AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX,
-                   bool IsXBinopExpr, bool IsIgnoreDenormalMode,
-                   bool IsFineGrainedMemory, bool IsRemoteMemory);
+                   bool IsXBinopExpr, omp::AtomicControl AC);
 
   /// Emit the binary op. described by \p RMWOp, using \p Src1 and \p Src2 .
   ///
@@ -4185,14 +4197,14 @@ public:
   /// \param IsXBinopExpr true if \a X is Left H.S. in Right H.S. part of the
   ///                     update expression, false otherwise.
   ///	                    (e.g. true for X = X BinOp Expr)
+  /// \param AC       Hints for the generated atomicrmw instruction.
   ///
   /// \return Insertion point after generated atomic update IR.
   LLVM_ABI InsertPointOrErrorTy createAtomicUpdate(
       const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
       Value *Expr, AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
       AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr,
-      bool IsIgnoreDenormalMode = false, bool IsFineGrainedMemory = false,
-      bool IsRemoteMemory = false);
+      omp::AtomicControl AC = {});
 
   /// Emit atomic update for constructs: --- Only Scalar data types
   /// V = X; X = X BinOp Expr ,
@@ -4222,6 +4234,7 @@ public:
   ///                     (e.g. true for X = X BinOp Expr)
   /// \param IsPostfixUpdate true if original value of 'x' must be stored in
   ///                        'v', not an updated one.
+  /// \param AC         Hints for the generated atomicrmw instruction.
   ///
   /// \return Insertion point after generated atomic capture IR.
   LLVM_ABI InsertPointOrErrorTy createAtomicCapture(
@@ -4229,8 +4242,7 @@ public:
       AtomicOpValue &V, Value *Expr, AtomicOrdering AO,
       AtomicRMWInst::BinOp RMWOp, AtomicUpdateCallbackTy &UpdateOp,
       bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr,
-      bool IsIgnoreDenormalMode = false, bool IsFineGrainedMemory = false,
-      bool IsRemoteMemory = false);
+      omp::AtomicControl AC = {});
 
   /// Emit atomic compare for constructs: --- Only scalar data types
   /// cond-expr-stmt:
@@ -4275,8 +4287,24 @@ public:
   /// \param IsFailOnly   True if the original value of 'x' is stored to 'v'
   ///                     only when the comparison fails. This is only valid for
   ///                     the case the comparison is '=='.
+  /// \param Failure      Atomic ordering of the cmpxchg on failure. Defaults to
+  ///                     the strongest failure ordering valid for \p AO.
+  /// \param IsWeak       True if the cmpxchg may fail spuriously.
+  /// \param AC           Hints for the generated atomicrmw instruction.
   ///
   /// \return Insertion point after generated atomic capture IR.
+  LLVM_ABI InsertPointTy createAtomicCompare(
+      const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
+      AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+      omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
+      bool IsFailOnly, bool IsWeak = false, omp::AtomicControl AC = {});
+  LLVM_ABI InsertPointTy createAtomicCompare(
+      const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
+      AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+      omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
+      bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false,
+      omp::AtomicControl AC = {});
+
   /// Whether to emit special handling for IEEE 754 -0.0 == +0.0 in
   /// atomic compare operations on floating-point types.
   bool HandleFPNegZero = false;
@@ -4288,17 +4316,6 @@ public:
     HandleFPNegZero = FPNegZero;
     return Old;
   }
-
-  LLVM_ABI InsertPointTy createAtomicCompare(
-      const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
-      AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
-      omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, bool IsWeak = false);
-  LLVM_ABI InsertPointTy createAtomicCompare(
-      const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
-      AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
-      omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///

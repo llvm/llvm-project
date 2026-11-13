@@ -7403,16 +7403,23 @@ static void emitOMPAtomicCompareExpr(
               R->getType().isVolatileQualified()};
   }
 
+  AtomicOptions AtomicOpts = CGF.CGM.getAtomicOpts();
+  llvm::omp::AtomicControl AC;
+  AC.IgnoreDenormalMode =
+      AtomicOpts.getOption(AtomicOptionKind::IgnoreDenormalMode);
+  AC.FineGrainedMemory =
+      AtomicOpts.getOption(AtomicOptionKind::FineGrainedMemory);
+  AC.RemoteMemory = AtomicOpts.getOption(AtomicOptionKind::RemoteMemory);
   if (FailAO == llvm::AtomicOrdering::NotAtomic) {
     // fail clause was not mentioned on the
     // "#pragma omp atomic compare" construct.
     CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
         CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-        IsPostfixUpdate, IsFailOnly));
+        IsPostfixUpdate, IsFailOnly, /*IsWeak=*/false, AC));
   } else
     CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
         CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-        IsPostfixUpdate, IsFailOnly, FailAO));
+        IsPostfixUpdate, IsFailOnly, FailAO, /*IsWeak=*/false, AC));
 }
 
 static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
