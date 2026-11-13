@@ -126,6 +126,8 @@ STATISTIC(NumVectorInstructions, "Number of vector instructions generated");
 STATISTIC(NumStridedStoreChains, "Number of vectorized stride stores");
 STATISTIC(NumStoreChains, "Number of vector stores created");
 STATISTIC(NumVectorizedStores, "Number of vectorized stores");
+STATISTIC(NumFailedSeedsSkipped,
+          "Number of seeds skipped as already failed to vectorize");
 
 DEBUG_COUNTER(VectorizedGraphs, "slp-vectorized",
               "Controls which SLP graphs should be vectorized.");
@@ -2257,12 +2259,22 @@ public:
   void analyzedBundle(ArrayRef<Value *> VL) {
     AnalyzedBundles.insert(hash_value(VL));
   }
-  /// Clear the list of the analyzed reduction root instructions.
+  /// Checks if \p I was already tried as a vectorization seed without success
+  /// and the IR has not been vectorized since.
+  bool isFailedSeed(const Instruction *I) const {
+    return FailedSeeds.contains(I);
+  }
+  /// Registers \p I as a seed that failed to vectorize.
+  void failedSeed(const Instruction *I) { FailedSeeds.insert(I); }
+  /// Clear the per-block analysis caches: the analyzed reduction roots and
+  /// values, the rejected bundles and minimal bitwidth values, and the failed
+  /// seeds.
   void clearReductionData() {
     AnalyzedReductionsRoots.clear();
     AnalyzedReductionVals.clear();
     AnalyzedBundles.clear();
     AnalyzedMinBWVals.clear();
+    FailedSeeds.clear();
   }
   /// Checks if the given value is gathered in one of the nodes.
   bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
@@ -3748,6 +3760,13 @@ private:
   /// Values already analyzed for minimal bitwidth and found to be
   /// non-profitable, mapped to the size of the tree used for the analysis.
   SmallDenseMap<Value *, unsigned> AnalyzedMinBWVals;
+
+  /// Seeds that failed to vectorize since the last IR change made by the
+  /// vectorizer. Retrying them would repeat the same analysis with the same
+  /// result. The FMA candidates are deferred before this cache is consulted
+  /// and retried only once, so the set never mixes the two modes of
+  /// tryToVectorize.
+  SmallPtrSet<const Instruction *, 16> FailedSeeds;
 
   /// A list of values that need to extracted out of the tree.
   /// This list holds pairs of (Internal Scalar : External User). External User
@@ -26430,6 +26449,8 @@ Value *
 BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                        Instruction *ReductionRoot,
                        ArrayRef<ReductionVectorPart> VectorValuesAndScales) {
+  // The IR is about to change, so previously failed seeds may succeed now.
+  FailedSeeds.clear();
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
@@ -35778,6 +35799,13 @@ bool SLPVectorizerPass::tryToVectorize(
       R.isDeleted(Op0) || R.isDeleted(Op1))
     return false;
 
+  if (R.isFailedSeed(I)) {
+    assert(!AllowFMACandidates &&
+           "FMA candidates are deferred before caching and retried once.");
+    ++NumFailedSeedsSkipped;
+    return false;
+  }
+
   // First collect all possible candidates
   SmallVector<std::pair<Value *, Value *>, 4> Candidates;
   Candidates.emplace_back(Op0, Op1);
@@ -35876,21 +35904,29 @@ bool SLPVectorizerPass::tryToVectorize(
 
     return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT, *LI) != nullptr;
   };
-  if (Candidates.size() == 1)
-    return TryToReduce(I, {Op0, Op1}) ||
-           (!AllowFMACandidates && tryToVectorizeList({Op0, Op1}, R));
+  const auto TryCandidates = [&]() {
+    if (Candidates.size() == 1)
+      return TryToReduce(I, {Op0, Op1}) ||
+             (!AllowFMACandidates && tryToVectorizeList({Op0, Op1}, R));
 
-  // We have multiple options. Try to pick the single best.
-  std::optional<int> BestCandidate = R.findBestRootPair(Candidates).first;
-  if (!BestCandidate)
-    return false;
-  return (*BestCandidate == 0 &&
-          TryToReduce(I, {Candidates[*BestCandidate].first,
-                          Candidates[*BestCandidate].second})) ||
-         (!AllowFMACandidates &&
-          tryToVectorizeList({Candidates[*BestCandidate].first,
-                              Candidates[*BestCandidate].second},
-                             R));
+    // We have multiple options. Try to pick the single best.
+    std::optional<int> BestCandidate = R.findBestRootPair(Candidates).first;
+    if (!BestCandidate)
+      return false;
+    return (*BestCandidate == 0 &&
+            TryToReduce(I, {Candidates[*BestCandidate].first,
+                            Candidates[*BestCandidate].second})) ||
+           (!AllowFMACandidates &&
+            tryToVectorizeList({Candidates[*BestCandidate].first,
+                                Candidates[*BestCandidate].second},
+                               R));
+  };
+  // Both attempts return true exactly when they vectorized, i.e. a failed
+  // attempt left the IR intact and will fail again.
+  if (TryCandidates())
+    return true;
+  R.failedSeed(I);
+  return false;
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(
