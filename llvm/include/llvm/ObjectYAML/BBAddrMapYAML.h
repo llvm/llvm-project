@@ -37,6 +37,7 @@ struct BBAddrMapEntry {
   };
   uint8_t Version;
   llvm::yaml::Hex16 Feature;
+  std::optional<llvm::yaml::Hex64> FuncGUID;
 
   struct BBRangeEntry {
     llvm::yaml::Hex64 BaseAddress;

@@ -29,6 +29,7 @@ unittest("AMDGPUTests") {
     "LiveRegUnits.cpp",
     "MFMACoExecRules.cpp",
     "PALMetadata.cpp",
+    "PkF32OpSelCommute.cpp",
     "RCIUpdateReservedRegsTest.cpp",
     "UniformityAnalysisTest.cpp",
   ]

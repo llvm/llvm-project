@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cassert>
+#include <limits>
+#include <random>
 #include <string>
 
 #include "Assembler.h"
@@ -17,7 +20,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Program.h"
 
@@ -205,8 +207,11 @@ std::mt19937 &randomGenerator() {
 }
 
 size_t randomIndex(size_t Max) {
-  std::uniform_int_distribution<> Distribution(0, Max);
-  return Distribution(randomGenerator());
+  // It would be nice to use `std::uniform_int_distribution`, but that doesn't
+  // guarantee stable results, resulting in differences between standard
+  // libraries. Like `llvm::shuffle`, we manually use `%` here.
+  assert(Max < std::numeric_limits<size_t>::max());
+  return randomGenerator()() % (Max + 1);
 }
 
 template <typename C> static decltype(auto) randomElement(const C &Container) {

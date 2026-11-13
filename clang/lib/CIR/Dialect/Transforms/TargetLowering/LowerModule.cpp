@@ -70,8 +70,10 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target)
-    : module(module), langOpts(std::move(langOpts)), target(std::move(target)),
-      abi(createCXXABI(*this)) {}
+    : module(module), langOpts(std::move(langOpts)), target(std::move(target)) {
+  if (this->target)
+    abi = createCXXABI(*this);
+}
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!targetLoweringInfo)
@@ -81,29 +83,28 @@ const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
 
 // TODO: not to create it every time
 std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
-  // If the triple is not present, e.g. CIR modules parsed from text, we
-  // cannot init LowerModule properly.
+  // If the triple is not present, e.g. CIR modules parsed from text, or clang
+  // has no TargetInfo support for it yet, LowerModule currently gets created
+  // with null target and abi. If triple becomes a requirement, we should not
+  // allow LowerModules to be created with null target and abi.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
-    return nullptr;
 
   // Fetch target information.
-  llvm::Triple triple(mlir::cast<mlir::StringAttr>(
-                          module->getAttr(cir::CIRDialect::getTripleAttrName()))
-                          .getValue());
-  clang::TargetOptions targetOptions;
-  targetOptions.Triple = triple.str();
-  auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
+  std::unique_ptr<clang::TargetInfo> targetInfo;
+  if (std::optional<llvm::Triple> triple = cir::getTripleFromModule(module)) {
+    clang::TargetOptions targetOptions;
+    targetOptions.Triple = triple->str();
+    targetInfo = clang::targets::AllocateTarget(*triple, targetOptions);
+  }
 
   // Populate the lowering-relevant LangOptions from the module's
-  // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
+  // #cir.lowering_options attribute so a reloaded .cir lowers the same
   // way it was compiled, without a live clang::LangOptions. When the attribute
   // is absent (e.g. hand-written CIR) the defaults are kept;
   clang::LangOptions langOpts;
   if (auto loweringLangOpts =
-          mlir::dyn_cast_if_present<cir::LoweringLangOptionsAttr>(
-              module->getAttr(
-                  cir::CIRDialect::getLoweringLangOptionsAttrName()))) {
+          mlir::dyn_cast_if_present<cir::LoweringOptionsAttr>(
+              module->getAttr(cir::CIRDialect::getLoweringOptionsAttrName()))) {
     langOpts.Exceptions = loweringLangOpts.getExceptions();
     langOpts.ThreadsafeStatics = loweringLangOpts.getThreadsafeStatics();
     langOpts.CUDA = loweringLangOpts.getCuda();
@@ -114,7 +115,16 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     langOpts.OpenMPIsTargetDevice = loweringLangOpts.getOpenmpIsTargetDevice();
     langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
         loweringLangOpts.getClangAbiCompat()));
+    langOpts.LongDoubleSize = loweringLangOpts.getLongDoubleSize();
+    langOpts.RelativeCXXABIVTables =
+        loweringLangOpts.getRelativeCxxAbiVtables();
   }
+  // Some langopts are still not lowered.
+  assert(!cir::MissingFeatures::lowerModuleLangOpts());
+
+  if (auto cxxABI = module->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getCXXABIAttrName()))
+    langOpts.CXXABI = clang::TargetCXXABI::getKind(cxxABI.getValue());
 
   // FIXME(cir): This just uses the default code generation options. We need to
   // account for custom options.
@@ -125,6 +135,13 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
           module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();
+  }
+
+  if (targetInfo) {
+    clang::DiagnosticOptions diagOpts;
+    clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), diagOpts,
+                                   new clang::IgnoringDiagConsumer());
+    targetInfo->adjust(diags, langOpts, /*Aux=*/nullptr);
   }
 
   return std::make_unique<LowerModule>(std::move(langOpts),

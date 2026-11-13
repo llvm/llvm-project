@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "IROptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -48,7 +49,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -63,10 +63,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "auto-upgrade"
-
-static cl::opt<bool>
-    DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
-                                cl::desc("Disable autoupgrade of debug info"));
 
 static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
@@ -1373,6 +1369,20 @@ static Intrinsic::ID shouldUpgradeNVPTXTMAReductionIntrinsics(StringRef Name) {
       .Default(Intrinsic::not_intrinsic);
 }
 
+static Intrinsic::ID
+shouldUpgradeNVVMBarrierMulticastIntrinsic(Function *F, StringRef Name) {
+  if (!Name.consume_front("mbarrier.") ||
+      !Name.consume_back(".space.cluster") || F->arg_size() != 2)
+    return Intrinsic::not_intrinsic;
+
+  Intrinsic::ID IID = F->getIntrinsicID();
+  if (IID == Intrinsic::not_intrinsic ||
+      Intrinsic::getType(F->getContext(), IID) == F->getFunctionType())
+    return Intrinsic::not_intrinsic;
+
+  return IID;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
                                                               StringRef Name) {
   if (Name.consume_front("mapa.shared.cluster"))
@@ -1422,35 +1432,17 @@ shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
 }
 
 static Intrinsic::ID
-shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(Function *F, StringRef Name) {
+shouldUpgradeNVPTXTcgen05AllocSharedIntrinsic(Function *F, StringRef Name) {
   if (F->arg_size() != 2)
     return Intrinsic::not_intrinsic;
 
-  if (Name.consume_front("tcgen05.alloc.shared.") ||
-      Name.consume_front("tcgen05.alloc."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
-        .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
-        .Default(Intrinsic::not_intrinsic);
-
-  if (Name.consume_front("tcgen05.dealloc."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("cg1", Intrinsic::nvvm_tcgen05_dealloc_cg1)
-        .Case("cg2", Intrinsic::nvvm_tcgen05_dealloc_cg2)
-        .Default(Intrinsic::not_intrinsic);
-
-  return Intrinsic::not_intrinsic;
+  return StringSwitch<Intrinsic::ID>(Name)
+      .Case("tcgen05.alloc.shared.cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
+      .Case("tcgen05.alloc.shared.cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
+      .Default(Intrinsic::not_intrinsic);
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
-  if (Name.consume_front("fma.rn."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
-        .Case("bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
-        .Case("relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
-        .Case("relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
-        .Default(Intrinsic::not_intrinsic);
-
   if (Name.consume_front("fmax."))
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_fmax_bf16)
@@ -1529,19 +1521,42 @@ static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
   return true;
 }
 
-// Overloaded fadd/fmul intrinsic IDs, indexed by [`.ftz`][`.sat`].
-static constexpr Intrinsic::ID NVVMFAddIIDs[2][2] = {
-    {Intrinsic::nvvm_fadd, Intrinsic::nvvm_fadd_sat},
-    {Intrinsic::nvvm_fadd_ftz, Intrinsic::nvvm_fadd_ftz_sat}};
-static constexpr Intrinsic::ID NVVMFMulIIDs[2][2] = {
-    {Intrinsic::nvvm_fmul, Intrinsic::nvvm_fmul_sat},
-    {Intrinsic::nvvm_fmul_ftz, Intrinsic::nvvm_fmul_ftz_sat}};
+// Overloaded fadd/fmul/fma intrinsic IDs, indexed by
+// [`.ftz`][none|`.sat`|`.relu`].
+static constexpr Intrinsic::ID NVVMFAddIIDs[2][3] = {
+    {Intrinsic::nvvm_fadd, Intrinsic::nvvm_fadd_sat, Intrinsic::not_intrinsic},
+    {Intrinsic::nvvm_fadd_ftz, Intrinsic::nvvm_fadd_ftz_sat,
+     Intrinsic::not_intrinsic}};
+static constexpr Intrinsic::ID NVVMFMulIIDs[2][3] = {
+    {Intrinsic::nvvm_fmul, Intrinsic::nvvm_fmul_sat, Intrinsic::not_intrinsic},
+    {Intrinsic::nvvm_fmul_ftz, Intrinsic::nvvm_fmul_ftz_sat,
+     Intrinsic::not_intrinsic}};
+static constexpr Intrinsic::ID NVVMFMAIIDs[2][3] = {
+    {Intrinsic::nvvm_fma, Intrinsic::nvvm_fma_sat, Intrinsic::nvvm_fma_relu},
+    {Intrinsic::nvvm_fma_ftz, Intrinsic::nvvm_fma_ftz_sat,
+     Intrinsic::nvvm_fma_ftz_relu}};
+
+// Returns true if the legacy nvvm.{add,mul,fma}.<rnd>{.ftz}{.sat|.relu}.<Type>
+// intrinsic with these modifiers existed.
+static bool isValidLegacyNVVMFPArithIntrinsic(const Intrinsic::ID (&IIDs)[2][3],
+                                              StringRef Type, bool IsRN,
+                                              bool IsFTZ, bool IsSat,
+                                              bool IsRelu) {
+  const bool IsFMA = &IIDs == &NVVMFMAIIDs;
+  const bool IsFMul = &IIDs == &NVVMFMulIIDs;
+  return StringSwitch<bool>(Type)
+      .Case("f", !IsRelu && !(IsSat && IsFMul))
+      .Case("d", !IsFTZ && !IsSat && !IsRelu)
+      .Case("f16", IsRN && (IsFMA || IsSat))
+      .Case("v2f16", IsRN && !IsFMA && IsSat)
+      .Case("f16x2", IsRN && IsFMA)
+      .Cases({"bf16", "bf16x2"}, IsRN && IsFMA && !IsFTZ && !IsSat)
+      .Default(false);
+}
 
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
-getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][2]) {
+getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][3]) {
   auto [Modifiers, Type] = Name.rsplit('.');
-  if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
-    return std::nullopt;
 
   std::optional<llvm::RoundingMode> RoundingMode =
       StringSwitch<std::optional<llvm::RoundingMode>>(Modifiers.take_front(2))
@@ -1556,10 +1571,21 @@ getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][2]) {
   StringRef Rest = Modifiers.drop_front(2);
   const bool IsFTZ = Rest.consume_front(".ftz");
   const bool IsSat = Rest.consume_front(".sat");
+  const bool IsRelu = !IsSat && Rest.consume_front(".relu");
   if (!Rest.empty())
     return std::nullopt;
 
-  return std::make_pair(IIDs[IsFTZ][IsSat], *RoundingMode);
+  const Intrinsic::ID IID = IIDs[IsFTZ][IsSat ? 1 : IsRelu ? 2 : 0];
+  if (IID == Intrinsic::not_intrinsic)
+    return std::nullopt;
+
+  // Reject combinations that never existed as legacy intrinsics.
+  const bool IsRN = *RoundingMode == llvm::RoundingMode::NearestTiesToEven;
+  if (!isValidLegacyNVVMFPArithIntrinsic(IIDs, Type, IsRN, IsFTZ, IsSat,
+                                         IsRelu))
+    return std::nullopt;
+
+  return std::make_pair(IID, *RoundingMode);
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
@@ -1765,6 +1791,17 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       switch (F->getIntrinsicID()) {
       default:
         break;
+      // Legacy asyncmark intrinsics without the stage operand.
+      case Intrinsic::amdgcn_asyncmark:
+      case Intrinsic::amdgcn_wait_asyncmark: {
+        Intrinsic::ID ID = F->getIntrinsicID();
+        if (F->arg_size() == (ID == Intrinsic::amdgcn_asyncmark ? 0u : 1u)) {
+          rename(F);
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break;
+      }
       // Legacy wmma iu intrinsics without the optional clamp operand.
       case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
         if (F->arg_size() == 7) {
@@ -2119,6 +2156,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
+      // Upgrade the shared::cluster mbarrier expect_tx/complete_tx/arrive*
+      // intrinsics to the forms carrying the 32-bit multicast CTA mask and
+      // the is-multicast flag.
+      IID = shouldUpgradeNVVMBarrierMulticastIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
       // Upgrade tcgen05.commit shared variants to anyptr intrinsics.
       IID = shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
@@ -2129,16 +2175,12 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
-      // Upgrade tcgen05.alloc/dealloc with the is_exclusive argument and
-      // tcgen05.alloc shared variants to anyptr intrinsics.
-      IID = shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(F, Name);
+      // Upgrade tcgen05.alloc.shared.* to anyptr alloc intrinsic.
+      IID = shouldUpgradeNVPTXTcgen05AllocSharedIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
-        if (Intrinsic::isOverloaded(IID))
-          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                    {F->getArg(0)->getType()});
-        else
-          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  {F->getArg(0)->getType()});
         return true;
       }
 
@@ -2210,6 +2252,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
             Name == "f" || Name == "ftz.f" || Name == "d" || Name == "f16x2";
+      else if (Name.consume_front("fma."))
+        // nvvm.fma.<rnd>{.ftz}{.sat|.relu}.{f,d,f16,f16x2,bf16,bf16x2}
+        Expand = getNVVMFPArithUpgrade(Name, NVVMFMAIIDs).has_value();
       else if (Name.consume_front("atomic.load."))
         // nvvm.atomic.load.add.{f32,f64}.p
         // nvvm.atomic.load.{inc,dec}.32.p
@@ -3268,15 +3313,28 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
 
 static Value *upgradeNVVMFPArithCall(IRBuilder<> &Builder, CallBase *CI,
                                      StringRef Name,
-                                     const Intrinsic::ID (&IIDs)[2][2]) {
+                                     const Intrinsic::ID (&IIDs)[2][3]) {
   auto Result = getNVVMFPArithUpgrade(Name, IIDs);
-  assert(Result && "unsupported nvvm.add.*/nvvm.mul.* intrinsic");
+  assert(Result && "unsupported nvvm.{add,mul,fma}.* intrinsic");
   auto [IID, RoundingMode] = *Result;
-  Value *A = CI->getArgOperand(0);
-  return Builder.CreateIntrinsic(
-      A->getType(), IID,
-      {A, CI->getArgOperand(1),
-       Builder.getInt32(static_cast<int>(RoundingMode))});
+
+  // The legacy bf16 variants used integer storage types for the bf16
+  // operands; bitcast them to the floating-point types of the new
+  // overloaded intrinsic.
+  Type *Ty = CI->getType();
+  const bool IsLegacyBF16Storage = Ty->getScalarType()->isIntegerTy();
+  if (IsLegacyBF16Storage)
+    Ty = Name.ends_with("bf16x2")
+             ? FixedVectorType::get(Builder.getBFloatTy(), 2)
+             : static_cast<Type *>(Builder.getBFloatTy());
+
+  SmallVector<Value *, 4> Args;
+  for (Value *Arg : CI->args())
+    Args.push_back(IsLegacyBF16Storage ? Builder.CreateBitCast(Arg, Ty) : Arg);
+  Args.push_back(Builder.getInt32(static_cast<int>(RoundingMode)));
+
+  Value *Rep = Builder.CreateIntrinsic(Ty, IID, Args);
+  return IsLegacyBF16Storage ? Builder.CreateBitCast(Rep, CI->getType()) : Rep;
 }
 
 static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
@@ -3310,6 +3368,9 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
                                                 : Intrinsic::nvvm_ex2_approx;
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
+  } else if (Name.consume_front("fma.")) {
+    // nvvm.fma.<rnd>{.ftz}{.sat|.relu}.{f,d,f16,f16x2,bf16,bf16x2}
+    Rep = upgradeNVVMFPArithCall(Builder, CI, Name, NVVMFMAIIDs);
   } else if (Name.starts_with("atomic.load.add.f32.p") ||
              Name.starts_with("atomic.load.add.f64.p")) {
     Value *Ptr = CI->getArgOperand(0);
@@ -6284,14 +6345,37 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
-  case Intrinsic::nvvm_tcgen05_alloc_cg1:
-  case Intrinsic::nvvm_tcgen05_alloc_cg2:
-  case Intrinsic::nvvm_tcgen05_dealloc_cg1:
-  case Intrinsic::nvvm_tcgen05_dealloc_cg2:
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
-                                   Builder.getFalse()});
-    break;
+    // clang-format off
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cluster:
+  case Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cluster: {
+    // clang-format on
+    SmallVector<Value *, 8> Args(CI->args());
+    Args.push_back(Builder.getInt32(0)); // cta-mask
+    Args.push_back(Builder.getFalse());  // is-multicast
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
   case Intrinsic::nvvm_mbarrier_init: {
     SmallVector<Value *, 3> Args(CI->args());
     // The .shared variant folded into the overloaded form without gaining an
@@ -6453,6 +6537,24 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Args[2], FixedVectorType::get(Builder.getBFloatTy(), NumElts));
 
     NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+
+  case Intrinsic::amdgcn_asyncmark:
+  case Intrinsic::amdgcn_wait_asyncmark: {
+    // Legacy asyncmark intrinsics missed the stage mask operand. Append a zero
+    // mask, which names every stage and so preserves the behavior they had.
+    SmallVector<Value *, 2> Args(CI->args());
+    Args.push_back(Builder.getInt32(0));
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    NewCall = Builder.CreateCall(NewFn, Args, Bundles);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->copyMetadata(*CI);
     break;
   }
 
@@ -6777,7 +6879,7 @@ static std::optional<StringRef> getModuleFlagNameSafely(const MDNode &Flag) {
 /// Check the debug info version number, if it is out-dated, drop the debug
 /// info. Return true if module is modified.
 bool llvm::UpgradeDebugInfo(Module &M) {
-  if (DisableAutoUpgradeDebugInfo)
+  if (!getIROptions(M.getContext()).auto_upgrade_debug_info)
     return false;
 
   llvm::TimeTraceScope timeScope("Upgrade debug info");
@@ -7222,6 +7324,7 @@ bool llvm::UpgradeModuleFlags(Module &M) {
     return Changed;
 
   bool HasObjCFlag = false, HasClassProperties = false;
+  bool HasClassROSigning = false;
   bool HasSwiftVersionFlag = false;
   uint8_t SwiftMajorVersion, SwiftMinorVersion;
   uint32_t SwiftABIVersion;
@@ -7248,6 +7351,8 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       HasObjCFlag = true;
     if (ID->getString() == "Objective-C Class Properties")
       HasClassProperties = true;
+    if (ID->getString() == "Objective-C Enforce ClassRO Pointer Signing")
+      HasClassROSigning = true;
     // Upgrade PIC from Error/Max to Min.
     if (ID->getString() == "PIC Level") {
       if (auto *Behavior =
@@ -7371,6 +7476,16 @@ bool llvm::UpgradeModuleFlags(Module &M) {
   if (HasObjCFlag && !HasClassProperties) {
     M.addModuleFlag(llvm::Module::Override, "Objective-C Class Properties",
                     (uint32_t)0);
+    Changed = true;
+  }
+
+  // Likewise, ObjC bitcode from before "Objective-C Enforce ClassRO Pointer
+  // Signing" was added does not sign class_ro_t pointers. Give it the flag with
+  // value 0, so that linking it with bitcode that signs them does not set
+  // SignedClassRO.
+  if (HasObjCFlag && !HasClassROSigning) {
+    M.addModuleFlag(Module::Override,
+                    "Objective-C Enforce ClassRO Pointer Signing", (uint32_t)0);
     Changed = true;
   }
 

@@ -301,7 +301,12 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   if (MI.getOperand(2).getSubReg())
     return false;
 
-  MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
+  Register DefReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(2).getReg();
+  if (!DefReg.isVirtual() || !SrcReg.isVirtual())
+    return false;
+
+  MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
   if (!SrcMI)
     return false;
 
@@ -344,10 +349,7 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
     return false;
 
-  Register DefReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(2).getReg();
   MRI->replaceRegWith(DefReg, SrcReg);
-  MRI->clearKillFlags(SrcReg);
   LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
   MI.eraseFromParent();
 
@@ -773,7 +775,6 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
                 TII->get(TargetOpcode::COPY), NewSrc)
             .addReg(SrcReg, getKillRegState(SrcKill));
         SrcReg = NewSrc;
-        SrcKill = true;
       }
     } else if (!AArch64::GPR64RegClass.contains(SrcReg)) {
       return false;
@@ -795,8 +796,10 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   //
   //  %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
   //  %6:fpr128 = IMPLICIT_DEF
-  //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
-  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+  //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), %1:fpr64, %subreg.dsub
+  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, %3:fpr128, 0
+  if (MI.getOperand(2).getImm() != 1)
+    return false;
   MachineInstr *Low64MI = MRI->getVRegDef(MI.getOperand(1).getReg());
   if (!Low64MI || Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
@@ -809,14 +812,14 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   //
   //  %2:fpr64 = MOVID 0
   //  %4:fpr128 = IMPLICIT_DEF
-  //  %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64, %subreg.dsub
-  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+  //  %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), %2:fpr64, %subreg.dsub
+  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, %3:fpr128, 0
   // or
   //  %5:fpr128 = MOVIv2d_ns 0
   //  %6:fpr64 = COPY %5.dsub:fpr128
   //  %8:fpr128 = IMPLICIT_DEF
-  //  %7:fpr128 = INSERT_SUBREG %8:fpr128(tied-def 0), killed %6:fpr64, %subreg.dsub
-  //  %11:fpr128 = INSvi64lane %9:fpr128(tied-def 0), 1, killed %7:fpr128, 0
+  //  %7:fpr128 = INSERT_SUBREG %8:fpr128(tied-def 0), %6:fpr64, %subreg.dsub
+  //  %11:fpr128 = INSvi64lane %9:fpr128(tied-def 0), 1, %7:fpr128, 0
   MachineInstr *High64MI = MRI->getUniqueVRegDef(MI.getOperand(3).getReg());
   if (!High64MI || High64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
@@ -835,7 +838,6 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
   MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
-  MRI->clearKillFlags(NewDef);
   MI.eraseFromParent();
 
   return true;
@@ -851,8 +853,6 @@ bool AArch64MIPeepholeOptImpl::visitFMOVDr(MachineInstr &MI) {
   Register OldDef = MI.getOperand(0).getReg();
   Register NewDef = MI.getOperand(1).getReg();
   LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
-  MRI->clearKillFlags(OldDef);
-  MRI->clearKillFlags(NewDef);
   MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
   MI.eraseFromParent();

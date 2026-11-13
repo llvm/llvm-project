@@ -41,13 +41,13 @@
 ; CHECK: %[[#I64:]] = OpTypeInt 64 0
 ; CHECK: %[[#PTR_CW_ARRAY_I:]] = OpTypePointer CrossWorkgroup %[[#ARRAY_I]]
 
-; CHECK: %[[#NULL_I32:]] = OpConstantNull %[[#I32]]
 ; CHECK: %[[#CONST_I64_4:]] = OpConstant %[[#I64]] 4
 ; CHECK: %[[#CONST_I32_1:]] = OpConstant %[[#I32]] 1
 ; CHECK: %[[#COMP_I32:]] = OpConstantComposite %[[#ARRAY_I]] %[[#CONST_I32_1]] %[[#CONST_2]]
 
 ; CHECK: %[[#VAR_V:]] = OpVariable %[[#PTR_CW_ARRAY_I]] CrossWorkgroup %[[#COMP_I32]]
-; CHECK: %[[#SPECCONSTOP:]] = OpSpecConstantOp %[[#PTR_CW_I8]] InBoundsPtrAccessChain %[[#VAR_V]] %[[#NULL_I32]] %[[#CONST_I64_4]]
+; CHECK: %[[#V8:]] = OpSpecConstantOp %[[#PTR_CW_I8]] Bitcast %[[#VAR_V]]
+; CHECK: %[[#SPECCONSTOP:]] = OpSpecConstantOp %[[#PTR_CW_I8]] InBoundsPtrAccessChain %[[#V8]] %[[#CONST_I64_4]]
 ; CHECK: %[[#VAR_S:]] = OpVariable %[[#PTR_CW_PTR_CW_I8]] CrossWorkgroup %[[#SPECCONSTOP]]
 ; CHECK: %[[#NULL_ARRAY_F:]] = OpConstantNull %[[#ARRAY_F]]
 ; CHECK: %[[#VAR_F:]] = OpVariable %[[#PTR_UC_ARRAY_F]] UniformConstant %[[#NULL_ARRAY_F]]

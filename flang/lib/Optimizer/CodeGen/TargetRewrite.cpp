@@ -173,12 +173,15 @@ public:
 
   mlir::ModuleOp getModule() { return getOperation(); }
 
+  // ABI temporaries have fixed size. FIR-to-LLVM lowering hoists their
+  // allocations to the enclosing function or OpenMP/OpenACC allocation block,
+  // so calls in loops do not require stack save/restore here.
   template <typename Ty, typename Callback>
   std::optional<std::function<mlir::Value(mlir::Operation *)>>
   rewriteCallResultType(mlir::Location loc, mlir::Type originalResTy,
                         Ty &newResTys,
                         fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs,
-                        Callback &newOpers, mlir::Value &savedStackPtr,
+                        Callback &newOpers,
                         fir::CodeGenSpecifics::Marshalling &m) {
     // Currently, targets mandate COMPLEX or STRUCT is a single aggregate or
     // packed scalar, including the sret case.
@@ -187,11 +190,6 @@ public:
     auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
     if (attr.isSRet()) {
       assert(fir::isa_ref_type(resTy) && "must be a memory reference type");
-      // Save the stack pointer, if it has not been saved for this call yet.
-      // We will need to restore it after the call, because the alloca
-      // needs to be deallocated.
-      if (!savedStackPtr)
-        savedStackPtr = genStackSave(loc);
       mlir::Value stack =
           fir::AllocaOp::create(*rewriter, loc, fir::dyn_cast_ptrEleTy(resTy));
       newInTyAndAttrs.push_back(m[0]);
@@ -203,10 +201,7 @@ public:
       };
     }
     newResTys.push_back(resTy);
-    return [=, &savedStackPtr](mlir::Operation *call) -> mlir::Value {
-      // We are going to generate an alloca, so save the stack pointer.
-      if (!savedStackPtr)
-        savedStackPtr = genStackSave(loc);
+    return [=](mlir::Operation *call) -> mlir::Value {
       return this->convertValueInMemory(loc, call->getResult(0), originalResTy,
                                         /*inputMayBeBigger=*/true);
     };
@@ -216,42 +211,36 @@ public:
   std::optional<std::function<mlir::Value(mlir::Operation *)>>
   rewriteCallComplexResultType(
       mlir::Location loc, mlir::ComplexType ty, Ty &newResTys,
-      fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs, Callback &newOpers,
-      mlir::Value &savedStackPtr) {
+      fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs, Callback &newOpers) {
     if (noComplexConversion) {
       newResTys.push_back(ty);
       return std::nullopt;
     }
     auto m = specifics->complexReturnType(loc, ty.getElementType());
     return rewriteCallResultType(loc, ty, newResTys, newInTyAndAttrs, newOpers,
-                                 savedStackPtr, m);
+                                 m);
   }
 
   template <typename Ty, typename Callback>
   std::optional<std::function<mlir::Value(mlir::Operation *)>>
   rewriteCallStructResultType(
       mlir::Location loc, fir::RecordType recTy, Ty &newResTys,
-      fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs, Callback &newOpers,
-      mlir::Value &savedStackPtr) {
+      fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs, Callback &newOpers) {
     if (noStructConversion) {
       newResTys.push_back(recTy);
       return std::nullopt;
     }
     auto m = specifics->structReturnType(loc, recTy);
     return rewriteCallResultType(loc, recTy, newResTys, newInTyAndAttrs,
-                                 newOpers, savedStackPtr, m);
+                                 newOpers, m);
   }
 
   void passArgumentOnStackOrWithNewType(
       mlir::Location loc, fir::CodeGenSpecifics::TypeAndAttr newTypeAndAttr,
       mlir::Type oldType, mlir::Value oper,
-      llvm::SmallVectorImpl<mlir::Value> &newOpers,
-      mlir::Value &savedStackPtr) {
+      llvm::SmallVectorImpl<mlir::Value> &newOpers) {
     auto resTy = std::get<mlir::Type>(newTypeAndAttr);
     auto attr = std::get<fir::CodeGenSpecifics::Attributes>(newTypeAndAttr);
-    // We are going to generate an alloca, so save the stack pointer.
-    if (!savedStackPtr)
-      savedStackPtr = genStackSave(loc);
     if (attr.isByVal() || attr.isIndirect()) {
       // Both forms require the caller to materialize a copy of the value and
       // pass the address of that copy. They differ only in the attribute that
@@ -295,8 +284,7 @@ public:
   void passSplitArgument(mlir::Location loc,
                          fir::CodeGenSpecifics::Marshalling splitArgs,
                          mlir::Type oldType, mlir::Value oper,
-                         llvm::SmallVectorImpl<mlir::Value> &newOpers,
-                         mlir::Value &savedStackPtr) {
+                         llvm::SmallVectorImpl<mlir::Value> &newOpers) {
     // COMPLEX or struct argument split into separate arguments
     if (!fir::isa_complex(oldType)) {
       // Cast original operand to a tuple of the new arguments
@@ -306,8 +294,6 @@ public:
         partTypes.push_back(std::get<mlir::Type>(argPart));
       mlir::Type tupleType =
           mlir::TupleType::get(oldType.getContext(), partTypes);
-      if (!savedStackPtr)
-        savedStackPtr = genStackSave(loc);
       oper = convertValueInMemory(loc, oper, tupleType,
                                   /*inputMayBeBigger=*/false);
     }
@@ -323,19 +309,19 @@ public:
     }
   }
 
-  void rewriteCallOperands(
-      mlir::Location loc, fir::CodeGenSpecifics::Marshalling passArgAs,
-      mlir::Type originalArgTy, mlir::Value oper,
-      llvm::SmallVectorImpl<mlir::Value> &newOpers, mlir::Value &savedStackPtr,
-      fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs) {
+  void
+  rewriteCallOperands(mlir::Location loc,
+                      fir::CodeGenSpecifics::Marshalling passArgAs,
+                      mlir::Type originalArgTy, mlir::Value oper,
+                      llvm::SmallVectorImpl<mlir::Value> &newOpers,
+                      fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs) {
     if (passArgAs.size() == 1) {
       // COMPLEX or derived type is passed as a single argument.
       passArgumentOnStackOrWithNewType(loc, passArgAs[0], originalArgTy, oper,
-                                       newOpers, savedStackPtr);
+                                       newOpers);
     } else {
       // COMPLEX or derived type is split into separate arguments
-      passSplitArgument(loc, passArgAs, originalArgTy, oper, newOpers,
-                        savedStackPtr);
+      passSplitArgument(loc, passArgAs, originalArgTy, oper, newOpers);
     }
     newInTyAndAttrs.insert(newInTyAndAttrs.end(), passArgAs.begin(),
                            passArgAs.end());
@@ -345,23 +331,20 @@ public:
   void rewriteCallComplexInputType(
       mlir::Location loc, CPLX ty, mlir::Value oper,
       fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs,
-      llvm::SmallVectorImpl<mlir::Value> &newOpers,
-      mlir::Value &savedStackPtr) {
+      llvm::SmallVectorImpl<mlir::Value> &newOpers) {
     if (noComplexConversion) {
       newInTyAndAttrs.push_back(fir::CodeGenSpecifics::getTypeAndAttr(ty));
       newOpers.push_back(oper);
       return;
     }
     auto m = specifics->complexArgumentType(loc, ty.getElementType());
-    rewriteCallOperands(loc, m, ty, oper, newOpers, savedStackPtr,
-                        newInTyAndAttrs);
+    rewriteCallOperands(loc, m, ty, oper, newOpers, newInTyAndAttrs);
   }
 
   void rewriteCallStructInputType(
       mlir::Location loc, fir::RecordType recTy, mlir::Value oper,
       fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs,
-      llvm::SmallVectorImpl<mlir::Value> &newOpers,
-      mlir::Value &savedStackPtr) {
+      llvm::SmallVectorImpl<mlir::Value> &newOpers) {
     if (noStructConversion) {
       newInTyAndAttrs.push_back(fir::CodeGenSpecifics::getTypeAndAttr(recTy));
       newOpers.push_back(oper);
@@ -369,7 +352,7 @@ public:
     }
     auto structArgs =
         specifics->structArgumentType(loc, recTy, newInTyAndAttrs);
-    rewriteCallOperands(loc, structArgs, recTy, oper, newOpers, savedStackPtr,
+    rewriteCallOperands(loc, structArgs, recTy, oper, newOpers,
                         newInTyAndAttrs);
   }
 
@@ -389,7 +372,6 @@ public:
     llvm::SmallVector<mlir::Type> newResTys;
     fir::CodeGenSpecifics::Marshalling newInTyAndAttrs;
     llvm::SmallVector<mlir::Value> newOpers;
-    mlir::Value savedStackPtr = nullptr;
 
     // If the call is indirect, the first argument must still be the function
     // to call.
@@ -412,13 +394,11 @@ public:
       llvm::TypeSwitch<mlir::Type>(ty)
           .Case([&](mlir::ComplexType cmplx) {
             wrap = rewriteCallComplexResultType(loc, cmplx, newResTys,
-                                                newInTyAndAttrs, newOpers,
-                                                savedStackPtr);
+                                                newInTyAndAttrs, newOpers);
           })
           .Case([&](fir::RecordType recTy) {
             wrap = rewriteCallStructResultType(loc, recTy, newResTys,
-                                               newInTyAndAttrs, newOpers,
-                                               savedStackPtr);
+                                               newInTyAndAttrs, newOpers);
           })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
     } else if (fnTy.getResults().size() > 1) {
@@ -429,6 +409,9 @@ public:
     llvm::SmallVector<mlir::Value> trailingOpers;
     llvm::SmallVector<mlir::Value> operands;
     unsigned passArgShift = 0;
+    // (original argument index, new operand index) of the arguments passed
+    // unchanged, whose attributes carry over to the new call.
+    llvm::SmallVector<std::pair<unsigned, unsigned>> keptArgs;
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>)
       operands = callOp.getKernelOperands();
     else
@@ -475,11 +458,11 @@ public:
           })
           .Case([&](mlir::ComplexType cmplx) {
             rewriteCallComplexInputType(loc, cmplx, oper, newInTyAndAttrs,
-                                        newOpers, savedStackPtr);
+                                        newOpers);
           })
           .Case([&](fir::RecordType recTy) {
             rewriteCallStructInputType(loc, recTy, oper, newInTyAndAttrs,
-                                       newOpers, savedStackPtr);
+                                       newOpers);
           })
           .Case([&](mlir::TupleType tuple) {
             if (fir::isCharacterProcedureTuple(tuple)) {
@@ -524,6 +507,7 @@ public:
               if (callOp.getPassArgPos() && *callOp.getPassArgPos() == index)
                 passArgShift = newOpers.size() - *callOp.getPassArgPos();
             }
+            keptArgs.emplace_back(index, newOpers.size());
             newInTyAndAttrs.push_back(
                 fir::CodeGenSpecifics::getTypeAndAttr(ty));
             newOpers.push_back(oper);
@@ -571,15 +555,29 @@ public:
                                       fir::CallOp::Properties{});
       }
       newCall.setFastmathAttr(callOp.getFastmathAttr());
+      newCall.setProcedureAttrsAttr(callOp.getProcedureAttrsAttr());
+      // Attributes of the arguments passed unchanged, by new argument index.
+      llvm::SmallVector<mlir::NamedAttrList> keptArgAttrs(
+          newInTyAndAttrs.size() - dropFront);
+      bool hasKeptArgAttrs = false;
+      if (mlir::ArrayAttr oldArgAttrs = callOp.getArgAttrsAttr())
+        for (auto [oldIdx, newOperIdx] : keptArgs) {
+          if (oldIdx >= oldArgAttrs.size())
+            continue;
+          auto dict = mlir::cast<mlir::DictionaryAttr>(oldArgAttrs[oldIdx]);
+          keptArgAttrs[newOperIdx - dropFront].append(dict.getValue());
+          hasKeptArgAttrs |= !dict.empty();
+        }
       // Always set ABI argument attributes on call operations, even when
       // direct, as required by
       // https://llvm.org/docs/LangRef.html#parameter-attributes.
-      if (hasAbiArgAttributes(newInTyAndAttrs)) {
+      if (hasAbiArgAttributes(newInTyAndAttrs) || hasKeptArgAttrs) {
         llvm::SmallVector<mlir::Attribute> argAttrsArray;
-        for (const auto &arg :
-             llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(newInTyAndAttrs)
-                 .drop_front(dropFront)) {
-          mlir::NamedAttrList argAttrs;
+        for (auto [argIdx, arg] :
+             llvm::enumerate(llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(
+                                 newInTyAndAttrs)
+                                 .drop_front(dropFront))) {
+          mlir::NamedAttrList &argAttrs = keptArgAttrs[argIdx];
           const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
           if (attr.isByVal()) {
             mlir::Type elemType =
@@ -600,6 +598,9 @@ public:
           argAttrsArray.emplace_back(
               argAttrs.getDictionary(rewriter->getContext()));
         }
+        // Trailing operands (e.g. character lengths) have no attributes.
+        argAttrsArray.append(trailingOpers.size(),
+                             rewriter->getDictionaryAttr({}));
         newCall.setArgAttrsAttr(rewriter->getArrayAttr(argAttrsArray));
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
@@ -623,23 +624,8 @@ public:
     }
 
     if (newCallResults.size() <= 1) {
-      if (savedStackPtr) {
-        if (newCallResults.size() == 1) {
-          // We assume that all the allocas are inserted before
-          // the operation that defines the new call result.
-          rewriter->setInsertionPointAfterValue(newCallResults[0]);
-        } else {
-          // If the call does not have results, then insert
-          // stack restore after the original call operation.
-          rewriter->setInsertionPointAfter(callOp);
-        }
-        genStackRestore(loc, savedStackPtr);
-      }
       replaceOp(callOp, newCallResults);
     } else {
-      // The TODO is duplicated here to make sure this part
-      // handles the stackrestore insertion properly, if
-      // we add support for multiple call results.
       TODO(loc, "multiple results not supported yet");
     }
   }
@@ -1401,20 +1387,6 @@ private:
   }
 
   inline void clearMembers() { setMembers(nullptr, nullptr, nullptr); }
-
-  // Inserts a call to llvm.stacksave at the current insertion
-  // point and the given location. Returns the call's result Value.
-  inline mlir::Value genStackSave(mlir::Location loc) {
-    fir::FirOpBuilder builder(*rewriter, getModule());
-    return builder.genStackSave(loc);
-  }
-
-  // Inserts a call to llvm.stackrestore at the current insertion
-  // point and the given location and argument.
-  inline void genStackRestore(mlir::Location loc, mlir::Value sp) {
-    fir::FirOpBuilder builder(*rewriter, getModule());
-    return builder.genStackRestore(loc, sp);
-  }
 
   fir::CodeGenSpecifics *specifics = nullptr;
   mlir::OpBuilder *rewriter = nullptr;

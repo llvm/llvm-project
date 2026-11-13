@@ -524,11 +524,9 @@ void Instruction::dropPoisonGeneratingMetadata() {
 
 bool Instruction::hasPoisonGeneratingAttributes() const {
   if (const auto *CB = dyn_cast<CallBase>(this)) {
-    auto HasPoisonGeneratingAttributes = [](AttributeSet Attrs) {
-      return Attrs.hasAttribute(Attribute::Range) ||
-             Attrs.hasAttribute(Attribute::Alignment) ||
-             Attrs.hasAttribute(Attribute::NonNull) ||
-             Attrs.hasAttribute(Attribute::NoFPClass);
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
+    auto HasPoisonGeneratingAttributes = [&](AttributeSet Attrs) {
+      return any_of(Attrs, [&](Attribute A) { return AM.contains(A); });
     };
     if (HasPoisonGeneratingAttributes(CB->getRetAttributes()))
       return true;
@@ -541,11 +539,7 @@ bool Instruction::hasPoisonGeneratingAttributes() const {
 
 void Instruction::dropPoisonGeneratingAttributes() {
   if (auto *CB = dyn_cast<CallBase>(this)) {
-    AttributeMask AM;
-    AM.addAttribute(Attribute::Range);
-    AM.addAttribute(Attribute::Alignment);
-    AM.addAttribute(Attribute::NonNull);
-    AM.addAttribute(Attribute::NoFPClass);
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
     CB->removeRetAttrs(AM);
     for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
       CB->removeParamAttrs(ArgNo, AM);
@@ -952,14 +946,17 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const CallInst *CI = dyn_cast<CallInst>(I1))
     return CI->isTailCall() == cast<CallInst>(I2)->isTailCall() &&
            CI->getCallingConv() == cast<CallInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<CallInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<CallInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallInst>(I2));
   if (const InvokeInst *CI = dyn_cast<InvokeInst>(I1))
     return CI->getCallingConv() == cast<InvokeInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<InvokeInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<InvokeInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<InvokeInst>(I2));
   if (const CallBrInst *CI = dyn_cast<CallBrInst>(I1))
     return CI->getCallingConv() == cast<CallBrInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<CallBrInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<CallBrInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallBrInst>(I2));
   if (const SwitchInst *SI = dyn_cast<SwitchInst>(I1)) {
@@ -1000,6 +997,8 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I1))
     return GEP->getSourceElementType() ==
            cast<GetElementPtrInst>(I2)->getSourceElementType();
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(I1))
+    return LP->isCleanup() == cast<LandingPadInst>(I2)->isCleanup();
 
   return true;
 }
@@ -1184,6 +1183,27 @@ bool Instruction::mayWriteToMemory() const {
   }
 }
 
+bool Instruction::mayReadOrWriteMemory() const {
+  // Keep in sync with mayReadFromMemory and mayWriteToMemory.
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::VAArg:
+  case Instruction::Load:
+  case Instruction::Store:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->doesNotAccessMemory();
+  }
+}
+
 bool Instruction::isAtomic() const {
   switch (getOpcode()) {
   default:
@@ -1193,9 +1213,9 @@ bool Instruction::isAtomic() const {
   case Instruction::Fence:
     return true;
   case Instruction::Load:
-    return cast<LoadInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<LoadInst>(this)->isAtomic();
   case Instruction::Store:
-    return cast<StoreInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<StoreInst>(this)->isAtomic();
   }
 }
 
@@ -1377,12 +1397,9 @@ bool Instruction::isSafeToRemove() const {
 
 bool Instruction::willReturn() const {
   // Volatile operations are not guaranteed to return.
-  if (isVolatile())
-    return false;
-
   if (const auto *CB = dyn_cast<CallBase>(this))
-    return CB->hasFnAttr(Attribute::WillReturn);
-  return true;
+    return CB->hasFnAttr(Attribute::WillReturn) && !isVolatile();
+  return !isVolatile();
 }
 
 bool Instruction::isLifetimeStartOrEnd() const {

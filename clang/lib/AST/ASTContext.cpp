@@ -91,6 +91,7 @@
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -304,6 +305,8 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
   // Decompose the end of the comment.
   const unsigned CommentEndOffset =
       Comments.getCommentEndOffset(CommentBeforeDecl);
+  if (CommentEndOffset > LocDecomp.second)
+    return nullptr;
 
   // Get the corresponding buffer.
   bool Invalid = false;
@@ -540,8 +543,18 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
       if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
         continue;
 
+      const FileID DeclFile = SourceMgr.getDecomposedLoc(DeclLoc).first;
+      if (!DeclFile.isValid())
+        continue;
+
+      const auto *CommentsInDeclFile =
+          DeclFile == File ? CommentsInThisFile
+                           : Comments.getCommentsInFile(DeclFile);
+      if (!CommentsInDeclFile || CommentsInDeclFile->empty())
+        continue;
+
       if (RawComment *const DocComment =
-              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
+              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInDeclFile)) {
         cacheRawComment(D, *DocComment);
         comments::FullComment *FC = DocComment->parse(*this, PP, D);
         ParsedComments[D->getCanonicalDecl()] = FC;
@@ -978,13 +991,6 @@ void ASTContext::cleanup() {
       R->Destroy(*this);
   }
   ASTRecordLayouts.clear();
-
-  for (llvm::DenseMap<const Decl*, AttrVec*>::iterator A = DeclAttrs.begin(),
-                                                    AEnd = DeclAttrs.end();
-       A != AEnd; ++A)
-    A->second->~AttrVec();
-  DeclAttrs.clear();
-  LastDeclAttrsDecl = nullptr;
 
   CtorClosureDefaultArgs.clear();
 
@@ -1535,33 +1541,8 @@ DiagnosticsEngine &ASTContext::getDiagnostics() const {
   return SourceMgr.getDiagnostics();
 }
 
-AttrVec& ASTContext::getDeclAttrs(const Decl *D) {
-  // 85% of lookups use the most recent D, so use a one-entry cache.
-  if (LastDeclAttrsDecl == D) {
-    assert(LastDeclAttrs != nullptr && LastDeclAttrs == DeclAttrs[D]);
-    return *LastDeclAttrs;
-  }
-
-  AttrVec *&Result = DeclAttrs[D];
-  if (!Result) {
-    void *Mem = Allocate(sizeof(AttrVec));
-    Result = new (Mem) AttrVec;
-  }
-
-  LastDeclAttrsDecl = D;
-  LastDeclAttrs = Result;
-  return *Result;
-}
-
-/// Erase the attributes corresponding to the given declaration.
-void ASTContext::eraseDeclAttrs(const Decl *D) {
-  llvm::DenseMap<const Decl*, AttrVec*>::iterator Pos = DeclAttrs.find(D);
-  if (Pos != DeclAttrs.end()) {
-    Pos->second->~AttrVec();
-    DeclAttrs.erase(Pos);
-  }
-  if (LastDeclAttrsDecl == D)
-    LastDeclAttrsDecl = nullptr;
+AttrVec *ASTContext::allocateAttrVec() {
+  return new (DeclAttrAllocator.Allocate()) AttrVec;
 }
 
 ArrayRef<CXXDefaultArgExpr *>
@@ -2187,11 +2168,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     else if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       // Adjust the alignment for fixed-length SVE predicates.
       Align = 16;
-    else if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
-             VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
+    else if (isRVVFixedLengthVectorKind(VT->getVectorKind()))
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
     // Vector types have their natural alignment resist reduction by
@@ -6329,15 +6306,17 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
     // of a real template argument.
     // FIXME: It would be more faithful to model this as something like an
     // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
-    ExprValueKind VK;
-    if (T->isRecordType()) {
+    ExprValueKind VK = VK_PRValue;
+    if (NTTP->getType()->isReferenceType()) {
+      // As in Sema::BuildDeclarationNameExpr, a parameter of reference
+      // type, even an rvalue reference, is an lvalue.
+      VK = VK_LValue;
+    } else if (T->isRecordType()) {
       // C++ [temp.param]p8: An id-expression naming a non-type
       // template-parameter of class type T denotes a static storage duration
       // object of type const T.
       T.addConst();
       VK = VK_LValue;
-    } else {
-      VK = Expr::getValueKindForType(NTTP->getType());
     }
     Expr *E = new (*this)
         DeclRefExpr(*this, NTTP, /*RefersToEnclosingVariableOrCapture=*/false,
@@ -7791,10 +7770,18 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     return false;
 
   // If either X or Y are local to the owning module, they are only possible to
-  // be the same entity if they are in the same module.
-  if (X->isModuleLocal() || Y->isModuleLocal())
-    if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()))
+  // be the same entity if they are in the same module, or if they are members
+  // of a lambda closure type. Closure types are merged by identity, and a class
+  // definition determines its members, so the members of a merged closure type
+  // are the same entity even if they are module-local to different modules.
+  // Two distinct closure types are still not merged, so their members are never
+  // compared.
+  if (X->isModuleLocal() || Y->isModuleLocal()) {
+    auto *RD = dyn_cast<CXXRecordDecl>(X->getDeclContext());
+    if (!isInSameModule(X->getOwningModule(), Y->getOwningModule()) &&
+        !(RD && RD->isLambda()))
       return false;
+  }
 
   // Two typedefs refer to the same entity if they have the same underlying
   // type.
@@ -9818,9 +9805,15 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::DeducedTemplateSpecialization:
     return;
 
+  // An overflow behavior type has the representation of its underlying type.
+  case Type::OverflowBehavior:
+    getObjCEncodingForTypeImpl(
+        cast<OverflowBehaviorType>(CT)->getUnderlyingType(), S, Options, FD,
+        NotEncodedT);
+    return;
+
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
-  case Type::OverflowBehavior:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
@@ -10793,16 +10786,8 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       First->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
       Second->getVectorKind() != VectorKind::SveFixedLengthData &&
       Second->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthData &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthData &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthMask &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthMask_1 &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_1 &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthMask_2 &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_2 &&
-      First->getVectorKind() != VectorKind::RVVFixedLengthMask_4 &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthMask_4)
+      !isRVVFixedLengthVectorKind(First->getVectorKind()) &&
+      !isRVVFixedLengthVectorKind(Second->getVectorKind()))
     return true;
 
   // In OpenCL, treat half and _Float16 vector types as compatible.
@@ -10882,31 +10867,19 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+        if (isRVVFixedLengthMaskVectorKind(VT->getVectorKind())) {
           BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
+          // A mask typedef converts to and from the vbool<R>_t type it was
+          // written against: vbool<R>_t has RVVBitsPerBlock / R lanes at
+          // vscale=1.
           return FirstType->isRVVVLSBuiltinType() &&
                  Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)));
+                 (llvm::RISCV::RVVBitsPerBlock >>
+                  getRVVFixedLengthMaskRatioLog2(VT->getVectorKind())) ==
+                     Info.EC.getKnownMinValue() &&
+                 VT->getRVVFixedLengthMaskLanes() == getRVVTypeSize(*this, BT);
         }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1) {
-          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
-          return FirstType->isRVVVLSBuiltinType() &&
-                 Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT) * 8));
-        }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2) {
-          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
-          return FirstType->isRVVVLSBuiltinType() &&
-                 Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)) * 4);
-        }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4) {
-          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
-          return FirstType->isRVVVLSBuiltinType() &&
-                 Info.ElementType == BoolTy &&
-                 getTypeSize(SecondType) == ((getRVVTypeSize(*this, BT)) * 2);
-        }
-        if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+        if (isRVVFixedLengthDataVectorKind(VT->getVectorKind()) ||
             VT->getVectorKind() == VectorKind::Generic)
           return FirstType->isRVVVLSBuiltinType() &&
                  getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&
@@ -12687,6 +12660,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
   bool IsChar = false, IsShort = false;
+  bool IsLeast = false;
   RequiresICE = false;
 
   // Read the prefixed modifiers first.
@@ -12709,6 +12683,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       assert(!Signed && "Can't use both 'S' and 'U' modifiers!");
       assert(!Unsigned && "Can't use 'U' modifier multiple times!");
       Unsigned = true;
+      break;
+    case 'l':
+      // This modifier represents the least-width type (e.g. uint_least8_t).
+      assert(!IsLeast && "Can't use 'l' modifier multiple times!");
+      IsLeast = true;
       break;
     case 'B':
       // This modifier represents int8 type (byte-width).
@@ -12860,6 +12839,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Unsigned ? Context.UnsignedLongTy : Context.LongTy;
     else
       Type = Unsigned ? Context.UnsignedIntTy : Context.IntTy;
+    if (IsLeast)
+      Type = Context.getLeastIntTypeForBitwidth(Context.getIntWidth(Type),
+                                                /*Signed=*/!Unsigned);
     break;
   case 'c':
     assert(HowLong == 0 && "Bad modifiers used with 'c'!");
@@ -12893,6 +12875,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     break;
   case 'M':
     Type = Context.getObjCSuperType();
+    break;
+  case 'r':
+    Type = Context.MetaInfoTy;
     break;
   case 'a':
     Type = Context.getBuiltinVaListType();
@@ -13683,7 +13668,7 @@ size_t ASTContext::getSideTableAllocatedMemory() const {
          llvm::capacity_in_bytes(KeyFunctions) +
          llvm::capacity_in_bytes(ObjCImpls) +
          llvm::capacity_in_bytes(BlockVarCopyInits) +
-         llvm::capacity_in_bytes(DeclAttrs) +
+         DeclAttrAllocator.getTotalMemory() +
          llvm::capacity_in_bytes(TemplateOrInstantiation) +
          llvm::capacity_in_bytes(InstantiatedFromUsingDecl) +
          llvm::capacity_in_bytes(InstantiatedFromUsingShadowDecl) +

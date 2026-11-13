@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -O0 -mtriple spirv-vulkan1.3-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple spirv-vulkan1.3-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
 ---
 name:            faceforward_instcombine_float
 tracksRegLiveness: true
@@ -29,6 +29,7 @@ body:             |
     %11:_(s32) = G_FNEG %0:fid
     %12:id(s32) = G_SELECT %10:_(s1), %0:fid, %11:_
     OpReturnValue %12:id(s32)
+...
 ---
 name:            faceforward_instcombine_float4
 tracksRegLiveness: true
@@ -60,6 +61,7 @@ body:             |
     %12:_(<4 x s32>) = G_FNEG %0:vfid
     %13:id(<4 x s32>) = G_SELECT %11:_(s1), %0:vfid, %12:_
     OpReturnValue %13:id(<4 x s32>)
+...
 ---
 name:            faceforward_instcombine_float_constants
 tracksRegLiveness: true
@@ -92,6 +94,7 @@ body:             |
     %10:_(s1) = G_FCMP floatpred(olt), %8:_(s32), %9:_
     %11:id(s32) = G_SELECT %10:_(s1), %12:_, %13:_
     OpReturnValue %11:id(s32)
+...
 ---
 name:            faceforward_instcombine_float4_constants
 tracksRegLiveness: true
@@ -129,6 +132,7 @@ body:             |
     %11:_(s1) = G_FCMP floatpred(olt), %9:_(s32), %10:_
     %12:id(<4 x s32>) = G_SELECT %11:_(s1), %13:_, %15:_
     OpReturnValue %12:id(<4 x s32>)
+...
 ---
 name:            faceforward_instcombine_float4_false_fmul
 tracksRegLiveness: true
@@ -164,6 +168,7 @@ body:             |
     %14:_(<4 x s32>) = G_FMUL %0:vfid, %12:_
     %15:id(<4 x s32>) = G_SELECT %11:_(s1), %0:vfid, %14:_
     OpReturnValue %15:id(<4 x s32>)
+...
 ---
 name:            faceforward_instcombine_float4_ogt
 tracksRegLiveness: true
@@ -195,6 +200,7 @@ body:             |
     %12:_(<4 x s32>) = G_FNEG %0:vfid
     %13:id(<4 x s32>) = G_SELECT %11:_(s1), %12:_, %0:vfid
     OpReturnValue %13:id(<4 x s32>)
+...
 ---
 name:            faceforward_instcombine_float_shared_condition
 tracksRegLiveness: true

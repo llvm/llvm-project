@@ -35,6 +35,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/HLSLResource.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
@@ -53,6 +54,7 @@
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -153,7 +155,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
     if (Target.getABI() == "darwinpcs")
       Kind = AArch64ABIKind::DarwinPCS;
-    else if (Triple.isOSWindows())
+    else if (Triple.isOSWindowsOrUEFI())
       return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
     else if (Target.getABI() == "aapcs-soft")
       Kind = AArch64ABIKind::AAPCSSoft;
@@ -337,6 +339,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createLoongArchTargetCodeGenInfo(
         CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
   }
+  case llvm::Triple::xtensa:
+    return createXtensaTargetCodeGenInfo(CGM);
   }
 }
 
@@ -353,6 +357,11 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   const llvm::Triple &T = getTriple();
   if (T.isBPF())
     return true;
+
+  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
+  // promotion rules and resource types are not modeled yet.
+  if (T.isSPIRV())
+    return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
 
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
@@ -437,6 +446,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
     Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
+    Opts.IsBigEndian = !T.isLittleEndian();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
                                   getLangOpts().getClangABICompat());
@@ -444,6 +454,14 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
   }
+
+  case llvm::Triple::spirv:
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    TheLLVMABITargetInfo = llvm::abi::createSPIRVTargetInfo(
+        TB, getContext().getTargetAddressSpace(LangAS::Default),
+        /*KernelPassAggregatesIndirect=*/getLangOpts().isTargetDevice());
+    return *TheLLVMABITargetInfo;
 
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
@@ -1504,6 +1522,9 @@ void CodeGenModule::Release() {
         llvm::MDString::get(getLLVMContext(),
                             llvm::getExceptionModelName(ExceptionModel)));
   }
+
+  if (CodeGenOpts.getDebuggerTuning() != llvm::DebuggerKind::Default)
+    getModule().setDebuggerTuning(CodeGenOpts.getDebuggerTuning());
 
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
@@ -3322,6 +3343,21 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
 
+  // An inline function or template instantiation defined in the main source
+  // file is (ignoring unusual setups like #include-ing a .cpp file) not
+  // referenced or emitted by any other translation unit.
+  if (CodeGenOpts.ModuleLocalHints) {
+    const auto *FD = dyn_cast<FunctionDecl>(D);
+    const SourceManager &SM = getContext().getSourceManager();
+    // D->getLocation(), for a template instantiation, is the location of the
+    // template's definition, not instantiation.
+    // TODO: Also consider template instantiations where a template argument is
+    // a class declared in the main file.
+    bool InMainFile = SM.isInMainFile(D->getLocation());
+    if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
+      B.addAttribute(llvm::Attribute::LikelyModuleLocal);
+  }
+
   F->addFnAttrs(B);
 
   llvm::MaybeAlign ExplicitAlignment;
@@ -3474,6 +3510,17 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   const auto *TC = FD ? FD->getAttr<TargetClonesAttr>() : nullptr;
   bool AddedAttr = false;
+  auto GetTargetFeaturesAttr = [&](llvm::ArrayRef<std::string> Features) {
+    llvm::SmallVector<StringRef, 16> CanonicalFeatures;
+    for (StringRef Feature : Features)
+      if (!getTarget().isReadOnlyFeature(Feature.drop_front()))
+        CanonicalFeatures.push_back(Feature);
+    if (CanonicalFeatures.empty())
+      return llvm::Attribute();
+    llvm::sort(CanonicalFeatures);
+    return llvm::Attribute::get(getLLVMContext(), "target-features",
+                                llvm::join(CanonicalFeatures, ","));
+  };
   if (TD || TV || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
@@ -3532,8 +3579,14 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       // The AMDGCN-flavored SPIR-V target unions every GPU's features so it can
       // report all builtins as supported, but that union is meaningless in the
       // emitted IR.
-    } else {
-      Features = getTarget().getTargetOpts().Features;
+    } else if (SetTargetFeatures) {
+      if (!DefaultTargetFeatures)
+        DefaultTargetFeatures =
+            GetTargetFeaturesAttr(getTarget().getTargetOpts().Features);
+      if (DefaultTargetFeatures->isValid()) {
+        Attrs.addAttribute(*DefaultTargetFeatures);
+        AddedAttr = true;
+      }
     }
   }
 
@@ -3546,12 +3599,9 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     AddedAttr = true;
   }
   if (!Features.empty() && SetTargetFeatures) {
-    llvm::erase_if(Features, [&](const std::string& F) {
-       return getTarget().isReadOnlyFeature(F.substr(1));
-    });
-    if (!Features.empty()) {
-      llvm::sort(Features);
-      Attrs.addAttribute("target-features", llvm::join(Features, ","));
+    llvm::Attribute FeatureAttr = GetTargetFeaturesAttr(Features);
+    if (FeatureAttr.isValid()) {
+      Attrs.addAttribute(FeatureAttr);
       AddedAttr = true;
     }
   }
@@ -3686,10 +3736,13 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       QT = ReconstructCallGraphPrototype(FNPT, ParamTypes);
     }
 
-    F->addMetadata(
+    // A function definition is annotated when its declaration is created and
+    // again when its body is emitted. Replace the attachment instead of adding
+    // a second one, so that a function carries exactly one type identifier.
+    F->setMetadata(
         llvm::LLVMContext::MD_callgraph,
-        *llvm::MDTuple::get(getLLVMContext(),
-                            {CreateMetadataIdentifierForCallGraphType(QT)}));
+        llvm::MDTuple::get(getLLVMContext(),
+                           {CreateMetadataIdentifierForCallGraphType(QT)}));
   }
 }
 
@@ -4577,6 +4630,12 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
+  // In an OpenMP compilation Sema may defer a function's diagnostics to the end
+  // of the TU (see Sema::emitDeferredDiags). Emitting it before then would let
+  // code with pending errors reach CodeGen.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && isa<FunctionDecl>(Global))
+    return false;
+
   // In OpenMP 5.0 variables and function may be marked as
   // device_type(host/nohost) and we should not emit them eagerly unless we sure
   // that they must be emitted on the host/device. To be sure we need to have
@@ -6090,7 +6149,8 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     }
 
     // Make sure the result is of the correct type.
-    if (Entry->getType()->getAddressSpace() != TargetAS)
+    if (Entry->getType()->getAddressSpace() != TargetAS &&
+        (!D || D->getTLSKind() == VarDecl::TLS_None))
       return llvm::ConstantExpr::getAddrSpaceCast(
           Entry, llvm::PointerType::get(Ty->getContext(), TargetAS));
 
@@ -6235,7 +6295,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       D ? D->getType().getAddressSpace()
         : (LangOpts.OpenCL ? LangAS::opencl_global : LangAS::Default);
   assert(getContext().getTargetAddressSpace(ExpectedAS) == TargetAS);
-  if (DAddrSpace != ExpectedAS)
+  if (DAddrSpace != ExpectedAS && (!D || D->getTLSKind() == VarDecl::TLS_None))
     return performAddrSpaceCast(
         GV, llvm::PointerType::get(getLLVMContext(), TargetAS));
 
@@ -6528,10 +6588,15 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   // TODO(Reflection): add support for consteval-only types.
 
-  // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen
-  if (getLangOpts().HLSL &&
-      D->getType().getAddressSpace() == LangAS::hlsl_constant)
+  // HLSL default buffer constants will be emitted during HLSLBufferDecl
+  // codegen. Also skip emitting globals for structs or arrays of structs
+  // containing only resource constants, which should have already been
+  // flattened into separate variables.
+  if (getLangOpts().HLSL && (ASTTy.getAddressSpace() == LangAS::hlsl_constant ||
+                             (D->getStorageClass() != SC_Static &&
+                              hlsl::isStructOrArrayOfWithResources(ASTTy)))) {
     return;
+  }
 
   // If this is OpenMP device, check if it is legal to emit this global
   // normally.

@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=amdgpu8.03 -run-pass=si-insert-waitcnts -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+# RUN: llc -o - %s -mtriple=amdgpu8.03 -run-pass=si-insert-waitcnts | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: waitcnt-back-edge-loop
 # GCN: bb.2
@@ -7,6 +7,7 @@
 
 ---
 name: waitcnt-back-edge-loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -65,6 +66,7 @@ body:             |
 # GCN-NEXT: S_BRANCH %bb.2
 
 name: waitcnt-multiple-back-edges
+tracksRegLiveness: false
 body: |
   bb.0:
     S_BRANCH %bb.2

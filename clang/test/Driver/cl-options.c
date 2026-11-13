@@ -184,6 +184,15 @@
 // RUN: %clang_cl /Od -### -- %s 2>&1 | FileCheck -check-prefix=Od %s
 // Od: -O0
 
+// clang-cl optimization options are independent of the host toolchain.
+// RUN: %clang_cl --target=x86_64-unknown-linux-gnu /O1 -### -- %s 2>&1 | FileCheck %s --check-prefix=CL-LINUX-OS
+// CL-LINUX-OS: "-cc1"
+// CL-LINUX-OS-SAME: "-Os"
+
+// RUN: %clang_cl --target=x86_64-w64-windows-gnu /O2 -### -- %s 2>&1 | FileCheck %s --check-prefix=CL-MINGW-O3
+// CL-MINGW-O3: "-cc1"
+// CL-MINGW-O3-SAME: "-O3"
+
 // RUN: %clang_cl /Oi- /Oi -### -- %s 2>&1 | FileCheck -check-prefix=Oi %s
 // Oi-NOT: -fno-builtin
 
@@ -585,6 +594,8 @@
 
 // RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
 // Brepro: "-mno-incremental-linker-compatible"
+// Brepro: "-gno-codeview-command-line"
+// Brepro: "-gno-codeview-cwd"
 
 // RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
 // Brepro_: "-mincremental-linker-compatible"

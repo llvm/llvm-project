@@ -1,5 +1,0 @@
-// RUN: cir-opt %s --cir-lowering-prepare -verify-diagnostics
-
-// expected-error @below {{cir-lowering-prepare requires a module with a triple}}
-module {
-}

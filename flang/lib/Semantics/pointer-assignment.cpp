@@ -466,7 +466,10 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
   } else if (type.IsUnlimitedPolymorphic()) {
     return true;
   } else {
-    return !IsExtensibleType(&type.GetDerivedTypeSpec());
+    // F2023 C1017 does not permit enumeration types here.
+    const DerivedTypeSpec &derived{type.GetDerivedTypeSpec()};
+    return !IsExtensibleType(&derived) &&
+        !IsEnumerationType(derived.typeSymbol());
   }
 }
 
@@ -533,11 +536,11 @@ static bool CheckPointerBounds(
           },
           [&](const evaluate::Assignment::BoundsRemapping &bounds) {
             isBoundsRemapping = true;
-            evaluate::ExtentExpr lhsSizeExpr{1};
+            evaluate::ExtentExpr lhsSizeExpr{evaluate::MakeExtentConstant(1)};
             for (const auto &bound : bounds) {
               lhsSizeExpr = std::move(lhsSizeExpr) *
                   (common::Clone(bound.second) - common::Clone(bound.first) +
-                      evaluate::ExtentExpr{1});
+                      evaluate::MakeExtentExpr(1));
             }
             if (std::optional<std::int64_t> lhsSize{evaluate::ToInt64(
                     evaluate::Fold(context, std::move(lhsSizeExpr)))}) {

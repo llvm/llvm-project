@@ -11,9 +11,6 @@ namespace use_after_instantiation {
   auto &s = decltype(S())::value;
 
   // This is ill-formed, but it should not crash.
-  // FIXME: Right now, it does crash.
-  // expected-no-diagnostics
-#if 0
   template<typename = void> auto T() {
     static int s;
     struct A {
@@ -23,5 +20,4 @@ namespace use_after_instantiation {
   }
 
   auto &t = decltype(T())::value;
-#endif
 }

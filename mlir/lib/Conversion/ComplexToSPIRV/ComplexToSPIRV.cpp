@@ -32,6 +32,30 @@ Value createFPConstant(OpBuilder &builder, Location loc, Type type,
       builder, loc, type, builder.getFloatAttr(cast<FloatType>(type), value));
 }
 
+/// Computes abs(re + i*im) as max * sqrt(1 + (min / max)^2) to avoid overflow
+/// in squaring. The result is NaN when both components are zero.
+template <typename SqrtOp, typename FAbsOp, typename FMaxOp, typename FMinOp>
+Value createComplexAbs(OpBuilder &builder, Location loc, Value re, Value im) {
+  Value absRe = FAbsOp::create(builder, loc, re);
+  Value absIm = FAbsOp::create(builder, loc, im);
+  Value max = FMaxOp::create(builder, loc, absRe, absIm);
+  Value min = FMinOp::create(builder, loc, absRe, absIm);
+  Value ratio = spirv::FDivOp::create(builder, loc, min, max);
+  Value ratioSq = spirv::FMulOp::create(builder, loc, ratio, ratio);
+  Value one = createFPConstant(builder, loc, re.getType(), 1.0);
+  Value ratioSqPlusOne = spirv::FAddOp::create(builder, loc, ratioSq, one);
+  Value sqrt = SqrtOp::create(builder, loc, ratioSqPlusOne);
+  return spirv::FMulOp::create(builder, loc, max, sqrt);
+}
+
+/// Returns true when both components are zero.
+Value createIsZero(OpBuilder &builder, Location loc, Value re, Value im) {
+  Value zero = createFPConstant(builder, loc, re.getType(), 0.0);
+  Value reIsZero = spirv::FOrdEqualOp::create(builder, loc, re, zero);
+  Value imIsZero = spirv::FOrdEqualOp::create(builder, loc, im, zero);
+  return spirv::LogicalAndOp::create(builder, loc, reIsZero, imIsZero);
+}
+
 struct ConstantOpPattern final : OpConversionPattern<complex::ConstantOp> {
   using Base::Base;
 
@@ -338,31 +362,172 @@ struct SignOpPattern final : OpConversionPattern<complex::SignOp> {
     Value im =
         spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
 
-    Value absRe = FAbsOp::create(rewriter, loc, re);
-    Value absIm = FAbsOp::create(rewriter, loc, im);
-    Value max = FMaxOp::create(rewriter, loc, absRe, absIm);
-    Value min = FMinOp::create(rewriter, loc, absRe, absIm);
-    Value ratio = spirv::FDivOp::create(rewriter, loc, min, max);
-    Value ratioSq = spirv::FMulOp::create(rewriter, loc, ratio, ratio);
-    Value one = createFPConstant(rewriter, loc, re.getType(), 1.0);
-    Value ratioSqPlusOne = spirv::FAddOp::create(rewriter, loc, ratioSq, one);
-    Value sqrt = SqrtOp::create(rewriter, loc, ratioSqPlusOne);
-    Value abs = spirv::FMulOp::create(rewriter, loc, max, sqrt);
+    Value abs =
+        createComplexAbs<SqrtOp, FAbsOp, FMaxOp, FMinOp>(rewriter, loc, re, im);
 
     Value signRe = spirv::FDivOp::create(rewriter, loc, re, abs);
     Value signIm = spirv::FDivOp::create(rewriter, loc, im, abs);
 
-    Value zero = createFPConstant(rewriter, loc, re.getType(), 0.0);
-    Value reIsZero = spirv::FOrdEqualOp::create(rewriter, loc, re, zero);
-    Value imIsZero = spirv::FOrdEqualOp::create(rewriter, loc, im, zero);
-    Value isZero =
-        spirv::LogicalAndOp::create(rewriter, loc, reIsZero, imIsZero);
+    Value isZero = createIsZero(rewriter, loc, re, im);
 
     // Select per component: spirv.Select with a scalar condition and a
     // composite result requires SPIR-V 1.4, so operate on scalars here and
     // assemble the result afterwards.
     Value resultRe = spirv::SelectOp::create(rewriter, loc, isZero, re, signRe);
     Value resultIm = spirv::SelectOp::create(rewriter, loc, isZero, im, signIm);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
+
+enum class SinCos { Sin, Cos };
+
+/// Lowers complex.sin/cos following the identities
+/// sin(x + iy) = sin(x) * cosh(y) + i * cos(x) * sinh(y)
+/// cos(x + iy) = cos(x) * cosh(y) - i * sin(x) * sinh(y)
+template <SinCos Kind, typename SinOp, typename CosOp, typename SinhOp,
+          typename CoshOp,
+          typename ComplexOp = std::conditional_t<
+              Kind == SinCos::Sin, complex::SinOp, complex::CosOp>>
+struct TrigonometricOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value sin = SinOp::create(rewriter, loc, re);
+    Value cos = CosOp::create(rewriter, loc, re);
+    Value sinh = SinhOp::create(rewriter, loc, im);
+    Value cosh = CoshOp::create(rewriter, loc, im);
+
+    bool isSin = Kind == SinCos::Sin;
+    Value resultRe =
+        spirv::FMulOp::create(rewriter, loc, isSin ? sin : cos, cosh);
+    Value resultIm =
+        spirv::FMulOp::create(rewriter, loc, isSin ? cos : sin, sinh);
+    if (!isSin)
+      resultIm = spirv::FNegateOp::create(rewriter, loc, resultIm);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
+
+/// Lowers complex.exp/expm1 following the identities
+/// exp(x + iy) = exp(x) * cos(y) + i * exp(x) * sin(y)
+/// expm1(x + iy) = exp(x) * cos(y) - 1 + i * exp(x) * sin(y)
+template <bool IsExpm1, typename ExpOp, typename SinOp, typename CosOp,
+          typename ComplexOp =
+              std::conditional_t<IsExpm1, complex::Expm1Op, complex::ExpOp>>
+struct ExpOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value expRe = ExpOp::create(rewriter, loc, re);
+    Value sinIm = SinOp::create(rewriter, loc, im);
+    Value cosIm = CosOp::create(rewriter, loc, im);
+    Value resultRe = spirv::FMulOp::create(rewriter, loc, expRe, cosIm);
+    if (IsExpm1) {
+      Value one = createFPConstant(rewriter, loc, re.getType(), 1.0);
+      resultRe = spirv::FSubOp::create(rewriter, loc, resultRe, one);
+    }
+    Value resultIm = spirv::FMulOp::create(rewriter, loc, expRe, sinIm);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
+
+enum class SqrtKind { Sqrt, Rsqrt };
+
+/// Lowers complex.sqrt/rsqrt following the trigonometric form
+/// sqrt(z) = sqrt(abs) * (cos(angle/2) + i*sin(angle/2))
+/// rsqrt(z) = rsqrt(abs) * (cos(-angle/2) + i*sin(-angle/2))
+/// where angle = atan2(im, re). Atan2 is undefined for zero input, so zero
+/// maps to 0 for sqrt and to inf + i*nan for rsqrt.
+template <SqrtKind Kind, typename SqrtOp, typename RsqrtOp, typename FAbsOp,
+          typename FMaxOp, typename FMinOp, typename SinOp, typename CosOp,
+          typename Atan2Op,
+          typename ComplexOp = std::conditional_t<
+              Kind == SqrtKind::Sqrt, complex::SqrtOp, complex::RsqrtOp>>
+struct SqrtOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+    Type elemType = re.getType();
+
+    bool isSqrt = Kind == SqrtKind::Sqrt;
+    Value abs =
+        createComplexAbs<SqrtOp, FAbsOp, FMaxOp, FMinOp>(rewriter, loc, re, im);
+    Value finalAbs = isSqrt ? Value(SqrtOp::create(rewriter, loc, abs))
+                            : Value(RsqrtOp::create(rewriter, loc, abs));
+    Value angle = Atan2Op::create(rewriter, loc, im, re);
+    Value scale =
+        createFPConstant(rewriter, loc, elemType, isSqrt ? 0.5 : -0.5);
+    Value scaledAngle = spirv::FMulOp::create(rewriter, loc, angle, scale);
+    Value cos = CosOp::create(rewriter, loc, scaledAngle);
+    Value sin = SinOp::create(rewriter, loc, scaledAngle);
+    Value resultRe = spirv::FMulOp::create(rewriter, loc, finalAbs, cos);
+    Value resultIm = spirv::FMulOp::create(rewriter, loc, finalAbs, sin);
+
+    Value isZero = createIsZero(rewriter, loc, re, im);
+    Value zeroRe = createFPConstant(
+        rewriter, loc, elemType,
+        isSqrt ? 0.0 : std::numeric_limits<double>::infinity());
+    Value zeroIm = createFPConstant(
+        rewriter, loc, elemType,
+        isSqrt ? 0.0 : std::numeric_limits<double>::quiet_NaN());
+    resultRe = spirv::SelectOp::create(rewriter, loc, isZero, zeroRe, resultRe);
+    resultIm = spirv::SelectOp::create(rewriter, loc, isZero, zeroIm, resultIm);
 
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
         op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
@@ -395,5 +560,35 @@ void mlir::populateComplexToSPIRVPatterns(
            SignOpPattern<spirv::GLSqrtOp, spirv::GLFAbsOp, spirv::GLFMaxOp,
                          spirv::GLFMinOp>,
            SignOpPattern<spirv::CLSqrtOp, spirv::CLFAbsOp, spirv::CLFMaxOp,
-                         spirv::CLFMinOp>>(typeConverter, context);
+                         spirv::CLFMinOp>,
+           TrigonometricOpPattern<SinCos::Sin, spirv::GLSinOp, spirv::GLCosOp,
+                                  spirv::GLSinhOp, spirv::GLCoshOp>,
+           TrigonometricOpPattern<SinCos::Sin, spirv::CLSinOp, spirv::CLCosOp,
+                                  spirv::CLSinhOp, spirv::CLCoshOp>,
+           TrigonometricOpPattern<SinCos::Cos, spirv::GLSinOp, spirv::GLCosOp,
+                                  spirv::GLSinhOp, spirv::GLCoshOp>,
+           TrigonometricOpPattern<SinCos::Cos, spirv::CLSinOp, spirv::CLCosOp,
+                                  spirv::CLSinhOp, spirv::CLCoshOp>,
+           ExpOpPattern</*IsExpm1=*/false, spirv::GLExpOp, spirv::GLSinOp,
+                        spirv::GLCosOp>,
+           ExpOpPattern</*IsExpm1=*/false, spirv::CLExpOp, spirv::CLSinOp,
+                        spirv::CLCosOp>,
+           ExpOpPattern</*IsExpm1=*/true, spirv::GLExpOp, spirv::GLSinOp,
+                        spirv::GLCosOp>,
+           ExpOpPattern</*IsExpm1=*/true, spirv::CLExpOp, spirv::CLSinOp,
+                        spirv::CLCosOp>>(typeConverter, context);
+  patterns.add<
+      SqrtOpPattern<SqrtKind::Sqrt, spirv::GLSqrtOp, spirv::GLInverseSqrtOp,
+                    spirv::GLFAbsOp, spirv::GLFMaxOp, spirv::GLFMinOp,
+                    spirv::GLSinOp, spirv::GLCosOp, spirv::GLAtan2Op>,
+      SqrtOpPattern<SqrtKind::Sqrt, spirv::CLSqrtOp, spirv::CLRsqrtOp,
+                    spirv::CLFAbsOp, spirv::CLFMaxOp, spirv::CLFMinOp,
+                    spirv::CLSinOp, spirv::CLCosOp, spirv::CLAtan2Op>,
+      SqrtOpPattern<SqrtKind::Rsqrt, spirv::GLSqrtOp, spirv::GLInverseSqrtOp,
+                    spirv::GLFAbsOp, spirv::GLFMaxOp, spirv::GLFMinOp,
+                    spirv::GLSinOp, spirv::GLCosOp, spirv::GLAtan2Op>,
+      SqrtOpPattern<SqrtKind::Rsqrt, spirv::CLSqrtOp, spirv::CLRsqrtOp,
+                    spirv::CLFAbsOp, spirv::CLFMaxOp, spirv::CLFMinOp,
+                    spirv::CLSinOp, spirv::CLCosOp, spirv::CLAtan2Op>>(
+      typeConverter, context);
 }

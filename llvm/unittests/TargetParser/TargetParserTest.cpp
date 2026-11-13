@@ -1087,6 +1087,24 @@ TEST(TargetParserTest, ARMPrintSupportedExtensions) {
   EXPECT_EQ(std::string::npos, captured.find("xscale"));
 }
 
+TEST(TargetParserTest, ARMParseBranchProtectionDefaultKey) {
+  // AArch64 Windows and UEFI only support B key return address signing, so it
+  // is the default there; everywhere else the A key is.
+  for (const auto &[TripleName, ExpectedKey] :
+       {std::pair{"aarch64-unknown-linux-gnu", "a_key"},
+        std::pair{"aarch64-pc-windows-msvc", "b_key"},
+        std::pair{"aarch64-unknown-uefi", "b_key"}}) {
+    const Triple T(TripleName);
+    for (StringRef Spec : {"standard", "pac-ret", "pac-ret+leaf+bti"}) {
+      ARM::ParsedBranchProtection PBP;
+      StringRef Err;
+      EXPECT_TRUE(ARM::parseBranchProtection(Spec, PBP, Err, T))
+          << TripleName << " " << Spec;
+      EXPECT_EQ(PBP.Key, ExpectedKey) << TripleName << " " << Spec;
+    }
+  }
+}
+
 struct AArch64CPUTestParams
     : public ARMCPUTestParams<AArch64::ExtensionBitset> {
   AArch64CPUTestParams(StringRef CPUName, StringRef ExpectedArch)
@@ -1190,6 +1208,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("apple-a18", "armv8.7-a"),
                       AArch64CPUTestParams("apple-m5", "armv8.7-a"),
+                      AArch64CPUTestParams("apple-m6", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),
@@ -1298,24 +1317,25 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTests, AArch64CPUAliasTestFixture,
-    ::testing::Values(AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
-                      AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
-                      AArch64CPUAliasTestParams({"apple-a7", "cyclone",
-                                                 "apple-a8", "apple-a9"}),
-                      AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
-                                                 "apple-s5"}),
-                      AArch64CPUAliasTestParams({"apple-a13", "apple-s6",
-                                                 "apple-s7", "apple-s8"}),
-                      AArch64CPUAliasTestParams({"apple-a14", "apple-m1"}),
-                      AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
-                      AArch64CPUAliasTestParams({"apple-a16", "apple-m3",
-                                                 "apple-s9", "apple-s10"}),
-                      AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
-                      AArch64CPUAliasTestParams({"apple-m5", "apple-a19"})),
+    ::testing::Values(
+        AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
+        AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
+        AArch64CPUAliasTestParams({"apple-a7", "cyclone", "apple-a8",
+                                   "apple-a9"}),
+        AArch64CPUAliasTestParams({"apple-a12", "apple-s4", "apple-s5"}),
+        AArch64CPUAliasTestParams({"apple-a13", "apple-s6", "apple-s7",
+                                   "apple-s8"}),
+        AArch64CPUAliasTestParams({"apple-a14", "apple-m1"}),
+        AArch64CPUAliasTestParams({"apple-a15", "apple-m2"}),
+        AArch64CPUAliasTestParams({"apple-a16", "apple-m3", "apple-s9",
+                                   "apple-s10"}),
+        AArch64CPUAliasTestParams({"apple-m4", "apple-a18"}),
+        AArch64CPUAliasTestParams({"apple-m5", "apple-a19"}),
+        AArch64CPUAliasTestParams({"apple-m6", "apple-a20", "apple-s11"})),
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 103;
+static constexpr unsigned NumAArch64CPUArchs = 106;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1509,6 +1529,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
       AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
       AArch64::AEK_CFLT,         AArch64::AEK_LSC64B,
+      AArch64::AEK_SVE_LRCPC,    AArch64::AEK_SVE_PERM256,
+      AArch64::AEK_SME_F16F8F16, AArch64::AEK_FPV2,
   };
 
   std::vector<StringRef> Features;
@@ -1635,6 +1657,10 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+hinte"));
   EXPECT_TRUE(llvm::is_contained(Features, "+cflt"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lsc64b"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-lrcpc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-perm256"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-f16f8f16"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+fpv2"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1818,6 +1844,10 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"hinte", "nohinte", "+hinte", "-hinte"},
       {"cflt", "nocflt", "+cflt", "-cflt"},
       {"lsc64b", "nolsc64b", "+lsc64b", "-lsc64b"},
+      {"sve-lrcpc", "nosve-lrcpc", "+sve-lrcpc", "-sve-lrcpc"},
+      {"sve-perm256", "nosve-perm256", "+sve-perm256", "-sve-perm256"},
+      {"sme-f16f8f16", "nosme-f16f8f16", "+sme-f16f8f16", "-sme-f16f8f16"},
+      {"fpv2", "nofpv2", "+fpv2", "-fpv2"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -1964,6 +1994,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {}},
         {AArch64::ARMV9_5A, {}, {"v9.5a", "mops", "cpa"}, {}},
         {AArch64::ARMV9_7A, {}, {"v9.7a", "f16f32dot"}, {}},
+        {AArch64::ARMV9_8A, {}, {"v9.8a", "sve-perm256"}, {}},
 
         // Positive modifiers
         {AArch64::ARMV8A, {"fp16"}, {"fullfp16"}, {}},
@@ -2124,7 +2155,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"noaes", "sve-aes"}, {"aes", "sve-aes"}, {}},
         {AArch64::ARMV8A, {"sve-aes", "noaes"}, {}, {"aes", "sve-aes"}},
 
-        // sve2 -> {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4, sve2-aes}
+        // sve2 ->
+        // {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4, sve2-aes, sve-lrcpc}
         {AArch64::ARMV8A, {"nosve2", "sve2p1"}, {"sve2", "sve2p1"}, {}},
         {AArch64::ARMV8A, {"sve2p1", "nosve2"}, {}, {"sve2", "sve2p1"}},
         {AArch64::ARMV8A,
@@ -2149,6 +2181,9 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve2-sm4", "nosve2"}, {}, {"sve2", "sve2-sm4"}},
         {AArch64::ARMV8A, {"nosve2", "sve2-aes"}, {"sve2", "sve2-aes"}, {}},
         {AArch64::ARMV8A, {"sve2-aes", "nosve2"}, {}, {"sve2", "sve2-aes"}},
+
+        {AArch64::ARMV8A, {"nosve2", "sve-lrcpc"}, {"sve2", "sve-lrcpc"}, {}},
+        {AArch64::ARMV8A, {"sve-lrcpc", "nosve2"}, {}, {"sve2", "sve-lrcpc"}},
 
         // sve-b16b16 -> {sme-b16b16}
         {AArch64::ARMV9_4A,
@@ -2181,7 +2216,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sme-fa64", "nosme"}, {}, {"sme", "sme-fa64"}},
 
         // sme2 -> {sme2p1, ssve-fp8fma, ssve-fp8dot2, ssve-fp8dot4, sme-f8f16,
-        // sme-f8f32, sme-b16b16, ssve-aes}
+        // sme-f8f32, sme-b16b16, sme-f16f8f16, ssve-aes}
         {AArch64::ARMV8A, {"nosme2", "sme2p1"}, {"sme2", "sme2p1"}, {}},
         {AArch64::ARMV8A, {"sme2p1", "nosme2"}, {}, {"sme2", "sme2p1"}},
         {AArch64::ARMV8A,
@@ -2214,6 +2249,14 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sme-f8f32", "nosme2"}, {}, {"sme2", "sme-f8f32"}},
         {AArch64::ARMV8A, {"nosme2", "sme-b16b16"}, {"sme2", "sme-b16b16"}, {}},
         {AArch64::ARMV8A, {"sme-b16b16", "nosme2"}, {}, {"sme2", "sme-b16b16"}},
+        {AArch64::ARMV8A,
+         {"nosme2", "sme-f16f8f16"},
+         {"sme2", "sme-f16f8f16"},
+         {}},
+        {AArch64::ARMV8A,
+         {"sme-f16f8f16", "nosme2"},
+         {},
+         {"sme2", "sme-f16f8f16"}},
         {AArch64::ARMV9_6A, {"nosme2", "ssve-aes"}, {"sme2", "ssve-aes"}, {}},
         {AArch64::ARMV9_6A, {"ssve-aes", "nosme2"}, {}, {"ssve-aes", "sme2"}},
 
@@ -2225,12 +2268,20 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_7A, {"nosme2p2", "sme2p3"}, {"sme2p3", "sme2p2"}, {}},
         {AArch64::ARMV9_7A, {"sme2p3", "nosme2p2"}, {}, {"sme2p2", "sme2p3"}},
 
-        // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm, fp8dot4, fp8dot2,
-        // ssve-fp8dot4, ssve-fp8dot2}
+        // fp8 -> {sme-f8f16, sme-f8f32, sme-f16f8f16, f8f16mm, f8f32mm,
+        // fp8dot4, fp8dot2, ssve-fp8dot4, ssve-fp8dot2}
         {AArch64::ARMV8A, {"nofp8", "sme-f8f16"}, {"fp8", "sme-f8f16"}, {}},
         {AArch64::ARMV8A, {"sme-f8f16", "nofp8"}, {}, {"fp8", "sme-f8f16"}},
         {AArch64::ARMV8A, {"nofp8", "sme-f8f32"}, {"fp8", "sme-f8f32"}, {}},
         {AArch64::ARMV8A, {"sme-f8f32", "nofp8"}, {}, {"fp8", "sme-f8f32"}},
+        {AArch64::ARMV8A,
+         {"nofp8", "sme-f16f8f16"},
+         {"fp8", "sme-f16f8f16"},
+         {}},
+        {AArch64::ARMV8A,
+         {"sme-f16f8f16", "nofp8"},
+         {},
+         {"fp8", "sme-f16f8f16"}},
         {AArch64::ARMV9_6A, {"nofp8", "f8f16mm"}, {"fp8", "f8f16mm"}, {}},
         {AArch64::ARMV9_6A, {"f8f16mm", "nofp8"}, {}, {"fp8", "f8f16mm"}},
         {AArch64::ARMV9_6A, {"nofp8", "f8f32mm"}, {"fp8", "f8f32mm"}, {}},
@@ -2260,6 +2311,9 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
         {AArch64::ARMV8A, {"lse128", "nolse"}, {}, {"lse", "lse128"}},
 
+        // fp16 -> fpv2
+        {AArch64::ARMV8A, {"nofp16", "fpv2"}, {"fullfp16", "fpv2"}, {}},
+
         // mtetc -> mte
         {AArch64::ARMV9_7A, {"nomemtag", "mtetc"}, {"mte"}, {}},
 
@@ -2286,6 +2340,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // rcpc -> rcpc3
         {AArch64::ARMV8A, {"norcpc", "rcpc3"}, {"rcpc", "rcpc3"}, {}},
         {AArch64::ARMV8A, {"rcpc3", "norcpc"}, {}, {"rcpc", "rcpc3"}},
+
+        // rcpc3 -> sve-lrcpc
+        {AArch64::ARMV8A, {"norcpc3", "sve-lrcpc"}, {"rcpc3", "sve-lrcpc"}, {}},
+        {AArch64::ARMV8A, {"sve-lrcpc", "norcpc3"}, {}, {"rcpc3", "sve-lrcpc"}},
 
         // sve-aes -> {ssve-aes, sve2-aes}
         {AArch64::ARMV9_6A,
@@ -2963,11 +3021,7 @@ TEST(TargetParserTest, testAMDGPULDSGranularityFeatures) {
     EXPECT_TRUE(Has(Kind, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_512));
   }
 
-  // A generic target uses the largest allocation granularity of the GPUs it
-  // covers. gfx9-4-generic therefore uses gfx950's 1280-byte granule.
   EXPECT_TRUE(
-      Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280));
-  EXPECT_FALSE(
       Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX9_4_GENERIC,
                   AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1280));
@@ -3267,7 +3321,7 @@ TEST(TargetParserTest, testAMDGPUgetTotalNumVGPRs) {
 
 TEST(TargetParserTest, testAMDGPUgetAddressableNumVGPRs) {
   // A wave addresses 256 VGPRs, except on gfx90a where the unified file makes
-  // the AGPRs addressable too, and on targets with 1024 addressable VGPRs.
+  // the AGPRs addressable too, and on targets with VGPR MSBs.
   EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX600, false), 256u);
   EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX1030, true), 256u);
 
@@ -3449,7 +3503,7 @@ TEST(TargetParserTest, testAMDGPUgetLDSGranules) {
       {AMDGPU::GK_GFX1250, Triple::AMDGPUSubArch1250, 2048, 2048},
       {AMDGPU::GK_GFX1251, Triple::AMDGPUSubArch1251, 2048, 2048},
       {AMDGPU::GK_GFX1310, Triple::AMDGPUSubArch1310, 1024, 1024},
-      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 1280, 1280},
+      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 512, 1280},
       {AMDGPU::GK_GFX10_1_GENERIC, Triple::AMDGPUSubArch10_1, 512, 512},
       {AMDGPU::GK_GFX10_3_GENERIC, Triple::AMDGPUSubArch10_3, 1024, 512},
       {AMDGPU::GK_GFX11_GENERIC, Triple::AMDGPUSubArch11, 1024, 512},
@@ -3653,10 +3707,9 @@ TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
   using namespace AMDGPU;
 
   // Existing SRAMECC targets retain their selectable modes, including generic
-  // targets and gfx12.5, where XNACK is hardwired on.
+  // targets.
   for (StringRef GPU :
-       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic",
-        "gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic"}) {
     SCOPED_TRACE(GPU);
     GPUKind Kind = parseArchAMDGCN(GPU);
     const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
@@ -3702,6 +3755,24 @@ TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
     EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "+sramecc")
                   .getSramEccSetting(),
               TargetIDSetting::Unsupported);
+  }
+
+  // gfx12.5 hardwires SRAMECC on, so the modifier is rejected.
+  for (StringRef GPU :
+       {"gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_SUPPORT));
+    EXPECT_FALSE(Features.test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    Triple TT(getSubArchName(getSubArch(Kind)), "amd", "amdhsa");
+    EXPECT_EQ(TargetID(TT, "").getSramEccSetting(), TargetIDSetting::On);
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc+"));
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc-"));
+    EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "-sramecc")
+                  .getSramEccSetting(),
+              TargetIDSetting::On);
   }
 }
 

@@ -655,7 +655,6 @@ set(files
   __mutex/tag_types.h
   __mutex/unique_lock.h
   __new/align_val_t.h
-  __new/allocate.h
   __new/destroying_delete_t.h
   __new/exceptions.h
   __new/global_new_delete.h
@@ -695,28 +694,30 @@ set(files
   __pstl/backend.h
   __pstl/backend_fwd.h
   __pstl/backends/default.h
-  __pstl/backends/libdispatch.h
   __pstl/backends/serial.h
-  __pstl/backends/std_thread.h
-  __pstl/cpu_algos/any_of.h
-  __pstl/cpu_algos/cpu_traits.h
-  __pstl/cpu_algos/fill.h
-  __pstl/cpu_algos/find_end.h
-  __pstl/cpu_algos/find_if.h
-  __pstl/cpu_algos/for_each.h
-  __pstl/cpu_algos/is_heap_until.h
-  __pstl/cpu_algos/merge.h
-  __pstl/cpu_algos/min_element.h
-  __pstl/cpu_algos/minmax_element.h
-  __pstl/cpu_algos/mismatch.h
-  __pstl/cpu_algos/reverse.h
-  __pstl/cpu_algos/search.h
-  __pstl/cpu_algos/search_n.h
-  __pstl/cpu_algos/stable_sort.h
-  __pstl/cpu_algos/swap_ranges.h
-  __pstl/cpu_algos/transform.h
-  __pstl/cpu_algos/transform_reduce.h
-  __pstl/cpu_algos/uninitialized_algorithms.h
+  __pstl/backends/statpart.h
+  __pstl/backends/statpart/any_of.h
+  __pstl/backends/statpart/basis.h
+  __pstl/backends/statpart/decoupled_lookback.h
+  __pstl/backends/statpart/fill.h
+  __pstl/backends/statpart/find_end.h
+  __pstl/backends/statpart/find_if.h
+  __pstl/backends/statpart/for_each.h
+  __pstl/backends/statpart/is_heap_until.h
+  __pstl/backends/statpart/merge.h
+  __pstl/backends/statpart/min_element.h
+  __pstl/backends/statpart/minmax_element.h
+  __pstl/backends/statpart/mismatch.h
+  __pstl/backends/statpart/reverse.h
+  __pstl/backends/statpart/search.h
+  __pstl/backends/statpart/search_n.h
+  __pstl/backends/statpart/stable_sort.h
+  __pstl/backends/statpart/swap_ranges.h
+  __pstl/backends/statpart/transform.h
+  __pstl/backends/statpart/transform_inclusive_scan.h
+  __pstl/backends/statpart/transform_reduce.h
+  __pstl/backends/statpart/uninitialized_copy.h
+  __pstl/backends/statpart/uninitialized_move.h
   __pstl/dispatch.h
   __pstl/handle_exception.h
   __random/bernoulli_distribution.h
@@ -830,6 +831,7 @@ set(files
   __system_error/system_error.h
   __system_error/throw_system_error.h
   __thread/formatter.h
+  __thread/hardware_concurrency.h
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h

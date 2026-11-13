@@ -803,8 +803,13 @@ CHRScope * CHR::findScope(Region *R) {
       // later.
       for (Instruction &I : *BB) {
         if (auto *SI = dyn_cast<SelectInst>(&I)) {
-          Selects.push_back(SI);
-          ++Stats.NumBranches;
+          // The fixupBranchesAndSelects function tries to merge
+          // the condition of select instruction with 'i1 true', which
+          // fails for non-integer condition type.
+          if (SI->getCondition()->getType()->isIntegerTy()) {
+            Selects.push_back(SI);
+            ++Stats.NumBranches;
+          }
         }
       }
     }
@@ -1677,6 +1682,16 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
 
   assert(Scope->RegInfos.size() >= 1 && "Should have at least one Region");
 
+  // An outer scope may have hoisted one of our selects out of this scope.
+  // It can no longer be specialized under this scope's merged branch, and
+  // may also be the cached branch insertion point.
+  // TODO: Add inner selects to Unhoistables to avoid hoisting them out of
+  // their scopes and allow those scopes to be transformed.
+  for (const RegInfo &RI : Scope->CHRRegions)
+    for (SelectInst *SI : RI.Selects)
+      if (!Scope->contains(SI))
+        return;
+
   for (RegInfo &RI : Scope->RegInfos) {
     const Region *R = RI.R;
     unsigned Duplication = getRegionDuplicationCount(R);
@@ -2098,8 +2113,7 @@ PreservedAnalyses ControlHeightReductionPass::run(
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  const InstrumentationOptions &Opts =
-      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(F);
   if (&Opts != ParsedOpts &&
       (!Opts.chr_module_list.empty() || !Opts.chr_function_list.empty())) {
     CHRModules.clear();

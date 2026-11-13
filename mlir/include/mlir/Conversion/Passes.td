@@ -992,7 +992,8 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
   let description = [{
     This pass converts supported Math ops to calls of compiler generated
     functions implementing these operations in software.
-    The LLVM dialect is used for LinkonceODR linkage of the generated functions.
+    The LLVM dialect is used for LinkonceODR linkage of the generated functions,
+    unless `set-llvm-linkage` is disabled.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -1012,6 +1013,9 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
     Option<"convertCtlz", "convert-ctlz", "bool", /*default=*/"false",
            "Convert math.ctlz to a software implementation. Enable "
            "for targets that do not natively support ctlz.">,
+    Option<"setLLVMLinkage", "set-llvm-linkage", "bool", /*default=*/"true",
+           "Give the generated functions LinkonceODR LLVM linkage. Disable "
+           "for targets that do not lower through LLVM.">,
   ];
 }
 
@@ -1379,6 +1383,8 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
 	     clEnumValN(::mlir::spirv::ClientAPI::Vulkan, "Vulkan", "Vulkan"),
 	     clEnumValN(::mlir::spirv::ClientAPI::WebGPU, "WebGPU", "WebGPU")
 	   )}]>,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">,
   ];
 }
 
@@ -1568,6 +1574,7 @@ def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
 def TosaToTensorPass : Pass<"tosa-to-tensor"> {
   let summary = "Lower TOSA to the Tensor dialect";
   let dependentDialects = [
+    "cf::ControlFlowDialect",
     "tensor::TensorDialect",
   ];
   let description = [{
@@ -1609,18 +1616,25 @@ def UBToSPIRVConversionPass : Pass<"convert-ub-to-spirv"> {
 // VectorToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
+def ConvertVectorToGPUPass : Pass<"convert-vector-to-gpu"> {
   let summary = "Lower the operations from the vector dialect into the GPU "
                 "dialect";
-  let constructor = "mlir::createConvertVectorToGPUPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
+    "vector::VectorDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// VectorToNVGPU
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToNVGPUPass : Pass<"convert-vector-to-nvgpu"> {
+  let summary = "Lower the operations from the vector dialect into the NVGPU "
+                "dialect";
   let dependentDialects = [
     "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
     "vector::VectorDialect", "nvgpu::NVGPUDialect"
-  ];
-
-  let options = [
-    Option<"useNvGpu", "use-nvgpu", "bool", /*default=*/"false",
-      "convert to NvGPU ops instead of GPU dialect ops">
   ];
 }
 

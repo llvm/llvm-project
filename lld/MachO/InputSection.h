@@ -310,9 +310,12 @@ bool isClassRefsSection(const InputSection *);
 bool isSelRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
+bool usesAuthGot(const InputSection *);
+const AuthInfo *getImplicitAuthInfo(const InputSection *isec,
+                                    const Symbol *sym);
 
 extern std::vector<ConcatInputSection *> inputSections;
-// This is used as a counter for specyfing input order for input sections
+// This is used as a counter for specifying input order for input sections.
 extern int inputSectionsOrder;
 
 namespace section_names {
@@ -332,6 +335,7 @@ constexpr const char data[] = "__data";
 constexpr const char debugAbbrev[] = "__debug_abbrev";
 constexpr const char debugInfo[] = "__debug_info";
 constexpr const char debugLine[] = "__debug_line";
+constexpr const char debugLineStr[] = "__debug_line_str";
 constexpr const char debugStr[] = "__debug_str";
 constexpr const char debugStrOffs[] = "__debug_str_offs";
 constexpr const char ehFrame[] = "__eh_frame";
@@ -344,6 +348,7 @@ constexpr const char header[] = "__mach_header";
 constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
 constexpr const char initOffsets[] = "__init_offsets";
 constexpr const char const_[] = "__const";
+constexpr const char constCfObj2[] = "__const_cfobj2";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
 constexpr const char literals[] = "__literals";
@@ -351,12 +356,20 @@ constexpr const char functionMap[] = "__llvm_merge";
 constexpr const char moduleInitFunc[] = "__mod_init_func";
 constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
+constexpr const char objcArrayData[] = "__objc_arraydata";
+constexpr const char objcArrayObj[] = "__objc_arrayobj";
 constexpr const char objcCatList[] = "__objc_catlist";
+constexpr const char objcCatList2[] = "__objc_catlist2";
 constexpr const char objcClassList[] = "__objc_classlist";
 constexpr const char objcMethList[] = "__objc_methlist";
 constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
+constexpr const char objcDateObj[] = "__objc_dateobj";
+constexpr const char objcDictObj[] = "__objc_dictobj";
+constexpr const char objcDoubleObj[] = "__objc_doubleobj";
+constexpr const char objcFloatObj[] = "__objc_floatobj";
 constexpr const char objCImageInfo[] = "__objc_imageinfo";
+constexpr const char objcIntObj[] = "__objc_intobj";
 constexpr const char objcStubs[] = "__objc_stubs";
 constexpr const char objcSelrefs[] = "__objc_selrefs";
 constexpr const char objcMethname[] = "__objc_methname";
@@ -371,6 +384,7 @@ constexpr const char staticInit[] = "__StaticInit";
 constexpr const char stringTable[] = "__string_table";
 constexpr const char stubHelper[] = "__stub_helper";
 constexpr const char stubs[] = "__stubs";
+constexpr const char authStubs[] = "__auth_stubs";
 constexpr const char swift[] = "__swift";
 constexpr const char symbolTable[] = "__symbol_table";
 constexpr const char textCoalNt[] = "__textcoal_nt";

@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
@@ -45,7 +46,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -57,18 +57,6 @@ using namespace llvm;
 STATISTIC(NumNoAlias,   "Number of NoAlias results");
 STATISTIC(NumMayAlias,  "Number of MayAlias results");
 STATISTIC(NumMustAlias, "Number of MustAlias results");
-
-/// Allow disabling BasicAA from the AA results. This is particularly useful
-/// when testing to isolate a single AA implementation.
-static cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden,
-                                    cl::init(false));
-
-#ifndef NDEBUG
-/// Print a trace of alias analysis queries and their results.
-static cl::opt<bool> EnableAATrace("aa-trace", cl::Hidden, cl::init(false));
-#else
-static const bool EnableAATrace = false;
-#endif
 
 AAResults::AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
 
@@ -115,6 +103,12 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
          "Can only call alias() on pointers");
   AliasResult Result = AliasResult::MayAlias;
 
+#ifndef NDEBUG
+  const bool EnableAATrace =
+      getAnalysisOptions(LocA.Ptr->getContext()).aa_trace;
+#else
+  constexpr bool EnableAATrace = false;
+#endif
   if (EnableAATrace) {
     for (unsigned I = 0; I < AAQI.Depth; ++I)
       dbgs() << "  ";
@@ -837,7 +831,7 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
   // so that it can trump TBAA results when it proves MustAlias.
   // FIXME: TBAA should have an explicit mode to support this and then we
   // should reconsider the ordering here.
-  if (!DisableBasicAA) {
+  if (!getAnalysisOptions(F).disable_basic_aa) {
     LLVM_DEBUG(dbgs() << "AAResults register BasicAA\n");
     AAR->addAAResult(getAnalysis<BasicAAWrapperPass>().getResult());
   }

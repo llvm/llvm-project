@@ -76,6 +76,7 @@ private:
 
   void flattenType(const Type *Ty,
                    SmallVectorImpl<const Type *> &Flattened) const;
+  bool containsOnlyPointers(const Type *Ty) const;
 
   bool isHomogeneousAggregateBaseType(const Type *Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Base,
@@ -151,8 +152,34 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
           NPRN);
   }
 
-  reportNYI("Aggregate return type handling");
-  return ArgInfo::getIgnore();
+  // Aggregates of at most 16 bytes are returned directly in registers or on
+  // the stack.
+  if (Size <= 128) {
+    if (Size <= 64 && !Opts.IsBigEndian) {
+      // Composite types are returned in lower bits of a 64-bit register for LE,
+      // and in higher bits for BE. However, integer types are always returned
+      // in lower bits for both LE and BE, and they are not rounded up to
+      // 64-bits. We can skip rounding up of composite types for LE, but not for
+      // BE, otherwise composite types will be indistinguishable from integer
+      // types.
+      return ArgInfo::getDirect(
+          TB.getIntegerType(Size, llvm::Align(8), /*Signed=*/false));
+    }
+
+    uint64_t AlignBits = RetTy->getAlignment().value() * 8;
+    Size = llvm::alignTo(Size, 64); // round up to multiple of 8 bytes
+
+    // A 16-byte value whose ABI alignment is below 16 bytes is a pair of
+    // i64. A 16-byte-aligned value is an i128.
+    if (AlignBits < 128 && Size == 128) {
+      const Type *I64 = TB.getIntegerType(64, llvm::Align(8), /*Signed=*/false);
+      return ArgInfo::getDirect(TB.getArrayType(I64, Size / 64, Size));
+    }
+    return ArgInfo::getDirect(
+        TB.getIntegerType(Size, llvm::Align(8), /*Signed=*/false));
+  }
+
+  return getNaturalAlignIndirect(RetTy, getAllocaAddrSpace());
 }
 
 ArgInfo AArch64TargetInfo::classifyArgumentType(
@@ -183,9 +210,9 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     }
 
     // Predicates and svcount_t are passed in a predicate register. Legal
-    // vectors, SVE data vectors, and floating-point types are passed in a
-    // SIMD and floating-point register. A tuple occupies one register of the
-    // appropriate kind per vector it contains.
+    // vectors, SVE data vectors, floating-point types, and opaque 8-bit
+    // floats are passed in a SIMD and floating-point register. A tuple
+    // occupies one register of the appropriate kind per vector it contains.
     if (const auto *VT = dyn_cast<VectorType>(Ty)) {
       if (VT->isSVEPredicate() || VT->isSVECount())
         NPRN = std::min(NPRN + 1, 4u);
@@ -196,7 +223,7 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
         NPRN = std::min(NPRN + TT->getNumVectors(), 4u);
       else
         NSRN = std::min(NSRN + TT->getNumVectors(), 8u);
-    } else if (Ty->isFloat()) {
+    } else if (Ty->isFloat() || Ty->isOpaqueFloat8()) {
       NSRN = std::min(NSRN + 1, 8u);
     }
 
@@ -263,8 +290,81 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
           Ty, IsNamedArg, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
   }
 
-  reportNYI("Aggregate argument type handling");
-  return ArgInfo::getIgnore();
+  // Aggregates of at most 16 bytes are passed directly in registers or on
+  // the stack.
+  if (Size <= 128) {
+    if (Size < 64 && !Opts.IsBigEndian &&
+        Opts.Kind != AArch64ABIKind::DarwinPCS)
+      return ArgInfo::getDirect(
+          TB.getIntegerType(Size, llvm::Align(8), /*Signed=*/false));
+
+    uint64_t AlignBits;
+    if (Opts.Kind == AArch64ABIKind::AAPCS) {
+      // An 8-byte slot when the unadjusted alignment is below 16 bytes, and
+      // a 16-byte slot otherwise.
+      AlignBits = Ty->getUnadjustedAlignment().value() * 8;
+      AlignBits = AlignBits < 128 ? 64 : 128;
+    } else {
+      // The larger of the ABI alignment and the pointer width.
+      uint64_t PointerWidth = Opts.IsILP32 ? 32 : 64;
+      AlignBits = std::max(Ty->getAlignment().value() * 8, PointerWidth);
+    }
+    Size = llvm::alignTo(Size, AlignBits);
+
+    const Type *BaseTy;
+    if ((Size == 64 || Size == 128) && AlignBits == 64 &&
+        containsOnlyPointers(Ty)) {
+      // A record of 64-bit pointers in an 8-byte slot is coerced to a pointer
+      // or an array of pointers.
+      BaseTy = TB.getPointerType(64, llvm::Align(8));
+    } else {
+      // Every other aggregate is coerced to an integer of the slot width, or
+      // an array of those integers.
+      BaseTy = TB.getIntegerType(AlignBits, llvm::Align(AlignBits / 8),
+                                 /*Signed=*/false);
+    }
+
+    if (Size == AlignBits)
+      return ArgInfo::getDirect(BaseTy);
+    return ArgInfo::getDirect(TB.getArrayType(BaseTy, Size / AlignBits, Size));
+  }
+
+  return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(), /*ByVal=*/false);
+}
+
+// True for a record whose bases and fields are plain pointers, or records of
+// such pointers. A plain pointer is a 64-bit pointer with no address-space
+// qualifier. An array field is inspected through its base element. False for an
+// empty record and for a type that is not a record.
+bool AArch64TargetInfo::containsOnlyPointers(const Type *Ty) const {
+  if (Ty->isEmptyRecord())
+    return false;
+
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
+    return false;
+
+  for (const FieldInfo &Base : RT->getBaseClasses())
+    if (!containsOnlyPointers(Base.FieldType))
+      return false;
+
+  for (const FieldInfo &Field : RT->getFields()) {
+    const Type *FT = Field.FieldType;
+    while (const auto *AT = dyn_cast<ArrayType>(FT)) {
+      if (AT->isMatrixType())
+        break;
+      FT = AT->getElementType();
+    }
+
+    bool IsPlainPointer = false;
+    if (const auto *PT = dyn_cast<PointerType>(FT))
+      IsPlainPointer = PT->getSizeInBits().getFixedValue() == 64 &&
+                       PT->getAddrSpace() == 0 &&
+                       !PT->hasAddressSpaceQualifier();
+    if (!IsPlainPointer && !containsOnlyPointers(FT))
+      return false;
+  }
+  return true;
 }
 
 bool AArch64TargetInfo::passAsAggregateType(const Type *Ty) const {
@@ -285,9 +385,6 @@ bool AArch64TargetInfo::passAsAggregateType(const Type *Ty) const {
 /// how many elements the fixed-length type has.
 const VectorType *AArch64TargetInfo::convertFixedToScalableVectorType(
     const VectorType *VT) const {
-  // TODO: Verify that this correctly handles MFloat8 when we decide on a
-  // mapping for that type.
-
   if (VT->isFixedLengthSVEPredicate())
     return TB.getScalablePredicateOrCountVectorType(Align(2),
                                                     VectorKind::SVEPredicate);
@@ -295,6 +392,10 @@ const VectorType *AArch64TargetInfo::convertFixedToScalableVectorType(
   assert(VT->isFixedLengthSVEData() && "expected a fixed-length SVE vector!");
 
   const Type *EltTy = VT->getElementType();
+  // A vector of opaque 8-bit floats should be mapped as a vector of i8.
+  assert(!EltTy->isOpaqueFloat8() &&
+         "opaque 8-bit float is not a valid vector element type");
+
   uint64_t EltBits = EltTy->getSizeInBits().getFixedValue();
   assert(EltBits >= 8 && EltBits <= 64 && isPowerOf2_64(EltBits) &&
          "unexpected element type for SVE data vector!");
@@ -582,15 +683,26 @@ bool AArch64TargetInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
   return true;
 }
 
+// MSVC on Windows on Arm64 excludes some C++ records from being HFAs that
+// AAPCS64 would otherwise permit. These are the rules observed from MSVC.
+static bool isMSVCPermittedHomogeneousAggregate(const RecordType *RT) {
+  if (RT->isCXXEmpty() || RT->isPolymorphic() ||
+      RT->hasNonTrivialCopyAssignment() || RT->hasNonTrivialDestructor() ||
+      RT->hasNonTrivialDefaultConstructor())
+    return false;
+
+  auto IsPermittedBase = [](const FieldInfo &Base) {
+    const auto *BaseRT = dyn_cast<RecordType>(Base.FieldType);
+    return !BaseRT || isMSVCPermittedHomogeneousAggregate(BaseRT);
+  };
+  return all_of(RT->getBaseClasses(), IsPermittedBase) &&
+         all_of(RT->getVirtualBaseClasses(), IsPermittedBase);
+}
+
 bool AArch64TargetInfo::isPermittedToBeHomogeneousAggregate(
     const RecordType *RT) const {
-  if (Opts.IsMicrosoftCXXABI && RT->isCXXRecord()) {
-    // This won't always return false, but we don't have enough information to
-    // perform the full check correctly yet.
-    reportNYI("MicrosoftCXXABI homogeneous record classification");
-    return false;
-  }
-
+  if (Opts.IsMicrosoftCXXABI && RT->isCXXRecord())
+    return isMSVCPermittedHomogeneousAggregate(RT);
   return true;
 }
 

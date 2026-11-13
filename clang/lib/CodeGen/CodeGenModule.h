@@ -362,6 +362,10 @@ private:
   llvm::Module &TheModule;
   DiagnosticsEngine &Diags;
   const TargetInfo &Target;
+  /// Lazily cached target features for functions without a target attribute.
+  /// An invalid attribute means that the defaults were computed but no
+  /// target-features attribute needs to be emitted.
+  std::optional<llvm::Attribute> DefaultTargetFeatures;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
@@ -1168,8 +1172,6 @@ public:
   getVTablePointerAuthentication(const CXXRecordDecl *thisClass,
                                  bool IsVTTEntry = false);
 
-  CGPointerAuthInfo EmitPointerAuthInfo(const RecordDecl *RD);
-
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) &&
@@ -1490,10 +1492,6 @@ public:
   /// Set the LLVM function attributes which only apply to a function
   /// definition.
   void SetLLVMFunctionAttributesForDefinition(const Decl *D, llvm::Function *F);
-
-  /// Set the LLVM function attributes that represent floating point
-  /// environment.
-  void setLLVMFunctionFEnvAttributes(const FunctionDecl *D, llvm::Function *F);
 
   /// Return true iff the given type uses 'sret' when used as a return type.
   bool ReturnTypeUsesSRet(const CGFunctionInfo &FI);

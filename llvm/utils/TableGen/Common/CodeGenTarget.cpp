@@ -84,7 +84,27 @@ CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
   if (Targets.size() != 1)
     PrintFatalError("Multiple subclasses of Target defined!");
   TargetRec = Targets[0];
-  MacroFusions = Records.getAllDerivedDefinitions("Fusion");
+  MacroFusions = Records.getAllDerivedDefinitions("FusionPredicates");
+  llvm::sort(MacroFusions, [](const Record *LHS, const Record *RHS) {
+    return std::tuple(getMacroFusionName(LHS), LHS->getID()) <
+           std::tuple(getMacroFusionName(RHS), RHS->getID());
+  });
+
+  auto Dup = adjacent_find(MacroFusions, [](const Record *A, const Record *B) {
+    return getMacroFusionName(A) == getMacroFusionName(B);
+  });
+  if (Dup != MacroFusions.end()) {
+    const Record *Fusion = *std::next(Dup);
+    PrintError(Fusion, "duplicate macro fusion for '" +
+                           getMacroFusionName(Fusion) + "'");
+    PrintFatalNote(*Dup, "previous definition here");
+  }
+}
+
+StringRef CodeGenTarget::getMacroFusionName(const Record *Fusion) {
+  if (Fusion->isSubClassOf("FusionFor"))
+    return Fusion->getValueAsDef("Feature")->getName();
+  return Fusion->getName();
 }
 
 CodeGenTarget::~CodeGenTarget() = default;
@@ -355,46 +375,27 @@ bool CodeGenTarget::isLittleEndianEncoding() const {
   return getInstructionSet()->getValueAsBit("isLittleEndianEncoding");
 }
 
-/// reverseBitsForLittleEndianEncoding - For little-endian instruction bit
-/// encodings, reverse the bit order of all instructions.
-void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
+ArrayRef<const Init *>
+CodeGenTarget::getInstructionEncodingBits(const Record *EncodingDef) const {
+  ArrayRef<const Init *> Bits =
+      EncodingDef->getValueAsBitsInit("Inst")->getBits();
   if (!isLittleEndianEncoding())
-    return;
+    return Bits;
 
-  for (const Record *R :
-       Records.getAllDerivedDefinitions("InstructionEncoding")) {
-    if (R->getValueAsString("Namespace") == "TargetOpcode" ||
-        R->getValueAsBit("isPseudo"))
-      continue;
+  // Pseudo instructions are not encoded.
+  if (EncodingDef->isSubClassOf("Instruction") &&
+      (EncodingDef->getValueAsString("Namespace") == "TargetOpcode" ||
+       EncodingDef->getValueAsBit("isPseudo")))
+    return Bits;
 
-    const BitsInit *BI = R->getValueAsBitsInit("Inst");
-
-    unsigned numBits = BI->getNumBits();
-
-    SmallVector<const Init *, 16> NewBits(numBits);
-
-    for (unsigned bit = 0, end = numBits / 2; bit != end; ++bit) {
-      unsigned bitSwapIdx = numBits - bit - 1;
-      const Init *OrigBit = BI->getBit(bit);
-      const Init *BitSwap = BI->getBit(bitSwapIdx);
-      NewBits[bit] = BitSwap;
-      NewBits[bitSwapIdx] = OrigBit;
-    }
-    if (numBits % 2) {
-      unsigned middle = (numBits + 1) / 2;
-      NewBits[middle] = BI->getBit(middle);
-    }
-
-    RecordKeeper &MutableRC = const_cast<RecordKeeper &>(Records);
-    const BitsInit *NewBI = BitsInit::get(MutableRC, NewBits);
-
-    // Update the bits in reversed order so that emitters will get the correct
-    // endianness.
-    // FIXME: Eliminate mutation of TG records by creating a helper function
-    // to reverse bits and maintain a cache instead of mutating records.
-    Record *MutableR = const_cast<Record *>(R);
-    MutableR->getValue("Inst")->setValue(NewBI);
+  auto [It, Inserted] = ReversedEncodingBits.try_emplace(EncodingDef);
+  if (Inserted) {
+    const Init **Reversed =
+        ReversedEncodingBitsAllocator.Allocate<const Init *>(Bits.size());
+    llvm::copy(reverse(Bits), Reversed);
+    It->second = ArrayRef(Reversed, Bits.size());
   }
+  return It->second;
 }
 
 /// guessInstructionProperties - Return true if it's OK to guess instruction

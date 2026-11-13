@@ -35,10 +35,13 @@ struct LinkModule {
 };
 
 /// Load every bitcode file listed in CodeGenOpts.LinkBitcodeFiles into
-/// \p LinkModules. Returns true on error (diagnostic already reported).
-/// Appends to \p LinkModules; does not clear it.
+/// \p LinkModules. With \p OnlyInternalized, skip the entries that are not
+/// internalized, the plain -mlink-bitcode-file inputs. Returns true on error
+/// (diagnostic already reported). Appends to \p LinkModules; does not clear
+/// it.
 bool loadLinkModules(CompilerInstance &CI, llvm::LLVMContext &Ctx,
-                     llvm::SmallVectorImpl<LinkModule> &LinkModules);
+                     llvm::SmallVectorImpl<LinkModule> &LinkModules,
+                     bool OnlyInternalized);
 
 /// Link every module in \p LinkModules into \p M, propagating default
 /// function attributes and internalizing as each entry requests. Linker

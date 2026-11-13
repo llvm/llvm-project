@@ -4,27 +4,27 @@
 // Immediate out of lower bound [-128, 112].
 
 ld1rqd z0.d, p0/z, [x0, #-144]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 16 in range [-128, 112].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 16 in range [-128, 112].
 // CHECK-NEXT: ld1rqd z0.d, p0/z, [x0, #-144]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rqd z0.d, p0/z, [x0, #-129]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 16 in range [-128, 112].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 16 in range [-128, 112].
 // CHECK-NEXT: ld1rqd z0.d, p0/z, [x0, #-129]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rqd z0.d, p0/z, [x0, #113]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 16 in range [-128, 112].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 16 in range [-128, 112].
 // CHECK-NEXT: ld1rqd z0.d, p0/z, [x0, #113]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rqd z0.d, p0/z, [x0, #128]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 16 in range [-128, 112].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 16 in range [-128, 112].
 // CHECK-NEXT: ld1rqd z0.d, p0/z, [x0, #128]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rqd z0.d, p0/z, [x0, #12]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 16 in range [-128, 112].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 16 in range [-128, 112].
 // CHECK-NEXT: ld1rqd z0.d, p0/z, [x0, #12]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

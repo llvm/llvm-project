@@ -8,7 +8,7 @@
 subroutine reduction_task_parallel()
   integer :: i
   i = 0
-  ! CHECK: omp.parallel reduction(mod: task, @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<i32>) {
+  ! CHECK: omp.parallel reduction(task @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<i32>) {
   !$omp parallel reduction(task, +:i)
   i = i + 1
   !$omp end parallel
@@ -18,7 +18,7 @@ end subroutine reduction_task_parallel
 subroutine reduction_task_do()
   integer :: i, j
   i = 0
-  ! CHECK: omp.wsloop {{.*}}reduction(mod: task, @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<i32>) {
+  ! CHECK: omp.wsloop {{.*}}reduction(task @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<i32>) {
   !$omp do reduction(task, +:i)
   do j = 1, 10
     i = i + 1
@@ -30,7 +30,7 @@ end subroutine reduction_task_do
 subroutine reduction_task_sections()
   integer :: i
   i = 0
-  ! CHECK: omp.sections {{.*}}reduction(mod: task, @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<i32>) {
+  ! CHECK: omp.sections {{.*}}reduction(task @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<i32>) {
   !$omp sections reduction(task, +:i)
   i = i + 1
   !$omp end sections

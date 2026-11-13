@@ -69,7 +69,7 @@ body:             |
     $fp, $lr = frame-destroy LDPXi $sp, 2,  debug-location !22
     $sp = frame-destroy ADDXri $sp, 32, 0,  debug-location !22
     RET undef $lr, implicit killed $w0,  debug-location !22
-
+...
 # CHECK-LABEL: bb.0
 # CHECK: DBG_VALUE $w1, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK-LABEL: bb.1.if.then:

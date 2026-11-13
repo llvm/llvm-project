@@ -72,9 +72,16 @@ def AtomicOrderingProp : EnumProp<AtomicOrdering>;
 // Ptr add flags enum properties.
 //===----------------------------------------------------------------------===//
 
+def Ptr_PtrAddFlagsNone : I32EnumCase<"none", 0>;
+def Ptr_PtrAddFlagsNusw : I32EnumCase<"nusw", 1>;
+def Ptr_PtrAddFlagsNuw : I32EnumCase<"nuw", 2>;
+def Ptr_PtrAddFlagsInbounds : I32EnumCase<"inbounds", 3>;
+
 def Ptr_PtrAddFlags : I32Enum<"PtrAddFlags", "Pointer add flags", [
-    I32EnumCase<"none", 0>, I32EnumCase<"nusw", 1>, I32EnumCase<"nuw", 2>,
-    I32EnumCase<"inbounds", 3>
+    Ptr_PtrAddFlagsNone,
+    Ptr_PtrAddFlagsNusw,
+    Ptr_PtrAddFlagsNuw,
+    Ptr_PtrAddFlagsInbounds
   ]> {
   let cppNamespace = "::mlir::ptr";
 }
@@ -83,8 +90,14 @@ def Ptr_PtrAddFlags : I32Enum<"PtrAddFlags", "Pointer add flags", [
 // Ptr diff flags enum properties.
 //===----------------------------------------------------------------------===//
 
+def Ptr_PtrDiffFlagsNone : I8BitEnumCase<"none", 0>;
+def Ptr_PtrDiffFlagsNuw : I8BitEnumCase<"nuw", 1>;
+def Ptr_PtrDiffFlagsNsw : I8BitEnumCase<"nsw", 2>;
+
 def Ptr_PtrDiffFlags : I8BitEnum<"PtrDiffFlags", "Pointer difference flags", [
-    I8BitEnumCase<"none", 0>, I8BitEnumCase<"nuw", 1>, I8BitEnumCase<"nsw", 2>
+    Ptr_PtrDiffFlagsNone,
+    Ptr_PtrDiffFlagsNuw,
+    Ptr_PtrDiffFlagsNsw
   ]> {
   let cppNamespace = "::mlir::ptr";
 }

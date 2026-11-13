@@ -32,43 +32,29 @@
 // classes. Sections in the same equivalence class when the algorithm
 // terminates are considered identical. Here are details:
 //
-// 1. First, we partition sections using their hash values as keys. Hash
-//    values contain section types, section contents and numbers of
-//    relocations. During this step, relocation targets are not taken into
-//    account. We just put sections that apparently differ into different
-//    equivalence classes.
+// 1. First, we partition sections using their hash values as keys. The hash
+//    covers section contents and relocations. A relocation to another ICF
+//    candidate contributes the target's hash, propagated for a few rounds,
+//    so the hash also covers sections a few relocation hops away.
 //
-// 2. Next, for each equivalence class, we visit sections to compare
-//    relocation targets. Relocation targets are considered equivalent if
-//    their targets are in the same equivalence class. Sections with
-//    different relocation targets are put into different equivalence
-//    classes.
+// 2. Next, we split each equivalence class by comparing everything except
+//    relocation targets (equalsConstant). These properties never change, so
+//    this step runs once.
 //
-// 3. If we split an equivalence class in step 2, two relocations
-//    previously target the same equivalence class may now target
-//    different equivalence classes. Therefore, we repeat step 2 until a
-//    convergence is obtained.
+// 3. Then we split classes by comparing relocation targets (equalsVariable),
+//    which are considered equivalent if they are in the same equivalence
+//    class. A split may make two relocations that targeted the same class
+//    target different classes, so we repeat this step until no class splits.
 //
 // 4. For each equivalence class C, pick an arbitrary section in C, and
 //    merge all the other sections in C with it.
 //
-// For small programs, this algorithm needs 3-5 iterations. For large
-// programs such as Chromium, it takes more than 20 iterations.
-//
-// This algorithm was mentioned as an "optimistic algorithm" in [1],
-// though gold implements a different algorithm than this.
+// Step 1 must give identical sections the same hash. A collision only costs
+// step 2 time, and the more relocation hops step 1 covers, the fewer
+// iterations step 3 needs.
 //
 // We parallelize each step so that multiple threads can work on different
-// equivalence classes concurrently. That gave us a large performance
-// boost when applying ICF on large programs. For example, MSVC link.exe
-// or GNU gold takes 10-20 seconds to apply ICF on Chromium, whose output
-// size is about 1.5 GB, but LLD can finish it in less than 2 seconds on a
-// 2.8 GHz 40 core machine. Even without threading, LLD's ICF is still
-// faster than MSVC or gold though.
-//
-// [1] Safe ICF: Pointer Safe and Unwinding aware Identical Code Folding
-// in the Gold Linker
-// http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/36912.pdf
+// equivalence classes concurrently.
 //
 //===----------------------------------------------------------------------===//
 
@@ -105,6 +91,11 @@ private:
   template <class RelTy>
   bool constantEq(const InputSection *a, Relocs<RelTy> relsA,
                   const InputSection *b, Relocs<RelTy> relsB);
+
+  template <class RelTy>
+  void hashRelocs(const InputSection &sec, uint64_t &h,
+                  SmallVectorImpl<uint32_t> &edges, uint32_t eqClassBase,
+                  Relocs<RelTy> rels);
 
   template <class RelTy>
   bool variableEq(const InputSection *a, Relocs<RelTy> relsA,
@@ -156,7 +147,7 @@ private:
   int current = 0;
   int next = 0;
 };
-}
+} // namespace
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *s) {
@@ -233,6 +224,31 @@ void ICF<ELFT>::segregate(size_t begin, size_t end, uint32_t eqClassBase,
   }
 }
 
+// Propagation mixes a self-referencing section's hash with itself, so mix(h, h)
+// must not be a constant.
+static uint64_t mix(uint64_t h, uint64_t v) {
+  return (h + v) * 0x9e3779b97f4a7c15;
+}
+
+// Different symbols compare equal only if both values are final: not a linker
+// script placeholder (assigned later) and not preemptible.
+static Defined *getComparableDef(Symbol &sym) {
+  auto *d = dyn_cast<Defined>(&sym);
+  return d && !d->scriptDefined && !d->isPreemptible ? d : nullptr;
+}
+
+// A section symbol's addend is not validated until getSymVA. Return nullopt
+// to conservatively disable folding for such an out-of-range offset.
+static std::optional<uint64_t> getMergeOffset(const Defined &d,
+                                              uint64_t addend) {
+  auto &ms = cast<MergeInputSection>(*d.section);
+  if (!d.isSection())
+    return ms.getOffset(d.value) + addend;
+  if (addend >= ms.content().size())
+    return std::nullopt;
+  return ms.getOffset(addend);
+}
+
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
@@ -251,25 +267,11 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
 
     Symbol &sa = secA->file->getRelocTargetSym(*rai);
     Symbol &sb = secB->file->getRelocTargetSym(*rbi);
-    if (&sa == &sb) {
-      if (addA == addB)
-        continue;
-      return false;
-    }
+    if (&sa == &sb && addA == addB)
+      continue;
 
-    auto *da = dyn_cast<Defined>(&sa);
-    auto *db = dyn_cast<Defined>(&sb);
-
-    // Placeholder symbols generated by linker scripts look the same now but
-    // may have different values later.
-    if (!da || !db || da->scriptDefined || db->scriptDefined)
-      return false;
-
-    // When comparing a pair of relocations, if they refer to different symbols,
-    // and either symbol is preemptible, the containing sections should be
-    // considered different. This is because even if the sections are identical
-    // in this DSO, they may not be after preemption.
-    if (da->isPreemptible || db->isPreemptible)
+    Defined *da = getComparableDef(sa), *db = getComparableDef(sb);
+    if (!da || !db)
       return false;
 
     // Relocations referring to absolute symbols are constant-equal if their
@@ -299,15 +301,46 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, Relocs<RelTy> ra,
     if (x->getParent() != y->getParent())
       return false;
 
-    uint64_t offsetA =
-        sa.isSection() ? x->getOffset(addA) : x->getOffset(da->value) + addA;
-    uint64_t offsetB =
-        sb.isSection() ? y->getOffset(addB) : y->getOffset(db->value) + addB;
-    if (offsetA != offsetB)
+    auto offA = getMergeOffset(*da, addA);
+    if (!offA || offA != getMergeOffset(*db, addB))
       return false;
   }
 
   return true;
+}
+
+// Hash what constantEq compares, plus the class of a non-candidate target,
+// which never changes. Candidate targets are recorded as edges instead.
+template <class ELFT>
+template <class RelTy>
+void ICF<ELFT>::hashRelocs(const InputSection &sec, uint64_t &h,
+                           SmallVectorImpl<uint32_t> &edges,
+                           uint32_t eqClassBase, Relocs<RelTy> rels) {
+  for (const RelTy &rel : rels) {
+    h = mix(h, rel.r_offset);
+    h = mix(h, rel.getType(ctx.arg.isMips64EL));
+    uint64_t addend = getAddend<ELFT>(rel);
+    Symbol &sym = sec.file->getRelocTargetSym(rel);
+    Defined *d = getComparableDef(sym);
+    if (!d) {
+      h = mix(h, xxh3_64bits(sym.getName()));
+      h = mix(h, addend);
+      continue;
+    }
+    if (isa_and_nonnull<MergeInputSection>(d->section)) {
+      h = mix(h, getMergeOffset(*d, addend).value_or(-1));
+      continue;
+    }
+    h = mix(h, d->value + addend);
+    auto *is = dyn_cast_or_null<InputSection>(d->section);
+    if (!is)
+      continue;
+    // A candidate's eqClass[0] - eqClassBase is its index in sections.
+    if (is->eqClass[0] >= eqClassBase)
+      edges.push_back(is->eqClass[0] - eqClassBase);
+    else
+      h = mix(h, is->eqClass[0]);
+  }
 }
 
 // Compare "non-moving" part of two InputSections, namely everything
@@ -444,22 +477,6 @@ void ICF<ELFT>::parallelForEachClass(
   ++cnt;
 }
 
-// Combine the hashes of the sections referenced by the given section into its
-// hash.
-template <class RelTy>
-static void combineRelocHashes(unsigned cnt, InputSection *isec,
-                               Relocs<RelTy> rels) {
-  uint32_t hash = isec->eqClass[cnt % 2];
-  for (RelTy rel : rels) {
-    Symbol &s = isec->file->getRelocTargetSym(rel);
-    if (auto *d = dyn_cast<Defined>(&s))
-      if (auto *relSec = dyn_cast_or_null<InputSection>(d->section))
-        hash += relSec->eqClass[cnt % 2];
-  }
-  // Set MSB to 1 to avoid collisions with unique IDs.
-  isec->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
-}
-
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
   // Two text sections may have identical content and relocations but different
@@ -470,61 +487,116 @@ template <class ELFT> void ICF<ELFT>::run() {
   //
   // If two .gcc_except_table have identical semantics (usually identical
   // content with PC-relative encoding), we will lose folding opportunity.
-  uint32_t uniqueId = 0;
-  ctx.in.ehFrame->iterateFDEWithLSDA<ELFT>(
-      [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
+  uint32_t uniqueId = 1;
+  ctx.in.ehFrame->iterateFDEWithLSDA(
+      [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = uniqueId++; });
 
-  // Collect sections to merge.
-  for (InputSectionBase *sec : ctx.inputSections) {
-    auto *s = dyn_cast<InputSection>(sec);
-    if (s && s->eqClass[0] == 0) {
-      if (isEligible(s))
-        sections.push_back(s);
-      else
-        // Ineligible sections are assigned unique IDs, i.e. each section
-        // belongs to an equivalence class of its own.
-        s->eqClass[0] = s->eqClass[1] = ++uniqueId;
+  // Assign a temporary class ID (eqClassBase) to eligible sections and assign
+  // unique IDs to ineligible sections. Use eqClassBase as the base for class
+  // IDs. Each ineligible section belongs to an equivalence class of its own.
+  constexpr size_t chunkSize = 1024;
+  ArrayRef<InputSectionBase *> inputs = ctx.inputSections;
+  size_t numInputChunks = divideCeil(inputs.size(), chunkSize);
+  auto chunkRange = [&](size_t c, size_t total) {
+    auto begin = c * chunkSize;
+    return std::make_pair(begin, std::min(begin + chunkSize, total));
+  };
+  uint32_t eqClassBase = uniqueId + inputs.size();
+  SmallVector<uint32_t, 0> firstIdx(numInputChunks);
+  parallelFor(0, numInputChunks, [&](size_t c) {
+    auto [begin, end] = chunkRange(c, inputs.size());
+    uint32_t n = 0;
+    for (size_t i = begin; i != end; ++i) {
+      auto *s = dyn_cast<InputSection>(inputs[i]);
+      if (s && s->eqClass[0] == 0) {
+        if (isEligible(s)) {
+          s->eqClass[0] = eqClassBase;
+          ++n;
+        } else {
+          s->eqClass[0] = s->eqClass[1] = uniqueId + i;
+        }
+      }
     }
-  }
-
-  // Initially, we use hash values to partition sections.
-  parallelForEach(sections, [&](InputSection *s) {
-    // Set MSB to 1 to avoid collisions with unique IDs.
-    s->eqClass[0] = xxh3_64bits(s->content()) | (1U << 31);
+    // Temporarily store the number of sections per chunk.
+    firstIdx[c] = n;
   });
 
-  // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to
-  // reduce the average sizes of equivalence classes, i.e. segregate() which has
-  // a large time complexity will have less work to do.
-  for (unsigned cnt = 0; cnt != 2; ++cnt) {
-    parallelForEach(sections, [&](InputSection *s) {
-      const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
-      if (rels.areRelocsCrel())
-        combineRelocHashes(cnt, s, rels.crels);
-      else if (rels.areRelocsRel())
-        combineRelocHashes(cnt, s, rels.rels);
-      else
-        combineRelocHashes(cnt, s, rels.relas);
+  // Compute the total number of eligible sections and each chunk's left index.
+  size_t numSections = 0;
+  for (size_t c = 0; c != numInputChunks; ++c) {
+    auto n = std::exchange(firstIdx[c], numSections);
+    numSections += n;
+  }
+  sections.resize_for_overwrite(numSections);
+  // Update temporary class ID above the unique IDs so that hashRelocs() can
+  // tell them apart.
+  assert(uint64_t(eqClassBase) + numSections <= UINT32_MAX);
+  parallelFor(0, numInputChunks, [&](size_t c) {
+    auto [begin, end] = chunkRange(c, inputs.size());
+    auto idx = firstIdx[c];
+    for (size_t i = begin; i != end; ++i) {
+      auto *s = dyn_cast<InputSection>(inputs[i]);
+      if (s && s->eqClass[0] == eqClassBase) {
+        s->eqClass[0] += idx;
+        sections[idx++] = s;
+      }
+    }
+  });
+
+  // Hash sections in chunks. An edge is a relocation to a candidate, recorded
+  // as the target's index. Each chunk appends its sections' edges to its own
+  // buffer; edgeEnd[i] is where section i's edges end within that buffer.
+  size_t numChunks = divideCeil(numSections, chunkSize);
+  SmallVector<uint64_t, 0> hashes(numSections, llvm::for_overwrite);
+  SmallVector<uint32_t, 0> edgeEnd(numSections, llvm::for_overwrite);
+  SmallVector<SmallVector<uint32_t, 0>, 0> chunkEdges(numChunks);
+  parallelFor(0, numChunks, [&](size_t c) {
+    SmallVectorImpl<uint32_t> &edges = chunkEdges[c];
+    auto [begin, end] = chunkRange(c, numSections);
+    for (size_t i = begin; i != end; ++i) {
+      InputSection *s = sections[i];
+      uint64_t h = xxh3_64bits(s->content());
+      invokeOnRelocs(*s, hashRelocs, *s, h, edges, eqClassBase);
+      hashes[i] = h;
+      edgeEnd[i] = edges.size();
+    }
+  });
+
+  // Propagate hashes over edges for 7 rounds. Each round saves up to one
+  // segregate() pass. 7 is empirical: even Chromium then needs just two passes.
+  SmallVector<uint64_t, 0> nextHashes(numSections, llvm::for_overwrite);
+  for (int round = 7; round--;) {
+    parallelFor(0, numChunks, [&](size_t c) {
+      ArrayRef<uint32_t> edges = chunkEdges[c];
+      auto [begin, end] = chunkRange(c, numSections);
+      size_t j = 0;
+      for (size_t i = begin; i != end; ++i) {
+        uint64_t h = hashes[i];
+        for (size_t e = edgeEnd[i]; j != e; ++j)
+          h = mix(h, hashes[edges[j]]);
+        nextHashes[i] = h;
+      }
     });
+    std::swap(hashes, nextHashes);
   }
 
-  // From now on, sections in Sections vector are ordered so that sections
-  // in the same equivalence class are consecutive in the vector.
-  SmallVector<uint64_t, 0> keys(sections.size());
-  parallelFor(0, sections.size(), [&](size_t i) {
-    keys[i] = uint64_t(sections[i]->eqClass[0]) << 32 | i;
+  // Order sections so that those in the same equivalence class are consecutive.
+  SmallVector<uint64_t, 0> keys(numSections, llvm::for_overwrite);
+  parallelFor(0, numSections, [&](size_t i) {
+    // mix()'s low bits depend only on the inputs' low bits. Fold the high half.
+    uint32_t h = hashes[i] ^ hashes[i] >> 32;
+    sections[i]->eqClass[0] = h;
+    keys[i] = uint64_t(h) << 32 | i;
   });
   parallelSort(keys.begin(), keys.end());
-  SmallVector<InputSection *, 0> sorted;
-  sorted.reserve(keys.size());
-  for (uint64_t k : keys)
-    sorted.push_back(sections[uint32_t(k)]);
+  SmallVector<InputSection *, 0> sorted(numSections, llvm::for_overwrite);
+  parallelFor(0, numSections,
+              [&](size_t i) { sorted[i] = sections[uint32_t(keys[i])]; });
   sections = std::move(sorted);
 
   // Compare static contents and assign unique equivalence class IDs for each
   // static content. Use a base offset for these IDs to ensure no overlap with
   // the unique IDs already assigned.
-  uint32_t eqClassBase = ++uniqueId;
   parallelForEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, eqClassBase, true);
   });
@@ -540,7 +612,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   Log(ctx) << "ICF needed " << cnt << " iterations";
 
   // Merge sections by the equivalence class.
-  forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
+  parallelForEachClass([&](size_t begin, size_t end) {
     for (size_t i = begin + 1; i < end; ++i) {
       sections[begin]->replace(sections[i]);
 
@@ -577,8 +649,7 @@ template <class ELFT> void ICF<ELFT>::run() {
           d->folded = true;
         }
   };
-  for (Symbol *sym : ctx.symtab->getSymbols())
-    fold(sym);
+  parallelForEach(ctx.symtab->getSymbols(), fold);
   parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
       fold(sym);

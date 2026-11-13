@@ -124,8 +124,6 @@ class IRTranslatorImpl {
 
     using const_vreg_iterator =
         DenseMap<const Value *, VRegListT *>::const_iterator;
-    using const_offset_iterator =
-        DenseMap<const Value *, OffsetListT *>::const_iterator;
 
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
@@ -245,11 +243,17 @@ class IRTranslatorImpl {
   /// Translate a debug-info record of a dbg.value into a DBG_* instruction.
   /// Pass in all the contents of the record, rather than relying on how it's
   /// stored.
-  void translateDbgValueRecord(Value *V, bool HasArgList,
-                               const DILocalVariable *Variable,
+  void translateDbgValueRecord(Value *V, const DILocalVariable *Variable,
                                const DIExpression *Expression,
                                const DebugLoc &DL,
                                MachineIRBuilder &MIRBuilder);
+
+  /// Translate a debug-info record of a variadic dbg.value (one using a
+  /// DIArgList) into a DBG_VALUE_LIST instruction.
+  void translateDbgValueListRecord(
+      iterator_range<DbgVariableRecord::location_op_iterator> Values,
+      const DILocalVariable *Variable, const DIExpression *Expression,
+      const DebugLoc &DL, MachineIRBuilder &MIRBuilder);
 
   /// Translate a debug-info record of a dbg.declare into an indirect DBG_*
   /// instruction. Pass in all the contents of the record, rather than relying
@@ -3630,7 +3634,7 @@ bool IRTranslatorImpl::translateCall(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (F && (F->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
+            (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
              F->hasExternalWeakLinkage())))
     return false;
 
@@ -3850,8 +3854,8 @@ bool IRTranslatorImpl::translateInvoke(const User &U,
   // FIXME: support Windows dllimport function calls and calls through
   // weak symbols.
   if (Fn && (Fn->hasDLLImportStorageClass() ||
-            (MF->getTarget().getTargetTriple().isOSWindows() &&
-             Fn->hasExternalWeakLinkage())))
+             (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI() &&
+              Fn->hasExternalWeakLinkage())))
     return false;
 
   bool LowerInlineAsm = I.isInlineAsm();
@@ -4044,8 +4048,8 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
     return true;
   }
 
-  // FIXME: support stack probing for Windows.
-  if (MF->getTarget().getTargetTriple().isOSWindows())
+  // FIXME: support stack probing for Windows and UEFI.
+  if (MF->getTarget().getTargetTriple().isOSWindowsOrUEFI())
     return false;
 
   // Now we're in the harder dynamic case.
@@ -4170,8 +4174,9 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
         InputType && InputType->getNumElements() == 1) {
       // We are inserting an illegal fixed vector into an illegal
       // fixed vector, use the scalar as it is not a legal vector type
-      // in LLT.
-      return translateCopy(U, Vec, MIRBuilder);
+      // in LLT. Since inserting a <1 x Ty> at index 0 replaces the whole
+      // destination, the result is the source operand.
+      return translateCopy(U, Elt, MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a legal fixed
@@ -4656,7 +4661,7 @@ void IRTranslatorImpl::finishPendingPhis() {
   }
 }
 
-void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
+void IRTranslatorImpl::translateDbgValueRecord(Value *V,
                                                const DILocalVariable *Variable,
                                                const DIExpression *Expression,
                                                const DebugLoc &DL,
@@ -4666,7 +4671,7 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
   // Act as if we're handling a debug intrinsic.
   MIRBuilder.setDebugLoc(DL);
 
-  if (!V || HasArgList) {
+  if (!V) {
     // DI cannot produce a valid DBG_VALUE, so produce an undef DBG_VALUE to
     // terminate any prior location.
     MIRBuilder.buildIndirectDbgValue(0, Variable, Expression);
@@ -4702,6 +4707,57 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
     // pretty baked in right now.
     MIRBuilder.buildDirectDbgValue(Reg, Variable, Expression);
   }
+}
+
+void IRTranslatorImpl::translateDbgValueListRecord(
+    iterator_range<DbgVariableRecord::location_op_iterator> Values,
+    const DILocalVariable *Variable, const DIExpression *Expression,
+    const DebugLoc &DL, MachineIRBuilder &MIRBuilder) {
+  assert(Variable->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  MIRBuilder.setDebugLoc(DL);
+
+  auto GetLocationOperand = [&](Value *V) -> std::optional<MachineOperand> {
+    if (!V || isa<UndefValue>(V))
+      return std::nullopt;
+    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+      if (CI->getBitWidth() > 64)
+        return MachineOperand::CreateCImm(CI);
+      return MachineOperand::CreateImm(
+          CI->getBitWidth() == 1 ? CI->getZExtValue() : CI->getSExtValue());
+    }
+    if (auto *CFP = dyn_cast<ConstantFP>(V))
+      return MachineOperand::CreateFPImm(CFP);
+    if (isa<ConstantPointerNull>(V))
+      return MachineOperand::CreateImm(0);
+    if (isa<Constant>(V))
+      return std::nullopt;
+    ArrayRef<Register> Regs = getOrCreateVRegs(*V);
+    if (Regs.size() != 1)
+      return std::nullopt;
+    return MachineOperand::CreateReg(Regs.front(), /*isDef=*/false,
+                                     /*isImp=*/false, /*isKill=*/false,
+                                     /*isDead=*/false, /*isUndef=*/false,
+                                     /*isEarlyClobber=*/false, /*SubReg=*/0,
+                                     /*isDebug=*/true);
+  };
+
+  SmallVector<MachineOperand, 4> MOs;
+  for (Value *V : Values) {
+    std::optional<MachineOperand> MO = GetLocationOperand(V);
+    if (!MO) {
+      // One of the location operands cannot be described, so produce an undef
+      // DBG_VALUE to terminate any prior location.
+      MIRBuilder.buildIndirectDbgValue(0, Variable, Expression);
+      return;
+    }
+    MOs.push_back(*MO);
+  }
+
+  MIRBuilder.insertInstr(
+      BuildMI(MIRBuilder.getMF(), DL,
+              MIRBuilder.getTII().get(TargetOpcode::DBG_VALUE_LIST),
+              /*IsIndirect=*/false, MOs, Variable, Expression));
 }
 
 void IRTranslatorImpl::translateDbgDeclareRecord(
@@ -4755,9 +4811,12 @@ void IRTranslatorImpl::translateDbgInfo(const Instruction &Inst,
     if (DVR.isDbgDeclare())
       translateDbgDeclareRecord(V, DVR.hasArgList(), Variable, Expression,
                                 DVR.getDebugLoc(), MIRBuilder);
+    else if (DVR.hasArgList())
+      translateDbgValueListRecord(DVR.location_ops(), Variable, Expression,
+                                  DVR.getDebugLoc(), MIRBuilder);
     else
-      translateDbgValueRecord(V, DVR.hasArgList(), Variable, Expression,
-                              DVR.getDebugLoc(), MIRBuilder);
+      translateDbgValueRecord(V, Variable, Expression, DVR.getDebugLoc(),
+                              MIRBuilder);
   }
 }
 
@@ -5053,14 +5112,20 @@ bool IRTranslatorImpl::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
     const Value *IRGuard = TLI->getSDagStackGuard(M, *Libcalls);
-    Register GuardPtr = getOrCreateVReg(*IRGuard);
+    if (IRGuard) {
+      Register GuardPtr = getOrCreateVReg(*IRGuard);
 
-    Guard = CurBuilder
-                ->buildLoad(PtrMemTy, GuardPtr,
-                            MachinePointerInfo::getFixedStack(*MF, FI), Align,
-                            MachineMemOperand::MOLoad |
-                                MachineMemOperand::MOVolatile)
-                .getReg(0);
+      Guard = CurBuilder
+                  ->buildLoad(PtrMemTy, GuardPtr,
+                              MachinePointerInfo::getFixedStack(*MF, FI), Align,
+                              MachineMemOperand::MOLoad |
+                                  MachineMemOperand::MOVolatile)
+                  .getReg(0);
+    } else {
+      LLVMContext &Ctx = CurBuilder->getContext();
+      Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+      Guard = CurBuilder->buildUndef(PtrMemTy).getReg(0);
+    }
   }
 
   // Perform the comparison.
@@ -5184,10 +5249,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   const TargetMachine &TM = MF->getTarget();
   EnableOpts = OptLevel != CodeGenOptLevel::None && !ShouldSkipOpts;
   FuncInfo.MF = MF;
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
   FuncInfo.ExceptionModel = F.getParent()->getExceptionModel();
-  if (FuncInfo.ExceptionModel == ExceptionHandling::Default)
-    FuncInfo.ExceptionModel = TM.getExceptionModel();
   if (EnableOpts) {
     AA = GetAAResults();
     FuncInfo.BPI = GetBPI();

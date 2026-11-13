@@ -16,7 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "L0CmdListManager.h"
-#include "L0Context.h"
+#include "L0Driver.h"
 #include "L0Program.h"
 #include "L0Queue.h"
 #include "PluginInterface.h"
@@ -25,7 +25,6 @@
 
 namespace llvm::omp::target::plugin {
 
-using OmpInteropTy = omp_interop_val_t *;
 class LevelZeroPluginTy;
 
 // clang-format off
@@ -95,8 +94,8 @@ struct DeviceQueueConfigInfoTy {
 };
 
 class L0DeviceTy final : public GenericDeviceTy {
-  // Level Zero Context for this Device.
-  L0ContextTy &L0Context;
+  // Level Zero driver for this Device.
+  L0DriverTy &L0Driver;
 
   // Level Zero handle  for this Device.
   ze_device_handle_t zeDevice;
@@ -108,7 +107,7 @@ class L0DeviceTy final : public GenericDeviceTy {
   ze_device_module_properties_t ModuleProperties{};
 
   /// Devices' default target allocation kind for internal allocation.
-  int32_t AllocKind = TARGET_ALLOC_DEVICE;
+  int32_t AllocKind = OL_ALLOC_TYPE_DEVICE;
 
   DeviceArchTy DeviceArch = DeviceArchTy::DeviceArch_None;
 
@@ -156,10 +155,10 @@ class L0DeviceTy final : public GenericDeviceTy {
 
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
-             ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
+             ze_device_handle_t zeDevice, L0DriverTy &Driver,
              const std::string_view zeId, int32_t ComputeIndex)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
-        L0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
+        L0Driver(Driver), zeDevice(zeDevice), zeId(zeId),
         ComputeIndex(ComputeIndex) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     DeviceProperties.pNext = nullptr;
@@ -186,14 +185,14 @@ public:
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 
-  uint32_t getDriverId() const override { return L0Context.getDriverId(); }
+  uint32_t getDriverId() const override { return L0Driver.getDriverId(); }
 
   bool supportsCooperativeKernels() const {
     return QueueConfig.SupportsCooperativeKernels;
   }
 
-  const L0ContextTy &getL0Context() const { return L0Context; }
-  L0ContextTy &getL0Context() { return L0Context; }
+  const L0DriverTy &getL0Driver() const { return L0Driver; }
+  L0DriverTy &getL0Driver() { return L0Driver; }
 
   const std::string_view getName() const { return DeviceName; }
   const char *getNameCStr() const { return DeviceName.c_str(); }
@@ -391,7 +390,7 @@ public:
     auto CmdListOrErr = createImmCmdList(UserZeCtx, InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
-    return new L0CmdListManagerTy(*CmdListOrErr, L0Context);
+    return new L0CmdListManagerTy(*CmdListOrErr, L0Driver);
   }
 
   Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
@@ -439,36 +438,36 @@ public:
   /// Driver related functions.
 
   /// Reurn the driver handle for this device.
-  ze_driver_handle_t getZeDriver() const { return L0Context.getZeDriver(); }
+  ze_driver_handle_t getZeDriver() const { return L0Driver.getZeDriver(); }
 
   /// Return context for this device.
-  ze_context_handle_t getZeContext() const { return L0Context.getZeContext(); }
+  ze_context_handle_t getZeContext() const { return L0Driver.getZeContext(); }
 
   /// Return driver API version for this device.
   ze_api_version_t getDriverAPIVersion() const {
-    return L0Context.getDriverAPIVersion();
+    return L0Driver.getDriverAPIVersion();
   }
 
   /// Get a low-level L0 event from the driver associated to this device.
   Expected<ze_event_handle_t> getEvent() {
-    return L0Context.getEventPool().getEvent();
+    return L0Driver.getEventPool().getEvent();
   }
   /// Get a high-level L0EventTy object from the driver associated to this
   /// device.
   Expected<L0EventTy *> getEventObject() {
-    return L0Context.getEventPool().getEventObject();
+    return L0Driver.getEventPool().getEventObject();
   }
 
   /// Release a L0 event to the pool associated to this device.
   Error releaseEvent(ze_event_handle_t Event) {
-    return L0Context.getEventPool().releaseEvent(Event);
+    return L0Driver.getEventPool().releaseEvent(Event);
   }
   /// Release an L0EventTy object to the pool associated to this device.
   Error releaseEventObject(L0EventTy *EventObj) {
-    return L0Context.getEventPool().releaseEventObject(EventObj);
+    return L0Driver.getEventPool().releaseEventObject(EventObj);
   }
 
-  bool supportsLargeMem() const { return L0Context.supportsLargeMem(); }
+  bool supportsLargeMem() const { return L0Driver.supportsLargeMem(); }
 
   /// Returns the Queue from an async info object, or creates a new one if
   /// the async info does not have a queue yet. When \p UserCtx is null the
@@ -497,14 +496,14 @@ public:
   MemAllocatorTy &getDeviceMemAllocator() { return MemAllocator; }
 
   MemAllocatorTy &getMemAllocator(int32_t Kind) {
-    if (Kind == TARGET_ALLOC_HOST)
-      return L0Context.getHostMemAllocator();
+    if (Kind == OL_ALLOC_TYPE_HOST)
+      return L0Driver.getHostMemAllocator();
     return getDeviceMemAllocator();
   }
 
   MemAllocatorTy &getMemAllocator(const void *Ptr) {
     if (ZE_MEMORY_TYPE_HOST == getMemAllocType(Ptr))
-      return L0Context.getHostMemAllocator();
+      return L0Driver.getHostMemAllocator();
     return getDeviceMemAllocator();
   }
 
@@ -515,9 +514,10 @@ public:
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
                  PluginContextTy *UserCtx) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
-  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, ol_alloc_type_t Kind,
                             size_t Alignment) override;
-  Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
+  Error free(void *TgtPtr,
+             ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE) override;
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
   /// return the same pointer as the device pointer.
@@ -533,7 +533,6 @@ public:
   }
 
   Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override;
-  Error dataFence(__tgt_async_info *Async) override;
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
@@ -545,14 +544,17 @@ public:
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                        bool *IsQueueWorkCompleted) override;
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                       AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                       AsyncInfoWrapperTy &AsyncInfoWrapper,
+                       GenericProfilerTy *ProfilerPtr) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override;
   Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,
-                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+                         AsyncInfoWrapperTy &AsyncInfoWrapper,
+                         GenericProfilerTy *ProfilerPtr) override;
   Expected<bool>
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
@@ -597,13 +599,11 @@ public:
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
 
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;
-  Error releaseInterop(omp_interop_val_t *Interop) override;
+  Expected<void *> getNativeHandle() override { return getZeDevice(); }
 
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override;
+  Expected<void *> getNativePlatformHandle() override { return getZeDriver(); }
+
+  Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) override;
 };
 
 } // namespace llvm::omp::target::plugin

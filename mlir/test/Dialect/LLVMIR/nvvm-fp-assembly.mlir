@@ -13,6 +13,9 @@ llvm.func @fp_modifiers(%a: f32, %b: f32, %x: f16, %y: f16, %z: f16) {
 
   // CHECK: nvvm.sqrt {{.*}}, rnd = <rz> ftz = true : f32
   %3 = nvvm.sqrt %a, rnd = <rz> ftz = true : f32
+
+  // CHECK: nvvm.mulf {{.*}} rnd = <rm> sat = <sat> ftz = true : f32
+  %4 = nvvm.mulf %a, %b sat = <sat> ftz = true rnd = <rm> : f32
   llvm.return
 }
 

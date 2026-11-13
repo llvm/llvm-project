@@ -12,7 +12,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/OpDefinition.h"
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h.inc"

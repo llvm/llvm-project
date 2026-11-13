@@ -59,9 +59,12 @@ body:             |
 name:            frem_f16
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
 
     ; CHECK-LABEL: name: frem_f16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s64)
@@ -100,9 +103,12 @@ body:             |
 name:            frem_v2f32
 body:             |
   bb.0.entry:
+    liveins: $v8, $v9
 
     ; CHECK-LABEL: name: frem_v2f32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $v8
+    ; CHECK: liveins: $v8, $v9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $v9
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)

@@ -155,7 +155,6 @@ static Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity) {
 
 // TODO: Refine the row and col-in-bytes of tile to row and col of matrix.
 std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
-  IRBuilder<> Builder(II);
   Value *Row = nullptr, *Col = nullptr;
   switch (II->getIntrinsicID()) {
   default:
@@ -645,7 +644,7 @@ void X86VolatileTileData::volatileTilePHI(PHINode *PHI) {
   for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
     Value *Op = PHI->getIncomingValue(I);
     Instruction *Inst = dyn_cast<Instruction>(Op);
-    assert(Inst && "We shouldn't fold AMX instrution!");
+    assert(Inst && "We shouldn't fold AMX instruction!");
     Incomings.push_back(Inst);
   }
 

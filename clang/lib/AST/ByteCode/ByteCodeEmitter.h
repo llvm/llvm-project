@@ -71,7 +71,7 @@ protected:
   bool constantFolding() const { return false; }
 
   /// Callback for local registration.
-  Local createLocal(const Descriptor *D);
+  Local createLocal(const Descriptor *D, bool IsConstexprUnknown = false);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;

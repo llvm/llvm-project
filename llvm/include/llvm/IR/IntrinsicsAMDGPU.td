@@ -45,6 +45,12 @@ class AMDGPULDSDMAIntrinsic {
   Intrinsic Intr = !cast<Intrinsic>(NAME);
 }
 
+// Tags V_CVT_SCALEF32_* conversions to narrow formats, which only read the
+// exponent field of their f32 scale argument.
+class AMDGPUExponentOnlyScale<int scalearg> {
+  int ScaleArg = scalearg;
+}
+
 let TargetPrefix = "r600" in {
 
   multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz<
@@ -698,9 +704,13 @@ class AMDGPUCvtScaleF32Intrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> :
   [DstTy], [Src0Ty, llvm_float_ty]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
+class AMDGPUCvtScaleF32ToNarrowIntrinsic<LLVMType DstTy, LLVMType Src0Ty, string name>
+  : AMDGPUCvtScaleF32Intrinsic<DstTy, Src0Ty, name>, AMDGPUExponentOnlyScale<1>;
+
 class AMDGPUCvtScaleF32SRIntrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : PureIntrinsic<
   [DstTy], [Src0Ty, llvm_i32_ty, llvm_float_ty]
->, ClangBuiltin<"__builtin_amdgcn_"#name>;
+>, ClangBuiltin<"__builtin_amdgcn_"#name>,
+  AMDGPUExponentOnlyScale<2>;
 
 def int_amdgcn_cvt_scale_pk8_f16_fp8   : AMDGPUCvtScaleIntrinsic<llvm_v8f16_ty,   llvm_v2i32_ty, "cvt_scale_pk8_f16_fp8">;
 def int_amdgcn_cvt_scale_pk8_bf16_fp8  : AMDGPUCvtScaleIntrinsic<llvm_v8bf16_ty,  llvm_v2i32_ty, "cvt_scale_pk8_bf16_fp8">;
@@ -730,27 +740,28 @@ let TargetFeatures = "fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32" in {
 
 class AMDGPUCvtScaleF32ToFP6BF6Intrinsic<LLVMType DstTy, LLVMType Src0Ty, LLVMType Src1Ty, string name> : PureIntrinsic<
   [DstTy], [Src0Ty, Src1Ty, llvm_float_ty]
->, ClangBuiltin<"__builtin_amdgcn_"#name>;
+>, ClangBuiltin<"__builtin_amdgcn_"#name>,
+  AMDGPUExponentOnlyScale<2>;
 
-def int_amdgcn_cvt_scalef32_pk32_fp6_f16  : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f16_ty,  "cvt_scalef32_pk32_fp6_f16">;
-def int_amdgcn_cvt_scalef32_pk32_bf6_f16  : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f16_ty,  "cvt_scalef32_pk32_bf6_f16">;
-def int_amdgcn_cvt_scalef32_pk8_fp8_bf16  : AMDGPUCvtScaleF32Intrinsic<llvm_v2i32_ty, llvm_v8bf16_ty,  "cvt_scalef32_pk8_fp8_bf16">;
-def int_amdgcn_cvt_scalef32_pk8_bf8_bf16  : AMDGPUCvtScaleF32Intrinsic<llvm_v2i32_ty, llvm_v8bf16_ty,  "cvt_scalef32_pk8_bf8_bf16">;
-def int_amdgcn_cvt_scalef32_pk32_fp6_bf16 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32bf16_ty, "cvt_scalef32_pk32_fp6_bf16">;
-def int_amdgcn_cvt_scalef32_pk32_bf6_bf16 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32bf16_ty, "cvt_scalef32_pk32_bf6_bf16">;
-def int_amdgcn_cvt_scalef32_pk8_fp8_f16   : AMDGPUCvtScaleF32Intrinsic<llvm_v2i32_ty, llvm_v8f16_ty,   "cvt_scalef32_pk8_fp8_f16">;
-def int_amdgcn_cvt_scalef32_pk8_bf8_f16   : AMDGPUCvtScaleF32Intrinsic<llvm_v2i32_ty, llvm_v8f16_ty,   "cvt_scalef32_pk8_bf8_f16">;
-def int_amdgcn_cvt_scalef32_pk8_fp8_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_v2i32_ty, llvm_v8f32_ty,   "cvt_scalef32_pk8_fp8_f32">;
-def int_amdgcn_cvt_scalef32_pk8_bf8_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_v2i32_ty, llvm_v8f32_ty,   "cvt_scalef32_pk8_bf8_f32">;
-def int_amdgcn_cvt_scalef32_pk8_fp4_f32   : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f32_ty,   "cvt_scalef32_pk8_fp4_f32">;
-def int_amdgcn_cvt_scalef32_pk8_fp4_f16   : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8f16_ty,   "cvt_scalef32_pk8_fp4_f16">;
-def int_amdgcn_cvt_scalef32_pk8_fp4_bf16  : AMDGPUCvtScaleF32Intrinsic<llvm_i32_ty,   llvm_v8bf16_ty,  "cvt_scalef32_pk8_fp4_bf16">;
-def int_amdgcn_cvt_scalef32_pk16_fp6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_fp6_f32">;
-def int_amdgcn_cvt_scalef32_pk16_bf6_f32  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_bf6_f32">;
-def int_amdgcn_cvt_scalef32_pk16_fp6_f16  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f16_ty,   "cvt_scalef32_pk16_fp6_f16">;
-def int_amdgcn_cvt_scalef32_pk16_bf6_f16  : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16f16_ty,   "cvt_scalef32_pk16_bf6_f16">;
-def int_amdgcn_cvt_scalef32_pk16_fp6_bf16 : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16bf16_ty,  "cvt_scalef32_pk16_fp6_bf16">;
-def int_amdgcn_cvt_scalef32_pk16_bf6_bf16 : AMDGPUCvtScaleF32Intrinsic<llvm_v3i32_ty, llvm_v16bf16_ty,  "cvt_scalef32_pk16_bf6_bf16">;
+def int_amdgcn_cvt_scalef32_pk32_fp6_f16  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v6i32_ty, llvm_v32f16_ty,  "cvt_scalef32_pk32_fp6_f16">;
+def int_amdgcn_cvt_scalef32_pk32_bf6_f16  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v6i32_ty, llvm_v32f16_ty,  "cvt_scalef32_pk32_bf6_f16">;
+def int_amdgcn_cvt_scalef32_pk8_fp8_bf16  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v2i32_ty, llvm_v8bf16_ty,  "cvt_scalef32_pk8_fp8_bf16">;
+def int_amdgcn_cvt_scalef32_pk8_bf8_bf16  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v2i32_ty, llvm_v8bf16_ty,  "cvt_scalef32_pk8_bf8_bf16">;
+def int_amdgcn_cvt_scalef32_pk32_fp6_bf16 : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v6i32_ty, llvm_v32bf16_ty, "cvt_scalef32_pk32_fp6_bf16">;
+def int_amdgcn_cvt_scalef32_pk32_bf6_bf16 : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v6i32_ty, llvm_v32bf16_ty, "cvt_scalef32_pk32_bf6_bf16">;
+def int_amdgcn_cvt_scalef32_pk8_fp8_f16   : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v2i32_ty, llvm_v8f16_ty,   "cvt_scalef32_pk8_fp8_f16">;
+def int_amdgcn_cvt_scalef32_pk8_bf8_f16   : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v2i32_ty, llvm_v8f16_ty,   "cvt_scalef32_pk8_bf8_f16">;
+def int_amdgcn_cvt_scalef32_pk8_fp8_f32   : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v2i32_ty, llvm_v8f32_ty,   "cvt_scalef32_pk8_fp8_f32">;
+def int_amdgcn_cvt_scalef32_pk8_bf8_f32   : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v2i32_ty, llvm_v8f32_ty,   "cvt_scalef32_pk8_bf8_f32">;
+def int_amdgcn_cvt_scalef32_pk8_fp4_f32   : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_i32_ty,   llvm_v8f32_ty,   "cvt_scalef32_pk8_fp4_f32">;
+def int_amdgcn_cvt_scalef32_pk8_fp4_f16   : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_i32_ty,   llvm_v8f16_ty,   "cvt_scalef32_pk8_fp4_f16">;
+def int_amdgcn_cvt_scalef32_pk8_fp4_bf16  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_i32_ty,   llvm_v8bf16_ty,  "cvt_scalef32_pk8_fp4_bf16">;
+def int_amdgcn_cvt_scalef32_pk16_fp6_f32  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_fp6_f32">;
+def int_amdgcn_cvt_scalef32_pk16_bf6_f32  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v3i32_ty, llvm_v16f32_ty,   "cvt_scalef32_pk16_bf6_f32">;
+def int_amdgcn_cvt_scalef32_pk16_fp6_f16  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v3i32_ty, llvm_v16f16_ty,   "cvt_scalef32_pk16_fp6_f16">;
+def int_amdgcn_cvt_scalef32_pk16_bf6_f16  : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v3i32_ty, llvm_v16f16_ty,   "cvt_scalef32_pk16_bf6_f16">;
+def int_amdgcn_cvt_scalef32_pk16_fp6_bf16 : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v3i32_ty, llvm_v16bf16_ty,  "cvt_scalef32_pk16_fp6_bf16">;
+def int_amdgcn_cvt_scalef32_pk16_bf6_bf16 : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v3i32_ty, llvm_v16bf16_ty,  "cvt_scalef32_pk16_bf6_bf16">;
 
 def int_amdgcn_cvt_scalef32_sr_pk32_fp6_f32  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v6i32_ty, llvm_v32f32_ty,  "cvt_scalef32_sr_pk32_fp6_f32">;
 def int_amdgcn_cvt_scalef32_sr_pk32_bf6_f32  : AMDGPUCvtScaleF32SRIntrinsic<llvm_v6i32_ty, llvm_v32f32_ty,  "cvt_scalef32_sr_pk32_bf6_f32">;
@@ -800,7 +811,8 @@ class AMDGPUCvtScaleF16BF16ToFP8BF8TiedInputIntrinsic<LLVMType SrcTy, string nam
    llvm_float_ty, // scale
    llvm_i1_ty],   // dst_lo_hi_sel[true false]
   [ImmArg<ArgIndex<3>>]
->, ClangBuiltin<"__builtin_amdgcn_"#name>;
+>, ClangBuiltin<"__builtin_amdgcn_"#name>,
+  AMDGPUExponentOnlyScale<2>;
 
 class AMDGPUCvtScaleF32ToFP8BF8TiedInputIntrinsic<string name> : PureIntrinsic<
   [llvm_v2i16_ty],
@@ -810,7 +822,8 @@ class AMDGPUCvtScaleF32ToFP8BF8TiedInputIntrinsic<string name> : PureIntrinsic<
    llvm_float_ty, // scale
    llvm_i1_ty],   // dst_lo_hi_sel[true false]
   [ImmArg<ArgIndex<4>>]
->, ClangBuiltin<"__builtin_amdgcn_"#name>;
+>, ClangBuiltin<"__builtin_amdgcn_"#name>,
+  AMDGPUExponentOnlyScale<3>;
 
 class AMDGPUCvtScaleFP8BF8ToF16TiedInputIntrinsic<LLVMType DstTy, string name> :PureIntrinsic<
   [DstTy],
@@ -830,7 +843,8 @@ class AMDGPUCvtScaleF32ToFP4Intrinsic<string name> : PureIntrinsic<
    llvm_float_ty, // scale
    llvm_i32_ty],  // dst_sel_index[0..3]
   [ImmArg<ArgIndex<4>>, Range<ArgIndex<4>, 0, 4>]
->, ClangBuiltin<"__builtin_amdgcn_"#name>;
+>, ClangBuiltin<"__builtin_amdgcn_"#name>,
+  AMDGPUExponentOnlyScale<3>;
 
 class AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<LLVMType SrcTy, string name> : PureIntrinsic<
   [llvm_i32_ty],
@@ -839,7 +853,8 @@ class AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<LLVMType SrcTy, string name> : Pu
    llvm_float_ty, // scale
    llvm_i32_ty],  // dest_sel_index [0..3]
   [ImmArg<ArgIndex<3>>, Range<ArgIndex<3>, 0, 4>]
->, ClangBuiltin<"__builtin_amdgcn_"#name>;
+>, ClangBuiltin<"__builtin_amdgcn_"#name>,
+  AMDGPUExponentOnlyScale<2>;
 
 class AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<LLVMType Src0Ty, string name> : PureIntrinsic<
   [llvm_i32_ty],
@@ -849,7 +864,8 @@ class AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<LLVMType Src0Ty, st
    llvm_float_ty, // scale
    llvm_i32_ty],  // dst_sel_index[0..3]
   [ImmArg<ArgIndex<4>>, Range<ArgIndex<4>, 0, 4>]
->, ClangBuiltin<"__builtin_amdgcn_"#name>;
+>, ClangBuiltin<"__builtin_amdgcn_"#name>,
+  AMDGPUExponentOnlyScale<3>;
 
 class AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<LLVMType DstTy, string name> : PureIntrinsic<
   [DstTy],
@@ -1007,10 +1023,10 @@ def int_amdgcn_bitop3 :
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                         [ImmArg<ArgIndex<3>>]>;
 
-class AMDGPUAVStore : Intrinsic <
+class AMDGPUAVStore<LLVMType ty> : Intrinsic <
   [],
   [llvm_anyptr_ty,         // Pointer to store to (flat or global)
-   llvm_v4i32_ty,          // Data to store
+   ty,                     // Data to store
    llvm_metadata_ty],      // Scope
   [ IntrWriteMem, WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
     NonNull<ArgIndex<0>>, IntrWillReturn, IntrNoCallback, IntrNoFree ],
@@ -1018,8 +1034,8 @@ class AMDGPUAVStore : Intrinsic <
   [SDNPMemOperand, SDNPMayStore]
 >;
 
-class AMDGPUAVLoad : Intrinsic <
-  [llvm_v4i32_ty],
+class AMDGPUAVLoad<LLVMType ty> : Intrinsic <
+  [ty],
   [llvm_anyptr_ty,         // Pointer to load from (flat or global)
    llvm_metadata_ty],      // Scope
   [ IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
@@ -1029,8 +1045,20 @@ class AMDGPUAVLoad : Intrinsic <
 >;
 
 let TargetFeatures = "flat-global-insts" in {
-def int_amdgcn_av_store_b128 : AMDGPUAVStore;
-def int_amdgcn_av_load_b128 : AMDGPUAVLoad;
+def int_amdgcn_av_store_b8 : AMDGPUAVStore<llvm_i8_ty>;
+def int_amdgcn_av_load_b8  : AMDGPUAVLoad<llvm_i8_ty>;
+
+def int_amdgcn_av_store_b16 : AMDGPUAVStore<llvm_i16_ty>;
+def int_amdgcn_av_load_b16  : AMDGPUAVLoad<llvm_i16_ty>;
+
+def int_amdgcn_av_store_b32 : AMDGPUAVStore<llvm_i32_ty>;
+def int_amdgcn_av_load_b32  : AMDGPUAVLoad<llvm_i32_ty>;
+
+def int_amdgcn_av_store_b64 : AMDGPUAVStore<llvm_v2i32_ty>;
+def int_amdgcn_av_load_b64  : AMDGPUAVLoad<llvm_v2i32_ty>;
+
+def int_amdgcn_av_store_b128 : AMDGPUAVStore<llvm_v4i32_ty>;
+def int_amdgcn_av_load_b128  : AMDGPUAVLoad<llvm_v4i32_ty>;
 } // End TargetFeatures = "flat-global-insts"
 
 } // TargetPrefix = "amdgcn"
@@ -1361,6 +1389,7 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
   AMDGPUImageDimIntrinsic Intr = !cast<AMDGPUImageDimIntrinsic>(NAME);
 
   let TargetPrefix = "amdgcn";
+  let TargetFeatures = "image-insts";
 }
 
 // Marker class for intrinsics with a DMask that determines the returned
@@ -1684,7 +1713,7 @@ class AMDGPURawPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntri
   [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
   ImmArg<ArgIndex<3>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_ptr_buffer_load_format : AMDGPURawPtrBufferLoad<llvm_anyfloat_ty>;
+def int_amdgcn_raw_ptr_buffer_load_format : AMDGPURawPtrBufferLoad;
 def int_amdgcn_raw_ptr_buffer_load : AMDGPURawPtrBufferLoad;
 
 class AMDGPURawPtrAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
@@ -3020,16 +3049,21 @@ def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
 // Sets a marker in the stream of async requests. Modelled as InaccessibleMem.
+// The argument is a mask of the async stages to create a mark for.
+// A zero mask marks every stage.
 def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
-                     IntrNoCallback, IntrNoFree]>;
+  Intrinsic<[], [llvm_i32_ty],
+            [ImmArg<ArgIndex<0>>, Range<ArgIndex<0>, 0, 2048>,
+             IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// Waits until the Nth previous marker is completed, if it exists.
+// Waits until the Nth previous marker is completed in each async stage's sequence,
+// if it exists. The second argument is a mask of the stages to wait on.
+// A zero mask waits on every stage.
 def int_amdgcn_wait_asyncmark :
     ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
-    Intrinsic<[], [llvm_i16_ty],
-              [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects,
-               IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+    Intrinsic<[], [llvm_i16_ty, llvm_i32_ty],
+              [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 0, 2048>,
+               IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
@@ -3407,12 +3441,18 @@ def int_amdgcn_ds_bpermute_fi_b32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// A prefetch cache policy sets th (bits 0-2) to anything but the reserved
+// value 7, scope (bits 3-4) and nv (bit 5).
+defvar PrefetchCachePolicyRanges =
+    !foreach(i, !range(8), [!mul(i, 8), !add(!mul(i, 8), 6)]);
+
 def int_amdgcn_flat_prefetch : ClangBuiltin<"__builtin_amdgcn_flat_prefetch">,
   DefaultAttrsIntrinsic<[],
     [llvm_ptr_ty,  // Pointer
      llvm_i32_ty], // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
-     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+     RangeSet<ArgIndex<1>, PrefetchCachePolicyRanges>],
     "",
     [SDNPMemOperand]
   >;
@@ -3422,7 +3462,8 @@ def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch"
     [LLVMQualPointerType<1>, // Pointer
      llvm_i32_ty],           // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
-     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+     RangeSet<ArgIndex<1>, PrefetchCachePolicyRanges>],
     "",
     [SDNPMemOperand]
   >;
@@ -3432,10 +3473,10 @@ def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch"
 //===----------------------------------------------------------------------===//
 
 // v6i32 @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32 <src0> <scale>
-def int_amdgcn_cvt_scalef32_pk32_bf6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_bf6_f32">;
+def int_amdgcn_cvt_scalef32_pk32_bf6_f32 : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_bf6_f32">;
 
 // v6i32 @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32 <src0> <scale>
-def int_amdgcn_cvt_scalef32_pk32_fp6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_fp6_f32">;
+def int_amdgcn_cvt_scalef32_pk32_fp6_f32 : AMDGPUCvtScaleF32ToNarrowIntrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_fp6_f32">;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
@@ -4433,8 +4474,10 @@ class AMDGPUTensorLoadStore:
     "", [SDNPMemOperand]
   >;
 
+let TargetFeatures = "tdm-insts" in {
 def int_amdgcn_tensor_load_to_lds    : ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
 def int_amdgcn_tensor_store_from_lds : ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
+} // End TargetFeatures = "tdm-insts"
 
 class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<

@@ -624,7 +624,6 @@ TEST(VirtualOutputBackendAdaptors, makeFilteringOutputBackend) {
       EXPECT_FALSE(OnDisk.getCurrentUniqueID());
     }
   }
-  SmallString<128> Path;
 }
 
 class AbsolutePathBackend : public ProxyOutputBackend {

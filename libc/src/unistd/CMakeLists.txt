@@ -78,6 +78,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  close_range
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.close_range
+)
+
+add_entrypoint_object(
+  copy_file_range
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.copy_file_range
+)
+
+add_entrypoint_object(
   dup
   ALIAS
   DEPENDS
@@ -162,6 +176,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execlp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execlp
+)
+
+add_entrypoint_object(
   execv
   ALIAS
   DEPENDS
@@ -173,6 +194,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.execve
+)
+
+add_entrypoint_object(
+  execvp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execvp
+)
+
+add_entrypoint_object(
+  execvpe
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execvpe
 )
 
 add_entrypoint_object(
@@ -208,6 +243,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.getegid
+)
+
+add_entrypoint_object(
+  getgroups
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getgroups
 )
 
 add_entrypoint_object(
@@ -250,6 +292,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.getppid
+)
+
+add_entrypoint_object(
+  getresgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getresgid
+)
+
+add_entrypoint_object(
+  getresuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getresuid
 )
 
 add_entrypoint_object(
@@ -358,6 +414,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  posix_close
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.posix_close
+)
+
+add_entrypoint_object(
   pread
   ALIAS
   DEPENDS
@@ -400,6 +463,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setegid
+)
+
+add_entrypoint_object(
+  seteuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.seteuid
+)
+
+add_entrypoint_object(
   setgid
   ALIAS
   DEPENDS
@@ -421,10 +498,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setresgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setresgid
+)
+
+add_entrypoint_object(
   setreuid
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.setreuid
+)
+
+add_entrypoint_object(
+  setresuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setresuid
 )
 
 add_entrypoint_object(

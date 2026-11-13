@@ -15,24 +15,18 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/SymbolTable.h"
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUBase.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.h.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SmallVector.h"
 #include <variant>
 
@@ -79,7 +73,6 @@
 
 namespace mlir {
 namespace acc {
-
 /// Enumeration used to encode the execution mapping on a loop construct.
 /// They refer directly to the OpenACC 3.3 standard:
 /// 2.9.2. gang
@@ -297,7 +290,6 @@ bool isGangWorkerVectorAllOne(ComputeOpT op) {
   return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
          isConstantIntValue(stripIndexCasts(vectorLength), 1);
 }
-
 } // namespace acc
 } // namespace mlir
 
