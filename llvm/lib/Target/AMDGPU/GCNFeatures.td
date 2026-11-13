@@ -1320,6 +1320,12 @@ defm VPermPk16Hazard : AMDGPUSubtargetFeature<"vperm-pk16-hazard",
   /*GenPredicate=*/0
 >;
 
+defm VGPRBankLoadHazard : AMDGPUSubtargetFeature<"vgpr-bank-load-hazard",
+  "Back-to-back DS/VMEM loads writing the same VGPR bank (vN mod 8) can stall "
+  "the destination buffer and break forwarding to later VALU readers",
+  /*GenPredicate=*/0
+>;
+
 defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
   "Hazards when WMMA co-executes with other WMMA/VALU instruction",
   /*GenPredicate=*/0
