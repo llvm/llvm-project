@@ -4417,19 +4417,9 @@ libc_function(
     ],
 )
 
-libc_function(
+alias(
     name = "poll",
-    srcs = ["src/poll/linux/poll.cpp"],
-    hdrs = ["src/poll/poll.h"],
-    deps = [
-        ":types_nfds_t",
-        ":types_struct_pollfd",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:poll",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/poll",
 )
 
 libc_support_library(
