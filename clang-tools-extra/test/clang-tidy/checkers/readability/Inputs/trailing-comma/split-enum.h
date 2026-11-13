@@ -1,0 +1,2 @@
+enum SplitEnum {
+  SplitA,

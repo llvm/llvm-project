@@ -33,6 +33,17 @@ enum E3 {
 };
 enum Empty {};
 
+// A multi-line block comment before '}' is skipped.
+enum MultiLineComment {
+  MLC_A, /* comment that
+            spans multiple lines */
+};
+// CHECK-MESSAGES: :[[@LINE-3]]:8: warning: enum should not have a trailing comma
+// CHECK-FIXES: enum MultiLineComment {
+// CHECK-FIXES-NEXT:   MLC_A /* comment that
+// CHECK-FIXES-NEXT:            spans multiple lines */
+// CHECK-FIXES-NEXT: };
+
 void f() {
   // Multi-line init lists with trailing commas - should warn to remove
   int a[] = {

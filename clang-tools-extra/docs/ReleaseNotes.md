@@ -473,6 +473,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 
+  - Fixed wrong diagnostics and fix-its when an enum's last enumerator is
+    followed by a block comment that spans multiple lines.
+
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
