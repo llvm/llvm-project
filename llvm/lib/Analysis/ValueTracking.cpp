@@ -2179,7 +2179,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
         // See if we can further use a conditional branch into the phi
         // to help us determine the range of the value.
-        if (!Known2.isConstant()) {
+        if (!Known2.isConstant() && IncValue->getType()->isIntegerTy()) {
           CmpPredicate Pred;
           Value *RHSValue = nullptr;
           BasicBlock *TrueSucc, *FalseSucc;
@@ -2193,24 +2193,28 @@ static void computeKnownBitsFromOperator(const Operator *I,
               // If we're using the false successor, invert the predicate.
               if (FalseSucc == CtxPhi->getParent())
                 Pred = CmpInst::getInversePredicate(Pred);
-              // Get the knownbits implied by the incoming phi condition.
-              KnownBits RHSKnown = computeKnownBits(
-                  RHSValue, DemandedElts, RecQ, MaxAnalysisRecursionDepth - 1);
-              if (!RHSKnown.isUnknown()) {
-                ConstantRange RHSRange = ConstantRange::fromKnownBits(
-                    RHSKnown, /*IsSigned=*/ICmpInst::isSigned(Pred));
-                auto CR = ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
-                KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
-                // We can have conflicts here if we are analyzing deadcode (its
-                // impossible for us reach this BB based the icmp).
-                if (KnownUnion.hasConflict()) {
-                  // No reason to continue analyzing in a known dead region, so
-                  // just resetAll and break. This will cause us to also exit
-                  // the outer loop.
-                  Known.resetAll();
-                  break;
+              // ICMP_NE does not usefully bound the range.
+              if (Pred != CmpInst::ICMP_NE) {
+                KnownBits RHSKnown =
+                    computeKnownBits(RHSValue, DemandedElts, RecQ,
+                                     MaxAnalysisRecursionDepth - 1);
+                if (!RHSKnown.isUnknown()) {
+                  ConstantRange RHSRange = ConstantRange::fromKnownBits(
+                      RHSKnown, ICmpInst::isSigned(Pred));
+                  auto CR =
+                      ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+                  KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
+                  // We can have conflicts here if we are analyzing deadcode
+                  // (its impossible for us reach this BB based the icmp).
+                  if (KnownUnion.hasConflict()) {
+                    // No reason to continue analyzing in a known dead region,
+                    // so just resetAll and break. This will cause us to also
+                    // exit the outer loop.
+                    Known.resetAll();
+                    break;
+                  }
+                  Known2 = KnownUnion;
                 }
-                Known2 = KnownUnion;
               }
             }
           }
