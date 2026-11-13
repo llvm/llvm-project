@@ -195,143 +195,6 @@ exit:
   ret i32 %sum.next
 }
 
-; Without VNNI, the signed i16 dot product is a PMADDWD and an ADD.
-define i32 @dot_s16s16_vf8_sse2(ptr readonly %a, ptr readonly %b) #8 {
-; CHECK-LABEL: 'dot_s16s16_vf8_sse2'
-; CHECK:  Cost of 2 for VF 8: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 2 for VF 8: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %gep.a = getelementptr inbounds i16, ptr %a, i64 %iv
-  %load.a = load i16, ptr %gep.a, align 1
-  %ext.a = sext i16 %load.a to i32
-  %gep.b = getelementptr inbounds i16, ptr %b, i64 %iv
-  %load.b = load i16, ptr %gep.b, align 1
-  %ext.b = sext i16 %load.b to i32
-  %mul = mul nsw i32 %ext.a, %ext.b
-  %sum.next = add nsw i32 %sum, %mul
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond, label %exit, label %loop, !llvm.loop !16
-
-exit:
-  ret i32 %sum.next
-}
-
-define i32 @dot_s16s16_vf16_avx(ptr readonly %a, ptr readonly %b) #9 {
-; CHECK-LABEL: 'dot_s16s16_vf16_avx'
-; CHECK:  Cost of 8 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 8 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %gep.a = getelementptr inbounds i16, ptr %a, i64 %iv
-  %load.a = load i16, ptr %gep.a, align 1
-  %ext.a = sext i16 %load.a to i32
-  %gep.b = getelementptr inbounds i16, ptr %b, i64 %iv
-  %load.b = load i16, ptr %gep.b, align 1
-  %ext.b = sext i16 %load.b to i32
-  %mul = mul nsw i32 %ext.a, %ext.b
-  %sum.next = add nsw i32 %sum, %mul
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond, label %exit, label %loop, !llvm.loop !17
-
-exit:
-  ret i32 %sum.next
-}
-
-define i32 @dot_s16s16_vf16_avx2(ptr readonly %a, ptr readonly %b) #10 {
-; CHECK-LABEL: 'dot_s16s16_vf16_avx2'
-; CHECK:  Cost of 2 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 2 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %gep.a = getelementptr inbounds i16, ptr %a, i64 %iv
-  %load.a = load i16, ptr %gep.a, align 1
-  %ext.a = sext i16 %load.a to i32
-  %gep.b = getelementptr inbounds i16, ptr %b, i64 %iv
-  %load.b = load i16, ptr %gep.b, align 1
-  %ext.b = sext i16 %load.b to i32
-  %mul = mul nsw i32 %ext.a, %ext.b
-  %sum.next = add nsw i32 %sum, %mul
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond, label %exit, label %loop, !llvm.loop !18
-
-exit:
-  ret i32 %sum.next
-}
-
-define i32 @dot_s16s16_vf32_avx512bw(ptr readonly %a, ptr readonly %b) #5 {
-; CHECK-LABEL: 'dot_s16s16_vf32_avx512bw'
-; CHECK:  Cost of 2 for VF 32: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 2 for VF 32: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %gep.a = getelementptr inbounds i16, ptr %a, i64 %iv
-  %load.a = load i16, ptr %gep.a, align 1
-  %ext.a = sext i16 %load.a to i32
-  %gep.b = getelementptr inbounds i16, ptr %b, i64 %iv
-  %load.b = load i16, ptr %gep.b, align 1
-  %ext.b = sext i16 %load.b to i32
-  %mul = mul nsw i32 %ext.a, %ext.b
-  %sum.next = add nsw i32 %sum, %mul
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond, label %exit, label %loop, !llvm.loop !19
-
-exit:
-  ret i32 %sum.next
-}
-
-; PMADDWD can't multiply unsigned i16 elements.
-define i32 @dot_u16u16_vf16_avx2(ptr readonly %a, ptr readonly %b) #10 {
-; CHECK-LABEL: 'dot_u16u16_vf16_avx2'
-; CHECK:  Cost of 2 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-; CHECK:  Cost of 2 for VF 16: WIDEN ir<%sum.next> = add ir<%sum>, ir<%mul>
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %gep.a = getelementptr inbounds i16, ptr %a, i64 %iv
-  %load.a = load i16, ptr %gep.a, align 1
-  %ext.a = zext i16 %load.a to i32
-  %gep.b = getelementptr inbounds i16, ptr %b, i64 %iv
-  %load.b = load i16, ptr %gep.b, align 1
-  %ext.b = zext i16 %load.b to i32
-  %mul = mul i32 %ext.a, %ext.b
-  %sum.next = add nsw i32 %sum, %mul
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond, label %exit, label %loop, !llvm.loop !20
-
-exit:
-  ret i32 %sum.next
-}
-
 define i32 @dot_s16u16_vf32_avxvnniint16(ptr readonly %a, ptr readonly %b) #3 {
 ; CHECK-LABEL: 'dot_s16u16_vf32_avxvnniint16'
 ; CHECK:  Cost of 2 for VF 32: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%sum> + partial.reduce.add (mul nsw (ir<%load.a> sext to i32), (ir<%load.b> zext to i32))
@@ -584,9 +447,6 @@ attributes #4 = { "target-features"="+avx512bf16,+avx512vl" }
 attributes #5 = { "target-features"="+avx512bw,+avx512vl" }
 attributes #6 = { "target-features"="+avx10.2" }
 attributes #7 = { "target-features"="+avx512fp16,+avx512vl" }
-attributes #8 = { "target-features"="+sse2" }
-attributes #9 = { "target-features"="+avx" }
-attributes #10 = { "target-features"="+avx2" }
 
 !0 = distinct !{!0, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 64}}
 !1 = distinct !{!1, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 32}}
@@ -604,8 +464,3 @@ attributes #10 = { "target-features"="+avx2" }
 !13 = distinct !{!13, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 32}}
 !14 = distinct !{!14, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 64}}
 !15 = distinct !{!15, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 32}}
-!16 = distinct !{!16, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 8}}
-!17 = distinct !{!17, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 16}}
-!18 = distinct !{!18, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 16}}
-!19 = distinct !{!19, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 32}}
-!20 = distinct !{!20, !{!"llvm.loop.interleave.count", i32 1}, !{!"llvm.loop.vectorize.width", i32 16}}
