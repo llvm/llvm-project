@@ -229,6 +229,18 @@ public:
   unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
+  bool shouldConvertBoolToFPWithSelect(unsigned Opcode, EVT VT) const override {
+    // Avoid an f32 conversion plus rounding for f16/bf16 and a 64-bit
+    // conversion for f64. i1 to f32 is already a single v_cndmask. This also
+    // lets R600 handle i1 to f64 and bf16, which it cannot otherwise lower.
+    EVT EltVT = VT.getScalarType();
+    if (EltVT != MVT::f16 && EltVT != MVT::bf16 && EltVT != MVT::f64)
+      return false;
+    // Type legalization splits i1 vectors into scalar conversions, which are
+    // folded later, unless the element type is promoted to f32.
+    return !VT.isVector() || !isTypeLegal(EltVT);
+  }
+
   FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
                              bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;

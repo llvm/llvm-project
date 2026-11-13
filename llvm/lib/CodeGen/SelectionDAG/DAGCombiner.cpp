@@ -20817,6 +20817,34 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   return Result;
 }
 
+/// Before operation legalization, fold (sint_to_fp x) -> (select x, -1.0, 0.0)
+/// and (uint_to_fp x) -> (select x, 1.0, 0.0) for an i1 or i1 vector x if the
+/// target prefers the select. Both results are exact, so no conversion or
+/// rounding is needed. After type legalization, this also catches the i1
+/// conversions created by splitting vectors.
+static SDValue foldBoolToFPWithSelect(SDNode *N, const SDLoc &DL,
+                                      SelectionDAG &DAG,
+                                      const TargetLowering &TLI,
+                                      bool LegalOperations) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  unsigned Opcode = N->getOpcode();
+  if (LegalOperations || N0.getValueType().getScalarType() != MVT::i1 ||
+      !TLI.shouldConvertBoolToFPWithSelect(Opcode, VT))
+    return SDValue();
+
+  // Leave (int_to_fp (fp_to_int x)) round trips to foldFPToIntToFP, which can
+  // turn them into ftrunc, possibly only once the FP type has been promoted.
+  unsigned FPToIntOpc =
+      Opcode == ISD::SINT_TO_FP ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+  if (N0.getOpcode() == FPToIntOpc && N0.getOperand(0).getValueType() == VT)
+    return SDValue();
+
+  double TrueVal = Opcode == ISD::SINT_TO_FP ? -1.0 : 1.0;
+  return DAG.getSelect(DL, VT, N0, DAG.getConstantFP(TrueVal, DL, VT),
+                       DAG.getConstantFP(0.0, DL, VT));
+}
+
 SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -20862,6 +20890,9 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
+
+  if (SDValue Sel = foldBoolToFPWithSelect(N, DL, DAG, TLI, LegalOperations))
+    return Sel;
 
   // fold (sint_to_fp x) -> (sint_to_fp (trunc x)) when the value of x is known
   // to fit in a narrower type the target can convert from directly.
@@ -20935,6 +20966,9 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
+
+  if (SDValue Sel = foldBoolToFPWithSelect(N, DL, DAG, TLI, LegalOperations))
+    return Sel;
 
   // fold (uint_to_fp x) -> (uint_to_fp (trunc x)) when the value of x is known
   // to fit in a narrower type the target can convert from directly.
