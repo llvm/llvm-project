@@ -2103,11 +2103,7 @@ Register SPIRVInstructionSelector::createPtrSizedIntReg(
     MachineIRBuilder &MIRBuilder) const {
   SPIRVTypeInst IntType =
       GR.getOrCreateSPIRVIntegerType(GR.getPointerSize(), MIRBuilder);
-  Register Reg =
-      MRI->createGenericVirtualRegister(LLT::scalar(GR.getPointerSize()));
-  MRI->setRegClass(Reg, GR.getRegClass(IntType));
-  GR.assignSPIRVTypeToVReg(IntType, Reg, MIRBuilder.getMF());
-  return Reg;
+  return createTempVReg(IntType);
 }
 
 Register
@@ -2131,10 +2127,7 @@ Register SPIRVInstructionSelector::castPtrToPtrToInt(
       GR.getOrCreateSPIRVIntegerType(GR.getPointerSize(), MIRBuilder);
   SPIRVTypeInst PtrType =
       GR.getOrCreateSPIRVPointerType(IntType, MIRBuilder, SC);
-  Register CastedPtr =
-      MRI->createGenericVirtualRegister(LLT::scalar(GR.getPointerSize()));
-  MRI->setRegClass(CastedPtr, GR.getRegClass(PtrType));
-  GR.assignSPIRVTypeToVReg(PtrType, CastedPtr, MIRBuilder.getMF());
+  Register CastedPtr = createTempVReg(PtrType);
   MIRBuilder.buildInstr(SPIRV::OpBitcast)
       .addDef(CastedPtr)
       .addUse(GR.getSPIRVTypeID(PtrType))
@@ -7539,11 +7532,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         // registers without a definition. We will resolve it later, during
         // module analysis stage.
         Register ResTypeReg = GR.getSPIRVTypeID(ResType);
-        MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-        Register FuncVReg =
-            MRI->createGenericVirtualRegister(GR.getRegType(ResType));
-        MRI->setRegClass(FuncVReg, &SPIRV::pIDRegClass);
-        GR.assignSPIRVTypeToVReg(ResType, FuncVReg, *GR.CurMF);
+        Register FuncVReg = createTempVReg(ResType);
         MachineInstrBuilder MIB1 =
             BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpUndef))
                 .addDef(FuncVReg)
