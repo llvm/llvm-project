@@ -11,6 +11,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/macros/config.h"
 #include "utils/MPCWrapper/mpc_inc.h"
 #include "utils/MPFRWrapper/MPCommon.h"
 
@@ -31,6 +32,7 @@ static inline cpp::string str(RoundingMode mode) {
   case RoundingMode::Nearest:
     return "MPFR_RNDN";
   }
+  __builtin_unreachable();
 }
 
 class MPCNumber {

@@ -337,3 +337,4 @@ body:             |
     %1:_(<2 x f16>) = G_INTRINSIC_ROUNDEVEN %0
     $s0 = COPY %1(<2 x f16>)
     RET_ReallyLR implicit $s0
+...

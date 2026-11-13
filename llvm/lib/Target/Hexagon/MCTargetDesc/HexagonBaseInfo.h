@@ -171,6 +171,8 @@ namespace HexagonII {
     FPPos = 48,
     FPMask = 0x1,
 
+    isHMXActivatePos = 49,
+
     // New-Value producer-2 instructions.
     hasNewValuePos2 = 50,
     hasNewValueMask2 = 0x1,
@@ -187,6 +189,8 @@ namespace HexagonII {
     PrefersSlot3Mask = 0x1,
 
     isTmpWritePos = 56,
+
+    isHMXWeightPos = 57,
 
     CVINewPos = 58,
     CVINewMask = 0x1,

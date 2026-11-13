@@ -69,7 +69,6 @@ name:            phi_i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; MIPS32FP32-LABEL: name: phi_i32
   ; MIPS32FP32: bb.0.entry:
@@ -148,7 +147,6 @@ name:            phi_i64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 20, size: 4, alignment: 4, isImmutable: true }
   - { id: 1, offset: 16, size: 4, alignment: 8, isImmutable: true }
@@ -248,7 +246,6 @@ name:            phi_float
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; MIPS32FP32-LABEL: name: phi_float
   ; MIPS32FP32: bb.0.entry:
@@ -327,7 +324,6 @@ name:            phi_double
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 16, size: 4, alignment: 8, isImmutable: true }
 body:             |

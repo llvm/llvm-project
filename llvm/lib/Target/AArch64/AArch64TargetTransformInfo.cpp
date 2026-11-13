@@ -7035,6 +7035,23 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
+    // A non-power-of-2 i1 vector is widened with the identity and reduced as
+    // the promoted integer vector, the i1 min/max lowering does not apply. The
+    // zero identity of or/xor is set by a single masking and.
+    if (ValTy->isIntOrIntVectorTy(1) &&
+        !isPowerOf2_32(ValVTy->getNumElements()) && LT.first == 1) {
+      unsigned PaddedElts = MTy.getVectorNumElements();
+      auto *PaddedTy =
+          FixedVectorType::get(ValVTy->getElementType(), PaddedElts);
+      if (ISD != ISD::AND)
+        return Entry->Cost +
+               getArithmeticInstrCost(Instruction::And, PaddedTy, CostKind);
+      return Entry->Cost +
+             getScalarizationOverhead(
+                 PaddedTy,
+                 APInt::getBitsSetFrom(PaddedElts, ValVTy->getNumElements()),
+                 /*Insert=*/true, /*Extract=*/false, CostKind);
+    }
     if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;
@@ -7061,8 +7078,15 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
+  if (IsUnsigned && Opcode == Instruction::Add &&
+      VecVT.isScalableVectorOf(MVT::i1) && ResVT.isSimple() &&
+      getTLI()->isTypeLegal(VecVT)) {
+    // This is vecreduce.add(ZExt(mask)) which can lower as cntp(mask).
+    return 1;
+  }
+
   if (Opcode == Instruction::Add && VecVT.isSimple() && ResVT.isSimple() &&
-      VecVT.getSizeInBits() >= 64) {
+      !VecVT.isScalableVT() && VecVT.getFixedSizeInBits() >= 64) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases are:
@@ -7155,9 +7179,12 @@ AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
         getCastInstrCost(Instruction::Trunc, LegalVTy, PromotedVTy,
                          TTI::CastContextHint::None, CostKind);
   }
+
   const auto *Entry =
       CostTableLookup(ShuffleTbl, TTI::SK_Splice, PromotedVT.getSimpleVT());
-  assert(Entry && "Illegal Type for Splice");
+  if (!Entry)
+    return InstructionCost::getInvalid();
+
   LegalizationCost += Entry->Cost;
   return LegalizationCost * LT.first;
 }

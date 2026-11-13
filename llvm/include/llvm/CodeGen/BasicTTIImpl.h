@@ -2695,7 +2695,7 @@ public:
         break;
 
       // Scalar types are lowered as a not.
-      if (!LT.second.isVector())
+      if (!LT.second.isVector() || LT.second == MVT::v1i1)
         return LT.first *
                thisT()->getArithmeticInstrCost(
                    Instruction::Xor, RetTy->getScalarType(), CostKind);

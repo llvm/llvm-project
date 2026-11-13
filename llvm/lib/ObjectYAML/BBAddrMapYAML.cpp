@@ -251,6 +251,12 @@ Error decodePayload(
         BaseAddress = Address;
       }
 
+      // Without BB entries, NumBlocks is the only record of the block count.
+      if (FeatureOrErr->OmitBBEntries) {
+        BBRanges.push_back({BaseAddress, NumBlocks, /*BBEntries=*/{}});
+        continue;
+      }
+
       std::vector<BBAddrMapEntry::BBEntry> BBEntries;
       // Read the specified number of BB entries, or until decoding fails.
       for (uint64_t BlockIndex = 0; Cur && BlockIndex < NumBlocks;
