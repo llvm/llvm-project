@@ -51,6 +51,16 @@ struct OperandInfo {
   OperandInfo(std::string D, bool HCD) : Decoder(D), HasCompleteDecoder(HCD) {}
 };
 
+/// Whether an encoding is being parsed for the decoder or for the encoder.
+///
+/// The two consumers need different answers: the decoder derives the encoding
+/// width from the `Size` field, because encodings of different widths are
+/// grouped into differently-typed decoder functions. The encoder only ever
+/// looks at the `Inst` field, so the full width of `Inst` is the encoding
+/// width. Encoder mode also suppresses diagnostics that only make sense when
+/// generating a decoder.
+enum class EncodingUse { Decoder, Encoder };
+
 /// Represents a parsed InstructionEncoding record or a record derived from it.
 class InstructionEncoding {
   /// The Record this encoding originates from.
@@ -58,6 +68,9 @@ class InstructionEncoding {
 
   /// The instruction this encoding is for.
   const CodeGenInstruction *Inst;
+
+  /// Whether this encoding is being parsed for the decoder or the encoder.
+  const EncodingUse Use;
 
   /// The name of this encoding (for debugging purposes).
   std::string Name;
@@ -85,9 +98,16 @@ class InstructionEncoding {
   /// Information about the operands' contribution to this encoding.
   SmallVector<OperandInfo, 16> Operands;
 
+  /// For fixed length encodings, the bits of the `Inst` field in encoding
+  /// order, i.e. reversed for targets that lay out instruction bit patterns as
+  /// [0..n] rather than [n..0]. Kept past construction for
+  /// getOperandInfoByName, which derives the contribution of a single named
+  /// operand.
+  ArrayRef<const Init *> FixedLenInstBits;
+
 public:
   InstructionEncoding(const CodeGenTarget &Target, const Record *EncodingDef,
-                      const CodeGenInstruction *Inst);
+                      const CodeGenInstruction *Inst, EncodingUse Use);
 
   /// Returns the Record this encoding originates from.
   const Record *getRecord() const { return EncodingDef; }
@@ -131,6 +151,17 @@ public:
 
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
+
+  /// Returns information about the segments of this encoding that are
+  /// contributed by the operand named \p OperandName, or std::nullopt if there
+  /// is no encoding record field by that name or it contributes no bits to the
+  /// encoding.
+  ///
+  /// Unlike getOperands(), this does not involve tied operands: only the named
+  /// operand itself is considered. It is intended for consumers that drive
+  /// code generation from the encoding record fields rather than from the
+  /// instruction's operand list.
+  std::optional<OperandInfo> getOperandInfoByName(StringRef OperandName) const;
 
   /// \returns the effective value of the DecoderMethod field. If DecoderMethod
   /// is an explictly set value, return false for second.

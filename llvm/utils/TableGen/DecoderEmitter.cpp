@@ -1440,7 +1440,7 @@ void DecoderEmitter::parseInstructionEncodings() {
           continue;
         }
         unsigned EncodingID = Encodings.size();
-        Encodings.emplace_back(Target, EncodingDef, Inst);
+        Encodings.emplace_back(Target, EncodingDef, Inst, EncodingUse::Decoder);
         EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
       }
       continue; // Ignore encoding specified by Instruction itself.
@@ -1452,7 +1452,7 @@ void DecoderEmitter::parseInstructionEncodings() {
     }
 
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(Target, InstDef, Inst);
+    Encodings.emplace_back(Target, InstDef, Inst, EncodingUse::Decoder);
 
     // This instruction is encoded the same on all HwModes.
     // According to user needs, add it to all, some, or only the default HwMode.
@@ -1475,8 +1475,8 @@ void DecoderEmitter::parseInstructionEncodings() {
       continue;
     }
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(Target, EncodingDef,
-                           &Target.getInstruction(InstDef));
+    Encodings.emplace_back(Target, EncodingDef, &Target.getInstruction(InstDef),
+                           EncodingUse::Decoder);
     EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
   }
 

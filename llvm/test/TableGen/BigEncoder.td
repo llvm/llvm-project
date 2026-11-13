@@ -22,7 +22,7 @@ def foo : Instruction {
     let Inst{7...0} = 0xAA;
     let Inst{14...8} = factor{6...0}; // no offset
     let AsmString = "foo  $factor";
-    field bits<16> SoftFail = 0;
+    field bits<65> SoftFail = 0;
     }
 
 def bar : Instruction {
@@ -32,7 +32,7 @@ def bar : Instruction {
     let Inst{7...0} = 0xBB;
     let Inst{15...8} = factor{10...3}; // offset by 3
     let AsmString = "bar  $factor";
-    field bits<16> SoftFail = 0;
+    field bits<65> SoftFail = 0;
     }
 
 def biz : Instruction {
@@ -42,7 +42,7 @@ def biz : Instruction {
     let Inst{7...0} = 0xCC;
     let Inst{11...8,15...12} = factor{10...3}; // offset by 3, multipart
     let AsmString = "biz  $factor";
-    field bits<16> SoftFail = 0;
+    field bits<65> SoftFail = 0;
     }
 
 }

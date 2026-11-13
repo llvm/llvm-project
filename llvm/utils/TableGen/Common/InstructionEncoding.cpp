@@ -87,10 +87,15 @@ void InstructionEncoding::parseVarLenEncoding(const VarLenInst &VLI) {
 
 void InstructionEncoding::parseFixedLenEncoding(
     ArrayRef<const Init *> RecordInstBits) {
-  // For fixed length instructions, sometimes the `Inst` field specifies more
-  // bits than the actual size of the instruction, which is specified in `Size`.
-  // In such cases, we do some basic validation and drop the upper bits.
-  unsigned BitWidth = EncodingDef->getValueAsInt("Size") * 8;
+  // The encoder only looks at `Inst`, so its width is the encoding width.
+  // The decoder derives the width from `Size`: encodings of different widths
+  // are grouped into differently-typed decoder functions, and for fixed length
+  // instructions the `Inst` field sometimes specifies more bits than the actual
+  // size of the instruction. In that case, the surplus bits are validated to
+  // carry no encoding and dropped.
+  unsigned BitWidth = Use == EncodingUse::Encoder
+                          ? RecordInstBits.size()
+                          : EncodingDef->getValueAsInt("Size") * 8;
   unsigned InstNumBits = RecordInstBits.size();
 
   // Returns true if all bits in `Bits` are zero or unset.
@@ -263,7 +268,9 @@ static void addOneOperandFields(const Record *EncodingDef,
   }
   if (const auto *OpBits = dyn_cast<BitsInit>(OpEncodingField->getValue())) {
     if (OpBits->getNumBits() == 0) {
-      if (OpInfo.Decoder.empty()) {
+      // OpRec is null when getOperandInfoByName looks up a single name, which
+      // has no operand record of its own and does not run this diagnostic.
+      if (OpRec && OpInfo.Decoder.empty()) {
         PrintError(EncodingDef->getLoc(), "operand '" + OpName + "' of type '" +
                                               OpRec->getName() +
                                               "' must have a decoder method");
@@ -397,10 +404,31 @@ void InstructionEncoding::parseFixedLenOperands(ArrayRef<const Init *> Bits) {
   }
 }
 
+std::optional<OperandInfo>
+InstructionEncoding::getOperandInfoByName(StringRef OperandName) const {
+  // Variable length encodings do not retain the raw bits, and this accessor is
+  // only used by the encoder, which does not handle them.
+  assert(!FixedLenInstBits.empty() && "only fixed length encodings supported");
+
+  // No decoder method: the caller only consumes Fields. OpRec is likewise
+  // unused outside of the decoder-only diagnostics inside addOneOperandFields.
+  OperandInfo OpInfo("", /*HCD=*/true);
+  std::map<StringRef, StringRef> TiedNames;
+  addOneOperandFields(EncodingDef, FixedLenInstBits, TiedNames,
+                      /*OpRec=*/nullptr, OperandName, OpInfo);
+
+  // Covers both "no such name" and "the name contributes no bits to Inst";
+  // the caller treats both as "nothing to emit".
+  if (OpInfo.HasNoEncoding)
+    return std::nullopt;
+  return OpInfo;
+}
+
 InstructionEncoding::InstructionEncoding(const CodeGenTarget &Target,
                                          const Record *EncodingDef,
-                                         const CodeGenInstruction *Inst)
-    : EncodingDef(EncodingDef), Inst(Inst) {
+                                         const CodeGenInstruction *Inst,
+                                         EncodingUse Use)
+    : EncodingDef(EncodingDef), Inst(Inst), Use(Use) {
   const Record *InstDef = Inst->TheDef;
 
   // Give this encoding a name.
@@ -417,15 +445,18 @@ InstructionEncoding::InstructionEncoding(const CodeGenTarget &Target,
   if (const auto *DI = dyn_cast<DagInit>(InstField->getValue())) {
     VarLenInst VLI(DI, InstField);
     parseVarLenEncoding(VLI);
-    // If the encoding has a custom decoder, don't bother parsing the operands.
-    if (DecoderMethod.empty())
+    // Operands only matter to the decoder, and only when it generates the
+    // decoder itself: a custom decoder method replaces the generated one.
+    if (Use == EncodingUse::Decoder && DecoderMethod.empty())
       parseVarLenOperands(VLI);
   } else {
     ArrayRef<const Init *> InstBits =
         Target.getInstructionEncodingBits(EncodingDef);
+    FixedLenInstBits = InstBits;
     parseFixedLenEncoding(InstBits);
-    // If the encoding has a custom decoder, don't bother parsing the operands.
-    if (DecoderMethod.empty())
+    // Operands only matter to the decoder, and only when it generates the
+    // decoder itself: a custom decoder method replaces the generated one.
+    if (Use == EncodingUse::Decoder && DecoderMethod.empty())
       parseFixedLenOperands(InstBits);
   }
 

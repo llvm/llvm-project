@@ -26,6 +26,7 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/InfoByHwMode.h"
+#include "Common/InstructionEncoding.h"
 #include "Common/VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -74,16 +75,18 @@ public:
   void run(raw_ostream &O);
 
 private:
-  int getVariableBit(const std::string &VarName,
-                     ArrayRef<const Init *> InstBits, int Bit);
+  const InstructionEncoding &addEncoding(const Record *EncodingDef,
+                                         const CodeGenInstruction *CGI);
+  const InstructionEncoding &getEncoding(const Record *EncodingDef,
+                                         const CodeGenInstruction *CGI);
   std::pair<std::string, std::string> getInstructionCases(const Record *R);
   void addInstructionCasesForEncoding(const Record *R,
                                       const Record *EncodingDef,
                                       std::string &Case,
                                       std::string &BitOffsetCase);
-  bool addCodeToMergeInOperand(const Record *R, ArrayRef<const Init *> InstBits,
-                               const std::string &VarName, std::string &Case,
-                               std::string &BitOffsetCase);
+  bool addCodeToMergeInOperand(const InstructionEncoding &Encoding,
+                               const std::string &OperandName,
+                               std::string &Case, std::string &BitOffsetCase);
 
   APInt getInstructionBaseValue(const CodeGenInstruction *CGI, unsigned HwMode);
   void buildBaseEncodingPool(
@@ -93,6 +96,13 @@ private:
   void emitInstructionBaseValues(
       raw_ostream &O, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
       unsigned HwMode = DefaultMode);
+  /// Parsed encodings, keyed on the encoding record and the instruction it
+  /// belongs to. Both are needed: an InstructionEncoding records its
+  /// CodeGenInstruction and parses the operands from it, so instructions
+  /// sharing an encoding record must not share a parsed encoding.
+  DenseMap<std::pair<const Record *, const CodeGenInstruction *>,
+           std::unique_ptr<InstructionEncoding>>
+      EncodingCache;
   BaseEncodingPool BaseEncodings;
   unsigned BitWidth = 0u;
   bool UseAPInt = false;
@@ -100,57 +110,51 @@ private:
 
 } // end anonymous namespace
 
-// If the VarBitInit at position 'bit' matches the specified variable then
-// return the variable bit position.  Otherwise return -1.
-int CodeEmitterGen::getVariableBit(const std::string &VarName,
-                                   ArrayRef<const Init *> InstBits, int Bit) {
-  if (const VarBitInit *VBI = dyn_cast<VarBitInit>(InstBits[Bit])) {
-    if (const VarInit *VI = dyn_cast<VarInit>(VBI->getBitVar()))
-      if (VI->getName() == VarName)
-        return VBI->getBitNum();
-  } else if (const VarInit *VI = dyn_cast<VarInit>(InstBits[Bit])) {
-    if (VI->getName() == VarName)
-      return 0;
-  }
+const InstructionEncoding &
+CodeEmitterGen::addEncoding(const Record *EncodingDef,
+                            const CodeGenInstruction *CGI) {
+  auto [It, Inserted] =
+      EncodingCache.try_emplace(std::make_pair(EncodingDef, CGI));
+  // Two HwModes may legitimately select the same encoding record, in which
+  // case both share the one parsed encoding.
+  if (Inserted)
+    It->second = std::make_unique<InstructionEncoding>(Target, EncodingDef, CGI,
+                                                       EncodingUse::Encoder);
+  return *It->second;
+}
 
-  return -1;
+const InstructionEncoding &
+CodeEmitterGen::getEncoding(const Record *EncodingDef,
+                            const CodeGenInstruction *CGI) {
+  auto It = EncodingCache.find(std::make_pair(EncodingDef, CGI));
+  assert(It != EncodingCache.end() && "encoding not parsed by run()");
+  return *It->second;
 }
 
 // Returns true if it succeeds, false if an error.
-bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
-                                             ArrayRef<const Init *> InstBits,
-                                             const std::string &VarName,
-                                             std::string &Case,
-                                             std::string &BitOffsetCase) {
-  const CodeGenInstruction &CGI = Target.getInstruction(R);
+bool CodeEmitterGen::addCodeToMergeInOperand(
+    const InstructionEncoding &Encoding, const std::string &OperandName,
+    std::string &Case, std::string &BitOffsetCase) {
+  const CodeGenInstruction &CGI = *Encoding.getInstruction();
+  const Record *R = CGI.TheDef;
 
-  // Determine if VarName actually contributes to the Inst encoding.
-  int Bit = InstBits.size() - 1;
-
-  // Scan for a bit that this contributed to.
-  for (; Bit >= 0;) {
-    if (getVariableBit(VarName, InstBits, Bit) != -1)
-      break;
-
-    --Bit;
-  }
-
-  // If we found no bits, ignore this value, otherwise emit the call to get the
-  // operand encoding.
-  if (Bit < 0)
+  // If the operand contributes no bits to the encoding, ignore it.
+  std::optional<OperandInfo> OpInfo =
+      Encoding.getOperandInfoByName(OperandName);
+  if (!OpInfo || OpInfo->Fields.empty())
     return true;
 
   // If the operand matches by name, reference according to that
   // operand number. Non-matching operands are assumed to be in
   // order.
   unsigned OpIdx;
-  if (auto SubOp = CGI.Operands.findSubOperandAlias(VarName)) {
+  if (auto SubOp = CGI.Operands.findSubOperandAlias(OperandName)) {
     OpIdx = CGI.Operands[SubOp->first].MIOperandNo + SubOp->second;
-  } else if (auto MayBeOpIdx = CGI.Operands.findOperandNamed(VarName)) {
+  } else if (auto MayBeOpIdx = CGI.Operands.findOperandNamed(OperandName)) {
     // Get the machine operand number for the indicated operand.
     OpIdx = CGI.Operands[*MayBeOpIdx].MIOperandNo;
   } else {
-    PrintError(R, Twine("No operand named ") + VarName + " in record " +
+    PrintError(R, Twine("No operand named ") + OperandName + " in record " +
                       R->getName());
     return false;
   }
@@ -162,7 +166,7 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   raw_string_ostream OS(Case);
   indent Indent(6);
 
-  OS << Indent << "// op: " << VarName << '\n';
+  OS << Indent << "// op: " << OperandName << '\n';
 
   if (UseAPInt)
     OS << Indent << "op.clearAllBits();\n";
@@ -183,56 +187,33 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
          << "), Fixups, STI);\n";
   }
 
-  unsigned BitOffset = -1;
-  for (; Bit >= 0;) {
-    int VarBit = getVariableBit(VarName, InstBits, Bit);
-
-    // If this bit isn't from a variable, skip it.
-    if (VarBit == -1) {
-      --Bit;
-      continue;
-    }
-
-    // Figure out the consecutive range of bits covered by this operand, in
-    // order to generate better encoding code.
-    int BeginInstBit = Bit;
-    int BeginVarBit = VarBit;
-    int N = 1;
-    for (--Bit; Bit >= 0;) {
-      VarBit = getVariableBit(VarName, InstBits, Bit);
-      if (VarBit == -1 || VarBit != (BeginVarBit - N))
-        break;
-      ++N;
-      --Bit;
-    }
-
-    unsigned LoBit = BeginVarBit - N + 1;
-    unsigned LoInstBit = BeginInstBit - N + 1;
-    BitOffset = LoInstBit;
+  // Segments are ordered by ascending Base. Emit them in reverse so that the
+  // resulting statements match the historical highest-run-first order.
+  for (const EncodingField &F : llvm::reverse(OpInfo->Fields)) {
     if (UseAPInt) {
-      if (N > 64)
-        OS << Indent << "Value.insertBits(op.extractBits(" << N << ", " << LoBit
-           << "), " << LoInstBit << ");\n";
+      if (F.Width > 64)
+        OS << Indent << "Value.insertBits(op.extractBits(" << F.Width << ", "
+           << F.Offset << "), " << F.Base << ");\n";
       else
-        OS << Indent << "Value.insertBits(op.extractBitsAsZExtValue(" << N
-           << ", " << LoBit << "), " << LoInstBit << ", " << N << ");\n";
+        OS << Indent << "Value.insertBits(op.extractBitsAsZExtValue(" << F.Width
+           << ", " << F.Offset << "), " << F.Base << ", " << F.Width << ");\n";
     } else {
-      uint64_t OpMask = maskTrailingOnes<uint64_t>(N) << LoBit;
+      uint64_t OpMask = maskTrailingOnes<uint64_t>(F.Width) << F.Offset;
       OS << Indent << "Value |= (op & " << format_hex(OpMask, 0) << ')';
-      int OpShift = BeginInstBit - BeginVarBit;
-      if (OpShift > 0)
-        OS << " << " << OpShift;
-      else if (OpShift < 0)
-        OS << " >> " << -OpShift;
+      if (F.Base > F.Offset)
+        OS << " << " << (F.Base - F.Offset);
+      else if (F.Base < F.Offset)
+        OS << " >> " << (F.Offset - F.Base);
       OS << ";\n";
     }
   }
 
-  if (BitOffset != (unsigned)-1) {
-    BitOffsetCase += "      case " + utostr(OpIdx) + ":\n";
-    BitOffsetCase += "        // op: " + VarName + "\n";
-    BitOffsetCase += "        return " + utostr(BitOffset) + ";\n";
-  }
+  // The lowest bit of the operand is the one with the smallest Base, which is
+  // the first segment in ascending order.
+  BitOffsetCase += "      case " + utostr(OpIdx) + ":\n";
+  BitOffsetCase += "        // op: " + OperandName + "\n";
+  BitOffsetCase +=
+      "        return " + utostr(OpInfo->Fields.front().Base) + ";\n";
 
   return true;
 }
@@ -340,8 +321,19 @@ CodeEmitterGen::getInstructionCases(const Record *R) {
 void CodeEmitterGen::addInstructionCasesForEncoding(
     const Record *R, const Record *EncodingDef, std::string &Case,
     std::string &BitOffsetCase) {
-  ArrayRef<const Init *> InstBits =
-      Target.getInstructionEncodingBits(EncodingDef);
+  // TODO: Iterating the encoding's operands (Encoding.getOperands()) instead
+  // of the encoding record's field declarations would remove the need for
+  // getOperandInfoByName and for the operand name lookup in
+  // addCodeToMergeInOperand, if OperandInfo also carried the machine operand
+  // number and the encoder method name. Two things come first:
+  //  - Tied operands are not de-duplicated in parseFixedLenOperands, which
+  //    populates both halves of a tie with the same segments, so iterating
+  //    operands would emit the operand fetch (and any fixup) twice.
+  //  - The "no operand named X" diagnostic in addCodeToMergeInOperand is
+  //    reported once per encoding record declaration; an operand-order loop
+  //    would no longer see a declaration that names no operand.
+  const InstructionEncoding &Encoding =
+      getEncoding(EncodingDef, &Target.getInstruction(R));
 
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.
@@ -355,7 +347,7 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
     if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
       continue;
 
-    Success &= addCodeToMergeInOperand(R, InstBits, RV.getName().str(), Case,
+    Success &= addCodeToMergeInOperand(Encoding, RV.getName().str(), Case,
                                        BitOffsetCase);
   }
   // Avoid empty switches.
@@ -399,14 +391,11 @@ APInt CodeEmitterGen::getInstructionBaseValue(const CodeGenInstruction *CGI,
     EncodingDef = EBM.get(HwMode);
   }
 
-  ArrayRef<const Init *> InstBits =
-      Target.getInstructionEncodingBits(EncodingDef);
-  APInt Value(BitWidth, 0);
-  for (auto [I, Bit] : enumerate(InstBits)) {
-    if (const auto *B = dyn_cast<BitInit>(Bit); B && B->getValue())
-      Value.setBit(I);
-  }
-  return Value;
+  // The encoder's width is the width of `Inst`, so the known bits of the
+  // encoding are already the right width.
+  const InstructionEncoding &Encoding = getEncoding(EncodingDef, CGI);
+  assert(Encoding.getBitWidth() <= BitWidth);
+  return Encoding.getInstBits().One.zextOrTrunc(BitWidth);
 }
 
 void CodeEmitterGen::buildBaseEncodingPool(
@@ -513,14 +502,12 @@ void CodeEmitterGen::run(raw_ostream &O) {
     if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
       EncodingInfoByHwMode EBM(RV, CGH);
       for (const auto &[Key, Value] : EBM) {
-        BitWidth = std::max<unsigned>(
-            BitWidth, Target.getInstructionEncodingBits(Value).size());
+        BitWidth = std::max(BitWidth, addEncoding(Value, CGI).getBitWidth());
         HwModes.insert(Key);
       }
       continue;
     }
-    BitWidth = std::max<unsigned>(BitWidth,
-                                  Target.getInstructionEncodingBits(R).size());
+    BitWidth = std::max(BitWidth, addEncoding(R, CGI).getBitWidth());
   }
   UseAPInt = BitWidth > 64;
   if (UseAPInt)
