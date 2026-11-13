@@ -17,7 +17,7 @@ def LunarlakePModel : SchedMachineModel {
   let IssueWidth = 8;  
   // Max micro-ops that can be buffered. 
   // Based on size of ROB
-  let MicroOpBufferSize = 792;
+  let MicroOpBufferSize = 576;
   // INT LOAD takes 4 cycles
   let LoadLatency = 4;
   let MispredictPenalty = 14;
@@ -74,10 +74,10 @@ def LNLPPort01_03_05        : ProcResGroup<[LNLPPort01, LNLPPort03, LNLPPort05]>
 def LNLPPort20_21_22        : ProcResGroup<[LNLPPort20, LNLPPort21, LNLPPort22]>;
 def LNLPPort25_26_27        : ProcResGroup<[LNLPPort25, LNLPPort26, LNLPPort27]>;
 
-// INT EU has 112 reservation stations.
+// INT EU has 120 reservation stations.
 def LNLPPort00_01_02_03_04_05 : ProcResGroup<[LNLPPort00, LNLPPort01, LNLPPort02,
                                              LNLPPort03, LNLPPort04, LNLPPort05]>{ 
-  let BufferSize = 110;  // Reduced from 128 in GLC
+  let BufferSize = 120;
 }
 
 // VEC EU has 180 reservation stations.
@@ -986,10 +986,6 @@ def : InstRW<[LNLPWriteResGroupX7], (instregex "^A(D|N)D8mi(8?)$",
 def : InstRW<[LNLPWriteResGroupX7, ReadAfterLd, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault], (instregex "^A(D|N)D8mr$",
                                                                                                                             "^(X?)OR8mr$")>;
 def : InstRW<[LNLPWriteResGroupX7, ReadAfterLd, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault], (instrs SUB8mr)>;
-def LNLPWriteResGroupX8 : SchedWriteRes<[LNLPPort01_03_05]> {
-  let Latency = 3;
-}
-def : InstRW<[LNLPWriteResGroupX8], (instregex "^(V?)(ADD|SUB)SSrr((_Int)?)$")>;
 def LNLPWriteResGroupX9 : SchedWriteRes<[LNLPPort20_21_22, LNLPPort01_03_05]> {
   let Latency = 10;
   let NumMicroOps = 2;
@@ -1614,7 +1610,7 @@ def : InstRW<[LNLPWriteResGroupX158], (instrs MUL_FST0r)>;
 def LNLPWriteResGroupX155 : SchedWriteRes<[LNLPPort01_03_05]>;
 def : InstRW<[LNLPWriteResGroupX155], (instregex "^MOVSX(16|32|64)rr(8|16|32)$")>;
 def : InstRW<[LNLPWriteResGroupX155], (instrs MOVSX32rr8_NOREX)>;
-def LNLPWriteResGroupX173 : SchedWriteRes<[LNLPPort01_03_05]>;
+def LNLPWriteResGroupX173 : SchedWriteRes<[LNLPVPort02_03]>;
 def : InstRW<[LNLPWriteResGroupX173], (instregex "^(V?)PALIGNRrri$",
                                                 "^VPBROADCAST(B|D|Q|W)rr$")>;
 def : InstRW<[LNLPWriteResGroupX173], (instrs VPALIGNRYrri)>;
