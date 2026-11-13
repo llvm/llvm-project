@@ -4533,6 +4533,473 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb8(ptr addrspace(1) %out, <2 x 
   ret void
 }
 
+define i32 @dpp_zero_full_masks(i32 %old) {
+; GFX8-LABEL: dpp_zero_full_masks:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_full_masks:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_full_masks:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_full_masks:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_full_masks:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call i32 @llvm.amdgcn.update.dpp.i32(
+      i32 %old, i32 0, i32 273, i32 15, i32 15, i1 true)
+  ret i32 %result
+}
+
+define i32 @dpp_zero_old_and_source() {
+; GFX8-LABEL: dpp_zero_old_and_source:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_old_and_source:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_old_and_source:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_old_and_source:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_old_and_source:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call i32 @llvm.amdgcn.update.dpp.i32(
+      i32 0, i32 0, i32 273, i32 7, i32 7, i1 false)
+  ret i32 %result
+}
+
+define i32 @dpp_zero_partial_rows(i32 %old) {
+; GFX8-LABEL: dpp_zero_partial_rows:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    s_nop 1
+; GFX8-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0x7 bank_mask:0xf bound_ctrl:1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_partial_rows:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0x7 bank_mask:0xf bound_ctrl:1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_partial_rows:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0x7 bank_mask:0xf bound_ctrl:1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_partial_rows:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0x7 bank_mask:0xf bound_ctrl:1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_partial_rows:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0x7 bank_mask:0xf bound_ctrl:1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call i32 @llvm.amdgcn.update.dpp.i32(
+      i32 %old, i32 0, i32 273, i32 7, i32 15, i1 true)
+  ret i32 %result
+}
+
+define i32 @dpp_zero_partial_banks(i32 %old) {
+; GFX8-LABEL: dpp_zero_partial_banks:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    s_nop 1
+; GFX8-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0x7 bound_ctrl:1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_partial_banks:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0x7 bound_ctrl:1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_partial_banks:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0x7 bound_ctrl:1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_partial_banks:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0x7 bound_ctrl:1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_partial_banks:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0x7 bound_ctrl:1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call i32 @llvm.amdgcn.update.dpp.i32(
+      i32 %old, i32 0, i32 273, i32 15, i32 7, i1 true)
+  ret i32 %result
+}
+
+define i32 @dpp_zero_without_zero_fill(i32 %old) {
+; GFX8-LABEL: dpp_zero_without_zero_fill:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    s_nop 1
+; GFX8-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_without_zero_fill:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_without_zero_fill:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_without_zero_fill:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_without_zero_fill:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call i32 @llvm.amdgcn.update.dpp.i32(
+      i32 %old, i32 0, i32 273, i32 15, i32 15, i1 false)
+  ret i32 %result
+}
+
+define i32 @dpp_zero_old_unknown_source(i32 %src) {
+; GFX8-OPT-LABEL: dpp_zero_old_unknown_source:
+; GFX8-OPT:       ; %bb.0:
+; GFX8-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-OPT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-OPT-NEXT:    s_nop 1
+; GFX8-OPT-NEXT:    v_mov_b32_dpp v1, v0 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX8-OPT-NEXT:    v_mov_b32_e32 v0, v1
+; GFX8-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-NOOPT-LABEL: dpp_zero_old_unknown_source:
+; GFX8-NOOPT:       ; %bb.0:
+; GFX8-NOOPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, v0
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NOOPT-NEXT:    s_nop 1
+; GFX8-NOOPT-NEXT:    v_mov_b32_dpp v0, v1 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX8-NOOPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_old_unknown_source:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_dpp v1, v0 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX10-NEXT:    v_mov_b32_e32 v0, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_old_unknown_source:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_dpp v1, v0 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_old_unknown_source:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_mov_b32_dpp v1, v0 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_old_unknown_source:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_mov_b32_dpp v1, v0 row_shr:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call i32 @llvm.amdgcn.update.dpp.i32(
+      i32 0, i32 %src, i32 273, i32 15, i32 15, i1 true)
+  ret i32 %result
+}
+
+define i64 @dpp_zero_full_masks_i64(i64 %old) {
+; GFX8-OPT-LABEL: dpp_zero_full_masks_i64:
+; GFX8-OPT:       ; %bb.0:
+; GFX8-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-OPT-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-OPT-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-NOOPT-LABEL: dpp_zero_full_masks_i64:
+; GFX8-NOOPT:       ; %bb.0:
+; GFX8-NOOPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NOOPT-NEXT:    s_mov_b32 s4, 32
+; GFX8-NOOPT-NEXT:    s_mov_b64 s[6:7], 0
+; GFX8-NOOPT-NEXT:    s_lshr_b64 s[4:5], s[6:7], s4
+; GFX8-NOOPT-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; GFX8-NOOPT-NEXT:    s_mov_b32 s5, s6
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v0, s5
+; GFX8-NOOPT-NEXT:    v_mov_b32_e32 v1, s4
+; GFX8-NOOPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_full_masks_i64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_full_masks_i64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_full_masks_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_full_masks_i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call i64 @llvm.amdgcn.update.dpp.i64(
+      i64 %old, i64 0, i32 273, i32 15, i32 15, i1 true)
+  ret i64 %result
+}
+
+define float @dpp_zero_full_masks_f32(float %old) {
+; GFX8-LABEL: dpp_zero_full_masks_f32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_full_masks_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_full_masks_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_full_masks_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_full_masks_f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call float @llvm.amdgcn.update.dpp.f32(
+      float %old, float 0.0, i32 273, i32 15, i32 15, i1 true)
+  ret float %result
+}
+
+define <2 x i16> @dpp_zero_full_masks_v2i16(<2 x i16> %old) {
+; GFX8-LABEL: dpp_zero_full_masks_v2i16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_full_masks_v2i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_full_masks_v2i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_full_masks_v2i16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_full_masks_v2i16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call <2 x i16> @llvm.amdgcn.update.dpp.v2i16(
+      <2 x i16> %old, <2 x i16> zeroinitializer, i32 273, i32 15, i32 15, i1 true)
+  ret <2 x i16> %result
+}
+
+define <2 x half> @dpp_zero_old_and_source_v2f16() {
+; GFX8-LABEL: dpp_zero_old_and_source_v2f16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: dpp_zero_old_and_source_v2f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: dpp_zero_old_and_source_v2f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: dpp_zero_old_and_source_v2f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: dpp_zero_old_and_source_v2f16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %result = call <2 x half> @llvm.amdgcn.update.dpp.v2f16(
+      <2 x half> zeroinitializer, <2 x half> zeroinitializer, i32 273, i32 7, i32 7, i1 false)
+  ret <2 x half> %result
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare void @llvm.amdgcn.s.barrier()
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #0
@@ -4545,4 +5012,3 @@ attributes #0 = { nounwind readnone convergent }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
 ; GCN-OPT: {{.*}}
-; GFX8: {{.*}}
