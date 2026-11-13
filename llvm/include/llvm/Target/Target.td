@@ -950,12 +950,12 @@ class AsmOperandClass {
   /// default to "isFoo", where Foo is the AsmOperandClass name. The method
   /// signature should be:
   ///   bool isFoo() const;
-  /// or, when PredicatePassSubtarget is set:
+  /// or, when PredicateUsesSubtarget is set:
   ///   bool isFoo(const MCSubtargetInfo &STI) const;
   string PredicateMethod = ?;
 
   /// Set to true if PredicateMethod takes `const MCSubtargetInfo &STI`.
-  bit PredicatePassSubtarget = false;
+  bit PredicateUsesSubtarget = false;
 
   /// The name of the method on the target specific operand to call to add the
   /// target specific operand to an MCInst. If not set, this will default to

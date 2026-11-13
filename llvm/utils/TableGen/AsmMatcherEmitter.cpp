@@ -201,7 +201,7 @@ struct ClassInfo {
   std::string PredicateMethod;
 
   /// Whether PredicateMethod takes `const MCSubtargetInfo &STI`.
-  bool PredicatePassSubtarget = false;
+  bool PredicateUsesSubtarget = false;
 
   /// RenderMethod - The name of the operand method to add this operand to an
   /// MCInst; this is not valid for Token or register kinds.
@@ -1546,7 +1546,7 @@ void AsmMatcherInfo::buildOperandClasses() {
       assert(isa<UnsetInit>(PMName) && "Unexpected PredicateMethod field!");
       CI->PredicateMethod = "is" + CI->ClassName;
     }
-    CI->PredicatePassSubtarget = Rec->getValueAsBit("PredicatePassSubtarget");
+    CI->PredicateUsesSubtarget = Rec->getValueAsBit("PredicateUsesSubtarget");
 
     // Get or construct the render method name.
     const Init *RMName = Rec->getValueInit("RenderMethod");
@@ -2846,7 +2846,7 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
 
     OS << "  case " << CI.Name << ": {\n";
     OS << "    DiagnosticPredicate DP(Operand." << CI.PredicateMethod << '('
-       << (CI.PredicatePassSubtarget ? "STI" : "") << "));\n";
+       << (CI.PredicateUsesSubtarget ? "STI" : "") << "));\n";
     OS << "    if (DP.isMatch())\n";
     OS << "      return MCTargetAsmParser::Match_Success;\n";
     if (!CI.DiagnosticType.empty()) {

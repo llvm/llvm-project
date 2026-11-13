@@ -20,12 +20,12 @@ def PlainImmAsmOp : AsmOperandClass {
 def SubtargetImmAsmOp : AsmOperandClass {
   let Name = "SubtargetImm";
   let PredicateMethod = "isSubtargetValidImm";
-  let PredicatePassSubtarget = true;
+  let PredicateUsesSubtarget = true;
 }
 
 def DefaultSubtargetAsmOp : AsmOperandClass {
   let Name = "DefaultSubtargetOp";
-  let PredicatePassSubtarget = true;
+  let PredicateUsesSubtarget = true;
 }
 
 def PlainImm : Operand<i32> {
