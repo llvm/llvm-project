@@ -107,6 +107,16 @@ public:
     for (auto &I : FI.arguments())
       I.info = classifyArgumentType(I.type, NumRegs);
   }
+
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override {
+    // Variadic arguments are passed directly on the stack, without padding
+    // or alignment.
+    CharUnits SlotSize = CharUnits::One();
+    auto TInfo = getContext().getTypeInfoInChars(Ty);
+    return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*IsIndirect=*/false, TInfo,
+                            SlotSize, /*AllowHigherAlign=*/false, Slot);
+  }
 };
 
 class AVRTargetCodeGenInfo : public TargetCodeGenInfo {
