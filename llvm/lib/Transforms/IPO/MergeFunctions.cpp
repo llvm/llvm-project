@@ -428,8 +428,7 @@ static bool isEligibleForMerging(Function &F) {
   // Oracle functions of llvm.speculative.load may only be referenced by
   // llvm.speculative.load, so they can neither become thunks nor be called.
   return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
-         !F.hasFnAttribute(Attribute::NoIPA) &&
-         !F.hasFnAttribute("oracle-function") &&
+         !F.isNoIPA() && !F.hasFnAttribute("oracle-function") &&
          !hasDistinctMetadataIntrinsic(F);
 }
 
@@ -476,7 +475,7 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
         continue;
       Function *F = cast<Function>(I);
       if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage() &&
-          !F->hasFnAttribute(Attribute::NoIPA)) {
+          !F->isNoIPA()) {
         Changed |= insert(F);
       }
     }

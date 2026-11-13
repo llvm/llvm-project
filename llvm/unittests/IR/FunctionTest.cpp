@@ -657,4 +657,21 @@ TEST(FunctionTest, NoIPAInterposable) {
   EXPECT_FALSE(M->getFunction("bar")->isDefinitionExact());
 }
 
+TEST(FunctionTest, OptNoneImpliesNoIPA) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @foo() { bb1: ret void }
+    define void @bar() #0 { bb1: ret void }
+    attributes #0 = { noinline optnone }
+  )");
+  Function *Foo = M->getFunction("foo");
+  Function *Bar = M->getFunction("bar");
+  EXPECT_FALSE(Foo->isNoIPA());
+  EXPECT_TRUE(Bar->isNoIPA());
+  EXPECT_TRUE(Bar->isInterposable());
+  EXPECT_FALSE(Bar->isInterposable(/*CheckNoIPA=*/false));
+  EXPECT_FALSE(Bar->isDefinitionExact());
+  EXPECT_FALSE(Bar->canChangeSignature());
+}
+
 } // end namespace

@@ -498,11 +498,11 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     Handles.front().I = Handles.begin();
     bool KnowNothing = false;
 
-    // Only the attributes of declarations, functions without an exact
-    // definition (which may be replaced at link time), and optnone functions
-    // can be relied on, not their bodies.
+    // Only the attributes of declarations and functions without an exact
+    // definition (which may be replaced at link time, or are noipa/optnone) can
+    // be relied on, not their bodies.
     auto UseAttributesOnly = [](const Function &F) {
-      return F.isDeclaration() || !F.isDefinitionExact() || F.hasOptNone();
+      return F.isDeclaration() || !F.isDefinitionExact();
     };
 
     // Intrinsics, like any other synchronizing function, can make effects
@@ -510,8 +510,8 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     // Similarly, if `nocallback` is missing the function, or intrinsic,
     // can call into the module arbitrarily. If both are set the function
     // has an effect but will not interact with accesses of internal
-    // globals inside the module. We are conservative here for definitions
-    // (optnone or non-exact), might not be necessary.
+    // globals inside the module. We are conservative here for non-exact
+    // definitions, might not be necessary.
     auto MaySyncOrCallIntoModule = [](const Function &F) {
       return !F.isDeclaration() || !F.hasNoSync() ||
              !F.hasFnAttribute(Attribute::NoCallback);
