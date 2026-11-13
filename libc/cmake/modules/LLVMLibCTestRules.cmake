@@ -109,6 +109,13 @@ function(_get_common_test_compile_options_impl output_var c_test)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       if(NOT c_test)
         list(APPEND compile_options "-fext-numeric-literals")
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "11.0.0")
+          # AllocChecker's operator new overloads inline malloc/aligned_alloc
+          # while C++ forbids marking replaceable operator delete inline,
+          # causing GCC to report false-positive -Wmismatched-new-delete
+          # diagnostics.
+          list(APPEND compile_options "-Wno-mismatched-new-delete")
+        endif()
       endif()
     else()
       list(APPEND compile_options "-Wno-c99-extensions")

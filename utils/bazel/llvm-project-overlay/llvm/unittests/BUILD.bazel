@@ -805,7 +805,7 @@ cc_test(
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
-    linkstatic = 1,
+    linkstatic = True,
     tags = [
         "no-sandbox",  # FileSystemTest.permissions not compatible with the sandbox on MacOS
     ],
@@ -830,7 +830,7 @@ cc_test(
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
-    linkstatic = 1,
+    linkstatic = True,
     deps = [
         "//llvm:AllTargetsCodeGens",
         "//llvm:Support",
@@ -847,7 +847,7 @@ cc_test(
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
-    linkstatic = 1,
+    linkstatic = True,
     deps = [
         "//llvm:Support",
         "//third-party/unittest:gmock",

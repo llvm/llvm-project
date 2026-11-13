@@ -36,7 +36,6 @@ name:            testVaCopyArg
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$r4' }
 fixedStack:

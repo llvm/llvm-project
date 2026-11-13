@@ -1,5 +1,6 @@
 ## A DW_AT_specification cycle must not hang the qualified name hash of the
-## Apple accelerator tables.
+## Apple accelerator tables, and neither must a DW_AT_specification into the
+## type's own subtree.
 ##
 ## a.cpp:
 ##   struct S { int x; };
@@ -9,10 +10,13 @@
 ##   clang -target arm64-apple-macosx15 -g -gdwarf-4 -O0 -S -fno-ident \
 ##     -fno-asynchronous-unwind-tables -fdebug-compilation-dir=/anon
 ## with the DW_AT_decl_file and DW_AT_decl_line of S replaced by a
-## DW_AT_specification that refers to S itself.
+## DW_AT_specification that refers to S itself (0x53) or to its member x (0x5c).
 
-# RUN: rm -rf %t && split-file %s %t
-# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj %t/a.s -o %t/a.o
+# RUN: rm -rf %t && split-file %s %t && mkdir %t/member
+# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj --defsym SPEC=0x53 \
+# RUN:   %t/a.s -o %t/a.o
+# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj --defsym SPEC=0x5c \
+# RUN:   %t/a.s -o %t/member/a.o
 
 # RUN: dsymutil --linker=classic --accelerator=Apple -oso-prepend-path=%t \
 # RUN:   -y %t/debug.map -f -o %t/classic.dwarf
@@ -31,6 +35,27 @@
 # CHECK-NEXT:   Atom[1]: {{.*}} (DW_TAG_structure_type)
 # CHECK-NEXT:   Atom[2]:
 # CHECK-NEXT:   Atom[3]: 0x0b87b16c
+
+# RUN: dsymutil --linker=classic --accelerator=Apple \
+# RUN:   -oso-prepend-path=%t/member -y %t/debug.map -f \
+# RUN:   -o %t/member-classic.dwarf
+# RUN: llvm-dwarfdump --apple-types %t/member-classic.dwarf \
+# RUN:   | FileCheck %s --check-prefix=MEMBER
+
+# RUN: dsymutil --linker=parallel --accelerator=Apple \
+# RUN:   -oso-prepend-path=%t/member -y %t/debug.map -f \
+# RUN:   -o %t/member-parallel.dwarf
+# RUN: llvm-dwarfdump --apple-types %t/member-parallel.dwarf \
+# RUN:   | FileCheck %s --check-prefix=MEMBER
+
+## S resolves to x, whose scope S resolves to x again. The name ends at the
+## repeated x: "x::x".
+# MEMBER:      String: {{.*}} "S"
+# MEMBER-NEXT: Data 0 [
+# MEMBER-NEXT:   Atom[0]:
+# MEMBER-NEXT:   Atom[1]: {{.*}} (DW_TAG_structure_type)
+# MEMBER-NEXT:   Atom[2]:
+# MEMBER-NEXT:   Atom[3]: 0x7c9fdba9
 
 #--- debug.map
 ---
@@ -213,7 +238,7 @@ Lset4 = Lfunc_end0-Lfunc_begin0         ; DW_AT_high_pc
 	.byte	5                               ; DW_AT_calling_convention
 	.long	19                              ; DW_AT_name
 	.byte	4                               ; DW_AT_byte_size
-	.short	83                              ; DW_AT_specification
+	.short	SPEC                            ; DW_AT_specification
 	.byte	6                               ; Abbrev [6] 0x5c:0xc DW_TAG_member
 	.long	21                              ; DW_AT_name
 	.long	105                             ; DW_AT_type

@@ -61,8 +61,8 @@
 # BASEREL-NEXT:     Address: 0x1026
 # BASEREL-NEXT:   }
 # BASEREL-NEXT:   Entry {
-# BASEREL-NEXT:     Type: ABSOLUTE
-# BASEREL-NEXT:     Address: 0x1000
+# BASEREL-NEXT:     Type: ARM_MOV32(T)
+# BASEREL-NEXT:     Address: 0x102E
 # BASEREL-NEXT:   }
 # BASEREL-NEXT:   Entry {
 # BASEREL-NEXT:     Type: HIGHLOW
@@ -84,7 +84,9 @@
 # DISASM-NEXT:               4661            mov     r1, r12
 # DISASM-NEXT:               f242 0004       movw r0, #8196
 # DISASM-NEXT:               f2c0 0040       movt    r0, #64
-# DISASM-NEXT:               f7ff ffe7       bl      0x401000 <.text>
+# DISASM-NEXT:               f241 0201       movw r2, #4097
+# DISASM-NEXT:               f2c0 0240       movt    r2, #64
+# DISASM-NEXT:               4790            blx     r2
 # DISASM-NEXT:               4684            mov     r12, r0
 # DISASM-NEXT:               ecbd 0b10       vpop    {d0, d1, d2, d3, d4, d5, d6, d7}
 # DISASM-NEXT:               e8bd 480f       pop.w   {r0, r1, r2, r3, r11, lr}
