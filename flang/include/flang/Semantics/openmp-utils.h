@@ -124,6 +124,10 @@ bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
 
 const Symbol *GetHostSymbol(const Symbol &sym);
 
+// Could a value of type "actual" be passed to a function taking the type
+// of "formal". This is not symmetric.
+bool IsTypeCompatible(const DeclTypeSpec &formal, const DeclTypeSpec &actual);
+
 // Resolve a user-defined reduction visible in scope under the mangled name
 // mangledName (e.g. "op.myop." for operator(.myop.), or a named reduction).
 // Follows USE associations, operator renames, private visibility, and merged
