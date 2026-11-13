@@ -57,11 +57,13 @@ def Combinell: OutPatFrag<(ops node:$Ls, node:$Lt),
    (REG_SEQUENCE HlxLLR, $Ls, vsub_hi, $Lt, vsub_lo)>;
 
 def SDTHexagonHlxCombine: SDTypeProfile<1, 2,
-  [SDTCisVT<0, HLXVecPI32>, SDTCisVT<1, HLXVecI16>, SDTCisSameAs<1, 2>]>;
+  [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1, 2>]>;
 
 def HexagonCOMBINELL:  SDNode<"HexagonISD::COMBINELL",  SDTHexagonHlxCombine>;
 
-def: Pat<(HexagonCOMBINELL HLI16:$Ls, HLI16:$Lt), (Combinell $Ls, $Lt)>;
+def: Pat<(HLXVecPI8  (HexagonCOMBINELL HLI8:$Ls,  HLI8:$Lt)), (Combinell $Ls, $Lt)>;
+def: Pat<(HLXVecPI16 (HexagonCOMBINELL HLI16:$Ls, HLI16:$Lt)), (Combinell $Ls, $Lt)>;
+def: Pat<(HLXVecPI32 (HexagonCOMBINELL HLI16:$Ls, HLI16:$Lt)), (Combinell $Ls, $Lt)>;
 
 let Predicates = [UseHLX] in {
   // Add
