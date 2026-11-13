@@ -18,7 +18,7 @@ body:             |
     %1.sub_8bit:gr16_abcd = IMPLICIT_DEF
     %3:gr16_abcd = COPY %1
     %3.sub_8bit:gr16_abcd = MOV8ri 1
-    %4:gr16_abcd = COPY killed %3
+    %4:gr16_abcd = COPY %3
     %5:gr16 = ADD16rr %1, %4, implicit-def dead $eflags
     $ax = COPY %5
     RET 0, implicit $ax
