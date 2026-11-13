@@ -53,8 +53,9 @@ public:
   virtual ~MarkLive() = default;
 
 protected:
+  const size_t numThreads = parallel::getThreadCount();
   std::vector<SmallVector<ConcatInputSection *, 0>> liveSupportShards{
-      parallel::getThreadCount()};
+      numThreads};
 };
 
 // Sets `flag` and returns true if no other thread set it first.
@@ -95,7 +96,7 @@ public:
       std::conditional_t<RecordWhyLive, WhyLiveEntry, InputSection>;
   using Worklist = SmallVector<WorklistEntry *, 0>;
 
-  MarkLiveImpl() : shards(parallel::getThreadCount()) {}
+  MarkLiveImpl() : shards(numThreads) {}
   void enqueue(InputSection *isec, uint64_t off, size_t shard) override {
     enqueue(isec, off, nullptr, shards[shard]);
   }
@@ -214,7 +215,6 @@ void MarkLiveImpl<RecordWhyLive>::visit(WorklistEntry *entry,
 // their stacks to the next level. The last join makes every live bit visible
 // to the live-support scan, which reads them with plain loads.
 template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
-  const size_t numThreads = parallel::getThreadCount();
   // The minimum number of visits a worker makes in a level before it may hand
   // back its stack. This keeps levels with fewer sections than workers from
   // ending after a visit or two, which would result in a lot of fork-join
