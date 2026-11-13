@@ -107,3 +107,4 @@ body: |
     %undef:_(i130) = G_IMPLICIT_DEF
     %trunc:_(i64) = G_TRUNC %undef
     $x0 = COPY %trunc(i64)
+...

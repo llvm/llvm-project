@@ -10,8 +10,7 @@
 #include "mlir/IR/Builders.h"
 #include "gtest/gtest.h"
 
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsPatterns.h"
 
 using namespace mlir;
 

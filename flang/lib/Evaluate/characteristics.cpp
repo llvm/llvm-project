@@ -79,6 +79,8 @@ TypeAndShape &TypeAndShape::Rewrite(FoldingContext &context) {
     }
   }
   shape_ = Fold(context, std::move(shape_));
+  CHECK(IsSubscriptIntegerKind(LEN_));
+  CHECK(!shape_ || IsSubscriptIntegerKind(*shape_));
   return *this;
 }
 
@@ -261,14 +263,14 @@ void TypeAndShape::AcquireAttrs(const semantics::Symbol &symbol) {
 
 void TypeAndShape::AcquireLEN() {
   if (auto len{type_.GetCharLength()}) {
-    LEN_ = std::move(len);
+    set_LEN(std::move(*len));
   }
 }
 
 void TypeAndShape::AcquireLEN(const semantics::Symbol &symbol) {
   if (type_.category() == TypeCategory::Character) {
     if (auto len{DataRef{symbol}.LEN()}) {
-      LEN_ = std::move(*len);
+      set_LEN(std::move(*len));
     }
   }
 }

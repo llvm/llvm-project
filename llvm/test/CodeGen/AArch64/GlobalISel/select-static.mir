@@ -47,7 +47,6 @@ body:             |
     $x0 = COPY %0(p0)
 ...
 
----
 
 ---
 # CHECK-LABEL: name: ptr_mask
