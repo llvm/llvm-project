@@ -3453,7 +3453,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
     The maximum will restrict allocation to use no more than max AGPRs.
 
     Max AGPR is also used to limit the maximum number of VGPRs a function can 
-    allocate. Max AGPRs specifies how many AGPRs a function needs to make space 
+    allocate. Max AGPR specifies how many AGPRs a function needs to make space 
     for by limiting the number of VGPRs it can allocate.
 
     The values may be ignored if satisfying it would violate other allocation constraints.
