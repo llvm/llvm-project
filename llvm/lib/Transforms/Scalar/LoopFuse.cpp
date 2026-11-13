@@ -1505,6 +1505,10 @@ private:
           auto *PN = dyn_cast<PHINode>(U);
           if (!PN || PN->getParent() != FC1.ExitBlock)
             continue;
+          // Fusion is only attempted after the loop has been checked to have a
+          // single exit edge and no predecessors outside the loop. So, any phi
+          // in the exit block that uses this instruction has only one incoming
+          // value, i.e. I.
           assert(PN->getNumIncomingValues() == 1 &&
                  PN->getIncomingValue(0) == I &&
                  "Expected a single-input exit phi forwarding the sunk value");
