@@ -6465,6 +6465,151 @@ static SDValue matchDeinterleaveBuildVector(SDValue N, unsigned &StartIndex) {
   return Src;
 }
 
+// Return true if values of type VT are kept in vector registers, i.e. VT is
+// a vector type whose elements are legal in LSX vectors.
+static bool isVectorRegisterVT(EVT VT, SelectionDAG &DAG) {
+  if (!VT.isVector())
+    return false;
+  EVT EltVT = VT.getVectorElementType();
+  unsigned EltBits = EltVT.getSizeInBits();
+  if (EltBits < 8 || EltBits > 64)
+    return false;
+  EVT LSXVT = EVT::getVectorVT(*DAG.getContext(), EltVT, 128 / EltBits);
+  return DAG.getTargetLoweringInfo().isTypeLegal(LSXVT);
+}
+
+// Return true if all users of the value loaded by Ld can use it in vector
+// registers.
+static bool hasOnlyVectorUsers(LoadSDNode *Ld, SelectionDAG &DAG) {
+  EVT VT = Ld->getValueType(0);
+  for (SDUse &U : Ld->uses()) {
+    if (U.getResNo() != 0)
+      continue;
+    SDNode *User = U.getUser();
+    switch (User->getOpcode()) {
+    case ISD::ADD:
+    case ISD::SUB:
+      if (User->getValueType(0) == VT)
+        continue;
+      break;
+    case ISD::STORE:
+      // The stored value, not the address.
+      if (U.getOperandNo() == 1)
+        continue;
+      break;
+    case ISD::BITCAST:
+      if (isVectorRegisterVT(User->getValueType(0), DAG))
+        continue;
+      break;
+    }
+    return false;
+  }
+  return true;
+}
+
+// Return true if V, a vNi128 value, is cheap to obtain in vector registers
+// of type PartVT.
+static bool isCheapVNi128VectorOperand(SDValue V, MVT PartVT,
+                                       SelectionDAG &DAG) {
+  switch (V.getOpcode()) {
+  case ISD::LOAD: {
+    auto *Ld = cast<LoadSDNode>(V);
+    unsigned Fast = 0;
+    return ISD::isNormalLoad(Ld) && Ld->isSimple() &&
+           DAG.getTargetLoweringInfo().allowsMemoryAccess(
+               *DAG.getContext(), DAG.getDataLayout(), PartVT,
+               *Ld->getMemOperand(), &Fast) &&
+           Fast && hasOnlyVectorUsers(Ld, DAG);
+  }
+  case ISD::BITCAST: {
+    // Vectors built from GPRs are not in vector registers.
+    SDValue Src = V.getOperand(0);
+    switch (Src.getOpcode()) {
+    case ISD::BUILD_VECTOR:
+      return ISD::isBuildVectorOfConstantSDNodes(Src.getNode());
+    case ISD::INSERT_VECTOR_ELT:
+    case ISD::SCALAR_TO_VECTOR:
+      return false;
+    }
+    return isVectorRegisterVT(Src.getValueType(), DAG);
+  }
+  default:
+    return ISD::isBuildVectorOfConstantSDNodes(V.getNode());
+  }
+}
+
+// Combine add/sub on vNi128 to [X]VADD.Q/[X]VSUB.Q:
+//
+//   (add vNi128:a, vNi128:b)
+//     -> (bitcast (VADD_Q (bitcast a to vMi64), (bitcast b to vMi64)))
+//
+// vNi128 types are not legal and would otherwise be expanded to scalar
+// add/sub with carry on GPRs, so this has to happen before type legalization.
+// Vectors wider than a vector register are split into register-sized parts.
+// Only do it when both operands are already in, or cheap to get into, vector
+// registers, e.g. loaded from memory. Values passed in GPRs (such as function
+// arguments) are better handled in GPRs.
+static SDValue performVNi128AddSubCombine(SDNode *N, SelectionDAG &DAG,
+                                          TargetLowering::DAGCombinerInfo &DCI,
+                                          const LoongArchSubtarget &Subtarget) {
+  assert(Subtarget.hasExtLSX() && "Unexpected combine");
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i128)
+    return SDValue();
+
+  // Use 256-bit parts with LASX and 128-bit parts for the rest.
+  unsigned NumElts = VT.getVectorNumElements();
+  bool UseLASX = Subtarget.hasExtLASX() && NumElts >= 2;
+  MVT PartVT = UseLASX ? MVT::v4i64 : MVT::v2i64;
+  EVT NewVT = EVT::getVectorVT(*DAG.getContext(), MVT::i64, NumElts * 2);
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  if (!isCheapVNi128VectorOperand(LHS, PartVT, DAG) ||
+      !isCheapVNi128VectorOperand(RHS, PartVT, DAG))
+    return SDValue();
+
+  // Replace loads with loads of the i64 vector type, so that the other users
+  // of the loaded value (e.g. another add/sub) can use it directly as well.
+  // The range metadata, if any, is dropped as it doesn't match the new type.
+  // The old loads are only replaced after N, as replacing them may CSE N into
+  // another node and delete it.
+  SmallVector<std::pair<LoadSDNode *, SDValue>, 2> LoadsToReplace;
+  auto ConvertOperand = [&](SDValue V) {
+    auto *Ld = dyn_cast<LoadSDNode>(V);
+    if (!Ld)
+      return DAG.getBitcast(NewVT, V);
+    SDValue NewLd =
+        DAG.getLoad(NewVT, SDLoc(Ld), Ld->getChain(), Ld->getBasePtr(),
+                    Ld->getPointerInfo(), Ld->getBaseAlign(),
+                    Ld->getMemOperand()->getFlags(), Ld->getAAInfo());
+    LoadsToReplace.push_back({Ld, NewLd});
+    return NewLd;
+  };
+  SDValue NewLHS = ConvertOperand(LHS);
+  SDValue NewRHS = LHS == RHS ? NewLHS : ConvertOperand(RHS);
+
+  SDLoc DL(N);
+  unsigned Opc =
+      N->getOpcode() == ISD::ADD ? LoongArchISD::VADD_Q : LoongArchISD::VSUB_Q;
+  SDValue Res = DAG.getUNDEF(NewVT);
+  for (unsigned Idx = 0, End = NumElts * 2; Idx != End;) {
+    MVT CurVT = UseLASX && End - Idx >= 4 ? MVT::v4i64 : MVT::v2i64;
+    SDValue PartLHS = DAG.getExtractSubvector(DL, CurVT, NewLHS, Idx);
+    SDValue PartRHS = DAG.getExtractSubvector(DL, CurVT, NewRHS, Idx);
+    SDValue Part = DAG.getNode(Opc, DL, CurVT, PartLHS, PartRHS);
+    Res = DAG.getInsertSubvector(DL, Res, Part, Idx);
+    Idx += CurVT.getVectorNumElements();
+  }
+  DCI.CombineTo(N, DAG.getBitcast(VT, Res));
+  for (auto [Ld, NewLd] : LoadsToReplace)
+    DCI.CombineTo(Ld, DAG.getBitcast(VT, NewLd), NewLd.getValue(1));
+  return SDValue(N, 0);
+}
+
 static SDValue
 performHorizWideningCombine(SDNode *N, SelectionDAG &DAG,
                             const LoongArchSubtarget &Subtarget) {
@@ -6534,6 +6679,9 @@ performHorizWideningCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
+  if (SDValue V = performVNi128AddSubCombine(N, DAG, DCI, Subtarget))
+    return V;
+
   if (SDValue V = performHorizWideningCombine(N, DAG, Subtarget))
     return V;
 
@@ -6973,6 +7121,9 @@ static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
 static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
+  if (SDValue V = performVNi128AddSubCombine(N, DAG, DCI, Subtarget))
+    return V;
+
   if (SDValue V = performHorizWideningCombine(N, DAG, Subtarget))
     return V;
 

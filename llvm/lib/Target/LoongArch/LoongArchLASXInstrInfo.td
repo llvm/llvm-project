@@ -2049,6 +2049,12 @@ defm : PatXrXr<add, "XVADD">;
 // XVSUB_{B/H/W/D}
 defm : PatXrXr<sub, "XVSUB">;
 
+// XVADD_Q/XVSUB_Q
+def : Pat<(loongarch_vadd_q (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+          (XVADD_Q LASX256:$xj, LASX256:$xk)>;
+def : Pat<(loongarch_vsub_q (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+          (XVSUB_Q LASX256:$xj, LASX256:$xk)>;
+
 // XVADDI_{B/H/W/D}U
 defm : PatXrNimm5<sub, "XVADDI">;
 defm : PatXrUimm5<add, "XVADDI">;
