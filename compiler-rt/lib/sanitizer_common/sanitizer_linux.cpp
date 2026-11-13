@@ -1026,8 +1026,9 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     k_act.sigaction = u_act->sigaction;
     internal_memcpy(&k_act.sa_mask, &u_act->sa_mask,
                     sizeof(__sanitizer_kernel_sigset_t));
-#      if defined(__hppa__)
-    // PA-RISC has no SA_RESTORER; the kernel supplies the signal trampoline.
+#      if defined(__hppa__) || defined(__alpha__)
+    // PA-RISC and Alpha have no SA_RESTORER. On PA-RISC the kernel supplies
+    // the signal trampoline.
     k_act.sa_flags = u_act->sa_flags;
 #      else
     // Without SA_RESTORER kernel ignores the calls (probably returns EINVAL).
@@ -1047,10 +1048,20 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
 #      endif
   }
 
+#      if defined(__alpha__)
+  // A null restorer makes the kernel write a sigreturn trampoline to the
+  // stack, which can't run if the stack is not executable. That's fine for
+  // the only caller, StopTheWorld, whose handler never returns.
+  uptr result = internal_syscall(SYSCALL(rt_sigaction), (uptr)signum,
+                                 (uptr)(u_act ? &k_act : nullptr),
+                                 (uptr)(u_oldact ? &k_oldact : nullptr),
+                                 (uptr)sizeof(__sanitizer_kernel_sigset_t), 0);
+#      else
   uptr result = internal_syscall(SYSCALL(rt_sigaction), (uptr)signum,
                                  (uptr)(u_act ? &k_act : nullptr),
                                  (uptr)(u_oldact ? &k_oldact : nullptr),
                                  (uptr)sizeof(__sanitizer_kernel_sigset_t));
+#      endif
 
   if ((result == 0) && u_oldact) {
     u_oldact->handler = k_oldact.handler;

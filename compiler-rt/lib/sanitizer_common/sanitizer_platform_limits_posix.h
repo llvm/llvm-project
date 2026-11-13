@@ -825,7 +825,8 @@ struct __sanitizer_kernel_sigaction_t {
   __sanitizer_kernel_sigset_t sa_mask;
   void (*sa_restorer)(void);
 };
-#  elif defined(__hppa__)
+#  elif defined(__hppa__) || defined(__alpha__)
+// No sa_restorer: Alpha passes it to rt_sigaction as a separate argument.
 struct __sanitizer_kernel_sigaction_t {
   union {
     void (*handler)(int signo);
