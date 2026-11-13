@@ -9553,28 +9553,10 @@ static Expected<Function *> createOutlinedFunction(
 /// Given a task descriptor, TaskWithPrivates, return the pointer to the block
 /// of pointers containing shared data between the parent task and the created
 /// task.
-static LoadInst *loadSharedDataFromTaskDescriptor(OpenMPIRBuilder &OMPIRBuilder,
-                                                  IRBuilderBase &Builder,
-                                                  Value *TaskWithPrivates,
-                                                  Type *TaskWithPrivatesTy) {
-
-  Type *TaskTy = OMPIRBuilder.Task;
+static LoadInst *loadSharedDataFromTaskDescriptor(IRBuilderBase &Builder,
+                                                  Value *TaskWithPrivates) {
   LLVMContext &Ctx = Builder.getContext();
-  Value *TaskT =
-      Builder.CreateStructGEP(TaskWithPrivatesTy, TaskWithPrivates, 0);
-  Value *Shareds = TaskT;
-  // TaskWithPrivatesTy can be one of the following
-  // 1. %struct.task_with_privates = type { %struct.kmp_task_ompbuilder_t,
-  //                                        %struct.privates }
-  // 2. %struct.kmp_task_ompbuilder_t ;; This is simply TaskTy
-  //
-  // In the former case, that is when  TaskWithPrivatesTy != TaskTy,
-  // its first member has to be the task descriptor. TaskTy is the type of the
-  // task descriptor. TaskT is the pointer to the task descriptor. Loading the
-  // first member of TaskT, gives us the pointer to shared data.
-  if (TaskWithPrivatesTy != TaskTy)
-    Shareds = Builder.CreateStructGEP(TaskTy, TaskT, 0);
-  return Builder.CreateLoad(PointerType::getUnqual(Ctx), Shareds);
+  return Builder.CreateLoad(PointerType::getUnqual(Ctx), TaskWithPrivates);
 }
 /// Create an entry point for a target task with the following.
 /// It'll have the following signature
@@ -9681,8 +9663,8 @@ static Function *emitTargetTaskProxyFunction(
 
     Value *SharedsSize = Builder.getInt64(StructSize);
 
-    LoadInst *LoadShared = loadSharedDataFromTaskDescriptor(
-        OMPBuilder, Builder, TaskWithPrivates, TaskWithPrivatesTy);
+    LoadInst *LoadShared =
+        loadSharedDataFromTaskDescriptor(Builder, TaskWithPrivates);
 
     Builder.CreateMemCpy(
         NewArgStructAlloca, NewArgStructAlloca->getAlign(), LoadShared,
@@ -10054,8 +10036,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
     Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
     if (HasShareds) {
       Value *Shareds = StaleCI->getArgOperand(SharedArgOperandNo);
-      Value *TaskShareds = loadSharedDataFromTaskDescriptor(
-          *this, Builder, TaskData, TaskWithPrivatesTy);
+      Value *TaskShareds = loadSharedDataFromTaskDescriptor(Builder, TaskData);
       Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
                            SharedsSize);
     }
