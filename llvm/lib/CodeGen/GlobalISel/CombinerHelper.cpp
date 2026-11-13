@@ -8947,17 +8947,12 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
   }
   default: {
     // Let the target describe the operands its own instructions demand.
-    KnownBits TargetKnown(BW);
     if (!getTargetLowering().simplifyDemandedBitsForTargetInstr(
-            *this, *DefMI, Demanded, TargetKnown, Depth, DoRewrite)) {
-      GiveUp();
-      // A target can provide known bits without finding a rewrite. Keep those
-      // facts alongside the fallback analysis, but only for demanded bits.
-      Known.Zero |= TargetKnown.Zero & Demanded;
-      Known.One |= TargetKnown.One & Demanded;
-      return false;
-    }
-    Known = TargetKnown;
+            *this, *DefMI, Demanded, Known, Depth, DoRewrite))
+      return GiveUp();
+    // The hook only guarantees facts about the demanded bits.
+    Known.Zero &= Demanded;
+    Known.One &= Demanded;
     DropPoisonFlags();
     InvalidateDebugUses(Demanded);
     return true;

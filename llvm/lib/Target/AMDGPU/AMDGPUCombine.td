@@ -77,8 +77,8 @@ def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
   (apply [{ applyFDivSqrtToRsqF16(*${root}, ${x}.getReg()); }])>;
 
 // Intrinsics that read only some bits of an operand can share this rule.
-// Add patterns here and operand demands in matchIntrinsicDemandedBits.
-// The target demanded-bits hook separately handles walking through their results.
+// Add patterns here and operand demands in the target demanded-bits hook.
+// The matcher starts analysis with all result bits demanded.
 def intrinsic_demanded_bits_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op, [int_amdgcn_cvt_pk_fp8_f32, int_amdgcn_cvt_pk_bf8_f32,

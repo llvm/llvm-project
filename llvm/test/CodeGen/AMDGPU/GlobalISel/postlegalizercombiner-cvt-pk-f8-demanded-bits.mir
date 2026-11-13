@@ -7,8 +7,8 @@
 # AMDGPU simplifyDemandedBitsForTargetInstr hook, reached from the conversion
 # rule and from the generic simplify_demanded_bits rule.
 
-# The hook does not rewrite the conversion, but its preserved high half is
-# known zero. The AND therefore does not demand the high bits set by the OR.
+# Value tracking knows the conversion's preserved high half is zero without
+# rewriting it. The AND does not demand the high bits set by the OR.
 ---
 name: known_zero_without_rewrite
 legalized: true
@@ -39,8 +39,8 @@ body: |
     SI_RETURN implicit $vgpr0
 ...
 
-# Likewise, known ones from the preserved half make the high bits cleared by
-# the AND irrelevant to the OR, even though the conversion is not rewritten.
+# Likewise, value tracking knows the preserved high half is all ones, making
+# the bits cleared by the AND irrelevant to the OR without a conversion rewrite.
 ---
 name: known_one_without_rewrite
 legalized: true

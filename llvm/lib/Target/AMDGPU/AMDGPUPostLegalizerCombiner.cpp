@@ -281,36 +281,22 @@ void AMDGPUPostLegalizerCombinerImpl::applyFDivSqrtToRsqF16(
   MI.eraseFromParent();
 }
 
-// Start demanded-bits analysis for intrinsics that read only part of an
-// operand. Keep intrinsic-specific operand indices and masks in this switch;
-// the probe and apply below are shared. Add matching TableGen patterns when
-// extending this to another intrinsic family.
+// Start with all result bits demanded and let the target hook determine the
+// operand demands. The TableGen pattern selects the supported intrinsics.
 bool AMDGPUPostLegalizerCombinerImpl::matchIntrinsicDemandedBits(
     MachineInstr &MI, BuildFnTy &MatchInfo) const {
-  unsigned OpNo;
-  APInt Demanded;
-  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-  case Intrinsic::amdgcn_cvt_pk_fp8_f32:
-  case Intrinsic::amdgcn_cvt_pk_bf8_f32:
-  case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3:
-    // Operands: result, intrinsic ID, src0, src1, vdst_in, word select.
-    // Only the half kept in the result is read from vdst_in.
-    OpNo = 4;
-    Demanded = MI.getOperand(5).getImm() ? APInt::getLowBitsSet(32, 16)
-                                         : APInt::getHighBitsSet(32, 16);
-    break;
-  default:
-    return false;
-  }
-
-  KnownBits Known(Demanded.getBitWidth());
-  if (!Helper.simplifyDemandedBits(MI, OpNo, Demanded, Known,
-                                   /*Depth=*/0, /*DoRewrite=*/false))
+  unsigned BitWidth =
+      MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits();
+  APInt Demanded = APInt::getAllOnes(BitWidth);
+  KnownBits Known(BitWidth);
+  if (!Helper.getTargetLowering().simplifyDemandedBitsForTargetInstr(
+          Helper, MI, Demanded, Known, /*Depth=*/0, /*DoRewrite=*/false))
     return false;
 
-  MatchInfo = [this, &MI, OpNo, Demanded](MachineIRBuilder &) {
+  MatchInfo = [this, &MI, Demanded](MachineIRBuilder &) {
     KnownBits K(Demanded.getBitWidth());
-    Helper.simplifyDemandedBits(MI, OpNo, Demanded, K);
+    Helper.getTargetLowering().simplifyDemandedBitsForTargetInstr(
+        Helper, MI, Demanded, K, /*Depth=*/0, /*DoRewrite=*/true);
   };
   return true;
 }

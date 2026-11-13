@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 
 // Check that we are able to track bits through PHIs
 // and get the intersections of everything we know on each operand.
@@ -1055,6 +1056,100 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsTrunc) {
   EXPECT_EQ(25u, Info.computeNumSignBits(CopyLoadSByte));
   EXPECT_EQ(16u, Info.computeNumSignBits(CopyLoadUShort));
   EXPECT_EQ(17u, Info.computeNumSignBits(CopyLoadSShort));
+}
+
+TEST_F(AMDGPUGISelMITest, TestKnownBitsCvtPkF8) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32);
+  auto Src = B.buildUndef(LLT::float32());
+  GISelValueTracking Info(*MF);
+  const struct {
+    int64_t WordSel;
+    uint32_t Initial;
+    uint32_t Zero;
+    uint32_t One;
+  } Cases[] = {
+      {0, 0, 0xffff0000, 0},
+      {-1, 0, 0x0000ffff, 0},
+      {0, 0xffffffff, 0, 0xffff0000},
+      {-1, 0xffffffff, 0, 0x0000ffff},
+      {0, 0x12345678, 0xedcb0000, 0x12340000},
+      {-1, 0x12345678, 0x0000a987, 0x00005678},
+  };
+
+  for (Intrinsic::ID ID :
+       {Intrinsic::amdgcn_cvt_pk_fp8_f32, Intrinsic::amdgcn_cvt_pk_bf8_f32,
+        Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3}) {
+    SCOPED_TRACE(ID);
+    for (const auto &Case : Cases) {
+      SCOPED_TRACE(Case.WordSel);
+      SCOPED_TRACE(Case.Initial);
+      auto Initial = B.buildConstant(S32, Case.Initial);
+      auto Cvt = B.buildIntrinsic(ID, {S32})
+                     .addUse(Src.getReg(0))
+                     .addUse(Src.getReg(0))
+                     .addUse(Initial.getReg(0))
+                     .addImm(Case.WordSel);
+      KnownBits Known = Info.getKnownBits(Cvt.getReg(0));
+      // Only the preserved half is known, even with a fully known input.
+      EXPECT_EQ(Case.Zero, Known.Zero.getZExtValue());
+      EXPECT_EQ(Case.One, Known.One.getZExtValue());
+    }
+
+    auto Initial = B.buildUndef(S32);
+    for (int64_t WordSel : {0, -1}) {
+      auto Cvt = B.buildIntrinsic(ID, {S32})
+                     .addUse(Src.getReg(0))
+                     .addUse(Src.getReg(0))
+                     .addUse(Initial.getReg(0))
+                     .addImm(WordSel);
+      EXPECT_TRUE(Info.getKnownBits(Cvt.getReg(0)).isUnknown());
+    }
+  }
+}
+
+TEST_F(AMDGPUGISelMITest, TestCvtPkF8DemandedBitsProbe) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32);
+  auto Src = B.buildUndef(LLT::float32());
+  auto Initial = B.buildConstant(S32, 0);
+  auto Low = B.buildIntrinsic(Intrinsic::amdgcn_cvt_pk_fp8_f32, {S32})
+                 .addUse(Src.getReg(0))
+                 .addUse(Src.getReg(0))
+                 .addUse(Initial.getReg(0))
+                 .addImm(0);
+  auto High = B.buildIntrinsic(Intrinsic::amdgcn_cvt_pk_fp8_f32, {S32})
+                  .addUse(Src.getReg(0))
+                  .addUse(Src.getReg(0))
+                  .addUse(Low.getReg(0))
+                  .addImm(-1);
+
+  GISelValueTracking Info(*MF);
+  CombinerHelper Helper(Info, B, /*IsPreLegalize=*/false, &Info);
+  const TargetLowering &TLI = Helper.getTargetLowering();
+  KnownBits Known(32);
+  APInt Demanded = APInt::getAllOnes(32);
+
+  std::string Before;
+  raw_string_ostream BeforeOS(Before);
+  MF->print(BeforeOS);
+  EXPECT_TRUE(TLI.simplifyDemandedBitsForTargetInstr(
+      Helper, *High, Demanded, Known, /*Depth=*/0, /*DoRewrite=*/false));
+  std::string After;
+  raw_string_ostream AfterOS(After);
+  MF->print(AfterOS);
+  EXPECT_EQ(Before, After);
+
+  EXPECT_TRUE(TLI.simplifyDemandedBitsForTargetInstr(
+      Helper, *High, Demanded, Known, /*Depth=*/0, /*DoRewrite=*/true));
+  EXPECT_EQ(TargetOpcode::G_IMPLICIT_DEF,
+            MRI->getVRegDef(Low->getOperand(4).getReg())->getOpcode());
 }
 
 TEST_F(AMDGPUGISelMITest, TestTargetKnownAlign) {

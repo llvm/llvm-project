@@ -20717,6 +20717,21 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
                               Depth + 1);
       break;
     }
+    case Intrinsic::amdgcn_cvt_pk_fp8_f32:
+    case Intrinsic::amdgcn_cvt_pk_bf8_f32:
+    case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
+      // Only the half preserved from vdst_in contributes known bits.
+      // Operands: result, intrinsic ID, src0, src1, vdst_in, word select.
+      KnownBits KnownVDstIn;
+      VT.computeKnownBitsImpl(MI->getOperand(4).getReg(), KnownVDstIn,
+                              DemandedElts, Depth + 1);
+      APInt VDstInBits = MI->getOperand(5).getImm()
+                             ? APInt::getLowBitsSet(32, 16)
+                             : APInt::getHighBitsSet(32, 16);
+      Known.Zero = KnownVDstIn.Zero & VDstInBits;
+      Known.One = KnownVDstIn.One & VDstInBits;
+      break;
+    }
     case Intrinsic::amdgcn_mul_u24:
     case Intrinsic::amdgcn_mul_i24: {
       Register LHS = MI->getOperand(2).getReg();
