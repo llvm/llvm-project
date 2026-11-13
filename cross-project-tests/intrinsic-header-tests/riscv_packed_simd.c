@@ -80,6 +80,54 @@ uint64_t test_slx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
 uint64_t test_srx_64(uint64_t rd, uint64_t rs1, unsigned shamt) {
   return __riscv_srx_64(rd, rs1, shamt);
 }
+
+// RV64-LABEL: test_zip8p_64:
+// RV64:        zip8p{{[[:space:]]}}
+uint64_t test_zip8p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip8p_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_zip16p_64:
+// RV64:        zip16p{{[[:space:]]}}
+uint64_t test_zip16p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip16p_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_zip8hp_64:
+// RV64:        zip8hp{{[[:space:]]}}
+uint64_t test_zip8hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip8hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_zip16hp_64:
+// RV64:        zip16hp{{[[:space:]]}}
+uint64_t test_zip16hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_zip16hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_unzip8p_64:
+// RV64:        unzip8p{{[[:space:]]}}
+uint64_t test_unzip8p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip8p_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_unzip16p_64:
+// RV64:        unzip16p{{[[:space:]]}}
+uint64_t test_unzip16p_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip16p_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_unzip8hp_64:
+// RV64:        unzip8hp{{[[:space:]]}}
+uint64_t test_unzip8hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip8hp_64(rs1, rs2);
+}
+
+// RV64-LABEL: test_unzip16hp_64:
+// RV64:        unzip16hp{{[[:space:]]}}
+uint64_t test_unzip16hp_64(uint64_t rs1, uint64_t rs2) {
+  return __riscv_unzip16hp_64(rs1, rs2);
+}
 #endif
 
 // Scalar averaging addition and subtraction
@@ -163,6 +211,45 @@ int64_t test_sati_i64(int64_t a) { return __riscv_sati_i64(a, 16); }
 // RV64:        usati{{[[:space:]]}}
 uint64_t test_usati_u64(int64_t a) { return __riscv_usati_u64(a, 16); }
 #endif
+
+// CHECK-LABEL: test_nclipu_u32:
+// RV32:        nclipu{{[[:space:]]}}
+// RV64:        srl{{[[:space:]]}}
+// RV64-NEXT:   pnclipup.w{{[[:space:]]}}
+uint32_t test_nclipu_u32(uint64_t a, unsigned shamt) {
+  return __riscv_nclipu_u32(a, shamt);
+}
+
+// CHECK-LABEL: test_nclipru_u32:
+// RV32:        nclipru{{[[:space:]]}}
+// RV64:        shlr{{[[:space:]]}}
+// RV64-NEXT:   pnclipup.w{{[[:space:]]}}
+uint32_t test_nclipru_u32(uint64_t a, unsigned shamt) {
+  return __riscv_nclipru_u32(a, shamt);
+}
+
+// CHECK-LABEL: test_nsrar_i32:
+// RV32:        nsrar{{[[:space:]]}}
+// RV64:        shar{{[[:space:]]}}
+int32_t test_nsrar_i32(int64_t a, unsigned shamt) {
+  return __riscv_nsrar_i32(a, shamt);
+}
+
+// CHECK-LABEL: test_nclip_i32:
+// RV32:        nclip{{[[:space:]]}}
+// RV64:        sra{{[[:space:]]}}
+// RV64-NEXT:   pnclipp.w{{[[:space:]]}}
+int32_t test_nclip_i32(int64_t a, unsigned shamt) {
+  return __riscv_nclip_i32(a, shamt);
+}
+
+// CHECK-LABEL: test_nclipr_i32:
+// RV32:        nclipr{{[[:space:]]}}
+// RV64:        shar{{[[:space:]]}}
+// RV64-NEXT:   pnclipp.w{{[[:space:]]}}
+int32_t test_nclipr_i32(int64_t a, unsigned shamt) {
+  return __riscv_nclipr_i32(a, shamt);
+}
 
 // CHECK-LABEL: test_pmv_s_u8x4:
 // CHECK:       pmv.bs

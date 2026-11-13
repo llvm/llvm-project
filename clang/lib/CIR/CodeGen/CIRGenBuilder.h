@@ -653,13 +653,17 @@ public:
                                            memberPtr);
   }
 
-  /// Create a cir.ptr_stride operation to get access to an array element.
-  /// \p idx is the index of the element to access, \p shouldDecay is true if
-  /// the result should decay to a pointer to the element type.
-  mlir::Value getArrayElement(mlir::Location arrayLocBegin,
-                              mlir::Location arrayLocEnd, mlir::Value arrayPtr,
-                              mlir::Type eltTy, mlir::Value idx,
-                              bool shouldDecay);
+  /// Create a cir.get_element or cir.ptr_stride operation to get access to an
+  /// array element.  \p idx is the index of the element to access,
+  /// \p shouldDecay is true if the result should decay to a pointer to the
+  /// element type.  \p flags are set on the cir.get_element emitted when
+  /// \p shouldDecay is true and \p arrayPtr points to the array type
+  /// \p eltTy, and are dropped when a cir.ptr_stride is emitted.
+  mlir::Value
+  getArrayElement(mlir::Location arrayLocBegin, mlir::Location arrayLocEnd,
+                  mlir::Value arrayPtr, mlir::Type eltTy, mlir::Value idx,
+                  bool shouldDecay,
+                  cir::PtrOffsetFlags flags = cir::PtrOffsetFlags::None);
 
   /// Returns a decayed pointer to the first element of the array
   /// pointed to by \p arrayPtr.

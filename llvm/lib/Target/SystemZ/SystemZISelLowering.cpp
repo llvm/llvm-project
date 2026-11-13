@@ -6897,8 +6897,13 @@ lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const {
       break;
     }
     if (StartOffsetCandidate != -1) {
-      StartOffset = StartOffsetCandidate;
-      PackedOp = PackedOp.getOperand(0);
+      // The mask indexes the concatenation of both shuffle operands: an offset
+      // past the first operand's lanes selects lanes of the second.
+      unsigned InNumElts = InVT.getVectorNumElements();
+      unsigned Offset = StartOffsetCandidate;
+      unsigned OpNo = Offset >= InNumElts ? 1 : 0;
+      StartOffset = Offset - OpNo * InNumElts;
+      PackedOp = PackedOp.getOperand(OpNo);
     }
   }
 

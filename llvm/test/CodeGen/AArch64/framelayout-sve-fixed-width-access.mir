@@ -29,4 +29,3 @@ body:             |
   bb.0.entry:
     $x8 = LDRXui %stack.0, 0
     RET_ReallyLR
----

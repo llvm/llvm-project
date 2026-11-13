@@ -1,5 +1,6 @@
 // RUN: mlir-opt -convert-math-to-emitc=language-target=c99 %s | FileCheck %s --check-prefix=c99
 // RUN: mlir-opt -convert-math-to-emitc=language-target=cpp11 %s | FileCheck %s --check-prefix=cpp11
+// RUN: mlir-opt -convert-math-to-emitc %s | FileCheck %s --check-prefix=cpp11
 // RUN: mlir-opt -convert-to-emitc="filter-dialects=math lower-to-cpp=false" %s | FileCheck %s --check-prefix=c99
 // RUN: mlir-opt -convert-to-emitc="filter-dialects=math" %s | FileCheck %s --check-prefix=cpp11
 

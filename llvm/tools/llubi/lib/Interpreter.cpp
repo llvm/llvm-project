@@ -681,6 +681,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
               handleFMFFlags(std::move(IncomingVal), FMF, /*IsInput=*/true);
       }
 
+      handleMetadata(PHI->getType(), IncomingVal, *PHI);
+      if (hasProgramExited())
+        return;
+
       IncomingValues.emplace_back(PHI, IncomingVal);
       ++CurrentFrame->PC;
     }
@@ -1229,6 +1233,10 @@ public:
       AttributeSet AttrsAtCallSite = CB.getRetAttributes();
       AttributeSet AttrsAtCallee =
           CurrentFrame->ResolvedCallee->getAttributes().getRetAttrs();
+      if (auto *FPMO = dyn_cast<FPMathOperator>(&CB)) {
+        if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
+          RetVal = handleFMFFlags(std::move(RetVal), FMF, /*IsInput=*/false);
+      }
       handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
       handleMetadata(RetTy, RetVal, CB);
     }
@@ -2074,6 +2082,15 @@ public:
     case Intrinsic::vp_store:
       return callVPLoadStoreIntrinsic(CB, Args[1], Args[2], Args[3], Args[0],
                                       /*IsStore=*/true);
+    case Intrinsic::vp_merge: {
+      std::vector<AnyValue> Cond(Args[0].asAggregate());
+      const AnyValue &EVL = Args[3];
+      if (EVL.isPoison() || EVL.asInteger().ugt(Cond.size()))
+        return AnyValue::getPoisonValue(Ctx, RetTy);
+      for (uint64_t I = EVL.asInteger().getZExtValue(); I != Cond.size(); ++I)
+        Cond[I] = AnyValue::boolean(false);
+      return computeSelect(std::move(Cond), Args[1], Args[2], RetTy, FMF);
+    }
     case Intrinsic::matrix_transpose: {
       const auto &Vec = Args[0].asAggregate();
       const unsigned Rows =
@@ -2956,25 +2973,28 @@ public:
     });
   }
 
-  void visitSelect(SelectInst &SI) {
+  /// Computes `select CondVal, TVVal, FVVal` of type \p Ty with fast-math flags
+  /// \p FMF. \p CondVal is either an i1 or a vector of i1.
+  AnyValue computeSelect(const AnyValue &CondVal, const AnyValue &TVVal,
+                         const AnyValue &FVVal, Type *Ty, FastMathFlags FMF) {
     AnyValue Res;
 
-    if (SI.getCondition()->getType()->isIntegerTy(1)) {
-      switch (getValue(SI.getCondition()).asBoolean()) {
+    if (!CondVal.isAggregate()) {
+      switch (CondVal.asBoolean()) {
       case BooleanKind::True:
-        Res = getValue(SI.getTrueValue());
+        Res = TVVal;
         break;
       case BooleanKind::False:
-        Res = getValue(SI.getFalseValue());
+        Res = FVVal;
         break;
       case BooleanKind::Poison:
-        Res = AnyValue::getPoisonValue(Ctx, SI.getType());
+        Res = AnyValue::getPoisonValue(Ctx, Ty);
         break;
       }
     } else {
-      auto &Cond = getValue(SI.getCondition()).asAggregate();
-      auto &TV = getValue(SI.getTrueValue()).asAggregate();
-      auto &FV = getValue(SI.getFalseValue()).asAggregate();
+      auto &Cond = CondVal.asAggregate();
+      auto &TV = TVVal.asAggregate();
+      auto &FV = FVVal.asAggregate();
       std::vector<AnyValue> ResVec;
       size_t Len = Cond.size();
       ResVec.reserve(Len);
@@ -2987,8 +3007,7 @@ public:
           ResVec.push_back(FV[I]);
           break;
         case BooleanKind::Poison:
-          ResVec.push_back(
-              AnyValue::getPoisonValue(Ctx, SI.getType()->getScalarType()));
+          ResVec.push_back(AnyValue::getPoisonValue(Ctx, Ty->getScalarType()));
           break;
         }
       }
@@ -2996,12 +3015,16 @@ public:
     }
 
     // Handle fast-math flags
-    if (auto *FPMO = dyn_cast<FPMathOperator>(&SI)) {
-      if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
-        Res = handleFMFFlags(std::move(Res), FMF, /*IsInput=*/true);
-    }
+    if (FMF.any())
+      Res = handleFMFFlags(std::move(Res), FMF, /*IsInput=*/true);
+    return Res;
+  }
 
-    setResult(SI, std::move(Res));
+  void visitSelect(SelectInst &SI) {
+    setResult(SI, computeSelect(getValue(SI.getCondition()),
+                                getValue(SI.getTrueValue()),
+                                getValue(SI.getFalseValue()), SI.getType(),
+                                SI.getFastMathFlagsOrNone()));
   }
 
   void visitAllocaInst(AllocaInst &AI) {
@@ -3190,32 +3213,36 @@ public:
   }
 
   void visitBitInsertInst(BitInsertInst &BII) {
-    ByteValue Res = getValue(BII.getOperand(0)).asByte();
-    auto &Val = getValue(BII.getOperand(1));
-    auto &Offset = getValue(BII.getOperand(2));
-    Type *ValTy = BII.getOperand(1)->getType();
+    Type *BaseTy = BII.getType()->getScalarType();
+    Type *ValTy = BII.getOperand(1)->getType()->getScalarType();
     uint64_t NumBits = DL.getTypeSizeInBits(ValTy).getFixedValue();
-    uint64_t OffsetInBits =
-        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
-    if (Offset.isPoison() || OffsetInBits + NumBits > Res.getBitWidth()) {
-      setResult(BII, AnyValue::getPoisonValue(Ctx, BII.getType()));
-      return;
-    }
-    Ctx.insertBits(Res, OffsetInBits, Val, ValTy);
-    setResult(BII, std::move(Res));
+    visitTriOp(BII,
+               [&](const AnyValue &Base, const AnyValue &Val,
+                   const AnyValue &Offset) -> AnyValue {
+                 if (Offset.isPoison())
+                   return AnyValue::getPoisonValue(Ctx, BaseTy);
+                 ByteValue Res = Base.asByte();
+                 uint64_t OffsetInBits = Offset.asInteger().getZExtValue();
+                 if (OffsetInBits + NumBits > Res.getBitWidth())
+                   return AnyValue::getPoisonValue(Ctx, BaseTy);
+                 Ctx.insertBits(Res, OffsetInBits, Val, ValTy);
+                 return Res;
+               });
   }
 
   void visitBitExtractInst(BitExtractInst &BEI) {
-    auto &Src = getValue(BEI.getOperand(0)).asByte();
-    auto &Offset = getValue(BEI.getOperand(1));
-    uint64_t NumBits = DL.getTypeSizeInBits(BEI.getType()).getFixedValue();
-    uint64_t OffsetInBits =
-        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
-    if (Offset.isPoison() || OffsetInBits + NumBits > Src.getBitWidth()) {
-      setResult(BEI, AnyValue::getPoisonValue(Ctx, BEI.getType()));
-      return;
-    }
-    setResult(BEI, Ctx.extractBits(Src, OffsetInBits, BEI.getType()));
+    Type *Ty = BEI.getType()->getScalarType();
+    uint64_t NumBits = DL.getTypeSizeInBits(Ty).getFixedValue();
+    visitBinOp(BEI,
+               [&](const AnyValue &Src, const AnyValue &Offset) -> AnyValue {
+                 if (Offset.isPoison())
+                   return AnyValue::getPoisonValue(Ctx, Ty);
+                 const ByteValue &Bytes = Src.asByte();
+                 uint64_t OffsetInBits = Offset.asInteger().getZExtValue();
+                 if (OffsetInBits + NumBits > Bytes.getBitWidth())
+                   return AnyValue::getPoisonValue(Ctx, Ty);
+                 return Ctx.extractBits(Bytes, OffsetInBits, Ty);
+               });
   }
 
   void visitFreezeInst(FreezeInst &FI) {

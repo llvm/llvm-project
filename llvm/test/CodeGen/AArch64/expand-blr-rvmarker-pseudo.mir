@@ -44,15 +44,14 @@
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $sp, implicit-def $x0, implicit-def $fp, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
 # CHECK-NEXT:      ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:   }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_1_callsite_info
-tracksRegLiveness: false
 callSites:
   - {bb: '%bb.0', offset: 0, fwdArgRegs:
     - { arg: 0, reg: '$x0' } }
@@ -60,7 +59,7 @@ body:             |
     bb.0:
         liveins: $lr, $x0
 
-        BLR_RVMARKER @attachedcall, 1, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, 1, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
         RET_ReallyLR implicit killed $w0
 ...
 
@@ -68,20 +67,19 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def $x0, implicit-def $fp, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_bl_pass_x0_arg
-tracksRegLiveness: false
 body:             |
     bb.0:
         liveins: $lr, $x0
 
-        BLR_RVMARKER @attachedcall, 1, @foo, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, 1, @foo, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
         RET_ReallyLR implicit killed $w0
 ...
 
@@ -97,7 +95,6 @@ body:             |
 # CHECK-NEXT:    RET undef $lr
 #
 name: test_bl_pass_x0_x1_x2_args
-tracksRegLiveness: false
 body:             |
     bb.0:
         liveins: $lr, $x0, $x1, $x2
@@ -110,20 +107,19 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $w0, implicit $w1, implicit $sp, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def $x0, implicit-def $fp, implicit $w0, implicit $w1, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_bl_pass_w0_w1_args
-tracksRegLiveness: false
 body:             |
     bb.0:
         liveins: $lr, $w0, $w1
 
-        BLR_RVMARKER @attachedcall, 1, @foo, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, 1, @foo, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
         RET_ReallyLR implicit killed $w0
 ...
 
@@ -132,20 +128,19 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit-def $fp, implicit $x8, implicit $w0, implicit $w1, implicit $sp, implicit $xzr, implicit $fp {
-# CHECK-NEXT:      BLR $x8, csr_aarch64_aapcs, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $sp, implicit-def $x0, implicit-def $fp, implicit $x8, implicit $w0, implicit $w1, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BLR $x8, csr_aarch64_aapcs, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
 # CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:    }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_blr_pass_w0_w1_args
-tracksRegLiveness: false
 body:             |
     bb.0:
         liveins: $lr, $x8, $w0, $w1
 
-        BLR_RVMARKER @attachedcall, 1, $x8, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, 1, $x8, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
         RET_ReallyLR implicit killed $w0
 ...
 
@@ -175,14 +170,13 @@ body:             |
 # CHECK:       bb.0:
 # CHECK-NEXT: liveins:
 # CHECK-NEXT: {{  $}}
-# CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $sp, implicit-def dead $x0, implicit $x0, implicit $sp {
-# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $sp, implicit-def $x0, implicit $x0, implicit $sp {
+# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
 # CHECK-NEXT:      BL @attachedcall, implicit-def $lr, implicit internal $sp
 # CHECK-NEXT:   }
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_no_nop
-tracksRegLiveness: false
 callSites:
   - {bb: '%bb.0', offset: 0, fwdArgRegs:
     - { arg: 0, reg: '$x0' } }
@@ -190,6 +184,6 @@ body:             |
     bb.0:
         liveins: $lr, $x0
 
-        BLR_RVMARKER @attachedcall, 0, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        BLR_RVMARKER @attachedcall, 0, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
         RET_ReallyLR implicit killed $w0
 ...
