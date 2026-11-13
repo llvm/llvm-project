@@ -96,6 +96,7 @@ configure_furo(
     html_title="The LLVM C Library",
     local_static_path=["_static"],
     extra_css_files=["status.css"],
+    extra_js_files=["status.js"],
 )
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -255,6 +256,9 @@ redirects = {
 
 
 def _configure_generated_header_links(app, pagename, templatename, context, doctree):
+    if pagename == "headers/index":
+        context["theme_top_of_page_buttons"] = []
+        return
     if not pagename.startswith("headers/"):
         return
     stem = pagename[len("headers/") :]

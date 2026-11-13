@@ -519,12 +519,10 @@ Block *SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     if (block_base >= func_base)
       child_block->AddRange(Block::Range(block_base - func_base, block.CodeSize));
     else {
-      GetObjectFile()->GetModule()->ReportError(
+      GetObjectFile()->GetModule()->ReportInternalError(
           "S_BLOCK32 at modi: {0:d} offset: {1:d}: adding range "
           "[{2:x16}-{3:x16}) which has a base that is less than the "
-          "function's "
-          "low PC 0x%" PRIx64 ". Please file a bug and attach the file at the "
-          "start of this error message",
+          "function's low PC {4:x16}",
           block_id.modi, block_id.offset, block_base,
           block_base + block.CodeSize, func_base);
     }

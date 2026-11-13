@@ -116,7 +116,7 @@ def _libc_library(
         copts = libc_common_copts() + copts,
         local_defines = LIBC_CONFIGURE_OPTIONS,
         deps = deps + libc_common_deps(),
-        linkstatic = 1,
+        linkstatic = True,
         target_compatible_with = target_compatible_with,
         **kwargs
     )

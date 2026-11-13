@@ -2065,7 +2065,7 @@ body:             |
     %3(f32) = G_FPTRUNC %2(f64)
     $r0 = COPY %3(f32)
     BX_RET 14, $noreg, implicit $r0
----
+...
 ---
 name:            test_fptosi_float
 legalized:       false
@@ -2078,6 +2078,65 @@ body:             |
   bb.0:
     liveins: $r0
 
+    ; HARD-LABEL: name: test_fptosi_float
+    ; HARD: liveins: $r0
+    ; HARD-NEXT: {{  $}}
+    ; HARD-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; HARD-NEXT: [[FPTOSI:%[0-9]+]]:_(i32) = G_FPTOSI [[COPY]](f32)
+    ; HARD-NEXT: $r0 = COPY [[FPTOSI]](i32)
+    ; HARD-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ;
+    ; SOFT-AEABI-ARM-LABEL: name: test_fptosi_float
+    ; SOFT-AEABI-ARM: liveins: $r0
+    ; SOFT-AEABI-ARM-NEXT: {{  $}}
+    ; SOFT-AEABI-ARM-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; SOFT-AEABI-ARM-NEXT: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+    ; SOFT-AEABI-ARM-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
+    ; SOFT-AEABI-ARM-NEXT: $r0 = COPY [[BITCAST]](i32)
+    ; SOFT-AEABI-ARM-NEXT: BL &__aeabi_f2iz, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
+    ; SOFT-AEABI-ARM-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $r0
+    ; SOFT-AEABI-ARM-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+    ; SOFT-AEABI-ARM-NEXT: $r0 = COPY [[COPY1]](i32)
+    ; SOFT-AEABI-ARM-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ;
+    ; SOFT-DEFAULT-ARM-LABEL: name: test_fptosi_float
+    ; SOFT-DEFAULT-ARM: liveins: $r0
+    ; SOFT-DEFAULT-ARM-NEXT: {{  $}}
+    ; SOFT-DEFAULT-ARM-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; SOFT-DEFAULT-ARM-NEXT: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+    ; SOFT-DEFAULT-ARM-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
+    ; SOFT-DEFAULT-ARM-NEXT: $r0 = COPY [[BITCAST]](i32)
+    ; SOFT-DEFAULT-ARM-NEXT: BL &__fixsfsi, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
+    ; SOFT-DEFAULT-ARM-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $r0
+    ; SOFT-DEFAULT-ARM-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+    ; SOFT-DEFAULT-ARM-NEXT: $r0 = COPY [[COPY1]](i32)
+    ; SOFT-DEFAULT-ARM-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ;
+    ; SOFT-AEABI-THUMB-LABEL: name: test_fptosi_float
+    ; SOFT-AEABI-THUMB: liveins: $r0
+    ; SOFT-AEABI-THUMB-NEXT: {{  $}}
+    ; SOFT-AEABI-THUMB-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; SOFT-AEABI-THUMB-NEXT: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+    ; SOFT-AEABI-THUMB-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
+    ; SOFT-AEABI-THUMB-NEXT: $r0 = COPY [[BITCAST]](i32)
+    ; SOFT-AEABI-THUMB-NEXT: tBL 14 /* CC::al */, $noreg, &__aeabi_f2iz, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
+    ; SOFT-AEABI-THUMB-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $r0
+    ; SOFT-AEABI-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+    ; SOFT-AEABI-THUMB-NEXT: $r0 = COPY [[COPY1]](i32)
+    ; SOFT-AEABI-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    ;
+    ; SOFT-DEFAULT-THUMB-LABEL: name: test_fptosi_float
+    ; SOFT-DEFAULT-THUMB: liveins: $r0
+    ; SOFT-DEFAULT-THUMB-NEXT: {{  $}}
+    ; SOFT-DEFAULT-THUMB-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+    ; SOFT-DEFAULT-THUMB-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
+    ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST]](i32)
+    ; SOFT-DEFAULT-THUMB-NEXT: tBL 14 /* CC::al */, $noreg, &__fixsfsi, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
+    ; SOFT-DEFAULT-THUMB-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $r0
+    ; SOFT-DEFAULT-THUMB-NEXT: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+    ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[COPY1]](i32)
+    ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0(f32) = COPY $r0
     %1(i32) = G_FPTOSI %0(f32)
     $r0 = COPY %1(i32)

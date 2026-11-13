@@ -20,7 +20,9 @@ int SysVal = 42;
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=SysA > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: %scan-deps-filter %t/result.json --fields=modules.is-in-stable-directories,modules.clang-module-deps,modules.clang-modulemap-file,modules.file-deps,modules.name \
+// RUN:   > %t/filtered.json
+// RUN: sed 's:\\\\\?:/:g' %t/filtered.json | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -28,16 +30,11 @@ int SysVal = 42;
 // CHECK-NEXT:       "is-in-stable-directories": true,
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Sysroot/usr/include/SysA/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Sysroot/usr/include/SysA/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/Sysroot/usr/include/SysA/SysA.h"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "SysA"
 // CHECK-NEXT:     }
-// CHECK-NEXT:   ],
-// CHECK-NEXT:   "translation-units": []
+// CHECK-NEXT:   ]
 // CHECK-NEXT: }

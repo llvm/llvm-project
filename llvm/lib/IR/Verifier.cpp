@@ -692,6 +692,15 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
           "visibility must be dso_local!",
           &GV);
 
+  // Constant::removeDeadConstantUsers skips the use-list walk for globals
+  // that are not marked as possibly having constant users.
+  if (!GV.mayHaveConstantUsers())
+    for (const User *U : GV.materialized_users())
+      Check(!isa<Constant>(U) || isa<GlobalValue>(U),
+            "Global is used by a constant but is not marked as possibly having "
+            "constant users",
+            &GV, U);
+
   forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const auto *I = dyn_cast<Instruction>(V)) {
       if (!I->getParent() || !I->getParent()->getParent())
@@ -2610,9 +2619,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
         "Attributes 'noinline and alwaysinline' are incompatible!", V);
 
   if (Attrs.hasFnAttr(Attribute::OptimizeNone)) {
-    Check(Attrs.hasFnAttr(Attribute::NoInline),
-          "Attribute 'optnone' requires 'noinline'!", V);
-
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
           "Attributes 'optsize and optnone' are incompatible!", V);
 
