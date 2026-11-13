@@ -18,3 +18,16 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.include.sys_syscall
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_object_library(
+    assert_fail
+    SRCS
+      assert_fail.cpp
+    DEPENDS
+      .darwin_util
+      libc.src.__support.OSUtil.assert_fail_hdrs
+      libc.src.__support.OSUtil.assert_fail_utils
+      libc.src.__support.macros.config
+  )
+endif()

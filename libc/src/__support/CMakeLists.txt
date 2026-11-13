@@ -452,27 +452,6 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
-if(LIBC_COPT_USE_C_ASSERT OR NOT LLVM_LIBC_FULL_BUILD)
-  add_header_library(
-    libc_assert
-    HDRS
-      libc_assert.h
-    DEPENDS
-      libc.src.__support.macros.hardening
-  )
-else()
-  add_header_library(
-    libc_assert
-    HDRS
-      libc_assert.h
-    DEPENDS
-      .integer_to_string
-      libc.src.__support.OSUtil.osutil
-      libc.src.__support.macros.optimization
-      libc.src.__support.macros.hardening
-  )
-endif()
-
 add_header_library(
   hash
   HDRS
@@ -522,6 +501,43 @@ add_header_library(
 
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
+
+set(libc_assert_hdrs_deps
+  libc.src.__support.macros.attributes
+  libc.src.__support.macros.config
+  libc.src.__support.macros.hardening
+  libc.src.__support.macros.macro_utils
+  libc.src.__support.macros.optimization
+  libc.src.__support.macros.properties.os
+)
+set(libc_assert_deps .libc_assert_hdrs)
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND libc_assert_hdrs_deps
+    libc.src.__support.OSUtil.assert_fail_hdrs
+  )
+  if(TARGET libc.src.__support.OSUtil.assert_fail)
+    list(APPEND libc_assert_deps
+      libc.src.__support.OSUtil.assert_fail
+    )
+  endif()
+endif()
+
+add_header_library(
+  libc_assert_hdrs
+  HDRS
+    libc_assert.h
+  DEPENDS
+    ${libc_assert_hdrs_deps}
+)
+
+add_header_library(
+  libc_assert
+  HDRS
+    libc_assert.h
+  DEPENDS
+    ${libc_assert_deps}
+)
+
 add_subdirectory(StringUtil)
 add_subdirectory(GPU)
 add_subdirectory(RPC)

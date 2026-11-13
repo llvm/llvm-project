@@ -27,12 +27,12 @@ TEST(LlvmLibcFreeListHeapDeathTest, DoubleFreeDeath) {
   allocator.free(ptr);
 #if defined(ENABLE_SUBPROCESS_TESTS) &&                                        \
     LIBC_COPT_HARDENING_MODE > LIBC_HARDENING_MODE_FAST
-  EXPECT_EXITS(
+  EXPECT_DEATH(
       [&] {
         allocator.free(ptr);
         allocator.integrity_check();
       },
-      255);
+      WITH_SIGNAL(-1));
 #endif
 }
 
@@ -45,6 +45,6 @@ TEST(LlvmLibcFreeListHeapDeathTest, UseAfterFreeDeath) {
 #if defined(ENABLE_SUBPROCESS_TESTS) &&                                        \
     LIBC_COPT_HARDENING_MODE > LIBC_HARDENING_MODE_FAST
   new (ptr) uintptr_t{0xDEADBEEF};
-  EXPECT_EXITS([&] { allocator.integrity_check(); }, 255);
+  EXPECT_DEATH([&] { allocator.integrity_check(); }, WITH_SIGNAL(-1));
 #endif
 }

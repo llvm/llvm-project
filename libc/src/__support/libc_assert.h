@@ -17,9 +17,7 @@
 #include "src/__support/macros/properties/os.h"
 
 #ifdef LIBC_FULL_BUILD
-#include "src/__support/OSUtil/exit.h"
-#include "src/__support/OSUtil/io.h"
-#include "src/__support/integer_to_string.h"
+#include "src/__support/OSUtil/assert_fail.h"
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -44,19 +42,11 @@
   } while (false)
 #endif // LIBC_TARGET_OS_IS_LINUX
 #else
-// FIXME: Calling abort on assertion is actually required by standards like LSB.
-// Calling exit also confuses the debugger as exiting will not trigger
-// debugger's stop-on-signal behavior by default. Currently, adding abort will
-// result in cyclic dependency.
 #define LIBC_REQUIRE(COND, MSG)                                                \
   do {                                                                         \
-    if (LIBC_UNLIKELY(!(COND))) {                                              \
-      LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" LLVM_LIBC_STRINGIFY(        \
-          __LINE__) ": Assertion failed: '" MSG "' in function: '");           \
-      LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
-      LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
-      LIBC_NAMESPACE::internal::exit(0xFF);                                    \
-    }                                                                          \
+    if (LIBC_UNLIKELY(!(COND)))                                                \
+      LIBC_NAMESPACE::internal::assert_fail(MSG, __FILE__, __LINE__,           \
+                                            __PRETTY_FUNCTION__);              \
   } while (false)
 #endif // LIBC_FULL_BUILD
 
@@ -73,26 +63,6 @@
 #endif // LIBC_ASSERT
 
 #else // Not LIBC_COPT_USE_C_ASSERT
-namespace LIBC_NAMESPACE_DECL {
-
-// This is intended to be removed in a future patch to use a similar design to
-// below, but it's necessary for the external assert.
-LIBC_INLINE void report_assertion_failure(const char *assertion,
-                                          const char *filename, unsigned line,
-                                          const char *funcname) {
-  const IntegerToString<unsigned> line_buffer(line);
-  write_to_stderr(filename);
-  write_to_stderr(":");
-  write_to_stderr(line_buffer.view());
-  write_to_stderr(": Assertion failed: '");
-  write_to_stderr(assertion);
-  write_to_stderr("' in function: '");
-  write_to_stderr(funcname);
-  write_to_stderr("'\n");
-}
-
-} // namespace LIBC_NAMESPACE_DECL
-
 #ifdef LIBC_ASSERT
 #error "Unexpected: LIBC_ASSERT macro already defined"
 #endif

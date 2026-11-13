@@ -11,3 +11,19 @@ add_object_library(
     libc.src.__support.RPC.rpc_client
     libc.src.string.memory_utils.inline_memcpy
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_object_library(
+    assert_fail
+    SRCS
+      assert_fail.cpp
+    DEPENDS
+      .gpu_util
+      libc.src.__support.CPP.atomic
+      libc.src.__support.GPU.utils
+      libc.src.__support.OSUtil.assert_fail_hdrs
+      libc.src.__support.OSUtil.assert_fail_utils
+      libc.src.__support.macros.config
+      libc.src.stdlib.abort_utils
+  )
+endif()
