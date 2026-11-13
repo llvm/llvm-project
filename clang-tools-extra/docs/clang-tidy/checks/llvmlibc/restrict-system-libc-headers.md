@@ -20,14 +20,15 @@ because they are ABI incompatible.
 
 ## Options
 
-:::{option} Includes
+```{option} Includes
 A string containing a comma separated glob list of allowed include
-filenames. Similar to the -checks glob list for running clang-tidy itself,
-the two wildcard characters are `*` and `-`, to include and exclude globs,
-respectively. The default is `-*`, which disallows all includes.
+filenames. Similar to the `-checks` glob list for running
+{program}`clang-tidy` itself, the two wildcard characters are `*` and `-`,
+to include and exclude globs, respectively. The default is `-*`, which
+disallows all includes.
 
 This can be used to allow known safe includes such as Linux development
 headers. See {doc}`portability-restrict-system-includes
 <../portability/restrict-system-includes>` for more
 details.
-:::
+```

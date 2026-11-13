@@ -24,8 +24,7 @@ globals().update(common_conf(tags))
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions += ["sphinx.ext.todo", "sphinx.ext.mathjax"]
 
-# The clang-tidy documentation uses definition lists, which need the "deflist"
-# MyST extension. This matches llvm/docs/conf.py and lldb/docs/conf.py.
+# MyST extension.
 myst_enable_extensions += ["deflist"]
 
 # General information about the project.

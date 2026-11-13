@@ -1,6 +1,6 @@
 # Getting Involved
 
-{program}`clang-tidy` has several own checks and can run Clang static analyzer
+{program}`clang-tidy` has several own checks and can run Clang Static Analyzer
 checks, but its power is in the ability to easily write custom checks.
 
 Checks are organized in modules, which can be linked into {program}`clang-tidy`
@@ -15,7 +15,7 @@ The interface provided by {program}`clang-tidy` makes it easy to write useful
 and precise checks in just a few lines of code. If you have an idea for a good
 check, the rest of this document explains how to do this.
 
-There are a few tools particularly useful when developing clang-tidy checks:
+There are a few tools particularly useful when developing Clang-Tidy checks:
 : - `add_new_check.py` is a script to automate the process of adding a new
     check; it will create the check, update the CMake file and create a test.
   - `rename_check.py` does what the script name suggests, renames an existing
@@ -72,27 +72,27 @@ may want to only enable the `X86` target in the CMake configuration.
 `llvm/clang-tools-extra` directory and is structured as follows:
 
 ```
-clang-tidy/                       # Clang-tidy core.
+clang-tidy/                       # Clang-Tidy core.
 |-- ClangTidy.h                   # Interfaces for users.
 |-- ClangTidyCheck.h              # Interfaces for checks.
-|-- ClangTidyModule.h             # Interface for clang-tidy modules.
+|-- ClangTidyModule.h             # Interface for Clang-Tidy modules.
    ...
-|-- google/                       # Google clang-tidy module.
+|-- google/                       # Google Clang-Tidy module.
 |-+
   |-- GoogleTidyModule.cpp
   |-- GoogleTidyModule.h
         ...
-|-- llvm/                         # LLVM clang-tidy module.
+|-- llvm/                         # LLVM Clang-Tidy module.
 |-+
   |-- LLVMTidyModule.cpp
   |-- LLVMTidyModule.h
         ...
-|-- objc/                         # Objective-C clang-tidy module.
+|-- objc/                         # Objective-C Clang-Tidy module.
 |-+
   |-- ObjCTidyModule.cpp
   |-- ObjCTidyModule.h
         ...
-|-- tool/                         # Sources of the clang-tidy binary.
+|-- tool/                         # Sources of the Clang-Tidy binary.
         ...
 test/clang-tidy/                  # Integration tests.
     ...
@@ -103,14 +103,14 @@ unittests/clang-tidy/             # Unit tests.
     ...
 ```
 
-## Writing a clang-tidy Check
+## Writing a Clang-Tidy Check
 
 So you have an idea of a useful check for {program}`clang-tidy`.
 
 First, if you're not familiar with LLVM development, read through the [Getting
 Started with the LLVM System][getting started with the llvm system] document for instructions on setting up your
 workflow and the [LLVM Coding Standards][llvm coding standards] document to familiarize yourself
-with the coding style used in the project. Code reviews for clang-tidy
+with the coding style used in the project. Code reviews for Clang-Tidy
 contributions are done through [LLVM Github][llvm github].
 
 Next, you need to decide which module the check belongs to. Modules
@@ -547,11 +547,11 @@ that code was not modified by fix-its, by checking that it is present
 unchanged in the fixed code. The full set of [FileCheck][filecheck] directives
 is available (e.g., `CHECK-MESSAGES-SAME:`, `CHECK-MESSAGES-NOT:`), though
 typically the basic `CHECK` forms (`CHECK-MESSAGES` and `CHECK-FIXES`)
-are sufficient for clang-tidy tests. Note that the [FileCheck][filecheck]
+are sufficient for Clang-Tidy tests. Note that the [FileCheck][filecheck]
 documentation mostly assumes the default prefix (`CHECK`), and hence
 describes the directive as `CHECK:`, `CHECK-SAME:`, `CHECK-NOT:`, etc.
 Replace `CHECK` with either `CHECK-FIXES` or `CHECK-MESSAGES` for
-clang-tidy tests.
+Clang-Tidy tests.
 
 An additional check enabled by `check_clang_tidy.py` ensures that
 if `CHECK-MESSAGES:` is used in a file then every warning or error
@@ -673,7 +673,7 @@ if you're unsure about a particular warning.
 Developing an out-of-tree check as a plugin largely follows the steps
 outlined above, including creating a new module and doing the hacks to
 register the module. The plugin is a shared library whose code lives outside
-the clang-tidy build system. Build and link this shared library against
+the Clang-Tidy build system. Build and link this shared library against
 LLVM as done for other kinds of Clang plugins. If using CMake, use the keyword
 `MODULE` while invoking `add_library` or `llvm_add_library`.
 
@@ -685,7 +685,7 @@ $ clang-tidy --checks=-*,my-explicit-constructor -list-checks -load myplugin.so
 ```
 
 There are no expectations regarding ABI and API stability, so the plugin must
-be compiled against the version of clang-tidy that will be loading the plugin.
+be compiled against the version of Clang-Tidy that will be loading the plugin.
 
 The plugins can use threads, TLS, or any other facilities available to in-tree
 code which is accessible from the external headers.
@@ -698,7 +698,7 @@ Alternatively, get [lit][lit] following the [test-suite guide][test-suite guide]
 [FileCheck][filecheck] binary, and write a version of [check_clang_tidy.py][check_clang_tidy.py] to suit your
 needs.
 
-## Running clang-tidy on LLVM
+## Running Clang-Tidy on LLVM
 
 To test a check, it's best to try it out on a larger code base. LLVM and Clang
 are the natural targets as you already have the source code around. The most
