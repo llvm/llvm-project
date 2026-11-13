@@ -1678,7 +1678,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP1]], [[FOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[FOR_BODY]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ poison, [[FOR_BODY]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), [[FOR_BODY]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[FOR_BODY]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
@@ -1700,10 +1700,10 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[TMP7]], [[BROADCAST_SPLAT5]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 -1)
-; IF-EVL-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP10]], [[TMP0]]
-; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = select i1 [[TMP14]], i64 0, i64 [[TMP13]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 9223372036854775807)
+; IF-EVL-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
+; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP14]], -9223372036854775808
+; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = select i1 [[TMP13]], i64 [[TMP14]], i64 0
 ; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
@@ -1727,7 +1727,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ poison, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -1742,10 +1742,10 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[TMP8]], [[BROADCAST_SPLAT5]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP7]], <vscale x 2 x i64> splat (i64 -1)
-; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
-; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP10]], [[TMP0]]
-; NO-VP-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i64 0, i64 [[TMP13]]
+; NO-VP-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP7]], <vscale x 2 x i64> splat (i64 9223372036854775807)
+; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
+; NO-VP-NEXT:    [[TMP14:%.*]] = icmp ne i64 [[TMP13]], -9223372036854775808
+; NO-VP-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i64 [[TMP13]], i64 0
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
@@ -1928,7 +1928,7 @@ define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP1]], [[FOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[FOR_BODY]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ poison, [[FOR_BODY]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), [[FOR_BODY]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[FOR_BODY]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
@@ -1950,10 +1950,10 @@ define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[TMP7]], [[BROADCAST_SPLAT5]]
-; IF-EVL-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 -1)
-; IF-EVL-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP10]], [[TMP0]]
-; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = select i1 [[TMP14]], i64 0, i64 [[TMP13]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 9223372036854775807)
+; IF-EVL-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
+; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP14]], -9223372036854775808
+; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = select i1 [[TMP13]], i64 [[TMP14]], i64 0
 ; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       for.end:
 ; IF-EVL-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
@@ -1977,7 +1977,7 @@ define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ poison, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; NO-VP-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -1992,10 +1992,10 @@ define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[TMP8]], [[BROADCAST_SPLAT5]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP7]], <vscale x 2 x i64> splat (i64 -1)
-; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
-; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP10]], [[TMP0]]
-; NO-VP-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i64 0, i64 [[TMP13]]
+; NO-VP-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP7]], <vscale x 2 x i64> splat (i64 9223372036854775807)
+; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
+; NO-VP-NEXT:    [[TMP14:%.*]] = icmp ne i64 [[TMP13]], -9223372036854775808
+; NO-VP-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i64 [[TMP13]], i64 0
 ; NO-VP-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; NO-VP:       scalar.ph:
