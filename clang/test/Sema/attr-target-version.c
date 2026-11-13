@@ -15,20 +15,16 @@ int __attribute__((target_version("aes"))) foo(void) { return 1; }
 //expected-note@+1 {{previous definition is here}}
 int __attribute__((target_version("default"))) foo(void) { return 2; }
 
-//expected-note@+1 {{previous definition is here}}
 int __attribute__((target_version("sha3 + aes "))) foo(void) { return 1; }
-//expected-note@-1 {{previous definition is here}}
 
-//expected-error@+1 {{redefinition of 'foo'}}
+//expected-error@+1 {{'target' attribute cannot be used for multiversioning on current target}}
 int __attribute__((target("dotprod"))) foo(void) { return -1; }
-//expected-warning@-1 {{attribute declaration must precede definition}}
 
 //expected-error@+1 {{redefinition of 'foo'}}
 int foo(void) { return 2; }
 
-//expected-note@+1 {{previous definition is here}}
 __attribute__ ((target("bf16,sve,sve2,dotprod"))) int func(void) { return 1; }
-//expected-error@+1 {{redefinition of 'func'}}
+//expected-error@+1 {{'target' attribute cannot be used for multiversioning on current target}}
 __attribute__ ((target("default"))) int func(void) { return 0; }
 
 //expected-note@+1 {{previous declaration is here}}
