@@ -30,9 +30,8 @@ namespace direct {
 namespace {
 
 // One entry per operand, format first. A string entry means the
-// operand is a constant string; a unit entry means it is not.
-constexpr llvm::StringLiteral kPrintfConstStringsAttrName =
-    "cir.printf.const_strings";
+// operand is a constant string; a unit entry means it is not. The
+// attribute name lives in CIRDialect.
 
 // Fold a constant through widening integral casts, each at its own width.
 // TODO: use the regular fold helpers once they fold widening cast chains
@@ -131,11 +130,11 @@ bool getConstantStringInfo(mlir::Value ptr, mlir::ModuleOp mod,
         return false;
       ptr = stride.getBase();
     } else if (auto elt = mlir::dyn_cast<cir::GetElementOp>(def)) {
-      auto arrayTy =
-          mlir::dyn_cast<cir::ArrayType>(elt.getBaseType().getPointee());
+      bool isArrayBase =
+          mlir::isa<cir::ArrayType>(elt.getBaseType().getPointee());
       std::optional<int64_t> index = getConstantInt(elt.getIndex());
       std::optional<int64_t> step =
-          arrayTy && index
+          isArrayBase && index
               ? scaledOffset(*index, elt.getElementType(), dataLayout)
               : std::nullopt;
       if (!step || llvm::AddOverflow(offset, *step, offset))
@@ -166,6 +165,10 @@ bool getConstantStringInfo(mlir::Value ptr, mlir::ModuleOp mod,
       data = strAttr.getValue().str();
     } else if (auto arrayAttr =
                    mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts())) {
+      // The element list may be shorter (trailing zeros elided) or
+      // longer than the array type; reserving the larger of the two
+      // keeps the later resize cheap either way.
+      data.reserve(std::max<size_t>(arrayAttr.size(), arrayTy.getSize()));
       for (mlir::Attribute elt : arrayAttr) {
         llvm::APInt byte;
         if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(elt)) {
@@ -215,8 +218,8 @@ public:
       : op(op), rewriter(rewriter), dataLayout(dataLayout),
         symbolTables(symbolTables), mod(op->getParentOfType<mlir::ModuleOp>()),
         genericAddrSpace(genericAddrSpace) {
-    if (auto attr =
-            op->getAttrOfType<mlir::ArrayAttr>(kPrintfConstStringsAttrName))
+    if (auto attr = op->getAttrOfType<mlir::ArrayAttr>(
+            cir::CIRDialect::getPrintfConstStringsAttrName()))
       if (attr.size() == op.getArgs().size() + 1)
         constStrings = attr;
   }
@@ -297,26 +300,26 @@ bool isAMDGPUPrintfModule(mlir::ModuleOp module) {
          (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD);
 }
 
-void annotateAMDGPUPrintfStrings(mlir::ModuleOp module,
+void annotateAMDGPUPrintfStrings(mlir::ModuleOp mod,
                                  mlir::SymbolTableCollection &symbolTables) {
-  mlir::MLIRContext *ctx = module.getContext();
-  module.walk([&](cir::OffloadPrintfOp op) {
+  mlir::MLIRContext *ctx = mod.getContext();
+  mod.walk([&](cir::OffloadPrintfOp op) {
     mlir::ModuleOp opModule = op->getParentOfType<mlir::ModuleOp>();
     if (!isAMDGPUPrintfModule(opModule))
       return;
     mlir::DataLayout opLayout(opModule);
-    llvm::SmallVector<mlir::Attribute> entries;
-    auto resolve = [&](mlir::Value value) {
+    auto resolve = [&](mlir::Value value) -> mlir::Attribute {
       std::string str;
       if (getConstantStringInfo(value, opModule, opLayout, symbolTables, str))
-        entries.push_back(mlir::StringAttr::get(ctx, str));
-      else
-        entries.push_back(mlir::UnitAttr::get(ctx));
+        return mlir::StringAttr::get(ctx, str);
+      return mlir::UnitAttr::get(ctx);
     };
-    resolve(op.getFormat());
+    llvm::SmallVector<mlir::Attribute> entries;
+    entries.reserve(op.getArgs().size() + 1);
+    entries.push_back(resolve(op.getFormat()));
     for (mlir::Value arg : op.getArgs())
-      resolve(arg);
-    op->setAttr(kPrintfConstStringsAttrName,
+      entries.push_back(resolve(arg));
+    op->setAttr(cir::CIRDialect::getPrintfConstStringsAttrName(),
                 mlir::ArrayAttr::get(ctx, entries));
   });
 }
