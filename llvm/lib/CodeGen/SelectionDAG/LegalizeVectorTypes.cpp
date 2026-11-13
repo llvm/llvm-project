@@ -6470,9 +6470,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTEND_VECTOR_INREG(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_FCOPYSIGN(SDNode *N) {
   // If this is an FCOPYSIGN with same input types, we can treat it as a
-  // normal (can trap) binary op.
+  // normal binary op.
   if (N->getOperand(0).getValueType() == N->getOperand(1).getValueType())
-    return WidenVecRes_BinaryCanTrap(N);
+    return WidenVecRes_Binary(N);
 
   // If the types are different, fall back to unrolling.
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
