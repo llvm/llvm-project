@@ -29,7 +29,7 @@ B::~B() {
 // CHECK:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
 
-// CHECK: cir.func{{.*}} private dso_local unnamed_addr @_ZN1BD1Ev(!cir.ptr<!rec_B>) alias(@_ZN1BD2Ev)
+// CHECK: cir.func private unnamed_addr @_ZN1BD1Ev(!cir.ptr<!rec_B>) alias(@_ZN1BD2Ev)
 
 // LLVM: @_ZN1BD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BD2Ev
 

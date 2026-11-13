@@ -47,6 +47,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cmath>
@@ -2244,6 +2245,34 @@ void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
                  HLSLVkLocationAttr(getASTContext(), AL, Location));
 }
 
+void SemaHLSL::handleVkBuiltInAttr(Decl *D, const ParsedAttr &AL) {
+  StringRef BuiltIn;
+  SourceLocation ArgLoc;
+  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, BuiltIn, &ArgLoc))
+    return;
+
+  // No built-ins are implemented yet. A name is added here together with its
+  // validation and CodeGen support, so Sema never accepts a built-in that the
+  // rest of the compiler ignores. Candidates: "PointSize", "HelperInvocation",
+  // "BaseVertex", "BaseInstance", "DrawIndex", "DeviceIndex", "ViewportMaskNV".
+  constexpr ArrayRef<StringRef> SupportedBuiltIns;
+  if (!llvm::is_contained(SupportedBuiltIns, BuiltIn)) {
+    std::string Quoted;
+    llvm::raw_string_ostream OS(Quoted);
+    if (SupportedBuiltIns.empty())
+      OS << "none";
+    else
+      llvm::interleaveComma(SupportedBuiltIns, OS,
+                            [&](StringRef S) { OS << "'" << S << "'"; });
+    Diag(ArgLoc, diag::err_hlsl_vk_builtin_unsupported_value)
+        << BuiltIn << Quoted;
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 HLSLVkBuiltInAttr(getASTContext(), AL, BuiltIn));
+}
+
 void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   uint32_t IndexValue(0), ExplicitIndex(0);
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), IndexValue) ||
@@ -3642,6 +3671,8 @@ bool SemaHLSL::ActOnResourceMemberAccessExpr(MemberExpr *ME) {
       E = SubME->getBase();
     } else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       E = ICE->getSubExpr();
+    } else if (isa<CXXThisExpr>(E)) {
+      return true;
     } else {
       llvm_unreachable("unexpected expr type in resource member access");
     }

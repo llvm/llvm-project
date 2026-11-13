@@ -507,6 +507,13 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical,
       return E;
   }
 
+  // Place definitions before declarations so finalizeSymtab()'s stable_sort
+  // keeps definitions (e.g. @foo.cfi) ahead of jump-table declarations (@foo)
+  // when they share a canonical name or GUID.
+  std::stable_partition(
+      MD5FuncMap.begin(), MD5FuncMap.end(),
+      [](const auto &Entry) { return !Entry.second->isDeclaration(); });
+
   Sorted = false;
   finalizeSymtab();
   return Error::success();
@@ -616,7 +623,7 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   //
   // ".__uniq." suffix is used to differentiate internal linkage functions in
   // different modules and should be kept. This is the only suffix with the
-  // pattern ".xxx" which is kept before matching, other suffixes ".llvm." and
+  // pattern ".xxx" which is kept before matching; ".cfi", ".llvm.", and
   // ".part." will be stripped.
   //
   // Leverage the common canonicalization logic from FunctionSamples. Instead of
@@ -628,7 +635,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // and its post-split clones (foo.resume, foo.cleanup) are all canonicalized
   // to "foo" otherwise, which can make the symtab lookup return unexpected
   // result.
-  const SmallVector<StringRef> SuffixesToRemove{FunctionSamples::LLVMSuffix,
+  const SmallVector<StringRef> SuffixesToRemove{FunctionSamples::CfiSuffix,
+                                                FunctionSamples::LLVMSuffix,
                                                 FunctionSamples::PartSuffix};
   return FunctionSamples::getCanonicalFnName(PGOName, SuffixesToRemove);
 }

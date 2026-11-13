@@ -6,7 +6,6 @@ name:            get_inverted
 legalized:       true
 regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
 body:             |

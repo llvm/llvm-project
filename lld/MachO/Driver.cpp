@@ -30,6 +30,7 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -837,20 +838,29 @@ static void replaceCommonSymbols() {
 
 static void initializeSectionRenameMap() {
   if (config->dataConst) {
-    SmallVector<StringRef> v{section_names::got,
-                             section_names::authGot,
+    SmallVector<StringRef> v{section_names::authGot,
                              section_names::authPtr,
-                             section_names::nonLazySymbolPtr,
-                             section_names::const_,
                              section_names::cfString,
+                             section_names::const_,
+                             section_names::constCfObj2,
+                             section_names::got,
                              section_names::moduleInitFunc,
                              section_names::moduleTermFunc,
-                             section_names::objcClassList,
-                             section_names::objcNonLazyClassList,
+                             section_names::nonLazySymbolPtr,
+                             section_names::objcArrayData,
+                             section_names::objcArrayObj,
                              section_names::objcCatList,
+                             section_names::objcCatList2,
+                             section_names::objcClassList,
+                             section_names::objcDateObj,
+                             section_names::objcDictObj,
+                             section_names::objcDoubleObj,
+                             section_names::objcFloatObj,
+                             section_names::objCImageInfo,
+                             section_names::objcIntObj,
                              section_names::objcNonLazyCatList,
-                             section_names::objcProtoList,
-                             section_names::objCImageInfo};
+                             section_names::objcNonLazyClassList,
+                             section_names::objcProtoList};
     for (StringRef s : v)
       config->sectionRenameMap[{segment_names::data, s}] = {
           segment_names::dataConst, s};
@@ -1126,7 +1136,8 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {"lld", opt.data()};
-  if (cl::parseCommandLineOptions(config->libraryOptions, argv, "", &os))
+  if (cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
 }

@@ -7,11 +7,13 @@
 name:            ctlz_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV64I-LABEL: name: ctlz_s32
-    ; RV64I: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; RV64I: liveins: $x10
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV64I-NEXT: [[CLZW:%[0-9]+]]:gpr = CLZW [[COPY]]
     ; RV64I-NEXT: $x10 = COPY [[CLZW]]
     ; RV64I-NEXT: PseudoRET implicit $x10
@@ -25,11 +27,13 @@ body:             |
 name:            ctlz_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; RV64I-LABEL: name: ctlz_s64
-    ; RV64I: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; RV64I: liveins: $x10
+    ; RV64I-NEXT: {{  $}}
+    ; RV64I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV64I-NEXT: [[CLZ:%[0-9]+]]:gpr = CLZ [[COPY]]
     ; RV64I-NEXT: $x10 = COPY [[CLZ]]
     ; RV64I-NEXT: PseudoRET implicit $x10
