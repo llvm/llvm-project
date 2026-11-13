@@ -13,13 +13,17 @@
 // On error, $v0 holds the positive errno.  Normalize to the standard -errno
 // convention on return so that internal_iserror can use the generic test.
 //
-// For syscalls with 4-6 arguments $a3 ($19) serves dual purpose: it carries
-// the fourth argument on entry and the error flag on return, so those variants
-// use a read-write ("+r") constraint for that register.
+// The kernel may clobber $1-$8, $16-$25, $27 and $28; the constraints follow
+// glibc's sysdeps/unix/sysv/linux/alpha/sysdep.h.  $a3 carries the fourth
+// argument in and the error flag out.
 //
 //===----------------------------------------------------------------------===//
 
 #define SYSCALL(name) __NR_##name
+
+#define ALPHA_SYSCALL_CLOBBERS                                                \
+  "$1", "$2", "$3", "$4", "$5", "$6", "$7", "$8", "$22", "$23", "$24", "$25", \
+      "$27", "$28", "memory"
 
 static uptr __internal_syscall(u64 nr) {
   register u64 v0 asm("$0") = nr;
@@ -27,7 +31,7 @@ static uptr __internal_syscall(u64 nr) {
   asm volatile("callsys"
                : "+r"(v0), "=r"(a3)
                :
-               : "memory", "$1", "$22", "$23", "$24", "$25", "$28");
+               : ALPHA_SYSCALL_CLOBBERS, "$16", "$17", "$18", "$20", "$21");
   return a3 ? -v0 : v0;
 }
 #define __internal_syscall0(n) (__internal_syscall)(n)
@@ -37,9 +41,9 @@ static uptr __internal_syscall(u64 nr, u64 arg1) {
   register u64 a0 asm("$16") = arg1;
   register u64 a3 asm("$19");
   asm volatile("callsys"
-               : "+r"(v0), "=r"(a3)
-               : "r"(a0)
-               : "memory", "$1", "$22", "$23", "$24", "$25", "$28");
+               : "+r"(v0), "=r"(a3), "+r"(a0)
+               :
+               : ALPHA_SYSCALL_CLOBBERS, "$17", "$18", "$20", "$21");
   return a3 ? -v0 : v0;
 }
 #define __internal_syscall1(n, a1) (__internal_syscall)(n, (u64)(a1))
@@ -50,9 +54,9 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2) {
   register u64 a1 asm("$17") = arg2;
   register u64 a3 asm("$19");
   asm volatile("callsys"
-               : "+r"(v0), "=r"(a3)
-               : "r"(a0), "r"(a1)
-               : "memory", "$1", "$22", "$23", "$24", "$25", "$28");
+               : "+r"(v0), "=r"(a3), "+r"(a0), "+r"(a1)
+               :
+               : ALPHA_SYSCALL_CLOBBERS, "$18", "$20", "$21");
   return a3 ? -v0 : v0;
 }
 #define __internal_syscall2(n, a1, a2) \
@@ -65,9 +69,9 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3) {
   register u64 a2 asm("$18") = arg3;
   register u64 a3 asm("$19");
   asm volatile("callsys"
-               : "+r"(v0), "=r"(a3)
-               : "r"(a0), "r"(a1), "r"(a2)
-               : "memory", "$1", "$22", "$23", "$24", "$25", "$28");
+               : "+r"(v0), "=r"(a3), "+r"(a0), "+r"(a1), "+r"(a2)
+               :
+               : ALPHA_SYSCALL_CLOBBERS, "$20", "$21");
   return a3 ? -v0 : v0;
 }
 #define __internal_syscall3(n, a1, a2, a3) \
@@ -81,9 +85,9 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
   register u64 a2 asm("$18") = arg3;
   register u64 a3 asm("$19") = arg4;
   asm volatile("callsys"
-               : "+r"(v0), "+r"(a3)
-               : "r"(a0), "r"(a1), "r"(a2)
-               : "memory", "$1", "$22", "$23", "$24", "$25", "$28");
+               : "+r"(v0), "+r"(a3), "+r"(a0), "+r"(a1), "+r"(a2)
+               :
+               : ALPHA_SYSCALL_CLOBBERS, "$20", "$21");
   return a3 ? -v0 : v0;
 }
 #define __internal_syscall4(n, a1, a2, a3, a4) \
@@ -98,9 +102,9 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
   register u64 a3 asm("$19") = arg4;
   register u64 a4 asm("$20") = arg5;
   asm volatile("callsys"
-               : "+r"(v0), "+r"(a3)
-               : "r"(a0), "r"(a1), "r"(a2), "r"(a4)
-               : "memory", "$1", "$22", "$23", "$24", "$25", "$28");
+               : "+r"(v0), "+r"(a3), "+r"(a0), "+r"(a1), "+r"(a2), "+r"(a4)
+               :
+               : ALPHA_SYSCALL_CLOBBERS, "$21");
   return a3 ? -v0 : v0;
 }
 #define __internal_syscall5(n, a1, a2, a3, a4, a5)                       \
@@ -117,9 +121,10 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
   register u64 a4 asm("$20") = arg5;
   register u64 a5 asm("$21") = arg6;
   asm volatile("callsys"
-               : "+r"(v0), "+r"(a3)
-               : "r"(a0), "r"(a1), "r"(a2), "r"(a4), "r"(a5)
-               : "memory", "$1", "$22", "$23", "$24", "$25", "$28");
+               : "+r"(v0), "+r"(a3), "+r"(a0), "+r"(a1), "+r"(a2), "+r"(a4),
+                 "+r"(a5)
+               :
+               : ALPHA_SYSCALL_CLOBBERS);
   return a3 ? -v0 : v0;
 }
 #define __internal_syscall6(n, a1, a2, a3, a4, a5, a6)                   \
