@@ -9,6 +9,16 @@ add_header_library(
 )
 
 add_fp_unittest(
+  simd_matcher_test
+  SUITE
+    libc-mathvec-tests
+  SRCS
+    simd_matcher_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   acosf_test
   SUITE
     libc-mathvec-tests

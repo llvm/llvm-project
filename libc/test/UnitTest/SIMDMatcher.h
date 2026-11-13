@@ -28,6 +28,9 @@ inline bool within_ulp_tolerance(T expected, T actual, uint64_t tolerance) {
   if (expected_bits.is_nan() || actual_bits.is_nan())
     return expected_bits.is_nan() && actual_bits.is_nan();
 
+  if (expected_bits.is_inf() || actual_bits.is_inf())
+    return expected_bits.uintval() == actual_bits.uintval();
+
   // Find the absolute difference of the input bits
   auto expected_uint = expected_bits.uintval();
   auto actual_uint = actual_bits.uintval();
