@@ -479,6 +479,14 @@ namespace llvm {
       return true;
     }
 
+    /// fctiwz/fctidz set VXCVI on out-of-range inputs, which traps when FP
+    /// invalid exceptions are enabled. Offset the source into range before
+    /// converting instead of converting both candidates and selecting.
+    bool shouldUseStrictFP_TO_INT(EVT FpVT, EVT IntVT,
+                                  bool IsSigned) const override {
+      return true;
+    }
+
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;
 

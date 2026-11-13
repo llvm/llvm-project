@@ -3,14 +3,10 @@
 
 define i32 @foo(double %a) {
 ; CHECK-LABEL: foo:
-; CHECK-DAG:            fctiwz [[FPR_1_i:[0-9]+]], {{[0-9]+}}
-; CHECK-DAG:            stfd [[FPR_1_i]], [[#%u,VAL1_ADDR:]](1)
-; CHECK-LE-DAG:         lwz {{[0-9]+}}, [[#%u,== VAL1_ADDR]](1)
-; CHECK-BE-DAG:         lwz {{[0-9]+}}, [[#%u,== VAL1_ADDR + 4]](1)
-; CHECK-DAG:            fctiwz [[FPR_2:[0-9]+]], {{[0-9]+}}
-; CHECK-DAG:            stfd [[FPR_2]], [[#%u,VAL2_ADDR:]](1)
-; CHECK-LE-DAG:         lwz {{[0-9]+}}, [[#%u,== VAL2_ADDR]](1)
-; CHECK-BE-DAG:         lwz {{[0-9]+}}, [[#%u,== VAL2_ADDR + 4]](1)
+; CHECK:                fctiwz [[FPR:[0-9]+]], {{[0-9]+}}
+; CHECK:                stfd [[FPR]], [[#%u,VAL_ADDR:]](1)
+; CHECK-LE:             lwz {{[0-9]+}}, [[#%u,== VAL_ADDR]](1)
+; CHECK-BE:             lwz {{[0-9]+}}, [[#%u,== VAL_ADDR + 4]](1)
 entry:
         %tmp.1 = fptoui double %a to i32         ; <i32> [#uses=1]
         ret i32 %tmp.1

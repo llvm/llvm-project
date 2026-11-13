@@ -8542,45 +8542,45 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
         APFloat APF = APFloat(APFloat::PPCDoubleDouble(), APInt(128, TwoE31));
         SDValue Cst = DAG.getConstantFP(APF, dl, SrcVT);
         SDValue SignMask = DAG.getConstant(0x80000000, dl, DstVT);
-        if (IsStrict) {
-          // Sel = Src < 0x80000000
-          // FltOfs = select Sel, 0.0, 0x80000000
-          // IntOfs = select Sel, 0, 0x80000000
-          // Result = fp_to_sint(Src - FltOfs) ^ IntOfs
-          SDValue Chain = Op.getOperand(0);
-          EVT SetCCVT =
-              getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
-          EVT DstSetCCVT =
-              getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
-          SDValue Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
-                                     Chain, true);
+        // Use the offset form for non-strict FP too: converting Src directly
+        // when it is >= 2^31 sets VXCVI, which traps when FP invalid
+        // exceptions are enabled.
+        // Sel = Src < 0x80000000
+        // FltOfs = select Sel, 0.0, 0x80000000
+        // IntOfs = select Sel, 0, 0x80000000
+        // Result = fp_to_sint(Src - FltOfs) ^ IntOfs
+        SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+        EVT SetCCVT =
+            getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+        EVT DstSetCCVT =
+            getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+        SDValue Sel =
+            DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT, Chain, true);
+        if (IsStrict)
           Chain = Sel.getValue(1);
 
-          SDValue FltOfs = DAG.getSelect(
-              dl, SrcVT, Sel, DAG.getConstantFP(0.0, dl, SrcVT), Cst);
-          Sel = DAG.getBoolExtOrTrunc(Sel, dl, DstSetCCVT, DstVT);
+        SDValue FltOfs = DAG.getSelect(dl, SrcVT, Sel,
+                                       DAG.getConstantFP(0.0, dl, SrcVT), Cst);
+        Sel = DAG.getBoolExtOrTrunc(Sel, dl, DstSetCCVT, DstVT);
 
+        SDValue SInt;
+        if (IsStrict) {
           SDValue Val = DAG.getNode(ISD::STRICT_FSUB, dl,
                                     DAG.getVTList(SrcVT, MVT::Other),
                                     {Chain, Src, FltOfs}, Flags);
           Chain = Val.getValue(1);
-          SDValue SInt = DAG.getNode(ISD::STRICT_FP_TO_SINT, dl,
-                                     DAG.getVTList(DstVT, MVT::Other),
-                                     {Chain, Val}, Flags);
+          SInt = DAG.getNode(ISD::STRICT_FP_TO_SINT, dl,
+                             DAG.getVTList(DstVT, MVT::Other), {Chain, Val},
+                             Flags);
           Chain = SInt.getValue(1);
-          SDValue IntOfs = DAG.getSelect(
-              dl, DstVT, Sel, DAG.getConstant(0, dl, DstVT), SignMask);
-          SDValue Result = DAG.getNode(ISD::XOR, dl, DstVT, SInt, IntOfs);
-          return DAG.getMergeValues({Result, Chain}, dl);
         } else {
-          // X>=2^31 ? (int)(X-2^31)+0x80000000 : (int)X
-          // FIXME: generated code sucks.
-          SDValue True = DAG.getNode(ISD::FSUB, dl, MVT::ppcf128, Src, Cst);
-          True = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, True);
-          True = DAG.getNode(ISD::ADD, dl, MVT::i32, True, SignMask);
-          SDValue False = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, Src);
-          return DAG.getSelectCC(dl, Src, Cst, True, False, ISD::SETGE);
+          SDValue Val = DAG.getNode(ISD::FSUB, dl, SrcVT, Src, FltOfs);
+          SInt = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Val);
         }
+        SDValue IntOfs = DAG.getSelect(dl, DstVT, Sel,
+                                       DAG.getConstant(0, dl, DstVT), SignMask);
+        SDValue Result = DAG.getNode(ISD::XOR, dl, DstVT, SInt, IntOfs);
+        return IsStrict ? DAG.getMergeValues({Result, Chain}, dl) : Result;
       }
     }
 
