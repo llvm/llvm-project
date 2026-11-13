@@ -6935,6 +6935,36 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   return RetBB;
 }
 
+/// Return true if all bits of the lane mask \p Reg are known to be the same,
+/// so that the bits of the inactive lanes match those of the active lanes.
+static bool isAllOrNoneLaneMask(Register Reg, const MachineRegisterInfo &MRI,
+                                const AMDGPU::LaneMaskConstants &LMC,
+                                unsigned Depth = 0) {
+  constexpr unsigned MaxDepth = 6;
+  if (Depth >= MaxDepth || !Reg.isVirtual())
+    return false;
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (!Def)
+    return false;
+
+  auto IsAllOrNone = [&](const MachineOperand &MO) {
+    if (MO.isImm())
+      return MO.getImm() == 0 || MO.getImm() == -1;
+    return MO.isReg() && !MO.getSubReg() &&
+           isAllOrNoneLaneMask(MO.getReg(), MRI, LMC, Depth + 1);
+  };
+
+  unsigned Opc = Def->getOpcode();
+  // SIFixSGPRCopies lowers a copy from SCC to S_CSELECT -1, 0.
+  if (Opc == AMDGPU::COPY)
+    return Def->getOperand(1).getReg() == AMDGPU::SCC ||
+           IsAllOrNone(Def->getOperand(1));
+  if (Opc == LMC.CSelectOpc || Opc == LMC.AndOpc || Opc == LMC.OrOpc ||
+      Opc == LMC.XorOpc)
+    return IsAllOrNone(Def->getOperand(1)) && IsAllOrNone(Def->getOperand(2));
+  return false;
+}
+
 MachineBasicBlock *
 SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                               MachineBasicBlock *BB) const {
@@ -7159,7 +7189,18 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Src2.setReg(RegOp2);
     }
 
-    if (ST.isWave64()) {
+    // Src2 is the lane mask of a uniform condition. Uniformity only means that
+    // the active lanes agree, so the bits of the inactive lanes may differ.
+    // Unless they are known to be 0 or to match the active lanes, mask Src2
+    // with EXEC. S_AND sets SCC to whether the result is non-zero.
+    const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+    if (!TII->isMaskedByExec(Src2.getReg(), MI, MRI) &&
+        !isAllOrNoneLaneMask(Src2.getReg(), MRI, LMC)) {
+      BuildMI(*BB, MII, DL, TII->get(LMC.AndOpc),
+              MRI.createVirtualRegister(TRI->getWaveMaskRegClass()))
+          .add(Src2)
+          .addReg(LMC.ExecReg);
+    } else if (ST.isWave64()) {
       if (ST.hasScalarCompareEq64()) {
         BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
             .addReg(Src2.getReg())
@@ -18045,6 +18086,59 @@ checkDot4MulSignedness(const SDValue &N, ByteProvider<SDValue> &Src0,
   llvm_unreachable("Fully covered condition");
 }
 
+/// Build \p Base + \p K + \p Carry if \p IsAdd, or \p Base - \p K - \p Carry
+/// otherwise, where \p K is 0 or -1. A 16-bit value is computed in 32 bits,
+/// and a 64-bit value with a chain of two 32-bit operations.
+static SDValue buildConditionalCarryOp(SelectionDAG &DAG, const SDLoc &SL,
+                                       EVT VT, bool IsAdd, SDValue Base,
+                                       int64_t K, SDValue Carry) {
+  assert((K == 0 || K == -1) && "unexpected conditional carry op constant");
+  unsigned Opc = IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY;
+  SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
+  SDValue KVal = DAG.getSignedConstant(K, SL, MVT::i32);
+  if (VT == MVT::i32)
+    return DAG.getNode(Opc, SL, VTList, Base, KVal, Carry);
+
+  if (VT == MVT::i16) {
+    // Only the low 16 bits of the 32-bit result are used.
+    SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Base);
+    SDValue Res = DAG.getNode(Opc, SL, VTList, Ext, KVal, Carry);
+    return DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, Res);
+  }
+
+  // K is 0 or -1, so both halves of the 64-bit constant are K.
+  assert(VT == MVT::i64 && "unexpected conditional carry op type");
+  auto [Lo, Hi] = DAG.SplitScalar(Base, SL, MVT::i32, MVT::i32);
+  SDValue ResLo = DAG.getNode(Opc, SL, VTList, Lo, KVal, Carry);
+  SDValue ResHi = DAG.getNode(Opc, SL, VTList, Hi, KVal, ResLo.getValue(1));
+  return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i64, ResLo, ResHi);
+}
+
+static bool isConditionalCarryOpType(EVT VT) {
+  return VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64;
+}
+
+/// Return true if \p Cond can be the carry-in of the carry op that replaces
+/// \p N without being saved for its other users. A uniform \p N becomes a
+/// scalar carry op, which takes its carry-in in SCC and clobbers SCC, so
+/// another user of a uniform condition would need it saved and copied back
+/// to SCC. A divergent \p N becomes a VALU carry op, which does not use SCC.
+/// If \p N reads \p Cond through the extend \p Ext, \p Ext must have no other
+/// users either, because it then stays as a second user of \p Cond.
+static bool canFoldCarryIn(const SDNode *N, SDValue Cond,
+                           SDValue Ext = SDValue()) {
+  if (N->isDivergent())
+    return true;
+  if (!Cond.hasOneUse() || (Ext && !Ext.hasOneUse()))
+    return false;
+  // DAGCombiner folds (add X, (uaddo_carry Y, 0, C)) into a new carry op on C
+  // and keeps the old one for its other users, so C would have two users.
+  // For simplicity, reject any multi-use \p N with an add user.
+  return N->hasOneUse() || none_of(N->users(), [](const SDNode *U) {
+           return U->getOpcode() == ISD::ADD || U->getOpcode() == ISD::UADDO;
+         });
+}
+
 SDValue SITargetLowering::performAddCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -18214,7 +18308,7 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     return DAG.getExtOrTrunc(*IsSigned, Dot, SL, VT);
   }
 
-  if (VT != MVT::i32 || !DCI.isAfterLegalizeDAG())
+  if (!isConditionalCarryOpType(VT) || !DCI.isAfterLegalizeDAG())
     return SDValue();
 
   // add x, zext (setcc) => uaddo_carry x, 0, setcc
@@ -18236,14 +18330,14 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     // extra instruction anyway.
     if (!isBoolSGPR(Cond))
       break;
-    SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
-    SDValue Args[] = {LHS, DAG.getConstant(0, SL, MVT::i32), Cond};
-    Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::USUBO_CARRY : ISD::UADDO_CARRY;
-    return DAG.getNode(Opc, SL, VTList, Args);
+    if (!canFoldCarryIn(N, Cond, RHS))
+      break;
+    return buildConditionalCarryOp(DAG, SL, VT, Opc != ISD::SIGN_EXTEND, LHS,
+                                   /*K=*/0, Cond);
   }
   case ISD::UADDO_CARRY: {
     // add x, (uaddo_carry y, 0, cc) => uaddo_carry x, y, cc
-    if (!isNullConstant(RHS.getOperand(1)))
+    if (VT != MVT::i32 || !isNullConstant(RHS.getOperand(1)))
       break;
     SDValue Args[] = {LHS, RHS.getOperand(0), RHS.getOperand(2)};
     return DAG.getNode(ISD::UADDO_CARRY, SDLoc(N), RHS->getVTList(), Args);
@@ -18346,7 +18440,8 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
       return Folded;
   }
 
-  if (VT != MVT::i32)
+  if (!isConditionalCarryOpType(VT) ||
+      (VT != MVT::i32 && !DCI.isAfterLegalizeDAG()))
     return SDValue();
 
   SDLoc SL(N);
@@ -18367,16 +18462,23 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
     // extra instruction anyway.
     if (!isBoolSGPR(Cond))
       break;
-    SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
-    SDValue Args[] = {LHS, DAG.getConstant(0, SL, MVT::i32), Cond};
-    Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::UADDO_CARRY : ISD::USUBO_CARRY;
-    return DAG.getNode(Opc, SL, VTList, Args);
+    if (!canFoldCarryIn(N, Cond, RHS))
+      break;
+    return buildConditionalCarryOp(DAG, SL, VT, Opc == ISD::SIGN_EXTEND, LHS,
+                                   /*K=*/0, Cond);
   }
   }
+
+  if (VT != MVT::i32)
+    return SDValue();
 
   if (LHS.getOpcode() == ISD::USUBO_CARRY) {
     // sub (usubo_carry x, 0, cc), y => usubo_carry x, y, cc
     if (!isNullConstant(LHS.getOperand(1)))
+      return SDValue();
+    // If the old carry op stays for its other users, a uniform cc would have
+    // two scalar carry ops as users and need to be saved.
+    if (!N->isDivergent() && !LHS.hasOneUse())
       return SDValue();
     SDValue Args[] = {LHS.getOperand(0), RHS, LHS.getOperand(2)};
     return DAG.getNode(ISD::USUBO_CARRY, SDLoc(N), LHS->getVTList(), Args);
@@ -19361,8 +19463,55 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
   return FrexpVal;
 }
 
+/// Fold a conditional increment or decrement into an add/sub-with-carry:
+///   select c, (add x, 1), x  => x + 0 + c
+///   select c, x, (add x, 1)  => x - (-1) - c
+///   select c, (add x, -1), x => x - 0 - c
+///   select c, x, (add x, -1) => x + (-1) + c
+/// The select already needs its condition in SCC or VCC, which is also where
+/// the carry-in operand is read from. Like the condition of a uniform select, a
+/// uniform carry-in is masked with EXEC when it may be non-zero in inactive
+/// lanes, so any condition can be used.
+static SDValue
+foldSelectOfIncDecToCarryOp(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  SDValue Cond = N->getOperand(0);
+  // A 64-bit select is split during legalization, so it is also matched
+  // before legalization. A 16-bit carry op formed before legalization is
+  // narrowed back to an illegal 16-bit node, so 16-bit and 32-bit selects are
+  // matched after legalization only.
+  if (!isConditionalCarryOpType(VT) || Cond.getValueType() != MVT::i1 ||
+      (VT != MVT::i64 && !DCI.isAfterLegalizeDAG()) || !canFoldCarryIn(N, Cond))
+    return SDValue();
+
+  auto Match = [&](SDValue Step, SDValue Base, bool StepIfTrue) -> SDValue {
+    if (Step.getOpcode() != ISD::ADD || !Step.hasOneUse() ||
+        Step.getOperand(0) != Base)
+      return SDValue();
+    auto *Imm = dyn_cast<ConstantSDNode>(Step.getOperand(1));
+    if (!Imm || (!Imm->isOne() && !Imm->isAllOnes()))
+      return SDValue();
+    bool IsInc = Imm->isOne();
+    SDLoc SL(N);
+    // select c, x + Imm, x = x + Imm * c
+    // select c, x, x + Imm = x + Imm - Imm * c
+    if (StepIfTrue)
+      return buildConditionalCarryOp(DCI.DAG, SL, VT, IsInc, Base, /*K=*/0,
+                                     Cond);
+    return buildConditionalCarryOp(DCI.DAG, SL, VT, !IsInc, Base, /*K=*/-1,
+                                   Cond);
+  };
+
+  if (SDValue Res =
+          Match(N->getOperand(1), N->getOperand(2), /*StepIfTrue=*/true))
+    return Res;
+  return Match(N->getOperand(2), N->getOperand(1), /*StepIfTrue=*/false);
+}
+
 SDValue SITargetLowering::performSelectCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
+  if (SDValue Res = foldSelectOfIncDecToCarryOp(N, DCI))
+    return Res;
 
   // Try to fold CMP + SELECT patterns with shared constants (both FP and
   // integer).

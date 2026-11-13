@@ -1100,11 +1100,10 @@ define <2 x i8> @to_f8e4m3fn_v2f16(<2 x half> %x) {
 ; CHECK-NEXT:    v_and_b32_e32 v1, v1, v5
 ; CHECK-NEXT:    v_add_u16_e32 v1, v2, v1
 ; CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v1
-; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; CHECK-NEXT:    v_add_u16_e32 v2, v4, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v4, vcc
 ; CHECK-NEXT:    v_add_u16_e32 v2, 6, v2
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v4, 3, v2
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
 ; CHECK-NEXT:    v_or_b32_e32 v4, v6, v4
 ; CHECK-NEXT:    v_or_b32_e32 v1, v4, v1
 ; CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v2
@@ -1151,11 +1150,10 @@ define <2 x i8> @to_f8e4m3fn_v2f16(<2 x half> %x) {
 ; CHECK-NEXT:    v_and_b32_e32 v3, v3, v7
 ; CHECK-NEXT:    v_add_u16_e32 v3, v4, v3
 ; CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, 7, v3
-; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; CHECK-NEXT:    v_add_u16_e32 v4, v6, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v4, vcc, 0, v6, vcc
 ; CHECK-NEXT:    v_add_u16_e32 v4, 6, v4
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v6, 3, v4
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
 ; CHECK-NEXT:    v_or_b32_e32 v6, v8, v6
 ; CHECK-NEXT:    v_or_b32_e32 v3, v6, v3
 ; CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v4
@@ -1215,11 +1213,10 @@ define i8 @to_f8e5m2_from_f16(half %x) {
 ; CHECK-NEXT:    v_and_b32_e32 v1, v1, v5
 ; CHECK-NEXT:    v_add_u16_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v1
-; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; CHECK-NEXT:    v_add_u16_e32 v2, v4, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v4, vcc
 ; CHECK-NEXT:    v_add_u16_e32 v2, 14, v2
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v4, 2, v2
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
 ; CHECK-NEXT:    v_or_b32_e32 v4, v6, v4
 ; CHECK-NEXT:    v_or_b32_e32 v4, v4, v1
 ; CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v2
@@ -1295,11 +1292,10 @@ define i8 @to_f8e5m2_from_bf16(bfloat %x) {
 ; CHECK-NEXT:    v_and_b32_e32 v2, v2, v6
 ; CHECK-NEXT:    v_add_u16_e32 v2, v3, v2
 ; CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, 3, v2
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
-; CHECK-NEXT:    v_add_u16_e32 v3, v5, v3
+; CHECK-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v5, vcc
 ; CHECK-NEXT:    v_add_u16_e32 v3, 14, v3
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v5, 2, v3
-; CHECK-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; CHECK-NEXT:    v_or_b32_e32 v5, v7, v5
 ; CHECK-NEXT:    v_or_b32_e32 v5, v5, v2
 ; CHECK-NEXT:    v_cmp_gt_i16_e32 vcc, 1, v3
