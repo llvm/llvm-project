@@ -92,12 +92,21 @@ void NormalizeMemRefs::runOnOperation() {
     normalizeFuncOpMemRefs(funcOp, moduleOp);
 }
 
-/// Check whether all the uses of oldMemRef are either dereferencing uses or the
-/// op is of type : DeallocOp, CallOp or ReturnOp. Only if these constraints
-/// are satisfied will the value become a candidate for replacement.
-/// TODO: Extend this for DimOps.
-static bool isMemRefNormalizable(Value::user_range opUsers) {
-  return llvm::all_of(opUsers, [](Operation *op) {
+/// Check whether all users support normalization. When old and new types are
+/// provided, also check that dimension queries retain their original extent.
+static bool isMemRefNormalizable(Value::user_range opUsers,
+                                 MemRefType oldType = {},
+                                 MemRefType newType = {}) {
+  return llvm::all_of(opUsers, [&](Operation *op) {
+    if (auto dimOp = dyn_cast<DimOp>(op); dimOp && oldType && newType) {
+      if (oldType == newType)
+        return true;
+      std::optional<int64_t> dim = dimOp.getConstantIndex();
+      // Equal dynamic dimension markers do not prove equal runtime extents.
+      return dim && *dim >= 0 && *dim < oldType.getRank() &&
+             *dim < newType.getRank() && !oldType.isDynamicDim(*dim) &&
+             oldType.getDimSize(*dim) == newType.getDimSize(*dim);
+    }
     return op->hasTrait<OpTrait::MemRefsNormalizable>();
   });
 }
@@ -173,6 +182,19 @@ bool NormalizeMemRefs::areMemRefsNormalizable(func::FuncOp funcOp) {
             Value oldMemRef = allocaOp.getResult();
             if (!allocaOp.getType().getLayout().isIdentity() &&
                 !isMemRefNormalizable(oldMemRef.getUsers()))
+              return WalkResult::interrupt();
+            return WalkResult::advance();
+          })
+          .wasInterrupted())
+    return false;
+
+  if (funcOp
+          .walk([&](ReinterpretCastOp reinterpretCastOp) -> WalkResult {
+            MemRefType oldType = reinterpretCastOp.getType();
+            MemRefType newType = normalizeMemRefType(oldType);
+            if (newType != oldType &&
+                !isMemRefNormalizable(reinterpretCastOp.getResult().getUsers(),
+                                      oldType, newType))
               return WalkResult::interrupt();
             return WalkResult::advance();
           })
