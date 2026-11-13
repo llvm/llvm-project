@@ -3242,6 +3242,10 @@ static std::optional<int> GetMatchingDistance(
     if (dummyDataAttr == common::CUDADataAttr::Pinned && !actualDataAttr) {
       return true;
     }
+    // IGNORE_TKR(D) ignores every CUDA data attribute.
+    if (dummyIgnoreTKR.test(common::IgnoreTKR::Device)) {
+      return true;
+    }
     return false;
   }};
 

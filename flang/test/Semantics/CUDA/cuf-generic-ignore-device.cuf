@@ -1,0 +1,131 @@
+! RUN: split-file %s %t
+! RUN: bbc -fcuda -emit-hlfir %t/accepted.cuf -o - | FileCheck %s --check-prefix=ACCEPT
+! RUN: not bbc -fcuda -emit-hlfir %t/type.cuf -o - 2>&1 | FileCheck %s --check-prefix=TYPE
+! RUN: bbc -fcuda -emit-hlfir %t/ranking.cuf -o - | FileCheck %s --check-prefix=RANKING
+! RUN: bbc -fcuda -gpu=unified -emit-hlfir %t/unified-ranking.cuf -o - | FileCheck %s --check-prefix=UNIFIED-RANKING
+
+!--- accepted.cuf
+! Test direct calls too: their compatibility check must still honor IGNORE_TKR(D).
+subroutine ignored_host(a)
+  integer, device :: a
+  interface choose
+    subroutine host_specific(x)
+      integer :: x
+      !dir$ ignore_tkr(d) x
+    end subroutine
+  end interface
+  ! ACCEPT-LABEL: func.func @_QPignored_host
+  ! ACCEPT: fir.call @_QPhost_specific
+  ! ACCEPT: fir.call @_QPhost_specific
+  call choose(a)
+  call host_specific(a)
+end subroutine
+
+subroutine ignored_device(a)
+  integer :: a
+  interface choose
+    subroutine device_specific(x)
+      integer, device :: x
+      !dir$ ignore_tkr(d) x
+    end subroutine
+  end interface
+  ! ACCEPT-LABEL: func.func @_QPignored_device
+  ! ACCEPT: fir.call @_QPdevice_specific
+  ! ACCEPT: fir.call @_QPdevice_specific
+  call choose(a)
+  call device_specific(a)
+end subroutine
+
+! The directive follows the same compatibility rule for other storage attributes.
+subroutine ignored_managed(a)
+  integer, device :: a
+  interface choose
+    subroutine managed_specific(x)
+      integer, managed :: x
+      !dir$ ignore_tkr(d) x
+    end subroutine
+  end interface
+  ! ACCEPT-LABEL: func.func @_QPignored_managed
+  ! ACCEPT: fir.call @_QPmanaged_specific
+  ! ACCEPT: fir.call @_QPmanaged_specific
+  call choose(a)
+  call managed_specific(a)
+end subroutine
+
+! Without IGNORE_TKR(D), opaque buffers retain their nonzero distance so an
+! explicit DEVICE overload wins. The opaque-only generic must also remain valid.
+subroutine opaque_buffer(a)
+  integer, device :: a(*)
+  interface choose
+    subroutine opaque_specific(x)
+      type(*) :: x(*)
+    end subroutine
+    subroutine attributed_specific(x)
+      integer, device :: x(*)
+    end subroutine
+  end interface
+  interface opaque_only
+    procedure :: opaque_specific
+  end interface
+  ! ACCEPT-LABEL: func.func @_QPopaque_buffer
+  ! ACCEPT: fir.call @_QPattributed_specific
+  ! ACCEPT: fir.call @_QPopaque_specific
+  call choose(a)
+  call opaque_only(a)
+end subroutine
+
+!--- type.cuf
+subroutine wrong_type(a)
+  real, device :: a
+  interface choose
+    subroutine integer_specific(x)
+      integer :: x
+      !dir$ ignore_tkr(d) x
+    end subroutine
+  end interface
+  ! TYPE: No specific subroutine of generic 'choose' matches the actual arguments
+  call choose(a)
+end subroutine
+
+!--- ranking.cuf
+! IGNORE_TKR(D) admits otherwise incompatible storage, but does not change a
+! finite distance: for a MANAGED actual, the ignored host dummy keeps its
+! distance (3) and the UNIFIED dummy (1) ranks better.
+subroutine ranking(m1, m2)
+  real, managed :: m1(10), m2(10)
+  interface choose
+    subroutine ignored_first(x, y)
+      real :: x(*), y(*)
+      !dir$ ignore_tkr(d) x
+    end subroutine
+    subroutine managed_second(x, y)
+      real, unified :: x(*)
+      real, managed :: y(*)
+    end subroutine
+  end interface
+  ! RANKING-LABEL: func.func @_QPranking
+  ! RANKING: fir.call @_QPmanaged_second
+  call choose(m1, m2)
+end subroutine
+
+!--- unified-ranking.cuf
+! Under -gpu=unified, a host actual keeps its finite distance (2) to an
+! IGNORE_TKR(D) DEVICE dummy, which ranks below a MANAGED dummy (1).
+subroutine unified_ranking(h, m)
+  real :: h(10)
+  real, managed :: m(10)
+  interface choose
+    subroutine ignored_device(x, y)
+      real, device :: x(*)
+      real, managed :: y(*)
+      !dir$ ignore_tkr(d) x
+    end subroutine
+    subroutine managed_first(x, y)
+      real, managed :: x(*)
+      real :: y(*)
+    end subroutine
+  end interface
+  ! UNIFIED-RANKING-LABEL: func.func @_QPunified_ranking
+  ! UNIFIED-RANKING: fir.call @_QPmanaged_first
+  call choose(h, m)
+end subroutine
