@@ -6967,6 +6967,28 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::SI_HI16_TO_VGPR32: {
+    Register Dst = MI.getOperand(0).getReg();
+    const MachineOperand Src = MI.getOperand(1);
+    const TargetRegisterClass *SrcRC = TRI->getSubRegisterClass(
+        MRI.getRegClass(Src.getReg()), Src.getSubReg());
+    if (AMDGPU::VGPR_16RegClass.hasSubClassEq(SrcRC)) {
+      Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
+          .addReg(Undef)
+          .addImm(AMDGPU::lo16)
+          .add(Src)
+          .addImm(AMDGPU::hi16);
+    } else {
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_LSHLREV_B32_e64), Dst)
+          .addImm(16)
+          .add(Src);
+    }
+
+    MI.eraseFromParent();
+    return BB;
+  }
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U64:

@@ -121,3 +121,65 @@ exit:
   store half %result, ptr addrspace(1) %out, align 2
   ret void
 }
+
+define void @hi16_to_vgpr32_repro(ptr addrspace(1) inreg %out, half inreg %x, float inreg %magnitude) {
+; GCN-LABEL: hi16_to_vgpr32_repro:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cmp_nle_f16_e64 vcc_lo, s2, 0.5
+; GCN-NEXT:    s_cbranch_vccz .LBB2_2
+; GCN-NEXT:  ; %bb.1: ; %big
+; GCN-NEXT:    s_mov_b32 s2, s2
+; GCN-NEXT:    s_mov_b32 s4, -2.0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    v_fma_mixlo_f16 v0, s2, s2, s4 op_sel_hi:[1,1,0]
+; GCN-NEXT:    s_branch .LBB2_3
+; GCN-NEXT:  .LBB2_2: ; %small
+; GCN-NEXT:    v_mul_f16_e64 v0.l, s2, s2
+; GCN-NEXT:  .LBB2_3: ; %exit
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 16, v0
+; GCN-NEXT:    v_bfi_b32 v0, 0x7fffffff, s3, v0
+; GCN-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; FAKE16-LABEL: hi16_to_vgpr32_repro:
+; FAKE16:       ; %bb.0: ; %entry
+; FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FAKE16-NEXT:    v_cmp_nle_f16_e64 vcc_lo, s2, 0.5
+; FAKE16-NEXT:    s_cbranch_vccz .LBB2_2
+; FAKE16-NEXT:  ; %bb.1: ; %big
+; FAKE16-NEXT:    s_mov_b32 s4, -2.0
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; FAKE16-NEXT:    v_fma_mixlo_f16 v0, s2, s2, s4 op_sel_hi:[1,1,0]
+; FAKE16-NEXT:    s_branch .LBB2_3
+; FAKE16-NEXT:  .LBB2_2: ; %small
+; FAKE16-NEXT:    v_mul_f16_e64 v0, s2, s2
+; FAKE16-NEXT:  .LBB2_3: ; %exit
+; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; FAKE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 16, v0
+; FAKE16-NEXT:    v_bfi_b32 v0, 0x7fffffff, s3, v0
+; FAKE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; FAKE16-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %condition = fcmp ugt half %x, 0xH3800
+  br i1 %condition, label %big, label %small
+
+small:
+  %s = fmul half %x, %x
+  br label %exit
+
+big:
+  %extended = fpext half %x to float
+  %m = call float @llvm.fmuladd.f32(float %extended, float %extended, float -2.0)
+  %t = fptrunc float %m to half
+  br label %exit
+
+exit:
+  %sign = phi half [ %s, %small ], [ %t, %big ]
+  %sign.extended = fpext half %sign to float
+  %result = call float @llvm.copysign.f32(float %magnitude, float %sign.extended)
+  store float %result, ptr addrspace(1) %out
+  ret void
+}
+
