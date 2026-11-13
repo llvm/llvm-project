@@ -19,29 +19,29 @@ define i64 @f_rettype() {
   ret i64 123
 }
 
-define i32 @argcount(i32 %idx) {
+define i32 @argcount(i64 %idx) {
 ; CHECK-LABEL: define i32 @argcount(
-; CHECK-SAME: i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x ptr], ptr @arr_argcount, i32 0, i32 [[IDX]]
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x ptr], ptr @arr_argcount, i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[FP:%.*]] = load ptr, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = call i32 [[FP]]()
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %gep = getelementptr inbounds [1 x ptr], ptr @arr_argcount, i32 0, i32 %idx
+  %gep = getelementptr inbounds [1 x ptr], ptr @arr_argcount, i64 0, i64 %idx
   %fp = load ptr, ptr %gep
   %r = call i32 %fp()
   ret i32 %r
 }
 
-define i32 @rettype(i32 %idx) {
+define i32 @rettype(i64 %idx) {
 ; CHECK-LABEL: define i32 @rettype(
-; CHECK-SAME: i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x ptr], ptr @arr_rettype, i32 0, i32 [[IDX]]
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x ptr], ptr @arr_rettype, i64 0, i64 [[IDX]]
 ; CHECK-NEXT:    [[FP:%.*]] = load ptr, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = call i32 [[FP]]()
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %gep = getelementptr inbounds [1 x ptr], ptr @arr_rettype, i32 0, i32 %idx
+  %gep = getelementptr inbounds [1 x ptr], ptr @arr_rettype, i64 0, i64 %idx
   %fp = load ptr, ptr %gep
   %r = call i32 %fp()
   ret i32 %r
