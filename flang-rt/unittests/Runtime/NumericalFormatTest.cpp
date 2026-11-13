@@ -11,6 +11,7 @@
 #include "flang/Runtime/io-api.h"
 #include <algorithm>
 #include <array>
+#include <cfenv>
 #include <cstring>
 #include <gtest/gtest.h>
 #include <tuple>
@@ -999,6 +1000,16 @@ TEST(IOApiTests, EditDoubleInputValues) {
       {"(RZ,F7.0)", "-1.e999", 0xffefffffffffffff, 0}, // -HUGE()
       {"(RD,F7.0)", "-1.e999", 0xfff0000000000000, ovf}, // -Inf
       {"(RU,F7.0)", "-1.e999", 0xffefffffffffffff, 0}, // -HUGE()
+      {"(F18.0)", "  9007199254740993", 0x4340000000000000, 0}, // 2**53+1, tie
+      {"(F18.0)", "1801439850948199e1", 0x4350000000000002, 0}, // tie, e > 0
+      {"(F18.0)", "1844674407370955e4", 0x43efffffffffffff, 0}, // < 2**64
+      {"(F18.0)", "1844674407370956e4", 0x43f0000000000002, 0}, // > 2**64
+      {"(F18.0)", "              1e19", 0x43e158e460913d00, 0},
+      {"(F18.0)", "              1e20", 0x4415af1d78b58c40, 0},
+      {"(F18.0)", "             1e-19", 0x3bfd83c94fb6d2ac, 0},
+      {"(F19.0)", "9999999999999999e-1", 0x430c6bf52633ffff, 0},
+      {"(F18.0)", "             5e-23", 0x3b4e392010175ee6, 0},
+      {"(F18.0)", "          -0.0e-99", 0x8000000000000000, 0},
       {"(E9.1)", " 1.0E-325", 0x0, 0},
       {"(RU,E9.1)", " 1.0E-325", 0x1, 0},
       {"(E9.1)", "-1.0E-325", 0x8000000000000000, 0},
@@ -1037,6 +1048,68 @@ TEST(IOApiTests, EditDoubleInputValues) {
     // Ensure raw uint64 value matches expected conversion from double
     EXPECT_EQ(u.raw, want) << '\'' << format << "' failed reading '" << data
                            << "', want " << want << ", got " << u.raw;
+  }
+}
+
+TEST(IOApiTests, EditRealInputRoundingModeTies) {
+  static constexpr struct {
+    const char *format;
+    std::uint32_t want4; // 4096000244140625e-12: a real(4) tie, e < 0
+    std::uint64_t want8; // 1801439850948199e1: a real(8) tie, e > 0
+  } cases[]{
+      {"(RN,F20.0)", 0x45800000, 0x4350000000000002},
+      {"(RU,F20.0)", 0x45800001, 0x4350000000000002},
+      {"(RD,F20.0)", 0x45800000, 0x4350000000000001},
+      {"(RZ,F20.0)", 0x45800000, 0x4350000000000001},
+      {"(RC,F20.0)", 0x45800001, 0x4350000000000002},
+  };
+  for (const auto &c : cases) {
+    static constexpr const char *data4{"4096000244140625e-12"};
+    static constexpr const char *data8{"  1801439850948199e1"};
+    auto cookie{IONAME(BeginInternalFormattedInput)(
+        data4, std::strlen(data4), c.format, std::strlen(c.format))};
+    float f;
+    IONAME(InputReal32)(cookie, f);
+    EXPECT_EQ(IONAME(EndIoStatement)(cookie), 0) << c.format;
+    std::uint32_t raw4;
+    std::memcpy(&raw4, &f, sizeof raw4);
+    EXPECT_EQ(raw4, c.want4) << c.format;
+    cookie = IONAME(BeginInternalFormattedInput)(
+        data8, std::strlen(data8), c.format, std::strlen(c.format));
+    double d;
+    IONAME(InputReal64)(cookie, d);
+    EXPECT_EQ(IONAME(EndIoStatement)(cookie), 0) << c.format;
+    std::uint64_t raw8;
+    std::memcpy(&raw8, &d, sizeof raw8);
+    EXPECT_EQ(raw8, c.want8) << c.format;
+  }
+}
+
+TEST(IOApiTests, EditDoubleInputIgnoresDynamicRoundingMode) {
+  static constexpr struct {
+    const char *format, *data;
+    std::uint64_t want;
+  } cases[]{
+      {"(F4.0)", " 0.1", 0x3fb999999999999a},
+      {"(RN,F4.0)", "-0.1", 0xbfb999999999999a},
+      {"(F5.0)", "2.675", 0x4005666666666666},
+  };
+  for (int mode : {FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
+    for (const auto &c : cases) {
+      std::fesetround(mode);
+      auto cookie{IONAME(BeginInternalFormattedInput)(
+          c.data, std::strlen(c.data), c.format, std::strlen(c.format))};
+      union {
+        double x;
+        std::uint64_t raw;
+      } u;
+      u.raw = 0;
+      IONAME(InputReal64)(cookie, u.x);
+      auto status{IONAME(EndIoStatement)(cookie)};
+      std::fesetround(FE_TONEAREST);
+      EXPECT_EQ(status, 0) << c.data << " mode " << mode;
+      EXPECT_EQ(u.raw, c.want) << c.data << " mode " << mode;
+    }
   }
 }
 
