@@ -20,6 +20,7 @@ using LlvmLibcGethostidTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcGethostidTest, Basic) {
   long id1 = LIBC_NAMESPACE::gethostid();
+  EXPECT_EQ(id1, 1L);
   EXPECT_EQ(static_cast<int>(libc_errno), 0);
 
   long id2 = LIBC_NAMESPACE::gethostid();
