@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm-only -triple s390x-none-zos -fdump-record-layouts %s | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -emit-llvm-only -triple s390x-none-zos -fdump-record-layouts -DINT128_A \
+// RUN: -target-cpu z13 %s | FileCheck %s --check-prefix=INT128
 // RUN: %clang_cc1 -emit-llvm -triple s390x-none-zos %s -o - | FileCheck %s --check-prefix=DECL
 
 static int __attribute__((aligned(32))) v0;
@@ -160,12 +162,14 @@ struct s11 {
 // CHECK-NEXT:         8 |   char b
 // CHECK-NEXT:           | [sizeof=16, align=8]
 
+#ifdef INT128_A
 struct s12 {
   __int128_t a;
 } S12;
-// CHECK:              0 | struct s12
-// CHECK-NEXT:         0 |   __int128_t a
-// CHECK-NEXT:           | [sizeof=16, align=8]
+// INT128:              0 | struct s12
+// INT128-NEXT:         0 |   __int128_t a
+// INT128-NEXT:           | [sizeof=16, align=8]
+#endif
 
 union u0 {
   unsigned short d1 __attribute__((packed));
