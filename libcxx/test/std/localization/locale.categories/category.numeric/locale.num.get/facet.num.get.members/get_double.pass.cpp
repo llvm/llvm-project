@@ -8,7 +8,9 @@
 
 // The fix for LWG2381 (https://github.com/llvm/llvm-project/pull/77948) changed behavior of
 // FP parsing. This requires 3e15c97fa3812993bdc319827a5c6d867b765ae8 in the dylib.
-// XFAIL: using-built-library-before-llvm-19
+// Subnormal stream extraction also requires the PR38360 fix in the dylib.
+// XFAIL: using-built-library-before-llvm-24
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // <locale>
 
@@ -22,6 +24,9 @@
 #include <cassert>
 #include <streambuf>
 #include <cmath>
+#include <limits>
+#include <sstream>
+#include <string>
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "hexfloat.h"
@@ -47,6 +52,27 @@ protected:
     virtual char_type do_thousands_sep() const {return '_';}
     virtual std::string do_grouping() const {return std::string("\1\2\3");}
 };
+
+void test_value(const std::string& str, double expected, std::ios_base::iostate expected_err = std::ios_base::goodbit) {
+  const my_facet f(1);
+  std::ios ios(0);
+  double v                               = -1;
+  std::ios_base::iostate err             = std::ios_base::goodbit;
+  const char* first                      = str.c_str();
+  cpp17_input_iterator<const char*> iter = f.get(
+      cpp17_input_iterator<const char*>(first), cpp17_input_iterator<const char*>(first + str.size() + 1), ios, err, v);
+  assert(base(iter) == first + str.size());
+  assert(err == expected_err);
+  assert(v == expected);
+  assert(std::signbit(v) == std::signbit(expected));
+
+  std::istringstream is(str);
+  v = -1;
+  is >> v;
+  assert(is.rdstate() == (expected_err | std::ios_base::eofbit));
+  assert(v == expected);
+  assert(std::signbit(v) == std::signbit(expected));
+}
 
 int main(int, char**)
 {
@@ -462,5 +488,25 @@ int main(int, char**)
       assert(v == -0.03125);
     }
 
-  return 0;
+    // Underflow to zero still reports failure.
+    test_value("1e-400", 0, std::ios_base::failbit);
+    test_value("-1e-400", -0.0, std::ios_base::failbit);
+
+    // Nonzero subnormals are representable (https://llvm.org/PR38360).
+    {
+      typedef std::numeric_limits<double> limits;
+      const double values[] = {limits::denorm_min(), -limits::denorm_min(), limits::min() / 2, -limits::min() / 2};
+      for (unsigned i = 0; i != sizeof(values) / sizeof(values[0]); ++i) {
+        std::ostringstream os;
+        os.precision(limits::digits10 + 3);
+        os << values[i];
+        test_value(os.str(), values[i]);
+      }
+    }
+    test_value("1e-320", 1e-320);
+    test_value("-1e-320", -1e-320);
+    test_value("4.940656458412465442e-324", std::numeric_limits<double>::denorm_min());
+    test_value("-4.940656458412465442e-324", -std::numeric_limits<double>::denorm_min());
+
+    return 0;
 }
