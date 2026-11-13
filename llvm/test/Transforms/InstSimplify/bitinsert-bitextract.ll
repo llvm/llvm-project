@@ -295,6 +295,37 @@ define b32 @neg_bitinsert_bitextract_other_offset(b32 %x) {
   ret b32 %r
 }
 
+define <4 x i8> @bitextract_vec_out_of_range(<4 x b32> %x) {
+; CHECK-LABEL: define <4 x i8> @bitextract_vec_out_of_range(
+; CHECK-SAME: <4 x b32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> poison
+;
+  %r = bitextract <4 x i8>, <4 x b32> %x, <4 x i32> splat (i32 25)
+  ret <4 x i8> %r
+}
+
+; The last bits of each element are in range.
+define <4 x i8> @neg_bitextract_vec_in_range(<4 x b32> %x) {
+; CHECK-LABEL: define <4 x i8> @neg_bitextract_vec_in_range(
+; CHECK-SAME: <4 x b32> [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitextract <4 x i8>, <4 x b32> [[X]], <4 x i32> splat (i32 24)
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %r = bitextract <4 x i8>, <4 x b32> %x, <4 x i32> splat (i32 24)
+  ret <4 x i8> %r
+}
+
+; Only the last lane is out of range.
+define <4 x i8> @neg_bitextract_vec_non_splat_offset(<4 x b32> %x) {
+; CHECK-LABEL: define <4 x i8> @neg_bitextract_vec_non_splat_offset(
+; CHECK-SAME: <4 x b32> [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitextract <4 x i8>, <4 x b32> [[X]], <4 x i32> <i32 0, i32 8, i32 16, i32 25>
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %r = bitextract <4 x i8>, <4 x b32> %x, <4 x i32> <i32 0, i32 8, i32 16, i32 25>
+  ret <4 x i8> %r
+}
+
 define <vscale x 4 x i8> @bitextract_scalable_vec_out_of_range(<vscale x 4 x b32> %x) {
 ; CHECK-LABEL: define <vscale x 4 x i8> @bitextract_scalable_vec_out_of_range(
 ; CHECK-SAME: <vscale x 4 x b32> [[X:%.*]]) {
@@ -302,4 +333,113 @@ define <vscale x 4 x i8> @bitextract_scalable_vec_out_of_range(<vscale x 4 x b32
 ;
   %r = bitextract <vscale x 4 x i8>, <vscale x 4 x b32> %x, <vscale x 4 x i32> splat (i32 25)
   ret <vscale x 4 x i8> %r
+}
+
+define <4 x b32> @bitinsert_vec_out_of_range(<4 x b32> %x, <4 x i8> %y) {
+; CHECK-LABEL: define <4 x b32> @bitinsert_vec_out_of_range(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <4 x b32> poison
+;
+  %r = bitinsert <4 x b32> %x, <4 x i8> %y, <4 x i32> splat (i32 25)
+  ret <4 x b32> %r
+}
+
+; The last bits of each element are in range.
+define <4 x b32> @neg_bitinsert_vec_in_range(<4 x b32> %x, <4 x i8> %y) {
+; CHECK-LABEL: define <4 x b32> @neg_bitinsert_vec_in_range(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitinsert <4 x b32> [[X]], <4 x i8> [[Y]], <4 x i32> splat (i32 24)
+; CHECK-NEXT:    ret <4 x b32> [[R]]
+;
+  %r = bitinsert <4 x b32> %x, <4 x i8> %y, <4 x i32> splat (i32 24)
+  ret <4 x b32> %r
+}
+
+; Only the last lane is out of range.
+define <4 x b32> @neg_bitinsert_vec_non_splat_offset(<4 x b32> %x, <4 x i8> %y) {
+; CHECK-LABEL: define <4 x b32> @neg_bitinsert_vec_non_splat_offset(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitinsert <4 x b32> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 8, i32 16, i32 25>
+; CHECK-NEXT:    ret <4 x b32> [[R]]
+;
+  %r = bitinsert <4 x b32> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 8, i32 16, i32 25>
+  ret <4 x b32> %r
+}
+
+define <4 x i8> @bitextract_vec_poison_offset(<4 x b32> %x) {
+; CHECK-LABEL: define <4 x i8> @bitextract_vec_poison_offset(
+; CHECK-SAME: <4 x b32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> poison
+;
+  %r = bitextract <4 x i8>, <4 x b32> %x, <4 x i32> poison
+  ret <4 x i8> %r
+}
+
+define <4 x b32> @bitinsert_vec_poison_offset(<4 x b32> %x, <4 x i8> %y) {
+; CHECK-LABEL: define <4 x b32> @bitinsert_vec_poison_offset(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    ret <4 x b32> poison
+;
+  %r = bitinsert <4 x b32> %x, <4 x i8> %y, <4 x i32> poison
+  ret <4 x b32> %r
+}
+
+; Only the last lane is poison.
+define <4 x i8> @neg_bitextract_vec_partial_poison_offset(<4 x b32> %x) {
+; CHECK-LABEL: define <4 x i8> @neg_bitextract_vec_partial_poison_offset(
+; CHECK-SAME: <4 x b32> [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitextract <4 x i8>, <4 x b32> [[X]], <4 x i32> <i32 0, i32 8, i32 16, i32 poison>
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %r = bitextract <4 x i8>, <4 x b32> %x, <4 x i32> <i32 0, i32 8, i32 16, i32 poison>
+  ret <4 x i8> %r
+}
+
+; Only the last lane is poison.
+define <4 x b32> @neg_bitinsert_vec_partial_poison_offset(<4 x b32> %x, <4 x i8> %y) {
+; CHECK-LABEL: define <4 x b32> @neg_bitinsert_vec_partial_poison_offset(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = bitinsert <4 x b32> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 8, i32 16, i32 poison>
+; CHECK-NEXT:    ret <4 x b32> [[R]]
+;
+  %r = bitinsert <4 x b32> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 8, i32 16, i32 poison>
+  ret <4 x b32> %r
+}
+
+define <4 x b32> @bitextract_vec_full_width(<4 x b32> %x, <4 x i32> %n) {
+; CHECK-LABEL: define <4 x b32> @bitextract_vec_full_width(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i32> [[N:%.*]]) {
+; CHECK-NEXT:    ret <4 x b32> [[X]]
+;
+  %r = bitextract <4 x b32>, <4 x b32> %x, <4 x i32> %n
+  ret <4 x b32> %r
+}
+
+define <4 x b32> @bitinsert_vec_full_width(<4 x b32> %x, <4 x b32> %y, <4 x i32> %n) {
+; CHECK-LABEL: define <4 x b32> @bitinsert_vec_full_width(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x b32> [[Y:%.*]], <4 x i32> [[N:%.*]]) {
+; CHECK-NEXT:    ret <4 x b32> [[Y]]
+;
+  %r = bitinsert <4 x b32> %x, <4 x b32> %y, <4 x i32> %n
+  ret <4 x b32> %r
+}
+
+define <4 x i8> @bitextract_bitinsert_vec(<4 x b32> %x, <4 x i8> %y, <4 x i32> %n) {
+; CHECK-LABEL: define <4 x i8> @bitextract_bitinsert_vec(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> [[N:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> [[Y]]
+;
+  %i = bitinsert <4 x b32> %x, <4 x i8> %y, <4 x i32> %n
+  %r = bitextract <4 x i8>, <4 x b32> %i, <4 x i32> %n
+  ret <4 x i8> %r
+}
+
+define <4 x b32> @bitinsert_bitextract_vec(<4 x b32> %x, <4 x i32> %n) {
+; CHECK-LABEL: define <4 x b32> @bitinsert_bitextract_vec(
+; CHECK-SAME: <4 x b32> [[X:%.*]], <4 x i32> [[N:%.*]]) {
+; CHECK-NEXT:    ret <4 x b32> [[X]]
+;
+  %e = bitextract <4 x i8>, <4 x b32> %x, <4 x i32> %n
+  %r = bitinsert <4 x b32> %x, <4 x i8> %e, <4 x i32> %n
+  ret <4 x b32> %r
 }
