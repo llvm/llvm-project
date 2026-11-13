@@ -5806,7 +5806,8 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
         Size = LocationSize::precise(MemVT.getStoreSize());
       Align Alignment = Info.align.value_or(DAG.getEVTAlign(MemVT));
       MachineMemOperand *MMO = MF.getMachineMemOperand(
-          MPI, Info.flags, Size, Alignment, I.getAAMetadata(), Info.ssid,
+          MPI, Info.flags, Size, Alignment,
+          MMOMetadata(I.getAAMetadata(), nullptr, Info.memCacheHint), Info.ssid,
           Info.order, Info.failureOrder);
       MMOs.push_back(MMO);
     }

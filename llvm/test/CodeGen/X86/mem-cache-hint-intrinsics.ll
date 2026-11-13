@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -O0 -global-isel=0 \
 ; RUN:   -stop-after=finalize-isel -verify-machineinstrs %s -o - | FileCheck %s
 
-; TODO: Preserve !mem.cache_hint when lowering X86 target memory intrinsics
-; through SelectionDAG, as IRTranslator does.
-
 define i32 @target_memory_intrinsic(ptr %p) {
   ; CHECK-LABEL: name: target_memory_intrinsic
   ; CHECK: bb.0 (%ir-block.0):
@@ -12,7 +9,7 @@ define i32 @target_memory_intrinsic(ptr %p) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY killed [[COPY]]
-  ; CHECK-NEXT:   LOCK_BTS32m [[COPY1]], 1, $noreg, 0, $noreg, 1, implicit-def $eflags :: (volatile load store (s32) on %ir.p, align 32)
+  ; CHECK-NEXT:   LOCK_BTS32m [[COPY1]], 1, $noreg, 0, $noreg, 1, implicit-def $eflags :: (volatile load store (s32) on %ir.p, align 32, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
   ; CHECK-NEXT:   [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
   ; CHECK-NEXT:   [[ADD32rr:%[0-9]+]]:gr32 = ADD32rr [[MOVZX32rr8_]], [[MOVZX32rr8_]], implicit-def dead $eflags
