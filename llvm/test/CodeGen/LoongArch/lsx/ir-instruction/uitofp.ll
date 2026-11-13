@@ -94,7 +94,7 @@ define <5 x double> @uitofp_v5i32_v5f64(<5 x i32> %a) {
 ; LA32-NEXT:    ld.w $a2, $a1, 4
 ; LA32-NEXT:    fld.s $fa0, $a1, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
-; LA32-NEXT:    fld.s $fa1, $a1, 16
+; LA32-NEXT:    vldrepl.w $vr1, $a1, 16
 ; LA32-NEXT:    ld.w $a2, $a1, 12
 ; LA32-NEXT:    fld.s $fa2, $a1, 8
 ; LA32-NEXT:    vrepli.b $vr3, 0
@@ -115,7 +115,7 @@ define <5 x double> @uitofp_v5i32_v5f64(<5 x i32> %a) {
 ; LA64-NEXT:    ld.w $a2, $a1, 8
 ; LA64-NEXT:    fld.s $fa0, $a1, 0
 ; LA64-NEXT:    vinsgr2vr.w $vr0, $a2, 1
-; LA64-NEXT:    fld.s $fa1, $a1, 32
+; LA64-NEXT:    vldrepl.w $vr1, $a1, 32
 ; LA64-NEXT:    ld.w $a2, $a1, 24
 ; LA64-NEXT:    fld.s $fa2, $a1, 16
 ; LA64-NEXT:    vrepli.b $vr3, 0

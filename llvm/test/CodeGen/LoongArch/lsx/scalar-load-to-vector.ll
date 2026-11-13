@@ -27,7 +27,7 @@ define <8 x i16> @load_to_8xi16(ptr %p) {
 define <4 x i32> @load_to_4xi32(ptr %p) {
 ; CHECK-LABEL: load_to_4xi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.s $fa0, $a0, 0
+; CHECK-NEXT:    vldrepl.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p
   %ret = insertelement <4 x i32> poison, i32 %v, i32 0
@@ -44,7 +44,7 @@ define <2 x i64> @load_to_2xi64(ptr %p) {
 ;
 ; LA64-LABEL: load_to_2xi64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    fld.d $fa0, $a0, 0
+; LA64-NEXT:    vldrepl.d $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %v = load i64, ptr %p
   %ret = insertelement <2 x i64> poison, i64 %v, i32 0
@@ -80,7 +80,8 @@ define <2 x i64> @load_to_2xi64_offset(ptr %p) {
 ;
 ; LA64-LABEL: load_to_2xi64_offset:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    fld.d $fa0, $a0, 6
+; LA64-NEXT:    addi.d $a0, $a0, 6
+; LA64-NEXT:    vldrepl.d $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %gep = getelementptr i8, ptr %p, i64 6
   %v = load i64, ptr %gep
@@ -155,7 +156,7 @@ define <4 x i32> @load_to_4xi32_volatile(ptr %p) {
 ; CHECK-LABEL: load_to_4xi32_volatile:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
 ; CHECK-NEXT:    ret
   %v = load volatile i32, ptr %p
   %ret = insertelement <4 x i32> poison, i32 %v, i32 0
@@ -166,7 +167,7 @@ define <4 x i32> @load_to_4xi32_multi_use(ptr %p, ptr %dst) {
 ; CHECK-LABEL: load_to_4xi32_multi_use:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p
@@ -178,8 +179,7 @@ define <4 x i32> @load_to_4xi32_multi_use(ptr %p, ptr %dst) {
 define <4 x i32> @load_to_4xi32_lane1(ptr %p) {
 ; CHECK-LABEL: load_to_4xi32_lane1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; CHECK-NEXT:    vldrepl.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p
   %ret = insertelement <4 x i32> poison, i32 %v, i32 1
@@ -201,7 +201,7 @@ define <4 x i32> @load_to_4xi32_not_undef(ptr %p, <4 x i32> %vec) {
 define <4 x i32> @load_to_4xi32_range(ptr %p) {
 ; CHECK-LABEL: load_to_4xi32_range:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.s $fa0, $a0, 0
+; CHECK-NEXT:    vldrepl.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p, !range !0
   %ret = insertelement <4 x i32> poison, i32 %v, i32 0
@@ -218,7 +218,7 @@ define <2 x i64> @load_to_2xi64_range(ptr %p) {
 ;
 ; LA64-LABEL: load_to_2xi64_range:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    fld.d $fa0, $a0, 0
+; LA64-NEXT:    vldrepl.d $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %v = load i64, ptr %p, !range !1
   %ret = insertelement <2 x i64> poison, i64 %v, i32 0
