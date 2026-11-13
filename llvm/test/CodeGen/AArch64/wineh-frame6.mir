@@ -61,7 +61,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:
 liveins:
   - { reg: '$w0', virtual-reg: '' }
   - { reg: '$w1', virtual-reg: '' }
