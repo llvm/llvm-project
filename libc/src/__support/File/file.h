@@ -336,7 +336,8 @@ private:
 
   FileIOResult read_unlocked_fbf(uint8_t *data, size_t len);
   FileIOResult read_unlocked_nbf(uint8_t *data, size_t len);
-  FileIOResult read_data_directly(uint8_t *data, size_t len);
+  FileIOResult read_from_platform(uint8_t *dst, size_t min_bytes,
+                                  size_t max_bytes);
   size_t copy_data_from_buf(uint8_t *data, size_t len);
 
   LIBC_INLINE constexpr void adjust_buf() {

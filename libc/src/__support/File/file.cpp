@@ -29,6 +29,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 #include "src/__support/wchar/character_converter.h"
@@ -303,12 +304,15 @@ size_t File::copy_data_from_buf(uint8_t *data, size_t len) {
   return available_data;
 }
 
-FileIOResult File::read_data_directly(uint8_t *data, size_t len) {
+FileIOResult File::read_from_platform(uint8_t *dst, size_t min_bytes,
+                                      size_t max_bytes) {
+  LIBC_ASSERT(min_bytes <= max_bytes);
   size_t total_read = 0;
-  cpp::span<uint8_t> dataref(data, len);
-  while (dataref.size() > 0) {
-    FileIOResult result = platform_read(this, dataref.data(), dataref.size());
+  cpp::span<uint8_t> dstref(dst, max_bytes);
+  while (total_read < min_bytes) {
+    FileIOResult result = platform_read(this, dstref.data(), dstref.size());
     size_t fetched_size = result.value;
+    LIBC_ASSERT(fetched_size <= dstref.size());
     total_read += fetched_size;
     if (result.has_error() || fetched_size == 0) {
       if (!result.has_error())
@@ -317,7 +321,7 @@ FileIOResult File::read_data_directly(uint8_t *data, size_t len) {
         err = true;
       return {total_read, result.error};
     }
-    dataref = dataref.subspan(fetched_size);
+    dstref = dstref.subspan(fetched_size);
   }
   return total_read;
 }
@@ -331,35 +335,20 @@ FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
   // Update the dataref to reflect that fact that we have already
   // copied |available_data| into |data|.
   size_t to_fetch = len - available_data;
-  cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
-                             to_fetch);
+  cpp::span<uint8_t> dataref(data + available_data, to_fetch);
 
   if (to_fetch > bufsize) {
-    FileIOResult result = read_data_directly(dataref.data(), to_fetch);
+    FileIOResult result =
+        read_from_platform(dataref.data(), to_fetch, to_fetch);
     return {available_data + result.value, result.error};
   }
 
   // Fetch and buffer another buffer worth of data.
-  while (to_fetch > 0) {
-    FileIOResult result = platform_read(this, buf, bufsize);
-    size_t fetched_size = result.value;
-    read_limit = fetched_size;
-    pos = 0;
-    size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
-    inline_memcpy(dataref.data(), buf, transfer_size);
-    pos += transfer_size;
-    available_data += transfer_size;
-    to_fetch -= transfer_size;
-    dataref = dataref.subspan(transfer_size);
-    if (result.has_error() || fetched_size == 0) {
-      if (!result.has_error())
-        eof = true;
-      else
-        err = true;
-      return {available_data, result.error};
-    }
-  }
-  return available_data;
+  FileIOResult result = read_from_platform(buf, to_fetch, bufsize);
+  read_limit = result.value;
+  pos = 0;
+  available_data += copy_data_from_buf(dataref.data(), to_fetch);
+  return {available_data, result.error};
 }
 
 FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
@@ -369,8 +358,9 @@ FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
     return available_data;
 
   // Directly copy the data into |data|.
-  FileIOResult result = read_data_directly(
-      static_cast<uint8_t *>(data) + available_data, len - available_data);
+  size_t to_fetch = len - available_data;
+  FileIOResult result =
+      read_from_platform(data + available_data, to_fetch, to_fetch);
   return {available_data + result.value, result.error};
 }
 

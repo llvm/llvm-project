@@ -33,6 +33,7 @@ add_object_library(
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.error_or
+    libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
     libc.src.__support.threads.mutex
     libc.src.__support.wchar.character_converter
