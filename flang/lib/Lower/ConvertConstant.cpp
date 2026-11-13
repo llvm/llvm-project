@@ -111,15 +111,21 @@ public:
     DenseGlobalBuilder globalBuilder;
     Fortran::common::visit(
         Fortran::common::visitors{
-            [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeLogical> &
-                    x) { globalBuilder.tryConvertingToAttributes(builder, x); },
-            [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger> &
-                    x) { globalBuilder.tryConvertingToAttributes(builder, x); },
-            [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeReal> &x) {
+            [&](const Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                    Fortran::common::TypeCategory::Logical>> &x) {
               globalBuilder.tryConvertingToAttributes(builder, x);
             },
-            [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeComplex> &
+            [&](const Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                    Fortran::common::TypeCategory::Integer>> &x) {
+              globalBuilder.tryConvertingToAttributes(builder, x);
+            },
+            [&](const Fortran::evaluate::Expr<
+                Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>> &
                     x) { globalBuilder.tryConvertingToAttributes(builder, x); },
+            [&](const Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                    Fortran::common::TypeCategory::Complex>> &x) {
+              globalBuilder.tryConvertingToAttributes(builder, x);
+            },
             [](const auto &) {},
         },
         initExpr.u);
@@ -171,9 +177,9 @@ private:
     };
 
     if (sameElements()) {
-      auto attr =
-          convertToAttribute<TC>(builder, values.front(), attributeElementType);
-      attributes.assign(values.size(), attr);
+      // A one element list makes DenseElementsAttr::get produce a splat.
+      attributes.push_back(convertToAttribute<TC>(builder, values.front(),
+                                                  attributeElementType));
       return;
     }
 
@@ -183,17 +189,12 @@ private:
   }
 
   /// Try converting an evaluate::Expr to a list of MLIR attributes.
-  template <typename SomeCat>
+  template <typename TR>
   void tryConvertingToAttributes(fir::FirOpBuilder &builder,
-                                 const Fortran::evaluate::Expr<SomeCat> &expr) {
-    Fortran::common::visit(
-        [&](const auto &x) {
-          using TR = Fortran::evaluate::ResultType<decltype(x)>;
-          if (const auto *constant =
-                  std::get_if<Fortran::evaluate::Constant<TR>>(&x.u))
-            tryConvertingToAttributes<TR::category>(builder, *constant);
-        },
-        expr.u);
+                                 const Fortran::evaluate::Expr<TR> &expr) {
+    if (const auto *constant =
+            std::get_if<Fortran::evaluate::Constant<TR>>(&expr.u))
+      tryConvertingToAttributes<TR::category>(builder, *constant);
   }
 
   /// Create a fir::Global if MLIR attributes have been successfully created by
@@ -590,13 +591,16 @@ static mlir::Value genInlinedStructureCtorLitImpl(
 
 static mlir::Value genScalarLit(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    const Fortran::evaluate::Scalar<Fortran::evaluate::SomeDerived> &value,
+    const Fortran::evaluate::Scalar<
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>> &value,
     mlir::Type eleTy, bool outlineBigConstantsInReadOnlyMemory) {
   if (!outlineBigConstantsInReadOnlyMemory)
     return genInlinedStructureCtorLitImpl(converter, loc, value, eleTy);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto expr = std::make_unique<Fortran::lower::SomeExpr>(toEvExpr(
-      Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived>(value)));
+  auto expr = std::make_unique<Fortran::lower::SomeExpr>(
+      toEvExpr(Fortran::evaluate::Constant<
+               Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>(
+          value)));
   llvm::StringRef globalName =
       converter.getUniqueLitName(loc, std::move(expr), eleTy);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
@@ -833,10 +837,10 @@ fir::ExtendedValue Fortran::lower::ConstantBuilder<T>::gen(
 static fir::ExtendedValue
 genConstantValue(Fortran::lower::AbstractConverter &converter,
                  mlir::Location loc,
-                 const Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>
-                     &constantExpr) {
-  if (const auto *constant = std::get_if<
-          Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived>>(
+                 const Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                     Fortran::common::TypeCategory::Derived>> &constantExpr) {
+  if (const auto *constant = std::get_if<Fortran::evaluate::Constant<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>>(
           &constantExpr.u))
     return Fortran::lower::convertConstant(converter, loc, *constant,
                                            /*outline=*/false);
@@ -846,10 +850,11 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
                                                       *structCtor);
   // Initializer folding preserves parentheses around a derived constant or a
   // structure constructor (e.g. "type(t) :: x = (t(7))"). Look through them.
-  // UnwrapConstantValue cannot see through Parentheses<SomeDerived> because a
-  // StructureConstructor is not a Constant<SomeDerived>.
-  if (const auto *parens = std::get_if<
-          Fortran::evaluate::Parentheses<Fortran::evaluate::SomeDerived>>(
+  // UnwrapConstantValue cannot see through
+  // Parentheses<Type<TypeCategory::Derived>> because a StructureConstructor is
+  // not a Constant<Type<TypeCategory::Derived>>.
+  if (const auto *parens = std::get_if<Fortran::evaluate::Parentheses<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Derived>>>(
           &constantExpr.u))
     return genConstantValue(converter, loc, parens->left());
   // Semantics gates every initializer through NonPointerInitializationExpr,
@@ -865,6 +870,9 @@ template <Fortran::common::TypeCategory TC>
 static fir::ExtendedValue genConstantValue(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::evaluate::Expr<Fortran::evaluate::Type<TC>> &constantExpr) {
+  static_assert(TC != Fortran::common::TypeCategory::Derived,
+                "Derived must use the non-template overload, which handles "
+                "structure constructors and parentheses");
   using T = Fortran::evaluate::Type<TC>;
   // Initializer folding preserves parentheses around a scalar constant (e.g.
   // "integer :: i = (42)"). UnwrapConstantValue looks through them.
@@ -891,16 +899,7 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
         using T = std::decay_t<decltype(x)>;
         if constexpr (Fortran::common::HasMember<
                           T, Fortran::lower::CategoryExpression>) {
-          if constexpr (T::Result::category ==
-                        Fortran::common::TypeCategory::Derived) {
-            return genConstantValue(converter, loc, x);
-          } else {
-            return Fortran::common::visit(
-                [&](const auto &preciseKind) {
-                  return genConstantValue(converter, loc, preciseKind);
-                },
-                x.u);
-          }
+          return genConstantValue(converter, loc, x);
         } else {
           fir::emitFatalError(loc, "unexpected typeless constant value");
         }

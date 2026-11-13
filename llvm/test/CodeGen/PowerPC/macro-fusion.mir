@@ -146,7 +146,7 @@ body:             |
     renamable $cr0 = CMPDI killed renamable $x3, 0
     renamable $x3 = ISEL8 killed renamable $x5, killed renamable $x4, renamable $cr0lt, implicit killed $cr0
     BLR8 implicit $lr8, implicit $rm, implicit $x3
-
+...
 # CHECK: back2back_1:%bb.0
 # CHECK: Macro fuse: SU(0) - SU(1) /  VADDUBM - VSUBUBM
 ---
@@ -158,7 +158,7 @@ body:             |
     renamable $v2 = VADDUBM $v3, $v2
     renamable $v2 = VSUBUBM killed renamable $v2, $v4
     BLR8 implicit $lr8, implicit $rm
-
+...
 # CHECK: back2back_2:%bb.0
 # CHECK: Macro fuse: SU(0) - SU(1) /  XSABSDP - XSNEGDP
 ---
@@ -170,7 +170,7 @@ body:             |
     renamable $f2 = XSABSDP $f1, implicit $rm
     renamable $f1 = XSNEGDP killed renamable $f2, implicit $rm
     BLR8 implicit $lr8, implicit $rm, implicit $f1
-
+...
 # CHECK: back2back_3:%bb.0
 # CHECK: Macro fuse: SU(0) - SU(1) /  VMAXFP - XVMINSP
 ---
@@ -182,3 +182,4 @@ body:             |
     renamable $v3 = VMAXFP $v2, $v3
     renamable $v2 = XVMINSP killed renamable $v3, $v4, implicit $rm
     BLR8 implicit $lr8, implicit $rm, implicit $v2
+...

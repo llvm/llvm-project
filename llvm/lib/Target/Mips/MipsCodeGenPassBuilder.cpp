@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips.h"
+#include "MipsAsmPrinter.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
 
@@ -30,7 +35,16 @@ public:
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
   void addIRPasses(PassManagerWrapper &PMW) override;
+
   Error addInstSelector(PassManagerWrapper &PMW) override;
+
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
@@ -43,10 +57,11 @@ public:
 void MipsCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   Base::addIRPasses(PMW);
   addFunctionPass(AtomicExpandPass(getTM()), PMW);
+  flushFPMsToMPM(PMW);
   if (getTM().getCLOpts().os16) {
-    // TODO(boomanaiden154): Add MipsOps16Pass
+    addModulePass(MipsOs16Pass(), PMW);
   }
-  // TODO(boomanaiden154): Add Mips16HardFloatPass
+  addModulePass(Mips16HardFloatPass(getTM()), PMW);
 }
 
 Error MipsCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
@@ -55,27 +70,56 @@ Error MipsCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   return Error::success();
 }
 
+Error MipsCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
+void MipsCodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(MipsPreLegalizerCombinerPass(), PMW);
+}
+
+Error MipsCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+void MipsCodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
+  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
+  addMachineFunctionPass(MipsPostLegalizerCombinerPass(IsOptNone), PMW);
+}
+
+Error MipsCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RegBankSelectPass(), PMW);
+  return Error::success();
+}
+
+Error MipsCodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
 void MipsCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add MipsOptimizerPICCallPass
+  addMachineFunctionPass(MipsOptimizePICCallPass(), PMW);
 }
 
 void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // Expand pseudo instructions that are sensitive to register allocation.
-  // TODO(boomanaiden154): Add MipsExpandPseudosPass
+  addMachineFunctionPass(MipsExpandPseudoPass(), PMW);
 
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.
-  // TODO(boomanaiden154): Add MicroMipsSizeReducePass
+  addMachineFunctionPass(MicroMipsSizeReducePass(), PMW);
 
   // This pass inserts a nop instruction between two back-to-back multiplication
   // instructions when the "mfix4300" flag is passed.
-  if (getTM().getCLOpts().mfix4300) {
-    // TODO(boomanaiden154): Add MipsMulMulBugPass
-  }
+  if (getTM().getCLOpts().mfix4300)
+    addMachineFunctionPass(MipsMulMulBugFixPass(), PMW);
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.
-  // TODO(boomanaiden154): Add MipsDelaySlotFillerPass
+  addMachineFunctionPass(MipsDelaySlotFillerPass(), PMW);
 
   // This pass expands branches and takes care about the forbidden slot hazards.
   // Expanding branches may potentially create forbidden slot hazards for
@@ -85,21 +129,21 @@ void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // then we can be sure that all branches are expanded properly and no hazards
   // exists.
   // Any new pass should go before this pass.
-  // TODO(boomanaiden154): AddMipsBranchExpansionPass
+  addMachineFunctionPass(MipsBranchExpansionPass(), PMW);
 
-  // TODO(boomanaiden154): Add MipsConstantIslandPass
+  addMachineFunctionPass(MipsConstantIslandPass(), PMW);
 }
 
 void MipsCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add MipsAsmPrinterBeginPass
+  addModulePass(MipsAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void MipsCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add MipsAsmPrinterPass
+  addMachineFunctionPass(MipsAsmPrinterPass(), PMW);
 }
 
 void MipsCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add MipsAsmPrinterEndPass
+  addModulePass(MipsAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 void MipsTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){

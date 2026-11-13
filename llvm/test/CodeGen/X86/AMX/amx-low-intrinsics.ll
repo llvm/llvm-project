@@ -23,7 +23,7 @@ define dso_local void @test_amx_load_non_O0(i16 signext %row, i16 signext %col, 
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TILELOAD_SCALARIZE_COLS_IV]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i8], ptr [[PTR:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV]], 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[TMP8]], [[TILELOAD_SCALARIZE_COLS_IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP7]], align 4
@@ -70,7 +70,7 @@ define dso_local void @test_amx_load(i16 signext %row, i16 signext %col, ptr%ptr
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TILELOAD_SCALARIZE_COLS_IV]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i8], ptr [[PTR:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV]], 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[TMP8]], [[TILELOAD_SCALARIZE_COLS_IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP7]], align 4
@@ -494,7 +494,7 @@ define dso_local void @test_amx_store(i16 signext %row, i16 signext %col, ptr%pt
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TILESTORE_SCALARIZE_COLS_IV]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i8], ptr [[PTR:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TILESTORE_SCALARIZE_ROWS_IV]], 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[TMP8]], [[TILESTORE_SCALARIZE_COLS_IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <256 x i32> [[VEC]], i16 [[TMP9]]

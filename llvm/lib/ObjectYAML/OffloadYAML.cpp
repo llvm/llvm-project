@@ -39,6 +39,7 @@ void ScalarEnumerationTraits<object::OffloadKind>::enumeration(
   ECase(OFK_Cuda);
   ECase(OFK_HIP);
   ECase(OFK_SYCL);
+  ECase(OFK_OpenACC);
   ECase(OFK_LAST);
 #undef ECase
   IO.enumFallback<Hex16>(Value);

@@ -716,7 +716,6 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
 [[maybe_unused]] void CodeGenPrepare::verifyBFIUpdates(Function &F) {
-  DominatorTree NewDT(F);
   CycleInfo NewCI;
   NewCI.compute(F);
   BranchProbabilityInfo NewBPI(F, NewCI, TLInfo);
@@ -1199,6 +1198,7 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
 
     // Insert after RelocatedBase
     IRBuilder<> Builder(RelocatedBase->getNextNode());
+    Builder.disableGEPCanonicalization();
     Builder.SetCurrentDebugLocation(ToReplace->getDebugLoc());
 
     Value *Replacement = Builder.CreateGEP(Derived->getSourceElementType(),
@@ -2111,6 +2111,8 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
   Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
   Value *RemSel =
       Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+  if (auto *SI = dyn_cast<SelectInst>(RemSel))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
 
   NewRem->addIncoming(Start, L->getLoopPreheader());
   NewRem->addIncoming(RemSel, L->getLoopLatch());
@@ -6188,6 +6190,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     auto NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
 
     IRBuilder<> Builder(MemoryInst);
+    Builder.disableGEPCanonicalization();
 
     Type *SourceTy = GEP->getSourceElementType();
     Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
@@ -6228,6 +6231,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     auto NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
 
     IRBuilder<> Builder(MemoryInst);
+    Builder.disableGEPCanonicalization();
 
     // Emit a vector GEP with a scalar pointer and all 0s vector index.
     Type *ScalarIndexTy = DL->getIndexType(V->getType()->getScalarType());
@@ -8469,6 +8473,7 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
 
   // Start to split store.
   IRBuilder<> Builder(&SI);
+  Builder.disableGEPCanonicalization();
 
   // If LValue/HValue is a bitcast in another BB, create a new one in current
   // BB so it may be merged with the splitted stores by dag combiner.
@@ -8572,9 +8577,7 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   // Check that GEPI is a constant ptradd with canonical index type.
   Instruction *GEPIOp;
   ConstantInt *GEPIIdx;
-  if (!match(GEPI, m_PtrAdd(m_Instruction(GEPIOp), m_ConstantInt(GEPIIdx))))
-    return false;
-  if (GEPIIdx->getType() != DL.getIndexType(GEPI->getType()))
+  if (!match(GEPI, m_PtrAdd(DL, m_Instruction(GEPIOp), m_ConstantInt(GEPIIdx))))
     return false;
   // Check that GEPI is a cheap one.
   if (TTI->getIntImmCost(GEPIIdx->getValue(), GEPIIdx->getType(),
@@ -8612,7 +8615,7 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
     // Check if Usr is also a constant ptradd with GEPIOp as pointer operand.
     // If so, record it in the vector. If not, give up.
     ConstantInt *UGEPIIdx;
-    if (!match(Usr, m_PtrAdd(m_Specific(GEPIOp), m_ConstantInt(UGEPIIdx))))
+    if (!match(Usr, m_PtrAdd(DL, m_Specific(GEPIOp), m_ConstantInt(UGEPIIdx))))
       return false;
     if (GEPIIdx->getType() != UGEPIIdx->getType())
       return false;
@@ -8729,6 +8732,151 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
   return false;
 }
 
+// Performs very basic loop strength reduction to vector values with a known
+// evolution from one iteration to the next that are used as the value operand
+// for a store.
+// A simple example to illustrate:
+//
+//  %vec.ind = phi <vscale x 2 x i64> [ %start, %vector.ph ],
+//                                    [ %vec.ind.next, %vector.body ]
+//  %data.gep = getelementptr inbounds nuw [72 x i8], ptr %datap,
+//                            <vscale x 2 x i64> %vec.ind
+//  %addr.gep = getelementptr inbounds nuw [8 x i8], ptr %addrp, i64 %index
+//  store <vscale x 2 x ptr> %data.gep, ptr %addr.gep, align 8
+//  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %elt.cnt.splat
+//
+// We want to change this to:
+//  vector.ph:
+//    %base = gep i8, %datap, (<stepvector> * 72)
+//    %stride = splat(elementcount) * 72
+//
+//  vector.body:
+//    %vec.lsr.phi = phi <vscale x 2 x ptr> [ %base, %vector.ph ],
+//                                          [ %vec.lsr.next, %vector.body ]
+//    %addr.gep = gep inbounds nuw [8 x i8], ptr %addrp, i64 %index
+//    store <vscale x 2 x ptr> %vec.lsr.phi, ptr %addr.gep, align 8
+//    %vec.lsr.next = gep i8, %vec.lsr.phi, %stride
+//
+// Doing so will remove a multiply from the loop, and leave the update as just
+// an add.
+//
+static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
+  // We're only interested in header phis in innermost loops.
+  // We want a loop with an identifiable preheader and single latch.
+  Loop *L = LI->getLoopFor(Phi->getParent());
+  if (!L || !L->isInnermost())
+    return false;
+
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *PreHeader = L->getLoopPreheader();
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!PreHeader || !Latch || Phi->getParent() != Header ||
+      Phi->getNumIncomingValues() != 2)
+    return false;
+
+  // Check the progression of the phi.
+  Value *Start = Phi->getIncomingValueForBlock(PreHeader);
+  Value *Step = Phi->getIncomingValueForBlock(Latch);
+
+  // Check that the elements are integers equal in size to pointers.
+  DataLayout DL = Phi->getFunction()->getDataLayout();
+  VectorType *VTy = dyn_cast<VectorType>(Start->getType());
+  if (!VTy)
+    return false;
+  Type *ITy = VTy->getElementType();
+  if (DL.getTypeStoreSize(ITy) != DL.getPointerSize())
+    return false;
+
+  // TODO: Handle offsets from stepvector.
+  if (!match(Start, m_Intrinsic<Intrinsic::stepvector>()))
+    return false;
+
+  Value *LoopStride = nullptr;
+  if (!match(Step, m_OneUse(m_c_Add(m_Specific(Phi), m_Value(LoopStride)))))
+    return false;
+
+  // Make sure the loop stride matches the pointer stride.
+  auto EltCnt = cast<VectorType>(Phi->getType())->getElementCount();
+  const APInt *ShiftAmt = nullptr;
+  Value *PtrStride = nullptr;
+  if (!match(
+          LoopStride,
+          m_Splat(m_Value(PtrStride, m_Shl(m_VScale(), m_APInt(ShiftAmt))))) ||
+      (1ULL << ShiftAmt->getZExtValue()) != EltCnt.getKnownMinValue())
+    return false;
+
+  // Make sure the stride isn't defined inside the loop, so we don't have to
+  // worry about dominance.
+  if (L->contains(cast<Instruction>(PtrStride)))
+    return false;
+
+  // For the simplest case, we're only interested if the phi has two users;
+  // The Step forming the incoming value for the backedge, and a GEP.
+  GetElementPtrInst *GEP = nullptr;
+  Value *Base = nullptr;
+  for (User *U : Phi->users()) {
+    // Skip over the step, handled above.
+    if (Step == U)
+      continue;
+
+    // If we've already found a GEP, bail out.
+    // TODO: Support multiple GEPs.
+    if (GEP)
+      return false;
+
+    // We're only interested in single index GEPs
+    GEP = dyn_cast<GetElementPtrInst>(U);
+    if (!GEP || GEP->getNumOperands() != 2)
+      return false;
+
+    // Reject if the base isn't loop invariant.
+    Base = GEP->getOperand(0);
+    if (!L->isLoopInvariant(Base))
+      return false;
+  }
+
+  // Make sure we found a GEP.
+  if (!GEP)
+    return false;
+
+  // Check that the indexed size is also the same.
+  unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
+
+  // Multiply the start by the size of the struct, and add the base pointer.
+  Type *Int8Ty = IntegerType::getInt8Ty(ITy->getContext());
+  IRBuilder<> Builder(PreHeader->getTerminator());
+  Value *StructSize = ConstantInt::get(ITy, Size);
+  Value *SizeSplat =
+      Builder.CreateVectorSplat(VTy->getElementCount(), StructSize);
+  Value *NewStart = Builder.CreateMul(Start, SizeSplat);
+  NewStart = Builder.CreateGEP(Int8Ty, Base, NewStart);
+
+  // Create a new step based on the total size of all struct addresses per
+  // iteration.
+  Value *StructStride = Builder.CreateMul(PtrStride, StructSize);
+  StructStride =
+      Builder.CreateVectorSplat(VTy->getElementCount(), StructStride);
+
+  Builder.SetInsertPoint(Phi);
+  PHINode *NewPhi = Builder.CreatePHI(GEP->getType(), 2, "vec.lsr.phi");
+  Builder.SetInsertPoint(cast<Instruction>(Step));
+  StructStride = Builder.CreateGEP(Int8Ty, NewPhi, StructStride);
+
+  // Set up the new PHI.
+  NewPhi->addIncoming(NewStart, PreHeader);
+  NewPhi->addIncoming(StructStride, Latch);
+
+  // Replace the GEP with the new phi.
+  Builder.SetInsertPoint(GEP);
+  GEP->replaceAllUsesWith(NewPhi);
+
+  // Remove old phi, gep, and step.
+  Phi->replaceAllUsesWith(llvm::PoisonValue::get(Phi->getType()));
+  llvm::RecursivelyDeleteTriviallyDeadInstructions(Phi);
+
+  return true;
+}
+
 bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   bool AnyChange = false;
   AnyChange = fixupDbgVariableRecordsOnInst(*I);
@@ -8750,6 +8898,12 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       ++NumPHIsElim;
       return true;
     }
+
+    // Look for simple GEPs on scalable vectors used as data which may
+    // introduce unnecessary multiplies in the loop.
+    // TODO: Support fixed vectors too.
+    if (P->getType()->isScalableTy())
+      AnyChange |= strengthReduceVectorPhiUsers(P, LI);
     return AnyChange;
   }
 

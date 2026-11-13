@@ -105,7 +105,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -271,9 +270,6 @@ Error CodeGenPassBuilder::buildPipeline(
     addAsmPrinterBegin(PMW);
   }
 
-  if (PrintMIR)
-    addModulePass(PrintMIRPreparePass(Out), PMW, /*Force=*/true);
-
   if (auto Err = addCoreISelPasses(PMW))
     return Err;
 
@@ -289,14 +285,11 @@ Error CodeGenPassBuilder::buildPipeline(
   // MIR as the final output, we never end up running AsmPrinter.
   addAsmPrinter(PMW);
 
-  if (PrintAsm) {
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
+  flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/!PrintMIR);
+  if (PrintAsm)
     addAsmPrinterEnd(PMW);
-  } else {
-    if (PrintMIR)
-      addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
-  }
+  else if (PrintMIR)
+    addModulePass(PrintMIRPass(Out), PMW, /*Force=*/true);
 
   return verifyStartStop(*StartStopInfo);
 }
@@ -375,7 +368,7 @@ void CodeGenPassBuilder::addISelPasses(PassManagerWrapper &PMW) {
     addFunctionPass(ObjCARCContractPass(), PMW);
     flushFPMsToMPM(PMW);
   }
-  addModulePass(PreISelIntrinsicLoweringPass(&TM), PMW);
+  addModulePass(PreISelIntrinsicLoweringPass(TM), PMW);
   addFunctionPass(ExpandIRInstsPass(TM, getOptLevel()), PMW);
 
   addIRPasses(PMW);
@@ -731,8 +724,7 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
-                         PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(), PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&

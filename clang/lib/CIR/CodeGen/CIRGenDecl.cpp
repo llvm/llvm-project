@@ -236,6 +236,9 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
   emission.addr = address;
   setAddrOfLocalVar(&d, address);
 
+  if (d.hasAttr<AnnotateAttr>() && haveInsertPoint())
+    emitVarAnnotations(&d, address.getPointer());
+
   // The lifetime marker must reference the original alloca, so peel any
   // address-space cast back to it.
   if (emission.useLifetimeMarkers)
@@ -805,7 +808,7 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
         cir::GlobalLinkageKind::PrivateLinkage));
     gv.setInitialValueAttr(constAttr);
     gv.setAlignment(align.getAsAlign().value());
-    // TODO(cir): Set unnamed address attribute when available in CIR
+    gv.setUnnamedAddr(true);
 
     cacheEntry = gv;
   } else if (cacheEntry.getAlignment() <
@@ -1278,7 +1281,9 @@ struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
     QualType baseElementType = cgf.getContext().getBaseElementType(elementType);
 
     mlir::Type cirElementType = cgf.convertTypeForMem(baseElementType);
-    cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
+    cir::PointerType ptrToElmType = builder.getPointerTo(
+        cirElementType,
+        mlir::cast<cir::PointerType>(arrayBegin.getType()).getAddrSpace());
 
     mlir::Value begin = arrayBegin;
     if (baseElementType != elementType) {
@@ -1442,7 +1447,9 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
   // Differently from LLVM traditional codegen, use a higher level
   // representation instead of lowering directly to a loop.
   mlir::Type cirElementType = convertTypeForMem(elementType);
-  cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
+  cir::PointerType ptrToElmType = builder.getPointerTo(
+      cirElementType,
+      mlir::cast<cir::PointerType>(begin.getType()).getAddrSpace());
 
   auto regionBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
     mlir::BlockArgument arg =

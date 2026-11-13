@@ -10,12 +10,14 @@
 #include "PassesOptions.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
@@ -30,6 +32,7 @@ static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
                                       raw_pwrite_stream &OS,
                                       raw_pwrite_stream *DwoOS,
                                       CodeGenFileType CGFT, bool DisableVerify,
+                                      const ModuleSummaryIndex *MSI,
                                       bool DisableSimplifyLibCalls) {
   legacy::PassManager CodeGenPasses;
   CodeGenPasses.add(
@@ -39,6 +42,8 @@ static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
   if (DisableSimplifyLibCalls)
     TLII.disableAllFunctions();
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
+  if (MSI)
+    CodeGenPasses.add(createImmutableModuleSummaryIndexWrapperPass(MSI));
 
   const TargetOptions &Options = TM.Options;
   CodeGenPasses.add(
@@ -55,6 +60,7 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
                                      raw_pwrite_stream &OS,
                                      raw_pwrite_stream *DwoOS,
                                      CodeGenFileType CGFT, bool DisableVerify,
+                                     const ModuleSummaryIndex *MSI,
                                      IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   ModulePassManager MPM;
   MachineFunctionAnalysisManager MFAM;
@@ -66,9 +72,17 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   Opt.DisableVerify = DisableVerify;
   MachineModuleInfo MMI(&TM);
   PassInstrumentationCallbacks PIC;
-  const auto &LibraryOptions = M.getContext().getLibraryOptions();
-  PipelineTuningOptions PTOptions(&LibraryOptions);
+  PipelineTuningOptions PTOptions;
   PassBuilder PB(M.getContext(), &TM, PTOptions, std::nullopt, &PIC, VFS);
+
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+  if (MSI) {
+    MAM.registerPass(
+        [&]() { return ImmutableModuleSummaryIndexAnalysis(MSI); });
+    MPM.addPass(
+        RequireAnalysisPass<ImmutableModuleSummaryIndexAnalysis, Module>());
+  }
+
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
@@ -78,8 +92,6 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
 
   StandardInstrumentations SI(M.getContext(), /*DebugLogging=*/false);
   SI.registerCallbacks(PIC, &MAM);
-
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   Error BuildPipelineError = TM.buildCodeGenPipeline(
       MPM, MAM, OS, DwoOS, CGFT, Opt, MMI.getContext(), &PIC);
@@ -94,12 +106,14 @@ Error llvm::runCodeGenPipeline(TargetMachine &TM, Module &M,
                                raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS,
                                CodeGenFileType CGFT, bool DisableVerify,
                                bool DisableSimplifyLibCalls,
+                               const ModuleSummaryIndex *MSI,
                                IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   const PassesOptions &Opts = getPassesOptions(M.getContext());
   if (valueOr(Opts.force_new_pm_codegen, TM.shouldDefaultToNewPM())) {
-    return runCodeGenPipelineNewPM(TM, M, OS, DwoOS, CGFT, DisableVerify, VFS);
+    return runCodeGenPipelineNewPM(TM, M, OS, DwoOS, CGFT, DisableVerify, MSI,
+                                   VFS);
   }
 
-  return runCodeGenPipelineLegacy(TM, M, OS, DwoOS, CGFT, DisableVerify,
+  return runCodeGenPipelineLegacy(TM, M, OS, DwoOS, CGFT, DisableVerify, MSI,
                                   DisableSimplifyLibCalls);
 }

@@ -16,7 +16,9 @@
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/omp.h"
 #include "PluginManager.h"
+#include "RecordReplay.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "omptarget.h"
@@ -42,18 +44,8 @@ using namespace llvm::omp::target::ompt;
 #endif
 
 using namespace llvm::omp::target::error;
-using namespace llvm::omp::target::plugin;
+using namespace llvm::omp::target::rr;
 using namespace llvm::omp::target::debug;
-
-namespace llvm::offload::tmp {
-GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
-int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
-RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
-llvm::omp::target::plugin::DeviceImageTy *
-__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
-llvm::omp::target::plugin::PluginContextTy *
-__ol_tgt_GetPluginContext(ol_context_handle_t Context);
-} // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
@@ -149,11 +141,7 @@ llvm::Error DeviceTy::init() {
     return createError(ErrorCode::BackendFailure,
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
-  IsHostDevice =
-      getInfo<ol_device_type_t>(OL_DEVICE_INFO_TYPE) == OL_DEVICE_TYPE_HOST;
 
-  RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
-  RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
 
   // Needs to be initialized before the GeometryProps.
   if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
@@ -214,21 +202,28 @@ llvm::Error DeviceTy::init() {
     BoolEnvar OMPX_EmitRecordReport("LIBOMPTARGET_RECORD_REPORT", false);
     StringEnvar OMPX_RecordReportFilename("LIBOMPTARGET_RECORD_REPORT_FILENAME",
                                           "");
-    if (OMPX_RecordDevice != RTLDeviceID)
+    if (OMPX_RecordDevice != DeviceID)
       return llvm::Error::success();
+
+    if (OMPX_RecordMemSize <= 0) {
+      REPORT() << "invalid LIBOMPTARGET_RECORD_MEMSIZE=" << OMPX_RecordMemSize;
+      return createError(ErrorCode::InvalidValue,
+                         "invalid LIBOMPTARGET_RECORD_MEMSIZE");
+    }
 
     // Print report if it was enabled explicitly or a report file was indicated.
     bool EmitReport =
         OMPX_EmitRecordReport || !OMPX_RecordReportFilename.get().empty();
 
-    int32_t Ret = RTL->initialize_record_replay(
-        RTLDeviceID, OMPX_RecordMemSize, nullptr,
-        /*IsRecord=*/true, /*IsNative=*/true, OMPX_RecordOutput, EmitReport,
-        OMPX_RecordReportFilename.get().c_str(),
-        OMPX_RecordOutputDir.get().c_str());
-    if (Ret != OFFLOAD_SUCCESS)
+    if (auto Err = activateRecordReplay(OMPX_RecordMemSize, nullptr,
+                                        /*IsRecord=*/true, /*IsNative=*/true,
+                                        OMPX_RecordOutput, EmitReport,
+                                        OMPX_RecordReportFilename.get().c_str(),
+                                        OMPX_RecordOutputDir.get().c_str())) {
+      REPORT() << toString(std::move(Err));
       return createError(ErrorCode::BackendFailure,
-                         "failed to initialize RR in device %d\n", DeviceID);
+                         "failed to initialize RR in device %d", DeviceID);
+    }
   }
 
   return llvm::Error::success();
@@ -238,13 +233,54 @@ llvm::Error DeviceTy::deinit() {
   OMPT_IF_BUILT_AND_INITIALIZED(
       { performOmptCallback(device_finalize, DeviceID); });
 
+  // Keep tearing down even if record/replay fails to finish cleanly.
+  llvm::Error Result =
+      RecordReplay ? RecordReplay->deinit() : llvm::Error::success();
+  RecordReplay.reset();
+
   if (!Context)
-    return llvm::Error::success();
+    return Result;
   if (auto Res = olDestroyContext(Context))
-    return createError(ErrorCode::BackendFailure,
-                       "failed to destroy context for device %d: %s", DeviceID,
-                       Res->Details);
+    Result = llvm::joinErrors(
+        std::move(Result),
+        createError(ErrorCode::BackendFailure,
+                    "failed to destroy context for device %d: %s", DeviceID,
+                    Res->Details));
   Context = nullptr;
+  return Result;
+}
+
+bool DeviceTy::isRecordingOrReplaying() const {
+  return RecordReplay && RecordReplay->isRecordingOrReplaying();
+}
+
+llvm::Error DeviceTy::activateRecordReplay(uint64_t MemorySize, void *VAddr,
+                                           bool IsRecord, bool IsNative,
+                                           bool SaveOutput, bool EmitReport,
+                                           const char *ReportFilename,
+                                           const char *OutputDirPath) {
+  if (RecordReplay)
+    return createError(ErrorCode::InvalidValue,
+                       "RR already initialized on device %d", DeviceID);
+  // Other formats could be supported in the future.
+  if (!IsNative)
+    return createError(ErrorCode::InvalidValue, "non-native RR not available");
+
+  RecordReplayTy::StatusTy Status = IsRecord
+                                        ? RecordReplayTy::StatusTy::Recording
+                                        : RecordReplayTy::StatusTy::Replaying;
+  auto RR = std::make_unique<NativeRecordReplayTy>(
+      Status, OutputDirPath ? OutputDirPath : "", SaveOutput, EmitReport,
+      ReportFilename ? ReportFilename : "", *this);
+  if (auto Err = RR->init(MemorySize, VAddr)) {
+    // Release anything init() acquired before failing.
+    llvm::consumeError(RR->deinit());
+    return createError(ErrorCode::BackendFailure,
+                       "failed to initialize RR with %" PRIu64
+                       " bytes on device %d: %s",
+                       MemorySize, DeviceID, toString(std::move(Err)).c_str());
+  }
+  RecordReplay = std::move(RR);
   return llvm::Error::success();
 }
 
@@ -264,8 +300,6 @@ DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
                        "(expected %zu, got %zu)",
                        Name, ExpectedSize, Size);
 
-  RecordReplayTy *RecordReplay =
-      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
   if (RecordReplay && RecordReplay->isRecording())
     RecordReplay->addGlobal(Name, Size, *AddrOrErr);
 
@@ -362,11 +396,14 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   ProgramTy Program = std::move(*ProgramOrErr);
 
   OMPT_IF_BUILT_AND_INITIALIZED({
-    auto &Image = *llvm::offload::tmp::__ol_tgt_GetDeviceImageFromProgram(
-        Program.getHandle());
+    auto ImageOrErr = Program.getImage();
+    if (!ImageOrErr)
+      return ImageOrErr.takeError();
+    llvm::MemoryBufferRef Image = *ImageOrErr;
     performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
                         /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-                        Image.getSize(), const_cast<void *>(Image.getStart()),
+                        Image.getBufferSize(),
+                        const_cast<char *>(Image.getBufferStart()),
                         /*DeviceAddr=*/nullptr, /*ModuleId=*/0);
   });
 
@@ -412,10 +449,6 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   return Program;
 }
 
-llvm::omp::target::plugin::PluginContextTy *DeviceTy::getPluginContext() {
-  return llvm::offload::tmp::__ol_tgt_GetPluginContext(Context);
-}
-
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
@@ -424,46 +457,66 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
                     DeviceID, HstPtr, &TargetPtr, Size,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  auto *PluginCtx = getPluginContext();
-  if (!PluginCtx) {
-    REPORT() << "Failure to allocate device memory: device " << DeviceID
-             << " has no context";
-    return nullptr;
+  // Record-replay serves every allocation from its preallocated region so
+  // recorded kernels can re-execute at their original addresses.
+  if (isRecordingOrReplaying()) {
+    auto AllocOrErr = RecordReplay->allocate(Size);
+    if (!AllocOrErr) {
+      REPORT() << "Failure to allocate record replay memory: "
+               << toString(AllocOrErr.takeError());
+      return nullptr;
+    }
+    // Set TargetPtr so the OMPT end callback sees the allocation.
+    return TargetPtr = *AllocOrErr;
   }
 
-  auto AllocOrErr =
-      PluginCtx->allocate(RTL->getDevice(RTLDeviceID), Size, HstPtr,
-                          static_cast<TargetAllocTy>(Kind), /*Alignment=*/0);
-  if (!AllocOrErr) {
-    REPORT() << "Failure to allocate device memory: "
-             << llvm::toString(AllocOrErr.takeError());
+  // liboffload has no default allocation kind; it is a device allocation.
+  ol_result_t Res = OL_SUCCESS;
+  switch (Kind) {
+  case TARGET_ALLOC_HOST:
+    Res = olMemAllocHost(Context, DeviceHandle, Size, &TargetPtr);
+    break;
+  case TARGET_ALLOC_SHARED:
+    Res = olMemAlloc(Context, DeviceHandle, OL_ALLOC_TYPE_MANAGED, Size,
+                     &TargetPtr);
+    break;
+  case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_DEFAULT:
+    Res = olMemAlloc(Context, DeviceHandle, OL_ALLOC_TYPE_DEVICE, Size,
+                     &TargetPtr);
+    break;
+  default:
+    llvm_unreachable("unhandled TargetAllocTy");
+  }
+  if (Res) {
+    REPORT() << "Failure to allocate device memory: " << Res->Details;
     return nullptr;
   }
-  assert(*AllocOrErr && "Null pointer upon successful allocation");
-
-  TargetPtr = *AllocOrErr;
+  assert(TargetPtr && "Null pointer upon successful allocation");
   return TargetPtr;
 }
 
-int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
+int32_t DeviceTy::deleteData(void *TgtAllocBegin) {
   /// RAII to establish tool anchors before and after data deletion
   OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
                     RegionInterface.getCallbacks<ompt_target_data_delete>(),
                     DeviceID, TgtAllocBegin,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  auto *PluginCtx = getPluginContext();
-  if (!PluginCtx) {
-    REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin
-             << ": device " << DeviceID << " has no context";
-    return OFFLOAD_FAIL;
+  // Record/replay owns the memory: forward the deallocation to its region
+  // instead of the plugin.
+  if (isRecordingOrReplaying()) {
+    if (auto Err = RecordReplay->deallocate(TgtAllocBegin)) {
+      REPORT() << "Failure to free record replay memory: "
+               << toString(std::move(Err));
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
   }
 
-  if (auto Err =
-          PluginCtx->deallocate(RTL->getDevice(RTLDeviceID), TgtAllocBegin,
-                                static_cast<TargetAllocTy>(Kind))) {
+  if (auto Res = olMemFree(Context, TgtAllocBegin)) {
     REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
-             << llvm::toString(std::move(Err));
+             << Res->Details;
     return OFFLOAD_FAIL;
   }
 
@@ -472,6 +525,9 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
 
 llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size,
                                              ol_alloc_type_t Type) {
+  if (isRecordingOrReplaying())
+    return RecordReplay->allocate(Size);
+
   void *Ptr = nullptr;
   if (auto Res = olMemAlloc(Context, DeviceHandle, Type, Size, &Ptr))
     return createError(ErrorCode::BackendFailure,
@@ -481,6 +537,9 @@ llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size,
 }
 
 llvm::Error DeviceTy::freeCtxMem(void *Ptr) {
+  if (isRecordingOrReplaying())
+    return RecordReplay->deallocate(Ptr);
+
   if (auto Res = olMemFree(Context, Ptr))
     return createError(ErrorCode::BackendFailure,
                        "failed to free memory %p on device %d: %s", Ptr,
@@ -608,7 +667,7 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataExchangeRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          DeviceID, SrcPtr, DstDev.DeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   ol_queue_handle_t queue = AsyncInfo.getQueue();
@@ -616,8 +675,8 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
     return OFFLOAD_FAIL;
   if (auto Res = olMemcpy(queue, DstPtr, DstDev.DeviceHandle, SrcPtr,
                           DeviceHandle, Size)) {
-    REPORT() << "Failure to copy data from device (" << RTLDeviceID
-             << ") to device (" << DstDev.RTLDeviceID
+    REPORT() << "Failure to copy data from device (" << DeviceID
+             << ") to device (" << DstDev.DeviceID
              << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
              << ", size = " << Size << ": " << Res->Details;
     return OFFLOAD_FAIL;
@@ -795,8 +854,7 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
                            const DynBlockMemConfTy &DynBlockMemConf,
                            uint32_t DynCGroupMem, void **DynPtrSlot,
                            AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
-  RecordReplayTy *RecordReplay =
-      llvm::offload::tmp::__ol_tgt_GetRecordReplay(Device.DeviceHandle);
+  RecordReplayTy *RecordReplay = Device.getRecordReplay();
 
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment, and launches with no reserved dyn_ptr slot (e.g. older
@@ -889,16 +947,21 @@ static uint32_t getDeviceBlockLimit(const DeviceGeometryPropsTy &Props,
 /// Get the default number of blocks for a kernel in Generic-SPMD mode.
 static uint32_t
 getDefaultNumBlocksGenericSPMD(const DeviceGeometryPropsTy &Props) {
-  // Envar to set the default number of blocks per compute unit for a kernel in
-  // Generic-SPMD mode. Currently only used on AMDGPU devices. Zero uses the
-  // default number of blocks of other kernels.
+  // Envar to override the default number of teams per compute unit for a kernel
+  // in Generic-SPMD mode. Zero uses the default number of blocks of kernels in
+  // any other execution mode.
   static UInt32Envar OMPX_GenericSPMDTeamsPerCU(
-      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 6);
+      "LIBOMPTARGET_GENERIC_SPMD_TEAMS_PER_CU", 0);
 
-  if (Props.Backend != OL_PLATFORM_BACKEND_AMDGPU ||
-      !OMPX_GenericSPMDTeamsPerCU.get() || !Props.NumComputeUnits)
+  uint32_t TeamsPerCU =
+      OMPX_GenericSPMDTeamsPerCU.isPresent()
+          ? OMPX_GenericSPMDTeamsPerCU.get()
+          : llvm::omp::target::BackendConfig::get(Props.Backend)
+                .DefaultGenericSPMDTeamsPerCU;
+
+  if (!TeamsPerCU || !Props.NumComputeUnits)
     return Props.DefaultNumBlocks;
-  return Props.NumComputeUnits * OMPX_GenericSPMDTeamsPerCU.get();
+  return Props.NumComputeUnits * TeamsPerCU;
 }
 
 /// Threshold for the reduction data size (in bytes) above which a cross-team
@@ -1310,8 +1373,9 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
   LaunchConfigTy Config = buildLaunchConfig(KernelArgs);
 
-  // Host kernels are only supported for the latest ABI.
-  if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION && isHostDevice()) {
+  // Some backends (e.g. host) only support the latest ABI.
+  if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION &&
+      getConfig().RequiresLatestKernelArgVersion) {
     REPORT() << "Incompatible kernel argument version for kernel "
              << KernelLaunchInfo.Name << " on host device";
     return OFFLOAD_FAIL;
@@ -1343,13 +1407,17 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
        KernelLaunchInfo.getExecutionModeName(), KernelArgs.Tripcount);
 
   // Record the kernel prologue data before the launch.
-  RecordReplayTy *RecordReplay =
-      llvm::offload::tmp::__ol_tgt_GetRecordReplay(DeviceHandle);
   RecordReplayTy::HandleTy RRHandle;
   KernelInfoTy Kernel;
   if (RecordReplay) {
-    Kernel = KernelInfoTy(KernelLaunchInfo.Name, KernelLaunchInfo.Image,
-                          KernelLaunchInfo.IRImage);
+    auto ImageOrErr = KernelLaunchInfo.Program.getImage();
+    if (!ImageOrErr) {
+      REPORT() << "Failure to get the image of kernel " << KernelLaunchInfo.Name
+               << ": " << toString(ImageOrErr.takeError());
+      return OFFLOAD_FAIL;
+    }
+    Kernel = KernelInfoTy(KernelLaunchInfo.Name, *ImageOrErr,
+                          KernelLaunchInfo.Program.getIRImage());
 
     // Record replay requires synchronization of any previous operation.
     if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)

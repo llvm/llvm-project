@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
@@ -295,7 +295,8 @@ static int usage() {
 
 static int run(int argc, char **argv) {
   cl::LibraryOptionsContext LibraryOptions;
-  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+  cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                              ArrayRef(argv, argc),
                               "Resolution-based LTO test harness");
 
   if (TimeTrace)
@@ -346,13 +347,12 @@ static int run(int argc, char **argv) {
 
   Config Conf;
   Conf.LibraryOptions = &LibraryOptions;
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   if (TimeTrace) {
     Conf.TimeTraceEnabled = TimeTrace;
     Conf.TimeTraceGranularity = TimeTraceGranularity;
   }
   Conf.CPU = codegen::getMCPU();
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple());
   Conf.MAttrs = codegen::getMAttrs();
   if (auto RM = codegen::getExplicitRelocModel())
     Conf.RelocModel = *RM;
@@ -499,13 +499,19 @@ static int run(int argc, char **argv) {
     std::vector<SymbolResolution> Res;
     for (const InputFile::Symbol &Sym : Input->symbols()) {
       auto I = CommandLineResolutions.find({F, std::string(Sym.getName())});
-      // If it isn't found, look for ".", which would have been added
-      // (followed by a hash) when the symbol was promoted during module
-      // splitting if it was defined in one part and used in the other.
+      // If it isn't found, look for ".llvm." (or legacy "."), which would have
+      // been added (followed by a hash) when the symbol was promoted during
+      // module splitting if it was defined in one part and used in the other.
       // Try looking up the symbol name before the suffix.
       if (I == CommandLineResolutions.end()) {
-        auto SplitName = Sym.getName().rsplit(".");
-        I = CommandLineResolutions.find({F, std::string(SplitName.first)});
+        StringRef OrigName =
+            ModuleSummaryIndex::getOriginalNameBeforePromote(Sym.getName());
+        if (OrigName != Sym.getName())
+          I = CommandLineResolutions.find({F, std::string(OrigName)});
+        if (I == CommandLineResolutions.end()) {
+          auto SplitName = Sym.getName().rsplit(".");
+          I = CommandLineResolutions.find({F, std::string(SplitName.first)});
+        }
       }
       if (I == CommandLineResolutions.end()) {
         llvm::errs() << argv[0] << ": missing symbol resolution for " << F

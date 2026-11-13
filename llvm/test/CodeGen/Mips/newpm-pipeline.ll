@@ -30,6 +30,8 @@
 ; MIPS-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-NEXT:   expand-reductions
 ; MIPS-NEXT:   atomic-expand
+; MIPS-NEXT: mips-mips16-hard-float
+; MIPS-NEXT: function
 ; MIPS-NEXT:   codegenprepare
 ; MIPS-NEXT:   sjlj-eh-prepare
 ; MIPS-NEXT:   dwarf-eh-prepare
@@ -37,6 +39,7 @@
 ; MIPS-NEXT:   safe-stack
 ; MIPS-NEXT:   stack-protector
 ; MIPS-NEXT:   verify
+; MIPS-NEXT: mips-asm-printer-begin
 ; MIPS-NEXT: function
 ; MIPS-NEXT:   machine-function
 ; MIPS-NEXT:     mips-mips16-isel
@@ -52,6 +55,7 @@
 ; MIPS-NEXT:     machine-sink
 ; MIPS-NEXT:     peephole-opt
 ; MIPS-NEXT:     dead-mi-elimination
+; MIPS-NEXT:     mips-optimize-pic-call
 ; MIPS-NEXT:     detect-dead-lanes
 ; MIPS-NEXT:     init-undef
 ; MIPS-NEXT:     process-implicit-defs
@@ -83,14 +87,21 @@
 ; MIPS-NEXT:     fentry-insert
 ; MIPS-NEXT:     xray-instrumentation
 ; MIPS-NEXT:     patchable-function
+; MIPS-NEXT:     mips-expand-pseudo
+; MIPS-NEXT:     mips-micromips-size-reduce
+; MIPS-NEXT:     mips-delay-slot-filler
+; MIPS-NEXT:     mips-branch-expansion
+; MIPS-NEXT:     mips-constant-islands
 ; MIPS-NEXT:     funclet-layout
 ; MIPS-NEXT:     remove-loads-into-fake-uses
 ; MIPS-NEXT:     StackMapLivenessPass
-; MIPS-NEXT:     live-debug-values<emit-debug-entry-values>
+; MIPS-NEXT:     live-debug-values
 ; MIPS-NEXT:     machine-sanmd
 ; MIPS-NEXT:     stack-frame-layout
 ; MIPS-NEXT:     verify
+; MIPS-NEXT:     mips-asm-printer
 ; MIPS-NEXT:   free-machine-function
+; MIPS-NEXT: mips-asm-printer-end
 
 ; MIPS-OS16: require<MachineModuleAnalysis>
 ; MIPS-OS16-NEXT: require<profile-summary>
@@ -117,6 +128,9 @@
 ; MIPS-OS16-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-OS16-NEXT:   expand-reductions
 ; MIPS-OS16-NEXT:   atomic-expand
+; MIPS-OS16-NEXT: mips-os16
+; MIPS-OS16-NEXT: mips-mips16-hard-float
+; MIPS-OS16-NEXT: function
 ; MIPS-OS16-NEXT:   codegenprepare
 ; MIPS-OS16-NEXT:   sjlj-eh-prepare
 ; MIPS-OS16-NEXT:   dwarf-eh-prepare
@@ -124,6 +138,7 @@
 ; MIPS-OS16-NEXT:   safe-stack
 ; MIPS-OS16-NEXT:   stack-protector
 ; MIPS-OS16-NEXT:   verify
+; MIPS-OS16-NEXT: mips-asm-printer-begin
 ; MIPS-OS16-NEXT: function
 ; MIPS-OS16-NEXT:   machine-function
 ; MIPS-OS16-NEXT:     mips-mips16-isel
@@ -139,6 +154,7 @@
 ; MIPS-OS16-NEXT:     machine-sink
 ; MIPS-OS16-NEXT:     peephole-opt
 ; MIPS-OS16-NEXT:     dead-mi-elimination
+; MIPS-OS16-NEXT:     mips-optimize-pic-call
 ; MIPS-OS16-NEXT:     detect-dead-lanes
 ; MIPS-OS16-NEXT:     init-undef
 ; MIPS-OS16-NEXT:     process-implicit-defs
@@ -170,14 +186,21 @@
 ; MIPS-OS16-NEXT:     fentry-insert
 ; MIPS-OS16-NEXT:     xray-instrumentation
 ; MIPS-OS16-NEXT:     patchable-function
+; MIPS-OS16-NEXT:     mips-expand-pseudo
+; MIPS-OS16-NEXT:     mips-micromips-size-reduce
+; MIPS-OS16-NEXT:     mips-delay-slot-filler
+; MIPS-OS16-NEXT:     mips-branch-expansion
+; MIPS-OS16-NEXT:     mips-constant-islands
 ; MIPS-OS16-NEXT:     funclet-layout
 ; MIPS-OS16-NEXT:     remove-loads-into-fake-uses
 ; MIPS-OS16-NEXT:     StackMapLivenessPass
-; MIPS-OS16-NEXT:     live-debug-values<emit-debug-entry-values>
+; MIPS-OS16-NEXT:     live-debug-values
 ; MIPS-OS16-NEXT:     machine-sanmd
 ; MIPS-OS16-NEXT:     stack-frame-layout
 ; MIPS-OS16-NEXT:     verify
+; MIPS-OS16-NEXT:     mips-asm-printer
 ; MIPS-OS16-NEXT:   free-machine-function
+; MIPS-OS16-NEXT: mips-asm-printer-end
 
 ; MIPS-MFIX4300: require<MachineModuleAnalysis>
 ; MIPS-MFIX4300-NEXT: require<profile-summary>
@@ -204,6 +227,8 @@
 ; MIPS-MFIX4300-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-MFIX4300-NEXT:   expand-reductions
 ; MIPS-MFIX4300-NEXT:   atomic-expand
+; MIPS-MFIX4300-NEXT: mips-mips16-hard-float
+; MIPS-MFIX4300-NEXT: function
 ; MIPS-MFIX4300-NEXT:   codegenprepare
 ; MIPS-MFIX4300-NEXT:   sjlj-eh-prepare
 ; MIPS-MFIX4300-NEXT:   dwarf-eh-prepare
@@ -211,6 +236,7 @@
 ; MIPS-MFIX4300-NEXT:   safe-stack
 ; MIPS-MFIX4300-NEXT:   stack-protector
 ; MIPS-MFIX4300-NEXT:   verify
+; MIPS-MFIX4300-NEXT: mips-asm-printer-begin
 ; MIPS-MFIX4300-NEXT: function
 ; MIPS-MFIX4300-NEXT:   machine-function
 ; MIPS-MFIX4300-NEXT:     mips-mips16-isel
@@ -226,6 +252,7 @@
 ; MIPS-MFIX4300-NEXT:     machine-sink
 ; MIPS-MFIX4300-NEXT:     peephole-opt
 ; MIPS-MFIX4300-NEXT:     dead-mi-elimination
+; MIPS-MFIX4300-NEXT:     mips-optimize-pic-call
 ; MIPS-MFIX4300-NEXT:     detect-dead-lanes
 ; MIPS-MFIX4300-NEXT:     init-undef
 ; MIPS-MFIX4300-NEXT:     process-implicit-defs
@@ -257,11 +284,19 @@
 ; MIPS-MFIX4300-NEXT:     fentry-insert
 ; MIPS-MFIX4300-NEXT:     xray-instrumentation
 ; MIPS-MFIX4300-NEXT:     patchable-function
+; MIPS-MFIX4300-NEXT:     mips-expand-pseudo
+; MIPS-MFIX4300-NEXT:     mips-micromips-size-reduce
+; MIPS-MFIX4300-NEXT:     mips-mul-mul-bug-fix
+; MIPS-MFIX4300-NEXT:     mips-delay-slot-filler
+; MIPS-MFIX4300-NEXT:     mips-branch-expansion
+; MIPS-MFIX4300-NEXT:     mips-constant-islands
 ; MIPS-MFIX4300-NEXT:     funclet-layout
 ; MIPS-MFIX4300-NEXT:     remove-loads-into-fake-uses
 ; MIPS-MFIX4300-NEXT:     StackMapLivenessPass
-; MIPS-MFIX4300-NEXT:     live-debug-values<emit-debug-entry-values>
+; MIPS-MFIX4300-NEXT:     live-debug-values
 ; MIPS-MFIX4300-NEXT:     machine-sanmd
 ; MIPS-MFIX4300-NEXT:     stack-frame-layout
 ; MIPS-MFIX4300-NEXT:     verify
+; MIPS-MFIX4300-NEXT:     mips-asm-printer
 ; MIPS-MFIX4300-NEXT:   free-machine-function
+; MIPS-MFIX4300-NEXT: mips-asm-printer-end

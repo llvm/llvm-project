@@ -6,7 +6,6 @@ name:            truncstore_atomic_32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -52,7 +51,6 @@ name:            truncstore_atomic_16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -98,7 +96,6 @@ name:            truncstore_atomic_8
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }

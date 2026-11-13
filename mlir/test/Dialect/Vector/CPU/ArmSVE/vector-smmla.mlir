@@ -71,9 +71,9 @@
 // CHECK-NEXT:    %[[T36:[0-9]+]] = vector.scalable.insert %[[PACK_RES_00]], %[[P0]][0] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T37:[0-9]+]] = vector.scalable.insert %[[PACK_RES_01]], %[[T36]][4] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T38:[0-9]+]] = vector.bitcast %[[T37]] : vector<[8]xi32> to vector<[4]xi64>
-// CHECK-NEXT:    %res1, %res2 = vector.deinterleave %[[T38]] : vector<[4]xi64> -> vector<[2]xi64>
-// CHECK-NEXT:    %[[UNPACK_RES_0:[0-9]+]] = vector.bitcast %res1 : vector<[2]xi64> to vector<[4]xi32>
-// CHECK-NEXT:    %[[UNPACK_RES_1:[0-9]+]] = vector.bitcast %res2 : vector<[2]xi64> to vector<[4]xi32>
+// CHECK-NEXT:    %resultEven, %resultOdd = vector.deinterleave %[[T38]] : vector<[4]xi64> -> vector<[2]xi64>
+// CHECK-NEXT:    %[[UNPACK_RES_0:[0-9]+]] = vector.bitcast %resultEven : vector<[2]xi64> to vector<[4]xi32>
+// CHECK-NEXT:    %[[UNPACK_RES_1:[0-9]+]] = vector.bitcast %resultOdd : vector<[2]xi64> to vector<[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_0:[0-9]+]] = vector.insert %[[UNPACK_RES_0]], %[[P1]] [0] : vector<[4]xi32> into vector<4x[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_1:[0-9]+]] = vector.insert %[[UNPACK_RES_1]], %[[TMP_OUT_0]] [1] : vector<[4]xi32> into vector<4x[4]xi32>
 
@@ -81,9 +81,9 @@
 // CHECK-NEXT:    %[[T43:[0-9]+]] = vector.scalable.insert %[[PACK_RES_10]], %[[P0]][0] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T44:[0-9]+]] = vector.scalable.insert %[[PACK_RES_11]], %[[T43]][4] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T45:[0-9]+]] = vector.bitcast %[[T44]] : vector<[8]xi32> to vector<[4]xi64>
-// CHECK-NEXT:    %res1_0, %res2_1 = vector.deinterleave %[[T45]] : vector<[4]xi64> -> vector<[2]xi64>
-// CHECK-NEXT:    %[[UNPACK_RES_2:[0-9]+]] = vector.bitcast %res1_0 : vector<[2]xi64> to vector<[4]xi32>
-// CHECK-NEXT:    %[[UNPACK_RES_3:[0-9]+]] = vector.bitcast %res2_1 : vector<[2]xi64> to vector<[4]xi32>
+// CHECK-NEXT:    %resultEven_0, %resultOdd_1 = vector.deinterleave %[[T45]] : vector<[4]xi64> -> vector<[2]xi64>
+// CHECK-NEXT:    %[[UNPACK_RES_2:[0-9]+]] = vector.bitcast %resultEven_0 : vector<[2]xi64> to vector<[4]xi32>
+// CHECK-NEXT:    %[[UNPACK_RES_3:[0-9]+]] = vector.bitcast %resultOdd_1 : vector<[2]xi64> to vector<[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_2:[0-9]+]] = vector.insert %[[UNPACK_RES_2]], %[[TMP_OUT_1]] [2] : vector<[4]xi32> into vector<4x[4]xi32>
 // CHECK-NEXT:    %[[OUT:[0-9]+]] = vector.insert %[[UNPACK_RES_3]], %[[TMP_OUT_2]] [3] : vector<[4]xi32> into vector<4x[4]xi32>
 
@@ -161,9 +161,9 @@ func.func @test_vector_contract_to_smmla(%lhs: vector<4x8xi8>,
 // CHECK-NEXT:    %[[T36:[0-9]+]] = vector.scalable.insert %[[PACK_RES_00]], %[[P0]][0] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T37:[0-9]+]] = vector.scalable.insert %[[PACK_RES_01]], %[[T36]][4] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T38:[0-9]+]] = vector.bitcast %[[T37]] : vector<[8]xi32> to vector<[4]xi64>
-// CHECK-NEXT:    %res1, %res2 = vector.deinterleave %[[T38]] : vector<[4]xi64> -> vector<[2]xi64>
-// CHECK-NEXT:    %[[UNPACK_RES_0:[0-9]+]] = vector.bitcast %res1 : vector<[2]xi64> to vector<[4]xi32>
-// CHECK-NEXT:    %[[UNPACK_RES_1:[0-9]+]] = vector.bitcast %res2 : vector<[2]xi64> to vector<[4]xi32>
+// CHECK-NEXT:    %resultEven, %resultOdd = vector.deinterleave %[[T38]] : vector<[4]xi64> -> vector<[2]xi64>
+// CHECK-NEXT:    %[[UNPACK_RES_0:[0-9]+]] = vector.bitcast %resultEven : vector<[2]xi64> to vector<[4]xi32>
+// CHECK-NEXT:    %[[UNPACK_RES_1:[0-9]+]] = vector.bitcast %resultOdd : vector<[2]xi64> to vector<[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_0:[0-9]+]] = vector.insert %[[UNPACK_RES_0]], %[[P1]] [0] : vector<[4]xi32> into vector<4x[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_1:[0-9]+]] = vector.insert %[[UNPACK_RES_1]], %[[TMP_OUT_0]] [1] : vector<[4]xi32> into vector<4x[4]xi32>
 
@@ -171,9 +171,9 @@ func.func @test_vector_contract_to_smmla(%lhs: vector<4x8xi8>,
 // CHECK-NEXT:    %[[T43:[0-9]+]] = vector.scalable.insert %[[PACK_RES_10]], %[[P0]][0] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T44:[0-9]+]] = vector.scalable.insert %[[PACK_RES_11]], %[[T43]][4] : vector<[4]xi32> into vector<[8]xi32>
 // CHECK-NEXT:    %[[T45:[0-9]+]] = vector.bitcast %[[T44]] : vector<[8]xi32> to vector<[4]xi64>
-// CHECK-NEXT:    %res1_0, %res2_1 = vector.deinterleave %[[T45]] : vector<[4]xi64> -> vector<[2]xi64>
-// CHECK-NEXT:    %[[UNPACK_RES_2:[0-9]+]] = vector.bitcast %res1_0 : vector<[2]xi64> to vector<[4]xi32>
-// CHECK-NEXT:    %[[UNPACK_RES_3:[0-9]+]] = vector.bitcast %res2_1 : vector<[2]xi64> to vector<[4]xi32>
+// CHECK-NEXT:    %resultEven_0, %resultOdd_1 = vector.deinterleave %[[T45]] : vector<[4]xi64> -> vector<[2]xi64>
+// CHECK-NEXT:    %[[UNPACK_RES_2:[0-9]+]] = vector.bitcast %resultEven_0 : vector<[2]xi64> to vector<[4]xi32>
+// CHECK-NEXT:    %[[UNPACK_RES_3:[0-9]+]] = vector.bitcast %resultOdd_1 : vector<[2]xi64> to vector<[4]xi32>
 // CHECK-NEXT:    %[[TMP_OUT_2:[0-9]+]] = vector.insert %[[UNPACK_RES_2]], %[[TMP_OUT_1]] [2] : vector<[4]xi32> into vector<4x[4]xi32>
 // CHECK-NEXT:    %[[OUT:[0-9]+]] = vector.insert %[[UNPACK_RES_3]], %[[TMP_OUT_2]] [3] : vector<[4]xi32> into vector<4x[4]xi32>
 

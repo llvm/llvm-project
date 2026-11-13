@@ -12,7 +12,6 @@
 ...
 ---
 name: f245
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: f245
   ; CHECK: bb.0:

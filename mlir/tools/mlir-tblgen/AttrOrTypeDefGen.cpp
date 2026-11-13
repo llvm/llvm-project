@@ -196,10 +196,13 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
       valueType(isa<AttrDef>(def) ? "Attribute" : "Type"),
       defType(isa<AttrDef>(def) ? "Attr" : "Type") {
-  // Check that all parameters have names.
-  for (const AttrOrTypeParameter &param : def.getParameters())
+  // Check that all parameters have names and record the headers declaring
+  // their types.
+  for (const AttrOrTypeParameter &param : def.getParameters()) {
     if (param.isAnonymous())
       llvm::PrintFatalError("all parameters must have a name");
+    llvm::append_range(requiredIncludes, param.getCppIncludes());
+  }
 
   // If a storage class is needed, create one.
   if (def.getNumParameters() > 0)
@@ -1188,6 +1191,21 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   printer.writeDeclTo(indentedOs);
 }
 
+/// Headers declaring the C++ constructs used by every generated attribute or
+/// type definition, beyond those already included by the declarations.
+static constexpr StringRef attrOrTypeDefIncludes[] = {
+    // `::llvm::TypeSwitch`.
+    "llvm/ADT/TypeSwitch.h",
+    // `::mlir::Builder`.
+    "mlir/IR/Builders.h",
+    // `::mlir::DialectAsmParser`, `::mlir::DialectAsmPrinter`,
+    // `::mlir::FieldParser`.
+    "mlir/IR/DialectImplementation.h",
+    // `::mlir::AsmParser`, `::mlir::AsmParser::KeywordSwitch`,
+    // `::mlir::AsmPrinter`.
+    "mlir/IR/OpImplementation.h",
+};
+
 bool DefGenerator::emitDefs(StringRef selectedDialect) {
   emitSourceFileHeader((defType + "Def Definitions").str(), os);
 
@@ -1198,6 +1216,7 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   emitTypeDefList(defs);
 
   llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
+  tblgen::emitIncludes(os, attrOrTypeDefIncludes);
   emitParsePrintDispatch(defs);
   for (const AttrOrTypeDef &def : defs) {
     {

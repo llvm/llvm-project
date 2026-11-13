@@ -37,7 +37,6 @@ using namespace llvm;
 static cl::opt<float> CoroElideBranchRatio(
     "coro-elide-branch-ratio", cl::init(0.55), cl::Hidden,
     cl::desc("Minimum BranchProbability to consider a elide a coroutine."));
-extern cl::opt<unsigned> MinBlockCounterExecution;
 
 static Instruction *getFirstNonAllocaInTheEntryBlock(Function *F) {
   for (Instruction &I : F->getEntryBlock())

@@ -19,7 +19,6 @@ define i32 @v_permlane_idx_gen_b32_vs(i32 %src0, i32 %src1) {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -42,7 +41,6 @@ define i32 @v_permlane_idx_gen_b32_vi(i32 %src0) {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_permlane_idx_gen_b32 v0, v0, 1
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -63,7 +61,6 @@ define i32 @v_permlane_idx_gen_b32_vl(i32 %src0) {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_permlane_idx_gen_b32 v0, v0, 0x64
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
@@ -88,7 +85,6 @@ define i32 @v_permlane_idx_gen_b32_vv() {
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    s_wait_expcnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_bvhcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_bfe_u32 v0, v31, 10, 10
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0x3ff, v31

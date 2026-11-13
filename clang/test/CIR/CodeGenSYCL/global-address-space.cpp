@@ -29,9 +29,9 @@ int i;
 // LLVM-DAG: @gs = addrspace(1) global ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4)), align 8
 // LLVM-DAG: @i = addrspace(1) global i32 0, align 4
 // LLVM-DAG: @_ZZ18static_const_localvE3foo = internal addrspace(1) constant i32 66, align 4
-// LLVM-CIR-DAG: @.str = private addrspace(1) constant [14 x i8] c"Hello, world!\00", align 1
-// LLVM-CIR-DAG: @.str.1 = private addrspace(1) constant [21 x i8] c"Another hello world!\00", align 1
-// LLVM-CIR-DAG: @.str.2 = private addrspace(1) constant [24 x i8] c"Yet another Hello world\00", align 1
+// LLVM-CIR-DAG: @.str = private unnamed_addr addrspace(1) constant [14 x i8] c"Hello, world!\00", align 1
+// LLVM-CIR-DAG: @.str.1 = private unnamed_addr addrspace(1) constant [21 x i8] c"Another hello world!\00", align 1
+// LLVM-CIR-DAG: @.str.2 = private unnamed_addr addrspace(1) constant [24 x i8] c"Yet another Hello world\00", align 1
 // OGCG-DAG: @.str = private unnamed_addr addrspace(1) constant [14 x i8] c"Hello, world!\00", align 1
 // OGCG-DAG: @.str.1 = private unnamed_addr addrspace(1) constant [21 x i8] c"Another hello world!\00", align 1
 // OGCG-DAG: @.str.2 = private unnamed_addr addrspace(1) constant [24 x i8] c"Yet another Hello world\00", align 1

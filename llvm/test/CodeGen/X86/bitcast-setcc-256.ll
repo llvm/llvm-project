@@ -477,19 +477,12 @@ define i3 @bitcast_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ;
 ; AVX1-LABEL: bitcast_v3i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpextrb $0, %xmm2, %eax
-; AVX1-NEXT:    vpextrb $8, %xmm2, %ecx
-; AVX1-NEXT:    andb $1, %cl
-; AVX1-NEXT:    addb %cl, %cl
-; AVX1-NEXT:    subb %al, %cl
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    shlb $2, %al
-; AVX1-NEXT:    orb %cl, %al
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovmskpd %ymm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -497,16 +490,7 @@ define i3 @bitcast_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; AVX2-LABEL: bitcast_v3i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
-; AVX2-NEXT:    andb $1, %cl
-; AVX2-NEXT:    addb %cl, %cl
-; AVX2-NEXT:    subb %al, %cl
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    shlb $2, %al
-; AVX2-NEXT:    orb %cl, %al
+; AVX2-NEXT:    vmovmskpd %ymm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

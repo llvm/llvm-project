@@ -47,7 +47,7 @@ void AMDGPUInstrPostProcess::postProcessInstruction(Instruction &Inst,
 // which are lost during the MCInst -> mca::Instruction lowering.
 void AMDGPUInstrPostProcess::processWaitCnt(Instruction &Inst,
                                             const MCInst &MCI) {
-  for (int Idx = 0, N = MCI.size(); Idx < N; Idx++) {
+  for (unsigned Idx = 0, N = MCI.getNumOperands(); Idx < N; Idx++) {
     MCAOperand Op;
     const MCOperand &MCOp = MCI.getOperand(Idx);
     if (MCOp.isReg()) {
@@ -202,21 +202,22 @@ void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
                            << MCII.getName(Opcode) << " will be completely "
                            << "ignored. So the wait may not be accurate.\n";
     }
+    unsigned ImmEnc = static_cast<unsigned>(OpImm->getImm());
     switch (Opcode) {
     // Redundant switch so I don't have to repeat the code above
     // for each case. There are more clever ways to avoid this
     // extra switch and anyone can feel free to implement one of them.
     case AMDGPU::S_WAITCNT_EXPCNT_gfx10:
-      Expcnt = OpImm->getImm();
+      Expcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_LGKMCNT_gfx10:
-      Lgkmcnt = OpImm->getImm();
+      Lgkmcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_VMCNT_gfx10:
-      Vmcnt = OpImm->getImm();
+      Vmcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_VSCNT_gfx10:
-      Vscnt = OpImm->getImm();
+      Vscnt = ImmEnc;
       break;
     }
     return;
@@ -224,7 +225,7 @@ void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
   case AMDGPU::S_WAITCNT_gfx10:
   case AMDGPU::S_WAITCNT_gfx6_gfx7:
   case AMDGPU::S_WAITCNT_vi:
-    unsigned WaitCnt = Inst.getOperand(0)->getImm();
+    unsigned WaitCnt = static_cast<unsigned>(Inst.getOperand(0)->getImm());
     AMDGPU::decodeWaitcnt(IV, WaitCnt, Vmcnt, Expcnt, Lgkmcnt);
     return;
   }
@@ -246,7 +247,7 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
 
   for (const auto &EN : llvm::enumerate(SrcMgr.getInstructions())) {
     const std::unique_ptr<Instruction> &Inst = EN.value();
-    unsigned Index = EN.index();
+    size_t Index = EN.index();
     unsigned Opcode = Inst->getOpcode();
     const MCInstrDesc &MCID = MCII.get(Opcode);
     if (SIInstrFlags::isDS(MCID) && SIInstrFlags::usesLGKM_CNT(MCID)) {

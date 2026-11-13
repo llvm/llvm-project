@@ -468,6 +468,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPTargetParallelGenericLoopDirective(
         cast<OMPTargetParallelGenericLoopDirective>(*S));
     break;
+  case Stmt::OMPTargetGenericLoopDirectiveClass:
+    EmitOMPTargetSimdDirective(cast<OMPTargetGenericLoopDirective>(*S));
+    break;
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
@@ -2807,6 +2810,10 @@ void AsmConstraintsInfo::EmitAsmStmt() {
       CBRRegResults;
 
   if (IsGCCAsmGoto) {
+    if (CGF.HaveInsertPoint() && !CGF.Bypasses.isAlwaysBypassed()) {
+      CGF.emitBypassedVarInitsForSource(&S);
+      CGF.BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+    }
     CBR = Builder.CreateCallBr(IA, DefaultDest, IndirectDests, Args);
     CGF.EmitBlock(DefaultDest);
     UpdateAsmCallInst(*CBR, HasSideEffect,

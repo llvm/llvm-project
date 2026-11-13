@@ -9,7 +9,6 @@
 #ifndef MLIR_INTERFACES_SUBSETOPINTERFACE_H_
 #define MLIR_INTERFACES_SUBSETOPINTERFACE_H_
 
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 namespace mlir {

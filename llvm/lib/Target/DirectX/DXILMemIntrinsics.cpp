@@ -166,10 +166,11 @@ void expandMemCpy(MemCpyInst *MemCpy) {
     if (Offset >= ByteLength)
       break;
     // TODO: Should we skip padding types here?
-    Value *ByteOffset = Builder.getInt32(Offset);
-    Value *SrcPtr = Builder.CreateInBoundsPtrAdd(Src, ByteOffset);
+    Value *SrcPtr = Builder.CreatePtrAddWithUnsignedOffset(
+        Src, Offset, "", GEPNoWrapFlags::inBounds());
     Value *SrcVal = Builder.CreateLoad(Ty, SrcPtr);
-    Value *DstPtr = Builder.CreateInBoundsPtrAdd(Dst, ByteOffset);
+    Value *DstPtr = Builder.CreatePtrAddWithUnsignedOffset(
+        Dst, Offset, "", GEPNoWrapFlags::inBounds());
     Builder.CreateStore(SrcVal, DstPtr);
   }
 
