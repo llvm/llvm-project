@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../private.h"
+#include "Helpers.h"
 #include "OpenMP/OffloadRTL.h"
 #include "device.h"
 #include "omptarget.h"
@@ -21,7 +21,7 @@
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/omp.h"
-#include "Shared/Profile.h"
+#include "Profile.h"
 
 #include "llvm/ADT/SmallVector.h"
 
@@ -41,7 +41,6 @@ EXTERN void ompx_dump_mapping_tables() {
 using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
-
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name);

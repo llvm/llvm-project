@@ -15,8 +15,8 @@
 #ifndef _OMPTARGET_PROGRAM_H
 #define _OMPTARGET_PROGRAM_H
 
+#include "APITypes.h"
 #include "OffloadAPI.h"
-#include "Shared/APITypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 

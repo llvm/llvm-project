@@ -5,18 +5,18 @@ if(NOT TARGET "omp")
 endif()
 
 add_library(omptarget SHARED
-  interface.cpp
-  omptarget.cpp
-  OffloadRTL.cpp
-  LegacyAPI.cpp
+  src/interface.cpp
+  src/omptarget.cpp
+  src/OffloadRTL.cpp
+  src/LegacyAPI.cpp
 
-  OpenMP/API.cpp
-  OpenMP/InteropAPI.cpp
-  OpenMP/OMPT/Callback.cpp
+  src/API.cpp
+  src/InteropAPI.cpp
+  src/OMPT/Callback.cpp
 
   ${LIBOMPACCSUPPORT_SOURCES}
 
-  KernelLanguage/API.cpp
+  src/KernelLanguage/API.cpp
 )
 
 if(LLVM_LINK_LLVM_DYLIB)
@@ -26,6 +26,8 @@ else()
 endif()
 target_link_libraries(omptarget PRIVATE omp ${llvm_libs})
 target_include_directories(omptarget PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${LIBOMPACCSUPPORT_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 )
 

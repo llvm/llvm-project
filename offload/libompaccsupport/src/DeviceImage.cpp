@@ -10,8 +10,8 @@
 
 #include "DeviceImage.h"
 
+#include "APITypes.h"
 #include "OffloadEntry.h"
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
 

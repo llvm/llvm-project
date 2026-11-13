@@ -12,8 +12,8 @@
 #ifndef OMPTARGET_DEVICE_IMAGE_H
 #define OMPTARGET_DEVICE_IMAGE_H
 
+#include "APITypes.h"
 #include "OffloadEntry.h"
-#include "Shared/APITypes.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

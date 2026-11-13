@@ -25,9 +25,9 @@
 #include <mutex>
 #include <set>
 
-#include "ExclusiveAccess.h"
 #include "OffloadEntry.h"
 #include "OpenMP/BackendConfig.h"
+#include "Shared/ExclusiveAccess.h"
 #include "omptarget.h"
 #include "rtl.h"
 
@@ -40,7 +40,6 @@
 
 #include "OffloadAPI.h"
 #include "Program.h"
-
 
 // Forward declarations.
 struct __tgt_bin_desc;

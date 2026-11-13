@@ -14,9 +14,9 @@
 #include "OmpAccError.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/OffloadRTL.h"
+#include "Profile.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
-#include "Shared/Profile.h"
 #include "device.h"
 
 #include "llvm/ADT/SmallString.h"

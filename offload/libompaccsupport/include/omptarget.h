@@ -16,9 +16,9 @@
 
 #include "OffloadAPI.h"
 
-#include "Shared/APITypes.h"
+#include "APITypes.h"
 #include "Shared/Environment.h"
-#include "Shared/SourceInfo.h"
+#include "SourceInfo.h"
 
 #include "OpenMP/InternalTypes.h"
 
