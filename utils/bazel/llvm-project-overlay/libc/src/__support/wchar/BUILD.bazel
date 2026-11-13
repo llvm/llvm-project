@@ -1,0 +1,76 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "mbstate",
+    hdrs = ["mbstate.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:hdr_stdint_proxy",
+        "//libc:types_char32_t",
+    ],
+)
+
+libc_support_library(
+    name = "character_converter",
+    hdrs = ["character_converter.h"],
+    deps = [
+        ":mbstate",
+        "//libc:__support_common",
+        "//libc:__support_error_or",
+        "//libc:__support_math_extras",
+        "//libc:hdr_errno_macros",
+        "//libc:types_char32_t",
+        "//libc:types_char8_t",
+        "//libc:types_size_t",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/macros/properties:types",
+    ],
+)
+
+libc_support_library(
+    name = "wcrtomb",
+    hdrs = ["wcrtomb.h"],
+    deps = [
+        ":character_converter",
+        ":mbstate",
+        "//libc:__support_common",
+        "//libc:__support_error_or",
+        "//libc:__support_libc_assert",
+        "//libc:hdr_errno_macros",
+        "//libc:types_char32_t",
+        "//libc:types_size_t",
+        "//libc:types_wchar_t",
+        "//libc/src/__support/macros:null_check",
+    ],
+)
+
+libc_support_library(
+    name = "string_converter",
+    hdrs = ["string_converter.h"],
+    deps = [
+        ":character_converter",
+        ":mbstate",
+        "//libc:__support_common",
+        "//libc:__support_error_or",
+        "//libc:types_char32_t",
+        "//libc:types_char8_t",
+        "//libc:types_size_t",
+        "//libc/src/__support/CPP:type_traits",
+    ],
+)

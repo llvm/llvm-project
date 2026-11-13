@@ -62,7 +62,6 @@ libc_test_library(
         "//libc:__support_libc_assert",
         "//libc:__support_libc_errno",
         "//libc:__support_uint128",
-        "//libc:__support_wchar_string_converter",
         "//libc:clock",
         "//libc:errno",
         "//libc:func_aligned_alloc",
@@ -90,6 +89,7 @@ libc_test_library(
         "//libc/src/__support/macros/properties:architectures",
         "//libc/src/__support/macros/properties:compiler",
         "//libc/src/__support/macros/properties:types",
+        "//libc/src/__support/wchar:string_converter",
     ] + select({
         "//libc:full_build": [
             "//libc:close",
@@ -242,11 +242,11 @@ libc_test_library(
     ],
     deps = [
         "//libc:__support_big_int",
-        "//libc:__support_wchar_string_converter",
         "//libc/src/__support/CPP:string",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/CPP:type_traits",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros/properties:types",
+        "//libc/src/__support/wchar:string_converter",
     ],
 )
