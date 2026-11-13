@@ -4712,7 +4712,9 @@ struct LLVMSCFToControlFlowInterface : SCFToControlFlowDialectInterface {
   using SCFToControlFlowDialectInterface::SCFToControlFlowDialectInterface;
 
   bool shouldPropagateLoopAttribute(NamedAttribute attr) const override {
-    return isa<LoopAnnotationAttr>(attr.getValue());
+    // Preserve the existing policy of forwarding LLVM-valued attributes,
+    // including loop annotations, during SCF-to-CF conversion.
+    return true;
   }
 };
 } // namespace

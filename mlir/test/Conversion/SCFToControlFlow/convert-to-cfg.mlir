@@ -855,17 +855,13 @@ func.func @parallel_loop_annotation_2d(%arg0 : index, %arg1 : index, %arg2 : ind
 
 // -----
 
-// Preserve the loop annotation and its nested hint.
-// Drop standalone loop hints, unrelated LLVM attributes and builtin values.
+// Propagation follows the attribute value's dialect. Attributes
+// whose dialects does not opt in must not be copied onto the backedge. Check
+// we forward LLVM valued attributes other than LoopAnnotationAttr as well.
 // CHECK: #[[UNROLL:.*]] = #llvm.loop_unroll<disable = true>
 // CHECK: #[[ANNOTATION:.*]] = #llvm.loop_annotation<unroll = #[[UNROLL]]>
 // CHECK: func.func @loop_annotation_value_dialect
-// CHECK-NOT: test.extra
-// CHECK-NOT: test.unrelated
-// CHECK-NOT: llvm.unrelated
-// CHECK: cf.br {{.*}} {test.annotation = #[[ANNOTATION]]}
-// CHECK-NOT: test.extra
-// CHECK-NOT: test.unrelated
+// CHECK: cf.br {{.*}} {test.annotation = #[[ANNOTATION]], test.extra = #[[UNROLL]], test.unrelated = #llvm.linkage<internal>}
 // CHECK-NOT: llvm.unrelated
 // CHECK: return
 #annotation = #llvm.loop_annotation<unroll = <disable = true>>
