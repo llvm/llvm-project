@@ -85,8 +85,8 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Analysis Pass */);
 
 static Error parseArguments(ArrayRef<const char *> Args) {
-  // Parsing without arguments would rename the program and re-check the
-  // host's required options. Keep the cl::opt values unchanged.
+  // ParseCommandLineOptions only acts on the options it receives, so empty Args
+  // wouldn't reset any cl::opts. Just keep the defaults.
   if (Args.empty())
     return Error::success();
   SmallVector<const char *, 0> Argv = {"Bye"};
