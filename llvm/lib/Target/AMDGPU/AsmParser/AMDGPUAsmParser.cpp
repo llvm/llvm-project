@@ -5559,7 +5559,8 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
 bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
                                            const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (Opc != AMDGPU::S_MONITOR_SLEEP_gfx12)
+  if (Opc != AMDGPU::S_MONITOR_SLEEP_gfx12 &&
+      Opc != AMDGPU::S_MONITOR_SLEEP_gfx13)
     return true;
 
   int ImmIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::simm16);
@@ -5572,8 +5573,7 @@ bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
           "sleep forever is unsupported on the target");
     return false;
   }
-  if (getSTI().hasFeature(AMDGPU::FeatureMonitorSleep7BitDuration) &&
-      (Sleep < INT16_MIN || Sleep > UINT16_MAX || (Sleep & 0x7fff) > 127)) {
+  if (Sleep < INT16_MIN || Sleep > UINT16_MAX || (Sleep & 0x7fff) > 127) {
     Error(getOperandLoc(Operands, ImmIdx),
           "sleep duration must be in range [0, 127] on this target");
     return false;

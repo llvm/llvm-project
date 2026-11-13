@@ -167,12 +167,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
     return false;
   }
   case AMDGPU::BI__builtin_amdgcn_s_monitor_sleep: {
-    bool Has7BitDuration = Builtin::evaluateRequiredTargetFeatures(
-        "monitor-sleep-7-bit-duration", CallerFeatureMap);
+    if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice)
+      return false;
     bool NoSleepForever = Builtin::evaluateRequiredTargetFeatures(
         "no-sleep-forever", CallerFeatureMap);
-    if (!Has7BitDuration && !NoSleepForever)
-      return false;
     Expr *ArgExpr = TheCall->getArg(0);
     if (ArgExpr->isInstantiationDependent())
       return false;
@@ -181,7 +179,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
       return true;
     // Bit 15 reaches Sema as the sign bit of the builtin's short argument.
     int Low = !NoSleepForever && Sleep.isNegative() ? INT16_MIN : 0;
-    int High = Has7BitDuration ? Low + 127 : INT16_MAX;
+    int High = Low + 127;
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, Low, High);
   }
   case AMDGPU::BI__builtin_amdgcn_flat_prefetch:

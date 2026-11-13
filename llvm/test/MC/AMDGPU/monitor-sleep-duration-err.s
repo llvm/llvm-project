@@ -5,6 +5,8 @@
 // RUN: not llvm-mc -triple=amdgpu12.50s -filetype=null %s 2>&1 | FileCheck --check-prefixes=ERR,NO-FOREVER --implicit-check-not=error: -strict-whitespace %s
 // RUN: not llvm-mc -triple=amdgpu12.51 -filetype=null %s 2>&1 | FileCheck --check-prefixes=ERR,FOREVER --implicit-check-not=error: -strict-whitespace %s
 // RUN: not llvm-mc -triple=amdgpu12.50 -mattr=-no-sleep-forever -filetype=null %s 2>&1 | FileCheck --check-prefixes=ERR,FOREVER --implicit-check-not=error: -strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgpu13 -filetype=null %s 2>&1 | FileCheck --check-prefixes=ERR,FOREVER --implicit-check-not=error: -strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgpu13.10 -filetype=null %s 2>&1 | FileCheck --check-prefixes=ERR,FOREVER --implicit-check-not=error: -strict-whitespace %s
 
 s_monitor_sleep -1
 // FOREVER: :[[@LINE-1]]:17: error: sleep duration must be in range [0, 127] on this target

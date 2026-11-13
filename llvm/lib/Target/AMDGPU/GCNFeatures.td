@@ -1695,12 +1695,6 @@ defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
   /*GenPredicate=*/1
 >;
 
-defm MonitorSleep7BitDuration : AMDGPUSubtargetFeature<
-  "monitor-sleep-7-bit-duration",
-  "s_monitor_sleep uses a 7-bit duration",
-  /*GenPredicate=*/0
->;
-
 defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
   "s_monitor_sleep should not use sleep_forever",
   /*GenPredicate=*/1
@@ -2509,7 +2503,6 @@ def FeatureISAVersion12 : FeatureSet<
 
 def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
-   FeatureMonitorSleep7BitDuration,
    FeatureGFX1250Insts,
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
@@ -2862,8 +2855,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureGFX940Insts, FeatureGFX950Insts, FeatureGFX9Insts,
   FeatureGWS, FeatureImageInsts, FeatureLdsBarrierArriveAtomic,
   FeatureLerpInst, FeatureLoadMonitorInsts, FeatureMAIInsts, FeatureMcastLoadInsts,
-  FeatureMonitorSleep7BitDuration, FeatureMqsadInsts, FeatureMqsadPkInsts,
-  FeatureMsadInsts, FeatureNoSleepForever,
+  FeatureMqsadInsts, FeatureMqsadPkInsts, FeatureMsadInsts,
+  FeatureNoSleepForever,
   FeatureOCPFP8ConversionInsts, FeaturePermlane16Insts, FeaturePermlane16Swap,
   FeaturePermlane32Swap, FeaturePkAddMinMaxInsts, FeaturePrngInst,
   FeatureQsadInsts, FeatureSMemRealTime, FeatureSMemTimeInst,

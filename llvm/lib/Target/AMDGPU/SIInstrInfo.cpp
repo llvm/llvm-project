@@ -5618,8 +5618,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       ErrInfo = "sleep forever is unsupported on this target";
       return false;
     }
-    if (ST.hasMonitorSleep7BitDuration() &&
-        ((!isInt<16>(Value) && !isUInt<16>(Value)) || (Value & 0x7fff) > 127)) {
+    if ((!isInt<16>(Value) && !isUInt<16>(Value)) || (Value & 0x7fff) > 127) {
       ErrInfo = "sleep duration must be in range [0, 127] on this target";
       return false;
     }
