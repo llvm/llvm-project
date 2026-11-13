@@ -58,7 +58,6 @@ libc_test_library(
         ":string_utils",
         ":test_logger",
         "//libc:__support_c_string",
-        "//libc:__support_fixed_point_fixed_point",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_rounding_mode",
@@ -90,6 +89,7 @@ libc_test_library(
         "//libc/src/__support/CPP:string",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/fixed_point",
     ] + select({
         "//libc:full_build": [
             "//libc:close",

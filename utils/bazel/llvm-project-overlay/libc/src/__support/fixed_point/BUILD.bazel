@@ -1,0 +1,40 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+libc_support_library(
+    name = "fixed_point",
+    hdrs = [
+        "fx_bits.h",
+        "fx_rep.h",
+    ],
+    deps = [
+        "//libc:__support_big_int",
+        "//libc:__support_libc_assert",
+        "//libc:__support_macros_attributes",
+        "//libc:__support_macros_config",
+        "//libc:__support_macros_null_check",
+        "//libc:__support_macros_optimization",
+        "//libc:__support_math_extras",
+        "//libc:__support_uint128",
+        "//libc:hdr_stdint_proxy",
+        "//libc:llvm_libc_macros_stdfix_macros",
+        "//libc/src/__support/CPP:algorithm",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:type_traits",
+    ],
+)
