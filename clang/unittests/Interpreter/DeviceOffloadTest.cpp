@@ -143,6 +143,26 @@ TEST(DeviceOffloadBuilderTest, MultipleOffloadArchsAreRejected) {
                               "supported. Pass a single --offload-arch"));
 }
 
+TEST(DeviceOffloadBuilderTest, HIPDeviceDefaultsToO3) {
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs({"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc"});
+  auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  EXPECT_EQ((*DeviceCI)->getCodeGenOpts().OptimizationLevel, 3u);
+  auto HostCI = CB.CreateHost(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  EXPECT_EQ((*HostCI)->getCodeGenOpts().OptimizationLevel, 0u);
+}
+
+TEST(DeviceOffloadBuilderTest, UserOptLevelOverridesHIPDeviceDefault) {
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs(
+      {"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc", "-O1"});
+  auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  EXPECT_EQ((*DeviceCI)->getCodeGenOpts().OptimizationLevel, 1u);
+}
+
 TEST_F(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
   IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs({"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc"});
