@@ -1283,10 +1283,10 @@ define dso_local ptr @load_addr_offset_268435456() nounwind {
 ;
 ; LA64-LARGE-LABEL: load_addr_offset_268435456:
 ; LA64-LARGE:       # %bb.0: # %entry
-; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64-4503597479886848)
-; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64-4503597479886848)
-; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64-4503597479886848)
-; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64-4503597479886848)
+; LA64-LARGE-NEXT:    pcalau12i $a0, %pc_hi20(g_a64+2147483648)
+; LA64-LARGE-NEXT:    addi.d $a1, $zero, %pc_lo12(g_a64+2147483648)
+; LA64-LARGE-NEXT:    lu32i.d $a1, %pc64_lo20(g_a64+2147483648)
+; LA64-LARGE-NEXT:    lu52i.d $a1, $a1, %pc64_hi12(g_a64+2147483648)
 ; LA64-LARGE-NEXT:    add.d $a0, $a1, $a0
 ; LA64-LARGE-NEXT:    ret
 entry:
