@@ -1472,6 +1472,10 @@ public:
       if (fir::isa_derived(expr.getEleTy()) || expr.isPolymorphic())
         return rewriter.notifyMatchFailure(
             op, "EOSHIFT of derived or polymorphic type");
+      // There is no default boundary value for the other types.
+      if (!op.getBoundary() && !getDefaultBoundaryValueType(expr.getEleTy()))
+        return rewriter.notifyMatchFailure(
+            op, "EOSHIFT without BOUNDARY and no default boundary value");
     }
 
     // When DIM==1 and the contiguity of the input array is not statically
