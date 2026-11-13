@@ -6,7 +6,6 @@
 
 ---
 name:            vector-copy-schedule
-tracksRegLiveness: true
 noPhis:          true
 body:             |
   bb.0:

@@ -25,6 +25,7 @@
 namespace llvm {
 
 class AMDGPUTargetMachine;
+struct AMDGPUOptions;
 class GCNSubtarget;
 class InstCombiner;
 class Loop;
@@ -39,6 +40,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   friend BaseT;
 
+  const AMDGPUOptions &CLOpts;
   Triple TargetTriple;
 
   const TargetSubtargetInfo *ST;
@@ -66,6 +68,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   friend BaseT;
 
+  const AMDGPUOptions &CLOpts;
   const GCNSubtarget *ST;
   const SITargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;

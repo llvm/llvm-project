@@ -220,6 +220,7 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertEqual(frame2.GetPC(), 0x7000)
         self.assertTrue(frame2.IsSynthetic(), "Frame should be marked as synthetic")
 
+    @skipIf(oslist=["linux"], archs=no_match(["i386", "x86_64"]))
     def test_expression_at_frame_without_variables(self):
         """Test evaluating an expression at a scripted frame whose
         get_variables() returns None."""

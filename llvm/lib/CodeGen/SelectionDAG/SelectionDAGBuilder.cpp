@@ -78,6 +78,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
@@ -3572,6 +3573,19 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
                                 TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
+    // EH labels mark it as an invoke site, like a call.
+    case Intrinsic::bpf_unwind_exit: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      MCSymbol *BeginLabel;
+      std::array<SDValue, 2> Ops = {
+          lowerStartEH(getControlRoot(), EHPadBB, BeginLabel),
+          DAG.getTargetConstant(Intrinsic::bpf_unwind_exit, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout()))};
+      SDValue Chain =
+          DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), MVT::Other, Ops);
+      DAG.setRoot(lowerEndEH(Chain, &I, EHPadBB, BeginLabel));
       break;
     }
     }
@@ -8820,6 +8834,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(1)),
                              getValue(I.getArgOperand(2)), Flags));
     return;
+  case Intrinsic::vector_shuffle:
+    setValue(&I, DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, sdl,
+                             TLI.getValueType(DAG.getDataLayout(), I.getType()),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
   case Intrinsic::experimental_convergence_anchor:
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_loop:
@@ -9944,19 +9964,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitMemCmpBCmpCall(I))
           return;
         break;
-      case LibFunc_copysign:
-      case LibFunc_copysignf:
-      case LibFunc_copysignl:
-        // We already checked this call's prototype; verify it doesn't modify
-        // errno.
-        if (I.onlyReadsMemory()) {
-          SDValue LHS = getValue(I.getArgOperand(0));
-          SDValue RHS = getValue(I.getArgOperand(1));
-          setValue(&I, DAG.getNode(ISD::FCOPYSIGN, getCurSDLoc(),
-                                   LHS.getValueType(), LHS, RHS));
-          return;
-        }
-        break;
       case LibFunc_sin:
       case LibFunc_sinf:
       case LibFunc_sinl:
@@ -10042,12 +10049,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_exp10f:
       case LibFunc_exp10l:
         if (visitUnaryFloatCall(I, ISD::FEXP10))
-          return;
-        break;
-      case LibFunc_ldexp:
-      case LibFunc_ldexpf:
-      case LibFunc_ldexpl:
-        if (visitBinaryFloatCall(I, ISD::FLDEXP))
           return;
         break;
       case LibFunc_strstr:
@@ -10700,10 +10701,21 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
           auto *R = cast<RegisterSDNode>(Info.AsmNodeOperands[CurOp + 1]);
           Register TiedReg = R->getReg();
           MVT RegVT = R->getSimpleValueType(0);
-          const TargetRegisterClass *RC =
-              TiedReg.isVirtual()     ? MRI.getRegClass(TiedReg)
-              : RegVT != MVT::Untyped ? TLI.getRegClassFor(RegVT)
-                                      : TRI.getMinimalPhysRegClass(TiedReg);
+          const TargetRegisterClass *RC;
+          if (TiedReg.isVirtual()) {
+            RC = MRI.getRegClass(TiedReg);
+          } else if (RegVT == MVT::Untyped) {
+            RC = TRI.getMinimalPhysRegClass(TiedReg);
+          } else {
+            RC = TLI.getRegClassFor(RegVT);
+            if (!RC->contains(TiedReg)) {
+              const TargetRegisterClass *PhysRC =
+                  TRI.getMinimalPhysRegClass(TiedReg);
+              if (PhysRC->isAllocatable())
+                RC = PhysRC;
+            }
+          }
+
           for (unsigned I = 0, E = Flag.getNumOperandRegisters(); I != E; ++I)
             Regs.push_back(MRI.createVirtualRegister(RC));
 

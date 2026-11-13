@@ -239,7 +239,6 @@
 ...
 ---
 name:            _ZN1sC2Ei
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$esi' }

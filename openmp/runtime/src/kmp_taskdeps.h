@@ -122,6 +122,9 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
   KA_TRACE(20, ("__kmp_release_deps: T#%d notifying successors of task %p.\n",
                 gtid, task));
 
+  // Order task body memory accesses before dn.task = NULL is observed
+  // by lock-free checks in __kmp_depnode_link_successor().
+  KMP_MB();
   KMP_ACQUIRE_DEPNODE(gtid, node);
   node->dn.task =
       NULL; // mark this task as finished, so no new dependencies are generated

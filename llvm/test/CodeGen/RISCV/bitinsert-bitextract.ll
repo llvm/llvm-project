@@ -2385,9 +2385,8 @@ define b123 @test_bitinsert_b123_crossword(b123 %base, i32 %val) {
 ; RV64ZBB-LABEL: test_bitinsert_b123_crossword:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    lui a3, 524288
-; RV64ZBB-NEXT:    addiw a3, a3, -1
-; RV64ZBB-NEXT:    slli a3, a3, 28
-; RV64ZBB-NEXT:    and a1, a1, a3
+; RV64ZBB-NEXT:    rori a3, a3, 36
+; RV64ZBB-NEXT:    andn a1, a1, a3
 ; RV64ZBB-NEXT:    slli a3, a2, 60
 ; RV64ZBB-NEXT:    slli a0, a0, 4
 ; RV64ZBB-NEXT:    srli a0, a0, 4
