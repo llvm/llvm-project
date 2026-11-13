@@ -1,3 +1,4 @@
+// RUN: mlir-opt -split-input-file -convert-vector-to-spirv -canonicalize -reconcile-unrealized-casts -verify-diagnostics %s -o - | FileCheck %s --check-prefix=EMULATED
 // RUN: mlir-opt -split-input-file -convert-vector-to-spirv -verify-diagnostics %s -o - | FileCheck %s
 
 module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Float16], []>, #spirv.resource_limits<>> } {
@@ -1357,4 +1358,107 @@ func.func @vector_store_physical(%arg0 : memref<4xf32, #spirv.storage_class<Phys
   return
 }
 
+}
+
+// -----
+
+// Emulated narrow integers occupy i32 components. Bitcasts must repack the
+// original element bits rather than reinterpret the widened representation.
+// EMULATED-LABEL: func.func @bitcast_emulated_i8_to_i32()
+// EMULATED: spirv.Constant 571604864 : i32
+// EMULATED-NOT: vector.bitcast
+// EMULATED: return
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>} {
+  func.func @bitcast_emulated_i8_to_i32() -> vector<1xi32> {
+    %word = spirv.Constant dense<[-128, -1, 17, 34]> : vector<4xi32>
+    %source = builtin.unrealized_conversion_cast %word : vector<4xi32> to vector<4xi8>
+    %result = vector.bitcast %source : vector<4xi8> to vector<1xi32>
+    return %result : vector<1xi32>
+  }
+}
+
+// -----
+
+// EMULATED-LABEL: func.func @bitcast_emulated_i32_to_i8()
+// EMULATED-DAG: %[[V1_0:.+]] = spirv.Constant 152 : i32
+// EMULATED-DAG: %[[V1_1:.+]] = spirv.Constant 186 : i32
+// EMULATED-DAG: %[[V1_2:.+]] = spirv.Constant 220 : i32
+// EMULATED-DAG: %[[V1_3:.+]] = spirv.Constant 254 : i32
+// EMULATED: spirv.CompositeConstruct %[[V1_0]], %[[V1_1]], %[[V1_2]], %[[V1_3]]
+// EMULATED-NOT: vector.bitcast
+// EMULATED: return
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>} {
+  func.func @bitcast_emulated_i32_to_i8() -> vector<4xi8> {
+    %word = spirv.Constant -19088744 : i32
+    %source = builtin.unrealized_conversion_cast %word : i32 to vector<1xi32>
+    %result = vector.bitcast %source : vector<1xi32> to vector<4xi8>
+    return %result : vector<4xi8>
+  }
+}
+
+// -----
+
+// EMULATED-LABEL: func.func @bitcast_emulated_i16_to_i32()
+// EMULATED: spirv.Constant -2147418113 : i32
+// EMULATED-NOT: vector.bitcast
+// EMULATED: return
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>} {
+  func.func @bitcast_emulated_i16_to_i32() -> vector<1xi32> {
+    %word = spirv.Constant dense<[-1, -32768]> : vector<2xi32>
+    %source = builtin.unrealized_conversion_cast %word : vector<2xi32> to vector<2xi16>
+    %result = vector.bitcast %source : vector<2xi16> to vector<1xi32>
+    return %result : vector<1xi32>
+  }
+}
+
+// -----
+
+// EMULATED-LABEL: func.func @bitcast_emulated_i32_to_i16()
+// EMULATED-DAG: %[[V3_0:.+]] = spirv.Constant 57005 : i32
+// EMULATED-DAG: %[[V3_1:.+]] = spirv.Constant 48879 : i32
+// EMULATED: spirv.CompositeConstruct %[[V3_0]], %[[V3_1]]
+// EMULATED-NOT: vector.bitcast
+// EMULATED: return
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>} {
+  func.func @bitcast_emulated_i32_to_i16() -> vector<2xi16> {
+    %word = spirv.Constant -1091576147 : i32
+    %source = builtin.unrealized_conversion_cast %word : i32 to vector<1xi32>
+    %result = vector.bitcast %source : vector<1xi32> to vector<2xi16>
+    return %result : vector<2xi16>
+  }
+}
+
+// -----
+
+// EMULATED-LABEL: func.func @bitcast_emulated_i8_to_i16()
+// EMULATED-DAG: %[[V4_0:.+]] = spirv.Constant 65408 : i32
+// EMULATED-DAG: %[[V4_1:.+]] = spirv.Constant 32895 : i32
+// EMULATED: spirv.CompositeConstruct %[[V4_0]], %[[V4_1]]
+// EMULATED-NOT: vector.bitcast
+// EMULATED: return
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>} {
+  func.func @bitcast_emulated_i8_to_i16() -> vector<2xi16> {
+    %word = spirv.Constant dense<[-128, -1, 127, -128]> : vector<4xi32>
+    %source = builtin.unrealized_conversion_cast %word : vector<4xi32> to vector<4xi8>
+    %result = vector.bitcast %source : vector<4xi8> to vector<2xi16>
+    return %result : vector<2xi16>
+  }
+}
+
+// -----
+
+// EMULATED-LABEL: func.func @bitcast_emulated_i16_to_i8()
+// EMULATED-DAG: %[[V5_0:.+]] = spirv.Constant 255 : i32
+// EMULATED-DAG: %[[V5_1:.+]] = spirv.Constant 0 : i32
+// EMULATED-DAG: %[[V5_2:.+]] = spirv.Constant 128 : i32
+// EMULATED: spirv.CompositeConstruct %[[V5_0]], %[[V5_0]], %[[V5_1]], %[[V5_2]]
+// EMULATED-NOT: vector.bitcast
+// EMULATED: return
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>} {
+  func.func @bitcast_emulated_i16_to_i8() -> vector<4xi8> {
+    %word = spirv.Constant dense<[-1, -32768]> : vector<2xi32>
+    %source = builtin.unrealized_conversion_cast %word : vector<2xi32> to vector<2xi16>
+    %result = vector.bitcast %source : vector<2xi16> to vector<4xi8>
+    return %result : vector<4xi8>
+  }
 }
