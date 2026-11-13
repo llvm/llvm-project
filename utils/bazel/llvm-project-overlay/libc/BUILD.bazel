@@ -4033,74 +4033,24 @@ libc_function(
 
 ################################ fcntl targets #################################
 
-libc_function(
+alias(
     name = "open",
-    srcs = ["src/fcntl/linux/open.cpp"],
-    hdrs = ["src/fcntl/open.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_fcntl_macros",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/fcntl:open",
 )
 
-libc_function(
+alias(
     name = "fcntl",
-    srcs = ["src/fcntl/linux/fcntl.cpp"],
-    hdrs = ["src/fcntl/fcntl.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:fcntl",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/fcntl",
 )
 
-libc_function(
+alias(
     name = "openat",
-    srcs = ["src/fcntl/linux/openat.cpp"],
-    hdrs = ["src/fcntl/openat.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":hdr_fcntl_macros",
-        ":types_mode_t",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:openat",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/fcntl:openat",
 )
 
-libc_function(
+alias(
     name = "creat",
-    srcs = ["src/fcntl/linux/creat.cpp"],
-    hdrs = ["src/fcntl/creat.h"],
-    deps = [
-        ":hdr_fcntl_macros",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:open",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/fcntl:creat",
 )
 
 ################################ time targets ##################################

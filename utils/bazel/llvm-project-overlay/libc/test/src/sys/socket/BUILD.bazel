@@ -19,7 +19,6 @@ libc_test_library(
         "//libc:fchdir",
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_sys_socket_macros",
-        "//libc:open",
         "//libc:strncpy",
         "//libc:strnlen",
         "//libc:types_size_t",
@@ -27,6 +26,7 @@ libc_test_library(
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:string_view",
+        "//libc/src/fcntl:open",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
@@ -62,7 +62,6 @@ libc_test(
         "//libc:bind",
         "//libc:close",
         "//libc:connect",
-        "//libc:fcntl",
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_sys_socket_macros",
         "//libc:listen",
@@ -73,6 +72,7 @@ libc_test(
         "//libc:types_socklen_t",
         "//libc:types_struct_sockaddr_un",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/fcntl",
     ],
 )
 
@@ -110,7 +110,6 @@ libc_test(
     srcs = ["linux/sendmsg_recvmsg_test.cpp"],
     deps = [
         "//libc:close",
-        "//libc:fcntl",
         "//libc:getsockopt",
         "//libc:hdr_fcntl_macros",
         "//libc:hdr_sys_socket_macros",
@@ -122,6 +121,7 @@ libc_test(
         "//libc:socketpair",
         "//libc:types_struct_cmsghdr",
         "//libc/src/__support/CPP:scope",
+        "//libc/src/fcntl",
     ],
 )
 

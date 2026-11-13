@@ -17,8 +17,8 @@ libc_test(
         "//libc:access",
         "//libc:close",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:unlink",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -29,10 +29,10 @@ libc_test(
         "//libc:close",
         "//libc:dup",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -43,10 +43,10 @@ libc_test(
         "//libc:close",
         "//libc:dup2",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -57,10 +57,10 @@ libc_test(
         "//libc:close",
         "//libc:dup3",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -71,11 +71,11 @@ libc_test(
         "//libc:close",
         "//libc:ftruncate",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
         "//libc/src/__support/CPP:string_view",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -94,11 +94,11 @@ libc_test(
         "//libc:close",
         "//libc:fsync",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:pread",
         "//libc:pwrite",
         "//libc:unlink",
         "//libc:write",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -120,8 +120,8 @@ libc_test(
         "//libc:close",
         "//libc:hdr_sys_stat_macros",
         "//libc:link",
-        "//libc:open",
         "//libc:unlink",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -140,9 +140,9 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:symlink",
         "//libc:unlink",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -152,12 +152,12 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:read",
         "//libc:truncate",
         "//libc:unlink",
         "//libc:write",
         "//libc/src/__support/CPP:string_view",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -167,8 +167,8 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:hdr_sys_stat_macros",
-        "//libc:open",
         "//libc:unlink",
+        "//libc/src/fcntl:open",
     ],
 )
 
@@ -195,7 +195,7 @@ libc_test(
         "//libc:close",
         "//libc:hdr_sys_stat_macros",
         "//libc:isatty",
-        "//libc:open",
+        "//libc/src/fcntl:open",
     ],
 )
 
