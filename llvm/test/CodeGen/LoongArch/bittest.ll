@@ -749,8 +749,8 @@ define i64 @bit_32_z_select_i64(i64 %a, i64 %b, i64 %c) {
 ;
 ; LA64-LABEL: bit_32_z_select_i64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ori $a3, $zero, 0
-; LA64-NEXT:    lu32i.d $a3, 1
+; LA64-NEXT:    lu12i.w $a3, 1
+; LA64-NEXT:    slli.d $a3, $a3, 20
 ; LA64-NEXT:    and $a0, $a0, $a3
 ; LA64-NEXT:    maskeqz $a2, $a2, $a0
 ; LA64-NEXT:    masknez $a0, $a1, $a0
