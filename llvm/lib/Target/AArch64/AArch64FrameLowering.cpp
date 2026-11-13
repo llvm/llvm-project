@@ -829,8 +829,18 @@ static MCRegister getRegisterOrZero(MCRegister Reg, bool HasSVE) {
 void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
                                                 MachineBasicBlock &MBB,
                                                 RegScavenger *) const {
-  // Insertion point.
-  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  // Zero registers before PAUTH_EPILOGUE where possible, so its expansion can
+  // combine authentication with the return. Authentication scratch registers
+  // must be cleared after the pseudo instead (see below).
+  MachineBasicBlock::iterator FirstTerminator = MBB.getFirstTerminator();
+  MachineBasicBlock::iterator MBBI = FirstTerminator;
+  // Unwind directives may separate the pseudo from the terminator.
+  for (MachineInstr &MI : reverse(make_range(MBB.begin(), FirstTerminator))) {
+    if (MI.getOpcode() == AArch64::PAUTH_EPILOGUE) {
+      MBBI = MI.getIterator();
+      break;
+    }
+  }
 
   // Fake a debug loc.
   DebugLoc DL;
@@ -860,14 +870,31 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   }
 
   const AArch64InstrInfo &TII = *STI.getInstrInfo();
+  bool IsPAuthEpilogue =
+      MBBI != MBB.end() && MBBI->getOpcode() == AArch64::PAUTH_EPILOGUE;
+  bool NeedsWinCFI = MF.hasWinCFI() && IsPAuthEpilogue;
+
+  auto ClearReg = [&](MCRegister Reg) {
+    auto InsertPt = MBBI;
+    // Clear authentication scratch registers after the pseudo but before the
+    // return, so they are still zero on return. These intervening instructions
+    // prevent authenticateLR from combining authentication with the return.
+    if (IsPAuthEpilogue && MBBI->modifiesRegister(Reg, &TRI))
+      InsertPt = FirstTerminator;
+    TII.buildClearRegister(Reg, MBB, InsertPt, DL);
+    // Zeroing inside a Windows epilogue needs matching unwind codes.
+    if (NeedsWinCFI && InsertPt == MBBI)
+      BuildMI(MBB, InsertPt, DL, TII.get(AArch64::SEH_Nop))
+          .setMIFlag(MachineInstr::FrameDestroy);
+  };
 
   // Zero out GPRs.
   for (MCRegister Reg : GPRsToZero.set_bits())
-    TII.buildClearRegister(Reg, MBB, MBBI, DL);
+    ClearReg(Reg);
 
   // Zero out FP/vector registers.
   for (MCRegister Reg : FPRsToZero.set_bits())
-    TII.buildClearRegister(Reg, MBB, MBBI, DL);
+    ClearReg(Reg);
 
   if (HasSVE) {
     for (MCRegister PReg :
@@ -875,8 +902,12 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
           AArch64::P5, AArch64::P6, AArch64::P7, AArch64::P8, AArch64::P9,
           AArch64::P10, AArch64::P11, AArch64::P12, AArch64::P13, AArch64::P14,
           AArch64::P15}) {
-      if (RegsToZero[PReg])
+      if (RegsToZero[PReg]) {
         BuildMI(MBB, MBBI, DL, TII.get(AArch64::PFALSE), PReg);
+        if (NeedsWinCFI)
+          BuildMI(MBB, MBBI, DL, TII.get(AArch64::SEH_Nop))
+              .setMIFlag(MachineInstr::FrameDestroy);
+      }
     }
   }
 }
