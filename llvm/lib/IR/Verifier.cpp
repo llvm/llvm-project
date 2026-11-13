@@ -2185,7 +2185,8 @@ Verifier::visitModuleFlag(const MDNode *Op,
   if (Name == "wchar_size") {
     ConstantInt *Value
       = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
-    Check(Value, "wchar_size metadata requires constant integer argument");
+    Check(Value && Value->getValue().isStrictlyPositive(),
+          "wchar_size metadata requires constant positive integer argument");
     return;
   }
 
