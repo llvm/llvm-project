@@ -144,6 +144,8 @@ STATISTIC(NumExitCountsNotComputed,
           "Number of loop exits without predictable exit counts");
 STATISTIC(NumBruteForceTripCountsComputed,
           "Number of loops with trip counts computed by force");
+STATISTIC(NumAddRecStartQueries,
+          "Number of predicates checked on the start values of AddRecs");
 
 #ifdef EXPENSIVE_CHECKS
 bool llvm::VerifySCEV = true;
@@ -12771,9 +12773,9 @@ static bool IsMinMaxConsistingOf(const SCEV *MaybeMinMaxExpr,
   return is_contained(MinMaxExpr->operands(), Candidate);
 }
 
-static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
-                                           CmpPredicate Pred, const SCEV *LHS,
-                                           const SCEV *RHS) {
+bool ScalarEvolution::isKnownPredicateViaAddRecStart(CmpPredicate Pred,
+                                                     const SCEV *LHS,
+                                                     const SCEV *RHS) {
   // If both sides are affine addrecs for the same loop, with equal
   // steps, and we know the recurrences don't wrap, then we only
   // need to check the predicate on the starting values.
@@ -12794,7 +12796,10 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
     return false;
 
-  return SE.isKnownPredicate(Pred, LStart, RStart);
+  // In the case when the start values are AddRecs themselves, we may recurse
+  // into this function again. Avoid it as it may cause exponential time complexity.
+  ++NumAddRecStartQueries;
+  return isKnownViaNonRecursiveReasoning(Pred, LStart, RStart);
 }
 
 /// Is LHS `Pred` RHS true because one of them is an AddRec that is known not to
@@ -13077,7 +13082,7 @@ bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
   return isKnownPredicateExtendIdiom(Pred, LHS, RHS) ||
          isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
          IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS) ||
-         IsKnownPredicateViaAddRecStart(*this, Pred, LHS, RHS) ||
+         isKnownPredicateViaAddRecStart(Pred, LHS, RHS) ||
          IsKnownPredicateViaAddRecMonotonicity(*this, Pred, LHS, RHS) ||
          isKnownPredicateViaNoOverflow(Pred, LHS, RHS);
 }

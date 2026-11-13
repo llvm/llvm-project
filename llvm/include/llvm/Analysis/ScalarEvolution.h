@@ -2316,6 +2316,14 @@ private:
                               const SCEV *RHS, const SCEV *FoundLHS,
                               const SCEV *FoundRHS, unsigned Depth = 0);
 
+  /// Test whether the condition described by Pred, LHS, and RHS is true,
+  /// where LHS and RHS are recurrences of the same loop, by proving it on their
+  /// start values.
+  /// If either LHS or RHS is not an AddRec, or they're from different loops,
+  /// or the predicate could not be proven, returns false.
+  bool isKnownPredicateViaAddRecStart(CmpPredicate Pred, const SCEV *LHS,
+                                      const SCEV *RHS);
+
   /// Test whether the condition described by Pred, LHS, and RHS is true.
   /// Use only simple non-recursive types of checks, such as range analysis etc.
   bool isKnownViaNonRecursiveReasoning(CmpPredicate Pred, SCEVUse LHS,
