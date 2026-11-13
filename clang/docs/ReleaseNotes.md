@@ -1471,7 +1471,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 - Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
   semantic checks, which caused spurious `reverse_offload` errors.
-- Fixed a crash when a variable with `#pragma omp allocate` is declared in unreachable code; jumping into its scope is now an error. (#GH140336)
 - Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
   `depth` clause. Flatten combines perfectly nested canonical loops into one
   loop. `depth(k)` selects how many outermost loops to combine (default 2).
@@ -1534,6 +1533,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   modifications to the bindings will not be reflected in the original variable.
   To ensure correct behavior, either use the original variable directly in the
   target region or map the bindings explicitly instead.
+- Fixed a crash when a variable with `#pragma omp allocate` is declared in unreachable code; jumping into its scope is now an error. (#GH140336)
 
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
