@@ -372,8 +372,7 @@ public:
 
     // For fixed vectors, scalarize if not using SVE for them.
     auto *DataTypeFVTy = dyn_cast<FixedVectorType>(DataType);
-    if (DataTypeFVTy && (!ST->useSVEForFixedLengthVectors() ||
-                         DataTypeFVTy->getNumElements() < 2))
+    if (DataTypeFVTy && DataTypeFVTy->getNumElements() < 2)
       return false;
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
