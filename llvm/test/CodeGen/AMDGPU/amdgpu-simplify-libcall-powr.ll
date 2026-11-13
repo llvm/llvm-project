@@ -95,7 +95,7 @@ define float @test_powr_afn_f32_nnan(float %x, float %y) {
 ; NOPRELINK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = fcmp nnan afn olt float [[X]], 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = select nnan afn i1 [[TMP1]], float +qnan, float [[X]]
-; NOPRELINK-NEXT:    [[TMP3:%.*]] = call nnan afn float @llvm.fabs.f32(float [[X]])
+; NOPRELINK-NEXT:    [[TMP3:%.*]] = call nnan afn float @llvm.fabs.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan afn float @llvm.log2.f32(float [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = fmul nnan afn float [[Y]], [[TMP4]]
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = call nnan afn float @llvm.exp2.f32(float [[TMP5]])
