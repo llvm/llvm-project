@@ -30241,4 +30241,6 @@
 {"_Z1fILDu114EEvv", "void f<(char8_t)114>()"},
 {"_Z16ManglingTestNTTPILDB99_38EEvv", "void ManglingTestNTTP<(_BitInt(99))38>()"},
 {"_Z1fILDn0EEvv", "void f<nullptr>()"},
+{"_ZN6test514fun3I2S1IiEiEEDTcldtcvS1_IT0_E_EdnT_EEv", "decltype(((S1<int>)()).~S1<int>()) test51::fun3<S1<int>, int>()"},
+{"_Z1fI1AiEDTcvT_IT0_ELi0EES2_", "decltype((A<int>)(0)) f<A, int>(int)"},
     // clang-format on
