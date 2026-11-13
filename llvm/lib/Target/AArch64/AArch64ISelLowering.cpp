@@ -1777,6 +1777,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FCANONICALIZE, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction({ISD::FDIV, ISD::STRICT_FDIV}, VT, Custom);
+      setOperationAction(ISD::FLDEXP, VT, Custom);
       setOperationAction({ISD::FMA, ISD::STRICT_FMA}, VT, Custom);
       setOperationAction({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT, Custom);
       setOperationAction({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT, Custom);
@@ -8349,44 +8350,61 @@ static SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static SDValue LowerFLDEXP(SDValue Op, SelectionDAG &DAG) {
-  SDValue X = Op.getOperand(0);
-  EVT XScalarTy = X.getValueType();
-  SDValue Exp = Op.getOperand(1);
-
+SDValue AArch64TargetLowering::LowerFLDEXP(SDValue Op,
+                                           SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  EVT XVT, ExpVT;
-  switch (Op.getSimpleValueType().SimpleTy) {
-  default:
-    return SDValue();
-  case MVT::bf16:
-  case MVT::f16:
-    X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X);
-    [[fallthrough]];
-  case MVT::f32:
-    XVT = MVT::nxv4f32;
-    ExpVT = MVT::nxv4i32;
-    break;
-  case MVT::f64:
-    XVT = MVT::nxv2f64;
-    ExpVT = MVT::nxv2i64;
-    Exp = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Exp);
-    break;
+  EVT VT = Op.getValueType();
+  SDValue X = Op.getOperand(0);
+  SDValue Exp = Op.getOperand(1);
+  EVT ExpVT = Exp.getValueType();
+
+  // FSCALE requires all elements to have the same bitwidth.
+  if (ExpVT.bitsGT(VT)) {
+    // Promote the floating-point operand.
+    EVT NewVT;
+    if (ExpVT == MVT::i32)
+      NewVT = MVT::f32;
+    else if (ExpVT == MVT::i64)
+      NewVT = MVT::f64;
+    else if (ExpVT.isVectorOf(MVT::i32))
+      NewVT = ExpVT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+    else if (ExpVT.isVectorOf(MVT::i64))
+      NewVT = ExpVT.changeVectorElementType(*DAG.getContext(), MVT::f64);
+    else
+      return SDValue();
+
+    X = DAG.getNode(ISD::FP_EXTEND, DL, NewVT, X);
+    SDValue FLDEXP = DAG.getNode(ISD::FLDEXP, DL, NewVT, X, Exp);
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, FLDEXP,
+                       DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true));
   }
 
-  SDValue VX = DAG.getInsertVectorElt(DL, DAG.getPOISON(XVT), X, 0);
-  SDValue VExp = DAG.getInsertVectorElt(DL, DAG.getPOISON(ExpVT), Exp, 0);
-  SDValue VPg = DAG.getConstant(
-      1, DL, XVT.changeVectorElementType(*DAG.getContext(), MVT::i1));
-  SDValue FScale = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, XVT,
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_fscale, DL, MVT::i64), VPg,
-      VX, VExp);
-  SDValue Final = DAG.getExtractVectorElt(DL, X.getValueType(), FScale, 0);
-  if (X.getValueType() != XScalarTy)
-    Final = DAG.getNode(ISD::FP_ROUND, DL, XScalarTy, Final,
-                        DAG.getIntPtrConstant(1, SDLoc(Op), /*isTarget=*/true));
-  return Final;
+  // FSCALE requires all elements to have the same bitwidth.
+  if (ExpVT.bitsLT(VT)) {
+    // Promote the integer operand.
+    EVT NewExpVT = ExpVT.isScalableVectorOf(MVT::i1)
+                       ? getPromotedVTForPredicate(ExpVT)
+                       : VT.changeTypeToInteger();
+    Exp = DAG.getNode(ISD::SIGN_EXTEND, DL, NewExpVT, Exp);
+    return DAG.getNode(ISD::FLDEXP, DL, VT, X, Exp);
+  }
+
+  assert(ExpVT.bitsEq(VT) && "Type mismatch!");
+
+  if (VT.isVector())
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FLDEXP_PRED);
+
+  // Lower scalar FDEXP to SVE.
+  EVT NewVT = getPackedSVEVectorVT(VT);
+  X = DAG.getInsertVectorElt(DL, DAG.getPOISON(NewVT), X, 0);
+
+  EVT NewExpVT = NewVT.changeTypeToInteger();
+  Exp = DAG.getInsertVectorElt(DL, DAG.getPOISON(NewExpVT), Exp, 0);
+
+  EVT PgVT = NewVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
+  SDValue Pg = DAG.getConstant(1, DL, PgVT);
+  SDValue FLDEXP = DAG.getNode(AArch64ISD::FLDEXP_PRED, DL, NewVT, Pg, X, Exp);
+  return DAG.getExtractVectorElt(DL, VT, FLDEXP, 0);
 }
 
 SDValue AArch64TargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
@@ -35277,7 +35295,9 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
 
       assert(isTypeLegal(V.getValueType()) &&
              "Expected only legal fixed-width types");
-      Operands.push_back(convertToScalableVector(DAG, ContainerVT, V));
+      EVT OpContainerVT =
+          getContainerForFixedLengthVector(DAG, V.getValueType());
+      Operands.push_back(convertToScalableVector(DAG, OpContainerVT, V));
     }
 
     if (isMergePassthruOpcode(NewOp))
