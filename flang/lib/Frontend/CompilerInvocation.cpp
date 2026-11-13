@@ -924,6 +924,13 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     }
   }
 
+  // -fbacktrace is the default, matching gfortran. -fno-backtrace is passed to
+  // the runtime by setting FLANG_ERROR_BACKTRACE when that variable is not
+  // already set, so an explicit environment value still wins.
+  if (!args.hasFlag(clang::options::OPT_fbacktrace,
+                    clang::options::OPT_fno_backtrace, /*Default=*/true))
+    opts.envDefaults.push_back({"FLANG_ERROR_BACKTRACE", "0"});
+
   // Set conversion based on -fconvert=<value>
   if (const auto *arg = args.getLastArg(clang::options::OPT_fconvert_EQ)) {
     const char *argValue = arg->getValue();

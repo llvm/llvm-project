@@ -80,6 +80,11 @@ struct ExecutionEnvironment {
   ConvertUnit *convertUnits{nullptr}; // FORT_CONVERT_UNIT
   std::size_t numConvertUnits{0};
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
+  // Print a stack trace for a fatal runtime error, ERROR STOP, or a deadly
+  // signal. On by default, matching gfortran -fbacktrace.
+  // ExecutionEnvironment::Configure() applies FLANG_ERROR_BACKTRACE
+  // when this variable is set.
+  bool backtrace{true};
   // FLANG_TIMEF_IN_MILLISECONDS=1 sets TIMEF resolution to milliseconds.
   // Default resolution is seconds.
   bool timefInMillisec{false};

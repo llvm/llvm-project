@@ -32,6 +32,10 @@ void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[],
     const EnvironmentDefaultList *envDefaults) {
   Fortran::runtime::executionEnvironment.Configure(
       argc, argv, envp, envDefaults);
+#ifdef FLANG_RT_HAVE_CSIGNAL
+  if (Fortran::runtime::executionEnvironment.backtrace)
+    Fortran::runtime::InstallFatalBacktraceHandlers();
+#endif
   ConfigureFloatingPoint();
   Fortran::runtime::io::RegisterRPCHandlers();
   // I/O is initialized on demand so that it works for non-Fortran main().

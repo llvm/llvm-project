@@ -102,10 +102,14 @@ static void CloseAllExternalUnits(const char *why) {
     std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
-  if (isErrorStop)
+  if (isErrorStop) {
+#ifdef FLANG_RT_HAVE_CSIGNAL
+    Fortran::runtime::PrintFatalBacktrace("\nError termination. Backtrace:\n");
+#endif
     Fortran::runtime::ErrorExit(code);
-  else
+  } else {
     Fortran::runtime::NormalExit(code);
+  }
 #endif
 }
 
@@ -133,6 +137,9 @@ static void CloseAllExternalUnits(const char *why) {
     DescribeIEEESignaledExceptions();
   }
   if (isErrorStop) {
+#ifdef FLANG_RT_HAVE_CSIGNAL
+    Fortran::runtime::PrintFatalBacktrace("\nError termination. Backtrace:\n");
+#endif
     Fortran::runtime::ErrorExit(EXIT_FAILURE);
   } else {
     Fortran::runtime::NormalExit(EXIT_SUCCESS);
@@ -237,8 +244,11 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 }
 
 [[noreturn]] RT_OPTNONE_ATTR void RTNAME(Abort)() {
-#ifdef HAVE_BACKTRACE
-  PrintBacktrace();
+#ifdef FLANG_RT_HAVE_CSIGNAL
+  Fortran::runtime::PrintFatalBacktrace("\nProgram aborted. Backtrace:\n");
+  // The fatal-signal handler also traces SIGABRT. Reset it so abort() does
+  // not print a second trace.
+  std::signal(SIGABRT, SIG_DFL);
 #endif
   std::abort();
 }
@@ -307,3 +317,98 @@ RT_EXT_API_GROUP_BEGIN
 }
 RT_EXT_API_GROUP_END
 }
+
+#ifdef FLANG_RT_HAVE_CSIGNAL
+void Fortran::runtime::PrintFatalBacktrace(const char *heading) {
+  if (!Fortran::runtime::executionEnvironment.backtrace)
+    return;
+  if (heading)
+    std::fputs(heading, stderr);
+  PrintBacktrace();
+}
+
+static volatile std::sig_atomic_t fatalErrorInProgress{0};
+
+static const char *SignalDescription(int signum) {
+  switch (signum) {
+#ifdef SIGQUIT
+  case SIGQUIT:
+    return "SIGQUIT: Terminal quit signal";
+#endif
+  case SIGILL:
+    return "SIGILL: Illegal instruction";
+  case SIGABRT:
+    return "SIGABRT: Process abort signal";
+  case SIGFPE:
+    return "SIGFPE: Floating-point exception";
+  case SIGSEGV:
+    return "SIGSEGV: Segmentation fault";
+#ifdef SIGBUS
+  case SIGBUS:
+    return "SIGBUS: Access to an undefined portion of a memory object";
+#endif
+#ifdef SIGSYS
+  case SIGSYS:
+    return "SIGSYS: Bad system call";
+#endif
+#ifdef SIGTRAP
+  case SIGTRAP:
+    return "SIGTRAP: Trace/breakpoint trap";
+#endif
+#ifdef SIGXCPU
+  case SIGXCPU:
+    return "SIGXCPU: CPU time limit exceeded";
+#endif
+#ifdef SIGXFSZ
+  case SIGXFSZ:
+    return "SIGXFSZ: File size limit exceeded";
+#endif
+  default:
+    return nullptr;
+  }
+}
+
+static void BacktraceSignalHandler(int signum) {
+  if (fatalErrorInProgress)
+    std::raise(signum);
+  fatalErrorInProgress = 1;
+  if (const char *desc{SignalDescription(signum)}) {
+    std::fprintf(stderr, "\nProgram received signal %s.\n", desc);
+  } else {
+    std::fprintf(stderr, "\nProgram received signal %d.\n", signum);
+  }
+  std::fputs("\nBacktrace for this error:\n", stderr);
+  PrintBacktrace();
+  std::signal(signum, SIG_DFL);
+  std::raise(signum);
+}
+
+static void InstallOneBacktraceHandler(int signum) {
+  std::signal(signum, BacktraceSignalHandler);
+}
+
+void Fortran::runtime::InstallFatalBacktraceHandlers() {
+#ifdef SIGQUIT
+  InstallOneBacktraceHandler(SIGQUIT);
+#endif
+  InstallOneBacktraceHandler(SIGILL);
+  InstallOneBacktraceHandler(SIGABRT);
+  InstallOneBacktraceHandler(SIGFPE);
+  InstallOneBacktraceHandler(SIGSEGV);
+#ifdef SIGBUS
+  InstallOneBacktraceHandler(SIGBUS);
+#endif
+#ifdef SIGSYS
+  InstallOneBacktraceHandler(SIGSYS);
+#endif
+#ifdef SIGTRAP
+  InstallOneBacktraceHandler(SIGTRAP);
+#endif
+#ifdef SIGXCPU
+  InstallOneBacktraceHandler(SIGXCPU);
+#endif
+#ifdef SIGXFSZ
+  InstallOneBacktraceHandler(SIGXFSZ);
+#endif
+}
+#endif

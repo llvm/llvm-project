@@ -148,6 +148,12 @@ page](https://llvm.org/releases/).
   default.
 
 ## New Compiler Flags
+- Added `-fbacktrace` and `-fno-backtrace`. A fatal runtime error, `ERROR STOP`,
+  `ABORT`, or a deadly signal prints a stack trace. This is the default.
+  `-fno-backtrace` disables those traces. `CALL BACKTRACE()` still prints one.
+  `FLANG_ERROR_BACKTRACE` overrides the option when it is already set. See
+  [RuntimeEnvironment.md](RuntimeEnvironment.md).
+
 - Added `-fno-out-of-bounds-subscripts`, which restores the previous behavior of
   rejecting an out-of-range constant subscript with an error. See the entry above
   for the change in default behavior.

@@ -37,7 +37,6 @@ defm aggressive_function_elimination : BooleanFFlag<"aggressive-function-elimina
 defm align_commons : BooleanFFlag<"align-commons">, Group<gfortran_Group>;
 defm all_intrinsics : BooleanFFlag<"all-intrinsics">, Group<gfortran_Group>;
 def fautomatic : Flag<["-"], "fautomatic">; // -fno-automatic is significant
-defm backtrace : BooleanFFlag<"backtrace">, Group<gfortran_Group>;
 defm bounds_check : BooleanFFlag<"bounds-check">, Group<gfortran_Group>;
 defm check_array_temporaries : BooleanFFlag<"check-array-temporaries">, Group<gfortran_Group>;
 defm cray_pointer : BooleanFFlag<"cray-pointer">, Group<gfortran_Group>;
@@ -146,6 +145,10 @@ def ffixed_line_length_EQ : Joined<["-"], "ffixed-line-length=">, Group<f_Group>
   DocBrief<[{Set column after which characters are ignored in typical fixed-form lines in the source
 file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
+def fbacktrace : Flag<["-"], "fbacktrace">, Group<f_Group>,
+  HelpText<"Print a stack trace on a fatal runtime error or deadly signal (default)">;
+def fno_backtrace : Flag<["-"], "fno-backtrace">, Group<f_Group>,
+  HelpText<"Do not print a stack trace on a fatal runtime error or deadly signal">;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
   HelpText<"Set endian conversion of data for unformatted files">;
 def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,
