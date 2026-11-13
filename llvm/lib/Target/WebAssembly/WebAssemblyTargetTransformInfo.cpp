@@ -173,6 +173,7 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       // shuffle
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},
+      // narrow, and
       {ISD::TRUNCATE, MVT::v4i16, MVT::v4i32, 2},
       // 2x narrow, and
       {ISD::TRUNCATE, MVT::v4i8, MVT::v4i32, 3},
