@@ -32,6 +32,7 @@
 ; DEFAULT-NEXT: Greedy Register Allocator
 ; DEFAULT-NEXT: GCN NSA Reassign
 ; DEFAULT-NEXT: AMDGPU Rewrite AGPR-Copy-MFMA
+; DEFAULT-NEXT: AMDGPU Optimize VGPR Encoding
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: Register Allocation Pass Scoring
 ; DEFAULT-NEXT: AMDGPU Mark Last Scratch Load
@@ -83,6 +84,7 @@
 ; BASIC-DEFAULT-NEXT: Greedy Register Allocator
 ; BASIC-DEFAULT-NEXT: GCN NSA Reassign
 ; BASIC-DEFAULT-NEXT: AMDGPU Rewrite AGPR-Copy-MFMA
+; BASIC-DEFAULT-NEXT: AMDGPU Optimize VGPR Encoding
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: Register Allocation Pass Scoring
 ; BASIC-DEFAULT-NEXT: AMDGPU Mark Last Scratch Load
@@ -107,6 +109,7 @@
 ; DEFAULT-BASIC-NEXT: Basic Register Allocator
 ; DEFAULT-BASIC-NEXT: GCN NSA Reassign
 ; DEFAULT-BASIC-NEXT: AMDGPU Rewrite AGPR-Copy-MFMA
+; DEFAULT-BASIC-NEXT: AMDGPU Optimize VGPR Encoding
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: Register Allocation Pass Scoring
 ; DEFAULT-BASIC-NEXT: AMDGPU Mark Last Scratch Load
@@ -139,6 +142,7 @@
 ; BASIC-BASIC-NEXT: Basic Register Allocator
 ; BASIC-BASIC-NEXT: GCN NSA Reassign
 ; BASIC-BASIC-NEXT: AMDGPU Rewrite AGPR-Copy-MFMA
+; BASIC-BASIC-NEXT: AMDGPU Optimize VGPR Encoding
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: Register Allocation Pass Scoring
 ; BASIC-BASIC-NEXT: AMDGPU Mark Last Scratch Load
