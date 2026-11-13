@@ -457,6 +457,7 @@
 ; CHECK-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare ptr @wmemset(ptr, i16, i16)
 ; CHECK-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
