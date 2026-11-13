@@ -16,7 +16,7 @@
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10,CHECK-P10-BE
 
 // CHECK-BE-DAG: @_mm_movemask_pd.__perm_mask = internal constant <4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656>, align 16
 // CHECK-BE-DAG: @_mm_shuffle_epi32.__permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
@@ -767,6 +767,7 @@ test_move() {
 // CHECK: insertelement <2 x double> %{{[0-9a-zA-Z_.]+}}, double %[[EXT]], i32 0
 
 // CHECK-P10-LABEL: define available_externally signext i32 @_mm_movemask_epi8
+// CHECK-P10-BE: call <16 x i8> @vec_reve(unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK-P10: call zeroext i32 @vec_extractm(unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_epi8
@@ -776,6 +777,7 @@ test_move() {
 // CHECK: trunc i64 %[[VAL]] to i32
 
 // CHECK-P10-LABEL: define available_externally signext i32 @_mm_movemask_pd
+// CHECK-P10-BE: call <2 x double> @vec_reve(double vector[2])(<2 x double> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK-P10: call zeroext i32 @vec_extractm(unsigned long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_pd

@@ -696,6 +696,7 @@ test_move() {
 // CHECK-BE: %[[EXT:[0-9a-zA-Z_.]+]] = extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK-BE: trunc i64 %[[EXT]] to i32
 // CHECK-P10-LE: call zeroext i32 @vec_extractm(unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
+// CHECK-P10-BE: call <4 x float> @vec_reve(float vector[4])(<4 x float> noundef %{{[0-9a-zA-Z_.]+}})
 // CHECK-P10-BE: call zeroext i32 @vec_extractm(unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 
 void __attribute__((noinline))
