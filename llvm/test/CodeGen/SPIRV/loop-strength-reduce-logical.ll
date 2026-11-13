@@ -3,8 +3,9 @@
 ; RUN: %if spirv-tools %{ llc -O2 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 ; RUN: %if spirv-tools %{ llc -O2 -mtriple=spirv1.6-unknown-vulkan1.3-compute -enable-new-pm %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
-; Array accesses should use a 32-bit or 64-bit integer loop index directly,
-; including when the index is also used as a value.
+; Array accesses should use a 32-bit integer loop index directly, and convert
+; a 64-bit one to the 32-bit index type, including when the index is also used
+; as a value.
 
 ; CHECK-DAG: OpName %[[#main64:]] "main"
 ; CHECK-DAG: OpName %[[#main32:]] "main32"
@@ -18,7 +19,8 @@
 ; CHECK: OpLabel
 ; CHECK-NEXT: OpPhi %[[#float]]
 ; CHECK-NEXT: %[[#i64:]] = OpPhi %[[#ulong]]
-; CHECK-NEXT: OpInBoundsAccessChain %[[#ptr]] %[[#w]] %[[#i64]]{{$}}
+; CHECK: %[[#idx:]] = OpUConvert %[[#uint]] %[[#i64]]
+; CHECK-NEXT: OpInBoundsAccessChain %[[#ptr]] %[[#w]] %[[#idx]]{{$}}
 ; CHECK: OpFunctionEnd
 ; CHECK: %[[#main32]] = OpFunction
 ; CHECK: %[[#i32:]] = OpPhi %[[#uint]]
