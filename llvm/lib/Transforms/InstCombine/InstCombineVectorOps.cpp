@@ -251,6 +251,10 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
   // If the source elements are wider than the destination, try to shift and
   // truncate a subset of scalar bits of an insert op.
   if (NumSrcElts.getKnownMinValue() < NumElts.getKnownMinValue()) {
+    // Each destination element must lie entirely within one source element.
+    if (NumElts.getKnownMinValue() % NumSrcElts.getKnownMinValue() != 0)
+      return nullptr;
+
     Value *Scalar;
     Value *Vec;
     uint64_t InsIndexC;
