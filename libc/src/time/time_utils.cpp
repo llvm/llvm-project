@@ -186,10 +186,7 @@ ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm) {
     yday++;
 
   // Step 5: Calculate day of week [0=Sun, 1=Mon, ..., 6=Sat]
-  // Unix epoch 1970-01-01 was Thursday (4)
-  int wday = static_cast<int>((unix_days + 4) % 7);
-  if (wday < 0)
-    wday += 7;
+  int wday = get_weekday(unix_days);
 
   // Step 6: Populate tm structure with all calculated values
   tm->tm_year = year - time_constants::TIME_YEAR_BASE; // Years since 1900
@@ -198,14 +195,12 @@ ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm) {
   tm->tm_wday = wday;                                  // Day of week [0, 6]
   tm->tm_yday = yday;                                  // Day of year [0, 365]
 
-  // Calculate time components from remaining seconds
-  tm->tm_hour =
-      static_cast<int>(remaining_seconds / time_constants::SECONDS_PER_HOUR);
-  tm->tm_min =
-      static_cast<int>(remaining_seconds / time_constants::SECONDS_PER_MIN %
-                       time_constants::SECONDS_PER_MIN);
-  tm->tm_sec =
-      static_cast<int>(remaining_seconds % time_constants::SECONDS_PER_MIN);
+  // Calculate time components from remaining seconds [0, 86399]
+  TimeOfDay time_of_day =
+      get_time_of_day(static_cast<uint32_t>(remaining_seconds));
+  tm->tm_hour = time_of_day.hour;
+  tm->tm_min = time_of_day.minute;
+  tm->tm_sec = time_of_day.second;
   tm->tm_isdst = 0; // Daylight saving time flag (not implemented)
 
   return {};

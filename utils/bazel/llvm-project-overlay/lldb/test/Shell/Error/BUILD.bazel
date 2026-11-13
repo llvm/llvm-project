@@ -6,8 +6,8 @@ load("//llvm:lit_test.bzl", "lit_test")
 
 licenses(["notice"])
 
-# cleanup.cpp builds an inferior with %clang_host, which the bazel setup
-# doesn't support yet.
+# cleanup.cpp runs lldb itself through %lldb, which sources the
+# lit-lldb-init-quiet file CMake writes into the test execution root.
 lit_test(
     name = "assert.test.test",
     srcs = ["assert.test"],

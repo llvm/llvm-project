@@ -486,12 +486,11 @@ void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, Instruction &RI,
     return;
   }
 
-  StringRef StackChkFailName =
-      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(StackChkFailImpl);
-
   FunctionCallee StackChkFail =
-      F.getParent()->getOrInsertFunction(StackChkFailName, IRB.getVoidTy());
-  IRBFail.CreateCall(StackChkFail, {});
+      Libcalls.getRuntimeLibcallsInfo().getOrInsertLibcallDecl(
+          *F.getParent(), StackChkFailImpl);
+  CallInst *Call = IRBFail.CreateCall(StackChkFail, {});
+  Call->setCallingConv(Libcalls.getLibcallImplCallingConv(StackChkFailImpl));
 }
 
 /// We explicitly compute and set the unsafe stack layout for all unsafe
@@ -721,8 +720,7 @@ bool SafeStack::ShouldInlinePointerAddress(CallInst &CI) {
   if (CI.hasFnAttr(Attribute::AlwaysInline) &&
       isInlineViable(*Callee).isSuccess())
     return true;
-  if (Callee->isInterposable() || Callee->hasFnAttribute(Attribute::NoInline) ||
-      CI.isNoInline())
+  if (Callee->isInterposable() || CI.isNoInline())
     return false;
   return true;
 }
@@ -786,28 +784,21 @@ bool SafeStack::run() {
     ++NumUnsafeStackRestorePointsFunctions;
 
   IRBuilder<> IRB(F.begin()->getFirstInsertionPt());
+  IRB.disableGEPCanonicalization();
   // Calls must always have a debug location, or else inlining breaks. So
   // we explicitly set a artificial debug location here.
   if (DISubprogram *SP = F.getSubprogram())
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
-  if (SafeStackUsePointerAddress) {
-    // FIXME: A more correct implementation of SafeStackUsePointerAddress would
-    // change the libcall availability in RuntimeLibcallsInfo
-    StringRef SafestackPointerAddressName =
-        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-            RTLIB::impl___safestack_pointer_address);
-
-    FunctionCallee Fn = F.getParent()->getOrInsertFunction(
-        SafestackPointerAddressName, IRB.getPtrTy(0));
-    UnsafeStackPtr = IRB.CreateCall(Fn);
-  } else {
+  if (SafeStackUsePointerAddress)
+    UnsafeStackPtr = TL.getSafeStackPointerAddressCall(IRB, Libcalls);
+  else
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);
-    if (!UnsafeStackPtr) {
-      F.getContext().emitError(
-          "no location available for safestack pointer address");
-      UnsafeStackPtr = PoisonValue::get(StackPtrTy);
-    }
+
+  if (!UnsafeStackPtr) {
+    F.getContext().emitError(
+        "no location available for safestack pointer address");
+    UnsafeStackPtr = PoisonValue::get(StackPtrTy);
   }
 
   // Load the current stack pointer (we'll also use it as a base pointer).

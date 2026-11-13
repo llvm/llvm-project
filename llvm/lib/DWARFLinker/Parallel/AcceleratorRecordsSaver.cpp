@@ -82,8 +82,7 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
       // is the unit of the last DIE resolved.
       CompileUnit *CU = &InUnit;
       uint32_t Hash = hashFullyQualifiedName(
-          InputDIE,
-          [&](const DWARFDie &Referrer, const DWARFFormValue &Ref) {
+          InputDIE, [&](const DWARFDie &Referrer, const DWARFFormValue &Ref) {
             assert(Referrer.getDwarfUnit() == &CU->getOrigUnit());
             std::optional<UnitEntryPairTy> RefDie = CU->resolveDIEReference(
                 Ref, ResolveInterCUReferencesMode::Resolve);
@@ -91,8 +90,7 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
               return DWARFDie();
             CU = RefDie->CU;
             return CU->getDIE(RefDie->DieEntry);
-          },
-          /*SkipModules=*/false);
+          });
       saveTypeRecord(InputDieEntry, AttrInfo.Name, OutDIE,
                      InputDieEntry->getTag(), Hash, ObjCClassIsImplementation,
                      TypeEntry);

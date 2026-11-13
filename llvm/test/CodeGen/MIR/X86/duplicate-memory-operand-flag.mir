@@ -13,7 +13,6 @@
 ...
 ---
 name:            volatile_inc
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 body: |

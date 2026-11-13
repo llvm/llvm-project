@@ -3735,6 +3735,10 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
       PtrInfo, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
       Alignment);
 
+  EVL = DAG.getNode(
+      ISD::UMIN, DL, EVL.getValueType(), DAG.getFreeze(EVL),
+      DAG.getElementCount(DL, EVL.getValueType(), VT.getVectorElementCount()));
+
   unsigned EltWidth = VT.getScalarSizeInBits() / 8;
   SDValue NumElemMinus1 =
       DAG.getNode(ISD::SUB, DL, PtrVT, DAG.getZExtOrTrunc(EVL, DL, PtrVT),
@@ -3805,7 +3809,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
 
   SDValue EltByteSize =
       DAG.getTypeSize(DL, PtrVT, VT.getVectorElementType().getStoreSize());
-  SDValue EVL1Ptr = DAG.getZExtOrTrunc(EVL1, DL, PtrVT);
+  SDValue EVL1Ptr = DAG.getZExtOrTrunc(DAG.getFreeze(EVL1), DL, PtrVT);
   SDValue EVL1Bytes = DAG.getNode(ISD::MUL, DL, PtrVT, EVL1Ptr, EltByteSize);
   // Clip EVL1Bytes to make sure we stay within the stack object.
   SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
@@ -6466,9 +6470,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTEND_VECTOR_INREG(SDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_FCOPYSIGN(SDNode *N) {
   // If this is an FCOPYSIGN with same input types, we can treat it as a
-  // normal (can trap) binary op.
+  // normal binary op.
   if (N->getOperand(0).getValueType() == N->getOperand(1).getValueType())
-    return WidenVecRes_BinaryCanTrap(N);
+    return WidenVecRes_Binary(N);
 
   // If the types are different, fall back to unrolling.
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
@@ -6497,7 +6501,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_ExpOp(SDNode *N) {
   if (ExpVT.isVector()) {
     EVT WideExpVT = WidenVT.changeVectorElementType(
         *DAG.getContext(), ExpVT.getVectorElementType());
-    ExpOp = ModifyToType(RHS, WideExpVT);
+    if (WideExpVT == TLI.getTypeToTransformTo(*DAG.getContext(), ExpVT))
+      ExpOp = GetWidenedVector(RHS);
+    else
+      ExpOp = ModifyToType(RHS, WideExpVT);
   }
 
   return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, ExpOp);

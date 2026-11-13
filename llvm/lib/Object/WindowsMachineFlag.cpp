@@ -15,7 +15,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -48,6 +47,6 @@ StringRef llvm::machineToStr(COFF::MachineTypes MT) {
   case COFF::IMAGE_FILE_MACHINE_I386:
     return "x86";
   default:
-    llvm_unreachable("unknown machine type");
+    return "unknown";
   }
 }

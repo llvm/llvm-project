@@ -372,13 +372,6 @@ name:            test_v2i64_eq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -406,13 +399,6 @@ name:            test_v4i32_eq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -440,13 +426,6 @@ name:            test_v2i32_eq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -473,24 +452,6 @@ name:            test_v2i16_eq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: gpr }
-  - { id: 14, class: fpr }
-  - { id: 15, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -529,13 +490,6 @@ name:            test_v8i16_eq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -563,13 +517,6 @@ name:            test_v4i16_eq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -596,13 +543,6 @@ name:            test_v16i8_eq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -629,13 +569,6 @@ name:            test_v8i8_eq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -662,13 +595,6 @@ name:            test_v2i64_ugt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -696,13 +622,6 @@ name:            test_v4i32_ugt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -730,13 +649,6 @@ name:            test_v2i32_ugt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -763,24 +675,6 @@ name:            test_v2i16_ugt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: gpr }
-  - { id: 14, class: fpr }
-  - { id: 15, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -819,13 +713,6 @@ name:            test_v8i16_ugt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -853,13 +740,6 @@ name:            test_v4i16_ugt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -886,13 +766,6 @@ name:            test_v16i8_ugt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -919,13 +792,6 @@ name:            test_v8i8_ugt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -952,13 +818,6 @@ name:            test_v2i64_uge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -986,13 +845,6 @@ name:            test_v4i32_uge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1020,13 +872,6 @@ name:            test_v2i32_uge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1053,24 +898,6 @@ name:            test_v2i16_uge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: gpr }
-  - { id: 14, class: fpr }
-  - { id: 15, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1109,13 +936,6 @@ name:            test_v8i16_uge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1143,13 +963,6 @@ name:            test_v4i16_uge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1176,13 +989,6 @@ name:            test_v16i8_uge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1209,13 +1015,6 @@ name:            test_v8i8_uge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1242,13 +1041,6 @@ name:            test_v2i64_ult
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1276,13 +1068,6 @@ name:            test_v4i32_ult
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1310,13 +1095,6 @@ name:            test_v2i32_ult
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1343,24 +1121,6 @@ name:            test_v2i16_ult
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: gpr }
-  - { id: 14, class: fpr }
-  - { id: 15, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1399,13 +1159,6 @@ name:            test_v8i16_ult
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1433,13 +1186,6 @@ name:            test_v4i16_ult
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1466,13 +1212,6 @@ name:            test_v16i8_ult
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1499,13 +1238,6 @@ name:            test_v8i8_ult
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1532,13 +1264,6 @@ name:            test_v2i64_ule
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1566,13 +1291,6 @@ name:            test_v4i32_ule
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1600,13 +1318,6 @@ name:            test_v2i32_ule
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1633,24 +1344,6 @@ name:            test_v2i16_ule
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: gpr }
-  - { id: 14, class: fpr }
-  - { id: 15, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1689,13 +1382,6 @@ name:            test_v8i16_ule
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1723,13 +1409,6 @@ name:            test_v4i16_ule
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1756,13 +1435,6 @@ name:            test_v16i8_ule
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1789,13 +1461,6 @@ name:            test_v8i8_ule
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1822,13 +1487,6 @@ name:            test_v2i64_sgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1856,13 +1514,6 @@ name:            test_v4i32_sgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1890,13 +1541,6 @@ name:            test_v2i32_sgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1923,26 +1567,6 @@ name:            test_v2i16_sgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: fpr }
-  - { id: 14, class: gpr }
-  - { id: 15, class: fpr }
-  - { id: 16, class: fpr }
-  - { id: 17, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -1987,13 +1611,6 @@ name:            test_v8i16_sgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2021,13 +1638,6 @@ name:            test_v4i16_sgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2054,13 +1664,6 @@ name:            test_v16i8_sgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2087,13 +1690,6 @@ name:            test_v8i8_sgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2120,13 +1716,6 @@ name:            test_v2i64_sge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2154,13 +1743,6 @@ name:            test_v4i32_sge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2188,13 +1770,6 @@ name:            test_v2i32_sge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2221,26 +1796,6 @@ name:            test_v2i16_sge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: fpr }
-  - { id: 14, class: gpr }
-  - { id: 15, class: fpr }
-  - { id: 16, class: fpr }
-  - { id: 17, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2285,13 +1840,6 @@ name:            test_v8i16_sge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2319,13 +1867,6 @@ name:            test_v4i16_sge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2352,13 +1893,6 @@ name:            test_v16i8_sge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2385,13 +1919,6 @@ name:            test_v8i8_sge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2418,13 +1945,6 @@ name:            test_v2i64_slt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2452,13 +1972,6 @@ name:            test_v4i32_slt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2486,13 +1999,6 @@ name:            test_v2i32_slt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2519,26 +2025,6 @@ name:            test_v2i16_slt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: fpr }
-  - { id: 14, class: gpr }
-  - { id: 15, class: fpr }
-  - { id: 16, class: fpr }
-  - { id: 17, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2583,13 +2069,6 @@ name:            test_v8i16_slt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2617,13 +2096,6 @@ name:            test_v4i16_slt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2650,13 +2122,6 @@ name:            test_v16i8_slt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2683,13 +2148,6 @@ name:            test_v8i8_slt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2716,13 +2174,6 @@ name:            test_v2i64_sle
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2750,13 +2201,6 @@ name:            test_v4i32_sle
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2784,13 +2228,6 @@ name:            test_v2i32_sle
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2817,26 +2254,6 @@ name:            test_v2i16_sle
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: fpr }
-  - { id: 3, class: fpr }
-  - { id: 4, class: _ }
-  - { id: 5, class: fpr }
-  - { id: 6, class: _ }
-  - { id: 7, class: fpr }
-  - { id: 8, class: fpr }
-  - { id: 9, class: fpr }
-  - { id: 10, class: gpr }
-  - { id: 11, class: fpr }
-  - { id: 12, class: fpr }
-  - { id: 13, class: fpr }
-  - { id: 14, class: gpr }
-  - { id: 15, class: fpr }
-  - { id: 16, class: fpr }
-  - { id: 17, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2881,13 +2298,6 @@ name:            test_v8i16_sle
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2915,13 +2325,6 @@ name:            test_v4i16_sle
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2948,13 +2351,6 @@ name:            test_v16i8_sle
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
@@ -2981,13 +2377,6 @@ name:            test_v8i8_sle
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: _ }
-  - { id: 3, class: fpr }
-  - { id: 4, class: fpr }
 machineFunctionInfo: {}
 body:             |
   bb.1 (%ir-block.0):
