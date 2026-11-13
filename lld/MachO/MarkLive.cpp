@@ -45,10 +45,16 @@ public:
   // optimization; flushing shortly after the worklist is populated means its
   // entries are likely still in cache.
   virtual void flush(size_t shard) = 0;
-  virtual void addLiveSupport(ConcatInputSection *isec, size_t shard) = 0;
+  void addLiveSupport(ConcatInputSection *isec, size_t shard) {
+    liveSupportShards[shard].push_back(isec);
+  }
   // Flushes all the shards into `nextLevel` before doing the marking.
   virtual void markTransitively() = 0;
   virtual ~MarkLive() = default;
+
+protected:
+  std::vector<SmallVector<ConcatInputSection *, 0>> liveSupportShards{
+      parallel::getThreadCount()};
 };
 
 // Sets `flag` and returns true if no other thread set it first.
@@ -89,9 +95,7 @@ public:
       std::conditional_t<RecordWhyLive, WhyLiveEntry, InputSection>;
   using Worklist = SmallVector<WorklistEntry *, 0>;
 
-  MarkLiveImpl()
-      : shards(parallel::getThreadCount()),
-        liveSupportShards(parallel::getThreadCount()) {}
+  MarkLiveImpl() : shards(parallel::getThreadCount()) {}
   void enqueue(InputSection *isec, uint64_t off, size_t shard) override {
     enqueue(isec, off, nullptr, shards[shard]);
   }
@@ -99,9 +103,6 @@ public:
     addSym(s, nullptr, shards[shard]);
   }
   void flush(size_t shard) override;
-  void addLiveSupport(ConcatInputSection *isec, size_t shard) override {
-    liveSupportShards[shard].push_back(isec);
-  }
   void markTransitively() override;
 
 private:
@@ -121,7 +122,6 @@ private:
   WorklistEntry *makeEntry(InputSection *, const WorklistEntry *prev) const;
 
   std::vector<Worklist> shards;
-  std::vector<SmallVector<ConcatInputSection *, 0>> liveSupportShards;
   std::mutex nextLevelMutex;
   // Sections that have been marked live and that the next level of drain() will
   // visit. Literal sections cannot contain references to other sections, so we
