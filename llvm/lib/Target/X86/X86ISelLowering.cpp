@@ -41863,7 +41863,7 @@ static SDValue combineX86ShuffleChain(
 
   // See if we can combine a single input shuffle with zeros to a bit-mask,
   // which is much simpler than any shuffle. Ensure we freeze the input to
-  // prevent AND(poison,) -> poison folds.
+  // prevent AND(poison,M) -> poison folds.
   if (UnaryShuffle && MaskContainsZeros && AllowVariablePerLaneMask &&
       isSequentialOrUndefOrZeroInRange(Mask, 0, NumMaskElts, 0) &&
       TLI.isTypeLegal(MaskVT)) {
