@@ -92,6 +92,7 @@ add_generic_entrypoint_object(
     libc.hdr.types.FILE
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+    libc.src.__support.libc_errno
 )
 
 # since this isn't an entrypoint we need to do these checks manually.
