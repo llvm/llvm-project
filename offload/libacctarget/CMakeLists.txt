@@ -16,6 +16,7 @@ else()
 endif()
 target_link_libraries(acctarget PRIVATE ${llvm_libs})
 target_include_directories(acctarget PRIVATE
+  ${LIBOMPACCSUPPORT_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 )
 

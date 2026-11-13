@@ -18,7 +18,6 @@
 #include <unordered_map>
 
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 #include "Utils/ELF.h"
 
 #include "GlobalHandler.h"

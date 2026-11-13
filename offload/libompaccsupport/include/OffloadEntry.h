@@ -12,7 +12,7 @@
 #ifndef OMPTARGET_OFFLOAD_ENTRY_H
 #define OMPTARGET_OFFLOAD_ENTRY_H
 
-#include "Shared/APITypes.h"
+#include "APITypes.h"
 
 #include "omptarget.h"
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
+#include "APITypes.h"
 #include "OffloadEntry.h"
 #include "OmpAccError.h"
 #include "OpenMP/Mapping.h"
@@ -19,7 +20,6 @@
 #include "OpenMP/omp.h"
 #include "PluginManager.h"
 #include "RecordReplay.h"
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "omptarget.h"
 #include "rtl.h"
@@ -141,7 +141,6 @@ llvm::Error DeviceTy::init() {
     return createError(ErrorCode::BackendFailure,
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
-
 
   // Needs to be initialized before the GeometryProps.
   if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),

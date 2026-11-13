@@ -133,7 +133,7 @@ struct TargetMemcpyArgsTy {
       : Dst(Dst), Src(Src), DstDevice(DstDevice), SrcDevice(SrcDevice),
         IsRectMemcpy(false), Length(Length), DstOffset(DstOffset),
         SrcOffset(SrcOffset), ElementSize(0), NumDims(0), Volume(0),
-        DstOffsets(0), SrcOffsets(0), DstDimensions(0), SrcDimensions(0){};
+        DstOffsets(0), SrcOffsets(0), DstDimensions(0), SrcDimensions(0) {};
 
   /**
    * Constructor for rectangle dimensional copy
@@ -147,7 +147,7 @@ struct TargetMemcpyArgsTy {
         IsRectMemcpy(true), Length(0), DstOffset(0), SrcOffset(0),
         ElementSize(ElementSize), NumDims(NumDims), Volume(Volume),
         DstOffsets(DstOffsets), SrcOffsets(SrcOffsets),
-        DstDimensions(DstDimensions), SrcDimensions(SrcDimensions){};
+        DstDimensions(DstDimensions), SrcDimensions(SrcDimensions) {};
 };
 
 struct TargetMemsetArgsTy {

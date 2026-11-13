@@ -11,6 +11,7 @@
 #include "PluginInterface.h"
 
 #include "Shared/Debug.h"
+#include "Shared/Environment.h"
 
 #include "ErrorReporting.h"
 #include "GenericProfiler.h"

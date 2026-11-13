@@ -12,8 +12,6 @@
 
 #include "L0Options.h"
 
-#include "Shared/APITypes.h"
-
 namespace llvm::omp::target::plugin {
 
 /// Read environment variables.

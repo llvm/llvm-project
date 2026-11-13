@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Shared/APITypes.h"
+#include "APITypes.h"
 
 #include <cstdio>
 

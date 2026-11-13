@@ -1,4 +1,4 @@
-//===---------- private.h - Target independent OpenMP target RTL ----------===//
+//===-- Helpers.h - Target independent OpenMP target RTL ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Private function declarations and helper macros for debugging output.
+// Function declarations and helper macros for debugging output.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPTARGET_PRIVATE_H
-#define _OMPTARGET_PRIVATE_H
+#ifndef OMPTARGET_HELPERS_H
+#define OMPTARGET_HELPERS_H
 
 #include "Shared/Debug.h"
-#include "Shared/SourceInfo.h"
+#include "SourceInfo.h"
 
 #include "OpenMP/InternalTypes.h"
 #include "OpenMP/omp.h"

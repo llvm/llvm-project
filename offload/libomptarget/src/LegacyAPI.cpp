@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Helpers.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "omptarget.h"
-#include "private.h"
 
-#include "Shared/Profile.h"
+#include "Profile.h"
 
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
