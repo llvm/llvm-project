@@ -58,9 +58,6 @@ libc_test_library(
         ":string_utils",
         ":test_logger",
         "//libc:__support_c_string",
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_fputil_fpbits_str",
-        "//libc:__support_fputil_rounding_mode",
         "//libc:__support_integer_to_string",
         "//libc:__support_libc_assert",
         "//libc:__support_libc_errno",
@@ -89,6 +86,9 @@ libc_test_library(
         "//libc/src/__support/CPP:string",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fpbits_str",
+        "//libc/src/__support/FPUtil:rounding_mode",
         "//libc/src/__support/fixed_point",
     ] + select({
         "//libc:full_build": [
@@ -174,10 +174,6 @@ libc_test_library(
         ":LibcUnitTest",
         ":string_utils",
         ":test_logger",
-        "//libc:__support_fputil_fenv_impl",
-        "//libc:__support_fputil_fp_bits",
-        "//libc:__support_fputil_fpbits_str",
-        "//libc:__support_fputil_rounding_mode",
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
         "//libc:__support_macros_optimization",
@@ -193,6 +189,10 @@ libc_test_library(
         "//libc/src/__support/CPP:span",
         "//libc/src/__support/CPP:type_traits",
         "//libc/src/__support/CPP:utility",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fpbits_str",
+        "//libc/src/__support/FPUtil:rounding_mode",
     ],
 )
 
@@ -226,12 +226,12 @@ libc_test_library(
     deps = [
         ":LibcUnitTest",
         ":string_utils",
-        "//libc:__support_fputil_fp_bits",
         "//libc:__support_macros_config",
         "//libc:__support_printf_core_printf_config",
         "//libc:__support_printf_core_printf_core_structs",
         "//libc:hdr_stdint_proxy",
         "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/FPUtil:fp_bits",
     ],
 )
 
