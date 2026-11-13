@@ -9083,7 +9083,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // EXTRACT_SUBVECTOR of an UNDEF is an UNDEF.
     if (N1.isUndef())
-      return getUNDEF(VT);
+      return N1.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
 
     // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
     // the concat have the same type as the extract.
