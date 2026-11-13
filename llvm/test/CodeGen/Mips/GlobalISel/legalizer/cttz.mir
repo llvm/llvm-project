@@ -3,7 +3,6 @@
 ---
 name:            cttz_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -30,7 +29,6 @@ body:             |
 ---
 name:            cttz_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -72,7 +70,6 @@ body:             |
 ---
 name:            ffs_i32_expansion
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -109,7 +106,6 @@ body:             |
 ---
 name:            ffs_i64_expansion
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5

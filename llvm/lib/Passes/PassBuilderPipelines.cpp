@@ -142,7 +142,6 @@
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/AssignGUID.h"
-#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
@@ -347,15 +346,17 @@ static CoroConditionalWrapper buildCoroWrapper(ThinOrFullLTOPhase Phase) {
   return CoroConditionalWrapper(std::move(CoroPM));
 }
 
-static InlineParams getInlineParamsFromOptLevel(OptimizationLevel Level) {
-  return getInlineParamsFromOptLevel(static_cast<unsigned>(Level));
+static InlineParams getInlineParamsFromOptLevel(const LLVMContext &Context,
+                                                OptimizationLevel Level) {
+  return getInlineParamsFromOptLevel(Context, static_cast<unsigned>(Level));
 }
 
 static void addModuleInlinerPass(ModulePassManager &MPM,
-                                 const PassesOptions &Opts,
+                                 const LLVMContext &Context,
                                  OptimizationLevel Level,
                                  ThinOrFullLTOPhase Phase) {
-  InlineParams IP = ::getInlineParamsFromOptLevel(Level);
+  const PassesOptions &Opts = getPassesOptions(Context);
+  InlineParams IP = ::getInlineParamsFromOptLevel(Context, Level);
   if (Opts.enable_module_inliner)
     MPM.addPass(ModuleInlinerPass(IP, Opts.enable_ml_inliner, Phase));
   else
@@ -522,8 +523,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Catch trivial redundancies
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
-  if (EnableKnowledgeRetention)
-    FPM.addPass(AssumeSimplifyPass());
 
   // Hoisting of scalars and load expressions.
   if (Opts.enable_gvn_hoist)
@@ -847,9 +846,9 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
                                   ThinOrFullLTOPhase Phase) {
   InlineParams IP;
   if (PTO.InlinerThreshold == -1)
-    IP = ::getInlineParamsFromOptLevel(Level);
+    IP = ::getInlineParamsFromOptLevel(Context, Level);
   else
-    IP = getInlineParams(PTO.InlinerThreshold);
+    IP = getInlineParams(Context, PTO.InlinerThreshold);
   // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
   // set hot-caller threshold to 0 to disable hot
   // callsite inline (as much as possible [1]) because it makes
@@ -955,7 +954,7 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
                                         ThinOrFullLTOPhase Phase) {
   ModulePassManager MPM;
 
-  InlineParams IP = ::getInlineParamsFromOptLevel(Level);
+  InlineParams IP = ::getInlineParamsFromOptLevel(Context, Level);
   // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
   // set hot-caller threshold to 0 to disable hot
   // callsite inline (as much as possible [1]) because it makes
@@ -999,14 +998,17 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   return MPM;
 }
 
-ModulePassManager
-PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
-                                               ThinOrFullLTOPhase Phase) {
+ModulePassManager PassBuilder::buildModuleSimplificationPipeline(
+    OptimizationLevel Level, ThinOrFullLTOPhase Phase,
+    const ModuleSummaryIndex *ImportSummary) {
   assert(Level != OptimizationLevel::O0 &&
          "Should not be used for O0 pipeline");
 
   assert(!isFullLTOPostLink(Phase) &&
          "FullLTOPostLink shouldn't call buildModuleSimplificationPipeline!");
+
+  assert((!ImportSummary || isThinLTOPostLink(Phase)) &&
+         "ImportSummary is only meaningful in the ThinLTO post link phase");
 
   ModulePassManager MPM;
 
@@ -1038,7 +1040,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // the sample profile in the ThinLTO backend, we ideally shouldn't have to
   // provide the sample profile file.
   if (isThinLTOPostLink(Phase) && !LoadSampleProfile)
-    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */, HasSampleProfile));
+    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */, HasSampleProfile,
+                                         ImportSummary));
 
   // Create an early function pass manager to cleanup the output of the
   // frontend. Not necessary with LTO post link pipelines since the pre link
@@ -1079,8 +1082,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       // This is important for the ThinLTO backend phase because otherwise
       // imported available_externally functions look unreferenced and are
       // removed.
-      MPM.addPass(
-          PGOIndirectCallPromotion(true /* IsInLTO */, true /* SamplePGO */));
+      MPM.addPass(PGOIndirectCallPromotion(
+          true /* IsInLTO */, true /* SamplePGO */, ImportSummary));
   }
 
   // Try to perform OpenMP specific optimizations on the module. This is a
@@ -1092,11 +1095,16 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   else if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
     MPM.addPass(AttributorLightPass());
 
-  // Lower type metadata and the type.test intrinsic in the ThinLTO
-  // post link pipeline after ICP. This is to enable usage of the type
-  // tests in ICP sequences.
-  if (isThinLTOPostLink(Phase))
+  // Lower type metadata and the type.test intrinsic in the ThinLTO post link
+  // pipeline after ICP. This is to enable usage of the type tests in ICP
+  // sequences. It also lets ICP (including the ICP performed by the sample
+  // profile loader) see the original names of the CFI functions it wants to
+  // promote to, which LowerTypeTests renames to <name>.cfi.
+  if (isThinLTOPostLink(Phase)) {
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     MPM.addPass(DropTypeTestsPass());
+  }
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
 
@@ -1626,6 +1634,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     // TODO: explore a better pipeline configuration that can improve
     // compilation time overhead.
     // FIXME: move this earlier (lots of pass ordering tests will need fixing)
+    MPM.addPass(NameAnonGlobalPass());
     MPM.addPass(AssignGUIDPass());
     MPM.addPass(WholeProgramDevirtPass(
         /*ExportSummary*/ nullptr,
@@ -1638,7 +1647,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     // Also, we can't run devirtualization before inlining because the
     // devirtualization depends on the passes optimizing/eliminating vtable GVs
     // and those passes are only effective after inlining.
-    addModuleInlinerPass(MPM, Opts, Level, ThinOrFullLTOPhase::None);
+    addModuleInlinerPass(MPM, Context, Level, ThinOrFullLTOPhase::None);
   }
 
   // Attach !implicit.ref metadata from all functions to copyright strings.
@@ -1852,10 +1861,10 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
       MPM.addPass(MemProfContextDisambiguation(
           ImportSummary, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
 
-    // These passes import type identifier resolutions for whole-program
-    // devirtualization and CFI. They must run early because other passes may
-    // disturb the specific instruction patterns that these passes look for,
-    // creating dependencies on resolutions that may not appear in the summary.
+    // WholeProgramDevirt imports type identifier resolutions for whole-program
+    // devirtualization. It must run early because later passes may disturb the
+    // specific instruction patterns that it looks for, creating dependencies on
+    // resolutions that may not appear in the summary.
     //
     // For example, GVN may transform the pattern assume(type.test) appearing in
     // two basic blocks into assume(phi(type.test, type.test)), which would
@@ -1865,13 +1874,16 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // Also, WPD has access to more precise information than ICP and can
     // devirtualize more effectively, so it should operate on the IR first.
     //
-    // The WPD and LowerTypeTest passes need to run at -O0 to lower type
-    // metadata and intrinsics.
+    // It also needs to run at -O0 to lower type metadata and intrinsics.
     MPM.addPass(WholeProgramDevirtPass(nullptr, ImportSummary));
-    MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
 
+  // LowerTypeTests renames CFI functions to <name>.cfi, so with optimization
+  // it runs in buildModuleSimplificationPipeline after ICP. Otherwise, lower
+  // type tests here.
   if (Level == OptimizationLevel::O0) {
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
     MPM.addPass(DropTypeTestsPass());
@@ -1892,12 +1904,16 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
+    // FIXME: Move LowerTypeTestsPass (and DropTypeTestsPass) into
+    // buildModuleInlinerPipeline after ModuleInlinerPass, which performs ICP.
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     MPM.addPass(
         buildModuleInlinerPipeline(Level, ThinOrFullLTOPhase::ThinLTOPostLink));
   } else {
     // Add the core simplification pipeline.
     MPM.addPass(buildModuleSimplificationPipeline(
-        Level, ThinOrFullLTOPhase::ThinLTOPostLink));
+        Level, ThinOrFullLTOPhase::ThinLTOPostLink, ImportSummary));
   }
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(
@@ -2098,7 +2114,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // valuable as the inliner doesn't currently care whether it is inlining an
   // invoke or a call.
   // Run the inliner now.
-  addModuleInlinerPass(MPM, Opts, Level, ThinOrFullLTOPhase::FullLTOPostLink);
+  addModuleInlinerPass(MPM, Context, Level,
+                       ThinOrFullLTOPhase::FullLTOPostLink);
 
   // Perform context disambiguation after inlining, since that would reduce the
   // amount of additional cloning required to distinguish the allocation

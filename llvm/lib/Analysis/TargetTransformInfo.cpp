@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -685,6 +686,30 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
 }
 
 TargetTransformInfo::VectorInstrContext
+TargetTransformInfo::getVectorInstrContextHint(ArrayRef<Value *> VL,
+                                               const APInt &DemandedElts) {
+  VectorInstrContext VIC = VectorInstrContext::None;
+  for (unsigned I : seq(VL.size())) {
+    if (!DemandedElts[I])
+      continue;
+    Value *V = VL[I];
+    if (isa<UndefValue>(V))
+      continue;
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst)
+      return VectorInstrContext::None;
+    VectorInstrContext IVIC = getVectorInstrContextHint(Inst);
+    if (VIC == VectorInstrContext::None) {
+      VIC = IVIC;
+      continue;
+    }
+    if (VIC != IVIC)
+      return VectorInstrContext::None;
+  }
+  return VIC;
+}
+
+TargetTransformInfo::VectorInstrContext
 TargetTransformInfo::getBuildVectorContextHint(
     ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
     function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
@@ -866,8 +891,8 @@ std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
 }
 
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  return TTIImpl->shouldMaximizeVectorBandwidth(K);
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
+  return TTIImpl->shouldMaximizeVectorBandwidth(K, ElementTy);
 }
 
 ElementCount TargetTransformInfo::getMinimumVF(unsigned ElemWidth,

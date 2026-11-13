@@ -65,7 +65,7 @@ void SparcCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
 }
 
 void SparcCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(SparcAsmPrinterPass(), PMW, /*Force=*/true);
+  addMachineFunctionPass(SparcAsmPrinterPass(), PMW);
 }
 
 void SparcCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {

@@ -18,7 +18,6 @@
 ---
 name:            fsub_s_zero
 alignment:       4
-tracksRegLiveness: true
 tracksDebugUserValues: true
 registers:       []
 liveins:

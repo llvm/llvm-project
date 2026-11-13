@@ -122,7 +122,7 @@ void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    markup(O, Markup::Immediate) << MO.getImm();
+    markup(O, Markup::Immediate) << formatImm(MO.getImm());
     return;
   }
 

@@ -1,15 +1,27 @@
 // RUN: %clang_cc1 -w -triple x86_64-apple-darwin10 \
 // RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=SSE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -w -triple x86_64-apple-darwin10 \
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=SSE %}
 // RUN: %clang_cc1 -w -triple   i386-apple-darwin10 \
 // RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=SSE
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -w -triple   i386-apple-darwin10 \
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=SSE %}
 // RUN: %clang_cc1 -w -triple x86_64-apple-darwin10 -target-feature +avx \
 // RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -w -triple x86_64-apple-darwin10 -target-feature +avx \
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX %}
 // RUN: %clang_cc1 -w -triple   i386-apple-darwin10 -target-feature +avx \
 // RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -w -triple   i386-apple-darwin10 -target-feature +avx \
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX %}
 // RUN: %clang_cc1 -w -triple x86_64-apple-darwin10 -target-feature +avx512f \
 // RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX512
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -w -triple x86_64-apple-darwin10 -target-feature +avx512f \
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 %}
 // RUN: %clang_cc1 -w -triple   i386-apple-darwin10 -target-feature +avx512f \
 // RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX512
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -w -triple   i386-apple-darwin10 -target-feature +avx512f \
+// RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 %}
 
 // At or below target max alignment with no aligned attribute should align based
 // on the size of vector.

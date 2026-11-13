@@ -80,7 +80,7 @@ define void @shorten_begin_wrap(ptr %b, i64 %x) {
 ; CHECK-SAME: ptr [[B:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr [[B]], i8 -128
 ; CHECK-NEXT:    [[K:%.*]] = getelementptr i8, ptr [[B]], i8 126
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[D]], i64 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[D]], i8 6
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP1]], i8 0, i64 10, i1 false)
 ; CHECK-NEXT:    store i64 [[X]], ptr [[K]], align 1
 ; CHECK-NEXT:    ret void
@@ -108,5 +108,19 @@ define void @mixed_idx_width(ptr addrspace(2) %b) {
   %k = getelementptr i8, ptr addrspace(2) %b, i64 1000
   store i32 1, ptr %d, align 1
   store i32 2, ptr addrspace(2) %k, align 1
+  ret void
+}
+
+; The first memset can be updated to start at `%b + 256`, but 256 doesn't fit
+; into the platform index type.
+define void @shorten_begin_offset_exceeds_index_width(ptr %b) {
+; CHECK-LABEL: define void @shorten_begin_offset_exceeds_index_width(
+; CHECK-SAME: ptr [[B:%.*]]) {
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[B]], i8 0, i64 257, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[B]], i8 1, i64 256, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %b, i8 0, i64 257, i1 false)
+  call void @llvm.memset.p0.i64(ptr %b, i8 1, i64 256, i1 false)
   ret void
 }

@@ -470,6 +470,9 @@ __packed_binary_builtin(aaddu_u32, uint32_t, __builtin_riscv_aaddu_u32)
 __packed_binary_builtin(asub_i32, int32_t, __builtin_riscv_asub_i32)
 __packed_binary_builtin(asubu_u32, uint32_t, __builtin_riscv_asubu_u32)
 
+/* Scalar Shift-Add */
+__packed_binary_builtin(ssh1sadd_i32, int32_t, __builtin_riscv_ssh1sadd_i32)
+
 /* Scalar Saturating Addition and Subtraction */
 __packed_binary_builtin(sadd_i32, int32_t, __builtin_elementwise_add_sat)
 __packed_binary_builtin(saddu_u32, uint32_t, __builtin_elementwise_add_sat)
@@ -489,6 +492,18 @@ __packed_pabs(abs_u64, int64_t, uint64_t)
 #define __riscv_sati_i64(rs1, width) __builtin_riscv_sati_i64(rs1, width)
 #define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
 #endif
+
+/* Scalar Narrowing Clip */
+__packed_binary_builtin_mixed(nclipu_u32, uint32_t, uint64_t, unsigned,
+                              __builtin_riscv_nclipu_u32)
+__packed_binary_builtin_mixed(nclipru_u32, uint32_t, uint64_t, unsigned,
+                              __builtin_riscv_nclipru_u32)
+__packed_binary_builtin_mixed(nsrar_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nsrar_i32)
+__packed_binary_builtin_mixed(nclip_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nclip_i32)
+__packed_binary_builtin_mixed(nclipr_i32, int32_t, int64_t, unsigned,
+                              __builtin_riscv_nclipr_i32)
 
 /* Scalar Multiply High */
 #define __packed_mulh_builtin(name, res_ty, ty1, ty2)                          \
@@ -993,6 +1008,61 @@ __packed_unzipo2(punzipo_i16x2, int16x2_t, int16x4_t)
 __packed_unzipe2(punzipe_u16x2, uint16x2_t, uint16x4_t)
 __packed_unzipo2(punzipo_u16x2, uint16x2_t, uint16x4_t)
 
+#if __riscv_xlen == 64
+/* Scalar Zip/Unzip */
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip8p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 0, 8, 1, 9, 2, 10,
+                                           3, 11);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip16p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 0, 4, 1, 5);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip8hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 4, 12, 5, 13, 6,
+                                           14, 7, 15);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_zip16hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 2, 6, 3, 7);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip8p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 0, 2, 4, 6, 8, 10,
+                                           12, 14);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip16p_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 0, 2, 4, 6);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip8hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint8x8_t)__rs1,
+                                           (uint8x8_t)__rs2, 1, 3, 5, 7, 9, 11,
+                                           13, 15);
+}
+
+static __inline__ uint64_t __DEFAULT_FN_ATTRS
+__riscv_unzip16hp_64(uint64_t __rs1, uint64_t __rs2) {
+  return (uint64_t)__builtin_shufflevector((uint16x4_t)__rs1,
+                                           (uint16x4_t)__rs2, 1, 3, 5, 7);
+}
+#endif
+
 /* Packed Pair (32-bit) */
 __packed_pair_ee4(ppaire_i8x4, int8x4_t)
 __packed_pair_ee4(ppaire_u8x4, uint8x4_t)
@@ -1231,23 +1301,42 @@ __packed_ternary_builtin_mixed(pwmacc_i32x2, int32x2_t, int16x2_t, int16x2_t, __
 __packed_ternary_builtin_mixed(pwmaccu_u32x2, uint32x2_t, uint16x2_t, uint16x2_t, __builtin_riscv_pwmaccu_u32x2)
 __packed_ternary_builtin_mixed(pwmaccsu_i32x2, int32x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pwmaccsu_i32x2)
 
-  /* Packed Multiplication with Horizontal Addition and Accumulate (64-bit) */
-static __inline__ int32x2_t __DEFAULT_FN_ATTRS
-__riscv_pm4adda_i8x8(int32x2_t __rd, int8x8_t __rs1, int8x8_t __rs2) {
-  return (int32x2_t)((uint32x2_t)__rd +
-                     (uint32x2_t)__riscv_pm4add_i8x8(__rs1, __rs2));
-}
+/* Packed Multiplication with Horizontal Addition and Accumulate (32-bit) */
+__packed_ternary_builtin_mixed(pm4adda_i8x4, int32_t, int8x4_t, int8x4_t, __builtin_riscv_pm4adda_i8x4)
+__packed_ternary_builtin_mixed(pm4addau_u8x4, uint32_t, uint8x4_t, uint8x4_t, __builtin_riscv_pm4addau_u8x4)
+__packed_ternary_builtin_mixed(pm4addasu_i8x4, int32_t, int8x4_t, uint8x4_t, __builtin_riscv_pm4addasu_i8x4)
+__packed_ternary_builtin_mixed(pm2adda_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2adda_i16x2)
+__packed_ternary_builtin_mixed(pm2adda_x_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2adda_x_i16x2)
+__packed_ternary_builtin_mixed(pm2addau_u16x2, uint32_t, uint16x2_t, uint16x2_t, __builtin_riscv_pm2addau_u16x2)
+__packed_ternary_builtin_mixed(pmq2adda_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pmq2adda_i16x2)
+__packed_ternary_builtin_mixed(pmqr2adda_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pmqr2adda_i16x2)
+__packed_ternary_builtin_mixed(pm2suba_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2suba_i16x2)
+__packed_ternary_builtin_mixed(pm2suba_x_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2suba_x_i16x2)
+__packed_ternary_builtin_mixed(pm2addasu_i16x2, int32_t, int16x2_t, uint16x2_t, __builtin_riscv_pm2addasu_i16x2)
 
-static __inline__ uint32x2_t __DEFAULT_FN_ATTRS
-__riscv_pm4addau_u8x8(uint32x2_t __rd, uint8x8_t __rs1, uint8x8_t __rs2) {
-  return __rd + __riscv_pm4addu_u8x8(__rs1, __rs2);
-}
-
-static __inline__ int32x2_t __DEFAULT_FN_ATTRS
-__riscv_pm4addasu_i8x8(int32x2_t __rd, int8x8_t __rs1, uint8x8_t __rs2) {
-  return (int32x2_t)((uint32x2_t)__rd +
-                     (uint32x2_t)__riscv_pm4addsu_i8x8(__rs1, __rs2));
-}
+/* Packed Multiplication with Horizontal Addition and Accumulate (64-bit) */
+__packed_ternary_builtin_mixed(pm4adda_i8x8, int32x2_t, int8x8_t, int8x8_t, __builtin_riscv_pm4adda_i8x8)
+__packed_ternary_builtin_mixed(pm4addau_u8x8, uint32x2_t, uint8x8_t, uint8x8_t, __builtin_riscv_pm4addau_u8x8)
+__packed_ternary_builtin_mixed(pm4addasu_i8x8, int32x2_t, int8x8_t, uint8x8_t, __builtin_riscv_pm4addasu_i8x8)
+__packed_ternary_builtin_mixed(pm2adda_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2adda_i16x4)
+__packed_ternary_builtin_mixed(pm2adda_x_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2adda_x_i16x4)
+__packed_ternary_builtin_mixed(pm2addau_u16x4, uint32x2_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm2addau_u16x4)
+__packed_ternary_builtin_mixed(pmq2adda_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmq2adda_i16x4)
+__packed_ternary_builtin_mixed(pmqr2adda_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmqr2adda_i16x4)
+__packed_ternary_builtin_mixed(pm2suba_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2suba_i16x4)
+__packed_ternary_builtin_mixed(pm2suba_x_i16x4, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pm2suba_x_i16x4)
+__packed_ternary_builtin_mixed(pm2addasu_i16x4, int32x2_t, int16x4_t, uint16x4_t, __builtin_riscv_pm2addasu_i16x4)
+__packed_ternary_builtin_mixed(pm2adda_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pm2adda_i32x2)
+__packed_ternary_builtin_mixed(pm2adda_x_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pm2adda_x_i32x2)
+__packed_ternary_builtin_mixed(pm2addau_u32x2, uint64_t, uint32x2_t, uint32x2_t, __builtin_riscv_pm2addau_u32x2)
+__packed_ternary_builtin_mixed(pmq2adda_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pmq2adda_i32x2)
+__packed_ternary_builtin_mixed(pmqr2adda_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pmqr2adda_i32x2)
+__packed_ternary_builtin_mixed(pm2suba_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pm2suba_i32x2)
+__packed_ternary_builtin_mixed(pm2suba_x_i32x2, int64_t, int32x2_t, int32x2_t, __builtin_riscv_pm2suba_x_i32x2)
+__packed_ternary_builtin_mixed(pm2addasu_i32x2, int64_t, int32x2_t, uint32x2_t, __builtin_riscv_pm2addasu_i32x2)
+__packed_ternary_builtin_mixed(pm4adda_i16x4, int64_t, int16x4_t, int16x4_t, __builtin_riscv_pm4adda_i16x4)
+__packed_ternary_builtin_mixed(pm4addau_u16x4, uint64_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm4addau_u16x4)
+__packed_ternary_builtin_mixed(pm4addasu_i16x4, int64_t, int16x4_t, uint16x4_t, __builtin_riscv_pm4addasu_i16x4)
 
 /* Packed Multiplication with Widening Horizontal Addition */
 __packed_binary_builtin_mixed(pm2wadd_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadd_i64)

@@ -289,6 +289,7 @@ Module::~Module() {
 
 ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                         lldb::addr_t header_addr, Status &error,
+                                        bool disable_memory_symtab_caching,
                                         size_t size_to_read) {
   if (m_objfile_sp) {
     error = Status::FromErrorString("object file already exists");
@@ -309,6 +310,8 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                               header_addr, data_sp);
         if (m_objfile_sp) {
           m_memory_module_addr = header_addr;
+          m_objfile_sp->SetDisableMemorySymtabCaching(
+              disable_memory_symtab_caching);
 
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
@@ -1021,6 +1024,13 @@ Symtab *Module::GetSymtab(bool can_create) {
   return nullptr;
 }
 
+uint32_t Module::GetSymtabState() {
+  if (ObjectFile *objfile = GetObjectFile())
+    if (Symtab *symtab = objfile->GetSymtab(/*can_create=*/false))
+      return symtab->GetState();
+  return eSymtabStateNone;
+}
+
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
                                       std::string object_name) {
   // Container objects whose paths do not specify a file directly can call this
@@ -1092,7 +1102,8 @@ void Module::ReportWarningOptimization(
      << " was compiled with optimization - stepping may behave "
         "oddly; variables may not be available";
   llvm::StringRef msg = ss.GetString();
-  Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(msg.str(), debugger_id);
 }
 
 void Module::ReportWarningUnsupportedLanguage(
@@ -1103,7 +1114,8 @@ void Module::ReportWarningUnsupportedLanguage(
      << "\". "
         "Inspection of frame variables will be limited";
   llvm::StringRef msg = ss.GetString();
-  Debugger::ReportWarning(msg.str(), debugger_id, GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(msg.str(), debugger_id);
 }
 
 void Module::ReportErrorIfModifyDetected(
@@ -1123,20 +1135,22 @@ void Module::ReportErrorIfModifyDetected(
   }
 }
 
-std::once_flag *Module::GetDiagnosticOnceFlag(llvm::StringRef msg) {
-  std::lock_guard<std::recursive_mutex> guard(m_diagnostic_mutex);
-  auto &once_ptr = m_shown_diagnostics[llvm::stable_hash_name(msg)];
-  if (!once_ptr)
-    once_ptr = std::make_unique<std::once_flag>();
-  return once_ptr.get();
+bool Module::ShouldReportDiagnostic(llvm::StringRef msg) {
+  return m_shown_diagnostics.Insert(llvm::stable_hash_name(msg));
 }
 
-void Module::ReportError(const llvm::formatv_object_base &payload) {
+void Module::ReportError(const llvm::formatv_object_base &payload,
+                         bool internal_error) {
   StreamString strm;
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelBrief);
   std::string msg = payload.str();
   strm << ' ' << msg;
-  Debugger::ReportError(strm.GetString().str(), {}, GetDiagnosticOnceFlag(msg));
+  if (!ShouldReportDiagnostic(msg))
+    return;
+  if (internal_error)
+    Debugger::ReportInternalError(strm.GetString().str());
+  else
+    Debugger::ReportError(strm.GetString().str());
 }
 
 void Module::ReportWarning(const llvm::formatv_object_base &payload) {
@@ -1144,8 +1158,8 @@ void Module::ReportWarning(const llvm::formatv_object_base &payload) {
   GetDescription(strm.AsRawOstream(), lldb::eDescriptionLevelFull);
   std::string msg = payload.str();
   strm << ' ' << msg;
-  Debugger::ReportWarning(strm.GetString().str(), {},
-                          GetDiagnosticOnceFlag(msg));
+  if (ShouldReportDiagnostic(msg))
+    Debugger::ReportWarning(strm.GetString().str());
 }
 
 void Module::LogMessage(Log *log, const llvm::formatv_object_base &payload) {
@@ -1526,7 +1540,7 @@ bool Module::FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) {
 
 void Module::AddPrefixMapSearchDir(FileSpec dir) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  m_prefix_map_search_dirs.insert(ConstString(dir.GetPath()));
+  m_prefix_map_search_dirs.insert(dir.GetPath());
 }
 
 void Module::LoadPrefixMapsIfNeeded() {
@@ -1538,11 +1552,10 @@ void Module::LoadPrefixMapsIfNeeded() {
   llvm::vfs::FileSystem &vfs = *llvm::vfs::getRealFileSystem();
   // Track visited directories so two starting paths that share ancestors
   // don't redundantly walk the same directory.
-  llvm::DenseSet<ConstString> searched;
-  for (ConstString start_cs : m_prefix_map_search_dirs) {
-    for (FileSpec current(start_cs.GetStringRef());;) {
-      ConstString directory_cs(current.GetPath());
-      if (!searched.insert(directory_cs).second)
+  llvm::StringSet<> searched;
+  for (const auto &start : m_prefix_map_search_dirs) {
+    for (FileSpec current(start.getKey());;) {
+      if (!searched.insert(current.GetPath()).second)
         break;
       FileSpec map_file(current);
       map_file.AppendPathComponent("compilation-prefix-map.json");
@@ -1598,10 +1611,9 @@ void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
       HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_name.str()});
 
   if (!sdk_path_or_err) {
-    Debugger::ReportError("Error while searching for Xcode SDK: " +
-                              toString(sdk_path_or_err.takeError()),
-                          /*debugger_id=*/std::nullopt,
-                          GetDiagnosticOnceFlag(sdk_name));
+    std::string error = toString(sdk_path_or_err.takeError());
+    if (ShouldReportDiagnostic(sdk_name))
+      Debugger::ReportError("Error while searching for Xcode SDK: " + error);
     return;
   }
 
@@ -1682,12 +1694,14 @@ std::string Module::GetCacheKey() {
   return key;
 }
 
-DataFileCache *Module::GetIndexCache(bool memory_module) {
+DataFileCache *Module::GetIndexCache(LLDBIndexType type) {
   bool lldb_index_enabled = false;
-  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache() &&
+      (type == eLLDBIndexTypeSymtab || type == eLLDBIndexTypeDwarfIndex))
     lldb_index_enabled = true;
-  if (memory_module && ModuleList::GetGlobalModuleListProperties()
-                           .GetEnableLLDBIndexCacheMemoryModules())
+  if (ModuleList::GetGlobalModuleListProperties()
+          .GetEnableLLDBIndexCacheMemoryModules() &&
+      type == eLLDBIndexTypeMemoryModuleSymtab)
     lldb_index_enabled = true;
   if (!lldb_index_enabled)
     return nullptr;

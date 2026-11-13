@@ -742,3 +742,15 @@ define void @test_compressstore_v4i64(ptr %p, <4 x i64> %vec, <4 x i1> %mask) {
   tail call void @llvm.masked.compressstore.v4i64(<4 x i64> %vec, ptr align 8 %p, <4 x i1> %mask)
   ret void
 }
+
+define void @test_compressstore_v1i28(ptr %p, <1 x i128> %vec, <1 x i1> %mask) {
+; CHECK-LABEL: test_compressstore_v1i28:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbz w4, #0, .LBB17_2
+; CHECK-NEXT:  // %bb.1: // %cond.store
+; CHECK-NEXT:    stp x2, x3, [x0]
+; CHECK-NEXT:  .LBB17_2: // %else
+; CHECK-NEXT:    ret
+  tail call void @llvm.masked.compressstore.v1i128(<1 x i128> %vec, ptr align 16 %p, <1 x i1> %mask)
+  ret void
+}

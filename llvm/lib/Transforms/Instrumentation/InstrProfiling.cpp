@@ -1143,7 +1143,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 
   // Add Bias to Bitmaps and put it before the intrinsic.
   IRBuilder<> Builder(I);
-  return Builder.CreatePtrAdd(Bitmaps, BiasLI, "profbm_addr");
+  return Builder.CreatePtrAddWithSExtOrTrunc(Bitmaps, BiasLI, "profbm_addr");
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
