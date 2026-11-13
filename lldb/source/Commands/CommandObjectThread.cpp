@@ -14,6 +14,7 @@
 
 #include "CommandObjectThreadUtil.h"
 #include "CommandObjectTrace.h"
+#include "lldb/Core/IOHandlerPicker.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -28,6 +29,7 @@
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -1321,13 +1323,62 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
+  /// Let the user pick one of \a process's threads interactively.
+  static Thread *PickThread(Debugger &debugger, Process &process) {
+    ThreadList &thread_list = process.GetThreadList();
+    ThreadSP selected_thread_sp = thread_list.GetSelectedThread();
+    llvm::SmallVector<ThreadSP> threads;
+    llvm::SmallVector<PickerItem, 0> items;
+    for (ThreadSP thread_sp : thread_list.Threads()) {
+      std::string stop_reason;
+      if (StopInfoSP stop_info_sp = thread_sp->GetStopInfo())
+        stop_reason = stop_info_sp->GetDescription();
+      std::string function;
+      if (StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0))
+        function = frame_sp
+                       ->GetSymbolContext(eSymbolContextFunction |
+                                          eSymbolContextSymbol)
+                       .GetFunctionName()
+                       .GetString();
+      const char *name = thread_sp->GetName();
+      PickerItem item;
+      item.values = {std::to_string(thread_sp->GetIndexID()),
+                     llvm::formatv("{0:x}", thread_sp->GetID()).str(),
+                     name ? name : "", stop_reason, function};
+      item.initially_selected = thread_sp == selected_thread_sp;
+      items.push_back(std::move(item));
+      threads.push_back(thread_sp);
+    }
+
+    std::optional<size_t> index = IOHandlerPicker::PickOne(
+        debugger,
+        "Select a thread:", {"INDEX", "TID", "NAME", "STOP REASON", "FUNCTION"},
+        std::move(items));
+    return index ? threads[*index].get() : nullptr;
+  }
+
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("no process");
       return;
-    } else if (m_options.m_thread_id == LLDB_INVALID_THREAD_ID &&
-               command.GetArgumentCount() != 1) {
+    }
+
+    if (m_options.m_thread_id == LLDB_INVALID_THREAD_ID &&
+        command.GetArgumentCount() == 0 &&
+        GetDebugger().GetInputFile().GetIsRealTerminal()) {
+      Thread *thread = PickThread(GetDebugger(), *process);
+      if (!thread) {
+        result.AppendError("no thread selected");
+        return;
+      }
+      process->GetThreadList().SetSelectedThreadByID(thread->GetID(), true);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return;
+    }
+
+    if (m_options.m_thread_id == LLDB_INVALID_THREAD_ID &&
+        command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
           "'%s' takes exactly one thread index argument, or a thread ID "
           "option:\nUsage: %s",

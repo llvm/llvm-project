@@ -18,12 +18,14 @@ class IOHandlerPickerTest(PExpectTest):
     arrow_down = "\x1b[B"
     escape_key = "\x1b"
 
-    def start_picker(self, command, header, dimensions=(24, 120), setup=()):
+    def start_picker(
+        self, command, header, dimensions=(24, 120), setup=(), executable=None
+    ):
         if command.startswith("test-picker") and not (
             self.dbg.GetCommandInterpreter().CommandExists("test-picker")
         ):
             self.skipTest("test-picker requires a build with assertions")
-        self.launch(dimensions=dimensions)
+        self.launch(executable=executable, dimensions=dimensions)
         # launch() runs "settings clear --all", which resets the terminal size.
         height, width = dimensions
         self.expect(f"settings set term-height {height}")
@@ -228,3 +230,63 @@ class IOHandlerPickerTest(PExpectTest):
         self.start_picker("process attach", "Select a process to attach to:")
         self.child.send(self.escape_key)
         self.finish("no process selected")
+
+    def start_stopped_picker(self, command, header):
+        """Stop in `inner`, called from `outer` and `main`, then run
+        `command`."""
+        self.build()
+        self.start_picker(
+            command,
+            header,
+            executable=self.getBuildArtifact("a.out"),
+            setup=[
+                ("breakpoint set -n inner", ["Breakpoint 1"]),
+                ("run", ["stop reason = breakpoint 1"]),
+            ],
+        )
+
+    def test_frame_select_picker(self):
+        """`frame select` without an index picks a frame, starting from the
+        selected one."""
+        self.start_stopped_picker("frame select", "Select a frame:")
+        # The preview shows the source of the frame under the cursor.
+        self.child.expect_exact("// break here")
+        self.child.send("j")
+        self.child.expect_exact("return inner(x) * 2;")
+        self.child.send("\r")
+        self.finish("frame #1", "outer")
+
+    def test_frame_select_picker_cancel(self):
+        """Canceling the frame picker keeps the selected frame."""
+        self.start_stopped_picker("frame select", "Select a frame:")
+        self.child.send(self.escape_key)
+        self.finish("no frame selected")
+
+    def test_thread_select_picker(self):
+        """`thread select` without an index or ID picks a thread."""
+        self.start_stopped_picker("thread select", "Select a thread:")
+        self.child.send(self.escape_key)
+        self.finish("no thread selected")
+
+    def test_target_select_picker(self):
+        """`target select` without an index picks a target, starting from the
+        selected one."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.start_picker(
+            "target select",
+            "Select a target:",
+            setup=[
+                (f"target create {exe}", ["Current executable set"]),
+                (f"target create {exe}", ["Current executable set"]),
+            ],
+        )
+        # The second target is selected, so k moves to the first one.
+        self.child.send("k\r")
+        self.finish("* target #0")
+
+    def test_platform_select_picker(self):
+        """`platform select` without a name picks a platform."""
+        self.start_picker("platform select", "Select a platform:")
+        self.child.send(self.escape_key)
+        self.finish("no platform selected")

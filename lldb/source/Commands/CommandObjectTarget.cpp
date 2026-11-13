@@ -11,6 +11,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
+#include "lldb/Core/IOHandlerPicker.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -635,7 +636,52 @@ public:
   ~CommandObjectTargetSelect() override = default;
 
 protected:
+  /// Let the user pick a target interactively.
+  void PickTarget(CommandReturnObject &result) {
+    TargetList &target_list = GetDebugger().GetTargetList();
+    const uint32_t num_targets = target_list.GetNumTargets();
+    if (num_targets == 0) {
+      result.AppendError("no targets to select");
+      return;
+    }
+
+    TargetSP selected_target_sp = target_list.GetSelectedTarget();
+    llvm::SmallVector<PickerItem, 0> items;
+    for (uint32_t i = 0; i < num_targets; ++i) {
+      TargetSP target_sp = target_list.GetTargetAtIndex(i);
+      Module *exe_module = target_sp->GetExecutableModulePointer();
+      const ArchSpec &arch = target_sp->GetArchitecture();
+      PickerItem item;
+      item.values = {std::to_string(i), target_sp->GetLabel(),
+                     exe_module ? exe_module->GetFileSpec().GetPath()
+                                : "<none>",
+                     arch.IsValid() ? arch.GetTriple().str() : ""};
+      item.initially_selected = target_sp == selected_target_sp;
+      items.push_back(std::move(item));
+    }
+
+    std::optional<size_t> index = IOHandlerPicker::PickOne(
+        GetDebugger(),
+        "Select a target:", {"INDEX", "LABEL", "EXECUTABLE", "ARCH"},
+        std::move(items));
+    if (!index) {
+      result.AppendError("no target selected");
+      return;
+    }
+
+    target_list.SetSelectedTarget(*index);
+    DumpTargetList(target_list, /*show_stopped_process_status=*/false,
+                   result.GetOutputStream());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+
   void DoExecute(Args &args, CommandReturnObject &result) override {
+    if (args.GetArgumentCount() == 0 &&
+        GetDebugger().GetInputFile().GetIsRealTerminal()) {
+      PickTarget(result);
+      return;
+    }
+
     if (args.GetArgumentCount() == 1) {
       const char *target_identifier = args.GetArgumentAtIndex(0);
       uint32_t target_idx = LLDB_INVALID_INDEX32;

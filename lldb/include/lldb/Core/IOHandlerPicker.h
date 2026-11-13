@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <atomic>
+#include <functional>
 #include <optional>
 #include <string>
 
@@ -26,6 +27,8 @@ using PickerColumnName = std::string;
 /// A row of the picker's table, with one value per column.
 struct PickerItem {
   llvm::SmallVector<std::string> values;
+  /// Checked in multi-select mode. In single-select mode, the cursor starts on
+  /// the first such item.
   bool initially_selected = false;
 };
 
@@ -57,6 +60,21 @@ public:
   void PrintAsync(const char *s, size_t len, bool is_stdout) override;
 
   const PickerResult &GetResult() const { return m_result; }
+
+  /// Returns the text to show under the list while the cursor is on the item
+  /// at the given index, like the source code around a stack frame.
+  using PreviewCallback = std::function<std::string(size_t index)>;
+  void SetPreviewCallback(PreviewCallback callback) {
+    m_preview_callback = std::move(callback);
+  }
+
+  /// Show a single-select picker and return the index of the chosen item, or
+  /// std::nullopt if the user canceled or the input isn't a terminal.
+  static std::optional<size_t>
+  PickOne(Debugger &debugger, llvm::StringRef header,
+          llvm::SmallVector<PickerColumnName> columns,
+          llvm::SmallVector<PickerItem, 0> items,
+          PreviewCallback preview_callback = {});
 
 private:
   enum class Key {
@@ -118,6 +136,7 @@ private:
   size_t GetInnerWidth() const;
   size_t GetViewportHeight() const { return m_viewport_height; }
   size_t GetDialogHeight() const;
+  void UpdatePreview();
 
   std::string m_header;
   llvm::SmallVector<PickerColumnName> m_columns;
@@ -154,6 +173,13 @@ private:
   size_t m_box_width = 0;
   /// Number of item rows in the dialog.
   size_t m_viewport_height = 0;
+  /// Number of preview lines in the dialog, or 0 without a preview.
+  size_t m_preview_height = 0;
+
+  PreviewCallback m_preview_callback;
+  /// Index into m_items of the item m_preview_lines is for.
+  std::optional<size_t> m_preview_item;
+  llvm::SmallVector<std::string> m_preview_lines;
 
   TerminalState m_saved_terminal_state;
 

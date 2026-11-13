@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "CommandObjectFrame.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/IOHandlerPicker.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/Config.h"
@@ -29,6 +30,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
@@ -295,6 +297,49 @@ private:
   }
 
 protected:
+  /// Let the user pick one of \a thread's frames interactively.
+  std::optional<uint32_t> PickFrame(Thread &thread) {
+    const uint32_t selected_idx =
+        thread.GetSelectedFrameIndex(SelectMostRelevantFrame);
+    llvm::SmallVector<PickerItem, 0> items;
+    for (uint32_t i = 0, e = thread.GetStackFrameCount(); i < e; ++i) {
+      StackFrameSP frame_sp = thread.GetStackFrameAtIndex(i);
+      if (!frame_sp)
+        break;
+      const SymbolContext &sc =
+          frame_sp->GetSymbolContext(eSymbolContextEverything);
+      std::string location;
+      if (sc.line_entry.IsValid())
+        location =
+            llvm::formatv("{0}:{1}", sc.line_entry.GetFile().GetFilename(),
+                          sc.line_entry.line)
+                .str();
+      lldb::addr_t pc = frame_sp->GetFrameCodeAddress().GetLoadAddress(
+          thread.CalculateTarget().get());
+      PickerItem item;
+      item.values = {std::to_string(i), sc.GetFunctionName().GetString(),
+                     location, llvm::formatv("{0:x}", pc).str()};
+      item.initially_selected = i == selected_idx;
+      items.push_back(std::move(item));
+    }
+
+    // Show each frame's source like selecting it would.
+    auto preview = [&thread](size_t index) {
+      StreamString strm;
+      if (StackFrameSP frame_sp = thread.GetStackFrameAtIndex(index))
+        frame_sp->GetStatus(strm, /*show_frame_info=*/false,
+                            /*show_source=*/true, /*show_unique=*/false);
+      return strm.GetString().str();
+    };
+    std::optional<size_t> index = IOHandlerPicker::PickOne(
+        GetDebugger(),
+        "Select a frame:", {"INDEX", "FUNCTION", "LOCATION", "PC"},
+        std::move(items), preview);
+    if (!index)
+      return std::nullopt;
+    return *index;
+  }
+
   void DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "thread" for validity as eCommandRequiresThread ensures
     // it is valid
@@ -374,6 +419,14 @@ protected:
                                        command[0].c_str());
           return;
         }
+      } else if (command.GetArgumentCount() == 0 &&
+                 GetDebugger().GetInputFile().GetIsRealTerminal()) {
+        std::optional<uint32_t> picked = PickFrame(*thread);
+        if (!picked) {
+          result.AppendError("no frame selected");
+          return;
+        }
+        frame_idx = *picked;
       } else if (command.GetArgumentCount() == 0) {
         frame_idx = thread->GetSelectedFrameIndex(SelectMostRelevantFrame);
         if (frame_idx == UINT32_MAX) {

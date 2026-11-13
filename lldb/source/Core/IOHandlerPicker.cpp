@@ -57,6 +57,11 @@ static constexpr size_t g_horizontal_margin_divisor = 10;
 /// Blank line, header, key help, column names, footer, and blank line.
 static constexpr size_t g_chrome_lines = 6;
 
+/// Most lines a preview takes, which fits the default source context.
+static constexpr size_t g_max_preview_lines = 10;
+/// Rows the list keeps when there's a preview, if it has that many items.
+static constexpr size_t g_min_rows_with_preview = 4;
+
 static constexpr char g_ctrl_c = 0x03;
 static constexpr char g_escape = 0x1b;
 static constexpr char g_delete = 0x7f; // Backspace on most terminals.
@@ -93,6 +98,13 @@ IOHandlerPicker::IOHandlerPicker(Debugger &debugger, llvm::StringRef header,
       m_checked.set(i);
 
   UpdateVisibleIndices();
+  if (m_mode == PickerMode::SingleSelect) {
+    auto it = llvm::find_if(m_visible_indices, [&](size_t i) {
+      return m_items[i].initially_selected;
+    });
+    if (it != m_visible_indices.end())
+      m_cursor_index = it - m_visible_indices.begin();
+  }
 
   // Without the pipe, resizes and cross-thread cancels wait for a key press.
   if (Status error = m_wakeup_pipe.CreateNew(); error.Fail())
@@ -100,6 +112,22 @@ IOHandlerPicker::IOHandlerPicker(Debugger &debugger, llvm::StringRef header,
 }
 
 IOHandlerPicker::~IOHandlerPicker() = default;
+
+std::optional<size_t>
+IOHandlerPicker::PickOne(Debugger &debugger, llvm::StringRef header,
+                         llvm::SmallVector<PickerColumnName> columns,
+                         llvm::SmallVector<PickerItem, 0> items,
+                         PreviewCallback preview_callback) {
+  auto picker_sp = std::make_shared<IOHandlerPicker>(
+      debugger, header, std::move(columns), std::move(items),
+      PickerMode::SingleSelect);
+  picker_sp->SetPreviewCallback(std::move(preview_callback));
+  debugger.RunIOHandlerSync(picker_sp);
+  const PickerResult &result = picker_sp->GetResult();
+  if (result.was_canceled || result.selected_indices.empty())
+    return std::nullopt;
+  return result.selected_indices.front();
+}
 
 size_t IOHandlerPicker::GetPrefixWidth() const {
   return m_mode == PickerMode::MultiSelect ? g_checked_prefix.size()
@@ -167,14 +195,53 @@ void IOHandlerPicker::UpdateLayout() {
       m_screen_height > 2 ? m_screen_height - 2 : m_screen_height;
   size_t max_rows =
       max_height > g_chrome_lines ? max_height - g_chrome_lines : 1;
-  m_viewport_height = std::min(m_items.size(), max_rows);
+
+  // The preview and the blank line above it take what the list can spare.
+  m_preview_height = 0;
+  if (m_preview_callback) {
+    size_t list_rows = std::min(m_items.size(), g_min_rows_with_preview);
+    if (max_rows > list_rows + 1)
+      m_preview_height =
+          std::min(max_rows - list_rows - 1, g_max_preview_lines);
+  }
+  size_t preview_lines = m_preview_height ? m_preview_height + 1 : 0;
+  m_viewport_height = std::min(m_items.size(), max_rows - preview_lines);
 
   m_box_top = (m_screen_height - std::min(GetDialogHeight(), m_screen_height)) / 2;
   m_box_left = (m_terminal_width - m_box_width) / 2;
 }
 
 size_t IOHandlerPicker::GetDialogHeight() const {
-  return m_viewport_height + g_chrome_lines;
+  size_t preview_lines = m_preview_height ? m_preview_height + 1 : 0;
+  return m_viewport_height + preview_lines + g_chrome_lines;
+}
+
+void IOHandlerPicker::UpdatePreview() {
+  std::optional<size_t> item;
+  if (!m_visible_indices.empty())
+    item = m_visible_indices[m_cursor_index];
+  if (item == m_preview_item)
+    return;
+
+  m_preview_item = item;
+  m_preview_lines.clear();
+  if (!item)
+    return;
+
+  std::string text = m_preview_callback(*item);
+  llvm::SmallVector<llvm::StringRef> lines;
+  llvm::StringRef(text).rtrim('\n').split(lines, '\n');
+  for (llvm::StringRef line : lines) {
+    // Tabs have no column width of their own.
+    std::string expanded;
+    for (char c : line.rtrim('\r')) {
+      if (c == '\t')
+        expanded.append(4, ' ');
+      else
+        expanded += c;
+    }
+    m_preview_lines.push_back(std::move(expanded));
+  }
 }
 
 bool IOHandlerPicker::EnterRawMode() {
@@ -491,6 +558,25 @@ void IOHandlerPicker::Render() {
   for (size_t i = end; i < m_viewport_start + GetViewportHeight(); ++i)
     write_line("", "");
 
+  if (m_preview_height) {
+    // The preview keeps the terminal's colors, since its text can have its
+    // own, like highlighted source code.
+    UpdatePreview();
+    write_line("", "");
+    for (size_t i = 0; i < m_preview_height; ++i) {
+      move_to_next_line();
+      frame += g_dialog_style;
+      frame += padding;
+      frame += ANSI_ESCAPE1(ANSI_CTRL_NORMAL);
+      frame += ansi::TrimAndPad(
+          i < m_preview_lines.size() ? m_preview_lines[i] : "", inner_width);
+      frame += ANSI_ESCAPE1(ANSI_CTRL_NORMAL);
+      frame += g_dialog_style;
+      frame += padding;
+      frame += ANSI_ESCAPE1(ANSI_CTRL_NORMAL);
+    }
+  }
+
   std::string footer;
   if (m_mode == PickerMode::MultiSelect)
     footer =
@@ -626,6 +712,7 @@ void IOHandlerPicker::Run() {
   }
 
   UpdateLayout();
+  ScrollToCursor();
 
   // Clip lines wider than measured instead of wrapping them.
   GetOutputStreamFileSP()->Lock()

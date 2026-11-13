@@ -10,6 +10,7 @@
 #include "CommandOptionsProcessAttach.h"
 #include "CommandOptionsProcessLaunch.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/IOHandlerPicker.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/OptionParser.h"
@@ -168,7 +169,53 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
+  /// Let the user pick one of the available platforms interactively.
+  std::optional<std::string> PickPlatform() {
+    PlatformSP selected_platform_sp =
+        GetDebugger().GetPlatformList().GetSelectedPlatform();
+    llvm::StringRef selected_name =
+        selected_platform_sp ? selected_platform_sp->GetPluginName() : "";
+
+    llvm::SmallVector<PickerItem, 0> items;
+    auto add_platform = [&](llvm::StringRef name, llvm::StringRef description) {
+      PickerItem item;
+      item.values = {name.str(), description.str()};
+      item.initially_selected = name == selected_name;
+      items.push_back(std::move(item));
+    };
+    PlatformSP host_platform_sp = Platform::GetHostPlatform();
+    add_platform(host_platform_sp->GetPluginName(),
+                 host_platform_sp->GetDescription());
+    for (uint32_t idx = 0;; ++idx) {
+      llvm::StringRef name = PluginManager::GetPlatformPluginNameAtIndex(idx);
+      if (name.empty())
+        break;
+      add_platform(name,
+                   PluginManager::GetPlatformPluginDescriptionAtIndex(idx));
+    }
+
+    llvm::SmallVector<std::string> names;
+    for (const PickerItem &item : items)
+      names.push_back(item.values[0]);
+    std::optional<size_t> index = IOHandlerPicker::PickOne(
+        GetDebugger(), "Select a platform:", {"NAME", "DESCRIPTION"},
+        std::move(items));
+    if (!index)
+      return std::nullopt;
+    return names[*index];
+  }
+
   void DoExecute(Args &args, CommandReturnObject &result) override {
+    if (args.GetArgumentCount() == 0 &&
+        GetDebugger().GetInputFile().GetIsRealTerminal()) {
+      std::optional<std::string> platform_name = PickPlatform();
+      if (!platform_name) {
+        result.AppendError("no platform selected");
+        return;
+      }
+      args.AppendArgument(*platform_name);
+    }
+
     if (args.GetArgumentCount() == 1) {
       const char *platform_name = args.GetArgumentAtIndex(0);
       if (platform_name && platform_name[0]) {
