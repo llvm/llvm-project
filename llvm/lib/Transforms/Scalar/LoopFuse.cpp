@@ -1196,7 +1196,43 @@ private:
     if (!AR || AR->getLoop() != FC.L || !AR->isAffine())
       return std::nullopt;
 
-    return AffineLoadKey{AR->getStart(), AR->getStepRecurrence(SE)};
+    // Drop a canonical constant addend so accesses a fixed distance apart,
+    // such as A[i] and A[i + 1], share a lookup key. Fusion can then keep
+    // those accesses close in time and exploit their cache locality. The
+    // caller still rejects distances larger than a cache line. The map below
+    // stays an exact match.
+    const SCEV *Start = AR->getStart();
+    if (const auto *Add = dyn_cast<SCEVAddExpr>(Start);
+        Add && isa<SCEVConstant>(Add->getOperand(0))) {
+      SmallVector<SCEVUse, 4> Ops(drop_begin(Add->operands()));
+      Start = SE.getAddExpr(Ops);
+    }
+
+    return AffineLoadKey{Start, AR->getStepRecurrence(SE)};
+  }
+
+  /// The constant byte distance between \p Load0 and \p Load1 counts as reuse
+  /// only when it fits in one cache line. Targets with no cache model,
+  /// including generic X86, report zero; use the common 64-byte line so the
+  /// offset still has a bound.
+  bool isWithinCacheLine(LoadInst &Load0, LoadInst &Load1) {
+    const auto *AR0 =
+        dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Load0.getPointerOperand()));
+    const auto *AR1 =
+        dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Load1.getPointerOperand()));
+    if (!AR0 || !AR1)
+      return false;
+
+    const auto *Distance = dyn_cast<SCEVConstant>(
+        SE.getMinusSCEV(AR0->getStart(), AR1->getStart()));
+    if (!Distance)
+      return false;
+
+    unsigned CacheLineSize = TTI.getCacheLineSize();
+    if (CacheLineSize == 0)
+      CacheLineSize = 64;
+    const APInt &Bytes = Distance->getAPInt();
+    return Bytes.sle(CacheLineSize) && Bytes.sge(-int64_t(CacheLineSize));
   }
 
   /// Return true if \p A is known to execute before \p B in an iteration of
@@ -1230,8 +1266,10 @@ private:
 
   /// Collect distinct read-read addresses reused at corresponding iterations.
   ///
-  /// This uses exact affine SCEV equality rather than adding a potentially
-  /// expensive read-read DependenceAnalysis query for every load pair.
+  /// Reads a constant distance apart also count as reuse because of spatial
+  /// locality, when that distance fits in a cache line. Constant offsets are
+  /// removed from affine starts so they can be found using the exact-match
+  /// lookup below.
   void collectReadReadReuse(const FusionCandidate &FC0,
                             const FusionCandidate &FC1,
                             ReusedValueSet &ReusedValues) {
@@ -1259,6 +1297,8 @@ private:
 
       auto *Load0 = cast<LoadInst>(MatchingLoad);
       auto *Load1 = cast<LoadInst>(ReadL1);
+      if (!isWithinCacheLine(*Load0, *Load1))
+        continue;
       if (hasInterveningWrite(BAA, *Load0, *Load1, FC0, FC1))
         continue;
 
