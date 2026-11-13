@@ -11,13 +11,13 @@ define void @Empty() nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    ret void
 ;
@@ -31,13 +31,13 @@ define void @Store1(ptr nocapture %p, i8 %x) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]], i8 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -77,13 +77,13 @@ define void @Store2(ptr nocapture %p, i16 %x) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]], i16 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -123,13 +123,13 @@ define void @Store4(ptr nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -169,13 +169,13 @@ define void @Store8(ptr nocapture %p, i64 %x) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -218,13 +218,13 @@ define void @Store16(ptr nocapture %p, i128 %x) nounwind uwtable sanitize_memory
 ; CHECK-SAME: ptr captures(none) [[P:%.*]], i128 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -252,7 +252,7 @@ define void @Store16(ptr nocapture %p, i128 %x) nounwind uwtable sanitize_memory
 ; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP18]], 32
 ; CHECK-NEXT:    [[TMP20:%.*]] = or i64 [[TMP18]], [[TMP19]]
 ; CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[TMP15]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP15]], i64 8
 ; CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP21]], align 8
 ; CHECK-NEXT:    br label %[[BB16]]
 ; CHECK:       [[BB16]]:
@@ -271,13 +271,13 @@ define i8 @Load1(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -309,13 +309,13 @@ define i16 @Load2(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -347,13 +347,13 @@ define i32 @Load4(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -385,13 +385,13 @@ define i64 @Load8(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -423,13 +423,13 @@ define i128 @Load16(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-SAME: ptr captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -470,13 +470,13 @@ define dso_local i32 @VarArgFn(ptr %fmt, ...) local_unnamed_addr sanitize_memory
 ; CHECK-SAME: ptr [[FMT:%.*]], ...) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
@@ -490,7 +490,7 @@ define dso_local i32 @VarArgFn(ptr %fmt, ...) local_unnamed_addr sanitize_memory
 ; CHECK-NEXT:    [[TMP9:%.*]] = alloca i8, i64 [[TMP6]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP9]], ptr align 8 [[VA_ARG_ORIGIN]], i64 [[TMP8]], i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[ARGS:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    call void @__msan_poison_alloca(ptr [[ARGS]], i64 24, ptr @[[GLOB0:[0-9]+]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[ARGS]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { ptr, ptr } [[TMP10]], 0
@@ -509,9 +509,9 @@ define dso_local i32 @VarArgFn(ptr %fmt, ...) local_unnamed_addr sanitize_memory
 ; CHECK-NEXT:    [[TMP24:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[TMP23]])
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { ptr, ptr } [[TMP24]], 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractvalue { ptr, ptr } [[TMP24]], 1
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP7]], i32 48
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP7]], i64 48
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP25]], ptr align 16 [[TMP27]], i64 [[TMP5]], i1 false)
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP9]], i32 48
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP9]], i64 48
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP26]], ptr align 16 [[TMP28]], i64 [[TMP5]], i1 false)
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[_MSARG1]], align 8
@@ -548,13 +548,13 @@ define dso_local void @VarArgCaller() local_unnamed_addr sanitize_memory {
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; CHECK-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
+; CHECK-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
+; CHECK-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1600
+; CHECK-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2400
+; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3200
+; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3208
+; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    store i64 0, ptr [[_MSARG]], align 8

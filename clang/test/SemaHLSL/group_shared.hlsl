@@ -66,7 +66,6 @@ groupshared void (*fp)();
 // expected-error@+1 {{pointers are unsupported in HLSL}}
 void (*fp2)(groupshared float);
 // NOTE: HLSL not support trailing return types.
-// expected-warning@#func{{'auto' type specifier is a HLSL 202y extension}}
 // expected-error@#func{{return type cannot be qualified with address space}}
 auto func() -> groupshared void; // #func
 // expected-warning@+2 {{'groupshared' attribute only applies to variables}}

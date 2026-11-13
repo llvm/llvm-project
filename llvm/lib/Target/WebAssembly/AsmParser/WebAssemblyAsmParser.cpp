@@ -514,9 +514,10 @@ public:
                   .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
                   .Default(-1);
       if (Order != -1) {
-        if (!STI->checkFeatures("+relaxed-atomics"))
-          return error("memory ordering requires relaxed-atomics feature: ",
-                       Tok);
+        if (!STI->checkFeatures("+acquire-release-atomics"))
+          return error(
+              "memory ordering requires acquire-release-atomics feature: ",
+              Tok);
         Parser.Lex();
       } else {
         Order = wasm::WASM_MEM_ORDER_SEQ_CST;

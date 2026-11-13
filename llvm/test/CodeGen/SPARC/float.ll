@@ -194,7 +194,8 @@ entry:
 ; V9:          fstoi
 
 ; SPARC64-LABEL:    test_utos_stou
-; SPARC64:     fdtos
+; SPARC64-NOT: fsubd
+; SPARC64:     fxtos
 ; SPARC64:     fstoi
 
 define void @test_utos_stou(i32 %a, ptr %ptr0, ptr %ptr1) {
@@ -217,6 +218,9 @@ entry:
 
 ; SPARC64-LABEL:    test_uxtod_dtoux
 ; SPARC64-NOT:          call __floatundidf
+; SPARC64-NOT:          sethi 1133568
+; SPARC64:              fxtod
+; SPARC64:              fmovrdlz
 ; SPARC64-NOT:          call __floatunsdfdi
 
 define void @test_uxtod_dtoux(i64 %a, ptr %ptr0, ptr %ptr1) {
@@ -238,7 +242,9 @@ entry:
 
 ; SPARC64-LABEL:    test_utod_dtou
 ; SPARC64-NOT:      fitod
-; SPARC64:          fdtoi
+; SPARC64-NOT:      fsubd
+; SPARC64-DAG:      fxtod
+; SPARC64-DAG:      fdtoi
 
 define void @test_utod_dtou(i32 %a, double %b, ptr %ptr0, ptr %ptr1) {
 entry:

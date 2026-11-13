@@ -65,6 +65,9 @@ def OpenACC_MapFlagsAttach : I32BitEnumAttrCaseBit<"attach", 23>;
 def OpenACC_MapFlagsDetach : I32BitEnumAttrCaseBit<"detach", 24>;
 def OpenACC_MapFlagsNoDeviceDescriptor
     : I32BitEnumAttrCaseBit<"no_device_descriptor", 25>;
+// `declare link`: the device storage is not present until a data clause maps
+// it.
+def OpenACC_MapFlagsLink : I32BitEnumAttrCaseBit<"link", 26>;
 
 def OpenACC_MapFlagsEnum : I32BitEnumAttr<
     "MapFlags", "OpenACC offload map-type flags",
@@ -78,7 +81,8 @@ def OpenACC_MapFlagsEnum : I32BitEnumAttr<
      OpenACC_MapFlagsDeviceResident, OpenACC_MapFlagsIfPresent,
      OpenACC_MapFlagsPresent, OpenACC_MapFlagsDescriptor,
      OpenACC_MapFlagsReduction, OpenACC_MapFlagsAttach,
-     OpenACC_MapFlagsDetach, OpenACC_MapFlagsNoDeviceDescriptor]> {
+     OpenACC_MapFlagsDetach, OpenACC_MapFlagsNoDeviceDescriptor,
+     OpenACC_MapFlagsLink]> {
   let separator = ",";
   let cppNamespace = "::mlir::acc";
   let genSpecializedAttr = 0;

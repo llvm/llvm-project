@@ -1,0 +1,4 @@
+## Test that the commands of a `%if` RUN line are run.
+
+# RUN: cp %S/Inputs/lit-if.c %t.c && %update_cc_test_checks %t.c
+# RUN: diff -u %S/Inputs/lit-if.c.expected %t.c

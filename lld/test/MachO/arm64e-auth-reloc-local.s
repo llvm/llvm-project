@@ -41,6 +41,7 @@ _ptr:
 ## local.s with the relocation turned into a section-relative one.
 #--- nonextern.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

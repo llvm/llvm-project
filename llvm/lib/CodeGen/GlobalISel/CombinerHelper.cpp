@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -23,6 +24,7 @@
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -173,15 +175,26 @@ bool CombinerHelper::isLegalOrHasFewerElements(
          Action == LegalizeActions::FewerElements;
 }
 
-bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
+bool CombinerHelper::isImmConstantLegalOrBeforeLegalizer(unsigned Opc,
+                                                         const LLT Ty) const {
   if (!Ty.isVector())
-    return isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {Ty}});
-  // Vector constants are represented as a G_BUILD_VECTOR of scalar G_CONSTANTs.
+    return isLegalOrBeforeLegalizer({Opc, {Ty}});
   if (isPreLegalize())
     return true;
+  // Scalable vectors cannot be constant folded here.
+  if (!Ty.isFixedVector())
+    return false;
   LLT EltTy = Ty.getElementType();
   return isLegal({TargetOpcode::G_BUILD_VECTOR, {Ty, EltTy}}) &&
-         isLegal({TargetOpcode::G_CONSTANT, {EltTy}});
+         isLegal({Opc, {EltTy}});
+}
+
+bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
+  return isImmConstantLegalOrBeforeLegalizer(TargetOpcode::G_CONSTANT, Ty);
+}
+
+bool CombinerHelper::isFPConstantLegalOrBeforeLegalizer(const LLT Ty) const {
+  return isImmConstantLegalOrBeforeLegalizer(TargetOpcode::G_FCONSTANT, Ty);
 }
 
 void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
@@ -1486,9 +1499,9 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(
   // This is required to create the memory operand for the narrowed load.
   // This machine memory operand object helps us infer about legality
   // before we proceed to combine the instruction.
-  if (auto CVal = getIConstantVRegVal(Vector, MRI)) {
+  Register Idx = MI.getOperand(2).getReg();
+  if (auto CVal = getIConstantVRegVal(Idx, MRI)) {
     int Elt = CVal->getZExtValue();
-    // FIXME: should be (ABI size)*Elt.
     Offset = VecEltTy.getSizeInBits() * Elt / 8;
     PtrInfo = MMO.getPointerInfo().getWithOffset(Offset);
   } else {
@@ -1776,80 +1789,6 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI,
          LegalizerHelper::LegalizeResult::Legalized;
 }
 
-static APFloat constantFoldFpUnary(const MachineInstr &MI,
-                                   const MachineRegisterInfo &MRI,
-                                   const APFloat &Val) {
-  APFloat Result(Val);
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode!");
-  case TargetOpcode::G_FNEG: {
-    Result.changeSign();
-    return Result;
-  }
-  case TargetOpcode::G_FABS: {
-    Result.clearSign();
-    return Result;
-  }
-  case TargetOpcode::G_FCEIL:
-    Result.roundToIntegral(APFloat::rmTowardPositive);
-    return Result;
-  case TargetOpcode::G_FFLOOR:
-    Result.roundToIntegral(APFloat::rmTowardNegative);
-    return Result;
-  case TargetOpcode::G_INTRINSIC_TRUNC:
-    Result.roundToIntegral(APFloat::rmTowardZero);
-    return Result;
-  case TargetOpcode::G_INTRINSIC_ROUND:
-    Result.roundToIntegral(APFloat::rmNearestTiesToAway);
-    return Result;
-  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
-    Result.roundToIntegral(APFloat::rmNearestTiesToEven);
-    return Result;
-  case TargetOpcode::G_FRINT:
-  case TargetOpcode::G_FNEARBYINT:
-    // Use default rounding mode (round to nearest, ties to even)
-    Result.roundToIntegral(APFloat::rmNearestTiesToEven);
-    return Result;
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPTRUNC: {
-    bool Unused;
-    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    Result.convert(getFltSemanticForLLT(DstTy), APFloat::rmNearestTiesToEven,
-                   &Unused);
-    return Result;
-  }
-  case TargetOpcode::G_FSQRT: {
-    bool Unused;
-    Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                   &Unused);
-    Result = APFloat(sqrt(Result.convertToDouble()));
-    break;
-  }
-  case TargetOpcode::G_FLOG2: {
-    bool Unused;
-    Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                   &Unused);
-    Result = APFloat(log2(Result.convertToDouble()));
-    break;
-  }
-  }
-  // Convert `APFloat` to appropriate IEEE type depending on `DstTy`. Otherwise,
-  // `buildFConstant` will assert on size mismatch. Only `G_FSQRT`, and
-  // `G_FLOG2` reach here.
-  bool Unused;
-  Result.convert(Val.getSemantics(), APFloat::rmNearestTiesToEven, &Unused);
-  return Result;
-}
-
-void CombinerHelper::applyCombineConstantFoldFpUnary(
-    MachineInstr &MI, const ConstantFP *Cst) const {
-  APFloat Folded = constantFoldFpUnary(MI, MRI, Cst->getValue());
-  const ConstantFP *NewCst = ConstantFP::get(Builder.getContext(), Folded);
-  Builder.buildFConstant(MI.getOperand(0), *NewCst);
-  MI.eraseFromParent();
-}
-
 bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
                                            PtrAddChain &MatchInfo) const {
   // We're trying to match the following pattern:
@@ -2024,7 +1963,7 @@ void CombinerHelper::applyShiftImmedChain(MachineInstr &MI,
 bool CombinerHelper::matchShiftOfShiftedLogic(
     MachineInstr &MI, ShiftOfShiftedLogic &MatchInfo) const {
   // We're trying to match the following pattern with any of
-  // G_SHL/G_ASHR/G_LSHR/G_USHLSAT/G_SSHLSAT shift instructions in combination
+  // G_SHL/G_ASHR/G_LSHR shift instructions in combination
   // with any of G_AND/G_OR/G_XOR logic instructions.
   //   %t1 = SHIFT %X, G_CONSTANT C0
   //   %t2 = LOGIC %t1, %Y
@@ -2036,10 +1975,8 @@ bool CombinerHelper::matchShiftOfShiftedLogic(
   unsigned ShiftOpcode = MI.getOpcode();
   assert((ShiftOpcode == TargetOpcode::G_SHL ||
           ShiftOpcode == TargetOpcode::G_ASHR ||
-          ShiftOpcode == TargetOpcode::G_LSHR ||
-          ShiftOpcode == TargetOpcode::G_USHLSAT ||
-          ShiftOpcode == TargetOpcode::G_SSHLSAT) &&
-         "Expected G_SHL, G_ASHR, G_LSHR, G_USHLSAT and G_SSHLSAT");
+          ShiftOpcode == TargetOpcode::G_LSHR) &&
+         "Expected G_SHL, G_ASHR and G_LSHR");
 
   // Match a one-use bitwise logic op.
   Register LogicDest = MI.getOperand(1).getReg();
@@ -2111,9 +2048,8 @@ void CombinerHelper::applyShiftOfShiftedLogic(
     MachineInstr &MI, ShiftOfShiftedLogic &MatchInfo) const {
   unsigned Opcode = MI.getOpcode();
   assert((Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_ASHR ||
-          Opcode == TargetOpcode::G_LSHR || Opcode == TargetOpcode::G_USHLSAT ||
-          Opcode == TargetOpcode::G_SSHLSAT) &&
-         "Expected G_SHL, G_ASHR, G_LSHR, G_USHLSAT and G_SSHLSAT");
+          Opcode == TargetOpcode::G_LSHR) &&
+         "Expected G_SHL, G_ASHR and G_LSHR");
 
   LLT ShlType = MRI.getType(MI.getOperand(2).getReg());
   LLT DestType = MRI.getType(MI.getOperand(0).getReg());
@@ -2974,8 +2910,8 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) const {
 }
 
 bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(
-    const MachineOperand &MO, bool OrNegative) const {
-  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative);
+    const MachineOperand &MO, bool OrNegative, bool OrZero) const {
+  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative, OrZero);
 }
 
 void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI,
@@ -3158,7 +3094,6 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   assert(LogicOpcode == TargetOpcode::G_AND ||
          LogicOpcode == TargetOpcode::G_OR ||
          LogicOpcode == TargetOpcode::G_XOR);
-  MachineIRBuilder MIB(MI);
   Register Dst = MI.getOperand(0).getReg();
   Register LHSReg = MI.getOperand(1).getReg();
   Register RHSReg = MI.getOperand(2).getReg();
@@ -4001,8 +3936,7 @@ matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
          "Expected Reg to only have one non-debug use?");
   Register MaybeLoad;
   int64_t Shift;
-  if (!mi_match(Reg, MRI,
-                m_OneNonDBGUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
+  if (!mi_match(Reg, MRI, m_OneUse(m_GShl(m_Reg(MaybeLoad), m_ICst(Shift))))) {
     Shift = 0;
     MaybeLoad = Reg;
   }
@@ -4713,9 +4647,8 @@ bool CombinerHelper::matchBitfieldExtractFromSExtInReg(
   int64_t Width = MI.getOperand(2).getImm();
   Register ShiftSrc;
   int64_t ShiftImm;
-  if (!mi_match(
-          Src, MRI,
-          m_OneNonDBGUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
+  if (!mi_match(Src, MRI,
+                m_OneUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
                                   m_GLShr(m_Reg(ShiftSrc), m_ICst(ShiftImm))))))
     return false;
   if (ShiftImm < 0 || ShiftImm + Width > Ty.getScalarSizeInBits())
@@ -4745,7 +4678,7 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(MachineInstr &MI,
   Register ShiftSrc;
   const unsigned Size = Ty.getScalarSizeInBits();
   if (!mi_match(And->getReg(0), MRI,
-                m_GAnd(m_OneNonDBGUse(m_GLShr(m_Reg(ShiftSrc), m_ICst(LSBImm))),
+                m_GAnd(m_OneUse(m_GLShr(m_Reg(ShiftSrc), m_ICst(LSBImm))),
                        m_ICst(AndImm))))
     return false;
 
@@ -4804,8 +4737,7 @@ bool CombinerHelper::matchBitfieldExtractFromShr(
 
   // Try to match shr (shl x, c1), c2
   if (!mi_match(Dst, MRI,
-                m_BinOp(Opcode,
-                        m_OneNonDBGUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
+                m_BinOp(Opcode, m_OneUse(m_GShl(m_Reg(ShlSrc), m_ICst(ShlAmt))),
                         m_ICst(ShrAmt))))
     return false;
 
@@ -4846,8 +4778,7 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
   int64_t ShrAmt;
   int64_t SMask;
   if (!mi_match(Dst, MRI,
-                m_BinOp(Opcode,
-                        m_OneNonDBGUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
+                m_BinOp(Opcode, m_OneUse(m_GAnd(m_Reg(AndSrc), m_ICst(SMask))),
                         m_ICst(ShrAmt))))
     return false;
 
@@ -5005,7 +4936,7 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
   Register LHSBase;
   std::optional<ValueAndVReg> LHSCstOff;
   if (!mi_match(MI.getBaseReg(), MRI,
-                m_OneNonDBGUse(m_GPtrAdd(m_Reg(LHSBase), m_GCst(LHSCstOff)))))
+                m_OneUse(m_GPtrAdd(m_Reg(LHSBase), m_GCst(LHSCstOff)))))
     return false;
 
   auto *LHSPtrAdd = cast<GPtrAdd>(LHS);
@@ -5185,12 +5116,39 @@ bool CombinerHelper::matchReassocCommBinOp(MachineInstr &MI,
 }
 
 bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
-                                             APInt &MatchInfo) const {
-  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+                                             BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
   Register SrcOp = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  unsigned Opc = MI.getOpcode();
 
-  if (auto MaybeCst = ConstantFoldCastOp(MI.getOpcode(), DstTy, SrcOp, MRI)) {
-    MatchInfo = *MaybeCst;
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  if (DstTy.isScalableVector())
+    return false;
+
+  if (DstTy.isFixedVector()) {
+    auto *BV = getOpcodeDef<GBuildVector>(SrcOp, MRI);
+    if (!BV)
+      return false;
+    SmallVector<APInt> Csts;
+    for (unsigned I = 0, E = BV->getNumSources(); I != E; ++I) {
+      auto MaybeCst = ConstantFoldCastOp(Opc, DstTy, BV->getSourceReg(I), MRI);
+      if (!MaybeCst)
+        return false;
+      Csts.push_back(*MaybeCst);
+    }
+    MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+      B.buildBuildVectorConstant(Dst, Csts);
+    };
+    return true;
+  }
+
+  if (auto MaybeCst = ConstantFoldCastOp(Opc, DstTy, SrcOp, MRI)) {
+    MatchInfo = [Dst, Cst = *MaybeCst](MachineIRBuilder &B) {
+      B.buildConstant(Dst, Cst);
+    };
     return true;
   }
 
@@ -5200,8 +5158,10 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
 bool CombinerHelper::matchConstantFoldUnaryIntOp(MachineInstr &MI,
                                                  BuildFnTy &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
-  auto Csts = ConstantFoldUnaryIntOp(MI.getOpcode(), MRI.getType(Dst),
-                                     MI.getOperand(1).getReg(), MRI);
+  LLT DstTy = MRI.getType(Dst);
+
+  SmallVector<APInt> Csts = ConstantFoldUnaryIntOp(
+      MI.getOpcode(), DstTy, MI.getOperand(1).getReg(), MRI);
   if (Csts.empty())
     return false;
 
@@ -5215,50 +5175,169 @@ bool CombinerHelper::matchConstantFoldUnaryIntOp(MachineInstr &MI,
 }
 
 bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
-                                            APInt &MatchInfo) const {
+                                            BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  // Scalable and pointer-element vectors have no G_BUILD_VECTOR of
+  // G_CONSTANT to fold to.
+  if (DstTy.isScalableVector() ||
+      (DstTy.isVector() && DstTy.getElementType().isPointer()))
+    return false;
+
+  if (DstTy.isFixedVector()) {
+    SmallVector<APInt> Csts =
+        ConstantFoldVectorBinop(MI.getOpcode(), Op1, Op2, MRI);
+    if (Csts.empty())
+      return false;
+    MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+      B.buildBuildVectorConstant(Dst, Csts);
+    };
+    return true;
+  }
+
   auto MaybeCst = ConstantFoldBinOp(MI.getOpcode(), Op1, Op2, MRI);
   if (!MaybeCst)
     return false;
-  MatchInfo = *MaybeCst;
+  MatchInfo = [Dst, Cst = *MaybeCst](MachineIRBuilder &B) {
+    B.buildConstant(Dst, Cst);
+  };
   return true;
 }
 
+// Vector FP constant folding assumes IEEE denormal arithmetic. Flush-to-zero
+// and dynamic modes can produce a different value, so skip those folds.
+// Targets such as RISC-V represent FP values as untyped scalars
+// (s16/s32/s64/s128). getFltSemanticForLLT maps those onto the IEEE formats.
+//
+// TODO: Honor non-IEEE and dynamic denormal modes instead of skipping the
+// vector folds. Scalar folds have the same limitation and stay unchanged here.
+static bool vectorFPFoldUsesIEEEDenormals(const MachineFunction &MF, LLT Ty) {
+  LLT ScalarTy = Ty.getScalarType();
+  if (!ScalarTy.isFloat() && !ScalarTy.isAnyScalar())
+    return true;
+  return MF.getDenormalMode(getFltSemanticForLLT(ScalarTy)) ==
+         DenormalMode::getIEEE();
+}
+
 bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
-                                              ConstantFP *&MatchInfo) const {
+                                              BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  if (DstTy.isScalableVector())
+    return false;
+
+  if (DstTy.isFixedVector()) {
+    if (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy))
+      return false;
+    SmallVector<APFloat> Csts =
+        ConstantFoldVectorFPBinop(MI.getOpcode(), Op1, Op2, MRI);
+    if (Csts.empty())
+      return false;
+    MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+      B.buildBuildVectorFConstant(Dst, Csts);
+    };
+    return true;
+  }
+
   auto MaybeCst = ConstantFoldFPBinOp(MI.getOpcode(), Op1, Op2, MRI);
   if (!MaybeCst)
     return false;
-  MatchInfo =
-      ConstantFP::get(MI.getMF()->getFunction().getContext(), *MaybeCst);
+  MatchInfo = [Dst, Cst = *MaybeCst](MachineIRBuilder &B) {
+    B.buildFConstant(Dst, Cst);
+  };
+  return true;
+}
+
+bool CombinerHelper::matchConstantFoldFPUnary(MachineInstr &MI,
+                                              BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (!isFPConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  // Source and destination element types can differ (G_FPEXT/G_FPTRUNC) and
+  // can have different denormal modes.
+  if (SrcTy.isVector() &&
+      (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), SrcTy) ||
+       !vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy)))
+    return false;
+
+  SmallVector<APFloat> Csts =
+      ConstantFoldUnaryFPOp(MI.getOpcode(), DstTy, Src, MRI);
+  if (Csts.empty())
+    return false;
+  MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+    if (Csts.size() == 1)
+      B.buildFConstant(Dst, Csts[0]);
+    else
+      B.buildBuildVectorFConstant(Dst, Csts);
+  };
   return true;
 }
 
 bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
-                                          ConstantFP *&MatchInfo) const {
+                                          BuildFnTy &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_FMA ||
          MI.getOpcode() == TargetOpcode::G_FMAD);
+  Register Dst = MI.getOperand(0).getReg();
   auto [_, Op1, Op2, Op3] = MI.getFirst4Regs();
+  LLT DstTy = MRI.getType(Dst);
+
+  auto FoldFMA = [](const APFloat &A, const APFloat &B,
+                    const APFloat &C) -> APFloat {
+    APFloat Res(A);
+    Res.fusedMultiplyAdd(B, C, APFloat::rmNearestTiesToEven);
+    return Res;
+  };
+
+  if (DstTy.isScalableVector())
+    return false;
+
+  if (DstTy.isFixedVector()) {
+    if (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy))
+      return false;
+    auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+    auto *BV2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+    auto *BV3 = getOpcodeDef<GBuildVector>(Op3, MRI);
+    if (!BV1 || !BV2 || !BV3)
+      return false;
+    unsigned NumElts = BV1->getNumSources();
+    if (BV2->getNumSources() != NumElts || BV3->getNumSources() != NumElts)
+      return false;
+    SmallVector<APFloat> Csts;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      const ConstantFP *C1 = getConstantFPVRegVal(BV1->getSourceReg(I), MRI);
+      const ConstantFP *C2 = getConstantFPVRegVal(BV2->getSourceReg(I), MRI);
+      const ConstantFP *C3 = getConstantFPVRegVal(BV3->getSourceReg(I), MRI);
+      if (!C1 || !C2 || !C3)
+        return false;
+      Csts.push_back(
+          FoldFMA(C1->getValueAPF(), C2->getValueAPF(), C3->getValueAPF()));
+    }
+    MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
+      B.buildBuildVectorFConstant(Dst, Csts);
+    };
+    return true;
+  }
 
   const ConstantFP *Op3Cst = getConstantFPVRegVal(Op3, MRI);
-  if (!Op3Cst)
-    return false;
-
   const ConstantFP *Op2Cst = getConstantFPVRegVal(Op2, MRI);
-  if (!Op2Cst)
-    return false;
-
   const ConstantFP *Op1Cst = getConstantFPVRegVal(Op1, MRI);
-  if (!Op1Cst)
+  if (!Op1Cst || !Op2Cst || !Op3Cst)
     return false;
 
-  APFloat Op1F = Op1Cst->getValueAPF();
-  Op1F.fusedMultiplyAdd(Op2Cst->getValueAPF(), Op3Cst->getValueAPF(),
-                        APFloat::rmNearestTiesToEven);
-  MatchInfo = ConstantFP::get(MI.getMF()->getFunction().getContext(), Op1F);
+  APFloat Res = FoldFMA(Op1Cst->getValueAPF(), Op2Cst->getValueAPF(),
+                        Op3Cst->getValueAPF());
+  MatchInfo = [Dst, Res](MachineIRBuilder &B) { B.buildFConstant(Dst, Res); };
   return true;
 }
 
@@ -5645,7 +5724,7 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegal({TargetOpcode::G_SMULH, {DstTy}}) &&
+    if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
         !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
       return false;
     if (Opcode == TargetOpcode::G_SREM &&
@@ -6970,9 +7049,9 @@ bool CombinerHelper::matchFPSelectToMinMax(Register Dst, Register Cond,
   // TODO: Allow multiple users of the compare if they are all selects.
   CmpInst::Predicate Pred;
   Register CmpLHS, CmpRHS;
-  if (!mi_match(Cond, MRI,
-                m_OneNonDBGUse(
-                    m_GFCmp(m_Pred(Pred), m_Reg(CmpLHS), m_Reg(CmpRHS)))) ||
+  if (!mi_match(
+          Cond, MRI,
+          m_OneUse(m_GFCmp(m_Pred(Pred), m_Reg(CmpLHS), m_Reg(CmpRHS)))) ||
       CmpInst::isEquality(Pred))
     return false;
   SelectPatternNaNBehaviour ResWithKnownNaNInfo =
@@ -7019,7 +7098,7 @@ bool CombinerHelper::matchSimplifySelectToMinMax(MachineInstr &MI,
   // Condition may be fed by a truncated compare.
   Register Cond = MI.getOperand(1).getReg();
   Register MaybeTrunc;
-  if (mi_match(Cond, MRI, m_OneNonDBGUse(m_GTrunc(m_Reg(MaybeTrunc)))))
+  if (mi_match(Cond, MRI, m_OneUse(m_GTrunc(m_Reg(MaybeTrunc)))))
     Cond = MaybeTrunc;
   Register Dst = MI.getOperand(0).getReg();
   Register TrueVal = MI.getOperand(2).getReg();
@@ -7095,24 +7174,36 @@ getMinUselessShift(KnownBits ValueKB, unsigned Opcode,
   return ValueKB.getBitWidth() - SignificantBits;
 }
 
-bool CombinerHelper::matchShiftsTooBig(
-    MachineInstr &MI, std::optional<int64_t> &MatchInfo) const {
+bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
   Register ShiftVal = MI.getOperand(1).getReg();
   Register ShiftReg = MI.getOperand(2).getReg();
-  LLT ResTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT ResTy = MRI.getType(Dst);
+  std::optional<int64_t> Result;
   auto IsShiftTooBig = [&](const Constant *C) {
     auto *CI = dyn_cast<ConstantInt>(C);
     if (!CI)
       return false;
     if (CI->uge(ResTy.getScalarSizeInBits())) {
-      MatchInfo = std::nullopt;
+      Result = std::nullopt;
       return true;
     }
-    auto OptMaxUsefulShift = getMinUselessShift(VT->getKnownBits(ShiftVal),
-                                                MI.getOpcode(), MatchInfo);
+    auto OptMaxUsefulShift =
+        getMinUselessShift(VT->getKnownBits(ShiftVal), MI.getOpcode(), Result);
     return OptMaxUsefulShift && CI->uge(*OptMaxUsefulShift);
   };
-  return matchUnaryPredicate(MRI, ShiftReg, IsShiftTooBig);
+  if (!matchUnaryPredicate(MRI, ShiftReg, IsShiftTooBig))
+    return false;
+
+  if (!Result) {
+    MatchInfo = [Dst](MachineIRBuilder &B) { B.buildUndef(Dst); };
+    return true;
+  }
+
+  int64_t Val = *Result;
+  MatchInfo = [Dst, Val](MachineIRBuilder &B) { B.buildConstant(Dst, Val); };
+  return true;
 }
 
 bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
@@ -7136,16 +7227,19 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
       !mi_match(RHS, MRI, m_MInstr(RHSDef)))
     return false;
 
-  if (!getIConstantVRegVal(LHS, MRI)) {
-    // Skip commuting if LHS is not a constant. But, LHS may be a
-    // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
-    // have a constant on the RHS.
+  if (!isConstantOrConstantVector(*LHSDef, MRI, /*AllowFP=*/false,
+                                  /*AllowOpaqueConstants=*/false)) {
+    // Skip commuting if LHS is not a constant or a vector of constants. But,
+    // LHS may be a G_CONSTANT_FOLD_BARRIER. If so we commute as long as we
+    // don't already have a constant on the RHS.
     if (LHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER)
       return false;
   }
-  // Commute as long as RHS is not a constant or G_CONSTANT_FOLD_BARRIER.
+  // Commute as long as RHS is not a constant, a vector of constants or
+  // G_CONSTANT_FOLD_BARRIER.
   return RHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
-         !getIConstantVRegVal(RHS, MRI);
+         !isConstantOrConstantVector(*RHSDef, MRI, /*AllowFP=*/false,
+                                     /*AllowOpaqueConstants=*/false);
 }
 
 bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) const {

@@ -33,6 +33,7 @@ ENUM_CODEGENOPT(ProfileUse, llvm::driver::ProfileInstrKind, 2, llvm::driver::Pro
 CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
                                       ///< enabled on the compile step.
 CODEGENOPT(DisableTailCalls, 1, 0) ///< Do not emit tail calls
+CODEGENOPT(NoPLT, 1, 0) ///< -fno-plt: use GOT indirection for external calls
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
 
@@ -63,6 +64,7 @@ CODEGENOPT(DwarfVersion, 3, 0) ///< Dwarf version
 CODEGENOPT(DebugInfoForProfiling, 1, 0)  ///< Emit extra debug info to make sample profile more accurate.
 CODEGENOPT(PseudoProbeForProfiling, 1, 0) ///< Emit pseudo probes for sample profiling.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0) ///< Append MD5 hash to internal linkage symbols.
+CODEGENOPT(ImplicitDefaultMapperAllocatableMembers, 1, 1) ///< Map allocatable members in generated OpenMP default mappers.
 
 CODEGENOPT(Underscoring, 1, 1)
 ENUM_CODEGENOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, Fortran::common::FPMaxminBehavior::Legacy)

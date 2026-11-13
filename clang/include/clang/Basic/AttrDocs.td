@@ -9755,6 +9755,40 @@ This attribute maps to the `Location` SPIR-V decoration.
   }];
 }
 
+def HLSLVkBuiltInDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Some Vulkan built-in variables have no equivalent in native HLSL, so no
+system-value semantic can express them. The `[[vk::builtin]]` attribute marks a
+stage input/output variable as a SPIR-V built-in variable, identified by name.
+Allowed on function parameters, function returns, and struct fields. This
+attribute has no effect when used outside of an entrypoint parameter/parameter
+field/return value.
+
+The attribute is only available when targeting SPIR-V. For any other target it
+is ignored with an "unknown attribute ignored" warning.
+
+The attribute takes a single string literal argument naming the built-in.
+Currently supported built-ins:
+
+* `PointSize`: the GLSL equivalent is `gl_PointSize`. Must be a scalar
+  `float`, or a `half` when native 16-bit types are not enabled (it is then
+  treated as `float`). Can be used as a vertex or mesh shader output, or as a
+  hull, domain or geometry shader input or output. It cannot be used in a pixel
+  shader.
+
+A declaration annotated with `[[vk::builtin]]` does not take part in
+`vk::location` assignment, and cannot also be annotated with `[[vk::location]]`.
+
+```c++
+struct VSOutput {
+  [[vk::location(0)]] float4 color : COLOR;
+  [[vk::builtin("PointSize")]] float size : PSIZE;
+};
+```
+  }];
+}
+
 def HLSLMatrixLayoutDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "row_major, column_major";

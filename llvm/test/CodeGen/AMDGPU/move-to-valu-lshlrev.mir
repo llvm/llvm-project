@@ -27,5 +27,5 @@ body:             |
     %3:vreg_64 = V_LSHL_ADD_U64_e64 %0:vreg_64, %1:vgpr_32, %2:vreg_64, implicit $exec
     %4:sreg_64 = COPY %3:vreg_64
     %5:sreg_32 = IMPLICIT_DEF
-    %6:sreg_64 = S_LSHL_B64 killed %4:sreg_64, %5:sreg_32, implicit-def dead $scc
+    %6:sreg_64 = S_LSHL_B64 %4:sreg_64, %5:sreg_32, implicit-def dead $scc
 ...

@@ -93,32 +93,23 @@ void InterpState::cleanup() {
 
 const Frame *InterpState::getCurrentFrame() { return Current; }
 
-void InterpState::deallocate(Block *B) {
+void InterpState::deallocateWithPointers(Block *B) {
   assert(B);
+  assert(B->hasPointers());
   assert(!B->isDynamic());
   assert(!B->isGlobal());
   assert(!B->isDead());
-
-  // The block might have a pointer saved in a field in its data
-  // that points to the block itself. We call the dtor first,
-  // which will destroy all the data but leave InlineDescriptors
-  // intact. If the block THEN still has pointers, we create a
-  // DeadBlock for it.
-  if (B->IsInitialized)
-    B->invokeDtor();
-
   assert(!B->isInitialized());
-  if (B->hasPointers()) {
-    size_t Size = B->getAllocSize();
-    // Allocate a new block, transferring over pointers.
-    char *Memory =
-        reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));
-    auto *D = new (Memory) DeadBlock(DeadBlocks, B);
-    // Since the block doesn't hold any actual data anymore, we can just
-    // memcpy() everything over.
-    std::memcpy(D->rawData(), B->rawData(), Size);
-    D->B.IsInitialized = false;
-  }
+
+  size_t Size = B->getAllocSize();
+  // Allocate a new block, transferring over pointers.
+  char *Memory =
+      reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));
+  auto *D = new (Memory) DeadBlock(DeadBlocks, B);
+  // Since the block doesn't hold any actual data anymore, we can just
+  // memcpy() everything over.
+  std::memcpy(D->rawData(), B->rawData(), Size);
+  D->B.IsInitialized = false;
 }
 
 bool InterpState::maybeDiagnoseDanglingAllocations() {

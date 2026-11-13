@@ -99,11 +99,7 @@
 
 ; CHECK: declare <vscale x 2 x i32> @Sleef_ilogbdx_rvvm2(<vscale x 2 x double>) [[ATTRS]]
 
-; CHECK: declare <vscale x 4 x i32> @Sleef_ilogbfx_rvvm2(<vscale x 4 x float>) [[ATTRS]]
-
 ; CHECK: declare <vscale x 2 x double> @Sleef_ldexpdx_rvvm2(<vscale x 2 x double>, <vscale x 2 x i32>) [[ATTRS]]
-
-; CHECK: declare <vscale x 4 x float> @Sleef_ldexpfx_rvvm2(<vscale x 4 x float>, <vscale x 4 x i32>) [[ATTRS]]
 
 ; CHECK: declare <vscale x 2 x double> @Sleef_lgammadx_u10rvvm2(<vscale x 2 x double>) [[ATTRS]]
 

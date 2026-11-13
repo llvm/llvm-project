@@ -27,7 +27,7 @@ using LIBC_NAMESPACE::fputil::Float80;
 TEST(LlvmLibcSharedMathTest, AllFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float16>;
 
-  int exponent;
+  int exponent = 0;
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::acoshf16(1.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::acospif16(1.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::rsqrtf16(1.0f16));
@@ -176,7 +176,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
 
 TEST(LlvmLibcSharedMathTest, AllFloat) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
-  int exponent;
+  int exponent = 0;
 
   EXPECT_FP_EQ(0x1.921fb6p+0, LIBC_NAMESPACE::shared::acosf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::acoshf(1.0f));
@@ -593,14 +593,21 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 // Emulated float128 tests
 TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
-  int exponent;
+  int exponent = 0;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float128>;
 
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::atan2f128(Float128(0.0), Float128(0.0)));
+  Float128 canonicalizef128_cx = Float128(0.0);
+  Float128 canonicalizef128_x = Float128(0.0);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef128(&canonicalizef128_cx,
+                                                        &canonicalizef128_x));
+  EXPECT_FP_EQ(Float128(0.0), canonicalizef128_cx);
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::copysignf128(
                                   Float128(0.0), Float128(0.0)));
+  EXPECT_FP_EQ(0.0,
+               LIBC_NAMESPACE::shared::daddf128(Float128(0.0), Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::fabsf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::fdimf128(Float128(0.0), Float128(0.0)));
@@ -645,11 +652,20 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::logbf128(Float128(1.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf128(Float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf128(Float128(0.0)));
+  Float128 modff128_iptr = Float128(0.0);
+  EXPECT_FP_EQ(Float128(0.0),
+               LIBC_NAMESPACE::shared::modff128(Float128(0.0), &modff128_iptr));
+  EXPECT_FP_EQ(Float128(0.0), modff128_iptr);
 
   EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
 
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
+  int remquof128_exp = 0;
+  EXPECT_FP_EQ(Float128(0.0),
+               LIBC_NAMESPACE::shared::remquof128(Float128(1.0), Float128(1.0),
+                                                  &remquof128_exp));
+  EXPECT_EQ(1, remquof128_exp);
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::rintf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
@@ -706,6 +722,21 @@ TEST(LlvmLibcSharedMathTest, AllFloat80) {
                                  Float80(0.0), Float80(0.0)));
   EXPECT_FP_EQ(Float80(0.0),
                LIBC_NAMESPACE::shared::fdimf80(Float80(0.0), Float80(0.0)));
+  Float80 totalorderf80_x = Float80(0.0);
+  Float80 totalorderf80_y = Float80(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalorderf80(&totalorderf80_x,
+                                                     &totalorderf80_y));
+  Float80 totalordermagf80_x = Float80(0.0);
+  Float80 totalordermagf80_y = Float80(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagf80(&totalordermagf80_x,
+                                                        &totalordermagf80_y));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf80(Float80(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf80(Float80(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf80(Float80(0.0)));
+  Float80 canonicalizef80_cx = Float80(0.0);
+  Float80 canonicalizef80_x = Float80(0.0);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef80(&canonicalizef80_cx,
+                                                       &canonicalizef80_x));
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
@@ -723,12 +754,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16addf128(
                                   float128(2.0), float128(3.0)));
 
-  float128 canonicalizef128_cx = float128(0.0);
-  float128 canonicalizef128_x = float128(0.0);
-  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef128(&canonicalizef128_cx,
-                                                        &canonicalizef128_x));
-  EXPECT_FP_EQ(float128(0.0), canonicalizef128_cx);
-
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16subf128(
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16fmaf128(
@@ -737,8 +762,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16divf128(
                                   float128(4.0), float128(2.0)));
-  EXPECT_FP_EQ(float128(0.0),
-               LIBC_NAMESPACE::shared::daddf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(1.0,
                LIBC_NAMESPACE::shared::ddivf128(float128(1.0), float128(1.0)));
   EXPECT_FP_EQ(0.0,
@@ -781,17 +804,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::ufromfpxf128(float128(0.0), 0, 32));
   LIBC_NAMESPACE::shared::fmodf128(float128(1.0), float128(1.0));
-  float128 modff128_iptr = float128(0.0);
-  EXPECT_FP_EQ(float128(0.0),
-               LIBC_NAMESPACE::shared::modff128(float128(0.0), &modff128_iptr));
-  EXPECT_FP_EQ(float128(0.0), modff128_iptr);
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::remainderf128(
                                   float128(1.0), float128(1.0)));
-  int remquof128_exp = 0;
-  EXPECT_FP_EQ(float128(0.0),
-               LIBC_NAMESPACE::shared::remquof128(float128(1.0), float128(1.0),
-                                                  &remquof128_exp));
-  EXPECT_EQ(1, remquof128_exp);
   EXPECT_FP_EQ(0x0p+0f,
                LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0x0p+0f,
@@ -804,6 +818,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   EXPECT_FP_EQ(bfloat16(0x1.921fb6p0f),
                LIBC_NAMESPACE::shared::acosbf16(bfloat16(0.0f)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::acoshbf16(bfloat16(1.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::asinbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::atanbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
@@ -840,6 +855,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                LIBC_NAMESPACE::shared::hypotbf16(bfloat16(4.0), bfloat16(3.0)));
 
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::sinbf16(bfloat16(0.0)));
 
   bfloat16 setpayloadbf16_res = bfloat16(0.0);
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadbf16(&setpayloadbf16_res,
@@ -853,6 +869,9 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::exp2bf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::expbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::log_bf16(bfloat16(1.0)));
+  EXPECT_FP_EQ(bfloat16(1.0),
+               LIBC_NAMESPACE::shared::log10p1bf16(bfloat16(9.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::sinhbf16(bfloat16(0.0)));
 
   bfloat16 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal,

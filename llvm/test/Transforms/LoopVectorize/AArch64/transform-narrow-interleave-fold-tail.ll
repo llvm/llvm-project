@@ -5,9 +5,9 @@
 
 target triple = "arm64-apple-macosx"
 
-define void @load_store_interleave_group(ptr noalias %data, i64 %n) {
+define void @load_store_interleave_group(ptr noalias %data, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @load_store_interleave_group(
-; CHECK-SAME: ptr noalias [[DATA:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias [[DATA:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

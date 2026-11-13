@@ -33,6 +33,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
     RelaxedSIMD,
   } SIMDLevel = NoSIMD;
 
+  bool HasAcquireReleaseAtomics = false;
   bool HasAtomics = false;
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
@@ -49,7 +50,6 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
-  bool HasRelaxedAtomics = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;

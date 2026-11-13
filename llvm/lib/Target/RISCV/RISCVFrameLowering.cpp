@@ -35,19 +35,12 @@
 
 using namespace llvm;
 
-static Align getABIStackAlignment(RISCVABI::ABI ABI) {
-  if (ABI == RISCVABI::ABI_ILP32E)
-    return Align(4);
-  if (ABI == RISCVABI::ABI_LP64E)
-    return Align(8);
-  return Align(16);
-}
-
 RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
-    : TargetFrameLowering(
-          StackGrowsDown, getABIStackAlignment(STI.getTargetABI()),
-          /*LocalAreaOffset=*/0,
-          /*TransientStackAlignment=*/getABIStackAlignment(STI.getTargetABI())),
+    : TargetFrameLowering(StackGrowsDown,
+                          RISCVABI::getStackAlignment(STI.getTargetABI()),
+                          /*LocalAreaOffset=*/0,
+                          /*TransientStackAlignment=*/
+                          RISCVABI::getStackAlignment(STI.getTargetABI())),
       STI(STI) {}
 
 // The register used to hold the frame pointer.
@@ -2690,9 +2683,13 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       return true;
     }
 
-    // Add restore libcall via tail call.
+    // Add restore libcall via tail call. Use the software guarded variant when
+    // cf-protection-branch is enabled because the restore function does not
+    // contain an lpad.
+    unsigned TailOpc =
+        RVFI->hasCFProtectionBranch() ? RISCV::PseudoTAILX7 : RISCV::PseudoTAIL;
     MachineInstrBuilder NewMI =
-        BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoTAIL))
+        BuildMI(MBB, MI, DL, TII.get(TailOpc))
             .addExternalSymbol(RestoreLibCall, RISCVII::MO_CALL)
             .setMIFlag(MachineInstr::FrameDestroy)
             .addDef(RISCV::X2, RegState::ImplicitDefine);

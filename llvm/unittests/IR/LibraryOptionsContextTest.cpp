@@ -50,7 +50,12 @@ TEST(LibraryOptionsContextTest, CAPI) {
   cl::ResetAllOptionOccurrences();
 
   const char *Bad[] = {"prog", "-print-inst-addrs=x"};
-  LLVMParseCommandLineOptions(std::size(Bad), Bad, "");
+  char *Msg;
+  int Err = LLVMParseCommandLineOptionsWithError(std::size(Bad), Bad, "", &Msg);
+  EXPECT_NE(Err, 0);
+  EXPECT_STREQ(Msg, "prog: invalid value 'x' in '-print-inst-addrs=x'\n");
+  LLVMDisposeMessage(Msg);
+
   C = LLVMContextCreate();
   EXPECT_EQ(printRet(*unwrap(C)), "  ret void");
   LLVMContextDispose(C);

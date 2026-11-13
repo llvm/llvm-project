@@ -1183,6 +1183,27 @@ bool Instruction::mayWriteToMemory() const {
   }
 }
 
+bool Instruction::mayReadOrWriteMemory() const {
+  // Keep in sync with mayReadFromMemory and mayWriteToMemory.
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::VAArg:
+  case Instruction::Load:
+  case Instruction::Store:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->doesNotAccessMemory();
+  }
+}
+
 bool Instruction::isAtomic() const {
   switch (getOpcode()) {
   default:
@@ -1192,9 +1213,9 @@ bool Instruction::isAtomic() const {
   case Instruction::Fence:
     return true;
   case Instruction::Load:
-    return cast<LoadInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<LoadInst>(this)->isAtomic();
   case Instruction::Store:
-    return cast<StoreInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<StoreInst>(this)->isAtomic();
   }
 }
 
@@ -1236,19 +1257,7 @@ bool Instruction::isVolatile() const {
     return cast<AtomicCmpXchgInst>(this)->isVolatile();
   case Instruction::Call:
   case Instruction::Invoke:
-    // There are a very limited number of intrinsics with volatile flags.
-    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
-      if (auto *MI = dyn_cast<MemIntrinsic>(II))
-        return MI->isVolatile();
-      switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::matrix_column_major_load:
-        return cast<ConstantInt>(II->getArgOperand(2))->isOne();
-      case Intrinsic::matrix_column_major_store:
-        return cast<ConstantInt>(II->getArgOperand(3))->isOne();
-      }
-    }
-    return false;
+    return cast<CallBase>(this)->isVolatile();
   }
 }
 
@@ -1376,12 +1385,9 @@ bool Instruction::isSafeToRemove() const {
 
 bool Instruction::willReturn() const {
   // Volatile operations are not guaranteed to return.
-  if (isVolatile())
-    return false;
-
   if (const auto *CB = dyn_cast<CallBase>(this))
-    return CB->hasFnAttr(Attribute::WillReturn);
-  return true;
+    return CB->hasFnAttr(Attribute::WillReturn) && !isVolatile();
+  return !isVolatile();
 }
 
 bool Instruction::isLifetimeStartOrEnd() const {

@@ -81,8 +81,8 @@ add_entrypoint_object(
 # GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
 set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
-  (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
-  (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
+    (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
+    (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
   set(environ_internal_gcc12_workaround "-Wno-stringop-overflow"
     "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
     "-fdisable-tree-waccess3")
@@ -91,7 +91,7 @@ endif()
 set(environ_internal_deps
   libc.config.app_h
   libc.hdr.types.size_t
-  libc.src.__support.alloc_checker
+  libc.src.__support.checked_ptr
   libc.src.__support.CPP.new
   libc.src.__support.CPP.optional
   libc.src.__support.CPP.string_view
@@ -562,12 +562,22 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
         ${SCUDO_DEPS}
     )
     add_entrypoint_external(
+      reallocarray
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
       aligned_alloc
       DEPENDS
         ${SCUDO_DEPS}
     )
     add_entrypoint_external(
       free
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
+      mallinfo2
       DEPENDS
         ${SCUDO_DEPS}
     )
@@ -592,10 +602,16 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
       realloc
     )
     add_entrypoint_external(
+      reallocarray
+    )
+    add_entrypoint_external(
       aligned_alloc
     )
     add_entrypoint_external(
       free
+    )
+    add_entrypoint_external(
+      mallinfo2
     )
     add_entrypoint_external(
       mallopt

@@ -188,12 +188,12 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0, [[COPY1]], %subreg.sub2_sub3
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:vreg_128 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0, %1, %subreg.sub2_sub3
+    %2:vreg_128 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub2
     S_ENDPGM 0, implicit %3
 
@@ -211,12 +211,12 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0, [[COPY1]], %subreg.sub2_sub3
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0, %1, %subreg.sub2_sub3
+    %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub2
     S_ENDPGM 0, implicit %3
 
@@ -235,12 +235,12 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0, [[COPY1]], %subreg.sub2_sub3
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub1_sub2
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0, %1, %subreg.sub2_sub3
+    %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vreg_64_align2 = COPY %2.sub1_sub2
     S_ENDPGM 0, implicit %3
 
@@ -259,12 +259,12 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0, [[COPY1]], %subreg.sub2_sub3
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub1_sub2
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0, %1, %subreg.sub2_sub3
+    %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vreg_64_align2 = COPY %2.sub1_sub2
     S_ENDPGM 0, implicit %3
 
