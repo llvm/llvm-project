@@ -27,6 +27,21 @@ struct UBInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
+
+  /// `ub.unreachable` does not return to the caller, so it stays in place when
+  /// the inlined region has more than one block.
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    assert(isa<UnreachableOp>(op) && "unexpected UB terminator");
+  }
+
+  /// The single-block fast path erases the terminator and continues the
+  /// inlined block with the operations after the call, which is wrong for
+  /// `ub.unreachable`.
+  bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const final {
+    return inlinedBlocks.empty() ||
+           !isa<UnreachableOp>(inlinedBlocks.begin()->getTerminator());
+  }
 };
 } // namespace
 
