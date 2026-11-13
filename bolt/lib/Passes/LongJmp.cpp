@@ -280,12 +280,12 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
 
   // Update non-call user counts when an instruction changes stubs.
   if (!IsCall && PrevStub != StubBB) {
-    StubUsersMap[StubBB]++;
+    NumStubUsers[StubBB]++;
     // Remove this instruction from the previous stub's user count.
     if (PrevStub) {
-      assert(StubUsersMap[PrevStub] > 0 &&
+      assert(NumStubUsers[PrevStub] > 0 &&
              "Non-call user count should be positive before decrementing.");
-      StubUsersMap[PrevStub]--;
+      NumStubUsers[PrevStub]--;
     }
   }
 
@@ -532,12 +532,11 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   BinaryFunction &Func = *StubBB.getFunction();
   BinaryContext &BC = Func.getBinaryContext();
   const int Bits = StubBits[&StubBB];
-  uint32_t NonCallUsers = StubUsersMap[&StubBB];
+  uint32_t NonCallUsers = NumStubUsers[&StubBB];
 
   const static int RangeShortJmp = BC.MIB->getShortJmpEncodingSize();
   const static int RangeSingleInstr = BC.MIB->getUncondBranchEncodingSize();
   const static int CodePointerSizeBits = BC.AsmInfo->getCodePointerSize() * 8;
-  const static uint64_t ShortJmpMask = ~((1ULL << RangeShortJmp) - 1);
 
   // Reject non-call users of existing stubs that clobber x16
   if (Bits == RangeShortJmp || Bits == CodePointerSizeBits) {
@@ -570,7 +569,9 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   }
 
   // Fits short jmp
-  if (!(PCRelTgtAddress & ShortJmpMask)) {
+  const int64_t PageOffset = static_cast<int64_t>(alignDown(TgtAddress, 4096) -
+                                                  alignDown(DotAddress, 4096));
+  if (isIntN(RangeShortJmp, PageOffset)) {
     if (Bits >= RangeShortJmp)
       return Error::success();
 

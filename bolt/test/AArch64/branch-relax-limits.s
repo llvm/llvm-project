@@ -19,17 +19,17 @@
 # RUN:   --custom-allocation-vma=0x200000 --print-longjmp 2>&1 | FileCheck %s --check-prefix=TAILCALL
 
 # CHECK: BOLT-INFO: Inserted 3 stubs in the hot area and 0 stubs in the cold area.
-# BOUNDARY: b.eq [[BOUNDARY_STUB:\.LStub[0-9]+]]
+# BOUNDARY:      b.eq    [[BOUNDARY_STUB:\.LStub[0-9]+]]
 # BOUNDARY: [[BOUNDARY_STUB]] (1 instructions,
-# BOUNDARY: 00000020: b {{\.Ltmp[0-9]+}}
+# BOUNDARY: 00000020: b       {{\.Ltmp[0-9]+}}
 # OUT-OF-RANGE: BOLT-ERROR: Unable to relax non-call branch beyond 128MiB
 # IN-RANGE: BOLT-INFO: Inserted 0 stubs in the hot area and 0 stubs in the cold area.
-# TAILCALL: b [[STUB:\.LStub[0-9]+]] # TAILCALL
+# TAILCALL:      b       [[STUB:\.LStub[0-9]+]] # TAILCALL
 # TAILCALL: [[STUB]] (
-# TAILCALL: adrp x16, foo
-# TAILCALL-NEXT: add x16, x16, :lo12:foo
-# TAILCALL-NEXT: br x16 # UNKNOWN CONTROL FLOW
-# TAILCALL: b [[STUB]] # TAILCALL
+# TAILCALL:      adrp    x16, foo
+# TAILCALL-NEXT: add     x16, x16, :lo12:foo
+# TAILCALL-NEXT: br      x16 # UNKNOWN CONTROL FLOW
+# TAILCALL:      b       [[STUB]] # TAILCALL
 
     .text
     .globl foo, _start, tail_calls

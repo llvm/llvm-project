@@ -63,7 +63,7 @@ class LongJmpPass : public BinaryFunctionPass {
 
   /// Stats about the number of users of the stubs that are non-call
   /// instructions targeting this stub.
-  DenseMap<const BinaryBasicBlock *, uint32_t> StubUsersMap;
+  DenseMap<const BinaryBasicBlock *, uint32_t> NumStubUsers;
 
   /// Stats about number of stubs inserted
   uint32_t NumHotStubs{0};
