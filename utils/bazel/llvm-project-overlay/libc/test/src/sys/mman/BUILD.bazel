@@ -41,7 +41,6 @@ libc_test(
     srcs = ["linux/mlock_test.cpp"],
     deps = [
         "//libc:getpagesize",
-        "//libc:getrlimit",
         "//libc:hdr_sys_mman_macros",
         "//libc:hdr_sys_resource_macros",
         "//libc/src/__support/OSUtil:syscall",
@@ -54,6 +53,7 @@ libc_test(
         "//libc/src/sys/mman:munlock",
         "//libc/src/sys/mman:munlockall",
         "//libc/src/sys/mman:munmap",
+        "//libc/src/sys/resource:getrlimit",
     ],
 )
 

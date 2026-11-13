@@ -4270,34 +4270,14 @@ alias(
 
 ############################# sys/resource targets #############################
 
-libc_function(
+alias(
     name = "getrlimit",
-    srcs = ["src/sys/resource/linux/getrlimit.cpp"],
-    hdrs = ["src/sys/resource/getrlimit.h"],
-    deps = [
-        ":types_struct_rlimit",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:prlimit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/resource:getrlimit",
 )
 
-libc_function(
+alias(
     name = "setrlimit",
-    srcs = ["src/sys/resource/linux/setrlimit.cpp"],
-    hdrs = ["src/sys/resource/setrlimit.h"],
-    deps = [
-        ":types_struct_rlimit",
-        "//libc/src/__support:common",
-        "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
-        "//libc/src/__support/OSUtil/linux/syscall_wrappers:prlimit",
-        "//libc/src/__support/macros:config",
-        "//libc/src/errno",
-    ],
+    actual = "//libc/src/sys/resource:setrlimit",
 )
 
 ############################### sys/sem targets ################################
