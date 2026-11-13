@@ -50,6 +50,20 @@ class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
                           extraTraits)> {
 }
 
+// Op partitions of the NVVM dialect ops.
+// Ops that fit no other partition are in `Misc`. The special register ops set
+// their partition, `IndexSReg` or `MiscSReg`, in their base classes.
+def NVVM_ArithPartition : Partition<"Arith">;
+def NVVM_ConvertPartition : Partition<"Convert">;
+def NVVM_IndexSRegPartition : Partition<"IndexSReg">;
+def NVVM_MemoryPartition : Partition<"Memory">;
+def NVVM_MiscPartition : Partition<"Misc">;
+def NVVM_MiscSRegPartition : Partition<"MiscSReg">;
+def NVVM_MmaPartition : Partition<"Mma">;
+def NVVM_SyncPartition : Partition<"Sync">;
+def NVVM_TcgenPartition : Partition<"Tcgen">;
+def NVVM_WarpPartition : Partition<"Warp">;
+
 //===----------------------------------------------------------------------===//
 // NVVM attribute definitions
 //===----------------------------------------------------------------------===//
@@ -234,6 +248,7 @@ class NVVM_F32UnaryApproxOp<string mnemonic, list<Trait> traits = []> :
 
 class NVVM_PureSpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
   NVVM_IntrOp<mnemonic, !listconcat(traits, [Pure]), 1> {
+  let partition = NVVM_MiscSRegPartition;
   let arguments = (ins);
   let results = (outs I32:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -242,6 +257,7 @@ class NVVM_PureSpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
 class NVVM_SpecialRegisterOp<string mnemonic, Type resultType = I32,
                                               list<Trait> traits = []> :
   NVVM_IntrOp<mnemonic, traits, 1> {
+  let partition = NVVM_MiscSRegPartition;
   let arguments = (ins);
   let results = (outs resultType:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -251,6 +267,7 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
   NVVM_PureSpecialRegisterOp<mnemonic,
     !listconcat(traits,
       [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>])> {
+  let partition = NVVM_IndexSRegPartition;
   let arguments = (ins OptionalAttr<LLVM_ConstantRangeAttr>:$range);
   let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
   let llvmBuilder = baseLlvmBuilder # setRangeRetAttrCode # baseLlvmBuilderCoda;
@@ -365,6 +382,7 @@ foreach index = !range(0, 32) in {
 // Inline PTX op definition
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_MiscPartition in {
 def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
     AttrSizedOperandSegments]>
@@ -446,11 +464,13 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     bool hasMemoryClobber() { return getMemoryClobber(); }
   }];
 }
+} // let partition = NVVM_MiscPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM approximate op definitions
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_ArithPartition in {
 def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
   let arguments = (ins F32:$arg);
   let results = (outs F32:$res);
@@ -548,11 +568,13 @@ def NVVM_RsqrtOp
     $src oilist(`ftz` `=` $ftz) attr-dict `:` type($src)
   }];
 }
+} // let partition = NVVM_ArithPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_WarpPartition in {
 def NVVM_ReduxOp :
   NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
   Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
@@ -586,11 +608,13 @@ def NVVM_ReduxOp :
     ) attr-dict `:` type($val) `->` type($res)
    }];   
 }
+} // let partition = NVVM_WarpPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM nanosleep
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_MiscPartition in {
 def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
   Arguments<(ins I32:$duration)> 
 {
@@ -640,11 +664,13 @@ def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
   let assemblyFormat = "attr-dict (`id` `=` $eventId^)? (`mask` `=` $maskedEventId^)?";
   let hasVerifier = 1;
 }
+} // let partition = NVVM_MiscPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Split arrive/wait barrier
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_SyncPartition in {
 /// mbarrier.init instruction with generic pointer type
 def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
     [NVVMRequiresSM<80>]>,
@@ -1248,6 +1274,7 @@ def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait",
   }];
   let hasVerifier = 1;
 }
+} // let partition = NVVM_SyncPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
@@ -1268,6 +1295,7 @@ def BarrierReduction
 def BarrierReductionAttr
     : EnumAttr<NVVM_Dialect, BarrierReduction, "reduction">;
 
+let partition = NVVM_SyncPartition in {
 def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
     [AttrSizedOperandSegments]> {
   let summary = "CTA Barrier Synchronization Op";
@@ -1488,12 +1516,14 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
   }];
   let assemblyFormat = "attr-dict";
 }
+} // let partition = NVVM_SyncPartition
 
 defvar MemOrderAcquireOrRelease =
   ConfinedAttr<MemOrderKindAttr,
     [EnumAttrIsOneOf<MemOrderKindAttr,
       [MemOrderKindAcquire, MemOrderKindRelease]>]>;
 
+let partition = NVVM_SyncPartition in {
 def NVVM_FenceSyncRestrictOp : NVVM_Op<"fence.sync_restrict">,
                                Arguments<(ins MemOrderAcquireOrRelease:$order)> {
   let summary = "Uni-directional thread fence operation";
@@ -1523,6 +1553,7 @@ def NVVM_FenceMbarrierInitOp : NVVM_Op<"fence.mbarrier.init"> {
     createIntrinsicCall(builder, llvm::Intrinsic::nvvm_fence_mbarrier_init_release_cluster);
   }];
 }
+} // let partition = NVVM_SyncPartition
 
 def ProxyAlias : I32EnumAttrCase<"alias", 0, "alias">;
 def ProxyAsync   : I32EnumAttrCase<"async", 1, "async">;
@@ -1548,6 +1579,7 @@ defvar ProxyKindNotTensormapOrGeneric =
   ConfinedAttr<ProxyKindAttr,
     [EnumAttrIsNoneOf<ProxyKindAttr, [ProxyTensorMap, ProxyGeneric]>]>;
 
+let partition = NVVM_SyncPartition in {
 def NVVM_FenceProxyOp : NVVM_Op<"fence.proxy">,
   Arguments<(ins ProxyKindNotTensormapOrGeneric:$kind,
                  OptionalAttr<SharedSpaceAttr>:$space)> {
@@ -1661,6 +1693,7 @@ def NVVM_FenceProxySyncRestrictOp : NVVM_Op<"fence.proxy.sync_restrict">,
 
   let hasVerifier = 1;
 }
+} // let partition = NVVM_SyncPartition
 
 def SetMaxRegisterActionIncrease : I32EnumAttrCase<"increase", 0>;
 def SetMaxRegisterActionDecrease   : I32EnumAttrCase<"decrease", 1>;
@@ -1671,6 +1704,7 @@ def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max reg
 }
 def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
 
+let partition = NVVM_MiscPartition in {
 def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
   let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
   let assemblyFormat = "enum($action) $regCount attr-dict";
@@ -1683,6 +1717,7 @@ def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
     createIntrinsicCall(builder, intId, builder.getInt32($regCount));
   }];
 }
+} // let partition = NVVM_MiscPartition
 
 def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
 def ShflKindUp   : I32EnumAttrCase<"up", 1>;
@@ -1697,6 +1732,7 @@ def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
 }
 def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
+let partition = NVVM_WarpPartition in {
 def NVVM_ShflOp :
   NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>, InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, F32, LLVMStructType]>:$res)>,
@@ -1737,6 +1773,7 @@ def NVVM_ShflOp :
    }];
    let hasVerifier = 1;
 }
+} // let partition = NVVM_WarpPartition
 
 def VoteSyncKindAny : I32EnumAttrCase<"any", 0>;
 def VoteSyncKindAll : I32EnumAttrCase<"all", 1>;
@@ -1752,6 +1789,7 @@ def VoteSyncKind : I32EnumAttr<"VoteSyncKind", "NVVM vote sync kind",
 
 def VoteSyncKindAttr : EnumAttr<NVVM_Dialect, VoteSyncKind, "vote_sync_kind">;
 
+let partition = NVVM_WarpPartition in {
 def NVVM_VoteSyncOp
     : NVVM_Op<"vote.sync", [InferTypeOpAdaptor]>,
       Results<(outs AnyTypeOf<[I32, I1]>:$res)>,
@@ -1840,6 +1878,7 @@ def NVVM_ElectSyncOp : NVVM_Op<"elect.sync">
     $pred = builder.CreateExtractValue(resultTuple, 1);
   }];
 }
+} // let partition = NVVM_WarpPartition
 
 //===----------------------------------------------------------------------===//
 // Permute Bytes (Prmt)
@@ -1864,6 +1903,7 @@ def PermuteMode : I32EnumAttr<"PermuteMode", "NVVM permute mode",
 
 def PermuteModeAttr : EnumAttr<NVVM_Dialect, PermuteMode, "permute_mode">;
 
+let partition = NVVM_ArithPartition in {
 def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
                      Results<(outs I32:$res)>,
                      Arguments<(ins I32:$lo, Optional<I32>:$hi, I32:$selector,
@@ -1953,6 +1993,7 @@ def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
 
   let hasVerifier = 1;
 }
+} // let partition = NVVM_ArithPartition
 
 def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
 def LoadCacheModifierCG : I32EnumAttrCase<"CG", 1, "cg">;
@@ -1976,6 +2017,7 @@ def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind",
 
 def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
 
+let partition = NVVM_MemoryPartition in {
 def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   Arguments<(ins LLVM_PointerShared:$dst,
                  LLVM_PointerGlobal:$src,
@@ -2041,11 +2083,13 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arriv
     $addr oilist(`noinc` `=` $noinc) attr-dict `:` type(operands)
   }];
 }
+} // let partition = NVVM_MemoryPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Conversion Ops (for "cvt.*" family of PTX instructions)
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_ConvertPartition in {
 def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   let summary = "Convert the given float input to TF32";
   let description = [{
@@ -2473,6 +2517,7 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
                       llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
   }];
 }
+} // let partition = NVVM_ConvertPartition
 
 def SaturationModeSatfiniteOrNone :
   ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr,
@@ -2519,6 +2564,7 @@ class NVVM_ConvertToFP16x2Op_Base <string srcTypeStr, Type srcStorageType, strin
   let hasVerifier = needVerify;
 }
 
+let partition = NVVM_ConvertPartition in {
 def NVVM_ConvertF8x2ToF16x2Op :
   NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16",
     [F8E4M3FN, F8E5M2, F8E5M3FNU], 1>;
@@ -2827,6 +2873,7 @@ def NVVM_ConvertF32x4ToF6x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f6x4", "convert.f
 
 // F32x4 -> F4x4 with stochastic rounding (supports E2M1FN)
 def NVVM_ConvertF32x4ToF4x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f4x4", "convert.f32x4.to.f4x4", I16>;
+} // let partition = NVVM_ConvertPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM MMA Ops
@@ -3330,6 +3377,7 @@ def MMAFrag: I32EnumAttr<"MMAFrag", "NVVM MMA frag type",
 }
 def MMAFragAttr : EnumAttr<NVVM_Dialect, MMAFrag, "mma_frag">;
 
+let partition = NVVM_MmaPartition in {
 def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
   Results<(outs AnyTypeOf<[LLVM_AnyStruct, F64]>:$res)>,
   Arguments<(ins LLVM_AnyPointer: $ptr, I32: $stride, I32Attr:$m,
@@ -3535,6 +3583,7 @@ def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
   }];
   let hasVerifier = 1;
 }
+} // let partition = NVVM_MmaPartition
 
 def LdStMatrixShapeAttr : NVVM_Attr<"LdStMatrixShape", "ld_st_matrix_shape"> {
   let summary = "Matrix shape for ldmatrix and stmatrix";
@@ -3557,6 +3606,7 @@ def LdStMatrixEltType : I32EnumAttr<"LdStMatrixEltType", "Element type for ldmat
 }
 def LdStMatrixEltTypeAttr : EnumAttr<NVVM_Dialect, LdStMatrixEltType, "ld_st_matrix_elt_type">;
 
+let partition = NVVM_MmaPartition in {
 def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
   Arguments<(ins LLVM_PointerShared: $ptr, Variadic<I32>:$sources, MMALayoutAttr:$layout,
              LdStMatrixShapeAttr:$shape, LdStMatrixEltTypeAttr:$eltType)> {
@@ -3822,6 +3872,7 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
+} // let partition = NVVM_MmaPartition
 
 /// Generate enum value of the mma.sync intrinsic.
 class MMA_SP_SYNC_NAME<string Metadata, string Kind, int Satfinite,
@@ -3927,6 +3978,7 @@ class MMA_SP_SYNC_INTR {
   string id = !foldl("", f3, acc, el, acc # "\n" # el);
 }
 
+let partition = NVVM_MmaPartition in {
 def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
 
   let summary = "cooperative sparse matrix-multiply and accumulate";
@@ -4032,6 +4084,7 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
+} // let partition = NVVM_MmaPartition
 
 def ScaleVecSize1X  : I32EnumAttrCase<"X1", 0, "x1">;
 def ScaleVecSize2X  : I32EnumAttrCase<"X2", 1, "x2">;
@@ -4297,6 +4350,7 @@ class NVVM_MmaBlockScaleBase<string mnemonic, list<Trait> traits = []> :
   let hasVerifier = 1;
 }
 
+let partition = NVVM_MmaPartition in {
 def NVVM_MmaBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.block_scale"> {
 
   let summary = "cooperative matrix-multiply and accumulate with block scaling";
@@ -4458,6 +4512,7 @@ def NVVM_MmaSpBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.sp.block_scale"> {
     $res = createIntrinsicCall(builder, id, args);
   }];
 }
+} // let partition = NVVM_MmaPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM TMA Ops
@@ -4541,6 +4596,7 @@ def CTAGroupKind : I32EnumAttr<"CTAGroupKind",
 def CTAGroupKindAttr :
   EnumAttr<NVVM_Dialect, CTAGroupKind, "cta_group">;
 
+let partition = NVVM_MemoryPartition in {
 def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
@@ -4845,6 +4901,7 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp :
 
     let hasVerifier = 1;
 }
+} // let partition = NVVM_MemoryPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Prefetch Op
@@ -4861,6 +4918,7 @@ def PrefetchCacheLevel : I32Enum<"PrefetchCacheLevel",
 
 def PrefetchCacheLevelAttr : EnumAttr<NVVM_Dialect, PrefetchCacheLevel, "prefetch_cache_level">;
 
+let partition = NVVM_MemoryPartition in {
 def NVVM_PrefetchOp : NVVM_Op<"prefetch",
     [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> {
   let summary = "Brings the cache line containing an address into the specified cache level";
@@ -5028,6 +5086,7 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
 
   let hasVerifier = 1;
 }
+} // let partition = NVVM_MemoryPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Reduction Ops
@@ -5052,6 +5111,7 @@ def TMAReduxKind : I32EnumAttr<"TMAReduxKind", "NVVM TMA redux kind",
 }
 def TMAReduxKindAttr : EnumAttr<NVVM_Dialect, TMAReduxKind, "tma_redux_kind">;
 
+let partition = NVVM_MemoryPartition in {
 def NVVM_CpAsyncBulkTensorReduceOp :
   NVVM_Op<"cp.async.bulk.tensor.reduce", [AttrSizedOperandSegments]> {
   let arguments = (ins
@@ -5314,11 +5374,13 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
     createIntrinsicCall(builder, id, args);
   }];
 }
+} // let partition = NVVM_MemoryPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_MmaPartition in {
 def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[90]>]> {
   let arguments = (ins);
   let description = [{
@@ -5357,6 +5419,7 @@ def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRe
     createIntrinsicCall(builder, llvm::Intrinsic::nvvm_wgmma_wait_group_sync_aligned, builder.getInt64($group));
   }];
 }
+} // let partition = NVVM_MmaPartition
 
 /// Enum attribute type for the negating of input operands
 def WGMMAScaleInNeg : I32EnumAttrCase<"neg", -1>;
@@ -5401,6 +5464,7 @@ def WGMMATypes : I32EnumAttr<"WGMMATypes", "NVVM WGMMA types",
 def WGMMATypesAttr : EnumAttr<NVVM_Dialect, WGMMATypes, "wgmma_type">;
 
 
+let partition = NVVM_MmaPartition in {
 def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async", 
               [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
                 PredOpTrait<"input struct and result struct must be the same type",
@@ -5496,6 +5560,7 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
   }];
 }
+} // let partition = NVVM_MmaPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Griddepcontrol Ops
@@ -5511,6 +5576,7 @@ def GridDepActionKind : I32Enum<"GridDepActionKind", "Action kind for grid depen
 
 def GridDepActionAttr : EnumAttr<NVVM_Dialect, GridDepActionKind, "grid_dep_action">;
 
+let partition = NVVM_MiscPartition in {
 def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
   let description = [{
     If the $kind attribute is set to `wait`, it causes the 
@@ -5543,11 +5609,13 @@ def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
       createIntrinsicCall(builder, id);
   }];
 }
+} // let partition = NVVM_MiscPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Mapa Op
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_MemoryPartition in {
 def NVVM_MapaOp: NVVM_Op<"mapa",
   [InputAddressIsCombinationOf<["a", "res"],
     [[LLVM_PointerShared, LLVM_PointerSharedCluster], [LLVM_PointerGeneric, LLVM_PointerGeneric]],
@@ -5566,6 +5634,7 @@ def NVVM_MapaOp: NVVM_Op<"mapa",
   
   let assemblyFormat = "$a`,` $b attr-dict `:` type($a) `->` type($res)";
 }
+} // let partition = NVVM_MemoryPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM match.sync Op
@@ -5582,6 +5651,7 @@ def MatchSyncKind : I32EnumAttr<"MatchSyncKind", "NVVM match sync kind",
 
 def MatchSyncKindAttr : EnumAttr<NVVM_Dialect, MatchSyncKind, "match_sync_kind">;
 
+let partition = NVVM_WarpPartition in {
 def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
@@ -5613,11 +5683,13 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
                        "type($val) `->` type($res)";
   let hasVerifier = 1;
 }
+} // let partition = NVVM_WarpPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Bulk Store Op
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_MemoryPartition in {
 def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, AnyTypeOf<[I32, I64]>:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
 
@@ -5697,7 +5769,9 @@ def NVVM_AsyncStoreSharedOp:
                        LLVM_PointerSharedCluster:$mbarrier);
   let assemblyFormat = "$addr `,` $value `,` `mbarrier` `=` $mbarrier attr-dict `:` type($addr) `,` type($value) `,` type($mbarrier)";
 }
+} // let partition = NVVM_MemoryPartition
 
+let partition = NVVM_MiscPartition in {
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{
@@ -5728,6 +5802,7 @@ def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
 
   let assemblyFormat = "attr-dict";
 }
+} // let partition = NVVM_MiscPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM TCGEN05 Ops
@@ -5752,6 +5827,7 @@ def Tcgen05WaitKind : I32EnumAttr<"Tcgen05WaitKind", "NVVM Tcgen05 wait kind",
 def Tcgen05WaitKindAttr :
   EnumAttr<NVVM_Dialect, Tcgen05WaitKind, "tcgen05_wait">;
 
+let partition = NVVM_TcgenPartition in {
 def NVVM_Tcgen05AllocOp : NVVM_VoidIntrinsicOp<"tcgen05.alloc",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 alloc operation";
@@ -5944,6 +6020,7 @@ def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift",
     createIntrinsicCall(builder, id, {$taddr});
   }];
 }
+} // let partition = NVVM_TcgenPartition
 
 def Shape128x256b : I32EnumAttrCase<"SHAPE_128x256b", 0, "shape_128x256b">;
 def Shape4x256b   : I32EnumAttrCase<"SHAPE_4x256b",   1, "shape_4x256b">;
@@ -5981,6 +6058,7 @@ def Tcgen05CpSrcFormat : I32EnumAttr<"Tcgen05CpSrcFormat", "tcgen05 cp source fo
 }
 def Tcgen05CpSrcFormatAttr : EnumAttr<NVVM_Dialect, Tcgen05CpSrcFormat, "tcgen05_cp_src_fmt">;
 
+let partition = NVVM_TcgenPartition in {
 def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 copy operation";
   let description = [{
@@ -6091,6 +6169,7 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     NVVM::Tcgen05MmaSmemDescOp::createSmemDescriptor(*op, moduleTranslation, builder);
   }];
 }
+} // let partition = NVVM_TcgenPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM tcgen05 LdSt Shape Attr
@@ -6118,6 +6197,7 @@ def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst
 // NVVM tcgen05.ld Op
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_TcgenPartition in {
 def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "tensor memory load instructions";
   let arguments = (ins
@@ -6381,6 +6461,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]>
 
   let hasVerifier = 1;
 }
+} // let partition = NVVM_TcgenPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM dot.accumulate Ops
@@ -6398,6 +6479,7 @@ def DotAccumulateType : I32EnumAttr<"DotAccumulateType",
 
 def DotAccumulateTypeAttr : EnumAttr<NVVM_Dialect, DotAccumulateType, "dot_accumulate_type">;
 
+let partition = NVVM_ArithPartition in {
 def NVVM_DotAccumulate4WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.4way"> {
   let summary = "Four-way byte dot product-accumulate instruction";
   let description = [{
@@ -6476,11 +6558,13 @@ def NVVM_DotAccumulate2WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.2way
     attr-dict `:` type($a) `,` type($b)
   }];
 }
+} // let partition = NVVM_ArithPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM clusterlaunchcontrol Ops.
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_MiscPartition in {
 def NVVM_ClusterLaunchControlTryCancelOp
     : NVVM_Op<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<100>]> {
   let summary = "Request atomically canceling the launch of a cluster that has not started running yet";
@@ -6522,6 +6606,7 @@ def NVVM_ClusterLaunchControlTryCancelOp
     createIntrinsicCall(builder, id, args);
   }];
 }
+} // let partition = NVVM_MiscPartition
 
 def ClusterLaunchControlIsCanceled
   : I32EnumCase<"IS_CANCELED", 0, "is_canceled">;
@@ -6544,6 +6629,7 @@ def ClusterLaunchControlQueryTypeAttr
   : EnumAttr<NVVM_Dialect,
       ClusterLaunchControlQueryType, "cluster_launch_control_query_type">;
 
+let partition = NVVM_MiscPartition in {
 def NVVM_ClusterLaunchControlQueryCancelOp
     : NVVM_Op<"clusterlaunchcontrol.query.cancel",
               [NVVMRequiresSM<100>, InferTypeOpAdaptor]> {
@@ -6586,6 +6672,7 @@ def NVVM_ClusterLaunchControlQueryCancelOp
     $res = createIntrinsicCall(builder, id, args);
   }];
 }
+} // let partition = NVVM_MiscPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM tcgen05.mma Ops
@@ -6675,6 +6762,7 @@ defvar Tcgen05MMABlockScaleKindAttr =
   ConfinedAttr<Tcgen05MMAKindAttr,
     [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMABlockScaleKindList>]>;
 
+let partition = NVVM_TcgenPartition in {
 def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
     [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs MMA operation on 5th-gen tensor cores";
@@ -6841,6 +6929,7 @@ def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
     createIntrinsicCall(builder, ID, args);
   }];
 }
+} // let partition = NVVM_TcgenPartition
 
 def Tcgen05MMABlockScaleDefault : I32EnumAttrCase<"DEFAULT", 0, "default">;
 def Tcgen05MMABlockScaleBlock16      : I32EnumAttrCase<"BLOCK16", 1, "block16">;
@@ -6858,6 +6947,7 @@ def Tcgen05MMABlockScale
 def Tcgen05MMABlockScaleAttr : EnumAttr<NVVM_Dialect, Tcgen05MMABlockScale,
                                           "tcgen05_mma_block_scale">;
 
+let partition = NVVM_TcgenPartition in {
 def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs block scaled MMA operation on 5th-gen tensor cores";
@@ -7013,6 +7103,7 @@ def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
     createIntrinsicCall(builder, ID, args);
   }];
 }
+} // let partition = NVVM_TcgenPartition
 
 def Tcgen05MMACollectorBBuffer0  : I32EnumAttrCase<"B0", 0, "b0">;
 def Tcgen05MMACollectorBBuffer1  : I32EnumAttrCase<"B1", 1, "b1">;
@@ -7030,6 +7121,7 @@ def Tcgen05MMACollectorBBuffer : I32EnumAttr<
 
 def Tcgen05MMACollectorBBufferAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorBBuffer, "tcgen05_mma_collectorb">;
 
+let partition = NVVM_TcgenPartition in {
 def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs weight stationary convolution MMA operation on 5th-gen tensor cores";
@@ -7242,6 +7334,7 @@ def NVVM_Tcgen05MMADecompressBOp :
 
   let hasVerifier = true;
 }
+} // let partition = NVVM_TcgenPartition
 
 defvar Tcgen05MMABlockScaleDecompressBScaleList = [
     Tcgen05MMABlockScaleDefault,
@@ -7253,6 +7346,7 @@ defvar Tcgen05MMABlockScaleDecompressBScaleAttr =
     [EnumAttrIsOneOf<Tcgen05MMABlockScaleAttr,
                      Tcgen05MMABlockScaleDecompressBScaleList>]>;
 
+let partition = NVVM_TcgenPartition in {
 def NVVM_Tcgen05MMABlockScaleDecompressBOp :
     NVVM_VoidIntrinsicOp<"tcgen05.mma.block_scale.decompress_b",
                          [NVVMRequiresSMf<[107]>]> {
@@ -7315,6 +7409,7 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
     ) attr-dict `:` `(` type(operands) `)`
   }];
 }
+} // let partition = NVVM_TcgenPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM sparse.compress and sparse.decompress Ops
@@ -7334,6 +7429,7 @@ defvar SPElemVectorType = FixedVectorOfRankAndType<[1], [I8, I16]>;
 defvar SPMetadataType = AnyTypeOf<[I32,
     FixedVectorOfRankAndLengthAndType<[1], [1, 2, 4, 8, 16, 32], [I32]>]>;
 
+let partition = NVVM_MiscPartition in {
 def NVVM_SparseCompressOp : NVVM_Op<"sparse.compress",
     [Pure, NVVMRequiresSMa<[107]>]> {
   let summary = "Compress dense vector to structured sparse vector";
@@ -7476,6 +7572,7 @@ def NVVM_SparseDecompressOp : NVVM_Op<"sparse.decompress",
     NVVM::SparseDecompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
   }];
 }
+} // let partition = NVVM_MiscPartition
 
 def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64,
                       VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
@@ -7504,6 +7601,7 @@ class NVVM_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
   }];
 }
 
+let partition = NVVM_ArithPartition in {
 def NVVM_AddFOp : NVVM_FloatBinaryOp<"addf", [Commutative]> {
   let summary = [{
     Performs floating point addition of the given arguments `lhs` and `rhs`
@@ -7704,6 +7802,7 @@ def NVVM_DivFOp
   }];
   let hasVerifier = 1;
 }
+} // let partition = NVVM_ArithPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM tensormap.replace Op
@@ -7835,6 +7934,7 @@ def TensormapFieldValueAttr :
     TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr, 
     TensormapFillModeAttr]>;
 
+let partition = NVVM_MemoryPartition in {
 def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     [NVVMRequiresSMaOrSMf<[90, 103], [100, 101, 110, 120]>]> {
   let summary = "Modifies a field of the tensor-map object";
@@ -7883,6 +7983,7 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     ($new_value_attr^):($new_value)? `in` $addr attr-dict `:` type(operands)
   }];
 }
+} // let partition = NVVM_MemoryPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM target attribute.
