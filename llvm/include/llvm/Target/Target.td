@@ -393,9 +393,10 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // When registers in this class share assembly names with registers in another
   // class returned by MatchRegisterName / parseRegister (for example, narrower
   // or wider FP or vector group register classes), setting CoerceFromRegClass
-  // allows the assembly matcher to accept registers from CoerceFromRegClass
-  // with matching names and convert them to the corresponding register in this
-  // class instead of requiring hand-written logic in the AsmParser.
+  // allows the assembly matcher to accept registers from both this class and
+  // from CoerceFromRegClass, and will convert those from CoerceFromRegClass
+  // to the corresponding register in this class using the matching names
+  // instead of requiring hand-written logic in the AsmParser.
   RegisterClass CoerceFromRegClass = ?;
 
   // Target-specific flags. This becomes the TSFlags field in TargetRegisterClass.
