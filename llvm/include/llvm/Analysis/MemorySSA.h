@@ -93,6 +93,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/IR/DerivedUser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Type.h"
@@ -743,15 +744,15 @@ public:
 
   /// Return the list of MemoryAccess's for a given basic block.
   AccessList *getBlockAccesses(const BasicBlock *BB) const {
-    auto It = PerBlockAccesses.find(BB);
-    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
+    const BlockInfo *Info = getBlockInfo(BB);
+    return Info ? Info->Accesses.get() : nullptr;
   }
 
   /// Return the list of MemoryDef's and MemoryPhi's for a given basic
   /// block.
   DefsList *getBlockDefs(const BasicBlock *BB) const {
-    auto It = PerBlockDefs.find(BB);
-    return It == PerBlockDefs.end() ? nullptr : It->second.get();
+    const BlockInfo *Info = getBlockInfo(BB);
+    return Info ? Info->Defs.get() : nullptr;
   }
 
   /// Given two memory accesses in the same basic block, determine
@@ -840,8 +841,32 @@ private:
     template <typename ListT> void operator()(ListT *L) const { L->~ListT(); }
   };
   template <typename ListT> using ListPtr = std::unique_ptr<ListT, ListDeleter>;
-  using AccessMap = DenseMap<const BasicBlock *, ListPtr<AccessList>>;
-  using DefsMap = DenseMap<const BasicBlock *, ListPtr<DefsList>>;
+
+  /// Per-block state, indexed by block number.
+  struct BlockInfo {
+    /// The list of all accesses in the block. Owns the accesses.
+    ListPtr<AccessList> Accesses;
+    /// The list of MemoryDefs and MemoryPhis in the block.
+    ListPtr<DefsList> Defs;
+  };
+
+  /// Return the index of \p BB in the per-block lists. Blocks must not be
+  /// renumbered or moved to a different function while MemorySSA is alive.
+  unsigned getBlockIndex(const BasicBlock *BB) const {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    assert(BB->getParent()->getBlockNumberEpoch() == BlockNumberEpoch &&
+           "Blocks were renumbered while MemorySSA was alive");
+#endif
+    return BB->getNumber();
+  }
+
+  /// Return the per-block state of \p BB, or nullptr if there is none.
+  const BlockInfo *getBlockInfo(const BasicBlock *BB) const {
+    unsigned N = getBlockIndex(BB);
+    return N < PerBlock.size() ? &PerBlock[N] : nullptr;
+  }
+  BlockInfo &getOrCreateBlockInfo(const BasicBlock *BB);
+  template <typename ListT> ListT *getOrCreateList(ListPtr<ListT> &List);
 
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
@@ -855,8 +880,6 @@ private:
                            SmallPtrSetImpl<BasicBlock *> &Visited,
                            bool SkipVisited = false,
                            bool RenameAllUses = false);
-  AccessList *getOrCreateAccessList(const BasicBlock *);
-  DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
   const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
@@ -870,14 +893,14 @@ private:
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
 
-  // These two mappings contain the main block to access/def mappings for
-  // MemorySSA. The list contained in PerBlockAccesses really owns all the
-  // MemoryAccesses.
-  // Both maps maintain the invariant that if a block is found in them, the
-  // corresponding list is not empty, and if a block is not found in them, the
-  // corresponding list is empty.
-  AccessMap PerBlockAccesses;
-  DefsMap PerBlockDefs;
+  // The main block to access/def mappings for MemorySSA, indexed by block
+  // number. The Accesses lists really own all the MemoryAccesses. A block's
+  // Accesses and Defs are non-null iff the corresponding list is not empty.
+  SmallVector<BlockInfo, 0> PerBlock;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
+#endif
   std::unique_ptr<MemoryAccess, ValueDeleter> LiveOnEntryDef;
 
   // Domination mappings
