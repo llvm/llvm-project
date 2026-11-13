@@ -88,16 +88,16 @@ unsigned int IEEEFloat::partCountForSemantic(APFloatBase::Semantics S) {
   }
 }
 
-template <APFloatBase::Semantics S>
+template <APFloatBase::Semantics E>
 APInt bitcastForSemantics(const FloatRepr &R) {
   const IEEEFloat &f{IEEEFloat::fromRepr(R)};
-  assert(f.partCount() == IEEEFloat::partCountForSemantic(S));
-  return f.convertIEEEFloatToAPInt<EnumToSemanticsCE(S)>();
+  assert(f.partCount() == IEEEFloat::partCountForSemantic(E));
+  return f.convertIEEEFloatToAPInt<E>();
 }
 
-template <APFloatBase::Semantics S>
+template <APFloatBase::Semantics E>
 void initFromAPIntForSemantics(FloatRepr &R, const APInt &api) {
-  IEEEFloat::fromRepr(R).initFromIEEEAPInt<EnumToSemanticsCE(S)>(api);
+  IEEEFloat::fromRepr(R).initFromIEEEAPInt<E>(api);
 }
 } // namespace detail
 
@@ -3761,8 +3761,8 @@ hash_code hash_value(const IEEEFloat &Arg) {
 // the actual IEEE respresentations.  We compensate for that here.
 
 template <>
-APInt IEEEFloat::convertIEEEFloatToAPInt<
-    APFloatBase::semPPCDoubleDoubleLegacy>() const {
+APInt IEEEFloat::convertIEEEFloatToAPInt<APFloatBase::S_PPCDoubleDoubleLegacy>()
+    const {
   assert(semantics ==
          (const llvm::fltSemantics *)&APFloatBase::semPPCDoubleDoubleLegacy);
   assert(partCount()==2);
@@ -3810,8 +3810,9 @@ APInt IEEEFloat::convertIEEEFloatToAPInt<
   return APInt(128, words);
 }
 
-template <const fltSemantics &S>
+template <APFloatBase::Semantics E>
 APInt IEEEFloat::convertIEEEFloatToAPInt() const {
+  constexpr const fltSemantics &S = EnumToSemanticsCE(E);
   assert(semantics == &S);
   constexpr unsigned int trailing_significand_bits =
       S.precision - 1 + S.hasExplicitIntegerBit;
@@ -3919,14 +3920,14 @@ float128 IEEEFloat::convertToQuad() const {
 #endif
 
 template <>
-void IEEEFloat::initFromIEEEAPInt<APFloatBase::semPPCDoubleDoubleLegacy>(
+void IEEEFloat::initFromIEEEAPInt<APFloatBase::S_PPCDoubleDoubleLegacy>(
     const APInt &api) {
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   bool losesInfo;
 
   // Get the first double and convert to our format.
-  initFromIEEEAPInt<APFloatBase::semIEEEdouble>(APInt(64, i1));
+  initFromIEEEAPInt<APFloatBase::S_IEEEdouble>(APInt(64, i1));
   [[maybe_unused]] opStatus fs = convert(APFloatBase::semPPCDoubleDoubleLegacy,
                                          rmNearestTiesToEven, &losesInfo);
   // (convert may return opInvalidOp if i1 is an sNaN).
@@ -3947,8 +3948,9 @@ void IEEEFloat::initFromIEEEAPInt<APFloatBase::semPPCDoubleDoubleLegacy>(
   }
 }
 
-template <const fltSemantics &S>
+template <APFloatBase::Semantics E>
 void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
+  constexpr const fltSemantics &S = EnumToSemanticsCE(E);
   assert(api.getBitWidth() == S.sizeInBits);
 
   constexpr unsigned int trailing_significand_bits =

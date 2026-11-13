@@ -802,13 +802,13 @@ private:
   template <APFloatBase::Semantics S>
   friend APInt bitcastForSemantics(const FloatRepr &R);
 
-  template <const fltSemantics &S> APInt convertIEEEFloatToAPInt() const;
+  template <APFloatBase::Semantics E> APInt convertIEEEFloatToAPInt() const;
 
   template <APFloatBase::Semantics S>
   friend void initFromAPIntForSemantics(FloatRepr &, const APInt &);
 
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
-  template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
+  template <APFloatBase::Semantics E> void initFromIEEEAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
