@@ -35,7 +35,7 @@ namespace static_rounding {
 // > display = hexadecimal;
 // > print(2+round(1/log(2), 128, RN));
 // LSB(LOG2_E_F128) = 2^-127
-LIBC_INLINE_VAR constexpr Frac128 LOG2_E_F128 =
+LIBC_INLINE_VAR constexpr Frac128 LOG2_E_128 =
     Frac128({0xbe87'fed0'691d'3e89, 0xb8aa'3b29'5c17'f0bb});
 
 // 2^x for x from 0 to (0b1111/2^4) = 15/16
@@ -43,7 +43,7 @@ LIBC_INLINE_VAR constexpr Frac128 LOG2_E_F128 =
 //   print(1+round(2^(i/16), 128, RN));
 // };
 // LSB(EXP_MID[i]) = 2^-127
-LIBC_INLINE_VAR constexpr Frac128 EXP_MID[] = {
+LIBC_INLINE_VAR constexpr Frac128 EXP_MID_128[] = {
     Frac128({0x0000'0000'0000'0000, 0x8000'0000'0000'0000}),
     Frac128({0xc5c9'5b8c'2154'c1b2, 0x85aa'c367'cc48'7b14}),
     Frac128({0xfbe4'6287'58a5'3c90, 0x8b95'c1e3'ea8b'd6e6}),
@@ -76,25 +76,37 @@ LIBC_INLINE_VAR constexpr Frac64 EXP_MID_64[] = {
 };
 
 // 128-bit polynomial approximation of 2^x coefficients generated with Sollya:
-// > P = fpminimax(2^x, 12, [|1, 128...|], [0, 1/16], absolute, fixed);
+// > prec = 500;
+// > display = hexadecimal;
+// > P = fpminimax(2^x, 15, [|1, 128...|], [0, 1/16], absolute, fixed);
+// > for i from 1 to 15 do {
+//     c = round(coeff(P, i) * 2^128, 256, RN);
+//     hi = floor(c * 2^(-64));
+//     lo = c - hi * 2^64;
+//     print(round(1 + lo * 2^(-64), 128, RN),
+//           round(1 + hi * 2^(-64), 128, RN));
+//   };
 // Store the fractional part of the coefficients below
 // > dirtyinfnorm(2^x - P(x), [0, 1/16]);
-// 0x1.b328...p-117
-// LSB(EXP_COEFFS[i]) = 2^-128
-LIBC_INLINE_VAR constexpr Frac128 EXP_COEFFS[] = {
+// 0x1.435e...p-142
+// LSB(EXP_COEFFS_128[i]) = 2^-128
+LIBC_INLINE_VAR constexpr Frac128 EXP_COEFFS_128[] = {
     // degree-0 = 1, add back afterwards to reduce calc ops
-    Frac128({0xc9e3'b398'033f'0902, 0xb172'17f7'd1cf'79ab}),
-    Frac128({0xde2d'60e0'866c'6365, 0x3d7f'7bff'058b'1d50}),
-    Frac128({0x99d3'ad04'd47d'0efe, 0x0e35'846b'8250'5fc5}),
-    Frac128({0x399a'b423'1644'1b55, 0x0276'556d'f749'cee5}),
-    Frac128({0x405f'ebef'0f76'011a, 0x0057'61ff'9e29'9cc4}),
-    Frac128({0x1ac4'9999'c0ef'b9ab, 0x000a'1848'97c3'63c4}),
-    Frac128({0xe6f8'52f9'914f'2d9a, 0x0000'ffe5'fe2c'4573}),
-    Frac128({0x6056'28a6'5061'b43f, 0x0000'162c'0223'a816}),
-    Frac128({0x6b99'3efe'2193'e54c, 0x0000'01b5'253d'0671}),
-    Frac128({0x9c76'f49c'ed65'743a, 0x0000'001e'4cf8'0b70}),
-    Frac128({0x1ac1'3330'6c4e'3d33, 0x0000'0001'e8ae'6938}),
-    Frac128({0x219f'9904'1f29'5f13, 0x0000'0000'1cd9'af73}),
+    Frac128({0xc9e3'b398'03f2'f6af, 0xb172'17f7'd1cf'79ab}),
+    Frac128({0xde2d'60dd'92e6'c0a6, 0x3d7f'7bff'058b'1d50}),
+    Frac128({0x99d3'b15d'995c'e24a, 0x0e35'846b'8250'5fc5}),
+    Frac128({0x3997'7c16'a94f'cb23, 0x0276'556d'f749'cee5}),
+    Frac128({0x41c5'fda5'd4a3'6a7a, 0x0057'61ff'9e29'9cc4}),
+    Frac128({0xb7a5'8586'1153'804d, 0x000a'1848'97c3'63c3}),
+    Frac128({0x3435'7b3d'e3e5'9c9d, 0x0000'ffe5'fe2c'4586}),
+    Frac128({0x2400'187f'2e99'8f28, 0x0000'162c'0223'a5c8}),
+    Frac128({0x7bf1'52d6'7d18'0a82, 0x0000'01b5'253d'395e}),
+    Frac128({0x9520'f82a'd45c'6df4, 0x0000'001e'4cf5'158b}),
+    Frac128({0xbf8d'5523'13cb'ee8f, 0x0000'0001'e8ca'c734}),
+    Frac128({0x437f'9043'9fee'4c9c, 0x0000'0000'1c3b'd654}),
+    Frac128({0x75a8'df7c'3227'e1f1, 0x0000'0000'0181'6185}),
+    Frac128({0x8f29'38b5'5a27'2ade, 0x0000'0000'0013'1469}),
+    Frac128({0xd7fe'9f11'0d52'e8af, 0x0000'0000'0000'e4af}),
 };
 
 // 64-bit polynomial approximation of 2^x coefficients generated with Sollya:
@@ -154,7 +166,7 @@ LIBC_ALWAYS_INLINE void exp_scale(uint64_t x_s_shifted, int x_e_unbiased,
   using FPBits = fputil::FPBits<double>;
 
   Frac128 x_s_frac({0, x_s_shifted});
-  Frac128 x_ln2 = x_s_frac * LOG2_E_F128;
+  Frac128 x_ln2 = x_s_frac * LOG2_E_128;
 
   uint64_t k = 0;
   if (x_e_unbiased >= -1) {
@@ -236,24 +248,32 @@ LIBC_ALWAYS_INLINE uint64_t exp_accurate_path(Frac128 l2y_r, bool is_neg, int d,
 
 #if defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
   Frac128 x2 = x_lo_frac * x_lo_frac;
-  Frac128 p_even =
-      fputil::polyeval(x2, EXP_COEFFS[0], EXP_COEFFS[2], EXP_COEFFS[4],
-                       EXP_COEFFS[6], EXP_COEFFS[8], EXP_COEFFS[10]);
+  Frac128 p_even = fputil::polyeval(x2, EXP_COEFFS_128[0], EXP_COEFFS_128[2],
+                                    EXP_COEFFS_128[4], EXP_COEFFS_128[6],
+                                    EXP_COEFFS_128[8], EXP_COEFFS_128[10],
+                                    EXP_COEFFS_128[12], EXP_COEFFS_128[14]);
   Frac128 p_odd =
-      fputil::polyeval(x2, EXP_COEFFS[1], EXP_COEFFS[3], EXP_COEFFS[5],
-                       EXP_COEFFS[7], EXP_COEFFS[9], EXP_COEFFS[11]);
+      fputil::polyeval(x2, EXP_COEFFS_128[1], EXP_COEFFS_128[3],
+                       EXP_COEFFS_128[5], EXP_COEFFS_128[7], EXP_COEFFS_128[9],
+                       EXP_COEFFS_128[11], EXP_COEFFS_128[13]);
   Frac128 p = fputil::multiply_add(p_odd, x_lo_frac, p_even) * x_lo_frac;
 #else  // !defined(LIBC_TYPES_HAS_INT128) || defined(LIBC_MATH_HAS_SMALL_TABLES)
-  Frac128 p(EXP_COEFFS[11]);
+  Frac128 p(EXP_COEFFS_128[14]);
   LIBC_LOOP_NOUNROLL
-  for (int i = 10; i >= 0; --i) {
-    p = p * x_lo_frac + EXP_COEFFS[i];
+  for (int i = 13; i >= 0; --i) {
+    p = p * x_lo_frac + EXP_COEFFS_128[i];
   }
   p *= x_lo_frac;
 #endif // defined(LIBC_TYPES_HAS_INT128) && !defined(LIBC_MATH_HAS_SMALL_TABLES)
 
-  Frac128 mid_val = EXP_MID[x_mid];
+  Frac128 mid_val = EXP_MID_128[x_mid];
   Frac128 result = fputil::multiply_add(mid_val, p, mid_val);
+
+  // Apply the "same" correction technique used in exp2_accurate_128.h on tiny
+  // negative inputs
+  if (is_neg && e_y == (uint64_t(fputil::FPBits<double>::EXP_BIAS - 1) << 20) &&
+      x_mid == 15)
+    result += Frac128(5);
 
   return exp_handle_rounding(result, is_neg, d, e_y, rounding);
 }

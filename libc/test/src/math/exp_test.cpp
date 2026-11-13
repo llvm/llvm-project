@@ -205,5 +205,5 @@ static double exp_static_rounding(double x) {
 }
 
 LIST_EXP_TESTS(StaticRounding, exp_static_rounding,
-               /*ulp_tolerance=*/1.0, /*all_rounding=*/true,
+               /*ulp_tolerance=*/0.5, /*all_rounding=*/true,
                /*check_exception=*/false);
